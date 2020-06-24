@@ -2048,6 +2048,12 @@ void KinBody::Joint::MIMIC::DOFFormat::SerializeJSON(rapidjson::Value& value, ra
     openravejson::SetJsonValueByKey(value,       "axis",       axis, allocator);
 }
 
+void KinBody::Joint::MIMIC::DOFFormat::DeserializeJSON(const rapidjson::Value& value) {
+    openravejson::LoadJsonValueByKey(value, "jointindex", jointindex);
+    openravejson::LoadJsonValueByKey(value,   "dofindex",   dofindex);
+    openravejson::LoadJsonValueByKey(value,       "axis",       axis);
+}
+
 KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(const KinBody &parent) const
 {
     int numjoints = (int)parent.GetJoints().size();
@@ -2060,11 +2066,22 @@ void KinBody::Joint::MIMIC::DOFHierarchy::SerializeJSON(rapidjson::Value& value,
     openravejson::SetJsonValueByKey(value, "dofformatindex", dofformatindex, allocator);
 }
 
+void KinBody::Joint::MIMIC::DOFHierarchy::DeserializeJSON(const rapidjson::Value& value) {
+    openravejson::LoadJsonValueByKey(value,       "dofindex",       dofindex);
+    openravejson::LoadJsonValueByKey(value, "dofformatindex", dofformatindex);
+}
+
 void KinBody::Joint::MIMIC::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const
 {
     openravejson::SetJsonValueByKey(value, "_vdofformat", _vdofformat, allocator);
     openravejson::SetJsonValueByKey(value, "_vmimicdofs", _vmimicdofs, allocator);
     openravejson::SetJsonValueByKey(value,  "_equations",  _equations, allocator);
+}
+
+void KinBody::Joint::MIMIC::DeserializeJSON(const rapidjson::Value& value) {
+    openravejson::LoadJsonValueByKey(value, "_vdofformat", _vdofformat);
+    openravejson::LoadJsonValueByKey(value, "_vmimicdofs", _vmimicdofs);
+    openravejson::LoadJsonValueByKey(value,  "_equations",  _equations);
 }
 
 void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters)

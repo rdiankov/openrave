@@ -855,6 +855,7 @@ public:
             boost::shared_ptr<Joint> GetJoint(KinBody &parent) const;
             boost::shared_ptr<Joint const> GetJoint(const KinBody &parent) const;
             void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const;
+            void DeserializeJSON(const rapidjson::Value& value);
         };
 
         struct DOFHierarchy
@@ -865,9 +866,11 @@ public:
                 return dofindex==r.dofindex && dofformatindex == r.dofformatindex;
             }
             void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const;
+            void DeserializeJSON(const rapidjson::Value& value);
         };
         
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const;
+        void DeserializeJSON(const rapidjson::Value& value);
 
         /// @name automatically set
         //@{
