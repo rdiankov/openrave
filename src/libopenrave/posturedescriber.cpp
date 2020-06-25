@@ -26,22 +26,27 @@ PostureDescriberBase::PostureDescriberBase(EnvironmentBasePtr penv) : InterfaceB
 {
 }
 
-PostureDescriberBase::~PostureDescriberBase() {
+PostureDescriberBase::~PostureDescriberBase()
+{
 }
 
-const char* PostureDescriberBase::GetHash() const {
+const char* PostureDescriberBase::GetHash() const
+{
     return OPENRAVE_POSTUREDESCRIBER_HASH;
 }
 
-bool PostureDescriberBase::Supports(const RobotBase::ManipulatorPtr& pmanip) const {
+bool PostureDescriberBase::Supports(const RobotBase::ManipulatorPtr& pmanip) const
+{
     return this->Supports(ExtractEssentialKinematicsChain(pmanip));
 }
 
-bool PostureDescriberBase::Init(const RobotBase::ManipulatorPtr& pmanip) {
+bool PostureDescriberBase::Init(const RobotBase::ManipulatorPtr& pmanip)
+{
     return this->Init(ExtractEssentialKinematicsChain(pmanip));
 }
 
-std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, std::vector<int>& armindices) {
+std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, std::vector<int>& armindices)
+{
     const LinkPair kinematicsChain = ExtractEssentialKinematicsChain(pmanip);
     return ComputeKinematicsChainHash(kinematicsChain, armindices);
 }
@@ -120,7 +125,8 @@ std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vec
     return chainhash;
 }
 
-LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain) {
+LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain)
+{
     const LinkPtr baselink = kinematicsChain[0];
     const LinkPtr eelink = kinematicsChain[1];
 
@@ -160,15 +166,18 @@ LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain) {
     return {(*itFirstR)->GetHierarchyParentLink(), (*ritLastR)->GetHierarchyChildLink()};
 }
 
-LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
+LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip)
+{
     return {pmanip->GetBase(), pmanip->GetEndEffector()};
 }
 
-LinkPair ExtractEssentialKinematicsChain(const RobotBase::ManipulatorPtr& pmanip) {
+LinkPair ExtractEssentialKinematicsChain(const RobotBase::ManipulatorPtr& pmanip)
+{
     return ExtractEssentialKinematicsChain(GetKinematicsChain(pmanip));
 }
 
-LinkPair ExtractEssentialKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
+LinkPair ExtractEssentialKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip)
+{
     return ExtractEssentialKinematicsChain(GetKinematicsChain(pmanip));
 }
 

@@ -67,7 +67,8 @@ PostureDescriber::~PostureDescriber() {
 
 /// \brief Checks whether joints match their expected joint types
 /// \return true the joint types match
-bool CheckJointTypes(const std::vector<JointPtr>& joints, const std::vector<KinBody::JointType>& jointtypes) {
+bool CheckJointTypes(const std::vector<JointPtr>& joints, const std::vector<KinBody::JointType>& jointtypes)
+{
     const size_t njoints = joints.size();
     if(njoints != jointtypes.size()) {
         throw OPENRAVE_EXCEPTION_FORMAT("Size mismatch: %d != %d", joints.size() % jointtypes.size(), ORE_InvalidArguments);
@@ -82,7 +83,8 @@ bool CheckJointTypes(const std::vector<JointPtr>& joints, const std::vector<KinB
 
 /// \brief Derives the relation between joint axes of two consecutive joints using the transform between them
 /// \return a NeighbouringTwoJointsRelation enum for the joint axes' relation
-NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t, const double tol) {
+NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t, const double tol)
+{
     // tol was increased for densowave-VS087A4-AV6 (2e-15), and then RV-35FM (4e-15)
     const Vector zaxis0(0, 0, 1); // z-axis of the first joint
     const Vector zaxis1 = t.rotate(zaxis0); // z-axis of the second joint
@@ -117,7 +119,8 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
 /// \brief Derives the robot posture support type for a sequence of joints along a kinematics chain
 /// \return a RobotPostureSupportType enum for the kinematics chain
     // const ref
-RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr>& joints, const double tol) {
+RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr>& joints, const double tol)
+{
     const size_t njoints = joints.size();
     const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute); ///< so far these are all revolute
     switch(njoints) {
@@ -209,7 +212,8 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
 /// \param [in] x      a posture value
 /// \param [in] tol    tolerance to determine whether x is considered 0.0, so that this value means a hybrid state.
 /// \return 0 if x is considered positive, 1 if considered negative, and 2 (meaning hybrid states) if considered 0.0
-inline PostureStateInt ComputeFeatureState(const double x, const double fTol) {
+inline PostureStateInt ComputeFeatureState(const double x, const double fTol)
+{
     return (x > fTol) ? 0 : (x < -fTol) ? 1 : 2; // TGN: >= or <= ?
 }
 
@@ -220,8 +224,8 @@ inline PostureStateInt ComputeFeatureState(const double x, const double fTol) {
 inline void ComputeRobotPostureStates(const double fTol,
                                       const std::vector<double>& posturevalues,
                                       std::vector<PostureStateInt>& featurestates,
-                                      std::vector<PostureStateInt>& posturestates
-                                      ) {
+                                      std::vector<PostureStateInt>& posturestates)
+{
     const size_t N = posturevalues.size();
     for(size_t i = 0; i < N; ++i) {
         featurestates.at(i) = ComputeFeatureState(posturevalues.at(i), fTol);
@@ -252,8 +256,8 @@ void ComputePostureStates6RGeneral(const std::vector<JointPtr>& joints,
                                    const double fTol,
                                    std::vector<double>& posturevalues,
                                    std::vector<PostureStateInt>& featurestates,
-                                   std::vector<PostureStateInt>& posturestates
-                                   ) {
+                                   std::vector<PostureStateInt>& posturestates)
+{
     const Vector axis0 = joints[0]->GetAxis();
     const Vector axis1 = joints[1]->GetAxis();
     const Vector axis3 = joints[3]->GetAxis();
@@ -276,8 +280,8 @@ void ComputePostureStates4RTypeA(const std::vector<JointPtr>& joints,
                                  const double fTol,
                                  std::vector<double>& posturevalues,
                                  std::vector<PostureStateInt>& featurestates,
-                                 std::vector<PostureStateInt>& posturestates
-                                 ) {
+                                 std::vector<PostureStateInt>& posturestates)
+{
     const Vector axis0 = joints[0]->GetAxis();
     const Vector axis1 = joints[1]->GetAxis();
     const Vector anchor1 = joints[1]->GetAnchor();
@@ -293,8 +297,8 @@ void ComputePostureStatesRRRParallel(const std::vector<JointPtr>& joints,
                                      const double fTol,
                                      std::vector<double>& posturevalues,
                                      std::vector<PostureStateInt>& featurestates,
-                                     std::vector<PostureStateInt>& posturestates
-                                     ) {
+                                     std::vector<PostureStateInt>& posturestates)
+{
     const Vector axis0 = joints[0]->GetAxis();
     const Vector anchor0 = joints[0]->GetAnchor();
     const Vector anchor1 = joints[1]->GetAnchor();
@@ -304,7 +308,8 @@ void ComputePostureStatesRRRParallel(const std::vector<JointPtr>& joints,
     ComputeRobotPostureStates(fTol, posturevalues, featurestates, posturestates);
 }
 
-bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
+bool PostureDescriber::Init(const LinkPair& kinematicsChain)
+{
     if(!this->Supports(kinematicsChain)) {
         RAVELOG_WARN("Does not support kinematics chain");
         return false;
@@ -345,7 +350,8 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
 }
 
 void PostureDescriber::_GetJointsFromKinematicsChain(const LinkPair& kinematicsChain,
-                                                     std::vector<JointPtr>& joints) const {
+                                                     std::vector<JointPtr>& joints) const
+{
     const int baselinkind = kinematicsChain[0]->GetIndex();
     const int eelinkind = kinematicsChain[1]->GetIndex();
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
@@ -380,7 +386,8 @@ void PostureDescriber::_GetJointsFromKinematicsChain(const LinkPair& kinematicsC
     }
 }
 
-bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
+bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const
+{
     const LinkPtr baselink = kinematicsChain[0];
     const LinkPtr eelink = kinematicsChain[1];
 
@@ -407,8 +414,8 @@ bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
 bool PostureDescriber::ComputePostureStates(std::vector<PostureStateInt>& posturestates,
                                             const std::vector<double>& dofvalues,
                                             const std::vector<int>& dofindices,
-                                            const KinBody::CheckLimitsAction claoption
-                                            ) {
+                                            const KinBody::CheckLimitsAction claoption)
+{
     if(!_posturefn) {
         RAVELOG_WARN("No supported posture describer; _posturefn is not set");
         posturestates.clear();
@@ -437,7 +444,8 @@ bool PostureDescriber::ComputePostureStates(std::vector<PostureStateInt>& postur
     return true;
 }
 
-bool PostureDescriber::SetPostureValueThreshold(double fTol) {
+bool PostureDescriber::SetPostureValueThreshold(double fTol)
+{
     if(fTol < 0.0) {
         RAVELOG_WARN_FORMAT("Cannot set fTol=%.4d<0.0; do not change its current value %.4e", fTol % _fTol);
         return false;
@@ -446,19 +454,23 @@ bool PostureDescriber::SetPostureValueThreshold(double fTol) {
     return true;
 }
 
-std::string PostureDescriber::GetMapDataKey() const {
+std::string PostureDescriber::GetMapDataKey() const
+{
     return _posturestatename;
 }
 
-bool PostureDescriber::IsInitialized() const {
+bool PostureDescriber::IsInitialized() const
+{
     return static_cast<bool>(_posturefn);
 }
 
-const LinkPair& PostureDescriber::GetEssentialKinematicsChain() const {
+const LinkPair& PostureDescriber::GetEssentialKinematicsChain() const
+{
     return _kinematicsChain;
 }
 
-void PostureDescriber::Destroy() {
+void PostureDescriber::Destroy()
+{
     _kinematicsChain  = {nullptr, nullptr};
     _joints.clear();
     _armindices.clear();
@@ -467,28 +479,33 @@ void PostureDescriber::Destroy() {
     _supporttype = RobotPostureSupportType::RPST_NoSupport;
 }
 
-bool PostureDescriber::_SetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) {
+bool PostureDescriber::_SetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin)
+{
     double fTol = 0.0;
     ssin >> fTol;
     return this->SetPostureValueThreshold(fTol);
 }
 
-bool PostureDescriber::_GetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) const {
+bool PostureDescriber::_GetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) const
+{
     ssout << _fTol;
     return true;
 }
 
-bool PostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const {
+bool PostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const
+{
     SerializeValues(ssout, _armindices, ' ');
     return !_armindices.empty();
 }
 
-bool PostureDescriber::_GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const {
+bool PostureDescriber::_GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const
+{
     ssout << static_cast<int>(_supporttype);
     return _supporttype != RobotPostureSupportType::RPST_NoSupport;
 }
 
-bool PostureDescriber::_ComputePostureValuesCommand(std::ostream& ssout, std::istream& ssin) {
+bool PostureDescriber::_ComputePostureValuesCommand(std::ostream& ssout, std::istream& ssin)
+{
     if(!_posturefn) {
         RAVELOG_WARN("No supported posture describer; _posturefn is not set");
         return false;
@@ -500,7 +517,8 @@ bool PostureDescriber::_ComputePostureValuesCommand(std::ostream& ssout, std::is
 
 bool PostureDescriber::_InterpretJSONCommand(const rapidjson::Value& input,
                                              rapidjson::Value& output,
-                                             rapidjson::Document::AllocatorType& allocator) {
+                                             rapidjson::Document::AllocatorType& allocator)
+{
     std::vector<std::string> vfeatures;
     switch(_supporttype) {
         case RobotPostureSupportType::RPST_6R_General: {
