@@ -157,10 +157,7 @@ PyPostureDescriberBasePtr GeneratePostureDescriber(const PyManipulatorPtr& pyman
                             pmanip->GetName() % probot->GetName());
         return PyPostureDescriberBasePtr();
     }
-    // fe743742269c7dbfe548cb1f3412f658
-    std::vector<int> armindices;
-    const std::string chainhash = ComputeKinematicsChainHash(linkpair, armindices);    
-    // posturedescriber.motoman-gp8l.fe743742269c7dbfe548cb1f3412f658.L0.L6
+    const std::string chainhash = ComputeKinematicsChainHash(linkpair);    
     if(interfacename.empty()) {
         interfacename = "posturedescriber"; ///< default to OpenRAVE's posture describer
     }

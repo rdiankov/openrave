@@ -1467,7 +1467,7 @@ protected:
         const RobotBasePtr probot = pmanip->GetRobot();
         const PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(pmanip);
         if (pDescriber != nullptr) {
-            if(pDescriber->ComputePostureStates(vsolutionindices, vravesol)) {
+            if(pDescriber->ComputePostureStates(vsolutionindices, vravesol, pmanip->GetArmIndices())) {
                 solutionIndicesNameLocal = pDescriber->GetMapDataKey();
             }
             else {
@@ -1482,7 +1482,7 @@ protected:
                                      ss.str() % vravesol.size() % solutionIndicesNameLocal);
             }
         }
-        if(vsolutionindices.empty()) {
+        else {
             iksol.GetSolutionIndices(vsolutionindices);
         }
 
@@ -1949,17 +1949,16 @@ protected:
         const RobotBasePtr probot = pmanip->GetRobot();
         const PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(pmanip);
         if (pDescriber != nullptr) {
-            if(pDescriber->ComputePostureStates(vsolutionindices, vravesol)) {
+            if(pDescriber->ComputePostureStates(vsolutionindices, vravesol, pmanip->GetArmIndices())) {
                 solutionIndicesNameLocal = pDescriber->GetMapDataKey();
             }
             else {
                 RAVELOG_WARN_FORMAT("Cannot compute posture states for vravesol of size %d; use solutionIndicesNameLocal %s", vravesol.size() % solutionIndicesNameLocal);
             }
         }
-        if(vsolutionindices.empty()) {
+        else {
             iksol.GetSolutionIndices(vsolutionindices);
         }
-
 //        if( IS_DEBUGLEVEL(Level_Verbose) ) {
 //            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
 //            ss << "ikfast solution (free=" << iksol.GetFree().size() << "); iksol=[";

@@ -63,7 +63,8 @@ public:
     virtual bool Init(const RobotBase::ManipulatorPtr& pmanip);
 
     /// \brief Computes posture state integers for a kinematics chain at either the current of specified dof values.
-    /// \param [in]  dofvalues       if empty, then use the current dof values; otherwise these specified dof values must have the same size as the number of dofs in the kinematics chain.
+    /// \param [in]  dofvalues       dof values, if empty, mean the current ones; otherwise its size should be either (1) the number of dofs in the essential kinematics chain (where the first, last joints are revolute), or (2) the size of the specified dof indices
+    /// \param [in]  dofindices      dof indices, if empty, mean the arm indices of the essential kinematics chain; otherwise it should have the same size as the specified dof values
     /// \param [out] posturestates   posture states, whose size is a power of 2. Always non-empty if (1) this class is properly initialized AND (2) dofvalues is either empty or has the correct size.
     /// \return true if (1) this describer class is properly initialized AND (2) dofvalues is either empty or has the correct size.
     virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturestates,
@@ -105,10 +106,10 @@ OPENRAVE_API LinkPair ExtractEssentialKinematicsChain(const RobotBase::Manipulat
 OPENRAVE_API LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip);
 
 ///< \brief Computes a kinematics hash from the baselink to eelink.
-OPENRAVE_API std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vector<int>& armindices);
+OPENRAVE_API std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain);
 
 ///< \brief Computes a kinematics hash from the manipulator's baselink to its eelink.
-OPENRAVE_API std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, std::vector<int>& armindices);
+OPENRAVE_API std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip);
 
 } // end namespace OpenRAVE
 

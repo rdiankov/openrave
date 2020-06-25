@@ -89,7 +89,8 @@ public:
     virtual bool Init(const LinkPair& kinematicsChain) override;
 
     /// \brief Computes posture state integers for a kinematics chain at either the current of specified dof values.
-    /// \param [in]  dofvalues       if empty, then use the current dof values; otherwise these specified dof values must have the same size as the number of dofs in the kinematics chain.
+    /// \param [in]  dofvalues       dof values, if empty, mean the current ones; otherwise its size should be either (1) the number of dofs in the essential kinematics chain (where the first, last joints are revolute), or (2) the size of the specified dof indices
+    /// \param [in]  dofindices      dof indices, if empty, mean the arm indices of the essential kinematics chain; otherwise it should have the same size as the specified dof values
     /// \param [out] posturestates   posture states, whose size is a power of 2. Always non-empty if (1) this class is properly initialized AND (2) dofvalues is either empty or has the correct size.
     /// \return true if (1) this describer class is properly initialized AND (2) dofvalues is either empty or has the correct size.
     virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturestates,
