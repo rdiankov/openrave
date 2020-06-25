@@ -198,6 +198,7 @@ public:
     }
 
     dict toDict() {
+        // for ujson serialization
         dict d;
         d["pos"] = pos();
         d["extents"] = extents();

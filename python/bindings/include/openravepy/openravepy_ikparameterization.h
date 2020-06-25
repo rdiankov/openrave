@@ -114,6 +114,7 @@ public:
     PyIkParameterizationPtr __mul__(object otrans);
 
     PyIkParameterizationPtr __rmul__(object otrans);
+    py::object toDict();
 
     IkParameterization _param;
 private:
