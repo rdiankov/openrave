@@ -157,8 +157,7 @@ LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain) {
     const std::vector<JointPtr>::const_reverse_iterator ritLastR = std::find_if(joints.rbegin(), joints.rend(), 
         [](const JointPtr& pjoint) { return pjoint->IsRevolute(0); }
     );
-    const std::vector<JointPtr>::const_iterator itLastR = (ritLastR + 1).base(); // don't forget to add 1
-    return {(*itFirstR)->GetHierarchyParentLink(), (*itLastR)->GetHierarchyChildLink()};
+    return {(*itFirstR)->GetHierarchyParentLink(), (*ritLastR)->GetHierarchyChildLink()};
 }
 
 LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
