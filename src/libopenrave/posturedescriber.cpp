@@ -136,7 +136,6 @@ LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain) {
     std::vector<JointPtr> joints;
     probot->GetChain(baselinkind, eelinkind, joints);
 
-    std::string typestr;
     for(std::vector<JointPtr>::iterator it = begin(joints); it != end(joints); ) {
         if((*it)->IsStatic() || (*it)->GetDOFIndex()==-1) {
             it = joints.erase(it);
