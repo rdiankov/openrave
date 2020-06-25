@@ -2046,9 +2046,10 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                 int index = -1;
                 if( !dofindices.empty() ) {
                     const std::vector<int>::const_iterator itindex = find(dofindices.begin(), dofindices.end(), dofindex + idof);
-                    if( itindex != dofindices.end() ) {
-                        index = itindex - dofindices.begin();
+                    if( itindex == dofindices.end() ) {
+                        continue;
                     }
+                    index = itindex - dofindices.begin();
                 }
                 else {
                     index = dofindex + idof;
@@ -2310,9 +2311,10 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                     int index = -1;
                     if( !dofindices.empty() ) {
                         const std::vector<int>::const_iterator itindex = find(dofindices.begin(),dofindices.end(),dofindex+dof);
-                        if( itindex != dofindices.end() ) {
-                            index = itindex - dofindices.begin();
+                        if( itindex == dofindices.end() ) {
+                            continue;
                         }
+                        index = itindex - dofindices.begin();
                     }
                     else {
                         index = dofindex + dof;
