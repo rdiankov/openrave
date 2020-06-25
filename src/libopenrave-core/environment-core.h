@@ -548,7 +548,7 @@ public:
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
 
-    virtual bool LoadJSON(const rapidjson::Value& doc, const AttributesList& atts)
+    virtual bool LoadJSON(const rapidjson::Document& doc, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         return RaveParseJSON(shared_from_this(), doc, atts);
