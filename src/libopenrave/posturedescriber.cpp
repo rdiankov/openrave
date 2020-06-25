@@ -50,7 +50,7 @@ std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, 
 // void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameterizationType iktype) const
 std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vector<int>& armindices)
 {
-    if(kinematicsChain[0] == nullptr || kinematicsChain[1] == nullptr)) {
+    if(kinematicsChain[0] == nullptr || kinematicsChain[1] == nullptr) {
         return "";
     }
     std::ostringstream ss;
