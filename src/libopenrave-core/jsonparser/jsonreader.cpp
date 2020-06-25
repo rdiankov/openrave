@@ -152,8 +152,8 @@ public:
                     std::string id = OpenRAVE::orjson::GetJsonValueByKey<std::string>(*it, "id", "");
                     if (id == fragment) {
                         if (IsExpandableRapidJSON(*it)) {
-                            std::string uri = OpenRAVE::orjson::GetJsonValueByKey<std::string>(*it, "referenceUri", "");
-                            if (!ExpandRapidJSON(envInfo, currentDoc, bodyId, uri, circularReference, fUnitScale)) {
+                            std::string bodyUri = OpenRAVE::orjson::GetJsonValueByKey<std::string>(*it, "referenceUri", "");
+                            if (!ExpandRapidJSON(envInfo, currentDoc, bodyId, bodyUri, circularReference, fUnitScale)) {
                                 return false;
                             }
                         }
@@ -186,8 +186,8 @@ public:
                     std::string id = OpenRAVE::orjson::GetJsonValueByKey<std::string>(*it, "id", "");
                     if ( id == fragment) {
                         if (IsExpandableRapidJSON(*it)) {
-                            std::string uri = OpenRAVE::orjson::GetJsonValueByKey<std::string>(*it, "referenceUri", "");
-                            if (!ExpandRapidJSON(envInfo, *expandedDoc, bodyId, uri, circularReference, fUnitScale)) {
+                            std::string bodyUri = OpenRAVE::orjson::GetJsonValueByKey<std::string>(*it, "referenceUri", "");
+                            if (!ExpandRapidJSON(envInfo, *expandedDoc, bodyId, bodyUri, circularReference, fUnitScale)) {
                                 return false;
                             }
                         }
