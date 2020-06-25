@@ -1093,7 +1093,8 @@ private:
     /// Computes posture state integers for describing the posture of links between baselink and eelink.
     /// \param [out] posturevalues     a vector of robot posture state (unsigned) integers at the current of specified dof values
     /// \param [in]  kinematicsChain   a kinematics chain prescribed by a baselink-eelink pair
-    /// \param [in]  dofvalues         dof values set along the kinematics chain from base link to end-effector link; its size should be either 0 (i.e., using the current dof values) or the same size of the dofs of the kinematics chain
+    /// \param [in]  dofvalues         dof values, if empty, mean the current ones; otherwise its size should be either (1) the number of dofs in the essential kinematics chain (where the first, last joints are revolute), or (2) the size of the specified dof indices
+    /// \param [in]  dofindices        dof indices, if empty, mean the arm indices of the essential kinematics chain; otherwise it should have the same size as the specified dof values
     /// \return true if the registered posture describer successfully computes a vector of posture state values for describing the posture of the kinematics chain.
     virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturevalues,
                                       const LinkPair& kinematicsChain,
@@ -1106,7 +1107,8 @@ private:
     /// If the manipulator is not specified, then we use the active manipulator.
     /// \param [out] posturevalues     a vector of robot posture state (unsigned) integers at the current of specified dof values
     /// \param [in]  pmanip            manipulator that prescribes a kinematics chain from its baselink to its eelink
-    /// \param [in]  dofvalues         dof values set along the kinematics chain from base link to end-effector link; its size should be either 0 (i.e., using the current dof values) or the same size of the dofs of the kinematics chain
+    /// \param [in]  dofvalues         dof values, if empty, mean the current ones; otherwise its size should be either (1) the number of dofs in the essential kinematics chain (where the first, last joints are revolute), or (2) the size of the specified dof indices
+    /// \param [in]  dofindices        dof indices, if empty, mean the arm indices of the essential kinematics chain; otherwise it should have the same size as the specified dof values
     /// \return true if the registered posture describer successfully computes a vector of posture state values for describing the posture of the kinematics chain.
     virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturevalues,
                                       ManipulatorConstPtr pmanip,

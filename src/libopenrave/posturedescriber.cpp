@@ -41,23 +41,29 @@ bool PostureDescriberBase::Init(const RobotBase::ManipulatorPtr& pmanip) {
     return this->Init(ExtractEssentialKinematicsChain(pmanip));
 }
 
-std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, std::vector<int>& armindices) {
+std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip) {
     const LinkPair kinematicsChain = ExtractEssentialKinematicsChain(pmanip);
-    if(kinematicsChain == LinkPair({nullptr, nullptr})) {
+    if(kinematicsChain[0] == nullptr || kinematicsChain[1] == nullptr) {
+        RAVELOG_WARN("kinematics chain is not valid as having nullptr");
         return "";
     }
-    return ComputeKinematicsChainHash(kinematicsChain, armindices);
+    return ComputeKinematicsChainHash(kinematicsChain);
 }
 
 // refer to libopenrave.h and
 // void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameterizationType iktype) const
-std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vector<int>& armindices)
+std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain)
 {
+    const RobotBase::LinkPtr& baselink = kinematicsChain[0];
+    const RobotBase::LinkPtr& eelink = kinematicsChain[1];
+    if(baselink == nullptr || eelink == nullptr) {
+        RAVELOG_WARN("kinematics chain is not valid as having nullptr");
+        return "";
+    }
+
     std::ostringstream ss;
     ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION); // SERIALIZATION_PRECISION = 4 from libopenrave.h 
 
-    const RobotBase::LinkPtr& baselink = kinematicsChain[0];
-    const RobotBase::LinkPtr& eelink = kinematicsChain[1];
     const int baselinkind = baselink->GetIndex();
     const int eelinkind = eelink->GetIndex();
     const KinBodyPtr probot = baselink->GetParent();
@@ -66,7 +72,7 @@ std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vec
     std::vector<RobotBase::JointPtr> joints;
     probot->GetChain(baselinkind, eelinkind, joints);
 
-    armindices.clear();
+    std::vector<int> armindices;
     for(const RobotBase::JointPtr& joint : joints) {
         const int dofindex = joint->GetDOFIndex();
         if(!(joint->IsStatic() || dofindex==-1)) {
