@@ -47,9 +47,10 @@ OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxItera
  */
 OPENRAVE_API int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters, int maxiterations=5000, dReal maxjitter=0.015, dReal perturbation=1e-5);
 
-/** \brief validates a trajectory with respect to the planning constraints. <b>[multi-thread safe]</b>
+/** \brief validates a trajectory with respect to the planning constraints.
 
     checks internal data structures and verifies that all trajectory via points do not violate joint position, velocity, and acceleration limits.
+    Assume that the environment that is used to create parameters is locked. (If the given parameters is not initialized, will attempt to create a new PlannerParameters with trajectory->GetEnv(). In this case, trajectory->GetEnv() should be locked.)
     \param parameters the planner parameters passed to the planner that returned the trajectory. If not initialized, will attempt to create a new PlannerParameters structure from trajectory->GetConfigurationSpecification()
     \param trajectory trajectory of points to be checked
     \param samplingstep If == 0, then will only test the supports points in trajectory->GetPoints(). If > 0, then will sample the trajectory at this time interval and check that smoothness is satisfied along with segment constraints.
@@ -152,7 +153,7 @@ public:
 
 protected:
     void _UpdateParameters();
-    
+
     RobotBasePtr _robot;
     PlannerBasePtr _planner;
     PlannerBase::PlannerParametersPtr _parameters;
@@ -192,7 +193,7 @@ public:
 
 protected:
     void _UpdateParameters();
-    
+
     RobotBasePtr _robot;
     PlannerBasePtr _planner;
     PlannerBase::PlannerParametersPtr _parameters;
@@ -427,7 +428,7 @@ public:
     ///
     /// \param torquelimitmode 1 if should use instantaneous max torque, 0 if should use nominal torque
     virtual void SetTorqueLimitMode(DynamicsConstraintsType torquelimitmode);
-    
+
     /// \brief set user check fucntions
     ///
     /// Two functions can be set, one to be called before check collision and one after.

@@ -572,7 +572,6 @@ protected:
 
 void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep)
 {
-    EnvironmentMutex::scoped_lock lockenv(trajectory->GetEnv()->GetMutex());
     if( !parameters ) {
         PlannerBase::PlannerParametersPtr newparams(new PlannerBase::PlannerParameters());
         newparams->SetConfigurationSpecification(trajectory->GetEnv(), trajectory->GetConfigurationSpecification().GetTimeDerivativeSpecification(0));
