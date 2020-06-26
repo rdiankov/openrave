@@ -826,6 +826,7 @@ public:
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        bool _DeserializeConnectedBodyInfo(RobotBase::ConnectedBodyInfo& connectedBodyInfo, rapidjson::Document& currentDoc, const std::string uri, std::set<std::string>& circularReference);
 
         std::vector<ManipulatorInfoPtr> _vManipulatorInfos; ///< list of pointers to ManipulatorInfo
         std::vector<AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< list of pointers to AttachedSensorInfo

@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+#include <openrave/openravejson.h>
+
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
 namespace OpenRAVE {
@@ -635,7 +637,41 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
                 id = OpenRAVE::orjson::GetStringJsonValueByKey(connectedBodyValue, "name");
                 connectedBodyIdGenerator.EnsureUniqueID(id);
             }
-            UpdateOrCreateInfo(connectedBodyValue, id, _vConnectedBodyInfos, fUnitScale);
+            // connectedBody use *uri* to represent referenceUri;
+            std::string referenceUri = OpenRAVE::orjson::GetStringJsonValueByKey(connectedBodyValue, "uri");
+            if (!referenceUri.empty()) {
+                // TODO: extend connectedBodyValue
+                boost::shared_ptr<RobotBase::ConnectedBodyInfo> pConnectedBodyInfo;
+                typename std::vector<boost::shared_ptr<RobotBase::ConnectedBodyInfo>>::iterator itExistingInfo = _vConnectedBodyInfos.end();
+                FOREACH(itInfo, _vConnectedBodyInfos) {
+                    if ((*itInfo)->_id == id) {
+                        itExistingInfo = itInfo;
+                    }
+                }
+                if (itExistingInfo != _vConnectedBodyInfos.end()) {
+                    pConnectedBodyInfo = *itExistingInfo;
+                }
+                else {
+                    pConnectedBodyInfo.reset(new RobotBase::ConnectedBodyInfo());
+                }
+                std::set<std::string> circularReference;
+                rapidjson::Document doc;
+                doc.CopyFrom(value, doc.GetAllocator());
+                if (!_DeserializeConnectedBodyInfo(*pConnectedBodyInfo, doc, referenceUri, circularReference)) {
+                    RAVELOG_ERROR("Deserialize connected body failed");
+                    continue;
+                }
+                (*pConnectedBodyInfo).DeserializeJSON(*it);
+
+                if (itExistingInfo == _vConnectedBodyInfos.end()) {
+                    _vConnectedBodyInfos.push_back(pConnectedBodyInfo);
+                }
+
+            }
+            else {
+                UpdateOrCreateInfo(connectedBodyValue, id, _vConnectedBodyInfos, fUnitScale);
+            }
+
         }
     }
 
@@ -662,6 +698,36 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
             UpdateOrCreateInfo(gripperInfoValue, id, _vGripperInfos, fUnitScale);
         }
     }
+}
+
+bool RobotBase::RobotBaseInfo::_DeserializeConnectedBodyInfo(RobotBase::ConnectedBodyInfo& connectedBodyInfo, rapidjson::Document& currentDoc, const std::string uri, std::set<std::string>& circularReference) {
+    if (circularReference.find(uri) != circularReference.end()) {
+        RAVELOG_ERROR("Load connected body failed: circular reference is found");
+        return false;
+    }
+    std::string scheme, path, fragment;
+    OpenRAVE::orjson::ParseURI(uri, scheme, path, fragment);
+    std::string fullFilename = OpenRAVE::orjson::ResolveURI(uri, std::vector<std::string>()); // TODO: passing vOpenRAVESchemeAliases
+    rapidjson::Document doc(&currentDoc.GetAllocator());
+    if (fullFilename.empty()) {
+        return false;
+    }
+
+    OpenRAVE::orjson::OpenRapidJsonDocument(fullFilename, doc);
+    if (doc.HasMember("bodies")) {
+        for(rapidjson::Value::ConstValueIterator it = doc["bodies"].Begin(); it != doc["bodies"].End(); it++) {
+            std::string id = OpenRAVE::orjson::GetJsonValueByKey<std::string>(*it, "id", "");
+            if ( id == fragment || fragment.empty() ){ // if fragment is empty, deserialize the first one
+                std::string referenceUri = OpenRAVE::orjson::GetJsonValueByKey<std::string>(*it, "referenceUri", "");
+                if (!referenceUri.empty()) {
+                    _DeserializeConnectedBodyInfo(connectedBodyInfo, doc, referenceUri, circularReference);
+                }
+                connectedBodyInfo.DeserializeJSON(*it);
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const rapidjson::Value& value) {
