@@ -1224,7 +1224,7 @@ protected:
     /// and also the first and last few prismatic joints. So the first and last joints in the essential kinematics chain are always revolute.
     /// \param [in] pmanip    manipulator that, if not mapped yet, will be mapped to its essential kinematics chain
     virtual void _EnsureEssentialKinematicsChainRegisteredOnManipulator(ManipulatorConstPtr pmanip);
-        
+
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
     ManipulatorPtr _pManipActive;
 

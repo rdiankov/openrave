@@ -62,7 +62,7 @@ std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain)
     }
 
     std::ostringstream ss;
-    ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION); // SERIALIZATION_PRECISION = 4 from libopenrave.h 
+    ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION); // SERIALIZATION_PRECISION = 4 from libopenrave.h
 
     const int baselinkind = baselink->GetIndex();
     const int eelinkind = eelink->GetIndex();
@@ -153,17 +153,21 @@ LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain)
     }
 
     const std::vector<JointPtr>::const_iterator itFirstR = std::find_if(begin(joints), end(joints),
-        [](const JointPtr& pjoint) { return pjoint->IsRevolute(0); }
-    );
+                                                                        [](const JointPtr& pjoint) {
+            return pjoint->IsRevolute(0);
+        }
+                                                                        );
     if(itFirstR == end(joints)) {
         RAVELOG_WARN("No revolute joints at all");
         joints.clear();
         return {nullptr, nullptr};
     }
 
-    const std::vector<JointPtr>::const_reverse_iterator ritLastR = std::find_if(joints.rbegin(), joints.rend(), 
-        [](const JointPtr& pjoint) { return pjoint->IsRevolute(0); }
-    );
+    const std::vector<JointPtr>::const_reverse_iterator ritLastR = std::find_if(joints.rbegin(), joints.rend(),
+                                                                                [](const JointPtr& pjoint) {
+            return pjoint->IsRevolute(0);
+        }
+                                                                                );
     return {(*itFirstR)->GetHierarchyParentLink(), (*ritLastR)->GetHierarchyChildLink()};
 }
 

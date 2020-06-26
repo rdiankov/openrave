@@ -456,7 +456,7 @@ bool PyRobotBase::PyManipulator::SetPostureDescriber(PyPostureDescriberBasePtr p
     const RobotBasePtr probot = _pmanip->GetRobot();
     if(pydescriber == nullptr) {
         return probot->UnregisterPostureDescriber(_pmanip);
-    }    
+    }
     return probot->SetPostureDescriber(_pmanip, pydescriber->GetPostureDescriber());
 }
 
@@ -1805,7 +1805,7 @@ PyPostureDescriberBasePtr PyRobotBase::GeneratePostureDescriber(PyManipulatorPtr
 bool PyRobotBase::SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberBasePtr pydescriber) const {
     if(pydescriber == nullptr) {
         return _probot->UnregisterPostureDescriber(pymanip->GetManipulator());
-    }    
+    }
     return _probot->SetPostureDescriber(pymanip->GetManipulator(), pydescriber->GetPostureDescriber());
 }
 
@@ -1960,9 +1960,9 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyAttachedSensorInfo_DeserializeJSON_over
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyConnectedBodyInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 
 // posture
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyRobotBaseGeneratePostureDescriber_overloads  , GeneratePostureDescriber, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyRobotBaseGeneratePostureDescriber_overloads, GeneratePostureDescriber, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyManipulatorGeneratePostureDescriber_overloads, GeneratePostureDescriber, 0, 1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyRobotBaseComputePostureStates_overloads  , ComputePostureStates, 1, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyRobotBaseComputePostureStates_overloads, ComputePostureStates, 1, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyManipulatorComputePostureStates_overloads, ComputePostureStates, 0, 3)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
@@ -2303,25 +2303,25 @@ void init_openravepy_robot()
                        .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver, CreateRobotStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a RobotStateSaver")[return_value_policy<manage_new_object>()])
 #endif
                        // posture describer
-#ifdef USE_PYBIND11_PYTHON_BINDINGS  
-                       .def("GeneratePostureDescriber", &PyRobotBase::GeneratePostureDescriber, 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                       .def("GeneratePostureDescriber", &PyRobotBase::GeneratePostureDescriber,
                             "manip"_a,
                             "load"_a = false,
                             DOXY_FN(RobotBase, GeneratePostureDescriber)
-                        )
+                            )
 #else
-                       .def("GeneratePostureDescriber", &PyRobotBase::GeneratePostureDescriber        , PyRobotBaseGeneratePostureDescriber_overloads(PY_ARGS("manip", "load") DOXY_FN(RobotBase, GeneratePostureDescriber)))
+                       .def("GeneratePostureDescriber", &PyRobotBase::GeneratePostureDescriber, PyRobotBaseGeneratePostureDescriber_overloads(PY_ARGS("manip", "load") DOXY_FN(RobotBase, GeneratePostureDescriber)))
 #endif
-                       .def("SetPostureDescriber",      &PyRobotBase::SetPostureDescriber             , PY_ARGS("manip", "describer") DOXY_FN(RobotBase             , SetPostureDescriber))
-                       .def("GetPostureDescriber",      &PyRobotBase::GetPostureDescriber             , PY_ARGS("manip")              DOXY_FN(RobotBase             , GetPostureDescriber))
+                       .def("SetPostureDescriber",      &PyRobotBase::SetPostureDescriber, PY_ARGS("manip", "describer") DOXY_FN(RobotBase, SetPostureDescriber))
+                       .def("GetPostureDescriber",      &PyRobotBase::GetPostureDescriber, PY_ARGS("manip")              DOXY_FN(RobotBase, GetPostureDescriber))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def("ComputePostureStates", &PyRobotBase::ComputePostureStates,
-                           "manip"_a,
-                           "dofvalues"_a = py::none_(),
-                           "dofindices"_a = py::none_(),
-                           "claoptions"_a = static_cast<uint32_t>(OpenRAVE::KinBody::CheckLimitsAction::CLA_Nothing),
-                           DOXY_FN(RobotBase, ComputePostureStates "")
-                       )
+                            "manip"_a,
+                            "dofvalues"_a = py::none_(),
+                            "dofindices"_a = py::none_(),
+                            "claoptions"_a = static_cast<uint32_t>(OpenRAVE::KinBody::CheckLimitsAction::CLA_Nothing),
+                            DOXY_FN(RobotBase, ComputePostureStates "")
+                            )
 #else
                        .def("ComputePostureStates",     &PyRobotBase::ComputePostureStates, PyRobotBaseComputePostureStates_overloads(PY_ARGS("manip", "dofvalues", "dofindices", "claoptions") DOXY_FN(RobotBase, ComputePostureStates)))
 #endif
@@ -2368,23 +2368,23 @@ void init_openravepy_robot()
         .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters, DOXY_FN(RobotBase::Manipulator,GetFreeParameters))
 
         // posture describer
-#ifdef USE_PYBIND11_PYTHON_BINDINGS  
-        .def("GeneratePostureDescriber", &PyRobotBase::PyManipulator::GeneratePostureDescriber, 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def("GeneratePostureDescriber", &PyRobotBase::PyManipulator::GeneratePostureDescriber,
              "load"_a = false,
              DOXY_FN(RobotBase, GeneratePostureDescriber)
-        )
+             )
 #else
         .def("GeneratePostureDescriber", &PyRobotBase::PyManipulator::GeneratePostureDescriber, PyManipulatorGeneratePostureDescriber_overloads(PY_ARGS("load") DOXY_FN(RobotBase::Manipulator, GeneratePostureDescriber)))
 #endif
-        .def("SetPostureDescriber",      &PyRobotBase::PyManipulator::SetPostureDescriber     , PY_ARGS("describer")                DOXY_FN(RobotBase::Manipulator, SetPostureDescriber))
-        .def("GetPostureDescriber",      &PyRobotBase::PyManipulator::GetPostureDescriber     ,                                     DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
+        .def("SetPostureDescriber",      &PyRobotBase::PyManipulator::SetPostureDescriber, PY_ARGS("describer")                DOXY_FN(RobotBase::Manipulator, SetPostureDescriber))
+        .def("GetPostureDescriber",      &PyRobotBase::PyManipulator::GetPostureDescriber,                                     DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("ComputePostureStates", &PyRobotBase::PyManipulator::ComputePostureStates,
-            "dofvalues"_a = py::none_(),
-            "dofindices"_a = py::none_(),
-            "claoptions"_a = static_cast<uint32_t>(OpenRAVE::KinBody::CheckLimitsAction::CLA_Nothing),
-            DOXY_FN(RobotBase::Manipulator, ComputePostureStates "")
-        )
+             "dofvalues"_a = py::none_(),
+             "dofindices"_a = py::none_(),
+             "claoptions"_a = static_cast<uint32_t>(OpenRAVE::KinBody::CheckLimitsAction::CLA_Nothing),
+             DOXY_FN(RobotBase::Manipulator, ComputePostureStates "")
+             )
 #else
         .def("ComputePostureStates", &PyRobotBase::PyManipulator::ComputePostureStates, PyManipulatorComputePostureStates_overloads(PY_ARGS("dofvalues", "dofindices", "claoptions") DOXY_FN(RobotBase::Manipulator, ComputePostureStates)))
 #endif
