@@ -67,8 +67,8 @@ inline T operator|=(T& x, T y)
 }
 
 using PostureValueFn = std::function<void(const std::vector<KinBody::JointPtr>& joints,
-                                          const double fTol,
-                                          std::vector<double>& posturevalues,
+                                          const dReal fTol,
+                                          std::vector<dReal>& posturevalues,
                                           std::vector<PostureStateInt>& featurestates,
                                           std::vector<PostureStateInt>& posturestates ///< most needed
                                           )>;
@@ -77,7 +77,7 @@ class OPENRAVE_API PostureDescriber : public PostureDescriberBase
 {
 public:
     PostureDescriber() = delete;
-    PostureDescriber(const EnvironmentBasePtr& penv, const double fTol = 1e-6);
+    PostureDescriber(const EnvironmentBasePtr& penv, const dReal fTol = 1e-6);
     virtual ~PostureDescriber();
 
     /// \brief Checks if we can use this describer class to compute posture values for a kinematics chain from baselink to eelink.
@@ -94,13 +94,13 @@ public:
     /// \param [out] posturestates   posture states, whose size is a power of 2. Always non-empty if (1) this class is properly initialized AND (2) dofvalues is either empty or has the correct size.
     /// \return true if (1) this describer class is properly initialized AND (2) dofvalues is either empty or has the correct size.
     virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturestates,
-                                     const std::vector<double>& dofvalues = {},
+                                     const std::vector<dReal>& dofvalues = {},
                                      const std::vector<int>& dofindices = {},
                                      const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing
                                      ) override;
 
     /// \brief Sets the tolerance for determining whether a robot posture value (shoulder, elbow, wrist, etc.) is close to 0
-    bool SetPostureValueThreshold(const double fTol);
+    bool SetPostureValueThreshold(const dReal fTol);
 
     /// \brief Gets the key used in map data (of type CustomData) in IkReturn
     virtual std::string GetMapDataKey() const override;
@@ -147,15 +147,15 @@ protected:
     LinkPair _kinematicsChain {nullptr, nullptr}; ///< the baselink-eelink pair of a kinematics chain
     std::vector<KinBody::JointPtr> _joints; ///< non-static joints from baselink to eelink
     std::vector<int> _armindices; ///< dof indices from baselink to eelink
-    double _fTol = 1e-6; ///< tolerance for determining if a robot posture value is considered 0
-    double _fGeometryTol = 4e-15; ///< tolerance for determining the geometric relation between two neighbouring joints
+    dReal _fTol = 1e-6; ///< tolerance for determining if a robot posture value is considered 0
+    dReal _fGeometryTol = 4e-15; ///< tolerance for determining the geometric relation between two neighbouring joints
     size_t _nfeatures = 0; ///< number of features
     PostureValueFn _posturefn; ///< function that computes posture values and states for a kinematics chain
     RobotPostureSupportType _supporttype = RobotPostureSupportType::RPST_NoSupport;
     std::string _posturestatename = POSTUREDESCRIBER_STATE_NAME;
 
     /* ========== cached values ========== */
-    std::vector<double>          _posturevalues; ///< cached posture values
+    std::vector<dReal>          _posturevalues; ///< cached posture values
     std::vector<PostureStateInt> _featurestates; ///< cached feature states
     std::vector<PostureStateInt> _posturestates; ///< cached posture states
 };
