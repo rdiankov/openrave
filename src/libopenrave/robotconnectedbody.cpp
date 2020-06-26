@@ -405,6 +405,8 @@ const std::string& RobotBase::ConnectedBody::GetStructureHash() const
     if (__hashstructure.size() == 0) {
         rapidjson::Document doc;
         _info.SerializeJSON(doc, doc.GetAllocator(), 1.0);
+        // set isActive to -1 so that its state does not affect the hash
+        openravejson::SetJsonValueByKey(doc, "isActive", -1, doc.GetAllocator());
         __hashstructure = utils::GetMD5HashString(openravejson::DumpJson(doc));
     }
     return __hashstructure;
