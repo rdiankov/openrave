@@ -2339,8 +2339,14 @@ private:
                     daeElementRef pconstrainttec = pconstraint->add("technique");
                     pconstrainttec->setAttribute("profile","OpenRAVE");
                     FOREACHC(itignorelink, listIgnoreLinks) {
-                        string linksid = ipmout->pmout->vrigidbodysids.at((*itignorelink)->GetIndex());
-                        pconstrainttec->add("ignore_link")->setAttribute("link",linksid.c_str());
+                        KinBody::LinkConstPtr& pignorelink = *itignorelink;
+                        if( pignorelink->GetIndex() < (int)ipmout->pmout->vrigidbodysids.size() ) {
+                            string linksid = ipmout->pmout->vrigidbodysids.at(pignorelink->GetIndex());
+                            pconstrainttec->add("ignore_link")->setAttribute("link",linksid.c_str());
+                        }
+                        else {
+                            RAVELOG_WARN_FORMAT("could not get linksid of link %s (index %d) when vrigidbodysids.size=%d", pignorelink->GetName()%pignorelink->GetIndex()%ipmout->pmout->vrigidbodysids.size());
+                        }
                     }
                 }
             }
