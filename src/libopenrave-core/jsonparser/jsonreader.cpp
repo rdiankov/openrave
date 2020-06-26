@@ -88,6 +88,9 @@ public:
         std::string scheme, path, fragment;
         ParseURI(uri, scheme, path, fragment);
         std::string fullFilename = ResolveURI(uri, GetOpenRAVESchemeAliases());
+        if (fullFilename.empty() && fragment.empty()) {
+            return false;
+        }
 
         boost::shared_ptr<const rapidjson::Document> expandedDoc;
         rapidjson::Document rEnv;
@@ -95,6 +98,7 @@ public:
 
         bool bFoundBody = false;
         rapidjson::Value bodyValue;
+
         if (fullFilename.empty() && !fragment.empty()) {
             // reference to itself
             if (currentDoc.HasMember("bodies")) {
@@ -103,7 +107,7 @@ public:
                     if (id == fragment) {
                         if (IsExpandableRapidJSON(*it)) {
                             std::string bodyUri = OpenRAVE::orjson::GetJsonValueByKey<std::string>(*it, "referenceUri", "");
-                            if (!ExpandRapidJSON(envInfo, currentDoc, bodyId, bodyUri, circularReference, fUnitScale)) {
+                            if (!ExpandRapidJSON(envInfo, currentDoc, id, bodyUri, circularReference, fUnitScale)) {
                                 return false;
                             }
                         }
