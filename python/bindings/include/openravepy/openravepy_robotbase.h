@@ -224,7 +224,8 @@ public:
         object GetResolvedGripperInfos();
 
         bool CanProvideManipulator(const std::string& resolvedManipulatorName);
-        std::string GetStructureHash();
+
+        std::string GetInfoHash();
 
         std::string __repr__();
 

@@ -400,16 +400,18 @@ bool RobotBase::ConnectedBody::CanProvideManipulator(const std::string& resolved
     return false;
 }
 
-const std::string& RobotBase::ConnectedBody::GetStructureHash() const
+const std::string& RobotBase::ConnectedBody::GetInfoHash() const
 {
-    if (__hashstructure.size() == 0) {
+    // _info currently is only set from constructor, so we don't need to invalidate __hashinfo yet
+    // isActive is ignored in the _info
+    if (__hashinfo.size() == 0) {
         rapidjson::Document doc;
         _info.SerializeJSON(doc, doc.GetAllocator(), 1.0);
         // set isActive to -1 so that its state does not affect the hash
         openravejson::SetJsonValueByKey(doc, "isActive", -1, doc.GetAllocator());
-        __hashstructure = utils::GetMD5HashString(openravejson::DumpJson(doc));
+        __hashinfo = utils::GetMD5HashString(openravejson::DumpJson(doc));
     }
-    return __hashstructure;
+    return __hashinfo;
 }
 
 RobotBase::ConnectedBodyPtr RobotBase::AddConnectedBody(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, bool removeduplicate)
