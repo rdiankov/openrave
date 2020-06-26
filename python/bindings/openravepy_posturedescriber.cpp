@@ -67,21 +67,25 @@ PostureDescriberBasePtr PyPostureDescriberBase::GetPostureDescriber() const {
     return _pDescriber;
 }
 
-bool PyPostureDescriberBase::Supports(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink) const {
+bool PyPostureDescriberBase::Supports(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink) const
+{
     const LinkPair kinematicsChain {pBaseLink->GetLink(), pEndEffectorLink->GetLink()};
     return _pDescriber->Supports(kinematicsChain);
 }
 
-bool PyPostureDescriberBase::Supports(PyManipulatorPtr pmanip) const {
+bool PyPostureDescriberBase::Supports(PyManipulatorPtr pmanip) const
+{
     return _pDescriber->Supports(pmanip->GetManipulator());
 }
 
-bool PyPostureDescriberBase::Init(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink) {
+bool PyPostureDescriberBase::Init(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink)
+{
     const LinkPair kinematicsChain {pBaseLink->GetLink(), pEndEffectorLink->GetLink()};
     return _pDescriber->Init(kinematicsChain);
 }
 
-bool PyPostureDescriberBase::Init(PyManipulatorPtr pmanip) {
+bool PyPostureDescriberBase::Init(PyManipulatorPtr pmanip)
+{
     return _pDescriber->Init(pmanip->GetManipulator());
 }
 
@@ -111,15 +115,18 @@ object PyPostureDescriberBase::ComputePostureStates(object pydofvalues, object p
     return StdVectorToPyList<PostureStateInt>(_posturestates);
 }
 
-std::string PyPostureDescriberBase::GetMapDataKey() const {
+std::string PyPostureDescriberBase::GetMapDataKey() const
+{
     return _pDescriber->GetMapDataKey();
 }
 
-bool PyPostureDescriberBase::IsInitialized() const {
+bool PyPostureDescriberBase::IsInitialized() const
+{
     return _pDescriber->IsInitialized();
 }
 
-bool PyPostureDescriberBase::Load() const {
+bool PyPostureDescriberBase::Load() const
+{
     if(this->IsInitialized()) {
          const LinkPair& kinematicsChain = _pDescriber->GetEssentialKinematicsChain();
          const KinBodyPtr pbody = kinematicsChain[0]->GetParent();
@@ -131,14 +138,16 @@ bool PyPostureDescriberBase::Load() const {
     return false;
 }
 
-py::object PyPostureDescriberBase::Interpret(const PostureStateInt state) const {
+py::object PyPostureDescriberBase::Interpret(const PostureStateInt state) const
+{
     rapidjson::Document rIn, rOut;
     openravejson::SetJsonValueByKey(rIn, "posturestate", state, rIn.GetAllocator());
     _pDescriber->SendJSONCommand("Interpret", rIn, rOut);
     return toPyObject(rOut);
 }
 
-PyPostureDescriberBasePtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip, std::string interfacename, const bool load) {
+PyPostureDescriberBasePtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip, const std::string& custominterfacename, const bool load)
+{
     const ManipulatorPtr pmanip = pymanip->GetManipulator();
     const RobotBasePtr probot = pmanip->GetRobot();
     const EnvironmentBasePtr penv = probot->GetEnv();
@@ -149,9 +158,8 @@ PyPostureDescriberBasePtr GeneratePostureDescriber(const PyManipulatorPtr& pyman
         return PyPostureDescriberBasePtr();
     }
     const std::string chainhash = ComputeKinematicsChainHash(linkpair);    
-    if(interfacename.empty()) {
-        interfacename = "posturedescriber"; ///< default to OpenRAVE's posture describer
-    }
+    ///< default to OpenRAVE's posture describer
+    const std::string interfacename = custominterfacename.empty() ? "posturedescriber" : custominterfacename;
     const std::string describername = interfacename + "." + probot->GetName() + "." + chainhash + "." + linkpair[0]->GetName() + "." + linkpair[1]->GetName();
     const PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, interfacename + " " + describername);
     if(pDescriber == nullptr) {

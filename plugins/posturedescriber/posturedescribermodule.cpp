@@ -43,19 +43,22 @@ PostureDescriberModule::PostureDescriberModule(const EnvironmentBasePtr& penv) :
                               "Loads a robot posture describer onto a (base link, end-effector link) pair, or onto a manipulator that prescribes the pair");
 }
 
-bool PostureDescriberModule::_SetInterfaceNameCommand(std::ostream& ssout, std::istream& ssin) {
+bool PostureDescriberModule::_SetInterfaceNameCommand(std::ostream& ssout, std::istream& ssin)
+{
     ssin >> _interfacename;
     return !!ssin;
 }
 
-bool PostureDescriberModule::_GetInterfaceNameCommand(std::ostream& ssout, std::istream& ssin) const {
+bool PostureDescriberModule::_GetInterfaceNameCommand(std::ostream& ssout, std::istream& ssin) const
+{
     ssout << _interfacename;
     return true;
 }
 
 bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::Value& input,
                                                               rapidjson::Value& output,
-                                                              rapidjson::Document::AllocatorType& allocator) {
+                                                              rapidjson::Document::AllocatorType& allocator)
+{
     const EnvironmentBasePtr penv = GetEnv();
     const int envId = penv->GetId();
 
