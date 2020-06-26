@@ -159,7 +159,7 @@ PyPostureDescriberBasePtr GeneratePostureDescriber(const PyManipulatorPtr& pyman
     }
     const std::string chainhash = ComputeKinematicsChainHash(linkpair);    
     ///< default to OpenRAVE's posture describer
-    std::string interfacename = custominterfacename.empty() ? "posturedescriber" : custominterfacename;
+    const std::string interfacename = custominterfacename.empty() ? "posturedescriber" : custominterfacename;
     const std::string describername = interfacename + "." + probot->GetName() + "." + chainhash + "." + linkpair[0]->GetName() + "." + linkpair[1]->GetName();
     const PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, interfacename + " " + describername);
     if(pDescriber == nullptr) {
