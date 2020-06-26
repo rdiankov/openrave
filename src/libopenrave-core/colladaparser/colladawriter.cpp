@@ -2340,7 +2340,7 @@ private:
                     pconstrainttec->setAttribute("profile","OpenRAVE");
                     FOREACHC(itignorelink, listIgnoreLinks) {
                         KinBody::LinkConstPtr& pignorelink = *itignorelink;
-                        if( pignorelink->GetIndex() < ipmout->pmout->vrigidbodysids.size() ) {
+                        if( pignorelink->GetIndex() < (int)ipmout->pmout->vrigidbodysids.size() ) {
                             string linksid = ipmout->pmout->vrigidbodysids.at(pignorelink->GetIndex());
                             pconstrainttec->add("ignore_link")->setAttribute("link",linksid.c_str());
                         }

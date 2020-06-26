@@ -221,11 +221,11 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
 #endif
     else if (PyString_Check(obj.ptr()))
     {
-        value.SetString(PyString_AsString(obj.ptr()), PyString_GET_SIZE(obj.ptr()));
+        value.SetString(PyString_AsString(obj.ptr()), PyString_GET_SIZE(obj.ptr()), allocator);
     }
     else if (PyUnicode_Check(obj.ptr()))
     {
-        value.SetString(PyBytes_AsString(obj.ptr()), PyBytes_GET_SIZE(obj.ptr()));
+        value.SetString(PyBytes_AsString(obj.ptr()), PyBytes_GET_SIZE(obj.ptr()), allocator);
     }
     else if (PyTuple_Check(obj.ptr()))
     {
