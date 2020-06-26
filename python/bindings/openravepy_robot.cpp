@@ -1074,6 +1074,11 @@ bool PyRobotBase::PyConnectedBody::CanProvideManipulator(const std::string& reso
     return _pconnected->CanProvideManipulator(resolvedManipulatorName);
 }
 
+std::string PyRobotBase::PyConnectedBody::GetStructureHash()
+{
+    return _pconnected->GetStructureHash();
+}
+
 std::string PyRobotBase::PyConnectedBody::__repr__() {
     return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetConnectedBody('%s')") %
                       RaveGetEnvironmentId(_pconnected->GetRobot()->GetEnv()) %
@@ -2456,6 +2461,7 @@ void init_openravepy_robot()
         .def("GetResolvedAttachedSensors",&PyRobotBase::PyConnectedBody::GetResolvedAttachedSensors, DOXY_FN(RobotBase::ConnectedBody,GetResolvedAttachedSensors))
         .def("GetResolvedGripperInfos",&PyRobotBase::PyConnectedBody::GetResolvedGripperInfos, DOXY_FN(RobotBase::ConnectedBody,GetResolvedGripperInfos))
         .def("CanProvideManipulator", &PyRobotBase::PyConnectedBody::CanProvideManipulator, DOXY_FN(RobotBase::ConnectedBody,CanProvideManipulator))
+        .def("GetStructureHash", &PyRobotBase::PyConnectedBody::GetStructureHash, DOXY_FN(RobotBase::ConnectedBody,GetStructureHash))
         .def("__str__",&PyRobotBase::PyConnectedBody::__str__)
         .def("__repr__",&PyRobotBase::PyConnectedBody::__repr__)
         .def("__unicode__",&PyRobotBase::PyConnectedBody::__unicode__)

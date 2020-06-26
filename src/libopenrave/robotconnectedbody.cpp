@@ -400,6 +400,16 @@ bool RobotBase::ConnectedBody::CanProvideManipulator(const std::string& resolved
     return false;
 }
 
+const std::string& RobotBase::ConnectedBody::GetStructureHash() const
+{
+    if (__hashstructure.size() == 0) {
+        rapidjson::Document doc;
+        _info.SerializeJSON(doc, doc.GetAllocator(), 1.0);
+        __hashstructure = utils::GetMD5HashString(openravejson::DumpJson(doc));
+    }
+    return __hashstructure;
+}
+
 RobotBase::ConnectedBodyPtr RobotBase::AddConnectedBody(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, bool removeduplicate)
 {
     if( _nHierarchyComputed != 0 ) {

@@ -673,7 +673,7 @@ public:
         // virtual void serialize(std::ostream& o, int options) const;
 
         /// \brief return hash of the attached kinbody definition
-        // virtual const std::string& GetStructureHash() const;
+        virtual const std::string& GetStructureHash() const;
 
         /// \brief returns the attached kinbody info
         inline const ConnectedBodyInfo& GetInfo() const {
