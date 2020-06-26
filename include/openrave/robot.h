@@ -769,8 +769,8 @@ public:
 
         // virtual void serialize(std::ostream& o, int options) const;
 
-        /// \brief return hash of the attached kinbody definition
-        // virtual const std::string& GetStructureHash() const;
+        /// \brief return hash of the connected body info
+        virtual const std::string& GetInfoHash() const;
 
         /// \brief returns the attached kinbody info
         inline const ConnectedBodyInfo& GetInfo() const {
@@ -800,7 +800,7 @@ private:
 
         RobotBaseWeakPtr _pattachedrobot; ///< the robot that the body is attached to
         LinkWeakPtr _pattachedlink;         ///< the robot link that the body is attached to
-        mutable std::string __hashstructure;
+        mutable std::string __hashinfo;
 
         friend class ColladaReader;
         friend class RobotBase;
