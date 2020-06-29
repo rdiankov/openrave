@@ -166,10 +166,10 @@ protected:
 
                 // finally push to the bodiesValue array if bodyValue is not empty
                 if (bodyValue.MemberCount() > 0) {
-                    std::string bodyId = OpenRAVE::orjson::GetJsonValueByKey<std::string>(bodyValue, "id");
-                    if (mShadowBodyValue.find(bodyId) != mShadowBodyValue.end()) {
-                        RemoveShadowRapidJSON(bodyValue, mShadowBodyValue[bodyId], _allocator);
-                    }
+                    // std::string bodyId = OpenRAVE::orjson::GetJsonValueByKey<std::string>(bodyValue, "id");
+                    // if (mShadowBodyValue.find(bodyId) != mShadowBodyValue.end()) {
+                    //     RemoveRapidJSON(bodyValue, mShadowBodyValue[bodyId], _allocator);
+                    // }
                     bodiesValue.PushBack(bodyValue, _allocator);
                 }
             }

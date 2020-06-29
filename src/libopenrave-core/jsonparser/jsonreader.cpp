@@ -189,9 +189,9 @@ public:
                     }
                 }
             }
+            envInfo.DeserializeJSON(doc, fUnitScale);
+            _penv->UpdateFromInfo(envInfo);
         }
-        envInfo.DeserializeJSON(doc, fUnitScale);
-        _penv->UpdateFromInfo(envInfo);
         return true;
     }
 

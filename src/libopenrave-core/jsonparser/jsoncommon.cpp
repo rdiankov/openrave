@@ -20,7 +20,7 @@
 
 namespace OpenRAVE {
 
-void RemoveShadowRapidJSON(rapidjson::Value& value, const rapidjson::Value& shadowValue, rapidjson::Document::AllocatorType& alloc) {
+void RemoveExpandedRapidJSON(rapidjson::Value& value, const rapidjson::Value& shadowValue, rapidjson::Document::AllocatorType& alloc) {
     for (rapidjson::Value::MemberIterator it = value.MemberBegin(); it != value.MemberEnd(); it++){
         std::string name = it->name.GetString();
         if (!shadowValue.HasMember(name.c_str())) {
@@ -45,7 +45,7 @@ void RemoveShadowRapidJSON(rapidjson::Value& value, const rapidjson::Value& shad
             }
         }
         else if (jsonType == "Object") {
-            RemoveShadowRapidJSON(it->value, rShadow, alloc);
+            RemoveExpandedRapidJSON(it->value, rShadow, alloc);
             if (it->value.MemberCount() == 0) {
                 value.RemoveMember(name.c_str());
             }
@@ -64,7 +64,7 @@ void RemoveShadowRapidJSON(rapidjson::Value& value, const rapidjson::Value& shad
                     if (shadowItemId == itemId) {
                         OpenRAVE::orjson::SetJsonValueByKey(rItemOrigin, "item", itemValue, alloc);
                         OpenRAVE::orjson::SetJsonValueByKey(rItemShadow, "item", itemValue, alloc);
-                        RemoveShadowRapidJSON(rItemOrigin, rItemShadow, alloc);
+                        RemoveExpandedRapidJSON(rItemOrigin, rItemShadow, alloc);
                         if (rItemOrigin.MemberCount() == 0) {
                             it->value.Erase(itemValue);
                         }
