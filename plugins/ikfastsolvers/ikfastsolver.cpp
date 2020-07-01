@@ -242,9 +242,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         }
 
         RobotBasePtr probot = pmanip->GetRobot();
-        RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmIndices());
-        probot->GetActiveDOFLimits(_qlower,_qupper);
+        probot->GetDOFLimits(_qlower,_qupper,pmanip->GetArmIndices());
         _qmid.resize(_qlower.size());
         _qbigrangeindices.resize(0);
         _qbigrangemaxsols.resize(0);
@@ -400,9 +398,6 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         }
 #endif
 
-        // get the joint limits
-        RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmIndices());
         SetJointLimits();
         return true;
     }
