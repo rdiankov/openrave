@@ -247,7 +247,9 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         }
     }
 
-    _probot->GetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
+    if( _options & Save_ConnectedBodies ) {
+        _probot->GetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
+    }
 }
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
@@ -303,20 +305,25 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
         return;
     }
 
-    if( _vConnectedBodyActiveStates.size() == probot->_vecConnectedBodies.size() ) {
-        bool bchanged = false;
-        for(size_t iconnectedbody = 0; iconnectedbody < probot->_vecConnectedBodies.size(); ++iconnectedbody) {
-            if( probot->_vecConnectedBodies[iconnectedbody]->IsActive() != _vConnectedBodyActiveStates[iconnectedbody] ) {
-                bchanged = true;
-                break;
+    if( _options & Save_ConnectedBodies ) {
+        if( _vConnectedBodyActiveStates.size() == probot->_vecConnectedBodies.size() ) {
+            bool bchanged = false;
+            for(size_t iconnectedbody = 0; iconnectedbody < probot->_vecConnectedBodies.size(); ++iconnectedbody) {
+                if( probot->_vecConnectedBodies[iconnectedbody]->IsActive() != _vConnectedBodyActiveStates[iconnectedbody] ) {
+                    bchanged = true;
+                    break;
+                }
+            }
+
+            if( bchanged ) {
+                EnvironmentRobotRemover robotremover(probot);
+                // need to restore active connected bodies
+                // but first check whether anything changed
+                probot->SetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
             }
         }
-
-        if( bchanged ) {
-            EnvironmentRobotRemover robotremover(probot);
-            // need to restore active connected bodies
-            // but first check whether anything changed
-            probot->SetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
+        else {
+            RAVELOG_WARN_FORMAT("env=%d, connected body states changed, so cannot save. saved num is %s, new robot num is %s", probot->GetEnv()->GetId()%_vConnectedBodyActiveStates.size()%probot->_vecConnectedBodies.size());
         }
     }
 
