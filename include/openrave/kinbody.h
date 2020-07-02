@@ -1791,6 +1791,7 @@ private:
         Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
         Save_ActiveManipulatorToolTransform  = 0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
         Save_ManipulatorsToolTransform       = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
+        Save_ConnectedBodies                 = 0x00200000, ///< [robot only], saves the connected body states
     };
 
     /// \brief info structure used to initialize a kinbody

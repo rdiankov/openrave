@@ -243,7 +243,8 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
     sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
 }
 
-PyGeometryInfo::PyGeometryInfo() {}
+PyGeometryInfo::PyGeometryInfo() {
+}
 
 PyGeometryInfo::PyGeometryInfo(const KinBody::GeometryInfo& info) {
     Init(info);
@@ -478,7 +479,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     for(const std::pair<py::handle, py::handle>& item : _mapExtraGeometries) {
         std::string name = extract<std::string>(item.first);
         info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(); info._mapExtraGeometries[name].reserve(len(item.second));
-        for(size_t j = 0; j < len(item.second); j++){
+        for(size_t j = 0; j < len(item.second); j++) {
             PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(item.second[j]);
             info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
         }
@@ -490,7 +491,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
         object okeyvalue = okeyvalueiter.attr("next") ();
         std::string name = extract<std::string>(okeyvalue[0]);
         info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(); info._mapExtraGeometries[name].reserve(len(okeyvalue[1]));
-        for(size_t j = 0; j < (size_t)len(okeyvalue[1]); j++){
+        for(size_t j = 0; j < (size_t)len(okeyvalue[1]); j++) {
             PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(okeyvalue[1][j]);
             info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
         }
@@ -3037,7 +3038,7 @@ object PyKinBody::GetLinkVelocities() const
     _pbody->GetLinkVelocities(velocities);
     const size_t nvelocities = velocities.size();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvel({(int) nvelocities, 6});
+    py::array_t<dReal> pyvel({(int)nvelocities, 6});
     py::buffer_info buf = pyvel.request();
     dReal* pfvel = (dReal*) buf.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
@@ -3092,12 +3093,12 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
     std::vector<std::pair<Vector,Vector> > vLinkAccelerations;
     _pbody->GetLinkAccelerations(vDOFAccelerations, vLinkAccelerations, pmapExternalAccelerations);
 
-   const size_t nLinkAccelerations = vLinkAccelerations.size();
+    const size_t nLinkAccelerations = vLinkAccelerations.size();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyaccel({(int) nLinkAccelerations, 6});
+    py::array_t<dReal> pyaccel({(int)nLinkAccelerations, 6});
     py::buffer_info buf = pyaccel.request();
     dReal* pf = (dReal*) buf.ptr;
-#else // USE_PYBIND11_PYTHON_BINDINGS    
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = {npy_intp(nLinkAccelerations), npy_intp(6)};
     PyObject *pyaccel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pf = (dReal*)PyArray_DATA(pyaccel);
@@ -3901,28 +3902,28 @@ public:
     static py::tuple getstate(const PyGeometryInfo& r)
     {
         return py::make_tuple(
-            r._t, 
+            r._t,
             py::make_tuple(
-                r._vGeomData, 
-                r._vGeomData2, 
-                r._vGeomData3, 
+                r._vGeomData,
+                r._vGeomData2,
+                r._vGeomData3,
                 r._vGeomData4
-            ), 
-            r._vDiffuseColor, 
-            r._vAmbientColor, 
-            r._meshcollision, 
-            (int)r._type, 
+                ),
+            r._vDiffuseColor,
+            r._vAmbientColor,
+            r._meshcollision,
+            (int)r._type,
             py::make_tuple(
-                r._name, 
-                r._filenamerender, 
+                r._name,
+                r._filenamerender,
                 r._filenamecollision
-            ), 
-            r._vRenderScale, 
-            r._vCollisionScale, 
-            r._fTransparency, 
-            r._bVisible, 
-            r._bModifiable 
-        );
+                ),
+            r._vRenderScale,
+            r._vCollisionScale,
+            r._fTransparency,
+            r._bVisible,
+            r._bModifiable
+            );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
         //int num = len(state);
@@ -4325,21 +4326,21 @@ void init_openravepy_kinbody()
                                        .def_readwrite("coloumb_friction",&PyElectricMotorActuatorInfo::coloumb_friction)
                                        .def_readwrite("viscous_friction",&PyElectricMotorActuatorInfo::viscous_friction)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                       .def("SerializeJSON", &PyElectricMotorActuatorInfo::SerializeJSON, 
-                                           "unitScale"_a = 1.0,
-                                           "options"_a = py::none_(), 
-                                           DOXY_FN(ElectricMotorActuatorInfo, SerializeJSON)
-                                       )
+                                       .def("SerializeJSON", &PyElectricMotorActuatorInfo::SerializeJSON,
+                                            "unitScale"_a = 1.0,
+                                            "options"_a = py::none_(),
+                                            DOXY_FN(ElectricMotorActuatorInfo, SerializeJSON)
+                                            )
                                        .def("DeserializeJSON", &PyElectricMotorActuatorInfo::DeserializeJSON,
-                                           "obj"_a,
-                                           "unitScale"_a = 1.0,
-                                           DOXY_FN(GeometryInfo, DeserializeJSON)
-                                       )
+                                            "obj"_a,
+                                            "unitScale"_a = 1.0,
+                                            DOXY_FN(GeometryInfo, DeserializeJSON)
+                                            )
 #else
                                        .def("SerializeJSON", &PyElectricMotorActuatorInfo::SerializeJSON, PyElectricMotorActuatorInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(ElectricMotorActuatorInfo, SerializeJSON)))
                                        .def("DeserializeJSON", &PyElectricMotorActuatorInfo::DeserializeJSON, PyElectricMotorActuatorInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(ElectricMotorActuatorInfo, DeserializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-                                       
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                        .def(py::pickle(
                                                 [](const PyElectricMotorActuatorInfo& pyinfo) {
@@ -4425,30 +4426,30 @@ void init_openravepy_kinbody()
                                "unitScale"_a = 1.0,
                                "options"_a = py::none_(),
                                DOXY_FN(GeometryInfo,SerializeJSON)
-                          )
+                               )
                           .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON,
                                "obj"_a,
                                "unitScale"_a = 1.0,
                                DOXY_FN(GeometryInfo, DeserializeJSON)
-                          )
+                               )
 #else
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON, PyGeometryInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(GeometryInfo,SerializeJSON)))
                           .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, PyGeometryInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(GeometryInfo, DeserializeJSON)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        .def(py::pickle(
-            [](const PyGeometryInfo &pygeom) {
+                          .def(py::pickle(
+                                   [](const PyGeometryInfo &pygeom) {
             // __getstate__
             return GeometryInfo_pickle_suite::getstate(pygeom);
         },
-        [](py::tuple state) {
+                                   [](py::tuple state) {
             // __setstate__
             /* Create a new C++ instance */
             PyGeometryInfo pygeom;
             GeometryInfo_pickle_suite::setstate(pygeom, state);
             return pygeom;
         }
-        ))
+                                   ))
 #else
                           .def_pickle(GeometryInfo_pickle_suite())
 #endif
@@ -4487,16 +4488,16 @@ void init_openravepy_kinbody()
                       .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
                       .def_readwrite("_bVisible",&PyLinkInfo::_bVisible)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                      .def("SerializeJSON", &PyLinkInfo::SerializeJSON, 
-                          "unitScale"_a = 1.0,
-                          "options"_a = py::none_(),
-                          DOXY_FN(LinkInfo, SerializeJSON)
-                       )
+                      .def("SerializeJSON", &PyLinkInfo::SerializeJSON,
+                           "unitScale"_a = 1.0,
+                           "options"_a = py::none_(),
+                           DOXY_FN(LinkInfo, SerializeJSON)
+                           )
                       .def("DeserializeJSON", &PyLinkInfo::DeserializeJSON,
-                          "obj"_a,
-                          "unitScale"_a = 1.0,
-                          DOXY_FN(LinkInfo, DeserializeJSON)
-                      )
+                           "obj"_a,
+                           "unitScale"_a = 1.0,
+                           DOXY_FN(LinkInfo, DeserializeJSON)
+                           )
 #else
                       .def("SerializeJSON", &PyLinkInfo::SerializeJSON, PyLinkInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(LinkInfo, SerializeJSON)))
                       .def("DeserializeJSON", &PyLinkInfo::DeserializeJSON, PyLinkInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(LinkInfo, DeserializeJSON)))
@@ -4507,7 +4508,7 @@ void init_openravepy_kinbody()
             // __getstate__
             return LinkInfo_pickle_suite::getstate(pyinfo);
         },
-                                      [](py::tuple state) {
+                               [](py::tuple state) {
             PyLinkInfo pyinfo;
             LinkInfo_pickle_suite::setstate(pyinfo, state);
             return pyinfo;
@@ -4528,18 +4529,18 @@ void init_openravepy_kinbody()
         .def_readwrite("robotControllerDOFIndex", &PyJointControlInfo_RobotController::robotControllerDOFIndex)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def(py::pickle(
-            [](const PyJointControlInfo_RobotController &pyinfo) {
+                 [](const PyJointControlInfo_RobotController &pyinfo) {
             // __getstate__
             return JointControlInfo_RobotController_pickle_suite::getstate(pyinfo);
         },
-            [](py::tuple state) {
+                 [](py::tuple state) {
             // __setstate__
             /* Create a new C++ instance */
             PyJointControlInfo_RobotController pyinfo;
             JointControlInfo_RobotController_pickle_suite::setstate(pyinfo, state);
             return pyinfo;
         }
-        ))
+                 ))
 #else
         .def_pickle(JointControlInfo_RobotController_pickle_suite())
 #endif // USE_PYBIND11_PYTHON_BINDINGS
@@ -4560,18 +4561,18 @@ void init_openravepy_kinbody()
         .def_readwrite("vLowerLimitSensorIsOn", &PyJointControlInfo_IO::vLowerLimitSensorIsOn)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def(py::pickle(
-            [](const PyJointControlInfo_IO &pyinfo) {
+                 [](const PyJointControlInfo_IO &pyinfo) {
             // __getstate__
             return JointControlInfo_IO_pickle_suite::getstate(pyinfo);
         },
-            [](py::tuple state) {
+                 [](py::tuple state) {
             // __setstate__
             /* Create a new C++ instance */
             PyJointControlInfo_IO pyinfo;
             JointControlInfo_IO_pickle_suite::setstate(pyinfo, state);
             return pyinfo;
         }
-        ))
+                 ))
 #else
         .def_pickle(JointControlInfo_IO_pickle_suite())
 #endif // USE_PYBIND11_PYTHON_BINDINGS
@@ -4587,19 +4588,19 @@ void init_openravepy_kinbody()
         .def_readwrite("externalDeviceId", &PyJointControlInfo_ExternalDevice::externalDeviceId)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def(py::pickle(
-            [](const PyJointControlInfo_ExternalDevice &pyinfo) {
+                 [](const PyJointControlInfo_ExternalDevice &pyinfo) {
             // __getstate__
             return JointControlInfo_ExternalDevice_pickle_suite::getstate(pyinfo);
         },
-            [](py::tuple state) {
+                 [](py::tuple state) {
             // __setstate__
             /* Create a new C++ instance */
             PyJointControlInfo_ExternalDevice pyinfo;
             JointControlInfo_ExternalDevice_pickle_suite::setstate(pyinfo, state);
             return pyinfo;
         }
-        ))
-#else 
+                 ))
+#else
         .def_pickle(JointControlInfo_ExternalDevice_pickle_suite())
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     ;
@@ -4650,12 +4651,12 @@ void init_openravepy_kinbody()
                             "unitScale"_a = 1.0,
                             "options"_a = py::none_(),
                             DOXY_FN(KinBody::JointInfo, SerializeJSON)
-                        )
+                            )
                        .def("DeserializeJSON", &PyJointInfo::DeserializeJSON,
                             "obj"_a,
                             "unitScale"_a = 1.0,
                             DOXY_FN(KinBody::JointInfo, DeserializeJSON)
-                        )
+                            )
 #else
                        .def("SerializeJSON", &PyJointInfo::SerializeJSON, PyJointInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::JointInfo, SerializeJSON)))
                        .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, PyJointInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(KinBody::JointInfo, DeserializeJSON)))
@@ -4666,7 +4667,7 @@ void init_openravepy_kinbody()
             // __getstate__
             return JointInfo_pickle_suite::getstate(pyinfo);
         },
-                                       [](py::tuple state) {
+                                [](py::tuple state) {
             PyJointInfo pyinfo;
             JointInfo_pickle_suite::setstate(pyinfo, state);
             return pyinfo;
@@ -4690,15 +4691,15 @@ void init_openravepy_kinbody()
                          .def_readwrite("_setRobotLinksToIgnore",&PyKinBody::PyGrabbedInfo::_setRobotLinksToIgnore)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON,
-                            "unitScale"_a = 1.0,
-                            "options"_a = py::none_(),
-                            DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)
-                         )
+                              "unitScale"_a = 1.0,
+                              "options"_a = py::none_(),
+                              DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)
+                              )
                          .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON,
-                            "obj"_a,
-                            "unitScale"_a = 1.0,
-                            DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON)
-                         )
+                              "obj"_a,
+                              "unitScale"_a = 1.0,
+                              DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON)
+                              )
 #else
                          .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON, PyGrabbedInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)))
                          .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON, PyGrabbedInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON)))
@@ -5192,6 +5193,8 @@ void init_openravepy_kinbody()
         .value("ActiveManipulator",KinBody::Save_ActiveManipulator)
         .value("GrabbedBodies",KinBody::Save_GrabbedBodies)
         .value("ActiveManipulatorToolTransform",KinBody::Save_ActiveManipulatorToolTransform)
+        .value("ManipulatorsToolTransform", KinBody::Save_ManipulatorsToolTransform)
+        .value("ConnectedBodies", KinBody::Save_ConnectedBodies)
         ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // CheckLimitsAction belongs to KinBody, not openravepy._openravepy_.openravepy_int
