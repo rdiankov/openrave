@@ -190,7 +190,7 @@ PyInterfaceBasePtr toPyPostureDescriberBase(PostureDescriberBasePtr pDescriber, 
     return !pDescriber ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyPostureDescriberBase(pDescriber,pyenv));
 }
 
-object toPyTrajectory(PostureDescriberBasePtr pDescriber, object opyenv)
+object toPyPostureDescriberBase(PostureDescriberBasePtr pDescriber, object opyenv)
 {
     extract_<PyEnvironmentBasePtr> pyenv(opyenv);
     if( pyenv.check() ) {
