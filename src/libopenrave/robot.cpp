@@ -36,7 +36,7 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
     name.clear();
     grippertype.clear();
     gripperJointNames.clear();
-
+    
     openravejson::LoadJsonValueByKey(value, "name", name);
     if( name.size() == 0 ) {
         openravejson::LoadJsonValueByKey(value, "id", name);
@@ -50,6 +50,15 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
     // should always create a new _pdocument in case an old one is initialized and copied
     _pdocument.reset(new rapidjson::Document());
     _pdocument->CopyFrom(value, _pdocument->GetAllocator(), true); // need to copy the const strings
+    // migrate toolSizeSafetyLinks -> toolSizeSafetyLinkNames
+    if (_pdocument->HasMember("toolSizeSafetyLinks")) {
+        if (! _pdocument->HasMember("toolSizeSafetyLinkNames")) {
+            std::vector<std::string> vToolSizeSafetyLinkNames; ///< names of the gripper joints
+            openravejson::LoadJsonValueByKey(*_pdocument, "toolSizeSafetyLinks", vToolSizeSafetyLinkNames);
+            openravejson::SetJsonValueByKey(*_pdocument, "toolSizeSafetyLinkNames", vToolSizeSafetyLinkNames, _pdocument->GetAllocator());
+        }
+        _pdocument->RemoveMember("toolSizeSafetyLinks");
+    }
 }
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
