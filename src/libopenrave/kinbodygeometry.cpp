@@ -234,7 +234,8 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     case GT_Cylinder: {
         // cylinder is on z axis
         dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
-        int numverts = (int)(fTessellation*48.0f) + 3;
+        int numverts = (int)(fTessellation*GetCylinderNumCircleDiscretiazationPoints());
+        // TODO: we should make collision obstacle bigger than cylinder, treat circle as inscribed circle not as circumscribed  
         dReal dtheta = 2 * PI / (dReal)numverts;
         _meshcollision.vertices.push_back(Vector(0,0,len));
         _meshcollision.vertices.push_back(Vector(0,0,-len));

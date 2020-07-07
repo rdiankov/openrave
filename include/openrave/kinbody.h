@@ -160,6 +160,12 @@ public:
         inline dReal GetCylinderHeight() const {
             return _vGeomData.y;
         }
+        inline dReal GetCylinderNumCircleDiscretiazationPoints() const {
+            if (_vGeomData.z <= 4) { // cannot discretize with less than 4 points
+                return 53; // default value for backwards compatibility
+            }
+            return _vGeomData.z;
+        }
         inline const Vector& GetBoxExtents() const {
             return _vGeomData;
         }
@@ -182,6 +188,7 @@ public:
 
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
+        /// For GT_Cylinder, cylinder radius, cylinder height, circle discretization points (will be affected by fTessellation) 
         Vector _vGeomData;
 
         ///< For GT_Container, the first 3 values are the full inner extents.
