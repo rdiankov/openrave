@@ -2905,12 +2905,21 @@ public:
                         else if( name == "cylinder" ) {
                             daeElementRef pradius = children[i]->getChild("radius");
                             daeElementRef pheight = children[i]->getChild("height");
+                            daeElementRef pnumapproximate = children[i]->getChild("numapproximate");
+
                             if( !!pradius && !!pheight ) {
                                 Vector vGeomData;
                                 stringstream ss(pradius->getCharData());
                                 ss >> vGeomData.x;
                                 stringstream ss2(pheight->getCharData());
                                 ss2 >> vGeomData.y;
+                                if ( !!pnumapproximate ) {
+                                    stringstream ss3(pnumapproximate->getCharData());
+                                    ss3 >> vGeomData.z;
+                                    if (!(ss3.eof() || !!ss3) ) {
+                                        vGeomData.z = 0; // reset if invalid number and use default one
+                                    }
+                                }
                                 if( (ss.eof() || !!ss) && (ss2.eof() || !!ss2) ) {
                                     Transform trot(quatRotateDirection(Vector(0,0,1),Vector(0,1,0)),Vector());
                                     tlocalgeom = tlocalgeom * trot;
@@ -2924,12 +2933,21 @@ public:
                         else if( name == "cylinderz" ) {
                             daeElementRef pradius = children[i]->getChild("radius");
                             daeElementRef pheight = children[i]->getChild("height");
+                            daeElementRef pnumapproximate = children[i]->getChild("numapproximate");
+
                             if( !!pradius && !!pheight ) {
                                 Vector vGeomData;
                                 stringstream ss(pradius->getCharData());
                                 ss >> vGeomData.x;
                                 stringstream ss2(pheight->getCharData());
                                 ss2 >> vGeomData.y;
+                                if ( !!pnumapproximate ) {
+                                    stringstream ss3(pnumapproximate->getCharData());
+                                    ss3 >> vGeomData.z;
+                                    if (!(ss3.eof() || !!ss3) ) {
+                                        vGeomData.z = 0; // reset if invalid number and use default one
+                                    }
+                                }
                                 if( (ss.eof() || !!ss) && (ss2.eof() || !!ss2) ) {
                                     geominfo._type = GT_Cylinder;
                                     geominfo._vGeomData = vGeomData;

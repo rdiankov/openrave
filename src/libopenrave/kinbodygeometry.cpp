@@ -234,14 +234,15 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     case GT_Cylinder: {
         // cylinder is on z axis
         dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
-        int numverts = (int)(fTessellation*GetCylinderNumCircleDiscretiazationPoints());
-        // TODO: we should make collision obstacle bigger than cylinder, treat circle as inscribed circle not as circumscribed  
+        // int numverts = (int)(fTessellation*48.0f) + 3;
+        int numverts = max((int)(fTessellation*GetCylinderNumCircleApproximate()), 3); // should not be less than 3 to maintain backwards compatibility  (numverts = (int)(fTessellation*48.0f) + 3;)
+        // TODO: we should make collision obstacle bigger than cylinder, treat circle as inscribed circle not as circumscribed
         dReal dtheta = 2 * PI / (dReal)numverts;
         _meshcollision.vertices.push_back(Vector(0,0,len));
         _meshcollision.vertices.push_back(Vector(0,0,-len));
         _meshcollision.vertices.push_back(Vector(rad,0,len));
         _meshcollision.vertices.push_back(Vector(rad,0,-len));
-        for(int i = 0; i < numverts+1; ++i) {
+        for(int i = 1; i < numverts+1; ++i) {
             dReal s = rad * RaveSin(dtheta * (dReal)i);
             dReal c = rad * RaveCos(dtheta * (dReal)i);
             int off = (int)_meshcollision.vertices.size();
@@ -509,6 +510,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Do
         openravejson::SetJsonValueByKey(value, "type", "cylinder", allocator);
         openravejson::SetJsonValueByKey(value, "radius", _vGeomData.x*fUnitScale, allocator);
         openravejson::SetJsonValueByKey(value, "height", _vGeomData.y*fUnitScale, allocator);
+        openravejson::SetJsonValueByKey(value, "numapproximate", (int)_vGeomData.z, allocator);
         break;
 
     case GT_TriMesh:
@@ -586,6 +588,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         _type = GT_Cylinder;
         openravejson::LoadJsonValueByKey(value, "radius", _vGeomData.x);
         openravejson::LoadJsonValueByKey(value, "height", _vGeomData.y);
+        openravejson::LoadJsonValueByKey(value, "numapproximate", _vGeomData.z);
 
         _vGeomData.x *= fUnitScale;
         _vGeomData.y *= fUnitScale;

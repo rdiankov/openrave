@@ -427,6 +427,9 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
             else if( xmlname == "height" ) {
                 _ss >> _pgeom->_vGeomData.y;
             }
+            else if( xmlname == "numapproximate" ) {
+                _ss >> _pgeom->_vGeomData.z;
+            }
             break;
         case GT_TriMesh:
             if(( xmlname == "data") ||( xmlname == "collision") ) {

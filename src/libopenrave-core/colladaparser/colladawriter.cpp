@@ -1997,6 +1997,7 @@ private:
                 ss << geom->GetCylinderRadius() << " " << geom->GetCylinderRadius();
                 pcylinder->add("radius")->setCharData(ss.str());
                 pcylinder->add("height")->setCharData(boost::lexical_cast<std::string>(geom->GetCylinderHeight()));
+                pcylinder->add("numapproximate")->setCharData(boost::lexical_cast<std::string>(geom->GetCylinderNumCircleApproximate()));
                 break;
             }
             case GT_None:

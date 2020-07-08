@@ -160,12 +160,14 @@ public:
         inline dReal GetCylinderHeight() const {
             return _vGeomData.y;
         }
-        inline dReal GetCylinderNumCircleDiscretiazationPoints() const {
-            if (_vGeomData.z <= 4) { // cannot discretize with less than 4 points
-                return 53; // default value for backwards compatibility
+        /// gets number of points circle face of cylinder should be approximated
+        inline dReal GetCylinderNumCircleApproximate() const {
+            if (_vGeomData[2] <= 4) { // cannot discretize with less than 4 points
+                return 51; // default value for backwards compatibility
             }
-            return _vGeomData.z;
+            return _vGeomData[2];
         }
+
         inline const Vector& GetBoxExtents() const {
             return _vGeomData;
         }
@@ -188,7 +190,8 @@ public:
 
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
-        /// For GT_Cylinder, cylinder radius, cylinder height, circle discretization points (will be affected by fTessellation) 
+        /// For GT_Cylinder, cylinder radius, cylinder height, number of points circle face of cylinder should be approximated
+
         Vector _vGeomData;
 
         ///< For GT_Container, the first 3 values are the full inner extents.
@@ -371,6 +374,13 @@ public:
             }
             inline dReal GetCylinderHeight() const {
                 return _info._vGeomData.y;
+            }
+            /// gets number of points circle face of cylinder should be approximated
+            inline dReal GetCylinderNumCircleApproximate() const {
+                if (_info._vGeomData[2] <= 4) { // cannot discretize with less than 4 points
+                    return 54; // default value for backwards compatibility
+                }
+                return _info._vGeomData[2];
             }
             inline const Vector& GetBoxExtents() const {
                 return _info._vGeomData;
