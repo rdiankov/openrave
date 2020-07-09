@@ -1837,7 +1837,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                 break;
             }
         }
-        else {
+        else if ( !pjoint->IsStatic() ) {
             if( pjoint->GetType() == JointRevolute ) {
                 tjoint.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pvalues[0]);
                 pjoint->_doflastsetvalues[0] = pvalues[0];
@@ -1860,6 +1860,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
             }
         }
 
+        // if pjoint->IsStatic(), then pjoint->_info._tRightNoOffset and tjoint are assigned identities
         Transform t = pjoint->GetInternalHierarchyLeftTransform() * tjoint * pjoint->GetInternalHierarchyRightTransform();
         if( !pjoint->GetHierarchyParentLink() ) {
             t = _veclinks.at(0)->GetTransform() * t;

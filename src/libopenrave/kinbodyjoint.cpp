@@ -590,6 +590,9 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
 dReal KinBody::Joint::GetValue(int iaxis) const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
+    if(this->IsStatic()) {
+        return _info._vlowerlimit.at(iaxis);
+    }
     dReal f;
     Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
     if( _info._type & KinBody::JointSpecialBit ) {
@@ -943,7 +946,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
         _tLeftNoOffset.trans = vanchor;
         _tRightNoOffset.trans = -vanchor;
         _tRightNoOffset = _tRightNoOffset * trel;
-        if( GetDOF() == 1 ) {
+        if( GetDOF() == 1 && IsRevolute(0) ) {
             // in the case of one axis, create a new coordinate system such that the axis rotates about (0,0,1)
             // this is necessary in order to simplify the rotation matrices (for future symbolic computation)
             // and suppress any floating-point error. The data structures are only setup for this to work in 1 DOF.
@@ -955,7 +958,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
 
         Transform toffset;
         if( IsRevolute(0) ) {
-            toffset.rot = quatFromAxisAngle(_vaxes[0], _info._voffsets[0]);
+            toffset.rot = quatFromAxisAngle(_vaxes[0], _info._voffsets[0]); // rotate about (0,0,1) by offset angle
         }
         else {
             toffset.trans = _vaxes[0]*_info._voffsets[0];
@@ -1042,6 +1045,16 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     if( _attachedbodies[1]->IsStatic() && !IsStatic() ) {
         RAVELOG_WARN(str(boost::format("joint %s: all attached links are static, but joint is not!\n")%GetName()));
     }
+
+    if(IsStatic()) {
+        for(int idof = 0; idof < GetDOF(); ++idof) {
+            BOOST_ASSERT(_info._vlowerlimit[idof] == 0 && _info._vupperlimit[idof] == 0);
+        }
+        _tLeftNoOffset *= _tRightNoOffset;
+        _tLeft *= _tRight;
+        _tRightNoOffset = _tRight = Transform();
+    }
+
 }
 
 KinBody::LinkPtr KinBody::Joint::GetHierarchyParentLink() const
