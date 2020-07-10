@@ -768,7 +768,7 @@ void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppen
         pVelocities.resize(0);
     }
     if( GetDOF() == 1 ) {
-        pVelocities.push_back(GetVelocity(0));
+        pVelocities.push_back(_GetVelocity(0, linkparentvelocity, linkchildvelocity));
         return;
     }
     const Transform& linkparenttransform = _attachedbodies[0]->_info._t;
