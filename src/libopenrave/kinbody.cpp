@@ -3131,7 +3131,7 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
         if( !!(*it)->_attachedbodies[0] ) {
             parentindex = (*it)->_attachedbodies[0]->GetIndex();
         }
-        int childindex = (*it)->_attachedbodies[0]->GetIndex();
+        int childindex = (*it)->_attachedbodies[1]->GetIndex();
         (*it)->_GetVelocities(dofvelocities,true,vLinkVelocities.at(parentindex),vLinkVelocities.at(childindex));
     }
 }
