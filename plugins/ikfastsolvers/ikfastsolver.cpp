@@ -242,9 +242,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         }
 
         RobotBasePtr probot = pmanip->GetRobot();
-        RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmIndices());
-        probot->GetActiveDOFLimits(_qlower,_qupper);
+        probot->GetDOFLimits(_qlower,_qupper,pmanip->GetArmIndices());
         _qmid.resize(_qlower.size());
         _qbigrangeindices.resize(0);
         _qbigrangemaxsols.resize(0);
@@ -400,9 +398,6 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         }
 #endif
 
-        // get the joint limits
-        RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmIndices());
         SetJointLimits();
         return true;
     }
@@ -1649,7 +1644,7 @@ protected:
                 if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     // if gripper is colliding, solutions will always fail, so completely stop solution process
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
-                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        if( !!ptempreport ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                             ss << "ikfast collision " << report.__str__() << " colvalues=[";
                             std::vector<dReal> vallvalues;
@@ -1707,7 +1702,7 @@ protected:
                     }
                 }
 
-                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                if( !!ptempreport ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "env=" << GetEnv()->GetId() << ", ikfast collision " << probot->GetName() << ":" << pmanip->GetName() << " " << report.__str__() << " colvalues=[";
                     std::vector<dReal> vallvalues;
@@ -2083,7 +2078,7 @@ protected:
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
-                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        if( !!ptempreport ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                             ss << "env=" << GetEnv()->GetId() << ", ikfast collision " << ptempreport->__str__() << " ";
                             if( !!ptempreport->plink1 ) {
@@ -2123,7 +2118,7 @@ protected:
                 }
             }
             if( GetEnv()->CheckCollision(KinBodyConstPtr(probot), ptempreport) ) {
-                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                if( !!ptempreport ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "ikfast collision " << report.__str__() << " colvalues=[";
                     std::vector<dReal> vallvalues;
