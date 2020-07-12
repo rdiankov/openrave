@@ -364,10 +364,10 @@ Some python code to display data::\n\
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        uint32_t basetime = utils::GetMilliTime();
+        uint64_t basetimeus = utils::GetMonotonicTime();
         
         int constraintFilterOptions = 0xffff|CFO_FillCheckedConfiguration;
-        if (planningoptions & PO_AddCollisionReport) {
+        if (planningoptions & PO_AddCollisionStatistics) {
             constraintFilterOptions = constraintFilterOptions|CFO_FillCollisionReport;
         }
 
@@ -400,9 +400,9 @@ Some python code to display data::\n\
             }
 
             if( _parameters->_nMaxPlanningTime > 0 ) {
-                uint32_t elapsedtime = utils::GetMilliTime()-basetime;
-                if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, time exceeded (%dms) so breaking. iter=%d < %d", GetEnv()->GetId()%elapsedtime%(iter/3)%_parameters->_nMaxIterations);
+                uint64_t elapsedtime = utils::GetMonotonicTime()-basetimeus;
+                if( elapsedtime >= 1000*_parameters->_nMaxPlanningTime ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, time exceeded (%d[us] > %d[us]) so breaking. iter=%d < %d", GetEnv()->GetId()%elapsedtime%(1000*_parameters->_nMaxPlanningTime)%(iter/3)%_parameters->_nMaxIterations);
                     break;
                 }
             }
@@ -520,17 +520,10 @@ Some python code to display data::\n\
         }
 
         if( _vgoalpaths.size() == 0 ) {
-            std::string description = str(boost::format(_("env=%d, plan failed in %fs, iter=%d, nMaxIterations=%d"))%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
+            uint64_t elapsedtimeus = utils::GetMonotonicTime()-basetimeus;
+            std::string description = str(boost::format(_("env=%d, plan failed in %u[us], iter=%d, nMaxIterations=%d"))%GetEnv()->GetId()%(elapsedtimeus)%(iter/3)%_parameters->_nMaxIterations);
             RAVELOG_WARN(description);
-            planningstatus.description = description;
-            planningstatus.statusCode = PS_Failed;
-
-            planningstatus.numIterations = iter/3;
-            planningstatus.maxNumIterations = _parameters->_nMaxIterations;
-            planningstatus.elapsedPlanningTime = utils::GetMilliTime() - basetime;
-            planningstatus.maxPlanningTime = _parameters->_nMaxPlanningTime;
-
-            return planningstatus;
+            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
 
         vector<GOALPATH>::iterator itbest = _vgoalpaths.begin();
@@ -545,11 +538,13 @@ Some python code to display data::\n\
             ptraj->Init(_parameters->_configurationspecification);
         }
         ptraj->Insert(ptraj->GetNumWaypoints(), itbest->qall, _parameters->_configurationspecification);
-        std::string description = str(boost::format(_("env=%d, plan success, iters=%d, path=%d points, computation time=%fs\n"))%GetEnv()->GetId()%progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+        uint64_t elapsedtimeus = utils::GetMonotonicTime()-basetimeus;
+        std::string description = str(boost::format(_("env=%d, plan success, iters=%d, path=%d points, computation time=%u[us]\n"))%GetEnv()->GetId()%progress._iteration%ptraj->GetNumWaypoints()%(elapsedtimeus));
         RAVELOG_DEBUG(description);
         PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
         //TODO should use accessor to change description
-        status.description = description;
+        //status.description = description; //?
+
         // Special case. No need to transfer collision information?
         return status;
     }

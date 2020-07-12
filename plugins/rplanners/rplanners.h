@@ -126,7 +126,7 @@ public:
 
     /// extends toward pNewConfig
     /// \return true if extension reached pNewConfig
-    virtual ExtendType Extend(const std::vector<dReal>& pTargetConfig, NodeBasePtr& lastnode, bool bOneStep=false, int constraintFilterOptions=0xffff|CFO_FillCheckedConfiguration) = 0;
+    virtual ExtendType Extend(const std::vector<dReal>& pTargetConfig, NodeBasePtr& lastnode, bool bOneStep, int constraintFilterOptions=0xffff|CFO_FillCheckedConfiguration) = 0;
 
     /// \brief the dof configured for
     virtual int GetDOF() = 0;

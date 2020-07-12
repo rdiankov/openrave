@@ -62,7 +62,7 @@ enum PlannerStatusCode
 enum PlanningOptions
 {
     PO_NoStatusDetail = 1, ///< if set, then do not output any PlannerStatus details, just the finish code. This allows system to be faster.
-    PO_AddCollisionReport = 1 << 1 /// If set, Fill in collision to aid in planning failure debugging. This will slow down the system.
+    PO_AddCollisionStatistics = 2 /// If set, Fill in collision to aid in planning failure debugging. This will slow down the system.
 };
 
 /// \brief action to send to the planner while it is planning. This is usually done by the user-specified planner callback function
@@ -484,21 +484,27 @@ typedef boost::weak_ptr<PlannerParameters> PlannerParametersWeakPtr;
 typedef boost::weak_ptr<PlannerParameters const> PlannerParametersWeakConstPtr;
 
 /// \brief Planner error information
+///
+/// For constructors that have report, will internally creates a new pointer and store the contents of report
 class OPENRAVE_API PlannerStatus
 {
 public:
     PlannerStatus();
-    PlannerStatus(const int statusCode);
-    PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report=CollisionReportPtr());
-    PlannerStatus(const std::string& description, const int statusCode, const IkParameterization& ikparam, CollisionReportPtr report=CollisionReportPtr());
-    PlannerStatus(const std::string& description, const int statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr report=CollisionReportPtr());
-    
+    PlannerStatus(const uint32_t statusCode);
+    PlannerStatus(const std::string& description, const uint32_t statusCode);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, CollisionReportPtr& report);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam, CollisionReportPtr& report);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr& report);
+
     virtual ~PlannerStatus();
 
     PlannerStatus& SetErrorOrigin(const std::string& errorOrigin);
     PlannerStatus& SetPlannerParameters(PlannerParametersConstPtr parameters);
 
-    void AddCollisionReport(const CollisionReport& collisionReport); // This assumes that collisionReport plink1 and plink2 fields are populated!
+    void InitCollisionReport(CollisionReportPtr& collisionReport);
+    void AddCollisionReport(const CollisionReport& collisionReport);
     void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
 
     inline uint32_t GetStatusCode() const {
@@ -516,14 +522,11 @@ public:
     IkParameterization ikparam;             // Optional, the ik parameter that failed to find a solution.
     std::vector<dReal> jointValues;         // Optional, the robot's joint values in rad or m
     CollisionReportPtr report;              ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
-    std::string errorOrigin;                // Auto, a string representing the code path of the error. Automatically filled on construction.
+    std::string errorOrigin;                // Auto, a string representing the code path of the error.
 
     std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int > mCollidingLinksCount; // Counter for colliding links
-    uint32_t numIterations;
-    uint32_t maxNumIterations;
-    uint32_t elapsedPlanningTime;
-    uint32_t maxPlanningTime;
-
+    uint32_t numPlannerIterations; ///< number of planner iterations before failure
+    uint64_t elapsedPlanningTimeUS; ///< us, elapsed time of the planner
 };
 
 #define OPENRAVE_PLANNER_STATUS(...) PlannerStatus(__VA_ARGS__).SetErrorOrigin(str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__)).SetPlannerParameters(_parameters);
