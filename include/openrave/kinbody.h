@@ -1621,6 +1621,7 @@ private:
         Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
         Save_ActiveManipulatorToolTransform  = 0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
         Save_ManipulatorsToolTransform       = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
+        Save_ConnectedBodies                 = 0x00200000, ///< [robot only], saves the connected body states
     };
 
     /// \brief Helper class to save and restore the entire kinbody state.
@@ -2540,6 +2541,14 @@ private:
         \param[out] vgrabbedinfo all the grabbed infos
      */
     virtual void GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const;
+
+    /** \brief gets the grabbed info of a grabbed object whose name matches grabbedname
+
+        \param[in] the grabbed name to get the info from
+        \param[out] grabbedInfo initialized with the grabbed info
+        \return true if robot is grabbing body with name "grabbedname" and grabbedInfo is initialized
+     */
+    virtual bool GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbedInfo) const;
 
     /** \brief resets the grabbed bodies of the body
 

@@ -29,9 +29,9 @@
 
 #ifdef _MSC_VER
 
-#pragma warning(disable:4251) // needs to have dll-interface to be used by clients of class
-#pragma warning(disable:4190) // C-linkage specified, but returns UDT 'boost::shared_ptr<T>' which is incompatible with C
-#pragma warning(disable:4819) //The file contains a character that cannot be represented in the current code page (932). Save the file in Unicode format to prevent data loss using native typeof
+#pragma warning(disable:4251)// needs to have dll-interface to be used by clients of class
+#pragma warning(disable:4190)// C-linkage specified, but returns UDT 'boost::shared_ptr<T>' which is incompatible with C
+#pragma warning(disable:4819)//The file contains a character that cannot be represented in the current code page (932). Save the file in Unicode format to prevent data loss using native typeof
 
 // needed to get typeof working
 //#include <boost/typeof/std/string.hpp>
@@ -717,6 +717,14 @@ protected:
 
     virtual bool operator==(const ConfigurationSpecification& r) const;
     virtual bool operator!=(const ConfigurationSpecification& r) const;
+
+    /// \brief JSON serializable
+    /// TODO: Ideally we should make it a subclass of openravejson::JsonSerializable, but it requires a lot changes to fix the header files for now.
+    virtual void DeserializeJSON(const rapidjson::Value& rValue);
+    virtual void SerializeJSON(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const;
+    virtual void SerializeJSON(rapidjson::Document& d) const {
+        SerializeJSON(d, d.GetAllocator());
+    }
 
     /// \brief return the group whose name begins with a particular string.
     ///
@@ -1723,6 +1731,16 @@ public:
         }
         values = it->second;
         return true;
+    }
+
+    /// \brief returns number of entries in the custom value. -1 if custom value is not in the map
+    inline int GetCustomValueNum(const std::string& name) const {
+        std::map<std::string, std::vector<dReal> >::const_iterator it = _mapCustomData.find(name);
+        if( it != _mapCustomData.end() ) {
+            return (int)it->second.size();
+        }
+
+        return -1;
     }
 
     /// \brief returns the first element of a custom value. If _mapCustomData does not have 'name' and is not > 0, then will return defaultValue

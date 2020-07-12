@@ -237,7 +237,10 @@ bool RobotBase::ConnectedBody::SetActive(int8_t active)
     RobotBasePtr pattachedrobot = _pattachedrobot.lock();
     if( !!pattachedrobot ) {
         if( pattachedrobot->_nHierarchyComputed != 0 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("Cannot set ConnectedBody %s active to %s since robot %s is still in the environment", _info._name%(int)active%pattachedrobot->GetName(), ORE_InvalidState);
+            // robot is already added, check to see if its state is getting in the way of changing the active state. right now -1 and 1 both enable the robot
+            if( (_info._bIsActive == 0) != (active == 0) ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("Cannot set ConnectedBody %s active to %s since robot %s is still in the environment", _info._name%(int)active%pattachedrobot->GetName(), ORE_InvalidState);
+            }
         }
     }
     _info._bIsActive = active;
@@ -791,6 +794,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 pnewdocument->CopyFrom(*connectedBodyInfo._vGripperInfos[iGripperInfo]->_pdocument, pnewdocument->GetAllocator());
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linkname")), *pnewdocument, pnewdocument->GetAllocator(), false);
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linknames")), *pnewdocument, pnewdocument->GetAllocator(), false);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("links")), *pnewdocument, pnewdocument->GetAllocator(), false);
                 pnewgripperInfo->_pdocument = pnewdocument;
             }
 
