@@ -237,7 +237,10 @@ bool RobotBase::ConnectedBody::SetActive(int8_t active)
     RobotBasePtr pattachedrobot = _pattachedrobot.lock();
     if( !!pattachedrobot ) {
         if( pattachedrobot->_nHierarchyComputed != 0 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("Cannot set ConnectedBody %s active to %s since robot %s is still in the environment", _info._name%(int)active%pattachedrobot->GetName(), ORE_InvalidState);
+            // robot is already added, check to see if its state is getting in the way of changing the active state. right now -1 and 1 both enable the robot
+            if( (_info._bIsActive == 0) != (active == 0) ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("Cannot set ConnectedBody %s active to %s since robot %s is still in the environment", _info._name%(int)active%pattachedrobot->GetName(), ORE_InvalidState);
+            }
         }
     }
     _info._bIsActive = active;
@@ -398,6 +401,20 @@ bool RobotBase::ConnectedBody::CanProvideManipulator(const std::string& resolved
     }
 
     return false;
+}
+
+const std::string& RobotBase::ConnectedBody::GetInfoHash() const
+{
+    // _info currently is only set from constructor, so we don't need to invalidate __hashinfo yet
+    // isActive is ignored in the _info
+    if (__hashinfo.size() == 0) {
+        rapidjson::Document doc;
+        _info.SerializeJSON(doc, doc.GetAllocator(), 1.0);
+        // set isActive to -1 so that its state does not affect the hash
+        openravejson::SetJsonValueByKey(doc, "isActive", -1, doc.GetAllocator());
+        __hashinfo = utils::GetMD5HashString(openravejson::DumpJson(doc));
+    }
+    return __hashinfo;
 }
 
 RobotBase::ConnectedBodyPtr RobotBase::AddConnectedBody(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, bool removeduplicate)
@@ -777,6 +794,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 pnewdocument->CopyFrom(*connectedBodyInfo._vGripperInfos[iGripperInfo]->_pdocument, pnewdocument->GetAllocator());
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linkname")), *pnewdocument, pnewdocument->GetAllocator(), false);
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linknames")), *pnewdocument, pnewdocument->GetAllocator(), false);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("links")), *pnewdocument, pnewdocument->GetAllocator(), false);
                 pnewgripperInfo->_pdocument = pnewdocument;
             }
 

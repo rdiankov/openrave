@@ -235,17 +235,21 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         _vtManipsLocalTool.resize(vmanips.size());
         _vvManipsLocalDirection.resize(vmanips.size());
         _vpManipsIkSolver.resize(vmanips.size());
+        _vManipsName.resize(vmanips.size());
         for(int imanip = 0; imanip < (int)vmanips.size(); ++imanip) {
             RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
             if( !!pmanip ) {
                 _vtManipsLocalTool[imanip] = pmanip->GetLocalToolTransform();
                 _vvManipsLocalDirection[imanip] = pmanip->GetLocalToolDirection();
                 _vpManipsIkSolver[imanip] = pmanip->GetIkSolver();
+                _vManipsName[imanip] = pmanip->GetName();
             }
         }
     }
 
-    _probot->GetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
+    if( _options & Save_ConnectedBodies ) {
+        _probot->GetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
+    }
 }
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
@@ -301,20 +305,25 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
         return;
     }
 
-    if( _vConnectedBodyActiveStates.size() == probot->_vecConnectedBodies.size() ) {
-        bool bchanged = false;
-        for(size_t iconnectedbody = 0; iconnectedbody < probot->_vecConnectedBodies.size(); ++iconnectedbody) {
-            if( probot->_vecConnectedBodies[iconnectedbody]->IsActive() != _vConnectedBodyActiveStates[iconnectedbody] ) {
-                bchanged = true;
-                break;
+    if( _options & Save_ConnectedBodies ) {
+        if( _vConnectedBodyActiveStates.size() == probot->_vecConnectedBodies.size() ) {
+            bool bchanged = false;
+            for(size_t iconnectedbody = 0; iconnectedbody < probot->_vecConnectedBodies.size(); ++iconnectedbody) {
+                if( probot->_vecConnectedBodies[iconnectedbody]->IsActive() != _vConnectedBodyActiveStates[iconnectedbody] ) {
+                    bchanged = true;
+                    break;
+                }
+            }
+
+            if( bchanged ) {
+                EnvironmentRobotRemover robotremover(probot);
+                // need to restore active connected bodies
+                // but first check whether anything changed
+                probot->SetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
             }
         }
-
-        if( bchanged ) {
-            EnvironmentRobotRemover robotremover(probot);
-            // need to restore active connected bodies
-            // but first check whether anything changed
-            probot->SetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
+        else {
+            RAVELOG_WARN_FORMAT("env=%d, connected body states changed, so cannot save. saved num is %s, new robot num is %s", probot->GetEnv()->GetId()%_vConnectedBodyActiveStates.size()%probot->_vecConnectedBodies.size());
         }
     }
 
@@ -370,10 +379,20 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
             if(vmanips.size() == _vtManipsLocalTool.size()) {
                 for(int imanip = 0; imanip < (int)vmanips.size(); ++imanip) {
                     RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
+                    const std::string manipName = pmanip->GetName();
+                    const vector<string>::const_iterator it = find(_vManipsName.begin(), _vManipsName.end(), manipName);
+                    if (it == _vManipsName.end()) {
+                        RAVELOG_WARN_FORMAT("manip %s is not found in saved state. Maybe newly added?", manipName);
+                        continue;
+                    }
+                    int indexAtSaveTime = distance(_vManipsName.cbegin(), it);
+                    if (indexAtSaveTime != imanip) {
+                        RAVELOG_DEBUG_FORMAT("manip %s was previously at index %d, but changed to index %d.", manipName%imanip%indexAtSaveTime);
+                    }
                     if( !!pmanip ) {
-                        pmanip->SetLocalToolTransform(_vtManipsLocalTool.at(imanip));
-                        pmanip->SetLocalToolDirection(_vvManipsLocalDirection.at(imanip));
-                        pmanip->SetIkSolver(_vpManipsIkSolver.at(imanip));
+                        pmanip->SetLocalToolTransform(_vtManipsLocalTool.at(indexAtSaveTime));
+                        pmanip->SetLocalToolDirection(_vvManipsLocalDirection.at(indexAtSaveTime));
+                        pmanip->SetIkSolver(_vpManipsIkSolver.at(indexAtSaveTime));
                     }
                 }
             }
@@ -430,7 +449,7 @@ void RobotBase::Destroy()
     _vecAttachedSensors.clear();
     _vecConnectedBodies.clear();
     _nActiveDOF = 0;
-    _vActiveDOFIndices.resize(0);
+    _vActiveDOFIndices.clear();
     _vAllDOFIndices.resize(0);
     SetController(ControllerBasePtr(),std::vector<int>(),0);
 
@@ -665,7 +684,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
 void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOFBitmask)
 {
     FOREACHC(itj, vJointIndices) {
-        OPENRAVE_ASSERT_FORMAT(*itj>=0 && *itj<GetDOF(), "bad index %d (dof=%d)",*itj%GetDOF(),ORE_InvalidArguments);
+        OPENRAVE_ASSERT_FORMAT(*itj>=0 && *itj<GetDOF(), "env=%d, robot '%s' bad index %d (dof=%d)",GetEnv()->GetId()%GetName()%(*itj)%GetDOF(),ORE_InvalidArguments);
     }
     // only reset the cache if the dof values are different
     if( _vActiveDOFIndices.size() != vJointIndices.size() ) {
@@ -1870,6 +1889,21 @@ void RobotBase::_ComputeInternalInformation()
     _vAllDOFIndices.resize(GetDOF());
     for(int i = 0; i < GetDOF(); ++i) {
         _vAllDOFIndices[i] = i;
+    }
+
+    // make sure the active dof indices in _vActiveDOFIndices are all within the new DOFs
+    {
+        int iwriteindex = 0;
+        int realdof = GetDOF();
+        for(int index = 0; index < (int)_vActiveDOFIndices.size(); ++index) {
+            if( _vActiveDOFIndices[index] < realdof ) {
+                _vActiveDOFIndices[iwriteindex++] = _vActiveDOFIndices[index];
+            }
+            else {
+                RAVELOG_INFO_FORMAT("env=%d, robot '%s' had active dof index %d outside of dof range (%d)", GetEnv()->GetId()%GetName()%_vActiveDOFIndices[index]%realdof);
+            }
+        }
+        _vActiveDOFIndices.resize(iwriteindex);
     }
 
     _activespec._vgroups.reserve(2);
