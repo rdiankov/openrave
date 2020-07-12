@@ -1048,13 +1048,24 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
 
     if(IsStatic()) {
         for(int idof = 0; idof < GetDOF(); ++idof) {
-            BOOST_ASSERT(_info._vlowerlimit[idof] == 0 && _info._vupperlimit[idof] == 0);
+            if( _info._vlowerlimit[idof] != 0 ) {
+                if( _info._vlowerlimit[idof] > g_fEpsilon || _info._vlowerlimit[idof] < -g_fEpsilon ) {
+                    RAVELOG_WARN_FORMAT("static joint %s has non-zero lower limit %e, setting to 0", _info._name%_info._vlowerlimit[idof]);
+                }
+                _info._vlowerlimit[idof] = 0;
+            }
+            if( _info._vupperlimit[idof] != 0 ) {
+                if( _info._vupperlimit[idof] > g_fEpsilon || _info._vupperlimit[idof] < -g_fEpsilon ) {
+                    RAVELOG_WARN_FORMAT("static joint %s has non-zero upper limit %e, setting to 0", _info._name%_info._vupperlimit[idof]);
+                }
+                _info._vupperlimit[idof] = 0;
+            }
         }
         _tLeftNoOffset *= _tRightNoOffset;
         _tLeft *= _tRight;
-        _tRightNoOffset = _tRight = Transform();
+        _tRightNoOffset = _tRight = _tinvRight = Transform();
+        _tinvLeft = _tLeft.inverse();
     }
-
 }
 
 KinBody::LinkPtr KinBody::Joint::GetHierarchyParentLink() const
