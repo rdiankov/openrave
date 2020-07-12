@@ -377,6 +377,9 @@ class InverseKinematicsModel(DatabaseGenerator):
                         return False
                     
                     self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIkSolver().GetXMLId().split(' ',1)[0]+iksuffix) if self.manip.GetIkSolver() is not None else None
+                    if self.iksolver is None:
+                        return False
+                
                 else:
                     if int(self.iktype) != int(iktype):
                         raise InverseKinematicsError('ik does not match types %s!=%s'%(self.iktype,iktype))
@@ -1079,6 +1082,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if compiler.compiler_type == 'unix':
                 compile_flags.append('-O3')
                 compile_flags.append('-fPIC')
+                compile_flags.append('-std=c++11')
         return compiler,compile_flags
     
     @staticmethod

@@ -858,8 +858,8 @@ public:
                         (*itmanip)->_info._name = _prefix + (*itmanip)->_info._name;
                         (*itmanip)->_info._sBaseLinkName = _prefix + (*itmanip)->_info._sBaseLinkName;
                         (*itmanip)->_info._sEffectorLinkName = _prefix + (*itmanip)->_info._sEffectorLinkName;
-                        FOREACH(itgrippername,(*itmanip)->_info._vGripperJointNames) {
-                            *itgrippername = _prefix + *itgrippername;
+                        FOREACH(itGripperJointName,(*itmanip)->_info._vGripperJointNames) {
+                            *itGripperJointName = _prefix + *itGripperJointName;
                         }
                     }
                 }
@@ -870,7 +870,7 @@ public:
                 }
                 FOREACH(itGripperInfo, probot->_vecGripperInfos) {
                     if( _setInitialGripperInfos.find(*itGripperInfo) == _setInitialGripperInfos.end() ) {
-                        (*itGripperInfo)->gripperid = _prefix + (*itGripperInfo)->gripperid;
+                        (*itGripperInfo)->name = _prefix + (*itGripperInfo)->name;
                     }
                 }
             }
@@ -3206,7 +3206,7 @@ public:
                 if( !!tec ) {
                     RobotBase::ManipulatorInfo manipinfo;
                     manipinfo._name = _ConvertToOpenRAVEName(name);
-                    daeElementRef pframe_origin = tec->getChild("frame_origin");                    
+                    daeElementRef pframe_origin = tec->getChild("frame_origin");
                     if( !!pframe_origin ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
                         if( !!pdomlink ) {
@@ -3224,12 +3224,29 @@ public:
                         }
                     }
 
-                    daeElementRef pgripperid = tec->getChild("gripperid");
-                    if( !!pgripperid ) {
-                        manipinfo._gripperid = pgripperid->getCharData();
+                    daeElementRef pgrippername = tec->getChild("grippername");
+                    if( !!pgrippername ) {
+                        manipinfo._grippername = pgrippername->getCharData();
                     }
                     else{
-                        manipinfo._gripperid.clear();
+
+                        // see if there is an old deprecated gripperid
+                        daeElementRef pgripperid = tec->getChild("gripperid");
+                        if( !!pgripperid ) {
+                            manipinfo._grippername = pgripperid->getCharData();
+                            RAVELOG_WARN_FORMAT("manipulator is old, got gripperid %s rather than grippername", manipinfo._grippername);
+                        }
+                        else {
+                            manipinfo._grippername.clear();
+                        }
+                    }
+
+                    daeElementRef pToolChangerConnectedBodyToolName = tec->getChild("toolChangerConnectedBodyToolName");
+                    if( !!pToolChangerConnectedBodyToolName ) {
+                        manipinfo._toolChangerConnectedBodyToolName = pToolChangerConnectedBodyToolName->getCharData();
+                    }
+                    else{
+                        manipinfo._toolChangerConnectedBodyToolName.clear();
                     }
 
                     daeElementRef pframe_tip = tec->getChild("frame_tip");
@@ -3309,7 +3326,7 @@ public:
                                 }
                             }
                         }
-                        else if((pmanipchild->getElementName() != string("frame_origin"))&&(pmanipchild->getElementName() != string("frame_tip"))&&(pmanipchild->getElementName() != string("gripperid"))) {
+                        else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_tip") && pmanipchild->getElementName() != string("grippername") && pmanipchild->getElementName() != string("toolChangerConnectedBodyToolName") ) {
                             RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%manipinfo._name));
                         }
                     }
@@ -3418,26 +3435,26 @@ public:
                 continue;
             }
             if( strcmp(pextra->getType(), "gripper_info") == 0 ) {
-                string gripperid = pextra->getAttribute("name");
-                if( gripperid.size() == 0 ) {
-                    gripperid = str(boost::format("gripper%d")%_nGlobalGripperInfoId++);
+                string grippername = pextra->getAttribute("name");
+                if( grippername.size() == 0 ) {
+                    grippername = str(boost::format("gripper%d")%_nGlobalGripperInfoId++);
                 }
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
                 if( !!tec ) {
                     RobotBase::GripperInfoPtr pGripperInfo(new RobotBase::GripperInfo());
-                    pGripperInfo->gripperid = _ConvertToOpenRAVEName(gripperid);
-
                     daeElementRef pjson_data = tec->getChild("json_data");
                     if( !!pjson_data ) {
                         rapidjson::Document rGripperInfo;
                         openravejson::ParseJson(rGripperInfo, pjson_data->getCharData());
                         dReal fUnitScale=1.0;
                         pGripperInfo->DeserializeJSON(rGripperInfo, fUnitScale);
-                        probot->_vecGripperInfos.push_back(pGripperInfo);
                     }
+                    // do not let json_data in collada override name attribute of <extra>
+                    pGripperInfo->name = _ConvertToOpenRAVEName(grippername);
+                    probot->_vecGripperInfos.push_back(pGripperInfo);
                 }
                 else {
-                    RAVELOG_WARN(str(boost::format("cannot create robot %s gripperInfo %s\n")%probot->GetName()%gripperid));
+                    RAVELOG_WARN_FORMAT("cannot create robot %s gripperInfo %s", probot->GetName()%grippername);
                 }
             }
         }
@@ -3540,10 +3557,19 @@ public:
             }
 
             RobotBase::ConnectedBodyInfo connectedBodyInfo;
-            connectedBodyInfo._bIsActive = false;  // defaults to non-active
+            connectedBodyInfo._bIsActive = 0;  // defaults to non-active
             daeElementRef pactive = tec->getChild("active");
             if( !!pactive ) {
-                resolveCommon_bool_or_param(pactive,tec,connectedBodyInfo._bIsActive);
+                bool bactive = false;
+                if( resolveCommon_bool_or_param(pactive,tec,bactive) ) {
+                    connectedBodyInfo._bIsActive = bactive;
+                }
+                else {
+                    int nActive = 0;
+                    if( resolveCommon_int_or_param(pactive,tec,nActive) ) {
+                        connectedBodyInfo._bIsActive = nActive;
+                    }
+                }
             }
 
             connectedBodyInfo._name = _ConvertToOpenRAVEName(name);
@@ -3575,7 +3601,21 @@ public:
                 }
 
                 RobotBasePtr pbody;
-                if( reader.InitFromURI(url, AttributesList()) ) {
+
+                AttributesList atts;
+                std::string schemes;
+                FOREACH(ialias, _vOpenRAVESchemeAliases) {
+                    if( schemes.size() > 0 ) {
+                        schemes += ' ';
+                    }
+                    schemes += *ialias;
+                }
+                if (!schemes.empty()) {
+                    RAVELOG_VERBOSE_FORMAT("inherit parent reader's openravescheme %s", schemes);
+                    atts.emplace_back("openravescheme", schemes);
+                }
+
+                if( reader.InitFromURI(url, atts) ) {
                     reader.Extract();
                     std::vector<RobotBasePtr> robots;
                     tempenv->GetRobots(robots);
@@ -3628,7 +3668,16 @@ public:
             }
             daeElementRef pactive = tec->getChild("active");
             if( !!pactive ) {
-                resolveCommon_bool_or_param(pactive, tec, connectedBody->_info._bIsActive);
+                bool bactive = false;
+                if( resolveCommon_bool_or_param(pactive, tec, bactive) ) {
+                    connectedBody->_info._bIsActive = bactive;
+                }
+                else {
+                    int nActive = -1;
+                    if( resolveCommon_int_or_param(pactive, tec, nActive) ) {
+                        connectedBody->_info._bIsActive = nActive;
+                    }
+                }
             }
         }
     }
@@ -4100,6 +4149,33 @@ public:
             }
             RAVELOG_WARN(str(boost::format("invalid bool data in element %s: %s")%pcommon->getElementName()%pbool->getCharData()));
             return false;
+        }
+        daeElement* pparam = pcommon->getChild("param");
+        if( !!pparam ) {
+            if( pparam->hasAttribute("ref") ) {
+                RAVELOG_WARN("cannot process param ref\n");
+            }
+            else {
+                daeElement* pelt = daeSidRef(pparam->getCharData(),parent).resolve().elt;
+                if( !!pelt ) {
+                    RAVELOG_WARN(str(boost::format("found param ref: %s from %s\n")%pelt->getCharData()%pparam->getCharData()));
+                }
+            }
+        }
+        return false;
+    }
+
+    static bool resolveCommon_int_or_param(daeElementRef pcommon, daeElementRef parent, int& intvalue)
+    {
+        if( !pcommon ) {
+            return false;
+        }
+        daeElement* pint = pcommon->getChild("int");
+        if( !!pint ) {
+            stringstream sint(pint->getCharData());
+            intvalue=0;
+            sint >> intvalue;
+            return !!sint;
         }
         daeElement* pparam = pcommon->getChild("param");
         if( !!pparam ) {

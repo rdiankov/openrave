@@ -18,11 +18,22 @@
 #include <algorithm>
 
 // used for functions that are also used internally
-#define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "body %s cannot be added to environment when doing this operation, current value is %d", GetName()%_nHierarchyComputed, ORE_InvalidState);
-#define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
-#define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
+#define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "env=%d, body %s cannot be added to environment when doing this operation, current value is %d", GetEnv()->GetId()%GetName()%_nHierarchyComputed, ORE_InvalidState);
+#define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "env=%d, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
+#define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "env=%d, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
 namespace OpenRAVE {
+
+const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type)
+{
+    switch(type) {
+    case DC_Unknown: return "Unknown";
+    case DC_IgnoreTorque: return "IgnoreTorque";
+    case DC_NominalTorque: return "NominalTorque";
+    case DC_InstantaneousTorque: return "InstantaneousTorque";
+    }
+    return "";
+}
 
 class ChangeCallbackData : public UserData
 {
@@ -1462,7 +1473,7 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
     else {
         RAVELOG_DEBUG("SetLinkTransformations should be called with doflastsetvalues, re-setting all values\n");
     }
-    OPENRAVE_ASSERT_OP_FORMAT(vbodies.size(), >=, _veclinks.size(), "not enough links %d<%d", vbodies.size()%_veclinks.size(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT(vbodies.size(), >=, _veclinks.size(), "env=%d, not enough links %d<%d", GetEnv()->GetId()%vbodies.size()%_veclinks.size(),ORE_InvalidArguments);
     vector<Transform>::const_iterator it;
     vector<LinkPtr>::iterator itlink;
     for(it = vbodies.begin(), itlink = _veclinks.begin(); it != vbodies.end(); ++it, ++itlink) {
@@ -1479,7 +1490,7 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
 
 void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues)
 {
-    OPENRAVE_ASSERT_OP_FORMAT(transforms.size(), >=, _veclinks.size(), "not enough links %d<%d", transforms.size()%_veclinks.size(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT(transforms.size(), >=, _veclinks.size(), "env=%d, not enough links %d<%d", GetEnv()->GetId()%transforms.size()%_veclinks.size(),ORE_InvalidArguments);
     vector<Transform>::const_iterator it;
     vector<LinkPtr>::iterator itlink;
     for(it = transforms.begin(), itlink = _veclinks.begin(); it != transforms.end(); ++it, ++itlink) {
@@ -1826,7 +1837,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                 break;
             }
         }
-        else {
+        else if ( !pjoint->IsStatic() ) {
             if( pjoint->GetType() == JointRevolute ) {
                 tjoint.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pvalues[0]);
                 pjoint->_doflastsetvalues[0] = pvalues[0];
@@ -1849,6 +1860,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
             }
         }
 
+        // if pjoint->IsStatic(), then pjoint->_info._tRightNoOffset and tjoint are assigned identities
         Transform t = pjoint->GetInternalHierarchyLeftTransform() * tjoint * pjoint->GetInternalHierarchyRightTransform();
         if( !pjoint->GetHierarchyParentLink() ) {
             t = _veclinks.at(0)->GetTransform() * t;
@@ -3120,7 +3132,7 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
         if( !!(*it)->_attachedbodies[0] ) {
             parentindex = (*it)->_attachedbodies[0]->GetIndex();
         }
-        int childindex = (*it)->_attachedbodies[0]->GetIndex();
+        int childindex = (*it)->_attachedbodies[1]->GetIndex();
         (*it)->_GetVelocities(dofvelocities,true,vLinkVelocities.at(parentindex),vLinkVelocities.at(childindex));
     }
 }
@@ -4703,6 +4715,21 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
     }
 
+    // Clone self-collision checker
+    _selfcollisionchecker.reset();
+    if( !!r->_selfcollisionchecker ) {
+        _selfcollisionchecker = RaveCreateCollisionChecker(GetEnv(), r->_selfcollisionchecker->GetXMLId());
+        _selfcollisionchecker->SetCollisionOptions(r->_selfcollisionchecker->GetCollisionOptions());
+        _selfcollisionchecker->SetGeometryGroup(r->_selfcollisionchecker->GetGeometryGroup());
+        if( GetEnvironmentId() != 0 ) {
+            // This body has been added to the environment already so can call InitKinBody.
+            _selfcollisionchecker->InitKinBody(shared_kinbody());
+        }
+        else {
+            // InitKinBody will be called when the body is added to the environment.
+        }
+    }
+
     _nUpdateStampId++; // update the stamp instead of copying
 }
 
@@ -4977,7 +5004,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
             if( !!plink1 ) {
                 break;
             }
-            }
+        }
         if( (*itlink)->_info._name == info._linkname1 ) {
             plink1 = *itlink;
             if( !!plink0 ) {

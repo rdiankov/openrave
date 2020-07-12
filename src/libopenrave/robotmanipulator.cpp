@@ -23,11 +23,12 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
     openravejson::SetJsonValueByKey(value, "transform", _tLocalTool, allocator);
     openravejson::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
     openravejson::SetJsonValueByKey(value, "direction", _vdirection, allocator);
-    openravejson::SetJsonValueByKey(value, "baseLInkName", _sBaseLinkName, allocator);
+    openravejson::SetJsonValueByKey(value, "baseLinkName", _sBaseLinkName, allocator);
     openravejson::SetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName, allocator);
     openravejson::SetJsonValueByKey(value, "iksolverType", _sIkSolverXMLId, allocator);
     openravejson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
-    openravejson::SetJsonValueByKey(value, "gripperid", _gripperid, allocator);
+    openravejson::SetJsonValueByKey(value, "grippername", _grippername, allocator);
+    openravejson::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
 }
 
 void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
@@ -40,7 +41,7 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     openravejson::LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
     openravejson::LoadJsonValueByKey(value, "iksolverType", _sIkSolverXMLId);
     openravejson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
-    openravejson::LoadJsonValueByKey(value, "gripperid", _gripperid);
+    openravejson::LoadJsonValueByKey(value, "grippername", _grippername);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
@@ -93,10 +94,10 @@ void RobotBase::Manipulator::SetChuckingDirection(const std::vector<dReal>& chuc
 
 void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
 {
-    _info._sIkSolverXMLId.resize(0);
     // only reset the iksolver if transform is different. note that the correct way is to see if the hash changes, but that could take too much computation. also hashes truncate the numbers.
     if( !!__pIkSolver && TransformDistance2(_info._tLocalTool, t) > g_fEpsilonLinear ) {
         __pIkSolver.reset();
+        _info._sIkSolverXMLId.resize(0);
     }
     _info._tLocalTool = t;
     __hashkinematicsstructure.resize(0);
@@ -107,13 +108,12 @@ void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
 
 void RobotBase::Manipulator::SetLocalToolDirection(const Vector& direction)
 {
-    _info._sIkSolverXMLId.resize(0);
-    __pIkSolver.reset();
-    // only reset the iksolver if transform is different. note that the correct way is to see if the hash changes, but that could take too much computation. also hashes truncate the numbers.
+    // only reset the iksolver if direction is different. note that the correct way is to see if the hash changes, but that could take too much computation. also hashes truncate the numbers.
     if( (_info._vdirection-direction).lengthsqr3() > g_fEpsilonLinear ) {
         // only reset if direction is actually used
         if( !!__pIkSolver && (__pIkSolver->Supports(IKP_TranslationDirection5D) || __pIkSolver->Supports(IKP_Direction3D)) ) {
             __pIkSolver.reset();
+            _info._sIkSolverXMLId.resize(0);
         }
     }
     _info._vdirection = direction*(1/RaveSqrt(direction.lengthsqr3())); // should normalize

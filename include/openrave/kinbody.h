@@ -38,6 +38,15 @@ enum GeometryType {
     GT_Cage=6, ///< a container shaped geometry with removable side walls. The side walls can be on any of the four sides. The origin is at the bottom of the base. The inner volume of the cage is measured from the base to the highest wall.
 };
 
+enum DynamicsConstraintsType {
+    DC_Unknown = -1, ///< constraints type is not set.
+    DC_IgnoreTorque        = 0, ///< Do no check torque limits
+    DC_NominalTorque       = 1, ///< Compute and check torque limits using nominal torque
+    DC_InstantaneousTorque = 2, ///< Compute and check torque limits using instantaneous torque
+};
+
+OPENRAVE_API const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type);
+
 /// \brief holds parameters for an electric motor
 ///
 /// all speed is in revolutions/second
@@ -1543,7 +1552,7 @@ public:
         std::string strname;         ///< \see KinBody::GetName
         std::vector<Transform> vectrans; ///< \see KinBody::GetLinkTransformations
         std::vector<uint8_t> vLinkEnableStates; ///< \see KinBody::GetLinkEnableStates
-        std::vector<uint8_t> vConnectedBodyActiveStates; ///< IsActive state of ConnectedBody \see RobotBase::GetConnectedBodyActiveStates
+        std::vector<int8_t> vConnectedBodyActiveStates; ///< IsActive state of ConnectedBody \see RobotBase::GetConnectedBodyActiveStates
         std::vector<dReal> jointvalues; ///< \see KinBody::GetDOFValues
         std::string uri; ///< \see KinBody::GetURI
         int updatestamp; ///< \see KinBody::GetUpdateStamp
@@ -1612,6 +1621,7 @@ private:
         Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
         Save_ActiveManipulatorToolTransform  = 0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
         Save_ManipulatorsToolTransform       = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
+        Save_ConnectedBodies                 = 0x00200000, ///< [robot only], saves the connected body states
     };
 
     /// \brief Helper class to save and restore the entire kinbody state.
@@ -2531,6 +2541,14 @@ private:
         \param[out] vgrabbedinfo all the grabbed infos
      */
     virtual void GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const;
+
+    /** \brief gets the grabbed info of a grabbed object whose name matches grabbedname
+
+        \param[in] the grabbed name to get the info from
+        \param[out] grabbedInfo initialized with the grabbed info
+        \return true if robot is grabbing body with name "grabbedname" and grabbedInfo is initialized
+     */
+    virtual bool GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbedInfo) const;
 
     /** \brief resets the grabbed bodies of the body
 
