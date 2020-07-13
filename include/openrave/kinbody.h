@@ -2542,6 +2542,14 @@ private:
      */
     virtual void GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const;
 
+    /** \brief gets the grabbed info of a grabbed object whose name matches grabbedname
+
+        \param[in] the grabbed name to get the info from
+        \param[out] grabbedInfo initialized with the grabbed info
+        \return true if robot is grabbing body with name "grabbedname" and grabbedInfo is initialized
+     */
+    virtual bool GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbedInfo) const;
+
     /** \brief resets the grabbed bodies of the body
 
         Any currently grabbed bodies will be first released.

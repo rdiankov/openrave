@@ -355,6 +355,31 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const
     }
 }
 
+bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbedInfo) const
+{
+    grabbedInfo.Reset();
+    for(size_t igrabbed = 0; igrabbed < _vGrabbedBodies.size(); ++igrabbed) {
+        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(_vGrabbedBodies[igrabbed]);
+        if( !!pgrabbed ) {
+            KinBodyPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
+            if( !!pgrabbedbody && pgrabbedbody->GetName() == grabbedname ) {
+                grabbedInfo._grabbedname = pgrabbedbody->GetName();
+                grabbedInfo._robotlinkname = pgrabbed->_plinkrobot->GetName();
+                grabbedInfo._trelative = pgrabbed->_troot;
+                grabbedInfo._setRobotLinksToIgnore = pgrabbed->_setRobotLinksToIgnore;
+                FOREACHC(itlink, _veclinks) {
+                    if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
+                        grabbedInfo._setRobotLinksToIgnore.insert((*itlink)->GetIndex());
+                    }
+                }
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     openravejson::SetJsonValueByKey(value, "grabbedName", _grabbedname, allocator);
