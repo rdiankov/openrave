@@ -2335,6 +2335,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     else if( options&CFO_FromPathShortcutting ) {
         neighstateoptions = NSO_FromPathShortcutting;
     }
+    else if( options&CFO_FromTrajectorySmoother ) {
+        neighstateoptions = NSO_OnlyHardConstraints|NSO_FromTrajectorySmoother; // for now, trajectory smoother uses hard constraints
+    }
 
     // bHasRampDeviatedFromInterpolation indicates if all the checked configurations deviate from the expected interpolation connecting q0 and q1.
     //
