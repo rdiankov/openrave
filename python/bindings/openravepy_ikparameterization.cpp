@@ -353,10 +353,6 @@ std::string PyIkParameterization::__str__() {
 object PyIkParameterization::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
-py::object PyIkParameterization::toDict() {
-    // for ujson serialization
-    return SerializeJSON();
-}
 PyIkParameterizationPtr PyIkParameterization::__mul__(object otrans)
 {
     return PyIkParameterizationPtr(new PyIkParameterization(_param * ExtractTransform(otrans)));
@@ -600,7 +596,6 @@ void init_openravepy_ikparameterization()
                                    .def("__repr__",&PyIkParameterization::__repr__)
                                    .def("__mul__",&PyIkParameterization::__mul__)
                                    .def("__rmul__",&PyIkParameterization::__rmul__)
-                                   .def("toDict",&PyIkParameterization::toDict)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                    .def(py::pickle(
                                     [](const PyIkParameterization& pyikparam) {
