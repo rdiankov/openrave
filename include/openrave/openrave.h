@@ -97,6 +97,7 @@ namespace OpenRAVE {
 
 }
 
+#include <openrave/openraverapidjson.h>
 #include <rapidjson/document.h>
 
 #include <openrave/logging.h>
