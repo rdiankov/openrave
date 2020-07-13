@@ -318,6 +318,8 @@ private:
 } // namespace OpenRAVE
 
 // replace the default allocator for rapidjson::Document and rapidjson::Value with our MemoryPoolAllocator
+#ifndef RAPIDJSON_DEFAULT_ALLOCATOR
 #define RAPIDJSON_DEFAULT_ALLOCATOR OpenRAVE::orrapidjson::MemoryPoolAllocator<>
+#endif
 
 #endif // OPENRAVE_RAPIDJSON_H
