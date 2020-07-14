@@ -229,7 +229,7 @@ public:
     virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
     /// \brief loads a scene from rapidjson document
-    virtual bool LoadJSON(const rapidjson::Document& doc, const AttributesList& atts = AttributesList()) = 0;
+    virtual bool LoadJSON(const rapidjson::Value& doc, const AttributesList& atts = AttributesList()) = 0;
 
     virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) {
         return LoadData(data,atts);

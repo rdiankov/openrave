@@ -78,7 +78,7 @@ public:
         return true;
     }
 
-    bool ExpandRapidJSON(EnvironmentBase::EnvironmentBaseInfo& envInfo, const rapidjson::Document& currentDoc, std::string bodyId, std::string uri, std::set<std::string>& circularReference, dReal fUnitScale) {
+    bool ExpandRapidJSON(EnvironmentBase::EnvironmentBaseInfo& envInfo, const rapidjson::Value& currentDoc, std::string bodyId, std::string uri, std::set<std::string>& circularReference, dReal fUnitScale) {
         if (circularReference.find(uri) != circularReference.end()) {
             RAVELOG_WARN("Load scene failed: circular reference is found");
             return false;
@@ -172,7 +172,7 @@ public:
     }
 
     /// \brief Extrat all bodies and add them into environment
-    bool ExtractAll(const rapidjson::Document& doc)
+    bool ExtractAll(const rapidjson::Value& doc)
     {
         EnvironmentBase::EnvironmentBaseInfo envInfo;
         dReal fUnitScale = _GetUnitScale(doc);
@@ -423,7 +423,7 @@ protected:
     std::map<boost::shared_ptr<const rapidjson::Document>, std::map<std::string, rapidjson::Value::ConstValueIterator>> _rapidJSONObjects;  ///< cache for opened rapidjson objects
 };
 
-bool RaveParseJSON(EnvironmentBasePtr penv, const rapidjson::Document& doc, const AttributesList& atts)
+bool RaveParseJSON(EnvironmentBasePtr penv, const rapidjson::Value& doc, const AttributesList& atts)
 {
     JSONReader reader(atts, penv);
     return reader.ExtractAll(doc);
