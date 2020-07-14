@@ -483,6 +483,10 @@ PyConfigurationSpecification::PyConfigurationSpecification(const std::string &s)
     ss >> _spec;
 }
 PyConfigurationSpecification::PyConfigurationSpecification(const ConfigurationSpecification& spec) {
+    _Update(spec);
+}
+
+void PyConfigurationSpecification::_Update(const ConfigurationSpecification& spec) {
     _spec = spec;
 }
 PyConfigurationSpecification::PyConfigurationSpecification(const ConfigurationSpecification::Group& g) {
@@ -500,6 +504,19 @@ int PyConfigurationSpecification::GetDOF() const {
 
 bool PyConfigurationSpecification::IsValid() const {
     return _spec.IsValid();
+}
+void PyConfigurationSpecification::DeserializeJSON(object obj) {
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    ConfigurationSpecification spec;
+    spec.DeserializeJSON(doc);
+    _Update(spec);
+}
+
+object PyConfigurationSpecification::SerializeJSON() {
+    rapidjson::Document doc;
+    _spec.SerializeJSON(doc);
+    return toPyObject(doc);
 }
 
 const ConfigurationSpecification::Group& PyConfigurationSpecification::GetGroupFromName(const std::string& name) {
@@ -1629,6 +1646,8 @@ void init_openravepy_global()
             .def(init<const std::string&>(py::args("xmldata")) )
             .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>(), DOXY_FN(ConfigurationSpecification,GetGroupFromName))
 #endif
+            .def("SerializeJSON", &PyConfigurationSpecification::SerializeJSON, DOXY_FN(ConfigurationSpecification, SerializeJSON))
+            .def("DeserializeJSON", &PyConfigurationSpecification::DeserializeJSON, PY_ARGS("obj") DOXY_FN(ConfigurationSpecification, DeserializeJSON))
             .def("FindCompatibleGroup",&PyConfigurationSpecification::FindCompatibleGroup, DOXY_FN(ConfigurationSpecification,FindCompatibleGroup))
             .def("FindTimeDerivativeGroup",&PyConfigurationSpecification::FindTimeDerivativeGroup, DOXY_FN(ConfigurationSpecification,FindTimeDerivativeGroup))
             .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))

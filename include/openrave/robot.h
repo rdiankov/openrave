@@ -114,8 +114,7 @@ public:
         std::string name; ///< unique name
         std::string grippertype; ///< gripper type
         std::vector<std::string> gripperJointNames; ///< names of the gripper joints
-
-        rapidjson::Document _docGripperInfo; ///< contains entire rapid json document to hold custom parameters
+        rapidjson::Document _docGripperInfo;  ///< contains entire rapid json document to hold custom parameters
     };
     typedef boost::shared_ptr<GripperInfo> GripperInfoPtr;
     typedef boost::shared_ptr<GripperInfo const> GripperInfoConstPtr;
