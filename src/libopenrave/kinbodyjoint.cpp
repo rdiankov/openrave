@@ -503,7 +503,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     if( !bAppend ) {
-        pValues.resize(0);
+        pValues.clear();
     }
     if( GetDOF() == 1 ) {
         pValues.push_back(GetValue(0));
