@@ -1792,13 +1792,13 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         if( vlinkscomputed[childlink->GetIndex()] ) {
             continue;
         }
-        if( !pvalues ) {
+        if( !pjoint->IsStatic() && !pvalues ) {
             // has to be a passive joint
             pvalues = vPassiveJointValues.at(jointindex-nActiveJoints).data();
         }
 
         Transform tjoint;
-        if( pjoint->GetType() & JointSpecialBit ) {
+        if( !pjoint->IsStatic() && pjoint->GetType() & JointSpecialBit ) {
             switch(pjoint->GetType()) {
             case JointHinge2: {
                 Transform tfirst;
@@ -1863,9 +1863,11 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         }
 
         // if pjoint->IsStatic(), then pjoint->_info._tRightNoOffset and tjoint are assigned identities
-        Transform t = pjoint->IsStatic() ? pjoint->GetInternalHierarchyLeftTransform()
-                                         : (pjoint->GetInternalHierarchyLeftTransform() * tjoint * pjoint->GetInternalHierarchyRightTransform());
-        t = (!!parentlink ? parentlink->GetTransform() : _veclinks.at(0)->GetTransform()) * t;
+        const Transform t = (!!parentlink ?      parentlink->GetTransform()
+                                          : _veclinks.at(0)->GetTransform())
+                            *
+                            (pjoint->IsStatic() ?  pjoint->GetInternalHierarchyLeftTransform()
+                                                : (pjoint->GetInternalHierarchyLeftTransform() * tjoint * pjoint->GetInternalHierarchyRightTransform()));
         childlink->SetTransform(t);
         vlinkscomputed[childlink->GetIndex()] = 1;
     }
