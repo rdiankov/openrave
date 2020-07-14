@@ -1476,6 +1476,7 @@ private:
         Transform _tRightNoOffset, _tLeftNoOffset;         ///< same as _tLeft and _tRight except it doesn't not include the offset
         Transform _tinvRight, _tinvLeft;         ///< the inverse transformations of tRight and tLeft
         bool _bInitialized;
+        bool _bStatic = false; ///< IsStatic with both lower and upper limits equal 0
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER

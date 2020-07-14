@@ -464,6 +464,10 @@ bool KinBody::Joint::IsPrismatic(int iaxis) const
 
 bool KinBody::Joint::IsStatic() const
 {
+    if(_bInitialized) {
+        return _bStatic;
+    }
+    
     if( IsMimic() ) {
         bool bstatic = true;
         KinBodyConstPtr parent(_parent);
@@ -1040,8 +1044,6 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     }
     _info._vcurrentvalues = vcurrentvalues;
 
-    _bInitialized = true;
-
     if( _attachedbodies[1]->IsStatic() && !IsStatic() ) {
         RAVELOG_WARN(str(boost::format("joint %s: all attached links are static, but joint is not!\n")%GetName()));
     }
@@ -1049,23 +1051,27 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     if(IsStatic()) {
         for(int idof = 0; idof < GetDOF(); ++idof) {
             if( _info._vlowerlimit[idof] != 0 ) {
-                if( _info._vlowerlimit[idof] > g_fEpsilon || _info._vlowerlimit[idof] < -g_fEpsilon ) {
+                if( RaveFabs(_info._vlowerlimit[idof]) > g_fEpsilon ) {
                     RAVELOG_WARN_FORMAT("static joint %s has non-zero lower limit %e, setting to 0", _info._name%_info._vlowerlimit[idof]);
                 }
                 _info._vlowerlimit[idof] = 0;
             }
             if( _info._vupperlimit[idof] != 0 ) {
-                if( _info._vupperlimit[idof] > g_fEpsilon || _info._vupperlimit[idof] < -g_fEpsilon ) {
+                if( RaveFabs(_info._vupperlimit[idof]) > g_fEpsilon ) {
                     RAVELOG_WARN_FORMAT("static joint %s has non-zero upper limit %e, setting to 0", _info._name%_info._vupperlimit[idof]);
                 }
                 _info._vupperlimit[idof] = 0;
             }
         }
+        _bStatic = true;
         _tLeftNoOffset *= _tRightNoOffset;
         _tLeft *= _tRight;
         _tRightNoOffset = _tRight = _tinvRight = Transform();
         _tinvLeft = _tLeft.inverse();
     }
+
+    // set _bInitialized at the end
+    _bInitialized = true;
 }
 
 KinBody::LinkPtr KinBody::Joint::GetHierarchyParentLink() const

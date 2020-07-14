@@ -1677,10 +1677,15 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     vlinkscomputed[0] = 1;
 
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
-        JointPtr pjoint = _vTopologicallySortedJointsAll[ijoint];
-        int jointindex = _vTopologicallySortedJointIndicesAll[ijoint];
-        int dofindex = pjoint->GetDOFIndex();
-        const dReal* pvalues=dofindex >= 0 ? pJointValues + dofindex : NULL;
+        const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
+        const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint];
+        const int dofindex = pjoint->GetDOFIndex(); // active joint has dofindex>=0; passive has dofindex=-1 but jointindex>=0
+        const dReal* pvalues = dofindex >= 0 ? pJointValues + dofindex : NULL;
+        const boost::array<dReal, 3>& vlowerlimit = pjoint->_info._vlowerlimit;
+        const boost::array<dReal, 3>& vupperlimit = pjoint->_info._vupperlimit;
+        const LinkPtr& parentlink = pjoint->_attachedbodies[0];
+        const LinkPtr& childlink = pjoint->_attachedbodies[1];
+
         if( pjoint->IsMimic() ) {
             for(int i = 0; i < pjoint->GetDOF(); ++i) {
                 if( pjoint->IsMimic(i) ) {
@@ -1787,7 +1792,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
             pvalues = &dummyvalues[0];
         }
         // do the test after mimic computation!
-        if( vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] ) {
+        if( vlinkscomputed[childlink->GetIndex()] ) {
             continue;
         }
         if( !pvalues ) {
@@ -1861,15 +1866,11 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         }
 
         // if pjoint->IsStatic(), then pjoint->_info._tRightNoOffset and tjoint are assigned identities
-        Transform t = pjoint->GetInternalHierarchyLeftTransform() * tjoint * pjoint->GetInternalHierarchyRightTransform();
-        if( !pjoint->GetHierarchyParentLink() ) {
-            t = _veclinks.at(0)->GetTransform() * t;
-        }
-        else {
-            t = pjoint->GetHierarchyParentLink()->GetTransform() * t;
-        }
-        pjoint->GetHierarchyChildLink()->SetTransform(t);
-        vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] = 1;
+        Transform t = pjoint->IsStatic() ? pjoint->GetInternalHierarchyLeftTransform()
+                                         : (pjoint->GetInternalHierarchyLeftTransform() * tjoint * pjoint->GetInternalHierarchyRightTransform());
+        t = (!!parentlink ? parentlink->GetTransform() : _veclinks.at(0)->GetTransform()) * t;
+        childlink->SetTransform(t);
+        vlinkscomputed[childlink->GetIndex()] = 1;
     }
 
     _UpdateGrabbedBodies();
