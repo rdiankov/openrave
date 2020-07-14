@@ -147,6 +147,51 @@ bool ConfigurationSpecification::operator!=(const ConfigurationSpecification& r)
     return !this->operator==(r);
 }
 
+bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0, int igroup1)
+{
+    return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
+}
+
+void ConfigurationSpecification::DeserializeJSON(const rapidjson::Value& rValue) {
+    if (rValue.HasMember("groups")) {
+        _vgroups.resize(rValue["groups"].Size());
+        size_t iGroup = 0;
+        for (rapidjson::Value::ConstValueIterator it = rValue["groups"].Begin(); it != rValue["groups"].End(); it++, iGroup++) {
+            ConfigurationSpecification::Group& group = _vgroups[iGroup];
+            OpenRAVE::orjson::LoadJsonValueByKey(*it, "name", group.name);
+            OpenRAVE::orjson::LoadJsonValueByKey(*it, "offset", group.offset);
+            OpenRAVE::orjson::LoadJsonValueByKey(*it, "dof", group.dof);
+            OpenRAVE::orjson::LoadJsonValueByKey(*it, "interpolation", group.interpolation);
+        }
+    }
+}
+
+void ConfigurationSpecification::SerializeJSON(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const {
+    std::vector<int> vgroupindices(_vgroups.size());
+    for (int i = 0; i < (int)vgroupindices.size(); ++i) {
+        vgroupindices[i] = i;
+    }
+    std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(*this), _1, _2));
+
+    rValue.SetObject();
+
+    rapidjson::Value rGroups;
+    rGroups.SetArray();
+    rGroups.Reserve(_vgroups.size(), alloc);
+    for(size_t iGroup = 0; iGroup < vgroupindices.size(); iGroup++) {
+        int iGroupIndex = vgroupindices[iGroup];
+        const ConfigurationSpecification::Group& group = _vgroups[iGroupIndex];
+        rapidjson::Value rGroup;
+        rGroup.SetObject();
+        OpenRAVE::orjson::SetJsonValueByKey(rGroup, "name", group.name, alloc);
+        OpenRAVE::orjson::SetJsonValueByKey(rGroup, "offset", group.offset, alloc);
+        OpenRAVE::orjson::SetJsonValueByKey(rGroup, "dof", group.dof, alloc);
+        OpenRAVE::orjson::SetJsonValueByKey(rGroup, "interpolation", group.interpolation, alloc);
+        rGroups.PushBack(rGroup, alloc);
+    }
+    OpenRAVE::orjson::SetJsonValueByKey(rValue, "groups", rGroups, alloc);
+}
+
 const ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(const std::string& name) const
 {
     size_t bestmatch=0xffffffff;
@@ -1839,11 +1884,6 @@ void ConfigurationSpecification::Reader::characters(const std::string& ch)
     else {
         _preader->characters(ch);
     }
-}
-
-bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0, int igroup1)
-{
-    return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
 }
 
 std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec)

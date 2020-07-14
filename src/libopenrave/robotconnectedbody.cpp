@@ -988,12 +988,13 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
 
             // look recursively for fields that end in "linkname" (case insensitive) and resolve their names
-            if ( connectedBodyInfo._vGripperInfos[iGripperInfo]->_docGripperInfo.IsObject()) {
+            if(connectedBodyInfo._vGripperInfos[iGripperInfo]->_docGripperInfo.IsObject()) {
                 rapidjson::Document newGripperInfoDoc;
                 newGripperInfoDoc.CopyFrom(connectedBodyInfo._vGripperInfos[iGripperInfo]->_docGripperInfo, newGripperInfoDoc.GetAllocator());
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linkname")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linknames")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
-                pnewgripperInfo->_docGripperInfo.Swap(newGripperInfoDoc);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("links")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
+                connectedBodyInfo._vGripperInfos[iGripperInfo]->_docGripperInfo.Swap(newGripperInfoDoc);
             }
 
             _vecGripperInfos.push_back(pnewgripperInfo);

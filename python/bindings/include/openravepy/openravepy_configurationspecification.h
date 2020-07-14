@@ -33,6 +33,9 @@ public:
     PyConfigurationSpecification(PyConfigurationSpecificationPtr pyspec);
     virtual ~PyConfigurationSpecification();
 
+    void DeserializeJSON(py::object obj);
+    py::object SerializeJSON();
+
     int GetDOF() const;
 
     bool IsValid() const;
@@ -106,6 +109,9 @@ public:
 
     // members
     ConfigurationSpecification _spec;
+
+private:
+    void _Update(const ConfigurationSpecification& spec);
 };
 
 } // namespace openravepy
