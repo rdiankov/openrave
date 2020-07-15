@@ -1660,25 +1660,25 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         if( !pjoint->IsMimic() ) {
             pjoint->GetValues(jvals);
             // check if out of limits!
-            for(size_t j = 0; j < vPassiveJointValues[i].size(); ++j) {
-                if( !_vPassiveJoints[i]->IsCircular(j) ) {
-                    if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_info._vlowerlimit.at(j) ) {
-                        if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_info._vlowerlimit.at(j)-5e-4f ) {
-                            RAVELOG_WARN(str(boost::format("dummy joint out of lower limit! %e < %e\n")%_vPassiveJoints[i]->_info._vlowerlimit.at(j)%vPassiveJointValues[i][j]));
+            for(size_t j = 0; j < jvals.size(); ++j) {
+                if( !pjoint->IsCircular(j) ) {
+                    if( jvals[j] < vlowerlimit.at(j) ) {
+                        if( jvals[j] < vlowerlimit.at(j) - 5e-4f ) {
+                            RAVELOG_WARN(str(boost::format("dummy joint out of lower limit! %e < %e\n") % vlowerlimit.at(j) % jvals[j]));
                         }
-                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_info._vlowerlimit.at(j);
+                        jvals[j] = vlowerlimit.at(j);
                     }
-                    else if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_info._vupperlimit.at(j) ) {
-                        if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_info._vupperlimit.at(j)+5e-4f ) {
-                            RAVELOG_WARN(str(boost::format("dummy joint out of upper limit! %e > %e\n")%_vPassiveJoints[i]->_info._vupperlimit.at(j)%vPassiveJointValues[i][j]));
+                    else if( jvals[j] > vupperlimit.at(j) ) {
+                        if( jvals[j] > vupperlimit.at(j) + 5e-4f ) {
+                            RAVELOG_WARN(str(boost::format("dummy joint out of upper limit! %e > %e\n") % vupperlimit.at(j) % jvals[j]));
                         }
-                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_info._vupperlimit.at(j);
+                        jvals[j] = vupperlimit.at(j);
                     }
                 }
             }
         }
         else {
-            vPassiveJointValues[i].reserve(_vPassiveJoints[i]->GetDOF()); // do not resize so that we can catch hierarchy errors
+            jvals.reserve(pjoint->GetDOF()); // do not resize so that we can catch hierarchy errors
         }
     }
 
