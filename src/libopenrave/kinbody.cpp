@@ -1651,6 +1651,9 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     std::vector< std::vector<dReal> > vPassiveJointValues(nPassiveJoints);
     for(int i = 0; i < nPassiveJoints; ++i) {
         const KinBody::JointPtr& pjoint = _vPassiveJoints[i];
+        if(pjoint->IsStatic()) {
+            continue;
+        }
         const boost::array<dReal, 3>& vlowerlimit = pjoint->_info._vlowerlimit;
         const boost::array<dReal, 3>& vupperlimit = pjoint->_info._vupperlimit;
         std::vector<dReal>& jvals = vPassiveJointValues[i];
