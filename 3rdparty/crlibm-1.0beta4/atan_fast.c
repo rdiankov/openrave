@@ -65,18 +65,17 @@ static void atan_quick(double *atanhi,double *atanlo, int *index_of_e, double x)
         {
           /* compute i so that a[i] < x < a[i+1] */
           i=31;
-          db_number TiA = arctan_table[i][A];
-          if (x < TiA.d) i-= 16;
+          if (x < arctan_table[i][A].d) i-= 16;
           else i+=16;
-          if (x < TiA.d) i-= 8;
+          if (x < arctan_table[i][A].d) i-= 8;
           else i+= 8;
-          if (x < TiA.d) i-= 4;
+          if (x < arctan_table[i][A].d) i-= 4;
           else i+= 4;
-          if (x < TiA.d) i-= 2;
+          if (x < arctan_table[i][A].d) i-= 2;
           else i+= 2;
-          if (x < TiA.d) i-= 1;
+          if (x < arctan_table[i][A].d) i-= 1;
           else i+= 1;
-          if (x < TiA.d) i-= 1;     
+          if (x < arctan_table[i][A].d) i-= 1;     
           xmBihi = x-arctan_table[i][B].d;
           xmBilo = 0.0;
         }
