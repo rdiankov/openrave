@@ -1642,9 +1642,6 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         pJointValues = &_vTempJoints[0];
     }
 
-    boost::array<dReal,3> dummyvalues; // dummy values for a joint
-    std::vector<dReal> vtempvalues, veval;
-
     // have to compute the angles ahead of time since they are dependent on the link 
     const int nActiveJoints = _vecjoints.size();
     const int nPassiveJoints = _vPassiveJoints.size();
@@ -1684,6 +1681,8 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
 
     std::vector<uint8_t> vlinkscomputed(_veclinks.size(),0);
     vlinkscomputed[0] = 1;
+    boost::array<dReal,3> dummyvalues; // dummy values for a joint
+    std::vector<dReal> vtempvalues, veval;
 
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
         const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
