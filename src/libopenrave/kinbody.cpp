@@ -1704,6 +1704,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint];
         const int dofindex = pjoint->GetDOFIndex(); // active joint has dofindex>=0; passive has dofindex=-1 but jointindex>=0
         const int jointdof = pjoint->GetDOF();
+        const KinBody::JointType jointtype = pjoint->GetType();
         const dReal* pvalues = dofindex >= 0 ? pJointValues + dofindex : NULL;
         const boost::array<dReal, 3>& vlowerlimit = pjoint->_info._vlowerlimit;
         const boost::array<dReal, 3>& vupperlimit = pjoint->_info._vupperlimit;
@@ -1724,20 +1725,20 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                     else {
                         const std::vector<dReal> vevalcopy = veval;
                         for(std::vector<dReal>::iterator iteval = veval.begin(); iteval != veval.end(); ) {
-                            if( pjoint->GetType() == JointSpherical || pjoint->IsCircular(i) ) {
+                            if( jointtype == JointSpherical || pjoint->IsCircular(i) ) {
                             }
-                            else if( *iteval < pjoint->_info._vlowerlimit[i] ) {
-                                if(*iteval >= pjoint->_info._vlowerlimit[i]-g_fEpsilonJointLimit ) {
-                                    *iteval = pjoint->_info._vlowerlimit[i];
+                            else if( *iteval < vlowerlimit[i] ) {
+                                if(*iteval >= vlowerlimit[i]-g_fEpsilonJointLimit ) {
+                                    *iteval = vlowerlimit[i];
                                 }
                                 else {
                                     iteval = veval.erase(iteval); // invalid value so remove from candidates
                                     continue;
                                 }
                             }
-                            else if( *iteval > pjoint->_info._vupperlimit[i] ) {
-                                if(*iteval <= pjoint->_info._vupperlimit[i]+g_fEpsilonJointLimit ) {
-                                    *iteval = pjoint->_info._vupperlimit[i];
+                            else if( *iteval > vupperlimit[i] ) {
+                                if(*iteval <= vupperlimit[i]+g_fEpsilonJointLimit ) {
+                                    *iteval = vupperlimit[i];
                                 }
                                 else {
                                     iteval = veval.erase(iteval); // invalid value so remove from candidates
@@ -1749,25 +1750,25 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
 
                         if( veval.empty() ) {
                             for(dReal eval : vevalcopy) {
-                                if( checklimits == CLA_Nothing || pjoint->GetType() == JointSpherical || pjoint->IsCircular(i) ) {
+                                if( checklimits == CLA_Nothing || jointtype == JointSpherical || pjoint->IsCircular(i) ) {
                                     veval.push_back(eval);
                                 }
-                                else if( eval < pjoint->_info._vlowerlimit[i]-g_fEpsilonEvalJointLimit ) {
-                                    veval.push_back(pjoint->_info._vlowerlimit[i]);
+                                else if( eval < vlowerlimit[i]-g_fEpsilonEvalJointLimit ) {
+                                    veval.push_back(vlowerlimit[i]);
                                     if( checklimits == CLA_CheckLimits ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_info._vlowerlimit[i]%eval));
+                                        RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%pjoint->GetName()%vlowerlimit[i]%eval));
                                     }
                                     else if( checklimits == CLA_CheckLimitsThrow ) {
                                         throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s: lower limit (%e) is not followed: %e"), pjoint->GetName()%pjoint->_info._vlowerlimit[i]%eval, ORE_InvalidArguments);
                                     }
                                 }
-                                else if( eval > pjoint->_info._vupperlimit[i]+g_fEpsilonEvalJointLimit ) {
-                                    veval.push_back(pjoint->_info._vupperlimit[i]);
+                                else if( eval > vupperlimit[i]+g_fEpsilonEvalJointLimit ) {
+                                    veval.push_back(vupperlimit[i]);
                                     if( checklimits == CLA_CheckLimits ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_info._vupperlimit[i]%eval));
+                                        RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%vupperlimit[i]%eval));
                                     }
                                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                                        throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s: upper limit (%e) is not followed: %e"), pjoint->GetName()%pjoint->_info._vupperlimit[i]%eval, ORE_InvalidArguments);
+                                        throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s: upper limit (%e) is not followed: %e"), pjoint->GetName()%vupperlimit[i]%eval, ORE_InvalidArguments);
                                     }
                                 }
                                 else {
@@ -1813,8 +1814,8 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         }
 
         Transform tjoint;
-        if( pjoint->GetType() & JointSpecialBit ) {
-            switch(pjoint->GetType()) {
+        if( jointtype & JointSpecialBit ) {
+            switch(jointtype) {
             case JointHinge2: {
                 Transform tfirst;
                 tfirst.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pvalues[0]);
@@ -1850,20 +1851,20 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                 break;
             }
             default:
-                RAVELOG_WARN(str(boost::format("forward kinematic type 0x%x not supported")%pjoint->GetType()));
+                RAVELOG_WARN(str(boost::format("forward kinematic type 0x%x not supported")%jointtype));
                 break;
             }
         }
         else {
-            if( pjoint->GetType() == JointRevolute ) {
+            if( jointtype == JointRevolute ) {
                 tjoint.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pvalues[0]);
                 pjoint->_doflastsetvalues[0] = pvalues[0];
             }
-            else if( pjoint->GetType() == JointPrismatic ) {
+            else if( jointtype == JointPrismatic ) {
                 tjoint.trans = pjoint->GetInternalHierarchyAxis(0) * pvalues[0];
             }
             else {
-                for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                for(int iaxis = 0; iaxis < jointdof; ++iaxis) {
                     Transform tdelta;
                     if( pjoint->IsRevolute(iaxis) ) {
                         tdelta.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(iaxis), pvalues[iaxis]);
