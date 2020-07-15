@@ -2,6 +2,7 @@
 # Copyright (C) 2020 MUJIN Inc
 
 import struct
+import numpy
 
 class BinaryTrajectory(object):
     """Represents a parsed binary trajectory
