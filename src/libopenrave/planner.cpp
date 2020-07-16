@@ -217,7 +217,20 @@ void PlannerStatus::InitCollisionReport(CollisionReportPtr& newreport)
     }
 }
 
-void PlannerStatus::AddCollisionReport(const CollisionReport& collisionReport)
+void PlannerStatus::InitWorkspaceTraj(TrajectoryBaseConstPtr& newworkspacetraj)
+{
+    if ( !!newworkspacetraj ) {
+        if ( !workspaceTraj ) {
+            workspaceTraj.reset(new TrajectoryBase());
+        }
+        *workspaceTraj = *newworkspacetraj;
+    }
+    else {
+        workspaceTraj.reset();
+    }
+}
+
+void PlannerStatus::UpdateLinkCollisionCount(const CollisionReport& collisionReport)
 {
     if (!!collisionReport.plink1 && !!collisionReport.plink2) {
         std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr> collisionPair(collisionReport.plink1, collisionReport.plink2);

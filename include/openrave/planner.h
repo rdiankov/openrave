@@ -62,7 +62,9 @@ enum PlannerStatusCode
 enum PlanningOptions
 {
     PO_NoStatusDetail = 1, ///< if set, then do not output any PlannerStatus details, just the finish code. This allows system to be faster.
-    PO_AddCollisionStatistics = 2 /// If set, Fill in collision to aid in planning failure debugging. This will slow down the system.
+    PO_AddBiRRTCollisionInfo = 2 /// If set, then will fill in collision information to aid in BiRRT planning failure debugging. This will slow down the system.
+    PO_AddLinearPlannerCollisionInfo = 4; /// If set, then will fill information to aid in linear planning failure debugging. This will slow down the system.
+    PO_AddWorkspacePlannerCollisionInfo = 0x8; /// If set, fill in collision to aid in IK filering failure debugging. This will slow down the system.
 };
 
 /// \brief action to send to the planner while it is planning. This is usually done by the user-specified planner callback function
@@ -504,7 +506,10 @@ public:
     PlannerStatus& SetPlannerParameters(PlannerParametersConstPtr parameters);
 
     void InitCollisionReport(CollisionReportPtr& collisionReport);
-    void AddCollisionReport(const CollisionReport& collisionReport);
+    void InitWorkspaceTraj(TrajectoryBaseConstPtr& workspaceTraj);
+
+    void UpdateLinkCollisionCount(const CollisionReport& collisionReport);
+
     void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
 
     inline uint32_t GetStatusCode() const {
@@ -524,9 +529,13 @@ public:
     CollisionReportPtr report;              ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
     std::string errorOrigin;                // Auto, a string representing the code path of the error.
 
+    // Currently only filled in by BiRRT planner
     std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int > mCollidingLinksCount; // Counter for colliding links
-    uint32_t numPlannerIterations; ///< number of planner iterations before failure
+    uint32_t numPlannerIterations; ///< number of planner iterations before failure.
     uint64_t elapsedPlanningTimeUS; ///< us, elapsed time of the planner
+
+    // Currently only filled in by workspace planner
+    TrajectoryBaseConstPtr workspaceTraj;   // maybe we can visualize this linear trajectory later
 };
 
 #define OPENRAVE_PLANNER_STATUS(...) PlannerStatus(__VA_ARGS__).SetErrorOrigin(str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__)).SetPlannerParameters(_parameters);
