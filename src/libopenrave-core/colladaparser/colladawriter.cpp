@@ -2328,9 +2328,12 @@ private:
                     continue;
                 }
 
-                string rigid_body = str(boost::format("%s/%s")%ipmout->ipm->getSid()%ipmout->pmout->vrigidbodysids.at(pgrabbinglink->GetIndex()));
-                pconstraint->add("ref_attachment")->setAttribute("rigid_body",rigid_body.c_str());
-                rigid_body = str(boost::format("%s/%s")%grabbedias->ipmout->ipm->getSid()%grabbedias->ipmout->pmout->vrigidbodysids.at(0));
+                if( pgrabbinglink->GetIndex() < (int)ipmout->pmout->vrigidbodysids.size() ) {
+                    string ref_attachment = str(boost::format("%s/%s")%ipmout->ipm->getSid()%ipmout->pmout->vrigidbodysids.at(pgrabbinglink->GetIndex()));
+                    pconstraint->add("ref_attachment")->setAttribute("rigid_body",ref_attachment.c_str());
+                }
+
+                std::string rigid_body = str(boost::format("%s/%s")%grabbedias->ipmout->ipm->getSid()%grabbedias->ipmout->pmout->vrigidbodysids.at(0));
                 pconstraint->add("attachment")->setAttribute("rigid_body",rigid_body.c_str());
 
                 std::list<KinBody::LinkConstPtr> listIgnoreLinks;
