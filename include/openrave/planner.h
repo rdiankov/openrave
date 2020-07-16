@@ -536,6 +536,7 @@ public:
 
     // Currently only filled in by workspace planner
     TrajectoryBaseConstPtr workspaceTraj;   // maybe we can visualize this linear trajectory later
+    // ikparam - in the case being returned by workspace planner, indicates which ikparam failed (may be linearly interpolated point)
 };
 
 #define OPENRAVE_PLANNER_STATUS(...) PlannerStatus(__VA_ARGS__).SetErrorOrigin(str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__)).SetPlannerParameters(_parameters);
