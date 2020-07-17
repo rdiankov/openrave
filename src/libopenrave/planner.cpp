@@ -220,13 +220,10 @@ void PlannerStatus::InitCollisionReport(CollisionReportPtr& newreport)
 void PlannerStatus::InitWorkspaceTraj(TrajectoryBaseConstPtr& newworkspacetraj)
 {
     if ( !!newworkspacetraj ) {
-        if ( !workspaceTraj ) {
-            workspaceTraj.reset(new TrajectoryBase());
-        }
-        *workspaceTraj = *newworkspacetraj;
-    }
-    else {
-        workspaceTraj.reset();
+        // Copy boost::shared_ptr
+        workspaceTraj = newworkspacetraj;
+    } else {
+        workspaceTraj.reset(); // So we don't take up heap memory
     }
 }
 
