@@ -230,7 +230,7 @@ void PlannerStatus::InitWorkspaceTraj(TrajectoryBaseConstPtr& newworkspacetraj)
     }
 }
 
-void PlannerStatus::UpdateLinkCollisionCount(const CollisionReport& collisionReport)
+void PlannerStatus::UpdateLinkCollisionInfo(const CollisionReport& collisionReport)
 {
     if (!!collisionReport.plink1 && !!collisionReport.plink2) {
         std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr> collisionPair(collisionReport.plink1, collisionReport.plink2);

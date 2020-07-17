@@ -463,7 +463,7 @@ Some python code to display data::\n\
             ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA, false, constraintFilterOptions);
 
             if (et == ET_Failed && (constraintFilterOptions&CFO_FillCollisionReport)) {
-                planningstatus.UpdateLinkCollisionCount(_treeForward.GetConstraintReport()->_report);
+                planningstatus.UpdateLinkCollisionInfo(_treeForward.GetConstraintReport()->_report);
             }
 
             // although check isn't necessary, having it improves running times
@@ -479,7 +479,7 @@ Some python code to display data::\n\
             et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB, false, constraintFilterOptions);     // extend B toward A
 
             if (et == ET_Failed && (constraintFilterOptions&CFO_FillCollisionReport)) {
-                planningstatus.UpdateLinkCollisionCount(_treeBackward.GetConstraintReport()->_report);
+                planningstatus.UpdateLinkCollisionInfo(_treeBackward.GetConstraintReport()->_report);
             }
 
             if( et == ET_Connected ) {
