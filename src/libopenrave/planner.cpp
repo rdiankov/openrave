@@ -217,14 +217,10 @@ void PlannerStatus::InitCollisionReport(CollisionReportPtr& newreport)
     }
 }
 
-void PlannerStatus::InitWorkspaceTraj(TrajectoryBaseConstPtr& newworkspacetraj)
+void PlannerStatus::InitWorkspaceTraj(const TrajectoryBaseConstPtr& newworkspacetraj)
 {
-    if ( !!newworkspacetraj ) {
-        // Copy boost::shared_ptr
-        workspaceTraj = newworkspacetraj;
-    } else {
-        workspaceTraj.reset(); // So we don't take up heap memory
-    }
+    // Copy boost::shared_ptr
+    pWorkspaceTraj = newworkspacetraj;
 }
 
 void PlannerStatus::UpdateLinkCollisionInfo(const CollisionReport& collisionReport)

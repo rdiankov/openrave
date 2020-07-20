@@ -62,9 +62,9 @@ enum PlannerStatusCode
 enum PlanningOptions
 {
     PO_NoStatusDetail = 1, ///< if set, then do not output any PlannerStatus details, just the finish code. This allows system to be faster.
-    PO_AddBiRRTCollisionInfo = 2, /// If set, then will fill in collision information to aid in BiRRT planning failure debugging. This will slow down the system.
-    PO_AddLinearPlannerCollisionInfo = 4, /// If set, then will fill information to aid in linear planning failure debugging. This will slow down the system.
-    PO_AddWorkspacePlannerCollisionInfo = 0x8 /// If set, fill in collision to aid in IK filering failure debugging. This will slow down the system.
+    PO_AddBiRRTCollisionInfo = 1 << 1, /// If set, then will fill in collision information to aid in BiRRT planning failure debugging. This will slow down the system.
+    PO_AddLinearPlannerCollisionInfo = 1 << 2, /// If set, then will fill information to aid in linear planning failure debugging. This will slow down the system.
+    PO_AddWorkspacePlannerCollisionInfo = 1 << 3 /// If set, fill in collision to aid in IK filering failure debugging. This will slow down the system.
 };
 
 /// \brief action to send to the planner while it is planning. This is usually done by the user-specified planner callback function
@@ -506,7 +506,7 @@ public:
     PlannerStatus& SetPlannerParameters(PlannerParametersConstPtr parameters);
 
     void InitCollisionReport(CollisionReportPtr& collisionReport);
-    void InitWorkspaceTraj(TrajectoryBaseConstPtr& workspaceTraj);
+    void InitWorkspaceTraj(const TrajectoryBaseConstPtr& workspaceTraj);
 
     void UpdateLinkCollisionInfo(const CollisionReport& collisionReport);
 
@@ -536,7 +536,7 @@ public:
 
     // Filled in by workspace planner
     // IkParameterization ikparam - in the case being returned by workspace planner, indicates which ikparam failed (may be linearly interpolated point) (conditionally populated)
-    TrajectoryBaseConstPtr workspaceTraj;   // maybe we can visualize this linear trajectory later; always populated by workspace planner (always populated)
+    TrajectoryBaseConstPtr pWorkspaceTraj;   // maybe we can visualize this linear trajectory later (always populated)
     // CollisionReportPtr report(?) - not sure if this should be added (conditionally populated)
     IkReturnAction ikReturnAction;  // summarizes why workspace planner failed (always populated)
 };
