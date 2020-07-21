@@ -295,7 +295,7 @@ void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Docu
     if (failedIkParam.GetType() != IKP_None) {
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-        ss << ikparam;
+        ss << failedIkParam;
         openravejson::SetJsonValueByKey(rPlannerStatus, "failedIkParam", ss.str(), alloc);
     }
     if (!!pWorkspaceTraj) {
@@ -304,7 +304,7 @@ void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Docu
         pWorkspaceTraj->serialize(os);
         openravejson::SetJsonValueByKey(rPlannerStatus, "pWorkspaceTraj", oss.str(), alloc);
     }
-    if (ikReturnAction != IKRA_Success) {
+    if (ikReturnAction) {
         openravejson::SetJsonValueByKey(rPlannerStatus, "ikReturnAction", ikReturnAction, alloc);
     }
 

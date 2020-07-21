@@ -532,7 +532,7 @@ public:
     // Filled in by workspace planner verifier
     IkParameterization failedIkParam; // in the case being returned by workspace planner, indicates which ikparam failed (may be linearly interpolated point) (conditionally populated)
     TrajectoryBaseConstPtr pWorkspaceTraj;   // maybe we can visualize this linear trajectory later (always populated)
-    IkReturnAction ikReturnAction=IKRA_Success;  // summarizes why workspace planner failed (always populated)
+    IkReturnAction ikReturnAction;  // summarizes why workspace planner failed (always populated)
 
     // Filled in by BiRRT planner
     std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int > mCollidingLinksCount; // Counter for colliding links
