@@ -535,9 +535,8 @@ public:
     uint64_t elapsedPlanningTimeUS; ///< us, elapsed time of the planner
 
     // Filled in by workspace planner
-    // IkParameterization ikparam - in the case being returned by workspace planner, indicates which ikparam failed (may be linearly interpolated point) (conditionally populated)
+    IkParameterization failedIkParam; // in the case being returned by workspace planner, indicates which ikparam failed (may be linearly interpolated point) (conditionally populated)
     TrajectoryBaseConstPtr pWorkspaceTraj;   // maybe we can visualize this linear trajectory later (always populated)
-    // CollisionReportPtr report(?) - not sure if this should be added (conditionally populated)
     IkReturnAction ikReturnAction;  // summarizes why workspace planner failed (always populated)
 };
 typedef boost::shared_ptr<PlannerStatus> PlannerStatusPtr;

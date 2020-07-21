@@ -123,7 +123,7 @@ PlannerStatus::PlannerStatus(const uint32_t statusCode) : PlannerStatus()
         description += "Planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results. ";
     }
     if(statusCode & PS_FailedDueToCollision) {
-        description += "planner failed due to collision constraints. ";
+        description += "Planner failed due to collision constraints. ";
     }
     if(statusCode & PS_FailedDueToInitial) {
         description += "Failed due to initial configurations. ";
