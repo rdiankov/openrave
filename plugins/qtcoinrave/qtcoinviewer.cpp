@@ -666,25 +666,26 @@ class GetCameraImageMessage : public QtCoinViewer::EnvMessage
 {
 public:
     GetCameraImageMessage(QtCoinViewerPtr pviewer, void** ppreturn,
-                          std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& extrinsic, const SensorBase::CameraIntrinsics& KK)
-        : EnvMessage(pviewer, ppreturn, true), _memory(memory), _width(width), _height(height), _extrinsic(extrinsic), _KK(KK) {
+                          std::vector<uint8_t>& color, int width, int height, const RaveTransform<float>& extrinsic, const SensorBase::CameraIntrinsics& KK, std::vector<float>* depth = nullptr)
+        : EnvMessage(pviewer, ppreturn, true), _color(color), _width(width), _height(height), _extrinsic(extrinsic), _KK(KK), _depth(depth) {
     }
 
     virtual void viewerexecute() {
-        void* ret = (void*)QtCoinViewerPtr(_pviewer)->_GetCameraImage(_memory, _width, _height, _extrinsic, _KK);
+        void* ret = (void*)QtCoinViewerPtr(_pviewer)->_GetCameraImage(_color, _width, _height, _extrinsic, _KK, _depth);
         if( _ppreturn != NULL )
             *_ppreturn = ret;
         EnvMessage::viewerexecute();
     }
 
 private:
-    vector<uint8_t>& _memory;
+    vector<uint8_t>& _color;
+    vector<float>* _depth;
     int _width, _height;
     const RaveTransform<float>& _extrinsic;
     const SensorBase::CameraIntrinsics& _KK;
 };
 
-bool QtCoinViewer::GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK)
+bool QtCoinViewer::GetCameraImage(std::vector<uint8_t>& color, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, std::vector<float>* depth)
 {
     void* ret = NULL;
     if (_timerSensor->isScheduled() && _bUpdateEnvironment) {
@@ -692,7 +693,7 @@ bool QtCoinViewer::GetCameraImage(std::vector<uint8_t>& memory, int width, int h
             RAVELOG_WARN("failed to GetCameraImage: force update failed\n");
             return false;
         }
-        EnvMessagePtr pmsg(new GetCameraImageMessage(shared_viewer(), &ret, memory, width, height, t, KK));
+        EnvMessagePtr pmsg(new GetCameraImageMessage(shared_viewer(), &ret, color, width, height, t, KK, depth));
         pmsg->callerexecute(false);
     }
     else {
@@ -3399,7 +3400,50 @@ void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
 #endif
 }
 
-bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& intrinsics)
+struct DepthRenderData
+{
+public:
+    DepthRenderData(float* buffer, int width, int height)
+      : _buffer(buffer)
+      , _width(width)
+      , _height(height)
+    {}
+
+    inline float* GetBuffer()
+    {
+        return _buffer;
+    }
+
+    inline int GetWidth() const
+    {
+        return _width;
+    }
+
+    inline int GetHeight() const
+    {
+        return _height;
+    }
+
+private:
+    float* _buffer;
+    unsigned int _width;
+    unsigned int _height;
+};
+
+void getZBuffer(void* _depthRenderData)
+{
+    DepthRenderData* depthRenderData = reinterpret_cast<DepthRenderData*>(_depthRenderData);
+    try
+    {
+        glReadPixels(0, 0, depthRenderData->GetWidth(), depthRenderData->GetHeight(), GL_DEPTH_COMPONENT, GL_FLOAT, depthRenderData->GetBuffer());
+    }
+    catch (...)
+    {
+        RAVELOG_WARN("renderOffscreenRgbDepthPointcloud: Error while reading the z-buffer (the read data may be partial)");
+    }
+}
+
+bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& color, int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& intrinsics, std::vector<float>* depth)
 {
     if( !_bCanRenderOffscreen ) {
         RAVELOG_WARN("cannot render offscreen\n");
@@ -3435,6 +3479,15 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     if( !bRenderFiguresInCamera ) {
         _ivRoot->removeChild(_pFigureRoot);
     }
+
+    if (depth != nullptr) {
+        depth->resize(height * width);
+        DepthRenderData depthRenderData(depth->data(), width, height);
+
+        ivOffscreen->getGLRenderAction()->setPassCallback(getZBuffer, static_cast<void*>(&depthRenderData));
+        ivOffscreen->getGLRenderAction()->setNumPasses(2);
+    }
+
     bool bSuccess = ivOffscreen->render(_pviewer->getSceneManager()->getSceneGraph());
     if( !bRenderFiguresInCamera ) {
         _ivRoot->addChild(_pFigureRoot);
@@ -3443,9 +3496,33 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
 
     if( bSuccess ) {
         // vertically flip since we want upper left corner to correspond to (0,0)
-        memory.resize(width*height*3);
+        color.resize(width*height*3);
         for(int i = 0; i < height; ++i) {
-            memcpy(&memory[i*width*3], ivOffscreen->getBuffer()+(height-i-1)*width*3, width*3);
+            memcpy(&color[i*width*3], ivOffscreen->getBuffer()+(height-i-1)*width*3, width*3);
+        }
+        if (depth != nullptr) {
+            // Vertically flip since we want upper left corner to correspond to (0,0)
+            float tmpRow[width];
+            for(size_t y = 0; y < static_cast<size_t>(height / 2); ++y) {
+                memcpy(tmpRow, &depth->at(y * width), width * sizeof(float));
+                memcpy(&depth->at(y * width), &depth->at((height - y - 1) * width), width * sizeof(float));
+                memcpy(&depth->at((height - y - 1) * width), tmpRow, width * sizeof(float));
+            }
+
+            // Convert Z-buffer into depth
+            const float nanVal = std::numeric_limits<float>::quiet_NaN();
+            const float zNear = GetCamera()->nearDistance.getValue();
+            const float zFar = GetCamera()->farDistance.getValue();
+            const float zMul = zFar * zNear, zDiff = zNear - zFar, zMax = 0.99 * zFar;
+            for (size_t y = 0; y < static_cast<size_t>(height); ++y)
+            {
+                for (size_t x = 0; x < static_cast<size_t>(width); ++x)
+                {
+                    const size_t pixelIndex = x + width * y;
+                    const float zVal = zMul / (zFar + depth->at(pixelIndex) * zDiff);
+                    depth->at(pixelIndex) = (zVal <= zMax) ? zVal : nanVal;
+                }
+            }
         }
     }
     else {

@@ -321,6 +321,23 @@ public:
         return toPyArray(memory,dims);
     }
 
+    object GetCameraColorAndDepthImages(int width, int height, object extrinsic, object oKK)
+    {
+        std::vector<float> vKK = ExtractArray<float>(oKK);
+        if( vKK.size() != 4 ) {
+            throw openrave_exception(_("KK needs to be of size 4"));
+        }
+        SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
+        std::vector<uint8_t> color;
+        std::vector<float>* depth = new std::vector<float>();
+        if( !_pviewer->GetCameraImage(color, width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK, depth) ) {
+            throw openrave_exception(_("failed to get camera color and/or depth images"));
+        }
+        std::vector<npy_intp> depthDims(2); depthDims[0] = height; depthDims[1] = width;
+        std::vector<npy_intp> colorDims(depthDims); colorDims.push_back(3);
+        return py::make_tuple(toPyArray(color, colorDims), toPyArray(*depth, depthDims));
+    }
+
     object GetCameraIntrinsics() {
         return py::to_object(toPyCameraIntrinsics(_pviewer->GetCameraIntrinsics()));
     }
@@ -394,6 +411,7 @@ void init_openravepy_viewer()
                        .def("GetCameraIntrinsics",&PyViewerBase::GetCameraIntrinsics, DOXY_FN(ViewerBase,GetCameraIntrinsics))
                        .def("GetCameraDistanceToFocus", &PyViewerBase::GetCameraDistanceToFocus, DOXY_FN(ViewerBase, GetCameraDistanceToFocus))
                        .def("GetCameraImage",&PyViewerBase::GetCameraImage, PY_ARGS("width","height","transform","K") DOXY_FN(ViewerBase,GetCameraImage))
+                       .def("GetCameraColorAndDepthImages",&PyViewerBase::GetCameraColorAndDepthImages, PY_ARGS("width","height","transform","K") DOXY_FN(ViewerBase,GetCameraImage))
         ;
 
 //        enum_<ViewerBase::ViewerEvents>("Events" DOXY_ENUM(ViewerEvents))

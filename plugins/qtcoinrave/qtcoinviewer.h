@@ -139,7 +139,7 @@ public:
         }
     }
 
-    virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
+    virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, std::vector<float>* depth = nullptr);
 
     virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0);
@@ -293,7 +293,7 @@ public:
     virtual void _Show(int showtype);
     virtual void _SetName(const string& ptitle);
 
-    virtual bool _GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
+    virtual bool _GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, std::vector<float>* depth = nullptr);
     virtual bool _WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void _SetCamera(const RaveTransform<float>& trans, float focalDistance);
 

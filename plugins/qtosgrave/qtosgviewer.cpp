@@ -1383,7 +1383,7 @@ bool QtOSGViewer::GetFractionOccluded(KinBodyPtr pbody, int width, int height, f
     return false;
 }
 
-bool QtOSGViewer::GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK)
+bool QtOSGViewer::GetCameraImage(std::vector<uint8_t>& color, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, std::vector<float>* depth)
 {
     return false;
 }

@@ -100,13 +100,14 @@ public:
 
         The camera is meant to show the underlying OpenRAVE world as a robot would see it, so all graphs
         rendered with the plotX and drawX functions are hidden by default. Some viewers support the SetFiguresInCamera command to allow graphs to be also displayed.
-        \param memory the memory where the image will be stored at, has to store 3*width*height
+        \param color the memory where the color image will be stored at, has to store 3*width*height
         \param width width of the image, if 0 the width of the viewer is used
         \param height height of the image, if 0 the width of the viewer is used
         \param t the rotation and translation of the camera. Note that +z is treated as the camera direction axis! So all points in front of the camera have a positive dot product with its +z direction.
         \param intrinsics the intrinsic parameters of the camera defining FOV, distortion, principal point, and focal length. The focal length is used to define the near plane for culling.
+        \param depth the optional memory where the depth image will be stored at, has to store width*height
      */
-    virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& intrinsics) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& intrinsics, std::vector<float>* depth = nullptr) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     //@}
 
