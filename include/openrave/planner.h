@@ -523,21 +523,21 @@ public:
 
     PlannerParametersConstPtr parameters;   ///< parameters used in the planner
     std::string description;                ///< Optional, the description of how/why the error happended. Displayed to the user by the UI. It will automatically be filled with a generic message corresponding to statusCode if not provided.
+    std::string errorOrigin;                // Auto, a string representing the code path of the error.
     uint32_t statusCode;                    // combination of PS_X fields (PlannerStatusCode)
     IkParameterization ikparam;             // Optional, the ik parameter that failed to find a solution.
     std::vector<dReal> jointValues;         // Optional, the robot's joint values in rad or m
     CollisionReportPtr report;              ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
-    std::string errorOrigin;                // Auto, a string representing the code path of the error.
+
+    // Filled in by workspace planner verifier
+    IkParameterization failedIkParam; // in the case being returned by workspace planner, indicates which ikparam failed (may be linearly interpolated point) (conditionally populated)
+    TrajectoryBaseConstPtr pWorkspaceTraj;   // maybe we can visualize this linear trajectory later (always populated)
+    IkReturnAction ikReturnAction=IKRA_Success;  // summarizes why workspace planner failed (always populated)
 
     // Filled in by BiRRT planner
     std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int > mCollidingLinksCount; // Counter for colliding links
-    uint32_t numPlannerIterations; ///< number of planner iterations before failure.
-    uint64_t elapsedPlanningTimeUS; ///< us, elapsed time of the planner
-
-    // Filled in by workspace planner
-    IkParameterization failedIkParam; // in the case being returned by workspace planner, indicates which ikparam failed (may be linearly interpolated point) (conditionally populated)
-    TrajectoryBaseConstPtr pWorkspaceTraj;   // maybe we can visualize this linear trajectory later (always populated)
-    IkReturnAction ikReturnAction;  // summarizes why workspace planner failed (always populated)
+    uint32_t numPlannerIterations=0; ///< number of planner iterations before failure.
+    uint64_t elapsedPlanningTimeUS=0; ///< us, elapsed time of the planner
 };
 typedef boost::shared_ptr<PlannerStatus> PlannerStatusPtr;
 
