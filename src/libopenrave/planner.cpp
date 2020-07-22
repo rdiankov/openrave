@@ -123,7 +123,7 @@ PlannerStatus::PlannerStatus(const uint32_t statusCode) : PlannerStatus()
         description += "Planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results. ";
     }
     if(statusCode & PS_FailedDueToCollision) {
-        description += "planner failed due to collision constraints. ";
+        description += "Planner failed due to collision constraints. ";
     }
     if(statusCode & PS_FailedDueToInitial) {
         description += "Failed due to initial configurations. ";
@@ -217,7 +217,13 @@ void PlannerStatus::InitCollisionReport(CollisionReportPtr& newreport)
     }
 }
 
-void PlannerStatus::AddCollisionReport(const CollisionReport& collisionReport)
+void PlannerStatus::InitWorkspaceTraj(const TrajectoryBaseConstPtr& newworkspacetraj)
+{
+    // Copy boost::shared_ptr
+    pWorkspaceTraj = newworkspacetraj;
+}
+
+void PlannerStatus::UpdateLinkCollisionInfo(const CollisionReport& collisionReport)
 {
     if (!!collisionReport.plink1 && !!collisionReport.plink2) {
         std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr> collisionPair(collisionReport.plink1, collisionReport.plink2);
@@ -233,9 +239,27 @@ void PlannerStatus::AddCollisionReport(const CollisionReport& collisionReport)
 void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const
 {
     rPlannerStatus.SetObject();
-    openravejson::SetJsonValueByKey(rPlannerStatus, "errorOrigin", errorOrigin, alloc);
+
+    /**************************
+    General PlannerStatus fields
+    ***************************/
+
+    if (!!parameters) {
+        // TODO: What planning parameters do we want to save?
+    }
+
     openravejson::SetJsonValueByKey(rPlannerStatus, "description", description, alloc);
     openravejson::SetJsonValueByKey(rPlannerStatus, "statusCode", statusCode, alloc);
+    openravejson::SetJsonValueByKey(rPlannerStatus, "errorOrigin", errorOrigin, alloc);
+
+    //Eventually, serialization could be in openravejson.h ?
+    if( ikparam.GetType() != IKP_None ) {
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+        ss << ikparam;
+        openravejson::SetJsonValueByKey(rPlannerStatus, "ikparam", ss.str(), alloc);
+    }
+
     if(jointValues.size() > 0) {
         openravejson::SetJsonValueByKey(rPlannerStatus, "jointValues", jointValues, alloc);
     }
@@ -264,12 +288,65 @@ void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Docu
         openravejson::SetJsonValueByKey(rPlannerStatus, "collisionReport", reportjson, alloc);
     }
 
-    //Eventually, serialization could be in openravejson.h ?
-    if( ikparam.GetType() != IKP_None ) {
+    /**************************
+    Workspace path verifier fields
+    ***************************/
+
+    if (failedIkParam.GetType() != IKP_None) {
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-        ss << ikparam;
-        openravejson::SetJsonValueByKey(rPlannerStatus, "ikparam", ss.str(), alloc);
+        ss << failedIkParam;
+        openravejson::SetJsonValueByKey(rPlannerStatus, "failedIkParam", ss.str(), alloc);
+    }
+    if (!!pWorkspaceTraj) {
+        std::ostringstream oss;
+        std::ostream &os = oss;
+        pWorkspaceTraj->serialize(os);
+        openravejson::SetJsonValueByKey(rPlannerStatus, "pWorkspaceTraj", oss.str(), alloc);
+    }
+    if (ikReturnAction) {
+        openravejson::SetJsonValueByKey(rPlannerStatus, "ikReturnAction", ikReturnAction, alloc);
+    }
+
+    /**************************
+    BiRRT fields
+    ***************************/
+
+    if (!mCollidingLinksCount.empty()) {
+        typedef std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> KinBodyLinkConstPtrPair;
+        typedef std::function<bool(std::pair<KinBodyLinkConstPtrPair, unsigned int>, std::pair<KinBodyLinkConstPtrPair, unsigned int>)> Comparator;
+        Comparator comparator = [](std::pair<KinBodyLinkConstPtrPair, unsigned int> linkPair1, std::pair<KinBodyLinkConstPtrPair, unsigned int> linkPair2) {
+            return linkPair1.second > linkPair2.second;
+        };
+        std::set<std::pair<KinBodyLinkConstPtrPair, unsigned int>, Comparator> sortedCollidingLinks(mCollidingLinksCount.begin(), mCollidingLinksCount.end(), comparator);
+
+        rapidjson::Value collidingLinks;
+        collidingLinks.SetArray();
+        collidingLinks.Reserve(sortedCollidingLinks.size(), alloc);
+        FOREACHC(collidingLinkPair, sortedCollidingLinks) {
+            KinBody::LinkConstPtr link1 = collidingLinkPair->first.first;
+            KinBody::LinkConstPtr link2 = collidingLinkPair->first.second;
+            KinBodyPtr parent1 = link1->GetParent(true);
+            KinBodyPtr parent2 = link2->GetParent(true);
+            unsigned int numCollisions = collidingLinkPair->second;
+
+            rapidjson::Value collidingPairInfo;
+            collidingPairInfo.SetObject();
+            openravejson::SetJsonValueByKey(collidingPairInfo, "collidingBodyName1", parent1->GetName(), alloc);
+            openravejson::SetJsonValueByKey(collidingPairInfo, "collidingLinkName1", link1->GetName(), alloc);
+            openravejson::SetJsonValueByKey(collidingPairInfo, "collidingBodyName2", parent2->GetName(), alloc);
+            openravejson::SetJsonValueByKey(collidingPairInfo, "collidingLinkName2", link2->GetName(), alloc);
+            openravejson::SetJsonValueByKey(collidingPairInfo, "numCollisions", numCollisions, alloc);
+
+            collidingLinks.PushBack(collidingPairInfo, alloc);
+        }
+        rPlannerStatus.AddMember(rapidjson::Document::StringRefType("biRRTCollidingLinks"), collidingLinks, alloc);
+    }
+    if (numPlannerIterations != 0) {
+        openravejson::SetJsonValueByKey(rPlannerStatus, "numPlannerIterations", numPlannerIterations, alloc);
+    }
+    if (elapsedPlanningTimeUS != 0) {
+        openravejson::SetJsonValueByKey(rPlannerStatus, "elapsedPlanningTimeUS", elapsedPlanningTimeUS, alloc);
     }
 }
 

@@ -62,7 +62,9 @@ enum PlannerStatusCode
 enum PlanningOptions
 {
     PO_NoStatusDetail = 1, ///< if set, then do not output any PlannerStatus details, just the finish code. This allows system to be faster.
-    PO_AddCollisionStatistics = 2 /// If set, Fill in collision to aid in planning failure debugging. This will slow down the system.
+    PO_AddBiRRTCollisionInfo = 1 << 1, /// If set, then will fill in collision information to aid in BiRRT planning failure debugging. This will slow down the system.
+    PO_AddLinearPlannerCollisionInfo = 1 << 2, /// If set, then will fill information to aid in linear planning failure debugging. This will slow down the system.
+    PO_AddWorkspacePlannerCollisionInfo = 1 << 3 /// If set, fill in collision to aid in IK filering failure debugging. This will slow down the system.
 };
 
 /// \brief action to send to the planner while it is planning. This is usually done by the user-specified planner callback function
@@ -504,7 +506,10 @@ public:
     PlannerStatus& SetPlannerParameters(PlannerParametersConstPtr parameters);
 
     void InitCollisionReport(CollisionReportPtr& collisionReport);
-    void AddCollisionReport(const CollisionReport& collisionReport);
+    void InitWorkspaceTraj(const TrajectoryBaseConstPtr& workspaceTraj);
+
+    void UpdateLinkCollisionInfo(const CollisionReport& collisionReport);
+
     void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
 
     inline uint32_t GetStatusCode() const {
@@ -518,16 +523,23 @@ public:
 
     PlannerParametersConstPtr parameters;   ///< parameters used in the planner
     std::string description;                ///< Optional, the description of how/why the error happended. Displayed to the user by the UI. It will automatically be filled with a generic message corresponding to statusCode if not provided.
+    std::string errorOrigin;                // Auto, a string representing the code path of the error.
     uint32_t statusCode;                    // combination of PS_X fields (PlannerStatusCode)
     IkParameterization ikparam;             // Optional, the ik parameter that failed to find a solution.
     std::vector<dReal> jointValues;         // Optional, the robot's joint values in rad or m
     CollisionReportPtr report;              ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
-    std::string errorOrigin;                // Auto, a string representing the code path of the error.
 
+    // Filled in by workspace planner verifier
+    IkParameterization failedIkParam; // in the case being returned by workspace planner, indicates which ikparam failed (may be linearly interpolated point) (conditionally populated)
+    TrajectoryBaseConstPtr pWorkspaceTraj;   // maybe we can visualize this linear trajectory later (always populated)
+    IkReturnAction ikReturnAction;  // summarizes why workspace planner failed (always populated)
+
+    // Filled in by BiRRT planner
     std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int > mCollidingLinksCount; // Counter for colliding links
-    uint32_t numPlannerIterations; ///< number of planner iterations before failure
-    uint64_t elapsedPlanningTimeUS; ///< us, elapsed time of the planner
+    uint32_t numPlannerIterations=0; ///< number of planner iterations before failure.
+    uint64_t elapsedPlanningTimeUS=0; ///< us, elapsed time of the planner
 };
+typedef boost::shared_ptr<PlannerStatus> PlannerStatusPtr;
 
 #define OPENRAVE_PLANNER_STATUS(...) PlannerStatus(__VA_ARGS__).SetErrorOrigin(str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__)).SetPlannerParameters(_parameters);
 #define OPENRAVE_PLANNER_STATUS_NOPARAMS(...) PlannerStatus(__VA_ARGS__).SetErrorOrigin(str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__));
