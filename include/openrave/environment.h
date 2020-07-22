@@ -749,8 +749,6 @@ public:
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info) = 0;
 
-    std::map<std::string, rapidjson::Value> _mExpandedBodyValue;  ///< map of bodyId and expandedBodyValue
-
 
 protected:
     virtual const char* GetHash() const {

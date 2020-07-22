@@ -42,22 +42,22 @@ public:
         std::vector<KinBodyPtr> vbodies;
         penv->GetBodies(vbodies);
         std::list<KinBodyPtr> listbodies(vbodies.begin(), vbodies.end());
-        _Write(listbodies, penv->_mExpandedBodyValue);
+        _Write(listbodies);
     }
 
     virtual void Write(KinBodyPtr pbody) {
         std::list<KinBodyPtr> listbodies;
         listbodies.push_back(pbody);
-        // _Write(listbodies);
+        _Write(listbodies);
     }
 
     virtual void Write(const std::list<KinBodyPtr>& listbodies) {
-        // _Write(listbodies);
+        _Write(listbodies);
     }
 
 protected:
 
-    virtual void _Write(const std::list<KinBodyPtr>& listbodies, std::map<std::string, rapidjson::Value>& mShadowBodyValue) {
+    virtual void _Write(const std::list<KinBodyPtr>& listbodies) {
         _rEnvironment.SetObject();
         _mapBodyIds.clear();
         if (listbodies.size() > 0) {
@@ -166,10 +166,6 @@ protected:
 
                 // finally push to the bodiesValue array if bodyValue is not empty
                 if (bodyValue.MemberCount() > 0) {
-                    // std::string bodyId = OpenRAVE::orjson::GetJsonValueByKey<std::string>(bodyValue, "id");
-                    // if (mShadowBodyValue.find(bodyId) != mShadowBodyValue.end()) {
-                    //     RemoveRapidJSON(bodyValue, mShadowBodyValue[bodyId], _allocator);
-                    // }
                     bodiesValue.PushBack(bodyValue, _allocator);
                 }
             }
