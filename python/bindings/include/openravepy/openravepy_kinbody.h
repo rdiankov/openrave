@@ -142,6 +142,7 @@ public:
 #endif
     bool InitFromTrimesh(py::object pytrimesh, bool bDraw=true, const std::string& uri=std::string());
     bool InitFromGeometries(py::object ogeometries, const std::string& uri=std::string());
+    void InitFromLinkInfos(py::object olinkinfos, const std::string& uri=std::string());
     bool Init(py::object olinkinfos, py::object ojointinfos, const std::string& uri=std::string());
     void SetLinkGeometriesFromGroup(const std::string& geomname);
     void SetLinkGroupGeometries(const std::string& geomname, py::object olinkgeometryinfos);

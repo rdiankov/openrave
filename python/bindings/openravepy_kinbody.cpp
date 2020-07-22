@@ -2079,6 +2079,19 @@ bool PyKinBody::InitFromGeometries(object ogeometries, const std::string& uri)
     return _pbody->InitFromGeometries(geometries, uri);
 }
 
+void PyKinBody::InitFromLinkInfos(py::object olinkinfos, const std::string& uri)
+{
+    std::vector<KinBody::LinkInfo> linkInfos(len(olinkinfos));
+    for(size_t i = 0; i < linkInfos.size(); ++i) {
+        PyLinkInfoPtr pylinkinfo = py::extract<PyLinkInfoPtr>(olinkinfos[i]);
+        if( !pylinkinfo ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.LinkInfo"),ORE_InvalidArguments);
+        }
+        linkInfos[i] = *pylinkinfo->GetLinkInfo();
+    }
+    return _pbody->InitFromLinkInfos(linkInfos, uri);
+}
+
 bool PyKinBody::Init(object olinkinfos, object ojointinfos, const std::string& uri)
 {
     std::vector<KinBody::LinkInfoConstPtr> vlinkinfos;
@@ -3907,6 +3920,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromBoxes_overloads, InitFromBoxes, 1
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromSpheres_overloads, InitFromSpheres, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromTrimesh_overloads, InitFromTrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromGeometries_overloads, InitFromGeometries, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromLinkInfos_overloads, InitFromLinkInfos, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
 // SerializeJSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
@@ -4489,6 +4503,15 @@ void init_openravepy_kinbody()
                               )
 #else
                          .def("InitFromGeometries",&PyKinBody::InitFromGeometries,InitFromGeometries_overloads(PY_ARGS("geometries", "uri") DOXY_FN(KinBody,InitFromGeometries)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("InitFromLinkInfos", &PyKinBody::InitFromLinkInfos,
+                              "linkInfos"_a,
+                              "uri"_a = "",
+                              DOXY_FN(KinBody, InitFromLinkInfos)
+                              )
+#else
+                         .def("InitFromLinkInfos",&PyKinBody::InitFromLinkInfos,InitFromLinkInfos_overloads(PY_ARGS("linkInfos", "uri") DOXY_FN(KinBody,InitFromLinkInfos)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("Init", &PyKinBody::Init,

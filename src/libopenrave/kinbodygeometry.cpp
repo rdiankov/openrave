@@ -455,6 +455,48 @@ inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::Side
     }
 }
 
+void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
+{
+    _t.trans *= fUnitScale;
+
+    switch(_type) {
+    case GT_Box:
+        _vGeomData *= fUnitScale;
+        break;
+
+    case GT_Container:
+        _vGeomData *= fUnitScale;
+        _vGeomData2 *= fUnitScale;
+        _vGeomData3 *= fUnitScale;
+        _vGeomData4 *= fUnitScale;
+        break;
+
+    case GT_Cage: {
+        _vGeomData *= fUnitScale;
+
+        FOREACH(itwall, _vSideWalls) {
+            itwall->transf.trans *= fUnitScale;
+            itwall->vExtents *= fUnitScale;
+        }
+        _vGeomData2 *= fUnitScale;
+        break;
+    }
+    case GT_Sphere:
+        _vGeomData *= fUnitScale;
+        break;
+
+    case GT_Cylinder:
+        _vGeomData *= fUnitScale;
+        break;
+
+    case GT_TriMesh:
+        FOREACH(itvertex, _meshcollision.vertices) {
+            *itvertex *= fUnitScale;
+        }
+        break;
+    }
+}
+
 void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
 {
     // RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "sid", sid);

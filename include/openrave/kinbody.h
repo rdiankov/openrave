@@ -144,8 +144,6 @@ public:
     {
 public:
         GeometryInfo();
-        virtual ~GeometryInfo() {
-        }
 
         /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
         /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
@@ -172,11 +170,14 @@ public:
         /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
 
+        /// \brief converts the unit scale of the geometry
+        void ConvertUnitScale(dReal fUnitScale);
+            
         ///< \param multiply all translational values by fUnitScale
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
 
         ///< \param multiply all translational values by fUnitScale
-        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
+        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
 
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
@@ -253,14 +254,15 @@ public:
     {
 public:
         LinkInfo();
-        virtual ~LinkInfo() {
-        }
 
         LinkInfo(const LinkInfo& other);
         LinkInfo& operator=(const LinkInfo& other);
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
+        /// \brief converts the unit scale of the link properties and geometries
+        void ConvertUnitScale(dReal fUnitScale);
+
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -274,9 +276,9 @@ public:
         /// the frame for inertia and center of mass of the link in the link's coordinate system
         Transform _tMassFrame;
         /// mass of link
-        dReal _mass;
-        /// inertia along the axes of _tMassFrame
-        Vector _vinertiamoments;
+        dReal _mass; ///< kg
+
+        Vector _vinertiamoments; ///< kg/unit**2 inertia along the axes of _tMassFrame
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
@@ -1763,6 +1765,12 @@ private:
     /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
     /// \param uri the new URI to set for the interface
     virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::string& uri=std::string());
+
+    /// \brief initializes a simple kinematics body with rigidly attached links
+    ///
+    /// \param linkinfos information for all the links. Links will be created in this order
+    /// \param uri the new URI to set for the interface
+    virtual void InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const std::string& uri=std::string());
 
     /// \brief Sets new geometries for all the links depending on the stored extra geometries each link has.
     ///

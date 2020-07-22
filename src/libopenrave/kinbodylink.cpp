@@ -27,6 +27,21 @@ KinBody::LinkInfo::LinkInfo(const LinkInfo& other) : XMLReadable("link")
     *this = other;
 }
 
+void KinBody::LinkInfo::ConvertUnitScale(dReal fUnitScale)
+{
+    FOREACH(itgeometry, _vgeometryinfos) {
+        (*itgeometry)->ConvertUnitScale(fUnitScale);
+    }
+    FOREACH(itextra, _mapExtraGeometries) {
+        FOREACH(itgeometry, itextra->second) {
+            (*itgeometry)->ConvertUnitScale(fUnitScale);
+        }
+    }
+
+    _tMassFrame.trans *= fUnitScale;
+    _vinertiamoments /= fUnitScale*fUnitScale;
+}
+
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     openravejson::SetJsonValueByKey(value, "name", _name, allocator);

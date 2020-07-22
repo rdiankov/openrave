@@ -415,6 +415,34 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     return true;
 }
 
+void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const std::string& uri)
+{
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_OP(linkinfos.size(),>,0);
+    Destroy();
+    _veclinks.reserve(linkinfos.size());
+    FOREACHC(itlinkinfo, linkinfos) {
+        LinkPtr plink(new Link(shared_kinbody()));
+        plink->_info = *itlinkinfo;
+        _InitAndAddLink(plink);
+    }
+    if( linkinfos.size() > 1 ) {
+        // create static joints
+        _vecjoints.resize(linkinfos.size()-1);
+        for(int ilinkinfo = 0; ilinkinfo+1 < (int)linkinfos.size(); ++ilinkinfo) {
+            JointPtr pjoint(new Joint(shared_kinbody()));
+            pjoint->_info._type = JointRevolute;
+            pjoint->_info._name = "dummy";
+            pjoint->_info._name += boost::lexical_cast<std::string>(ilinkinfo);
+            pjoint->_info._linkname0 = linkinfos[ilinkinfo]._name;
+            pjoint->_info._linkname1 = linkinfos[ilinkinfo+1]._name;
+            pjoint->_info._bIsActive = false;
+            _InitAndAddJoint(pjoint);
+        }
+    }
+    __struri = uri;
+}
+
 void KinBody::SetName(const std::string& newname)
 {
     OPENRAVE_ASSERT_OP(newname.size(), >, 0);
