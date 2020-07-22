@@ -119,7 +119,7 @@ public:
 
         if (!bFoundBody) {
             boost::shared_ptr<const rapidjson::Document> expandedDoc;
-            // TODO: optimze. for the first time expandedDoc is cahced, all the expandable object will never get cached, because we are not update document cache after expand any body
+            // TODO: optimize this. for the first time expandedDoc is cached, all the expandable object will never get cached, because we are not update document cache after expand any body
             if (_rapidJSONDocuments.find(fullFilename) != _rapidJSONDocuments.end()) {
                 expandedDoc = _rapidJSONDocuments[fullFilename];
             }
