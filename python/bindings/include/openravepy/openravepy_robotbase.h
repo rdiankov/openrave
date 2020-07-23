@@ -225,6 +225,8 @@ public:
 
         bool CanProvideManipulator(const std::string& resolvedManipulatorName);
 
+        std::string GetInfoHash();
+
         std::string __repr__();
 
         std::string __str__();
