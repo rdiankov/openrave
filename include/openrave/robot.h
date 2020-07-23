@@ -37,22 +37,8 @@ public:
     {
 public:
         ManipulatorInfo() {}
-        ManipulatorInfo(const ManipulatorInfo& other) {
-            *this = other;
-        };
-        ManipulatorInfo& operator=(const ManipulatorInfo& other) {
-            _name = other._name;
-            _sBaseLinkName = other._sBaseLinkName;
-            _sEffectorLinkName = other._sEffectorLinkName;
-            _tLocalTool = other._tLocalTool;
-            _vChuckingDirection = other._vChuckingDirection;
-            _vdirection = other._vdirection;
-            _sIkSolverXMLId = other._sIkSolverXMLId;
-            _vGripperJointNames = other._vGripperJointNames;
-            _grippername = other._grippername;
-            _id = other._id;
-            return *this;
-        }
+        ManipulatorInfo(const ManipulatorInfo& other) = default;
+        ManipulatorInfo& operator=(const ManipulatorInfo& other) = default;
         bool operator==(const ManipulatorInfo& other) const {
             return _name == other._name
                 && _sBaseLinkName == other._sBaseLinkName
