@@ -727,7 +727,10 @@ bool RobotBase::RobotBaseInfo::_DeserializeConnectedBodyInfo(RobotBase::Connecte
             if ( id == fragment || fragment.empty() ){ // if fragment is empty, deserialize the first one
                 std::string referenceUri = OpenRAVE::orjson::GetJsonValueByKey<std::string>(*it, "referenceUri", "");
                 if (!referenceUri.empty()) {
-                    _DeserializeConnectedBodyInfo(connectedBodyInfo, doc, referenceUri, circularReference);
+                    bool bSuccess = _DeserializeConnectedBodyInfo(connectedBodyInfo, doc, referenceUri, circularReference);
+                    if (!bSuccess) {
+                        return false;
+                    }
                 }
                 connectedBodyInfo.DeserializeJSON(*it);
                 return true;
