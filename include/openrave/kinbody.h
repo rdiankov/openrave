@@ -935,6 +935,7 @@ public:
         boost::array<uint8_t, 3> _bIsCircular;
 
         bool _bIsActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+        bool _bStatic; ///< IsStatic with both lower and upper limits equal 0
 
         /// \brief _controlMode specifies how this joint is controlled. For possible control modes, see enum JointControlMode.
         JointControlMode _controlMode;
@@ -1477,7 +1478,7 @@ private:
         Transform _tRightNoOffset, _tLeftNoOffset;         ///< same as _tLeft and _tRight except it doesn't not include the offset
         Transform _tinvRight, _tinvLeft;         ///< the inverse transformations of tRight and tLeft
         bool _bInitialized;
-        bool _bStatic; ///< IsStatic with both lower and upper limits equal 0
+
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
