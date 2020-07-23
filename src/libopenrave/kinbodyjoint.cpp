@@ -423,6 +423,7 @@ KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
     jointindex=-1;
     dofindex = -1; // invalid index
     _bInitialized = false;
+    _bStatic = false;
     _info._type = type;
     _info._controlMode = JCM_None;
 }
@@ -499,7 +500,7 @@ bool KinBody::Joint::IsStatic() const
     return true;
 }
 
-void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
+void KinBody::Joint::GetValues(std::vector<dReal>& pValues, bool bAppend) const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     if( !bAppend ) {
@@ -583,6 +584,92 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             else { // prismatic
                 f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
                 pValues.push_back(_info._voffsets[i]+f);
+                if( i+1 < GetDOF() ) {
+                    tjoint.trans -= vaxis*f;
+                }
+            }
+        }
+    }
+}
+
+void KinBody::Joint::GetValues(boost::array<dReal, 3>& pValues) const
+{
+    OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized", ORE_NotInitialized);
+    if( this->GetDOF() == 1 ) {
+        pValues[0] = this->GetValue(0);
+        return;
+    }
+
+    dReal f;
+    Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
+    if( _info._type & KinBody::JointSpecialBit ) {
+        switch(_info._type) {
+        case KinBody::JointHinge2: {
+            Vector axis1cur = tjoint.rotate(_vaxes[0]), axis2cur = tjoint.rotate(_vaxes[1]);
+            Vector vec1, vec2, vec3;
+            vec1 = (_vaxes[1] - _vaxes[0].dot3(_vaxes[1])*_vaxes[0]).normalize();
+            vec2 = (axis2cur - _vaxes[0].dot3(axis2cur)*_vaxes[0]).normalize();
+            vec3 = _vaxes[0].cross(vec1);
+            f = 2.0*RaveAtan2(vec3.dot3(vec2), vec1.dot3(vec2));
+            pValues[0] = GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]);
+            vec1 = (_vaxes[0] - axis2cur.dot(_vaxes[0])*axis2cur).normalize();
+            vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
+            vec3 = axis2cur.cross(vec1);
+            f = 2.0*RaveAtan2(vec3.dot(vec2), vec1.dot(vec2));
+            if( f < -PI ) {
+                f += 2*PI;
+            }
+            else if( f > PI ) {
+                f -= 2*PI;
+            }
+            pValues[1] = GetClosestValueAlongCircle(_info._voffsets[1]+f, _doflastsetvalues[1]);
+            break;
+        }
+        case KinBody::JointSpherical: {
+            dReal fsinang2 = tjoint.rot.y*tjoint.rot.y+tjoint.rot.z*tjoint.rot.z+tjoint.rot.w*tjoint.rot.w;
+            if( fsinang2 > 1e-10f ) {
+                dReal fsinang = RaveSqrt(fsinang2);
+                dReal fmult = 2*RaveAtan2(fsinang,tjoint.rot.x)/fsinang;
+                pValues = {tjoint.rot.y*fmult, tjoint.rot.z*fmult, tjoint.rot.w*fmult};
+            }
+            else {
+                pValues = {0, 0, 0};
+            }
+            break;
+        }
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unknown joint type 0x%x"), _info._type, ORE_Failed);
+        }
+    }
+    else {
+        // chain of revolute and prismatic joints
+        for(int i = 0; i < GetDOF(); ++i) {
+            Vector vaxis = _vaxes.at(i);
+            if( IsRevolute(i) ) {
+                if( i+1 < GetDOF() ) {
+                    std::pair<dReal, Vector > res = normalizeAxisRotation(vaxis,tjoint.rot);
+                    tjoint.rot = res.second;
+                    if( res.first != 0 ) {
+                        // could speed up by checking if trans is ever needed after this
+                        tjoint.trans = quatRotate(quatFromAxisAngle(vaxis,res.first),tjoint.trans);
+                    }
+                    f = -res.first;
+                }
+                else {
+                    f = 2.0f*RaveAtan2(tjoint.rot.y*vaxis.x+tjoint.rot.z*vaxis.y+tjoint.rot.w*vaxis.z, tjoint.rot.x);
+                }
+                // expect values to be within -PI to PI range
+                if( f < -PI ) {
+                    f += 2*PI;
+                }
+                else if( f > PI ) {
+                    f -= 2*PI;
+                }
+                pValues[0] = GetClosestValueAlongCircle(_info._voffsets[i]+f, _doflastsetvalues[i]);
+            }
+            else { // prismatic
+                f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
+                pValues[0] = _info._voffsets[i]+f;
                 if( i+1 < GetDOF() ) {
                     tjoint.trans -= vaxis*f;
                 }

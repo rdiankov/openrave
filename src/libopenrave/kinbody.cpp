@@ -1645,7 +1645,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     // have to compute the angles ahead of time since they are dependent on the link 
     const int nActiveJoints = _vecjoints.size();
     const int nPassiveJoints = _vPassiveJoints.size();
-    std::vector< std::vector<dReal> > vPassiveJointValues(nPassiveJoints);
+    std::vector< boost::array<dReal, 3> > vPassiveJointValues(nPassiveJoints);
     for(int i = 0; i < nPassiveJoints; ++i) {
         const KinBody::JointPtr& pjoint = _vPassiveJoints[i];
         if(pjoint->IsStatic()) {
@@ -1653,11 +1653,11 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         }
         const boost::array<dReal, 3>& vlowerlimit = pjoint->_info._vlowerlimit;
         const boost::array<dReal, 3>& vupperlimit = pjoint->_info._vupperlimit;
-        std::vector<dReal>& jvals = vPassiveJointValues[i];
+        boost::array<dReal, 3>& jvals = vPassiveJointValues[i];
         if( !pjoint->IsMimic() ) {
             pjoint->GetValues(jvals);
             // check if out of limits!
-            for(size_t j = 0; j < jvals.size(); ++j) {
+            for(size_t j = 0; j < 3; ++j) {
                 if( !pjoint->IsCircular(j) ) {
                     if( jvals[j] < vlowerlimit.at(j) ) {
                         if( jvals[j] < vlowerlimit.at(j) - 5e-4f ) {
@@ -1673,9 +1673,6 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                     }
                 }
             }
-        }
-        else {
-            jvals.reserve(pjoint->GetDOF()); // do not resize so that we can catch hierarchy errors
         }
     }
 
@@ -1789,7 +1786,6 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
 
                     // if joint is passive, update the stored joint values! This is necessary because joint value might be referenced in the future.
                     if( dofindex < 0 ) {
-                        vPassiveJointValues.at(jointindex-nActiveJoints).resize(jointdof);
                         vPassiveJointValues.at(jointindex-nActiveJoints).at(i) = dummyvalues[i];
                     }
                 }

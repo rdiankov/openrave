@@ -1123,6 +1123,7 @@ public:
         /// \param bAppend if true will append to the end of the vector instead of erasing it
         /// \return degrees of freedom of the joint (even if pValues is NULL)
         virtual void GetValues(std::vector<dReal>& values, bool bAppend=false) const;
+        virtual void GetValues(boost::array<dReal, 3>& values) const;
 
         /// \brief Return the value of the specified joint axis only.
         virtual dReal GetValue(int axis) const;
@@ -1476,7 +1477,7 @@ private:
         Transform _tRightNoOffset, _tLeftNoOffset;         ///< same as _tLeft and _tRight except it doesn't not include the offset
         Transform _tinvRight, _tinvLeft;         ///< the inverse transformations of tRight and tLeft
         bool _bInitialized;
-        bool _bStatic = false; ///< IsStatic with both lower and upper limits equal 0
+        bool _bStatic; ///< IsStatic with both lower and upper limits equal 0
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
