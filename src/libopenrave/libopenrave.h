@@ -482,7 +482,7 @@ inline uint32_t ConvertUIntToHex(uint32_t value, char* output)
             output[index] = '0'+nibble;
         }
         else {
-            output[index] = 'a'+(nibble-10);
+            output[index] = 'A'+(nibble-10);
         }
     }
     output[length] = 0; // null terminator
