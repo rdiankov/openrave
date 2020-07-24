@@ -2860,6 +2860,9 @@ protected:
     /// Can only be called before internal robot hierarchy is initialized
     virtual void _InitAndAddJoint(JointPtr pjoint);
 
+    /// \brief goes through all the link/joint ids and makes sure they are unique
+    virtual void _ResolveInfoIds();
+
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
     std::vector<JointPtr> _vTopologicallySortedJoints; ///< \see GetDependencyOrderedJoints

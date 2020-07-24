@@ -152,22 +152,22 @@ void KinBody::KinBodyInfo::Reset()
     _mReadableInterfaces.clear();
 }
 
-void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    value.SetObject();
-    orjson::SetJsonValueByKey(value, "id", _id, allocator);
-    orjson::SetJsonValueByKey(value, "name", _name, allocator);
+    rKinBodyInfo.SetObject();
+    orjson::SetJsonValueByKey(rKinBodyInfo, "id", _id, allocator);
+    orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
     if (!_referenceUri.empty()) {
         if( options & ISO_ReferenceUriHint ) {
-            orjson::SetJsonValueByKey(value, "referenceUriHint", _referenceUri, allocator);
+            orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUriHint", _referenceUri, allocator);
         }
         else {
-            orjson::SetJsonValueByKey(value, "referenceUri", _referenceUri, allocator);
+            orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUri", _referenceUri, allocator);
         }
     }
-    orjson::SetJsonValueByKey(value, "interfaceType", _interfaceType, allocator);
-    orjson::SetJsonValueByKey(value, "transform", _transform, allocator);
-    orjson::SetJsonValueByKey(value, "isRobot", _isRobot, allocator);
+    orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
+    orjson::SetJsonValueByKey(rKinBodyInfo, "transform", _transform, allocator);
+    orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
 
     if (_dofValues.size() > 0) {
         rapidjson::Value dofValues;
@@ -180,7 +180,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
             orjson::SetJsonValueByKey(dofValue, "value", itDofValue->second, allocator);
             dofValues.PushBack(dofValue, allocator);
         }
-        value.AddMember("dofValues", dofValues, allocator);
+        rKinBodyInfo.AddMember("dofValues", dofValues, allocator);
     }
 
     if (_vGrabbedInfos.size() > 0) {
@@ -192,7 +192,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
             (*it)->SerializeJSON(grabbedInfoValue, allocator, fUnitScale, options);
             rGrabbedInfoValues.PushBack(grabbedInfoValue, allocator);
         }
-        value.AddMember("grabbed", rGrabbedInfoValues, allocator);
+        rKinBodyInfo.AddMember("grabbed", rGrabbedInfoValues, allocator);
     }
 
     if (_vLinkInfos.size() > 0) {
@@ -204,7 +204,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
             (*it)->SerializeJSON(linkInfoValue, allocator, fUnitScale, options);
             rLinkInfoValues.PushBack(linkInfoValue, allocator);
         }
-        value.AddMember("links", rLinkInfoValues, allocator);
+        rKinBodyInfo.AddMember("links", rLinkInfoValues, allocator);
     }
 
     if (_vJointInfos.size() > 0) {
@@ -216,7 +216,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
             (*it)->SerializeJSON(jointInfoValue, allocator, fUnitScale, options);
             rJointInfoValues.PushBack(jointInfoValue, allocator);
         }
-        value.AddMember("joints", rJointInfoValues, allocator);
+        rKinBodyInfo.AddMember("joints", rJointInfoValues, allocator);
     }
 
     if (_mReadableInterfaces.size() > 0) {
@@ -228,7 +228,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
             orjson::SetJsonValueByKey(rReadable, "id", it->first, allocator);
             rReadableInterfaces.PushBack(rReadable, allocator);
         }
-        value.AddMember("readableInterfaces", rReadableInterfaces, allocator);
+        rKinBodyInfo.AddMember("readableInterfaces", rReadableInterfaces, allocator);
     }
 }
 
@@ -262,22 +262,11 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
-        UniqueIDGenerator linkIdGenerator("link");
-        FOREACHC(itLink, _vLinkInfos) {
-            linkIdGenerator.EnsureUniqueID((*itLink)->_id);
-        }
-        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
-            const rapidjson::Value& linkValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(linkValue, "id");
-            linkIdGenerator.ReserveUniqueID(id);
-        }
-
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
             const rapidjson::Value& linkValue = *it;
             std::string id = orjson::GetStringJsonValueByKey(linkValue, "id");
             if (id.empty()) {
                 id = orjson::GetStringJsonValueByKey(linkValue, "name");
-                linkIdGenerator.EnsureUniqueID(id);
             }
             UpdateOrCreateInfo(linkValue, id, _vLinkInfos, fUnitScale, options);
         }
@@ -285,23 +274,11 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
-
-        UniqueIDGenerator jointIdGenerator("joint");
-        FOREACHC(itJoint, _vJointInfos) {
-            jointIdGenerator.EnsureUniqueID((*itJoint)->_id);
-        }
-        for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
-            const rapidjson::Value& jointValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(jointValue, "id");
-            jointIdGenerator.ReserveUniqueID(id);
-        }
-
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
             const rapidjson::Value& jointValue = *it;
             std::string id = orjson::GetStringJsonValueByKey(jointValue, "id");
             if (id.empty()) {
                 id = orjson::GetStringJsonValueByKey(jointValue, "name");
-                jointIdGenerator.EnsureUniqueID(id);
             }
             UpdateOrCreateInfo(jointValue, id, _vJointInfos, fUnitScale, options);
         }
@@ -4423,6 +4400,7 @@ void KinBody::_ComputeInternalInformation()
         }
         _ResetInternalCollisionCache();
     }
+    _ResolveInfoIds();
     _nHierarchyComputed = 2;
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
@@ -5263,8 +5241,191 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     }
 }
 
+void KinBody::_ResolveInfoIds()
+{
+    char sTempIndexConversion[9]; // temp memory space for converting indices to hex strings, enough space to convert uint32_t
+    uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
+
+    // go through all link infos and make sure _id is unique
+    static const char pLinkIdPrefix[] = "link";
+    static const char pGeometryIdPrefix[] = "geom";    
+    int nLinkId = 0;
+    int numlinks = (int)_veclinks.size();
+    for(int ilink = 0; ilink < numlinks; ++ilink) {
+        KinBody::LinkInfo& linkinfo = _veclinks[ilink]->_info;
+        bool bGenerateNewId = linkinfo._id.empty();
+        if( !bGenerateNewId ) {
+            for(int itestlink = 0; itestlink < ilink; ++itestlink) {
+                if( _veclinks[itestlink]->_info._id == linkinfo._id ) {
+                    bGenerateNewId = true;
+                    break;
+                }
+            }
+        }
+
+        if( bGenerateNewId ) {
+            while(1) {
+                nTempIndexConversion = ConvertUIntToHex(nLinkId, sTempIndexConversion);
+                bool bHasSame = false;
+                for(int itestlink = 0; itestlink < numlinks; ++itestlink) {
+                    const std::string& testid = _veclinks[itestlink]->_info._id;
+                    if( testid.size() == sizeof(pLinkIdPrefix)-1+nTempIndexConversion ) {
+                        if( strncmp(testid.c_str() + (sizeof(pLinkIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
+                            // matches
+                            bHasSame = true;
+                            break;
+                        }
+                    }
+                }
+
+                if( bHasSame ) {
+                    nLinkId++;
+                    continue;
+                }
+
+                break;
+            }
+
+            linkinfo._id = pLinkIdPrefix;
+            linkinfo._id += sTempIndexConversion;
+        }
+
+        // geometries
+        {
+            int nGeometryId = 0;
+            const std::vector<Link::GeometryPtr>& vgeometries = _veclinks[ilink]->GetGeometries();
+            int numgeometries = (int)vgeometries.size();
+            for(int igeometry = 0; igeometry < numgeometries; ++igeometry) {
+                KinBody::GeometryInfo& geometryinfo = vgeometries[igeometry]->_info;
+                bool bGenerateNewId = geometryinfo._id.empty();
+                if( !bGenerateNewId ) {
+                    for(int itestgeometry = 0; itestgeometry < igeometry; ++itestgeometry) {
+                        if( vgeometries[itestgeometry]->_info._id == geometryinfo._id ) {
+                            bGenerateNewId = true;
+                            break;
+                        }
+                    }
+                }
+
+                if( bGenerateNewId ) {
+                    while(1) {
+                        nTempIndexConversion = ConvertUIntToHex(nGeometryId, sTempIndexConversion);
+                        bool bHasSame = false;
+                        for(int itestgeometry = 0; itestgeometry < numgeometries; ++itestgeometry) {
+                            const std::string& testid = vgeometries[itestgeometry]->_info._id;
+                            if( testid.size() == sizeof(pGeometryIdPrefix)-1+nTempIndexConversion ) {
+                                if( strncmp(testid.c_str() + (sizeof(pGeometryIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
+                                    // matches
+                                    bHasSame = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if( bHasSame ) {
+                            nGeometryId++;
+                            continue;
+                        }
+
+                        break;
+                    }
+
+                    geometryinfo._id = pGeometryIdPrefix;
+                    geometryinfo._id += sTempIndexConversion;
+                }
+            }
+        }
+    }
+
+    static const char pJointIdPrefix[] = "joint";
+    int nJointId = 0;
+    int numjoints = (int)_vecjoints.size();
+    for(int ijoint = 0; ijoint < numjoints; ++ijoint) {
+        KinBody::JointInfo& jointinfo = _vecjoints[ijoint]->_info;
+        bool bGenerateNewId = jointinfo._id.empty();
+        if( !bGenerateNewId ) {
+            for(int itestjoint = 0; itestjoint < ijoint; ++itestjoint) {
+                if( _vecjoints[itestjoint]->_info._id == jointinfo._id ) {
+                    bGenerateNewId = true;
+                    break;
+                }
+            }
+        }
+
+        if( bGenerateNewId ) {
+            while(1) {
+                nTempIndexConversion = ConvertUIntToHex(nJointId, sTempIndexConversion);
+                bool bHasSame = false;
+                for(int itestjoint = 0; itestjoint < numjoints; ++itestjoint) {
+                    const std::string& testid = _vecjoints[itestjoint]->_info._id;
+                    if( testid.size() == sizeof(pJointIdPrefix)-1+nTempIndexConversion ) {
+                        if( strncmp(testid.c_str() + (sizeof(pJointIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
+                            // matches
+                            bHasSame = true;
+                            break;
+                        }
+                    }
+                }
+
+                if( bHasSame ) {
+                    nJointId++;
+                    continue;
+                }
+
+                break;
+            }
+
+            jointinfo._id = pJointIdPrefix;
+            jointinfo._id += sTempIndexConversion;
+        }
+    }
+
+    int numPassiveJoints = (int)_vecPassiveJoints.size();
+    for(int ijoint = 0; ijoint < numPassiveJoints; ++ijoint) {
+        KinBody::JointInfo& jointinfo = _vecPassiveJoints[ijoint]->_info;
+        bool bGenerateNewId = jointinfo._id.empty();
+        if( !bGenerateNewId ) {
+            for(int itestjoint = 0; itestjoint < ijoint; ++itestjoint) {
+                if( _vecPassiveJoints[itestjoint]->_info._id == jointinfo._id ) {
+                    bGenerateNewId = true;
+                    break;
+                }
+            }
+        }
+
+        if( bGenerateNewId ) {
+            while(1) {
+                nTempIndexConversion = ConvertUIntToHex(nJointId, sTempIndexConversion);
+                bool bHasSame = false;
+                for(int itestjoint = 0; itestjoint < numPassiveJoints; ++itestjoint) {
+                    const std::string& testid = _vecPassiveJoints[itestjoint]->_info._id;
+                    if( testid.size() == sizeof(pJointIdPrefix)-1+nTempIndexConversion ) {
+                        if( strncmp(testid.c_str() + (sizeof(pJointIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
+                            // matches
+                            bHasSame = true;
+                            break;
+                        }
+                    }
+                }
+
+                if( bHasSame ) {
+                    nJointId++;
+                    continue;
+                }
+
+                break;
+            }
+
+            jointinfo._id = pJointIdPrefix;
+            jointinfo._id += sTempIndexConversion;
+        }
+    }
+}
+
 void KinBody::ExtractInfo(KinBodyInfo& info)
 {
+    _ResolveInfoIds();
+
     info._id = _id;
     info._uri = __struri;
     info._name = _name;

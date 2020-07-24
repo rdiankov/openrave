@@ -610,23 +610,11 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
 
     if (value.HasMember("tools")) {
         _vManipulatorInfos.reserve(value["tools"].Size() + _vManipulatorInfos.size());
-
-        UniqueIDGenerator manipulatorIdGenerator("tool");
-        FOREACHC(itManipulator, _vManipulatorInfos) {
-            manipulatorIdGenerator.EnsureUniqueID((*itManipulator)->_id);
-        }
-        for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it) {
-            const rapidjson::Value& manipulatorValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(manipulatorValue, "id");
-            manipulatorIdGenerator.ReserveUniqueID(id);
-        }
-
         for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it) {
             const rapidjson::Value& manipulatorValue = *it;
             std::string id = orjson::GetStringJsonValueByKey(manipulatorValue, "id");
             if (id.empty()) {
                 id = orjson::GetStringJsonValueByKey(manipulatorValue, "name");
-                manipulatorIdGenerator.EnsureUniqueID(id);
             }
             UpdateOrCreateInfo(manipulatorValue, id, _vManipulatorInfos, fUnitScale, options);
         }
@@ -634,24 +622,11 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
 
     if (value.HasMember("attachedSensors")) {
         _vAttachedSensorInfos.reserve(value["attachedSensors"].Size() + _vAttachedSensorInfos.size());
-
-        UniqueIDGenerator attachedSensorIdGenerator("attachedSensor");
-        FOREACHC(itAttachedSensor, _vAttachedSensorInfos) {
-            attachedSensorIdGenerator.EnsureUniqueID((*itAttachedSensor)->_id);
-        }
-
-        for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it) {
-            const rapidjson::Value& attachedSensorValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(attachedSensorValue, "id");
-            attachedSensorIdGenerator.ReserveUniqueID(id);
-        }
-
         for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it) {
             const rapidjson::Value& attachedSensorValue = *it;
             std::string id = orjson::GetStringJsonValueByKey(attachedSensorValue, "id");
             if (id.empty()) {
                 id = orjson::GetStringJsonValueByKey(attachedSensorValue, "name");
-                attachedSensorIdGenerator.EnsureUniqueID(id);
             }
             UpdateOrCreateInfo(attachedSensorValue, id, _vAttachedSensorInfos, fUnitScale, options);
         }
@@ -659,23 +634,11 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
 
     if (value.HasMember("connectedBodies")) {
         _vConnectedBodyInfos.reserve(value["connectedBodies"].Size() + _vConnectedBodyInfos.size());
-
-        UniqueIDGenerator connectedBodyIdGenerator("connectedBody");
-        FOREACHC(itConnectedBody, _vConnectedBodyInfos) {
-            connectedBodyIdGenerator.EnsureUniqueID((*itConnectedBody)->_id);
-        }
-        for (rapidjson::Value::ConstValueIterator it = value["connectedBodies"].Begin(); it != value["connectedBodies"].End(); ++it) {
-            const rapidjson::Value& connectedBodyValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(connectedBodyValue, "id");
-            connectedBodyIdGenerator.ReserveUniqueID(id);
-        }
-
         for (rapidjson::Value::ConstValueIterator it = value["connectedBodies"].Begin(); it != value["connectedBodies"].End(); ++it) {
             const rapidjson::Value& connectedBodyValue = *it;
             std::string id = orjson::GetStringJsonValueByKey(connectedBodyValue, "id");
             if (id.empty()) {
                 id = orjson::GetStringJsonValueByKey(connectedBodyValue, "name");
-                connectedBodyIdGenerator.EnsureUniqueID(id);
             }
             UpdateOrCreateInfo(connectedBodyValue, id, _vConnectedBodyInfos, fUnitScale, options);
         }
@@ -683,23 +646,11 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
 
     if (value.HasMember("gripperInfos")) {
         _vGripperInfos.reserve(value["gripperInfos"].Size() + _vGripperInfos.size());
-
-        UniqueIDGenerator gripperInfoIdGenerator("gripper");
-        FOREACHC(itGripper, _vGripperInfos) {
-            gripperInfoIdGenerator.EnsureUniqueID((*itGripper)->_id);
-        }
-        for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it) {
-            const rapidjson::Value& gripperInfoValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(gripperInfoValue, "id");
-            gripperInfoIdGenerator.ReserveUniqueID(id);
-        }
-
         for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it) {
             const rapidjson::Value& gripperInfoValue = *it;
             std::string id = orjson::GetStringJsonValueByKey(gripperInfoValue, "id");
             if (id.empty()) {
                 id = orjson::GetStringJsonValueByKey(gripperInfoValue, "name");
-                gripperInfoIdGenerator.EnsureUniqueID(id);
             }
             UpdateOrCreateInfo(gripperInfoValue, id, _vGripperInfos, fUnitScale, options);
         }
@@ -925,6 +876,186 @@ void RobotBase::_UpdateAttachedSensors()
     FOREACH(itsensor, _vecAttachedSensors) {
         if( !!(*itsensor)->GetSensor() && !(*itsensor)->pattachedlink.expired() ) {
             (*itsensor)->GetSensor()->SetTransform(LinkPtr((*itsensor)->pattachedlink)->GetTransform()*(*itsensor)->GetRelativeTransform());
+        }
+    }
+}
+
+void RobotBase::_ResolveInfoIds()
+{
+    KinBody::_ResolveInfoIds();
+
+    char sTempIndexConversion[9]; // temp memory space for converting indices to hex strings, enough space to convert uint32_t
+    uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
+
+    static const char pManipulatorIdPrefix[] = "manipulator";
+    int nManipulatorId = 0;
+    int nummanipulators = (int)_vecManipulators.size();
+    for(int imanipulator = 0; imanipulator < nummanipulators; ++imanipulator) {
+        RobotBase::ManipulatorInfo& manipulatorinfo = _vecManipulators[imanipulator]->_info;
+        bool bGenerateNewId = manipulatorinfo._id.empty();
+        if( !bGenerateNewId ) {
+            for(int itestmanipulator = 0; itestmanipulator < imanipulator; ++itestmanipulator) {
+                if( _vecManipulators[itestmanipulator]->_info._id == manipulatorinfo._id ) {
+                    bGenerateNewId = true;
+                    break;
+                }
+            }
+        }
+
+        if( bGenerateNewId ) {
+            while(1) {
+                nTempIndexConversion = ConvertUIntToHex(nManipulatorId, sTempIndexConversion);
+                bool bHasSame = false;
+                for(int itestmanipulator = 0; itestmanipulator < nummanipulators; ++itestmanipulator) {
+                    const std::string& testid = _vecManipulators[itestmanipulator]->_info._id;
+                    if( testid.size() == sizeof(pManipulatorIdPrefix)-1+nTempIndexConversion ) {
+                        if( strncmp(testid.c_str() + (sizeof(pManipulatorIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
+                            // matches
+                            bHasSame = true;
+                            break;
+                        }
+                    }
+                }
+
+                if( bHasSame ) {
+                    nManipulatorId++;
+                    continue;
+                }
+
+                break;
+            }
+
+            manipulatorinfo._id = pManipulatorIdPrefix;
+            manipulatorinfo._id += sTempIndexConversion;
+        }
+    }
+
+    static const char pAttachedSensorIdPrefix[] = "attachedSensor";
+    int nAttachedSensorId = 0;
+    int numattachedSensors = (int)_vecAttachedSensors.size();
+    for(int iattachedSensor = 0; iattachedSensor < numattachedSensors; ++iattachedSensor) {
+        RobotBase::AttachedSensorInfo& attachedSensorinfo = _vecAttachedSensors[iattachedSensor]->_info;
+        bool bGenerateNewId = attachedSensorinfo._id.empty();
+        if( !bGenerateNewId ) {
+            for(int itestattachedSensor = 0; itestattachedSensor < iattachedSensor; ++itestattachedSensor) {
+                if( _vecAttachedSensors[itestattachedSensor]->_info._id == attachedSensorinfo._id ) {
+                    bGenerateNewId = true;
+                    break;
+                }
+            }
+        }
+
+        if( bGenerateNewId ) {
+            while(1) {
+                nTempIndexConversion = ConvertUIntToHex(nAttachedSensorId, sTempIndexConversion);
+                bool bHasSame = false;
+                for(int itestattachedSensor = 0; itestattachedSensor < numattachedSensors; ++itestattachedSensor) {
+                    const std::string& testid = _vecAttachedSensors[itestattachedSensor]->_info._id;
+                    if( testid.size() == sizeof(pAttachedSensorIdPrefix)-1+nTempIndexConversion ) {
+                        if( strncmp(testid.c_str() + (sizeof(pAttachedSensorIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
+                            // matches
+                            bHasSame = true;
+                            break;
+                        }
+                    }
+                }
+
+                if( bHasSame ) {
+                    nAttachedSensorId++;
+                    continue;
+                }
+
+                break;
+            }
+
+            attachedSensorinfo._id = pAttachedSensorIdPrefix;
+            attachedSensorinfo._id += sTempIndexConversion;
+        }
+    }
+
+    static const char pConnectedBodyIdPrefix[] = "connectedBody";
+    int nConnectedBodyId = 0;
+    int numconnectedBodies = (int)_vecConnectedBodies.size();
+    for(int iconnectedBody = 0; iconnectedBody < numconnectedBodies; ++iconnectedBody) {
+        RobotBase::ConnectedBodyInfo& connectedBodyinfo = _vecConnectedBodies[iconnectedBody]->_info;
+        bool bGenerateNewId = connectedBodyinfo._id.empty();
+        if( !bGenerateNewId ) {
+            for(int itestconnectedBody = 0; itestconnectedBody < iconnectedBody; ++itestconnectedBody) {
+                if( _vecConnectedBodies[itestconnectedBody]->_info._id == connectedBodyinfo._id ) {
+                    bGenerateNewId = true;
+                    break;
+                }
+            }
+        }
+
+        if( bGenerateNewId ) {
+            while(1) {
+                nTempIndexConversion = ConvertUIntToHex(nConnectedBodyId, sTempIndexConversion);
+                bool bHasSame = false;
+                for(int itestconnectedBody = 0; itestconnectedBody < numconnectedBodies; ++itestconnectedBody) {
+                    const std::string& testid = _vecConnectedBodies[itestconnectedBody]->_info._id;
+                    if( testid.size() == sizeof(pConnectedBodyIdPrefix)-1+nTempIndexConversion ) {
+                        if( strncmp(testid.c_str() + (sizeof(pConnectedBodyIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
+                            // matches
+                            bHasSame = true;
+                            break;
+                        }
+                    }
+                }
+
+                if( bHasSame ) {
+                    nConnectedBodyId++;
+                    continue;
+                }
+
+                break;
+            }
+
+            connectedBodyinfo._id = pConnectedBodyIdPrefix;
+            connectedBodyinfo._id += sTempIndexConversion;
+        }
+    }
+
+    static const char pGripperInfoIdPrefix[] = "gripperInfo";
+    int nGripperInfoId = 0;
+    int numgripperInfos = (int)_vecGripperInfos.size();
+    for(int igripperInfo = 0; igripperInfo < numgripperInfos; ++igripperInfo) {
+        RobotBase::GripperInfo& gripperInfo = *_vecGripperInfos[igripperInfo];
+        bool bGenerateNewId = gripperInfo._id.empty();
+        if( !bGenerateNewId ) {
+            for(int itestgripperInfo = 0; itestgripperInfo < igripperInfo; ++itestgripperInfo) {
+                if( _vecGripperInfos[itestgripperInfo]->_id == gripperInfo._id ) {
+                    bGenerateNewId = true;
+                    break;
+                }
+            }
+        }
+
+        if( bGenerateNewId ) {
+            while(1) {
+                nTempIndexConversion = ConvertUIntToHex(nGripperInfoId, sTempIndexConversion);
+                bool bHasSame = false;
+                for(int itestgripperInfo = 0; itestgripperInfo < numgripperInfos; ++itestgripperInfo) {
+                    const std::string& testid = _vecGripperInfos[itestgripperInfo]->_id;
+                    if( testid.size() == sizeof(pGripperInfoIdPrefix)-1+nTempIndexConversion ) {
+                        if( strncmp(testid.c_str() + (sizeof(pGripperInfoIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
+                            // matches
+                            bHasSame = true;
+                            break;
+                        }
+                    }
+                }
+
+                if( bHasSame ) {
+                    nGripperInfoId++;
+                    continue;
+                }
+
+                break;
+            }
+
+            gripperInfo._id = pGripperInfoIdPrefix;
+            gripperInfo._id += sTempIndexConversion;
         }
     }
 }

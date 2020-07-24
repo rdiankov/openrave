@@ -470,58 +470,49 @@ inline const char *strcasestr(const char *s, const char *find)
 }
 #endif
 
-
-/// \brief A local uid generator
-class UniqueIDGenerator
+/// \brief converts the value into output and writes a null terminator
+///
+/// \return length of string (ie strlen(output))
+inline uint32_t ConvertUIntToHex(uint32_t value, char* output)
 {
-public:
-    UniqueIDGenerator() = delete;
-    UniqueIDGenerator(std::string prefix): _prefix(prefix) {}
-    virtual ~UniqueIDGenerator() {}
+    uint32_t testvalue = 0xf0000000;
+    uint32_t testindex = 0;
+    while(1) {
+        if( !testvalue ) {
+            break;
+        }
+        if( value & testvalue ) {
+            break;
+        }
 
-    /// \brief Check if the given id is unique, otherwise it will assign a unique one and udpate the set
-    void EnsureUniqueID(std::string& id) {
-        if (!id.empty() && _IsUnique(id)) {
-            _sUniqueId.insert(id);
-            return;
-        }
-        std::string tempId = id;
-        int count = 0;
-
-        // situations for generating a new id
-        // 1. same id has been reserved by others
-        // 2. id is empty
-        // 3. id has conflicted with updated id
-        while (_IsReserved(tempId) || tempId.empty() || !_IsUnique(tempId)) {
-            tempId = str(boost::format("%s%d")%(id.empty()?_prefix:id)%count);
-            count++;
-        }
-        _sUniqueId.insert(tempId);
-        id = tempId;
-    }
-    /// \brief Reserve the id namespace
-    void ReserveUniqueID(const std::string& id) {
-        if (id.empty() || _IsReserved(id)) {
-            return;
-        }
-        _sReservedId.insert(id);
+        testvalue >>= 4;
+        ++testindex;
     }
 
-private:
-    bool _IsUnique(const std::string& id) {
-        return _sUniqueId.find(id) == _sUniqueId.end();
+    uint32_t length = 8-testindex;
+    if( length == 0 ) {
+        output[0] = '0';
+        output[1] = 0; // null terminator
+        return 1;
     }
-    bool _IsReserved(const std::string& id) {
-        return _sReservedId.find(id) != _sReservedId.end();
+    
+    for(uint32_t index = 0; index < length; ++index) {
+        uint32_t nibble = (value>>(4*(length-1-index)))&0xf;
+        if( nibble < 10 ) {
+            output[index] = '0'+nibble;
+        }
+        else {
+            output[index] = 'A'+(nibble-10);
+            }
     }
-    std::string _prefix;
-    std::set<std::string> _sUniqueId;
-    std::set<std::string> _sReservedId;
-};
+    output[length] = 0; // null terminator
+    return length;
+}
 
 ///* \brief Update current info from json value. Create a new one if there is no id matched.
 template<typename T>
-void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string id, std::vector<boost::shared_ptr<T> >& vInfos, dReal fUnitScale, int options) {
+void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string& id, std::vector<boost::shared_ptr<T> >& vInfos, dReal fUnitScale, int options)
+{
     typename std::vector<boost::shared_ptr<T>>::iterator itExistingInfo = vInfos.end();
     FOREACH(itInfo, vInfos) {
         if ((*itInfo)->_id == id) {
