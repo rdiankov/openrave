@@ -3447,7 +3447,8 @@ public:
                         rapidjson::Document rGripperInfo;
                         OpenRAVE::orjson::ParseJson(rGripperInfo, pjson_data->getCharData());
                         dReal fUnitScale=1.0;
-                        pGripperInfo->DeserializeJSON(rGripperInfo, fUnitScale);
+                        int options = 0;
+                        pGripperInfo->DeserializeJSON(rGripperInfo, fUnitScale, options);
                     }
                     // do not let json_data in collada override name attribute of <extra>
                     pGripperInfo->name = _ConvertToOpenRAVEName(grippername);

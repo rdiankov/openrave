@@ -2556,8 +2556,10 @@ private:
                 domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
                 ptec->setProfile("OpenRAVE");
 
+                dReal fUnitScale=1;
+                int options = 0;
                 rapidjson::Document rGripperInfo;
-                (*itGripperInfo)->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator());
+                (*itGripperInfo)->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator(), fUnitScale, options);
                 if (rGripperInfo.HasMember("id")) {
                     rGripperInfo.RemoveMember("id");
                 }

@@ -97,7 +97,7 @@ public:
 
     py::object SerializeJSON(dReal fUnitScale=1.0, py::object ooptions=py::none_());
 
-    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
 
     std::string __str__();
     py::object __unicode__();
@@ -132,7 +132,7 @@ public:
     PyKinBodyInfo();
     PyKinBodyInfo(const KinBody::KinBodyInfo& info);
     py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
-    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
     KinBody::KinBodyInfoPtr GetKinBodyInfo() const;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     std::vector<KinBody::LinkInfoPtr> _vLinkInfos;
@@ -173,7 +173,7 @@ public:
     void Destroy();
     KinBodyPtr GetBody();
 
-    bool InitFromInfo(const py::object pyKinBodyInfo);
+    bool InitFromKinBodyInfo(const py::object pyKinBodyInfo);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     bool InitFromBoxes(const std::vector<std::vector<dReal> >& vboxes, const bool bDraw = true, const std::string& uri = "");
     bool InitFromSpheres(const std::vector<std::vector<dReal> >& vspheres, const bool bDraw = true, const std::string& uri = "");

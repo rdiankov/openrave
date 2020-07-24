@@ -703,7 +703,7 @@ public:
     }
 
     /// \brief info structure used to initialize environment
-    class OPENRAVE_API EnvironmentBaseInfo
+    class OPENRAVE_API EnvironmentBaseInfo : public InfoBase
     {
 public:
         EnvironmentBaseInfo() {}
@@ -723,11 +723,11 @@ public:
             return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
-
         uint64_t _revision;
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;

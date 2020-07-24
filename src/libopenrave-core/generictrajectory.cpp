@@ -424,6 +424,7 @@ public:
     // New feature: Store trajectory file in binary
     void serialize(std::ostream& O, int options) const override
     {
+        dReal fUnitScale = 1.0;
         if( options & 0x8000 ) {
             TrajectoryBase::serialize(O, options);
         }
@@ -467,7 +468,8 @@ public:
                 JSONReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(itReadableInterface->second);
                 if (!!pjsonreadable) {
                     rapidjson::Value rReadable;
-                    pjsonreadable->SerializeJSON(rReadable, document.GetAllocator());
+                    int options = 0;
+                    pjsonreadable->SerializeJSON(rReadable, document.GetAllocator(), fUnitScale, options);
                     WriteBinaryString(O, rReadable.GetString());
                     continue;
                 }

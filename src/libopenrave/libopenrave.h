@@ -472,7 +472,8 @@ inline const char *strcasestr(const char *s, const char *find)
 
 
 /// \brief A local uid generator
-class UniqueIDGenerator {
+class UniqueIDGenerator
+{
 public:
     UniqueIDGenerator() = delete;
     UniqueIDGenerator(std::string prefix): _prefix(prefix) {}
@@ -499,7 +500,7 @@ public:
         id = tempId;
     }
     /// \brief Reserve the id namespace
-    void ReserveUniqueID(const std::string id) {
+    void ReserveUniqueID(const std::string& id) {
         if (id.empty() || _IsReserved(id)) {
             return;
         }
@@ -520,7 +521,7 @@ private:
 
 ///* \brief Update current info from json value. Create a new one if there is no id matched.
 template<typename T>
-void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string id, std::vector<boost::shared_ptr<T>>& vInfos, dReal fUnitScale) {
+void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string id, std::vector<boost::shared_ptr<T> >& vInfos, dReal fUnitScale, int options) {
     typename std::vector<boost::shared_ptr<T>>::iterator itExistingInfo = vInfos.end();
     FOREACH(itInfo, vInfos) {
         if ((*itInfo)->_id == id) {
@@ -534,7 +535,7 @@ void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string id, std
             vInfos.erase(itExistingInfo);
             return;
         }
-        (*itExistingInfo)->DeserializeJSON(value, fUnitScale);
+        (*itExistingInfo)->DeserializeJSON(value, fUnitScale, options);
         (*itExistingInfo)->_id = id;
         return;
     }
@@ -542,7 +543,7 @@ void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string id, std
         return;
     }
     boost::shared_ptr<T> pNewInfo(new T());
-    pNewInfo->DeserializeJSON(value, fUnitScale);
+    pNewInfo->DeserializeJSON(value, fUnitScale, options);
     pNewInfo->_id = id;
     vInfos.push_back(pNewInfo);
 }

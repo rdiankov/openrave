@@ -158,10 +158,10 @@ void ConfigurationSpecification::DeserializeJSON(const rapidjson::Value& rValue)
         size_t iGroup = 0;
         for (rapidjson::Value::ConstValueIterator it = rValue["groups"].Begin(); it != rValue["groups"].End(); it++, iGroup++) {
             ConfigurationSpecification::Group& group = _vgroups[iGroup];
-            OpenRAVE::orjson::LoadJsonValueByKey(*it, "name", group.name);
-            OpenRAVE::orjson::LoadJsonValueByKey(*it, "offset", group.offset);
-            OpenRAVE::orjson::LoadJsonValueByKey(*it, "dof", group.dof);
-            OpenRAVE::orjson::LoadJsonValueByKey(*it, "interpolation", group.interpolation);
+            orjson::LoadJsonValueByKey(*it, "name", group.name);
+            orjson::LoadJsonValueByKey(*it, "offset", group.offset);
+            orjson::LoadJsonValueByKey(*it, "dof", group.dof);
+            orjson::LoadJsonValueByKey(*it, "interpolation", group.interpolation);
         }
     }
 }
@@ -183,13 +183,13 @@ void ConfigurationSpecification::SerializeJSON(rapidjson::Value& rValue, rapidjs
         const ConfigurationSpecification::Group& group = _vgroups[iGroupIndex];
         rapidjson::Value rGroup;
         rGroup.SetObject();
-        OpenRAVE::orjson::SetJsonValueByKey(rGroup, "name", group.name, alloc);
-        OpenRAVE::orjson::SetJsonValueByKey(rGroup, "offset", group.offset, alloc);
-        OpenRAVE::orjson::SetJsonValueByKey(rGroup, "dof", group.dof, alloc);
-        OpenRAVE::orjson::SetJsonValueByKey(rGroup, "interpolation", group.interpolation, alloc);
+        orjson::SetJsonValueByKey(rGroup, "name", group.name, alloc);
+        orjson::SetJsonValueByKey(rGroup, "offset", group.offset, alloc);
+        orjson::SetJsonValueByKey(rGroup, "dof", group.dof, alloc);
+        orjson::SetJsonValueByKey(rGroup, "interpolation", group.interpolation, alloc);
         rGroups.PushBack(rGroup, alloc);
     }
-    OpenRAVE::orjson::SetJsonValueByKey(rValue, "groups", rGroups, alloc);
+    orjson::SetJsonValueByKey(rValue, "groups", rGroups, alloc);
 }
 
 const ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(const std::string& name) const

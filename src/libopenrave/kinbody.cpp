@@ -72,59 +72,102 @@ protected:
 
 typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 
-void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+void ElectricMotorActuatorInfo::Reset()
 {
-    OpenRAVE::orjson::SetJsonValueByKey(value, "modelType", model_type, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "assignedPowerRating", assigned_power_rating, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "maxSpeed", max_speed, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "noLoadSpeed", no_load_speed, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "stallTorque", stall_torque, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "nominalTorque", nominal_torque, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "rotorInertia", rotor_inertia, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "torqueConstant", torque_constant, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "nominalVoltage", nominal_voltage, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "speedConstant", speed_constant, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "startingCurrent", starting_current, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "terminalResistance", terminal_resistance, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "gearRatio", gear_ratio, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "coloumbFriction", coloumb_friction, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "viscousFriction", viscous_friction, allocator);
+    model_type.clear();
+    assigned_power_rating = 0;
+    max_speed = 0;
+    no_load_speed = 0;
+    stall_torque = 0;
+    max_instantaneous_torque = 0;
+    nominal_speed_torque_points.clear();
+    max_speed_torque_points.clear();
+    nominal_torque = 0;
+    rotor_inertia = 0;
+    torque_constant = 0;
+    nominal_voltage = 0;
+    speed_constant = 0;
+    starting_current = 0;
+    terminal_resistance = 0;
+    gear_ratio = 0;
+    coloumb_friction = 0;
+    viscous_friction = 0;
 }
 
-void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "modelType", model_type);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "maxSpeed", max_speed);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "noLoadSpeed", no_load_speed);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "stallTorque", stall_torque);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "nominalTorque", nominal_torque);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "rotorInertia", rotor_inertia);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "torqueConstant", torque_constant);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "nominalVoltage", nominal_voltage);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "speedConstant", speed_constant);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "startingCurrent", starting_current);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "terminalResistance", terminal_resistance);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "gearRatio", gear_ratio);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "coloumbFriction", coloumb_friction);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
+    orjson::SetJsonValueByKey(value, "modelType", model_type, allocator);
+    orjson::SetJsonValueByKey(value, "assignedPowerRating", assigned_power_rating, allocator);
+    orjson::SetJsonValueByKey(value, "maxSpeed", max_speed, allocator);
+    orjson::SetJsonValueByKey(value, "noLoadSpeed", no_load_speed, allocator);
+    orjson::SetJsonValueByKey(value, "stallTorque", stall_torque, allocator);
+    orjson::SetJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque, allocator);
+    orjson::SetJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points, allocator);
+    orjson::SetJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points, allocator);
+    orjson::SetJsonValueByKey(value, "nominalTorque", nominal_torque, allocator);
+    orjson::SetJsonValueByKey(value, "rotorInertia", rotor_inertia, allocator);
+    orjson::SetJsonValueByKey(value, "torqueConstant", torque_constant, allocator);
+    orjson::SetJsonValueByKey(value, "nominalVoltage", nominal_voltage, allocator);
+    orjson::SetJsonValueByKey(value, "speedConstant", speed_constant, allocator);
+    orjson::SetJsonValueByKey(value, "startingCurrent", starting_current, allocator);
+    orjson::SetJsonValueByKey(value, "terminalResistance", terminal_resistance, allocator);
+    orjson::SetJsonValueByKey(value, "gearRatio", gear_ratio, allocator);
+    orjson::SetJsonValueByKey(value, "coloumbFriction", coloumb_friction, allocator);
+    orjson::SetJsonValueByKey(value, "viscousFriction", viscous_friction, allocator);
+}
+
+void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+{
+    orjson::LoadJsonValueByKey(value, "modelType", model_type);
+    orjson::LoadJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);
+    orjson::LoadJsonValueByKey(value, "maxSpeed", max_speed);
+    orjson::LoadJsonValueByKey(value, "noLoadSpeed", no_load_speed);
+    orjson::LoadJsonValueByKey(value, "stallTorque", stall_torque);
+    orjson::LoadJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque);
+    orjson::LoadJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points);
+    orjson::LoadJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points);
+    orjson::LoadJsonValueByKey(value, "nominalTorque", nominal_torque);
+    orjson::LoadJsonValueByKey(value, "rotorInertia", rotor_inertia);
+    orjson::LoadJsonValueByKey(value, "torqueConstant", torque_constant);
+    orjson::LoadJsonValueByKey(value, "nominalVoltage", nominal_voltage);
+    orjson::LoadJsonValueByKey(value, "speedConstant", speed_constant);
+    orjson::LoadJsonValueByKey(value, "startingCurrent", starting_current);
+    orjson::LoadJsonValueByKey(value, "terminalResistance", terminal_resistance);
+    orjson::LoadJsonValueByKey(value, "gearRatio", gear_ratio);
+    orjson::LoadJsonValueByKey(value, "coloumbFriction", coloumb_friction);
+    orjson::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
+}
+
+void KinBody::KinBodyInfo::Reset()
+{
+    _id.clear();
+    _uri.clear();
+    _name.clear();
+    _referenceUri.clear();
+    _transform = Transform();
+    _dofValues.clear();
+    _vGrabbedInfos.clear();
+    _vLinkInfos.clear();
+    _vJointInfos.clear();
+    _mReadableInterfaces.clear();
 }
 
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     value.SetObject();
-    OpenRAVE::orjson::SetJsonValueByKey(value, "id", _id, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "name", _name, allocator);
+    orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    orjson::SetJsonValueByKey(value, "name", _name, allocator);
     if (!_referenceUri.empty()) {
-        OpenRAVE::orjson::SetJsonValueByKey(value, "referenceUri", _referenceUri, allocator);
+        if( options & ISO_ReferenceUriHint ) {
+            orjson::SetJsonValueByKey(value, "referenceUriHint", _referenceUri, allocator);
+        }
+        else {
+            orjson::SetJsonValueByKey(value, "referenceUri", _referenceUri, allocator);
+        }
     }
-    OpenRAVE::orjson::SetJsonValueByKey(value, "transform", _transform, allocator);
+    orjson::SetJsonValueByKey(value, "interfaceType", _interfaceType, allocator);
+    orjson::SetJsonValueByKey(value, "transform", _transform, allocator);
+    orjson::SetJsonValueByKey(value, "isRobot", _isRobot, allocator);
 
     if (_dofValues.size() > 0) {
         rapidjson::Value dofValues;
@@ -132,9 +175,9 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
         dofValues.Reserve(_dofValues.size(), allocator);
         FOREACHC(itDofValue, _dofValues) {
             rapidjson::Value dofValue;
-            OpenRAVE::orjson::SetJsonValueByKey(dofValue, "jointName", itDofValue->first.first, allocator);
-            OpenRAVE::orjson::SetJsonValueByKey(dofValue, "jointAxis", itDofValue->first.second, allocator);
-            OpenRAVE::orjson::SetJsonValueByKey(dofValue, "value", itDofValue->second, allocator);
+            orjson::SetJsonValueByKey(dofValue, "jointName", itDofValue->first.first, allocator);
+            orjson::SetJsonValueByKey(dofValue, "jointAxis", itDofValue->first.second, allocator);
+            orjson::SetJsonValueByKey(dofValue, "value", itDofValue->second, allocator);
             dofValues.PushBack(dofValue, allocator);
         }
         value.AddMember("dofValues", dofValues, allocator);
@@ -181,30 +224,39 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
         rReadableInterfaces.SetArray();
         for(std::map<std::string, JSONReadablePtr>::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
             rapidjson::Value rReadable;
-            it->second->SerializeJSON(rReadable, allocator);
-            OpenRAVE::orjson::SetJsonValueByKey(rReadable, "id", it->first, allocator);
+            it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
+            orjson::SetJsonValueByKey(rReadable, "id", it->first, allocator);
             rReadableInterfaces.PushBack(rReadable, allocator);
         }
         value.AddMember("readableInterfaces", rReadableInterfaces, allocator);
     }
 }
 
-void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "id", _id);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "name", _name);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+    orjson::LoadJsonValueByKey(value, "name", _name);
+    orjson::LoadJsonValueByKey(value, "id", _id);
+    if( _id.empty() ) {
+        _id = _name;
+    }
+
+    if( !(options & IDO_IgnoreReferenceUri) ) {
+        orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+    }
+
+    orjson::LoadJsonValueByKey(value, "interfaceType", _interfaceType);
+    orjson::LoadJsonValueByKey(value, "isRobot", _isRobot);
 
     if (value.HasMember("grabbed")) {
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
         size_t iGrabbed = 0;
         for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
             const rapidjson::Value& grabbedValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(grabbedValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(grabbedValue, "id");
             if (id.empty()) {
-                id = OpenRAVE::orjson::GetStringJsonValueByKey(grabbedValue, "grabbedName");
+                id = orjson::GetStringJsonValueByKey(grabbedValue, "grabbedName");
             }
-            UpdateOrCreateInfo(grabbedValue, id, _vGrabbedInfos, fUnitScale);
+            UpdateOrCreateInfo(grabbedValue, id, _vGrabbedInfos, fUnitScale, options);
         }
     }
 
@@ -216,18 +268,18 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         }
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
             const rapidjson::Value& linkValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(linkValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(linkValue, "id");
             linkIdGenerator.ReserveUniqueID(id);
         }
 
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
             const rapidjson::Value& linkValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(linkValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(linkValue, "id");
             if (id.empty()) {
-                id = OpenRAVE::orjson::GetStringJsonValueByKey(linkValue, "name");
+                id = orjson::GetStringJsonValueByKey(linkValue, "name");
                 linkIdGenerator.EnsureUniqueID(id);
             }
-            UpdateOrCreateInfo(linkValue, id, _vLinkInfos, fUnitScale);
+            UpdateOrCreateInfo(linkValue, id, _vLinkInfos, fUnitScale, options);
         }
     }
 
@@ -240,18 +292,18 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         }
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
             const rapidjson::Value& jointValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(jointValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(jointValue, "id");
             jointIdGenerator.ReserveUniqueID(id);
         }
 
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
             const rapidjson::Value& jointValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(jointValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(jointValue, "id");
             if (id.empty()) {
-                id = OpenRAVE::orjson::GetStringJsonValueByKey(jointValue, "name");
+                id = orjson::GetStringJsonValueByKey(jointValue, "name");
                 jointIdGenerator.EnsureUniqueID(id);
             }
-            UpdateOrCreateInfo(jointValue, id, _vJointInfos, fUnitScale);
+            UpdateOrCreateInfo(jointValue, id, _vJointInfos, fUnitScale, options);
         }
     }
 
@@ -262,9 +314,9 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 std::string jointName;
                 int jointAxis = 0;
                 dReal dofValue;
-                OpenRAVE::orjson::LoadJsonValueByKey(*itr, "jointName", jointName);
-                OpenRAVE::orjson::LoadJsonValueByKey(*itr, "jointAxis", jointAxis);
-                OpenRAVE::orjson::LoadJsonValueByKey(*itr, "value", dofValue);
+                orjson::LoadJsonValueByKey(*itr, "jointName", jointName);
+                orjson::LoadJsonValueByKey(*itr, "jointAxis", jointAxis);
+                orjson::LoadJsonValueByKey(*itr, "value", dofValue);
                 _dofValues.emplace_back(std::make_pair(jointName, jointAxis), dofValue);
             }
         }
@@ -277,13 +329,13 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
 
     if (value.HasMember("transform")) {
-        OpenRAVE::orjson::LoadJsonValueByKey(value, "transform", _transform);
+        orjson::LoadJsonValueByKey(value, "transform", _transform);
     }
 }
 
 void KinBody::KinBodyInfo::_DeserializeReadableInterface(const rapidjson::Value& value) {
     std::string id;
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "id", id);
+    orjson::LoadJsonValueByKey(value, "id", id);
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, KinBodyPtr(), AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value);
@@ -294,7 +346,7 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const rapidjson::Value&
     }
     else if (value.HasMember("string")) {
         std::string stringValue;
-        OpenRAVE::orjson::LoadJsonValueByKey(value, "string", stringValue);
+        orjson::LoadJsonValueByKey(value, "string", stringValue);
         StringReadablePtr pReadable(new StringReadable(id, stringValue));
         _mReadableInterfaces[id] = pReadable;
     }
@@ -579,7 +631,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     return true;
 }
 
-bool KinBody::InitFromInfo(const KinBodyInfo& info)
+bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
 {
     std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info._vLinkInfos.begin(), info._vLinkInfos.end());
     std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info._vJointInfos.begin(), info._vJointInfos.end());
@@ -594,6 +646,11 @@ bool KinBody::InitFromInfo(const KinBodyInfo& info)
     FOREACH(it, info._mReadableInterfaces) {
         SetReadableInterface(it->first, it->second);
     }
+
+    if( GetXMLId() != info._interfaceType ) {
+        RAVELOG_WARN_FORMAT("body '%s' interfaceType does not match %s != %s", GetName()%GetXMLId()%info._interfaceType);
+    }
+
     return true;
 }
 
@@ -5212,6 +5269,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     info._uri = __struri;
     info._name = _name;
     info._referenceUri = _referenceUri;
+    info._interfaceType = GetXMLId();
 
     info._dofValues.resize(0);
     std::vector<dReal> vDOFValues;
@@ -5303,9 +5361,11 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     }
 }
 
-UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
+UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 {
-    BOOST_ASSERT(info._id == _id);
+    if(info._id != _id) {
+        RAVELOG_WARN_FORMAT("body '%s' update info ids do not match %s != %s", GetName()%_id%info._id);
+    }
 
     // links
     FOREACHC(itLinkInfo, info._vLinkInfos) {
@@ -5447,7 +5507,7 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
     std::vector<dReal> dofValues;
     GetDOFValues(dofValues);
     bool bDOFChanged = false;
-    for(std::vector<std::pair<std::pair<std::string, int>, dReal>>::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
+    for(std::vector<std::pair<std::pair<std::string, int>, dReal> >::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
         // find the joint in the active chain
         JointPtr joint;
         FOREACHC(itJoint,_vecjoints) {
@@ -5476,8 +5536,10 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
         if (!!pReadable) {
             if ( (*(it->second)) != (*pReadable)) {
                 rapidjson::Document docReadable;
-                it->second->SerializeJSON(docReadable, docReadable.GetAllocator());
-                pReadable->DeserializeJSON(docReadable);
+                dReal fUnitScale = 1.0;
+                int options = 0;
+                it->second->SerializeJSON(docReadable, docReadable.GetAllocator(), fUnitScale, options);
+                pReadable->DeserializeJSON(docReadable, fUnitScale);
             }
         }
         else {

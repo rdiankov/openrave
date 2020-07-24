@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-#include <openrave/openravejson.h>
 
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
@@ -34,28 +33,40 @@ RobotBase::GripperInfo& RobotBase::GripperInfo::operator=(const RobotBase::Gripp
     return *this;
 }
 
+void RobotBase::GripperInfo::Reset()
+{
+    _id.clear();
+    name.clear();
+    grippertype.clear();
+    gripperJointNames.clear();
+    _docGripperInfo = rapidjson::Document();
+}
+
 void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     value.SetObject();
     if( _docGripperInfo.IsObject() ) {
         value.CopyFrom(_docGripperInfo, allocator, true); // need to copy the const strings
     }
-    OpenRAVE::orjson::SetJsonValueByKey(value, "id", _id, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "name", name, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "grippertype", grippertype, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
+    orjson::SetJsonValueByKey(value, "name", name, allocator);
+    orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    orjson::SetJsonValueByKey(value, "grippertype", grippertype, allocator);
+    orjson::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
 }
 
-void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+    void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "id", _id);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "name", name);
+    orjson::LoadJsonValueByKey(value, "name", name);
+    orjson::LoadJsonValueByKey(value, "id", _id);
     if( name.size() == 0 && _id.size() > 0 ) {
         name = _id;
         RAVELOG_WARN_FORMAT("gripperInfo %s got old tag 'id', when it should be 'name'", name);
     }
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "grippertype", grippertype);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "gripperJointNames", gripperJointNames);
+    if( _id.empty() ) {
+        _id = name;
+    }
+    orjson::LoadJsonValueByKey(value, "grippertype", grippertype);
+    orjson::LoadJsonValueByKey(value, "gripperJointNames", gripperJointNames);
 
     rapidjson::Document docGripperInfo;
     docGripperInfo.SetObject();
@@ -68,19 +79,29 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
         if (name == "id" || name == "name" || name == "grippertype" || name == "gripperJointNames") {
             continue;
         }
-        OpenRAVE::orjson::SetJsonValueByKey(docGripperInfo, name, it->value);
+        orjson::SetJsonValueByKey(docGripperInfo, name, it->value);
     }
     _docGripperInfo.Swap(docGripperInfo);
+}
+
+void RobotBase::AttachedSensorInfo::Reset()
+{
+    _id.clear();
+    _name.clear();
+    _linkname.clear();
+    _trelative = Transform();
+    _sensorname.clear();
+    _docSensorGeometry = rapidjson::Document();
 }
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     value.SetObject();
-    OpenRAVE::orjson::SetJsonValueByKey(value, "id", _id, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "name", _name, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "linkName", _linkname, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "transform", _trelative, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "type", _sensorname, allocator);
+    orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    orjson::SetJsonValueByKey(value, "name", _name, allocator);
+    orjson::SetJsonValueByKey(value, "linkName", _linkname, allocator);
+    orjson::SetJsonValueByKey(value, "transform", _trelative, allocator);
+    orjson::SetJsonValueByKey(value, "type", _sensorname, allocator);
 
     if (_docSensorGeometry.IsObject() && _docSensorGeometry.MemberCount() > 0) {
         rapidjson::Value sensorGeometry;
@@ -89,19 +110,22 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     }
 }
 
-void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "id", _id);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "name", _name);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "linkName", _linkname);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "transform", _trelative);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "type", _sensorname);
+    orjson::LoadJsonValueByKey(value, "name", _name);
+    orjson::LoadJsonValueByKey(value, "id", _id);
+    if( _id.empty() ) {
+        _id = _name;
+    }
+    orjson::LoadJsonValueByKey(value, "linkName", _linkname);
+    orjson::LoadJsonValueByKey(value, "transform", _trelative);
+    orjson::LoadJsonValueByKey(value, "type", _sensorname);
 
     if (value.HasMember("sensorGeometry")) {
         if (!_docSensorGeometry.IsObject()) {
             _docSensorGeometry.SetObject();
         }
-        OpenRAVE::orjson::UpdateJson(_docSensorGeometry, value["sensorGeometry"]);
+        orjson::UpdateJson(_docSensorGeometry, value["sensorGeometry"]);
     }
 }
 
@@ -510,17 +534,26 @@ RobotBase::RobotBaseInfo& RobotBase::RobotBaseInfo::operator=(const RobotBase::R
 
 bool RobotBase::RobotBaseInfo::operator==(const RobotBaseInfo& other) const {
     return KinBody::KinBodyInfo::operator==(other)
-        && IsInfoVectorEqual(_vManipulatorInfos, other._vManipulatorInfos)
-        && IsInfoVectorEqual(_vAttachedSensorInfos, other._vAttachedSensorInfos)
-        && IsInfoVectorEqual(_vConnectedBodyInfos, other._vConnectedBodyInfos)
-        && IsInfoVectorEqual(_vGripperInfos, other._vGripperInfos);
+           && IsInfoVectorEqual(_vManipulatorInfos, other._vManipulatorInfos)
+           && IsInfoVectorEqual(_vAttachedSensorInfos, other._vAttachedSensorInfos)
+           && IsInfoVectorEqual(_vConnectedBodyInfos, other._vConnectedBodyInfos)
+           && IsInfoVectorEqual(_vGripperInfos, other._vGripperInfos);
+}
+
+void RobotBase::RobotBaseInfo::Reset()
+{
+    KinBodyInfo::Reset();
+    _vManipulatorInfos.clear();
+    _vAttachedSensorInfos.clear();
+    _vConnectedBodyInfos.clear();
+    _vGripperInfos.clear();
 }
 
 void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     KinBody::KinBodyInfo::SerializeJSON(value, allocator, fUnitScale, options);
 
-    OpenRAVE::orjson::SetJsonValueByKey(value, "isRobot", true, allocator);
+    orjson::SetJsonValueByKey(value, "isRobot", true, allocator);
 
     if (_vManipulatorInfos.size() > 0) {
         rapidjson::Value rManipulatorInfoValues;
@@ -571,9 +604,9 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
     }
 }
 
-void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
-    KinBody::KinBodyInfo::DeserializeJSON(value, fUnitScale);
+    KinBodyInfo::DeserializeJSON(value, fUnitScale, options);
 
     if (value.HasMember("tools")) {
         _vManipulatorInfos.reserve(value["tools"].Size() + _vManipulatorInfos.size());
@@ -584,18 +617,18 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
         }
         for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it) {
             const rapidjson::Value& manipulatorValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(manipulatorValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(manipulatorValue, "id");
             manipulatorIdGenerator.ReserveUniqueID(id);
         }
 
         for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it) {
             const rapidjson::Value& manipulatorValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(manipulatorValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(manipulatorValue, "id");
             if (id.empty()) {
-                id = OpenRAVE::orjson::GetStringJsonValueByKey(manipulatorValue, "name");
+                id = orjson::GetStringJsonValueByKey(manipulatorValue, "name");
                 manipulatorIdGenerator.EnsureUniqueID(id);
             }
-            UpdateOrCreateInfo(manipulatorValue, id, _vManipulatorInfos, fUnitScale);
+            UpdateOrCreateInfo(manipulatorValue, id, _vManipulatorInfos, fUnitScale, options);
         }
     }
 
@@ -609,18 +642,18 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
 
         for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it) {
             const rapidjson::Value& attachedSensorValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(attachedSensorValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(attachedSensorValue, "id");
             attachedSensorIdGenerator.ReserveUniqueID(id);
         }
 
         for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it) {
             const rapidjson::Value& attachedSensorValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(attachedSensorValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(attachedSensorValue, "id");
             if (id.empty()) {
-                id = OpenRAVE::orjson::GetStringJsonValueByKey(attachedSensorValue, "name");
+                id = orjson::GetStringJsonValueByKey(attachedSensorValue, "name");
                 attachedSensorIdGenerator.EnsureUniqueID(id);
             }
-            UpdateOrCreateInfo(attachedSensorValue, id, _vAttachedSensorInfos, fUnitScale);
+            UpdateOrCreateInfo(attachedSensorValue, id, _vAttachedSensorInfos, fUnitScale, options);
         }
     }
 
@@ -633,52 +666,18 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
         }
         for (rapidjson::Value::ConstValueIterator it = value["connectedBodies"].Begin(); it != value["connectedBodies"].End(); ++it) {
             const rapidjson::Value& connectedBodyValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(connectedBodyValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(connectedBodyValue, "id");
             connectedBodyIdGenerator.ReserveUniqueID(id);
         }
 
         for (rapidjson::Value::ConstValueIterator it = value["connectedBodies"].Begin(); it != value["connectedBodies"].End(); ++it) {
             const rapidjson::Value& connectedBodyValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(connectedBodyValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(connectedBodyValue, "id");
             if (id.empty()) {
-                id = OpenRAVE::orjson::GetStringJsonValueByKey(connectedBodyValue, "name");
+                id = orjson::GetStringJsonValueByKey(connectedBodyValue, "name");
                 connectedBodyIdGenerator.EnsureUniqueID(id);
             }
-            // connectedBody use *uri* to represent referenceUri;
-            std::string referenceUri = OpenRAVE::orjson::GetStringJsonValueByKey(connectedBodyValue, "uri");
-            if (!referenceUri.empty()) {
-                // TODO: extend connectedBodyValue
-                boost::shared_ptr<RobotBase::ConnectedBodyInfo> pConnectedBodyInfo;
-                typename std::vector<boost::shared_ptr<RobotBase::ConnectedBodyInfo>>::iterator itExistingInfo = _vConnectedBodyInfos.end();
-                FOREACH(itInfo, _vConnectedBodyInfos) {
-                    if ((*itInfo)->_id == id) {
-                        itExistingInfo = itInfo;
-                    }
-                }
-                if (itExistingInfo != _vConnectedBodyInfos.end()) {
-                    pConnectedBodyInfo = *itExistingInfo;
-                }
-                else {
-                    pConnectedBodyInfo.reset(new RobotBase::ConnectedBodyInfo());
-                }
-                std::set<std::string> circularReference;
-                rapidjson::Document doc;
-                doc.CopyFrom(value, doc.GetAllocator());
-                if (!_DeserializeConnectedBodyInfo(*pConnectedBodyInfo, doc, referenceUri, circularReference)) {
-                    RAVELOG_ERROR("Deserialize connected body failed");
-                    continue;
-                }
-                (*pConnectedBodyInfo).DeserializeJSON(*it);
-
-                if (itExistingInfo == _vConnectedBodyInfos.end()) {
-                    _vConnectedBodyInfos.push_back(pConnectedBodyInfo);
-                }
-
-            }
-            else {
-                UpdateOrCreateInfo(connectedBodyValue, id, _vConnectedBodyInfos, fUnitScale);
-            }
-
+            UpdateOrCreateInfo(connectedBodyValue, id, _vConnectedBodyInfos, fUnitScale, options);
         }
     }
 
@@ -691,58 +690,25 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
         }
         for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it) {
             const rapidjson::Value& gripperInfoValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(gripperInfoValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(gripperInfoValue, "id");
             gripperInfoIdGenerator.ReserveUniqueID(id);
         }
 
         for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it) {
             const rapidjson::Value& gripperInfoValue = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(gripperInfoValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(gripperInfoValue, "id");
             if (id.empty()) {
-                id = OpenRAVE::orjson::GetStringJsonValueByKey(gripperInfoValue, "name");
+                id = orjson::GetStringJsonValueByKey(gripperInfoValue, "name");
                 gripperInfoIdGenerator.EnsureUniqueID(id);
             }
-            UpdateOrCreateInfo(gripperInfoValue, id, _vGripperInfos, fUnitScale);
+            UpdateOrCreateInfo(gripperInfoValue, id, _vGripperInfos, fUnitScale, options);
         }
     }
-}
-
-bool RobotBase::RobotBaseInfo::_DeserializeConnectedBodyInfo(RobotBase::ConnectedBodyInfo& connectedBodyInfo, rapidjson::Document& currentDoc, const std::string uri, std::set<std::string>& circularReference) {
-    if (circularReference.find(uri) != circularReference.end()) {
-        RAVELOG_ERROR("Load connected body failed: circular reference is found");
-        return false;
-    }
-    std::string scheme, path, fragment;
-    OpenRAVE::orjson::ParseURI(uri, scheme, path, fragment);
-    std::string fullFilename = OpenRAVE::orjson::ResolveURI(uri, std::vector<std::string>()); // TODO: passing vOpenRAVESchemeAliases
-    rapidjson::Document doc(&currentDoc.GetAllocator());
-    if (fullFilename.empty()) {
-        return false;
-    }
-
-    OpenRAVE::orjson::OpenRapidJsonDocument(fullFilename, doc);
-    if (doc.HasMember("bodies")) {
-        for(rapidjson::Value::ConstValueIterator it = doc["bodies"].Begin(); it != doc["bodies"].End(); it++) {
-            std::string id = OpenRAVE::orjson::GetJsonValueByKey<std::string>(*it, "id", "");
-            if ( id == fragment || fragment.empty() ){ // if fragment is empty, deserialize the first one
-                std::string referenceUri = OpenRAVE::orjson::GetJsonValueByKey<std::string>(*it, "referenceUri", "");
-                if (!referenceUri.empty()) {
-                    bool bSuccess = _DeserializeConnectedBodyInfo(connectedBodyInfo, doc, referenceUri, circularReference);
-                    if (!bSuccess) {
-                        return false;
-                    }
-                }
-                connectedBodyInfo.DeserializeJSON(*it);
-                return true;
-            }
-        }
-    }
-    return false;
 }
 
 void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const rapidjson::Value& value) {
     std::string id;
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "id", id);
+    orjson::LoadJsonValueByKey(value, "id", id);
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, RobotBasePtr(), AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value);
@@ -753,7 +719,7 @@ void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const rapidjson::Va
     }
     else if (value.HasMember("string")) {
         std::string stringValue;
-        OpenRAVE::orjson::LoadJsonValueByKey(value, "string", stringValue);
+        orjson::LoadJsonValueByKey(value, "string", stringValue);
         StringReadablePtr pReadable(new StringReadable(id, stringValue));
         _mReadableInterfaces[id] = pReadable;
     }
@@ -838,7 +804,7 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
     return true;
 }
 
-bool RobotBase::InitFromInfo(const RobotBaseInfo& info)
+bool RobotBase::InitFromRobotInfo(const RobotBaseInfo& info)
 {
     std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info._vLinkInfos.begin(), info._vLinkInfos.end());
     std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info._vJointInfos.begin(), info._vJointInfos.end());
@@ -1159,7 +1125,7 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, uint32_t bC
     if( (int)_vActiveDOFIndices.size() < _nActiveDOF ) {
         t = GetTransform();
         RaveGetTransformFromAffineDOFValues(t, values.begin()+_vActiveDOFIndices.size(),_nAffineDOFs,vActvAffineRotationAxis);
-        if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+        if( _nAffineDOFs & DOF_RotationQuat ) {
             t.rot = quatMultiply(_vRotationQuatLimitStart, t.rot);
         }
         if( _vActiveDOFIndices.size() == 0 ) {
@@ -1200,11 +1166,11 @@ void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
         }
     }
 
-    if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
+    if( _nAffineDOFs == DOF_NoTransform ) {
         return;
     }
     Transform t = GetTransform();
-    if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+    if( _nAffineDOFs & DOF_RotationQuat ) {
         t.rot = quatMultiply(quatInverse(_vRotationQuatLimitStart), t.rot);
     }
     RaveGetAffineDOFValuesFromTransform(itvalues,t,_nAffineDOFs,vActvAffineRotationAxis);
@@ -1225,18 +1191,18 @@ void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, uin
 
         _veclinks.at(0)->GetVelocity(linearvel, angularvel);
 
-        if( _nAffineDOFs & OpenRAVE::DOF_X ) linearvel.x = *pAffineValues++;
-        if( _nAffineDOFs & OpenRAVE::DOF_Y ) linearvel.y = *pAffineValues++;
-        if( _nAffineDOFs & OpenRAVE::DOF_Z ) linearvel.z = *pAffineValues++;
-        if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
+        if( _nAffineDOFs & DOF_X ) linearvel.x = *pAffineValues++;
+        if( _nAffineDOFs & DOF_Y ) linearvel.y = *pAffineValues++;
+        if( _nAffineDOFs & DOF_Z ) linearvel.z = *pAffineValues++;
+        if( _nAffineDOFs & DOF_RotationAxis ) {
             angularvel = vActvAffineRotationAxis * *pAffineValues++;
         }
-        else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
+        else if( _nAffineDOFs & DOF_Rotation3D ) {
             angularvel.x = *pAffineValues++;
             angularvel.y = *pAffineValues++;
             angularvel.z = *pAffineValues++;
         }
-        else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+        else if( _nAffineDOFs & DOF_RotationQuat ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("quaternions not supported"),ORE_InvalidArguments);
         }
 
@@ -1278,25 +1244,25 @@ void RobotBase::GetActiveDOFVelocities(std::vector<dReal>& velocities) const
         }
     }
 
-    if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
+    if( _nAffineDOFs == DOF_NoTransform ) {
         return;
     }
     Vector linearvel, angularvel;
     _veclinks.at(0)->GetVelocity(linearvel, angularvel);
 
-    if( _nAffineDOFs & OpenRAVE::DOF_X ) *pVelocities++ = linearvel.x;
-    if( _nAffineDOFs & OpenRAVE::DOF_Y ) *pVelocities++ = linearvel.y;
-    if( _nAffineDOFs & OpenRAVE::DOF_Z ) *pVelocities++ = linearvel.z;
-    if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
+    if( _nAffineDOFs & DOF_X ) *pVelocities++ = linearvel.x;
+    if( _nAffineDOFs & DOF_Y ) *pVelocities++ = linearvel.y;
+    if( _nAffineDOFs & DOF_Z ) *pVelocities++ = linearvel.z;
+    if( _nAffineDOFs & DOF_RotationAxis ) {
 
         *pVelocities++ = vActvAffineRotationAxis.dot3(angularvel);
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
+    else if( _nAffineDOFs & DOF_Rotation3D ) {
         *pVelocities++ = angularvel.x;
         *pVelocities++ = angularvel.y;
         *pVelocities++ = angularvel.z;
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+    else if( _nAffineDOFs & DOF_RotationQuat ) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("quaternions not supported"),ORE_InvalidArguments);
     }
 }
@@ -1334,24 +1300,24 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
             }
         }
 
-        if( _nAffineDOFs & OpenRAVE::DOF_X ) {
+        if( _nAffineDOFs & DOF_X ) {
             *pLowerLimit++ = _vTranslationLowerLimits.x;
             *pUpperLimit++ = _vTranslationUpperLimits.x;
         }
-        if( _nAffineDOFs & OpenRAVE::DOF_Y ) {
+        if( _nAffineDOFs & DOF_Y ) {
             *pLowerLimit++ = _vTranslationLowerLimits.y;
             *pUpperLimit++ = _vTranslationUpperLimits.y;
         }
-        if( _nAffineDOFs & OpenRAVE::DOF_Z ) {
+        if( _nAffineDOFs & DOF_Z ) {
             *pLowerLimit++ = _vTranslationLowerLimits.z;
             *pUpperLimit++ = _vTranslationUpperLimits.z;
         }
 
-        if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
+        if( _nAffineDOFs & DOF_RotationAxis ) {
             *pLowerLimit++ = _vRotationAxisLowerLimits.x;
             *pUpperLimit++ = _vRotationAxisUpperLimits.x;
         }
-        else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
+        else if( _nAffineDOFs & DOF_Rotation3D ) {
             *pLowerLimit++ = _vRotation3DLowerLimits.x;
             *pLowerLimit++ = _vRotation3DLowerLimits.y;
             *pLowerLimit++ = _vRotation3DLowerLimits.z;
@@ -1359,7 +1325,7 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
             *pUpperLimit++ = _vRotation3DUpperLimits.y;
             *pUpperLimit++ = _vRotation3DUpperLimits.z;
         }
-        else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+        else if( _nAffineDOFs & DOF_RotationQuat ) {
             // this is actually difficult to do correctly...
             dReal fsin = RaveSin(_fQuatLimitMaxAngle);
             *pLowerLimit++ = RaveCos(_fQuatLimitMaxAngle);
@@ -1392,23 +1358,23 @@ void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
         *pResolution++ = _vTempRobotJoints[*it];
     }
     // set some default limits
-    if( _nAffineDOFs & OpenRAVE::DOF_X ) {
+    if( _nAffineDOFs & DOF_X ) {
         *pResolution++ = _vTranslationResolutions.x;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_Y ) {
+    if( _nAffineDOFs & DOF_Y ) {
         *pResolution++ = _vTranslationResolutions.y;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_Z ) { *pResolution++ = _vTranslationResolutions.z; }
+    if( _nAffineDOFs & DOF_Z ) { *pResolution++ = _vTranslationResolutions.z; }
 
-    if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
+    if( _nAffineDOFs & DOF_RotationAxis ) {
         *pResolution++ = _vRotationAxisResolutions.x;
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
+    else if( _nAffineDOFs & DOF_Rotation3D ) {
         *pResolution++ = _vRotation3DResolutions.x;
         *pResolution++ = _vRotation3DResolutions.y;
         *pResolution++ = _vRotation3DResolutions.z;
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+    else if( _nAffineDOFs & DOF_RotationQuat ) {
         *pResolution++ = _fQuatLimitMaxAngle;
         *pResolution++ = _fQuatLimitMaxAngle;
         *pResolution++ = _fQuatLimitMaxAngle;
@@ -1434,17 +1400,17 @@ void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
         *pweight++ = _vTempRobotJoints[*it];
     }
     // set some default limits
-    if( _nAffineDOFs & OpenRAVE::DOF_X ) { *pweight++ = _vTranslationWeights.x; }
-    if( _nAffineDOFs & OpenRAVE::DOF_Y ) { *pweight++ = _vTranslationWeights.y; }
-    if( _nAffineDOFs & OpenRAVE::DOF_Z ) { *pweight++ = _vTranslationWeights.z; }
+    if( _nAffineDOFs & DOF_X ) { *pweight++ = _vTranslationWeights.x; }
+    if( _nAffineDOFs & DOF_Y ) { *pweight++ = _vTranslationWeights.y; }
+    if( _nAffineDOFs & DOF_Z ) { *pweight++ = _vTranslationWeights.z; }
 
-    if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) { *pweight++ = _vRotationAxisWeights.x; }
-    else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
+    if( _nAffineDOFs & DOF_RotationAxis ) { *pweight++ = _vRotationAxisWeights.x; }
+    else if( _nAffineDOFs & DOF_Rotation3D ) {
         *pweight++ = _vRotation3DWeights.x;
         *pweight++ = _vRotation3DWeights.y;
         *pweight++ = _vRotation3DWeights.z;
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+    else if( _nAffineDOFs & DOF_RotationQuat ) {
         *pweight++ = _fQuatAngleWeight;
         *pweight++ = _fQuatAngleWeight;
         *pweight++ = _fQuatAngleWeight;
@@ -1469,17 +1435,17 @@ void RobotBase::GetActiveDOFVelocityLimits(std::vector<dReal>& maxvel) const
     FOREACHC(it, _vActiveDOFIndices) {
         *pMaxVel++ = _vTempRobotJoints[*it];
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_X ) { *pMaxVel++ = _vTranslationMaxVels.x; }
-    if( _nAffineDOFs & OpenRAVE::DOF_Y ) { *pMaxVel++ = _vTranslationMaxVels.y; }
-    if( _nAffineDOFs & OpenRAVE::DOF_Z ) { *pMaxVel++ = _vTranslationMaxVels.z; }
+    if( _nAffineDOFs & DOF_X ) { *pMaxVel++ = _vTranslationMaxVels.x; }
+    if( _nAffineDOFs & DOF_Y ) { *pMaxVel++ = _vTranslationMaxVels.y; }
+    if( _nAffineDOFs & DOF_Z ) { *pMaxVel++ = _vTranslationMaxVels.z; }
 
-    if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) { *pMaxVel++ = _vRotationAxisMaxVels.x; }
-    else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
+    if( _nAffineDOFs & DOF_RotationAxis ) { *pMaxVel++ = _vRotationAxisMaxVels.x; }
+    else if( _nAffineDOFs & DOF_Rotation3D ) {
         *pMaxVel++ = _vRotation3DMaxVels.x;
         *pMaxVel++ = _vRotation3DMaxVels.y;
         *pMaxVel++ = _vRotation3DMaxVels.z;
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+    else if( _nAffineDOFs & DOF_RotationQuat ) {
         *pMaxVel++ = _fQuatMaxAngleVelocity;
         *pMaxVel++ = _fQuatMaxAngleVelocity;
         *pMaxVel++ = _fQuatMaxAngleVelocity;
@@ -1503,17 +1469,17 @@ void RobotBase::GetActiveDOFAccelerationLimits(std::vector<dReal>& maxaccel) con
     FOREACHC(it, _vActiveDOFIndices) {
         *pMaxAccel++ = _vTempRobotJoints[*it];
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_X ) { *pMaxAccel++ = _vTranslationMaxVels.x; } // wrong
-    if( _nAffineDOFs & OpenRAVE::DOF_Y ) { *pMaxAccel++ = _vTranslationMaxVels.y; } // wrong
-    if( _nAffineDOFs & OpenRAVE::DOF_Z ) { *pMaxAccel++ = _vTranslationMaxVels.z; } // wrong
+    if( _nAffineDOFs & DOF_X ) { *pMaxAccel++ = _vTranslationMaxVels.x; } // wrong
+    if( _nAffineDOFs & DOF_Y ) { *pMaxAccel++ = _vTranslationMaxVels.y; } // wrong
+    if( _nAffineDOFs & DOF_Z ) { *pMaxAccel++ = _vTranslationMaxVels.z; } // wrong
 
-    if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) { *pMaxAccel++ = _vRotationAxisMaxVels.x; } // wrong
-    else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
+    if( _nAffineDOFs & DOF_RotationAxis ) { *pMaxAccel++ = _vRotationAxisMaxVels.x; } // wrong
+    else if( _nAffineDOFs & DOF_Rotation3D ) {
         *pMaxAccel++ = _vRotation3DMaxVels.x; // wrong
         *pMaxAccel++ = _vRotation3DMaxVels.y; // wrong
         *pMaxAccel++ = _vRotation3DMaxVels.z; // wrong
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+    else if( _nAffineDOFs & DOF_RotationQuat ) {
         *pMaxAccel++ = _fQuatMaxAngleVelocity; // wrong
         *pMaxAccel++ = _fQuatMaxAngleVelocity; // wrong
         *pMaxAccel++ = _fQuatMaxAngleVelocity; // wrong
@@ -1618,33 +1584,33 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
         }
     }
 
-    if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
+    if( _nAffineDOFs == DOF_NoTransform ) {
         return;
     }
 
-    if( _nAffineDOFs & OpenRAVE::DOF_X ) {
+    if( _nAffineDOFs & DOF_X ) {
         q1.at(index) -= q2.at(index);
         index++;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_Y ) {
+    if( _nAffineDOFs & DOF_Y ) {
         q1.at(index) -= q2.at(index);
         index++;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_Z ) {
+    if( _nAffineDOFs & DOF_Z ) {
         q1.at(index) -= q2.at(index);
         index++;
     }
 
-    if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
+    if( _nAffineDOFs & DOF_RotationAxis ) {
         q1.at(index) = utils::SubtractCircularAngle(q1.at(index),q2.at(index));
         index++;
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
+    else if( _nAffineDOFs & DOF_Rotation3D ) {
         q1.at(index) -= q2.at(index); index++;
         q1.at(index) -= q2.at(index); index++;
         q1.at(index) -= q2.at(index); index++;
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+    else if( _nAffineDOFs & DOF_RotationQuat ) {
         // would like to do q2^-1 q1, but that might break rest of planners...?
         q1.at(index) -= q2.at(index); index++;
         q1.at(index) -= q2.at(index); index++;
@@ -1680,7 +1646,7 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<
     int dofstride = GetActiveDOF();
     vjacobian.resize(3*dofstride);
     if( _vActiveDOFIndices.size() != 0 ) {
-        if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
+        if( _nAffineDOFs == DOF_NoTransform ) {
             ComputeJacobianTranslation(index, offset, vjacobian, _vActiveDOFIndices);
             return;
         }
@@ -1692,36 +1658,36 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<
         }
     }
 
-    if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
+    if( _nAffineDOFs == DOF_NoTransform ) {
         return;
     }
     size_t ind = _vActiveDOFIndices.size();
-    if( _nAffineDOFs & OpenRAVE::DOF_X ) {
+    if( _nAffineDOFs & DOF_X ) {
         vjacobian[ind] = 1;
         vjacobian[dofstride+ind] = 0;
         vjacobian[2*dofstride+ind] = 0;
         ind++;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_Y ) {
+    if( _nAffineDOFs & DOF_Y ) {
         vjacobian[ind] = 0;
         vjacobian[dofstride+ind] = 1;
         vjacobian[2*dofstride+ind] = 0;
         ind++;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_Z ) {
+    if( _nAffineDOFs & DOF_Z ) {
         vjacobian[ind] = 0;
         vjacobian[dofstride+ind] = 0;
         vjacobian[2*dofstride+ind] = 1;
         ind++;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
+    if( _nAffineDOFs & DOF_RotationAxis ) {
         Vector vj = vActvAffineRotationAxis.cross(offset-GetTransform().trans);
         vjacobian[ind] = vj.x;
         vjacobian[dofstride+ind] = vj.y;
         vjacobian[2*dofstride+ind] = vj.z;
         ind++;
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
+    else if( _nAffineDOFs & DOF_Rotation3D ) {
         // have to take the partial derivative dT/dA of the axis*angle representation with respect to the transformation it induces
         // can introduce converting to quaternions in the middle, then by chain rule,  dT/dA = dT/tQ * dQ/dA
         // for questions on derivation email rdiankov@cs.cmu.edu
@@ -1763,7 +1729,7 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<
         }
         ind += 3;
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+    else if( _nAffineDOFs & DOF_RotationQuat ) {
         Transform t; t.identity(); t.rot = quatInverse(_vRotationQuatLimitStart);
         t = t * GetTransform();
         // note: qw, qx, qy, qz here follow the standard quaternion convention, not the openrave one
@@ -1825,33 +1791,33 @@ void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, std:
         }
     }
 
-    if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
+    if( _nAffineDOFs == DOF_NoTransform ) {
         return;
     }
 
     size_t ind = _vActiveDOFIndices.size();
-    if( _nAffineDOFs & OpenRAVE::DOF_X ) {
+    if( _nAffineDOFs & DOF_X ) {
         vjacobian[ind] = 0;
         vjacobian[dofstride+ind] = 0;
         vjacobian[2*dofstride+ind] = 0;
         vjacobian[3*dofstride+ind] = 0;
         ind++;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_Y ) {
+    if( _nAffineDOFs & DOF_Y ) {
         vjacobian[ind] = 0;
         vjacobian[dofstride+ind] = 0;
         vjacobian[2*dofstride+ind] = 0;
         vjacobian[3*dofstride+ind] = 0;
         ind++;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_Z ) {
+    if( _nAffineDOFs & DOF_Z ) {
         vjacobian[ind] = 0;
         vjacobian[dofstride+ind] = 0;
         vjacobian[2*dofstride+ind] = 0;
         vjacobian[3*dofstride+ind] = 0;
         ind++;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
+    if( _nAffineDOFs & DOF_RotationAxis ) {
         const Vector& v = vActvAffineRotationAxis;
         vjacobian[ind] = dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
         vjacobian[dofstride+ind] = dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
@@ -1859,11 +1825,11 @@ void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, std:
         vjacobian[3*dofstride+ind] = dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
         ind++;
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
+    else if( _nAffineDOFs & DOF_Rotation3D ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("robot %s rotation 3d not supported, affine=%d"),GetName()%_nAffineDOFs,ORE_NotImplemented);
         ind += 3;
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+    else if( _nAffineDOFs & DOF_RotationQuat ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("robot %s quaternion not supported, affine=%d"),GetName()%_nAffineDOFs,ORE_NotImplemented);
         ind += 4;
     }
@@ -1896,7 +1862,7 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, std::vector<dR
     int dofstride = GetActiveDOF();
     vjacobian.resize(3*dofstride);
     if( _vActiveDOFIndices.size() != 0 ) {
-        if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
+        if( _nAffineDOFs == DOF_NoTransform ) {
             ComputeJacobianAxisAngle(index, vjacobian, _vActiveDOFIndices);
             return;
         }
@@ -1908,39 +1874,39 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, std::vector<dR
         }
     }
 
-    if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
+    if( _nAffineDOFs == DOF_NoTransform ) {
         return;
     }
     size_t ind = _vActiveDOFIndices.size();
-    if( _nAffineDOFs & OpenRAVE::DOF_X ) {
+    if( _nAffineDOFs & DOF_X ) {
         vjacobian[ind] = 0;
         vjacobian[dofstride+ind] = 0;
         vjacobian[2*dofstride+ind] = 0;
         ind++;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_Y ) {
+    if( _nAffineDOFs & DOF_Y ) {
         vjacobian[ind] = 0;
         vjacobian[dofstride+ind] = 0;
         vjacobian[2*dofstride+ind] = 0;
         ind++;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_Z ) {
+    if( _nAffineDOFs & DOF_Z ) {
         vjacobian[ind] = 0;
         vjacobian[dofstride+ind] = 0;
         vjacobian[2*dofstride+ind] = 0;
         ind++;
     }
-    if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
+    if( _nAffineDOFs & DOF_RotationAxis ) {
         const Vector& v = vActvAffineRotationAxis;
         vjacobian[ind] = v.x;
         vjacobian[dofstride+ind] = v.y;
         vjacobian[2*dofstride+ind] = v.z;
 
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
+    else if( _nAffineDOFs & DOF_Rotation3D ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("robot %s rotation 3d not supported, affine=%d"),GetName()%_nAffineDOFs,ORE_NotImplemented);
     }
-    else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
+    else if( _nAffineDOFs & DOF_RotationQuat ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("robot %s quaternion not supported, affine=%d"),GetName()%_nAffineDOFs,ORE_NotImplemented);
 
         // most likely wrong
@@ -2619,9 +2585,9 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
     }
 }
 
-UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
+UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
 {
-    UpdateFromInfoResult updateFromInfoResult = KinBody::UpdateFromInfo(info);
+    UpdateFromInfoResult updateFromInfoResult = UpdateFromKinBodyInfo(info);
     if (updateFromInfoResult != UFIR_Success) {
         return updateFromInfoResult;
     }

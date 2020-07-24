@@ -45,60 +45,6 @@ namespace OpenRAVE {
 
 namespace orjson {
 
-/// \brief open and cache a json document
-static void OpenRapidJsonDocument(const std::string& filename, rapidjson::Document& doc)
-{
-    std::ifstream ifs(filename.c_str());
-    rapidjson::IStreamWrapper isw(ifs);
-    rapidjson::ParseResult ok = doc.ParseStream<rapidjson::kParseFullPrecisionFlag>(isw);
-    if (!ok) {
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", filename, ORE_InvalidArguments);
-    }
-}
-
-/// \brief get the scheme of the uri, e.g. file: or openrave:
-static void ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
-{
-    path = uri;
-    size_t hashindex = path.find_last_of('#');
-    if (hashindex != std::string::npos) {
-        fragment = path.substr(hashindex + 1);
-        path = path.substr(0, hashindex);
-    }
-
-    size_t colonindex = path.find_first_of(':');
-    if (colonindex != std::string::npos) {
-        // notice: in python code, like realtimerobottask3.py, it pass scheme as {openravescene: mujin}. No colon,
-        scheme = path.substr(0, colonindex);
-        path = path.substr(colonindex + 1);
-    }
-}
-
-static std::string ResolveURI(const std::string& scheme, const std::string& path, const std::vector<std::string>& vOpenRAVESchemeAliases)
-{
-    if (scheme.empty() && path.empty() ) {
-        return std::string();
-    }
-    else if (scheme == "file")
-    {
-        return RaveFindLocalFile(path);
-    }
-    else if (find(vOpenRAVESchemeAliases.begin(), vOpenRAVESchemeAliases.end(), scheme) != vOpenRAVESchemeAliases.end())
-    {
-        return RaveFindLocalFile(path);
-    }
-
-    return std::string();
-}
-/// \brief resolve a uri
-static std::string ResolveURI(const std::string& uri, const std::vector<std::string>& vOpenRAVESchemeAliases)
-{
-    std::string scheme, path, fragment;
-    ParseURI(uri, scheme, path, fragment);
-    return ResolveURI(scheme, path, vOpenRAVESchemeAliases);
-}
-
-
 /// \brief gets a string of the Value type for debugging purposes
 inline std::string GetJsonTypeName(const rapidjson::Value& v) {
     int type = v.GetType();

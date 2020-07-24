@@ -2523,13 +2523,13 @@ void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options)
 void SensorBase::SensorGeometry::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     if(hardware_id.size() > 0) {
-        OpenRAVE::orjson::SetJsonValueByKey(value, "hardwareId", hardware_id, allocator);
+        orjson::SetJsonValueByKey(value, "hardwareId", hardware_id, allocator);
     }
 }
 
 void SensorBase::SensorGeometry::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "hardwareId", hardware_id);
+    orjson::LoadJsonValueByKey(value, "hardwareId", hardware_id);
 }
 
 void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options) const
@@ -2573,25 +2573,25 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
 void SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "sensorReference", sensor_reference, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "targetRegion", target_region, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "intrinstics", intrinsics, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "width", width, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "height", height, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "measurementTime", measurement_time, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "gain", gain, allocator);
+    orjson::SetJsonValueByKey(value, "sensorReference", sensor_reference, allocator);
+    orjson::SetJsonValueByKey(value, "targetRegion", target_region, allocator);
+    orjson::SetJsonValueByKey(value, "intrinstics", intrinsics, allocator);
+    orjson::SetJsonValueByKey(value, "width", width, allocator);
+    orjson::SetJsonValueByKey(value, "height", height, allocator);
+    orjson::SetJsonValueByKey(value, "measurementTime", measurement_time, allocator);
+    orjson::SetJsonValueByKey(value, "gain", gain, allocator);
 }
 
 void SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "sensorReference", sensor_reference);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "targetRegion", target_region);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "intrinstics", intrinsics);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "width", width);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "height", height);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "measurementTime", measurement_time);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "gain", gain);
+    orjson::LoadJsonValueByKey(value, "sensorReference", sensor_reference);
+    orjson::LoadJsonValueByKey(value, "targetRegion", target_region);
+    orjson::LoadJsonValueByKey(value, "intrinstics", intrinsics);
+    orjson::LoadJsonValueByKey(value, "width", width);
+    orjson::LoadJsonValueByKey(value, "height", height);
+    orjson::LoadJsonValueByKey(value, "measurementTime", measurement_time);
+    orjson::LoadJsonValueByKey(value, "gain", gain);
 }
 
 
@@ -2683,8 +2683,8 @@ double RaveRandomDouble(IntervalType interval)
 void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale) const
 {
     rIkParameterization.SetObject();
-    OpenRAVE::orjson::SetJsonValueByKey(rIkParameterization, "type", GetName(), allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(rIkParameterization, "transform", _transform, allocator);
+    orjson::SetJsonValueByKey(rIkParameterization, "type", GetName(), allocator);
+    orjson::SetJsonValueByKey(rIkParameterization, "transform", _transform, allocator);
 
     if (_mapCustomData.size() > 0) {
         // TODO have to scale _mapCustomData by fUnitScale
@@ -2693,8 +2693,8 @@ void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, ra
         FOREACHC(it, _mapCustomData) {
             rapidjson::Value parameter;
             parameter.SetObject();
-            OpenRAVE::orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
-            OpenRAVE::orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
+            orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
             parameters.PushBack(parameter, allocator);
         }
         rIkParameterization.AddMember("customData", parameters, allocator);
@@ -2725,7 +2725,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
         }
     }
     if (rIkParameterization.HasMember("transform")) {
-        OpenRAVE::orjson::LoadJsonValueByKey(rIkParameterization, "transform", _transform);
+        orjson::LoadJsonValueByKey(rIkParameterization, "transform", _transform);
         _transform.trans *= fUnitScale;
     }
 
@@ -2733,11 +2733,11 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     if (rIkParameterization.HasMember("customData") && rIkParameterization["customData"].IsArray()) {
         for (rapidjson::Value::ConstValueIterator it = rIkParameterization["customData"].Begin(); it != rIkParameterization["customData"].End(); ++it) {
             std::string key;
-            OpenRAVE::orjson::LoadJsonValueByKey(*it, "key", key);
+            orjson::LoadJsonValueByKey(*it, "key", key);
             if (key.empty()) {
                 continue;
             }
-            OpenRAVE::orjson::LoadJsonValueByKey(*it, "values", _mapCustomData[key]);
+            orjson::LoadJsonValueByKey(*it, "values", _mapCustomData[key]);
         }
     }
     // TODO have to scale _mapCustomData by fUnitScale
@@ -2772,11 +2772,11 @@ const std::string& StringReadable::GetData() const
 
 void StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    OpenRAVE::orjson::SetJsonValueByKey(value, "string", _data, allocator);
+    orjson::SetJsonValueByKey(value, "string", _data, allocator);
 }
 void StringReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "string", _data);
+    orjson::LoadJsonValueByKey(value, "string", _data);
 }
 
 } // end namespace OpenRAVE

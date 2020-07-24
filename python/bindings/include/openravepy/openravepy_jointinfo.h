@@ -47,7 +47,7 @@ public:
     object ComputeAABB(object otransform);
 
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
     KinBody::GeometryInfoPtr GetGeometryInfo();
 
     object _t = ReturnTransform(Transform());
@@ -83,7 +83,7 @@ public:
     KinBody::LinkInfoPtr GetLinkInfo();
 
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     py::list _vgeometryinfos;
     object _id = py::none_();
@@ -112,7 +112,7 @@ public:
     PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info);
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo();
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     std::string model_type;
     dReal gear_ratio = 0.0;
@@ -182,7 +182,7 @@ public:
     KinBody::JointInfoPtr GetJointInfo();
     object GetDOF();
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     KinBody::JointType _type = KinBody::JointNone;
     object _id = py::none_();

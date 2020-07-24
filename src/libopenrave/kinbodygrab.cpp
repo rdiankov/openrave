@@ -382,27 +382,36 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
     return false;
 }
 
-void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+void KinBody::GrabbedInfo::Reset()
 {
-    OpenRAVE::orjson::SetJsonValueByKey(value, "id", _id, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "grabbedName", _grabbedname, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "robotLinkName", _robotlinkname, allocator);
-    Transform transform = _trelative;
-    transform.trans *= fUnitScale;
-    OpenRAVE::orjson::SetJsonValueByKey(value, "transform", transform, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "ignoreRobotLinkNames", _setRobotLinksToIgnore, allocator);
+    _id.clear();
+    _grabbedname.clear();
+    _robotlinkname.clear();
+    _trelative = Transform();
+    _setRobotLinksToIgnore.clear();
 }
 
-void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "id", _id);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "grabbedName", _grabbedname);
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "robotLinkName", _robotlinkname);
+    orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    orjson::SetJsonValueByKey(value, "grabbedName", _grabbedname, allocator);
+    orjson::SetJsonValueByKey(value, "robotLinkName", _robotlinkname, allocator);
+    Transform transform = _trelative;
+    transform.trans *= fUnitScale;
+    orjson::SetJsonValueByKey(value, "transform", transform, allocator);
+    orjson::SetJsonValueByKey(value, "ignoreRobotLinkNames", _setRobotLinksToIgnore, allocator);
+}
+
+void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+{
+    orjson::LoadJsonValueByKey(value, "id", _id);
+    orjson::LoadJsonValueByKey(value, "grabbedName", _grabbedname);
+    orjson::LoadJsonValueByKey(value, "robotLinkName", _robotlinkname);
     if (value.HasMember("transform")) {
-        OpenRAVE::orjson::LoadJsonValueByKey(value, "transform", _trelative);
+        orjson::LoadJsonValueByKey(value, "transform", _trelative);
         _trelative.trans *= fUnitScale;
     }
-    OpenRAVE::orjson::LoadJsonValueByKey(value, "ignoreRobotLinkNames", _setRobotLinksToIgnore);
+    orjson::LoadJsonValueByKey(value, "ignoreRobotLinkNames", _setRobotLinksToIgnore);
 }
 
 void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgrabbedinfo)
@@ -414,8 +423,9 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgra
         FOREACHC(itgrabbedinfo, vgrabbedinfo) {
             GrabbedInfoConstPtr pgrabbedinfo = *itgrabbedinfo;
             KinBodyPtr pbody = GetEnv()->GetKinBody(pgrabbedinfo->_grabbedname);
+            OPENRAVE_ASSERT_FORMAT(!!pbody, "body %s invalid grab body '%s'",GetName()%pgrabbedinfo->_grabbedname, ORE_InvalidArguments);
             KinBody::LinkPtr pBodyLinkToGrabWith = GetLink(pgrabbedinfo->_robotlinkname);
-            OPENRAVE_ASSERT_FORMAT(!!pbody && !!pBodyLinkToGrabWith, "body %s invalid grab arguments",GetName(), ORE_InvalidArguments);
+            OPENRAVE_ASSERT_FORMAT(!!pBodyLinkToGrabWith, "body %s invalid grab link '%s'",GetName()%pgrabbedinfo->_robotlinkname, ORE_InvalidArguments);
             OPENRAVE_ASSERT_FORMAT(pbody.get() != this, "body %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
             if( IsGrabbing(*pbody) ) {
                 RAVELOG_VERBOSE(str(boost::format("Body %s: body %s already grabbed\n")%GetName()%pbody->GetName()));

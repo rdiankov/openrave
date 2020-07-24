@@ -16,6 +16,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+void EnvironmentBase::EnvironmentBaseInfo::Reset()
+{
+    _vBodyInfos.clear();
+    _revision = 0;
+}
+
 void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     // for all SerializeJSON, we clear the output
@@ -34,25 +40,25 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& value
     }
 }
 
-void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
     // for DeserializeJSON, there are two possibilities: 1. full json passed in 2. diff json passed in
     // for example, do not clear _vBodyInfos.clear(), since we could be dealing with partial json
 
     if (value.HasMember("revision")) {
-        OpenRAVE::orjson::LoadJsonValueByKey(value, "revision", _revision);
+        orjson::LoadJsonValueByKey(value, "revision", _revision);
     }
 
     if (value.HasMember("bodies")) {
         _vBodyInfos.reserve(_vBodyInfos.size() + value["bodies"].Size());
         size_t iBody = 0;
         for (rapidjson::Value::ConstValueIterator it = value["bodies"].Begin(); it != value["bodies"].End(); ++it, ++iBody) {
-            const rapidjson::Value& bodyValue = *it;
+            const rapidjson::Value& rKinBodyInfo = *it;
 
             // first figure an id
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(bodyValue, "id");
+            std::string id = orjson::GetStringJsonValueByKey(rKinBodyInfo, "id");
             if (id.empty()) {
-                id = OpenRAVE::orjson::GetStringJsonValueByKey(bodyValue, "name");
+                id = orjson::GetStringJsonValueByKey(rKinBodyInfo, "name");
                 RAVELOG_DEBUG_FORMAT("used name as id for body: %s", id);
             }
             if (id.empty()) {
@@ -72,19 +78,19 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                 }
             }
 
-            bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(bodyValue, "__deleted__", false);
+            bool isDeleted = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "__deleted__", false);
             if (isDeleted) {
                 RAVELOG_DEBUG_FORMAT("deleted body: %s", id);
             }
 
-            bool isRobot = OpenRAVE::orjson::GetJsonValueByKey<bool>(bodyValue, "isRobot", isExistingRobot);
-            RAVELOG_DEBUG_FORMAT("body: %s, isRobot = %d", id%isRobot);
+            bool isRobot = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "isRobot", isExistingRobot);
+            RAVELOG_DEBUG_FORMAT("body '%s', isRobot=%d", id%isRobot);
             if (isRobot) {
                 if (itExistingBodyInfo == _vBodyInfos.end()) {
                     // in case no such id
                     if (!isDeleted) {
                         RobotBase::RobotBaseInfoPtr pRobotBaseInfo(new RobotBase::RobotBaseInfo());
-                        pRobotBaseInfo->DeserializeJSON(bodyValue, fUnitScale);
+                        pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                         pRobotBaseInfo->_id = id;
                         _vBodyInfos.push_back(pRobotBaseInfo);
                     }
@@ -105,15 +111,16 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                     *((KinBody::KinBodyInfo*)pRobotBaseInfo.get()) = *pKinBodyInfo;
                     RAVELOG_DEBUG_FORMAT("replaced body as a robot: %s", id);
                 }
-                pRobotBaseInfo->DeserializeJSON(bodyValue, fUnitScale);
+                pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                 pRobotBaseInfo->_id = id;
-            } else {
+            }
+            else {
                 // not a robot
                 if (itExistingBodyInfo == _vBodyInfos.end()) {
                     // in case no such id
                     if (!isDeleted) {
                         KinBody::KinBodyInfoPtr pKinBodyInfo(new KinBody::KinBodyInfo());
-                        pKinBodyInfo->DeserializeJSON(bodyValue, fUnitScale);
+                        pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                         pKinBodyInfo->_id = id;
                         _vBodyInfos.push_back(pKinBodyInfo);
                     }
@@ -134,7 +141,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                     *pKinBodyInfo = *((KinBody::KinBodyInfo*)pRobotBaseInfo.get());
                     RAVELOG_DEBUG_FORMAT("replaced robot as a body: %s", id);
                 }
-                pKinBodyInfo->DeserializeJSON(bodyValue, fUnitScale);
+                pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                 pKinBodyInfo->_id = id;
             }
         }

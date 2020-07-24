@@ -33,26 +33,13 @@ public:
     /// \brief holds all user-set manipulator information used to initialize the Manipulator class.
     ///
     /// This is serializable and independent of environment.
-    class OPENRAVE_API ManipulatorInfo
+    class OPENRAVE_API ManipulatorInfo : public InfoBase
     {
 public:
         ManipulatorInfo() {}
         ManipulatorInfo(const ManipulatorInfo& other) {
             *this = other;
         };
-        ManipulatorInfo& operator=(const ManipulatorInfo& other) {
-            _name = other._name;
-            _sBaseLinkName = other._sBaseLinkName;
-            _sEffectorLinkName = other._sEffectorLinkName;
-            _tLocalTool = other._tLocalTool;
-            _vChuckingDirection = other._vChuckingDirection;
-            _vdirection = other._vdirection;
-            _sIkSolverXMLId = other._sIkSolverXMLId;
-            _vGripperJointNames = other._vGripperJointNames;
-            _grippername = other._grippername;
-            _id = other._id;
-            return *this;
-        }
         bool operator==(const ManipulatorInfo& other) const {
             return _name == other._name
                 && _sBaseLinkName == other._sBaseLinkName
@@ -69,8 +56,9 @@ public:
             return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
         std::string _id; ///< unique id for manipulator info
         std::string _name;
@@ -87,7 +75,7 @@ public:
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
 
     /// \brief Holds the definition of a gripper that can be mounted on the robot.
-    class OPENRAVE_API GripperInfo
+    class OPENRAVE_API GripperInfo : public InfoBase
     {
 public:
         GripperInfo() {};
@@ -106,8 +94,9 @@ public:
             return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
 
         std::string _id; /// < unique id
@@ -506,7 +495,7 @@ private:
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
     ///
     /// This is serializable and independent of environment.
-    class OPENRAVE_API AttachedSensorInfo
+    class OPENRAVE_API AttachedSensorInfo : public InfoBase
     {
 public:
         AttachedSensorInfo() {}
@@ -538,8 +527,9 @@ public:
             return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
         std::string _id;
         std::string _name;
@@ -654,7 +644,7 @@ private:
     /// \brief holds all user-set attached kinbody information used to initialize the AttachedKinBody class.
     ///
     /// This is serializable and independent of environment.
-    class OPENRAVE_API ConnectedBodyInfo
+    class OPENRAVE_API ConnectedBodyInfo : public InfoBase
     {
 public:
         ConnectedBodyInfo();
@@ -667,10 +657,12 @@ public:
             return !operator==(other);
         }
 
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options);
+
         /// \brief Updates the infos depending on the robot at the identity and zero position.
-        virtual void InitInfoFromBody(RobotBase& robot);
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
+        void InitInfoFromBody(RobotBase& robot);
 
         std::string _id; ///< unique id of the connected body
         std::string _name; ///< the name of the connected body info
@@ -823,9 +815,9 @@ public:
             return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
-        bool _DeserializeConnectedBodyInfo(RobotBase::ConnectedBodyInfo& connectedBodyInfo, rapidjson::Document& currentDoc, const std::string uri, std::set<std::string>& circularReference);
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
         std::vector<ManipulatorInfoPtr> _vManipulatorInfos; ///< list of pointers to ManipulatorInfo
         std::vector<AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< list of pointers to AttachedSensorInfo
@@ -893,7 +885,7 @@ private:
     virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::vector<ManipulatorInfoConstPtr>& manipinfos, const std::vector<AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::string& uri=std::string());
 
     /// \brief initializes a robot with info structure
-    virtual bool InitFromInfo(const RobotBaseInfo& info);
+    virtual bool InitFromRobotInfo(const RobotBaseInfo& info);
 
     /// \brief Returns the manipulators of the robot
     virtual const std::vector<ManipulatorPtr>& GetManipulators() const;
@@ -949,15 +941,6 @@ private:
         @name Affine DOFs
         @{
      */
-
-    /// \deprecated (11/10/04), use OpenRAVE:: global variables
-    static const DOFAffine DOF_NoTransform RAVE_DEPRECATED = OpenRAVE::DOF_NoTransform;
-    static const DOFAffine DOF_X RAVE_DEPRECATED = OpenRAVE::DOF_X;
-    static const DOFAffine DOF_Y RAVE_DEPRECATED = OpenRAVE::DOF_Y;
-    static const DOFAffine DOF_Z RAVE_DEPRECATED = OpenRAVE::DOF_Z;
-    static const DOFAffine DOF_RotationAxis RAVE_DEPRECATED = OpenRAVE::DOF_RotationAxis;
-    static const DOFAffine DOF_Rotation3D RAVE_DEPRECATED = OpenRAVE::DOF_Rotation3D;
-    static const DOFAffine DOF_RotationQuat RAVE_DEPRECATED = OpenRAVE::DOF_RotationQuat;
 
     /** \brief Set the joint indices and affine transformation dofs that the planner should use. If \ref DOF_RotationAxis is specified, the previously set axis is used.
 
@@ -1275,7 +1258,7 @@ private:
     virtual void ExtractInfo(RobotBaseInfo& info);
 
     /// \brief update RobotBase according to new RobotBaseInfo, returns false if update cannot be performed and requires InitFromInfo
-    virtual UpdateFromInfoResult UpdateFromInfo(const RobotBaseInfo& info);
+    virtual UpdateFromInfoResult UpdateFromRobotInfo(const RobotBaseInfo& info);
 
 protected:
     RobotBase(EnvironmentBasePtr penv);

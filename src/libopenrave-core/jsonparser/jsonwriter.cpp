@@ -33,6 +33,7 @@ public:
                 _vForceResolveOpenRAVEScheme = itatt->second;
             }
         }
+        _serializeOptions = 0;
     }
 
     virtual ~EnvironmentJSONWriter() {
@@ -107,7 +108,7 @@ protected:
                         FOREACH(itConnectedBodyInfo, info._vConnectedBodyInfos) {
                             (*itConnectedBodyInfo)->_uri = _CanonicalizeURI((*itConnectedBodyInfo)->_uri);
                         }
-                        info.SerializeJSON(bodyValue, _allocator, fUnitScale);
+                        info.SerializeJSON(bodyValue, _allocator, fUnitScale, _serializeOptions);
                     }
                 }
                 // dof value
@@ -140,7 +141,7 @@ protected:
                     grabbedsValue.SetArray();
                     FOREACHC(itgrabbedinfo, vGrabbedInfo) {
                         rapidjson::Value grabbedValue;
-                        (*itgrabbedinfo)->SerializeJSON(grabbedValue, _allocator, fUnitScale);
+                        (*itgrabbedinfo)->SerializeJSON(grabbedValue, _allocator, fUnitScale, _serializeOptions);
                         grabbedsValue.PushBack(grabbedValue, _allocator);
                     }
                     bodyValue.AddMember("grabbed", grabbedsValue, _allocator);
@@ -154,7 +155,7 @@ protected:
                         JSONReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(it->second);
                         if (!!pReadable) {
                             rapidjson::Value readableValue;
-                            pReadable->SerializeJSON(readableValue, _allocator, fUnitScale);
+                            pReadable->SerializeJSON(readableValue, _allocator, fUnitScale, _serializeOptions);
                             OpenRAVE::orjson::SetJsonValueByKey(readableValue, "id", it->first, _allocator);
                             readableInterfacesValue.PushBack(readableValue, _allocator);
                         }
@@ -231,6 +232,7 @@ protected:
     std::string _vForceResolveOpenRAVEScheme; ///< if specified, writer will attempt to convert a local system URI (**file:/**) to a a relative path with respect to $OPENRAVE_DATA paths and use **customscheme** as the scheme
 
     std::map<int, int> _mapBodyIds; ///< map from body environment id to unique json ids
+    int _serializeOptions; ///< the serialization options
 
     rapidjson::Value& _rEnvironment;
     rapidjson::Document::AllocatorType& _allocator;

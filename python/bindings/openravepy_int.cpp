@@ -930,12 +930,12 @@ static std::vector<KinBody::KinBodyInfoPtr> _ExtractBodyInfoArray(object vBodyIn
         vBodyInfos.resize(arraySize);
 
         for(size_t iBodyInfo = 0; iBodyInfo < arraySize; iBodyInfo++) {
-            extract_<OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo>> pyrobotbaseinfo(vBodyInfoList[iBodyInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo> > pyrobotbaseinfo(vBodyInfoList[iBodyInfo]);
             if (pyrobotbaseinfo.check()) {
                 vBodyInfos[iBodyInfo] = ((OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo>)pyrobotbaseinfo)->GetRobotBaseInfo();
                 continue;
             }
-            extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo>> pykinbodyinfo(vBodyInfoList[iBodyInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo> > pykinbodyinfo(vBodyInfoList[iBodyInfo]);
             if (pykinbodyinfo.check()) {
                 vBodyInfos[iBodyInfo] = ((OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo>)pykinbodyinfo)->GetKinBodyInfo();
                 continue;
@@ -978,11 +978,12 @@ py::object PyEnvironmentBase::PyEnvironmentBaseInfo::SerializeJSON(dReal fUnitSc
     return toPyObject(doc);
 }
 
-void PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON(py::object obj, dReal fUnitScale) {
+void PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON(py::object obj, dReal fUnitScale, py::object options)
+{
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     EnvironmentBase::EnvironmentBaseInfoPtr pInfo = GetEnvironmentBaseInfo();
-    pInfo->DeserializeJSON(doc, fUnitScale);
+    pInfo->DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
     _Update(*pInfo);
 }
 
@@ -2526,7 +2527,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodies_overloads, GetPublishe
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyJointValues_overloads, GetPublishedBodyJointValues, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyTransformsMatchingPrefix_overloads, GetPublishedBodyTransformsMatchingPrefix, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyEnvironmentBaseInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyEnvironmentBaseInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyEnvironmentBaseInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
 
 
 object get_openrave_exception_unicode(OpenRAVEException* p)
@@ -2741,27 +2742,28 @@ Because race conditions can pop up when trying to lock the openrave environment 
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object environmentbaseinfo = class_<PyEnvironmentBase::PyEnvironmentBaseInfo, OPENRAVE_SHARED_PTR<PyEnvironmentBase::PyEnvironmentBaseInfo> >(m, "EnvironmentBaseInfo", DOXY_CLASS(EnvironmentBase::EnvironmentBaseInfo))
-                         .def(init<>())
+                                 .def(init<>())
 #else
     object environmentbaseinfo = class_<PyEnvironmentBase::PyEnvironmentBaseInfo, OPENRAVE_SHARED_PTR<PyEnvironmentBase::PyEnvironmentBaseInfo> >("EnvironmentBaseInfo", DOXY_CLASS(EnvironmentBase::EnvironmentBaseInfo))
 #endif
-                         .def_readwrite("_vBodyInfos",&PyEnvironmentBase::PyEnvironmentBaseInfo::_vBodyInfos)
-                         .def("__str__",&PyEnvironmentBase::PyEnvironmentBaseInfo::__str__)
-                         .def("__unicode__",&PyEnvironmentBase::PyEnvironmentBaseInfo::__unicode__)
+                                 .def_readwrite("_vBodyInfos",&PyEnvironmentBase::PyEnvironmentBaseInfo::_vBodyInfos)
+                                 .def("__str__",&PyEnvironmentBase::PyEnvironmentBaseInfo::__str__)
+                                 .def("__unicode__",&PyEnvironmentBase::PyEnvironmentBaseInfo::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                         .def("SerializeJSON", &PyEnvironmentBase::PyEnvironmentBaseInfo::SerializeJSON,
-                              "unitScale"_a = 1.0,
-                              "options"_a = py::none_(),
-                              DOXY_FN(EnvironmentBase::EnvironmentBaseInfo, SerializeJSON)
-                          )
-                          .def("DeserializeJSON", &PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON,
-                              "obj"_a,
-                              "unitScale"_a = 1.0,
-                              DOXY_FN(EnvironmentBase::EnvironmentBaseInfo, DeserializeJSON)
-                          )
+                                 .def("SerializeJSON", &PyEnvironmentBase::PyEnvironmentBaseInfo::SerializeJSON,
+                                      "unitScale"_a = 1.0,
+                                      "options"_a = py::none_(),
+                                      DOXY_FN(EnvironmentBase::EnvironmentBaseInfo, SerializeJSON)
+                                      )
+                                 .def("DeserializeJSON", &PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON,
+                                      "obj"_a,
+                                      "unitScale"_a = 1.0,
+                                      "options"_a = py::none_(),
+                                      DOXY_FN(EnvironmentBase::EnvironmentBaseInfo, DeserializeJSON)
+                                      )
 #else
-                          .def("SerializeJSON", &PyEnvironmentBase::PyEnvironmentBaseInfo::SerializeJSON, PyEnvironmentBaseInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(EnvironmentBase::EnvironmentBaseInfo, SerializeJSON)))
-                          .def("DeserializeJSON", &PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON, PyEnvironmentBaseInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(EnvironmentBase::EnvironmentBaseInfo, DeserializeJSON)))
+                                 .def("SerializeJSON", &PyEnvironmentBase::PyEnvironmentBaseInfo::SerializeJSON, PyEnvironmentBaseInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(EnvironmentBase::EnvironmentBaseInfo, SerializeJSON)))
+                                 .def("DeserializeJSON", &PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON, PyEnvironmentBaseInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(EnvironmentBase::EnvironmentBaseInfo, DeserializeJSON)))
 #endif
     ;
 

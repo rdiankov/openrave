@@ -57,60 +57,41 @@ OPENRAVE_API const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsTyp
 /// \brief holds parameters for an electric motor
 ///
 /// all speed is in revolutions/second
-class OPENRAVE_API ElectricMotorActuatorInfo
+class OPENRAVE_API ElectricMotorActuatorInfo : public InfoBase
 {
 public:
-    ElectricMotorActuatorInfo() {};
+    ElectricMotorActuatorInfo() {
+    };
     ElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& other) {
         *this = other;
     }
-    ElectricMotorActuatorInfo& operator=(const ElectricMotorActuatorInfo& other) {
-        model_type = other.model_type;
-        assigned_power_rating = other.assigned_power_rating;
-        max_speed = other.max_speed;
-        no_load_speed = other.no_load_speed;
-        stall_torque = other.stall_torque;
-        max_instantaneous_torque = other.max_instantaneous_torque;
-        nominal_speed_torque_points = other.nominal_speed_torque_points;
-        max_speed_torque_points = other.max_speed_torque_points;
-        nominal_torque = other.nominal_torque;
-        rotor_inertia = other.rotor_inertia;
-        torque_constant = other.torque_constant;
-        nominal_voltage = other.nominal_voltage;
-        speed_constant = other.speed_constant;
-        starting_current = other.starting_current;
-        terminal_resistance = other.terminal_resistance;
-        gear_ratio = other.gear_ratio;
-        coloumb_friction = other.coloumb_friction;
-        viscous_friction = other.viscous_friction;
-        return *this;
-    }
     bool operator==(const ElectricMotorActuatorInfo& other) const {
         return model_type == other.model_type
-            && assigned_power_rating == other.assigned_power_rating
-            && max_speed == other.max_speed
-            && no_load_speed == other.no_load_speed
-            && stall_torque == other.stall_torque
-            && max_instantaneous_torque == other.max_instantaneous_torque
-            && nominal_speed_torque_points == other.nominal_speed_torque_points
-            && max_speed_torque_points == other.max_speed_torque_points
-            && nominal_torque == other.nominal_torque
-            && rotor_inertia == other.rotor_inertia
-            && torque_constant == other.torque_constant
-            && nominal_voltage == other.nominal_voltage
-            && speed_constant == other.speed_constant
-            && starting_current == other.starting_current
-            && terminal_resistance == other.terminal_resistance
-            && gear_ratio == other.gear_ratio
-            && coloumb_friction == other.coloumb_friction
-            && viscous_friction == other.viscous_friction;
+               && assigned_power_rating == other.assigned_power_rating
+               && max_speed == other.max_speed
+               && no_load_speed == other.no_load_speed
+               && stall_torque == other.stall_torque
+               && max_instantaneous_torque == other.max_instantaneous_torque
+               && nominal_speed_torque_points == other.nominal_speed_torque_points
+               && max_speed_torque_points == other.max_speed_torque_points
+               && nominal_torque == other.nominal_torque
+               && rotor_inertia == other.rotor_inertia
+               && torque_constant == other.torque_constant
+               && nominal_voltage == other.nominal_voltage
+               && speed_constant == other.speed_constant
+               && starting_current == other.starting_current
+               && terminal_resistance == other.terminal_resistance
+               && gear_ratio == other.gear_ratio
+               && coloumb_friction == other.coloumb_friction
+               && viscous_friction == other.viscous_friction;
     }
     bool operator!=(const ElectricMotorActuatorInfo& other) const {
         return !operator==(other);
     }
 
-    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
-    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
+    void Reset() override;
+    void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+    void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
     std::string model_type; ///< the type of actuator it is. Usually the motor model name is ok, but can include other info like gear box, etc
     //@{ from motor data sheet
@@ -194,59 +175,47 @@ public:
     /// \brief Describes the properties of a geometric primitive.
     ///
     /// Contains everything associated with a geometry's appearance and shape
-    class OPENRAVE_API GeometryInfo
+    class OPENRAVE_API GeometryInfo : public InfoBase
     {
 public:
-        GeometryInfo() {}
+        GeometryInfo() {
+        }
         GeometryInfo(const GeometryInfo& other) {
             *this = other;
         }
-        GeometryInfo& operator=(const GeometryInfo& other) {
-            _t = other._t;
-            _vGeomData = other._vGeomData;
-            _vGeomData2 = other._vGeomData2;
-            _vGeomData3 = other._vGeomData3;
-            _vGeomData4 = other._vGeomData4;
-            _vSideWalls = other._vSideWalls;
-            _vDiffuseColor = other._vDiffuseColor;
-            _vAmbientColor = other._vAmbientColor;
-            _meshcollision = other._meshcollision;
-            _type = other._type;
-            _id = other._id;
-            _name = other._name;
-            _filenamerender = other._filenamerender;
-            _filenamecollision = other._filenamecollision;
-            _vRenderScale = other._vRenderScale;
-            _vCollisionScale = other._vCollisionScale;
-            _fTransparency = other._fTransparency;
-            _bVisible = other._bVisible;
-            _bModifiable = other._bModifiable;
-            return *this;
-        }
         bool operator==(const GeometryInfo& other) const {
             return _t == other._t
-                && _vGeomData == other._vGeomData
-                && _vGeomData2 == other._vGeomData2
-                && _vGeomData3 == other._vGeomData3
-                && _vGeomData4 == other._vGeomData4
-                // && _vSideWalls == other._vSideWalls
-                && _vDiffuseColor == other._vDiffuseColor
-                && _vAmbientColor == other._vAmbientColor
-                // && _meshcollision == other._meshcollision
-                && _id == other._id
-                && _name == other._name
-                && _type == other._type
-                && _filenamerender == other._filenamerender
-                && _filenamecollision == other._filenamecollision
-                && _vRenderScale == other._vRenderScale
-                && _vCollisionScale == other._vCollisionScale
-                && _fTransparency == other._fTransparency
-                && _bVisible == other._bVisible
-                && _bModifiable == other._bModifiable;
+                   && _vGeomData == other._vGeomData
+                   && _vGeomData2 == other._vGeomData2
+                   && _vGeomData3 == other._vGeomData3
+                   && _vGeomData4 == other._vGeomData4
+                   // && _vSideWalls == other._vSideWalls
+                   && _vDiffuseColor == other._vDiffuseColor
+                   && _vAmbientColor == other._vAmbientColor
+                   // && _meshcollision == other._meshcollision
+                   && _id == other._id
+                   && _name == other._name
+                   && _type == other._type
+                   && _filenamerender == other._filenamerender
+                   && _filenamecollision == other._filenamecollision
+                   && _vRenderScale == other._vRenderScale
+                   && _vCollisionScale == other._vCollisionScale
+                   && _fTransparency == other._fTransparency
+                   && _bVisible == other._bVisible
+                   && _bModifiable == other._bModifiable;
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
         }
+
+        void Reset() override;
+
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+
+        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options) override;
+
+        /// \brief compare two geometry infos. If the floating differences are within fEpsilon, then comparison will return true.
+        bool Compare(const GeometryInfo& rhs, dReal fEpsilon=1e-7) const;
 
         /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
         /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
@@ -273,14 +242,11 @@ public:
         /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
 
-        ///< \param multiply all translational values by fUnitScale
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
-
-        ///< \param multiply all translational values by fUnitScale
-        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale);
-
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
+        ///< for sphere it is radius
+        ///< for cylinder, first 2 values are radius and height
+        ///< for trimesh, none
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
         Vector _vGeomData;
@@ -312,9 +278,6 @@ public:
         };
         std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
 
-        ///< for sphere it is radius
-        ///< for cylinder, first 2 values are radius and height
-        ///< for trimesh, none
         RaveVector<float> _vDiffuseColor = Vector(1,1,1);
         RaveVector<float> _vAmbientColor; ///< hints for how to color the meshes
 
@@ -352,10 +315,11 @@ public:
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
 
     /// \brief Describes the properties of a link used to initialize it
-    class OPENRAVE_API LinkInfo
+    class OPENRAVE_API LinkInfo : public InfoBase
     {
 public:
-        LinkInfo() {};
+        LinkInfo() {
+        };
         LinkInfo(const LinkInfo& other) {
             *this = other;
         }
@@ -365,8 +329,9 @@ public:
             return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale);
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options) override;
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -958,12 +923,14 @@ private:
     /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
     ///
     /// In every array, [0] is position, [1] is velocity, [2] is acceleration.
-    class OPENRAVE_API MimicInfo
+    class OPENRAVE_API MimicInfo : public InfoBase
     {
 public:
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
         boost::array< std::string, 3>  _equations;         ///< the original equations
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
     };
     typedef boost::shared_ptr<MimicInfo> MimicInfoPtr;
     typedef boost::shared_ptr<MimicInfo const> MimicInfoConstPtr;
@@ -1004,10 +971,41 @@ public:
     typedef boost::shared_ptr<Mimic const> MimicConstPtr;
 
     /// \brief Describes the properties of a joint used to initialize it
-    class OPENRAVE_API JointInfo
+    class OPENRAVE_API JointInfo : public InfoBase
     {
 public:
-        JointInfo() {}
+        struct JointControlInfo_RobotController
+        {
+            JointControlInfo_RobotController() {
+            };
+            int robotId = -1;
+            boost::array<int16_t, 3> robotControllerDOFIndex = {-1, -1, -1}; ///< indicates which DOF in the robot controller controls which joint axis. -1 if not specified/not valid.
+        };
+        typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
+
+        struct JointControlInfo_IO
+        {
+            JointControlInfo_IO() {
+            };
+            int deviceId = -1;
+            boost::array< std::vector<std::string>, 3 > vMoveIONames;       ///< io names for controlling positions of this joint.
+            boost::array< std::vector<std::string>, 3 > vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
+            boost::array< std::vector<uint8_t>, 3 > vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+            boost::array< std::vector<std::string>, 3 > vLowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
+            boost::array< std::vector<uint8_t>, 3 > vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+        };
+        typedef boost::shared_ptr<JointControlInfo_IO> JointControlInfo_IOPtr;
+
+        struct JointControlInfo_ExternalDevice
+        {
+            JointControlInfo_ExternalDevice() {
+            };
+            std::string externalDeviceId; ///< id for the external device
+        };
+        typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
+
+        JointInfo() {
+        }
         JointInfo(const JointInfo& other) {
             *this = other;
         }
@@ -1017,10 +1015,11 @@ public:
             return !operator==(other);
         }
 
-        virtual int GetDOF() const;
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
+        int GetDOF() const;
 
         JointType _type = JointNone; /// The joint type
 
@@ -1073,39 +1072,11 @@ public:
 
         /// \brief _controlMode specifies how this joint is controlled. For possible control modes, see enum JointControlMode.
         JointControlMode _controlMode = JCM_None;
-
-        struct JointControlInfo_RobotController
-        {
-            JointControlInfo_RobotController() {};
-            int robotId = -1;
-            boost::array<int16_t, 3> robotControllerDOFIndex = {-1, -1, -1}; ///< indicates which DOF in the robot controller controls which joint axis. -1 if not specified/not valid.
-        };
-        typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
-
-        struct JointControlInfo_IO
-        {
-            JointControlInfo_IO() {};
-            int deviceId = -1;
-            boost::array< std::vector<std::string>, 3 > vMoveIONames;       ///< io names for controlling positions of this joint.
-            boost::array< std::vector<std::string>, 3 > vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
-            boost::array< std::vector<uint8_t>, 3 > vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
-            boost::array< std::vector<std::string>, 3 > vLowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
-            boost::array< std::vector<uint8_t>, 3 > vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
-        };
-        typedef boost::shared_ptr<JointControlInfo_IO> JointControlInfo_IOPtr;
-
-        struct JointControlInfo_ExternalDevice
-        {
-            JointControlInfo_ExternalDevice() {};
-            std::string externalDeviceId; ///< id for the external device
-        };
-        typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
-
         JointControlInfo_RobotControllerPtr _jci_robotcontroller;
         JointControlInfo_IOPtr _jci_io;
         JointControlInfo_ExternalDevicePtr _jci_externaldevice;
-
     };
+
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
 
@@ -1646,10 +1617,11 @@ private:
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
     ///
     /// This is serializable and independent of environment.
-    class OPENRAVE_API GrabbedInfo
+    class OPENRAVE_API GrabbedInfo : public InfoBase
     {
 public:
-        GrabbedInfo() {}
+        GrabbedInfo() {
+        }
         GrabbedInfo(const GrabbedInfo& other) {
             *this = other;
         }
@@ -1663,26 +1635,18 @@ public:
         }
         bool operator==(const GrabbedInfo& other) const {
             return _id == other._id
-                && _grabbedname == other._grabbedname
-                && _robotlinkname == other._robotlinkname
-                && _trelative == other._trelative
-                && _setRobotLinksToIgnore == other._setRobotLinksToIgnore;
+                   && _grabbedname == other._grabbedname
+                   && _robotlinkname == other._robotlinkname
+                   && _trelative == other._trelative
+                   && _setRobotLinksToIgnore == other._setRobotLinksToIgnore;
         }
-        bool operator!=(const GrabbedInfo& other) const{
+        bool operator!=(const GrabbedInfo& other) const {
             return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
-
-        /// \brief resets the info
-        inline void Reset() {
-            _id.clear();
-            _grabbedname.clear();
-            _robotlinkname.clear();
-            _trelative = Transform();
-            _setRobotLinksToIgnore.clear();
-        }
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
         std::string _id; ///< unique id of the grabbed info
         std::string _grabbedname; ///< the name of the body to grab
@@ -1795,10 +1759,11 @@ private:
     };
 
     /// \brief info structure used to initialize a kinbody
-    class OPENRAVE_API KinBodyInfo
+    class OPENRAVE_API KinBodyInfo : public InfoBase
     {
 public:
-        KinBodyInfo() {}
+        KinBodyInfo() {
+        }
         KinBodyInfo(const KinBodyInfo& other) {
             *this = other;
         }
@@ -1807,39 +1772,46 @@ public:
             _uri = other._uri;
             _name = other._name;
             _referenceUri = other._referenceUri;
+            _interfaceType = other._interfaceType;
             _dofValues = other._dofValues;
             _transform = other._transform;
             _vLinkInfos = other._vLinkInfos;
             _vJointInfos = other._vJointInfos;
             _vGrabbedInfos = other._vGrabbedInfos;
             _mReadableInterfaces = other._mReadableInterfaces;
+            _isRobot = other._isRobot;
+
             // TODO: deep copy infos
             return *this;
         }
         bool operator==(const KinBodyInfo& other) const {
             return _id == other._id
-                && _uri == other._uri
-                && _name == other._name
-                && _referenceUri == other._referenceUri
-                && _dofValues == other._dofValues
-                && _transform == other._transform
-                && _vLinkInfos == other._vLinkInfos
-                && _vJointInfos == other._vJointInfos
-                && _vGrabbedInfos == other._vGrabbedInfos
-                && _mReadableInterfaces == other._mReadableInterfaces;
+                   && _uri == other._uri
+                   && _name == other._name
+                   && _referenceUri == other._referenceUri
+                   && _interfaceType == other._interfaceType
+                   && _dofValues == other._dofValues
+                   && _transform == other._transform
+                   && _vLinkInfos == other._vLinkInfos
+                   && _vJointInfos == other._vJointInfos
+                   && _vGrabbedInfos == other._vGrabbedInfos
+                   && _mReadableInterfaces == other._mReadableInterfaces
+                   && _isRobot == other._isRobot;
             // TODO: deep compare infos
         }
-        bool operator!=(const KinBodyInfo& other) const{
+        bool operator!=(const KinBodyInfo& other) const {
             return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
         std::string _id;
-        std::string _uri;
+        std::string _uri; ///< uri for this body
         std::string _name;
-        std::string _referenceUri;  // referenced body info uri
+        std::string _referenceUri;  ///< referenced body info uri
+        std::string _interfaceType; ///< the interface type
 
         Transform _transform; ///< transform of the base link
         std::vector< std::pair< std::pair<std::string, int>, dReal> > _dofValues; ///< mapping from (jointName, jointAxis) to dofValue
@@ -1849,6 +1821,8 @@ public:
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
 
         std::map<std::string, JSONReadablePtr> _mReadableInterfaces; ///< readable interface mapping
+
+        bool _isRobot = false; ///< true if should create a RobotBasePtr
 protected:
         virtual void _DeserializeReadableInterface(const rapidjson::Value& value);
 
@@ -1997,7 +1971,7 @@ private:
     virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::string& uri=std::string());
 
     /// \brief initializes an complex kinematics body from info structure
-    virtual bool InitFromInfo(const KinBodyInfo& info);
+    virtual bool InitFromKinBodyInfo(const KinBodyInfo& info);
 
     /// \brief Sets new geometries for all the links depending on the stored extra geometries each link has.
     ///
@@ -2815,7 +2789,7 @@ private:
     virtual void ExtractInfo(KinBodyInfo& info);
 
     /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
-    virtual UpdateFromInfoResult UpdateFromInfo(const KinBodyInfo& info);
+    virtual UpdateFromInfoResult UpdateFromKinBodyInfo(const KinBodyInfo& info);
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies

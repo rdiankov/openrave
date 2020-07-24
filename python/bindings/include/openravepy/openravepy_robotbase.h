@@ -37,7 +37,7 @@ public:
     RobotBase::RobotBaseInfoPtr GetRobotBaseInfo() const;
 
     py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
-    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos;
@@ -441,7 +441,7 @@ public:
     virtual PyStateRestoreContextBase* CreateStateSaver(object options);
 
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_());
-    bool InitFromInfo(const py::object pyRobotBaseInfo);
+    bool InitFromRobotInfo(const py::object pyRobotBaseInfo);
     py::object ExtractInfo() const;
 
     virtual std::string __repr__();

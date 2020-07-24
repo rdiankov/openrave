@@ -492,13 +492,13 @@ public:
         }
         else if( _IsJSONFile(filename) ) {
             _ClearRapidJsonBuffer();
-            if( RaveParseJSONFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc) ){
+            if( RaveParseJSONFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc) ) {
                 return true;
             }
         }
         else if( _IsMsgPackFile(filename) ) {
             _ClearRapidJsonBuffer();
-            if( RaveParseMsgPackFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc) ){
+            if( RaveParseMsgPackFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc) ) {
                 return true;
             }
         }
@@ -551,7 +551,7 @@ public:
     virtual bool LoadJSON(const rapidjson::Value& doc, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return RaveParseJSON(shared_from_this(), doc, atts);
+        return RaveParseJSON(shared_from_this(), doc, atts, *_prLoadEnvAlloc);
     }
 
     virtual void Save(const std::string& filename, SelectionOptions options, const AttributesList& atts)
@@ -2410,17 +2410,15 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
+        std::vector<dReal> vDOFValues;
+
         // TODO: revision error checking ?
         SetRevision(info._revision);
 
-        // fall back to use name if id is empty
-        FOREACH(itBodyInfo, info._vBodyInfos) {
-            if ((*itBodyInfo)->_id.empty()) {
-                (*itBodyInfo)->_id = (*itBodyInfo)->_name;
-            }
-        }
-
         FOREACHC(itBodyInfo, info._vBodyInfos) {
+            KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
+            RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
+
             // find existing body in the env
             std::vector<KinBodyPtr>::iterator itExistingBody = _vecbodies.end();
             FOREACH(itBody, _vecbodies) {
@@ -2430,19 +2428,33 @@ public:
                 }
             }
 
-            KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
-            RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
             KinBodyPtr pBody;
             if (itExistingBody != _vecbodies.end()) {
-                // update existing body or robot
-                UpdateFromInfoResult updateFromInfoResult = UFIR_Success;
-                pBody = *itExistingBody;
-                if (!!pRobotBaseInfo && pBody->IsRobot()) {
-                    RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
-                    updateFromInfoResult = pRobot->UpdateFromInfo(*pRobotBaseInfo);
+                bool bInterfaceMatches = pBody->GetXMLId() == pKinBodyInfo->_interfaceType;
+                if( !bInterfaceMatches || pBody->IsRobot() != pKinBodyInfo->_isRobot ) {
+                    boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                    _RemoveKinBodyFromIterator(itExistingBody);
+                    itExistingBody = _vecbodies.end();
                 }
-                else if (!pRobotBaseInfo && !pBody->IsRobot()) {
-                    updateFromInfoResult = pBody->UpdateFromInfo(*pKinBodyInfo);
+            }
+    
+            if(itExistingBody != _vecbodies.end()) {
+                // interface should match at this point
+
+                // update existing body or robot
+                UpdateFromInfoResult updateFromInfoResult = UFIR_RequireRemoveFromEnvironment;
+                pBody = *itExistingBody;
+                if (pKinBodyInfo->_isRobot && pBody->IsRobot()) {
+                    RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
+                    if( !!pRobotBaseInfo ) {
+                        updateFromInfoResult = pRobot->UpdateFromRobotInfo(*pRobotBaseInfo);
+                    }
+                    else {
+                        updateFromInfoResult = pRobot->UpdateFromKinBodyInfo(*pKinBodyInfo);
+                    }
+                }
+                else if (!pKinBodyInfo->_isRobot && !pBody->IsRobot()) {
+                    updateFromInfoResult = pBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                 }
 
                 if (updateFromInfoResult == UFIR_Success) {
@@ -2454,48 +2466,67 @@ public:
                     _RemoveKinBodyFromIterator(itExistingBody);
                 }
 
-                if (!!pRobotBaseInfo && pBody->IsRobot()) {
+                if (pBody->IsRobot()) {
                     RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
                     if (updateFromInfoResult == UFIR_RequireRemoveFromEnvironment) {
-                        updateFromInfoResult = pRobot->UpdateFromInfo(*pRobotBaseInfo);
+                        if( !!pRobotBaseInfo ) {
+                            updateFromInfoResult = pRobot->UpdateFromRobotInfo(*pRobotBaseInfo);
+                        }
+                        else {
+                            updateFromInfoResult = pRobot->UpdateFromKinBodyInfo(*pKinBodyInfo);
+                        }
                     }
                     if (updateFromInfoResult != UFIR_Success) {
-                        pRobot->InitFromInfo(*pRobotBaseInfo);
-
+                        if( !!pRobotBaseInfo ) {
+                            pRobot->InitFromRobotInfo(*pRobotBaseInfo);
+                        }
+                        else {
+                            pRobot->InitFromKinBodyInfo(*pKinBodyInfo);
+                        }
                     }
                     _AddRobot(pRobot, true);
                 }
-                else if (!pRobotBaseInfo && !pBody->IsRobot()) {
+                else {
                     if (updateFromInfoResult == UFIR_RequireRemoveFromEnvironment) {
-                        updateFromInfoResult = pBody->UpdateFromInfo(*pKinBodyInfo);
+                        updateFromInfoResult = pBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                     }
                     if (updateFromInfoResult != UFIR_Success) {
-                        pBody->InitFromInfo(*pKinBodyInfo);
+                        pBody->InitFromKinBodyInfo(*pKinBodyInfo);
                     }
                     _AddKinBody(pBody, true);
                 }
             }
             else {
                 // for new body or robot
-                if (!!pRobotBaseInfo) {
-                    RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), "GenericRobot");
+                if (pKinBodyInfo->_isRobot) {
+                    RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), pKinBodyInfo->_interfaceType);
                     if( !pRobot ) {
                         pRobot = RaveCreateRobot(shared_from_this(), "");
                     }
-                    pRobot->InitFromInfo(*pRobotBaseInfo);
+
+                    if( !!pRobotBaseInfo ) {
+                        pRobot->InitFromRobotInfo(*pRobotBaseInfo);
+                    }
+                    else {
+                        pRobot->InitFromKinBodyInfo(*pKinBodyInfo);
+                    }
                     _AddRobot(pRobot, true);
                     pBody = RaveInterfaceCast<KinBody>(pRobot);
                 }
                 else {
-                    pBody = RaveCreateKinBody(shared_from_this(), "");
-                    pBody->InitFromInfo(*pKinBodyInfo);
+                    pBody = RaveCreateKinBody(shared_from_this(), pKinBodyInfo->_interfaceType);
+                    if( !pBody ) {
+                        pBody = RaveCreateKinBody(shared_from_this(), "");
+                    }
+                    pBody->InitFromKinBodyInfo(*pKinBodyInfo);
                     _AddKinBody(pBody, true);
                 }
             }
 
             if (!!pBody) {
+                pBody->SetName(pKinBodyInfo->_name);
+
                 // dof value
-                std::vector<dReal> vDOFValues;
                 pBody->GetDOFValues(vDOFValues);
 
                 FOREACH(it, pKinBodyInfo->_dofValues) {
@@ -2507,12 +2538,7 @@ public:
                     }
                 }
 
-                pBody->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
-                // transform
-                pBody->SetTransform(pKinBodyInfo->_transform);
-                // grabbed infos
-                std::vector<KinBody::GrabbedInfoConstPtr> grabbedInfo(pKinBodyInfo->_vGrabbedInfos.begin(), pKinBodyInfo->_vGrabbedInfos.end());
-                pBody->ResetGrabbed(grabbedInfo);
+                pBody->SetDOFValues(vDOFValues, pKinBodyInfo->_transform, KinBody::CLA_Nothing);
             }
         }
 
@@ -2532,6 +2558,31 @@ public:
             {
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                 _RemoveKinBodyFromIterator(itBody);
+            }
+        }
+
+        // after all bodies are added, update the grab states
+        FOREACHC(itBodyInfo, info._vBodyInfos) {
+            KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
+
+            const std::string& bodyid = (*itBodyInfo)->_id;
+            
+            // find existing body in the env
+            std::vector<KinBodyPtr>::iterator itExistingBody = _vecbodies.end();
+            FOREACH(itBody, _vecbodies) {
+                if ((*itBody)->_id == bodyid) {
+                    itExistingBody = itBody;
+                    break;
+                }
+            }
+
+            if (itExistingBody != _vecbodies.end()) {
+                // grabbed infos
+                std::vector<KinBody::GrabbedInfoConstPtr> grabbedInfo(pKinBodyInfo->_vGrabbedInfos.begin(), pKinBodyInfo->_vGrabbedInfos.end());
+                (*itExistingBody)->ResetGrabbed(grabbedInfo);
+            }
+            else {
+                RAVELOG_WARN_FORMAT("could not find body with id='%s', name='%s'", bodyid%(*itBodyInfo)->_name);
             }
         }
 

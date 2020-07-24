@@ -439,8 +439,8 @@ class OPENRAVE_API JSONReadable : virtual public Readable, public boost::enable_
 public:
     JSONReadable() {}
     virtual ~JSONReadable() {}
-    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const = 0;
-    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) = 0;
+    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const = 0;
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale) = 0;
     virtual bool operator==(const JSONReadable& other) = 0;
     virtual bool operator!=(const JSONReadable& other) = 0;
 };
