@@ -5383,13 +5383,13 @@ void KinBody::_ResolveInfoIds()
         }
     }
 
-    int numPassiveJoints = (int)_vecPassiveJoints.size();
+    int numPassiveJoints = (int)_vPassiveJoints.size();
     for(int ijoint = 0; ijoint < numPassiveJoints; ++ijoint) {
-        KinBody::JointInfo& jointinfo = _vecPassiveJoints[ijoint]->_info;
+        KinBody::JointInfo& jointinfo = _vPassiveJoints[ijoint]->_info;
         bool bGenerateNewId = jointinfo._id.empty();
         if( !bGenerateNewId ) {
             for(int itestjoint = 0; itestjoint < ijoint; ++itestjoint) {
-                if( _vecPassiveJoints[itestjoint]->_info._id == jointinfo._id ) {
+                if( _vPassiveJoints[itestjoint]->_info._id == jointinfo._id ) {
                     bGenerateNewId = true;
                     break;
                 }
@@ -5401,7 +5401,7 @@ void KinBody::_ResolveInfoIds()
                 nTempIndexConversion = ConvertUIntToHex(nJointId, sTempIndexConversion);
                 bool bHasSame = false;
                 for(int itestjoint = 0; itestjoint < numPassiveJoints; ++itestjoint) {
-                    const std::string& testid = _vecPassiveJoints[itestjoint]->_info._id;
+                    const std::string& testid = _vPassiveJoints[itestjoint]->_info._id;
                     if( testid.size() == sizeof(pJointIdPrefix)-1+nTempIndexConversion ) {
                         if( strncmp(testid.c_str() + (sizeof(pJointIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
                             // matches
