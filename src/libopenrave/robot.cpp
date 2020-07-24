@@ -927,6 +927,7 @@ void RobotBase::_ResolveInfoIds()
 
             manipulatorinfo._id = pManipulatorIdPrefix;
             manipulatorinfo._id += sTempIndexConversion;
+            nManipulatorId++;
         }
     }
 
@@ -970,6 +971,7 @@ void RobotBase::_ResolveInfoIds()
 
             attachedSensorinfo._id = pAttachedSensorIdPrefix;
             attachedSensorinfo._id += sTempIndexConversion;
+            nAttachedSensorId++;
         }
     }
 
@@ -1013,6 +1015,7 @@ void RobotBase::_ResolveInfoIds()
 
             connectedBodyinfo._id = pConnectedBodyIdPrefix;
             connectedBodyinfo._id += sTempIndexConversion;
+            nConnectedBodyId++;
         }
     }
 
@@ -1056,6 +1059,7 @@ void RobotBase::_ResolveInfoIds()
 
             gripperInfo._id = pGripperInfoIdPrefix;
             gripperInfo._id += sTempIndexConversion;
+            nGripperInfoId++;
         }
     }
 }

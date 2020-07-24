@@ -5288,6 +5288,7 @@ void KinBody::_ResolveInfoIds()
 
             linkinfo._id = pLinkIdPrefix;
             linkinfo._id += sTempIndexConversion;
+            nLinkId++;
         }
 
         // geometries
@@ -5332,6 +5333,7 @@ void KinBody::_ResolveInfoIds()
 
                     geometryinfo._id = pGeometryIdPrefix;
                     geometryinfo._id += sTempIndexConversion;
+                    nGeometryId++;
                 }
             }
         }
@@ -5377,6 +5379,7 @@ void KinBody::_ResolveInfoIds()
 
             jointinfo._id = pJointIdPrefix;
             jointinfo._id += sTempIndexConversion;
+            nJointId++;
         }
     }
 
@@ -5418,6 +5421,7 @@ void KinBody::_ResolveInfoIds()
 
             jointinfo._id = pJointIdPrefix;
             jointinfo._id += sTempIndexConversion;
+            nJointId++;
         }
     }
 }
