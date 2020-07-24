@@ -887,7 +887,7 @@ void RobotBase::_ResolveInfoIds()
     char sTempIndexConversion[9]; // temp memory space for converting indices to hex strings, enough space to convert uint32_t
     uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
 
-    static const char pManipulatorIdPrefix[] = "manipulator";
+    static const char pManipulatorIdPrefix[] = "tool";
     int nManipulatorId = 0;
     int nummanipulators = (int)_vecManipulators.size();
     for(int imanipulator = 0; imanipulator < nummanipulators; ++imanipulator) {
