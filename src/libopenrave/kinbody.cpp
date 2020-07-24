@@ -72,14 +72,16 @@ protected:
 
 typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 
-ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
+void ElectricMotorActuatorInfo::Reset()
 {
-    gear_ratio = 0;
+    model_type.clear();
     assigned_power_rating = 0;
     max_speed = 0;
     no_load_speed = 0;
     stall_torque = 0;
     max_instantaneous_torque = 0;
+    nominal_speed_torque_points.clear();
+    max_speed_torque_points.clear();
     nominal_torque = 0;
     rotor_inertia = 0;
     torque_constant = 0;
@@ -87,53 +89,244 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
     speed_constant = 0;
     starting_current = 0;
     terminal_resistance = 0;
+    gear_ratio = 0;
     coloumb_friction = 0;
     viscous_friction = 0;
 }
 
-
 void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    openravejson::SetJsonValueByKey(value, "modelType", model_type, allocator);
-    openravejson::SetJsonValueByKey(value, "assignedPowerRating", assigned_power_rating, allocator);
-    openravejson::SetJsonValueByKey(value, "maxSpeed", max_speed, allocator);
-    openravejson::SetJsonValueByKey(value, "noLoadSpeed", no_load_speed, allocator);
-    openravejson::SetJsonValueByKey(value, "stallTorque", stall_torque, allocator);
-    openravejson::SetJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque, allocator);
-    openravejson::SetJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points, allocator);
-    openravejson::SetJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points, allocator);
-    openravejson::SetJsonValueByKey(value, "nominalTorque", nominal_torque, allocator);
-    openravejson::SetJsonValueByKey(value, "rotorInertia", rotor_inertia, allocator);
-    openravejson::SetJsonValueByKey(value, "torqueConstant", torque_constant, allocator);
-    openravejson::SetJsonValueByKey(value, "nominalVoltage", nominal_voltage, allocator);
-    openravejson::SetJsonValueByKey(value, "speedConstant", speed_constant, allocator);
-    openravejson::SetJsonValueByKey(value, "startingCurrent", starting_current, allocator);
-    openravejson::SetJsonValueByKey(value, "terminalResistance", terminal_resistance, allocator);
-    openravejson::SetJsonValueByKey(value, "gearRatio", gear_ratio, allocator);
-    openravejson::SetJsonValueByKey(value, "coloumbFriction", coloumb_friction, allocator);
-    openravejson::SetJsonValueByKey(value, "viscousFriction", viscous_friction, allocator);
+    orjson::SetJsonValueByKey(value, "modelType", model_type, allocator);
+    orjson::SetJsonValueByKey(value, "assignedPowerRating", assigned_power_rating, allocator);
+    orjson::SetJsonValueByKey(value, "maxSpeed", max_speed, allocator);
+    orjson::SetJsonValueByKey(value, "noLoadSpeed", no_load_speed, allocator);
+    orjson::SetJsonValueByKey(value, "stallTorque", stall_torque, allocator);
+    orjson::SetJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque, allocator);
+    orjson::SetJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points, allocator);
+    orjson::SetJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points, allocator);
+    orjson::SetJsonValueByKey(value, "nominalTorque", nominal_torque, allocator);
+    orjson::SetJsonValueByKey(value, "rotorInertia", rotor_inertia, allocator);
+    orjson::SetJsonValueByKey(value, "torqueConstant", torque_constant, allocator);
+    orjson::SetJsonValueByKey(value, "nominalVoltage", nominal_voltage, allocator);
+    orjson::SetJsonValueByKey(value, "speedConstant", speed_constant, allocator);
+    orjson::SetJsonValueByKey(value, "startingCurrent", starting_current, allocator);
+    orjson::SetJsonValueByKey(value, "terminalResistance", terminal_resistance, allocator);
+    orjson::SetJsonValueByKey(value, "gearRatio", gear_ratio, allocator);
+    orjson::SetJsonValueByKey(value, "coloumbFriction", coloumb_friction, allocator);
+    orjson::SetJsonValueByKey(value, "viscousFriction", viscous_friction, allocator);
 }
 
-void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
-    openravejson::LoadJsonValueByKey(value, "modelType", model_type);
-    openravejson::LoadJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);
-    openravejson::LoadJsonValueByKey(value, "maxSpeed", max_speed);
-    openravejson::LoadJsonValueByKey(value, "noLoadSpeed", no_load_speed);
-    openravejson::LoadJsonValueByKey(value, "stallTorque", stall_torque);
-    openravejson::LoadJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque);
-    openravejson::LoadJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points);
-    openravejson::LoadJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points);
-    openravejson::LoadJsonValueByKey(value, "nominalTorque", nominal_torque);
-    openravejson::LoadJsonValueByKey(value, "rotorInertia", rotor_inertia);
-    openravejson::LoadJsonValueByKey(value, "torqueConstant", torque_constant);
-    openravejson::LoadJsonValueByKey(value, "nominalVoltage", nominal_voltage);
-    openravejson::LoadJsonValueByKey(value, "speedConstant", speed_constant);
-    openravejson::LoadJsonValueByKey(value, "startingCurrent", starting_current);
-    openravejson::LoadJsonValueByKey(value, "terminalResistance", terminal_resistance);
-    openravejson::LoadJsonValueByKey(value, "gearRatio", gear_ratio);
-    openravejson::LoadJsonValueByKey(value, "coloumbFriction", coloumb_friction);
-    openravejson::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
+    orjson::LoadJsonValueByKey(value, "modelType", model_type);
+    orjson::LoadJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);
+    orjson::LoadJsonValueByKey(value, "maxSpeed", max_speed);
+    orjson::LoadJsonValueByKey(value, "noLoadSpeed", no_load_speed);
+    orjson::LoadJsonValueByKey(value, "stallTorque", stall_torque);
+    orjson::LoadJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque);
+    orjson::LoadJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points);
+    orjson::LoadJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points);
+    orjson::LoadJsonValueByKey(value, "nominalTorque", nominal_torque);
+    orjson::LoadJsonValueByKey(value, "rotorInertia", rotor_inertia);
+    orjson::LoadJsonValueByKey(value, "torqueConstant", torque_constant);
+    orjson::LoadJsonValueByKey(value, "nominalVoltage", nominal_voltage);
+    orjson::LoadJsonValueByKey(value, "speedConstant", speed_constant);
+    orjson::LoadJsonValueByKey(value, "startingCurrent", starting_current);
+    orjson::LoadJsonValueByKey(value, "terminalResistance", terminal_resistance);
+    orjson::LoadJsonValueByKey(value, "gearRatio", gear_ratio);
+    orjson::LoadJsonValueByKey(value, "coloumbFriction", coloumb_friction);
+    orjson::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
+}
+
+void KinBody::KinBodyInfo::Reset()
+{
+    _id.clear();
+    _uri.clear();
+    _name.clear();
+    _referenceUri.clear();
+    _transform = Transform();
+    _dofValues.clear();
+    _vGrabbedInfos.clear();
+    _vLinkInfos.clear();
+    _vJointInfos.clear();
+    _mReadableInterfaces.clear();
+}
+
+void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    rKinBodyInfo.SetObject();
+    orjson::SetJsonValueByKey(rKinBodyInfo, "id", _id, allocator);
+    orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
+    if (!_referenceUri.empty()) {
+        if( options & ISO_ReferenceUriHint ) {
+            orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUriHint", _referenceUri, allocator);
+        }
+        else {
+            orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUri", _referenceUri, allocator);
+        }
+    }
+    orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
+    orjson::SetJsonValueByKey(rKinBodyInfo, "transform", _transform, allocator);
+    orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
+
+    if (_dofValues.size() > 0) {
+        rapidjson::Value dofValues;
+        dofValues.SetArray();
+        dofValues.Reserve(_dofValues.size(), allocator);
+        FOREACHC(itDofValue, _dofValues) {
+            rapidjson::Value dofValue;
+            orjson::SetJsonValueByKey(dofValue, "jointName", itDofValue->first.first, allocator);
+            orjson::SetJsonValueByKey(dofValue, "jointAxis", itDofValue->first.second, allocator);
+            orjson::SetJsonValueByKey(dofValue, "value", itDofValue->second, allocator);
+            dofValues.PushBack(dofValue, allocator);
+        }
+        rKinBodyInfo.AddMember("dofValues", dofValues, allocator);
+    }
+
+    if (_vGrabbedInfos.size() > 0) {
+        rapidjson::Value rGrabbedInfoValues;
+        rGrabbedInfoValues.SetArray();
+        rGrabbedInfoValues.Reserve(_vGrabbedInfos.size(), allocator);
+        FOREACHC(it, _vGrabbedInfos) {
+            rapidjson::Value grabbedInfoValue;
+            (*it)->SerializeJSON(grabbedInfoValue, allocator, fUnitScale, options);
+            rGrabbedInfoValues.PushBack(grabbedInfoValue, allocator);
+        }
+        rKinBodyInfo.AddMember("grabbed", rGrabbedInfoValues, allocator);
+    }
+
+    if (_vLinkInfos.size() > 0) {
+        rapidjson::Value rLinkInfoValues;
+        rLinkInfoValues.SetArray();
+        rLinkInfoValues.Reserve(_vLinkInfos.size(), allocator);
+        FOREACHC(it, _vLinkInfos) {
+            rapidjson::Value linkInfoValue;
+            (*it)->SerializeJSON(linkInfoValue, allocator, fUnitScale, options);
+            rLinkInfoValues.PushBack(linkInfoValue, allocator);
+        }
+        rKinBodyInfo.AddMember("links", rLinkInfoValues, allocator);
+    }
+
+    if (_vJointInfos.size() > 0) {
+        rapidjson::Value rJointInfoValues;
+        rJointInfoValues.SetArray();
+        rJointInfoValues.Reserve(_vJointInfos.size(), allocator);
+        FOREACHC(it, _vJointInfos) {
+            rapidjson::Value jointInfoValue;
+            (*it)->SerializeJSON(jointInfoValue, allocator, fUnitScale, options);
+            rJointInfoValues.PushBack(jointInfoValue, allocator);
+        }
+        rKinBodyInfo.AddMember("joints", rJointInfoValues, allocator);
+    }
+
+    if (_mReadableInterfaces.size() > 0) {
+        rapidjson::Value rReadableInterfaces;
+        rReadableInterfaces.SetArray();
+        for(std::map<std::string, JSONReadablePtr>::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
+            rapidjson::Value rReadable;
+            it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
+            orjson::SetJsonValueByKey(rReadable, "id", it->first, allocator);
+            rReadableInterfaces.PushBack(rReadable, allocator);
+        }
+        rKinBodyInfo.AddMember("readableInterfaces", rReadableInterfaces, allocator);
+    }
+}
+
+void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+{
+    orjson::LoadJsonValueByKey(value, "name", _name);
+    orjson::LoadJsonValueByKey(value, "id", _id);
+    if( _id.empty() ) {
+        _id = _name;
+    }
+
+    if( !(options & IDO_IgnoreReferenceUri) ) {
+        orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+    }
+
+    orjson::LoadJsonValueByKey(value, "interfaceType", _interfaceType);
+    orjson::LoadJsonValueByKey(value, "isRobot", _isRobot);
+
+    if (value.HasMember("grabbed")) {
+        _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
+        size_t iGrabbed = 0;
+        for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
+            const rapidjson::Value& grabbedValue = *it;
+            std::string id = orjson::GetStringJsonValueByKey(grabbedValue, "id");
+            if (id.empty()) {
+                id = orjson::GetStringJsonValueByKey(grabbedValue, "grabbedName");
+            }
+            UpdateOrCreateInfo(grabbedValue, id, _vGrabbedInfos, fUnitScale, options);
+        }
+    }
+
+    if (value.HasMember("links")) {
+        _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
+        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
+            const rapidjson::Value& linkValue = *it;
+            std::string id = orjson::GetStringJsonValueByKey(linkValue, "id");
+            if (id.empty()) {
+                id = orjson::GetStringJsonValueByKey(linkValue, "name");
+            }
+            UpdateOrCreateInfo(linkValue, id, _vLinkInfos, fUnitScale, options);
+        }
+    }
+
+    if (value.HasMember("joints")) {
+        _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
+        for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
+            const rapidjson::Value& jointValue = *it;
+            std::string id = orjson::GetStringJsonValueByKey(jointValue, "id");
+            if (id.empty()) {
+                id = orjson::GetStringJsonValueByKey(jointValue, "name");
+            }
+            UpdateOrCreateInfo(jointValue, id, _vJointInfos, fUnitScale, options);
+        }
+    }
+
+    if (value.HasMember("dofValues")) {
+        _dofValues.resize(0);
+        for(rapidjson::Value::ConstValueIterator itr = value["dofValues"].Begin(); itr != value["dofValues"].End(); ++itr) {
+            if (itr->IsObject() && itr->HasMember("jointName") && itr->HasMember("value")) {
+                std::string jointName;
+                int jointAxis = 0;
+                dReal dofValue;
+                orjson::LoadJsonValueByKey(*itr, "jointName", jointName);
+                orjson::LoadJsonValueByKey(*itr, "jointAxis", jointAxis);
+                orjson::LoadJsonValueByKey(*itr, "value", dofValue);
+                _dofValues.emplace_back(std::make_pair(jointName, jointAxis), dofValue);
+            }
+        }
+    }
+
+    if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsArray()) {
+        for (rapidjson::Value::ConstValueIterator it = value["readableInterfaces"].Begin(); it != value["readableInterfaces"].End(); ++it) {
+            _DeserializeReadableInterface(*it);
+        }
+    }
+
+    if (value.HasMember("transform")) {
+        orjson::LoadJsonValueByKey(value, "transform", _transform);
+    }
+}
+
+void KinBody::KinBodyInfo::_DeserializeReadableInterface(const rapidjson::Value& value) {
+    std::string id;
+    orjson::LoadJsonValueByKey(value, "id", id);
+    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, KinBodyPtr(), AttributesList());
+    if (!!pReader) {
+        pReader->DeserializeJSON(value);
+        JSONReadablePtr pReadable = pReader->GetReadable();
+        if (!!pReadable) {
+            _mReadableInterfaces[id] = pReadable;
+        }
+    }
+    else if (value.HasMember("string")) {
+        std::string stringValue;
+        orjson::LoadJsonValueByKey(value, "string", stringValue);
+        StringReadablePtr pReadable(new StringReadable(id, stringValue));
+        _mReadableInterfaces[id] = pReadable;
+    }
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
@@ -441,6 +634,29 @@ void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const st
         }
     }
     __struri = uri;
+}
+
+bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
+{
+    std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info._vLinkInfos.begin(), info._vLinkInfos.end());
+    std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info._vJointInfos.begin(), info._vJointInfos.end());
+    if( !KinBody::Init(vLinkInfosConst, vJointInfosConst, info._uri) ) {
+        return false;
+    }
+
+    _id = info._id;
+    _name = info._name;
+    _referenceUri = info._referenceUri;
+
+    FOREACH(it, info._mReadableInterfaces) {
+        SetReadableInterface(it->first, it->second);
+    }
+
+    if( GetXMLId() != info._interfaceType ) {
+        RAVELOG_WARN_FORMAT("body '%s' interfaceType does not match %s != %s", GetName()%GetXMLId()%info._interfaceType);
+    }
+
+    return true;
 }
 
 void KinBody::SetName(const std::string& newname)
@@ -4212,6 +4428,7 @@ void KinBody::_ComputeInternalInformation()
         }
         _ResetInternalCollisionCache();
     }
+    _ResolveInfoIds();
     _nHierarchyComputed = 2;
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
@@ -5050,6 +5267,494 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     else {
         _vPassiveJoints.push_back(pjoint);
     }
+}
+
+void KinBody::_ResolveInfoIds()
+{
+    char sTempIndexConversion[9]; // temp memory space for converting indices to hex strings, enough space to convert uint32_t
+    uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
+
+    // go through all link infos and make sure _id is unique
+    static const char pLinkIdPrefix[] = "link";
+    static const char pGeometryIdPrefix[] = "geom";    
+    int nLinkId = 0;
+    int numlinks = (int)_veclinks.size();
+    for(int ilink = 0; ilink < numlinks; ++ilink) {
+        KinBody::LinkInfo& linkinfo = _veclinks[ilink]->_info;
+        bool bGenerateNewId = linkinfo._id.empty();
+        if( !bGenerateNewId ) {
+            for(int itestlink = 0; itestlink < ilink; ++itestlink) {
+                if( _veclinks[itestlink]->_info._id == linkinfo._id ) {
+                    bGenerateNewId = true;
+                    break;
+                }
+            }
+        }
+
+        if( bGenerateNewId ) {
+            while(1) {
+                nTempIndexConversion = ConvertUIntToHex(nLinkId, sTempIndexConversion);
+                bool bHasSame = false;
+                for(int itestlink = 0; itestlink < numlinks; ++itestlink) {
+                    const std::string& testid = _veclinks[itestlink]->_info._id;
+                    if( testid.size() == sizeof(pLinkIdPrefix)-1+nTempIndexConversion ) {
+                        if( strncmp(testid.c_str() + (sizeof(pLinkIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
+                            // matches
+                            bHasSame = true;
+                            break;
+                        }
+                    }
+                }
+
+                if( bHasSame ) {
+                    nLinkId++;
+                    continue;
+                }
+
+                break;
+            }
+
+            linkinfo._id = pLinkIdPrefix;
+            linkinfo._id += sTempIndexConversion;
+            nLinkId++;
+        }
+
+        // geometries
+        {
+            int nGeometryId = 0;
+            const std::vector<Link::GeometryPtr>& vgeometries = _veclinks[ilink]->GetGeometries();
+            int numgeometries = (int)vgeometries.size();
+            for(int igeometry = 0; igeometry < numgeometries; ++igeometry) {
+                KinBody::GeometryInfo& geometryinfo = vgeometries[igeometry]->_info;
+                bool bGenerateNewId = geometryinfo._id.empty();
+                if( !bGenerateNewId ) {
+                    for(int itestgeometry = 0; itestgeometry < igeometry; ++itestgeometry) {
+                        if( vgeometries[itestgeometry]->_info._id == geometryinfo._id ) {
+                            bGenerateNewId = true;
+                            break;
+                        }
+                    }
+                }
+
+                if( bGenerateNewId ) {
+                    while(1) {
+                        nTempIndexConversion = ConvertUIntToHex(nGeometryId, sTempIndexConversion);
+                        bool bHasSame = false;
+                        for(int itestgeometry = 0; itestgeometry < numgeometries; ++itestgeometry) {
+                            const std::string& testid = vgeometries[itestgeometry]->_info._id;
+                            if( testid.size() == sizeof(pGeometryIdPrefix)-1+nTempIndexConversion ) {
+                                if( strncmp(testid.c_str() + (sizeof(pGeometryIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
+                                    // matches
+                                    bHasSame = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if( bHasSame ) {
+                            nGeometryId++;
+                            continue;
+                        }
+
+                        break;
+                    }
+
+                    geometryinfo._id = pGeometryIdPrefix;
+                    geometryinfo._id += sTempIndexConversion;
+                    nGeometryId++;
+                }
+            }
+        }
+    }
+
+    static const char pJointIdPrefix[] = "joint";
+    int nJointId = 0;
+    int numjoints = (int)_vecjoints.size();
+    for(int ijoint = 0; ijoint < numjoints; ++ijoint) {
+        KinBody::JointInfo& jointinfo = _vecjoints[ijoint]->_info;
+        bool bGenerateNewId = jointinfo._id.empty();
+        if( !bGenerateNewId ) {
+            for(int itestjoint = 0; itestjoint < ijoint; ++itestjoint) {
+                if( _vecjoints[itestjoint]->_info._id == jointinfo._id ) {
+                    bGenerateNewId = true;
+                    break;
+                }
+            }
+        }
+
+        if( bGenerateNewId ) {
+            while(1) {
+                nTempIndexConversion = ConvertUIntToHex(nJointId, sTempIndexConversion);
+                bool bHasSame = false;
+                for(int itestjoint = 0; itestjoint < numjoints; ++itestjoint) {
+                    const std::string& testid = _vecjoints[itestjoint]->_info._id;
+                    if( testid.size() == sizeof(pJointIdPrefix)-1+nTempIndexConversion ) {
+                        if( strncmp(testid.c_str() + (sizeof(pJointIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
+                            // matches
+                            bHasSame = true;
+                            break;
+                        }
+                    }
+                }
+
+                if( bHasSame ) {
+                    nJointId++;
+                    continue;
+                }
+
+                break;
+            }
+
+            jointinfo._id = pJointIdPrefix;
+            jointinfo._id += sTempIndexConversion;
+            nJointId++;
+        }
+    }
+
+    int numPassiveJoints = (int)_vPassiveJoints.size();
+    for(int ijoint = 0; ijoint < numPassiveJoints; ++ijoint) {
+        KinBody::JointInfo& jointinfo = _vPassiveJoints[ijoint]->_info;
+        bool bGenerateNewId = jointinfo._id.empty();
+        if( !bGenerateNewId ) {
+            for(int itestjoint = 0; itestjoint < ijoint; ++itestjoint) {
+                if( _vPassiveJoints[itestjoint]->_info._id == jointinfo._id ) {
+                    bGenerateNewId = true;
+                    break;
+                }
+            }
+        }
+
+        if( bGenerateNewId ) {
+            while(1) {
+                nTempIndexConversion = ConvertUIntToHex(nJointId, sTempIndexConversion);
+                bool bHasSame = false;
+                for(int itestjoint = 0; itestjoint < numPassiveJoints; ++itestjoint) {
+                    const std::string& testid = _vPassiveJoints[itestjoint]->_info._id;
+                    if( testid.size() == sizeof(pJointIdPrefix)-1+nTempIndexConversion ) {
+                        if( strncmp(testid.c_str() + (sizeof(pJointIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
+                            // matches
+                            bHasSame = true;
+                            break;
+                        }
+                    }
+                }
+
+                if( bHasSame ) {
+                    nJointId++;
+                    continue;
+                }
+
+                break;
+            }
+
+            jointinfo._id = pJointIdPrefix;
+            jointinfo._id += sTempIndexConversion;
+            nJointId++;
+        }
+    }
+}
+
+void KinBody::ExtractInfo(KinBodyInfo& info)
+{
+    _ResolveInfoIds();
+
+    info._id = _id;
+    info._uri = __struri;
+    info._name = _name;
+    info._referenceUri = _referenceUri;
+    info._interfaceType = GetXMLId();
+
+    info._dofValues.resize(0);
+    std::vector<dReal> vDOFValues;
+    GetDOFValues(vDOFValues);
+    for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
+        JointPtr pJoint = GetJointFromDOFIndex(idof);
+        int jointAxis = idof - pJoint->GetDOFIndex();
+        info._dofValues.emplace_back(std::make_pair(pJoint->GetName(), jointAxis), vDOFValues[idof]);
+    }
+
+    info._transform = GetTransform();
+    info._vGrabbedInfos.resize(0);
+    GetGrabbedInfo(info._vGrabbedInfos);
+
+    KinBody::KinBodyStateSaver saver(shared_kinbody());
+    vector<dReal> vZeros(GetDOF(), 0);
+    SetDOFValues(vZeros, KinBody::CLA_Nothing);
+    SetTransform(Transform());
+
+    // need to avoid extracting info for links and joints belonging to connected bodies
+    std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
+    std::vector<bool> isConnectedJoint(_vecjoints.size(), false); // indicate which joint comes from connectedbody
+    std::vector<bool> isConnectedPassiveJoint(_vPassiveJoints.size(), false); // indicate which passive joint comes from connectedbody
+
+    if (IsRobot()) {
+        RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(shared_from_this());
+        std::vector<KinBody::LinkPtr> resolvedLinks;
+        std::vector<KinBody::JointPtr> resolvedJoints;
+        FOREACHC(itConnectedBody, pRobot->GetConnectedBodies()) {
+            (*itConnectedBody)->GetResolvedLinks(resolvedLinks);
+            (*itConnectedBody)->GetResolvedJoints(resolvedJoints);
+            KinBody::JointPtr resolvedDummyJoint = (*itConnectedBody)->GetResolvedDummyPassiveJoint();
+
+            FOREACHC(itLink, _veclinks) {
+                if (std::find(resolvedLinks.begin(), resolvedLinks.end(), *itLink) != resolvedLinks.end()) {
+                    isConnectedLink[itLink-_veclinks.begin()] = true;
+                }
+            }
+            FOREACHC(itJoint, _vecjoints) {
+                if (std::find(resolvedJoints.begin(), resolvedJoints.end(), *itJoint) != resolvedJoints.end()) {
+                    isConnectedJoint[itJoint-_vecjoints.begin()] = true;
+                }
+            }
+            FOREACHC(itPassiveJoint, _vPassiveJoints) {
+                if (std::find(resolvedJoints.begin(), resolvedJoints.end(), *itPassiveJoint) != resolvedJoints.end()) {
+                    isConnectedPassiveJoint[itPassiveJoint-_vPassiveJoints.begin()] = true;
+                } else if (resolvedDummyJoint == *itPassiveJoint) {
+                    isConnectedPassiveJoint[itPassiveJoint-_vPassiveJoints.begin()] = true;
+                }
+            }
+        }
+    }
+
+    info._vLinkInfos.reserve(_veclinks.size());
+    for(size_t iLink = 0; iLink < _veclinks.size(); ++iLink) {
+        if (isConnectedLink[iLink]) {
+            continue;
+        }
+        KinBody::LinkInfoPtr pLinkInfo(new KinBody::LinkInfo());
+        info._vLinkInfos.push_back(pLinkInfo);
+        _veclinks[iLink]->ExtractInfo(*(info._vLinkInfos.back()));
+    }
+
+    info._vJointInfos.reserve(_vecjoints.size() + _vPassiveJoints.size());
+    for(size_t iJoint = 0; iJoint < _vecjoints.size(); iJoint++) {
+        if (isConnectedJoint[iJoint]) {
+            continue;
+        }
+        KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo());
+        info._vJointInfos.push_back(pJointInfo);
+        _vecjoints[iJoint]->ExtractInfo(*(info._vJointInfos.back()));
+    }
+
+    for(size_t iJoint = 0; iJoint < _vPassiveJoints.size(); iJoint++) {
+        if (isConnectedPassiveJoint[iJoint]) {
+            continue;
+        }
+        KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo());
+        info._vJointInfos.push_back(pJointInfo);
+        _vPassiveJoints[iJoint]->ExtractInfo(*(info._vJointInfos.back()));
+    }
+
+
+    FOREACHC(it, GetReadableInterfaces()) {
+        JSONReadablePtr pReadable = boost::dynamic_pointer_cast<JSONReadable>(it->second);
+        if (!!pReadable) {
+            info._mReadableInterfaces[it->first] = pReadable;
+        }
+    }
+}
+
+UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
+{
+    if(info._id != _id) {
+        RAVELOG_WARN_FORMAT("body '%s' update info ids do not match %s != %s", GetName()%_id%info._id);
+    }
+
+    // links
+    FOREACHC(itLinkInfo, info._vLinkInfos) {
+        // find existing link in body
+        std::vector<KinBody::LinkPtr>::iterator itExistingLink = _veclinks.end();
+        FOREACH(itLink, _veclinks) {
+            if ((*itLink)->_info._id == (*itLinkInfo)->_id) {
+                itExistingLink = itLink;
+                break;
+            }
+        }
+
+        KinBody::LinkInfoPtr pLinkInfo = *itLinkInfo;
+        if (itExistingLink != _veclinks.end()) {
+            // update existing link
+            UpdateFromInfoResult updateFromLinkInfoResult = UFIR_Success;
+            KinBody::LinkPtr pLink = *itExistingLink;
+            updateFromLinkInfoResult = pLink->UpdateFromInfo(*pLinkInfo);
+            if (updateFromLinkInfoResult == UFIR_Success) {
+                continue;
+            }
+            // link update failed.
+            return updateFromLinkInfoResult;
+        }
+
+        // new links is added
+        return UFIR_RequireReinitialize;
+    }
+
+    // delete links
+    FOREACH(itLink, _veclinks) {
+        bool stillExists = false;
+        FOREACHC(itLinkInfo, info._vLinkInfos) {
+            if ((*itLink)->_info._id == (*itLinkInfo)->_id) {
+                stillExists = true;
+                break;
+            }
+        }
+        if (!stillExists) {
+            return UFIR_RequireReinitialize;
+        }
+    }
+
+    // joints
+    FOREACHC(itJointInfo, info._vJointInfos) {
+        // find exsiting joint in body
+        std::vector<KinBody::JointPtr>::iterator itExistingJoint = _vecjoints.end();
+        FOREACH(itJoint, _vecjoints) {
+            if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
+                itExistingJoint = itJoint;
+                break;
+            }
+        }
+
+        if (itExistingJoint == _vecjoints.end()) {
+            FOREACH(itJoint, _vPassiveJoints) {
+                if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
+                    itExistingJoint = itJoint;
+                    break;
+                }
+            }
+        }
+
+        KinBody::JointInfoPtr pJointInfo = *itJointInfo;
+        if (itExistingJoint != _vecjoints.end() || itExistingJoint != _vPassiveJoints.end()) {
+            // update current joint
+            UpdateFromInfoResult updateFromJointInfoResult = UFIR_Success;
+            KinBody::JointPtr pJoint = *itExistingJoint;
+            updateFromJointInfoResult = pJoint->UpdateFromInfo(*pJointInfo);
+            if (updateFromJointInfoResult == UFIR_Success) {
+                continue;
+            }
+            // joint update failed;
+            return updateFromJointInfoResult;
+        }
+        // new joints is added or deleted
+        return UFIR_RequireReinitialize;
+    }
+
+    // delete joints
+    FOREACH(itJoint, _vecjoints) {
+        bool stillExists = false;
+        FOREACHC(itJointInfo, info._vJointInfos) {
+            if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
+                stillExists = true;
+                break;
+            }
+        }
+        if (!stillExists) {
+            return UFIR_RequireReinitialize;
+        }
+    }
+
+    // grabbedinfos
+    bool resetGrabbed = false;
+    std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfos;
+    GetGrabbedInfo(vGrabbedInfos);
+    if (vGrabbedInfos.size() != info._vGrabbedInfos.size()) {
+        resetGrabbed = true;
+    }
+    else {
+        FOREACHC(itExistingGrabbedInfo, vGrabbedInfos) {
+            bool foundGrabbedInfo = false;
+            FOREACHC(itGrabbedInfo, info._vGrabbedInfos) {
+                // find existing grabbedinfo
+                if ((*itGrabbedInfo)->_id == (*itExistingGrabbedInfo)->_id) {
+                    foundGrabbedInfo = true;
+                    if ((**itGrabbedInfo) != (**itExistingGrabbedInfo)) {
+                        resetGrabbed = true;
+                        break;
+                    }
+                }
+            }
+            if (!foundGrabbedInfo) {
+                resetGrabbed = true;
+            }
+            if (resetGrabbed) {
+                break;
+            }
+        }
+    }
+
+    if (resetGrabbed) {
+        std::vector<KinBody::GrabbedInfoConstPtr> grabbedInfos(info._vGrabbedInfos.begin(), info._vGrabbedInfos.end());
+        ResetGrabbed(grabbedInfos);
+    }
+
+    // name
+    if (GetName() != info._name) {
+        SetName(info._name);
+    }
+
+    // transform
+    if (GetTransform() != info._transform) {
+        SetTransform(info._transform);
+    }
+
+    // dof values
+    std::vector<dReal> dofValues;
+    GetDOFValues(dofValues);
+    bool bDOFChanged = false;
+    for(std::vector<std::pair<std::pair<std::string, int>, dReal> >::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
+        // find the joint in the active chain
+        JointPtr joint;
+        FOREACHC(itJoint,_vecjoints) {
+            if ((*itJoint)->GetName() == it->first.first) {
+                joint = *itJoint;
+                break;
+            }
+        }
+        if (!joint) {
+            continue;
+        }
+        if (it->first.second >= joint->GetDOF()) {
+            continue;
+        }
+        if (dofValues[joint->GetDOFIndex()+it->first.second] != it->second) {
+            dofValues[joint->GetDOFIndex()+it->first.second] = it->second;
+            bDOFChanged = true;
+        }
+    }
+    if (bDOFChanged) {
+        SetDOFValues(dofValues);
+    }
+
+    FOREACH(it, info._mReadableInterfaces) {
+        JSONReadablePtr pReadable = boost::dynamic_pointer_cast<JSONReadable>(GetReadableInterface(it->first));
+        if (!!pReadable) {
+            if ( (*(it->second)) != (*pReadable)) {
+                rapidjson::Document docReadable;
+                dReal fUnitScale = 1.0;
+                int options = 0;
+                it->second->SerializeJSON(docReadable, docReadable.GetAllocator(), fUnitScale, options);
+                pReadable->DeserializeJSON(docReadable, fUnitScale);
+            }
+        }
+        else {
+            // TODO: create a new Readable?
+            SetReadableInterface(it->first, it->second);
+        }
+    }
+
+    // delete readableInterface
+    FOREACH(itExisting, GetReadableInterfaces()) {
+        bool bFound = false;
+        FOREACHC(it, info._mReadableInterfaces) {
+            if (itExisting->first == it->first) {
+                bFound = true;
+                break;
+            }
+        }
+        if (!bFound) {
+            ClearReadableInterface(itExisting->first);
+        }
+    }
+    return UFIR_Success;
 }
 
 } // end namespace OpenRAVE

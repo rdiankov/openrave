@@ -470,6 +470,109 @@ inline const char *strcasestr(const char *s, const char *find)
 }
 #endif
 
+/// \brief converts the value into output and writes a null terminator
+///
+/// \return length of string (ie strlen(output))
+inline uint32_t ConvertUIntToHex(uint32_t value, char* output)
+{
+    uint32_t length = 1 + ((value & 0xffff0000) ? 4 : 0) + ((value & 0xff00ff00) ? 2 : 0) +  ((value & 0xf0f0f0f0) ? 1 : 0);
+    for(int index = 0; index < length; ++index) {
+        uint32_t nibble = (value>>(4*(length-1-index)))&0xf;
+        if( nibble < 10 ) {
+            output[index] = '0'+nibble;
+        }
+        else {
+            output[index] = 'A'+(nibble-10);
+        }
+    }
+    output[length] = 0; // null terminator
+    return length;
+}
+
+///* \brief Update current info from json value. Create a new one if there is no id matched.
+template<typename T>
+void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string& id, std::vector<boost::shared_ptr<T> >& vInfos, dReal fUnitScale, int options)
+{
+    typename std::vector<boost::shared_ptr<T>>::iterator itExistingInfo = vInfos.end();
+    FOREACH(itInfo, vInfos) {
+        if ((*itInfo)->_id == id) {
+            itExistingInfo = itInfo;
+            break;
+        }
+    }
+    bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
+    if (itExistingInfo != vInfos.end()) {
+        if (isDeleted) {
+            vInfos.erase(itExistingInfo);
+            return;
+        }
+        (*itExistingInfo)->DeserializeJSON(value, fUnitScale, options);
+        (*itExistingInfo)->_id = id;
+        return;
+    }
+    if (isDeleted) {
+        return;
+    }
+    boost::shared_ptr<T> pNewInfo(new T());
+    pNewInfo->DeserializeJSON(value, fUnitScale, options);
+    pNewInfo->_id = id;
+    vInfos.push_back(pNewInfo);
+}
+
+/// \brief helper function to compare two info(shared_ptr) vectors and copy the diff into vecDiffOut;
+template<typename T>
+void GetInfoVectorDiff(const std::vector<boost::shared_ptr<T>>& oldInfos, const std::vector<boost::shared_ptr<T>>& newInfos, std::vector<boost::shared_ptr<T>>& vecDiffOut) {
+    vecDiffOut.reserve(oldInfos.size() + newInfos.size());
+    std::vector<bool> existingNewInfo(newInfos.size(), false);
+    for(typename std::vector<boost::shared_ptr<T>>::const_iterator itOldInfo = oldInfos.begin(); itOldInfo != oldInfos.end(); itOldInfo++) {
+        bool oldInfoFound = false;
+        for(typename std::vector<boost::shared_ptr<T>>::const_iterator itNewInfo = newInfos.begin(); itNewInfo != newInfos.end(); itNewInfo++) {
+            if ((*itOldInfo)->_id == (*itNewInfo)->_id) {
+                if ((**itOldInfo) != (**itNewInfo)) {
+                    vecDiffOut.push_back(*itOldInfo);
+                }
+                existingNewInfo[itNewInfo - newInfos.begin()] = true;
+                oldInfoFound = true;
+                break;
+            }
+        }
+        if (!oldInfoFound) {
+            vecDiffOut.push_back(*itOldInfo);
+        }
+    }
+
+    for(size_t iFound = 0; iFound < existingNewInfo.size(); iFound++) {
+        if (!existingNewInfo[iFound]) {
+            vecDiffOut.push_back(newInfos[iFound]);
+        }
+    }
+}
+
+template<typename T>
+bool IsInfoVectorEqual(const std::vector<boost::shared_ptr<T>>& oldInfos, const std::vector<boost::shared_ptr<T>>& newInfos) {
+    if (oldInfos.size() != newInfos.size()) {
+        return false;
+    }
+
+    for (size_t iOld = 0; iOld < oldInfos.size(); iOld++) {
+        bool bFound = false;
+        for (size_t iNew = 0; iNew < newInfos.size(); iNew++) {
+            if (oldInfos[iOld]->_id == newInfos[iNew]->_id) {
+                bFound = true;
+                if ((*oldInfos[iOld]) != (*newInfos[iNew])) {
+                    return false;
+                }
+                break;
+            }
+        }
+        if (!bFound) {
+            return false;
+        }
+    }
+    return true;
+
+}
+
 } // end OpenRAVE namespace
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace

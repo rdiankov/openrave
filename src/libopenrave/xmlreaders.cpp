@@ -16,7 +16,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 #include <openrave/xmlreaders.h>
-
 #include <boost/lexical_cast.hpp>
 
 #define LIBXML_SAX1_ENABLED
@@ -30,31 +29,8 @@
 #include <libxml/xmlmemory.h>
 
 namespace OpenRAVE {
+
 namespace xmlreaders {
-
-StringXMLReadable::StringXMLReadable(const std::string& xmlid, const std::string& data) : XMLReadable(xmlid), _data(data)
-{
-}
-
-void StringXMLReadable::Serialize(BaseXMLWriterPtr writer, int options) const
-{
-    if( writer->GetFormat() == "collada" ) {
-        AttributesList atts;
-        atts.emplace_back("type", "stringxmlreadable");
-        atts.emplace_back("name", GetXMLId());
-        BaseXMLWriterPtr child = writer->AddChild("extra",atts);
-        atts.clear();
-        atts.emplace_back("profile", "OpenRAVE");
-        writer = child->AddChild("technique",atts)->AddChild("data");
-    }
-
-    writer->SetCharData(_data);
-}
-
-const std::string& StringXMLReadable::GetData() const
-{
-    return _data;
-}
 
 HierarchicalXMLReadable::HierarchicalXMLReadable(const std::string& xmlid, const AttributesList& atts) : XMLReadable(xmlid), _atts(atts)
 {
@@ -256,7 +232,7 @@ BaseXMLReader::ProcessElement GeometryInfoReader::startElement(const std::string
         return PE_Ignore;
     }
 
-    if( xmlname == _pgeom->GetXMLId() || xmlname == "geom" ) {
+    if( xmlname == "geometry" || xmlname == "geom" ) {
         _pcurreader.reset(new GeometryInfoReader(_pgeom, atts));
         return PE_Support;
     }
@@ -318,7 +294,7 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
         return false;
     }
 
-    if( xmlname == _pgeom->GetXMLId() || xmlname == "geom" ) {
+    if( xmlname == "geometry" || xmlname == "geom" ) {
         return true;
     }
     else if( xmlname == "translation" ) {

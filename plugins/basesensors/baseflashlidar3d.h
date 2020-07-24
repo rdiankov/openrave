@@ -117,6 +117,16 @@ protected:
     {
 public:
         CameraIntrinsics KK;         // intrinsic matrix expanding to [ KK[0] 0 KK[2]; 0 KK[1] KK[3] ]
+        bool operator==(const JSONReadable& other) {
+            boost::shared_ptr<const BaseFlashLidar3DGeom> pOther = boost::dynamic_pointer_cast<const BaseFlashLidar3DGeom>(other.shared_from_this());
+            if (!pOther) {
+                return false;
+            }
+            return width == pOther->width && height == pOther->height;
+        }
+        bool operator!=(const JSONReadable& other) {
+            return !operator==(other);
+        }
         int width, height;         // dimensions in number of lasers
     };
 

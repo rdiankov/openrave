@@ -54,7 +54,6 @@
 #include <map>
 #include <set>
 #include <string>
-#include <exception>
 
 #include <iomanip>
 #include <fstream>
@@ -77,6 +76,7 @@
 #include <boost/format.hpp>
 #include <boost/array.hpp>
 #include <boost/multi_array.hpp>
+#include <boost/make_shared.hpp>
 //#include <boost/cstdint.hpp>
 
 #endif
@@ -88,6 +88,7 @@
 #endif
 
 #include <openrave/smart_ptr.h>
+#include <openrave/openraveexception.h>
 
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
@@ -149,40 +150,6 @@ OPENRAVE_API dReal RaveCeil(dReal f);
 
 //@}
 
-/// %OpenRAVE error codes
-enum OpenRAVEErrorCode {
-    ORE_Failed=0,
-    ORE_InvalidArguments=1, ///< passed in input arguments are not valid
-    ORE_EnvironmentNotLocked=2,
-    ORE_CommandNotSupported=3, ///< string command could not be parsed or is not supported
-    ORE_Assert=4,
-    ORE_InvalidPlugin=5, ///< shared object is not a valid plugin
-    ORE_InvalidInterfaceHash=6, ///< interface hashes do not match between plugins
-    ORE_NotImplemented=7, ///< function is not implemented by the interface.
-    ORE_InconsistentConstraints=8, ///< returned solutions or trajectories do not follow the constraints of the planner/module. The constraints invalidated here are planning constraints, not programming constraints.
-    ORE_NotInitialized=9, ///< when object is used without it getting fully initialized
-    ORE_InvalidState=10, ///< the state of the object is not consistent with its parameters, or cannot be used. This is usually due to a programming error where a vector is not the correct length, etc.
-    ORE_Timeout=11, ///< process timed out
-};
-
-/// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
-class OPENRAVE_API OpenRAVEException : public std::exception
-{
-public:
-    OpenRAVEException();
-    OpenRAVEException(const std::string& s, OpenRAVEErrorCode error=ORE_Failed);
-    virtual ~OpenRAVEException() throw() {
-    }
-    char const* what() const throw();
-    const std::string& message() const;
-    OpenRAVEErrorCode GetCode() const;
-private:
-    std::string _s;
-    OpenRAVEErrorCode _error;
-};
-
-typedef OpenRAVEException openrave_exception;
-
 class OPENRAVE_LOCAL CaseInsensitiveCompare
 {
 public:
@@ -235,24 +202,6 @@ public:
 };
 typedef boost::shared_ptr<SerializableData> SerializableDataPtr;
 typedef boost::weak_ptr<SerializableData> SerializableDataWeakPtr;
-
-#define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s")%(__PRETTY_FUNCTION__)%(__LINE__)%(s)),errorcode)
-
-/// adds the function name and line number to an openrave exception
-#define OPENRAVE_EXCEPTION_FORMAT(s, args, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] ")%(__PRETTY_FUNCTION__)%(__LINE__)) + boost::str(boost::format(s)%args),errorcode)
-
-#define OPENRAVE_ASSERT_FORMAT(testexpr, s, args, errorcode) { if( !(testexpr) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] (%s) failed ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# testexpr)) + boost::str(boost::format(s)%args),errorcode); } }
-
-#define OPENRAVE_ASSERT_FORMAT0(testexpr, s, errorcode) { if( !(testexpr) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] (%s) failed %s")%(__PRETTY_FUNCTION__)%(__LINE__)%(# testexpr)%(s)),errorcode); } }
-
-// note that expr1 and expr2 will be evaluated twice if not equal
-#define OPENRAVE_ASSERT_OP_FORMAT(expr1,op,expr2,s, args, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)) + boost::str(boost::format(s)%args),errorcode); } }
-
-#define OPENRAVE_ASSERT_OP_FORMAT0(expr1,op,expr2,s, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) %s")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)%(s)),errorcode); } }
-
-#define OPENRAVE_ASSERT_OP(expr1,op,expr2) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),OpenRAVE::ORE_Assert); } }
-
-#define OPENRAVE_DUMMY_IMPLEMENTATION { throw OPENRAVE_EXCEPTION_FORMAT0("not implemented",OpenRAVE::ORE_NotImplemented); }
 
 /// \brief Enumeration of all the interfaces.
 enum InterfaceType
@@ -368,13 +317,21 @@ enum CloningOptions {
 };
 
 /// base class for readable interfaces
-class OPENRAVE_API XMLReadable : public UserData
+class OPENRAVE_API Readable : public UserData
 {
 public:
-    XMLReadable(const std::string& xmlid) : __xmlid(xmlid) {
-    }
-    virtual ~XMLReadable() {
-    }
+    Readable() {}
+    virtual ~Readable() {}
+};
+typedef boost::shared_ptr<Readable> ReadablePtr;
+typedef boost::shared_ptr<Readable const> ReadableConstPtr;
+
+/// base class for xml readable interfaces
+class OPENRAVE_API XMLReadable : virtual public Readable
+{
+public:
+    XMLReadable(const std::string& xmlid) : __xmlid(xmlid) { }
+    virtual ~XMLReadable() { }
     virtual const std::string& GetXMLId() const {
         return __xmlid;
     }
@@ -384,7 +341,6 @@ public:
 private:
     std::string __xmlid;
 };
-
 typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
 typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
 
@@ -432,9 +388,7 @@ public:
     /// XML filename/resource used for this class (can be empty)
     std::string _filename;
 };
-
 typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateXMLReaderFn;
-
 
 /// \brief reads until the tag ends
 class OPENRAVE_API DummyXMLReader : public BaseXMLReader
@@ -478,6 +432,48 @@ public:
     /// \brief returns a writer for child elements
     virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList()) = 0;
 };
+
+/// base class for json readable interfaces
+class OPENRAVE_API JSONReadable : virtual public Readable, public boost::enable_shared_from_this<JSONReadable>
+{
+public:
+    JSONReadable() {}
+    virtual ~JSONReadable() {}
+    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const = 0;
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale) = 0;
+    virtual bool operator==(const JSONReadable& other) = 0;
+    virtual bool operator!=(const JSONReadable& other) = 0;
+};
+typedef boost::shared_ptr<JSONReadable> JSONReadablePtr;
+typedef boost::shared_ptr<JSONReadable const> JSONReadableConstPtr;
+
+/// \brief base class for all json readers. JSONReaders are used to process data from json files.
+///
+/// Custom readers can be registered through \ref RaveRegisterJSONReader.
+class OPENRAVE_API BaseJSONReader : public boost::enable_shared_from_this<BaseJSONReader>
+{
+public:
+
+    BaseJSONReader() {}
+    virtual ~BaseJSONReader() {}
+
+    /// a readable interface that stores the information processsed for the current tag
+    /// This pointer is used to the InterfaceBase class registered readers
+    virtual JSONReadablePtr GetReadable() {
+        return JSONReadablePtr();
+    }
+
+    /// by default, json reader will simply call readable's deserialize function
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) {
+        JSONReadablePtr pReadable = GetReadable();
+        if (!!pReadable) {
+            pReadable->DeserializeJSON(value, fUnitScale);
+        }
+    }
+};
+typedef boost::shared_ptr<BaseJSONReader> BaseJSONReaderPtr;
+typedef boost::shared_ptr<BaseJSONReader const> BaseJSONReaderConstPtr;
+typedef boost::function<BaseJSONReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateJSONReaderFn;
 
 } // end namespace OpenRAVE
 
@@ -596,6 +592,31 @@ enum IkParameterizationType {
     IKP_UniqueIdMask = 0x0000ffff, ///< the mask for the unique ids
     IKP_CustomDataBit = 0x00010000, ///< bit is set if the ikparameterization contains custom data, this is only used when serializing the ik parameterizations
 };
+
+class OPENRAVE_API StringReadable: public XMLReadable, public JSONReadable
+{
+public:
+    StringReadable(const std::string& id, const std::string& data);
+    virtual ~StringReadable();
+    virtual void Serialize(BaseXMLWriterPtr wirter, int options=0) const;
+    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+    virtual bool operator==(const JSONReadable& other) {
+        boost::shared_ptr<const StringReadable> pOther = boost::dynamic_pointer_cast<const StringReadable>(other.shared_from_this());
+        if (!pOther) {
+            return false;
+        }
+
+        return _data == pOther->_data;
+    }
+    virtual bool operator!=(const JSONReadable& other) {
+        return !operator==(other);
+    }
+
+    const std::string& GetData() const;
+    std::string _data;
+};
+typedef boost::shared_ptr<StringReadable> StringReadablePtr;
 
 /// \brief returns a string of the ik parameterization type names
 ///
@@ -2100,6 +2121,16 @@ public:
 
     void DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale=1.0);
 
+    virtual bool operator==(const IkParameterization& other) const {
+        return _type == other._type
+            && _transform == other._transform
+            && _mapCustomData == other._mapCustomData;
+    }
+
+    virtual bool operator!=(const IkParameterization& other) const {
+        return !operator==(other);
+    }
+
 protected:
     inline static bool _IsValidCharInName(char c) {
         return c < 0 || c >= 33;
@@ -2632,6 +2663,16 @@ OPENRAVE_API UserDataPtr RaveRegisterInterface(InterfaceType type, const std::st
  */
 OPENRAVE_API UserDataPtr RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
 
+/** \brief Registers a custom json reader for a particular interface.
+
+    Once registered, anytime an interface is created through JSON and
+    the id is seen, the function CreateJSONReaderFn will be called to get a reader
+    \param id the id specified is seen in the interface, the the custom reader will be created.
+    \param fn CreateJSONReaderFn(pinterface,atts) - passed in the pointer to the interface where the id was seen along with the list of attributes
+    \return a pointer holding the registration, releasing the pointer will unregister the XML reader
+ */
+OPENRAVE_API UserDataPtr RaveRegisterJSONReader(InterfaceType type, const std::string& id, const CreateJSONReaderFn& fn);
+
 /// \brief return the environment's unique id, returns 0 if environment could not be found or not registered
 OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBaseConstPtr env);
 
@@ -2646,6 +2687,11 @@ OPENRAVE_API void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenviron
 ///
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
 OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts);
+
+/// \brief Returns the current registered json reader for the interface type/id
+///
+/// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
+OPENRAVE_API BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, InterfaceBasePtr pinterface, const AttributesList& atts);
 
 /** \brief Returns the absolute path of the filename on the local filesystem resolving relative paths from OpenRAVE paths.
 
@@ -2760,6 +2806,7 @@ const std::string& IkParameterization::GetName() const
     }
     throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")%_type));
 }
+
 
 } // end namespace OpenRAVE
 

@@ -123,8 +123,10 @@ void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
     FOREACHC(it, __mapReadableInterfaces) {
         // sometimes interfaces might be disabled
-        if( !!it->second ) {
-            it->second->Serialize(writer,options);
+        // some readable are not xml readable and does not get serialized here
+        XMLReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<XMLReadable>(it->second);
+        if( !!pxmlreadable ) {
+            pxmlreadable->Serialize(writer,options);
         }
     }
 }
@@ -252,29 +254,28 @@ void InterfaceBase::_GetJSONCommandHelp(const rapidjson::Value& input, rapidjson
     output.SetObject();
 
     for(JSONCMDMAP::const_iterator it = __mapJSONCommands.begin(); it != __mapJSONCommands.end(); ++it) {
-        output.AddMember(rapidjson::Value().SetString(it->first.c_str(), allocator), rapidjson::Value().SetString(it->second->help.c_str
-            (), allocator), allocator);
+        output.AddMember(rapidjson::Value().SetString(it->first.c_str(), allocator), rapidjson::Value().SetString(it->second->help.c_str(), allocator), allocator);
     }
 }
 
-XMLReadablePtr InterfaceBase::GetReadableInterface(const std::string& xmltag) const
+ReadablePtr InterfaceBase::GetReadableInterface(const std::string& id) const
 {
     boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
-    READERSMAP::const_iterator it = __mapReadableInterfaces.find(xmltag);
-    return it != __mapReadableInterfaces.end() ? it->second : XMLReadablePtr();
+    READERSMAP::const_iterator it = __mapReadableInterfaces.find(id);
+    return it != __mapReadableInterfaces.end() ? it->second : ReadablePtr();
 }
 
-XMLReadablePtr InterfaceBase::SetReadableInterface(const std::string& xmltag, XMLReadablePtr readable)
+ReadablePtr InterfaceBase::SetReadableInterface(const std::string& id, ReadablePtr readable)
 {
     boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
-    READERSMAP::iterator it = __mapReadableInterfaces.find(xmltag);
+    READERSMAP::iterator it = __mapReadableInterfaces.find(id);
     if( it == __mapReadableInterfaces.end() ) {
         if( !!readable ) {
-            __mapReadableInterfaces[xmltag] = readable;
+            __mapReadableInterfaces[id] = readable;
         }
-        return XMLReadablePtr();
+        return ReadablePtr();
     }
-    XMLReadablePtr pprev = it->second;
+    ReadablePtr pprev = it->second;
     if( !!readable ) {
         it->second = readable;
     }
@@ -282,6 +283,17 @@ XMLReadablePtr InterfaceBase::SetReadableInterface(const std::string& xmltag, XM
         __mapReadableInterfaces.erase(it);
     }
     return pprev;
+}
+
+void InterfaceBase::ClearReadableInterfaces()
+{
+    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    __mapReadableInterfaces.clear();
+}
+
+void InterfaceBase::ClearReadableInterface(const std::string& id) {
+    boost::unique_lock<boost::shared_mutex> lock(_mutexInterface);
+    __mapReadableInterfaces.erase(id);
 }
 
 }

@@ -2379,13 +2379,17 @@ private:
             pextra->setType("manipulator");
             domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
             ptec->setProfile("OpenRAVE");
-            daeElementRef frame_origin = ptec->add("frame_origin");
-            frame_origin->setAttribute("link",vlinksidrefs.at((*itmanip)->GetBase()->GetIndex()).c_str());
+            if( !!(*itmanip)->GetBase() ) {
+                daeElementRef frame_origin = ptec->add("frame_origin");
+                frame_origin->setAttribute("link",vlinksidrefs.at((*itmanip)->GetBase()->GetIndex()).c_str());
+            }
             daeElementRef frame_tip = ptec->add("frame_tip");
-            frame_tip->setAttribute("link",vlinksidrefs.at((*itmanip)->GetEndEffector()->GetIndex()).c_str());
+            if( !!(*itmanip)->GetEndEffector() ) {
+                frame_tip->setAttribute("link",vlinksidrefs.at((*itmanip)->GetEndEffector()->GetIndex()).c_str());
+            }
             _WriteTransformation(frame_tip,(*itmanip)->GetLocalToolTransform());
+            daeElementRef direction = frame_tip->add("direction");
             {
-                daeElementRef direction = frame_tip->add("direction");
                 stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                 ss << (*itmanip)->GetLocalToolDirection().x << " " << (*itmanip)->GetLocalToolDirection().y << " " << (*itmanip)->GetLocalToolDirection().z;
                 direction->setCharData(ss.str());
@@ -2552,8 +2556,10 @@ private:
                 domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
                 ptec->setProfile("OpenRAVE");
 
+                dReal fUnitScale=1;
+                int options = 0;
                 rapidjson::Document rGripperInfo;
-                (*itGripperInfo)->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator());
+                (*itGripperInfo)->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator(), fUnitScale, options);
                 if (rGripperInfo.HasMember("id")) {
                     rGripperInfo.RemoveMember("id");
                 }
@@ -2561,7 +2567,7 @@ private:
                     rGripperInfo.RemoveMember("name");
                 }
                 daeElementRef pjson_data = ptec->add("json_data");
-                std::string sGripperInfoJSON = openravejson::DumpJson(rGripperInfo);
+                std::string sGripperInfoJSON = OpenRAVE::orjson::DumpJson(rGripperInfo);
                 pjson_data->setCharData(sGripperInfoJSON.c_str());
             }
         }
@@ -2582,7 +2588,7 @@ private:
                 _WriteTransformation(frame_origin,(*itConnectedBody)->GetRelativeTransform());
 
                 daeElementRef instance_body = ptec->add("instance_body");
-                instance_body->setAttribute("url",(*itConnectedBody)->GetInfo()._url.c_str());
+                instance_body->setAttribute("url",(*itConnectedBody)->GetInfo()._uri.c_str());
 
                 ptec->add("active")->add("bool")->setCharData((*itConnectedBody)->IsActive() ? "true" : "false");
             }
