@@ -35,7 +35,7 @@
 
 #ifdef BOOST_ASSERT
 #define MATH_ASSERT BOOST_ASSERT
-#ifdef BOOST_DISABLE_ASSERTS
+#if defined(BOOST_DISABLE_ASSERTS)||defined(NDEBUG)
 // in case where <boost/assert.hpp> is included and BOOST_DISABLE_ASSERTS is used
 #define MATH_DISABLE_ASSERTS
 #endif // BOOST_DISABLE_ASSERTS
