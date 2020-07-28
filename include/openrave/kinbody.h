@@ -61,30 +61,8 @@ class OPENRAVE_API ElectricMotorActuatorInfo
 {
 public:
     ElectricMotorActuatorInfo() {};
-    ElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& other) {
-        *this = other;
-    }
-    ElectricMotorActuatorInfo& operator=(const ElectricMotorActuatorInfo& other) {
-        model_type = other.model_type;
-        assigned_power_rating = other.assigned_power_rating;
-        max_speed = other.max_speed;
-        no_load_speed = other.no_load_speed;
-        stall_torque = other.stall_torque;
-        max_instantaneous_torque = other.max_instantaneous_torque;
-        nominal_speed_torque_points = other.nominal_speed_torque_points;
-        max_speed_torque_points = other.max_speed_torque_points;
-        nominal_torque = other.nominal_torque;
-        rotor_inertia = other.rotor_inertia;
-        torque_constant = other.torque_constant;
-        nominal_voltage = other.nominal_voltage;
-        speed_constant = other.speed_constant;
-        starting_current = other.starting_current;
-        terminal_resistance = other.terminal_resistance;
-        gear_ratio = other.gear_ratio;
-        coloumb_friction = other.coloumb_friction;
-        viscous_friction = other.viscous_friction;
-        return *this;
-    }
+    ElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& other) = default;
+    ElectricMotorActuatorInfo& operator=(const ElectricMotorActuatorInfo& other) = default;
     bool operator==(const ElectricMotorActuatorInfo& other) const {
         return model_type == other.model_type
             && assigned_power_rating == other.assigned_power_rating
@@ -198,31 +176,8 @@ public:
     {
 public:
         GeometryInfo() {}
-        GeometryInfo(const GeometryInfo& other) {
-            *this = other;
-        }
-        GeometryInfo& operator=(const GeometryInfo& other) {
-            _t = other._t;
-            _vGeomData = other._vGeomData;
-            _vGeomData2 = other._vGeomData2;
-            _vGeomData3 = other._vGeomData3;
-            _vGeomData4 = other._vGeomData4;
-            _vSideWalls = other._vSideWalls;
-            _vDiffuseColor = other._vDiffuseColor;
-            _vAmbientColor = other._vAmbientColor;
-            _meshcollision = other._meshcollision;
-            _type = other._type;
-            _id = other._id;
-            _name = other._name;
-            _filenamerender = other._filenamerender;
-            _filenamecollision = other._filenamecollision;
-            _vRenderScale = other._vRenderScale;
-            _vCollisionScale = other._vCollisionScale;
-            _fTransparency = other._fTransparency;
-            _bVisible = other._bVisible;
-            _bModifiable = other._bModifiable;
-            return *this;
-        }
+        GeometryInfo(const GeometryInfo& other) = default;
+        GeometryInfo& operator=(const GeometryInfo& other) = default;
         bool operator==(const GeometryInfo& other) const {
             return _t == other._t
                 && _vGeomData == other._vGeomData
@@ -1650,17 +1605,8 @@ private:
     {
 public:
         GrabbedInfo() {}
-        GrabbedInfo(const GrabbedInfo& other) {
-            *this = other;
-        }
-        GrabbedInfo& operator=(const GrabbedInfo& other) {
-            _id = other._id;
-            _grabbedname = other._grabbedname;
-            _robotlinkname = other._robotlinkname;
-            _trelative = other._trelative;
-            _setRobotLinksToIgnore = other._setRobotLinksToIgnore;
-            return *this;
-        }
+        GrabbedInfo(const GrabbedInfo& other) = default;
+        GrabbedInfo& operator=(const GrabbedInfo& other) = default;
         bool operator==(const GrabbedInfo& other) const {
             return _id == other._id
                 && _grabbedname == other._grabbedname
