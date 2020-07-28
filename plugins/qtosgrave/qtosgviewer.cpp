@@ -16,8 +16,8 @@
 #include <boost/lexical_cast.hpp>
 #include <iostream>
 
+#include <QSurfaceFormat>
 #include <osg/ArgumentParser>
-
 #include "osgviewerwidget.h"
 
 namespace qtosgrave {
@@ -207,6 +207,10 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
     else {
         connect(QApplication::instance(), SIGNAL(aboutToQuit()), this, SLOT(_ProcessApplicationQuit()));
     }
+
+    QSurfaceFormat sf;
+    sf.setSamples(8);
+    QSurfaceFormat::setDefaultFormat(sf);
 
     _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
 
@@ -1034,8 +1038,10 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
     int height = centralWidget()->size().height();
     _posgWidget->SetViewport(width, height, GetEnv()->GetUnit().second);
 
-    _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getMatrix());
-    osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
+    return;
+
+    _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCurrentCameraManipulator()->getMatrix());
+    osg::ref_ptr<osgGA::NodeTrackerManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::NodeTrackerManipulator>(_posgWidget->GetCurrentCameraManipulator());
     if( !!ptrackball ) {
         _focalDistance = ptrackball->getDistance();
     }
@@ -1118,7 +1124,7 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
                 _Tcamera.rot = vDestQuat;
             }
 
-            _SetCameraTransform();
+            //_SetCameraTransform();
         }
     }
 
@@ -1202,9 +1208,22 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
     EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
     KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
     if( !pbody ) {
+        // restore navigation manipulator
+        _posgWidget->RestoreDefaultManipulator();
         return false;
     }
     _ptrackinglink = pbody->GetLink(linkname);
+    auto raveItem = _posgWidget->GetItemFromName(bodyname);
+    if(!!raveItem && !!_ptrackinglink) {
+        auto osgNode = raveItem->GetOSGLink(_ptrackinglink->GetIndex());
+        if(osgNode) {
+            dynamic_cast<OpenRAVETracker*>(_posgWidget->GetTrackModeManipulator())->setTrackNode(osgNode.get());
+        }
+        else {
+            RAVELOG_ERROR(str("Could not retrieve scene node for the corresponding link"));
+            return;
+        }
+    }
     if( !!_ptrackinglink ) {
         sinput >> tTrackingLinkRelative;
         if( !!sinput ) {
@@ -1235,10 +1254,10 @@ bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
     _ptrackingmanip.reset();
     EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
     RobotBasePtr probot = GetEnv()->GetRobot(robotname);
+    _ptrackingmanip = probot->GetManipulator(manipname);
     if( !probot ) {
         return false;
     }
-    _ptrackingmanip = probot->GetManipulator(manipname);
     if( bresetvelocity ) {
         _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
     }
@@ -1395,17 +1414,17 @@ bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<fl
 
 void QtOSGViewer::_SetCameraTransform()
 {
-    osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
+    osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCurrentCameraManipulator());
     if( !!ptrackball ) {
         ptrackball->setDistance(_focalDistance);
     }
 
     // has to come after setting distance because internally orbit manipulator uses the distance to deduct view center
-    _posgWidget->GetCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
+    _posgWidget->GetCurrentCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
 
     //osg::Vec3d eye, center, up;
     //osg::Matrix::inverse(GetMatrixFromRaveTransform(_Tcamera)).getLookAt(eye, center, up, _focalDistance);
-    //_posgWidget->GetCameraManipulator()->setTransformation(eye, center, up);
+    //_posgWidget->GetCurrentCameraManipulator()->setTransformation(eye, center, up);
 }
 
 void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)

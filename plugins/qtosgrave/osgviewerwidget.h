@@ -27,12 +27,14 @@
 #include <osgViewer/ViewerEventHandlers>
 #include <osg/PositionAttitudeTransform>
 #include <osgManipulator/Dragger>
+#include <osgGA/NodeTrackerManipulator>
 #include <iostream>
 
 namespace qtosgrave {
 
 using namespace OpenRAVE;
 
+class OpenRAVETracker;
 class OpenRAVETrackball;
 
 /// \brief  Class of the openscene graph 3d viewer
@@ -125,7 +127,11 @@ public:
 
     osg::Camera *GetCamera();
 
-    osg::ref_ptr<osgGA::CameraManipulator> GetCameraManipulator();
+    osg::ref_ptr<osgGA::CameraManipulator> GetCurrentCameraManipulator();
+    void SetCurrentCameraManipulator(osgGA::CameraManipulator* manipulator);
+
+    void RestoreDefaultManipulator();
+    OpenRAVETracker* GetTrackModeManipulator();
 
     OSGMatrixTransformPtr GetCameraHUD();
 
@@ -134,6 +140,9 @@ public:
 
     /// \brief Find node of Robot for the link picked
     KinBodyItemPtr FindKinBodyItemFromOSGNode(OSGNodePtr node);
+
+    /// \brief Find KinBodyItem from a kinbody name
+    KinBodyItemPtr GetItemFromName(const std::string &name);
 
     /// \brief restores cursor to what it was originally set to
     void RestoreCursor();
@@ -173,7 +182,6 @@ protected:
 
     osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h, double metersinunit);
 
-    KinBodyItemPtr _GetItemFromName(const std::string &name);
 
     /// \brief Find joint into OpenRAVE core
     KinBody::JointPtr _FindJoint(KinBodyItemPtr pitem, KinBody::LinkPtr link);
@@ -247,7 +255,8 @@ protected:
     osgViewer::GraphicsWindowEmbedded* _osgGraphicWindow;
     osg::ref_ptr<osgViewer::View> _osgview;
     osg::ref_ptr<osgViewer::View> _osghudview;
-    osg::ref_ptr<OpenRAVETrackball> _osgCameraManipulator;
+    osg::ref_ptr<OpenRAVETrackball> _osgDefaultManipulator; //< default manipulator
+    osg::ref_ptr<OpenRAVETracker> _osgTrackModeManipulator; //< manipulator used by TrackLink and TrackManip commands
 
     osg::ref_ptr<osgText::Text> _osgHudText; ///< the HUD text in the upper left corner
     std::string _strUserText, _strSelectedItemText, _strRayInfoText; ///< the user hud text
@@ -256,7 +265,7 @@ protected:
 
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;
-
+    double _metersinunit; //< current meter unit to be used in all transformations and calculations
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
     bool _bSwitchMouseLeftMiddleButton;  ///< whether to switch mouse left button and middle button (camera control mode)
     bool _bLightOn; ///< whether lights are on or not
