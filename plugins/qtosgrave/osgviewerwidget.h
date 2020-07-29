@@ -23,10 +23,12 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLayout>
 #include <QtWidgets/QOpenGLWidget>
+
+#include <osg/AnimationPath>
+#include <osgManipulator/Dragger>
 #include <osgViewer/CompositeViewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osg/PositionAttitudeTransform>
-#include <osgManipulator/Dragger>
 #include <osgGA/NodeTrackerManipulator>
 #include <iostream>
 
@@ -34,8 +36,31 @@ namespace qtosgrave {
 
 using namespace OpenRAVE;
 
-class OpenRAVETracker;
 class OpenRAVETrackball;
+
+class OpenRAVETracker : public osgGA::NodeTrackerManipulator
+{
+public:
+    /// \brief Starts tracking the given node using the given upVector to set initial pose
+    /// param currentCamera is not stored, its only used to get current camera pose in order to calculate
+    /// the transition animation from current position to the final tracking position for the node
+    virtual void startTrackingNode(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector);
+    virtual void stopTrackingNode(osg::Camera* currentCamera);
+    virtual void setOffset(const osg::Vec3d& offset);
+    virtual osg::Matrixd getMatrix() const;
+
+    // need to reimplement this method so we can track based on nodes origin (or offset) instead of center of bounding sphere
+    // this function will be called to update camera from osg::CameraManipulator: virtual void updateCamera(osg::Camera& camera) { camera.setViewMatrix(getInverseMatrix()); }
+    virtual osg::Matrixd getInverseMatrix() const;
+
+private:
+    void createTransitionAnimationPath(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector);
+
+private:
+    osg::Vec3d _offset;
+    osg::ref_ptr<osg::AnimationPath> _transitionAnimationPath;
+
+};
 
 /// \brief  Class of the openscene graph 3d viewer
 class QOSGViewerWidget : public QOpenGLWidget
@@ -102,7 +127,10 @@ public:
     double GetCameraNearPlane();
 
     /// \brief called when the qt window size changes
-    void SetViewport(int width, int height, double metersinunit);
+    void SetViewport(int width, int height);
+
+    /// \brief update hud display axis from current manipulator transform
+    void UpdateHUDAxisTransform(int width, int height);
 
     /// \brief sets user-controlled hud text
     void SetUserHUDText(const std::string &text);
@@ -208,6 +236,8 @@ protected:
     /// \param draggerName the type of dragger to create
     /// \param joint if not empty, the joint to create the dragger over (ie for moving the joint value)
     OSGNodePtr _AddDraggerToObject(const std::string &draggerName, KinBodyItemPtr item, KinBody::JointPtr joint);
+
+    virtual void initializeGL();
 
     virtual void paintGL();
 

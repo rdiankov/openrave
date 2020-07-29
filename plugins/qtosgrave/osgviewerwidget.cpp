@@ -33,43 +33,69 @@
 
 namespace qtosgrave {
 
-class OpenRAVETracker : public osgGA::NodeTrackerManipulator
+void OpenRAVETracker::setOffset(const osg::Vec3d& offset) {
+    _offset = offset;
+}
+
+void OpenRAVETracker::startTrackingNode(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
 {
-public:
-    virtual void setOffset(const osg::Vec3d& offset) {
-        _offset = offset;
-    }
-    virtual osg::Matrixd getMatrix() const {
-        osg::Vec3d nodeCenter;
-        osg::Quat nodeRotation;
-        computeNodeCenterAndRotation(nodeCenter,nodeRotation);
+    // NodeTrackerManipulator::setTrackNode(node);
+    // osg::Vec3d eye, center, up;
+    // getTransformation( eye, center, up );
+    // setTransformation( eye, center, worldUpVector );
+    createTransitionAnimationPath(node, currentCamera, worldUpVector);
+    currentCamera->setUpdateCallback(new osg::AnimationPathCallback(_transitionAnimationPath.get(),0.0,1.0));
+}
 
-        osg::Matrixd localToWorld, worldToLocal;
-        computeNodeLocalToWorld(localToWorld);
+osg::Matrixd OpenRAVETracker::getMatrix() const {
+    osg::Vec3d nodeCenter;
+    osg::Quat nodeRotation;
+    computeNodeCenterAndRotation(nodeCenter, nodeRotation);
 
-        nodeCenter = osg::Vec3d(_offset) * localToWorld;
+    osg::Matrixd localToWorld;
+    computeNodeLocalToWorld(localToWorld);
 
-        return osg::Matrixd::translate(0.0,0.0,_distance)*osg::Matrixd::rotate(_rotation)*osg::Matrixd::rotate(nodeRotation)*osg::Matrix::translate(nodeCenter);
-    }
+    nodeCenter = osg::Vec3d(_offset) * localToWorld;
 
-    // need to reimplement this method so we can track based on nodes origin instead of center of bounding sphere
-    virtual osg::Matrixd getInverseMatrix() const
-    {
-        osg::Vec3d nodeCenter;
-        osg::Quat nodeRotation;
-        computeNodeCenterAndRotation(nodeCenter,nodeRotation);
+    return osg::Matrixd::translate(0.0,0.0,_distance)*osg::Matrixd::rotate(_rotation)*osg::Matrix::translate(nodeCenter);
+}
 
-        osg::Matrixd localToWorld, worldToLocal;
-        computeNodeLocalToWorld(localToWorld);
+void OpenRAVETracker::createTransitionAnimationPath(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
+{
+    _transitionAnimationPath->clear();
 
-        nodeCenter = osg::Vec3d(_offset) * localToWorld;
-        return osg::Matrixd::translate(-nodeCenter)*osg::Matrixd::rotate(nodeRotation.inverse())*osg::Matrixd::rotate(_rotation.inverse())*osg::Matrixd::translate(0.0,0.0,-_distance);
-    }
+    // first create current camera pose
+    osg::Matrixd viewMatrix = osg::Matrixd::inverse(currentCamera->getViewMatrix());
 
-private:
-    osg::Vec3d _offset;
+    osg::Vec3d cameraPos(viewMatrix(0,3), viewMatrix(1,3), viewMatrix(2,3));
+    osg::Quat cameraRotation = viewMatrix.getRotate();
+    _transitionAnimationPath->insert(0,osg::AnimationPath::ControlPoint(cameraPos, cameraRotation));
 
-};
+    // now calculate a pose that will look to the node using current position
+    osg::Matrixd localToWorld;
+    computeNodeLocalToWorld(localToWorld);
+
+    osg::Vec3d nodeCenter = osg::Vec3d(localToWorld(0,3),localToWorld(1,3),localToWorld(2,3));
+
+    osg::Matrixd lookAtNodeMatrix;
+    lookAtNodeMatrix.lookAt(cameraPos, nodeCenter, worldUpVector);
+
+    _transitionAnimationPath->insert(1,osg::AnimationPath::ControlPoint(cameraPos, lookAtNodeMatrix.getRotate()));
+}
+
+// need to reimplement this method so we can track based on nodes origin instead of center of bounding sphere
+osg::Matrixd OpenRAVETracker::getInverseMatrix() const
+{
+    osg::Vec3d nodeCenter;
+    osg::Quat nodeRotation;
+    computeNodeCenterAndRotation(nodeCenter,nodeRotation);
+
+    osg::Matrixd localToWorld, worldToLocal;
+    computeNodeLocalToWorld(localToWorld);
+
+    nodeCenter = osg::Vec3d(_offset) * localToWorld;
+    return osg::Matrixd::translate(-nodeCenter)*osg::Matrixd::rotate(_rotation.inverse())*osg::Matrixd::translate(0.0,0.0,-_distance);
+}
 
 class OpenRAVETrackball : public osgGA::TrackballManipulator
 {
@@ -806,17 +832,6 @@ void QOSGViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
     if (!!item) {
         KinBody::LinkPtr link = item->GetLinkFromOSG(node);
 
-//        if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_ALT) ) {
-//            //RAVELOG_INFO("setting camera manipulator tracking node\n");
-//            //_osgDefaultManipulator->setTrackNode(robot);
-//            _osgDefaultManipulator->setNode(node.get());//robot.get());
-//            _osgDefaultManipulator->computeHomePosition();
-//            _osgDefaultManipulator->home(2);
-//        }
-
-        //  Gets camera transform
-        //_StoreMatrixTransform(); // TODO store matrix for later canceling of the move
-
         // Find joint of a link name given
         joint = _FindJoint(item, link);
         if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_CTRL) ) {
@@ -928,16 +943,21 @@ void QOSGViewerWidget::SetViewType(int isorthogonal)
     }
 }
 
-void QOSGViewerWidget::SetViewport(int width, int height, double metersinunit)
+void QOSGViewerWidget::SetViewport(int width, int height)
 {
     float scale = this->devicePixelRatio();
-    osg::Matrix m = _osgDefaultManipulator->getInverseMatrix();
-    m.setTrans(width*scale/2 - 40, -height*scale/2 + 40, -50);
-    _osgWorldAxis->setMatrix(m);
-
     double textheight = 12*scale;
     _osgHudText->setPosition(osg::Vec3(-width*scale/2+10, height*scale/2-textheight, -50));
     _osgHudText->setCharacterSize(textheight);
+    UpdateHUDAxisTransform(width, height);
+}
+
+void QOSGViewerWidget::UpdateHUDAxisTransform(int width, int height)
+{
+    float scale = this->devicePixelRatio();
+    osg::Matrix m = GetCurrentCameraManipulator()->getInverseMatrix();
+    m.setTrans(width*scale/2 - 40, -height*scale/2 + 40, -50);
+    _osgWorldAxis->setMatrix(m);
 }
 
 void QOSGViewerWidget::Zoom(float factor)
@@ -1204,7 +1224,7 @@ osg::Camera *QOSGViewerWidget::GetCamera()
 
 osg::ref_ptr<osgGA::CameraManipulator> QOSGViewerWidget::GetCurrentCameraManipulator()
 {
-    return _osgDefaultManipulator;
+    return _osgview->getCameraManipulator();
 }
 
 void QOSGViewerWidget::SetCurrentCameraManipulator(osgGA::CameraManipulator* manipulator)
@@ -1396,6 +1416,10 @@ OSGNodePtr QOSGViewerWidget::_AddDraggerToObject(const std::string& draggerName,
     return _osgDraggerRoot;
 }
 
+void QOSGViewerWidget::initializeGL() {
+    SetViewport(width(), height());
+}
+
 void QOSGViewerWidget::paintGL()
 {
     try {
@@ -1420,11 +1444,13 @@ void QOSGViewerWidget::resizeGL(int width, int height)
         gw->getEventQueue()->windowResize(this->x() * scale, this->y() * scale, width * scale, height * scale);
         gw->resized(this->x() * scale, this->y() * scale, width * scale, height * scale);
     }
-    
+
     osg::Camera *camera = _osgview->getCamera();
     camera->setViewport(0, 0, width * scale, height * scale);
     osg::Camera *hudcamera = _osghudview->getCamera();
     hudcamera->setViewport(0, 0, width * scale, height * scale);
+
+    SetViewport(width, height);
 }
 
 void QOSGViewerWidget::mouseMoveEvent(QMouseEvent *event)
@@ -1439,7 +1465,6 @@ void QOSGViewerWidget::GetSwitchedButtonValue(unsigned int &button) {
         // left button = 1
         // middle button = 2
         button = (button << 1) % 3;
-
     }
 }
 

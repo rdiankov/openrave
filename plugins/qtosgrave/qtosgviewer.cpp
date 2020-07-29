@@ -1033,100 +1033,9 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
 {
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
-    // set the viewport size correctly so we can draw stuff on the hud using window coordinates
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
-    _posgWidget->SetViewport(width, height, GetEnv()->GetUnit().second);
-
-    return;
-
-    _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCurrentCameraManipulator()->getMatrix());
-    osg::ref_ptr<osgGA::NodeTrackerManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::NodeTrackerManipulator>(_posgWidget->GetCurrentCameraManipulator());
-    if( !!ptrackball ) {
-        _focalDistance = ptrackball->getDistance();
-    }
-    else {
-        _focalDistance = 0;
-    }
-
-    if( fTimeElapsed > 0 ) {
-        // animate the camera if necessary
-        bool bTracking=false;
-        Transform tTrack;
-        KinBody::LinkPtr ptrackinglink = _ptrackinglink;
-        if( !!ptrackinglink ) {
-            bTracking = true;
-            tTrack = ptrackinglink->GetTransform()*_tTrackingLinkRelative;
-            //tTrack.trans = ptrackinglink->ComputeAABB().pos;
-        }
-        RobotBase::ManipulatorPtr ptrackingmanip=_ptrackingmanip;
-        if( !!ptrackingmanip ) {
-            bTracking = true;
-            tTrack = ptrackingmanip->GetTransform();
-        }
-
-        if( bTracking ) {
-
-            RaveVector<float> vup(0,0,1); // up vector that camera should always be oriented to
-            if( !!GetEnv()->GetPhysicsEngine() ) {
-                Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
-                if( vgravity.lengthsqr3() > g_fEpsilon ) {
-                    vup = -vgravity*(1.0/RaveSqrt(vgravity.lengthsqr3()));
-                }
-            }
-            RaveVector<float> vlookatdir = _Tcamera.trans - tTrack.trans;
-            vlookatdir -= vup*vup.dot3(vlookatdir);
-            float flookatlen = sqrtf(vlookatdir.lengthsqr3());
-            vlookatdir = vlookatdir*cosf(_fTrackAngleToUp) + flookatlen*sinf(_fTrackAngleToUp)*vup; // flookatlen shouldn't change
-            if( flookatlen > g_fEpsilon ) {
-                vlookatdir *= 1/flookatlen;
-            }
-            else {
-                vlookatdir = Vector(1,0,0);
-            }
-            vup -= vlookatdir*vlookatdir.dot3(vup);
-            vup.normalize3();
-
-            //RaveVector<float> vcameradir = ExtractAxisFromQuat(_Tcamera.rot, 2);
-            //RaveVector<float> vToDesiredQuat = quatRotateDirection(vcameradir, vlookatdir);
-            //RaveVector<float> vDestQuat = quatMultiply(vToDesiredQuat, _Tcamera.rot);
-            //vDestQuat = quatMultiply(quatRotateDirection(ExtractAxisFromQuat(vDestQuat,1), vup), vDestQuat);
-            float angle = normalizeAxisRotation(vup, _Tcamera.rot).first;
-            RaveVector<float> vDestQuat = quatMultiply(quatFromAxisAngle(vup, -angle), quatRotateDirection(RaveVector<float>(0,1,0), vup));
-            //transformLookat(tTrack.trans, _Tcamera.trans, vup);
-
-            // focal distance is the tracking radius. ie how far from the coord system camera shoud be
-            RaveVector<float> vDestPos = tTrack.trans + ExtractAxisFromQuat(vDestQuat,2)*_focalDistance;
-
-            if(1) {
-                // PID animation
-                float pconst = 0.02;
-                float dconst = 0.2;
-                RaveVector<float> newtrans = _Tcamera.trans + fTimeElapsed*_tTrackingCameraVelocity.trans;
-                newtrans += pconst*(vDestPos - _Tcamera.trans); // proportional term
-                newtrans -= dconst*_tTrackingCameraVelocity.trans*fTimeElapsed; // derivative term (target is zero velocity)
-
-                pconst = 0.001;
-                dconst = 0.04;
-                RaveVector<float> newquat = _Tcamera.rot + fTimeElapsed*_tTrackingCameraVelocity.rot;
-                newquat += pconst*(vDestQuat - _Tcamera.rot);
-                newquat -= dconst*_tTrackingCameraVelocity.rot*fTimeElapsed;
-                newquat.normalize4();
-                // have to make sure newquat's y vector aligns with vup
-
-                _tTrackingCameraVelocity.trans = (newtrans-_Tcamera.trans)*(2/fTimeElapsed) - _tTrackingCameraVelocity.trans;
-                _tTrackingCameraVelocity.rot = (newquat-_Tcamera.rot)*(2/fTimeElapsed) - _tTrackingCameraVelocity.rot;
-                _Tcamera.trans = newtrans;
-                _Tcamera.rot = newquat;
-            }
-            else {
-                _Tcamera.trans = vDestPos;
-                _Tcamera.rot = vDestQuat;
-            }
-
-            //_SetCameraTransform();
-        }
-    }
+    _posgWidget->UpdateHUDAxisTransform(width, height);
 
     double fovy, aspectRatio, zNear, zFar;
     _posgWidget->GetCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
@@ -1209,21 +1118,10 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
     KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
     if( !pbody ) {
         // restore navigation manipulator
-        _posgWidget->RestoreDefaultManipulator();
+        _SetTrackManipulatorToStopTracking();
         return false;
     }
     _ptrackinglink = pbody->GetLink(linkname);
-    auto raveItem = _posgWidget->GetItemFromName(bodyname);
-    if(!!raveItem && !!_ptrackinglink) {
-        auto osgNode = raveItem->GetOSGLink(_ptrackinglink->GetIndex());
-        if(osgNode) {
-            dynamic_cast<OpenRAVETracker*>(_posgWidget->GetTrackModeManipulator())->setTrackNode(osgNode.get());
-        }
-        else {
-            RAVELOG_ERROR(str("Could not retrieve scene node for the corresponding link"));
-            return;
-        }
-    }
     if( !!_ptrackinglink ) {
         sinput >> tTrackingLinkRelative;
         if( !!sinput ) {
@@ -1233,6 +1131,10 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
             RAVELOG_WARN("failed to get tracking link relative trans\n");
             _tTrackingLinkRelative = Transform(); // use the identity
         }
+    }
+    KinBodyItemPtr kinBodyItem = _posgWidget->GetItemFromName(bodyname);
+    if(!_SetTrackManipulatorToTrackLink(_ptrackinglink, kinBodyItem, _tTrackingLinkRelative)) {
+        return false;
     }
     if( bresetvelocity ) {
         _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
@@ -1443,6 +1345,28 @@ void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
 void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistance)
 {
     _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance));
+}
+
+void QtOSGViewer::_SetTrackManipulatorToStopTracking() 
+{
+    _posgWidget->RestoreDefaultManipulator();
+}
+
+bool QtOSGViewer::_SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, KinBodyItemPtr linkParentKinBodyItem, const RaveTransform<float>& linkRelativeTranslation)
+{
+    if(!linkParentKinBodyItem || !link) {
+        RAVELOG_ERROR_FORMAT("Could not set track manipulator to track link %s of object %s", link->GetName()%linkParentKinBodyItem->GetName());
+        return false;
+    }
+    auto osgNode = linkParentKinBodyItem->GetOSGLink(link->GetIndex());
+    assert(osgNode);
+
+    OpenRAVETracker* trackManipulator = _posgWidget->GetTrackModeManipulator();
+    _posgWidget->SetCurrentCameraManipulator(trackManipulator);
+    trackManipulator->startTrackingNode(osgNode.get(), _posgWidget->GetCamera(), osg::Vec3d(0,1,0));
+    trackManipulator->setDistance(_focalDistance);
+    trackManipulator->setOffset(osg::Vec3d(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]));
+    return true;
 }
 
 void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
