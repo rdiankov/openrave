@@ -2515,11 +2515,11 @@ private:
                                     }
                                 }
                             }
-                            camgeom.Serialize(extrawriter,0);
+                            camgeom.SerializeXML(extrawriter,0);
                             bSerialize = false;
                         }
                         if( bSerialize ) {
-                            pgeom->Serialize(extrawriter,0);
+                            pgeom->SerializeXML(extrawriter,0);
                         }
                     }
 

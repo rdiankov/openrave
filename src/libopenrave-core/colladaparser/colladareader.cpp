@@ -4618,7 +4618,7 @@ private:
                 if( !!tec ) {
                     daeElementRef pdata = tec->getChild("data");
                     if( !!pdata ) {
-                        pbody->SetReadableInterface(xmlid, XMLReadablePtr(new xmlreaders::StringXMLReadable(xmlid, pdata->getCharData())));
+                        pbody->SetReadableInterface(xmlid, ReadablePtr(new StringReadable(xmlid, pdata->getCharData())));
                     }
                 }
             }

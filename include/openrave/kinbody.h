@@ -1720,7 +1720,7 @@ public:
         /// returns a pointer to the data used to initialize the BODY with AddKinBody.
         /// if psize is not NULL, will be filled with the size of the data in bytes
         /// This function will be used to restore bodies that were removed
-        virtual XMLReadableConstPtr GetData() const = 0;
+        virtual ReadableConstPtr GetData() const = 0;
 
         /// particular link that sensor system is tracking.
         /// All transformations describe this link.
@@ -1826,7 +1826,7 @@ public:
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
 
-        std::map<std::string, JSONReadablePtr> _mReadableInterfaces; ///< readable interface mapping
+        std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 
         bool _isRobot = false; ///< true if should create a RobotBasePtr
 protected:

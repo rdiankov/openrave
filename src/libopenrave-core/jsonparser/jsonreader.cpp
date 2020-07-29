@@ -486,7 +486,7 @@ protected:
                 BaseJSONReaderPtr pReader = RaveCallJSONReader(pInterface->GetInterfaceType(), id, pInterface, AttributesList());
                 if (!!pReader) {
                     pReader->DeserializeJSON(*itReadable, fUnitScale);//, _deserializeOptions);
-                    JSONReadablePtr pReadable = pReader->GetReadable();
+                    ReadablePtr pReadable = pReader->GetReadable();
                     if (!!pReadable) {
                         pInterface->SetReadableInterface(id, pReadable);
                     }

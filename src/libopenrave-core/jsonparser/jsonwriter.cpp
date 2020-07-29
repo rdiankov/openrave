@@ -152,7 +152,7 @@ protected:
                     rapidjson::Value readableInterfacesValue;
                     readableInterfacesValue.SetArray();
                     FOREACHC(it, pBody->GetReadableInterfaces()) {
-                        JSONReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(it->second);
+                        ReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(it->second);
                         if (!!pReadable) {
                             rapidjson::Value readableValue;
                             pReadable->SerializeJSON(readableValue, _allocator, fUnitScale, _serializeOptions);

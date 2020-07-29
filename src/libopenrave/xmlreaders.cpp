@@ -32,17 +32,18 @@ namespace OpenRAVE {
 
 namespace xmlreaders {
 
-HierarchicalXMLReadable::HierarchicalXMLReadable(const std::string& xmlid, const AttributesList& atts) : XMLReadable(xmlid), _atts(atts)
+HierarchicalXMLReadable::HierarchicalXMLReadable(const std::string& xmlid, const AttributesList& atts) : Readable(xmlid), _atts(atts)
 {
 }
 
-void HierarchicalXMLReadable::Serialize(BaseXMLWriterPtr writer, int options) const
+bool HierarchicalXMLReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
 {
     writer->SetCharData(_data);
     for(std::list<HierarchicalXMLReadablePtr>::const_iterator it = _listchildren.begin(); it != _listchildren.end(); ++it) {
         BaseXMLWriterPtr childwriter = writer->AddChild((*it)->GetXMLId(), (*it)->_atts);
-        (*it)->Serialize(childwriter,options);
+        (*it)->SerializeXML(childwriter,options);
     }
+    return true;
 }
 
 TrajectoryReader::TrajectoryReader(EnvironmentBasePtr penv, TrajectoryBasePtr ptraj, const AttributesList& atts) : _ptraj(ptraj)
@@ -652,7 +653,7 @@ void HierarchicalXMLReader::characters(const std::string& ch)
     }
 }
 
-XMLReadablePtr HierarchicalXMLReader::GetReadable()
+ReadablePtr HierarchicalXMLReader::GetReadable()
 {
     return _readable;
 }

@@ -476,7 +476,7 @@ inline const char *strcasestr(const char *s, const char *find)
 inline uint32_t ConvertUIntToHex(uint32_t value, char* output)
 {
     uint32_t length = 1 + ((value & 0xffff0000) ? 4 : 0) + ((value & 0xff00ff00) ? 2 : 0) +  ((value & 0xf0f0f0f0) ? 1 : 0);
-    for(int index = 0; index < length; ++index) {
+    for(uint32_t index = 0; index < length; ++index) {
         uint32_t nibble = (value>>(4*(length-1-index)))&0xf;
         if( nibble < 10 ) {
             output[index] = '0'+nibble;

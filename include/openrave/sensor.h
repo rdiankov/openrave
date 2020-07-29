@@ -178,32 +178,32 @@ public:
     };
 
     /// permanent properties of the sensors
-    class OPENRAVE_API SensorGeometry : public XMLReadable, public JSONReadable
+    class OPENRAVE_API SensorGeometry : public Readable
     {
 public:
-        SensorGeometry(const std::string& xmlid) : XMLReadable(xmlid), JSONReadable() {
+        SensorGeometry(const std::string& xmlid) : Readable(xmlid) {
         }
         virtual ~SensorGeometry() {
         }
         virtual SensorType GetType() const = 0;
 
-        virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override;
+        bool SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
+        bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
 
         virtual SensorGeometry& operator=(const SensorGeometry& r) {
             hardware_id = r.hardware_id;
             return *this;
         }
 
-        virtual bool operator==(const JSONReadable& r) {
-            boost::shared_ptr<const SensorGeometry> pOther = boost::dynamic_pointer_cast<const SensorGeometry>(r.shared_from_this());
+        bool operator==(const Readable& r) override {
+            const SensorGeometry* pOther = dynamic_cast<const SensorGeometry*>(&r);
             if (!pOther) {
                 return false;
             }
             return hardware_id == pOther->hardware_id;
         }
-        virtual bool operator!=(const JSONReadable& r) {
+        virtual bool operator!=(const Readable& r) {
             return !operator==(r);
         }
         std::string hardware_id; ///< optional hardware identifier of the sensor
@@ -221,8 +221,8 @@ public:
             return ST_Laser;
         }
 
-        virtual bool operator==(const JSONReadable& other) {
-            boost::shared_ptr<const LaserGeomData> pOther = boost::dynamic_pointer_cast<const LaserGeomData>(other.shared_from_this());
+        bool operator==(const Readable& other) override {
+            const LaserGeomData* pOther = dynamic_cast<const LaserGeomData*>(&other);
             if (!pOther) {
                 return false;
             }
@@ -236,7 +236,7 @@ public:
                 && time_scan == pOther->time_scan;
         }
 
-        virtual bool operator!=(const JSONReadable& other) {
+        bool operator!=(const Readable& other) override {
             return !operator==(other);
         }
         boost::array<dReal,2> min_angle;         ///< Start for the laser scan [rad].
@@ -272,8 +272,8 @@ public:
             return *this;
         }
 
-        virtual bool operator==(const JSONReadable& other) {
-            boost::shared_ptr<const CameraGeomData> pOther = boost::dynamic_pointer_cast<const CameraGeomData>(other.shared_from_this());
+        bool operator==(const Readable& other) override {
+            const CameraGeomData* pOther = dynamic_cast<const CameraGeomData*>(&other);
             if (!pOther) {
                 return false;
             }
@@ -287,13 +287,13 @@ public:
                 && gain == pOther->gain;
         }
 
-        virtual bool operator!=(const JSONReadable& other) {
+        bool operator!=(const Readable& other) override {
             return !operator==(other);
         }
 
-        virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override;
+        bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
+        bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
 
         std::string sensor_reference; ///< name of sensor that whose data is referenced. This sensor transforms the data in a particular way.
         std::string target_region; ///< name of the kinbody that describes the region of interest for the camera. 
@@ -315,16 +315,15 @@ public:
             return ST_JointEncoder;
         }
 
-        virtual bool operator==(const JSONReadable& other) {
-            boost::shared_ptr<const JointEncoderGeomData> pOther = boost::dynamic_pointer_cast<const JointEncoderGeomData>(other.shared_from_this());
+        bool operator==(const Readable& other) override {
+            const JointEncoderGeomData* pOther = dynamic_cast<const JointEncoderGeomData*>(&other);
             if (!pOther) {
                 return false;
             }
-            return SensorGeometry::operator==(other)
-                && resolution == pOther->resolution;
+            return SensorGeometry::operator==(other) && resolution == pOther->resolution;
         }
 
-        virtual bool operator!=(const JSONReadable& other) {
+        bool operator!=(const Readable& other) override {
             return !operator==(other);
         }
         std::vector<dReal> resolution;         ///< the delta value of one encoder tick
@@ -337,15 +336,15 @@ public:
         virtual SensorType GetType() const {
             return ST_Force6D;
         }
-        virtual bool operator==(const JSONReadable& other) {
-            boost::shared_ptr<const Force6DGeomData> pOther = boost::dynamic_pointer_cast<const Force6DGeomData>(other.shared_from_this());
+        bool operator==(const Readable& other) override {
+            const Force6DGeomData* pOther = dynamic_cast<const Force6DGeomData*>(&other);
             if (!pOther) {
                 return false;
             }
             return SensorGeometry::operator==(other);
         }
 
-        virtual bool operator!=(const JSONReadable& other) {
+        bool operator!=(const Readable& other) override {
             return !operator==(other);
         }
     };
@@ -358,16 +357,15 @@ public:
             return ST_IMU;
         }
 
-        virtual bool operator==(const JSONReadable& other) {
-            boost::shared_ptr<const IMUGeomData> pOther = boost::dynamic_pointer_cast<const IMUGeomData>(other.shared_from_this());
+        bool operator==(const Readable& other) override {
+            const IMUGeomData* pOther = dynamic_cast<const IMUGeomData*>(&other);
             if (!pOther) {
                 return false;
             }
-            return SensorGeometry::operator==(other)
-                && time_measurement == pOther->time_measurement;
+            return SensorGeometry::operator==(other) && time_measurement == pOther->time_measurement;
         }
 
-        virtual bool operator!=(const JSONReadable& other) {
+        bool operator!=(const Readable& other) override {
             return !operator==(other);
         }
         dReal time_measurement;         ///< time between measurements
@@ -380,8 +378,9 @@ public:
         virtual SensorType GetType() const {
             return ST_Odometry;
         }
-        virtual bool operator==(const JSONReadable& other) {
-            boost::shared_ptr<const OdometryGeomData> pOther = boost::dynamic_pointer_cast<const OdometryGeomData>(other.shared_from_this());
+
+        bool operator==(const Readable& other) override {
+            const OdometryGeomData* pOther = dynamic_cast<const OdometryGeomData*>(&other);
             if (!pOther) {
                 return false;
             }
@@ -389,7 +388,7 @@ public:
                 && targetid == pOther->targetid;
         }
 
-        virtual bool operator!=(const JSONReadable& other) {
+        bool operator!=(const Readable& other) override {
             return !operator==(other);
         }
 
@@ -405,8 +404,8 @@ public:
             return ST_Tactile;
         }
 
-        virtual bool operator==(const JSONReadable& other) {
-            boost::shared_ptr<const TactileGeomData> pOther = boost::dynamic_pointer_cast<const TactileGeomData>(other.shared_from_this());
+        bool operator==(const Readable& other) override {
+            const TactileGeomData* pOther = dynamic_cast<const TactileGeomData*>(&other);
             if (!pOther) {
                 return false;
             }
@@ -416,7 +415,7 @@ public:
                 // && _mapfriction == pOther->_mapfriction;
         }
 
-        virtual bool operator!=(const JSONReadable& other) {
+        bool operator!=(const Readable& other) override {
             return !operator==(other);
         }
 
@@ -454,8 +453,8 @@ public:
             return ST_Actuator;
         }
 
-        virtual bool operator==(const JSONReadable& other) {
-            boost::shared_ptr<const ActuatorGeomData> pOther = boost::dynamic_pointer_cast<const ActuatorGeomData>(other.shared_from_this());
+        bool operator==(const Readable& other) override {
+            const ActuatorGeomData* pOther = dynamic_cast<const ActuatorGeomData*>(&other);
             if (!pOther) {
                 return false;
             }
@@ -469,7 +468,7 @@ public:
                 && staticfriction == pOther->staticfriction
                 && viscousfriction == pOther->viscousfriction;
         }
-        virtual bool operator!=(const JSONReadable& other) {
+        bool operator!=(const Readable& other) override {
             return !operator==(other);
         }
         dReal maxtorque;         ///< Maximum possible torque actuator can apply (on output side). This includes the actuator's rotor, if one exists.

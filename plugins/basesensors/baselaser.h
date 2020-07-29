@@ -506,8 +506,8 @@ private:
 public:
         dReal fSpinSpeed;
         Vector vSpinAxis, vSpinPos;
-        virtual bool operator==(const JSONReadable& other) {
-            boost::shared_ptr<const SpinningLaserGeomData> pOther = boost::dynamic_pointer_cast<const SpinningLaserGeomData>(other.shared_from_this());
+        bool operator==(const Readable& other) override {
+            const SpinningLaserGeomData* pOther = dynamic_cast<const SpinningLaserGeomData*>(&other);
             if (!pOther) {
                 return false;
             }
@@ -516,7 +516,7 @@ public:
                 && vSpinAxis == pOther->vSpinAxis
                 && vSpinPos == pOther->vSpinPos;
         }
-        virtual bool operator!=(const JSONReadable& other) {
+        bool operator!=(const Readable& other) override {
             return !operator==(other);
         }
     };

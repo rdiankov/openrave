@@ -173,7 +173,7 @@ public:
             _pgeom.reset(new CameraGeomData());
         }
         virtual ~BaseCameraJSONReader() {}
-        virtual JSONReadablePtr GetReadable() {
+        ReadablePtr GetReadable() override {
             return _pgeom;
         }
 protected:
@@ -424,7 +424,7 @@ public:
         _Reset();
     }
 
-    void Serialize(BaseXMLWriterPtr writer, int options=0) const
+    void Serialize(BaseXMLWriterPtr writer, int options=0) const override
     {
         if( !!_pgeom ) {
             SensorBasePtr psensor_reference = _psensor_reference.lock();
@@ -432,7 +432,7 @@ public:
                 _pgeom->sensor_reference = psensor_reference->GetName();
             }
         }
-        _pgeom->Serialize(writer, options);
+        _pgeom->SerializeXML(writer, options);
         AttributesList atts;
         stringstream ss;
         ss << _vColor.x << " " << _vColor.y << " " << _vColor.z;

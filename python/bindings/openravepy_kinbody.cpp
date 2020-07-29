@@ -158,13 +158,13 @@ std::vector<std::pair<std::pair<std::string, int>, dReal> > ExtractDOFValuesArra
 }
 
 
-std::map<std::string, JSONReadablePtr> ExtractReadableInterfaces(object pyReadableInterfaces) {
+std::map<std::string, ReadablePtr> ExtractReadableInterfaces(object pyReadableInterfaces) {
     if (IS_PYTHONOBJECT_NONE(pyReadableInterfaces)) {
         return {};
     }
 
     py::dict pyReadableInterfacesDict = (py::dict)pyReadableInterfaces;
-    std::map<std::string, JSONReadablePtr> mReadableInterfaces;
+    std::map<std::string, ReadablePtr> mReadableInterfaces;
     try {
 
         py::list keys = py::list(pyReadableInterfacesDict.keys());
@@ -172,7 +172,7 @@ std::map<std::string, JSONReadablePtr> ExtractReadableInterfaces(object pyReadab
         for(size_t iKey = 0; iKey < numkeys; iKey++) {
             std::string name = py::extract<std::string>(keys[iKey]);
             ReadablePtr pReadable = ExtractReadable(pyReadableInterfacesDict[name]);
-            mReadableInterfaces[name] = boost::dynamic_pointer_cast<JSONReadable>(pReadable);
+            mReadableInterfaces[name] = boost::dynamic_pointer_cast<Readable>(pReadable);
             // Readable pValue = py::extract<Readable>(pyReadableInterfacesDict[name]);
             // mReadableInterfaces[name] = pValue;
         }
@@ -196,7 +196,7 @@ py::object ReturnDOFValues(const std::vector<std::pair<std::pair<std::string, in
     return pyDOFValuesList;
 }
 
-py::object ReturnReadableInterfaces(const std::map<std::string, JSONReadablePtr>& mReadableInterfaces)
+py::object ReturnReadableInterfaces(const std::map<std::string, ReadablePtr>& mReadableInterfaces)
 {
     py::dict pyReadableInterfaces;
     FOREACHC(it, mReadableInterfaces) {

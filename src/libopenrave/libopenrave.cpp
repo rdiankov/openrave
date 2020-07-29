@@ -2512,29 +2512,32 @@ bool SensorBase::CameraSensorData::serialize(std::ostream& O) const
     return true;
 }
 
-void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options) const
+bool SensorBase::SensorGeometry::SerializeXML(BaseXMLWriterPtr writer, int options) const
 {
     AttributesList atts;
     if( hardware_id.size() > 0 ) {
         writer->AddChild("hardware_id",atts)->SetCharData(hardware_id);
     }
+    return true;
 }
 
-void SensorBase::SensorGeometry::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+bool SensorBase::SensorGeometry::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     if(hardware_id.size() > 0) {
         orjson::SetJsonValueByKey(value, "hardwareId", hardware_id, allocator);
     }
+    return true;
 }
 
-void SensorBase::SensorGeometry::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+bool SensorBase::SensorGeometry::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     orjson::LoadJsonValueByKey(value, "hardwareId", hardware_id);
+    return true;
 }
 
-void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options) const
+bool SensorBase::CameraGeomData::SerializeXML(BaseXMLWriterPtr writer, int options) const
 {
-    SensorGeometry::Serialize(writer, options);
+    SensorGeometry::SerializeXML(writer, options);
     AttributesList atts;
     stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
     ss << KK.fx << " 0 " << KK.cx << " 0 " << KK.fy << " " << KK.cy;
@@ -2568,9 +2571,10 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
         writer->AddChild("target_region",atts);
         atts.clear();
     }
+    return true;
 }
 
-void SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+bool SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
     orjson::SetJsonValueByKey(value, "sensorReference", sensor_reference, allocator);
@@ -2580,9 +2584,10 @@ void SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjso
     orjson::SetJsonValueByKey(value, "height", height, allocator);
     orjson::SetJsonValueByKey(value, "measurementTime", measurement_time, allocator);
     orjson::SetJsonValueByKey(value, "gain", gain, allocator);
+    return true;
 }
 
-void SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
     orjson::LoadJsonValueByKey(value, "sensorReference", sensor_reference);
@@ -2592,6 +2597,7 @@ void SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "height", height);
     orjson::LoadJsonValueByKey(value, "measurementTime", measurement_time);
     orjson::LoadJsonValueByKey(value, "gain", gain);
+    return true;
 }
 
 
@@ -2743,7 +2749,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     // TODO have to scale _mapCustomData by fUnitScale
 }
 
-StringReadable::StringReadable(const std::string& id, const std::string& data): XMLReadable(id), JSONReadable(), _data(data)
+StringReadable::StringReadable(const std::string& id, const std::string& data): Readable(id), _data(data)
 {
 }
 
@@ -2751,7 +2757,7 @@ StringReadable::~StringReadable()
 {
 }
 
-void StringReadable::Serialize(BaseXMLWriterPtr writer, int options) const
+bool StringReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
 {
     if( writer->GetFormat() == "collada" ) {
         AttributesList atts;
@@ -2763,6 +2769,7 @@ void StringReadable::Serialize(BaseXMLWriterPtr writer, int options) const
         writer = child->AddChild("technique",atts)->AddChild("data");
     }
     writer->SetCharData(_data);
+    return true;
 }
 
 const std::string& StringReadable::GetData() const
@@ -2770,13 +2777,16 @@ const std::string& StringReadable::GetData() const
     return _data;
 }
 
-void StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+bool StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     orjson::SetJsonValueByKey(value, "string", _data, allocator);
+    return true;
 }
-void StringReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+
+bool StringReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     orjson::LoadJsonValueByKey(value, "string", _data);
+    return true;
 }
 
 } // end namespace OpenRAVE

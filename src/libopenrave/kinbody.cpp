@@ -222,7 +222,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
     if (_mReadableInterfaces.size() > 0) {
         rapidjson::Value rReadableInterfaces;
         rReadableInterfaces.SetArray();
-        for(std::map<std::string, JSONReadablePtr>::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
+        for(std::map<std::string, ReadablePtr>::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
             rapidjson::Value rReadable;
             it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
             orjson::SetJsonValueByKey(rReadable, "id", it->first, allocator);
@@ -316,7 +316,7 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const rapidjson::Value&
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, KinBodyPtr(), AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value);
-        JSONReadablePtr pReadable = pReader->GetReadable();
+        ReadablePtr pReadable = pReader->GetReadable();
         if (!!pReadable) {
             _mReadableInterfaces[id] = pReadable;
         }
@@ -5547,7 +5547,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 
 
     FOREACHC(it, GetReadableInterfaces()) {
-        JSONReadablePtr pReadable = boost::dynamic_pointer_cast<JSONReadable>(it->second);
+        ReadablePtr pReadable = boost::dynamic_pointer_cast<Readable>(it->second);
         if (!!pReadable) {
             info._mReadableInterfaces[it->first] = pReadable;
         }
@@ -5725,7 +5725,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     FOREACH(it, info._mReadableInterfaces) {
-        JSONReadablePtr pReadable = boost::dynamic_pointer_cast<JSONReadable>(GetReadableInterface(it->first));
+        ReadablePtr pReadable = boost::dynamic_pointer_cast<Readable>(GetReadableInterface(it->first));
         if (!!pReadable) {
             if ( (*(it->second)) != (*pReadable)) {
                 rapidjson::Document docReadable;

@@ -620,6 +620,8 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
             *itvertex *= fUnitScale;
         }
         break;
+    case GT_None:
+        break;
     }
 }
 

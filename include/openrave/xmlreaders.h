@@ -29,18 +29,16 @@ namespace OpenRAVE {
 
 namespace xmlreaders {
 
-typedef OpenRAVE::StringReadable StringXMLReadable RAVE_DEPRECATED;
-typedef boost::shared_ptr<StringXMLReadable> StringXMLReadablePtr RAVE_DEPRECATED;
 OPENRAVE_API bool ParseXMLData(BaseXMLReader& reader, const char* buffer, int size);
 
 /// \brief maintains a hierarchy of classes each containing the xml attributes and data
-class OPENRAVE_API HierarchicalXMLReadable : public XMLReadable
+class OPENRAVE_API HierarchicalXMLReadable : public Readable
 {
 public:
     HierarchicalXMLReadable(const std::string& xmlid, const AttributesList& atts);
     virtual ~HierarchicalXMLReadable() {
     }
-    virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+    bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override;
     std::string _data;
     AttributesList _atts;
     std::list<boost::shared_ptr<HierarchicalXMLReadable> > _listchildren;
@@ -57,9 +55,9 @@ public:
     /// \param traj can optionally pass a trajectory to initialize if need to read into an existing trajectory, but the pointer can be empty
     /// \param atts attributes passed from <trajectory> tag
     TrajectoryReader(EnvironmentBasePtr env, TrajectoryBasePtr traj = TrajectoryBasePtr(), const AttributesList& atts=AttributesList());
-    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
-    virtual bool endElement(const std::string& name);
-    virtual void characters(const std::string& ch);
+    ProcessElement startElement(const std::string& name, const AttributesList& atts) override;
+    bool endElement(const std::string& name) override;
+    void characters(const std::string& ch) override;
 
     inline TrajectoryBasePtr GetTrajectory() const {
         return _ptraj;
@@ -85,9 +83,9 @@ public:
     /// \param traj can optionally pass a trajectory to initialize if need to read into an existing trajectory, but the pointer can be empty
     /// \param atts attributes passed from <trajectory> tag
     GeometryInfoReader(KinBody::GeometryInfoPtr geom = KinBody::GeometryInfoPtr(), const AttributesList& atts=AttributesList());
-    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
-    virtual bool endElement(const std::string& name);
-    virtual void characters(const std::string& ch);
+    ProcessElement startElement(const std::string& name, const AttributesList& atts) override;
+    bool endElement(const std::string& name) override;
+    void characters(const std::string& ch) override;
 
     inline KinBody::GeometryInfoPtr GetGeometryInfo() const {
         return _pgeom;
@@ -125,9 +123,9 @@ public:
     /// \param traj can optionally pass a trajectory to initialize if need to read into an existing trajectory, but the pointer can be empty
     /// \param atts attributes passed from <trajectory> tag
     ElectricMotorActuatorInfoReader(ElectricMotorActuatorInfoPtr geom = ElectricMotorActuatorInfoPtr(), const AttributesList& atts=AttributesList());
-    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
-    virtual bool endElement(const std::string& name);
-    virtual void characters(const std::string& ch);
+    ProcessElement startElement(const std::string& name, const AttributesList& atts) override;
+    bool endElement(const std::string& name) override;
+    void characters(const std::string& ch) override;
 
     inline ElectricMotorActuatorInfoPtr GetActuatorInfo() const {
         return _pinfo;
@@ -146,11 +144,11 @@ class OPENRAVE_API HierarchicalXMLReader : public BaseXMLReader
 {
 public:
     HierarchicalXMLReader(const std::string& xmlid, const AttributesList& atts);
-    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
-    virtual bool endElement(const std::string& name);
-    virtual void characters(const std::string& ch);
-    virtual XMLReadablePtr GetReadable();
-    virtual HierarchicalXMLReadablePtr GetHierarchicalReadable();
+    ProcessElement startElement(const std::string& name, const AttributesList& atts) override;
+    bool endElement(const std::string& name) override;
+    void characters(const std::string& ch) override;
+    ReadablePtr GetReadable() override;
+    HierarchicalXMLReadablePtr GetHierarchicalReadable();
 private:
     std::string _xmlid;
     boost::shared_ptr<HierarchicalXMLReader> _pcurreader;
@@ -163,9 +161,9 @@ class OPENRAVE_API StreamXMLWriter : public BaseXMLWriter
 {
 public:
     StreamXMLWriter(const std::string& xmltag, const AttributesList& atts=AttributesList());
-    const std::string& GetFormat() const;
-    virtual void SetCharData(const std::string& data);
-    virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList());
+    const std::string& GetFormat() const override;
+    void SetCharData(const std::string& data) override;
+    BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList()) override;
     virtual void Serialize(std::ostream& stream);
 
     std::list<boost::shared_ptr<StreamXMLWriter> > _listchildren;

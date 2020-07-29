@@ -292,7 +292,7 @@ void PlannerParameters::StateSaver::_Restore()
     BOOST_ASSERT(ret==0);
 }
 
-PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _nMaxPlanningTime(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0)
+PlannerParameters::PlannerParameters() : Readable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _nMaxPlanningTime(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0)
 {
     _diffstatefn = SubtractStates;
     _neighstatefn = AddStates;
@@ -322,9 +322,8 @@ PlannerParameters::~PlannerParameters()
 {
 }
 
-PlannerParameters::PlannerParameters(const PlannerParameters &r) : XMLReadable("")
+PlannerParameters::PlannerParameters(const PlannerParameters &r)
 {
-    BOOST_ASSERT(0);
 }
 
 PlannerParameters& PlannerParameters::operator=(const PlannerParameters& r)

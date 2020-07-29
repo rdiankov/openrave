@@ -81,22 +81,25 @@ public:
     }
     std::string GetXMLId() const {
         // some readable are not xml readable and does have a xml id
-        XMLReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<XMLReadable>(_readable);
+        ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
         if (!pxmlreadable) {
             return "";
         }
         return pxmlreadable->GetXMLId();
     }
 
-    object Serialize(int options=0) {
+    object SerializeXML(int options=0) {
         // some readable are not xml readable and does not get serialized here
-        XMLReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<XMLReadable>(_readable);
+        ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
         if (!pxmlreadable) {
             return py::none_();
         }
         std::string xmlid;
         OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
-        pxmlreadable->Serialize(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options);
+        if( !pxmlreadable->SerializeXML(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options) ) {
+            return py::none_();
+        }
+
         std::stringstream ss;
         writer.Serialize(ss);
         return ConvertStringToUnicode(ss.str());
@@ -104,21 +107,23 @@ public:
 
     py::object SerializeJSON(dReal fUnitScale=1.0, int options=0) const
     {
-        JSONReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(_readable);
+        ReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
         if (!pjsonreadable) {
             return py::none_();
         }
         rapidjson::Document doc;
-        pjsonreadable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options);
+        if( !pjsonreadable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options) ) {
+            return py::none_();
+        }
         return toPyObject(doc);
     }
 
-    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0)
+    bool DeserializeJSON(py::object obj, dReal fUnitScale=1.0)
     {
         rapidjson::Document doc;
         toRapidJSONValue(obj, doc, doc.GetAllocator());
-        JSONReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(_readable);
-        pjsonreadable->DeserializeJSON(doc, fUnitScale);
+        ReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
+        return pjsonreadable->DeserializeJSON(doc, fUnitScale);
     }
 
     ReadablePtr GetReadable() {
@@ -1282,7 +1287,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractIkParameterization_overloads, PyCo
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractAffineValues_overloads, PyConfigurationSpecification::ExtractAffineValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigurationSpecification::ExtractJointValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(RemoveGroups_overloads, PyConfigurationSpecification::RemoveGroups, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Serialize_overloads, Serialize, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeXML_overloads, SerializeXML, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
@@ -1598,7 +1603,7 @@ void init_openravepy_global()
          DOXY_FN(eadable, Serialize)
          )
 #else
-    .def("Serialize", &PyReadable::Serialize, Serialize_overloads(PY_ARGS("options") DOXY_FN(Readable, Serialize)))
+    .def("SerializeXML", &PyReadable::SerializeXML, SerializeXML_overloads(PY_ARGS("options") DOXY_FN(Readable, Serialize)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("SerializeJSON", &PyReadable::SerializeJSON,

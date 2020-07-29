@@ -169,7 +169,7 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
                 BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, _info._sensorname, InterfaceBasePtr(), AttributesList());
                 if (!!pReader) {
                     pReader->DeserializeJSON(_info._docSensorGeometry);
-                    JSONReadablePtr pReadable = pReader->GetReadable();
+                    ReadablePtr pReadable = pReader->GetReadable();
                     if (!!pReadable) {
                         SensorBase::SensorGeometryPtr sensorGeometry = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
                         _psensor->SetSensorGeometry(sensorGeometry);
@@ -663,7 +663,7 @@ void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const rapidjson::Va
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, RobotBasePtr(), AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value);
-        JSONReadablePtr pReadable = pReader->GetReadable();
+        ReadablePtr pReadable = pReader->GetReadable();
         if (!!pReadable) {
             _mReadableInterfaces[id] = pReadable;
         }

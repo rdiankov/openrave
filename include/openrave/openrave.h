@@ -322,27 +322,45 @@ class OPENRAVE_API Readable : public UserData
 public:
     Readable() {}
     virtual ~Readable() {}
-};
-typedef boost::shared_ptr<Readable> ReadablePtr;
-typedef boost::shared_ptr<Readable const> ReadableConstPtr;
 
-/// base class for xml readable interfaces
-class OPENRAVE_API XMLReadable : virtual public Readable
-{
-public:
-    XMLReadable(const std::string& xmlid) : __xmlid(xmlid) { }
-    virtual ~XMLReadable() { }
-    virtual const std::string& GetXMLId() const {
+    Readable(const std::string& xmlid) : __xmlid(xmlid) {
+    }
+
+    const std::string& GetXMLId() const {
         return __xmlid;
     }
+
     /// \brief serializes the interface
-    virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const {
+    ///
+    /// \return true if serialized
+    virtual bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const = 0;//{
+//        return false;
+//    }
+
+    /// \return true if serialized
+    virtual bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const {
+        return false;
     }
+
+    /// \return true if deserialized
+    virtual bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale) {
+        return false;
+    }
+
+    virtual bool operator==(const Readable& other) {
+        return false;
+    }
+
+    virtual bool operator!=(const Readable& other) {
+        return true;
+    }
+
 private:
     std::string __xmlid;
 };
-typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
-typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
+
+typedef boost::shared_ptr<Readable> ReadablePtr;
+typedef boost::shared_ptr<Readable const> ReadableConstPtr;
 
 /// \brief a list of key-value pairs. It is possible for keys to repeat.
 typedef std::list<std::pair<std::string,std::string> > AttributesList;
@@ -366,8 +384,8 @@ public:
 
     /// a readable interface that stores the information processsed for the current tag
     /// This pointer is used to the InterfaceBase class registered readers
-    virtual XMLReadablePtr GetReadable() {
-        return XMLReadablePtr();
+    virtual ReadablePtr GetReadable() {
+        return ReadablePtr();
     }
 
     /// Gets called in the beginning of each "<type>" expression. In this case, name is "type"
@@ -433,20 +451,6 @@ public:
     virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList()) = 0;
 };
 
-/// base class for json readable interfaces
-class OPENRAVE_API JSONReadable : virtual public Readable, public boost::enable_shared_from_this<JSONReadable>
-{
-public:
-    JSONReadable() {}
-    virtual ~JSONReadable() {}
-    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const = 0;
-    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale) = 0;
-    virtual bool operator==(const JSONReadable& other) = 0;
-    virtual bool operator!=(const JSONReadable& other) = 0;
-};
-typedef boost::shared_ptr<JSONReadable> JSONReadablePtr;
-typedef boost::shared_ptr<JSONReadable const> JSONReadableConstPtr;
-
 /// \brief base class for all json readers. JSONReaders are used to process data from json files.
 ///
 /// Custom readers can be registered through \ref RaveRegisterJSONReader.
@@ -459,13 +463,13 @@ public:
 
     /// a readable interface that stores the information processsed for the current tag
     /// This pointer is used to the InterfaceBase class registered readers
-    virtual JSONReadablePtr GetReadable() {
-        return JSONReadablePtr();
+    virtual ReadablePtr GetReadable() {
+        return ReadablePtr();
     }
 
     /// by default, json reader will simply call readable's deserialize function
     virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) {
-        JSONReadablePtr pReadable = GetReadable();
+        ReadablePtr pReadable = GetReadable();
         if (!!pReadable) {
             pReadable->DeserializeJSON(value, fUnitScale);
         }
@@ -593,27 +597,30 @@ enum IkParameterizationType {
     IKP_CustomDataBit = 0x00010000, ///< bit is set if the ikparameterization contains custom data, this is only used when serializing the ik parameterizations
 };
 
-class OPENRAVE_API StringReadable: public XMLReadable, public JSONReadable
+class OPENRAVE_API StringReadable: public Readable
 {
 public:
     StringReadable(const std::string& id, const std::string& data);
     virtual ~StringReadable();
-    virtual void Serialize(BaseXMLWriterPtr wirter, int options=0) const;
-    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
-    virtual bool operator==(const JSONReadable& other) {
-        boost::shared_ptr<const StringReadable> pOther = boost::dynamic_pointer_cast<const StringReadable>(other.shared_from_this());
+    bool SerializeXML(BaseXMLWriterPtr wirter, int options=0) const override;
+    bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
+    bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
+    bool operator==(const Readable& other) override {
+        const StringReadable* pOther = dynamic_cast<const StringReadable*>(&other);
         if (!pOther) {
             return false;
         }
 
         return _data == pOther->_data;
     }
-    virtual bool operator!=(const JSONReadable& other) {
+
+    bool operator!=(const Readable& other) override {
         return !operator==(other);
     }
 
     const std::string& GetData() const;
+
+private:
     std::string _data;
 };
 typedef boost::shared_ptr<StringReadable> StringReadablePtr;
@@ -2865,7 +2872,7 @@ BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::TrajectoryBase::TPOINT)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::TrajectoryBase::TSEGMENT)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::PLUGININFO)
-BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::XMLReadable)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::Readable)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::InterfaceBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::BaseXMLReader)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::BaseXMLWriter)
