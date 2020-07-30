@@ -73,6 +73,7 @@ void KinBody::JointInfo::Reset()
     _infoElectricMotor.reset();
     _bIsCircular = {0, 0, 0};
     _bIsActive = true;
+    _bStatic = false;
     _controlMode = JCM_None;
     _jci_robotcontroller.reset();
     _jci_io.reset();
@@ -2166,7 +2167,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
     }
 }
 
-int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput)
+int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput) const
 {
     if( timederiv == 0 ) {
         _vmimic.at(axis)->_posfn->EvalMulti(voutput, vdependentvalues.empty() ? NULL : &vdependentvalues[0]);

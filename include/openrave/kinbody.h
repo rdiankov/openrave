@@ -1582,7 +1582,7 @@ protected:
         /// \param[in] vdependentvalues input values ordered with respect to _vdofformat[iaxis]
         /// \param[out] voutput the output values
         /// \return an internal error code, 0 if no error
-        virtual int _Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput);
+        virtual int _Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput) const;
 
         /// \brief compute joint velocities given the parent and child link transformations/velocities
         virtual void _GetVelocities(std::vector<dReal>& values, bool bAppend, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const;
