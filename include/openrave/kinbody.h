@@ -1083,6 +1083,7 @@ public:
         boost::array<uint8_t, 3> _bIsCircular = {0, 0, 0};
 
         bool _bIsActive = true;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+        bool _bStatic = false; ///< IsStatic with both lower and upper limits equal 0
 
         /// \brief _controlMode specifies how this joint is controlled. For possible control modes, see enum JointControlMode.
         JointControlMode _controlMode = JCM_None;
@@ -1247,6 +1248,7 @@ public:
         /// \param bAppend if true will append to the end of the vector instead of erasing it
         /// \return degrees of freedom of the joint (even if pValues is NULL)
         virtual void GetValues(std::vector<dReal>& values, bool bAppend=false) const;
+        virtual void GetValues(boost::array<dReal, 3>& values) const;
 
         /// \brief Return the value of the specified joint axis only.
         virtual dReal GetValue(int axis) const;
@@ -1580,7 +1582,7 @@ protected:
         /// \param[in] vdependentvalues input values ordered with respect to _vdofformat[iaxis]
         /// \param[out] voutput the output values
         /// \return an internal error code, 0 if no error
-        virtual int _Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput);
+        virtual int _Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput) const;
 
         /// \brief compute joint velocities given the parent and child link transformations/velocities
         virtual void _GetVelocities(std::vector<dReal>& values, bool bAppend, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const;
@@ -1605,6 +1607,7 @@ private:
         Transform _tRightNoOffset, _tLeftNoOffset;         ///< same as _tLeft and _tRight except it doesn't not include the offset
         Transform _tinvRight, _tinvLeft;         ///< the inverse transformations of tRight and tLeft
         bool _bInitialized;
+
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER

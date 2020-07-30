@@ -1886,128 +1886,141 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         pJointValues = &_vTempJoints[0];
     }
 
-    boost::array<dReal,3> dummyvalues; // dummy values for a joint
-    std::vector<dReal> vtempvalues, veval;
-
-    // have to compute the angles ahead of time since they are dependent on the link transformations
-    std::vector< std::vector<dReal> > vPassiveJointValues(_vPassiveJoints.size());
-    for(size_t i = 0; i < vPassiveJointValues.size(); ++i) {
-        if( !_vPassiveJoints[i]->IsMimic() ) {
-            _vPassiveJoints[i]->GetValues(vPassiveJointValues[i]);
+    // have to compute the angles ahead of time since they are dependent on the link
+    const int nActiveJoints = _vecjoints.size();
+    const int nPassiveJoints = _vPassiveJoints.size();
+    std::vector< boost::array<dReal, 3> > vPassiveJointValues(nPassiveJoints);
+    for(int i = 0; i < nPassiveJoints; ++i) {
+        const KinBody::JointPtr& pjoint = _vPassiveJoints[i];
+        const KinBody::Joint& joint = *pjoint;
+        if(joint.IsStatic()) {
+            continue;
+        }
+        const boost::array<dReal, 3>& vlowerlimit = joint._info._vlowerlimit;
+        const boost::array<dReal, 3>& vupperlimit = joint._info._vupperlimit;
+        boost::array<dReal, 3>& jvals = vPassiveJointValues[i];
+        if( !joint.IsMimic() ) {
+            joint.GetValues(jvals);
             // check if out of limits!
-            for(size_t j = 0; j < vPassiveJointValues[i].size(); ++j) {
-                if( !_vPassiveJoints[i]->IsCircular(j) ) {
-                    if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_info._vlowerlimit.at(j) ) {
-                        if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_info._vlowerlimit.at(j)-5e-4f ) {
-                            RAVELOG_WARN(str(boost::format("dummy joint out of lower limit! %e < %e\n")%_vPassiveJoints[i]->_info._vlowerlimit.at(j)%vPassiveJointValues[i][j]));
+            for(size_t j = 0; j < 3; ++j) {
+                if( !joint.IsCircular(j) ) {
+                    if( jvals[j] < vlowerlimit.at(j) ) {
+                        if( jvals[j] < vlowerlimit.at(j) - 5e-4f ) {
+                            RAVELOG_WARN_FORMAT("dummy joint out of lower limit! %e < %e", vlowerlimit.at(j) % jvals[j]);
                         }
-                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_info._vlowerlimit.at(j);
+                        jvals[j] = vlowerlimit.at(j);
                     }
-                    else if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_info._vupperlimit.at(j) ) {
-                        if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_info._vupperlimit.at(j)+5e-4f ) {
-                            RAVELOG_WARN(str(boost::format("dummy joint out of upper limit! %e > %e\n")%_vPassiveJoints[i]->_info._vupperlimit.at(j)%vPassiveJointValues[i][j]));
+                    else if( jvals[j] > vupperlimit.at(j) ) {
+                        if( jvals[j] > vupperlimit.at(j) + 5e-4f ) {
+                            RAVELOG_WARN_FORMAT("dummy joint out of upper limit! %e > %e", vupperlimit.at(j) % jvals[j]);
                         }
-                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_info._vupperlimit.at(j);
+                        jvals[j] = vupperlimit.at(j);
                     }
                 }
             }
-        }
-        else {
-            vPassiveJointValues[i].reserve(_vPassiveJoints[i]->GetDOF()); // do not resize so that we can catch hierarchy errors
         }
     }
 
     std::vector<uint8_t> vlinkscomputed(_veclinks.size(),0);
     vlinkscomputed[0] = 1;
+    boost::array<dReal,3> dummyvalues; // dummy values for a joint
+    std::vector<dReal> vtempvalues, veval;
 
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
-        JointPtr pjoint = _vTopologicallySortedJointsAll[ijoint];
-        int jointindex = _vTopologicallySortedJointIndicesAll[ijoint];
-        int dofindex = pjoint->GetDOFIndex();
-        const dReal* pvalues=dofindex >= 0 ? pJointValues + dofindex : NULL;
-        if( pjoint->IsMimic() ) {
-            for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                if( pjoint->IsMimic(i) ) {
-                    vtempvalues.resize(0);
-                    const std::vector<Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[i]->_vdofformat;
-                    FOREACHC(itdof,vdofformat) {
-                        if( itdof->dofindex >= 0 ) {
-                            vtempvalues.push_back(pJointValues[itdof->dofindex]);
-                        }
-                        else {
-                            vtempvalues.push_back(vPassiveJointValues.at(itdof->jointindex-_vecjoints.size()).at(itdof->axis));
-                        }
+        const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
+        KinBody::Joint& joint = *pjoint;
+        const LinkPtr& parentlink = joint._attachedbodies[0];
+        const LinkPtr& childlink = joint._attachedbodies[1];
+
+        if( joint.IsStatic() ) {
+            // if joint.IsStatic(), then joint._info._tRightNoOffset and tjoint are assigned identities
+            const Transform t = (!!parentlink ? parentlink->GetTransform() : _veclinks.at(0)->GetTransform()) * joint.GetInternalHierarchyLeftTransform();
+            childlink->SetTransform(t);
+            vlinkscomputed[childlink->GetIndex()] = 1;
+            continue;
+        }
+
+        const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint];
+        const int dofindex = joint.GetDOFIndex(); // active joint has dofindex>=0; passive has dofindex=-1 but jointindex>=0
+        const int jointdof = joint.GetDOF();
+        const KinBody::JointType jointtype = joint.GetType();
+        const dReal* pvalues = dofindex >= 0 ? pJointValues + dofindex : NULL;
+        const boost::array<dReal, 3>& vlowerlimit = joint._info._vlowerlimit;
+        const boost::array<dReal, 3>& vupperlimit = joint._info._vupperlimit;
+
+        if( joint.IsMimic() ) {
+            for(int i = 0; i < jointdof; ++i) {
+                if( joint.IsMimic(i) ) {
+                    vtempvalues.clear();
+                    const std::vector<Mimic::DOFFormat>& vdofformat = joint._vmimic[i]->_vdofformat;
+                    for(const Mimic::DOFFormat& dofformat : vdofformat) {
+                        vtempvalues.push_back(dofformat.dofindex >= 0 ? pJointValues[dofformat.dofindex]
+                                              : vPassiveJointValues.at(dofformat.jointindex-nActiveJoints).at(dofformat.axis));
                     }
-                    int err = pjoint->_Eval(i, 0, vtempvalues, veval);
+                    const int err = joint._Eval(i, 0, vtempvalues, veval);
                     if( err ) {
-                        RAVELOG_WARN(str(boost::format("failed to evaluate joint %s, fparser error %d")%pjoint->GetName()%err));
+                        RAVELOG_WARN(str(boost::format("failed to evaluate joint %s, fparser error %d")%joint.GetName()%err));
                     }
                     else {
-                        vector<dReal> vevalcopy = veval;
-                        vector<dReal>::iterator iteval = veval.begin();
-                        while(iteval != veval.end()) {
-                            bool removevalue = false;
-                            if( pjoint->GetType() == JointSpherical || pjoint->IsCircular(i) ) {
+                        const std::vector<dReal> vevalcopy = veval;
+                        for(std::vector<dReal>::iterator iteval = veval.begin(); iteval != veval.end(); ) {
+                            if( jointtype == JointSpherical || joint.IsCircular(i) ) {
                             }
-                            else if( *iteval < pjoint->_info._vlowerlimit[i] ) {
-                                if(*iteval >= pjoint->_info._vlowerlimit[i]-g_fEpsilonJointLimit ) {
-                                    *iteval = pjoint->_info._vlowerlimit[i];
+                            else if( *iteval < vlowerlimit[i] ) {
+                                if(*iteval >= vlowerlimit[i]-g_fEpsilonJointLimit ) {
+                                    *iteval = vlowerlimit[i];
                                 }
                                 else {
-                                    removevalue=true;
+                                    iteval = veval.erase(iteval); // invalid value so remove from candidates
+                                    continue;
                                 }
                             }
-                            else if( *iteval > pjoint->_info._vupperlimit[i] ) {
-                                if(*iteval <= pjoint->_info._vupperlimit[i]+g_fEpsilonJointLimit ) {
-                                    *iteval = pjoint->_info._vupperlimit[i];
+                            else if( *iteval > vupperlimit[i] ) {
+                                if(*iteval <= vupperlimit[i]+g_fEpsilonJointLimit ) {
+                                    *iteval = vupperlimit[i];
                                 }
                                 else {
-                                    removevalue=true;
+                                    iteval = veval.erase(iteval); // invalid value so remove from candidates
+                                    continue;
                                 }
                             }
-
-                            if( removevalue ) {
-                                iteval = veval.erase(iteval); // invalid value so remove from candidates
-                            }
-                            else {
-                                ++iteval;
-                            }
+                            ++iteval;
                         }
 
                         if( veval.empty() ) {
-                            FORIT(iteval,vevalcopy) {
-                                if( checklimits == CLA_Nothing || pjoint->GetType() == JointSpherical || pjoint->IsCircular(i) ) {
-                                    veval.push_back(*iteval);
+                            for(dReal eval : vevalcopy) {
+                                if( checklimits == CLA_Nothing || jointtype == JointSpherical || joint.IsCircular(i) ) {
+                                    veval.push_back(eval);
                                 }
-                                else if( *iteval < pjoint->_info._vlowerlimit[i]-g_fEpsilonEvalJointLimit ) {
-                                    veval.push_back(pjoint->_info._vlowerlimit[i]);
+                                else if( eval < vlowerlimit[i]-g_fEpsilonEvalJointLimit ) {
+                                    veval.push_back(vlowerlimit[i]);
                                     if( checklimits == CLA_CheckLimits ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_info._vlowerlimit[i]%*iteval));
+                                        RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%joint.GetName()%vlowerlimit[i]%eval));
                                     }
                                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                                        throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s: lower limit (%e) is not followed: %e"), pjoint->GetName()%pjoint->_info._vlowerlimit[i]%*iteval, ORE_InvalidArguments);
+                                        throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s: lower limit (%e) is not followed: %e"), joint.GetName()%joint._info._vlowerlimit[i]%eval, ORE_InvalidArguments);
                                     }
                                 }
-                                else if( *iteval > pjoint->_info._vupperlimit[i]+g_fEpsilonEvalJointLimit ) {
-                                    veval.push_back(pjoint->_info._vupperlimit[i]);
+                                else if( eval > vupperlimit[i]+g_fEpsilonEvalJointLimit ) {
+                                    veval.push_back(vupperlimit[i]);
                                     if( checklimits == CLA_CheckLimits ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_info._vupperlimit[i]%*iteval));
+                                        RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%joint.GetName()%vupperlimit[i]%eval));
                                     }
                                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                                        throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s: upper limit (%e) is not followed: %e"), pjoint->GetName()%pjoint->_info._vupperlimit[i]%*iteval, ORE_InvalidArguments);
+                                        throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s: upper limit (%e) is not followed: %e"), joint.GetName()%vupperlimit[i]%eval, ORE_InvalidArguments);
                                     }
                                 }
                                 else {
-                                    veval.push_back(*iteval);
+                                    veval.push_back(eval);
                                 }
                             }
-                            OPENRAVE_ASSERT_FORMAT(!veval.empty(), "no valid values for joint %s", pjoint->GetName(),ORE_Assert);
+                            OPENRAVE_ASSERT_FORMAT(!veval.empty(), "no valid values for joint %s", joint.GetName(),ORE_Assert);
                         }
                         if( veval.size() > 1 ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                            ss << "multiplie values for joint " << pjoint->GetName() << ": ";
-                            FORIT(iteval,veval) {
-                                ss << *iteval << " ";
+                            ss << "multiplie values for joint " << joint.GetName() << ": ";
+                            for(dReal eval : veval) {
+                                ss << eval << " ";
                             }
                             RAVELOG_WARN(ss.str());
                         }
@@ -2016,8 +2029,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
 
                     // if joint is passive, update the stored joint values! This is necessary because joint value might be referenced in the future.
                     if( dofindex < 0 ) {
-                        vPassiveJointValues.at(jointindex-(int)_vecjoints.size()).resize(pjoint->GetDOF());
-                        vPassiveJointValues.at(jointindex-(int)_vecjoints.size()).at(i) = dummyvalues[i];
+                        vPassiveJointValues.at(jointindex-nActiveJoints).at(i) = dummyvalues[i];
                     }
                 }
                 else if( dofindex >= 0 ) {
@@ -2025,31 +2037,31 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                 }
                 else {
                     // preserve passive joint values
-                    dummyvalues[i] = vPassiveJointValues.at(jointindex-(int)_vecjoints.size()).at(i);
+                    dummyvalues[i] = vPassiveJointValues.at(jointindex-nActiveJoints).at(i);
                 }
             }
             pvalues = &dummyvalues[0];
         }
         // do the test after mimic computation!
-        if( vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] ) {
+        if( vlinkscomputed[childlink->GetIndex()] ) {
             continue;
         }
         if( !pvalues ) {
             // has to be a passive joint
-            pvalues = &vPassiveJointValues.at(jointindex-(int)_vecjoints.size()).at(0);
+            pvalues = vPassiveJointValues.at(jointindex-nActiveJoints).data();
         }
 
         Transform tjoint;
-        if( pjoint->GetType() & JointSpecialBit ) {
-            switch(pjoint->GetType()) {
+        if( jointtype & JointSpecialBit ) {
+            switch(jointtype) {
             case JointHinge2: {
                 Transform tfirst;
-                tfirst.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pvalues[0]);
+                tfirst.rot = quatFromAxisAngle(joint.GetInternalHierarchyAxis(0), pvalues[0]);
                 Transform tsecond;
-                tsecond.rot = quatFromAxisAngle(tfirst.rotate(pjoint->GetInternalHierarchyAxis(1)), pvalues[1]);
+                tsecond.rot = quatFromAxisAngle(tfirst.rotate(joint.GetInternalHierarchyAxis(1)), pvalues[1]);
                 tjoint = tsecond * tfirst;
-                pjoint->_doflastsetvalues[0] = pvalues[0];
-                pjoint->_doflastsetvalues[1] = pvalues[1];
+                joint._doflastsetvalues[0] = pvalues[0];
+                joint._doflastsetvalues[1] = pvalues[1];
                 break;
             }
             case JointSpherical: {
@@ -2065,55 +2077,48 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                 vector<dReal> vdata;
                 tjoint = Transform();
                 dReal fvalue = pvalues[0];
-                if( pjoint->IsCircular(0) ) {
+                if( joint.IsCircular(0) ) {
                     // need to normalize the value
-                    fvalue = utils::NormalizeCircularAngle(fvalue,pjoint->_vcircularlowerlimit.at(0), pjoint->_vcircularupperlimit.at(0));
+                    fvalue = utils::NormalizeCircularAngle(fvalue,joint._vcircularlowerlimit.at(0), joint._vcircularupperlimit.at(0));
                 }
-                pjoint->_info._trajfollow->Sample(vdata,fvalue);
-                if( !pjoint->_info._trajfollow->GetConfigurationSpecification().ExtractTransform(tjoint,vdata.begin(),KinBodyConstPtr()) ) {
-                    RAVELOG_WARN(str(boost::format("trajectory sampling for joint %s failed")%pjoint->GetName()));
+                joint._info._trajfollow->Sample(vdata,fvalue);
+                if( !joint._info._trajfollow->GetConfigurationSpecification().ExtractTransform(tjoint,vdata.begin(),KinBodyConstPtr()) ) {
+                    RAVELOG_WARN(str(boost::format("trajectory sampling for joint %s failed")%joint.GetName()));
                 }
-                pjoint->_doflastsetvalues[0] = 0;
+                joint._doflastsetvalues[0] = 0;
                 break;
             }
             default:
-                RAVELOG_WARN(str(boost::format("forward kinematic type 0x%x not supported")%pjoint->GetType()));
+                RAVELOG_WARN(str(boost::format("forward kinematic type 0x%x not supported")%jointtype));
                 break;
             }
         }
-        else if ( !pjoint->IsStatic() ) {
-            if( pjoint->GetType() == JointRevolute ) {
-                tjoint.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pvalues[0]);
-                pjoint->_doflastsetvalues[0] = pvalues[0];
+        else {
+            if( jointtype == JointRevolute ) {
+                tjoint.rot = quatFromAxisAngle(joint.GetInternalHierarchyAxis(0), pvalues[0]);
+                joint._doflastsetvalues[0] = pvalues[0];
             }
-            else if( pjoint->GetType() == JointPrismatic ) {
-                tjoint.trans = pjoint->GetInternalHierarchyAxis(0) * pvalues[0];
+            else if( jointtype == JointPrismatic ) {
+                tjoint.trans = joint.GetInternalHierarchyAxis(0) * pvalues[0];
             }
             else {
-                for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                for(int iaxis = 0; iaxis < jointdof; ++iaxis) {
                     Transform tdelta;
-                    if( pjoint->IsRevolute(iaxis) ) {
-                        tdelta.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(iaxis), pvalues[iaxis]);
-                        pjoint->_doflastsetvalues[iaxis] = pvalues[iaxis];
+                    if( joint.IsRevolute(iaxis) ) {
+                        tdelta.rot = quatFromAxisAngle(joint.GetInternalHierarchyAxis(iaxis), pvalues[iaxis]);
+                        joint._doflastsetvalues[iaxis] = pvalues[iaxis];
                     }
                     else {
-                        tdelta.trans = pjoint->GetInternalHierarchyAxis(iaxis) * pvalues[iaxis];
+                        tdelta.trans = joint.GetInternalHierarchyAxis(iaxis) * pvalues[iaxis];
                     }
                     tjoint = tjoint * tdelta;
                 }
             }
         }
 
-        // if pjoint->IsStatic(), then pjoint->_info._tRightNoOffset and tjoint are assigned identities
-        Transform t = pjoint->GetInternalHierarchyLeftTransform() * tjoint * pjoint->GetInternalHierarchyRightTransform();
-        if( !pjoint->GetHierarchyParentLink() ) {
-            t = _veclinks.at(0)->GetTransform() * t;
-        }
-        else {
-            t = pjoint->GetHierarchyParentLink()->GetTransform() * t;
-        }
-        pjoint->GetHierarchyChildLink()->SetTransform(t);
-        vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] = 1;
+        const Transform t = (!!parentlink ? parentlink->GetTransform() : _veclinks.at(0)->GetTransform()) * (joint.GetInternalHierarchyLeftTransform() * tjoint * joint.GetInternalHierarchyRightTransform());
+        childlink->SetTransform(t);
+        vlinkscomputed[childlink->GetIndex()] = 1;
     }
 
     _UpdateGrabbedBodies();
@@ -2263,7 +2268,7 @@ void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& position, 
         int jointindex = _vAllPairsShortestPaths[offset+curlink].second;
         if( jointindex < (int)_vecjoints.size() ) {
             // active joint
-            JointPtr pjoint = _vecjoints.at(jointindex);
+            const JointPtr& pjoint = _vecjoints.at(jointindex);
             int dofindex = pjoint->GetDOFIndex();
             int8_t affect = DoesAffect(pjoint->GetJointIndex(), linkindex);
             for(int dof = 0; dof < pjoint->GetDOF(); ++dof) {
@@ -2293,7 +2298,7 @@ void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& position, 
         }
         else {
             // add in the contributions from the passive joint
-            JointPtr pjoint = _vPassiveJoints.at(jointindex-_vecjoints.size());
+            const JointPtr& pjoint = _vPassiveJoints.at(jointindex-_vecjoints.size());
             for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
                 if( pjoint->IsMimic(idof) ) {
                     bool bhas = dofindices.size() == 0;
@@ -5276,7 +5281,7 @@ void KinBody::_ResolveInfoIds()
 
     // go through all link infos and make sure _id is unique
     static const char pLinkIdPrefix[] = "link";
-    static const char pGeometryIdPrefix[] = "geom";    
+    static const char pGeometryIdPrefix[] = "geom";
     int nLinkId = 0;
     int numlinks = (int)_veclinks.size();
     for(int ilink = 0; ilink < numlinks; ++ilink) {

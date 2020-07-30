@@ -32,12 +32,20 @@
 #ifndef RAVE_DEPRECATED
 #define RAVE_DEPRECATED
 #endif
+
 #ifdef BOOST_ASSERT
 #define MATH_ASSERT BOOST_ASSERT
-#else
+#if defined(BOOST_DISABLE_ASSERTS)||defined(NDEBUG)
+// in case where <boost/assert.hpp> is included and BOOST_DISABLE_ASSERTS is used
+#define MATH_DISABLE_ASSERTS
+#endif // BOOST_DISABLE_ASSERTS
+#else // BOOST_ASSERT
 #include <cassert>
 #define MATH_ASSERT assert
-#endif
+#ifdef NDEBUG
+#define MATH_DISABLE_ASSERTS
+#endif // NDEBUG
+#endif // BOOST_ASSERT
 
 namespace OpenRAVE {
 
@@ -393,11 +401,19 @@ public:
     template <typename U> RaveTransform(const RaveTransform<U>& t) {
         rot = t.rot;
         trans = t.trans;
-        MATH_ASSERT( rot.lengthsqr4() > 0.99f && rot.lengthsqr4() < 1.01f );
+#if !defined(MATH_DISABLE_ASSERTS)
+        const T l = rot.lengthsqr4();
+        MATH_ASSERT( l > 0.99f && l < 1.01f );
+#endif
     }
+
     template <typename U> RaveTransform(const RaveVector<U>& rot, const RaveVector<U>& trans) : rot(rot), trans(trans) {
-        MATH_ASSERT( rot.lengthsqr4() > 0.99f && rot.lengthsqr4() < 1.01f );
+#if !defined(MATH_DISABLE_ASSERTS)
+        const T l = rot.lengthsqr4();
+        MATH_ASSERT( l > 0.99f && l < 1.01f );
+#endif
     }
+
     inline RaveTransform(const RaveTransformMatrix<T>&t);
 
     void identity() {
@@ -437,8 +453,11 @@ public:
         t.rot.y = rot.x*r.rot.y + rot.y*r.rot.x + rot.z*r.rot.w - rot.w*r.rot.z;
         t.rot.z = rot.x*r.rot.z + rot.z*r.rot.x + rot.w*r.rot.y - rot.y*r.rot.w;
         t.rot.w = rot.x*r.rot.w + rot.w*r.rot.x + rot.y*r.rot.z - rot.z*r.rot.y;
+#if !defined(MATH_DISABLE_ASSERTS)
+        const T l = t.rot.lengthsqr4();
+        MATH_ASSERT( l > 0.99f && l < 1.01f );
+#endif
         // normalize the transformation
-        MATH_ASSERT( t.rot.lengthsqr4() > 0.99f && t.rot.lengthsqr4() < 1.01f );
         t.rot.normalize4();
         return t;
     }
@@ -451,8 +470,11 @@ public:
         t.rot.y = rot.x*r.rot.y + rot.y*r.rot.x + rot.z*r.rot.w - rot.w*r.rot.z;
         t.rot.z = rot.x*r.rot.z + rot.z*r.rot.x + rot.w*r.rot.y - rot.y*r.rot.w;
         t.rot.w = rot.x*r.rot.w + rot.w*r.rot.x + rot.y*r.rot.z - rot.z*r.rot.y;
+#if !defined(MATH_DISABLE_ASSERTS)
+        const T l = t.rot.lengthsqr4();
+        MATH_ASSERT( l > 0.99f && l < 1.01f );
+#endif
         // normalize the transformation
-        MATH_ASSERT( t.rot.lengthsqr4() > 0.99f && t.rot.lengthsqr4() < 1.01f );
         t.rot.normalize4();
         return t;
     }
@@ -483,7 +505,10 @@ public:
     template <typename U> inline RaveTransform<T>& operator= (const RaveTransform<U>&r) {
         trans = r.trans;
         rot = r.rot;
-        MATH_ASSERT( rot.lengthsqr4() > 0.99f && rot.lengthsqr4() < 1.01f );
+#if !defined(MATH_DISABLE_ASSERTS)
+        const T l = rot.lengthsqr4();
+        MATH_ASSERT( l > 0.99f && l < 1.01f );
+#endif
         return *this;
     }
 
