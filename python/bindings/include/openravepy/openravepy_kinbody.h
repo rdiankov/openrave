@@ -97,7 +97,7 @@ public:
 
     py::object SerializeJSON(dReal fUnitScale=1.0, py::object ooptions=py::none_());
 
-    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
 
     std::string __str__();
     py::object __unicode__();
@@ -108,9 +108,11 @@ private:
 public:
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::string _id;
     std::string _grabbedname;
     std::string _robotlinkname;
 #else
+    py::object _id = py::none_();
     py::object _grabbedname = py::none_();
     py::object _robotlinkname = py::none_();
 #endif
@@ -123,6 +125,43 @@ public:
 }; // class PyGrabbedInfo
 typedef OPENRAVE_SHARED_PTR<PyGrabbedInfo> PyGrabbedInfoPtr;
 
+public:
+    class PyKinBodyInfo
+{
+public:
+    PyKinBodyInfo();
+    PyKinBodyInfo(const KinBody::KinBodyInfo& info);
+    py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
+    KinBody::KinBodyInfoPtr GetKinBodyInfo() const;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::vector<KinBody::LinkInfoPtr> _vLinkInfos;
+    std::vector<KinBody::JointInfoPtr> _vJointInfos;
+    std::vector<KinBody::GrabbedInfoPtr> _vGrabbedInfos;
+    std::string _uri;
+    std::string _id;
+    std::string _name;
+    std::string _referenceUri;
+#else
+    py::object _vLinkInfos = py::none_();
+    py::object _vJointInfos = py::none_();
+    py::object _vGrabbedInfos = py::none_();
+    py::object _uri = py::none_();
+    py::object _referenceUri = py::none_();
+    py::object _id = py::none_();
+    py::object _name = py::none_();
+#endif
+    py::object _transform = ReturnTransform(Transform());
+    py::object _dofValues = py::none_();
+    py::object _readableInterfaces = py::none_();
+    virtual std::string __str__();
+    virtual py::object __unicode__();
+
+protected:
+    void _Update(const KinBody::KinBodyInfo& info);
+}; // class PyKinBodyInfo
+
+
 protected:
     KinBodyPtr _pbody;
     std::list<OPENRAVE_SHARED_PTR<void> > _listStateSavers;
@@ -133,6 +172,8 @@ public:
     virtual ~PyKinBody();
     void Destroy();
     KinBodyPtr GetBody();
+
+    bool InitFromKinBodyInfo(const py::object pyKinBodyInfo);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     bool InitFromBoxes(const std::vector<std::vector<dReal> >& vboxes, const bool bDraw = true, const std::string& uri = "");
     bool InitFromSpheres(const std::vector<std::vector<dReal> >& vspheres, const bool bDraw = true, const std::string& uri = "");
@@ -142,6 +183,7 @@ public:
 #endif
     bool InitFromTrimesh(py::object pytrimesh, bool bDraw=true, const std::string& uri=std::string());
     bool InitFromGeometries(py::object ogeometries, const std::string& uri=std::string());
+    void InitFromLinkInfos(py::object olinkinfos, const std::string& uri=std::string());
     bool Init(py::object olinkinfos, py::object ojointinfos, const std::string& uri=std::string());
     void SetLinkGeometriesFromGroup(const std::string& geomname);
     void SetLinkGroupGeometries(const std::string& geomname, py::object olinkgeometryinfos);
@@ -273,6 +315,9 @@ public:
     std::string serialize(int options) const;
     std::string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
+
+    py::object ExtractInfo() const;
+
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);
     virtual std::string __repr__();
     virtual std::string __str__();

@@ -228,15 +228,18 @@ public:
     /// \brief Loads a scene from in-memory data and adds all objects in the environment. <b>[multi-thread safe]</b>
     virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
+    /// \brief loads a scene from rapidjson document
+    virtual bool LoadJSON(const rapidjson::Value& doc, const AttributesList& atts = AttributesList()) = 0;
+
     virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) {
         return LoadData(data,atts);
     }
 
     /** \brief Saves a scene depending on the filename extension. Default is in COLLADA format
 
-        \param filename the filename to save the results at
+        \param filename the filename to save the results at. Use the suffix extension of the filename to figure out the type to save. Supports: "dae", "json", "msgpack"
         \param options controls what to save
-        \param atts attributes that refine further options. For collada parsing, the options are passed through
+        \param atts attributes that refine further options. For collada-dom parsing, the options are passed through
         \code
         DAE::getIOPlugin()->setOption(key,value).
         \endcode
@@ -254,9 +257,12 @@ public:
         Save(filename,options,atts);
     }
 
+    /// \brief saves a scene to rapidjson document
+    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) = 0;
+
     /** \brief Saves a scene depending on the filename extension.
 
-        \param filetype the type of file to save, can be collada
+        \param filetype the type of file to save, can be: "collada", "json", "msgpack"
         \param output the output data if saving is successful
         \param options controls what to save
         \param atts attributes that refine further options. For collada parsing, the options are passed through
@@ -695,6 +701,54 @@ public:
     inline int GetId() const {
         return __nUniqueId;
     }
+
+    /// \brief info structure used to initialize environment
+    class OPENRAVE_API EnvironmentBaseInfo : public InfoBase
+    {
+public:
+        EnvironmentBaseInfo() {}
+        EnvironmentBaseInfo(const EnvironmentBaseInfo& other) {
+            *this = other;
+        }
+        EnvironmentBaseInfo& operator=(const EnvironmentBaseInfo& other) {
+            _vBodyInfos = other._vBodyInfos;
+            // TODO: deep copy infos
+            return *this;
+        }
+        bool operator==(const EnvironmentBaseInfo& other) const {
+            return _vBodyInfos == other._vBodyInfos;
+            // TODO: deep compare infos
+        }
+        bool operator!=(const EnvironmentBaseInfo& other) const{
+            return !operator==(other);
+        }
+
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+        std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
+        uint64_t _revision;
+    };
+    typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
+    typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;
+
+    inline uint64_t GetRevision() const {
+        return _revision;
+    }
+
+    virtual void SetRevision(const uint64_t revision) {
+        _revision = revision;
+    }
+
+    uint64_t _revision = 0;  ///< environment current revision
+
+    /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+    virtual void ExtractInfo(EnvironmentBaseInfo& info) = 0;
+
+    /// \brief update EnvironmentBase according to new EnvironmentBaseInfo
+    virtual void UpdateFromInfo(const EnvironmentBaseInfo& info) = 0;
+
 
 protected:
     virtual const char* GetHash() const {

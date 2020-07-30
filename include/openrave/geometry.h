@@ -232,6 +232,16 @@ public:
         x = (T)r.x; y = (T)r.y; z = (T)r.z; w = (T)r.w; return *this;
     }
 
+    template <typename U>
+    bool operator==(const RaveVector<U>& r) const{
+        return x == r.x && y == r.y && z == r.z && w == r.w;
+    }
+
+    template <typename U>
+    bool operator!=(const RaveVector<U>& r) const{
+        return x != r.x || y != r.y || z != r.z || w != r.w;
+    }
+
     // SCALAR FUNCTIONS
     template <typename U> inline T dot(const RaveVector<U> &v) const {
         return x*v.x + y*v.y + z*v.z + w*v.w;
@@ -474,6 +484,13 @@ public:
         return *this;
     }
 
+    inline bool operator== (const RaveTransform<T>& right) const{
+        return trans == right.trans && rot == right.rot;
+    }
+    inline bool operator!= (const RaveTransform<T>& right) const{
+        return !operator==(right);
+    }
+
     inline RaveTransform<T> inverse() const {
         RaveTransform<T> inv;
         inv.rot.x = rot.x;
@@ -676,6 +693,14 @@ class OrientedBox
 public:
     RaveTransform<T> transform;
     RaveVector<T> extents;
+
+    virtual bool operator==(const OrientedBox& other) const {
+        return transform == other.transform && extents == other.extents;
+    }
+
+    virtual bool operator!=(const OrientedBox& other) const {
+        return !operator==(other);
+    }
 };
 
 /// \brief An oriented bounding box.
@@ -738,8 +763,7 @@ public:
     }
 
     template <typename U>
-    RaveCameraIntrinsics<T>& operator=(const RaveCameraIntrinsics<U>&r)
-    {
+    RaveCameraIntrinsics<T>& operator=(const RaveCameraIntrinsics<U>&r) {
         distortion_model = r.distortion_model;
         distortion_coeffs.resize(r.distortion_coeffs.size());
         std::copy(r.distortion_coeffs.begin(),r.distortion_coeffs.end(),distortion_coeffs.begin());
@@ -748,6 +772,22 @@ public:
         fy = r.fy;
         cx = r.cx;
         cy = r.cy;
+    }
+
+    template<typename U>
+    bool operator==(const RaveCameraIntrinsics<U>& r) {
+        return distortion_model == r.distortion_model
+            && distortion_coeffs == r.distortion_coeffs
+            && focal_length == r.focal_length
+            && fx == r.fx
+            && fy == r.fy
+            && cx == r.cx
+            && cy == r.cy;
+    }
+
+    template<typename U>
+    bool operator!=(const RaveCameraIntrinsics<U>& other) const {
+        return !operator==(other);
     }
 
     T fx,fy, cx,cy;

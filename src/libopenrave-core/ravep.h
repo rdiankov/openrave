@@ -260,13 +260,18 @@ using namespace std;
 
 namespace OpenRAVEXMLParser
 {
-class InterfaceXMLReadable : public XMLReadable
+class InterfaceXMLReadable : public Readable
 {
 public:
-    InterfaceXMLReadable(InterfaceBasePtr pinterface) : XMLReadable(pinterface->GetXMLId()), _pinterface(pinterface) {
+    InterfaceXMLReadable(InterfaceBasePtr pinterface) : Readable(pinterface->GetXMLId()), _pinterface(pinterface) {
     }
     virtual ~InterfaceXMLReadable() {
     }
+
+    bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override {
+        return false;
+    }
+
     InterfaceBasePtr _pinterface;
 };
 
