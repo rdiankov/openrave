@@ -54,7 +54,7 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
     orjson::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
 }
 
-    void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
     orjson::LoadJsonValueByKey(value, "name", name);
     orjson::LoadJsonValueByKey(value, "id", _id);
@@ -549,11 +549,11 @@ void RobotBase::RobotBaseInfo::Reset()
     _vGripperInfos.clear();
 }
 
-void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& rRobotBaseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    KinBody::KinBodyInfo::SerializeJSON(value, allocator, fUnitScale, options);
+    KinBody::KinBodyInfo::SerializeJSON(rRobotBaseInfo, allocator, fUnitScale, options);
 
-    orjson::SetJsonValueByKey(value, "isRobot", true, allocator);
+    orjson::SetJsonValueByKey(rRobotBaseInfo, "isRobot", true, allocator);
 
     if (_vManipulatorInfos.size() > 0) {
         rapidjson::Value rManipulatorInfoValues;
@@ -564,7 +564,7 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
             (*it)->SerializeJSON(manipInfoValue, allocator, fUnitScale, options);
             rManipulatorInfoValues.PushBack(manipInfoValue, allocator);
         }
-        value.AddMember("tools", rManipulatorInfoValues, allocator);  // NOTICE: manipulator is changed name to tools in json scene
+        rRobotBaseInfo.AddMember("tools", rManipulatorInfoValues, allocator);  // NOTICE: manipulator is changed name to tools in json scene
     }
 
     if (_vAttachedSensorInfos.size() > 0) {
@@ -576,7 +576,7 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
             (*it)->SerializeJSON(attachedSensorInfoValue, allocator, fUnitScale, options);
             rAttachedSensorInfoValues.PushBack(attachedSensorInfoValue, allocator);
         }
-        value.AddMember("attachedSensors", rAttachedSensorInfoValues, allocator);
+        rRobotBaseInfo.AddMember("attachedSensors", rAttachedSensorInfoValues, allocator);
     }
 
     if (_vConnectedBodyInfos.size() > 0) {
@@ -588,7 +588,7 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
             (*it)->SerializeJSON(connectedBodyInfoValue, allocator, fUnitScale, options);
             rConnectedBodyInfoValues.PushBack(connectedBodyInfoValue, allocator);
         }
-        value.AddMember("connectedBodies", rConnectedBodyInfoValues, allocator);
+        rRobotBaseInfo.AddMember("connectedBodies", rConnectedBodyInfoValues, allocator);
     }
 
     if (_vGripperInfos.size() > 0) {
@@ -600,7 +600,7 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
             (*it)->SerializeJSON(gripperInfoValue, allocator, fUnitScale, options);
             rGripperInfoValues.PushBack(gripperInfoValue, allocator);
         }
-        value.AddMember("gripperInfos", rGripperInfoValues, allocator);
+        rRobotBaseInfo.AddMember("gripperInfos", rGripperInfoValues, allocator);
     }
 }
 
