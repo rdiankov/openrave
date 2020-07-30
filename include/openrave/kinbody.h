@@ -215,6 +215,8 @@ public:
         void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options) override;
 
         /// \brief compare two geometry infos. If the floating differences are within fEpsilon, then comparison will return true.
+        ///
+        /// \return true if geometries are similar within epsilon
         bool Compare(const GeometryInfo& rhs, dReal fEpsilon=1e-7) const;
 
         /// \brief converts the unit scale of the geometry
@@ -336,6 +338,12 @@ public:
         void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
         void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options) override;
 
+        /// \brief compare two link infos. If the floating differences are within fEpsilon, then comparison will return true.
+        ///
+        /// \param linkCompareOptions 0 to compare everything. 1 to ignore _t
+        /// \return true if links are similar within epsilon
+        bool Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fEpsilon=1e-7) const;
+
         /// \brief converts the unit scale of the link properties and geometries
         void ConvertUnitScale(dReal fUnitScale);
 
@@ -355,7 +363,7 @@ public:
         /// mass of link
         dReal _mass; ///< kg
 
-        Vector _vinertiamoments; ///< kg/unit**2 inertia along the axes of _tMassFrame
+        Vector _vinertiamoments; ///< kg*unit**2 inertia along the axes of _tMassFrame
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model

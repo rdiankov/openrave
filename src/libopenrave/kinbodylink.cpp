@@ -38,6 +38,71 @@ void KinBody::LinkInfo::Reset()
     _bIsEnabled = false;
 }
 
+bool KinBody::LinkInfo::Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fEpsilon) const
+{
+    if( _vgeometryinfos.size() != rhs._vgeometryinfos.size() ) {
+        return false;
+    }
+
+    if( _id != rhs._id ) {
+        return false;
+    }
+    if( _name != rhs._name ) {
+        return false;
+    }
+    if( _mapFloatParameters != rhs._mapFloatParameters ) {
+        return false;
+    }
+    if( _mapIntParameters != rhs._mapIntParameters ) {
+        return false;
+    }
+    if( _mapStringParameters != rhs._mapStringParameters ) {
+        return false;
+    }
+
+    if( _vForcedAdjacentLinks != rhs._vForcedAdjacentLinks ) {
+        return false;
+    }
+
+    if( _bStatic != rhs._bStatic ) {
+        return false;
+    }
+
+    if( _bIsEnabled != rhs._bIsEnabled ) {
+        return false;
+    }
+
+    if( !(linkCompareOptions & 1) ) {
+        if( TransformDistanceFast(_t, rhs._t) > fEpsilon ) {
+            return false;
+        }
+    }
+
+    if( TransformDistanceFast(_tMassFrame, rhs._tMassFrame) > fEpsilon ) {
+        return false;
+    }
+    if( RaveFabs(_mass - rhs._mass) > fEpsilon ) {
+        return false;
+    }
+    if( RaveFabs(_vinertiamoments[0]- rhs._vinertiamoments[0]) > fEpsilon ) {
+        return false;
+    }
+    if( RaveFabs(_vinertiamoments[1]- rhs._vinertiamoments[1]) > fEpsilon ) {
+        return false;
+    }
+    if( RaveFabs(_vinertiamoments[2]- rhs._vinertiamoments[2]) > fEpsilon ) {
+        return false;
+    }
+
+    for(int igeom = 0; igeom < (int)_vgeometryinfos.size(); ++igeom) {
+        if( !_vgeometryinfos[igeom]->Compare(*rhs._vgeometryinfos[igeom], fEpsilon) ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void KinBody::LinkInfo::ConvertUnitScale(dReal fUnitScale)
 {
     FOREACH(itgeometry, _vgeometryinfos) {
@@ -50,7 +115,7 @@ void KinBody::LinkInfo::ConvertUnitScale(dReal fUnitScale)
     }
 
     _tMassFrame.trans *= fUnitScale;
-    _vinertiamoments /= fUnitScale*fUnitScale;
+    _vinertiamoments *= fUnitScale*fUnitScale;
 }
 
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const

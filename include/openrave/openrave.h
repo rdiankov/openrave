@@ -352,7 +352,7 @@ public:
     }
 
     virtual bool operator!=(const Readable& other) {
-        return true;
+        return !operator==(other);
     }
 
 private:
@@ -612,10 +612,6 @@ public:
         }
 
         return _data == pOther->_data;
-    }
-
-    bool operator!=(const Readable& other) override {
-        return !operator==(other);
     }
 
     const std::string& GetData() const;
