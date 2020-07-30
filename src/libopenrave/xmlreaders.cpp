@@ -271,8 +271,18 @@ BaseXMLReader::ProcessElement GeometryInfoReader::startElement(const std::string
         return PE_Support;
     }
     switch(_pgeom->_type) {
+    case GT_Container:
+        if( xmlname == "outer_extents" || xmlname == "inner_extents" || xmlname == "bottom_cross" || xmlname == "bottom" ) {
+            return PE_Support;
+        }
+        break;
+    case GT_Cage:
+        if( xmlname == "sidewall" || xmlname == "transf" || xmlname == "vExtents" || xmlname == "type" ) {
+            return PE_Support;
+        }
+        break;
     case GT_TriMesh:
-        if(xmlname=="collision"|| xmlname=="data" || xmlname=="vertices" ) {
+        if( xmlname == "collision" || xmlname == "data" || xmlname == "vertices" ) {
             return PE_Support;
         }
         break;
