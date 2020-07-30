@@ -76,13 +76,21 @@ void RobotBase::ConnectedBodyInfo::Reset()
     _bIsActive = 0;
 }
 
-void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &rConnectedBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    orjson::SetJsonValueByKey(value, "id", _id, allocator);
-    orjson::SetJsonValueByKey(value, "name", _name, allocator);
-    orjson::SetJsonValueByKey(value, "linkName", _linkname, allocator);
-    orjson::SetJsonValueByKey(value, "uri", _uri, allocator);
-    orjson::SetJsonValueByKey(value, "transform", _trelative, allocator);
+    orjson::SetJsonValueByKey(rConnectedBodyInfo, "id", _id, allocator);
+    orjson::SetJsonValueByKey(rConnectedBodyInfo, "name", _name, allocator);
+    orjson::SetJsonValueByKey(rConnectedBodyInfo, "linkName", _linkname, allocator);
+    if (!_uri.empty()) {
+        if( options & ISO_ReferenceUriHint ) {
+            orjson::SetJsonValueByKey(rConnectedBodyInfo, "uriHint", _uri, allocator);
+        }
+        else {
+            orjson::SetJsonValueByKey(rConnectedBodyInfo, "uri", _uri, allocator);
+        }
+    }
+
+    orjson::SetJsonValueByKey(rConnectedBodyInfo, "transform", _trelative, allocator);
 
     rapidjson::Value linkInfosValue;
     linkInfosValue.SetArray();
@@ -93,7 +101,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         linkInfosValue.PushBack(info, allocator);
     }
     if (linkInfosValue.Size() > 0) {
-        value.AddMember("links", linkInfosValue, allocator);
+        rConnectedBodyInfo.AddMember("links", linkInfosValue, allocator);
     }
 
     rapidjson::Value jointInfosValue;
@@ -105,7 +113,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         jointInfosValue.PushBack(v, allocator);
     }
     if (jointInfosValue.Size()) {
-        value.AddMember("joints", jointInfosValue, allocator);
+        rConnectedBodyInfo.AddMember("joints", jointInfosValue, allocator);
     }
 
     rapidjson::Value manipulatorInfosValue;
@@ -117,7 +125,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         manipulatorInfosValue.PushBack(info, allocator);
     }
     if (manipulatorInfosValue.Size() > 0) {
-        value.AddMember("tools", manipulatorInfosValue, allocator);
+        rConnectedBodyInfo.AddMember("tools", manipulatorInfosValue, allocator);
     }
 
     rapidjson::Value attachedSensorInfosValue;
@@ -129,7 +137,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         attachedSensorInfosValue.PushBack(info, allocator);
     }
     if (attachedSensorInfosValue.Size() > 0) {
-        value.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
+        rConnectedBodyInfo.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
     }
 
     rapidjson::Value rGripperInfos;
@@ -141,10 +149,10 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         rGripperInfos.PushBack(info, allocator);
     }
     if (rGripperInfos.Size() > 0) {
-        value.AddMember("gripperInfos", rGripperInfos, allocator);
+        rConnectedBodyInfo.AddMember("gripperInfos", rGripperInfos, allocator);
     }
 
-    orjson::SetJsonValueByKey(value, "isActive", (int)_bIsActive, allocator);
+    orjson::SetJsonValueByKey(rConnectedBodyInfo, "isActive", (int)_bIsActive, allocator);
 }
 
 void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options)
@@ -155,7 +163,11 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
         _id = _name;
     }
     orjson::LoadJsonValueByKey(value, "linkName", _linkname);
-    orjson::LoadJsonValueByKey(value, "uri", _uri);
+
+    if( !(options & IDO_IgnoreReferenceUri) ) {
+        orjson::LoadJsonValueByKey(value, "uri", _uri);
+    }
+
     orjson::LoadJsonValueByKey(value, "transform", _trelative);
 
     if(value.HasMember("links") && value["links"].IsArray()) {

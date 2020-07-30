@@ -3452,6 +3452,9 @@ public:
                     }
                     // do not let json_data in collada override name attribute of <extra>
                     pGripperInfo->name = _ConvertToOpenRAVEName(grippername);
+                    if( pGripperInfo->_id.empty() ) {
+                        pGripperInfo->_id = pGripperInfo->name;
+                    }
                     probot->_vecGripperInfos.push_back(pGripperInfo);
                 }
                 else {
