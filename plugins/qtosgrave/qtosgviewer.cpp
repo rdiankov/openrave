@@ -1347,7 +1347,7 @@ void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistan
     _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance));
 }
 
-void QtOSGViewer::_SetTrackManipulatorToStopTracking() 
+void QtOSGViewer::_SetTrackManipulatorToStopTracking()
 {
     _posgWidget->RestoreDefaultManipulator();
 }
@@ -1363,7 +1363,7 @@ bool QtOSGViewer::_SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, KinBody
 
     OpenRAVETracker* trackManipulator = _posgWidget->GetTrackModeManipulator();
     _posgWidget->SetCurrentCameraManipulator(trackManipulator);
-    trackManipulator->startTrackingNode(osgNode.get(), _posgWidget->GetCamera(), osg::Vec3d(0,1,0));
+    trackManipulator->startTrackingNode(osgNode.get(), _posgWidget->GetCamera(), osg::Vec3d(0,0,1));
     trackManipulator->setDistance(_focalDistance);
     trackManipulator->setOffset(osg::Vec3d(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]));
     return true;

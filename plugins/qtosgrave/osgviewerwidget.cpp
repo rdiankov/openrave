@@ -33,18 +33,30 @@
 
 namespace qtosgrave {
 
+OpenRAVETracker::OpenRAVETracker()
+{
+    _currentTransitionAnimationTime = 0;
+    _transitionAnimationPath = new osg::AnimationPath();
+}
+
 void OpenRAVETracker::setOffset(const osg::Vec3d& offset) {
     _offset = offset;
 }
 
 void OpenRAVETracker::startTrackingNode(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
 {
-    // NodeTrackerManipulator::setTrackNode(node);
-    // osg::Vec3d eye, center, up;
-    // getTransformation( eye, center, up );
-    // setTransformation( eye, center, worldUpVector );
+    NodeTrackerManipulator::setTrackNode(node);
+    osg::Vec3d eye, center, up;
+    getTransformation( eye, center, up );
+    setTransformation( eye, center, worldUpVector );
+    _lastTimeStamp = 0;
+    _currentTransitionAnimationTime = 0;
     createTransitionAnimationPath(node, currentCamera, worldUpVector);
-    currentCamera->setUpdateCallback(new osg::AnimationPathCallback(_transitionAnimationPath.get(),0.0,1.0));
+    // currentCamera->setUpdateCallback(new osg::AnimationPathCallback(_transitionAnimationPath.get(),0.0,1.0));
+}
+
+void OpenRAVETracker::stopTrackingNode(osg::Camera* currentCamera) {
+    // empty
 }
 
 osg::Matrixd OpenRAVETracker::getMatrix() const {
@@ -60,32 +72,30 @@ osg::Matrixd OpenRAVETracker::getMatrix() const {
     return osg::Matrixd::translate(0.0,0.0,_distance)*osg::Matrixd::rotate(_rotation)*osg::Matrix::translate(nodeCenter);
 }
 
-void OpenRAVETracker::createTransitionAnimationPath(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
-{
-    _transitionAnimationPath->clear();
-
-    // first create current camera pose
-    osg::Matrixd viewMatrix = osg::Matrixd::inverse(currentCamera->getViewMatrix());
-
-    osg::Vec3d cameraPos(viewMatrix(0,3), viewMatrix(1,3), viewMatrix(2,3));
-    osg::Quat cameraRotation = viewMatrix.getRotate();
-    _transitionAnimationPath->insert(0,osg::AnimationPath::ControlPoint(cameraPos, cameraRotation));
-
-    // now calculate a pose that will look to the node using current position
-    osg::Matrixd localToWorld;
-    computeNodeLocalToWorld(localToWorld);
-
-    osg::Vec3d nodeCenter = osg::Vec3d(localToWorld(0,3),localToWorld(1,3),localToWorld(2,3));
-
-    osg::Matrixd lookAtNodeMatrix;
-    lookAtNodeMatrix.lookAt(cameraPos, nodeCenter, worldUpVector);
-
-    _transitionAnimationPath->insert(1,osg::AnimationPath::ControlPoint(cameraPos, lookAtNodeMatrix.getRotate()));
-}
-
 // need to reimplement this method so we can track based on nodes origin instead of center of bounding sphere
 osg::Matrixd OpenRAVETracker::getInverseMatrix() const
 {
+    double dt = 1.0/60.0;
+
+    if(_currentTransitionAnimationTime <= 2) {
+        const_cast<OpenRAVETracker*>(this)->_currentTransitionAnimationTime += dt;
+
+        osg::AnimationPath::ControlPoint cp;
+        _transitionAnimationPath->getInterpolatedControlPoint(_currentTransitionAnimationTime, cp);
+        
+        osg::Quat lookAtRotation = cp.getRotation().inverse();
+        osg::Vec3d lookAtTranslation = lookAtRotation * -cp.getPosition();
+
+        // build a lookat matrix from position and camera axis
+        osg::Matrixd result;
+        result.makeRotate(lookAtRotation);
+        result(3,0) = lookAtTranslation.x();
+        result(3,1) = lookAtTranslation.y();
+        result(3,2) = lookAtTranslation.z();
+        return result;
+    }
+
+
     osg::Vec3d nodeCenter;
     osg::Quat nodeRotation;
     computeNodeCenterAndRotation(nodeCenter,nodeRotation);
@@ -95,6 +105,30 @@ osg::Matrixd OpenRAVETracker::getInverseMatrix() const
 
     nodeCenter = osg::Vec3d(_offset) * localToWorld;
     return osg::Matrixd::translate(-nodeCenter)*osg::Matrixd::rotate(_rotation.inverse())*osg::Matrixd::translate(0.0,0.0,-_distance);
+}
+
+void OpenRAVETracker::createTransitionAnimationPath(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
+{
+    _transitionAnimationPath->clear();
+
+    // create animation frames in world space
+    osg::Matrixd viewMatrix = osg::Matrixd::inverse(currentCamera->getViewMatrix());
+
+    osg::Vec3d cameraWorldPos(viewMatrix(3,0), viewMatrix(3,1), viewMatrix(3,2));
+    osg::Quat cameraRotation = viewMatrix.getRotate();
+    _transitionAnimationPath->insert(0,osg::AnimationPath::ControlPoint(cameraWorldPos, cameraRotation));
+
+    // now calculate a pose that will look to the node using current position
+    osg::Matrixd localToWorld;
+    computeNodeLocalToWorld(localToWorld);
+
+    // openscenegraph has transposed matrix form to match opengl spec
+    osg::Vec3d nodeCenterWorld = osg::Vec3d(localToWorld(3,0),localToWorld(3,1),localToWorld(3,2));
+
+    osg::Matrixd lookAtNodeMatrix;
+    lookAtNodeMatrix.makeLookAt(cameraWorldPos, nodeCenterWorld - cameraWorldPos, worldUpVector);
+
+    _transitionAnimationPath->insert(2,osg::AnimationPath::ControlPoint(cameraWorldPos, lookAtNodeMatrix.getRotate().inverse()));
 }
 
 class OpenRAVETrackball : public osgGA::TrackballManipulator

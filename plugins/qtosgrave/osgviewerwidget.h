@@ -41,6 +41,8 @@ class OpenRAVETrackball;
 class OpenRAVETracker : public osgGA::NodeTrackerManipulator
 {
 public:
+    OpenRAVETracker();
+
     /// \brief Starts tracking the given node using the given upVector to set initial pose
     /// param currentCamera is not stored, its only used to get current camera pose in order to calculate
     /// the transition animation from current position to the final tracking position for the node
@@ -58,6 +60,8 @@ private:
 
 private:
     osg::Vec3d _offset;
+    double _lastTimeStamp;
+    double _currentTransitionAnimationTime;
     osg::ref_ptr<osg::AnimationPath> _transitionAnimationPath;
 
 };
