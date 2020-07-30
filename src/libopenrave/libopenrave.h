@@ -475,27 +475,10 @@ inline const char *strcasestr(const char *s, const char *find)
 /// \return length of string (ie strlen(output))
 inline uint32_t ConvertUIntToHex(uint32_t value, char* output)
 {
-    uint32_t testvalue = 0xf0000000;
-    uint32_t testindex = 0;
-    while(1) {
-        if( !testvalue ) {
-            break;
-        }
-        if( value & testvalue ) {
-            break;
-        }
-
-        testvalue >>= 4;
-        ++testindex;
+    uint32_t length = 1; // in case value is 0, still requires one character '0'
+    if( value > 0 ) {
+        length = 8-(__builtin_clz(value)/4);
     }
-
-    uint32_t length = 8-testindex;
-    if( length == 0 ) {
-        output[0] = '0';
-        output[1] = 0; // null terminator
-        return 1;
-    }
-    
     for(uint32_t index = 0; index < length; ++index) {
         uint32_t nibble = (value>>(4*(length-1-index)))&0xf;
         if( nibble < 10 ) {
