@@ -914,10 +914,17 @@ void QOSGViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
     }
 }
 
-void QOSGViewerWidget::StartTrackingNode(OSGNodePtr node, const osg::Vec3d& offset, double trackDistance, const osg::Vec3d& worldUpVector)
+void QOSGViewerWidget::StartTrackingNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance, const osg::Vec3d& worldUpVector)
 {
+    _trackingNodeText = str(boost::format("Tracking %s")%trackInfoText);
     SetCurrentCameraManipulator(_osgTrackModeManipulator.get());
     _osgTrackModeManipulator->StartTrackingNode(node.get(), offset, trackDistance, GetCamera(), osg::Vec3d(0,0,1));
+}
+
+void QOSGViewerWidget::StopTrackingNode()
+{
+    _trackingNodeText = "";
+    RestoreDefaultManipulator();
 }
 
 void QOSGViewerWidget::_ClearDragger()
@@ -974,6 +981,12 @@ void QOSGViewerWidget::_UpdateHUDText()
             s += "\n";
         }
         s += _strSelectedItemText;
+    }
+    if( _trackingNodeText.size() > 0 ) {
+        if( s.size() > 0 ) {
+            s += "\n";
+        }
+        s += _trackingNodeText;
     }
     _osgHudText->setText(s);
 }
@@ -1497,7 +1510,7 @@ OSGNodePtr QOSGViewerWidget::_AddDraggerToObject(const std::string& draggerName,
 }
 
 void QOSGViewerWidget::initializeGL() {
-    SetViewport(width(), height());
+    resizeGL(width(), height());
 }
 
 void QOSGViewerWidget::paintGL()

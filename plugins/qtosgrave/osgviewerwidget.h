@@ -132,7 +132,9 @@ public:
     void SelectOSGLink(OSGNodePtr node, int modkeymask);
 
     /// \brief activate and configure trackmode manipulator to track given OSG node
-    void StartTrackingNode(OSGNodePtr node, const osg::Vec3d& offset, double trackDistance, const osg::Vec3d& worldUpVector);
+    /// \brief trackInfoText is the text to display in canvas about the current element being tracked
+    void StartTrackingNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance, const osg::Vec3d& worldUpVector);
+    void StopTrackingNode();
 
     osg::Camera *GetCamera();
 
@@ -271,7 +273,7 @@ protected:
     osg::ref_ptr<OpenRAVETracker> _osgTrackModeManipulator; //< manipulator used by TrackLink and TrackManip commands
 
     osg::ref_ptr<osgText::Text> _osgHudText; ///< the HUD text in the upper left corner
-    std::string _strUserText, _strSelectedItemText, _strRayInfoText; ///< the user hud text
+    std::string _strUserText, _strSelectedItemText, _strRayInfoText, _trackingNodeText;; ///< the user hud text
 
     osg::ref_ptr<Skybox> _osgSkybox;  ///< the skybox moving together with camera
 
