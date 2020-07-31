@@ -141,7 +141,7 @@ bool PyPostureDescriberBase::Load() const
 py::object PyPostureDescriberBase::Interpret(const PostureStateInt state) const
 {
     rapidjson::Document rIn, rOut;
-    openravejson::SetJsonValueByKey(rIn, "posturestate", state, rIn.GetAllocator());
+    orjson::SetJsonValueByKey(rIn, "posturestate", state, rIn.GetAllocator());
     _pDescriber->SendJSONCommand("Interpret", rIn, rOut);
     return toPyObject(rOut);
 }

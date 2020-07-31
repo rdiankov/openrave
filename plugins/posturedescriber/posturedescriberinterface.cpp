@@ -551,8 +551,8 @@ bool PostureDescriber::_InterpretJSONCommand(const rapidjson::Value& input,
         mfeaturestate[feature] = (state & pow2) ? 1 : 0;
     }
 
-    openravejson::SetJsonValueByKey(output,       "features",     vfeatures, allocator);
-    openravejson::SetJsonValueByKey(output, "interpretation", mfeaturestate, allocator);
+    orjson::SetJsonValueByKey(output,       "features",     vfeatures, allocator);
+    orjson::SetJsonValueByKey(output, "interpretation", mfeaturestate, allocator);
 
     return true;
 }
