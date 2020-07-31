@@ -73,7 +73,6 @@ void KinBody::JointInfo::Reset()
     _infoElectricMotor.reset();
     _bIsCircular = {0, 0, 0};
     _bIsActive = true;
-    _bStatic = false;
     _controlMode = JCM_None;
     _jci_robotcontroller.reset();
     _jci_io.reset();
