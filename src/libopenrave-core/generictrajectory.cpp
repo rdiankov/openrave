@@ -461,6 +461,7 @@ public:
             WriteBinaryUInt16(O, numReadableInterfaces);
 
             rapidjson::Document document;
+            int zerooptions = 0;
             FOREACHC(itReadableInterface, GetReadableInterfaces()) {
                 WriteBinaryString(O, itReadableInterface->first);  // readable interface id
 
@@ -468,8 +469,7 @@ public:
                 ReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(itReadableInterface->second);
                 if (!!pReadable) {
                     rapidjson::Value rReadable;
-                    int options = 0;
-                    if( pReadable->SerializeJSON(rReadable, document.GetAllocator(), fUnitScale, options) ) {
+                    if( pReadable->SerializeJSON(rReadable, document.GetAllocator(), fUnitScale, zerooptions) ) {
                         WriteBinaryString(O, rReadable.GetString());
                         continue;
                     }
@@ -491,7 +491,7 @@ public:
                         }
                         else {
                             writer.reset(new xmlreaders::StreamXMLWriter(std::string()));
-                            if( pReadable->SerializeXML(writer, options) ) {
+                            if( pReadable->SerializeXML(writer, zerooptions) ) {
                                 ss.clear();
                                 ss.str(std::string());
                                 writer->Serialize(ss);
