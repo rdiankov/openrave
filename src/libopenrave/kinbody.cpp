@@ -5464,6 +5464,9 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     _ResolveInfoIds();
 
     info._id = _id;
+    if(info._id.empty()) {
+        info._id = _name;
+    }
     info._uri = __struri;
     info._name = _name;
     info._referenceUri = _referenceUri;
