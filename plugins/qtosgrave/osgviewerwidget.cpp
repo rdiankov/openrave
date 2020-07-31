@@ -40,7 +40,7 @@ public:
         _currentTransitionAnimationTime = 0;
         _transitionAnimationPath = new osg::AnimationPath();
         _transitionAnimationPath->setLoopMode(osg::AnimationPath::NO_LOOPING);
-        _transitionAnimationDuration = 1.5;
+        _transitionAnimationDuration = 1.0;
     }
 
     void StartTrackingNode(osg::Node* node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
@@ -102,23 +102,25 @@ private:
         osg::Matrixd viewMatrix = osg::Matrixd::inverse(currentCamera->getViewMatrix());
 
         osg::Vec3d cameraWorldPos(viewMatrix(3,0), viewMatrix(3,1), viewMatrix(3,2));
-        osg::Quat cameraRotation = viewMatrix.getRotate();
-        _transitionAnimationPath->insert(0,osg::AnimationPath::ControlPoint(cameraWorldPos, cameraRotation));
 
-        // now calculate a pose that will look to the node using current position
+         // now calculate a pose that will look to the node using current position
         osg::Matrixd localToWorld;
         computeNodeLocalToWorld(localToWorld);
 
         // openscenegraph has transposed matrix form to match opengl spec
         osg::Vec3d nodeCenterWorld = osg::Vec3d(_offset) * localToWorld;
+        if(nodeCenterWorld.length() < 1e-3) {
+            // already very close to desired position, no need to animate
+            _transitionAnimationDuration = 0;
+            return;
+        }
 
-        osg::Matrixd lookAtNodeMatrix;
-        lookAtNodeMatrix.makeLookAt(cameraWorldPos, nodeCenterWorld - cameraWorldPos, worldUpVector);
 
-        _transitionAnimationPath->insert(_transitionAnimationDuration * 0.4,osg::AnimationPath::ControlPoint(cameraWorldPos, lookAtNodeMatrix.getRotate().inverse()));
-
+        osg::Quat cameraRotation = viewMatrix.getRotate();
+        _transitionAnimationPath->insert(0,osg::AnimationPath::ControlPoint(cameraWorldPos, cameraRotation));
 
         // last frame pose is looking at the node from a distance _distance
+        osg::Matrixd lookAtNodeMatrix;
         osg::Vec3d towardsNodeVector = nodeCenterWorld - cameraWorldPos;
         // // check if we are already at a proper distance from tracked node - if so, no need to navigate to there, just skip this keyframe
         // if( abs(towardsNodeVector.length() -_distance ) < 1e-3 ) {
@@ -132,7 +134,7 @@ private:
 
     bool _IsTransitionAnimationFinished() const
     {
-        return _currentTransitionAnimationTime >= _transitionAnimationDuration;
+        return _transitionAnimationDuration > 0 && _currentTransitionAnimationTime >= _transitionAnimationDuration;
     }
 
     osg::Matrixd _GetTransitionAnimationMatrix()
@@ -1029,6 +1031,23 @@ void QOSGViewerWidget::SetViewType(int isorthogonal)
 void QOSGViewerWidget::SetViewport(int width, int height)
 {
     float scale = this->devicePixelRatio();
+    _osgview->getCamera()->setViewport(0,0,width*scale,height*scale);
+    _osghudview->getCamera()->setViewport(0,0,width*scale,height*scale);
+    _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width*scale/2, width*scale/2, -height*scale/2, height*scale/2, 0.01/_metersinunit, 100.0/_metersinunit));
+
+    osgViewer::Viewer::Windows windows;
+    _osgviewer->getWindows(windows);
+    for (osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+        osgViewer::GraphicsWindowEmbedded *gw = dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(*itr);
+        gw->getEventQueue()->windowResize(this->x() * scale, this->y() * scale, width * scale, height * scale);
+        gw->resized(this->x() * scale, this->y() * scale, width * scale, height * scale);
+    }
+
+    osg::Camera *camera = _osgview->getCamera();
+    camera->setViewport(0, 0, width * scale, height * scale);
+    osg::Camera *hudcamera = _osghudview->getCamera();
+    hudcamera->setViewport(0, 0, width * scale, height * scale);
+
     double textheight = 12*scale;
     _osgHudText->setPosition(osg::Vec3(-width*scale/2+10, height*scale/2-textheight, -50));
     _osgHudText->setCharacterSize(textheight);
@@ -1057,7 +1076,6 @@ void QOSGViewerWidget::Zoom(float factor)
     } else {
         _osgDefaultManipulator->setDistance(_osgDefaultManipulator->getDistance() / factor);
         _osgTrackModeManipulator->setDistance(_osgTrackModeManipulator->getDistance() / factor);
-
     }
 }
 
@@ -1525,24 +1543,6 @@ void QOSGViewerWidget::paintGL()
 
 void QOSGViewerWidget::resizeGL(int width, int height)
 {
-    float scale = this->devicePixelRatio();
-    _osgview->getCamera()->setViewport(0,0,width*scale,height*scale);
-    _osghudview->getCamera()->setViewport(0,0,width*scale,height*scale);
-    _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width*scale/2, width*scale/2, -height*scale/2, height*scale/2, 0.01/_metersinunit, 100.0/_metersinunit));
-
-    osgViewer::Viewer::Windows windows;
-    _osgviewer->getWindows(windows);
-    for (osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
-        osgViewer::GraphicsWindowEmbedded *gw = dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(*itr);
-        gw->getEventQueue()->windowResize(this->x() * scale, this->y() * scale, width * scale, height * scale);
-        gw->resized(this->x() * scale, this->y() * scale, width * scale, height * scale);
-    }
-
-    osg::Camera *camera = _osgview->getCamera();
-    camera->setViewport(0, 0, width * scale, height * scale);
-    osg::Camera *hudcamera = _osghudview->getCamera();
-    hudcamera->setViewport(0, 0, width * scale, height * scale);
-
     SetViewport(width, height);
 }
 
@@ -1599,7 +1599,6 @@ void QOSGViewerWidget::wheelEvent(QWheelEvent *event)
                                                      : osgGA::GUIEventAdapter::SCROLL_DOWN;
     SetKeyboardModifiers(event);
     _osgGraphicWindow->getEventQueue()->mouseScroll(motion);
-
 }
 
 void QOSGViewerWidget::keyPressEvent(QKeyEvent *event)

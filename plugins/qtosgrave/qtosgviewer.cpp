@@ -1035,7 +1035,7 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
 
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
-    _posgWidget->UpdateHUDAxisTransform(width, height);
+    _posgWidget->SetViewport(width, height); // < need to do this since resizeGL is not properly called when using viewer in embedded apps (other than openrave standalone viewer)
 
     double fovy, aspectRatio, zNear, zFar;
     _posgWidget->GetCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
@@ -1048,6 +1048,8 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
     _camintrinsics.cy = (float)camheight/2;
     _camintrinsics.focal_length = zNear;
     _camintrinsics.distortion_model = "";
+
+    _UpdateDistanceToFocusFromCurrentManipulator();
 }
 
 bool QtOSGViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
@@ -1322,10 +1324,7 @@ bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<fl
 
 void QtOSGViewer::_SetCameraTransform()
 {
-    osg::ref_ptr<osgGA::TrackballManipulator> defaultManip = _posgWidget->GetDefaultCameraManipulator();
-    defaultManip->setDistance(_focalDistance);
-    // has to come after setting distance because internally orbit manipulator uses the distance to deduct view center
-    defaultManip->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
+    _posgWidget->GetDefaultCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
 }
 
 void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
@@ -1369,10 +1368,21 @@ void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
 {
     if (focalDistance > 0) {
         _focalDistance = focalDistance;
+        // both trackball and node tracker manipulators inherit from orbit manip which has setDistance method
+        osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(_posgWidget->GetCurrentCameraManipulator().get());
+        currentManip->setDistance(_focalDistance);
     }
 
     _SetCameraTransform();
     _UpdateCameraTransform(0);
+}
+
+void QtOSGViewer::_UpdateDistanceToFocusFromCurrentManipulator()
+{
+    // get current distance from current manipulator and set it to _focalDistance. This need to be done because
+    // manipulators internally updates their distance during usage and this must reflect viewer state
+    osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(_posgWidget->GetCurrentCameraManipulator().get());
+    _focalDistance = currentManip->getDistance();
 }
 
 RaveTransform<float> QtOSGViewer::GetCameraTransform() const
