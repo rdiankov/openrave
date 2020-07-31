@@ -358,7 +358,7 @@ public:
 
     virtual bool seekToMousePointer( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
     {
-        //SetSeekMode(false);
+        SetSeekMode(false);
         if( !isAnimating() ) {
             // get current transformation
             osg::Vec3d prevCenter, prevEye, prevUp;
@@ -642,7 +642,7 @@ bool QOSGViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::
     }
 
     if( key == 'f' ) {
-        //_osgDefaultManipulator->SetSeekMode(!_osgDefaultManipulator->InSeekMode());
+        _osgDefaultManipulator->SetSeekMode(!_osgDefaultManipulator->InSeekMode());
     }
     return false;
 }
@@ -823,7 +823,7 @@ void QOSGViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Inte
         _strRayInfoText.clear();
         _UpdateHUDText();
         if( buttonPressed ) {
-            //_osgDefaultManipulator->SetSeekMode(false);
+            _osgDefaultManipulator->SetSeekMode(false);
         }
         if( _bIsSelectiveActive && buttonPressed ) {
             SelectOSGLink(OSGNodePtr(), modkeymask);

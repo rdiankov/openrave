@@ -1144,9 +1144,7 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
     if(!_SetTrackManipulatorToTrackLink(_ptrackinglink, kinBodyItem, _tTrackingLinkRelative)) {
         return false;
     }
-    if( bresetvelocity ) {
-        _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
-    }
+    
     return !!_ptrackinglink;
 }
 
@@ -1165,12 +1163,16 @@ bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
     EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
     RobotBasePtr probot = GetEnv()->GetRobot(robotname);
     _ptrackingmanip = probot->GetManipulator(manipname);
-    if( !probot ) {
+    if( !probot || !_ptrackingmanip) {
+        _SetTrackManipulatorToStopTracking();
         return false;
     }
-    if( bresetvelocity ) {
-        _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
+    KinBodyItemPtr kinBodyItem = _posgWidget->GetItemFromName(robotname);
+
+    if(!_SetTrackManipulatorToTrackLink(_ptrackingmanip->GetEndEffector(), kinBodyItem, OpenRAVE::RaveTransform<float>())) {
+        return false;
     }
+
     return !!_ptrackingmanip;
 }
 
