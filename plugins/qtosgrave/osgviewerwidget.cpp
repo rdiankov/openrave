@@ -37,26 +37,20 @@ OpenRAVETracker::OpenRAVETracker()
 {
     _currentTransitionAnimationTime = 0;
     _transitionAnimationPath = new osg::AnimationPath();
+    _transitionAnimationPath->setLoopMode(osg::AnimationPath::NO_LOOPING);
+    _transitionAnimationDuration = 1.5;
 }
 
-void OpenRAVETracker::setOffset(const osg::Vec3d& offset) {
+void OpenRAVETracker::SetOffset(const osg::Vec3d& offset) {
     _offset = offset;
 }
 
-void OpenRAVETracker::startTrackingNode(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
+void OpenRAVETracker::StartTrackingNode(osg::Node* node, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
 {
     NodeTrackerManipulator::setTrackNode(node);
-    osg::Vec3d eye, center, up;
-    getTransformation( eye, center, up );
-    setTransformation( eye, center, worldUpVector );
-    _lastTimeStamp = 0;
     _currentTransitionAnimationTime = 0;
-    createTransitionAnimationPath(node, currentCamera, worldUpVector);
-    // currentCamera->setUpdateCallback(new osg::AnimationPathCallback(_transitionAnimationPath.get(),0.0,1.0));
-}
-
-void OpenRAVETracker::stopTrackingNode(osg::Camera* currentCamera) {
-    // empty
+    _CreateTransitionAnimationPath(node, currentCamera, worldUpVector);
+    _time.restart();
 }
 
 osg::Matrixd OpenRAVETracker::getMatrix() const {
@@ -75,26 +69,10 @@ osg::Matrixd OpenRAVETracker::getMatrix() const {
 // need to reimplement this method so we can track based on nodes origin instead of center of bounding sphere
 osg::Matrixd OpenRAVETracker::getInverseMatrix() const
 {
-    double dt = 1.0/60.0;
-
-    if(_currentTransitionAnimationTime <= 2) {
-        const_cast<OpenRAVETracker*>(this)->_currentTransitionAnimationTime += dt;
-
-        osg::AnimationPath::ControlPoint cp;
-        _transitionAnimationPath->getInterpolatedControlPoint(_currentTransitionAnimationTime, cp);
-        
-        osg::Quat lookAtRotation = cp.getRotation().inverse();
-        osg::Vec3d lookAtTranslation = lookAtRotation * -cp.getPosition();
-
-        // build a lookat matrix from position and camera axis
-        osg::Matrixd result;
-        result.makeRotate(lookAtRotation);
-        result(3,0) = lookAtTranslation.x();
-        result(3,1) = lookAtTranslation.y();
-        result(3,2) = lookAtTranslation.z();
-        return result;
+    if(!_IsTransitionAnimationFinished()) {
+        // a very small const encapsulation break, since this allow all animation logic to be totally contained in the manipulator
+        return const_cast<OpenRAVETracker*>(this)->_GetTransitionAnimationMatrix();
     }
-
 
     osg::Vec3d nodeCenter;
     osg::Quat nodeRotation;
@@ -107,7 +85,7 @@ osg::Matrixd OpenRAVETracker::getInverseMatrix() const
     return osg::Matrixd::translate(-nodeCenter)*osg::Matrixd::rotate(_rotation.inverse())*osg::Matrixd::translate(0.0,0.0,-_distance);
 }
 
-void OpenRAVETracker::createTransitionAnimationPath(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
+void OpenRAVETracker::_CreateTransitionAnimationPath(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
 {
     _transitionAnimationPath->clear();
 
@@ -128,7 +106,39 @@ void OpenRAVETracker::createTransitionAnimationPath(osg::Node* node, osg::Camera
     osg::Matrixd lookAtNodeMatrix;
     lookAtNodeMatrix.makeLookAt(cameraWorldPos, nodeCenterWorld - cameraWorldPos, worldUpVector);
 
-    _transitionAnimationPath->insert(2,osg::AnimationPath::ControlPoint(cameraWorldPos, lookAtNodeMatrix.getRotate().inverse()));
+    _transitionAnimationPath->insert(_transitionAnimationDuration * 0.4,osg::AnimationPath::ControlPoint(cameraWorldPos, lookAtNodeMatrix.getRotate().inverse()));
+
+    // last frame pose is looking at the node from a distance _distance
+    towardsNodeVector.normalize();
+    lookAtNodeMatrix.makeLookAt(nodeCenterWorld - towardsNodeVector * _distance, nodeCenterWorld, worldUpVector);
+    _transitionAnimationPath->insert(_transitionAnimationDuration,osg::AnimationPath::ControlPoint(nodeCenterWorld - towardsNodeVector * _distance, lookAtNodeMatrix.getRotate().inverse()));
+}
+
+bool OpenRAVETracker::_IsTransitionAnimationFinished() const
+{
+    return _currentTransitionAnimationTime >= _transitionAnimationDuration;
+}
+
+osg::Matrixd OpenRAVETracker::_GetTransitionAnimationMatrix()
+{
+    double dt = _time.restart() / 1000.0;
+    _currentTransitionAnimationTime = min(_currentTransitionAnimationTime+dt, _transitionAnimationDuration);
+    osg::AnimationPath::ControlPoint cp;
+    _transitionAnimationPath->getInterpolatedControlPoint(_currentTransitionAnimationTime, cp);
+    osg::Quat lookAtRotation = cp.getRotation().inverse();
+    osg::Vec3d lookAtTranslation = lookAtRotation * -cp.getPosition();
+
+    // build a lookat matrix from position and camera axis
+    osg::Matrixd result;
+    result.makeRotate(lookAtRotation);
+    result(3,0) = lookAtTranslation.x();
+    result(3,1) = lookAtTranslation.y();
+    result(3,2) = lookAtTranslation.z();
+
+    // set final manipulator rotation so it matches the last animation rotation, so when it finishes (or get stopped),
+    // we start manipulating from there
+    _rotation = cp.getRotation();
+    return result;
 }
 
 class OpenRAVETrackball : public osgGA::TrackballManipulator
@@ -512,11 +522,6 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     {
         _osgFigureRoot = new osg::Group();
         osg::ref_ptr<osg::StateSet> stateset = _osgFigureRoot->getOrCreateStateSet();
-        //stateset->setAttribute(new osg::CullFace(osg::CullFace::FRONT_AND_BACK));
-        //stateset->setMode(GL_CULL_FACE, osg::StateAttribute::OFF);
-        //stateset->setAttributeAndModes(new osg::CullFace, osg::StateAttribute::OFF);
-        //stateset->setMode(GL_NORMALIZE,osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE);
-        //stateset->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
         stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
         stateset->setMode(GL_BLEND, osg::StateAttribute::ON);
         stateset->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
@@ -533,7 +538,6 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 
     // create world axis
     _osgWorldAxis = new osg::MatrixTransform();
-    //_osgWorldAxis->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE );
 
     _osgWorldAxis->addChild(CreateOSGXYZAxes(32.0, 2.0));
 
@@ -580,7 +584,6 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
         toon->addChild(_osgSceneRoot);
     }
 
-    //_osgLightsGroup->addChild(_osgSceneRoot);
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
     _timer.start( 10 );
 
@@ -1269,6 +1272,9 @@ void QOSGViewerWidget::SetCurrentCameraManipulator(osgGA::CameraManipulator* man
 void QOSGViewerWidget::RestoreDefaultManipulator()
 {
     SetCurrentCameraManipulator(_osgDefaultManipulator.get());
+    // copy matrix from trackManipulator to default one so change of manipulators occurs seamless
+    OpenRAVETracker* trackManipulator = GetTrackModeManipulator();
+    _osgDefaultManipulator->setByMatrix(trackManipulator->getMatrix());
 }
 
 OpenRAVETracker* QOSGViewerWidget::GetTrackModeManipulator()

@@ -19,6 +19,7 @@
 #include "osgpick.h"
 #include "osgskybox.h"
 
+#include <QTime>
 #include <QtCore/QTimer>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLayout>
@@ -46,9 +47,11 @@ public:
     /// \brief Starts tracking the given node using the given upVector to set initial pose
     /// param currentCamera is not stored, its only used to get current camera pose in order to calculate
     /// the transition animation from current position to the final tracking position for the node
-    virtual void startTrackingNode(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector);
-    virtual void stopTrackingNode(osg::Camera* currentCamera);
-    virtual void setOffset(const osg::Vec3d& offset);
+    virtual void StartTrackingNode(osg::Node* node, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector);
+    virtual void SetOffset(const osg::Vec3d& offset);
+
+public:
+    // OSG overloaded methods
     virtual osg::Matrixd getMatrix() const;
 
     // need to reimplement this method so we can track based on nodes origin (or offset) instead of center of bounding sphere
@@ -56,11 +59,14 @@ public:
     virtual osg::Matrixd getInverseMatrix() const;
 
 private:
-    void createTransitionAnimationPath(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector);
+    bool _IsTransitionAnimationFinished() const;
+    osg::Matrixd _GetTransitionAnimationMatrix();
+    void _CreateTransitionAnimationPath(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector);
 
 private:
+    QTime _time;
     osg::Vec3d _offset;
-    double _lastTimeStamp;
+    double _transitionAnimationDuration; //< specifies how long the transition will take
     double _currentTransitionAnimationTime;
     osg::ref_ptr<osg::AnimationPath> _transitionAnimationPath;
 

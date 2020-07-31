@@ -1363,9 +1363,8 @@ bool QtOSGViewer::_SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, KinBody
 
     OpenRAVETracker* trackManipulator = _posgWidget->GetTrackModeManipulator();
     _posgWidget->SetCurrentCameraManipulator(trackManipulator);
-    trackManipulator->startTrackingNode(osgNode.get(), _posgWidget->GetCamera(), osg::Vec3d(0,0,1));
-    trackManipulator->setDistance(_focalDistance);
-    trackManipulator->setOffset(osg::Vec3d(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]));
+    trackManipulator->StartTrackingNode(osgNode.get(), _focalDistance, _posgWidget->GetCamera(), osg::Vec3d(0,0,1));
+    trackManipulator->SetOffset(osg::Vec3d(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]));
     return true;
 }
 
