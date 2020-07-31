@@ -445,7 +445,6 @@ protected:
         }
         pBody->SetName(pKinBodyInfo->_name);
         _ExtractTransform(bodyValue, pBody, fUnitScale);
-        _ExtractReadableInterfaces(bodyValue, pBody, fUnitScale);
         pBodyOut = pBody;
         return true;
     }
@@ -472,34 +471,8 @@ protected:
         }
         pRobot->SetName(pRobotBaseInfo->_name);
         _ExtractTransform(bodyValue, pRobot, fUnitScale);
-        _ExtractReadableInterfaces(bodyValue, pRobot, fUnitScale);
         pRobotOut = pRobot;
         return true;
-    }
-
-    void _ExtractReadableInterfaces(const rapidjson::Value &objectValue, InterfaceBasePtr pInterface, dReal fUnitScale)
-    {
-        if (objectValue.HasMember("readableInterfaces") && objectValue["readableInterfaces"].IsArray()) {
-            for (rapidjson::Value::ConstValueIterator itReadable = objectValue["readableInterfaces"].Begin(); itReadable != objectValue["readableInterfaces"].End(); itReadable++) {
-                std::string id;
-                orjson::LoadJsonValueByKey(*itReadable, "id", id);
-                BaseJSONReaderPtr pReader = RaveCallJSONReader(pInterface->GetInterfaceType(), id, pInterface, AttributesList());
-                if (!!pReader) {
-                    pReader->DeserializeJSON(*itReadable, fUnitScale);//, _deserializeOptions);
-                    ReadablePtr pReadable = pReader->GetReadable();
-                    if (!!pReadable) {
-                        pInterface->SetReadableInterface(id, pReadable);
-                    }
-                }
-                else if (itReadable->HasMember("string")) {
-                    // TODO: current json data is not able to help distinguish the type. So we try to use string readable if the value is string and no reader is found.
-                    std::string stringValue;
-                    orjson::LoadJsonValueByKey(*itReadable, "string", stringValue);
-                    StringReadablePtr pReadable(new StringReadable(id, stringValue));
-                    pInterface->SetReadableInterface(id, pReadable);
-                }
-            }
-        }
     }
 
     /// \brief processes any URIs in the info structures

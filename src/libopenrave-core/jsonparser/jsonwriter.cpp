@@ -152,24 +152,6 @@ protected:
                     bodyValue.AddMember("grabbed", grabbedsValue, _allocator);
                 }
 
-                // readable interface
-                if (pBody->GetReadableInterfaces().size() > 0) {
-                    rapidjson::Value readableInterfacesValue;
-                    readableInterfacesValue.SetArray();
-                    FOREACHC(it, pBody->GetReadableInterfaces()) {
-                        ReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(it->second);
-                        if (!!pReadable) {
-                            rapidjson::Value readableValue;
-                            pReadable->SerializeJSON(readableValue, _allocator, fUnitScale, _serializeOptions);
-                            OpenRAVE::orjson::SetJsonValueByKey(readableValue, "id", it->first, _allocator);
-                            readableInterfacesValue.PushBack(readableValue, _allocator);
-                        }
-                    }
-                    if (readableInterfacesValue.Size() > 0) {
-                        bodyValue.AddMember("readableInterfaces", readableInterfacesValue, _allocator);
-                    }
-                }
-
                 // finally push to the bodiesValue array if bodyValue is not empty
                 if (bodyValue.MemberCount() > 0) {
                     bodiesValue.PushBack(bodyValue, _allocator);
