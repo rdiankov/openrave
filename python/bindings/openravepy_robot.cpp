@@ -170,11 +170,21 @@ void PyAttachedSensorInfo::_Update(const RobotBase::AttachedSensorInfo& info) {
 RobotBase::AttachedSensorInfoPtr PyAttachedSensorInfo::GetAttachedSensorInfo() const
 {
     RobotBase::AttachedSensorInfoPtr pinfo(new RobotBase::AttachedSensorInfo());
-    pinfo->_id = py::extract<std::string>(_id);
-    pinfo->_name = py::extract<std::string>(_name);
-    pinfo->_linkname = py::extract<std::string>(_linkname);
-    pinfo->_trelative = ExtractTransform(_trelative);
-    pinfo->_sensorname = py::extract<std::string>(_sensorname);
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        pinfo->_id = py::extract<std::string>(_id);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_name) ) {
+        pinfo->_name = py::extract<std::string>(_name);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_linkname) ) {
+        pinfo->_linkname = py::extract<std::string>(_linkname);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_trelative) ) {
+        pinfo->_trelative = ExtractTransform(_trelative);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_sensorname) ) {
+        pinfo->_sensorname = py::extract<std::string>(_sensorname);
+    }
     rapidjson::Document docSensorGeometry;
     if(!!_sensorgeometry) {
         SensorBase::SensorGeometryPtr sensorGeometry = _sensorgeometry->GetGeometry();
