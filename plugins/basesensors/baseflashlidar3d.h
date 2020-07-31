@@ -117,6 +117,16 @@ protected:
     {
 public:
         CameraIntrinsics KK;         // intrinsic matrix expanding to [ KK[0] 0 KK[2]; 0 KK[1] KK[3] ]
+        bool operator==(const Readable& other) override {
+            const BaseFlashLidar3DGeom* pOther = dynamic_cast<const BaseFlashLidar3DGeom*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return width == pOther->width && height == pOther->height;
+        }
+        bool operator!=(const Readable& other) override {
+            return !operator==(other);
+        }
         int width, height;         // dimensions in number of lasers
     };
 

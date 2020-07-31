@@ -28,6 +28,34 @@ using py::object;
 
 class PyRobotBase : public PyKinBody
 {
+public:
+    class PyRobotBaseInfo: public PyKinBodyInfo
+{
+public:
+    PyRobotBaseInfo();
+    PyRobotBaseInfo(const RobotBase::RobotBaseInfo& info);
+    RobotBase::RobotBaseInfoPtr GetRobotBaseInfo() const;
+
+    py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos;
+    std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos;
+    std::vector<RobotBase::ConnectedBodyInfoPtr> _vConnectedBodyInfos;
+#else
+    py::object _vManipulatorInfos = py::none_();
+    py::object _vAttachedSensorInfos = py::none_();
+    py::object _vConnectedBodyInfos = py::none_();
+#endif
+    virtual std::string __str__();
+    virtual py::object __unicode__();
+
+protected:
+    void _Update(const RobotBase::RobotBaseInfo& info);
+}; // class PyKinBodyInfo
+typedef OPENRAVE_SHARED_PTR<PyRobotBaseInfo> PyRobotBaseInfoPtr;
+
 protected:
     RobotBasePtr _probot;
 public:
@@ -436,6 +464,8 @@ public:
     virtual PyStateRestoreContextBase* CreateStateSaver(object options);
 
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_());
+    bool InitFromRobotInfo(const py::object pyRobotBaseInfo);
+    py::object ExtractInfo() const;
 
     /* ========== posture describer ========== */
     /// \brief Generates a posture describer for this manipulator
