@@ -210,6 +210,7 @@ public:
     py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _bIsCircular = py::list();
     bool _bIsActive = true;
+    bool _bStatic = false;
     KinBody::JointControlMode _controlMode = KinBody::JointControlMode::JCM_None;
     PyJointControlInfo_RobotControllerPtr _jci_robotcontroller;
     PyJointControlInfo_IOPtr _jci_io;

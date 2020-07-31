@@ -875,6 +875,7 @@ void PyJointInfo::_Update(const KinBody::JointInfo& info) {
     }
     _bIsCircular = bIsCircular;
     _bIsActive = info._bIsActive;
+    _bStatic = info._bStatic;
     if( !!info._infoElectricMotor ) {
         _infoElectricMotor = PyElectricMotorActuatorInfoPtr(new PyElectricMotorActuatorInfo(*info._infoElectricMotor));
     }
@@ -1084,6 +1085,7 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
         info._bIsCircular.at(i) = py::extract<int>(_bIsCircular[i])!=0;
     }
     info._bIsActive = _bIsActive;
+    info._bStatic = _bStatic;
     if( !!_infoElectricMotor ) {
         //PyElectricMotorActuatorInfoPtr pinfo = py::extract<PyElectricMotorActuatorInfoPtr>(_infoElectricMotor);
         //if( !!pinfo ) {
@@ -4121,7 +4123,7 @@ class JointInfo_pickle_suite
 public:
     static py::tuple getstate(const PyJointInfo& r)
     {
-        return py::make_tuple(py::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), py::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), py::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia, r._vmaxjerk, r._vhardmaxaccel, r._vhardmaxjerk));
+        return py::make_tuple(py::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), py::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), py::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._bStatic, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia, r._vmaxjerk, r._vhardmaxaccel, r._vhardmaxjerk));
     }
     static void setstate(PyJointInfo& r, py::tuple state) {
         r._type = (KinBody::JointType)(int)py::extract<int>(state[0][0]);
@@ -4151,18 +4153,19 @@ public:
         r._mapIntParameters = py::dict(state[2][3]);
         r._bIsCircular = state[2][4];
         r._bIsActive = py::extract<bool>(state[2][5]);
-        if( num2 > 6 ) {
-            r._mapStringParameters = py::dict(state[2][6]);
-            if( num2 > 7 ) {
-                r._infoElectricMotor = py::extract<PyElectricMotorActuatorInfoPtr>(state[2][7]);
-                if( num2 > 8 ) {
-                    r._vmaxinertia = state[2][8];
-                    if( num2 > 9 ) {
-                        r._vmaxjerk = state[2][9];
-                        if( num2 > 10 ) {
-                            r._vhardmaxaccel = state[2][10];
-                            if( num2 > 11 ) {
-                                r._vhardmaxjerk = state[2][11];
+        r._bStatic = py::extract<bool>(state[2][6]);
+        if( num2 > 7 ) {
+            r._mapStringParameters = py::dict(state[2][7]);
+            if( num2 > 8 ) {
+                r._infoElectricMotor = py::extract<PyElectricMotorActuatorInfoPtr>(state[2][8]);
+                if( num2 > 9 ) {
+                    r._vmaxinertia = state[2][9];
+                    if( num2 > 10 ) {
+                        r._vmaxjerk = state[2][10];
+                        if( num2 > 11 ) {
+                            r._vhardmaxaccel = state[2][11];
+                            if( num2 > 12 ) {
+                                r._vhardmaxjerk = state[2][12];
                             }
                         }
                     }
@@ -4658,6 +4661,7 @@ void init_openravepy_kinbody()
                        .def_readwrite("_mapStringParameters",&PyJointInfo::_mapStringParameters)
                        .def_readwrite("_bIsCircular",&PyJointInfo::_bIsCircular)
                        .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
+                       .def_readwrite("_bStatic",&PyJointInfo::_bStatic)
                        .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
                        // joint mode
                        .def_readwrite("_controlMode", &PyJointInfo::_controlMode)
