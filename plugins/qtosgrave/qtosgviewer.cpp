@@ -1104,7 +1104,6 @@ bool QtOSGViewer::_SetTextureCubeMap(ostream& out, istream& sinput)
 
 bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
 {
-    RAVELOG_WARN("TRACK LINK COMMAND!\n");
     bool bresetvelocity = true;
     std::string bodyname, linkname;
     float focalDistance = 0.0;
@@ -1113,8 +1112,6 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
     if( focalDistance > 0 ) {
         _SetCameraDistanceToFocus(focalDistance);
     }
-    _ptrackinglink.reset();
-    _ptrackingmanip.reset();
     EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
     KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
     if( !pbody ) {
@@ -1122,7 +1119,17 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
         _SetTrackManipulatorToStopTracking();
         return false;
     }
-    _ptrackinglink = pbody->GetLink(linkname);
+    _ptrackingmanip.reset();
+    auto requestedLink = pbody->GetLink(linkname);
+    std::cout << "TRACKLINK == " << pbody << ", " << linkname << ", " << _ptrackinglink << ", " << requestedLink << std::endl;
+    if(!!_ptrackinglink && _ptrackinglink == requestedLink ) {
+        // already tracking the requested link, nothing to be done
+        std::cout << "NOTHING TO DO" << std::endl;
+        return true;
+    }
+
+    _ptrackinglink.reset();
+    _ptrackinglink = requestedLink;
     if( !!_ptrackinglink ) {
         sinput >> tTrackingLinkRelative;
         if( !!sinput ) {
@@ -1317,18 +1324,10 @@ bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<fl
 
 void QtOSGViewer::_SetCameraTransform()
 {
-    osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCurrentCameraManipulator());
-    if( !!ptrackball ) {
-        ptrackball->setDistance(_focalDistance);
-    }
-
-    RAVELOG_WARN("SET TRANSFORM!, is default? %d", _posgWidget->GetCurrentCameraManipulator().get() == _posgWidget->GetTrackModeManipulator());
+    osg::ref_ptr<osgGA::TrackballManipulator> defaultManip = _posgWidget->GetDefaultCameraManipulator();
+    defaultManip->setDistance(_focalDistance);
     // has to come after setting distance because internally orbit manipulator uses the distance to deduct view center
-    _posgWidget->GetCurrentCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
-
-    //osg::Vec3d eye, center, up;
-    //osg::Matrix::inverse(GetMatrixFromRaveTransform(_Tcamera)).getLookAt(eye, center, up, _focalDistance);
-    //_posgWidget->GetCurrentCameraManipulator()->setTransformation(eye, center, up);
+    defaultManip->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
 }
 
 void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
@@ -1363,10 +1362,8 @@ bool QtOSGViewer::_SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, KinBody
     auto osgNode = linkParentKinBodyItem->GetOSGLink(link->GetIndex());
     assert(osgNode);
 
-    OpenRAVETracker* trackManipulator = _posgWidget->GetTrackModeManipulator();
-    _posgWidget->SetCurrentCameraManipulator(trackManipulator);
     osg::Vec3d linkOffset(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]);
-    trackManipulator->StartTrackingNode(osgNode.get(), linkOffset, _focalDistance, _posgWidget->GetCamera(), osg::Vec3d(0,0,1));
+    _posgWidget->StartTrackingNode(osgNode.get(), linkOffset, _focalDistance, osg::Vec3d(0,0,1));
     return true;
 }
 

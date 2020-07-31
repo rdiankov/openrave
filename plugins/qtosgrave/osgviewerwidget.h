@@ -37,39 +37,8 @@ namespace qtosgrave {
 
 using namespace OpenRAVE;
 
+class OpenRAVETracker;
 class OpenRAVETrackball;
-
-class OpenRAVETracker : public osgGA::NodeTrackerManipulator
-{
-public:
-    OpenRAVETracker();
-
-    /// \brief Starts tracking the given node using the given upVector to set initial pose
-    /// param currentCamera is not stored, its only used to get current camera pose in order to calculate
-    /// the transition animation from current position to the final tracking position for the node
-    virtual void StartTrackingNode(osg::Node* node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector);
-
-public:
-    // OSG overloaded methods
-    virtual osg::Matrixd getMatrix() const;
-
-    // need to reimplement this method so we can track based on nodes origin (or offset) instead of center of bounding sphere
-    // this function will be called to update camera from osg::CameraManipulator: virtual void updateCamera(osg::Camera& camera) { camera.setViewMatrix(getInverseMatrix()); }
-    virtual osg::Matrixd getInverseMatrix() const;
-
-private:
-    bool _IsTransitionAnimationFinished() const;
-    osg::Matrixd _GetTransitionAnimationMatrix();
-    void _CreateTransitionAnimationPath(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector);
-
-private:
-    QTime _time;
-    osg::Vec3d _offset;
-    double _transitionAnimationDuration; //< specifies how long the transition will take
-    double _currentTransitionAnimationTime;
-    osg::ref_ptr<osg::AnimationPath> _transitionAnimationPath;
-
-};
 
 /// \brief  Class of the openscene graph 3d viewer
 class QOSGViewerWidget : public QOpenGLWidget
@@ -162,13 +131,17 @@ public:
     /// \brief handle case when link is selected
     void SelectOSGLink(OSGNodePtr node, int modkeymask);
 
+    /// \brief activate and configure trackmode manipulator to track given OSG node
+    void StartTrackingNode(OSGNodePtr node, const osg::Vec3d& offset, double trackDistance, const osg::Vec3d& worldUpVector);
+
     osg::Camera *GetCamera();
 
     osg::ref_ptr<osgGA::CameraManipulator> GetCurrentCameraManipulator();
     void SetCurrentCameraManipulator(osgGA::CameraManipulator* manipulator);
 
     void RestoreDefaultManipulator();
-    OpenRAVETracker* GetTrackModeManipulator();
+    osg::ref_ptr<osgGA::TrackballManipulator> GetDefaultCameraManipulator();
+    osg::ref_ptr<osgGA::NodeTrackerManipulator> GetTrackModeManipulator();
 
     OSGMatrixTransformPtr GetCameraHUD();
 
