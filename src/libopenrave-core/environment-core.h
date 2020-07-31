@@ -2430,6 +2430,7 @@ public:
 
             KinBodyPtr pBody;
             if (itExistingBody != _vecbodies.end()) {
+                pBody = *itExistingBody;
                 bool bInterfaceMatches = pBody->GetXMLId() == pKinBodyInfo->_interfaceType;
                 if( !bInterfaceMatches || pBody->IsRobot() != pKinBodyInfo->_isRobot ) {
                     boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
