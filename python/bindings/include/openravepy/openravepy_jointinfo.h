@@ -47,7 +47,7 @@ public:
     object ComputeAABB(object otransform);
 
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
     KinBody::GeometryInfoPtr GetGeometryInfo();
 
     object _t = ReturnTransform(Transform());
@@ -59,6 +59,7 @@ public:
     object _vAmbientColor = toPyVector3(Vector(0,0,0));
     object _meshcollision = py::none_();
     GeometryType _type = GT_None;
+    object _id = py::none_();
     object _name = py::none_();
     object _filenamerender = py::none_();
     object _filenamecollision = py::none_();
@@ -82,9 +83,10 @@ public:
     KinBody::LinkInfoPtr GetLinkInfo();
 
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     py::list _vgeometryinfos;
+    object _id = py::none_();
     object _name = py::none_();
     object _t = ReturnTransform(Transform());
     object _tMassFrame = ReturnTransform(Transform());
@@ -110,7 +112,7 @@ public:
     PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info);
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo();
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     std::string model_type;
     dReal gear_ratio = 0.0;
@@ -180,9 +182,10 @@ public:
     KinBody::JointInfoPtr GetJointInfo();
     object GetDOF();
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     KinBody::JointType _type = KinBody::JointNone;
+    object _id = py::none_();
     object _name = py::none_();
     object _linkname0 = py::none_(), _linkname1 = py::none_();
     object _vanchor = toPyVector3(Vector());
@@ -193,10 +196,10 @@ public:
     object _vhardmaxvel = toPyVector3(Vector(0,0,0));
     object _vmaxaccel = toPyVector3(Vector(50,50,50));
     object _vhardmaxaccel = toPyVector3(Vector(0,0,0));
-    object _vmaxjerk = toPyVector3(Vector(2e6,2e6,2e6));
+    object _vmaxjerk = toPyVector3(Vector(5e4, 5e4, 5e4));  // default value should keep the same as Joint in cpp
     object _vhardmaxjerk= toPyVector3(Vector(0, 0, 0));
-    object _vmaxtorque = toPyVector3(Vector(1e5,1e5,1e5));
-    object _vmaxinertia = toPyVector3(Vector(1e5,1e5,1e5));
+    object _vmaxtorque = toPyVector3(Vector(0, 0, 0)); // default value should keep the same as Joint in cpp
+    object _vmaxinertia = toPyVector3(Vector(0, 0, 0)); // default value should keep the same as Joint in cpp
     object _vweights = toPyVector3(Vector(1,1,1));
     object _voffsets = toPyVector3(Vector(0,0,0));
     object _vlowerlimit = toPyVector3(Vector(0,0,0));

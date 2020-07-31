@@ -178,23 +178,32 @@ public:
     };
 
     /// permanent properties of the sensors
-    class OPENRAVE_API SensorGeometry : public XMLReadable
+    class OPENRAVE_API SensorGeometry : public Readable
     {
 public:
-        SensorGeometry(const std::string& xmlid) : XMLReadable(xmlid) {
+        SensorGeometry(const std::string& xmlid) : Readable(xmlid) {
         }
         virtual ~SensorGeometry() {
         }
         virtual SensorType GetType() const = 0;
 
-        virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override;
+        bool SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
+        bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
 
         virtual SensorGeometry& operator=(const SensorGeometry& r) {
             hardware_id = r.hardware_id;
             return *this;
         }
+
+        bool operator==(const Readable& r) override {
+            const SensorGeometry* pOther = dynamic_cast<const SensorGeometry*>(&r);
+            if (!pOther) {
+                return false;
+            }
+            return hardware_id == pOther->hardware_id;
+        }
+
         std::string hardware_id; ///< optional hardware identifier of the sensor
     };
     typedef boost::shared_ptr<SensorBase::SensorGeometry> SensorGeometryPtr;
@@ -209,6 +218,22 @@ public:
         virtual SensorType GetType() const {
             return ST_Laser;
         }
+
+        bool operator==(const Readable& other) override {
+            const LaserGeomData* pOther = dynamic_cast<const LaserGeomData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return SensorGeometry::operator==(other)
+                   && min_angle == pOther->min_angle
+                   && max_angle == pOther->max_angle
+                   && resolution == pOther->resolution
+                   && min_range == pOther->min_range
+                   && max_range == pOther->max_range
+                   && time_increment == pOther->time_increment
+                   && time_scan == pOther->time_scan;
+        }
+
         boost::array<dReal,2> min_angle;         ///< Start for the laser scan [rad].
         boost::array<dReal,2> max_angle;         ///< End angles for the laser scan [rad].
         boost::array<dReal,2> resolution;         ///< Angular resolutions for each axis of rotation [rad].
@@ -219,7 +244,7 @@ public:
 
     typedef boost::shared_ptr<LaserGeomData> LaserGeomDataPtr;
     typedef boost::shared_ptr<LaserGeomData const> LaserGeomDataConstPtr;
-    
+
     class OPENRAVE_API CameraGeomData : public SensorGeometry
     {
 public:
@@ -242,12 +267,27 @@ public:
             return *this;
         }
 
-        virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
+        bool operator==(const Readable& other) override {
+            const CameraGeomData* pOther = dynamic_cast<const CameraGeomData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return SensorGeometry::operator==(other)
+                   && intrinsics == pOther->intrinsics
+                   && width == pOther->width
+                   && height == pOther->height
+                   && sensor_reference == pOther->sensor_reference
+                   && target_region == pOther->target_region
+                   && measurement_time == pOther->measurement_time
+                   && gain == pOther->gain;
+        }
+
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override;
+        bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
+        bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
 
         std::string sensor_reference; ///< name of sensor that whose data is referenced. This sensor transforms the data in a particular way.
-        std::string target_region; ///< name of the kinbody that describes the region of interest for the camera. 
+        std::string target_region; ///< name of the kinbody that describes the region of interest for the camera.
         CameraIntrinsics intrinsics;         ///< intrinsic matrix
         int width, height;         ///< width and height of image
         dReal measurement_time; ///< specifies time used to take one image (also known as exposure).
@@ -265,6 +305,15 @@ public:
         virtual SensorType GetType() const {
             return ST_JointEncoder;
         }
+
+        bool operator==(const Readable& other) override {
+            const JointEncoderGeomData* pOther = dynamic_cast<const JointEncoderGeomData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return SensorGeometry::operator==(other) && resolution == pOther->resolution;
+        }
+
         std::vector<dReal> resolution;         ///< the delta value of one encoder tick
     };
     class OPENRAVE_API Force6DGeomData : public SensorGeometry
@@ -275,6 +324,13 @@ public:
         virtual SensorType GetType() const {
             return ST_Force6D;
         }
+        bool operator==(const Readable& other) override {
+            const Force6DGeomData* pOther = dynamic_cast<const Force6DGeomData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return SensorGeometry::operator==(other);
+        }
     };
     class OPENRAVE_API IMUGeomData : public SensorGeometry
     {
@@ -284,6 +340,15 @@ public:
         virtual SensorType GetType() const {
             return ST_IMU;
         }
+
+        bool operator==(const Readable& other) override {
+            const IMUGeomData* pOther = dynamic_cast<const IMUGeomData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return SensorGeometry::operator==(other) && time_measurement == pOther->time_measurement;
+        }
+
         dReal time_measurement;         ///< time between measurements
     };
     class OPENRAVE_API OdometryGeomData : public SensorGeometry
@@ -294,6 +359,16 @@ public:
         virtual SensorType GetType() const {
             return ST_Odometry;
         }
+
+        bool operator==(const Readable& other) override {
+            const OdometryGeomData* pOther = dynamic_cast<const OdometryGeomData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return SensorGeometry::operator==(other)
+                   && targetid == pOther->targetid;
+        }
+
         std::string targetid;         ///< id of the target whose odometry/pose messages are being published for
     };
 
@@ -306,13 +381,32 @@ public:
             return ST_Tactile;
         }
 
+        bool operator==(const Readable& other) override {
+            const TactileGeomData* pOther = dynamic_cast<const TactileGeomData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return SensorGeometry::operator==(other)
+                   && positions == pOther->positions
+                   && thickness == pOther->thickness;
+            // && _mapfriction == pOther->_mapfriction;
+        }
+
         /// LuGre friction model?
-        struct Friction
+        class Friction
         {
+public:
             dReal sigma_0;         ///< the stiffness coefficient of the contacting surfaces
             dReal sigma_1;         ///< the friction damping coefficient.
             dReal mu_s;         ///< static friction coefficient
             dReal mu_d;         ///< dynamic friction coefficient
+
+            virtual bool operator==(const Friction& other) {
+                return sigma_0 == other.sigma_0
+                       && sigma_1 == other.sigma_1
+                       && mu_s == other.mu_s
+                       && mu_d == other.mu_d;
+            }
         };
         std::vector<Vector> positions;         ///< 3D positions of all the elements in the sensor frame
         dReal thickness;         ///< the thickness of the tactile sensors (used for determining contact and computing force)
@@ -328,6 +422,23 @@ public:
         virtual SensorType GetType() const {
             return ST_Actuator;
         }
+
+        bool operator==(const Readable& other) override {
+            const ActuatorGeomData* pOther = dynamic_cast<const ActuatorGeomData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return SensorGeometry::operator==(other)
+                   && maxtorque == pOther->maxtorque
+                   && maxcurrent == pOther->maxcurrent
+                   && nominalcurrent == pOther->nominalcurrent
+                   && maxvelocity == pOther->maxvelocity
+                   && maxacceleration == pOther->maxacceleration
+                   && maxjerk == pOther->maxjerk
+                   && staticfriction == pOther->staticfriction
+                   && viscousfriction == pOther->viscousfriction;
+        }
+
         dReal maxtorque;         ///< Maximum possible torque actuator can apply (on output side). This includes the actuator's rotor, if one exists.
         dReal maxcurrent;         ///< Maximum permissible current of the actuator. If this current value is exceeded for a prolonged period of time, then an error could occur (due to heat, etc).
         dReal nominalcurrent;          ///< Rated current of the actuator.

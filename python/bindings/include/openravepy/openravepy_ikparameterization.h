@@ -116,6 +116,7 @@ public:
     PyIkParameterizationPtr __rmul__(object otrans);
 
     IkParameterization _param;
+
 private:
     void _Update(const IkParameterization& ikparam);
 };
