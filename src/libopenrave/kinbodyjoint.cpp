@@ -238,7 +238,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
 
     orjson::SetJsonValueByKey(value, "isCircular", _bIsCircular, allocator, dof);
     orjson::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
-
+    orjson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
 }
 
 void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -328,7 +328,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     }
     orjson::LoadJsonValueByKey(value, "isCircular", _bIsCircular);
     orjson::LoadJsonValueByKey(value, "isActive", _bIsActive);
-
+    orjson::LoadJsonValueByKey(value, "isStatic", _bStatic);
 
     if (value.HasMember("mimics") && value["mimics"].IsArray())
     {
@@ -405,6 +405,7 @@ bool KinBody::JointInfo::operator==(const KinBody::JointInfo& other) const
            && _infoElectricMotor == other._infoElectricMotor
            && _bIsCircular == other._bIsCircular
            && _bIsActive == other._bIsActive
+           && _bStatic == other._bStatic
            && _controlMode == other._controlMode
            && _jci_robotcontroller == other._jci_robotcontroller
            && _jci_io == other._jci_io
@@ -464,6 +465,7 @@ KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& othe
 
     _bIsCircular = other._bIsCircular;
     _bIsActive = other._bIsActive;
+    _bStatic = other._bStatic;
 
     _controlMode = other._controlMode;
     _jci_robotcontroller.reset();
@@ -2495,6 +2497,11 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
 
     // _bIsActive
     if (_info._bIsActive != info._bIsActive) {
+        return UFIR_RequireReinitialize;
+    }
+
+    // _bStatic
+    if (_info._bStatic != info._bStatic) {
         return UFIR_RequireReinitialize;
     }
 
