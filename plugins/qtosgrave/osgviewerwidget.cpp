@@ -109,7 +109,8 @@ private:
 
         // openscenegraph has transposed matrix form to match opengl spec
         osg::Vec3d nodeCenterWorld = osg::Vec3d(_offset) * localToWorld;
-        if(nodeCenterWorld.length() < 1e-3) {
+        osg::Vec3d towardsNodeVector = nodeCenterWorld - cameraWorldPos;
+        if(towardsNodeVector.length() < 1e-3) {
             // already very close to desired position, no need to animate
             _transitionAnimationDuration = 0;
             return;
@@ -121,7 +122,6 @@ private:
 
         // last frame pose is looking at the node from a distance _distance
         osg::Matrixd lookAtNodeMatrix;
-        osg::Vec3d towardsNodeVector = nodeCenterWorld - cameraWorldPos;
         // // check if we are already at a proper distance from tracked node - if so, no need to navigate to there, just skip this keyframe
         // if( abs(towardsNodeVector.length() -_distance ) < 1e-3 ) {
         //     return;
@@ -129,12 +129,12 @@ private:
         towardsNodeVector.normalize();
         lookAtNodeMatrix.makeLookAt(nodeCenterWorld - towardsNodeVector * _distance, nodeCenterWorld, worldUpVector);
         _transitionAnimationPath->insert(_transitionAnimationDuration,
-            osg::AnimationPath::ControlPoint(nodeCenterWorld - towardsNodeVector * _distance, lookAtNodeMatrix.getRotate().inverse()));
+            osg::AnimationPath::ControlPoint(nodeCenterWorld - (towardsNodeVector * _distance), lookAtNodeMatrix.getRotate().inverse()));
     }
 
     bool _IsTransitionAnimationFinished() const
     {
-        return _transitionAnimationDuration > 0 && _currentTransitionAnimationTime >= _transitionAnimationDuration;
+        return _transitionAnimationDuration == 0 || _currentTransitionAnimationTime >= _transitionAnimationDuration;
     }
 
     osg::Matrixd _GetTransitionAnimationMatrix()
