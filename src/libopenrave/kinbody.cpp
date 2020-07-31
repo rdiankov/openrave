@@ -221,12 +221,11 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
 
     if (_mReadableInterfaces.size() > 0) {
         rapidjson::Value rReadableInterfaces;
-        rReadableInterfaces.SetArray();
+        rReadableInterfaces.SetObject();
         for(std::map<std::string, ReadablePtr>::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
             rapidjson::Value rReadable;
             it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
-            orjson::SetJsonValueByKey(rReadable, "id", it->first, allocator);
-            rReadableInterfaces.PushBack(rReadable, allocator);
+            orjson::SetJsonValueByKey(rReadableInterfaces, it->first.c_str(), rReadable, allocator);
         }
         rKinBodyInfo.AddMember("readableInterfaces", rReadableInterfaces, allocator);
     }
@@ -299,9 +298,9 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         }
     }
 
-    if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsArray()) {
-        for (rapidjson::Value::ConstValueIterator it = value["readableInterfaces"].Begin(); it != value["readableInterfaces"].End(); ++it) {
-            _DeserializeReadableInterface(*it);
+    if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
+        for (rapidjson::Value::ConstMemberIterator it = value["readableInterfaces"].MemberBegin(); it != value["readableInterfaces"].MemberEnd(); ++it) {
+            _DeserializeReadableInterface(it->name.GetString(), it->value);
         }
     }
 
@@ -310,9 +309,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
 }
 
-void KinBody::KinBodyInfo::_DeserializeReadableInterface(const rapidjson::Value& value) {
-    std::string id;
-    orjson::LoadJsonValueByKey(value, "id", id);
+void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value) {
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, KinBodyPtr(), AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value);
@@ -321,10 +318,8 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const rapidjson::Value&
             _mReadableInterfaces[id] = pReadable;
         }
     }
-    else if (value.HasMember("string")) {
-        std::string stringValue;
-        orjson::LoadJsonValueByKey(value, "string", stringValue);
-        StringReadablePtr pReadable(new StringReadable(id, stringValue));
+    else if (value.IsString()) {
+        StringReadablePtr pReadable(new StringReadable(id, value.GetString()));
         _mReadableInterfaces[id] = pReadable;
     }
 }

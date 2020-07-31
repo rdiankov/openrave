@@ -657,9 +657,7 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
     }
 }
 
-void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const rapidjson::Value& value) {
-    std::string id;
-    orjson::LoadJsonValueByKey(value, "id", id);
+void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value) {
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, RobotBasePtr(), AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value);
@@ -668,10 +666,8 @@ void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const rapidjson::Va
             _mReadableInterfaces[id] = pReadable;
         }
     }
-    else if (value.HasMember("string")) {
-        std::string stringValue;
-        orjson::LoadJsonValueByKey(value, "string", stringValue);
-        StringReadablePtr pReadable(new StringReadable(id, stringValue));
+    else if (value.IsString()) {
+        StringReadablePtr pReadable(new StringReadable(id, value.GetString()));
         _mReadableInterfaces[id] = pReadable;
     }
 }
