@@ -1121,10 +1121,8 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
     }
     _ptrackingmanip.reset();
     auto requestedLink = pbody->GetLink(linkname);
-    std::cout << "TRACKLINK == " << pbody << ", " << linkname << ", " << _ptrackinglink << ", " << requestedLink << std::endl;
     if(!!_ptrackinglink && _ptrackinglink == requestedLink ) {
         // already tracking the requested link, nothing to be done
-        std::cout << "NOTHING TO DO" << std::endl;
         return true;
     }
 
