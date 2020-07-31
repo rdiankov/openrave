@@ -41,13 +41,16 @@ OpenRAVETracker::OpenRAVETracker()
     _transitionAnimationDuration = 1.5;
 }
 
-void OpenRAVETracker::SetOffset(const osg::Vec3d& offset) {
-    _offset = offset;
-}
-
-void OpenRAVETracker::StartTrackingNode(osg::Node* node, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
+void OpenRAVETracker::StartTrackingNode(osg::Node* node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
 {
-    NodeTrackerManipulator::setTrackNode(node);
+    _offset = offset;
+    _distance = trackDistance;
+    auto nodeParents = node->getParentalNodePaths();
+    if(nodeParents.empty()) {
+        RAVELOG_WARN("Could not track node, node has no transform chain");
+        return;
+    }
+    NodeTrackerManipulator::setTrackNodePath(nodeParents[0]);
     _currentTransitionAnimationTime = 0;
     _CreateTransitionAnimationPath(node, currentCamera, worldUpVector);
     _time.restart();
@@ -101,7 +104,7 @@ void OpenRAVETracker::_CreateTransitionAnimationPath(osg::Node* node, osg::Camer
     computeNodeLocalToWorld(localToWorld);
 
     // openscenegraph has transposed matrix form to match opengl spec
-    osg::Vec3d nodeCenterWorld = osg::Vec3d(localToWorld(3,0),localToWorld(3,1),localToWorld(3,2));
+    osg::Vec3d nodeCenterWorld = osg::Vec3d(_offset) * localToWorld;
 
     osg::Matrixd lookAtNodeMatrix;
     lookAtNodeMatrix.makeLookAt(cameraWorldPos, nodeCenterWorld - cameraWorldPos, worldUpVector);
@@ -111,7 +114,8 @@ void OpenRAVETracker::_CreateTransitionAnimationPath(osg::Node* node, osg::Camer
     // last frame pose is looking at the node from a distance _distance
     towardsNodeVector.normalize();
     lookAtNodeMatrix.makeLookAt(nodeCenterWorld - towardsNodeVector * _distance, nodeCenterWorld, worldUpVector);
-    _transitionAnimationPath->insert(_transitionAnimationDuration,osg::AnimationPath::ControlPoint(nodeCenterWorld - towardsNodeVector * _distance, lookAtNodeMatrix.getRotate().inverse()));
+    _transitionAnimationPath->insert(_transitionAnimationDuration,
+        osg::AnimationPath::ControlPoint(nodeCenterWorld - towardsNodeVector * _distance, lookAtNodeMatrix.getRotate().inverse()));
 }
 
 bool OpenRAVETracker::_IsTransitionAnimationFinished() const
@@ -121,10 +125,13 @@ bool OpenRAVETracker::_IsTransitionAnimationFinished() const
 
 osg::Matrixd OpenRAVETracker::_GetTransitionAnimationMatrix()
 {
+    if(_IsTransitionAnimationFinished()) {
+        return osg::Matrixd();
+    }
     double dt = _time.restart() / 1000.0;
-    _currentTransitionAnimationTime = min(_currentTransitionAnimationTime+dt, _transitionAnimationDuration);
     osg::AnimationPath::ControlPoint cp;
     _transitionAnimationPath->getInterpolatedControlPoint(_currentTransitionAnimationTime, cp);
+    _currentTransitionAnimationTime =_currentTransitionAnimationTime+dt;
     osg::Quat lookAtRotation = cp.getRotation().inverse();
     osg::Vec3d lookAtTranslation = lookAtRotation * -cp.getPosition();
 
@@ -999,6 +1006,7 @@ void QOSGViewerWidget::UpdateHUDAxisTransform(int width, int height)
 
 void QOSGViewerWidget::Zoom(float factor)
 {
+    RAVELOG_WARN("ZOOM!");
     // Ortho
     if ( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
         const int width = _osgview->getCamera()->getViewport()->width();
@@ -1271,9 +1279,12 @@ void QOSGViewerWidget::SetCurrentCameraManipulator(osgGA::CameraManipulator* man
 
 void QOSGViewerWidget::RestoreDefaultManipulator()
 {
-    SetCurrentCameraManipulator(_osgDefaultManipulator.get());
+    if(_osgview->getCameraManipulator() == _osgDefaultManipulator.get()) {
+        return;
+    }
     // copy matrix from trackManipulator to default one so change of manipulators occurs seamless
     OpenRAVETracker* trackManipulator = GetTrackModeManipulator();
+    SetCurrentCameraManipulator(_osgDefaultManipulator.get());
     _osgDefaultManipulator->setByMatrix(trackManipulator->getMatrix());
 }
 

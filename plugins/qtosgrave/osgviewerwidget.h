@@ -47,8 +47,7 @@ public:
     /// \brief Starts tracking the given node using the given upVector to set initial pose
     /// param currentCamera is not stored, its only used to get current camera pose in order to calculate
     /// the transition animation from current position to the final tracking position for the node
-    virtual void StartTrackingNode(osg::Node* node, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector);
-    virtual void SetOffset(const osg::Vec3d& offset);
+    virtual void StartTrackingNode(osg::Node* node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector);
 
 public:
     // OSG overloaded methods
