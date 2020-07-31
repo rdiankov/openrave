@@ -1841,7 +1841,7 @@ public:
 
         bool _isRobot = false; ///< true if should create a RobotBasePtr
 protected:
-        virtual void _DeserializeReadableInterface(const rapidjson::Value& value);
+        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value);
 
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
