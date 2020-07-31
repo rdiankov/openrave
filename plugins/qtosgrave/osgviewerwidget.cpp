@@ -117,8 +117,13 @@ private:
 
         _transitionAnimationPath->insert(_transitionAnimationDuration * 0.4,osg::AnimationPath::ControlPoint(cameraWorldPos, lookAtNodeMatrix.getRotate().inverse()));
 
+
         // last frame pose is looking at the node from a distance _distance
         osg::Vec3d towardsNodeVector = nodeCenterWorld - cameraWorldPos;
+        // check if we are already at a proper distance from tracked node - if so, no need to navigate to there, just skip this keyframe
+        if( abs(towardsNodeVector.length() -_distance ) < 1e-3 ) {
+            return;
+        }
         towardsNodeVector.normalize();
         lookAtNodeMatrix.makeLookAt(nodeCenterWorld - towardsNodeVector * _distance, nodeCenterWorld, worldUpVector);
         _transitionAnimationPath->insert(_transitionAnimationDuration,
