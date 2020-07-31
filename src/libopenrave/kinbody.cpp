@@ -221,12 +221,11 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
 
     if (_mReadableInterfaces.size() > 0) {
         rapidjson::Value rReadableInterfaces;
-        rReadableInterfaces.SetArray();
+        rReadableInterfaces.SetObject();
         for(std::map<std::string, ReadablePtr>::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
             rapidjson::Value rReadable;
             it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
-            orjson::SetJsonValueByKey(rReadable, "id", it->first, allocator);
-            rReadableInterfaces.PushBack(rReadable, allocator);
+            orjson::SetJsonValueByKey(rReadableInterfaces, it->first.c_str(), rReadable, allocator);
         }
         rKinBodyInfo.AddMember("readableInterfaces", rReadableInterfaces, allocator);
     }
@@ -299,9 +298,9 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         }
     }
 
-    if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsArray()) {
-        for (rapidjson::Value::ConstValueIterator it = value["readableInterfaces"].Begin(); it != value["readableInterfaces"].End(); ++it) {
-            _DeserializeReadableInterface(*it);
+    if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
+        for (rapidjson::Value::ConstMemberIterator it = value["readableInterfaces"].MemberBegin(); it != value["readableInterfaces"].MemberEnd(); ++it) {
+            _DeserializeReadableInterface(it->name.GetString(), it->value);
         }
     }
 
@@ -310,9 +309,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
 }
 
-void KinBody::KinBodyInfo::_DeserializeReadableInterface(const rapidjson::Value& value) {
-    std::string id;
-    orjson::LoadJsonValueByKey(value, "id", id);
+void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value) {
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, KinBodyPtr(), AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value);
@@ -321,10 +318,8 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const rapidjson::Value&
             _mReadableInterfaces[id] = pReadable;
         }
     }
-    else if (value.HasMember("string")) {
-        std::string stringValue;
-        orjson::LoadJsonValueByKey(value, "string", stringValue);
-        StringReadablePtr pReadable(new StringReadable(id, stringValue));
+    else if (value.IsString()) {
+        StringReadablePtr pReadable(new StringReadable(id, value.GetString()));
         _mReadableInterfaces[id] = pReadable;
     }
 }
@@ -2272,9 +2267,6 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
         if( jointindex < nActiveJoints ) {
             // active joint
             const JointPtr& pjoint = _vecjoints.at(jointindex);
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                RAVELOG_VERBOSE_FORMAT("Working with active joint %s with joint index %d", pjoint->GetName() % jointindex);
-            }
             const int dofindex = pjoint->GetDOFIndex();
             const int ndof = pjoint->GetDOF();
             const int8_t affect = this->DoesAffect(pjoint->GetJointIndex(), linkindex);
@@ -2312,9 +2304,6 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
         else {
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - nActiveJoints);
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                RAVELOG_VERBOSE_FORMAT("Working with mimic joint %s with (generalized) joint index %d", pjoint->GetName() % jointindex);
-            }
             const int ndof = pjoint->GetDOF();
             for(int idof = 0; idof < ndof; ++idof) {
                 if( pjoint->IsMimic(idof) ) {
@@ -2343,9 +2332,6 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                             index = itindex - dofindices.begin(); ///< index of an active joint
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(index, >=, 0, "index should be >= 0; now %d", index, ORE_InvalidArguments);
-                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            RAVELOG_VERBOSE_FORMAT("Collecting linear velocity Jacobian w.r.t index %d (dof index %d) by the influence of joint %s", index % dofindex % pjoint->GetName());
-                        }
                         const dReal partialderiv = dofindexDerivativePair.second;
                         vjacobian[index                ] += v.x * partialderiv;
                         vjacobian[index + dofstride    ] += v.y * partialderiv;
@@ -2414,9 +2400,6 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
         if( jointindex < nActiveJoints ) {
             // active joint
             const JointPtr& pjoint = _vecjoints.at(jointindex);
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                RAVELOG_VERBOSE_FORMAT("Working with active joint %s with joint index %d", pjoint->GetName() % jointindex);
-            }
             const int dofindex = pjoint->GetDOFIndex();
             const int ndof = pjoint->GetDOF();
             const int8_t affect = DoesAffect(pjoint->GetJointIndex(), linkindex);
@@ -2443,9 +2426,6 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
         else {
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - nActiveJoints);
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                RAVELOG_VERBOSE_FORMAT("Working with mimic joint %s with (generalized) joint index %d", pjoint->GetName() % jointindex);
-            }
             const int ndof = pjoint->GetDOF();
             for(int idof = 0; idof < ndof; ++idof) {
                 if( pjoint->IsMimic(idof) ) {
@@ -2473,9 +2453,6 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                             continue;
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(dofindex, >=, 0, "dofindex should be >= 0; now %d", dofindex, ORE_InvalidArguments);
-                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            RAVELOG_VERBOSE_FORMAT("Collecting quaternion velocity Jacobian w.r.t dof index %d by the influence of joint %s", dofindex % pjoint->GetName());
-                        }
                         const size_t index = dofindex + idof;
                         const dReal partialderiv = dofindexDerivativePair.second;
                         vjacobian[index                ] += dReal(0.5) * partialderiv * (-quat.y * v.x - quat.z * v.y - quat.w * v.z);
@@ -2539,9 +2516,6 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
         if( jointindex < nActiveJoints ) {
             // active joint
             const JointPtr& pjoint = _vecjoints.at(jointindex);
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                RAVELOG_VERBOSE_FORMAT("Working with active joint %s with joint index %d", pjoint->GetName() % jointindex);
-            }
             const int dofindex = pjoint->GetDOFIndex();
             const int ndof = pjoint->GetDOF();
             const int8_t affect = this->DoesAffect(pjoint->GetJointIndex(), linkindex);
@@ -2578,9 +2552,6 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
         else {
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - nActiveJoints);
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                RAVELOG_VERBOSE_FORMAT("Working with mimic joint %s with (generalized) joint index %d", pjoint->GetName() % jointindex);
-            }
             const int ndof = pjoint->GetDOF();
             for(int idof = 0; idof < ndof; ++idof) {
                 if( pjoint->IsMimic(idof) ) {
@@ -2610,9 +2581,6 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                             index = itindex - dofindices.begin(); ///< index of an active joint
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(index, >=, 0, "index should be >= 0; now %d", index, ORE_InvalidArguments);
-                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            RAVELOG_VERBOSE_FORMAT("Collecting angular velocity Jacobian w.r.t index %d (dof index %d) by the influence of joint %s", index % dofindex % pjoint->GetName());
-                        }
                         const dReal partialderiv = dofindexDerivativePair.second;
                         vjacobian[index                ] += v.x * partialderiv;
                         vjacobian[index + dofstride    ] += v.y * partialderiv;
