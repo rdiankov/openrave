@@ -41,8 +41,12 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
     if( GetReadableInterfaces().size() > 0 ) {
         xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
         FOREACHC(it, GetReadableInterfaces()) {
-            BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
-            it->second->Serialize(newwriter,options);
+            // some readable are not xml readable and does not get serialized here
+            ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(it->second);
+            if( !!pxmlreadable ) {
+                BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
+                pxmlreadable->SerializeXML(newwriter,options);
+            }
         }
         writer->Serialize(O);
     }

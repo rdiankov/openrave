@@ -1965,9 +1965,10 @@ public:
         }
     }
 
-    virtual XMLReadablePtr GetReadable() {
-        return XMLReadablePtr(new InterfaceXMLReadable(_pinterface));
+    ReadablePtr GetReadable() override {
+        return ReadablePtr(new InterfaceXMLReadable(_pinterface));
     }
+
 protected:
     EnvironmentBasePtr _penv;
     InterfaceType _type;
@@ -3612,8 +3613,8 @@ public:
         return false;
     }
 
-    virtual XMLReadablePtr GetReadable() {
-        return XMLReadablePtr(new InterfaceXMLReadable(_pinterface));
+    ReadablePtr GetReadable() override {
+        return ReadablePtr(new InterfaceXMLReadable(_pinterface));
     }
 protected:
     EnvironmentBasePtr _penv;

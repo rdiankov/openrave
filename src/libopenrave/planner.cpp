@@ -233,43 +233,40 @@ void PlannerStatus::AddCollisionReport(const CollisionReport& collisionReport)
 void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const
 {
     rPlannerStatus.SetObject();
-    openravejson::SetJsonValueByKey(rPlannerStatus, "errorOrigin", errorOrigin, alloc);
-    openravejson::SetJsonValueByKey(rPlannerStatus, "description", description, alloc);
-    openravejson::SetJsonValueByKey(rPlannerStatus, "statusCode", statusCode, alloc);
+    orjson::SetJsonValueByKey(rPlannerStatus, "errorOrigin", errorOrigin, alloc);
+    orjson::SetJsonValueByKey(rPlannerStatus, "description", description, alloc);
+    orjson::SetJsonValueByKey(rPlannerStatus, "statusCode", statusCode, alloc);
     if(jointValues.size() > 0) {
-        openravejson::SetJsonValueByKey(rPlannerStatus, "jointValues", jointValues, alloc);
+        orjson::SetJsonValueByKey(rPlannerStatus, "jointValues", jointValues, alloc);
     }
 
     if(!!report) {
         rapidjson::Value reportjson(rapidjson::kObjectType);
         if(!!report->plink1) {
-            openravejson::SetJsonValueByKey(reportjson, "plink1", report->plink1->GetName(), alloc);
+            orjson::SetJsonValueByKey(reportjson, "plink1", report->plink1->GetName(), alloc);
         }
         if(!!report->plink2) {
-            openravejson::SetJsonValueByKey(reportjson, "plink2", report->plink2->GetName(), alloc);
+            orjson::SetJsonValueByKey(reportjson, "plink2", report->plink2->GetName(), alloc);
         }
         rapidjson::Value reportContactsjson(rapidjson::kObjectType);
         for (size_t i=0; i<report->contacts.size(); ++i) {
             rapidjson::Value reportContactsPosjson(rapidjson::kObjectType);
-            openravejson::SetJsonValueByKey(reportContactsPosjson, "x", report->contacts[i].pos.x, alloc);
-            openravejson::SetJsonValueByKey(reportContactsPosjson, "y", report->contacts[i].pos.y, alloc);
-            openravejson::SetJsonValueByKey(reportContactsPosjson, "z", report->contacts[i].pos.z, alloc);
+            orjson::SetJsonValueByKey(reportContactsPosjson, "x", report->contacts[i].pos.x, alloc);
+            orjson::SetJsonValueByKey(reportContactsPosjson, "y", report->contacts[i].pos.y, alloc);
+            orjson::SetJsonValueByKey(reportContactsPosjson, "z", report->contacts[i].pos.z, alloc);
 
             rapidjson::Value rname;
-            openravejson::SaveJsonValue(rname, std::to_string(i), alloc);
+            orjson::SaveJsonValue(rname, std::to_string(i), alloc);
             reportContactsjson.AddMember(rname, reportContactsPosjson, alloc);
         }
-        openravejson::SetJsonValueByKey(reportjson, "contacts", reportContactsjson, alloc);
+        orjson::SetJsonValueByKey(reportjson, "contacts", reportContactsjson, alloc);
         //Eventually, serialization could be in openravejson.h
-        openravejson::SetJsonValueByKey(rPlannerStatus, "collisionReport", reportjson, alloc);
+        orjson::SetJsonValueByKey(rPlannerStatus, "collisionReport", reportjson, alloc);
     }
 
     //Eventually, serialization could be in openravejson.h ?
     if( ikparam.GetType() != IKP_None ) {
-        std::stringstream ss;
-        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-        ss << ikparam;
-        openravejson::SetJsonValueByKey(rPlannerStatus, "ikparam", ss.str(), alloc);
+        orjson::SetJsonValueByKey(rPlannerStatus, "ikparam", ikparam, alloc);
     }
 }
 
@@ -295,7 +292,7 @@ void PlannerParameters::StateSaver::_Restore()
     BOOST_ASSERT(ret==0);
 }
 
-PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _nMaxPlanningTime(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0)
+PlannerParameters::PlannerParameters() : Readable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _nMaxPlanningTime(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0)
 {
     _diffstatefn = SubtractStates;
     _neighstatefn = AddStates;
@@ -325,9 +322,8 @@ PlannerParameters::~PlannerParameters()
 {
 }
 
-PlannerParameters::PlannerParameters(const PlannerParameters &r) : XMLReadable("")
+PlannerParameters::PlannerParameters(const PlannerParameters &r)
 {
-    BOOST_ASSERT(0);
 }
 
 PlannerParameters& PlannerParameters::operator=(const PlannerParameters& r)

@@ -136,7 +136,7 @@ typedef boost::shared_ptr<ConstraintFilterReturn> ConstraintFilterReturnPtr;
 
     Also allows the parameters and descriptions to be serialized to reStructuredText for documentation purposes.
  */
-class OPENRAVE_API PlannerParameters : public BaseXMLReader, public XMLReadable
+class OPENRAVE_API PlannerParameters : public BaseXMLReader, public Readable
 {
 public:
     typedef std::list< std::vector<dReal> > ConfigurationList;
@@ -456,6 +456,11 @@ protected:
         return boost::static_pointer_cast<PlannerParameters const>(shared_from_this());
     }
 
+    virtual bool SerializeXML(BaseXMLWriterPtr writer, int options) const override
+    {
+        return false;
+    }
+    
     /// \brief output the planner parameters in a string (in XML format)
     ///
     /// \param options if 1 will skip writing the extra parameters

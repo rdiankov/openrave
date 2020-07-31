@@ -46,7 +46,7 @@ class ColladaReader;
 class ColladaWriter;
 
 /// \brief holds all information required to describe the collada references to the loaded body
-class ColladaXMLReadable : public XMLReadable
+class ColladaXMLReadable : public Readable
 {
 public:
     static std::string GetXMLIdStatic() {
@@ -89,7 +89,11 @@ public:
         std::string ikmodelsidref;
     };
 
-    ColladaXMLReadable() : XMLReadable(GetXMLIdStatic()) {
+    ColladaXMLReadable() : Readable(GetXMLIdStatic()) {
+    }
+
+    bool SerializeXML(BaseXMLWriterPtr wirter, int options=0) const override {
+        return false;
     }
 
     std::list< std::pair<std::string, bool> > _articulated_systemURIs; ///< pairs of (urls, isexternal) of the articulated_system, ordered in the same way as they are read. The first is the top-most level
