@@ -17,7 +17,9 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-import sys,time
+import sys
+import time
+import readline
 from types import ModuleType
 from numpy import *
 from OpenGL import GL

@@ -221,11 +221,11 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
 #endif
     else if (PyString_Check(obj.ptr()))
     {
-        value.SetString(PyString_AsString(obj.ptr()), PyString_GET_SIZE(obj.ptr()));
+        value.SetString(PyString_AsString(obj.ptr()), PyString_GET_SIZE(obj.ptr()), allocator);
     }
     else if (PyUnicode_Check(obj.ptr()))
     {
-        value.SetString(PyBytes_AsString(obj.ptr()), PyBytes_GET_SIZE(obj.ptr()));
+        value.SetString(PyBytes_AsString(obj.ptr()), PyBytes_GET_SIZE(obj.ptr()), allocator);
     }
     else if (PyTuple_Check(obj.ptr()))
     {
@@ -882,19 +882,19 @@ object PyInterfaceBase::GetReadableInterfaces()
 {
     py::dict ointerfaces;
     FOREACHC(it,_pbase->GetReadableInterfaces()) {
-        ointerfaces[it->first] = toPyXMLReadable(it->second);
+        ointerfaces[it->first] = toPyReadable(it->second);
     }
     return ointerfaces;
 }
 
-object PyInterfaceBase::GetReadableInterface(const std::string& xmltag)
+object PyInterfaceBase::GetReadableInterface(const std::string& id)
 {
-    return toPyXMLReadable(_pbase->GetReadableInterface(xmltag));
+    return toPyReadable(_pbase->GetReadableInterface(id));
 }
 
-void PyInterfaceBase::SetReadableInterface(const std::string& xmltag, object oreadable)
+void PyInterfaceBase::SetReadableInterface(const std::string& id, object oreadable)
 {
-    _pbase->SetReadableInterface(xmltag,ExtractXMLReadable(oreadable));
+    _pbase->SetReadableInterface(id,ExtractReadable(oreadable));
 }
 
 PyInterfaceBasePtr PyEnvironmentBase::_toPyInterface(InterfaceBasePtr pinterface)
@@ -919,6 +919,101 @@ PyInterfaceBasePtr PyEnvironmentBase::_toPyInterface(InterfaceBasePtr pinterface
     case PT_PostureDescriber: return openravepy::toPyPostureDescriberBase(OPENRAVE_STATIC_POINTER_CAST<PostureDescriberBase>(pinterface), shared_from_this());
     }
     return PyInterfaceBasePtr();
+}
+
+static std::vector<KinBody::KinBodyInfoPtr> _ExtractBodyInfoArray(object vBodyInfoList)
+{
+    if( IS_PYTHONOBJECT_NONE(vBodyInfoList) ) {
+        return {};
+    }
+    std::vector<KinBody::KinBodyInfoPtr> vBodyInfos;
+    try {
+        const size_t arraySize = len(vBodyInfoList);
+        vBodyInfos.resize(arraySize);
+
+        for(size_t iBodyInfo = 0; iBodyInfo < arraySize; iBodyInfo++) {
+            extract_<OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo> > pyrobotbaseinfo(vBodyInfoList[iBodyInfo]);
+            if (pyrobotbaseinfo.check()) {
+                vBodyInfos[iBodyInfo] = ((OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo>)pyrobotbaseinfo)->GetRobotBaseInfo();
+                continue;
+            }
+            extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo> > pykinbodyinfo(vBodyInfoList[iBodyInfo]);
+            if (pykinbodyinfo.check()) {
+                vBodyInfos[iBodyInfo] = ((OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo>)pykinbodyinfo)->GetKinBodyInfo();
+                continue;
+            }
+            throw openrave_exception(_("Bad BodyInfo"));
+        }
+    }
+    catch(...) {
+        RAVELOG_WARN("Cannot do ExtractArray for BodyInfos");
+    }
+    return vBodyInfos;
+}
+
+PyEnvironmentBase::PyEnvironmentBaseInfo::PyEnvironmentBaseInfo() {
+}
+
+PyEnvironmentBase::PyEnvironmentBaseInfo::PyEnvironmentBaseInfo(const EnvironmentBase::EnvironmentBaseInfo& info) {
+    _Update(info);
+}
+
+EnvironmentBase::EnvironmentBaseInfoPtr PyEnvironmentBase::PyEnvironmentBaseInfo::GetEnvironmentBaseInfo() const {
+    EnvironmentBase::EnvironmentBaseInfoPtr pInfo(new EnvironmentBase::EnvironmentBaseInfo());
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    pInfo->_vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(_vBodyInfos), end(_vBodyInfos));
+#else
+    std::vector<KinBody::KinBodyInfoPtr> vBodyInfo = _ExtractBodyInfoArray(_vBodyInfos);
+    pInfo->_vBodyInfos.clear();
+    pInfo->_vBodyInfos.reserve(vBodyInfo.size());
+    FOREACHC(it, vBodyInfo) {
+        pInfo->_vBodyInfos.push_back(*it);
+    }
+#endif
+    return pInfo;
+}
+
+py::object PyEnvironmentBase::PyEnvironmentBaseInfo::SerializeJSON(dReal fUnitScale, py::object options) {
+    rapidjson::Document doc;
+    EnvironmentBase::EnvironmentBaseInfoPtr pInfo = GetEnvironmentBaseInfo();
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
+    return toPyObject(doc);
+}
+
+void PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON(py::object obj, dReal fUnitScale, py::object options)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    EnvironmentBase::EnvironmentBaseInfoPtr pInfo = GetEnvironmentBaseInfo();
+    pInfo->DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
+    _Update(*pInfo);
+}
+
+void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::EnvironmentBaseInfo& info) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    _vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(info._vBodyInfos), end(info._vBodyInfos));
+#else
+    py::list vBodyInfos;
+    FOREACHC(itBodyInfo, info._vBodyInfos) {
+        RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itBodyInfo);
+        if (!!pRobotBaseInfo) {
+            PyRobotBase::PyRobotBaseInfo info = PyRobotBase::PyRobotBaseInfo(*pRobotBaseInfo);
+            vBodyInfos.append(info);
+        } else {
+            PyKinBody::PyKinBodyInfo info = PyKinBody::PyKinBodyInfo(**itBodyInfo);
+            vBodyInfos.append(info);
+        }
+    }
+    _vBodyInfos = vBodyInfos;
+#endif
+}
+
+std::string PyEnvironmentBase::PyEnvironmentBaseInfo::__str__() {
+    return "<EnvironmentBaseInfo>";
+}
+
+py::object PyEnvironmentBase::PyEnvironmentBaseInfo::__unicode__() {
+    return ConvertStringToUnicode(__str__());
 }
 
 void PyEnvironmentBase::_BodyCallback(object fncallback, KinBodyPtr pbody, int action)
@@ -2255,7 +2350,26 @@ void PyEnvironmentBase::SetUnit(std::string unitname, dReal unitmult){
 object PyEnvironmentBase::GetUnit() const {
     std::pair<std::string, dReal> unit = _penv->GetUnit();
     return py::make_tuple(unit.first, unit.second);
+}
 
+void PyEnvironmentBase::SetRevision(const uint64_t revision) {
+    _penv->SetRevision(revision);
+}
+
+object PyEnvironmentBase::GetRevision() const {
+    uint64_t revision = _penv->GetRevision();
+    return py::to_object(revision);
+}
+
+object PyEnvironmentBase::ExtractInfo() const {
+    EnvironmentBase::EnvironmentBaseInfo info;
+    _penv->ExtractInfo(info);
+    return py::to_object(boost::shared_ptr<PyEnvironmentBase::PyEnvironmentBaseInfo>(new PyEnvironmentBase::PyEnvironmentBaseInfo(info)));
+}
+
+void PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info) {
+    EnvironmentBase::EnvironmentBaseInfoPtr pInfo = info->GetEnvironmentBaseInfo();
+    _penv->UpdateFromInfo(*pInfo);
 }
 
 bool PyEnvironmentBase::__eq__(PyEnvironmentBasePtr p) {
@@ -2414,6 +2528,9 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBody_overloads, GetPublishedB
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodies_overloads, GetPublishedBodies, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyJointValues_overloads, GetPublishedBodyJointValues, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyTransformsMatchingPrefix_overloads, GetPublishedBodyTransformsMatchingPrefix, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyEnvironmentBaseInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyEnvironmentBaseInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
+
 
 object get_openrave_exception_unicode(OpenRAVEException* p)
 {
@@ -2614,7 +2731,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
         .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces, DOXY_FN(InterfaceBase,GetReadableInterfaces))
         .def("GetReadableInterface",&PyInterfaceBase::GetReadableInterface, DOXY_FN(InterfaceBase,GetReadableInterface))
-        .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface, PY_ARGS("xmltag","xmlreadable") DOXY_FN(InterfaceBase,SetReadableInterface))
+        .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface, PY_ARGS("id","readable") DOXY_FN(InterfaceBase,SetReadableInterface))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
         .def("__unicode__", &PyInterfaceBase::__unicode__)
@@ -2623,6 +2740,34 @@ Because race conditions can pop up when trying to lock the openrave environment 
         .def("__ne__",&PyInterfaceBase::__ne__)
         ;
     }
+
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object environmentbaseinfo = class_<PyEnvironmentBase::PyEnvironmentBaseInfo, OPENRAVE_SHARED_PTR<PyEnvironmentBase::PyEnvironmentBaseInfo> >(m, "EnvironmentBaseInfo", DOXY_CLASS(EnvironmentBase::EnvironmentBaseInfo))
+                                 .def(init<>())
+#else
+    object environmentbaseinfo = class_<PyEnvironmentBase::PyEnvironmentBaseInfo, OPENRAVE_SHARED_PTR<PyEnvironmentBase::PyEnvironmentBaseInfo> >("EnvironmentBaseInfo", DOXY_CLASS(EnvironmentBase::EnvironmentBaseInfo))
+#endif
+                                 .def_readwrite("_vBodyInfos",&PyEnvironmentBase::PyEnvironmentBaseInfo::_vBodyInfos)
+                                 .def("__str__",&PyEnvironmentBase::PyEnvironmentBaseInfo::__str__)
+                                 .def("__unicode__",&PyEnvironmentBase::PyEnvironmentBaseInfo::__unicode__)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                 .def("SerializeJSON", &PyEnvironmentBase::PyEnvironmentBaseInfo::SerializeJSON,
+                                      "unitScale"_a = 1.0,
+                                      "options"_a = py::none_(),
+                                      DOXY_FN(EnvironmentBase::EnvironmentBaseInfo, SerializeJSON)
+                                      )
+                                 .def("DeserializeJSON", &PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON,
+                                      "obj"_a,
+                                      "unitScale"_a = 1.0,
+                                      "options"_a = py::none_(),
+                                      DOXY_FN(EnvironmentBase::EnvironmentBaseInfo, DeserializeJSON)
+                                      )
+#else
+                                 .def("SerializeJSON", &PyEnvironmentBase::PyEnvironmentBaseInfo::SerializeJSON, PyEnvironmentBaseInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(EnvironmentBase::EnvironmentBaseInfo, SerializeJSON)))
+                                 .def("DeserializeJSON", &PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON, PyEnvironmentBaseInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(EnvironmentBase::EnvironmentBaseInfo, DeserializeJSON)))
+#endif
+    ;
 
     {
         bool (PyEnvironmentBase::*pcolb)(PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
@@ -2691,7 +2836,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("Clone",&PyEnvironmentBase::Clone, PY_ARGS("reference","options") DOXY_FN(EnvironmentBase,Clone))
                      .def("SetCollisionChecker",&PyEnvironmentBase::SetCollisionChecker, PY_ARGS("collisionchecker") DOXY_FN(EnvironmentBase,SetCollisionChecker))
                      .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker, DOXY_FN(EnvironmentBase,GetCollisionChecker))
-
                      .def("CheckCollision",pcolb, PY_ARGS("body") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; CollisionReportPtr"))
                      .def("CheckCollision",pcolbr, PY_ARGS("body","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; CollisionReportPtr"))
                      .def("CheckCollision",pcolbb, PY_ARGS("body1","body2") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; KinBodyConstPtr; CollisionReportPtr"))
@@ -2963,6 +3107,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetUserData",&PyEnvironmentBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
                      .def("GetUnit",&PyEnvironmentBase::GetUnit, DOXY_FN(EnvironmentBase,GetUnit))
                      .def("SetUnit",&PyEnvironmentBase::SetUnit, PY_ARGS("unitname","unitmult") DOXY_FN(EnvironmentBase,SetUnit))
+                     .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
+                     .def("SetRevision", &PyEnvironmentBase::SetRevision, PY_ARGS("revision") DOXY_FN(EnvironmentBase, SetRevision))
+                     .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
+                     .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info") DOXY_FN(EnvironmentBase,UpdateFromInfo))
                      .def("__enter__",&PyEnvironmentBase::__enter__)
                      .def("__exit__",&PyEnvironmentBase::__exit__)
                      .def("__eq__",&PyEnvironmentBase::__eq__)

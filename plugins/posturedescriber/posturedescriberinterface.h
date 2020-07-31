@@ -94,10 +94,10 @@ public:
     /// \param [out] posturestates   posture states, whose size is a power of 2. Always non-empty if (1) this class is properly initialized AND (2) dofvalues is either empty or has the correct size.
     /// \return true if (1) this describer class is properly initialized AND (2) dofvalues is either empty or has the correct size.
     virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturestates,
-                                     const std::vector<dReal>& dofvalues = {},
-                                     const std::vector<int>& dofindices = {},
-                                     const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing
-                                     ) override;
+                                      const std::vector<dReal>& dofvalues = {},
+                                      const std::vector<int>& dofindices = {},
+                                      const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing
+                                      ) override;
 
     /// \brief Sets the tolerance for determining whether a robot posture value (shoulder, elbow, wrist, etc.) is close to 0
     bool SetPostureValueThreshold(const dReal fTol);

@@ -33,22 +33,39 @@ public:
     /// \brief holds all user-set manipulator information used to initialize the Manipulator class.
     ///
     /// This is serializable and independent of environment.
-    class OPENRAVE_API ManipulatorInfo
+    class OPENRAVE_API ManipulatorInfo : public InfoBase
     {
 public:
-        ManipulatorInfo() : _vdirection(0,0,1) {
+        ManipulatorInfo() {}
+        ManipulatorInfo(const ManipulatorInfo& other) {
+            *this = other;
+        };
+        bool operator==(const ManipulatorInfo& other) const {
+            return _name == other._name
+                && _sBaseLinkName == other._sBaseLinkName
+                && _sEffectorLinkName == other._sEffectorLinkName
+                && _tLocalTool == other._tLocalTool
+                && _vChuckingDirection == other._vChuckingDirection
+                && _vdirection == other._vdirection
+                && _sIkSolverXMLId == other._sIkSolverXMLId
+                && _vGripperJointNames == other._vGripperJointNames
+                && _grippername == other._grippername
+                && _id == other._id;
         }
-        virtual ~ManipulatorInfo() {
+        bool operator!=(const ManipulatorInfo& other) const {
+            return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
+        std::string _id; ///< unique id for manipulator info
         std::string _name;
         std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
         Transform _tLocalTool;
         std::vector<dReal> _vChuckingDirection; ///< the normal direction to move joints for the hand to grasp something
-        Vector _vdirection;
+        Vector _vdirection = Vector(0,0,1);
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
         std::string _grippername; ///< associates the manipulator with a GripperInfo
@@ -58,17 +75,35 @@ public:
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
 
     /// \brief Holds the definition of a gripper that can be mounted on the robot.
-    class OPENRAVE_API GripperInfo
+    class OPENRAVE_API GripperInfo : public InfoBase
     {
 public:
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        GripperInfo() {};
+        GripperInfo(const GripperInfo& other) {
+            *this = other;
+        };
+        GripperInfo& operator=(const GripperInfo& other);
+        bool operator==(const GripperInfo& other) const {
+            return _id == other._id
+                && name == other.name
+                && grippertype == other.grippertype
+                && gripperJointNames == other.gripperJointNames
+                && _docGripperInfo == other._docGripperInfo;
+        }
+        bool operator!=(const GripperInfo& other) const {
+            return !operator==(other);
+        }
 
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+
+        std::string _id; /// < unique id
         std::string name; ///< unique name
         std::string grippertype; ///< gripper type
         std::vector<std::string> gripperJointNames; ///< names of the gripper joints
-
-        boost::shared_ptr<rapidjson::Document> _pdocument;  ///< contains entire rapid json document to hold custom parameters
+        rapidjson::Document _docGripperInfo;  ///< contains entire rapid json document to hold custom parameters
     };
     typedef boost::shared_ptr<GripperInfo> GripperInfoPtr;
     typedef boost::shared_ptr<GripperInfo const> GripperInfoConstPtr;
@@ -86,9 +121,22 @@ public:
         virtual ~Manipulator();
 
         /// \brief return a serializable info holding everything to initialize a manipulator
-        inline const ManipulatorInfo& GetInfo() const {
+        virtual inline const ManipulatorInfo& GetInfo() const {
             return _info;
         }
+
+        virtual inline const ManipulatorInfo& UpdateAndGetInfo() {
+            UpdateInfo();
+            return GetInfo();
+        }
+
+        virtual void UpdateInfo();
+
+        /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+        virtual void ExtractInfo(RobotBase::ManipulatorInfo& info) const;
+
+        /// \brief update Manipulator according to new ManipulatorInfo, returns false if update cannot be performed and requires InitFromInfo
+        virtual UpdateFromInfoResult UpdateFromInfo(const RobotBase::ManipulatorInfo& info);
 
         /// \brief Return the transformation of the manipulator frame
         ///
@@ -447,22 +495,48 @@ private:
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
     ///
     /// This is serializable and independent of environment.
-    class OPENRAVE_API AttachedSensorInfo
+    class OPENRAVE_API AttachedSensorInfo : public InfoBase
     {
 public:
-        AttachedSensorInfo() {
+        AttachedSensorInfo() {}
+        AttachedSensorInfo(const AttachedSensorInfo& other) {
+            *this = other;
+        };
+        AttachedSensorInfo& operator=(const AttachedSensorInfo& other) {
+            _id = other._id;
+            _name = other._name;
+            _linkname = other._linkname;
+            _trelative = other._trelative;
+            _sensorname = other._sensorname;
+            rapidjson::Document docSensorGeometry;
+            if (other._docSensorGeometry.IsObject()) {
+                docSensorGeometry.CopyFrom(other._docSensorGeometry, docSensorGeometry.GetAllocator());
+            }
+            _docSensorGeometry.Swap(docSensorGeometry);
+            return *this;
         }
-        virtual ~AttachedSensorInfo() {
+        bool operator==(const AttachedSensorInfo& other) const {
+            return _id == other._id
+                && _name == other._name
+                && _linkname == other._linkname
+                && _trelative == other._trelative
+                && _sensorname == other._sensorname
+                && _docSensorGeometry == other._docSensorGeometry;
+        }
+        bool operator!=(const AttachedSensorInfo& other) const {
+            return !operator==(other);
         }
 
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+        std::string _id;
         std::string _name;
         std::string _linkname; ///< the robot link that the sensor is attached to
         Transform _trelative;         ///< relative transform of the sensor with respect to the attached link
         std::string _sensorname; ///< name of the sensor interface to create, in other words the sensor type
-        SensorBase::SensorGeometryPtr _sensorgeometry; ///< the sensor geometry to initialize the sensor with
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
-
+        rapidjson::Document _docSensorGeometry; ///< the sensor geometry to initialize the sensor with
     };
     typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
     typedef boost::shared_ptr<AttachedSensorInfo const> AttachedSensorInfoConstPtr;
@@ -528,9 +602,15 @@ public:
         }
 
         /// \brief returns the attached sensor info
-        inline const AttachedSensorInfo& GetInfo() const {
+        virtual inline const AttachedSensorInfo& GetInfo() const {
             return _info;
         }
+
+        /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+        virtual void ExtractInfo(RobotBase::AttachedSensorInfo& info) const;
+
+        /// \brief update AttachedSensor according to new AttachedSensorInfo, returns false if update cannot be performed and requires InitFromInfo
+        virtual UpdateFromInfoResult UpdateFromInfo(const RobotBase::AttachedSensorInfo& info);
 
 private:
         /// \brief compute internal information from user-set info
@@ -564,22 +644,30 @@ private:
     /// \brief holds all user-set attached kinbody information used to initialize the AttachedKinBody class.
     ///
     /// This is serializable and independent of environment.
-    class OPENRAVE_API ConnectedBodyInfo
+    class OPENRAVE_API ConnectedBodyInfo : public InfoBase
     {
 public:
         ConnectedBodyInfo();
-        virtual ~ConnectedBodyInfo() {
+        ConnectedBodyInfo(const ConnectedBodyInfo& other) {
+            *this = other;
+        };
+        ConnectedBodyInfo& operator=(const ConnectedBodyInfo& other);
+        bool operator==(const ConnectedBodyInfo& other) const;
+        bool operator!=(const ConnectedBodyInfo& other) const {
+            return !operator==(other);
         }
 
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options);
+
         /// \brief Updates the infos depending on the robot at the identity and zero position.
-        virtual void InitInfoFromBody(RobotBase& robot);
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
+        void InitInfoFromBody(RobotBase& robot);
 
-
+        std::string _id; ///< unique id of the connected body
         std::string _name; ///< the name of the connected body info
         std::string _linkname; ///< the robot link that the body is attached to
-        std::string _url;  //< the url where the connected body came from. this is used when writing back to the filename.
+        std::string _uri;  //< the uri where the connected body came from. this is used when writing back to the filename.
         Transform _trelative;  ///< relative transform of the body with respect to the attached link. The link transforms are multiplied by the transform of _linkname and _trelative to put them on the real robot.
         std::vector<KinBody::LinkInfoPtr> _vLinkInfos; ///< extracted link infos representing the connected body. The names are the original "desired" names. Should not consider _linkname and _trelative.
         std::vector<KinBody::JointInfoPtr> _vJointInfos; ///< extracted joint infos (inluding passive) representing the connected body. The names are the original "desired" names.
@@ -672,13 +760,19 @@ public:
 
         // virtual void serialize(std::ostream& o, int options) const;
 
-        /// \brief return hash of the attached kinbody definition
-        // virtual const std::string& GetStructureHash() const;
+        /// \brief return hash of the connected body info
+        virtual const std::string& GetInfoHash() const;
 
         /// \brief returns the attached kinbody info
         inline const ConnectedBodyInfo& GetInfo() const {
             return _info;
         }
+
+        /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+        virtual void ExtractInfo(RobotBase::ConnectedBodyInfo& info) const;
+
+        /// \brief update ConnectedBody according to new ConnectedBodyInfo, returns false if update cannot be performed and requires InitFromInfo
+        virtual UpdateFromInfoResult UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info);
 
         /// \brief returns true if the connected body can provide a manipulator with the specified resolved name. Function works even though connected body is not active
         bool CanProvideManipulator(const std::string& resolvedManipulatorName) const;
@@ -697,7 +791,7 @@ private:
 
         RobotBaseWeakPtr _pattachedrobot; ///< the robot that the body is attached to
         LinkWeakPtr _pattachedlink;         ///< the robot link that the body is attached to
-        mutable std::string __hashstructure;
+        mutable std::string __hashinfo;
 
         friend class ColladaReader;
         friend class RobotBase;
@@ -706,6 +800,35 @@ private:
     typedef boost::shared_ptr<RobotBase::ConnectedBody> ConnectedBodyPtr;
     typedef boost::shared_ptr<RobotBase::ConnectedBody const> ConnectedBodyConstPtr;
     typedef boost::weak_ptr<RobotBase::ConnectedBody> ConnectedBodyWeakPtr;
+
+    /// \brief info structure used to initialize a robot
+    class OPENRAVE_API RobotBaseInfo : public KinBodyInfo
+    {
+public:
+        RobotBaseInfo() : KinBodyInfo() {}
+        RobotBaseInfo(const RobotBaseInfo& other) : KinBodyInfo(other) {
+            *this = other;
+        };
+        RobotBaseInfo& operator=(const RobotBaseInfo& other);
+        bool operator==(const RobotBaseInfo& other) const;
+        bool operator!=(const RobotBaseInfo& other) const{
+            return !operator==(other);
+        }
+
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+        std::vector<ManipulatorInfoPtr> _vManipulatorInfos; ///< list of pointers to ManipulatorInfo
+        std::vector<AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< list of pointers to AttachedSensorInfo
+        std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
+        std::vector<GripperInfoPtr> _vGripperInfos; ///< list of pointers to GripperInfo
+protected:
+        virtual void _DeserializeReadableInterface(const rapidjson::Value& value);
+
+    };
+    typedef boost::shared_ptr<RobotBaseInfo> RobotBaseInfoPtr;
+    typedef boost::shared_ptr<RobotBaseInfo const> RobotBaseInfoConstPtr;
 
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
@@ -738,6 +861,7 @@ protected:
         std::vector<Vector> _vvManipsLocalDirection;
         std::vector<IkSolverBasePtr> _vpManipsIkSolver;
         std::vector<int8_t> _vConnectedBodyActiveStates; ///< GetConnectedBodyActiveStates
+        std::vector<std::string> _vManipsName; ///< name of manipulators in the order other states are stored.
 private:
         virtual void _RestoreRobot(boost::shared_ptr<RobotBase> robot);
     };
@@ -760,6 +884,8 @@ private:
     /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
     virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::vector<ManipulatorInfoConstPtr>& manipinfos, const std::vector<AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::string& uri=std::string());
 
+    /// \brief initializes a robot with info structure
+    virtual bool InitFromRobotInfo(const RobotBaseInfo& info);
 
     /// \brief Returns the manipulators of the robot
     virtual const std::vector<ManipulatorPtr>& GetManipulators() const;
@@ -815,15 +941,6 @@ private:
         @name Affine DOFs
         @{
      */
-
-    /// \deprecated (11/10/04), use OpenRAVE:: global variables
-    static const DOFAffine DOF_NoTransform RAVE_DEPRECATED = OpenRAVE::DOF_NoTransform;
-    static const DOFAffine DOF_X RAVE_DEPRECATED = OpenRAVE::DOF_X;
-    static const DOFAffine DOF_Y RAVE_DEPRECATED = OpenRAVE::DOF_Y;
-    static const DOFAffine DOF_Z RAVE_DEPRECATED = OpenRAVE::DOF_Z;
-    static const DOFAffine DOF_RotationAxis RAVE_DEPRECATED = OpenRAVE::DOF_RotationAxis;
-    static const DOFAffine DOF_Rotation3D RAVE_DEPRECATED = OpenRAVE::DOF_Rotation3D;
-    static const DOFAffine DOF_RotationQuat RAVE_DEPRECATED = OpenRAVE::DOF_RotationQuat;
 
     /** \brief Set the joint indices and affine transformation dofs that the planner should use. If \ref DOF_RotationAxis is specified, the previously set axis is used.
 
@@ -1200,6 +1317,12 @@ private:
         return boost::static_pointer_cast<RobotBase const>(shared_from_this());
     }
 
+    /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+    virtual void ExtractInfo(RobotBaseInfo& info);
+
+    /// \brief update RobotBase according to new RobotBaseInfo, returns false if update cannot be performed and requires InitFromInfo
+    virtual UpdateFromInfoResult UpdateFromRobotInfo(const RobotBaseInfo& info);
+
 protected:
     RobotBase(EnvironmentBasePtr penv);
 
@@ -1220,11 +1343,14 @@ protected:
 
     virtual void _UpdateAttachedSensors();
 
+    /// \brief goes through all the link/joint ids and makes sure they are unique
+    void _ResolveInfoIds() override;
+
     /// \brief Ensures we have always mapped a manipulator to its "essential kinematics chain"---starting with a baselink-eelink pair, we exclude any static joints in between,
     /// and also the first and last few prismatic joints. So the first and last joints in the essential kinematics chain are always revolute.
     /// \param [in] pmanip    manipulator that, if not mapped yet, will be mapped to its essential kinematics chain
     virtual void _EnsureEssentialKinematicsChainRegisteredOnManipulator(ManipulatorConstPtr pmanip);
-        
+
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
     ManipulatorPtr _pManipActive;
 
@@ -1246,6 +1372,8 @@ protected:
     dReal _fQuatLimitMaxAngle, _fQuatMaxAngleVelocity, _fQuatAngleResolution, _fQuatAngleWeight;
 
     ConfigurationSpecification _activespec;
+
+    // posture describer
     std::map<LinkPair, PostureDescriberBasePtr> _mPostureDescribers; ///< maps a baselink-eelink pair to a posture describer that is capable of describing the kinematics chain; several manipulators can be attached to the same end-effector with different local tool transforms & directions, while they share the same baselink-eelink pair and the 6D IK hash, so we only need one describer for all these manipulators.
     std::map<ManipulatorConstPtr, LinkPair> _mEssentialLinkPairs; ///< maps a manipulator to its essential link pair, formed by its baselink-eelink pair, but excluding any static joints and the first, last few prismatic joints
 

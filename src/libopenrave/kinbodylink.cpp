@@ -15,46 +15,163 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+
 #include <algorithm>
 
 namespace OpenRAVE {
 
-KinBody::LinkInfo::LinkInfo() : XMLReadable("link"), _mass(0), _bStatic(false), _bIsEnabled(true) {
+void KinBody::LinkInfo::Reset()
+{
+    _vgeometryinfos.clear();
+    _mapExtraGeometries.clear();
+    _id.clear();
+    _name.clear();
+    _t = Transform();
+    _tMassFrame = Transform();
+    _mass = 0;
+    _vinertiamoments = Vector();
+    _mapFloatParameters.clear();
+    _mapIntParameters.clear();
+    _mapStringParameters.clear();
+    _vForcedAdjacentLinks.clear();
+    _bStatic = false;
+    _bIsEnabled = false;
 }
 
-KinBody::LinkInfo::LinkInfo(const LinkInfo& other) : XMLReadable("link")
+bool KinBody::LinkInfo::Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fEpsilon) const
 {
-    *this = other;
+    if( _vgeometryinfos.size() != rhs._vgeometryinfos.size() ) {
+        return false;
+    }
+
+    if( _id != rhs._id ) {
+        return false;
+    }
+    if( _name != rhs._name ) {
+        return false;
+    }
+    if( _mapFloatParameters != rhs._mapFloatParameters ) {
+        return false;
+    }
+    if( _mapIntParameters != rhs._mapIntParameters ) {
+        return false;
+    }
+    if( _mapStringParameters != rhs._mapStringParameters ) {
+        return false;
+    }
+
+    if( _vForcedAdjacentLinks != rhs._vForcedAdjacentLinks ) {
+        return false;
+    }
+
+    if( _bStatic != rhs._bStatic ) {
+        return false;
+    }
+
+    if( _bIsEnabled != rhs._bIsEnabled ) {
+        return false;
+    }
+
+    if( !(linkCompareOptions & 1) ) {
+        if( TransformDistanceFast(_t, rhs._t) > fEpsilon ) {
+            return false;
+        }
+    }
+
+    if( TransformDistanceFast(_tMassFrame, rhs._tMassFrame) > fEpsilon ) {
+        return false;
+    }
+    if( RaveFabs(_mass - rhs._mass) > fEpsilon ) {
+        return false;
+    }
+    if( RaveFabs(_vinertiamoments[0]- rhs._vinertiamoments[0]) > fEpsilon ) {
+        return false;
+    }
+    if( RaveFabs(_vinertiamoments[1]- rhs._vinertiamoments[1]) > fEpsilon ) {
+        return false;
+    }
+    if( RaveFabs(_vinertiamoments[2]- rhs._vinertiamoments[2]) > fEpsilon ) {
+        return false;
+    }
+
+    for(int igeom = 0; igeom < (int)_vgeometryinfos.size(); ++igeom) {
+        if( !_vgeometryinfos[igeom]->Compare(*rhs._vgeometryinfos[igeom], fEpsilon) ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void KinBody::LinkInfo::ConvertUnitScale(dReal fUnitScale)
+{
+    FOREACH(itgeometry, _vgeometryinfos) {
+        (*itgeometry)->ConvertUnitScale(fUnitScale);
+    }
+    FOREACH(itextra, _mapExtraGeometries) {
+        FOREACH(itgeometry, itextra->second) {
+            (*itgeometry)->ConvertUnitScale(fUnitScale);
+        }
+    }
+
+    _tMassFrame.trans *= fUnitScale;
+    _vinertiamoments *= fUnitScale*fUnitScale;
 }
 
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    openravejson::SetJsonValueByKey(value, "name", _name, allocator);
+    orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    orjson::SetJsonValueByKey(value, "name", _name, allocator);
 
     Transform tmpTransform {_t};
     Transform tmpMassTransform {_tMassFrame};
     tmpTransform.trans *= fUnitScale;
     tmpMassTransform.trans *= fUnitScale;
 
-    openravejson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
-    openravejson::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
-    openravejson::SetJsonValueByKey(value, "mass", _mass, allocator);
-    openravejson::SetJsonValueByKey(value, "intertialMoments", _vinertiamoments, allocator);
+    orjson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
+    orjson::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
+    orjson::SetJsonValueByKey(value, "mass", _mass, allocator);
+    orjson::SetJsonValueByKey(value, "intertialMoments", _vinertiamoments, allocator);
 
-    if (_mapFloatParameters.size() > 0) {
-        openravejson::SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
+    if(_mapFloatParameters.size() > 0) {
+        rapidjson::Value parameters;
+        parameters.SetArray();
+        FOREACHC(it, _mapFloatParameters) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        value.AddMember("floatParameters", parameters, allocator);
     }
-
-    if (_mapIntParameters.size() > 0) {
-        openravejson::SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
+    if(_mapIntParameters.size() > 0) {
+        rapidjson::Value parameters;
+        parameters.SetArray();
+        FOREACHC(it, _mapIntParameters) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        value.AddMember("intParameters", parameters, allocator);
     }
-
-    if (_mapStringParameters.size() > 0) {
-        openravejson::SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
+    if(_mapStringParameters.size() > 0) {
+        rapidjson::Value parameters;
+        parameters.SetArray();
+        FOREACHC(it, _mapStringParameters) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "value", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        value.AddMember("stringParameters", parameters, allocator);
     }
 
     if (_vForcedAdjacentLinks.size() > 0) {
-        openravejson::SetJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks, allocator);
+        orjson::SetJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks, allocator);
     }
 
     if (_vgeometryinfos.size() > 0) {
@@ -63,80 +180,137 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         geometriesValue.Reserve(_vgeometryinfos.size(), allocator);
         FOREACHC(it, _vgeometryinfos) {
             rapidjson::Value geometryValue;
-            (*it)->SerializeJSON(geometryValue, allocator, options);
+            (*it)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
             geometriesValue.PushBack(geometryValue, allocator);
         }
         value.AddMember("geometries", geometriesValue, allocator);
     }
 
-    if(_mapExtraGeometries.size() > 0 ) {
-        rapidjson::Value extraGeometriesValue;
-        extraGeometriesValue.SetObject();
-        FOREACHC(im, _mapExtraGeometries) {
-            rapidjson::Value geometriesValue;
-            geometriesValue.SetArray();
-            FOREACHC(iv, im->second){
-                if(!!(*iv))
-                {
-                    rapidjson::Value geometryValue;
-                    (*iv)->SerializeJSON(geometryValue, allocator);
-                    geometriesValue.PushBack(geometryValue, allocator);
-                }
-            }
-            extraGeometriesValue.AddMember(rapidjson::Value(im->first.c_str(), allocator).Move(), geometriesValue, allocator);
-        }
-        value.AddMember("extraGeometries", extraGeometriesValue, allocator);
-    }
+    // if(_mapExtraGeometries.size() > 0 ) {
+    //     rapidjson::Value extraGeometriesValue;
+    //     extraGeometriesValue.SetObject();
+    //     FOREACHC(im, _mapExtraGeometries) {
+    //         rapidjson::Value geometriesValue;
+    //         geometriesValue.SetArray();
+    //         FOREACHC(iv, im->second){
+    //             if(!!(*iv))
+    //             {
+    //                 rapidjson::Value geometryValue;
+    //                 (*iv)->SerializeJSON(geometryValue, allocator);
+    //                 geometriesValue.PushBack(geometryValue, allocator);
+    //             }
+    //         }
+    //         extraGeometriesValue.AddMember(rapidjson::Value(im->first.c_str(), allocator).Move(), geometriesValue, allocator);
+    //     }
+    //     value.AddMember("extraGeometries", extraGeometriesValue, allocator);
+    // }
 
-    openravejson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
-    openravejson::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
+    orjson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
+    orjson::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
 }
 
-void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
+void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options)
 {
-    openravejson::LoadJsonValueByKey(value, "name", _name);
-    openravejson::LoadJsonValueByKey(value, "transform", _t);
-    openravejson::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
-    openravejson::LoadJsonValueByKey(value, "mass", _mass);
-    openravejson::LoadJsonValueByKey(value, "intertialMoments", _vinertiamoments);
-    openravejson::LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
-    openravejson::LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
-    openravejson::LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
-    openravejson::LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
+    orjson::LoadJsonValueByKey(value, "id", _id);
+    orjson::LoadJsonValueByKey(value, "name", _name);
+    if( _id.empty() ) {
+        _id = _name;
+    }
 
-    _t.trans *= fUnitScale;
-    _tMassFrame.trans *= fUnitScale;
+    if (value.HasMember("transform")) {
+        orjson::LoadJsonValueByKey(value, "transform", _t);
+        _t.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
+    }
+    if (value.HasMember("massTransform")) {
+        orjson::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
+        _tMassFrame.trans *= fUnitScale;
+    }
+
+    orjson::LoadJsonValueByKey(value, "mass", _mass);
+    orjson::LoadJsonValueByKey(value, "intertialMoments", _vinertiamoments);
+
+    if (value.HasMember("floatParameters") && value["floatParameters"].IsArray()) {
+        _mapFloatParameters.clear();
+        for (rapidjson::Value::ConstValueIterator it = value["floatParameters"].Begin(); it != value["floatParameters"].End(); ++it) {
+            std::string key;
+            orjson::LoadJsonValueByKey(*it, "key", key);
+            orjson::LoadJsonValueByKey(*it, "values", _mapFloatParameters[key]);
+        }
+    }
+    if (value.HasMember("intParameters") && value["intParameters"].IsArray()) {
+        _mapIntParameters.clear();
+        for (rapidjson::Value::ConstValueIterator it = value["intParameters"].Begin(); it != value["intParameters"].End(); ++it) {
+            std::string key;
+            orjson::LoadJsonValueByKey(*it, "key", key);
+            orjson::LoadJsonValueByKey(*it, "values", _mapIntParameters[key]);
+        }
+    }
+    if (value.HasMember("stringParameters") && value["stringParameters"].IsArray()) {
+        _mapStringParameters.clear();
+        for (rapidjson::Value::ConstValueIterator it = value["stringParameters"].Begin(); it != value["stringParameters"].End(); ++it) {
+            std::string key;
+            orjson::LoadJsonValueByKey(*it, "key", key);
+            orjson::LoadJsonValueByKey(*it, "value", _mapStringParameters[key]);
+        }
+    }
+
+    orjson::LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
 
     if (value.HasMember("geometries")) {
-        _vgeometryinfos.clear();
-        _vgeometryinfos.reserve(value["geometries"].Size());
-        for (size_t i = 0; i < value["geometries"].Size(); ++i) {
-            GeometryInfoPtr pGeometryInfo(new GeometryInfo());
-            pGeometryInfo->DeserializeJSON(value["geometries"][i], fUnitScale);
-            _vgeometryinfos.push_back(pGeometryInfo);
-        }
-    }
-    if (value.HasMember("extraGeometries")) {
-        _mapExtraGeometries.clear();
-        for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
-            _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
-            std::vector<GeometryInfoPtr>& vgeometries = _mapExtraGeometries[it->name.GetString()];
-            vgeometries.reserve(it->value.Size());
-
-            for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im) {
-                GeometryInfoPtr pInfo (new GeometryInfo());
-                pInfo->DeserializeJSON(*im, fUnitScale);
-                vgeometries.push_back(pInfo);
+        _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());
+        for (rapidjson::Value::ConstValueIterator it = value["geometries"].Begin(); it != value["geometries"].End(); ++it) {
+            const rapidjson::Value& geometryValue = *it;
+            std::string id = orjson::GetStringJsonValueByKey(geometryValue, "id");
+            if (id.empty()) {
+                id = orjson::GetStringJsonValueByKey(geometryValue, "name");
             }
+            UpdateOrCreateInfo(geometryValue, id, _vgeometryinfos, fUnitScale, options);
         }
     }
 
-    openravejson::LoadJsonValueByKey(value, "isStatic", _bStatic);
-    openravejson::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
+    _mapExtraGeometries.clear();
+    // if (value.HasMember("extraGeometries")) {
+    //     for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
+    //         if (_mapExtraGeometries.find(it->name.GetString()) == _mapExtraGeometries.end()) {
+    //             _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
+    //         }
+    //         std::vector<GeometryInfoPtr>& vgeometries = _mapExtraGeometries[it->name.GetString()];
+    //         vgeometries.reserve(it->value.Size() + vgeometries.size());
+    //         size_t iGeometry = 0;
+    //         for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
+    //             std::string id = orjson::GetStringJsonValueByKey(*im, "id");
+    //             if (id.empty()) {
+    //                 id = orjson::GetStringJsonValueByKey(*im, "name");
+    //             }
+    //             if (id.empty()) {
+    //                 id = boost::str(boost::format("geometry%d") % iGeometry);
+    //             }
+    //             UpdateOrCreateInfo(*im, id, vgeometries, fUnitScale);
+    //         }
+    //     }
+    // }
+
+    orjson::LoadJsonValueByKey(value, "isStatic", _bStatic);
+    orjson::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
 }
 
-KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
-{
+bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
+    return _id == other._id
+           && _name == other._name
+           && _t == other._t
+           && _tMassFrame == other._tMassFrame
+           && _mass == other._mass
+           && _vinertiamoments == other._vinertiamoments
+           && _mapFloatParameters == other._mapFloatParameters
+           && _mapIntParameters == other._mapIntParameters
+           && _mapStringParameters == other._mapStringParameters
+           && _vForcedAdjacentLinks == other._vForcedAdjacentLinks
+           && _bStatic == other._bStatic
+           && _bIsEnabled == other._bIsEnabled
+           && _vgeometryinfos == other._vgeometryinfos;
+}
+
+KinBody::LinkInfo& KinBody::LinkInfo::operator=(const LinkInfo& other) {
     _vgeometryinfos.resize(other._vgeometryinfos.size());
     for( size_t i = 0; i < _vgeometryinfos.size(); ++i ) {
         if( !other._vgeometryinfos[i] ) {
@@ -157,7 +331,7 @@ KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
             }
         }
     }
-
+    _id = other._id;
     _name = other._name;
     _t = other._t;
     _tMassFrame = other._tMassFrame;
@@ -169,7 +343,6 @@ KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
     _vForcedAdjacentLinks = other._vForcedAdjacentLinks;
     _bStatic = other._bStatic;
     _bIsEnabled = other._bIsEnabled;
-
     return *this;
 }
 
@@ -697,6 +870,127 @@ void KinBody::Link::UpdateInfo()
         }
         *_info._vgeometryinfos[i] = _vGeometries[i]->GetInfo();
     }
+}
+
+void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
+{
+    info = _info;
+    info._vgeometryinfos.resize(_vGeometries.size());
+    for (size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
+        info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
+        _vGeometries[i]->ExtractInfo(*info._vgeometryinfos[i]);
+    }
+}
+
+UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info)
+{
+    BOOST_ASSERT(info._id == _info._id);
+
+    // name
+    if (GetName() != info._name) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _bIsEnable
+    if (IsEnabled() != info._bIsEnabled) {
+        Enable(info._bIsEnabled);
+    }
+
+    // _bStatic
+    if (IsStatic() != info._bStatic) {
+        SetStatic(info._bStatic);
+    }
+
+    // _mass
+    if (GetMass() != info._mass) {
+        SetMass(info._mass);
+    }
+
+    // inertiamoments
+    if (_info._vinertiamoments != info._vinertiamoments) {
+        SetPrincipalMomentsOfInertia(info._vinertiamoments);
+    }
+
+    // geometries
+    bool isGeometryChanged = false;
+    FOREACHC(itGeometryInfo, info._vgeometryinfos) {
+        std::vector<KinBody::Link::GeometryPtr>::iterator itExistingGeometry = _vGeometries.end();
+        FOREACH(itGeometry, _vGeometries) {
+            if ((*itGeometry)->_info._id == (*itGeometryInfo)->_id) {
+                itExistingGeometry = itGeometry;
+                break;
+            }
+        }
+
+        KinBody::GeometryInfoPtr pGeometryInfo = *itGeometryInfo;
+        if (itExistingGeometry != _vGeometries.end()) {
+            // update current geometry
+            UpdateFromInfoResult updateFromGeometryInfoResult = UFIR_Success;
+            KinBody::Link::GeometryPtr pGeometry = *itExistingGeometry;
+            updateFromGeometryInfoResult = pGeometry->UpdateFromInfo(*pGeometryInfo);
+            if (updateFromGeometryInfoResult == UFIR_Success) {
+                continue;
+            }
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+        // new geometry is added;
+        AddGeometry(pGeometryInfo, true); // TODO: add to groups?
+        isGeometryChanged = true;
+    }
+
+    FOREACHC(itGeometry, _vGeometries) {
+        bool stillExists = false;
+        FOREACHC(itGeometryInfo, info._vgeometryinfos) {
+            if ((*itGeometry)->_info._id == (*itGeometryInfo)->_id) {
+                stillExists = true;
+                break;
+            }
+        }
+        if (stillExists) {
+            continue;
+        }
+        RemoveGeometryByName((*itGeometry)->GetName(), true);
+        isGeometryChanged = true;
+    }
+    if (isGeometryChanged) {
+        _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
+    }
+
+    // _mapFloatParameters
+    const std::map<std::string, std::vector<dReal> > floatParameters = GetFloatParameters();
+    if (floatParameters != info._mapFloatParameters) {
+        FOREACH(itParam, floatParameters) {
+            SetFloatParameters(itParam->first, {}); // erase current parameters
+        }
+
+        FOREACH(itParam, info._mapFloatParameters) {
+            SetFloatParameters(itParam->first, itParam->second);  // update with new info
+        }
+    }
+
+    // _mapIntParameters
+    const std::map<std::string, std::vector<int> > intParameters = GetIntParameters();
+    if (intParameters != info._mapIntParameters) {
+        FOREACH(itParam, intParameters) {
+            SetIntParameters(itParam->first, {});
+        }
+        FOREACH(itParam, info._mapIntParameters) {
+            SetIntParameters(itParam->first, itParam->second);
+        }
+    }
+
+    // _mapStringParameters
+    const std::map<std::string, std::string> stringParameters = GetStringParameters();
+    if (stringParameters != info._mapStringParameters) {
+        FOREACH(itParam, stringParameters) {
+            SetStringParameters(itParam->first, {});
+        }
+        FOREACH(itParam, info._mapStringParameters) {
+            SetStringParameters(itParam->first, itParam->second);
+        }
+    }
+
+    return UFIR_Success;
 }
 
 void KinBody::Link::_Update(bool parameterschanged, uint32_t extraParametersChanged)

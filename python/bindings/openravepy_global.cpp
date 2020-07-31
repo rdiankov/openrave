@@ -72,62 +72,107 @@ object PyRay::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
 
-class PyXMLReadable
+class PyReadable
 {
 public:
-    PyXMLReadable(XMLReadablePtr xmlreadable) : _xmlreadable(xmlreadable) {
+    PyReadable(ReadablePtr readable) : _readable(readable) {
     }
-    virtual ~PyXMLReadable() {
+    virtual ~PyReadable() {
     }
     std::string GetXMLId() const {
-        return _xmlreadable->GetXMLId();
+        // some readable are not xml readable and does have a xml id
+        ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
+        if (!pxmlreadable) {
+            return "";
+        }
+        return pxmlreadable->GetXMLId();
     }
-    object Serialize(int options=0)
-    {
+
+    object SerializeXML(int options=0) {
+        // some readable are not xml readable and does not get serialized here
+        ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
+        if (!pxmlreadable) {
+            return py::none_();
+        }
         std::string xmlid;
         OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
-        _xmlreadable->Serialize(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options);
+        if( !pxmlreadable->SerializeXML(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options) ) {
+            return py::none_();
+        }
+
         std::stringstream ss;
         writer.Serialize(ss);
         return ConvertStringToUnicode(ss.str());
     }
 
-    XMLReadablePtr GetXMLReadable() {
-        return _xmlreadable;
+    py::object SerializeJSON(dReal fUnitScale=1.0, int options=0) const
+    {
+        ReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
+        if (!pjsonreadable) {
+            return py::none_();
+        }
+        rapidjson::Document doc;
+        if( !pjsonreadable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options) ) {
+            return py::none_();
+        }
+        return toPyObject(doc);
+    }
+
+    bool DeserializeJSON(py::object obj, dReal fUnitScale=1.0)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        ReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
+        return pjsonreadable->DeserializeJSON(doc, fUnitScale);
+    }
+
+    ReadablePtr GetReadable() {
+        return _readable;
     }
 protected:
-    XMLReadablePtr _xmlreadable;
+    ReadablePtr _readable;
 };
 
-XMLReadablePtr ExtractXMLReadable(object o) {
+ReadablePtr ExtractReadable(object o) {
     if( !IS_PYTHONOBJECT_NONE(o) ) {
-        extract_<PyXMLReadablePtr> pyreadable(o);
-        return ((PyXMLReadablePtr)pyreadable)->GetXMLReadable();
+        extract_<PyReadablePtr> pyreadable(o);
+        return ((PyReadablePtr)pyreadable)->GetReadable();
     }
-    return XMLReadablePtr();
+    return ReadablePtr();
 }
 
-object toPyXMLReadable(XMLReadablePtr p) {
+object toPyReadable(ReadablePtr p) {
     if( !p ) {
         return py::none_();
     }
-    return py::to_object(PyXMLReadablePtr(new PyXMLReadable(p)));
+    return py::to_object(PyReadablePtr(new PyReadable(p)));
 }
 
-namespace xmlreaders
-{
 
-class PyStaticClass
+class PyStringReaderStaticClass
 {
 public:
 };
 
-PyXMLReadablePtr pyCreateStringXMLReadable(const std::string& xmlid, const std::string& data)
+PyReadablePtr pyCreateStringReadable(const std::string& id, const std::string& data)
 {
-    return PyXMLReadablePtr(new PyXMLReadable(XMLReadablePtr(new OpenRAVE::xmlreaders::StringXMLReadable(xmlid, data))));
+    return PyReadablePtr(new PyReadable(ReadablePtr(new OpenRAVE::StringReadable(id, data))));
 }
 
-} // end namespace xmlreaders
+namespace xmlreaders
+{
+class RAVE_DEPRECATED PyXMLReaderStaticClass
+{
+public:
+};
+
+PyReadablePtr RAVE_DEPRECATED pyCreateStringXMLReadable(const std::string& xmlid, const std::string& data)
+{
+    RAVELOG_WARN("CreateStringXMLReadable is deprecated. Use CreateStringReadable instead.");
+    return pyCreateStringReadable(xmlid, data);
+}
+
+} // end namespace xmlreaders (deprecated)
 
 object toPyGraphHandle(const GraphHandlePtr p)
 {
@@ -424,7 +469,6 @@ object toPyTriMesh(const TriMesh& mesh)
     return py::to_object(OPENRAVE_SHARED_PTR<PyTriMesh>(new PyTriMesh(mesh)));
 }
 
-
 class TriMesh_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     : public pickle_suite
@@ -444,6 +488,10 @@ PyConfigurationSpecification::PyConfigurationSpecification(const std::string &s)
     ss >> _spec;
 }
 PyConfigurationSpecification::PyConfigurationSpecification(const ConfigurationSpecification& spec) {
+    _Update(spec);
+}
+
+void PyConfigurationSpecification::_Update(const ConfigurationSpecification& spec) {
     _spec = spec;
 }
 PyConfigurationSpecification::PyConfigurationSpecification(const ConfigurationSpecification::Group& g) {
@@ -461,6 +509,19 @@ int PyConfigurationSpecification::GetDOF() const {
 
 bool PyConfigurationSpecification::IsValid() const {
     return _spec.IsValid();
+}
+void PyConfigurationSpecification::DeserializeJSON(object obj) {
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    ConfigurationSpecification spec;
+    spec.DeserializeJSON(doc);
+    _Update(spec);
+}
+
+object PyConfigurationSpecification::SerializeJSON() {
+    rapidjson::Document doc;
+    _spec.SerializeJSON(doc);
+    return toPyObject(doc);
 }
 
 const ConfigurationSpecification::Group& PyConfigurationSpecification::GetGroupFromName(const std::string& name) {
@@ -1226,7 +1287,9 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractIkParameterization_overloads, PyCo
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractAffineValues_overloads, PyConfigurationSpecification::ExtractAffineValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigurationSpecification::ExtractJointValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(RemoveGroups_overloads, PyConfigurationSpecification::RemoveGroups, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Serialize_overloads, Serialize, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeXML_overloads, SerializeXML, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1527,20 +1590,35 @@ void init_openravepy_global()
 #endif
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyXMLReadable, PyXMLReadablePtr >(m, "XMLReadable", DOXY_CLASS(XMLReadable))
-    .def(init<XMLReadablePtr>(), "readableraw"_a)
+    class_<PyReadable, PyReadablePtr >(m, "Readable", DOXY_CLASS(eadable))
+    .def(init<ReadablePtr>(), "readableraw"_a)
 #else
-    class_<PyXMLReadable, PyXMLReadablePtr >("XMLReadable", DOXY_CLASS(XMLReadable), no_init)
-    .def(init<XMLReadablePtr>(py::args("readableraw")))
+    class_<PyReadable, PyReadablePtr >("Readable", DOXY_CLASS(eadable), no_init)
+    .def(init<ReadablePtr>(py::args("readableraw")))
 #endif
-    .def("GetXMLId", &PyXMLReadable::GetXMLId, DOXY_FN(XMLReadable, GetXMLId))
+    .def("GetXMLId", &PyReadable::GetXMLId, DOXY_FN(eadable, GetXMLId))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def("Serialize", &PyXMLReadable::Serialize,
+    .def("Serialize", &PyReadable::Serialize,
          "options"_a = 0,
-         DOXY_FN(XMLReadable, Serialize)
+         DOXY_FN(eadable, Serialize)
          )
 #else
-    .def("Serialize", &PyXMLReadable::Serialize, Serialize_overloads(PY_ARGS("options") DOXY_FN(XMLReadable, Serialize)))
+    .def("SerializeXML", &PyReadable::SerializeXML, SerializeXML_overloads(PY_ARGS("options") DOXY_FN(Readable, Serialize)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("SerializeJSON", &PyReadable::SerializeJSON,
+        "unitScale"_a = 1.0,
+        "options"_a = py::none_(),
+        DOXY_FN(Readable, SerializeJSON)
+    )
+    .def("DeserializeJSON", &PyReadable::DeserializeJSON,
+        "obj"_a,
+        "unitScale"_a = 1.0,
+        DOXY_FN(Readable, DeserializeJSON)
+    )
+#else
+    .def("SerializeJSON", &PyReadable::SerializeJSON, SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(Readable, SerializeJSON)))
+    .def("DeserializeJSON", &PyReadable::DeserializeJSON, DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(Readable, DeserializeJSON)))
 #endif
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1573,6 +1651,8 @@ void init_openravepy_global()
             .def(init<const std::string&>(py::args("xmldata")) )
             .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>(), DOXY_FN(ConfigurationSpecification,GetGroupFromName))
 #endif
+            .def("SerializeJSON", &PyConfigurationSpecification::SerializeJSON, DOXY_FN(ConfigurationSpecification, SerializeJSON))
+            .def("DeserializeJSON", &PyConfigurationSpecification::DeserializeJSON, PY_ARGS("obj") DOXY_FN(ConfigurationSpecification, DeserializeJSON))
             .def("FindCompatibleGroup",&PyConfigurationSpecification::FindCompatibleGroup, DOXY_FN(ConfigurationSpecification,FindCompatibleGroup))
             .def("FindTimeDerivativeGroup",&PyConfigurationSpecification::FindTimeDerivativeGroup, DOXY_FN(ConfigurationSpecification,FindTimeDerivativeGroup))
             .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))
@@ -1717,9 +1797,25 @@ void init_openravepy_global()
 
     {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ scope_xmlreaders = class_<xmlreaders::PyStaticClass>(m, "xmlreaders")
+        scope_ scope_stringreaders = class_<PyStringReaderStaticClass>(m, "stringreaders")
 #else
-        scope_ scope_xmlreaders = class_<xmlreaders::PyStaticClass>("xmlreaders")
+        scope_ scope_stringreaders = class_<PyStringReaderStaticClass>("stringreaders")
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                            .def_static("CreateStringReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+#else
+                            // https://wiki.python.org/moin/boost.python/HowTo
+                            .def("CreateStringReadable", pyCreateStringReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+                            .staticmethod("CreateStringReadable")
+#endif
+        ;
+    }
+
+    {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        scope_ RAVE_DEPRECATED scope_xmlreaders = class_<xmlreaders::PyXMLReaderStaticClass>(m, "xmlreaders")
+#else
+        scope_ RAVE_DEPRECATED scope_xmlreaders = class_<xmlreaders::PyXMLReaderStaticClass>("xmlreaders")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                   .def_static("CreateStringXMLReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))

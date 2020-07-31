@@ -506,6 +506,19 @@ private:
 public:
         dReal fSpinSpeed;
         Vector vSpinAxis, vSpinPos;
+        bool operator==(const Readable& other) override {
+            const SpinningLaserGeomData* pOther = dynamic_cast<const SpinningLaserGeomData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return LaserGeomData::operator==(other)
+                && fSpinSpeed == pOther->fSpinSpeed
+                && vSpinAxis == pOther->vSpinAxis
+                && vSpinPos == pOther->vSpinPos;
+        }
+        bool operator!=(const Readable& other) override {
+            return !operator==(other);
+        }
     };
 
 public:

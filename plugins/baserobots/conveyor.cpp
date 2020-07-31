@@ -52,11 +52,16 @@ public:
         }
     };
 
-    class ConveyorInfo : public XMLReadable
+    class ConveyorInfo : public Readable
     {
 public:
-        ConveyorInfo() : XMLReadable("conveyorjoint"), _fLinkDensity(10), _bIsCircular(true), _bCreated(false) {
+        ConveyorInfo() : Readable("conveyorjoint"), _fLinkDensity(10), _bIsCircular(true), _bCreated(false) {
         }
+
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override {
+            return false;
+        }
+        
         boost::shared_ptr<KinBody::Mimic> _mimic; // always has to mimic
         KinBody::LinkPtr _linkParent; ///< base link attached
         TrajectoryBasePtr _trajfollow; ///< trajectory to following in base link's coordinate system
@@ -86,7 +91,7 @@ public:
             }
         }
 
-        virtual XMLReadablePtr GetReadable() {
+        virtual ReadablePtr GetReadable() override {
             return _cmdata;
         }
 
