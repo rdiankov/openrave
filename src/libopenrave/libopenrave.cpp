@@ -2779,13 +2779,13 @@ const std::string& StringReadable::GetData() const
 
 bool StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    orjson::SetJsonValueByKey(value, "string", _data, allocator);
+    value.SetString(_data.c_str(), allocator);
     return true;
 }
 
 bool StringReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    orjson::LoadJsonValueByKey(value, "string", _data);
+    _data = value.GetString();
     return true;
 }
 
