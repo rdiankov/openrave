@@ -48,6 +48,163 @@ using py::def;
 
 namespace numeric = py::numeric;
 
+KinBody::KinBodyInfoPtr ExtractKinBodyInfo(object obj)
+{
+    extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo> > pyKinBodyInfo(obj);
+    if (pyKinBodyInfo.check()) {
+        return (OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo>(pyKinBodyInfo))->GetKinBodyInfo();
+    }
+    return NULL;
+}
+
+std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(object pyLinkInfoList)
+{
+    if( IS_PYTHONOBJECT_NONE(pyLinkInfoList) ) {
+        return {};
+    }
+    std::vector<KinBody::LinkInfoPtr> vLinkInfos;
+    try {
+        const size_t arraySize = len(pyLinkInfoList);
+        vLinkInfos.resize(arraySize);
+
+        for(size_t iLinkInfo = 0; iLinkInfo < arraySize; iLinkInfo++) {
+            extract_<OPENRAVE_SHARED_PTR<PyLinkInfo> > pylinkinfo(pyLinkInfoList[iLinkInfo]);
+            if (pylinkinfo.check()) {
+                vLinkInfos[iLinkInfo] = ((OPENRAVE_SHARED_PTR<PyLinkInfo>)pylinkinfo)->GetLinkInfo();
+            }
+            else{
+                throw openrave_exception(_("Bad LinkInfo"));
+            }
+        }
+    }
+    catch(...) {
+        RAVELOG_WARN("Cannot do ExtractArray for LinkInfos");
+    }
+    return vLinkInfos;
+}
+
+std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(object pyJointInfoList)
+{
+    if( IS_PYTHONOBJECT_NONE(pyJointInfoList) ) {
+        return {};
+    }
+    std::vector<KinBody::JointInfoPtr> vJointInfos;
+    try {
+        const size_t arraySize = len(pyJointInfoList);
+        vJointInfos.resize(arraySize);
+
+        for(size_t iJointInfo = 0; iJointInfo < arraySize; iJointInfo++) {
+            extract_<OPENRAVE_SHARED_PTR<PyJointInfo> > pyjointinfo(pyJointInfoList[iJointInfo]);
+            if (pyjointinfo.check()) {
+                vJointInfos[iJointInfo] = ((OPENRAVE_SHARED_PTR<PyJointInfo>)pyjointinfo)->GetJointInfo();
+            }
+            else {
+                throw openrave_exception(_("Bad JointInfo"));
+            }
+        }
+    }
+    catch(...) {
+        RAVELOG_WARN("Cannot do ExtractArray for JointInfos");
+    }
+    return vJointInfos;
+}
+
+std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(object pyGrabbedInfoList)
+{
+    if( IS_PYTHONOBJECT_NONE(pyGrabbedInfoList) ) {
+        return {};
+    }
+    std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfos;
+    try {
+        const size_t arraySize = len(pyGrabbedInfoList);
+        vGrabbedInfos.resize(arraySize);
+
+        for(size_t iGrabbedInfo = 0; iGrabbedInfo < arraySize; iGrabbedInfo++) {
+            extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo> > pygrabbedinfo(pyGrabbedInfoList[iGrabbedInfo]);
+            if (pygrabbedinfo.check()) {
+                vGrabbedInfos[iGrabbedInfo] = ((OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo>)pygrabbedinfo)->GetGrabbedInfo();
+            }
+            else {
+                throw openrave_exception(_("Bad GrabbedInfo"));
+            }
+        }
+    }
+    catch(...) {
+        RAVELOG_WARN("Cannot do ExtractArray for GrabbedInfos");
+    }
+    return vGrabbedInfos;
+}
+
+std::vector<std::pair<std::pair<std::string, int>, dReal> > ExtractDOFValuesArray(object pyDOFValuesList)
+{
+    if( IS_PYTHONOBJECT_NONE(pyDOFValuesList) ) {
+        return {};
+    }
+    std::vector<std::pair<std::pair<std::string, int>, dReal> > vDOFValues;
+    try {
+        const size_t arraySize = len(pyDOFValuesList);
+        vDOFValues.resize(arraySize);
+
+        for(size_t iDOFValue = 0; iDOFValue < arraySize; iDOFValue++) {
+            vDOFValues[iDOFValue].first.first = py::extract<std::string>(pyDOFValuesList[iDOFValue][0]);
+            vDOFValues[iDOFValue].first.second = py::extract<int>(pyDOFValuesList[iDOFValue][1]);
+            vDOFValues[iDOFValue].second = py::extract<dReal>(pyDOFValuesList[iDOFValue][2]);
+        }
+    }
+    catch(...) {
+        RAVELOG_WARN("Cannot do ExtractArray for DOFValues");
+    }
+    return vDOFValues;
+}
+
+
+std::map<std::string, ReadablePtr> ExtractReadableInterfaces(object pyReadableInterfaces) {
+    if (IS_PYTHONOBJECT_NONE(pyReadableInterfaces)) {
+        return {};
+    }
+
+    py::dict pyReadableInterfacesDict = (py::dict)pyReadableInterfaces;
+    std::map<std::string, ReadablePtr> mReadableInterfaces;
+    try {
+
+        py::list keys = py::list(pyReadableInterfacesDict.keys());
+        size_t numkeys = len(keys);
+        for(size_t iKey = 0; iKey < numkeys; iKey++) {
+            std::string name = py::extract<std::string>(keys[iKey]);
+            ReadablePtr pReadable = ExtractReadable(pyReadableInterfacesDict[name]);
+            mReadableInterfaces[name] = boost::dynamic_pointer_cast<Readable>(pReadable);
+            // Readable pValue = py::extract<Readable>(pyReadableInterfacesDict[name]);
+            // mReadableInterfaces[name] = pValue;
+        }
+    }
+    catch (...) {
+        RAVELOG_WARN("Cannot do Extract mapping for readableinterfaces");
+    }
+    return mReadableInterfaces;
+}
+
+py::object ReturnDOFValues(const std::vector<std::pair<std::pair<std::string, int>, dReal> >& vDOFValues)
+{
+    py::list pyDOFValuesList;
+    FOREACHC(it, vDOFValues) {
+        py::list pyDOFValue;
+        pyDOFValue.append(it->first.first);
+        pyDOFValue.append(it->first.second);
+        pyDOFValue.append(it->second);
+        pyDOFValuesList.append(pyDOFValue);
+    }
+    return pyDOFValuesList;
+}
+
+py::object ReturnReadableInterfaces(const std::map<std::string, ReadablePtr>& mReadableInterfaces)
+{
+    py::dict pyReadableInterfaces;
+    FOREACHC(it, mReadableInterfaces) {
+        pyReadableInterfaces[it->first] = toPyReadable(it->second);
+    }
+    return pyReadableInterfaces;
+}
+
 template <typename T>
 object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, object oname, int index)
 {
@@ -109,6 +266,7 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _vDiffuseColor = toPyVector3(info._vDiffuseColor);
     _vAmbientColor = toPyVector3(info._vAmbientColor);
     _meshcollision = toPyTriMesh(info._meshcollision);
+    _id = ConvertStringToUnicode(info._id);
     _type = info._type;
     _name = ConvertStringToUnicode(info._name);
     _filenamerender = ConvertStringToUnicode(info._filenamerender);
@@ -144,12 +302,12 @@ object PyGeometryInfo::SerializeJSON(dReal fUnitScale, object options)
     return toPyObject(doc);
 }
 
-void PyGeometryInfo::DeserializeJSON(object obj, dReal fUnitScale)
+void PyGeometryInfo::DeserializeJSON(object obj, dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-    pgeominfo->DeserializeJSON(doc, fUnitScale);
+    pgeominfo->DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
     Init(*pgeominfo);
 }
 
@@ -175,6 +333,10 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
         ExtractTriMesh(_meshcollision,info._meshcollision);
     }
     info._type = _type;
+
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        info._id = py::extract<std::string>(_id);
+    }
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
         info._name = py::extract<std::string>(_name);
     }
@@ -203,6 +365,7 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     FOREACHC(itgeominfo, info._vgeometryinfos) {
         _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
     }
+    _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _t = ReturnTransform(info._t);
     _tMassFrame = ReturnTransform(info._tMassFrame);
@@ -238,12 +401,12 @@ py::object PyLinkInfo::SerializeJSON(dReal fUnitScale, object options)
     return toPyObject(doc);
 }
 
-void PyLinkInfo::DeserializeJSON(object obj, dReal fUnitScale)
+void PyLinkInfo::DeserializeJSON(object obj, dReal fUnitScale, py::object options)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     KinBody::LinkInfoPtr pInfo = GetLinkInfo();
-    pInfo->DeserializeJSON(doc, fUnitScale);
+    pInfo->DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
     _Update(*pInfo);
 }
 
@@ -254,6 +417,9 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     for(size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
         PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(_vgeometryinfos[i]);
         info._vgeometryinfos[i] = pygeom->GetGeometryInfo();
+    }
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        info._id = py::extract<std::string>(_id);
     }
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
         info._name = py::extract<std::string>(_name);
@@ -344,6 +510,7 @@ PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo)
     return PyLinkInfoPtr(new PyLinkInfo(linkinfo));
 }
 
+
 PyElectricMotorActuatorInfo::PyElectricMotorActuatorInfo() {
 }
 
@@ -382,12 +549,12 @@ py::object PyElectricMotorActuatorInfo::SerializeJSON(dReal fUnitScale, py::obje
     pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
     return toPyObject(doc);
 }
-void PyElectricMotorActuatorInfo::DeserializeJSON(py::object obj, dReal fUnitScale)
+void PyElectricMotorActuatorInfo::DeserializeJSON(py::object obj, dReal fUnitScale, py::object options)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     ElectricMotorActuatorInfo info;
-    info.DeserializeJSON(doc, fUnitScale);
+    info.DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
     _Update(info);
     return;
 }
@@ -655,6 +822,7 @@ PyJointInfo::PyJointInfo(const KinBody::JointInfo& info) {
 
 void PyJointInfo::_Update(const KinBody::JointInfo& info) {
     _type = info._type;
+    _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _linkname0 = ConvertStringToUnicode(info._linkname0);
     _linkname1 = ConvertStringToUnicode(info._linkname1);
@@ -743,6 +911,10 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
     KinBody::JointInfoPtr pinfo(new KinBody::JointInfo());
     KinBody::JointInfo& info = *pinfo;
     info._type = _type;
+
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        info._id = py::extract<std::string>(_id);
+    }
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
         info._name = py::extract<std::string>(_name);
     }
@@ -942,12 +1114,13 @@ object PyJointInfo::SerializeJSON(dReal fUnitScale, object options)
     return toPyObject(doc);
 }
 
-void PyJointInfo::DeserializeJSON(object obj, dReal fUnitScale)
+void PyJointInfo::DeserializeJSON(object obj, dReal fUnitScale, py::object options)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
-    KinBody::JointInfo info;
-    info.DeserializeJSON(doc, fUnitScale);
+    KinBody::JointInfoPtr pCurrentInfo = GetJointInfo();
+    KinBody::JointInfo info = *pCurrentInfo;
+    info.DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
     _Update(info);
 }
 
@@ -1910,14 +2083,24 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
 {
     RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    pinfo->_id = _id;
     pinfo->_grabbedname = _grabbedname;
     pinfo->_robotlinkname = _robotlinkname;
     pinfo->_trelative = ExtractTransform(_trelative);
     pinfo->_setRobotLinksToIgnore = std::set<int>(begin(_setRobotLinksToIgnore), end(_setRobotLinksToIgnore));
 #else
-    pinfo->_grabbedname = py::extract<std::string>(_grabbedname);
-    pinfo->_robotlinkname = py::extract<std::string>(_robotlinkname);
-    pinfo->_trelative = ExtractTransform(_trelative);
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        pinfo->_id = py::extract<std::string>(_id);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_grabbedname) ) {
+        pinfo->_grabbedname = py::extract<std::string>(_grabbedname);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_robotlinkname) ) {
+        pinfo->_robotlinkname = py::extract<std::string>(_robotlinkname);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_trelative) ) {
+        pinfo->_trelative = ExtractTransform(_trelative);
+    }
     pinfo->_setRobotLinksToIgnore.clear();
 
     if( !IS_PYTHONOBJECT_NONE(_setRobotLinksToIgnore) ) {
@@ -1938,12 +2121,12 @@ py::object PyKinBody::PyGrabbedInfo::SerializeJSON(dReal fUnitScale, py::object 
     return toPyObject(doc);
 }
 
-void PyKinBody::PyGrabbedInfo::DeserializeJSON(py::object obj, dReal fUnitScale)
+void PyKinBody::PyGrabbedInfo::DeserializeJSON(py::object obj, dReal fUnitScale, py::object options)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     KinBody::GrabbedInfo info;
-    info.DeserializeJSON(doc, fUnitScale);
+    info.DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
     _Update(info);
 }
 
@@ -1959,9 +2142,11 @@ std::string PyKinBody::PyGrabbedInfo::__str__() {
 
 void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    _id = info._id;
     _grabbedname = info._grabbedname;
     _robotlinkname = info._robotlinkname;
 #else
+    _id = ConvertStringToUnicode(info._id);
     _grabbedname = ConvertStringToUnicode(info._grabbedname);
     _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
 #endif
@@ -1978,6 +2163,136 @@ void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
 }
 
 py::object PyKinBody::PyGrabbedInfo::__unicode__() {
+    return ConvertStringToUnicode(__str__());
+}
+
+
+PyKinBody::PyKinBodyInfo::PyKinBodyInfo() {
+}
+
+PyKinBody::PyKinBodyInfo::PyKinBodyInfo(const KinBody::KinBodyInfo& info) {
+    _Update(info);
+}
+
+KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
+    KinBody::KinBodyInfoPtr pInfo(new KinBody::KinBodyInfo());
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    pInfo->_id = _id;
+    pInfo->_name = _name;
+    pInfo->_uri = _uri;
+    pInfo->_referenceUri = _referenceUri;
+    pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
+    pInfo->_vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(_vJointInfos), end(_vJointInfos));
+    pInfo->_vGrabbedInfos = std::vector<KinBody::GrabbedInfoPtr>(begin(_vGrabbedInfos), end(_vGrabbedInfos));
+#else
+    if (!IS_PYTHONOBJECT_NONE(_id)) {
+        pInfo->_id = py::extract<std::string>(_id);
+    }
+    if (!IS_PYTHONOBJECT_NONE(_name)) {
+        pInfo->_name = py::extract<std::string>(_name);
+    }
+    if (!IS_PYTHONOBJECT_NONE(_uri)) {
+        pInfo->_uri = py::extract<std::string>(_uri);
+    }
+    if (!IS_PYTHONOBJECT_NONE(_referenceUri)) {
+        pInfo->_referenceUri = py::extract<std::string>(_referenceUri);
+    }
+    std::vector<KinBody::LinkInfoPtr> vLinkInfo = ExtractLinkInfoArray(_vLinkInfos);
+    pInfo->_vLinkInfos.clear();
+    pInfo->_vLinkInfos.reserve(vLinkInfo.size());
+    FOREACHC(it, vLinkInfo) {
+        pInfo->_vLinkInfos.push_back(*it);
+    }
+    std::vector<KinBody::JointInfoPtr> vJointInfos = ExtractJointInfoArray(_vJointInfos);
+    pInfo->_vJointInfos.clear();
+    pInfo->_vJointInfos.reserve(vJointInfos.size());
+    FOREACHC(it, vJointInfos) {
+        pInfo->_vJointInfos.push_back(*it);
+    }
+    std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfos = ExtractGrabbedInfoArray(_vGrabbedInfos);
+    pInfo->_vGrabbedInfos.clear();
+    pInfo->_vGrabbedInfos.reserve(vGrabbedInfos.size());
+    FOREACHC(it, vGrabbedInfos) {
+        pInfo->_vGrabbedInfos.push_back(*it);
+    }
+#endif
+    pInfo->_transform = ExtractTransform(_transform);
+    pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
+
+    pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
+    return pInfo;
+}
+
+py::object PyKinBody::PyKinBodyInfo::SerializeJSON(dReal fUnitScale, py::object options) {
+    rapidjson::Document doc;
+    KinBody::KinBodyInfoPtr pInfo = GetKinBodyInfo();
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
+    return toPyObject(doc);
+}
+
+void PyKinBody::PyKinBodyInfo::DeserializeJSON(py::object obj, dReal fUnitScale, py::object options)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    KinBody::KinBodyInfoPtr pCurrentInfo = GetKinBodyInfo();
+    KinBody::KinBodyInfo info = *pCurrentInfo;
+    info.DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
+    _Update(info);
+}
+
+void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    _id = info._id;
+    _name = info._name;
+    _uri = info._uri;
+    _referenceUri = info._referenceUri;
+    _vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(info._vLinkInfos), end(info._vLinkInfos));
+    _vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(info._vJointInfos), end(info._vJointInfos));
+    _vGrabbedInfos = std::vector<KinBody::GrabbedInfoPtr>(begin(info._vGrabbedInfos), end(info._vGrabbedInfos));
+#else
+    _id = ConvertStringToUnicode(info._id);
+    _name = ConvertStringToUnicode(info._name);
+    _uri = ConvertStringToUnicode(info._uri);
+    _referenceUri = ConvertStringToUnicode(info._referenceUri);
+    py::list vLinkInfos;
+    FOREACHC(itLinkInfo, info._vLinkInfos) {
+        PyLinkInfo info = PyLinkInfo(**itLinkInfo);
+        vLinkInfos.append(info);
+    }
+    _vLinkInfos = vLinkInfos;
+
+    py::list vJointInfos;
+    FOREACHC(itJointInfo, info._vJointInfos) {
+        PyJointInfo info = PyJointInfo(**itJointInfo);
+        vJointInfos.append(info);
+    }
+    _vJointInfos = vJointInfos;
+
+    py::list vGrabbedInfos;
+    FOREACHC(itGrabbedInfo, info._vGrabbedInfos) {
+        PyKinBody::PyGrabbedInfo info = PyKinBody::PyGrabbedInfo(**itGrabbedInfo);
+        vGrabbedInfos.append(info);
+    }
+    _vGrabbedInfos = vGrabbedInfos;
+#endif
+    _transform = ReturnTransform(info._transform);
+    _dofValues = ReturnDOFValues(info._dofValues);
+    _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
+}
+
+std::string PyKinBody::PyKinBodyInfo::__str__() {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return boost::str(boost::format("<KinBodyInfo: %s>")%_uri);
+#else
+    std::string uri = "";
+    if (!IS_PYTHONOBJECT_NONE(_uri)) {
+        uri = extract<std::string>(_uri);
+    }
+    return boost::str(boost::format("<KinBodyInfo: %s>")%uri);
+#endif
+}
+
+py::object PyKinBody::PyKinBodyInfo::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
 
@@ -2002,6 +2317,16 @@ KinBodyPtr PyKinBody::GetBody()
 void PyKinBody::Destroy()
 {
     _pbody->Destroy();
+}
+
+bool PyKinBody::InitFromKinBodyInfo(const object pyKinBodyInfo)
+{
+    KinBody::KinBodyInfoPtr pKinBodyInfo;
+    pKinBodyInfo = ExtractKinBodyInfo(pyKinBodyInfo);
+    if(!!pKinBodyInfo) {
+        return _pbody->InitFromKinBodyInfo(*pKinBodyInfo);
+    }
+    return false;
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -2077,6 +2402,19 @@ bool PyKinBody::InitFromGeometries(object ogeometries, const std::string& uri)
         geometries[i] = pygeom->GetGeometryInfo();
     }
     return _pbody->InitFromGeometries(geometries, uri);
+}
+
+void PyKinBody::InitFromLinkInfos(py::object olinkinfos, const std::string& uri)
+{
+    std::vector<KinBody::LinkInfo> linkInfos(len(olinkinfos));
+    for(size_t i = 0; i < linkInfos.size(); ++i) {
+        PyLinkInfoPtr pylinkinfo = py::extract<PyLinkInfoPtr>(olinkinfos[i]);
+        if( !pylinkinfo ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.LinkInfo"),ORE_InvalidArguments);
+        }
+        linkInfos[i] = *pylinkinfo->GetLinkInfo();
+    }
+    return _pbody->InitFromLinkInfos(linkInfos, uri);
 }
 
 bool PyKinBody::Init(object olinkinfos, object ojointinfos, const std::string& uri)
@@ -3399,6 +3737,13 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
     return CreateStateSaver(options);
 }
 
+object PyKinBody::ExtractInfo() const {
+    KinBody::KinBodyInfo info;
+    _pbody->ExtractInfo(info);
+    return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
+}
+
+
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
 {
     PyKinBodyStateSaverPtr saver;
@@ -3907,6 +4252,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromBoxes_overloads, InitFromBoxes, 1
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromSpheres_overloads, InitFromSpheres, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromTrimesh_overloads, InitFromTrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromGeometries_overloads, InitFromGeometries, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromLinkInfos_overloads, InitFromLinkInfos, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
 // SerializeJSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
@@ -3914,12 +4260,14 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_SerializeJSON_overloads, S
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyLinkInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGrabbedInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyKinBodyInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 // DeserializeJSON
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyLinkInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGrabbedInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyLinkInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGrabbedInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyKinBodyInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
 // end of JSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABB_overloads, ComputeAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBFromTransform_overloads, ComputeAABBFromTransform, 1, 2)
@@ -4010,11 +4358,12 @@ void init_openravepy_kinbody()
                                        .def("DeserializeJSON", &PyElectricMotorActuatorInfo::DeserializeJSON,
                                             "obj"_a,
                                             "unitScale"_a = 1.0,
+                                            "options"_a = py::none_(),
                                             DOXY_FN(GeometryInfo, DeserializeJSON)
                                             )
 #else
                                        .def("SerializeJSON", &PyElectricMotorActuatorInfo::SerializeJSON, PyElectricMotorActuatorInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(ElectricMotorActuatorInfo, SerializeJSON)))
-                                       .def("DeserializeJSON", &PyElectricMotorActuatorInfo::DeserializeJSON, PyElectricMotorActuatorInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(ElectricMotorActuatorInfo, DeserializeJSON)))
+                                       .def("DeserializeJSON", &PyElectricMotorActuatorInfo::DeserializeJSON, PyElectricMotorActuatorInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(ElectricMotorActuatorInfo, DeserializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -4085,6 +4434,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_vAmbientColor",&PyGeometryInfo::_vAmbientColor)
                           .def_readwrite("_meshcollision",&PyGeometryInfo::_meshcollision)
                           .def_readwrite("_type",&PyGeometryInfo::_type)
+                          .def_readwrite("_id", &PyGeometryInfo::_id)
                           .def_readwrite("_name",&PyGeometryInfo::_name)
                           .def_readwrite("_filenamerender",&PyGeometryInfo::_filenamerender)
                           .def_readwrite("_filenamecollision",&PyGeometryInfo::_filenamecollision)
@@ -4105,11 +4455,12 @@ void init_openravepy_kinbody()
                           .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON,
                                "obj"_a,
                                "unitScale"_a = 1.0,
+                               "options"_a = py::none_(),
                                DOXY_FN(GeometryInfo, DeserializeJSON)
                                )
 #else
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON, PyGeometryInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(GeometryInfo,SerializeJSON)))
-                          .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, PyGeometryInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(GeometryInfo, DeserializeJSON)))
+                          .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, PyGeometryInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(GeometryInfo, DeserializeJSON)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def(py::pickle(
@@ -4148,6 +4499,7 @@ void init_openravepy_kinbody()
     object linkinfo = class_<PyLinkInfo, OPENRAVE_SHARED_PTR<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
 #endif
                       .def_readwrite("_vgeometryinfos",&PyLinkInfo::_vgeometryinfos)
+                      .def_readwrite("_id", &PyLinkInfo::_id)
                       .def_readwrite("_name",&PyLinkInfo::_name)
                       .def_readwrite("_t",&PyLinkInfo::_t)
                       .def_readwrite("_tMassFrame",&PyLinkInfo::_tMassFrame)
@@ -4170,11 +4522,12 @@ void init_openravepy_kinbody()
                       .def("DeserializeJSON", &PyLinkInfo::DeserializeJSON,
                            "obj"_a,
                            "unitScale"_a = 1.0,
+                           "options"_a = py::none_(),
                            DOXY_FN(LinkInfo, DeserializeJSON)
                            )
 #else
                       .def("SerializeJSON", &PyLinkInfo::SerializeJSON, PyLinkInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(LinkInfo, SerializeJSON)))
-                      .def("DeserializeJSON", &PyLinkInfo::DeserializeJSON, PyLinkInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(LinkInfo, DeserializeJSON)))
+                      .def("DeserializeJSON", &PyLinkInfo::DeserializeJSON, PyLinkInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(LinkInfo, DeserializeJSON)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                       .def(py::pickle(
@@ -4286,6 +4639,7 @@ void init_openravepy_kinbody()
     object jointinfo = class_<PyJointInfo, OPENRAVE_SHARED_PTR<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
 #endif
                        .def_readwrite("_type",&PyJointInfo::_type)
+                       .def_readwrite("_id", &PyJointInfo::_id)
                        .def_readwrite("_name",&PyJointInfo::_name)
                        .def_readwrite("_linkname0",&PyJointInfo::_linkname0)
                        .def_readwrite("_linkname1",&PyJointInfo::_linkname1)
@@ -4328,11 +4682,12 @@ void init_openravepy_kinbody()
                        .def("DeserializeJSON", &PyJointInfo::DeserializeJSON,
                             "obj"_a,
                             "unitScale"_a = 1.0,
+                            "options"_a = py::none_(),
                             DOXY_FN(KinBody::JointInfo, DeserializeJSON)
                             )
 #else
                        .def("SerializeJSON", &PyJointInfo::SerializeJSON, PyJointInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::JointInfo, SerializeJSON)))
-                       .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, PyJointInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(KinBody::JointInfo, DeserializeJSON)))
+                       .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, PyJointInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(KinBody::JointInfo, DeserializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def(py::pickle(
@@ -4357,6 +4712,7 @@ void init_openravepy_kinbody()
 #else
     object grabbedinfo = class_<PyKinBody::PyGrabbedInfo, OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(KinBody::GrabbedInfo))
 #endif
+                         .def_readwrite("_id",&PyKinBody::PyGrabbedInfo::_id)
                          .def_readwrite("_grabbedname",&PyKinBody::PyGrabbedInfo::_grabbedname)
                          .def_readwrite("_robotlinkname",&PyKinBody::PyGrabbedInfo::_robotlinkname)
                          .def_readwrite("_trelative",&PyKinBody::PyGrabbedInfo::_trelative)
@@ -4370,11 +4726,12 @@ void init_openravepy_kinbody()
                          .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON,
                               "obj"_a,
                               "unitScale"_a = 1.0,
+                              "options"_a = py::none_(),
                               DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON)
                               )
 #else
                          .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON, PyGrabbedInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)))
-                         .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON, PyGrabbedInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON)))
+                         .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON, PyGrabbedInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
                          .def("__str__",&PyKinBody::PyGrabbedInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyGrabbedInfo::__unicode__)
@@ -4387,7 +4744,7 @@ void init_openravepy_kinbody()
         },
                                   // __setstate__
                                   [](py::tuple state) {
-            if (state.size() != 4) {
+            if (state.size() != 2) {
                 RAVELOG_WARN("Invalid state!");
             }
             /* Create a new C++ instance */
@@ -4401,6 +4758,41 @@ void init_openravepy_kinbody()
 #endif
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object kinbodyinfo = class_<PyKinBody::PyKinBodyInfo, OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo> >(m, "KinBodyInfo", DOXY_CLASS(KinBody::KinBodyInfo))
+                         .def(init<>())
+#else
+    object kinbodyinfo = class_<PyKinBody::PyKinBodyInfo, OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo> >("KinBodyInfo", DOXY_CLASS(KinBody::KinBodyInfo))
+#endif
+                         .def_readwrite("_vLinkInfos",&PyKinBody::PyKinBodyInfo::_vLinkInfos)
+                         .def_readwrite("_vJointInfos",&PyKinBody::PyKinBodyInfo::_vJointInfos)
+                         .def_readwrite("_vGrabbedInfos",&PyKinBody::PyKinBodyInfo::_vGrabbedInfos)
+                         .def_readwrite("_id", &PyKinBody::PyKinBodyInfo::_id)
+                         .def_readwrite("_name", &PyKinBody::PyKinBodyInfo::_name)
+                         .def_readwrite("_uri", &PyKinBody::PyKinBodyInfo::_uri)
+                         .def_readwrite("_referenceUri", &PyKinBody::PyKinBodyInfo::_referenceUri)
+                         .def_readwrite("_dofValues", &PyKinBody::PyKinBodyInfo::_dofValues)
+                         .def_readwrite("_readableInterfaces", &PyKinBody::PyKinBodyInfo::_readableInterfaces)
+                         .def_readwrite("_transform", &PyKinBody::PyKinBodyInfo::_transform)
+                         .def("__str__",&PyKinBody::PyKinBodyInfo::__str__)
+                         .def("__unicode__",&PyKinBody::PyKinBodyInfo::__unicode__)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("SerializeJSON", &PyKinBody::PyKinBodyInfo::SerializeJSON,
+                              "unitScale"_a = 1.0,
+                              "options"_a = py::none_(),
+                              DOXY_FN(KinBody::KinBodyInfo, SerializeJSON)
+                              )
+                         .def("DeserializeJSON", &PyKinBody::PyKinBodyInfo::DeserializeJSON,
+                              "obj"_a,
+                              "unitScale"_a = 1.0,
+                              "options"_a = py::none_(),
+                              DOXY_FN(KinBody::KinBodyInfo, DeserializeJSON)
+                              )
+#else
+                         .def("SerializeJSON", &PyKinBody::PyKinBodyInfo::SerializeJSON, PyKinBodyInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::KinBodyInfo, SerializeJSON)))
+                         .def("DeserializeJSON", &PyKinBody::PyKinBodyInfo::DeserializeJSON, PyKinBodyInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(KinBody::KinBodyInfo, DeserializeJSON)))
+#endif
+    ;
 
     {
         void (PyKinBody::*psetdofvalues1)(object) = &PyKinBody::SetDOFValues;
@@ -4452,6 +4844,13 @@ void init_openravepy_kinbody()
 #endif
                          .def("Destroy",&PyKinBody::Destroy, DOXY_FN(KinBody,Destroy))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("InitFromKinBodyInfo", &PyKinBody::InitFromKinBodyInfo,
+                              "info"_a,
+                              DOXY_FN(KinBody, InitFromKinBodyInfo))
+#else
+                         .def("InitFromKinBodyInfo",&PyKinBody::InitFromKinBodyInfo, DOXY_FN(KinBody, InitFromKinBodyInfo))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("InitFromBoxes", &PyKinBody::InitFromBoxes,
                               "boxes"_a,
                               "draw"_a = true,
@@ -4489,6 +4888,15 @@ void init_openravepy_kinbody()
                               )
 #else
                          .def("InitFromGeometries",&PyKinBody::InitFromGeometries,InitFromGeometries_overloads(PY_ARGS("geometries", "uri") DOXY_FN(KinBody,InitFromGeometries)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("InitFromLinkInfos", &PyKinBody::InitFromLinkInfos,
+                              "linkInfos"_a,
+                              "uri"_a = "",
+                              DOXY_FN(KinBody, InitFromLinkInfos)
+                              )
+#else
+                         .def("InitFromLinkInfos",&PyKinBody::InitFromLinkInfos,InitFromLinkInfos_overloads(PY_ARGS("linkInfos", "uri") DOXY_FN(KinBody,InitFromLinkInfos)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("Init", &PyKinBody::Init,
@@ -4799,6 +5207,7 @@ void init_openravepy_kinbody()
 #else
                          .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
 #endif
+                         .def("ExtractInfo", &PyKinBody::ExtractInfo, DOXY_FN(KinBody, ExtractInfo))
                          .def("__enter__",&PyKinBody::__enter__)
                          .def("__exit__",&PyKinBody::__exit__)
                          .def("__repr__",&PyKinBody::__repr__)
@@ -4851,6 +5260,7 @@ void init_openravepy_kinbody()
         kinbody.attr("GeometryInfo") = geometryinfo;
         kinbody.attr("JointInfo") = jointinfo;
         kinbody.attr("GrabbedInfo") = grabbedinfo;
+        kinbody.attr("KinBodyInfo") = kinbodyinfo;
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
             // link belongs to kinbody

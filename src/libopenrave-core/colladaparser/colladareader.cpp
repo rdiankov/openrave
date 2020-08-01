@@ -3463,12 +3463,16 @@ public:
                     daeElementRef pjson_data = tec->getChild("json_data");
                     if( !!pjson_data ) {
                         rapidjson::Document rGripperInfo;
-                        openravejson::ParseJson(rGripperInfo, pjson_data->getCharData());
+                        OpenRAVE::orjson::ParseJson(rGripperInfo, pjson_data->getCharData());
                         dReal fUnitScale=1.0;
-                        pGripperInfo->DeserializeJSON(rGripperInfo, fUnitScale);
+                        int options = 0;
+                        pGripperInfo->DeserializeJSON(rGripperInfo, fUnitScale, options);
                     }
                     // do not let json_data in collada override name attribute of <extra>
                     pGripperInfo->name = _ConvertToOpenRAVEName(grippername);
+                    if( pGripperInfo->_id.empty() ) {
+                        pGripperInfo->_id = pGripperInfo->name;
+                    }
                     probot->_vecGripperInfos.push_back(pGripperInfo);
                 }
                 else {
@@ -3608,18 +3612,17 @@ public:
                 EnvironmentBasePtr tempenv = RaveCreateEnvironment(); // use an temporary environment for parsing body
                 bool bExtractConnectedBodies = false;
                 ColladaReader reader(tempenv, false, bExtractConnectedBodies); // to prevent recursion of extracting connected bodies
-                std::string url = instance_body->getAttribute("url");
+                std::string uri = instance_body->getAttribute("url");
                 // circular reference catching connected body pointing to self
                 // but still have problem in case of url1 -> url2 -> url1
                 std::string robotUri = probot->GetURI();
-                std::string resolvedUri = ResolveURI(url);
+                std::string resolvedUri = ResolveURI(uri);
                 if (robotUri.substr(0, robotUri.find('#')) == resolvedUri) {
-                    RAVELOG_WARN_FORMAT("connected body has same uri %s as robot %s", url % probot->GetURI());
+                    RAVELOG_WARN_FORMAT("connected body has same uri %s as robot %s", uri % probot->GetURI());
                     continue;
                 }
 
                 RobotBasePtr pbody;
-
                 AttributesList atts;
                 std::string schemes;
                 FOREACH(ialias, _vOpenRAVESchemeAliases) {
@@ -3633,23 +3636,23 @@ public:
                     atts.emplace_back("openravescheme", schemes);
                 }
 
-                if( reader.InitFromURI(url, atts) ) {
+                if( reader.InitFromURI(uri, atts) ) {
                     reader.Extract();
                     std::vector<RobotBasePtr> robots;
                     tempenv->GetRobots(robots);
                     if (robots.size() == 1) {
                         pbody = robots.front();
                     } else {
-                        RAVELOG_DEBUG_FORMAT("Found %d robots, Do not support this case for url %s", robots.size() % url);
+                        RAVELOG_DEBUG_FORMAT("Found %d robots, Do not support this case for uri %s", robots.size() % uri);
                     }
                 }
                 else {
-                    RAVELOG_WARN_FORMAT("Could not load url %s for connected body %s", url%connectedBodyInfo._name);
+                    RAVELOG_WARN_FORMAT("Could not load uri %s for connected body %s", uri%connectedBodyInfo._name);
                 }
 
                 if (!!pbody) {
-                    RAVELOG_DEBUG_FORMAT("Loaded body from %s", url);
-                    connectedBodyInfo._url = url;
+                    RAVELOG_DEBUG_FORMAT("Loaded body from %s", uri);
+                    connectedBodyInfo._uri = uri;
                     connectedBodyInfo.InitInfoFromBody(*pbody);
                     RobotBase::ConnectedBodyPtr pConnectedBody(new RobotBase::ConnectedBody(probot, connectedBodyInfo));
                     probot->_vecConnectedBodies.push_back(pConnectedBody);
@@ -4636,7 +4639,7 @@ private:
                 if( !!tec ) {
                     daeElementRef pdata = tec->getChild("data");
                     if( !!pdata ) {
-                        pbody->SetReadableInterface(xmlid, XMLReadablePtr(new xmlreaders::StringXMLReadable(xmlid, pdata->getCharData())));
+                        pbody->SetReadableInterface(xmlid, ReadablePtr(new StringReadable(xmlid, pdata->getCharData())));
                     }
                 }
             }

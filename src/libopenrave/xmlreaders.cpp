@@ -16,7 +16,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 #include <openrave/xmlreaders.h>
-
 #include <boost/lexical_cast.hpp>
 
 #define LIBXML_SAX1_ENABLED
@@ -30,43 +29,21 @@
 #include <libxml/xmlmemory.h>
 
 namespace OpenRAVE {
+
 namespace xmlreaders {
 
-StringXMLReadable::StringXMLReadable(const std::string& xmlid, const std::string& data) : XMLReadable(xmlid), _data(data)
+HierarchicalXMLReadable::HierarchicalXMLReadable(const std::string& xmlid, const AttributesList& atts) : Readable(xmlid), _atts(atts)
 {
 }
 
-void StringXMLReadable::Serialize(BaseXMLWriterPtr writer, int options) const
-{
-    if( writer->GetFormat() == "collada" ) {
-        AttributesList atts;
-        atts.emplace_back("type", "stringxmlreadable");
-        atts.emplace_back("name", GetXMLId());
-        BaseXMLWriterPtr child = writer->AddChild("extra",atts);
-        atts.clear();
-        atts.emplace_back("profile", "OpenRAVE");
-        writer = child->AddChild("technique",atts)->AddChild("data");
-    }
-
-    writer->SetCharData(_data);
-}
-
-const std::string& StringXMLReadable::GetData() const
-{
-    return _data;
-}
-
-HierarchicalXMLReadable::HierarchicalXMLReadable(const std::string& xmlid, const AttributesList& atts) : XMLReadable(xmlid), _atts(atts)
-{
-}
-
-void HierarchicalXMLReadable::Serialize(BaseXMLWriterPtr writer, int options) const
+bool HierarchicalXMLReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
 {
     writer->SetCharData(_data);
     for(std::list<HierarchicalXMLReadablePtr>::const_iterator it = _listchildren.begin(); it != _listchildren.end(); ++it) {
         BaseXMLWriterPtr childwriter = writer->AddChild((*it)->GetXMLId(), (*it)->_atts);
-        (*it)->Serialize(childwriter,options);
+        (*it)->SerializeXML(childwriter,options);
     }
+    return true;
 }
 
 TrajectoryReader::TrajectoryReader(EnvironmentBasePtr penv, TrajectoryBasePtr ptraj, const AttributesList& atts) : _ptraj(ptraj)
@@ -256,7 +233,7 @@ BaseXMLReader::ProcessElement GeometryInfoReader::startElement(const std::string
         return PE_Ignore;
     }
 
-    if( xmlname == _pgeom->GetXMLId() || xmlname == "geom" ) {
+    if( xmlname == "geometry" || xmlname == "geom" ) {
         _pcurreader.reset(new GeometryInfoReader(_pgeom, atts));
         return PE_Support;
     }
@@ -294,8 +271,18 @@ BaseXMLReader::ProcessElement GeometryInfoReader::startElement(const std::string
         return PE_Support;
     }
     switch(_pgeom->_type) {
+    case GT_Container:
+        if( xmlname == "outer_extents" || xmlname == "inner_extents" || xmlname == "bottom_cross" || xmlname == "bottom" ) {
+            return PE_Support;
+        }
+        break;
+    case GT_Cage:
+        if( xmlname == "sidewall" || xmlname == "transf" || xmlname == "vExtents" || xmlname == "type" ) {
+            return PE_Support;
+        }
+        break;
     case GT_TriMesh:
-        if(xmlname=="collision"|| xmlname=="data" || xmlname=="vertices" ) {
+        if( xmlname == "collision" || xmlname == "data" || xmlname == "vertices" ) {
             return PE_Support;
         }
         break;
@@ -318,7 +305,7 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
         return false;
     }
 
-    if( xmlname == _pgeom->GetXMLId() || xmlname == "geom" ) {
+    if( xmlname == "geometry" || xmlname == "geom" ) {
         return true;
     }
     else if( xmlname == "translation" ) {
@@ -679,7 +666,7 @@ void HierarchicalXMLReader::characters(const std::string& ch)
     }
 }
 
-XMLReadablePtr HierarchicalXMLReader::GetReadable()
+ReadablePtr HierarchicalXMLReader::GetReadable()
 {
     return _readable;
 }

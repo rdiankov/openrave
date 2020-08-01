@@ -19,6 +19,7 @@
 
 #include "ravep.h"
 #include "colladaparser/colladacommon.h"
+#include "jsonparser/jsoncommon.h"
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
@@ -126,6 +127,9 @@ public:
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
         _unit = std::make_pair("meter",1.0); //default unit settings
+
+        _vRapidJsonLoadBuffer.resize(4000000);
+        _prLoadEnvAlloc.reset(new rapidjson::MemoryPoolAllocator<>(&_vRapidJsonLoadBuffer[0], _vRapidJsonLoadBuffer.size()));
 
         _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
         _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
@@ -454,7 +458,20 @@ public:
 
     virtual bool LoadURI(const std::string& uri, const AttributesList& atts)
     {
-        return RaveParseColladaURI(shared_from_this(), uri, atts);
+        if ( _IsColladaURI(uri) ) {
+            return RaveParseColladaURI(shared_from_this(), uri, atts);
+        }
+        else if ( _IsJSONURI(uri) ) {
+            _ClearRapidJsonBuffer();
+            return RaveParseJSONURI(shared_from_this(), uri, atts, *_prLoadEnvAlloc);
+        }
+        else if ( _IsMsgPackURI(uri) ) {
+            _ClearRapidJsonBuffer();
+            return RaveParseMsgPackURI(shared_from_this(), uri, atts, *_prLoadEnvAlloc);
+        }
+
+        RAVELOG_WARN("load failed on uri %s\n", uri.c_str());
+        return false;
     }
 
     virtual bool Load(const std::string& filename, const AttributesList& atts)
@@ -470,6 +487,18 @@ public:
         else if( _IsColladaFile(filename) ) {
             if( RaveParseColladaFile(shared_from_this(), filename, atts) ) {
                 UpdatePublishedBodies();
+                return true;
+            }
+        }
+        else if( _IsJSONFile(filename) ) {
+            _ClearRapidJsonBuffer();
+            if( RaveParseJSONFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc) ) {
+                return true;
+            }
+        }
+        else if( _IsMsgPackFile(filename) ) {
+            _ClearRapidJsonBuffer();
+            if( RaveParseMsgPackFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc) ) {
                 return true;
             }
         }
@@ -508,7 +537,21 @@ public:
         if( _IsColladaData(data) ) {
             return RaveParseColladaData(shared_from_this(), data, atts);
         }
+        if( _IsJSONData(data) ) {
+            _ClearRapidJsonBuffer();
+            return RaveParseJSONData(shared_from_this(), data, atts, *_prLoadEnvAlloc);
+        }
+        if( _IsMsgPackData(data) ) {
+            _ClearRapidJsonBuffer();
+            return RaveParseMsgPackData(shared_from_this(), data, atts, *_prLoadEnvAlloc);
+        }
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
+    }
+
+    virtual bool LoadJSON(const rapidjson::Value& doc, const AttributesList& atts)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        return RaveParseJSON(shared_from_this(), doc, atts, *_prLoadEnvAlloc);
     }
 
     virtual void Save(const std::string& filename, SelectionOptions options, const AttributesList& atts)
@@ -517,7 +560,99 @@ public:
         std::list<KinBodyPtr> listbodies;
         switch(options) {
         case SO_Everything:
-            RaveWriteColladaFile(shared_from_this(),filename,atts);
+            if( _IsJSONFile(filename) ) {
+                _ClearRapidJsonBuffer();
+                RaveWriteJSONFile(shared_from_this(),filename,atts,*_prLoadEnvAlloc);
+            }
+            else if( _IsMsgPackFile(filename) ) {
+                _ClearRapidJsonBuffer();
+                RaveWriteMsgPackFile(shared_from_this(),filename,atts,*_prLoadEnvAlloc);
+            }
+            else {
+                RaveWriteColladaFile(shared_from_this(),filename,atts);
+            }
+            return;
+
+        case SO_Body: {
+            std::string targetname;
+            FOREACHC(itatt,atts) {
+                if( itatt->first == "target" ) {
+                    KinBodyPtr pbody = GetKinBody(itatt->second);
+                    if( !pbody ) {
+                        RAVELOG_WARN_FORMAT("failed to get body %s", itatt->second);
+                    }
+                    else {
+                        listbodies.push_back(pbody);
+                    }
+                }
+            }
+            break;
+        }
+        case SO_NoRobots:
+            FOREACH(itbody,_vecbodies) {
+                if( !(*itbody)->IsRobot() ) {
+                    listbodies.push_back(*itbody);
+                }
+            }
+            break;
+        case SO_Robots:
+            FOREACH(itrobot,_vecrobots) {
+                listbodies.push_back(*itrobot);
+            }
+            break;
+        case SO_AllExceptBody: {
+            std::list<std::string> listignore;
+            FOREACHC(itatt,atts) {
+                if( itatt->first == "target" ) {
+                    listignore.push_back(itatt->second);
+                }
+            }
+            FOREACH(itbody,_vecbodies) {
+                if( find(listignore.begin(),listignore.end(),(*itbody)->GetName()) == listignore.end() ) {
+                    listbodies.push_back(*itbody);
+                }
+            }
+            break;
+        }
+        }
+
+        if( _IsJSONFile(filename) ) {
+            if( listbodies.size() == 1 ) {
+                _ClearRapidJsonBuffer();
+                RaveWriteJSONFile(listbodies.front(),filename,atts,*_prLoadEnvAlloc);
+            }
+            else {
+                _ClearRapidJsonBuffer();
+                RaveWriteJSONFile(listbodies,filename,atts,*_prLoadEnvAlloc);
+            }
+        }
+        else if( _IsMsgPackFile(filename) ) {
+            if( listbodies.size() == 1 ) {
+                _ClearRapidJsonBuffer();
+                RaveWriteMsgPackFile(listbodies.front(),filename,atts,*_prLoadEnvAlloc);
+            }
+            else {
+                _ClearRapidJsonBuffer();
+                RaveWriteMsgPackFile(listbodies,filename,atts,*_prLoadEnvAlloc);
+            }
+        }
+        else {
+            if( listbodies.size() == 1 ) {
+                RaveWriteColladaFile(listbodies.front(),filename,atts);
+            }
+            else {
+                RaveWriteColladaFile(listbodies,filename,atts);
+            }
+        }
+    }
+
+    virtual void SerializeJSON(rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, SelectionOptions options, const AttributesList& atts)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        std::list<KinBodyPtr> listbodies;
+        switch(options) {
+        case SO_Everything:
+            RaveWriteJSON(shared_from_this(), rEnvironment, allocator, atts);
             return;
 
         case SO_Body: {
@@ -564,24 +699,34 @@ public:
         }
 
         if( listbodies.size() == 1 ) {
-            RaveWriteColladaFile(listbodies.front(),filename,atts);
+            RaveWriteJSON(listbodies.front(), rEnvironment, allocator, atts);
         }
         else {
-            RaveWriteColladaFile(listbodies,filename,atts);
+            RaveWriteJSON(listbodies, rEnvironment, allocator, atts);
         }
     }
 
     virtual void WriteToMemory(const std::string& filetype, std::vector<char>& output, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList())
     {
-        if( filetype != "collada" ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("got invalid filetype %s, only support collada", filetype, ORE_InvalidArguments);
+        if (filetype != "collada" && filetype != "json" && filetype != "msgpack") {
+            throw OPENRAVE_EXCEPTION_FORMAT("got invalid filetype %s, only support collada and json", filetype, ORE_InvalidArguments);
         }
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::list<KinBodyPtr> listbodies;
         switch(options) {
         case SO_Everything:
-            RaveWriteColladaMemory(shared_from_this(),output,atts);
+            if (filetype == "collada") {
+                RaveWriteColladaMemory(shared_from_this(), output, atts);
+            }
+            else if (filetype == "json") {
+                _ClearRapidJsonBuffer();
+                RaveWriteJSONMemory(shared_from_this(), output, atts,*_prLoadEnvAlloc);
+            }
+            else if (filetype == "msgpack") {
+                _ClearRapidJsonBuffer();
+                RaveWriteMsgPackMemory(shared_from_this(), output, atts,*_prLoadEnvAlloc);
+            }
             return;
 
         case SO_Body: {
@@ -628,10 +773,30 @@ public:
         }
 
         if( listbodies.size() == 1 ) {
-            RaveWriteColladaMemory(listbodies.front(),output,atts);
+            if (filetype == "collada") {
+                RaveWriteColladaMemory(listbodies.front(), output, atts);
+            }
+            else if (filetype == "json") {
+                _ClearRapidJsonBuffer();
+                RaveWriteJSONMemory(listbodies.front(), output, atts,*_prLoadEnvAlloc);
+            }
+            else if (filetype == "msgpack") {
+                _ClearRapidJsonBuffer();
+                RaveWriteMsgPackMemory(listbodies.front(), output, atts,*_prLoadEnvAlloc);
+            }
         }
         else {
-            RaveWriteColladaMemory(listbodies,output,atts);
+            if (filetype == "collada") {
+                RaveWriteColladaMemory(listbodies, output, atts);
+            }
+            else if (filetype == "json") {
+                _ClearRapidJsonBuffer();
+                RaveWriteJSONMemory(listbodies, output, atts,*_prLoadEnvAlloc);
+            }
+            else if (filetype == "msgpack") {
+                _ClearRapidJsonBuffer();
+                RaveWriteMsgPackMemory(listbodies, output, atts,*_prLoadEnvAlloc);
+            }
         }
     }
 
@@ -1222,8 +1387,32 @@ public:
                 return RobotBasePtr();
             }
         }
+        else if( _IsJSONURI(filename) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseJSONURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
+                return RobotBasePtr();
+            }
+        }
+        else if( _IsMsgPackURI(filename) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseMsgPackURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
+                return RobotBasePtr();
+            }
+        }
         else if( _IsColladaFile(filename) ) {
             if( !RaveParseColladaFile(shared_from_this(), robot, filename, atts) ) {
+                return RobotBasePtr();
+            }
+        }
+        else if( _IsJSONFile(filename) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseJSONFile(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
+                return RobotBasePtr();
+            }
+        }
+        else if( _IsMsgPackFile(filename) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseMsgPackFile(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
@@ -1308,6 +1497,18 @@ public:
                 return RobotBasePtr();
             }
         }
+        else if( _IsJSONData(data) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseJSONData(shared_from_this(), robot, data, atts, *_prLoadEnvAlloc) ) {
+                return RobotBasePtr();
+            }
+        }
+        else if( _IsMsgPackData(data) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseMsgPackData(shared_from_this(), robot, data, atts, *_prLoadEnvAlloc) ) {
+                return RobotBasePtr();
+            }
+        }
         else if( _IsXData(data) ) {
             // have to copy since it takes vector<char>
             std::vector<char> newdata(data.size()+1, 0);  // need a null-terminator
@@ -1365,8 +1566,32 @@ public:
                 return KinBodyPtr();
             }
         }
+        else if( _IsJSONURI(filename) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseJSONURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
+                return KinBodyPtr();
+            }
+        }
+        else if( _IsMsgPackURI(filename) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseMsgPackURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
+                return KinBodyPtr();
+            }
+        }
         else if( _IsColladaFile(filename) ) {
             if( !RaveParseColladaFile(shared_from_this(), body, filename, atts) ) {
+                return KinBodyPtr();
+            }
+        }
+        else if( _IsJSONFile(filename) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseJSONFile(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
+                return KinBodyPtr();
+            }
+        }
+        else if( _IsMsgPackFile(filename) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseMsgPackFile(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
                 return KinBodyPtr();
             }
         }
@@ -1449,6 +1674,18 @@ public:
                 return RobotBasePtr();
             }
         }
+        else if( _IsJSONData(data) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseJSONData(shared_from_this(), body, data, atts, *_prLoadEnvAlloc) ) {
+                return RobotBasePtr();
+            }
+        }
+        else if( _IsMsgPackData(data) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseMsgPackData(shared_from_this(), body, data, atts, *_prLoadEnvAlloc) ) {
+                return RobotBasePtr();
+            }
+        }
         else if( _IsXData(data) ) {
             // have to copy since it takes vector<char>
             std::vector<char> newdata(data.size()+1, 0);  // need a null-terminator
@@ -1512,18 +1749,36 @@ public:
     virtual InterfaceBasePtr ReadInterfaceURI(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        bool bIsColladaURI=false, bIsColladaFile=false, bIsXFile = false;
+        bool bIsColladaURI = false;
+        bool bIsColladaFile = false;
+        bool bIsJSONURI = false;
+        bool bIsJSONFile = false;
+        bool bIsMsgPackURI = false;
+        bool bIsMsgPackFile = false;
+        bool bIsXFile = false;
         if( _IsColladaURI(filename) ) {
             bIsColladaURI = true;
         }
+        else if( _IsJSONURI(filename) ) {
+            bIsJSONURI = true;
+        }
+        else if( _IsMsgPackURI(filename) ) {
+            bIsMsgPackURI = true;
+        }
         else if( _IsColladaFile(filename) ) {
             bIsColladaFile = true;
+        }
+        else if( _IsJSONFile(filename) ) {
+            bIsJSONFile = true;
+        }
+        else if( _IsMsgPackFile(filename) ) {
+            bIsMsgPackFile = true;
         }
         else if( _IsXFile(filename) ) {
             bIsXFile = true;
         }
 
-        if( (type == PT_KinBody ||type == PT_Robot ) && (bIsColladaURI||bIsColladaFile||bIsXFile) ) {
+        if( (type == PT_KinBody ||type == PT_Robot ) && (bIsColladaURI||bIsJSONURI||bIsMsgPackURI||bIsColladaFile||bIsJSONFile||bIsMsgPackFile||bIsXFile) ) {
             if( type == PT_KinBody ) {
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
                 KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
@@ -1532,8 +1787,32 @@ public:
                         return InterfaceBasePtr();
                     }
                 }
+                else if( bIsJSONURI ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseJSONURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
+                else if( bIsMsgPackURI ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseMsgPackURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
                 else if( bIsColladaFile ) {
                     if( !RaveParseColladaFile(shared_from_this(), pbody, filename, atts) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
+                else if( bIsJSONFile ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseJSONFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
+                else if( bIsMsgPackFile ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseMsgPackFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
@@ -1552,8 +1831,32 @@ public:
                         return InterfaceBasePtr();
                     }
                 }
+                else if( bIsJSONURI ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseJSONURI(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
+                else if( bIsMsgPackURI ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseMsgPackURI(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
                 else if( bIsColladaFile ) {
                     if( !RaveParseColladaFile(shared_from_this(), probot, filename, atts) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
+                else if( bIsJSONFile ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseJSONFile(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
+                else if( bIsMsgPackFile ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseMsgPackFile(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
@@ -2086,6 +2389,205 @@ public:
         _unit = unit;
     }
 
+    /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+    virtual void ExtractInfo(EnvironmentBaseInfo& info)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        info._vBodyInfos.resize(_vecbodies.size());
+        for(size_t i = 0; i < info._vBodyInfos.size(); ++i) {
+            if (_vecbodies[i]->IsRobot()) {
+                info._vBodyInfos[i].reset(new RobotBase::RobotBaseInfo());
+                RaveInterfaceCast<RobotBase>(_vecbodies[i])->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(info._vBodyInfos[i])));
+            } else {
+                info._vBodyInfos[i].reset(new KinBody::KinBodyInfo());
+                _vecbodies[i]->ExtractInfo(*info._vBodyInfos[i]);
+            }
+        }
+    }
+
+    /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
+    virtual void UpdateFromInfo(const EnvironmentBaseInfo& info)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+
+        std::vector<dReal> vDOFValues;
+
+        // TODO: revision error checking ?
+        SetRevision(info._revision);
+
+        FOREACHC(itBodyInfo, info._vBodyInfos) {
+            KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
+            RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
+
+            // find existing body in the env
+            std::vector<KinBodyPtr>::iterator itExistingBody = _vecbodies.end();
+            FOREACH(itBody, _vecbodies) {
+                if ((*itBody)->_id == (*itBodyInfo)->_id) {
+                    itExistingBody = itBody;
+                    break;
+                }
+            }
+
+            KinBodyPtr pBody;
+            if (itExistingBody != _vecbodies.end()) {
+                bool bInterfaceMatches = pBody->GetXMLId() == pKinBodyInfo->_interfaceType;
+                if( !bInterfaceMatches || pBody->IsRobot() != pKinBodyInfo->_isRobot ) {
+                    boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                    _RemoveKinBodyFromIterator(itExistingBody);
+                    itExistingBody = _vecbodies.end();
+                }
+            }
+    
+            if(itExistingBody != _vecbodies.end()) {
+                // interface should match at this point
+
+                // update existing body or robot
+                UpdateFromInfoResult updateFromInfoResult = UFIR_RequireRemoveFromEnvironment;
+                pBody = *itExistingBody;
+                if (pKinBodyInfo->_isRobot && pBody->IsRobot()) {
+                    RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
+                    if( !!pRobotBaseInfo ) {
+                        updateFromInfoResult = pRobot->UpdateFromRobotInfo(*pRobotBaseInfo);
+                    }
+                    else {
+                        updateFromInfoResult = pRobot->UpdateFromKinBodyInfo(*pKinBodyInfo);
+                    }
+                }
+                else if (!pKinBodyInfo->_isRobot && !pBody->IsRobot()) {
+                    updateFromInfoResult = pBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
+                }
+
+                if (updateFromInfoResult == UFIR_Success) {
+                    continue;
+                }
+
+                {
+                    boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                    _RemoveKinBodyFromIterator(itExistingBody);
+                }
+
+                if (pBody->IsRobot()) {
+                    RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
+                    if (updateFromInfoResult == UFIR_RequireRemoveFromEnvironment) {
+                        if( !!pRobotBaseInfo ) {
+                            updateFromInfoResult = pRobot->UpdateFromRobotInfo(*pRobotBaseInfo);
+                        }
+                        else {
+                            updateFromInfoResult = pRobot->UpdateFromKinBodyInfo(*pKinBodyInfo);
+                        }
+                    }
+                    if (updateFromInfoResult != UFIR_Success) {
+                        if( !!pRobotBaseInfo ) {
+                            pRobot->InitFromRobotInfo(*pRobotBaseInfo);
+                        }
+                        else {
+                            pRobot->InitFromKinBodyInfo(*pKinBodyInfo);
+                        }
+                    }
+                    _AddRobot(pRobot, true);
+                }
+                else {
+                    if (updateFromInfoResult == UFIR_RequireRemoveFromEnvironment) {
+                        updateFromInfoResult = pBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
+                    }
+                    if (updateFromInfoResult != UFIR_Success) {
+                        pBody->InitFromKinBodyInfo(*pKinBodyInfo);
+                    }
+                    _AddKinBody(pBody, true);
+                }
+            }
+            else {
+                // for new body or robot
+                if (pKinBodyInfo->_isRobot) {
+                    RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), pKinBodyInfo->_interfaceType);
+                    if( !pRobot ) {
+                        pRobot = RaveCreateRobot(shared_from_this(), "");
+                    }
+
+                    if( !!pRobotBaseInfo ) {
+                        pRobot->InitFromRobotInfo(*pRobotBaseInfo);
+                    }
+                    else {
+                        pRobot->InitFromKinBodyInfo(*pKinBodyInfo);
+                    }
+                    _AddRobot(pRobot, true);
+                    pBody = RaveInterfaceCast<KinBody>(pRobot);
+                }
+                else {
+                    pBody = RaveCreateKinBody(shared_from_this(), pKinBodyInfo->_interfaceType);
+                    if( !pBody ) {
+                        pBody = RaveCreateKinBody(shared_from_this(), "");
+                    }
+                    pBody->InitFromKinBodyInfo(*pKinBodyInfo);
+                    _AddKinBody(pBody, true);
+                }
+            }
+
+            if (!!pBody) {
+                pBody->SetName(pKinBodyInfo->_name);
+
+                // dof value
+                pBody->GetDOFValues(vDOFValues);
+
+                FOREACH(it, pKinBodyInfo->_dofValues) {
+                    FOREACH(itJoint, pBody->_vecjoints) {
+                        if ((*itJoint)->GetName() == it->first.first) {
+                            vDOFValues[(*itJoint)->GetDOFIndex()+it->first.second] = (*it).second;
+                            break;
+                        }
+                    }
+                }
+
+                pBody->SetDOFValues(vDOFValues, pKinBodyInfo->_transform, KinBody::CLA_Nothing);
+            }
+        }
+
+        // remove extra bodies
+        FOREACH_NOINC(itBody, _vecbodies) {
+            bool stillExists = false;
+            FOREACHC(itBodyInfo, info._vBodyInfos) {
+                if ((*itBody)->_id == (*itBodyInfo)->_id) {
+                    stillExists = true;
+                    break;
+                }
+            }
+            if (stillExists) {
+                ++itBody;
+                continue;
+            }
+            {
+                boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                _RemoveKinBodyFromIterator(itBody);
+            }
+        }
+
+        // after all bodies are added, update the grab states
+        FOREACHC(itBodyInfo, info._vBodyInfos) {
+            KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
+
+            const std::string& bodyid = (*itBodyInfo)->_id;
+            
+            // find existing body in the env
+            std::vector<KinBodyPtr>::iterator itExistingBody = _vecbodies.end();
+            FOREACH(itBody, _vecbodies) {
+                if ((*itBody)->_id == bodyid) {
+                    itExistingBody = itBody;
+                    break;
+                }
+            }
+
+            if (itExistingBody != _vecbodies.end()) {
+                // grabbed infos
+                std::vector<KinBody::GrabbedInfoConstPtr> grabbedInfo(pKinBodyInfo->_vGrabbedInfos.begin(), pKinBodyInfo->_vGrabbedInfos.end());
+                (*itExistingBody)->ResetGrabbed(grabbedInfo);
+            }
+            else {
+                RAVELOG_WARN_FORMAT("could not find body with id='%s', name='%s'", bodyid%(*itBodyInfo)->_name);
+            }
+        }
+
+        UpdatePublishedBodies();
+    }
 
 protected:
 
@@ -2789,6 +3291,65 @@ protected:
         return false;
     }
 
+    static bool _IsJSONURI(const std::string& uri)
+    {
+        string scheme, authority, path, query, fragment;
+        string s1, s3, s6, s8;
+        static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
+        bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
+        return bmatch && scheme.size() > 0 && _IsJSONFile(path); //scheme.size() > 0;
+    }
+
+    static bool _IsJSONFile(const std::string& filename)
+    {
+        size_t len = filename.size();
+        if( len < 5 ) {
+            return false;
+        }
+        if( filename[len-5] == '.' && ::tolower(filename[len-4]) == 'j' && ::tolower(filename[len-3]) == 's' && ::tolower(filename[len-2]) == 'o' && ::tolower(filename[len-1]) == 'n' ) {
+            return true;
+        }
+        return false;
+    }
+
+    static bool _IsJSONData(const std::string& data)
+    {
+        return data.size() >= 2 && data[0] == '{';
+    }
+
+    static bool _IsMsgPackURI(const std::string& uri)
+    {
+        string scheme, authority, path, query, fragment;
+        string s1, s3, s6, s8;
+        static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
+        bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
+        return bmatch && scheme.size() > 0 && _IsMsgPackFile(path); //scheme.size() > 0;
+    }
+
+    static bool _IsMsgPackFile(const std::string& filename)
+    {
+        // .msgpack
+        size_t len = filename.size();
+        if( len < 8 ) {
+            return false;
+        }
+        if( filename[len-8] == '.' && ::tolower(filename[len-7]) == 'm' && ::tolower(filename[len-6]) == 's' && ::tolower(filename[len-5]) == 'g' && ::tolower(filename[len-4]) == 'p' && ::tolower(filename[len-3]) == 'a' && ::tolower(filename[len-2]) == 'c' && ::tolower(filename[len-1]) == 'k' ) {
+            return true;
+        }
+        return false;
+    }
+
+    static bool _IsMsgPackData(const std::string& data)
+    {
+        return data.size() > 0 && !std::isprint(data[0]);
+    }
+
+    void _ClearRapidJsonBuffer()
+    {
+        // TODO resize smartly
+        _prLoadEnvAlloc->Clear();
+    }
+
     std::vector<RobotBasePtr> _vecrobots;      ///< robots (possibly controlled)
     std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots)
 
@@ -2824,6 +3385,9 @@ protected:
 
     std::list<UserDataWeakPtr> _listRegisteredCollisionCallbacks;     ///< see EnvironmentBase::RegisterCollisionCallback
     std::list<UserDataWeakPtr> _listRegisteredBodyCallbacks;     ///< see EnvironmentBase::RegisterBodyCallback
+
+    std::vector<uint8_t> _vRapidJsonLoadBuffer;
+    boost::shared_ptr<rapidjson::MemoryPoolAllocator<> > _prLoadEnvAlloc; ///< allocator used for loading environments
 
     bool _bInit;                   ///< environment is initialized
     bool _bEnableSimulation;            ///< enable simulation loop

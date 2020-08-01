@@ -19,7 +19,7 @@
 class CollisionMapRobot : public RobotBase
 {
 public:
-    class XMLData : public XMLReadable
+    class XMLData : public Readable
     {
 public:
         /// specifies the free space of two joints
@@ -32,8 +32,13 @@ public:
             boost::array<int,N> jointindices;
         };
         typedef COLLISIONMAP<2> COLLISIONPAIR;
-        XMLData() : XMLReadable("collisionmap") {
+        XMLData() : Readable("collisionmap") {
         }
+
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override {
+            return false;
+        }
+
         list<COLLISIONPAIR> listmaps;
     };
 
@@ -47,7 +52,7 @@ public:
             }
         }
 
-        virtual XMLReadablePtr GetReadable() {
+        ReadablePtr GetReadable() override {
             return _cmdata;
         }
 

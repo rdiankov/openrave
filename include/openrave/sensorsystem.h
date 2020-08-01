@@ -48,7 +48,7 @@ public:
 
     /// add body for registering with sensor system
     /// pdata is a pointer to a data structor holding tracking/registration information for the system
-    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, XMLReadableConstPtr pdata) = 0;
+    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, ReadableConstPtr pdata) = 0;
     /// remove body from sensory system. If bDestroy is true, will also deallocate the memory
     virtual bool RemoveKinBody(KinBodyPtr pbody) = 0;
     /// returns true if body is present
@@ -76,10 +76,15 @@ private:
 class OPENRAVE_API SimpleSensorSystem : public SensorSystemBase
 {
 public:
-    class OPENRAVE_API XMLData : public XMLReadable {
+    class OPENRAVE_API XMLData : public Readable {
 public:
-        XMLData(const std::string& xmlid) : XMLReadable(xmlid), id(0) {
+        XMLData(const std::string& xmlid) : Readable(xmlid), id(0) {
         }
+
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override {
+            return false;
+        }
+
         virtual void copy(boost::shared_ptr<XMLData const> pdata) {
             *this = *pdata;
         }
@@ -99,7 +104,7 @@ public:
             SetBody(pbody);
         }
 
-        virtual XMLReadableConstPtr GetData() const {
+        virtual ReadableConstPtr GetData() const {
             return _initdata;
         }
         virtual KinBody::LinkPtr GetOffsetLink() const {
@@ -156,7 +161,7 @@ protected:
     {
 public:
         SimpleXMLReader(boost::shared_ptr<XMLData>);
-        virtual XMLReadablePtr GetReadable() {
+        virtual ReadablePtr GetReadable() {
             return _pdata;
         }
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
@@ -177,7 +182,7 @@ protected:
     virtual void Reset();
 
     virtual void AddRegisteredBodies(const std::vector<KinBodyPtr>& vbodies);
-    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, XMLReadableConstPtr pdata);
+    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, ReadableConstPtr pdata);
 
     virtual bool RemoveKinBody(KinBodyPtr pbody);
     virtual bool IsBodyPresent(KinBodyPtr pbody);

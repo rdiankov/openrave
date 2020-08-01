@@ -133,7 +133,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             robot->SetActiveDOFValues(newdof,KinBody::CLA_CheckLimitsSilent);
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 robot->GetActiveDOFValues(newdof);
-                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 for(size_t i = 0; i < newdof.size(); ++i ) {
                     if( i > 0 ) {
                         ss << "," << newdof[i];
@@ -234,7 +234,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
         if( parameters->CheckPathAllConstraints(newdof,newdof,zerodof,zerodof,0,IT_OpenStart) != 0 ) {
             bCollision = true;
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 ss << "constraints failed, ";
                 for(size_t i = 0; i < newdof.size(); ++i ) {
                     if( i > 0 ) {
@@ -324,7 +324,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
             if( parameters->CheckPathAllConstraints(newdof,newdof,zerodof,zerodof,0,IT_OpenStart) != 0 ) {
                 bCollision = true;
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                     ss << "constraints failed, ";
                     for(size_t i = 0; i < newdof.size(); ++i ) {
                         if( i > 0 ) {
@@ -370,7 +370,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
             }
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 parameters->_getstatefn(newdof);
-                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 for(size_t i = 0; i < newdof.size(); ++i ) {
                     if( i > 0 ) {
                         ss << "," << newdof[i];
@@ -2125,7 +2125,7 @@ void DynamicsCollisionConstraint::SetPerturbation(dReal perturbation)
 int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParametersConstPtr params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn)
 {
 //    if( IS_DEBUGLEVEL(Level_Verbose) ) {
-//        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+//        stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
 //        ss << "checking values=[";
 //            for(size_t i = 0; i < vdofvalues.size(); ++i ) {
 //            if( i > 0 ) {
@@ -2227,7 +2227,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                     // TODO use the ElectricMotorActuatorInfo if present to get the real torque with friction
                     if( fcurtorque < torquelimits.first || fcurtorque > torquelimits.second ) {
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            stringstream ssvel; ssvel << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            stringstream ssvel; ssvel << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                             FOREACHC(itvel, vdofvelocities) {
                                 ssvel << *itvel << ",";
                             }
@@ -2276,7 +2276,7 @@ void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
         PlannerBase::PlannerParametersConstPtr params = _parameters.lock();
         std::vector<dReal> vcurrentvalues;
         params->_getstatefn(vcurrentvalues);
-        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+        stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         if( _listCheckBodies.size() > 0 ) {
             ss << "env=" << _listCheckBodies.front()->GetEnv()->GetId() << ", ";
         }
@@ -2752,7 +2752,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( dqscale < 1 ) {
                 numRepeating++;
                 if( dqscale <= 0.01 ) {
-                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                     ss << "x0=[";
                     RaveSerializeValues(ss, q0);
                     ss << "]; x1=[";
@@ -2769,7 +2769,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     return CFO_StateSettingError;
                 }
                 if( numRepeating > numSteps*2 ) {
-                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                     ss << "x0=[";
                     RaveSerializeValues(ss, q0);
                     ss << "]; x1=[";
@@ -2813,7 +2813,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     }
 
                     {
-                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                         ss << "x0=[";
                         RaveSerializeValues(ss, q0);
                         ss << "]; x1=[";

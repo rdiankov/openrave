@@ -27,6 +27,13 @@ namespace OpenRAVE {
 class OpenRAVEFunctionParserReal;
 typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
 
+/// \brief Result of UpdateFromInfo() call
+enum UpdateFromInfoResult {
+    UFIR_Success = 0, ///< Updated successfully
+    UFIR_RequireRemoveFromEnvironment, ///< Failed to update, require the kinbody to be removed from environment before update can succeed
+    UFIR_RequireReinitialize, ///< Failed to update, require InitFromInfo() to be called before update can succeed
+};
+
 /// \brief The type of geometry primitive.
 enum GeometryType {
     GT_None = 0,
@@ -50,36 +57,64 @@ OPENRAVE_API const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsTyp
 /// \brief holds parameters for an electric motor
 ///
 /// all speed is in revolutions/second
-class OPENRAVE_API ElectricMotorActuatorInfo
+class OPENRAVE_API ElectricMotorActuatorInfo : public InfoBase
 {
 public:
-    ElectricMotorActuatorInfo();
+    ElectricMotorActuatorInfo() {
+    };
+    ElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& other) {
+        *this = other;
+    }
+    bool operator==(const ElectricMotorActuatorInfo& other) const {
+        return model_type == other.model_type
+               && assigned_power_rating == other.assigned_power_rating
+               && max_speed == other.max_speed
+               && no_load_speed == other.no_load_speed
+               && stall_torque == other.stall_torque
+               && max_instantaneous_torque == other.max_instantaneous_torque
+               && nominal_speed_torque_points == other.nominal_speed_torque_points
+               && max_speed_torque_points == other.max_speed_torque_points
+               && nominal_torque == other.nominal_torque
+               && rotor_inertia == other.rotor_inertia
+               && torque_constant == other.torque_constant
+               && nominal_voltage == other.nominal_voltage
+               && speed_constant == other.speed_constant
+               && starting_current == other.starting_current
+               && terminal_resistance == other.terminal_resistance
+               && gear_ratio == other.gear_ratio
+               && coloumb_friction == other.coloumb_friction
+               && viscous_friction == other.viscous_friction;
+    }
+    bool operator!=(const ElectricMotorActuatorInfo& other) const {
+        return !operator==(other);
+    }
 
-    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+    void Reset() override;
+    void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+    void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
     std::string model_type; ///< the type of actuator it is. Usually the motor model name is ok, but can include other info like gear box, etc
     //@{ from motor data sheet
-    dReal assigned_power_rating; ///< the nominal power the electric motor can safely produce. Units are **Mass * Distance² * Time-³**
-    dReal max_speed; ///< the maximum speed of the motor **Time-¹**
-    dReal no_load_speed; ///< specifies the speed of the motor powered by the nominal voltage when the motor provides zero torque. Units are **Time-¹**.
-    dReal stall_torque; ///< the maximum torque achievable by the motor at the nominal voltage. This torque is achieved at zero velocity (stall). Units are **Mass * Distance * Time-²**.
-    dReal max_instantaneous_torque; ///< the maximum instantenous torque achievable by the motor when voltage <= nominal voltage. Motor going between nominal_torque and max_instantaneous_torque can overheat, so should not be driven at it for a long time. Units are **Mass * Distance * Time-²**.
+    dReal assigned_power_rating = 0; ///< the nominal power the electric motor can safely produce. Units are **Mass * Distance² * Time-³**
+    dReal max_speed = 0; ///< the maximum speed of the motor **Time-¹**
+    dReal no_load_speed = 0; ///< specifies the speed of the motor powered by the nominal voltage when the motor provides zero torque. Units are **Time-¹**.
+    dReal stall_torque = 0; ///< the maximum torque achievable by the motor at the nominal voltage. This torque is achieved at zero velocity (stall). Units are **Mass * Distance * Time-²**.
+    dReal max_instantaneous_torque = 0; ///< the maximum instantenous torque achievable by the motor when voltage <= nominal voltage. Motor going between nominal_torque and max_instantaneous_torque can overheat, so should not be driven at it for a long time. Units are **Mass * Distance * Time-²**.
     std::vector<std::pair<dReal, dReal> > nominal_speed_torque_points; ///< the speed and torque achievable when the motor is powered by the nominal voltage. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the stall torque directly (ideal). Should be ordered from increasing speed.
     std::vector<std::pair<dReal, dReal> > max_speed_torque_points; ///< the speed and torque achievable when the motor is powered by the max voltage/current. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the max_instantaneous_torque directly (ideal). Should be ordered from increasing speed.
-    dReal nominal_torque; ///< the maximum torque the motor can provide continuously without overheating. Units are **Mass * Distance * Time-²**.
-    dReal rotor_inertia; ///< the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**.
-    dReal torque_constant; ///< specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * Charge-¹**.
-    dReal nominal_voltage; ///< the nominal voltage the electric motor can safely produce. Units are **Mass * Distance² * Time-² * Charge**.
-    dReal speed_constant; ///< the constant of proportionality relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-¹**.
-    dReal starting_current; ///< specifies the current through the motor at zero velocity, equal to the nominal voltage divided by the terminal resistance. Also called the stall current.  Units are **Time-¹ * Charge**.
-    dReal terminal_resistance; ///< the resistance of the motor windings. Units are **Mass * Distance² * Time-¹ * Charge-²**.
+    dReal nominal_torque = 0; ///< the maximum torque the motor can provide continuously without overheating. Units are **Mass * Distance * Time-²**.
+    dReal rotor_inertia = 0; ///< the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**.
+    dReal torque_constant = 0; ///< specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * Charge-¹**.
+    dReal nominal_voltage = 0; ///< the nominal voltage the electric motor can safely produce. Units are **Mass * Distance² * Time-² * Charge**.
+    dReal speed_constant = 0; ///< the constant of proportionality relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-¹**.
+    dReal starting_current = 0; ///< specifies the current through the motor at zero velocity, equal to the nominal voltage divided by the terminal resistance. Also called the stall current.  Units are **Time-¹ * Charge**.
+    dReal terminal_resistance = 0; ///< the resistance of the motor windings. Units are **Mass * Distance² * Time-¹ * Charge-²**.
     //@}
 
     //@{ depending on gear box
-    dReal gear_ratio; ///< specifies the ratio between the input speed of the transmission (the speed of the motor shaft) and the output speed of the transmission.
-    dReal coloumb_friction; ///< static coloumb friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
-    dReal viscous_friction; ///< viscous friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
+    dReal gear_ratio = 0; ///< specifies the ratio between the input speed of the transmission (the speed of the motor shaft) and the output speed of the transmission.
+    dReal coloumb_friction = 0; ///< static coloumb friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
+    dReal viscous_friction = 0; ///< viscous friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
     //@}
 };
 
@@ -140,13 +175,53 @@ public:
     /// \brief Describes the properties of a geometric primitive.
     ///
     /// Contains everything associated with a geometry's appearance and shape
-    class OPENRAVE_API GeometryInfo : public XMLReadable
+    class OPENRAVE_API GeometryInfo : public InfoBase
     {
 public:
-        GeometryInfo();
-        virtual ~GeometryInfo() {
+        GeometryInfo() {
+        }
+        GeometryInfo(const GeometryInfo& other) {
+            *this = other;
+        }
+        bool operator==(const GeometryInfo& other) const {
+            return _t == other._t
+                   && _vGeomData == other._vGeomData
+                   && _vGeomData2 == other._vGeomData2
+                   && _vGeomData3 == other._vGeomData3
+                   && _vGeomData4 == other._vGeomData4
+                   // && _vSideWalls == other._vSideWalls
+                   && _vDiffuseColor == other._vDiffuseColor
+                   && _vAmbientColor == other._vAmbientColor
+                   // && _meshcollision == other._meshcollision
+                   && _id == other._id
+                   && _name == other._name
+                   && _type == other._type
+                   && _filenamerender == other._filenamerender
+                   && _filenamecollision == other._filenamecollision
+                   && _vRenderScale == other._vRenderScale
+                   && _vCollisionScale == other._vCollisionScale
+                   && _fTransparency == other._fTransparency
+                   && _bVisible == other._bVisible
+                   && _bModifiable == other._bModifiable;
+        }
+        bool operator!=(const GeometryInfo& other) const {
+            return !operator==(other);
         }
 
+        void Reset() override;
+
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+
+        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options) override;
+
+        /// \brief compare two geometry infos. If the floating differences are within fEpsilon, then comparison will return true.
+        ///
+        /// \return true if geometries are similar within epsilon
+        bool Compare(const GeometryInfo& rhs, dReal fEpsilon=1e-7) const;
+
+        /// \brief converts the unit scale of the geometry
+        void ConvertUnitScale(dReal fUnitScale);
+        
         /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
         /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
         bool InitCollisionMesh(float fTessellation=1);
@@ -180,14 +255,11 @@ public:
         /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
 
-        ///< \param multiply all translational values by fUnitScale
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-
-        ///< \param multiply all translational values by fUnitScale
-        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
-
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
+        ///< for sphere it is radius
+        ///< for cylinder, first 2 values are radius and height
+        ///< for trimesh, none
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
         /// For GT_Cylinder, cylinder radius, cylinder height, number of points circle face of cylinder should be approximated
@@ -221,10 +293,8 @@ public:
         };
         std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
 
-        ///< for sphere it is radius
-        ///< for cylinder, first 2 values are radius and height
-        ///< for trimesh, none
-        RaveVector<float> _vDiffuseColor, _vAmbientColor; ///< hints for how to color the meshes
+        RaveVector<float> _vDiffuseColor = Vector(1,1,1);
+        RaveVector<float> _vAmbientColor; ///< hints for how to color the meshes
 
         /// \brief trimesh representation of the collision data of this object in this local coordinate system
         ///
@@ -233,8 +303,8 @@ public:
         /// If empty, will be automatically computed from the geometry's type and render data
         TriMesh _meshcollision;
 
-        GeometryType _type; ///< the type of geometry primitive
-
+        GeometryType _type = GT_None; ///< the type of geometry primitive
+        std::string _id;   ///< unique id of the geometry
         std::string _name; ///< the name of the geometry
 
         /// \brief filename for render model (optional)
@@ -249,34 +319,51 @@ public:
         /// The user should call _meshcollision = *env->ReadTrimeshURI(_filenamecollision) by themselves.
         std::string _filenamecollision;
 
-        Vector _vRenderScale; ///< render scale of the object (x,y,z) from _filenamerender
-        Vector _vCollisionScale; ///< render scale of the object (x,y,z) from _filenamecollision
-        float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
-        bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
-        bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
+        Vector _vRenderScale = Vector(1,1,1); ///< render scale of the object (x,y,z) from _filenamerender
+        Vector _vCollisionScale = Vector(1,1,1); ///< render scale of the object (x,y,z) from _filenamecollision
+        float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
+        bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
+        bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
+
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
 
     /// \brief Describes the properties of a link used to initialize it
-    class OPENRAVE_API LinkInfo : public XMLReadable
+    class OPENRAVE_API LinkInfo : public InfoBase
     {
 public:
-        LinkInfo();
-        virtual ~LinkInfo() {
+        LinkInfo() {
+        };
+        LinkInfo(const LinkInfo& other) {
+            *this = other;
+        }
+        LinkInfo& operator=(const LinkInfo& other);
+        bool operator==(const LinkInfo& other) const;
+        bool operator!=(const LinkInfo& other) const {
+            return !operator==(other);
         }
 
-        LinkInfo(const LinkInfo& other);
-        LinkInfo& operator=(const LinkInfo& other);
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options) override;
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
+        /// \brief compare two link infos. If the floating differences are within fEpsilon, then comparison will return true.
+        ///
+        /// \param linkCompareOptions 0 to compare everything. 1 to ignore _t
+        /// \return true if links are similar within epsilon
+        bool Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fEpsilon=1e-7) const;
+
+        /// \brief converts the unit scale of the link properties and geometries
+        void ConvertUnitScale(dReal fUnitScale);
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
         std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
 
+        ///\brief unique id of the link
+        std::string _id;
         /// \brief unique link name
         std::string _name;
         /// the current transformation of the link with respect to the body coordinate system
@@ -284,9 +371,9 @@ public:
         /// the frame for inertia and center of mass of the link in the link's coordinate system
         Transform _tMassFrame;
         /// mass of link
-        dReal _mass;
-        /// inertia along the axes of _tMassFrame
-        Vector _vinertiamoments;
+        dReal _mass; ///< kg
+
+        Vector _vinertiamoments; ///< kg*unit**2 inertia along the axes of _tMassFrame
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
@@ -296,10 +383,10 @@ public:
         ///
         //// Static should be used when an object has infinite mass and
         /// shouldn't be affected by physics (including gravity). Collision still works.
-        bool _bStatic;
+        bool _bStatic = false;
 
         /// \true false if the link is disabled. disabled links do not participate in collision detection
-        bool _bIsEnabled;
+        bool _bIsEnabled = true;
         bool __padding0, __padding1; // for 4-byte alignment
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
@@ -345,6 +432,7 @@ public:
             inline GeometryType GetType() const {
                 return _info._type;
             }
+
             inline const Vector& GetRenderScale() const {
                 return _info._vRenderScale;
             }
@@ -415,6 +503,19 @@ public:
             inline const KinBody::GeometryInfo& GetInfo() const {
                 return _info;
             }
+
+            inline const KinBody::GeometryInfo& UpdateAndGetInfo() {
+                UpdateInfo();
+                return _info;
+            }
+
+            virtual void UpdateInfo();
+
+            /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+            virtual void ExtractInfo(KinBody::GeometryInfo& info) const;
+
+            /// \brief update Geometry according to new GeometryInfo, returns false if update cannot be performed and requires InitFromInfo
+            virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::GeometryInfo& info);
 
             /// cage
             //@{
@@ -768,6 +869,12 @@ protected:
             return _info;
         }
 
+        /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+        virtual void ExtractInfo(KinBody::LinkInfo& info) const;
+
+        /// \brief update Link according to new LinkInfo, returns false if update cannot be performed and requires InitFromInfo
+        virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::LinkInfo& info);
+
 protected:
         /// \brief Updates the cached information due to changes in the collision data.
         ///
@@ -847,12 +954,14 @@ private:
     /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
     ///
     /// In every array, [0] is position, [1] is velocity, [2] is acceleration.
-    class OPENRAVE_API MimicInfo
+    class OPENRAVE_API MimicInfo : public InfoBase
     {
 public:
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
         boost::array< std::string, 3>  _equations;         ///< the original equations
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
     };
     typedef boost::shared_ptr<MimicInfo> MimicInfoPtr;
     typedef boost::shared_ptr<MimicInfo const> MimicInfoConstPtr;
@@ -893,46 +1002,85 @@ public:
     typedef boost::shared_ptr<Mimic const> MimicConstPtr;
 
     /// \brief Describes the properties of a joint used to initialize it
-    class OPENRAVE_API JointInfo : public XMLReadable
+    class OPENRAVE_API JointInfo : public InfoBase
     {
 public:
-        JointInfo();
-        virtual ~JointInfo() {
+        struct JointControlInfo_RobotController
+        {
+            JointControlInfo_RobotController() {
+            };
+            int robotId = -1;
+            boost::array<int16_t, 3> robotControllerDOFIndex = {-1, -1, -1}; ///< indicates which DOF in the robot controller controls which joint axis. -1 if not specified/not valid.
+        };
+        typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
+
+        struct JointControlInfo_IO
+        {
+            JointControlInfo_IO() {
+            };
+            int deviceId = -1;
+            boost::array< std::vector<std::string>, 3 > vMoveIONames;       ///< io names for controlling positions of this joint.
+            boost::array< std::vector<std::string>, 3 > vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
+            boost::array< std::vector<uint8_t>, 3 > vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+            boost::array< std::vector<std::string>, 3 > vLowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
+            boost::array< std::vector<uint8_t>, 3 > vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+        };
+        typedef boost::shared_ptr<JointControlInfo_IO> JointControlInfo_IOPtr;
+
+        struct JointControlInfo_ExternalDevice
+        {
+            JointControlInfo_ExternalDevice() {
+            };
+            std::string externalDeviceId; ///< id for the external device
+        };
+        typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
+
+        JointInfo() {
+        }
+        JointInfo(const JointInfo& other) {
+            *this = other;
+        }
+        JointInfo& operator=(const JointInfo& other);
+        bool operator==(const JointInfo& other) const;
+        bool operator!=(const JointInfo& other) const {
+            return !operator==(other);
         }
 
-        JointInfo(const JointInfo& other);
-        JointInfo& operator=(const JointInfo& other);
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
-        virtual int GetDOF() const;
+        int GetDOF() const;
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        JointType _type = JointNone; /// The joint type
 
-        JointType _type; /// The joint type
+        std::string _id;   // joint unique id
         std::string _name;         ///< the unique joint name
         std::string _linkname0, _linkname1; ///< attaching links, all axes and anchors are defined in the link pointed to by _linkname0 coordinate system. _linkname0 is usually the parent link.
         Vector _vanchor; ///< the anchor of the rotation axes defined in _linkname0's coordinate system. this is only used to construct the internal left/right matrices. passed into Joint::_ComputeInternalInformation
-        boost::array<Vector,3> _vaxes;                ///< axes in _linkname0's or environment coordinate system used to define joint movement. passed into Joint::_ComputeInternalInformation
+        boost::array<Vector,3> _vaxes = {Vector(0,0,1), Vector(0,0,1), Vector(0,0,1)};                ///< axes in _linkname0's or environment coordinate system used to define joint movement. passed into Joint::_ComputeInternalInformation
         std::vector<dReal> _vcurrentvalues; ///< joint values at initialization. passed into Joint::_ComputeInternalInformation
 
-        boost::array<dReal,3> _vresolution;              ///< interpolation resolution
-        boost::array<dReal,3> _vmaxvel;                  ///< the soft maximum velocity (rad/s) to move the joint when planning
-        boost::array<dReal,3> _vhardmaxvel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
-        boost::array<dReal,3> _vmaxaccel;                ///< the soft maximum acceleration (rad/s^2) of the joint
-        boost::array<dReal,3> _vhardmaxaccel;            ///< the hard maximum acceleration (rad/s^2), robot cannot exceed this acceleration. used for verification checking
-        boost::array<dReal,3> _vmaxjerk;                 ///< the soft maximum jerk (rad/s^3) of the joint
-        boost::array<dReal,3> _vhardmaxjerk;             ///< the hard maximum jerk (rad/s^3), robot cannot exceed this jerk. used for verification checking
-        boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that should be applied to the joint. Usually this is computed from the motor nominal torque and gear ratio. Ignore if values are 0.
-        boost::array<dReal,3> _vmaxinertia;             ///< maximum inertia (kg m^2) that the joint can exhibit. Usually this is set for safety reasons. Ignore if values are 0.
-        boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
+        boost::array<dReal,3> _vresolution = {0.02, 0.02, 0.02};              ///< interpolation resolution
+        boost::array<dReal,3> _vmaxvel = {10, 10, 10};                  ///< the soft maximum velocity (rad/s) to move the joint when planning
+        boost::array<dReal,3> _vhardmaxvel = {0, 0, 0};              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking. Default hard limits is 0. if 0, the user should not use the hard limit value.
+        boost::array<dReal,3> _vmaxaccel = {50, 50, 50};                ///< the soft maximum acceleration (rad/s^2) of the joint
+        boost::array<dReal,3> _vhardmaxaccel = {0, 0, 0};            ///< the hard maximum acceleration (rad/s^2), robot cannot exceed this acceleration. used for verification checking. Default hard limits is 0. if 0, the user should not use the hard limit value.
+        boost::array<dReal,3> _vmaxjerk = {50*1000, 50*1000, 50*1000};                 ///< the soft maximum jerk (rad/s^3) of the joint
+        // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step.
+        boost::array<dReal,3> _vhardmaxjerk = {0, 0, 0};             ///< the hard maximum jerk (rad/s^3), robot cannot exceed this jerk. used for verification checking. Default hard limits is 0. if 0, the user should not use the hard limit value.
+        boost::array<dReal,3> _vmaxtorque = {0, 0, 0};               ///< maximum torque (N.m, kg m^2/s^2) that should be applied to the joint. Usually this is computed from the motor nominal torque and gear ratio. Ignore if values are 0. Set max torque to 0 to notify the system that dynamics parameters might not be valid.
+        boost::array<dReal,3> _vmaxinertia = {0, 0, 0};             ///< maximum inertia (kg m^2) that the joint can exhibit. Usually this is set for safety reasons. Ignore if values are 0.
+        boost::array<dReal,3> _vweights = {1, 1, 1};                ///< the weights of the joint for computing distance metrics.
 
         /// \brief internal offset parameter that determines the branch the angle centers on
         ///
         /// Wrap offsets are needed for rotation joints since the range is limited to 2*pi.
         /// This allows the wrap offset to be set so the joint can function in [-pi+offset,pi+offset]..
         /// \param iaxis the axis to get the offset from
-        boost::array<dReal,3> _voffsets;
-        boost::array<dReal,3> _vlowerlimit, _vupperlimit;         ///< joint limits
+        boost::array<dReal,3> _voffsets = {0, 0, 0};
+        boost::array<dReal,3> _vlowerlimit = {0, 0, 0};
+        boost::array<dReal,3> _vupperlimit = {0, 0, 0};         ///< joint limits
         TrajectoryBasePtr _trajfollow; ///< used if joint type is JointTrajectory
 
         boost::array<MimicInfoPtr,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
@@ -949,44 +1097,17 @@ public:
         /// at its lower limit. The most common identification on revolute joints at -pi and pi. 'circularity' means the
         /// joint does not stop at limits.
         /// Although currently not developed, it could be possible to support identification for joints that are not revolute.
-        boost::array<uint8_t, 3> _bIsCircular;
+        boost::array<uint8_t, 3> _bIsCircular = {0, 0, 0};
 
-        bool _bIsActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+        bool _bIsActive = true;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
 
         /// \brief _controlMode specifies how this joint is controlled. For possible control modes, see enum JointControlMode.
-        JointControlMode _controlMode;
-
-        struct JointControlInfo_RobotController
-        {
-            JointControlInfo_RobotController();
-            int robotId;
-            boost::array<int16_t, 3> robotControllerDOFIndex; ///< indicates which DOF in the robot controller controls which joint axis. -1 if not specified/not valid.
-        };
-        typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
-
-        struct JointControlInfo_IO
-        {
-            JointControlInfo_IO();
-            int deviceId;
-            boost::array< std::vector<std::string>, 3 > vMoveIONames;       ///< io names for controlling positions of this joint.
-            boost::array< std::vector<std::string>, 3 > vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
-            boost::array< std::vector<uint8_t>, 3 > vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
-            boost::array< std::vector<std::string>, 3 > vLowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
-            boost::array< std::vector<uint8_t>, 3 > vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
-        };
-        typedef boost::shared_ptr<JointControlInfo_IO> JointControlInfo_IOPtr;
-
-        struct JointControlInfo_ExternalDevice
-        {
-            JointControlInfo_ExternalDevice();
-            std::string externalDeviceId; ///< id for the external device
-        };
-        typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
-
+        JointControlMode _controlMode = JCM_None;
         JointControlInfo_RobotControllerPtr _jci_robotcontroller;
         JointControlInfo_IOPtr _jci_io;
         JointControlInfo_ExternalDevicePtr _jci_externaldevice;
     };
+
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
 
@@ -1114,6 +1235,9 @@ public:
         /// \brief Return true if any of the joint axes has an identification at some of its lower and upper limits.
         virtual bool IsCircular() const;
 
+        /// \brief Return true if joint is active
+        virtual bool IsActive() const;
+
         /// \brief Return true if joint axis has an identification at some of its lower and upper limits.
         ///
         /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
@@ -1140,6 +1264,7 @@ public:
         /// \param bAppend if true will append to the end of the vector instead of erasing it
         /// \return degrees of freedom of the joint (even if pValues is NULL)
         virtual void GetValues(std::vector<dReal>& values, bool bAppend=false) const;
+        virtual void GetValues(boost::array<dReal, 3>& values) const;
 
         /// \brief Return the value of the specified joint axis only.
         virtual dReal GetValue(int axis) const;
@@ -1420,7 +1545,6 @@ public:
 
         /// \brief Updates several fields in \ref _info depending on the current state of the joint.
         virtual void UpdateInfo();
-
         /// \brief returns the JointInfo structure containing all information.
         ///
         /// Some values in this structure like _vcurrentvalues need to be updated, so make sure to call \ref UpdateInfo() right before this function is called.
@@ -1433,6 +1557,12 @@ public:
             UpdateInfo();
             return _info;
         }
+
+        /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+        virtual void ExtractInfo(KinBody::JointInfo& info) const;
+
+        /// \brief update Joint according to new JointInfo, returns false if update cannot be performed and requires InitFromInfo
+        virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::JointInfo& info);
 
 protected:
         JointInfo _info;
@@ -1468,7 +1598,7 @@ protected:
         /// \param[in] vdependentvalues input values ordered with respect to _vdofformat[iaxis]
         /// \param[out] voutput the output values
         /// \return an internal error code, 0 if no error
-        virtual int _Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput);
+        virtual int _Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput) const;
 
         /// \brief compute joint velocities given the parent and child link transformations/velocities
         virtual void _GetVelocities(std::vector<dReal>& values, bool bAppend, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const;
@@ -1493,6 +1623,7 @@ private:
         Transform _tRightNoOffset, _tLeftNoOffset;         ///< same as _tLeft and _tRight except it doesn't not include the offset
         Transform _tinvRight, _tinvLeft;         ///< the inverse transformations of tRight and tLeft
         bool _bInitialized;
+        bool _bStatic; ///< IsStatic with both lower and upper limits equal 0
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -1519,23 +1650,42 @@ private:
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
     ///
     /// This is serializable and independent of environment.
-    class OPENRAVE_API GrabbedInfo
+    class OPENRAVE_API GrabbedInfo : public InfoBase
     {
 public:
-        /// \brief resets the info
-        inline void Reset() {
-            _grabbedname.clear();
-            _robotlinkname.clear();
-            _trelative = Transform();
-            _setRobotLinksToIgnore.clear();
+        GrabbedInfo() {
+        }
+        GrabbedInfo(const GrabbedInfo& other) {
+            *this = other;
+        }
+        GrabbedInfo& operator=(const GrabbedInfo& other) {
+            _id = other._id;
+            _grabbedname = other._grabbedname;
+            _robotlinkname = other._robotlinkname;
+            _trelative = other._trelative;
+            _setRobotLinksToIgnore = other._setRobotLinksToIgnore;
+            return *this;
+        }
+        bool operator==(const GrabbedInfo& other) const {
+            return _id == other._id
+                   && _grabbedname == other._grabbedname
+                   && _robotlinkname == other._robotlinkname
+                   && _trelative == other._trelative
+                   && _setRobotLinksToIgnore == other._setRobotLinksToIgnore;
+        }
+        bool operator!=(const GrabbedInfo& other) const {
+            return !operator==(other);
         }
 
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+        std::string _id; ///< unique id of the grabbed info
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
         std::set<int> _setRobotLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
@@ -1597,7 +1747,7 @@ public:
         /// returns a pointer to the data used to initialize the BODY with AddKinBody.
         /// if psize is not NULL, will be filled with the size of the data in bytes
         /// This function will be used to restore bodies that were removed
-        virtual XMLReadableConstPtr GetData() const = 0;
+        virtual ReadableConstPtr GetData() const = 0;
 
         /// particular link that sensor system is tracking.
         /// All transformations describe this link.
@@ -1640,6 +1790,78 @@ private:
         Save_ManipulatorsToolTransform       = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
         Save_ConnectedBodies                 = 0x00200000, ///< [robot only], saves the connected body states
     };
+
+    /// \brief info structure used to initialize a kinbody
+    class OPENRAVE_API KinBodyInfo : public InfoBase
+    {
+public:
+        KinBodyInfo() {
+        }
+        KinBodyInfo(const KinBodyInfo& other) {
+            *this = other;
+        }
+        KinBodyInfo& operator=(const KinBodyInfo& other) {
+            _id = other._id;
+            _uri = other._uri;
+            _name = other._name;
+            _referenceUri = other._referenceUri;
+            _interfaceType = other._interfaceType;
+            _dofValues = other._dofValues;
+            _transform = other._transform;
+            _vLinkInfos = other._vLinkInfos;
+            _vJointInfos = other._vJointInfos;
+            _vGrabbedInfos = other._vGrabbedInfos;
+            _mReadableInterfaces = other._mReadableInterfaces;
+            _isRobot = other._isRobot;
+
+            // TODO: deep copy infos
+            return *this;
+        }
+        bool operator==(const KinBodyInfo& other) const {
+            return _id == other._id
+                   && _uri == other._uri
+                   && _name == other._name
+                   && _referenceUri == other._referenceUri
+                   && _interfaceType == other._interfaceType
+                   && _dofValues == other._dofValues
+                   && _transform == other._transform
+                   && _vLinkInfos == other._vLinkInfos
+                   && _vJointInfos == other._vJointInfos
+                   && _vGrabbedInfos == other._vGrabbedInfos
+                   && _mReadableInterfaces == other._mReadableInterfaces
+                   && _isRobot == other._isRobot;
+            // TODO: deep compare infos
+        }
+        bool operator!=(const KinBodyInfo& other) const {
+            return !operator==(other);
+        }
+
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+        std::string _id;
+        std::string _uri; ///< uri for this body
+        std::string _name;
+        std::string _referenceUri;  ///< referenced body info uri
+        std::string _interfaceType; ///< the interface type
+
+        Transform _transform; ///< transform of the base link
+        std::vector< std::pair< std::pair<std::string, int>, dReal> > _dofValues; ///< mapping from (jointName, jointAxis) to dofValue
+        std::vector<GrabbedInfoPtr> _vGrabbedInfos; ///< list of pointers to GrabbedInfo
+
+        std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
+        std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
+
+        std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
+
+        bool _isRobot = false; ///< true if should create a RobotBasePtr
+protected:
+        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value);
+
+    };
+    typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
+    typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
 
     /// \brief Helper class to save and restore the entire kinbody state.
     ///
@@ -1780,6 +2002,15 @@ private:
     /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
     /// \param uri the new URI to set for the interface
     virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::string& uri=std::string());
+
+    /// \brief initializes a simple kinematics body with rigidly attached links
+    ///
+    /// \param linkinfos information for all the links. Links will be created in this order
+    /// \param uri the new URI to set for the interface
+    virtual void InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const std::string& uri=std::string());
+
+    /// \brief initializes an complex kinematics body from info structure
+    virtual bool InitFromKinBodyInfo(const KinBodyInfo& info);
 
     /// \brief Sets new geometries for all the links depending on the stored extra geometries each link has.
     ///
@@ -2559,6 +2790,14 @@ private:
      */
     virtual void GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const;
 
+    /** \brief gets the grabbed info of a grabbed object whose name matches grabbedname
+
+        \param[in] the grabbed name to get the info from
+        \param[out] grabbedInfo initialized with the grabbed info
+        \return true if robot is grabbing body with name "grabbedname" and grabbedInfo is initialized
+     */
+    virtual bool GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbedInfo) const;
+
     /** \brief resets the grabbed bodies of the body
 
         Any currently grabbed bodies will be first released.
@@ -2584,6 +2823,12 @@ private:
     inline KinBodyConstPtr shared_kinbody_const() const {
         return boost::static_pointer_cast<KinBody const>(shared_from_this());
     }
+
+    /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+    virtual void ExtractInfo(KinBodyInfo& info);
+
+    /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
+    virtual UpdateFromInfoResult UpdateFromKinBodyInfo(const KinBodyInfo& info);
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
@@ -2654,6 +2899,9 @@ protected:
     /// Can only be called before internal robot hierarchy is initialized
     virtual void _InitAndAddJoint(JointPtr pjoint);
 
+    /// \brief goes through all the link/joint ids and makes sure they are unique
+    virtual void _ResolveInfoIds();
+
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
     std::vector<JointPtr> _vTopologicallySortedJoints; ///< \see GetDependencyOrderedJoints
@@ -2691,6 +2939,10 @@ protected:
     uint32_t _nHierarchyComputed; ///< 2 if the joint heirarchy and other cached information is computed. 1 if the hierarchy information is computing
     bool _bMakeJoinedLinksAdjacent; ///< if true, then automatically add adjacent links to the adjacency list so that their self-collisions are ignored.
     bool _bAreAllJoints1DOFAndNonCircular; ///< if true, then all controllable joints  of the robot are guaranteed to be either revolute or prismatic and non-circular. This allows certain functions that do operations on the joint values (like SubtractActiveDOFValues) to be optimized without calling Joint functions.
+
+    std::string _id; ///< unique id of the KinBody
+    std::string _referenceUri; ///< reference uri saved from InitFromInfo
+
 private:
     mutable std::string __hashkinematics;
     mutable std::vector<dReal> _vTempJoints;
