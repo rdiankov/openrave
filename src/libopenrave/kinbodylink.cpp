@@ -131,7 +131,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     orjson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
     orjson::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
     orjson::SetJsonValueByKey(value, "mass", _mass, allocator);
-    orjson::SetJsonValueByKey(value, "intertialMoments", _vinertiamoments, allocator);
+    orjson::SetJsonValueByKey(value, "inertiaMoments", _vinertiamoments, allocator);
 
     if(_mapFloatParameters.size() > 0) {
         rapidjson::Value parameters;
@@ -227,7 +227,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     }
 
     orjson::LoadJsonValueByKey(value, "mass", _mass);
-    orjson::LoadJsonValueByKey(value, "intertialMoments", _vinertiamoments);
+    orjson::LoadJsonValueByKey(value, "inertiaMoments", _vinertiamoments);
 
     if (value.HasMember("floatParameters") && value["floatParameters"].IsArray()) {
         _mapFloatParameters.clear();
