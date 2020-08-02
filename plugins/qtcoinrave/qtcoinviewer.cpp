@@ -666,26 +666,25 @@ class GetCameraImageMessage : public QtCoinViewer::EnvMessage
 {
 public:
     GetCameraImageMessage(QtCoinViewerPtr pviewer, void** ppreturn,
-                          std::vector<uint8_t>& color, int width, int height, const RaveTransform<float>& extrinsic, const SensorBase::CameraIntrinsics& KK, std::vector<float>* depth = nullptr)
-        : EnvMessage(pviewer, ppreturn, true), _color(color), _width(width), _height(height), _extrinsic(extrinsic), _KK(KK), _depth(depth) {
+                          std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& extrinsic, const SensorBase::CameraIntrinsics& KK)
+        : EnvMessage(pviewer, ppreturn, true), _memory(memory), _width(width), _height(height), _extrinsic(extrinsic), _KK(KK) {
     }
 
     virtual void viewerexecute() {
-        void* ret = (void*)QtCoinViewerPtr(_pviewer)->_GetCameraImage(_color, _width, _height, _extrinsic, _KK, _depth);
+        void* ret = (void*)QtCoinViewerPtr(_pviewer)->_GetCameraImage(_memory, _width, _height, _extrinsic, _KK);
         if( _ppreturn != NULL )
             *_ppreturn = ret;
         EnvMessage::viewerexecute();
     }
 
 private:
-    vector<uint8_t>& _color;
-    vector<float>* _depth;
+    vector<uint8_t>& _memory;
     int _width, _height;
     const RaveTransform<float>& _extrinsic;
     const SensorBase::CameraIntrinsics& _KK;
 };
 
-bool QtCoinViewer::GetCameraImage(std::vector<uint8_t>& color, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, std::vector<float>* depth)
+bool QtCoinViewer::GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK)
 {
     void* ret = NULL;
     if (_timerSensor->isScheduled() && _bUpdateEnvironment) {
@@ -693,11 +692,55 @@ bool QtCoinViewer::GetCameraImage(std::vector<uint8_t>& color, int width, int he
             RAVELOG_WARN("failed to GetCameraImage: force update failed\n");
             return false;
         }
-        EnvMessagePtr pmsg(new GetCameraImageMessage(shared_viewer(), &ret, color, width, height, t, KK, depth));
+        EnvMessagePtr pmsg(new GetCameraImageMessage(shared_viewer(), &ret, memory, width, height, t, KK));
         pmsg->callerexecute(false);
     }
     else {
         RAVELOG_VERBOSE("failed to GetCameraImage: viewer is not updating\n");
+    }
+    return *(bool*)&ret;
+}
+
+class GetCameraImagesMessage : public QtCoinViewer::EnvMessage
+{
+public:
+    GetCameraImagesMessage(QtCoinViewerPtr pviewer, void** ppreturn,
+                           int width, int height, const RaveTransform<float>& extrinsic, const SensorBase::CameraIntrinsics& KK,
+                           std::vector<uint8_t>* color = nullptr, std::vector<float>* depth = nullptr, std::vector<float>* pointcloud = nullptr, std::vector<float>* normals = nullptr)
+        : EnvMessage(pviewer, ppreturn, true), _width(width), _height(height), _extrinsic(extrinsic), _KK(KK), _color(color), _depth(depth), _pointcloud(pointcloud), _normals(normals) {
+    }
+
+    virtual void viewerexecute() {
+        void* ret = (void*)QtCoinViewerPtr(_pviewer)->_GetCameraImages(_width, _height, _extrinsic, _KK, _color, _depth, _pointcloud, _normals);
+        if( _ppreturn != NULL )
+            *_ppreturn = ret;
+        EnvMessage::viewerexecute();
+    }
+
+private:
+    vector<uint8_t>* _color;
+    vector<float>* _depth;
+    vector<float>* _pointcloud;
+    vector<float>* _normals;
+    int _width, _height;
+    const RaveTransform<float>& _extrinsic;
+    const SensorBase::CameraIntrinsics& _KK;
+};
+
+bool QtCoinViewer::GetCameraImages(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK,
+                                  std::vector<uint8_t>* color, std::vector<float>* depth, std::vector<float>* pointcloud, std::vector<float>* normals)
+{
+    void* ret = NULL;
+    if (_timerSensor->isScheduled() && _bUpdateEnvironment) {
+        if( !ForceUpdatePublishedBodies() ) {
+            RAVELOG_WARN("failed to GetCameraImages: force update failed\n");
+            return false;
+        }
+        EnvMessagePtr pmsg(new GetCameraImagesMessage(shared_viewer(), &ret, width, height, t, KK, color, depth, pointcloud, normals));
+        pmsg->callerexecute(false);
+    }
+    else {
+        RAVELOG_VERBOSE("failed to GetCameraImages: viewer is not updating\n");
     }
     return *(bool*)&ret;
 }
@@ -3400,7 +3443,12 @@ void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
 #endif
 }
 
-struct DepthRenderData
+bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& intrinsics)
+{
+    _GetCameraImages(width, height, _t, intrinsics, &memory);
+}
+
+class DepthRenderData
 {
 public:
     DepthRenderData(float* buffer, int width, int height)
@@ -3430,7 +3478,7 @@ private:
     unsigned int _height;
 };
 
-void getZBuffer(void* _depthRenderData)
+void _GetOpenGLZBuffer(void* _depthRenderData)
 {
     DepthRenderData* depthRenderData = reinterpret_cast<DepthRenderData*>(_depthRenderData);
     try
@@ -3443,10 +3491,19 @@ void getZBuffer(void* _depthRenderData)
     }
 }
 
-bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& color, int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& intrinsics, std::vector<float>* depth)
+bool QtCoinViewer::_GetCameraImages(int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& intrinsics,
+                                    std::vector<uint8_t>* color, std::vector<float>* depth, std::vector<float>* pointcloud, std::vector<float>* normals)
 {
     if( !_bCanRenderOffscreen ) {
         RAVELOG_WARN("cannot render offscreen\n");
+        return false;
+    }
+    if (pointcloud != nullptr) {
+        RAVELOG_ERROR("pointcloud rendering not implemented\n");
+        return false;
+    }
+    if (normals != nullptr) {
+        RAVELOG_ERROR("surface-normals rendering not implemented\n");
         return false;
     }
 
@@ -3484,7 +3541,7 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& color, int width, int h
         depth->resize(height * width);
         DepthRenderData depthRenderData(depth->data(), width, height);
 
-        ivOffscreen->getGLRenderAction()->setPassCallback(getZBuffer, static_cast<void*>(&depthRenderData));
+        ivOffscreen->getGLRenderAction()->setPassCallback(_GetOpenGLZBuffer, static_cast<void*>(&depthRenderData));
         ivOffscreen->getGLRenderAction()->setNumPasses(2);
     }
 
@@ -3495,10 +3552,12 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& color, int width, int h
     _pFigureRoot->unref();
 
     if( bSuccess ) {
-        // vertically flip since we want upper left corner to correspond to (0,0)
-        color.resize(width*height*3);
-        for(int i = 0; i < height; ++i) {
-            memcpy(&color[i*width*3], ivOffscreen->getBuffer()+(height-i-1)*width*3, width*3);
+        if (color != nullptr) {
+            color->resize(width*height*3);
+            // vertically flip since we want upper left corner to correspond to (0,0)
+            for(int i = 0; i < height; ++i) {
+                memcpy(&color->at(i*width*3), ivOffscreen->getBuffer()+(height-i-1)*width*3, width*3);
+            }
         }
         if (depth != nullptr) {
             // Vertically flip since we want upper left corner to correspond to (0,0)
