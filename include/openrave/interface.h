@@ -40,13 +40,41 @@ enum SerializationOptions
     SO_JointLimits = 0x100 ///< information of joint limits including velocity, acceleration, jerk, torque and inertia limits
 };
 
+enum InfoSerializeOption
+{
+    ISO_ReferenceUriHint = 1, ///< if set, will save the referenceURI as a hint rather than as a referenceUri
+};
+
+enum InfoDeserializeOption
+{
+    IDO_IgnoreReferenceUri = 1, ///< if set, will ignore the referenceURI when loading
+};
+
+/// \brief base info for serialization
+class OPENRAVE_API InfoBase
+{
+public:
+    virtual ~InfoBase() {
+    }
+
+    virtual void Reset() = 0;
+
+    /// \param options combination of ISO_X options
+    /// \param fUnitScale multiply all translational values by fUnitScale
+    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const = 0;
+
+    /// \param options combination of IDO_X options
+    /// \param multiply all translational values by fUnitScale
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) = 0;
+};
+
 /** \brief <b>[interface]</b> Base class for all interfaces that OpenRAVE provides. See \ref interface_concepts.
     \ingroup interfaces
  */
 class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
 {
 public:
-    typedef std::map<std::string, XMLReadablePtr, CaseInsensitiveCompare> READERSMAP;
+    typedef std::map<std::string, ReadablePtr, CaseInsensitiveCompare> READERSMAP;
 
     InterfaceBase(InterfaceType type, EnvironmentBasePtr penv);
     virtual ~InterfaceBase();
@@ -79,10 +107,14 @@ public:
     }
 
     /// \brief Returns the readable interface. <b>[multi-thread safe]</b>
-    virtual XMLReadablePtr GetReadableInterface(const std::string& xmltag) const;
+    virtual ReadablePtr GetReadableInterface(const std::string& id) const;
 
     /// \brief Set a new readable interface and return the previously set interface if it exists. <b>[multi-thread safe]</b>
-    virtual XMLReadablePtr SetReadableInterface(const std::string& xmltag, XMLReadablePtr readable);
+    virtual ReadablePtr SetReadableInterface(const std::string& id, ReadablePtr readable);
+
+    /// \brief clears the readable interfaces
+    virtual void ClearReadableInterfaces();
+    virtual void ClearReadableInterface(const std::string& id);
 
     /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc. <b>[multi-thread safe]</b>
     virtual const std::string& GetDescription() const {
@@ -288,7 +320,7 @@ private:
 
     typedef std::map<std::string, boost::shared_ptr<InterfaceJSONCommand>, CaseInsensitiveCompare> JSONCMDMAP;
     JSONCMDMAP __mapJSONCommands; ///< all registered commands
-    
+
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
     friend class Environment;

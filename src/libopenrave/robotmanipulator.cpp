@@ -17,31 +17,49 @@
 #include "libopenrave.h"
 namespace OpenRAVE {
 
-void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+void RobotBase::ManipulatorInfo::Reset()
 {
-    openravejson::SetJsonValueByKey(value, "name", _name, allocator);
-    openravejson::SetJsonValueByKey(value, "transform", _tLocalTool, allocator);
-    openravejson::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
-    openravejson::SetJsonValueByKey(value, "direction", _vdirection, allocator);
-    openravejson::SetJsonValueByKey(value, "baseLinkName", _sBaseLinkName, allocator);
-    openravejson::SetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName, allocator);
-    openravejson::SetJsonValueByKey(value, "iksolverType", _sIkSolverXMLId, allocator);
-    openravejson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
-    openravejson::SetJsonValueByKey(value, "grippername", _grippername, allocator);
-    openravejson::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
+    _id.clear();
+    _name.clear();
+    _sBaseLinkName.clear();
+    _sEffectorLinkName.clear();
+    _tLocalTool = Transform();
+    _vChuckingDirection.clear();
+    _vdirection = Vector(0,0,1);
+    _sIkSolverXMLId.clear();
+    _vGripperJointNames.clear();
+    _grippername.clear();
+    _toolChangerConnectedBodyToolName.clear();
 }
 
-void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    openravejson::LoadJsonValueByKey(value, "name", _name);
-    openravejson::LoadJsonValueByKey(value, "transform", _tLocalTool);
-    openravejson::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
-    openravejson::LoadJsonValueByKey(value, "direction", _vdirection);
-    openravejson::LoadJsonValueByKey(value, "baseLinkName", _sBaseLinkName);
-    openravejson::LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
-    openravejson::LoadJsonValueByKey(value, "iksolverType", _sIkSolverXMLId);
-    openravejson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
-    openravejson::LoadJsonValueByKey(value, "grippername", _grippername);
+    orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    orjson::SetJsonValueByKey(value, "name", _name, allocator);
+    orjson::SetJsonValueByKey(value, "transform", _tLocalTool, allocator);
+    orjson::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
+    orjson::SetJsonValueByKey(value, "direction", _vdirection, allocator);
+    orjson::SetJsonValueByKey(value, "baseLinkName", _sBaseLinkName, allocator);
+    orjson::SetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName, allocator);
+    orjson::SetJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId, allocator);
+    orjson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
+    orjson::SetJsonValueByKey(value, "grippername", _grippername, allocator);
+    orjson::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
+}
+
+void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+{
+    orjson::LoadJsonValueByKey(value, "id", _id);
+    orjson::LoadJsonValueByKey(value, "name", _name);
+    orjson::LoadJsonValueByKey(value, "transform", _tLocalTool);
+    orjson::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
+    orjson::LoadJsonValueByKey(value, "direction", _vdirection);
+    orjson::LoadJsonValueByKey(value, "baseLinkName", _sBaseLinkName);
+    orjson::LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
+    orjson::LoadJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId);
+    orjson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
+    orjson::LoadJsonValueByKey(value, "grippername", _grippername);
+    orjson::LoadJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
@@ -73,6 +91,61 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, boost::shared_ptr<Robot
 //        //__pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _info._sIkSolverXMLId);
 //        // cannot call __pIkSolver->Init since this is the constructor...
 //    }
+}
+
+void RobotBase::Manipulator::UpdateInfo()
+{
+    // TODO: update _info
+    RAVELOG_WARN("Manipulator UpdateInfo is not implemented");
+}
+
+void RobotBase::Manipulator::ExtractInfo(RobotBase::ManipulatorInfo& info) const
+{
+    // TODO
+    info = _info;
+}
+
+UpdateFromInfoResult RobotBase::Manipulator::UpdateFromInfo(const RobotBase::ManipulatorInfo& info)
+{
+    BOOST_ASSERT(info._id == _info._id);
+    // TODO: test
+    if (_info._sBaseLinkName != info._sBaseLinkName) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    if (_info._sEffectorLinkName != info._sEffectorLinkName) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    if (_info._grippername != info._grippername) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    if (_info._vGripperJointNames != info._vGripperJointNames) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    if (info._sIkSolverXMLId != info._sIkSolverXMLId) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    if (GetName() != info._name) {
+        SetName(info._name);
+    }
+
+    if (GetChuckingDirection() != info._vChuckingDirection) {
+        SetChuckingDirection(info._vChuckingDirection);
+    }
+
+    if (GetLocalToolTransform() != info._tLocalTool) {
+        SetLocalToolTransform(info._tLocalTool);
+    }
+
+    if (GetLocalToolDirection() != info._vdirection) {
+        SetLocalToolDirection(info._vdirection);
+    }
+
+    return UFIR_Success;
 }
 
 int RobotBase::Manipulator::GetArmDOF() const
@@ -347,11 +420,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         if (inworld) {
             Transform localt = GetBase()->GetTransform().inverse()*t;
             const Vector vlocaldirection = localt.rotate(_info._vdirection);
-            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
         }
         else {
             const Vector vlocaldirection = t.rotate(_info._vdirection);
-            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
         }
         break;
     }
@@ -359,11 +432,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         if (inworld) {
             Transform localt = GetBase()->GetTransform().inverse()*t;
             const Vector vlocaldirection = localt.rotate(_info._vdirection);
-            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
         }
         else {
             const Vector vlocaldirection = t.rotate(_info._vdirection);
-            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
         }
         break;
     }
@@ -371,11 +444,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         if (inworld) {
             Transform localt = GetBase()->GetTransform().inverse()*t;
             const Vector vlocaldirection = localt.rotate(_info._vdirection);
-            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
         }
         else {
             const Vector vlocaldirection = t.rotate(_info._vdirection);
-            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
         }
         break;
     }
@@ -493,11 +566,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         if (inworld) {
             Transform localt = GetBase()->GetTransform().inverse()*t;
             const Vector vlocaldirection = localt.rotate(_info._vdirection);
-            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
         }
         else {
             const Vector vlocaldirection = t.rotate(_info._vdirection);
-            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
         }
         break;
     }
@@ -505,11 +578,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         if (inworld) {
             Transform localt = GetBase()->GetTransform().inverse()*t;
             const Vector vlocaldirection = localt.rotate(_info._vdirection);
-            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
         }
         else {
             const Vector vlocaldirection = t.rotate(_info._vdirection);
-            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
         }
         break;
     }
@@ -517,11 +590,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         if (inworld) {
             Transform localt = GetBase()->GetTransform().inverse()*t;
             const Vector vlocaldirection = localt.rotate(_info._vdirection);
-            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
         }
         else {
             const Vector vlocaldirection = t.rotate(_info._vdirection);
-            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
         }
         break;
     }
@@ -1181,7 +1254,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
 
     // if IK can be solved, then there exists a solution for the end effector that is not in collision
     IkReturn ikreturn(IKRA_Success);
-    IkReturnPtr pikreturn(&ikreturn,OpenRAVE::utils::null_deleter());
+    IkReturnPtr pikreturn(&ikreturn,utils::null_deleter());
 
     // need to use free params here since sometimes IK can have 3+ free DOF and it would freeze searching for all of them
     std::vector<dReal> vFreeParameters;
@@ -1284,7 +1357,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterizat
 
     // if IK can be solved, then there exists a solution for the end effector that is not in collision
     IkReturn ikreturn(IKRA_Success);
-    IkReturnPtr pikreturn(&ikreturn,OpenRAVE::utils::null_deleter());
+    IkReturnPtr pikreturn(&ikreturn,utils::null_deleter());
 
     // need to use free params here since sometimes IK can have 3+ free DOF and it would freeze searching for all of them
     std::vector<dReal> vFreeParameters;

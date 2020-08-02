@@ -639,8 +639,19 @@ PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& 
     return PySensorBasePtr(new PySensorBase(p,pyenv));
 }
 
-PySensorGeometryPtr toPySensorGeometry(SensorBase::SensorGeometryPtr pgeom)
+PySensorGeometryPtr toPySensorGeometry(const std::string& sensorname, const rapidjson::Document& docSensorGeometry)
 {
+    SensorBase::SensorGeometryPtr pgeom;
+    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, sensorname, InterfaceBasePtr(), AttributesList());
+    if (!!pReader) {
+        pReader->DeserializeJSON(docSensorGeometry);
+        ReadablePtr pReadable = pReader->GetReadable();
+        if (!!pReadable) {
+            pgeom = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
+        }
+    } else {
+        RAVELOG_WARN_FORMAT("failed to get json reader for sensor type \"%s\"", sensorname);
+    }
     if( !!pgeom ) {
         if( pgeom->GetType() == SensorBase::ST_Camera ) {
             return PySensorGeometryPtr(new PyCameraGeomData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::CameraGeomData const>(pgeom)));

@@ -183,12 +183,23 @@ public:
             }
             _InitializeGroupFunctions();
         }
-        _vtrajdata.resize(0);
-        _vaccumtime.resize(0);
-        _vdeltainvtime.resize(0);
+        _vtrajdata.clear();
+        _vaccumtime.clear();
+        _vdeltainvtime.clear();
         _bChanged = true;
         _bSamplingVerified = false;
         _bInit = true;
+    }
+
+    void ClearWaypoints()
+    {
+        if( _bInit ) {
+            if( _vtrajdata.size() > 0 ) {
+                _bSamplingVerified = false;
+                _bChanged = true;
+                _vtrajdata.clear();
+            }
+        }
     }
 
     void Insert(size_t index, const std::vector<dReal>& data, bool bOverwrite)
@@ -413,6 +424,7 @@ public:
     // New feature: Store trajectory file in binary
     void serialize(std::ostream& O, int options) const override
     {
+        dReal fUnitScale = 1.0;
         if( options & 0x8000 ) {
             TrajectoryBase::serialize(O, options);
         }
@@ -447,27 +459,52 @@ public:
             std::stringstream ss;
             const uint16_t numReadableInterfaces = GetReadableInterfaces().size();
             WriteBinaryUInt16(O, numReadableInterfaces);
+
+            rapidjson::Document document;
+            int zerooptions = 0;
             FOREACHC(itReadableInterface, GetReadableInterfaces()) {
-                WriteBinaryString(O, itReadableInterface->first);  // xmlid
+                WriteBinaryString(O, itReadableInterface->first);  // readable interface id
 
-                // try to see if the readable interface is a known type
-                ss.str(std::string());
-
-                std::string readerType;
-                xmlreaders::HierarchicalXMLReadablePtr pHierarchical = boost::dynamic_pointer_cast<xmlreaders::HierarchicalXMLReadable>(itReadableInterface->second);
-                xmlreaders::StreamXMLWriterPtr writer;
-                if( !!pHierarchical ) {
-                    readerType = "HierarchicalXMLReadable";
-                    writer.reset(new xmlreaders::StreamXMLWriter("root")); // need to parse with xml, so need a root
+                // try to serialize to json first
+                ReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(itReadableInterface->second);
+                if (!!pReadable) {
+                    rapidjson::Value rReadable;
+                    if( pReadable->SerializeJSON(rReadable, document.GetAllocator(), fUnitScale, zerooptions) ) {
+                        WriteBinaryString(O, rReadable.GetString());
+                        continue;
+                    }
+                    else {
+                        // perhaps XML?
+                        ss.str(std::string());
+                        xmlreaders::StreamXMLWriterPtr writer;
+                        
+                        // try to serialize to HierarchicalXML
+                        xmlreaders::HierarchicalXMLReadablePtr pHierarchical = OPENRAVE_DYNAMIC_POINTER_CAST<xmlreaders::HierarchicalXMLReadable>(pReadable);
+                        if( !!pHierarchical ) {
+                            writer.reset(new xmlreaders::StreamXMLWriter("root")); // need to parse with xml, so need a root
+                            pHierarchical->SerializeXML(writer, options);
+                            writer->Serialize(ss);
+                            
+                            WriteBinaryString(O, ss.str());
+                            WriteBinaryString(O, "HierarchicalXMLReadable");
+                            continue;
+                        }
+                        else {
+                            writer.reset(new xmlreaders::StreamXMLWriter(std::string()));
+                            if( pReadable->SerializeXML(writer, zerooptions) ) {
+                                ss.clear();
+                                ss.str(std::string());
+                                writer->Serialize(ss);
+                                WriteBinaryString(O, ss.str());
+                                continue;
+                            }
+                        }
+                    }
                 }
-                else {
-                    writer.reset(new xmlreaders::StreamXMLWriter(std::string()));
-                }
-                itReadableInterface->second->Serialize(writer, options);
-                writer->Serialize(ss);
 
-                WriteBinaryString(O, ss.str());
-                WriteBinaryString(O, readerType);
+                // if neither json or xml serializable, write an empty string
+                WriteBinaryString(O, "");
+
             }
         }
     }
@@ -515,26 +552,20 @@ public:
             ReadBinaryString(I, __description);
 
             // clear out existing readable interfaces
-            {
-                const READERSMAP& readableInterfaces = GetReadableInterfaces();
-                for (READERSMAP::const_iterator itReadableInterface = readableInterfaces.begin(); itReadableInterface != readableInterfaces.end(); ++itReadableInterface ) {
-                    SetReadableInterface(itReadableInterface->first, XMLReadablePtr());
-                }
-            }
+            ClearReadableInterfaces();
+
             // versions >= 0x0002 have readable interfaces
-            if (versionNumber >= 0x0002)
-            {
+            if (versionNumber >= 0x0002) {
                 // read readable interfaces
                 uint16_t numReadableInterfaces = 0;
                 ReadBinaryUInt16(I, numReadableInterfaces);
                 std::string xmlid, readerType;
                 std::string serializedReadableInterface;
-                for (size_t readableInterfaceIndex = 0; readableInterfaceIndex < numReadableInterfaces; ++readableInterfaceIndex)
-                {
+                for (size_t readableInterfaceIndex = 0; readableInterfaceIndex < numReadableInterfaces; ++readableInterfaceIndex) {
                     ReadBinaryString(I, xmlid);
                     ReadBinaryString(I, serializedReadableInterface);
 
-                    XMLReadablePtr readableInterface;
+                    ReadablePtr readableInterface;
                     if( versionNumber >= 3 ) {
                         ReadBinaryString(I, readerType);
                         if( readerType == "HierarchicalXMLReadable" ) {
@@ -555,11 +586,11 @@ public:
                             }
                         }
                         else {
-                            readableInterface.reset(new xmlreaders::StringXMLReadable(xmlid, serializedReadableInterface));
+                            readableInterface.reset(new StringReadable(xmlid, serializedReadableInterface));
                         }
                     }
                     else {
-                        readableInterface.reset(new xmlreaders::StringXMLReadable(xmlid, serializedReadableInterface));
+                        readableInterface.reset(new StringReadable(xmlid, serializedReadableInterface));
                     }
                     SetReadableInterface(xmlid, readableInterface);
                 }

@@ -158,10 +158,10 @@ void ConfigurationSpecification::DeserializeJSON(const rapidjson::Value& rValue)
         size_t iGroup = 0;
         for (rapidjson::Value::ConstValueIterator it = rValue["groups"].Begin(); it != rValue["groups"].End(); it++, iGroup++) {
             ConfigurationSpecification::Group& group = _vgroups[iGroup];
-            openravejson::LoadJsonValueByKey(*it, "name", group.name);
-            openravejson::LoadJsonValueByKey(*it, "offset", group.offset);
-            openravejson::LoadJsonValueByKey(*it, "dof", group.dof);
-            openravejson::LoadJsonValueByKey(*it, "interpolation", group.interpolation);
+            orjson::LoadJsonValueByKey(*it, "name", group.name);
+            orjson::LoadJsonValueByKey(*it, "offset", group.offset);
+            orjson::LoadJsonValueByKey(*it, "dof", group.dof);
+            orjson::LoadJsonValueByKey(*it, "interpolation", group.interpolation);
         }
     }
 }
@@ -183,13 +183,13 @@ void ConfigurationSpecification::SerializeJSON(rapidjson::Value& rValue, rapidjs
         const ConfigurationSpecification::Group& group = _vgroups[iGroupIndex];
         rapidjson::Value rGroup;
         rGroup.SetObject();
-        openravejson::SetJsonValueByKey(rGroup, "name", group.name, alloc);
-        openravejson::SetJsonValueByKey(rGroup, "offset", group.offset, alloc);
-        openravejson::SetJsonValueByKey(rGroup, "dof", group.dof, alloc);
-        openravejson::SetJsonValueByKey(rGroup, "interpolation", group.interpolation, alloc);
+        orjson::SetJsonValueByKey(rGroup, "name", group.name, alloc);
+        orjson::SetJsonValueByKey(rGroup, "offset", group.offset, alloc);
+        orjson::SetJsonValueByKey(rGroup, "dof", group.dof, alloc);
+        orjson::SetJsonValueByKey(rGroup, "interpolation", group.interpolation, alloc);
         rGroups.PushBack(rGroup, alloc);
     }
-    openravejson::SetJsonValueByKey(rValue, "groups", rGroups, alloc);
+    orjson::SetJsonValueByKey(rValue, "groups", rGroups, alloc);
 }
 
 const ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(const std::string& name) const
