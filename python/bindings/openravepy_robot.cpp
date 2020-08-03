@@ -84,13 +84,27 @@ void PyManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info) {
 RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
 {
     RobotBase::ManipulatorInfoPtr pinfo(new RobotBase::ManipulatorInfo());
-    pinfo->_id = py::extract<std::string>(_id);
-    pinfo->_name = py::extract<std::string>(_name);
-    pinfo->_sBaseLinkName = py::extract<std::string>(_sBaseLinkName);
-    pinfo->_sEffectorLinkName = py::extract<std::string>(_sEffectorLinkName);
-    pinfo->_tLocalTool = ExtractTransform(_tLocalTool);
-    pinfo->_vChuckingDirection = ExtractArray<dReal>(_vChuckingDirection);
-    pinfo->_vdirection = ExtractVector3(_vdirection);
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        pinfo->_id = py::extract<std::string>(_id);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_name) ) {
+        pinfo->_name = py::extract<std::string>(_name);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_sBaseLinkName) ) {
+        pinfo->_sBaseLinkName = py::extract<std::string>(_sBaseLinkName);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_sEffectorLinkName) ) {
+        pinfo->_sEffectorLinkName = py::extract<std::string>(_sEffectorLinkName);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_tLocalTool) ) {
+        pinfo->_tLocalTool = ExtractTransform(_tLocalTool);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_vChuckingDirection) ) {
+        pinfo->_vChuckingDirection = ExtractArray<dReal>(_vChuckingDirection);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_vdirection) ) {
+        pinfo->_vdirection = ExtractVector3(_vdirection);
+    }
     pinfo->_sIkSolverXMLId = _sIkSolverXMLId;
     if( !IS_PYTHONOBJECT_NONE(_vGripperJointNames) ) {
         pinfo->_vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
@@ -156,11 +170,21 @@ void PyAttachedSensorInfo::_Update(const RobotBase::AttachedSensorInfo& info) {
 RobotBase::AttachedSensorInfoPtr PyAttachedSensorInfo::GetAttachedSensorInfo() const
 {
     RobotBase::AttachedSensorInfoPtr pinfo(new RobotBase::AttachedSensorInfo());
-    pinfo->_id = py::extract<std::string>(_id);
-    pinfo->_name = py::extract<std::string>(_name);
-    pinfo->_linkname = py::extract<std::string>(_linkname);
-    pinfo->_trelative = ExtractTransform(_trelative);
-    pinfo->_sensorname = py::extract<std::string>(_sensorname);
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        pinfo->_id = py::extract<std::string>(_id);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_name) ) {
+        pinfo->_name = py::extract<std::string>(_name);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_linkname) ) {
+        pinfo->_linkname = py::extract<std::string>(_linkname);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_trelative) ) {
+        pinfo->_trelative = ExtractTransform(_trelative);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_sensorname) ) {
+        pinfo->_sensorname = py::extract<std::string>(_sensorname);
+    }
     rapidjson::Document docSensorGeometry;
     if(!!_sensorgeometry) {
         SensorBase::SensorGeometryPtr sensorGeometry = _sensorgeometry->GetGeometry();
