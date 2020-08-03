@@ -2499,7 +2499,8 @@ public:
             }
             else {
                 // for new body or robot
-                if (!!pRobotBaseInfo) {
+                // if (!!pRobotBaseInfo) {
+                if (pKinBodyInfo->_isRobot) {
                     RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), pKinBodyInfo->_interfaceType);
                     if( !pRobot ) {
                         pRobot = RaveCreateRobot(shared_from_this(), "");
