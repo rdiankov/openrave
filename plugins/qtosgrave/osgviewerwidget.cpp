@@ -84,7 +84,6 @@ public:
 
         return osgGA::NodeTrackerManipulator::handle(ea, us);
     }
-    
 
     virtual osg::Matrixd getMatrix() const
     {
@@ -124,6 +123,15 @@ public:
         _rotation = matrix.getRotate().inverse();
     }
 
+    bool performMovementRightMouseButton( const double eventTimeDelta, const double dx, const double dy )
+    {
+        if(_posgviewerwidget->IsInOrthoMode()) {
+            _posgviewerwidget->Zoom( dy < 0 ? 0.9 : 1.1 );
+            return true;
+        }
+        return osgGA::NodeTrackerManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
+    }
+
 private:
     void _CreateTransitionAnimationPath(osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
     {
@@ -146,7 +154,6 @@ private:
             _transitionAnimationDuration = 0;
             return;
         }
-
 
         osg::Quat cameraRotation = viewMatrix.getRotate();
         _transitionAnimationPath->insert(0,osg::AnimationPath::ControlPoint(cameraWorldPos, cameraRotation));
@@ -271,11 +278,14 @@ public:
     // make zooming faster
     bool performMovementRightMouseButton( const double eventTimeDelta, const double dx, const double dy )
     {
+        if(_posgviewerwidget->IsInOrthoMode()) {
+            _posgviewerwidget->Zoom( dy < 0 ? 0.9 : 1.1 );
+            return true;
+        }
         return osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
     }
     void applyAnimationStep( const double currentProgress, const double prevProgress )
     {
-        std::cout << currentProgress << ", " << prevProgress << std::endl;
         OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData* >( _animationData.get() );
         assert( ad );
 
