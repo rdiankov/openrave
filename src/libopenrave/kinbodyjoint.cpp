@@ -72,7 +72,6 @@ void KinBody::JointInfo::Reset()
     _infoElectricMotor.reset();
     _bIsCircular = {0, 0, 0};
     _bIsActive = true;
-    _bStatic = false;
     _controlMode = JCM_None;
     _jci_robotcontroller.reset();
     _jci_io.reset();
@@ -571,7 +570,7 @@ KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
     jointindex=-1;
     dofindex = -1; // invalid index
     _bInitialized = false;
-    _info._bStatic = false;
+    _bStatic = false;
     _info._type = type;
     _info._controlMode = JCM_None;
 }
@@ -619,7 +618,7 @@ bool KinBody::Joint::IsPrismatic(int iaxis) const
 bool KinBody::Joint::IsStatic() const
 {
     if(_bInitialized) {
-        return _info._bStatic;
+        return _bStatic;
     }
     
     if( IsMimic() ) {
@@ -1303,7 +1302,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
                 _info._vupperlimit[idof] = 0;
             }
         }
-        _info._bStatic = true;
+        _bStatic = true;
         _tLeftNoOffset *= _tRightNoOffset;
         _tLeft *= _tRight;
         _tRightNoOffset = _tRight = _tinvRight = Transform();
