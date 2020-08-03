@@ -35,8 +35,9 @@ namespace qtosgrave {
 
 class OpenRAVETracker : public osgGA::NodeTrackerManipulator {
 public:
-    OpenRAVETracker()
+    OpenRAVETracker(QOSGViewerWidget* osgviewerwidget)
     {
+        _posgviewerwidget = osgviewerwidget;
         _currentTransitionAnimationTime = 0;
         _transitionAnimationPath = new osg::AnimationPath();
         _transitionAnimationPath->setLoopMode(osg::AnimationPath::NO_LOOPING);
@@ -65,6 +66,25 @@ public:
 
     // OSG overloaded methods
 public:
+    virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        switch( ea.getEventType() )
+        {
+        case osgGA::GUIEventAdapter::SCROLL:
+            if(_posgviewerwidget->IsInOrthoMode()) {
+                double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_UP ? 1.1 : 0.9;
+                _posgviewerwidget->Zoom(factor);
+                return true;
+            }
+            break;
+
+        default:
+            break;
+        }
+
+        return osgGA::NodeTrackerManipulator::handle(ea, us);
+    }
+    
 
     virtual osg::Matrixd getMatrix() const
     {
@@ -176,6 +196,7 @@ private:
 private:
     QTime _time; ///< tracks the time of the last _ComputeNextTransitionAnimationMatrix call, so that can compute the time passed from that last call.
     osg::Vec3d _offset; ///< the translation offset in the getTrackNode() coordinate system.
+    QOSGViewerWidget* _posgviewerwidget;
     double _transitionAnimationDuration; //< specifies how long the transition will take
     double _currentTransitionAnimationTime; ///< tracks the time since the transition was made. Incremeneted whenever computing _ComputeNextTransitionAnimationMatrix
     osg::ref_ptr<osg::AnimationPath> _transitionAnimationPath;
@@ -254,6 +275,7 @@ public:
     }
     void applyAnimationStep( const double currentProgress, const double prevProgress )
     {
+        std::cout << currentProgress << ", " << prevProgress << std::endl;
         OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData* >( _animationData.get() );
         assert( ad );
 
@@ -278,17 +300,24 @@ public:
 
     virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
     {
-        if (osgGA::TrackballManipulator::handle(ea, us)) {
-            return true;
-        }
         switch( ea.getEventType() )
         {
         case osgGA::GUIEventAdapter::DOUBLECLICK:
             return handleMouseDoubleClick( ea, us );
 
+        case osgGA::GUIEventAdapter::SCROLL:
+            if(_posgviewerwidget->IsInOrthoMode()) {
+                double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_UP ? 1.1 : 0.9;
+                _posgviewerwidget->Zoom(factor);
+                return true;
+            }
+            break;
+
         default:
-            return false;
+            break;
         }
+
+        return osgGA::TrackballManipulator::handle(ea, us);
     }
 
     bool setCenterByMousePointerIntersection( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
@@ -1057,9 +1086,9 @@ void QOSGViewerWidget::SetViewType(int isorthogonal)
     int height = _osgview->getCamera()->getViewport()->height();
     double aspect = static_cast<double>(width)/static_cast<double>(height);
     if( isorthogonal ) {
-        double distance = 0.5*_osgDefaultManipulator->getDistance();
+        double distance = _osgDefaultManipulator->getDistance();
         _currentOrthoFrustumSize = distance * 0.5;
-        _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, _zNear, _zNear * 10000.0);
+        _osgview->getCamera()->setProjectionMatrixAsOrtho(-_currentOrthoFrustumSize, _currentOrthoFrustumSize, -_currentOrthoFrustumSize/aspect, _currentOrthoFrustumSize/aspect, _zNear, _zNear * 10000.0);
     }
     else {
         SetCurrentManipulatorDistanceToFocus(_currentOrthoFrustumSize*2);
@@ -1170,7 +1199,7 @@ void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
 void QOSGViewerWidget::Zoom(float factor)
 {
     // Ortho
-    if ( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
+    if (IsInOrthoMode()) {
         _currentOrthoFrustumSize = _currentOrthoFrustumSize * factor;
         const int width = _osgview->getCamera()->getViewport()->width();
         const int height = _osgview->getCamera()->getViewport()->height();
@@ -1204,7 +1233,7 @@ void QOSGViewerWidget::_SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_p
     _osgDefaultManipulator->setAllowThrow(false);
     view->setCameraManipulator( _osgDefaultManipulator.get() );
 
-    _osgTrackModeManipulator = new OpenRAVETracker();
+    _osgTrackModeManipulator = new OpenRAVETracker(this);
     _osgTrackModeManipulator->setWheelZoomFactor(0.2);
     _osgTrackModeManipulator->setAllowThrow(false);
     _osgTrackModeManipulator->setRotationMode(osgGA::NodeTrackerManipulator::TRACKBALL);
@@ -1442,6 +1471,11 @@ void QOSGViewerWidget::_InitializeLights(int nlights)
 osg::Camera *QOSGViewerWidget::GetCamera()
 {
     return _osgview->getCamera();
+}
+
+bool QOSGViewerWidget::IsInOrthoMode()
+{
+    return _osgview->getCamera()->getProjectionMatrix()(2,3) == 0;
 }
 
 osg::ref_ptr<osgGA::CameraManipulator> QOSGViewerWidget::GetCurrentCameraManipulator()
