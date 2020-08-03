@@ -45,8 +45,7 @@ public:
     void StartTrackingNode(osg::Node* node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
     {
         _offset = offset;
-        _distance = trackDistance;
-        auto nodeParents = node->getParentalNodePaths();
+        osg::NodePathList nodeParents = node->getParentalNodePaths();
         if(nodeParents.empty()) {
             RAVELOG_WARN("Could not track node, node has no transform chain");
             return;
