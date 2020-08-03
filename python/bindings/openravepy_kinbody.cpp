@@ -2089,10 +2089,18 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
     pinfo->_trelative = ExtractTransform(_trelative);
     pinfo->_setRobotLinksToIgnore = std::set<int>(begin(_setRobotLinksToIgnore), end(_setRobotLinksToIgnore));
 #else
-    pinfo->_id = py::extract<std::string>(_id);
-    pinfo->_grabbedname = py::extract<std::string>(_grabbedname);
-    pinfo->_robotlinkname = py::extract<std::string>(_robotlinkname);
-    pinfo->_trelative = ExtractTransform(_trelative);
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        pinfo->_id = py::extract<std::string>(_id);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_grabbedname) ) {
+        pinfo->_grabbedname = py::extract<std::string>(_grabbedname);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_robotlinkname) ) {
+        pinfo->_robotlinkname = py::extract<std::string>(_robotlinkname);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_trelative) ) {
+        pinfo->_trelative = ExtractTransform(_trelative);
+    }
     pinfo->_setRobotLinksToIgnore.clear();
 
     if( !IS_PYTHONOBJECT_NONE(_setRobotLinksToIgnore) ) {

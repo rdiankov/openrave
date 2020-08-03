@@ -1026,7 +1026,10 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linkname")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linknames")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("links")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
-                connectedBodyInfo._vGripperInfos[iGripperInfo]->_docGripperInfo.Swap(newGripperInfoDoc);
+                pnewgripperInfo->_docGripperInfo.Swap(newGripperInfoDoc);
+            }
+            else {
+                pnewgripperInfo->_docGripperInfo.Clear();
             }
 
             _vecGripperInfos.push_back(pnewgripperInfo);
