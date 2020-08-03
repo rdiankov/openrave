@@ -611,7 +611,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 
     {
         _osgSkybox = new Skybox;
-        _osgFigureRoot->addChild(_osgSkybox);
+        //_osgFigureRoot->addChild(_osgSkybox); // disabled skybox since it is not currently in use
         _osgFigureRoot->setNodeMask(~OSG_IS_PICKABLE_MASK);
     }
 
@@ -1210,7 +1210,7 @@ void QOSGViewerWidget::Zoom(float factor)
 {
     // Ortho
     if (IsInOrthoMode()) {
-        _currentOrthoFrustumSize = _currentOrthoFrustumSize * factor;
+        _currentOrthoFrustumSize = _currentOrthoFrustumSize / factor;
         const int width = _osgview->getCamera()->getViewport()->width();
         const int height = _osgview->getCamera()->getViewport()->height();
         const double aspect = static_cast<double>(width)/static_cast<double>(height);
@@ -1218,7 +1218,7 @@ void QOSGViewerWidget::Zoom(float factor)
         _osgview->getCamera()->setProjectionMatrixAsOrtho(-_currentOrthoFrustumSize, _currentOrthoFrustumSize, -_currentOrthoFrustumSize/aspect, _currentOrthoFrustumSize/aspect, nearplane, 10000*nearplane);
     }
     else {
-        double newDistance = GetCurrentManipulatorDistanceToFocus() * factor;
+        double newDistance = GetCurrentManipulatorDistanceToFocus() / factor;
         SetCurrentManipulatorDistanceToFocus(newDistance);
     }
 }
@@ -1510,8 +1510,18 @@ void QOSGViewerWidget::SetCurrentManipulatorDistanceToFocus(double distance)
     if( distance <= 0 ) {
         return;
     }
-    osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());
-    currentManip->setDistance(distance);
+    if (IsInOrthoMode()) {
+        _currentOrthoFrustumSize = distance;
+        const int width = _osgview->getCamera()->getViewport()->width();
+        const int height = _osgview->getCamera()->getViewport()->height();
+        const double aspect = static_cast<double>(width)/static_cast<double>(height);
+        const double nearplane = GetCameraNearPlane();
+        _osgview->getCamera()->setProjectionMatrixAsOrtho(-_currentOrthoFrustumSize, _currentOrthoFrustumSize, -_currentOrthoFrustumSize/aspect, _currentOrthoFrustumSize/aspect, nearplane, 10000*nearplane);
+    }
+    else {
+        osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());
+        currentManip->setDistance(distance);
+    }
 }
 
 void QOSGViewerWidget::RestoreDefaultManipulator()
