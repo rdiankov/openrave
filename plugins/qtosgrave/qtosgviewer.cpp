@@ -1169,7 +1169,7 @@ bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
         return false;
     }
 
-    if(!_SetTrackManipulatorToTrackLink(_ptrackingmanip->GetEndEffector(), OpenRAVE::RaveTransform<float>())) {
+    if(!_SetTrackManipulatorToTrackLink(_ptrackingmanip->GetEndEffector(), _ptrackingmanip->GetLocalToolTransform())) {
         return false;
     }
 
