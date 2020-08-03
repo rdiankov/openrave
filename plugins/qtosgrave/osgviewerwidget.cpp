@@ -143,11 +143,11 @@ private:
             return osg::Matrixd();
         }
         double dt = _time.restart() / 1000.0;
-        osg::AnimationPath::ControlPoint cp;
-        _transitionAnimationPath->getInterpolatedControlPoint(_currentTransitionAnimationTime, cp);
+        osg::AnimationPath::ControlPoint controlPoint;
+        _transitionAnimationPath->getInterpolatedControlPoint(_currentTransitionAnimationTime, controlPoint);
         _currentTransitionAnimationTime =_currentTransitionAnimationTime+dt;
-        osg::Quat lookAtRotation = cp.getRotation().inverse();
-        osg::Vec3d lookAtTranslation = lookAtRotation * -cp.getPosition();
+        osg::Quat lookAtRotation = controlPoint.getRotation().inverse();
+        osg::Vec3d lookAtTranslation = lookAtRotation * -controlPoint.getPosition();
 
         // build a lookat matrix from position and camera axis
         osg::Matrixd result;
@@ -158,7 +158,7 @@ private:
 
         // set final manipulator rotation so it matches the last animation rotation, so when it finishes (or get stopped),
         // we start manipulating from there
-        _rotation = cp.getRotation();
+        _rotation = controlPoint.getRotation();
         return result;
     }
 
