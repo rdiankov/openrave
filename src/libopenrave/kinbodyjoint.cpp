@@ -622,25 +622,12 @@ bool KinBody::Joint::IsStatic() const
         return _bStatic;
     }
     
-    if( IsMimic() ) {
-        bool bstatic = true;
-        KinBodyConstPtr parent(_parent);
-        for(int i = 0; i < GetDOF(); ++i) {
-            if( !!_vmimic.at(i) ) {
-                FOREACHC(it, _vmimic.at(i)->_vmimicdofs) {
-                    if( !parent->GetJointFromDOFIndex(it->dofindex)->IsStatic() ) {
-                        bstatic = false;
-                        break;
-                    }
-                }
-                if( !bstatic ) {
-                    break;
-                }
-            }
-        }
-        if( bstatic ) {
-            return true;
-        }
+    if( this->IsMimic() ) {
+        // TGN: Joint::SetMimicEquations (from KinBody::_ComputeInternalInformation) hasn't been called here,
+        // so _vmimic.at(i)->_vmimicdofs is empty before _bInitialized is set true at the end of Joint::_ComputeInternalInformation.
+        // Hence the v0.47--0.50 code would wrongly return true here.
+        // After all, a mimic joint should not depend on any static joint, so is not static.
+        return false;
     }
     for(int i = 0; i < GetDOF(); ++i) {
         if( IsCircular(i) ) {
