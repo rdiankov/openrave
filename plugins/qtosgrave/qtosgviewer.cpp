@@ -433,7 +433,7 @@ void QtOSGViewer::_CreateActions()
 void QtOSGViewer::_UpdateViewerCallback()
 {
     try {
-        _UpdateEnvironment(1.0/60.0);
+        _UpdateEnvironment();
         //UpdateFromModel();
 
         {
@@ -632,7 +632,6 @@ void QtOSGViewer::_SetDebugLevelVerbose()
 
 void QtOSGViewer::_ChangeViewToXY()
 {
-    _UpdateCameraTransform(0);
     osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
     _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(0));
     _Tcamera.trans.x = center.x();
@@ -643,7 +642,6 @@ void QtOSGViewer::_ChangeViewToXY()
 
 void QtOSGViewer::_ChangeViewToXZ()
 {
-    _UpdateCameraTransform(0);
     osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
     _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2));
     _Tcamera.trans.x = center.x();
@@ -655,7 +653,6 @@ void QtOSGViewer::_ChangeViewToXZ()
 
 void QtOSGViewer::_ChangeViewToYZ()
 {
-    _UpdateCameraTransform(0);
     osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
     _Tcamera.rot = quatMultiply(quatFromAxisAngle(RaveVector<float>(0,0,1), float(M_PI/2)), quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2)));
     _Tcamera.trans.x = center.x()+_focalDistance;
@@ -1031,7 +1028,7 @@ void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
     RAVELOG_VERBOSE("End _FillObjectTree....\n");
 }
 
-void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
+void QtOSGViewer::_Update()
 {
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
@@ -1339,7 +1336,6 @@ void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
     }
 
     _SetCameraTransform();
-    _UpdateCameraTransform(0);
 }
 
 void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistance)
@@ -1379,7 +1375,6 @@ void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
     }
 
     _SetCameraTransform();
-    _UpdateCameraTransform(0);
 }
 
 void QtOSGViewer::_UpdateDistanceToFocusFromCurrentManipulator()
@@ -2009,7 +2004,7 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtOSGViewer::LockEnvironmen
             break;
         }
         if( bUpdateEnvironment ) {
-            _UpdateEnvironment(0);
+            _UpdateEnvironment();
         }
     }
 
@@ -2019,7 +2014,7 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtOSGViewer::LockEnvironmen
     return lockenv;
 }
 
-void QtOSGViewer::_UpdateEnvironment(float fTimeElapsed)
+void QtOSGViewer::_UpdateEnvironment()
 {
     boost::mutex::scoped_lock lockupd(_mutexUpdating);
 
@@ -2042,7 +2037,7 @@ void QtOSGViewer::_UpdateEnvironment(float fTimeElapsed)
 
         // have to update model after messages since it can lock the environment
         UpdateFromModel();
-        _UpdateCameraTransform(fTimeElapsed);
+        _Update();
     }
 }
 

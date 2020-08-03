@@ -309,14 +309,14 @@ public:
     virtual void _InitGUI(bool bCreateStatusBar, bool bCreateMenu);
 
     /// \brief Update model and camera transform
-    virtual void _UpdateEnvironment(float fTimeElapsed);
+    virtual void _UpdateEnvironment();
     virtual bool _ForceUpdatePublishedBodies();
 
     /// \brief Reset update from model
     virtual void _Reset();
 
     /// \brief reset the camera depending on its mode
-    virtual void _UpdateCameraTransform(float fTimeElapsed);
+    virtual void _Update();
     virtual void _SetCameraTransform();
 
     virtual OSGSwitchPtr _CreateGraphHandle();
