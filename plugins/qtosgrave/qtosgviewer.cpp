@@ -208,9 +208,11 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
         connect(QApplication::instance(), SIGNAL(aboutToQuit()), this, SLOT(_ProcessApplicationQuit()));
     }
 
-    QSurfaceFormat sf;
-    sf.setSamples(8);
-    QSurfaceFormat::setDefaultFormat(sf);
+    // Configure sample buffers in the default surface format, which will allow Qt to enable the sample
+    // buffers so color buffer can be oversampled to achieve antialiasing (MSAA antialiasing)
+    QSurfaceFormat surfaceFormat;
+    surfaceFormat.setSamples(8);
+    QSurfaceFormat::setDefaultFormat(surfaceFormat);
 
     _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
 
