@@ -1357,7 +1357,7 @@ void QtOSGViewer::_SetTrackManipulatorToStopTracking()
 bool QtOSGViewer::_SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, KinBodyItemPtr linkParentKinBodyItem, const RaveTransform<float>& linkRelativeTranslation)
 {
     if(!linkParentKinBodyItem || !link) {
-        RAVELOG_ERROR_FORMAT("Could not set track manipulator to track link %s of object %s", link->GetName()%linkParentKinBodyItem->GetName());
+        RAVELOG_ERROR("Could not set track manipulator to track link");
         return false;
     }
     auto osgNode = linkParentKinBodyItem->GetOSGLink(link->GetIndex());
