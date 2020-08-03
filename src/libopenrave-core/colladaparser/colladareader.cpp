@@ -2266,8 +2266,8 @@ public:
                     //  Rotate axis from the parent offset
                     vAxes[ic] = tatt.rotate(vAxes[ic]);
                 }
-                RAVELOG_DEBUG(str(boost::format("joint dof: %d, links %s->%s\n")%pjoint->dofindex%plink->GetName()%pchildlink->GetName()));
-                pjoint->_ComputeInternalInformation(plink,pchildlink,tatt.trans,vAxes,std::vector<dReal>());
+                RAVELOG_DEBUG_FORMAT("joint dof: %d, links %s->%s", pjoint->dofindex%plink->GetName()%pchildlink->GetName());
+                pjoint->_ComputeJointInternalInformation(plink,pchildlink,tatt.trans,vAxes,std::vector<dReal>());
             }
             if( pdomlink->getAttachment_start_array().getCount() > 0 ) {
                 RAVELOG_WARN("openrave collada reader does not support attachment_start\n");

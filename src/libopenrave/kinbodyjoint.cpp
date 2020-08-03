@@ -571,7 +571,7 @@ KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
     jointindex=-1;
     dofindex = -1; // invalid index
     _bInitialized = false;
-    _bStatic = false;
+    _nIsStatic = -1;
     _info._type = type;
     _info._controlMode = JCM_None;
 }
@@ -618,12 +618,12 @@ bool KinBody::Joint::IsPrismatic(int iaxis) const
 
 bool KinBody::Joint::IsStatic() const
 {
-    if(_bInitialized) {
-        return _bStatic;
+    if(_nIsStatic != -1) {
+        return _nIsStatic==1;
     }
-    
+
     if( IsMimic() ) {
-        bool bstatic = true;
+        bool bstatic = _bInitialized && _nIsStatic != -1; // if not _bInitialized, then most likely do not know if dependent joints are static, so always return false
         KinBodyConstPtr parent(_parent);
         for(int i = 0; i < GetDOF(); ++i) {
             if( !!_vmimic.at(i) ) {
@@ -1108,7 +1108,7 @@ Vector KinBody::Joint::GetAxis(int iaxis) const
     return _attachedbodies[0]->GetTransform().rotate(_tLeft.rotate(_vaxes.at(iaxis)));
 }
 
-void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchorraw, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues)
+void KinBody::Joint::_ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchorraw, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues)
 {
     OPENRAVE_ASSERT_OP_FORMAT(!!plink0,&&,!!plink1, "one or more attached _attachedbodies are invalid for joint %s", GetName(),ORE_InvalidArguments);
     for(int i = 0; i < GetDOF(); ++i) {
@@ -1288,6 +1288,12 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
         RAVELOG_WARN(str(boost::format("joint %s: all attached links are static, but joint is not!\n")%GetName()));
     }
 
+    // set _bInitialized at the end
+    _bInitialized = true;
+}
+
+void KinBody::Joint::_ComputeInternalStaticInformation()
+{
     if(this->IsStatic()) {
         for(int idof = 0; idof < GetDOF(); ++idof) {
             if( _info._vlowerlimit[idof] != 0 ) {
@@ -1303,15 +1309,17 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
                 _info._vupperlimit[idof] = 0;
             }
         }
-        _bStatic = true;
+        _nIsStatic = 1;
         _tLeftNoOffset *= _tRightNoOffset;
+        _tRightNoOffset = Transform();
         _tLeft *= _tRight;
-        _tRightNoOffset = _tRight = _tinvRight = Transform();
+        _tRight = Transform();
         _tinvLeft = _tLeft.inverse();
+        _tinvRight = Transform();
     }
-
-    // set _bInitialized at the end
-    _bInitialized = true;
+    else {
+        _nIsStatic = 0;
+    }
 }
 
 KinBody::LinkPtr KinBody::Joint::GetHierarchyParentLink() const

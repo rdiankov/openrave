@@ -109,6 +109,16 @@ std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(object pyJointInfoList)
     return vJointInfos;
 }
 
+KinBody::GrabbedInfoPtr ExtractGrabbedInfo(py::object oGrabbedInfo)
+{
+    extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo> > pygrabbedinfo(oGrabbedInfo);
+    if (pygrabbedinfo.check()) {
+        return ((OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo>)pygrabbedinfo)->GetGrabbedInfo();
+    }
+
+    return KinBody::GrabbedInfoPtr();
+}
+
 std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(object pyGrabbedInfoList)
 {
     if( IS_PYTHONOBJECT_NONE(pyGrabbedInfoList) ) {
