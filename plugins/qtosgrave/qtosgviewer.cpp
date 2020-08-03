@@ -1435,13 +1435,9 @@ bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& 
 
 void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
 {
+    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
     _posgWidget->SetCurrentManipulatorDistanceToFocus(focalDistance);
     _SetCameraTransform();
-}
-
-double QtOSGViewer::_GetCameraDistanceToFocus()
-{
-    return _posgWidget->GetCurrentManipulatorDistanceToFocus();
 }
 
 RaveTransform<float> QtOSGViewer::GetCameraTransform() const

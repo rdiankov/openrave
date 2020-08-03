@@ -1058,9 +1058,11 @@ void QOSGViewerWidget::SetViewType(int isorthogonal)
     double aspect = static_cast<double>(width)/static_cast<double>(height);
     if( isorthogonal ) {
         double distance = 0.5*_osgDefaultManipulator->getDistance();
+        _currentOrthoFrustumSize = distance * 0.5;
         _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, _zNear, _zNear * 10000.0);
     }
     else {
+        SetCurrentManipulatorDistanceToFocus(_currentOrthoFrustumSize*2);
         _osgview->getCamera()->setProjectionMatrixAsPerspective(45.0f, aspect, _zNear, _zNear * 10000.0);
     }
 }
@@ -1169,16 +1171,16 @@ void QOSGViewerWidget::Zoom(float factor)
 {
     // Ortho
     if ( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
+        _currentOrthoFrustumSize = _currentOrthoFrustumSize * factor;
         const int width = _osgview->getCamera()->getViewport()->width();
         const int height = _osgview->getCamera()->getViewport()->height();
         const double aspect = static_cast<double>(width)/static_cast<double>(height);
         const double nearplane = GetCameraNearPlane();
-        factor = std::min(std::max(factor, 0.01f), 100.0f);
-        const double distance = 0.5 * _osgDefaultManipulator->getDistance() / factor;
-
-        _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, nearplane, 10000*nearplane);
-    } else {
-        SetCurrentManipulatorDistanceToFocus(GetCurrentManipulatorDistanceToFocus() / factor);
+        _osgview->getCamera()->setProjectionMatrixAsOrtho(-_currentOrthoFrustumSize, _currentOrthoFrustumSize, -_currentOrthoFrustumSize/aspect, _currentOrthoFrustumSize/aspect, nearplane, 10000*nearplane);
+    }
+    else {
+        double newDistance = GetCurrentManipulatorDistanceToFocus() * factor;
+        SetCurrentManipulatorDistanceToFocus(newDistance);
     }
 }
 
