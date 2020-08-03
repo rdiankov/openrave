@@ -40,7 +40,6 @@ public:
         _currentTransitionAnimationTime = 0;
         _transitionAnimationPath = new osg::AnimationPath();
         _transitionAnimationPath->setLoopMode(osg::AnimationPath::NO_LOOPING);
-        _transitionAnimationDuration = 1.0;
     }
 
     void StartTrackingNode(osg::Node* node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
@@ -53,6 +52,7 @@ public:
             return;
         }
         NodeTrackerManipulator::setTrackNodePath(nodeParents[0]);
+        _transitionAnimationDuration = 1.0; //< transition animation time
         _currentTransitionAnimationTime = 0;
         _CreateTransitionAnimationPath(node, currentCamera, worldUpVector);
         _time.restart();
