@@ -1142,8 +1142,7 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
             _tTrackingLinkRelative = Transform(); // use the identity
         }
     }
-    KinBodyItemPtr kinBodyItem = _posgWidget->GetItemFromName(bodyname);
-    if(!_SetTrackManipulatorToTrackLink(_ptrackinglink, kinBodyItem, _tTrackingLinkRelative)) {
+    if(!_SetTrackManipulatorToTrackLink(_ptrackinglink, _tTrackingLinkRelative)) {
         return false;
     }
     
@@ -1169,9 +1168,8 @@ bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
         _SetTrackManipulatorToStopTracking();
         return false;
     }
-    KinBodyItemPtr kinBodyItem = _posgWidget->GetItemFromName(robotname);
 
-    if(!_SetTrackManipulatorToTrackLink(_ptrackingmanip->GetEndEffector(), kinBodyItem, OpenRAVE::RaveTransform<float>())) {
+    if(!_SetTrackManipulatorToTrackLink(_ptrackingmanip->GetEndEffector(), OpenRAVE::RaveTransform<float>())) {
         return false;
     }
 
@@ -1354,17 +1352,20 @@ void QtOSGViewer::_SetTrackManipulatorToStopTracking()
     _posgWidget->StopTrackingNode();
 }
 
-bool QtOSGViewer::_SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, KinBodyItemPtr linkParentKinBodyItem, const RaveTransform<float>& linkRelativeTranslation)
+bool QtOSGViewer::_SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation)
 {
-    if(!linkParentKinBodyItem || !link) {
+    if(!link) {
         RAVELOG_ERROR("Could not set track manipulator to track link");
         return false;
     }
-    auto osgNode = linkParentKinBodyItem->GetOSGLink(link->GetIndex());
+
+    KinBodyPtr parent = link->GetParent();
+    KinBodyItemPtr parentIem = _posgWidget->GetItemFromKinBody(parent);
+    auto osgNode = parentIem->GetOSGLink(link->GetIndex());
     assert(osgNode);
 
     osg::Vec3d linkOffset(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]);
-    _posgWidget->StartTrackingNode(osgNode.get(), str(boost::format("(link) %s/%s")%linkParentKinBodyItem->GetName()%link->GetName()), linkOffset, _focalDistance, osg::Vec3d(0,0,1));
+    _posgWidget->StartTrackingNode(osgNode.get(), str(boost::format("(link) %s/%s")%parentIem->GetName()%link->GetName()), linkOffset, _focalDistance, osg::Vec3d(0,0,1));
     return true;
 }
 

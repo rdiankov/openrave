@@ -156,6 +156,9 @@ public:
     /// \brief Find KinBodyItem from a kinbody name
     KinBodyItemPtr GetItemFromName(const std::string &name);
 
+    /// \brief Find KinBodyItem from a kinbody instance
+    KinBodyItemPtr GetItemFromKinBody(KinBodyPtr kinBody);
+
     /// \brief restores cursor to what it was originally set to
     void RestoreCursor();
 

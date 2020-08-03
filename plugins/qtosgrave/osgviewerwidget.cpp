@@ -45,6 +45,7 @@ public:
     void StartTrackingNode(osg::Node* node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
     {
         _offset = offset;
+        _distance = trackDistance;
         osg::NodePathList nodeParents = node->getParentalNodePaths();
         if(nodeParents.empty()) {
             RAVELOG_WARN("Could not track node, node has no transform chain");
@@ -1163,8 +1164,12 @@ osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateHUDCamera( int x, int y, int 
 KinBodyItemPtr QOSGViewerWidget::GetItemFromName(const std::string& name)
 {
     KinBodyPtr pbody = _penv->GetKinBody(name);
-    KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
-    return pitem;
+    return GetItemFromKinBody(pbody);
+}
+
+KinBodyItemPtr QOSGViewerWidget::GetItemFromKinBody(KinBodyPtr kinBody)
+{
+    return boost::dynamic_pointer_cast<KinBodyItem>(kinBody->GetUserData(_userdatakey));
 }
 
 KinBodyItemPtr QOSGViewerWidget::FindKinBodyItemFromOSGNode(OSGNodePtr node)

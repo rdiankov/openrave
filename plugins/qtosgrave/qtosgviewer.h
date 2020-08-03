@@ -334,7 +334,7 @@ public:
     virtual void _SetCameraDistanceToFocus(float focalDistance);
     virtual void _UpdateDistanceToFocusFromCurrentManipulator();
     virtual void _SetTrackManipulatorToStopTracking();
-    virtual bool _SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, KinBodyItemPtr linksKinBodyItem, const RaveTransform<float>& linkRelativeTranslation);
+    virtual bool _SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation);
     virtual void _SetItemVisualization(std::string& itemname, std::string& visualizationmode);
     virtual void _SetProjectionMode(const std::string& projectionMode);
     virtual void _SetBkgndColor(const RaveVector<float>& color);
