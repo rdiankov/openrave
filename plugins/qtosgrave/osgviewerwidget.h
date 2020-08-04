@@ -107,9 +107,6 @@ public:
     /// \brief called when the qt window size changes
     void SetViewport(int width, int height);
 
-    /// \brief update hud display axis from current manipulator transform
-    void UpdateHUDAxisTransform(int width, int height);
-
     /// \brief sets user-controlled hud text
     void SetUserHUDText(const std::string &text);
 
@@ -214,6 +211,9 @@ protected:
 
     /// \brief Loads the stored matrix transform to the camera
     void _LoadMatrixTransform();
+
+    /// \brief update hud display axis from current manipulator transform
+    void _UpdateHUDAxisTransform(int width, int height);
 
     /// \brief Create a dragger with a name given
     std::vector<osg::ref_ptr<osgManipulator::Dragger> > _CreateDragger(const std::string &name);

@@ -61,7 +61,8 @@ public:
     // OSG overloaded methods
 public:
 
-    osg::Matrixd getMatrix() const {
+    osg::Matrixd getMatrix() const
+    {
         osg::Vec3d nodeCenter;
         osg::Quat nodeRotation;
         computeNodeCenterAndRotation(nodeCenter, nodeRotation);
@@ -71,7 +72,7 @@ public:
 
         nodeCenter = osg::Vec3d(_offset) * localToWorld;
 
-        return osg::Matrixd::translate(0.0,0.0,_distance)*osg::Matrixd::rotate(_rotation)*osg::Matrix::translate(nodeCenter);
+        return osg::Matrixd::translate(0.0,0.0,_distance) * osg::Matrixd::rotate(_rotation) * osg::Matrix::translate(nodeCenter);
     }
 
     // need to reimplement this method so we can track based on nodes origin instead of center of bounding sphere
@@ -90,7 +91,7 @@ public:
         computeNodeLocalToWorld(localToWorld);
 
         nodeCenter = osg::Vec3d(_offset) * localToWorld;
-        return osg::Matrixd::translate(-nodeCenter)*osg::Matrixd::rotate(_rotation.inverse())*osg::Matrixd::translate(0.0,0.0,-_distance);
+        return osg::Matrixd::translate(-nodeCenter) * osg::Matrixd::rotate(_rotation.inverse()) * osg::Matrixd::translate(0.0,0.0,-_distance);
     }
 
 private:
@@ -1049,12 +1050,12 @@ void QOSGViewerWidget::SetViewport(int width, int height)
     hudcamera->setViewport(0, 0, width * scale, height * scale);
 
     double textheight = 12*scale;
-    _osgHudText->setPosition(osg::Vec3(-width*scale/2+10, height*scale/2-textheight, -50));
+    _osgHudText->setPosition(osg::Vec3(-width * scale / 2 + 10, height * scale / 2 - textheight, -50));
     _osgHudText->setCharacterSize(textheight);
-    UpdateHUDAxisTransform(width, height);
+    _UpdateHUDAxisTransform(width, height);
 }
 
-void QOSGViewerWidget::UpdateHUDAxisTransform(int width, int height)
+void QOSGViewerWidget::_UpdateHUDAxisTransform(int width, int height)
 {
     float scale = this->devicePixelRatio();
     osg::Matrix m = GetCurrentCameraManipulator()->getInverseMatrix();
