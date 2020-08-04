@@ -138,9 +138,9 @@ private:
         _transitionAnimationPath->clear();
 
         // create animation frames in world space
-        osg::Matrixd viewMatrix = osg::Matrixd::inverse(currentCamera->getViewMatrix());
+        osg::Matrixd cameraToWorld = osg::Matrixd::inverse(currentCamera->getViewMatrix());
 
-        osg::Vec3d cameraWorldPos(viewMatrix(3,0), viewMatrix(3,1), viewMatrix(3,2));
+        osg::Vec3d cameraWorldPos(cameraToWorld(3,0), cameraToWorld(3,1), cameraToWorld(3,2));
 
         // now calculate a pose that will look to the node using current position
         osg::Matrixd localToWorld;
@@ -155,7 +155,7 @@ private:
             return;
         }
 
-        osg::Quat cameraRotation = viewMatrix.getRotate();
+        osg::Quat cameraRotation = cameraToWorld.getRotate();
         _transitionAnimationPath->insert(0,osg::AnimationPath::ControlPoint(cameraWorldPos, cameraRotation));
 
         // last frame pose is looking at the node from a distance _distance
@@ -1096,7 +1096,7 @@ void QOSGViewerWidget::SetViewType(int isorthogonal)
     int height = _osgview->getCamera()->getViewport()->height();
     double aspect = static_cast<double>(width)/static_cast<double>(height);
     if( isorthogonal ) {
-        double distance = _osgDefaultManipulator->getDistance();
+        double distance = GetCameraDistanceToFocus();
         _currentOrthoFrustumSize = distance * 0.5;
         _osgview->getCamera()->setProjectionMatrixAsOrtho(-_currentOrthoFrustumSize, _currentOrthoFrustumSize, -_currentOrthoFrustumSize/aspect, _currentOrthoFrustumSize/aspect, _zNear, _zNear * 10000.0);
     }
@@ -1201,14 +1201,35 @@ void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
         _PanCameraTowardsDirection((panDelta / _metersinunit), osg::Vec3d(0,0,1));
         return;
     }
+    // If in ortho mode, camera position cannot move, but rather we need to change projection plane size. Zoom() method will automatically handle this.
+    // so isPan has no effect if in ortho mode. Similarly, nodetrackmanipulator, by definition, cannot have its focal point changed. So we also ignore
+    // isPan in this case. Parameter isPan will only be applied if using default manipulator in perspective mode.
+    if(!IsInOrthoMode() && IsUsingDefaultCameraManipulator()) {
+        if(isPan) {
+            // move focal point
+            double cameraDistanceToFocus = GetCurrentManipulatorDistanceToFocus();
+            osg::Matrixd cameraToWorld = osg::Matrixd::inverse(GetCamera()->getViewMatrix());
+            osg::Vec3d targetDir = cameraToWorld.getRotate() * osg::Vec3d(0,0,-cameraDistanceToFocus);
+            osg::Vec3d cameraWorldPos(cameraToWorld(3,0), cameraToWorld(3,1), cameraToWorld(3,2));
+
+            osg::Matrixd newViewMatrix;
+            float worldUnitOffset = (panDelta / _metersinunit);
+            osg::Vec3 worldOffsetVector = targetDir;
+            worldOffsetVector.normalize();
+            worldOffsetVector = worldOffsetVector * worldUnitOffset;
+            osg::Vec3d cameraUp(cameraToWorld(1,0),cameraToWorld(1,1), cameraToWorld(1,2));
+            newViewMatrix.makeLookAt(cameraWorldPos + worldOffsetVector, cameraWorldPos + targetDir + worldOffsetVector, cameraUp);
+            GetCurrentCameraManipulator()->setByInverseMatrix(newViewMatrix);
+            return;
+        }
+    }
 
     Zoom(factor);
 }
 
-
+// see header, this function never changes focal point position
 void QOSGViewerWidget::Zoom(float factor)
 {
-    // Ortho
     double distanceToFocus = 0;
     if (IsInOrthoMode()) {
         // if we increase _currentOrthoFrustumSize, we zoom out since a bigger frustum maps object to smaller part of screen
@@ -1523,7 +1544,7 @@ void QOSGViewerWidget::SetCameraDistanceToFocus(double distance)
 
 void QOSGViewerWidget::RestoreDefaultManipulator()
 {
-    if(_osgview->getCameraManipulator() == _osgDefaultManipulator.get()) {
+    if(IsUsingDefaultCameraManipulator()) {
         return;
     }
     // save current distance to focus so to apply to the default manipulator
@@ -1534,6 +1555,12 @@ void QOSGViewerWidget::RestoreDefaultManipulator()
     SetCurrentManipulatorDistanceToFocus(currentDistanceToFocus);
     _osgDefaultManipulator->setByMatrix(_osgTrackModeManipulator->getMatrix());
 }
+
+bool QOSGViewerWidget::IsUsingDefaultCameraManipulator()
+{
+    return _osgview->getCameraManipulator() == _osgDefaultManipulator.get();
+}
+
 
 osg::ref_ptr<osgGA::TrackballManipulator> QOSGViewerWidget::GetDefaultCameraManipulator() {
     return osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_osgDefaultManipulator);

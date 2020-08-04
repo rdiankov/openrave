@@ -173,6 +173,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     "Pans the camera in the direction of the screen x vector, parallel to screen plane. The argument dx is in normalized coordinates 0 < dx < 1, where 1 means canvas width.");
     RegisterCommand("PanCameraYDirection", boost::bind(&QtOSGViewer::_PanCameraYDirectionCommand, this, _1, _2),
     "Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.");
+    RegisterCommand("MoveCameraZoom", boost::bind(&QtOSGViewer::_MoveCameraZoomCommand, this, _1, _2),
+                    "Set the zooming factor of the view");
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;

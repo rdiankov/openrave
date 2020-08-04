@@ -94,6 +94,10 @@ public:
 
     /// \brief Rotates the camera around the current focal point in the direction of the screen y vector (in world coordinates). The argument thetaY is in radians -pi < thetaY < pi.
     virtual void RotateCameraYDirection(float thetaY);
+    /// \brief sets the zoom factor. only affects orthogonal view
+    /// \param factor > 1.0 = zoom in. < 1.0 = zoom out
+    /// \param isPan, if true, then focal distance will not change, but rather camera position will move along with focal point
+    void MoveCameraZoom(float factor, bool isPan);
 
     /// \brief Pans the camera in the direction of the screen x vector, parallel to screen plane. The argument dx is in normalized coordinates 0 < dx < 1, where 1 means canvas width.
     virtual void PanCameraXDirection(float dx);
@@ -156,6 +160,7 @@ public:
     double GetCameraDistanceToFocus();
 
     void RestoreDefaultManipulator();
+    bool IsUsingDefaultCameraManipulator();
     osg::ref_ptr<osgGA::TrackballManipulator> GetDefaultCameraManipulator();
     osg::ref_ptr<osgGA::NodeTrackerManipulator> GetTrackModeManipulator();
 
