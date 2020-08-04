@@ -566,6 +566,10 @@ inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::Side
         std::string type = "";
         orjson::LoadJsonValueByKey(v, "type", type);
         std::map<std::string, KinBody::GeometryInfo::SideWallType> sideWallTypeMapping = {
+            {"0", KinBody::GeometryInfo::SideWallType::SWT_NX},
+            {"1", KinBody::GeometryInfo::SideWallType::SWT_PX},
+            {"2", KinBody::GeometryInfo::SideWallType::SWT_NY},
+            {"3", KinBody::GeometryInfo::SideWallType::SWT_PY},
             {"nx", KinBody::GeometryInfo::SideWallType::SWT_NX},
             {"px", KinBody::GeometryInfo::SideWallType::SWT_PX},
             {"ny", KinBody::GeometryInfo::SideWallType::SWT_NY},
