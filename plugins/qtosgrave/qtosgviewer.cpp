@@ -161,7 +161,11 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
                     "sets the viewer projection mode, perspective or orthogonal");
     RegisterCommand("Zoom", boost::bind(&QtOSGViewer::_ZoomCommand, this, _1, _2),
-                    "Set the zooming factor of the view");
+                    "Set the zooming factor of the view");    
+    RegisterCommand("RotateCameraXDirection", boost::bind(&QtOSGViewer::_RotateCameraXDirectionCommand, this, _1, _2),
+    "Rotates the camera around the current focal point in the direction of the screen x vector (in world coordinates). The argument thetaX is in radians -pi < dx < pi.");
+    RegisterCommand("RotateCameraYDirection", boost::bind(&QtOSGViewer::_RotateCameraYDirectionCommand, this, _1, _2),
+    "Rotates the camera around the current focal point in the direction of the screen y vector (in world coordinates). The argument thetaY is in radians -pi < dy < pi.");
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
@@ -1235,6 +1239,24 @@ bool QtOSGViewer::_ZoomCommand(ostream& sout, istream& sinput)
     return true;
 }
 
+bool QtOSGViewer::_RotateCameraXDirectionCommand(ostream& sout, istream& sinput)
+{
+    float thetaX = 0.0f;
+    sinput >> thetaX;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraXDirection, this, thetaX));
+    return true;
+}
+
+bool QtOSGViewer::_RotateCameraYDirectionCommand(ostream& sout, istream& sinput)
+{
+    float thetaY = 0.0f;
+    sinput >> thetaY;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraYDirection, this, thetaY));
+    return true;
+}
+
 void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
 {
     if (projectionMode == "orthogonal")
@@ -1781,6 +1803,16 @@ void QtOSGViewer::Move(int x, int y)
 void QtOSGViewer::Zoom(float factor)
 {
     _PostToGUIThread(boost::bind(&QtOSGViewer::_Zoom, this, factor));
+}
+
+void QtOSGViewer::_RotateCameraXDirection(float thetaX)
+{
+    _posgWidget->RotateCameraXDirection(thetaX);
+}
+
+void QtOSGViewer::_RotateCameraYDirection(float thetaY)
+{
+    _posgWidget->RotateCameraYDirection(thetaY);
 }
 
 void QtOSGViewer::_Zoom(float factor)

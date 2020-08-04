@@ -341,6 +341,8 @@ public:
 
     virtual void _SetName(const std::string& name);
     virtual void _Zoom(float factor);
+    virtual void _RotateCameraXDirection(float thetaX);
+    virtual void _RotateCameraYDirection(float thetaY);
 
     /// \brief posts a function to be executed in the GUI thread
     ///
@@ -388,6 +390,8 @@ public:
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
     bool _SetProjectionModeCommand(ostream& sout, istream& sinput);
     bool _ZoomCommand(ostream& sout, istream& sinput);
+    bool _RotateCameraXDirectionCommand(ostream& sout, istream& sinput);
+    bool _RotateCameraYDirectionCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions

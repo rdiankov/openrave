@@ -1013,6 +1013,19 @@ void QOSGViewerWidget::SetNearPlane(double nearplane)
     }
 }
 
+
+void QOSGViewerWidget::RotateCameraXDirection(float thetaX)
+{
+    // rotation in X direction is over y
+    _RotateCameraOverDirection(thetaX, osg::Vec3d(0,1,0));
+}
+
+void QOSGViewerWidget::RotateCameraYDirection(float thetaY)
+{
+    // rotation in Y direction is over x
+    _RotateCameraOverDirection(thetaY, osg::Vec3d(1,0,0));
+}
+
 double QOSGViewerWidget::GetCameraNearPlane()
 {
     return _zNear;
@@ -1066,6 +1079,46 @@ void QOSGViewerWidget::_UpdateHUDAxisTransform(int width, int height)
     _osgWorldAxis->setMatrix(m);
 }
 
+void QOSGViewerWidget::_RotateCameraOverDirection(double angle, const osg::Vec3d& rotationOverDirection, bool useCameraUpDirection)
+{
+    osg::Matrixd cameraToWorld = osg::Matrixd::inverse(GetCamera()->getViewMatrix());
+    double cameraDistanceToFocus = GetCurrentManipulatorDistanceToFocus();
+    osg::Quat cameraToWorldRotate = cameraToWorld.getRotate();
+
+    osg::Vec3d upVector;
+    if(useCameraUpDirection) {
+        upVector.set(cameraToWorld(1,0),cameraToWorld(1,1), cameraToWorld(1,2));
+    }
+    else {
+        _GetRAVEEnvironmentUpVector(upVector);
+    }
+    osg::Vec3d targetVector = cameraToWorldRotate * osg::Vec3d(0,0,-cameraDistanceToFocus);
+
+    osg::Vec3d cameraWorldPos(cameraToWorld(3,0), cameraToWorld(3,1), cameraToWorld(3,2));
+    osg::Vec3d focusPoint = cameraWorldPos + targetVector;
+
+    osg::Vec3d rotationOverDirectionWorld = cameraToWorldRotate * rotationOverDirection;
+
+    // rotate the camera dir over the rotationOverDirection in world space
+    osg::Vec3d rotatedCameraDir = osg::Quat(angle, rotationOverDirectionWorld) * (-targetVector);
+
+    osg::Vec3d viewDir = rotatedCameraDir;
+    viewDir.normalize();
+    if(!useCameraUpDirection && 1-abs(viewDir * upVector) < 1e-3)
+    {
+        // if using world up, prevent camera from being upside down and also from calculating a degenerated lookat.
+        // we rotate over X until our view direction in world is roughly aligned with world up direction
+        return;
+    }
+
+    osg::Vec3d newCameraPos = focusPoint + rotatedCameraDir;
+    // send rotationOverDirection to wor
+
+    osg::Matrixd newViewMatrix;
+    newViewMatrix.makeLookAt(newCameraPos, newCameraPos - rotatedCameraDir, upVector);
+    GetCurrentCameraManipulator()->setByInverseMatrix(newViewMatrix);
+}
+
 void QOSGViewerWidget::Zoom(float factor)
 {
     // Ortho
@@ -1082,6 +1135,7 @@ void QOSGViewerWidget::Zoom(float factor)
         _osgTrackModeManipulator->setDistance(_osgTrackModeManipulator->getDistance() / factor);
     }
 }
+
 
 void QOSGViewerWidget::SetTextureCubeMap(const std::string& posx, const std::string& negx, const std::string& posy,
                                          const std::string& negy, const std::string& posz, const std::string& negz)
@@ -1122,6 +1176,7 @@ void QOSGViewerWidget::_GetRAVEEnvironmentUpVector(osg::Vec3d& upVector)
 
     // assume world up is the oposite direction of gravity
     upVector.set(-gravityDir[0], -gravityDir[1], -gravityDir[2]);
+    upVector.normalize();
 }
 
 

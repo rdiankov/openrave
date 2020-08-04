@@ -89,8 +89,14 @@ public:
     /// \brief sets the near plane for the camera
     void SetNearPlane(double nearplane);
 
-    /// \brief sets the zoom factor. only affects orthogonal view
-    /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
+    /// \brief Rotates the camera around the current focal point in the direction of the screen x vector (in world coordinates). The argument thetaX is in radians -pi < thetaX < pi.
+    virtual void RotateCameraXDirection(float thetaX);
+
+    /// \brief Rotates the camera around the current focal point in the direction of the screen y vector (in world coordinates). The argument thetaY is in radians -pi < thetaY < pi.
+    virtual void RotateCameraYDirection(float thetaY);
+
+    /// \brief changes current focal distance (if in perspective mode) or the current projection plane size (if in ortho mode) in order
+    /// to zoom in/out towards/from focal point (if factor < 1). This function never changes de focal point position.
     void Zoom(float factor);
 
     /// \brief set the cubemap for skybox
@@ -219,6 +225,8 @@ protected:
 
     /// \brief update hud display axis from current manipulator transform
     void _UpdateHUDAxisTransform(int width, int height);
+
+    void _RotateCameraOverDirection(double angle, const osg::Vec3d& rotationOverDirection, bool useCameraUpDirection=true);
 
     /// \brief Create a dragger with a name given
     std::vector<osg::ref_ptr<osgManipulator::Dragger> > _CreateDragger(const std::string &name);
