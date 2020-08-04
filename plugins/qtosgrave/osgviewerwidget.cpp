@@ -1339,6 +1339,22 @@ void QOSGViewerWidget::SetCurrentCameraManipulator(osgGA::CameraManipulator* man
     _osgview->setCameraManipulator(manipulator);
 }
 
+double QOSGViewerWidget::GetCurrentManipulatorDistanceToFocus()
+{
+    osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());
+    return currentManip->getDistance();
+
+}
+
+void QOSGViewerWidget::SetCurrentManipulatorDistanceToFocus(double distance)
+{
+    if( distance <= 0 ) {
+        return;
+    }
+    osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());
+    currentManip->setDistance(distance);
+}
+
 void QOSGViewerWidget::RestoreDefaultManipulator()
 {
     if(_osgview->getCameraManipulator() == _osgDefaultManipulator.get()) {

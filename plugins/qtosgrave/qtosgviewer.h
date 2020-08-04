@@ -316,7 +316,7 @@ public:
     virtual void _Reset();
 
     /// \brief reset the camera depending on its mode
-    virtual void _Update();
+    virtual void _UpdateViewport();
     virtual void _SetCameraTransform();
 
     virtual OSGSwitchPtr _CreateGraphHandle();
@@ -332,7 +332,7 @@ public:
 
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
-    virtual void _UpdateDistanceToFocusFromCurrentManipulator();
+    virtual double _GetCameraDistanceToFocus();
     virtual void _SetTrackManipulatorToStopTracking();
     virtual bool _SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation);
     virtual void _SetItemVisualization(std::string& itemname, std::string& visualizationmode);
@@ -407,7 +407,6 @@ public:
 
     //@{ camera
     RaveTransform<float> _Tcamera; ///< current position of the camera representing the current view, updated periodically, read only.
-    float _focalDistance;  ///< current focal distance of the camera, read-only
     geometry::RaveCameraIntrinsics<float> _camintrinsics; ///< intrinsics of the camera representing the current view, updated periodically, read only.
     //@}
 
