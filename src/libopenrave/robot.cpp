@@ -22,6 +22,7 @@ namespace OpenRAVE {
 
 RobotBase::GripperInfo& RobotBase::GripperInfo::operator=(const RobotBase::GripperInfo& other)
 {
+    _id = other._id;
     name = other.name;
     grippertype = other.grippertype;
     gripperJointNames = other.gripperJointNames;

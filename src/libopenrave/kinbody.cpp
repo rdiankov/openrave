@@ -4199,19 +4199,20 @@ void KinBody::_ComputeInternalInformation()
 
         // based on this topological sorting, find the parent link for each joint
         FOREACH(itjoint,_vTopologicallySortedJointsAll) {
+            Joint& joint = **itjoint;
             int parentlinkindex = -1;
-            if( !(*itjoint)->GetFirstAttached() || (*itjoint)->GetFirstAttached()->IsStatic() ) {
-                if( !!(*itjoint)->GetSecondAttached() && !(*itjoint)->GetSecondAttached()->IsStatic() ) {
-                    parentlinkindex = (*itjoint)->GetSecondAttached()->GetIndex();
+            if( !joint.GetFirstAttached() || joint.GetFirstAttached()->IsStatic() ) {
+                if( !!joint.GetSecondAttached() && !joint.GetSecondAttached()->IsStatic() ) {
+                    parentlinkindex = joint.GetSecondAttached()->GetIndex();
                 }
             }
-            else if( !(*itjoint)->GetSecondAttached() || (*itjoint)->GetSecondAttached()->IsStatic() ) {
-                parentlinkindex = (*itjoint)->GetFirstAttached()->GetIndex();
+            else if( !joint.GetSecondAttached() || joint.GetSecondAttached()->IsStatic() ) {
+                parentlinkindex = joint.GetFirstAttached()->GetIndex();
             }
             else {
                 // NOTE: possibly try to choose roots that do not involve mimic joints. ikfast might have problems
                 // dealing with very complex formulas
-                LinkPtr plink0 = (*itjoint)->GetFirstAttached(), plink1 = (*itjoint)->GetSecondAttached();
+                LinkPtr plink0 = joint.GetFirstAttached(), plink1 = joint.GetSecondAttached();
                 if( vlinkdepths[plink0->GetIndex()] < vlinkdepths[plink1->GetIndex()] ) {
                     parentlinkindex = plink0->GetIndex();
                 }
@@ -4243,30 +4244,32 @@ void KinBody::_ComputeInternalInformation()
                 }
             }
             if( parentlinkindex == -1 ) {
-                RAVELOG_WARN(str(boost::format("could not compute parent link for joint %s")%(*itjoint)->GetName()));
+                RAVELOG_WARN(str(boost::format("could not compute parent link for joint %s")%joint.GetName()));
             }
-            else if( parentlinkindex != (*itjoint)->GetFirstAttached()->GetIndex() ) {
-                RAVELOG_VERBOSE(str(boost::format("swapping link order of joint %s(%d)")%(*itjoint)->GetName()%(*itjoint)->GetJointIndex()));
+            else if( parentlinkindex != joint.GetFirstAttached()->GetIndex() ) {
+                RAVELOG_VERBOSE(str(boost::format("swapping link order of joint %s(%d)")%joint.GetName()%joint.GetJointIndex()));
                 // have to swap order
-                Transform tswap = (*itjoint)->GetInternalHierarchyRightTransform().inverse();
-                std::vector<Vector> vaxes((*itjoint)->GetDOF());
+                Transform tswap = joint.GetInternalHierarchyRightTransform().inverse();
+                std::vector<Vector> vaxes(joint.GetDOF());
                 for(size_t i = 0; i < vaxes.size(); ++i) {
-                    vaxes[i] = -tswap.rotate((*itjoint)->GetInternalHierarchyAxis(i));
+                    vaxes[i] = -tswap.rotate(joint.GetInternalHierarchyAxis(i));
                 }
                 std::vector<dReal> vcurrentvalues;
-                (*itjoint)->GetValues(vcurrentvalues);
+                joint.GetValues(vcurrentvalues);
                 // have to reset the link transformations temporarily in order to avoid setting a joint offset
-                TransformSaver<LinkPtr> linksaver0((*itjoint)->GetFirstAttached());
-                TransformSaver<LinkPtr> linksaver1((*itjoint)->GetSecondAttached());
+                TransformSaver<LinkPtr> linksaver0(joint.GetFirstAttached());
+                TransformSaver<LinkPtr> linksaver1(joint.GetSecondAttached());
                 // assume joint values are set to 0
-                (*itjoint)->GetFirstAttached()->SetTransform(Transform());
-                (*itjoint)->GetSecondAttached()->SetTransform((*itjoint)->GetInternalHierarchyLeftTransform()*(*itjoint)->GetInternalHierarchyRightTransform());
+                joint.GetFirstAttached()->SetTransform(Transform());
+                joint.GetSecondAttached()->SetTransform(joint.GetInternalHierarchyLeftTransform()*joint.GetInternalHierarchyRightTransform());
                 // pass in empty joint values
                 std::vector<dReal> vdummyzerovalues;
-                (*itjoint)->_ComputeInternalInformation((*itjoint)->GetSecondAttached(),(*itjoint)->GetFirstAttached(),tswap.trans,vaxes,vdummyzerovalues);
+                joint._ComputeJointInternalInformation(joint.GetSecondAttached(),joint.GetFirstAttached(),tswap.trans,vaxes,vdummyzerovalues);
                 // initialize joint values to the correct value
-                (*itjoint)->_info._vcurrentvalues = vcurrentvalues;
+                joint._info._vcurrentvalues = vcurrentvalues;
             }
+
+            joint._ComputeInternalStaticInformation(); // IsStatic should be computable here
         }
         // find out what links are affected by what joints.
         FOREACH(it,_vJointsAffectingLinks) {
@@ -5176,7 +5179,7 @@ void KinBody::SetZeroConfiguration()
         for(size_t i = 0; i < vaxes.size(); ++i) {
             vaxes[i] = (*itjoint)->GetInternalHierarchyLeftTransform().rotate((*itjoint)->GetInternalHierarchyAxis(i));
         }
-        (*itjoint)->_ComputeInternalInformation((*itjoint)->GetFirstAttached(), (*itjoint)->GetSecondAttached(),(*itjoint)->GetInternalHierarchyLeftTransform().trans,vaxes,std::vector<dReal>());
+        (*itjoint)->_ComputeJointInternalInformation((*itjoint)->GetFirstAttached(), (*itjoint)->GetSecondAttached(),(*itjoint)->GetInternalHierarchyLeftTransform().trans,vaxes,std::vector<dReal>());
     }
 }
 
@@ -5316,6 +5319,11 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
         if( !!info._vmimic[i] ) {
             pjoint->_vmimic[i].reset(new Mimic());
             pjoint->_vmimic[i]->_equations = info._vmimic[i]->_equations;
+//
+//            if( !pjoint->_vmimic[i]->_equations.at(0).empty() ) {
+//                std::string poseq = pjoint->_vmimic[i]->_equations[0], veleq = pjoint->_vmimic[i]->_equations[1], acceleq = pjoint->_vmimic[i]->_equations[2]; // have to copy since memory can become invalidated
+//                pjoint->SetMimicEquations(i,poseq,veleq,acceleq);
+//            }
         }
     }
     LinkPtr plink0, plink1;
@@ -5336,7 +5344,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     OPENRAVE_ASSERT_FORMAT(!!plink0&&!!plink1, "cannot find links '%s' and '%s' of body '%s' joint %s ", info._linkname0%info._linkname1%GetName()%info._name, ORE_Failed);
     std::vector<Vector> vaxes(pjoint->GetDOF());
     std::copy(info._vaxes.begin(),info._vaxes.begin()+vaxes.size(), vaxes.begin());
-    pjoint->_ComputeInternalInformation(plink0, plink1, info._vanchor, vaxes, info._vcurrentvalues);
+    pjoint->_ComputeJointInternalInformation(plink0, plink1, info._vanchor, vaxes, info._vcurrentvalues);
     if( info._bIsActive ) {
         _vecjoints.push_back(pjoint);
     }
