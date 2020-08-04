@@ -918,14 +918,14 @@ void QOSGViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
 
 void QOSGViewerWidget::StartTrackingNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance, const osg::Vec3d& worldUpVector)
 {
-    _strTrackingNodeText = str(boost::format("Tracking %s")%trackInfoText);
+    _strTrackInfoText = str(boost::format("Tracking %s")%trackInfoText);
     SetCurrentCameraManipulator(_osgTrackModeManipulator.get());
     _osgTrackModeManipulator->StartTrackingNode(node.get(), offset, trackDistance, GetCamera(), osg::Vec3d(0,0,1));
 }
 
 void QOSGViewerWidget::StopTrackingNode()
 {
-    _strTrackingNodeText = "";
+    _strTrackInfoText = "";
     RestoreDefaultManipulator();
 }
 
@@ -984,11 +984,11 @@ void QOSGViewerWidget::_UpdateHUDText()
         }
         s += _strSelectedItemText;
     }
-    if( _strTrackingNodeText.size() > 0 ) {
+    if( _strTrackInfoText.size() > 0 ) {
         if( s.size() > 0 ) {
             s += "\n";
         }
-        s += _strTrackingNodeText;
+        s += _strTrackInfoText;
     }
     _osgHudText->setText(s);
 }

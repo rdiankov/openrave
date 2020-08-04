@@ -276,7 +276,7 @@ protected:
     osg::ref_ptr<OpenRAVETracker> _osgTrackModeManipulator; //< manipulator used by TrackLink and TrackManip commands
 
     osg::ref_ptr<osgText::Text> _osgHudText; ///< the HUD text in the upper left corner
-    std::string _strUserText, _strSelectedItemText, _strRayInfoText, _strTrackingNodeText;; ///< the user hud text
+    std::string _strUserText, _strSelectedItemText, _strRayInfoText, _strTrackInfoText;; ///< the user hud text
 
     osg::ref_ptr<Skybox> _osgSkybox;  ///< the skybox moving together with camera
 
