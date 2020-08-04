@@ -130,7 +130,7 @@ public:
 
     /// \brief activate and configure trackmode manipulator to track given OSG node
     /// \brief trackInfoText is the text to display in canvas about the current element being tracked
-    void TrackNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance, const osg::Vec3d& worldUpVector);
+    void TrackNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance);
     void StopTrackNode();
 
     osg::Camera *GetCamera();
@@ -190,6 +190,9 @@ protected:
     /// \brief Set up cameras
     void _SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view,
                       osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview);
+
+    /// \brief Retrieves RAVE environment world up unitary vector
+    void _GetRAVEEnvironmentUpVector(osg::Vec3d& upVector);
 
     /// \brief Create Open GL Context
     osg::ref_ptr<osg::Camera> _CreateCamera(int x, int y, int w, int h, double metersinunit);

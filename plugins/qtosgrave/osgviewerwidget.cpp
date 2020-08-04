@@ -917,11 +917,14 @@ void QOSGViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
     }
 }
 
-void QOSGViewerWidget::TrackNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance, const osg::Vec3d& worldUpVector)
+void QOSGViewerWidget::TrackNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance)
 {
     _strTrackInfoText = str(boost::format("Tracking %s")%trackInfoText);
     SetCurrentCameraManipulator(_osgTrackModeManipulator.get());
-    _osgTrackModeManipulator->TrackNode(node.get(), offset, trackDistance, GetCamera(), osg::Vec3d(0,0,1));
+
+    osg::Vec3d worldUpVector;
+    _GetRAVEEnvironmentUpVector(worldUpVector);
+    _osgTrackModeManipulator->TrackNode(node.get(), offset, trackDistance, GetCamera(), worldUpVector);
 }
 
 void QOSGViewerWidget::StopTrackNode()
@@ -1112,6 +1115,15 @@ void QOSGViewerWidget::_SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_p
     hudcamera->setGraphicsContext(_osgGraphicWindow);
     hudcamera->setViewport(0,0,_osgGraphicWindow->getTraits()->width, _osgGraphicWindow->getTraits()->height);
 }
+
+void QOSGViewerWidget::_GetRAVEEnvironmentUpVector(osg::Vec3d& upVector)
+{
+    OpenRAVE::Vector gravityDir = _penv->GetPhysicsEngine()->GetGravity();
+
+    // assume world up is the oposite direction of gravity
+    upVector.set(-gravityDir[0], -gravityDir[1], -gravityDir[2]);
+}
+
 
 osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateCamera( int x, int y, int w, int h, double metersinunit)
 {

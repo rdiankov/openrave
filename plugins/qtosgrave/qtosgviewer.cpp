@@ -1355,8 +1355,7 @@ bool QtOSGViewer::_SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, const R
     assert(osgNode);
 
     osg::Vec3d linkOffset(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]);
-    _posgWidget->TrackNode(osgNode.get(), str(boost::format("(link) %s/%s")%parentIem->GetName()%link->GetName()), 
-        linkOffset, _posgWidget->GetCurrentManipulatorDistanceToFocus(), osg::Vec3d(0,0,1));
+    _posgWidget->TrackNode(osgNode.get(), str(boost::format("(link) %s/%s")%parentIem->GetName()%link->GetName()), linkOffset, _posgWidget->GetCurrentManipulatorDistanceToFocus());
     return true;
 }
 
