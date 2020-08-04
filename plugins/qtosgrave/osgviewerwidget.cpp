@@ -61,7 +61,7 @@ public:
     // OSG overloaded methods
 public:
 
-    osg::Matrixd getMatrix() const
+    virtual osg::Matrixd getMatrix() const
     {
         osg::Vec3d nodeCenter;
         osg::Quat nodeRotation;
@@ -76,7 +76,7 @@ public:
     }
 
     // need to reimplement this method so we can track based on nodes origin instead of center of bounding sphere
-    osg::Matrixd getInverseMatrix() const
+    virtual osg::Matrixd getInverseMatrix() const
     {
         if(!_IsTransitionAnimationFinished()) {
             // a very small const encapsulation break, since this allow all animation logic to be totally contained in the manipulator
@@ -92,6 +92,11 @@ public:
 
         nodeCenter = osg::Vec3d(_offset) * localToWorld;
         return osg::Matrixd::translate(-nodeCenter) * osg::Matrixd::rotate(_rotation.inverse()) * osg::Matrixd::translate(0.0,0.0,-_distance);
+    }
+
+    virtual void setByInverseMatrix(const osg::Matrixd& matrix)
+    {
+        _rotation = matrix.getRotate().inverse();
     }
 
 private:
