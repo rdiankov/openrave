@@ -1121,7 +1121,7 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
         return false;
     }
     _ptrackingmanip.reset();
-    auto requestedLink = pbody->GetLink(linkname);
+    KinBody::LinkPtr requestedLink = pbody->GetLink(linkname);
     if(!!_ptrackinglink && _ptrackinglink == requestedLink ) {
         // already tracking the requested link, nothing to be done
         return true;
@@ -1357,7 +1357,7 @@ bool QtOSGViewer::_SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, const R
 
     KinBodyPtr parent = link->GetParent();
     KinBodyItemPtr parentIem = _posgWidget->GetItemFromKinBody(parent);
-    auto osgNode = parentIem->GetOSGLink(link->GetIndex());
+    OSGNodePtr osgNode = parentIem->GetOSGLink(link->GetIndex());
     assert(osgNode);
 
     osg::Vec3d linkOffset(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]);
