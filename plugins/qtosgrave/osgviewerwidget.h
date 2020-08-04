@@ -130,8 +130,8 @@ public:
 
     /// \brief activate and configure trackmode manipulator to track given OSG node
     /// \brief trackInfoText is the text to display in canvas about the current element being tracked
-    void StartTrackingNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance, const osg::Vec3d& worldUpVector);
-    void StopTrackingNode();
+    void TrackNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance, const osg::Vec3d& worldUpVector);
+    void StopTrackNode();
 
     osg::Camera *GetCamera();
 

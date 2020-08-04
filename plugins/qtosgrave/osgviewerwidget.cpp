@@ -42,7 +42,7 @@ public:
         _transitionAnimationPath->setLoopMode(osg::AnimationPath::NO_LOOPING);
     }
 
-    void StartTrackingNode(osg::Node* node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
+    void TrackNode(osg::Node* node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
     {
         _offset = offset;
         _distance = trackDistance;
@@ -917,14 +917,14 @@ void QOSGViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
     }
 }
 
-void QOSGViewerWidget::StartTrackingNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance, const osg::Vec3d& worldUpVector)
+void QOSGViewerWidget::TrackNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance, const osg::Vec3d& worldUpVector)
 {
     _strTrackInfoText = str(boost::format("Tracking %s")%trackInfoText);
     SetCurrentCameraManipulator(_osgTrackModeManipulator.get());
-    _osgTrackModeManipulator->StartTrackingNode(node.get(), offset, trackDistance, GetCamera(), osg::Vec3d(0,0,1));
+    _osgTrackModeManipulator->TrackNode(node.get(), offset, trackDistance, GetCamera(), osg::Vec3d(0,0,1));
 }
 
-void QOSGViewerWidget::StopTrackingNode()
+void QOSGViewerWidget::StopTrackNode()
 {
     _strTrackInfoText = "";
     RestoreDefaultManipulator();
