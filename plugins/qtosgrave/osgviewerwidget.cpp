@@ -1143,7 +1143,7 @@ void QOSGViewerWidget::_UpdateHUDAxisTransform(int width, int height)
 void QOSGViewerWidget::_RotateCameraOverDirection(double angle, const osg::Vec3d& camSpaceRotationOverDirection, bool useCameraUpDirection)
 {
     osg::Matrixd cameraToWorld = osg::Matrixd::inverse(GetCamera()->getViewMatrix());
-    double cameraDistanceToFocus = GetCurrentManipulatorDistanceToFocus();
+    double cameraDistanceToFocus = GetCameraDistanceToFocus();
     osg::Quat cameraToWorldRotate = cameraToWorld.getRotate();
 
     osg::Vec3d upVector;
