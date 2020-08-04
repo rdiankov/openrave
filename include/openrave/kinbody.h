@@ -1572,8 +1572,12 @@ protected:
             \param vanchor the anchor of the rotation axes
             \param vaxes the axes in plink0's coordinate system of the joints
             \param vinitialvalues the current values of the robot used to set the 0 offset of the robot
+            \param bProcessStatic if true, then check to see if the joint is static and then set its cache and reduce its limits. If false, treat the joint as non-static.
          */
-        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
+        virtual void _ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
+
+        /// \brief once all the joints have been computed and initiailzed, call this function 
+        virtual void _ComputeInternalStaticInformation();
 
         /// \brief evaluates the mimic joint equation using vdependentvalues
         ///
@@ -1607,7 +1611,7 @@ private:
         Transform _tRightNoOffset, _tLeftNoOffset;         ///< same as _tLeft and _tRight except it doesn't not include the offset
         Transform _tinvRight, _tinvLeft;         ///< the inverse transformations of tRight and tLeft
         bool _bInitialized;
-        bool _bStatic; ///< IsStatic with both lower and upper limits equal 0
+        int8_t _nIsStatic; ///< If 1, then joint is static and shouldnot move. If 0, then joint is not static. If -1, then still unknown
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
