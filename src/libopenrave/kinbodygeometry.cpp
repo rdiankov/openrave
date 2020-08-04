@@ -563,8 +563,12 @@ inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::Side
     if(v.IsObject()) {
         orjson::LoadJsonValueByKey(v, "transform", t.transf);
         orjson::LoadJsonValueByKey(v, "halfExtents", t.vExtents);
+        if(!v.HasMember("type")) {
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("need sidewall type when loading from json"), ORE_InvalidArguments);
+        }
         int sideWallType = 0;
-        if (v.HasMember("type") && v["type"].IsInt()) {
+        if (v["type"].IsInt()) {
+            // backward compatibility, support enum sideWall type
             orjson::LoadJsonValueByKey(v, "type", sideWallType);
             if (!(sideWallType >= KinBody::GeometryInfo::SideWallType::SWT_NX
                 && sideWallType <= KinBody::GeometryInfo::SideWallType::SWT_PY)) {
