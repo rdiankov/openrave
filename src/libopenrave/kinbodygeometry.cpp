@@ -563,19 +563,25 @@ inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::Side
     if(v.IsObject()) {
         orjson::LoadJsonValueByKey(v, "transform", t.transf);
         orjson::LoadJsonValueByKey(v, "halfExtents", t.vExtents);
-        std::string type = "";
-        orjson::LoadJsonValueByKey(v, "type", type);
-        std::map<std::string, KinBody::GeometryInfo::SideWallType> sideWallTypeMapping = {
-            {"nx", KinBody::GeometryInfo::SideWallType::SWT_NX},
-            {"px", KinBody::GeometryInfo::SideWallType::SWT_PX},
-            {"ny", KinBody::GeometryInfo::SideWallType::SWT_NY},
-            {"py", KinBody::GeometryInfo::SideWallType::SWT_PY},
-        };
-
-        if (sideWallTypeMapping.find(type) == sideWallTypeMapping.end()) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized sidewall type %s for loading from json"), type, ORE_InvalidArguments);
+        int sideWallType = 0;
+        if (v.HasMember("type") && v["type"].IsNumber()) {
+            orjson::LoadJsonValueByKey(v, "type", sideWallType);
         }
-        t.type = sideWallTypeMapping[type];
+        else {
+            std::string type = "";
+            orjson::LoadJsonValueByKey(v, "type", type);
+            std::map<std::string, KinBody::GeometryInfo::SideWallType> sideWallTypeMapping = {
+                {"nx", KinBody::GeometryInfo::SideWallType::SWT_NX},
+                {"px", KinBody::GeometryInfo::SideWallType::SWT_PX},
+                {"ny", KinBody::GeometryInfo::SideWallType::SWT_NY},
+                {"py", KinBody::GeometryInfo::SideWallType::SWT_PY},
+            };
+            if (sideWallTypeMapping.find(type) == sideWallTypeMapping.end()) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized sidewall type %s for loading from json"), type, ORE_InvalidArguments);
+            }
+            sideWallType = sideWallTypeMapping[type];
+        }
+        t.type = (KinBody::GeometryInfo::SideWallType)sideWallType;
     } else {
         throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Geometry::SideWall", orjson::GetJsonTypeName(v), ORE_InvalidArguments);
     }
