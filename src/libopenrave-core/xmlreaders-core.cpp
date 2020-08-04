@@ -1519,7 +1519,7 @@ public:
             FOREACH(itaxis,_vAxes) {
                 *itaxis = toffsetfrom.rotate(*itaxis);
             }
-            _pjoint->_ComputeInternalInformation(attachedbodies[0],attachedbodies[1],toffsetfrom*_vanchor,_vAxes,_vinitialvalues);
+            _pjoint->_ComputeJointInternalInformation(attachedbodies[0],attachedbodies[1],toffsetfrom*_vanchor,_vAxes,_vinitialvalues);
             return true;
         }
         else if( xmlname == "weight" ) {
