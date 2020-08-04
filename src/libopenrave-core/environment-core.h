@@ -2417,6 +2417,9 @@ public:
 
         FOREACHC(itBodyInfo, info._vBodyInfos) {
             KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
+            if(pKinBodyInfo->_id.empty()){
+                pKinBodyInfo->_id = pKinBodyInfo->_name;
+            }
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
 
             // find existing body in the env
