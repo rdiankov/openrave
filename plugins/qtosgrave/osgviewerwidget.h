@@ -152,8 +152,8 @@ public:
 
     osg::ref_ptr<osgGA::CameraManipulator> GetCurrentCameraManipulator();
     void SetCurrentCameraManipulator(osgGA::CameraManipulator* manipulator);
-    void SetCurrentManipulatorDistanceToFocus(double distance);
-    double GetCurrentManipulatorDistanceToFocus();
+    void SetCameraDistanceToFocus(double distance);
+    double GetCameraDistanceToFocus();
 
     void RestoreDefaultManipulator();
     osg::ref_ptr<osgGA::TrackballManipulator> GetDefaultCameraManipulator();

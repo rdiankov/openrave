@@ -1101,8 +1101,8 @@ void QOSGViewerWidget::SetViewType(int isorthogonal)
         _osgview->getCamera()->setProjectionMatrixAsOrtho(-_currentOrthoFrustumSize, _currentOrthoFrustumSize, -_currentOrthoFrustumSize/aspect, _currentOrthoFrustumSize/aspect, _zNear, _zNear * 10000.0);
     }
     else {
-        SetCurrentManipulatorDistanceToFocus(_currentOrthoFrustumSize*2);
         _osgview->getCamera()->setProjectionMatrixAsPerspective(45.0f, aspect, _zNear, _zNear * 10000.0);
+        SetCameraDistanceToFocus(_currentOrthoFrustumSize*2);
     }
 }
 
@@ -1209,18 +1209,15 @@ void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
 void QOSGViewerWidget::Zoom(float factor)
 {
     // Ortho
+    double distanceToFocus = 0;
     if (IsInOrthoMode()) {
-        _currentOrthoFrustumSize = _currentOrthoFrustumSize / factor;
-        const int width = _osgview->getCamera()->getViewport()->width();
-        const int height = _osgview->getCamera()->getViewport()->height();
-        const double aspect = static_cast<double>(width)/static_cast<double>(height);
-        const double nearplane = GetCameraNearPlane();
-        _osgview->getCamera()->setProjectionMatrixAsOrtho(-_currentOrthoFrustumSize, _currentOrthoFrustumSize, -_currentOrthoFrustumSize/aspect, _currentOrthoFrustumSize/aspect, nearplane, 10000*nearplane);
+        // if we increase _currentOrthoFrustumSize, we zoom out since a bigger frustum maps object to smaller part of screen
+        distanceToFocus = 2 * _currentOrthoFrustumSize * factor;
     }
     else {
-        double newDistance = GetCurrentManipulatorDistanceToFocus() / factor;
-        SetCurrentManipulatorDistanceToFocus(newDistance);
+        distanceToFocus = GetCameraDistanceToFocus() / factor;
     }
+    SetCameraDistanceToFocus(distanceToFocus);
 }
 
 
@@ -1498,20 +1495,20 @@ void QOSGViewerWidget::SetCurrentCameraManipulator(osgGA::CameraManipulator* man
     _osgview->setCameraManipulator(manipulator);
 }
 
-double QOSGViewerWidget::GetCurrentManipulatorDistanceToFocus()
+double QOSGViewerWidget::GetCameraDistanceToFocus()
 {
     osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());
     return currentManip->getDistance();
 
 }
 
-void QOSGViewerWidget::SetCurrentManipulatorDistanceToFocus(double distance)
+void QOSGViewerWidget::SetCameraDistanceToFocus(double distance)
 {
     if( distance <= 0 ) {
         return;
     }
     if (IsInOrthoMode()) {
-        _currentOrthoFrustumSize = distance;
+        _currentOrthoFrustumSize = distance * 0.5;
         const int width = _osgview->getCamera()->getViewport()->width();
         const int height = _osgview->getCamera()->getViewport()->height();
         const double aspect = static_cast<double>(width)/static_cast<double>(height);

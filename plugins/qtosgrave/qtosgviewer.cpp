@@ -651,7 +651,7 @@ void QtOSGViewer::_ChangeViewToXY()
     _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(0));
     _Tcamera.trans.x = center.x();
     _Tcamera.trans.y = center.y();
-    _Tcamera.trans.z = center.z() + _posgWidget->GetCurrentManipulatorDistanceToFocus();
+    _Tcamera.trans.z = center.z() + _posgWidget->GetCameraDistanceToFocus();
     _SetCameraTransform();
 }
 
@@ -660,7 +660,7 @@ void QtOSGViewer::_ChangeViewToXZ()
     osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
     _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2));
     _Tcamera.trans.x = center.x();
-    _Tcamera.trans.y = center.y() - _posgWidget->GetCurrentManipulatorDistanceToFocus();
+    _Tcamera.trans.y = center.y() - _posgWidget->GetCameraDistanceToFocus();
     _Tcamera.trans.z = center.z();
     _SetCameraTransform();
 
@@ -670,7 +670,7 @@ void QtOSGViewer::_ChangeViewToYZ()
 {
     osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
     _Tcamera.rot = quatMultiply(quatFromAxisAngle(RaveVector<float>(0,0,1), float(M_PI/2)), quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2)));
-    _Tcamera.trans.x = center.x() + _posgWidget->GetCurrentManipulatorDistanceToFocus();
+    _Tcamera.trans.x = center.x() + _posgWidget->GetCameraDistanceToFocus();
     _Tcamera.trans.y = center.y();
     _Tcamera.trans.z = center.z();
     _SetCameraTransform();
@@ -1436,7 +1436,7 @@ bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& 
 void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
 {
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
-    _posgWidget->SetCurrentManipulatorDistanceToFocus(focalDistance);
+    _posgWidget->SetCameraDistanceToFocus(focalDistance);
     _SetCameraTransform();
 }
 
@@ -1451,7 +1451,7 @@ RaveTransform<float> QtOSGViewer::GetCameraTransform() const
 float QtOSGViewer::GetCameraDistanceToFocus() const
 {
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
-    return _posgWidget->GetCurrentManipulatorDistanceToFocus();
+    return _posgWidget->GetCameraDistanceToFocus();
 }
 
 geometry::RaveCameraIntrinsics<float> QtOSGViewer::GetCameraIntrinsics() const
