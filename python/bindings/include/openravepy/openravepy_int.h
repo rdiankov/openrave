@@ -612,6 +612,7 @@ OPENRAVEPY_API py::object toPyTriMesh(const TriMesh& mesh);
 OPENRAVEPY_API bool ExtractTriMesh(py::object o, TriMesh& mesh);
 OPENRAVEPY_API std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(py::object pyLinkInfoList);
 OPENRAVEPY_API std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(py::object pyJointInfoList);
+OPENRAVEPY_API KinBody::GrabbedInfoPtr ExtractGrabbedInfo(py::object pyGrabbedInfo);
 OPENRAVEPY_API std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(py::object pyGrabbedInfoList);
 OPENRAVEPY_API std::vector< std::pair< std::pair<std::string, int>, dReal>> ExtractDOFValuesArray(py::object pyDOFValuesList);
 OPENRAVEPY_API std::map<std::string, ReadablePtr> ExtractReadableInterfaces(py::object pyReadableInterfaces);
