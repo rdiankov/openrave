@@ -611,7 +611,8 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 
     {
         _osgSkybox = new Skybox;
-        //_osgFigureRoot->addChild(_osgSkybox); // disabled skybox since it is not currently in use
+        _osgFigureRoot->addChild(_osgSkybox);
+        _osgSkybox->setNodeMask(0x0);// only enable when set texture map
         _osgFigureRoot->setNodeMask(~OSG_IS_PICKABLE_MASK);
     }
 
@@ -1245,6 +1246,7 @@ void QOSGViewerWidget::Zoom(float factor)
 void QOSGViewerWidget::SetTextureCubeMap(const std::string& posx, const std::string& negx, const std::string& posy,
                                          const std::string& negy, const std::string& posz, const std::string& negz)
 {
+    _osgSkybox->setNodeMask(~OSG_IS_PICKABLE_MASK);
     _osgSkybox->setTextureCubeMap(posx, negx, posy, negy, posz, negz);
 }
 
