@@ -1233,7 +1233,7 @@ void QOSGViewerWidget::Zoom(float factor)
     double distanceToFocus = 0;
     if (IsInOrthoMode()) {
         // if we increase _currentOrthoFrustumSize, we zoom out since a bigger frustum maps object to smaller part of screen
-        distanceToFocus = 2 * _currentOrthoFrustumSize * factor;
+        distanceToFocus = 2 * _currentOrthoFrustumSize / factor;
     }
     else {
         distanceToFocus = GetCameraDistanceToFocus() / factor;
