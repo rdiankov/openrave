@@ -2286,6 +2286,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _vGrabbedInfos = vGrabbedInfos;
 #endif
     _transform = ReturnTransform(info._transform);
+    _isRobot = info._isRobot;
     _dofValues = ReturnDOFValues(info._dofValues);
     _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
 }
@@ -4784,6 +4785,7 @@ void init_openravepy_kinbody()
                          .def_readwrite("_dofValues", &PyKinBody::PyKinBodyInfo::_dofValues)
                          .def_readwrite("_readableInterfaces", &PyKinBody::PyKinBodyInfo::_readableInterfaces)
                          .def_readwrite("_transform", &PyKinBody::PyKinBodyInfo::_transform)
+                         .def_readwrite("_isRobot", &PyKinBody::PyKinBodyInfo::_isRobot)
                          .def("__str__",&PyKinBody::PyKinBodyInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyKinBodyInfo::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

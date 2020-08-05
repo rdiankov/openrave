@@ -152,6 +152,7 @@ public:
     py::object _name = py::none_();
 #endif
     py::object _transform = ReturnTransform(Transform());
+    bool _isRobot = false;
     py::object _dofValues = py::none_();
     py::object _readableInterfaces = py::none_();
     virtual std::string __str__();
