@@ -212,7 +212,12 @@ public:
         }
 
         if( bStartSimulationThread ) {
+            _bEnableSimulation = true;
             _StartSimulationThread();
+        }
+        else {
+            // since not running, disable it
+            _bEnableSimulation = false;
         }
     }
 
@@ -1454,10 +1459,14 @@ public:
 #else
                         robot->SetName("object");
 #endif
-                        return robot;
+                    }
+                    else {
+                        robot.reset();
                     }
                 }
-                robot.reset();
+                else {
+                    robot.reset();
+                }
             }
         }
         else {
@@ -1472,6 +1481,11 @@ public:
             if( !bSuccess || !robot ) {
                 return RobotBasePtr();
             }
+            //robot->__struri = filename;
+        }
+
+        // have to set the URI to the passed in one rather than the resolved one, otherwise external components won't be able to compare if a URI is equivalent or not
+        if( !!robot ) {
             robot->__struri = filename;
         }
 
@@ -1631,10 +1645,16 @@ public:
 #else
                         body->SetName("object");
 #endif
-                        return body;
+                    }
+                    else {
+                        // failed
+                        body.reset();
                     }
                 }
-                body.reset();
+                else {
+                    // nothing to load
+                    body.reset();
+                }
             }
         }
         else {
@@ -1649,6 +1669,11 @@ public:
             if( !bSuccess || !body ) {
                 return KinBodyPtr();
             }
+            //body->__struri = filename;
+        }
+
+        // have to set the URI to the passed in one rather than the resolved one, otherwise external components won't be able to compare if a URI is equivalent or not
+        if( !!body ) {
             body->__struri = filename;
         }
 

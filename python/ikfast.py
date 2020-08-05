@@ -1633,8 +1633,8 @@ class IKFastSolver(AutoReloader):
                             for itestjoint, testjoint in enumerate(chainjoints):
                                 var = var.replace(testjoint.GetName(), 'j%d'%testjoint.GetDOFIndex())
                             # this needs to be reduced!
-                            cosvar = cos(var)
-                            sinvar = sin(var)
+                            cosvar = expand_trig(cos(var)) # cos(j1+j2) -> cos(j1)*cos(j2) - sin(j1)*sin(j2)
+                            sinvar = expand_trig(sin(var))
                         elif joint.IsStatic():
                             # joint doesn't move so assume identity
                             pass
@@ -1705,7 +1705,7 @@ class IKFastSolver(AutoReloader):
             Links[ileft-1] = Links[ileft-1] * Ttrans
             Links[ileft+1] = self.affineInverse(Ttrans) * Links[ileft+1]
             log.info("moved translation on intersecting axis %s to left",Ttrans[0:3,3].transpose())
-            
+        
         return Links, jointvars
     
     def countVariables(self,expr,var):
