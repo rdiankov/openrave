@@ -2532,6 +2532,12 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
             SerializeRound(o,_info._vupperlimit[i]);
         }
     }
+
+    if( options & SO_BodyState ) {
+        for(int i = 0; i < GetDOF(); ++i) {
+            SerializeRound(o,GetValue(i));
+        }
+    }    
 }
 
 void KinBody::MimicInfo::Reset()

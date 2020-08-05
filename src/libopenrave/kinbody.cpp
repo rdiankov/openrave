@@ -4346,6 +4346,7 @@ void KinBody::_ComputeInternalInformation()
     }
 
     __hashkinematics.resize(0);
+    __hashbodystate.resize(0);
 
     // create the adjacency list
     {
@@ -4822,6 +4823,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _nHierarchyComputed = r->_nHierarchyComputed;
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
     __hashkinematics = r->__hashkinematics;
+    __hashbodystate = r->__hashbodystate;
     _vTempJoints = r->_vTempJoints;
 
     _veclinks.resize(0); _veclinks.reserve(r->_veclinks.size());
@@ -4997,6 +4999,10 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
         __hashkinematics.resize(0);
     }
 
+    if( !!(parameters & (Prop_LinkEnable|Prop_LinkTransforms)) ) {
+        __hashbodystate.resize(0);
+    }
+
     if( (parameters&Prop_LinkEnable) == Prop_LinkEnable ) {
         // check if any regrabbed bodies have the link in _listNonCollidingLinks and the link is enabled, or are missing the link in _listNonCollidingLinks and the link is disabled
         std::map<GrabbedPtr, list<KinBody::LinkConstPtr> > mapcheckcollisions;
@@ -5115,6 +5121,19 @@ const std::string& KinBody::GetKinematicsGeometryHash() const
         __hashkinematics = utils::GetMD5HashString(ss.str());
     }
     return __hashkinematics;
+}
+
+const std::string& KinBody::GetBodyStateHash() const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    if( __hashbodystate.size() == 0 ) {
+        ostringstream ss;
+        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+        // should add dynamics since that affects a lot how part is treated.
+        serialize(ss,SO_BodyState);
+        __hashbodystate = utils::GetMD5HashString(ss.str());
+    }
+    return __hashbodystate;
 }
 
 void KinBody::SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, uint32_t checklimits)

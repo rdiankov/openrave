@@ -548,6 +548,10 @@ void KinBody::Link::serialize(std::ostream& o, int options) const
         SerializeRound(o,_info._mass);
         SerializeRound3(o,_info._vinertiamoments);
     }
+    if( options & SO_BodyState ) {
+        SerializeRound(o,_info._t);
+        o << " " << _info._bIsEnabled;
+    }
 }
 
 void KinBody::Link::SetStatic(bool bStatic)
