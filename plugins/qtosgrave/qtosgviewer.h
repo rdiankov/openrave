@@ -448,7 +448,6 @@ public:
     QAction* loadAct;
     QAction* multiAct;
     QAction* simpleAct;
-
     QAction* importAct;
     QAction* saveAct;
     QAction* viewCamAct;
@@ -488,6 +487,7 @@ public:
     QTreeView* _qtree;
 
     //QActionGroup* shapeGroup;
+    QPushButton* _cameraMoveModeButton;
     QButtonGroup* _pointerTypeGroup;
     QButtonGroup* buttonGroup;
     QButtonGroup* draggerTypeGroup;

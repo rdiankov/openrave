@@ -862,16 +862,16 @@ void QtOSGViewer::_CreateControlButtons()
             this->_posgWidget->Zoom(0.9);
         });
 
-    QPushButton *cameraMoveModeButton = new QPushButton("Rot");
-    cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
-    connect(cameraMoveModeButton, &QPushButton::pressed, [=]() {
+    _cameraMoveModeButton = new QPushButton("Rot");
+    _cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
+    connect(_cameraMoveModeButton, &QPushButton::pressed, [=]() {
             _posgWidget->ToggleCameraMoveMode();
-            cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
+            _cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
         });
 
     qvBoxLayout->addWidget(zoomInButton);
     qvBoxLayout->addWidget(zoomOutButton);
-    qvBoxLayout->addWidget(cameraMoveModeButton);
+    qvBoxLayout->addWidget(_cameraMoveModeButton);
 
     controlWidget->setLayout(qvBoxLayout);
 }
@@ -1387,6 +1387,7 @@ void QtOSGViewer::_SetTrackManipulatorToStopTracking()
 {
     _ptrackinglink.reset();
     _posgWidget->StopTrackNode();
+    _cameraMoveModeButton->setEnabled(true);
 }
 
 bool QtOSGViewer::_SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation)
@@ -1403,6 +1404,7 @@ bool QtOSGViewer::_SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, const R
 
     osg::Vec3d linkOffset(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]);
     _posgWidget->TrackNode(osgNode.get(), str(boost::format("(link) %s/%s")%parentIem->GetName()%link->GetName()), linkOffset, _posgWidget->GetCurrentManipulatorDistanceToFocus());
+    _cameraMoveModeButton->setEnabled(false);
     return true;
 }
 
