@@ -95,6 +95,12 @@ public:
     /// \brief Rotates the camera around the current focal point in the direction of the screen y vector (in world coordinates). The argument thetaY is in radians -pi < thetaY < pi.
     virtual void RotateCameraYDirection(float thetaY);
 
+    /// \brief Pans the camera in the direction of the screen x vector, parallel to screen plane. The argument dx is in normalized coordinates 0 < dx < 1, where 1 means canvas width.
+    virtual void PanCameraXDirection(float dx);
+
+    /// \brief Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.
+    virtual void PanCameraYDirection(float dy);
+
     /// \brief changes current focal distance (if in perspective mode) or the current projection plane size (if in ortho mode) in order
     /// to zoom in/out towards/from focal point (if factor < 1). This function never changes de focal point position.
     void Zoom(float factor);
@@ -226,7 +232,16 @@ protected:
     /// \brief update hud display axis from current manipulator transform
     void _UpdateHUDAxisTransform(int width, int height);
 
-    void _RotateCameraOverDirection(double angle, const osg::Vec3d& rotationOverDirection, bool useCameraUpDirection=true);
+    /// \brief performs a rotation of the camera over the current focal point (see GetCurrentManipulatorDistanceToFocus()).
+    /// Camera will keep looking ate the focal point after performing the rotation.
+    /// \param angle in radians, -pi < angle < pi, camSpaceRotationOverDirection is the direction in camera space over which to rotate to.
+    /// \param useCameraUpDirection in radians, -pi < angle < pi, camSpaceRotationOverDirection is the direction, in camera, space over which to rotate to.
+    void _RotateCameraOverDirection(double angle, const osg::Vec3d& camSpaceRotationOverDirection, bool useCameraUpDirection=true);
+
+    /// \brief performs a a pan translation of both camera and focal point position.
+    /// \param camSpacePanDirection is the pan direction in camera space to apply to camera and focal point.
+    /// \param delta is how much to translate in worlds units (see _metersinunit and QOSGViewerWidget() constructor)
+    void _PanCameraTowardsDirection(double delta, const osg::Vec3d& camSpacePanDirection);
 
     /// \brief Create a dragger with a name given
     std::vector<osg::ref_ptr<osgManipulator::Dragger> > _CreateDragger(const std::string &name);

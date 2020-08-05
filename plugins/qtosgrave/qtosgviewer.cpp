@@ -161,11 +161,18 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
                     "sets the viewer projection mode, perspective or orthogonal");
     RegisterCommand("Zoom", boost::bind(&QtOSGViewer::_ZoomCommand, this, _1, _2),
-                    "Set the zooming factor of the view");    
+                    "Set the zooming factor of the view");
     RegisterCommand("RotateCameraXDirection", boost::bind(&QtOSGViewer::_RotateCameraXDirectionCommand, this, _1, _2),
     "Rotates the camera around the current focal point in the direction of the screen x vector (in world coordinates). The argument thetaX is in radians -pi < dx < pi.");
     RegisterCommand("RotateCameraYDirection", boost::bind(&QtOSGViewer::_RotateCameraYDirectionCommand, this, _1, _2),
     "Rotates the camera around the current focal point in the direction of the screen y vector (in world coordinates). The argument thetaY is in radians -pi < dy < pi.");
+
+    // Pan commands. This commands will be ignored if currently in TrackLink or TrackManipulator mode (e.g: using osgviewerwidget NodeTrackManipulator or activating TrackLink or TrackManipulator commands)
+    // since pan is not a valid operation during track mode, because when tracking we always keep focus in the tracked object.
+    RegisterCommand("PanCameraXDirection", boost::bind(&QtOSGViewer::_PanCameraXDirectionCommand, this, _1, _2),
+    "Pans the camera in the direction of the screen x vector, parallel to screen plane. The argument dx is in normalized coordinates 0 < dx < 1, where 1 means canvas width.");
+    RegisterCommand("PanCameraYDirection", boost::bind(&QtOSGViewer::_PanCameraYDirectionCommand, this, _1, _2),
+    "Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.");
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
@@ -1257,6 +1264,24 @@ bool QtOSGViewer::_RotateCameraYDirectionCommand(ostream& sout, istream& sinput)
     return true;
 }
 
+bool QtOSGViewer::_PanCameraXDirectionCommand(ostream& sout, istream& sinput) 
+{
+    float dx = 0.0f;
+    sinput >> dx;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraXDirection, this, dx));
+    return true;
+}
+
+bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput) 
+{
+    float dy = 0.0f;
+    sinput >> dy;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraYDirection, this, dy));
+    return true;
+}
+
 void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
 {
     if (projectionMode == "orthogonal")
@@ -1813,6 +1838,16 @@ void QtOSGViewer::_RotateCameraXDirection(float thetaX)
 void QtOSGViewer::_RotateCameraYDirection(float thetaY)
 {
     _posgWidget->RotateCameraYDirection(thetaY);
+}
+
+void QtOSGViewer::_PanCameraXDirection(float dx)
+{
+    _posgWidget->PanCameraXDirection(dx);
+}
+
+void QtOSGViewer::_PanCameraYDirection(float dy)
+{
+    _posgWidget->PanCameraYDirection(dy);
 }
 
 void QtOSGViewer::_Zoom(float factor)

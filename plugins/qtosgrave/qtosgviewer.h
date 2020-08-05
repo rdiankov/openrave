@@ -343,6 +343,8 @@ public:
     virtual void _Zoom(float factor);
     virtual void _RotateCameraXDirection(float thetaX);
     virtual void _RotateCameraYDirection(float thetaY);
+    virtual void _PanCameraXDirection(float dx);
+    virtual void _PanCameraYDirection(float dy);
 
     /// \brief posts a function to be executed in the GUI thread
     ///
@@ -392,6 +394,8 @@ public:
     bool _ZoomCommand(ostream& sout, istream& sinput);
     bool _RotateCameraXDirectionCommand(ostream& sout, istream& sinput);
     bool _RotateCameraYDirectionCommand(ostream& sout, istream& sinput);
+    bool _PanCameraXDirectionCommand(ostream& sout, istream& sinput);
+    bool _PanCameraYDirectionCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions

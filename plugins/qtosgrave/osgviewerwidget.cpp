@@ -1031,6 +1031,16 @@ void QOSGViewerWidget::RotateCameraYDirection(float thetaY)
     _RotateCameraOverDirection(thetaY, osg::Vec3d(1,0,0));
 }
 
+void QOSGViewerWidget::PanCameraXDirection(float dx)
+{
+    _PanCameraTowardsDirection(dx, osg::Vec3d(1,0,0));
+}
+
+void QOSGViewerWidget::PanCameraYDirection(float dy)
+{
+    _PanCameraTowardsDirection(dy, osg::Vec3d(0,1,0));
+}
+
 double QOSGViewerWidget::GetCameraNearPlane()
 {
     return _zNear;
@@ -1084,7 +1094,7 @@ void QOSGViewerWidget::_UpdateHUDAxisTransform(int width, int height)
     _osgWorldAxis->setMatrix(m);
 }
 
-void QOSGViewerWidget::_RotateCameraOverDirection(double angle, const osg::Vec3d& rotationOverDirection, bool useCameraUpDirection)
+void QOSGViewerWidget::_RotateCameraOverDirection(double angle, const osg::Vec3d& camSpaceRotationOverDirection, bool useCameraUpDirection)
 {
     osg::Matrixd cameraToWorld = osg::Matrixd::inverse(GetCamera()->getViewMatrix());
     double cameraDistanceToFocus = GetCurrentManipulatorDistanceToFocus();
@@ -1102,7 +1112,7 @@ void QOSGViewerWidget::_RotateCameraOverDirection(double angle, const osg::Vec3d
     osg::Vec3d cameraWorldPos(cameraToWorld(3,0), cameraToWorld(3,1), cameraToWorld(3,2));
     osg::Vec3d focusPoint = cameraWorldPos + targetVector;
 
-    osg::Vec3d rotationOverDirectionWorld = cameraToWorldRotate * rotationOverDirection;
+    osg::Vec3d rotationOverDirectionWorld = cameraToWorldRotate * camSpaceRotationOverDirection;
 
     // rotate the camera dir over the rotationOverDirection in world space
     osg::Vec3d rotatedCameraDir = osg::Quat(angle, rotationOverDirectionWorld) * (-targetVector);
@@ -1122,6 +1132,20 @@ void QOSGViewerWidget::_RotateCameraOverDirection(double angle, const osg::Vec3d
     osg::Matrixd newViewMatrix;
     newViewMatrix.makeLookAt(newCameraPos, newCameraPos - rotatedCameraDir, upVector);
     GetCurrentCameraManipulator()->setByInverseMatrix(newViewMatrix);
+}
+
+void QOSGViewerWidget::_PanCameraTowardsDirection(double delta, const osg::Vec3d& camSpacePanDirection)
+{
+    osg::Matrixd viewMatrix = GetCamera()->getViewMatrix();
+
+    osg::Vec3d panTranslation = camSpacePanDirection;
+    panTranslation.normalize();
+    panTranslation = panTranslation * (delta / _metersinunit);
+
+    viewMatrix(3,0) = viewMatrix(3,0) + panTranslation.x();
+    viewMatrix(3,1) = viewMatrix(3,1) + panTranslation.y();
+    viewMatrix(3,2) = viewMatrix(3,2) + panTranslation.z();
+    GetCurrentCameraManipulator()->setByInverseMatrix(viewMatrix);
 }
 
 void QOSGViewerWidget::Zoom(float factor)
