@@ -315,6 +315,7 @@ public:
     int GetUpdateStamp() const;
     std::string serialize(int options) const;
     std::string GetKinematicsGeometryHash() const;
+    std::string GetBodyStateHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
 
     py::object ExtractInfo() const;

@@ -3743,6 +3743,11 @@ string PyKinBody::GetKinematicsGeometryHash() const
     return _pbody->GetKinematicsGeometryHash();
 }
 
+string PyKinBody::GetBodyStateHash() const
+{
+    return _pbody->GetBodyStateHash();
+}
+
 PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
 {
     return CreateStateSaver(options);
@@ -5211,6 +5216,7 @@ void init_openravepy_kinbody()
                          .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp, DOXY_FN(KinBody,GetUpdateStamp))
                          .def("serialize",&PyKinBody::serialize,PY_ARGS("options") DOXY_FN(KinBody,serialize))
                          .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash, DOXY_FN(KinBody,GetKinematicsGeometryHash))
+                         .def("GetBodyStateHash",&PyKinBody::GetBodyStateHash, DOXY_FN(KinBody,GetBodyStateHash))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("CreateKinBodyStateSaver", &PyKinBody::CreateKinBodyStateSaver,
                               "options"_a = py::none_(),

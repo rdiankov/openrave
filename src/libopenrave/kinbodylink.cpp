@@ -559,7 +559,7 @@ void KinBody::Link::serialize(std::ostream& o, int options) const
     }
     if( options & SO_BodyState ) {
         SerializeRound(o,_info._t);
-        o << " " << _info._bIsEnabled;
+        o << _info._bIsEnabled << " ";
     }
 }
 
