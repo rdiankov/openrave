@@ -216,8 +216,10 @@ public:
 
         /// \brief compare two geometry infos. If the floating differences are within fEpsilon, then comparison will return true.
         ///
-        /// \return true if geometries are similar within epsilon
-        bool Compare(const GeometryInfo& rhs, dReal fEpsilon=1e-7) const;
+        /// \param rhs the right hand geometry info to compare
+        /// \param fUnitScale rhs should be scaled by fUnitScale when being compared.
+        /// \return 0 if geometries are similar within epsilon. Otherwise a non-zero code indicating what was not the same
+        int Compare(const GeometryInfo& rhs, dReal fUnitScale, dReal fEpsilon) const;
 
         /// \brief converts the unit scale of the geometry
         void ConvertUnitScale(dReal fUnitScale);
@@ -341,8 +343,9 @@ public:
         /// \brief compare two link infos. If the floating differences are within fEpsilon, then comparison will return true.
         ///
         /// \param linkCompareOptions 0 to compare everything. 1 to ignore _t
-        /// \return true if links are similar within epsilon
-        bool Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fEpsilon=1e-7) const;
+        /// \param fUnitScale rhs should be scaled by fUnitScale when being compared.
+        /// \return 0 if links are similar within epsilon. Otherwise a non-zero code indicating what was not the same
+        int Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fUnitScale, dReal fEpsilon) const;
 
         /// \brief converts the unit scale of the link properties and geometries
         void ConvertUnitScale(dReal fUnitScale);
@@ -1571,8 +1574,12 @@ protected:
             \param vanchor the anchor of the rotation axes
             \param vaxes the axes in plink0's coordinate system of the joints
             \param vinitialvalues the current values of the robot used to set the 0 offset of the robot
+            \param bProcessStatic if true, then check to see if the joint is static and then set its cache and reduce its limits. If false, treat the joint as non-static.
          */
-        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
+        virtual void _ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
+
+        /// \brief once all the joints have been computed and initiailzed, call this function 
+        virtual void _ComputeInternalStaticInformation();
 
         /// \brief evaluates the mimic joint equation using vdependentvalues
         ///
@@ -1606,7 +1613,7 @@ private:
         Transform _tRightNoOffset, _tLeftNoOffset;         ///< same as _tLeft and _tRight except it doesn't not include the offset
         Transform _tinvRight, _tinvLeft;         ///< the inverse transformations of tRight and tLeft
         bool _bInitialized;
-        bool _bStatic; ///< IsStatic with both lower and upper limits equal 0
+        int8_t _nIsStatic; ///< If 1, then joint is static and shouldnot move. If 0, then joint is not static. If -1, then still unknown
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -2767,6 +2774,14 @@ private:
      */
     virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
 
+    /// \brief returns number of grabbed targets
+    virtual int GetNumGrabbed() const;
+
+    /// \brief return the valid grabbed body. If the grabbed body is not in the environment, will just return empty
+    ///
+    /// \param iGrabbed index into the grabbed body. Max is GetNumGrabbed()-1
+    virtual KinBodyPtr GetGrabbedBody(int iGrabbed) const;
+    
     /** \brief gets all grabbed bodies of the body
 
         \param[out] vgrabbedinfo filled with the grabbed info for every body. The pointers are newly created.

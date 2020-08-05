@@ -509,6 +509,7 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     if (!IS_PYTHONOBJECT_NONE(_referenceUri)) {
         pInfo->_referenceUri = py::extract<std::string>(_referenceUri);
     }
+    pInfo->_isRobot = true;
     std::vector<KinBody::LinkInfoPtr> vLinkInfos = ExtractLinkInfoArray(_vLinkInfos);
     pInfo->_vLinkInfos.clear();
     pInfo->_vLinkInfos.reserve(vLinkInfos.size());

@@ -277,7 +277,7 @@ protected:
                     }
                 }
                 std::vector<dReal> vcurrentvalues;
-                pjoint->_ComputeInternalInformation(plink,pchildlink, (t*tlocalpivot).trans,vaxes,vcurrentvalues);
+                pjoint->_ComputeJointInternalInformation(plink,pchildlink, (t*tlocalpivot).trans,vaxes,vcurrentvalues);
                 if( node->mFramePivot->mJointIndex > pbody->_vecjoints.size() ) {
                     pbody->_vecjoints.resize(node->mFramePivot->mJointIndex);
                 }

@@ -22,6 +22,7 @@ namespace OpenRAVE {
 
 RobotBase::GripperInfo& RobotBase::GripperInfo::operator=(const RobotBase::GripperInfo& other)
 {
+    _id = other._id;
     name = other.name;
     grippertype = other.grippertype;
     gripperJointNames = other.gripperJointNames;
@@ -2651,6 +2652,7 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
 {
     KinBody::ExtractInfo(info);
 
+    info._isRobot = true;
     // need to avoid extracting info from connectedbodies
     std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);
     std::vector<bool> isConnectedAttachedSensor(_vecAttachedSensors.size(), false);

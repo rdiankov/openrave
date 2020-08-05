@@ -45,10 +45,10 @@ public:
             _info._trajfollow = trajfollow;
         }
 
-        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, dReal currentvalue)
+        virtual void _ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, dReal currentvalue)
         {
             std::vector<dReal> vcurrentvalues(1); vcurrentvalues[0] = 0; // current values always 0
-            Joint::_ComputeInternalInformation(plink0, plink1, Vector(), std::vector<Vector>(), vcurrentvalues);
+            Joint::_ComputeJointInternalInformation(plink0, plink1, Vector(), std::vector<Vector>(), vcurrentvalues);
         }
     };
 
@@ -224,7 +224,7 @@ protected:
         }
     }
 
-    virtual void _ComputeInternalInformation()
+    virtual void _ComputeInternalInformation() override
     {
         // create extra joints for each conveyor joint
         ConveyorInfoPtr cmdata = boost::dynamic_pointer_cast<ConveyorInfo>(GetReadableInterface("conveyorjoint"));
@@ -248,7 +248,7 @@ protected:
                 mimic->_equations[0] += str(boost::format(" +%.15e")%curtime); // have to add the offset inside the equations
                 boost::shared_ptr<ConveyorJoint> pchildjoint(new ConveyorJoint(pchildlink->GetName(), cmdata->_trajfollow, mimic, cmdata->_bIsCircular, shared_kinbody()));
                 _vecjoints.push_back(pchildjoint);
-                pchildjoint->_ComputeInternalInformation(cmdata->_linkParent, pchildlink, curtime);
+                pchildjoint->_ComputeJointInternalInformation(cmdata->_linkParent, pchildlink, curtime);
             }
             cmdata->_bCreated = true;
         }
