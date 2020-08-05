@@ -333,8 +333,8 @@ public:
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
     virtual double _GetCameraDistanceToFocus();
-    virtual void _SetTrackManipulatorToStopTracking();
-    virtual bool _SetTrackManipulatorToTrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation);
+    virtual void _StopTrackingLink();
+    virtual bool _StartTrackingLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation);
     virtual void _SetItemVisualization(std::string& itemname, std::string& visualizationmode);
     virtual void _SetProjectionMode(const std::string& projectionMode);
     virtual void _SetBkgndColor(const RaveVector<float>& color);
@@ -499,8 +499,7 @@ public:
     /// tracking parameters
     //@{
     KinBody::LinkPtr _ptrackinglink; ///< current link tracking
-    Transform _tTrackingLinkRelative; ///< relative transform in the _ptrackinglink coord system  that should be tracking.
-    RobotBase::ManipulatorPtr _ptrackingmanip; ///< current manipulator tracking
+    Transform _currentTrackLinkRelTransform; ///< relative transform in the _ptrackinglink coord system  that should be tracking.
     Transform _tTrackingCameraVelocity; ///< camera velocity
     float _fTrackAngleToUp; ///< tilt a little when looking at the point
     //@}
