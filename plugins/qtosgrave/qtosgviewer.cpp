@@ -1395,7 +1395,6 @@ bool QtOSGViewer::_StartTrackingLink(KinBody::LinkPtr link, const RaveTransform<
 {
     if(!!_ptrackinglink && _ptrackinglink == link && AreTransformsEqual(_currentTrackLinkRelTransform, linkRelativeTranslation)) {
         // already tracking the requested link, nothing to be done
-        RAVELOG_WARN("Already tracking link %s, ignoring command", link->GetName());
         return true;
     }
     _ptrackinglink = link;
