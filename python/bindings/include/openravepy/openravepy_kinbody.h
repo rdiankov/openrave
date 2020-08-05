@@ -300,7 +300,7 @@ public:
     void RegrabAll();
     py::object IsGrabbing(PyKinBodyPtr pbody) const;
     py::object GetGrabbed() const;
-    py::object GetGrabbedInfo() const;
+    py::object GetGrabbedInfo(py::object ograbbedname=py::none_()) const;
     void ResetGrabbed(py::object ograbbedinfos);
     bool IsRobot() const;
     int GetEnvironmentId() const;
