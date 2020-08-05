@@ -616,7 +616,8 @@ void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const st
     }
     if( linkinfos.size() > 1 ) {
         // create static joints
-        _vecjoints.resize(linkinfos.size()-1);
+        _vecjoints.clear();
+        _vecjoints.reserve(linkinfos.size()-1);
         for(int ilinkinfo = 0; ilinkinfo+1 < (int)linkinfos.size(); ++ilinkinfo) {
             JointPtr pjoint(new Joint(shared_kinbody()));
             pjoint->_info._type = JointRevolute;

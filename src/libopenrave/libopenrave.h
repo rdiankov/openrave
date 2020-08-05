@@ -263,6 +263,24 @@ inline dReal GetClosestValueAlongCircle(dReal angle, dReal testvalue)
     return angle;
 }
 
+inline bool IsZeroWithEpsilon3(const Vector v, dReal fEpsilon)
+{
+    return RaveFabs(v.x) <= fEpsilon && RaveFabs(v.y) <= fEpsilon && RaveFabs(v.z) <= fEpsilon;
+}
+
+inline bool IsZeroWithEpsilon4(const Vector v, dReal fEpsilon)
+{
+    return RaveFabs(v.x) <= fEpsilon && RaveFabs(v.y) <= fEpsilon && RaveFabs(v.z) <= fEpsilon && RaveFabs(v.w) <= fEpsilon;
+}
+
+inline dReal ComputeQuatDistance2(const Vector& quat0, const Vector& quat1)
+{
+    dReal e1 = (quat0-quat1).lengthsqr4();
+    dReal e2 = (quat0+quat1).lengthsqr4();
+    dReal e = e1 < e2 ? e1 : e2;
+    return e;
+}
+
 inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
 {
     dReal e1 = (t1.rot-t2.rot).lengthsqr4();
@@ -496,7 +514,7 @@ inline uint32_t ConvertUIntToHex(uint32_t value, char* output)
 template<typename T>
 void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string& id, std::vector<boost::shared_ptr<T> >& vInfos, dReal fUnitScale, int options)
 {
-    typename std::vector<boost::shared_ptr<T>>::iterator itExistingInfo = vInfos.end();
+    typename std::vector<boost::shared_ptr<T> >::iterator itExistingInfo = vInfos.end();
     FOREACH(itInfo, vInfos) {
         if ((*itInfo)->_id == id) {
             itExistingInfo = itInfo;
@@ -524,12 +542,12 @@ void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string& id, st
 
 /// \brief helper function to compare two info(shared_ptr) vectors and copy the diff into vecDiffOut;
 template<typename T>
-void GetInfoVectorDiff(const std::vector<boost::shared_ptr<T>>& oldInfos, const std::vector<boost::shared_ptr<T>>& newInfos, std::vector<boost::shared_ptr<T>>& vecDiffOut) {
+void GetInfoVectorDiff(const std::vector<boost::shared_ptr<T> >& oldInfos, const std::vector<boost::shared_ptr<T> >& newInfos, std::vector<boost::shared_ptr<T> >& vecDiffOut) {
     vecDiffOut.reserve(oldInfos.size() + newInfos.size());
     std::vector<bool> existingNewInfo(newInfos.size(), false);
-    for(typename std::vector<boost::shared_ptr<T>>::const_iterator itOldInfo = oldInfos.begin(); itOldInfo != oldInfos.end(); itOldInfo++) {
+    for(typename std::vector<boost::shared_ptr<T> >::const_iterator itOldInfo = oldInfos.begin(); itOldInfo != oldInfos.end(); itOldInfo++) {
         bool oldInfoFound = false;
-        for(typename std::vector<boost::shared_ptr<T>>::const_iterator itNewInfo = newInfos.begin(); itNewInfo != newInfos.end(); itNewInfo++) {
+        for(typename std::vector<boost::shared_ptr<T> >::const_iterator itNewInfo = newInfos.begin(); itNewInfo != newInfos.end(); itNewInfo++) {
             if ((*itOldInfo)->_id == (*itNewInfo)->_id) {
                 if ((**itOldInfo) != (**itNewInfo)) {
                     vecDiffOut.push_back(*itOldInfo);
@@ -552,7 +570,7 @@ void GetInfoVectorDiff(const std::vector<boost::shared_ptr<T>>& oldInfos, const 
 }
 
 template<typename T>
-bool IsInfoVectorEqual(const std::vector<boost::shared_ptr<T>>& oldInfos, const std::vector<boost::shared_ptr<T>>& newInfos) {
+bool IsInfoVectorEqual(const std::vector<boost::shared_ptr<T> >& oldInfos, const std::vector<boost::shared_ptr<T> >& newInfos) {
     if (oldInfos.size() != newInfos.size()) {
         return false;
     }

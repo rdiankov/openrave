@@ -38,69 +38,77 @@ void KinBody::LinkInfo::Reset()
     _bIsEnabled = false;
 }
 
-bool KinBody::LinkInfo::Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fEpsilon) const
+int KinBody::LinkInfo::Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fUnitScale, dReal fEpsilon) const
 {
     if( _vgeometryinfos.size() != rhs._vgeometryinfos.size() ) {
-        return false;
+        return 1;
     }
 
     if( _id != rhs._id ) {
-        return false;
+        return 2;
     }
     if( _name != rhs._name ) {
-        return false;
+        return 3;
     }
     if( _mapFloatParameters != rhs._mapFloatParameters ) {
-        return false;
+        return 4;
     }
     if( _mapIntParameters != rhs._mapIntParameters ) {
-        return false;
+        return 5;
     }
     if( _mapStringParameters != rhs._mapStringParameters ) {
-        return false;
+        return 6;
     }
 
     if( _vForcedAdjacentLinks != rhs._vForcedAdjacentLinks ) {
-        return false;
+        return 7;
     }
 
     if( _bStatic != rhs._bStatic ) {
-        return false;
+        return 8;
     }
 
     if( _bIsEnabled != rhs._bIsEnabled ) {
-        return false;
+        return 9;
     }
 
     if( !(linkCompareOptions & 1) ) {
-        if( TransformDistanceFast(_t, rhs._t) > fEpsilon ) {
-            return false;
+        if( !IsZeroWithEpsilon4(_t.rot - rhs._t.rot, fEpsilon) ) {
+            return 10;
+        }
+        if( !IsZeroWithEpsilon3(_t.trans - rhs._t.trans*fUnitScale, fEpsilon) ) {
+            return 11;
         }
     }
 
-    if( TransformDistanceFast(_tMassFrame, rhs._tMassFrame) > fEpsilon ) {
-        return false;
+    if( !IsZeroWithEpsilon4(_tMassFrame.rot - rhs._tMassFrame.rot, fEpsilon) ) {
+        return 12;
     }
+    if( !IsZeroWithEpsilon3(_tMassFrame.trans - rhs._tMassFrame.trans*fUnitScale, fEpsilon) ) {
+        return 13;
+    }
+
     if( RaveFabs(_mass - rhs._mass) > fEpsilon ) {
-        return false;
+        return 14;
     }
-    if( RaveFabs(_vinertiamoments[0]- rhs._vinertiamoments[0]) > fEpsilon ) {
-        return false;
+    if( RaveFabs(_vinertiamoments[0]- rhs._vinertiamoments[0]*fUnitScale*fUnitScale) > fEpsilon ) {
+        return 15;
     }
-    if( RaveFabs(_vinertiamoments[1]- rhs._vinertiamoments[1]) > fEpsilon ) {
-        return false;
+    if( RaveFabs(_vinertiamoments[1]- rhs._vinertiamoments[1]*fUnitScale*fUnitScale) > fEpsilon ) {
+        return 16;
     }
-    if( RaveFabs(_vinertiamoments[2]- rhs._vinertiamoments[2]) > fEpsilon ) {
-        return false;
+    if( RaveFabs(_vinertiamoments[2]- rhs._vinertiamoments[2]*fUnitScale*fUnitScale) > fEpsilon ) {
+        return 17;
     }
 
     for(int igeom = 0; igeom < (int)_vgeometryinfos.size(); ++igeom) {
-        if( !_vgeometryinfos[igeom]->Compare(*rhs._vgeometryinfos[igeom], fEpsilon) ) {
-            return false;
+        int geomcompare = _vgeometryinfos[igeom]->Compare(*rhs._vgeometryinfos[igeom], fUnitScale, fEpsilon);
+        if (geomcompare != 0) {
+            return 18|(igeom<<16)|(geomcompare<<24);
         }
     }
 
-    return true;
+    return 0;
 }
 
 void KinBody::LinkInfo::ConvertUnitScale(dReal fUnitScale)
@@ -131,7 +139,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     orjson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
     orjson::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
     orjson::SetJsonValueByKey(value, "mass", _mass, allocator);
-    orjson::SetJsonValueByKey(value, "inertiaMoments", _vinertiamoments, allocator);
+    orjson::SetJsonValueByKey(value, "inertiaMoments", _vinertiamoments*fUnitScale*fUnitScale, allocator);
 
     if(_mapFloatParameters.size() > 0) {
         rapidjson::Value parameters;
@@ -228,6 +236,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
 
     orjson::LoadJsonValueByKey(value, "mass", _mass);
     orjson::LoadJsonValueByKey(value, "inertiaMoments", _vinertiamoments);
+    _vinertiamoments *= fUnitScale*fUnitScale;
 
     if (value.HasMember("floatParameters") && value["floatParameters"].IsArray()) {
         _mapFloatParameters.clear();
