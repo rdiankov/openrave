@@ -37,6 +37,7 @@ set(PLUGINS basecontrollers baserobots basesamplers basesensors bulletrave mobyr
 if( OPT_QTOSG_VIEWER )
   set(PLUGINS ${PLUGINS} qtosgrave)
 endif()
+set( OPT_QTCOIN_VIEWER 0) # not supported at the moment
 if( OPT_QTCOIN_VIEWER )
   set(PLUGINS ${PLUGINS} qtcoinrave)
 endif()
