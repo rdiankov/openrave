@@ -570,8 +570,8 @@ inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::Side
         if (v["type"].IsInt()) {
             // backward compatibility, support enum sideWall type
             orjson::LoadJsonValueByKey(v, "type", sideWallType);
-            if (!(sideWallType >= KinBody::GeometryInfo::SideWallType::SWT_NX
-                && sideWallType <= KinBody::GeometryInfo::SideWallType::SWT_PY)) {
+            if (!(sideWallType >= KinBody::GeometryInfo::SideWallType::SWT_First
+                && sideWallType <= KinBody::GeometryInfo::SideWallType::SWT_Last)) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized sidewall type enum range %d for loading from json"), sideWallType, ORE_InvalidArguments);
             }
         }

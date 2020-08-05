@@ -273,6 +273,8 @@ public:
             SWT_PX=1,
             SWT_NY=2,
             SWT_PY=3,
+            SWT_First=SWT_NX,
+            SWT_Last=SWT_PY,
         };
 
         struct SideWall
