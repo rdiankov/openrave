@@ -558,42 +558,47 @@ inline void SaveJsonValue(rapidjson::Value& v, const KinBody::GeometryInfo::Side
     }
 }
 
-inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::SideWall& t)
+inline void LoadJsonValue(const rapidjson::Value& rValue, KinBody::GeometryInfo::SideWall& sideWall)
 {
-    if(v.IsObject()) {
-        orjson::LoadJsonValueByKey(v, "transform", t.transf);
-        orjson::LoadJsonValueByKey(v, "halfExtents", t.vExtents);
-        if(!v.HasMember("type")) {
-            RAVELOG_WARN(_("sideWallType is missing in json, set to 'nx'"));
-            t.type = KinBody::GeometryInfo::SideWallType::SWT_NX;
-            return;
+    if(rValue.IsObject()) {
+        orjson::LoadJsonValueByKey(rValue, "transform", sideWall.transf);
+        orjson::LoadJsonValueByKey(rValue, "halfExtents", sideWall.vExtents);
+
+        if (!rValue.HasMember("type")) {
+            // no type provided, default to nx
+            sideWall.type = KinBody::GeometryInfo::SideWallType::SWT_NX;
         }
-        int sideWallType = 0;
-        if (v["type"].IsInt()) {
+        else if(rValue["type"].IsInt()) {
             // backward compatibility, support enum sideWall type
-            orjson::LoadJsonValueByKey(v, "type", sideWallType);
+            int sideWallType = (int)KinBody::GeometryInfo::SideWallType::SWT_NX;
+            orjson::LoadJsonValueByKey(rValue, "type", sideWallType);
             if (!(sideWallType >= KinBody::GeometryInfo::SideWallType::SWT_First
                 && sideWallType <= KinBody::GeometryInfo::SideWallType::SWT_Last)) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized sidewall type enum range %d for loading from json"), sideWallType, ORE_InvalidArguments);
             }
+            sideWall.type = (KinBody::GeometryInfo::SideWallType)sideWallType;
         }
         else {
-            std::string type = "";
-            orjson::LoadJsonValueByKey(v, "type", type);
-            std::map<std::string, KinBody::GeometryInfo::SideWallType> sideWallTypeMapping = {
-                {"nx", KinBody::GeometryInfo::SideWallType::SWT_NX},
-                {"px", KinBody::GeometryInfo::SideWallType::SWT_PX},
-                {"ny", KinBody::GeometryInfo::SideWallType::SWT_NY},
-                {"py", KinBody::GeometryInfo::SideWallType::SWT_PY},
-            };
-            if (sideWallTypeMapping.find(type) == sideWallTypeMapping.end()) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized sidewall type %s for loading from json"), type, ORE_InvalidArguments);
+            std::string type = "nx";
+            orjson::LoadJsonValueByKey(rValue, "type", type);
+            if(type == "nx") {
+                sideWall.type = KinBody::GeometryInfo::SideWallType::SWT_NX;
             }
-            sideWallType = sideWallTypeMapping[type];
+            else if(type == "px") {
+                sideWall.type = KinBody::GeometryInfo::SideWallType::SWT_PX;
+            }
+            else if(type == "ny") {
+                sideWall.type = KinBody::GeometryInfo::SideWallType::SWT_NY;
+            }
+            else if(type == "py") {
+                sideWall.type = KinBody::GeometryInfo::SideWallType::SWT_PY;
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized sidewall type string %s for loading from json"), type, ORE_InvalidArguments);
+            }
         }
-        t.type = (KinBody::GeometryInfo::SideWallType)sideWallType;
     } else {
-        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Geometry::SideWall", orjson::GetJsonTypeName(v), ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Cannot convert JSON type %s to Geometry::SideWall"), orjson::GetJsonTypeName(rValue), ORE_InvalidArguments);
     }
 }
 
