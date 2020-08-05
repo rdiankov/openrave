@@ -678,9 +678,9 @@ public:
             - \b affine_velocities - The velocity (1/second) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
             - \b affine_accelerations - The acceleration (1/second^2) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
             - \b affine_jerks - The jerk (1/second^3) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
-            - \b ikparam_values - The values of an IkParmeterization. The ikparam type is stored as the second value in name
-            - \b ikparam_velocities - acceleration of an IkParmeterization. The ikparam type is stored as the second value in name
-            - \b ikparam_jerks - jerk of an IkParmeterization. The ikparam type is stored as the second value in name
+            - \b ikparam_values - The values of an IkParameterization. The ikparam type is stored as the second value in name
+            - \b ikparam_velocities - acceleration of an IkParameterization. The ikparam type is stored as the second value in name
+            - \b ikparam_jerks - jerk of an IkParameterization. The ikparam type is stored as the second value in name
             - \b iswaypoint - non-zero if the point represents a major knot point of the trajectory
             - \b grabbody - Grabs the body. The configuration values are 1 for grab and 0 for release. The group name format is: bodyname robotname robotlinkindex [relative_grab_pose]. relative_grab_pose is a 7 value (quaterion + translation) pose of the relative location of the body with respect to the grabbed link. Only 1 DOF is accepted.
          */
