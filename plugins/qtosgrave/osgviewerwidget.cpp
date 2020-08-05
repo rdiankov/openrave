@@ -1456,9 +1456,12 @@ void QOSGViewerWidget::RestoreDefaultManipulator()
     if(_osgview->getCameraManipulator() == _osgDefaultManipulator.get()) {
         return;
     }
+    // save current distance to focus so to apply to the default manipulator
+    double currentDistanceToFocus = GetCurrentManipulatorDistanceToFocus();
     // copy matrix from trackManipulator to default one so change of manipulators occurs seamless
     // SetCurrentCameraManipulator must be called before setByMatrix in order to take effect
     SetCurrentCameraManipulator(_osgDefaultManipulator.get());
+    SetCurrentManipulatorDistanceToFocus(currentDistanceToFocus);
     _osgDefaultManipulator->setByMatrix(_osgTrackModeManipulator->getMatrix());
 }
 
