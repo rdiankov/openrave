@@ -14,6 +14,7 @@
 #include "osgviewerwidget.h"
 #include "osgcartoon.h"
 #include "osgskybox.h"
+#include "renderutils.h"
 
 #include <osg/ShadeModel>
 #include <osgDB/ReadFile>
