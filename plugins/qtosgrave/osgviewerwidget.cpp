@@ -388,7 +388,11 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     _bSwitchMouseLeftMiddleButton = false;
     _bLightOn = true;
     _bIsSelectiveActive = false;
+
     _osgview = new osgViewer::View();
+    // disable viewer default light since we are settinup custom lights
+    _osgview->setLightingMode(osg::View::NO_LIGHT);
+
     _osghudview = new osgViewer::View();
     _osgviewer = new osgViewer::CompositeViewer();
     _osgviewer->setKeyEventSetsDone(0); // disable Escape key from killing the viewer!
@@ -471,16 +475,9 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
         _osgCameraHUD->addChild(geodetext);
     }
 
-    _InitializeLights(2);
+    _InitializeLights();
+    SetLight(true);
 
-    {
-        osg::ref_ptr<qtosgrave::OpenRAVECartoon> toon = new qtosgrave::OpenRAVECartoon();
-        //toon->setOutlineColor(osg::Vec4(0,1,0,1));
-        _osgLightsGroup->addChild(toon);
-        toon->addChild(_osgSceneRoot);
-    }
-
-    //_osgLightsGroup->addChild(_osgSceneRoot);
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
     _timer.start( 10 );
 
@@ -590,16 +587,8 @@ void QOSGViewerWidget::SetSceneData()
     rootscene->getOrCreateStateSet()->setMode(GL_NORMALIZE,osg::StateAttribute::ON);
     rootscene->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::ON);
 
-    if (_bLightOn) {
-        rootscene->addChild(_osgLightsGroup);
-    }
-    else {
-        osg::ref_ptr<qtosgrave::OpenRAVECartoon> toon = new qtosgrave::OpenRAVECartoon();
-        //toon->setOutlineColor(osg::Vec4(0,1,0,1));
-        rootscene->addChild(toon);
-        toon->addChild(_osgSceneRoot);
-    }
-
+    rootscene->addChild(_osgLightsGroup);
+    _osgLightsGroup->addChild(_osgSceneRoot);
     rootscene->addChild(_osgFigureRoot);
     _osgview->setSceneData(rootscene.get());
 }
@@ -622,7 +611,8 @@ void QOSGViewerWidget::SetHome()
 void QOSGViewerWidget::SetLight(bool enabled)
 {
     _bLightOn = enabled;
-    SetSceneData();
+    osg::ref_ptr<osg::StateSet> stateset = _osgLightsGroup->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING, (_bLightOn?osg::StateAttribute::ON : osg::StateAttribute::OFF) | osg::StateAttribute::OVERRIDE);
 }
 
 void QOSGViewerWidget::SetFacesMode(bool enabled)
@@ -1089,72 +1079,32 @@ osg::ref_ptr<osg::Light> QOSGViewerWidget::_CreateAmbientLight(osg::Vec4 color, 
     return light;
 }
 
-void QOSGViewerWidget::_InitializeLights(int nlights)
+void QOSGViewerWidget::_InitializeLights()
 {
-    _vLightTransform.resize(nlights);
-
     // we need the scene's state set to enable the light for the entire scene
     _osgLightsGroup = new osg::Group();
     _lightStateSet = _osgLightsGroup->getOrCreateStateSet();
 
-    // Create 3 Lights
-    osg::Vec4 lightColors[] = { osg::Vec4(1.0, 1.0, 1.0, 1.0),
-                                osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0),
-                                osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0) };
+    // w = 0 means light at infinity
+    osg::Vec4 lightPosition[] = { osg::Vec4(1, 1, 1, 0),
+                                  osg::Vec4(-1, -1, 1, 0),
+                                  osg::Vec4(-1, 1, 1, 0),
+                                  osg::Vec4(1, -1, 1, 0)};
 
-    osg::Vec3 lightPosition[] = { osg::Vec3(0, 0, 3.5),
-                                  osg::Vec3(0, 0, 2.5), osg::Vec3(-2, -2.5, 2.5),
-                                  osg::Vec3(2, 2.5, 2.5), osg::Vec3(-2, 2.5, 2.5) };
+    int nlights = sizeof(lightPosition) / sizeof(osg::Vec4);
 
-    osg::Vec3 lightDirection[] = {osg::Vec3(0.0, 0.0, -1.0),
-                                  osg::Vec3(0.0, 0.0, -1.0), osg::Vec3(0.0, 0.0, -1.0),
-                                  osg::Vec3(0.0, 0.0, -1.0), osg::Vec3(0.0, 0.0, -1.0) };
-
-    int lightid = 0;
+    double lightFactor = 0.4;
     for (int i = 0; i < nlights; i++)
     {
-        // osg::ref_ptr<osg::Geode> lightMarker = new osg::Geode();
-        // lightMarker->addDrawable(new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(), 1)));
-        // lightMarker->getOrCreateStateSet()->setAttribute(_CreateSimpleMaterial(lightColors[i]));
-
-        osg::ref_ptr<osg::LightSource> lightSource = new osg::LightSource();
-
-        if (i == 0) {
-            osg::ref_ptr<osg::Light> light = _CreateAmbientLight(lightColors[i], lightid++);
-            lightSource->setLight(light.get());
-        }
-        else {
-            osg::ref_ptr<osg::Light> light = _CreateLight(lightColors[i], lightid++);
-            lightSource->setLight(light.get());
-        }
-
-        lightSource->getLight()->setDirection(lightDirection[i]);
+        osg::ref_ptr<osg::Light> light = _CreateLight(osg::Vec4(lightFactor, lightFactor, lightFactor, 1.0), i);
+        light->setPosition(lightPosition[i]);
+         osg::ref_ptr<osg::LightSource> lightSource = new osg::LightSource();
+         lightSource->setLight(light.get());
         lightSource->setLocalStateSetModes(osg::StateAttribute::ON);
         lightSource->setStateSetModes(*_lightStateSet, osg::StateAttribute::ON);
-        //lightSource->setReferenceFrame(osg::LightSource::ABSOLUTE_RF);
-
-        _vLightTransform[i] = new osg::PositionAttitudeTransform();
-        _vLightTransform[i]->addChild(lightSource.get());
-        // _vLightTransform[i]->addChild(lightMarker);
-        _vLightTransform[i]->setPosition(lightPosition[i]);
-        _vLightTransform[i]->setScale(osg::Vec3(0.1,0.1,0.1));
-        _osgLightsGroup->addChild(_vLightTransform[i].get());
+        _osgLightsGroup->addChild(lightSource);
     }
 }
-
-//void QOSGViewerWidget::_UpdateFromOSG()
-//{
-//    std::vector<KinBody::BodyState> vecbodies;
-//    _penv->GetPublishedBodies(vecbodies);
-//    FOREACH(itbody,vecbodies) {
-//        BOOST_ASSERT( !!itbody->pbody );
-//        KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-//        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
-//        if (!!pitem) {
-//            pitem->UpdateFromOSG();
-//        }
-//    }
-//}
 
 osg::Camera *QOSGViewerWidget::GetCamera()
 {
