@@ -491,6 +491,16 @@ public:
         return !operator==(right);
     }
 
+    inline bool IsEqual(const RaveTransform<T>& tCompare) const {
+        RaveVector<T> _rot = rot;
+        _rot.normalize();
+        RaveVector<T> _rrot = tCompare.rot;
+        _rrot.normalize();
+        const T transDistance = sqrt(pow(trans.x - tCompare.trans.x, 2) + pow(trans.y - tCompare.trans.y, 2) + pow(trans.z - tCompare.trans.z, 2));
+        const T quatDistance = 1 - pow((_rot.x*_rrot.x + _rot.y*_rrot.y + _rot.z*_rrot.z + _rot.w*_rrot.w), 2);
+        return transDistance < 1e-3f && quatDistance < 1e-4f;
+    }
+
     inline RaveTransform<T> inverse() const {
         RaveTransform<T> inv;
         inv.rot.x = rot.x;

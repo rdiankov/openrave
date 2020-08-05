@@ -1126,7 +1126,7 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
     KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
     if( !pbody ) {
         // restore navigation manipulator
-        _StopTrackingLink();
+        _StopTrackLink();
         return false;
     }
     KinBody::LinkPtr requestedLink = pbody->GetLink(linkname);
@@ -1140,7 +1140,7 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
         }
     }
 
-    if(!_StartTrackingLink( "link", requestedLink, requestedLinkRelativeTransform)) {
+    if(!_TrackLink(requestedLink, requestedLinkRelativeTransform)) {
         return false;
     }
 
@@ -1162,12 +1162,12 @@ bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
     RobotBasePtr probot = GetEnv()->GetRobot(robotname);
     RobotBase::ManipulatorPtr requestedManipulator = probot->GetManipulator(manipname);
     if( !probot || !requestedManipulator) {
-        _StopTrackingLink();
+        _StopTrackLink();
         return false;
     }
 
     RaveTransform<float> relativeTransform = requestedManipulator->GetLocalToolTransform();
-    if(!_StartTrackingLink( str(boost::format("%s manipulator")%manipname), requestedManipulator->GetEndEffector(), relativeTransform)) {
+    if(!_TrackLink(requestedManipulator->GetEndEffector(), relativeTransform, str(boost::format("%s manipulator %s")%robotname%manipname))) {
         return false;
     }
 
@@ -1376,7 +1376,7 @@ void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistan
     _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance));
 }
 
-void QtOSGViewer::_StopTrackingLink()
+void QtOSGViewer::_StopTrackLink()
 {
     _ptrackinglink.reset();
     _posgWidget->StopTrackNode();
@@ -1385,15 +1385,9 @@ void QtOSGViewer::_StopTrackingLink()
     }
 }
 
-inline bool AreTransformsEqual(const RaveTransform<float>& t1, const RaveTransform<float>& t2, float tolerance=1e-3)
+bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText)
 {
-    float tol2 = tolerance*tolerance;
-    return (t1.trans-t2.trans).lengthsqr2() < tol2 && (t1.rot-t2.rot).lengthsqr2() < tol2;
-}
-
-bool QtOSGViewer::_StartTrackingLink(const std::string& infoText, KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation)
-{
-    if(!!_ptrackinglink && _ptrackinglink == link && AreTransformsEqual(_currentTrackLinkRelTransform, linkRelativeTranslation)) {
+    if(!!_ptrackinglink && _ptrackinglink == link && _currentTrackLinkRelTransform.IsEqual(linkRelativeTranslation)) {
         // already tracking the requested link, nothing to be done
         return true;
     }
@@ -1410,7 +1404,10 @@ bool QtOSGViewer::_StartTrackingLink(const std::string& infoText, KinBody::LinkP
     assert(osgNode);
 
     osg::Vec3d linkOffset(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]);
-    _posgWidget->TrackNode(osgNode.get(), str(boost::format("(%s) %s/%s")%infoText%parentIem->GetName()%link->GetName()), linkOffset, _posgWidget->GetCurrentManipulatorDistanceToFocus());
+    if (infoText.size() == 0) {
+        infoText = str(boost::format("%s/%s")%parentIem->GetName()%link->GetName());
+    }
+    _posgWidget->TrackNode(osgNode.get(), infoText, linkOffset, _posgWidget->GetCurrentManipulatorDistanceToFocus());
     if(_cameraMoveModeButton != NULL) {
         _cameraMoveModeButton->setEnabled(false);
     }
