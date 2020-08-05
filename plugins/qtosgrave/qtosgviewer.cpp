@@ -1140,7 +1140,7 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
         }
     }
 
-    if(!_StartTrackingLink(requestedLink, requestedLinkRelativeTransform)) {
+    if(!_StartTrackingLink( "link", requestedLink, requestedLinkRelativeTransform)) {
         return false;
     }
 
@@ -1167,7 +1167,7 @@ bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
     }
 
     RaveTransform<float> relativeTransform = requestedManipulator->GetLocalToolTransform();
-    if(!_StartTrackingLink(requestedManipulator->GetEndEffector(), relativeTransform)) {
+    if(!_StartTrackingLink( str(boost::format("%s manipulator")%manipname), requestedManipulator->GetEndEffector(), relativeTransform)) {
         return false;
     }
 
@@ -1391,7 +1391,7 @@ inline bool AreTransformsEqual(const RaveTransform<float>& t1, const RaveTransfo
     return (t1.trans-t2.trans).lengthsqr2() < tol2 && (t1.rot-t2.rot).lengthsqr2() < tol2;
 }
 
-bool QtOSGViewer::_StartTrackingLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation)
+bool QtOSGViewer::_StartTrackingLink(const std::string& infoText, KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation)
 {
     if(!!_ptrackinglink && _ptrackinglink == link && AreTransformsEqual(_currentTrackLinkRelTransform, linkRelativeTranslation)) {
         // already tracking the requested link, nothing to be done
@@ -1410,7 +1410,7 @@ bool QtOSGViewer::_StartTrackingLink(KinBody::LinkPtr link, const RaveTransform<
     assert(osgNode);
 
     osg::Vec3d linkOffset(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]);
-    _posgWidget->TrackNode(osgNode.get(), str(boost::format("(link) %s/%s")%parentIem->GetName()%link->GetName()), linkOffset, _posgWidget->GetCurrentManipulatorDistanceToFocus());
+    _posgWidget->TrackNode(osgNode.get(), str(boost::format("(%s) %s/%s")%infoText%parentIem->GetName()%link->GetName()), linkOffset, _posgWidget->GetCurrentManipulatorDistanceToFocus());
     if(_cameraMoveModeButton != NULL) {
         _cameraMoveModeButton->setEnabled(false);
     }
