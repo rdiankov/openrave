@@ -223,7 +223,7 @@ protected:
     osg::ref_ptr<osg::Light> _CreateAmbientLight(osg::Vec4 color, int lightid);
 
     /// \brief Initialize lighting
-    void _InitializeLights(int nlights);
+    void _InitializeLights();
 
     /// \brief Stores matrix transform
     void _StoreMatrixTransform();
