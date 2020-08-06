@@ -198,7 +198,9 @@ QtOSGViewer::~QtOSGViewer()
 
     // have to remove all the _userdatakey set on bodies in the env before we go
     FOREACH(itbody, _mapbodies) {
-        BOOST_ASSERT( itbody->first->GetUserData(_userdatakey) == itbody->second );
+        if( itbody->first->GetUserData(_userdatakey) != itbody->second ) {
+            RAVELOG_WARN_FORMAT("kinbody %s has unexpected %s user data set on it\n", itbody->first->GetName()%_userdatakey);
+        }
         itbody->first->RemoveUserData(_userdatakey);
     }
     _mapbodies.clear();
@@ -468,7 +470,9 @@ void QtOSGViewer::_Reset()
     _condUpdateModels.notify_all();
 
     FOREACH(itbody, _mapbodies) {
-        BOOST_ASSERT( itbody->first->GetUserData(_userdatakey) == itbody->second );
+        if( itbody->first->GetUserData(_userdatakey) != itbody->second ) {
+            RAVELOG_WARN_FORMAT("kinbody %s has unexpected %s user data set on it\n", itbody->first->GetName()%_userdatakey);
+        }
         itbody->first->RemoveUserData(_userdatakey);
     }
     _mapbodies.clear();
