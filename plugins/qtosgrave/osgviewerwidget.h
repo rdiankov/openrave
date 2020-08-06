@@ -94,19 +94,18 @@ public:
 
     /// \brief Rotates the camera around the current focal point in the direction of the screen y vector (in world coordinates). The argument thetaY is in radians -pi < thetaY < pi.
     virtual void RotateCameraYDirection(float thetaY);
-    /// \brief sets the zoom factor. only affects orthogonal view
-    /// \param factor > 1.0 = zoom in. < 1.0 = zoom out
-    /// \param isPan, if true, then focal distance will not change, but rather camera position will move along with focal point
-    void MoveCameraZoom(float factor, bool isPan);
 
     /// \brief Pans the camera in the direction of the screen x vector, parallel to screen plane. The argument dx is in normalized coordinates 0 < dx < 1, where 1 means canvas width.
     virtual void PanCameraXDirection(float dx);
 
     /// \brief Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.
     virtual void PanCameraYDirection(float dy);
+
     /// \param factor > 1.0 = zoom in. < 1.0 = zoom out
     /// \param isPan, if true, then focal distance will not change, but rather camera position will move along with focal point
+    /// \param panDelta, if true, then focal distance will not change, but rather camera position will move along with focal point
     void MoveCameraZoom(float factor, bool isPan, float panDelta);
+
     /// \brief changes current focal distance (if in perspective mode) or the current projection plane size (if in ortho mode) in order
     /// to zoom in/out towards/from focal point (if factor < 1). This function never changes de focal point position.
     void Zoom(float factor);

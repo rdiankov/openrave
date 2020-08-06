@@ -1208,7 +1208,7 @@ void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
     if(!IsInOrthoMode() && IsUsingDefaultCameraManipulator()) {
         if(isPan) {
             // move focal point
-            double cameraDistanceToFocus = GetCurrentManipulatorDistanceToFocus();
+            double cameraDistanceToFocus = GetCameraDistanceToFocus();
             osg::Matrixd cameraToWorld = osg::Matrixd::inverse(GetCamera()->getViewMatrix());
             osg::Vec3d targetDir = cameraToWorld.getRotate() * osg::Vec3d(0,0,-cameraDistanceToFocus);
             osg::Vec3d cameraWorldPos(cameraToWorld(3,0), cameraToWorld(3,1), cameraToWorld(3,2));
@@ -1550,11 +1550,11 @@ void QOSGViewerWidget::RestoreDefaultManipulator()
         return;
     }
     // save current distance to focus so to apply to the default manipulator
-    double currentDistanceToFocus = GetCurrentManipulatorDistanceToFocus();
+    double currentDistanceToFocus = GetCameraDistanceToFocus();
     // copy matrix from trackManipulator to default one so change of manipulators occurs seamless
     // SetCurrentCameraManipulator must be called before setByMatrix in order to take effect
     SetCurrentCameraManipulator(_osgDefaultManipulator.get());
-    SetCurrentManipulatorDistanceToFocus(currentDistanceToFocus);
+    SetCameraDistanceToFocus(currentDistanceToFocus);
     _osgDefaultManipulator->setByMatrix(_osgTrackModeManipulator->getMatrix());
 }
 
