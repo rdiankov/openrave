@@ -195,6 +195,15 @@ QtOSGViewer::~QtOSGViewer()
     }
 
     _condUpdateModels.notify_all();
+
+    // have to remove all the _userdatakey set on bodies in the env before we go
+    FOREACH(itbody, _mapbodies) {
+        if( itbody->first->GetUserData(_userdatakey) != itbody->second ) {
+            RAVELOG_WARN_FORMAT("kinbody %s has unexpected %s user data set on it\n", itbody->first->GetName()%_userdatakey);
+        }
+        itbody->first->RemoveUserData(_userdatakey);
+    }
+    _mapbodies.clear();
 }
 
 void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
@@ -461,7 +470,9 @@ void QtOSGViewer::_Reset()
     _condUpdateModels.notify_all();
 
     FOREACH(itbody, _mapbodies) {
-        BOOST_ASSERT( itbody->first->GetUserData(_userdatakey) == itbody->second );
+        if( itbody->first->GetUserData(_userdatakey) != itbody->second ) {
+            RAVELOG_WARN_FORMAT("kinbody %s has unexpected %s user data set on it\n", itbody->first->GetName()%_userdatakey);
+        }
         itbody->first->RemoveUserData(_userdatakey);
     }
     _mapbodies.clear();
@@ -2207,9 +2218,23 @@ UserDataPtr QtOSGViewer::RegisterViewerThreadCallback(const ViewerThreadCallback
     return pdata;
 }
 
+void _ReleaseQtOSGViewer(QCoreApplication* pNewApp, QtOSGViewer* pViewer)
+{
+    delete pViewer;
+    delete pNewApp; // have to release QApplication after QtOSGViewer
+}
+
 ViewerBasePtr CreateQtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ViewerBasePtr(new QtOSGViewer(penv, sinput));
+    QCoreApplication* pNewApp = NULL;
+    if( !QApplication::instance() ) {
+        static int s_QtArgc = 0; // has to be static!
+        pNewApp = new QApplication(s_QtArgc, NULL);
+    } else {
+        //if( widgets.empty() ) {
+        RAVELOG_WARN("application exists?\n");
+    }
+    return ViewerBasePtr(new QtOSGViewer(penv, sinput), boost::bind(_ReleaseQtOSGViewer, pNewApp, _1));
 }
 
 } // end namespace qtosgviewer
