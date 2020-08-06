@@ -4,18 +4,24 @@
 
 #include <osg/Camera>
 #include <osg/Group>
+#include <osg/Shader>
 #include <osg/Texture2D>
 #include <osg/TextureRectangle>
+#include <osg/Texture2DMultisample>
 
 class RenderUtils {
 public:
     osg::ref_ptr<osg::StateSet> setShaderProgram(osg::ref_ptr<osg::Camera> pass,
-                                            const std::string& vertShareFile,
-                                            const std::string& fragShaderFile)
+                                            const std::string& vertShaderString,
+                                            const std::string& fragShaderString)
     {
         osg::ref_ptr<osg::Program> program = new osg::Program;
-        program->addShader(osgDB::readRefShaderFile(vertShareFile));
-        program->addShader(osgDB::readRefShaderFile(fragShaderFile));
+        osg::Shader* vertShader = new osg::Shader(osg::Sahder::VERTEX, vertShaderString);
+        program->addShader(vertShader);
+
+        osg::Shader* fragShader = new osg::Shader(osg::Sahder::FRAGMENT, fragShaderString);
+        program->addShader(fragShader);
+
         osg::ref_ptr<osg::StateSet> ss = pass->getOrCreateStateSet();
         ss->setAttributeAndModes(
             program.get(),
@@ -23,9 +29,9 @@ public:
         return ss;
     }
 
-    static osg::TextureRectangle *createFloatTextureRectangle(int width, int height)
+    static osg::Texture2DMultisample *createFloatTextureRectangle(int width, int height)
     {
-        osg::ref_ptr<osg::TextureRectangle> tex2D = new osg::TextureRectangle;
+        osg::ref_ptr<osg::Texture2DMultisample> tex2D = new osg::Texture2DMultisample;
         tex2D->setTextureSize(width, height);
         tex2D->setInternalFormat(GL_RGBA16F_ARB);
         tex2D->setSourceFormat(GL_RGBA);
