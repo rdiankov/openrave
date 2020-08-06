@@ -195,6 +195,13 @@ QtOSGViewer::~QtOSGViewer()
     }
 
     _condUpdateModels.notify_all();
+
+    // have to remove all the _userdatakey set on bodies in the env before we go
+    FOREACH(itbody, _mapbodies) {
+        BOOST_ASSERT( itbody->first->GetUserData(_userdatakey) == itbody->second );
+        itbody->first->RemoveUserData(_userdatakey);
+    }
+    _mapbodies.clear();
 }
 
 void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
