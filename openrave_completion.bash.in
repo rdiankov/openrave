@@ -1,6 +1,6 @@
 # Programmable completion for openrave under bash. Source this file 
 # or add it to ~/.bash_completion or /etc/bash_completion.d
-resource_types="json|dae|zae|xml|iv|vrml|wrl|stl|blend|3ds|ase|obj|ply|dxf|lwo|lxo|ac|ms3d|x|mesh.xml|irrmesh|irr|nff|off|raw"
+resource_types="json|dae|zae|xml|iv|vrml|wrl|stl|blend|3ds|ase|obj|ply|dxf|lwo|lxo|ac|ms3d|x|mesh.xml|irrmesh|irr|nff|off|raw|msgpack"
 
 function _complete_openravepy {
     cur="${COMP_WORDS[COMP_CWORD]}"

@@ -584,7 +584,6 @@ void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vec
 bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
-    OPENRAVE_ASSERT_OP(linkinfos.size(),>,0);
     Destroy();
     _veclinks.reserve(linkinfos.size());
     FOREACHC(itlinkinfo, linkinfos) {
@@ -616,7 +615,8 @@ void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const st
     }
     if( linkinfos.size() > 1 ) {
         // create static joints
-        _vecjoints.resize(linkinfos.size()-1);
+        _vecjoints.clear();
+        _vecjoints.reserve(linkinfos.size()-1);
         for(int ilinkinfo = 0; ilinkinfo+1 < (int)linkinfos.size(); ++ilinkinfo) {
             JointPtr pjoint(new Joint(shared_kinbody()));
             pjoint->_info._type = JointRevolute;
