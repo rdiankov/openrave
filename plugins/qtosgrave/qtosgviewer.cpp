@@ -1160,14 +1160,17 @@ bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
 
     EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
     RobotBasePtr probot = GetEnv()->GetRobot(robotname);
-    RobotBase::ManipulatorPtr requestedManipulator = probot->GetManipulator(manipname);
-    if( !probot || !requestedManipulator) {
+    RobotBase::ManipulatorPtr requestedManipulator = NULL;
+    if( !!probot ) {
+        requestedManipulator = probot->GetManipulator(manipname);
+    }
+    if( !requestedManipulator ) {
         _StopTrackLink();
         return false;
     }
 
     RaveTransform<float> relativeTransform = requestedManipulator->GetLocalToolTransform();
-    if(!_TrackLink(requestedManipulator->GetEndEffector(), relativeTransform, str(boost::format("%s manipulator %s")%robotname%manipname))) {
+    if( !_TrackLink(requestedManipulator->GetEndEffector(), relativeTransform, str(boost::format("%s manipulator %s")%robotname%manipname)) ) {
         return false;
     }
 
