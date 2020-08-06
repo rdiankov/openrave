@@ -3690,6 +3690,9 @@ void KinBody::_ComputeInternalInformation()
         }
         lindex++;
     }
+    for (const auto& j : _vecjoints) {
+        RAVELOG_ERROR_FORMAT("active: %s (%d)", j->GetName()%_vecjoints.size());
+    }
 
     {
         // move any enabled passive joints to the regular joints list
@@ -3703,6 +3706,7 @@ void KinBody::_ComputeInternalInformation()
             }
             if( !bmimic && (*itjoint)->_info._bIsActive ) {
                 _vecjoints.push_back(*itjoint);
+                RAVELOG_WARN_FORMAT("push %s", (**itjoint).GetName());
                 itjoint = _vPassiveJoints.erase(itjoint);
             }
             else {
@@ -3740,6 +3744,13 @@ void KinBody::_ComputeInternalInformation()
             (*itjoint)->dofindex = -1;
             (*itjoint)->_info._bIsActive = false;
         }
+    }
+
+    for (const auto& j : _vecjoints) {
+        RAVELOG_ERROR_FORMAT("active: %s", j->GetName());
+    }
+    for (const auto& j : _vPassiveJoints) {
+        RAVELOG_ERROR_FORMAT("passive: %s", j->GetName());
     }
 
     vector<size_t> vorder(_vecjoints.size());
@@ -3939,6 +3950,7 @@ void KinBody::_ComputeInternalInformation()
             vlinkadjacency.at((*itjoint)->GetSecondAttached()->GetIndex()).push_back((*itjoint)->GetFirstAttached()->GetIndex());
         }
         FOREACHC(itjoint,_vPassiveJoints) {
+            RAVELOG_WARN_FORMAT("dealing with %s", (**itjoint).GetName());
             vlinkadjacency.at((*itjoint)->GetFirstAttached()->GetIndex()).push_back((*itjoint)->GetSecondAttached()->GetIndex());
             vlinkadjacency.at((*itjoint)->GetSecondAttached()->GetIndex()).push_back((*itjoint)->GetFirstAttached()->GetIndex());
         }

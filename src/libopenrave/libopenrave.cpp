@@ -356,7 +356,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         // is this really necessary? just makes bugs hard to reproduce...
         //srand(GetMilliTime());
         //RaveInitRandomGeneration(GetMilliTime());
-        _nDebugLevel = Level_Info;
+        _nDebugLevel = Level_Verbose;
         _nGlobalEnvironmentId = 0;
         _nDataAccessOptions = 0;
 #ifdef USE_CRLIBM

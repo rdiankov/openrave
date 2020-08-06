@@ -1908,6 +1908,7 @@ public:
 
             //  Process all atached links
             for (size_t iatt = 0; iatt < pdomlink->getAttachment_full_array().getCount(); ++iatt) {
+                RAVELOG_ERROR_FORMAT("start dealing %d / %d", iatt%pdomlink->getAttachment_full_array().getCount());
                 domLink::domAttachment_fullRef pattfull = pdomlink->getAttachment_full_array()[iatt];
                 if( !pattfull->getJoint() ) {
                     RAVELOG_WARN(str(boost::format("no joint defined for attachment_full in link %s node %s")%plink->GetName()%pdomnode->getName()));
@@ -2029,7 +2030,12 @@ public:
                     pjoint->_info._name = str(boost::format("dummy%d")%pjoint->jointindex);
                 }
 
+                if( _mapJointSids.find(jointsidref) != _mapJointSids.end() ) {
+                    RAVELOG_WARN_FORMAT("jointid '%s' is duplicated!", jointsidref);
+                    continue;
+                }
                 if( pjoint->_info._bIsActive ) {
+                    RAVELOG_ERROR_FORMAT("push_back %s", pjoint->GetName());
                     pkinbody->_vecjoints.push_back(pjoint);
                 }
                 else {
@@ -2037,9 +2043,6 @@ public:
                     pkinbody->_vPassiveJoints.push_back(pjoint);
                 }
 
-                if( _mapJointSids.find(jointsidref) != _mapJointSids.end() ) {
-                    RAVELOG_WARN_FORMAT("jointid '%s' is duplicated!", jointsidref);
-                }
                 _mapJointSids[jointsidref] = pjoint;
                 size_t lastJointSidIndex = jointsidref.find_last_of('/');
                 if( lastJointSidIndex != string::npos ) {
