@@ -2738,12 +2738,12 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     _mapCustomData.clear();
     if (rIkParameterization.HasMember("customData") && rIkParameterization["customData"].IsArray()) {
         for (rapidjson::Value::ConstValueIterator it = rIkParameterization["customData"].Begin(); it != rIkParameterization["customData"].End(); ++it) {
-            std::string key;
-            orjson::LoadJsonValueByKey(*it, "key", key);
-            if (key.empty()) {
+            std::string id;
+            orjson::LoadJsonValueByKey(*it, "id", id);
+            if (id.empty()) {
                 continue;
             }
-            orjson::LoadJsonValueByKey(*it, "values", _mapCustomData[key]);
+            orjson::LoadJsonValueByKey(*it, "values", _mapCustomData[id]);
         }
     }
     // TODO have to scale _mapCustomData by fUnitScale

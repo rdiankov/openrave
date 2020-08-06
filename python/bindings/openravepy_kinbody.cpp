@@ -3658,7 +3658,7 @@ object PyKinBody::GetGrabbedInfo(py::object ograbbedname) const
         if( !_pbody->GetGrabbedInfo(grabbedname, grabbedInfo) ) {
             return py::none_();
         }
-        return object(PyGrabbedInfoPtr(new PyGrabbedInfo(grabbedInfo)));
+        return py::to_object(PyGrabbedInfoPtr(new PyGrabbedInfo(grabbedInfo)));
     }
 }
 
