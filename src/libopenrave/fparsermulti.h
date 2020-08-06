@@ -727,6 +727,7 @@ public:
     static std::string mlNumber(T a)
     {
         std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
         ss << "<cn type=\"real\">" << a << "</cn>" << endl;
         return ss.str();
     }

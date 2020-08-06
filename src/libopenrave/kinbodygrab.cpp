@@ -297,7 +297,8 @@ KinBody::LinkPtr KinBody::IsGrabbing(const KinBody &body) const
 
 void KinBody::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
 {
-    vbodies.resize(0);
+    vbodies.clear();
+    vbodies.reserve(_vGrabbedBodies.size());
     FOREACHC(itgrabbed, _vGrabbedBodies) {
         GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
         KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
@@ -305,6 +306,22 @@ void KinBody::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
             vbodies.push_back(pbody);
         }
     }
+}
+
+int KinBody::GetNumGrabbed() const
+{
+    return (int)_vGrabbedBodies.size();
+}
+
+KinBodyPtr KinBody::GetGrabbedBody(int iGrabbed) const
+{
+    GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(_vGrabbedBodies.at(iGrabbed));
+    KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
+    if( !!pbody && pbody->GetEnvironmentId() ) {
+        return pbody;
+    }
+
+    return KinBodyPtr(); // whatever is grabbed is not valid.
 }
 
 void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo) const
