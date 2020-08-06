@@ -2207,9 +2207,24 @@ UserDataPtr QtOSGViewer::RegisterViewerThreadCallback(const ViewerThreadCallback
     return pdata;
 }
 
+void _ReleaseQtOSGViewer(QCoreApplication* pNewApp, QtOSGViewer* pViewer)
+{
+    delete pViewer;
+    delete pNewApp; // have to release QApplication after QtOSGViewer
+}
+
 ViewerBasePtr CreateQtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ViewerBasePtr(new QtOSGViewer(penv, sinput));
+    QCoreApplication* pNewApp = NULL;
+    if( !QApplication::instance() ) {
+        static int s_QtArgc = 0; // has to be static!
+        pNewApp = new QApplication(s_QtArgc, NULL);
+    } else {
+        if( widgets.empty() ) {
+            RAVELOG_WARN("widget are empty, but application exists?\n");
+        }
+    }
+    return ViewerBasePtr(new QtOSGViewer(penv, sinput), boost::bind(_ReleaseQtOSGViewer, pNewApp, _1));
 }
 
 } // end namespace qtosgviewer
