@@ -14,7 +14,7 @@
 #include "osgviewerwidget.h"
 #include "osgcartoon.h"
 #include "osgskybox.h"
-#include "renderutils.h"
+#include "outlineshaderpipeline.h"
 
 #include <osg/ShadeModel>
 #include <osgDB/ReadFile>
@@ -591,7 +591,12 @@ void QOSGViewerWidget::SetSceneData()
     rootscene->addChild(_osgLightsGroup);
     _osgLightsGroup->addChild(_osgSceneRoot);
     rootscene->addChild(_osgFigureRoot);
-    _osgview->setSceneData(rootscene.get());
+
+    _outlineRenderPipeline = OutlineShaderPipeline::CreateOutlineRenderingScene(GetCamera(), rootscene, 1024, 768);
+    std::cout << "WIDTH x HEIGHT = " << width() << ", " << height() << std::endl;
+    //outlineGroup->addChild(rootscene);
+    _osgview->setSceneData(_outlineRenderPipeline.firstPassGroup);
+    //GetCamera()->setSceneData(outlineGroup);
 }
 
 void QOSGViewerWidget::ResetViewToHome()
@@ -893,6 +898,7 @@ void QOSGViewerWidget::SetViewport(int width, int height, double metersinunit)
     double textheight = 12*scale;
     _osgHudText->setPosition(osg::Vec3(-width*scale/2+10, height*scale/2-textheight, -50));
     _osgHudText->setCharacterSize(textheight);
+    _outlineRenderPipeline.Resize(width, height);
 }
 
 void QOSGViewerWidget::Zoom(float factor)
@@ -921,7 +927,7 @@ void QOSGViewerWidget::SetTextureCubeMap(const std::string& posx, const std::str
 void QOSGViewerWidget::_SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view,
                                     osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview)
 {
-    view->setCamera( camera.get() );
+    //view->setCamera( camera.get() );
     hudview->setCamera( hudcamera.get() );
     _osgviewer->addView( view.get() );
     _osgviewer->addView( hudview.get() );

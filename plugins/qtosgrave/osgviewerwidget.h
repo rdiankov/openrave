@@ -15,9 +15,10 @@
 #define OPENRAVE_QTOSG_VIEWERCONTEXT_H
 
 #include "qtosg.h"
-#include "osgrenderitem.h"
 #include "osgpick.h"
 #include "osgskybox.h"
+#include "osgrenderitem.h"
+#include "outlineshaderpipeline.h"
 
 #include <QtCore/QTimer>
 #include <QtWidgets/QApplication>
@@ -220,6 +221,8 @@ protected:
     virtual void keyReleaseEvent(QKeyEvent *event);
 
     virtual bool event(QEvent *event);
+
+    OutlineShaderPipeline _outlineRenderPipeline;
 
     OSGGroupPtr _osgSceneRoot; ///< root scene node
     OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into

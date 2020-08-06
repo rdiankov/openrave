@@ -1,8 +1,9 @@
 
 #include "renderutils.h"
+#include "outlineshaderpipeline.h"
 
 namespace {
-    const char* normalColorFragShaderStr =
+    const std::string normalColorFragShaderStr =
                 "#version 150 core\n"
                 "\n"
                 "in vec3 normal;\n"
@@ -16,7 +17,7 @@ namespace {
                 "    fragColor = vec4(normal, 1);\n"
                 "}\n";
 
-    const char* normalColorVertShaderStr =
+    const std::string normalColorVertShaderStr =
                 "#version 150 core\n"
                 "\n"
                 "\n"
@@ -38,7 +39,7 @@ namespace {
                 "    gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
                 "}\n";
 
-    const char* outlineFragShaderStr =
+    const std::string outlineFragShaderStr =
                 "#version 150\n"
                 "\n"
                 "uniform sampler2DMS color;\n"
@@ -106,7 +107,7 @@ namespace {
                 "    fragColor = vec4(0,1,0,intensity);\n"
                 "}\n";
 
-        const char* outlineVertShaderStr =
+        const std::string outlineVertShaderStr =
                 "#version 150\n"
                 "\n"
                 "in vec3 vertexPosition;\n"
@@ -117,11 +118,30 @@ namespace {
                 "}\n";
 }
 
-osg::Camera* OutlineShaderPipeline::createOutlineRenderingCamera(osg::Node* sceneRoot, int viewportWidth, int viewportHeight)
+OutlineShaderPipeline OutlineShaderPipeline::CreateOutlineRenderingScene(osg::ref_ptr<osg::Camera> originalSceneCamera, osg::ref_ptr<osg::Node> originalSceneRoot, int viewportWidth, int viewportHeight)
 {
-        osg::Texture* renderToTexture = createFloatTextureRectangle(viewportWidth, viewportHeight);
-        osg::ref_ptr<osg::Camera> renderPassCamera =
-        createTextureDisplayQuad(osg::Vec3(-1, -1, 0),
-                                 p.pass2Normals,
-                                 p.textureSize);
+        OutlineShaderPipeline pipeline;
+        // First pass will render the same scene using a special shader that render objects with different colors
+        // different from background, so to prepare for outline edge detection post processing shader
+        osg::ref_ptr<osg::StateSet> firstPassStateSet = new osg::StateSet;
+        RenderUtils::SetShaderProgramOnStateSet(firstPassStateSet.get(), normalColorVertShaderStr, normalColorFragShaderStr);
+        pipeline.firstPassGroup = new osg::Group();
+        //firstPassGroup->setStateSet(firstPassStateSet);
+
+        // clone main camera settings so to render same scene
+        pipeline.firstPassCamera = new osg::Camera(*originalSceneCamera, osg::CopyOp::DEEP_COPY_ALL);
+        pipeline.firstPassGroup->addChild(pipeline.firstPassCamera.get());
+        pipeline.firstPassCamera->addChild(originalSceneRoot);
+
+        return pipeline;
+        // osg::Texture* renderToTexture = createFloatTextureRectangle(viewportWidth, viewportHeight);
+        // osg::ref_ptr<osg::Camera> renderPassCamera =
+        // createTextureDisplayQuad(osg::Vec3(-1, -1, 0),
+        //                          p.pass2Normals,
+        //                          p.textureSize);
+}
+
+void OutlineShaderPipeline::Resize(int width, int height)
+{
+        firstPassCamera->setViewport(0,0,width,height);
 }
