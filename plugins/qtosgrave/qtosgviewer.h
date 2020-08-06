@@ -104,7 +104,7 @@ public:
 
     /// \brief sets the zoom factor. only affects orthogonal view
     /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
-    virtual void Zoom(float factor);
+    virtual void MoveCameraZoom(float factor, bool isPan);
 
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
@@ -340,7 +340,7 @@ public:
     virtual void _SetBkgndColor(const RaveVector<float>& color);
 
     virtual void _SetName(const std::string& name);
-    virtual void _Zoom(float factor);
+    virtual void _MoveCameraZoom(float factor, bool isPan);
     virtual void _RotateCameraXDirection(float thetaX);
     virtual void _RotateCameraYDirection(float thetaY);
     virtual void _PanCameraXDirection(float dx);
@@ -391,7 +391,7 @@ public:
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
     bool _SetProjectionModeCommand(ostream& sout, istream& sinput);
-    bool _ZoomCommand(ostream& sout, istream& sinput);
+    bool _MoveCameraZoomCommand(ostream& sout, istream& sinput);
     bool _RotateCameraXDirectionCommand(ostream& sout, istream& sinput);
     bool _RotateCameraYDirectionCommand(ostream& sout, istream& sinput);
     bool _PanCameraXDirectionCommand(ostream& sout, istream& sinput);

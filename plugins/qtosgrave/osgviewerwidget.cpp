@@ -1148,6 +1148,25 @@ void QOSGViewerWidget::_PanCameraTowardsDirection(double delta, const osg::Vec3d
     GetCurrentCameraManipulator()->setByInverseMatrix(viewMatrix);
 }
 
+void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan)
+{
+    if(isPan) {
+        // move focal point
+        double cameraDistanceToFocus = GetCurrentManipulatorDistanceToFocus();
+        osg::Matrixd cameraToWorld = osg::Matrixd::inverse(GetCamera()->getViewMatrix());
+        osg::Vec3d targetDir = cameraToWorld.getRotate() * osg::Vec3d(0,0,-cameraDistanceToFocus);
+        osg::Vec3d cameraWorldPos(cameraToWorld(3,0), cameraToWorld(3,1), cameraToWorld(3,2));
+
+        osg::Matrixd newViewMatrix;
+        newViewMatrix.makeLookAt(cameraWorldPos + targetDir * (factor-1), cameraWorldPos + targetDir, osg::Vec3d(0,0,1));
+        GetCurrentCameraManipulator()->setByInverseMatrix(newViewMatrix);
+        return;
+    }
+
+    Zoom(factor);
+}
+
+
 void QOSGViewerWidget::Zoom(float factor)
 {
     // Ortho
@@ -1161,8 +1180,7 @@ void QOSGViewerWidget::Zoom(float factor)
 
         _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, nearplane, 10000*nearplane);
     } else {
-        _osgDefaultManipulator->setDistance(_osgDefaultManipulator->getDistance() / factor);
-        _osgTrackModeManipulator->setDistance(_osgTrackModeManipulator->getDistance() / factor);
+        SetCurrentManipulatorDistanceToFocus(GetCurrentManipulatorDistanceToFocus() / factor);
     }
 }
 
