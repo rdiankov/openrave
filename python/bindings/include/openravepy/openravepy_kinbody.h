@@ -152,6 +152,7 @@ public:
     py::object _name = py::none_();
 #endif
     py::object _transform = ReturnTransform(Transform());
+    bool _isRobot = false;
     py::object _dofValues = py::none_();
     py::object _readableInterfaces = py::none_();
     virtual std::string __str__();
@@ -299,7 +300,7 @@ public:
     void RegrabAll();
     py::object IsGrabbing(PyKinBodyPtr pbody) const;
     py::object GetGrabbed() const;
-    py::object GetGrabbedInfo() const;
+    py::object GetGrabbedInfo(py::object ograbbedname=py::none_()) const;
     void ResetGrabbed(py::object ograbbedinfos);
     bool IsRobot() const;
     int GetEnvironmentId() const;
