@@ -2709,8 +2709,8 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
                             RAVELOG_WARN("ComputeHessianTranslation joint %d not supported\n", pjoint->GetType());
                         }
                         PartialInfo& partialinfo = mappartialsinserted[vinsertedindices.size()];
-                        partialinfo.first.resize(vinsertedindices.size());
-                        pjoint->_ComputePartialVelocities(partialinfo.second,idof,mapcachedpartials);
+                        partialinfo.first.clear(); // resize(vinsertedindices.size());
+                        pjoint->_ComputePartialVelocities(partialinfo.second, idof, mapcachedpartials);
                         vinsertedindices.push_back(-1);
                     }
                 }
@@ -2924,8 +2924,8 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
                             RAVELOG_WARN("ComputeHessianTranslation joint %d not supported\n", pjoint->GetType());
                         }
                         PartialInfo& partialinfo = mappartialsinserted[vinsertedindices.size()];
-                        partialinfo.first.resize(vinsertedindices.size());
-                        pjoint->_ComputePartialVelocities(partialinfo.second,idof,mapcachedpartials);
+                        partialinfo.first.clear(); // resize(vinsertedindices.size());
+                        pjoint->_ComputePartialVelocities(partialinfo.second, idof, mapcachedpartials);
                         vinsertedindices.push_back(-1);
                     }
                 }
@@ -3096,7 +3096,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     }
     std::fill(doftorques.begin(),doftorques.end(),0);
 
-    std::vector<std::pair<int,dReal> > vpartials;
+    std::vector<std::pair<int,dReal> > vDofindexDerivativePairs;
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > mapcachedpartials;
 
     // go backwards
@@ -3167,10 +3167,10 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 // TODO how to process this correctly? what is velocity of this joint? pjoint->GetVelocity(0)?
             }
 
-            pjoint->_ComputePartialVelocities(vpartials,0,mapcachedpartials);
-            FOREACH(itpartial,vpartials) {
-                int dofindex = itpartial->first;
-                doftorques.at(dofindex) += itpartial->second*faxistorque;
+            vDofindexDerivativePairs.clear();
+            pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, 0, mapcachedpartials);
+            for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
+                doftorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
             }
         }
         else {
@@ -3319,7 +3319,8 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
 
         bool bIsMimic = pjoint->GetDOFIndex() < 0 && pjoint->IsMimic(0);
         if( bIsMimic ) {
-            pjoint->_ComputePartialVelocities(vpartials,0,mapcachedpartials);
+            vpartials.clear();
+            pjoint->_ComputePartialVelocities(vpartials, 0, mapcachedpartials);
         }
 
         dReal mass = pjoint->GetHierarchyChildLink()->GetMass();
