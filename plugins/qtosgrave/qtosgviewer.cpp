@@ -2220,9 +2220,8 @@ ViewerBasePtr CreateQtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput)
         static int s_QtArgc = 0; // has to be static!
         pNewApp = new QApplication(s_QtArgc, NULL);
     } else {
-        if( widgets.empty() ) {
-            RAVELOG_WARN("widget are empty, but application exists?\n");
-        }
+        //if( widgets.empty() ) {
+        RAVELOG_WARN("application exists?\n");
     }
     return ViewerBasePtr(new QtOSGViewer(penv, sinput), boost::bind(_ReleaseQtOSGViewer, pNewApp, _1));
 }
