@@ -1148,7 +1148,7 @@ void QOSGViewerWidget::_PanCameraTowardsDirection(double delta, const osg::Vec3d
     GetCurrentCameraManipulator()->setByInverseMatrix(viewMatrix);
 }
 
-void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan)
+void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
 {
     if(isPan) {
         // move focal point
@@ -1158,7 +1158,12 @@ void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan)
         osg::Vec3d cameraWorldPos(cameraToWorld(3,0), cameraToWorld(3,1), cameraToWorld(3,2));
 
         osg::Matrixd newViewMatrix;
-        newViewMatrix.makeLookAt(cameraWorldPos + targetDir * (factor-1), cameraWorldPos + targetDir, osg::Vec3d(0,0,1));
+        float worldUnitOffset = (panDelta / _metersinunit);
+        osg::Vec3 worldOffsetVector = targetDir;
+        worldOffsetVector.normalize();
+        worldOffsetVector = worldOffsetVector * worldUnitOffset;
+        osg::Vec3d cameraUp(cameraToWorld(1,0),cameraToWorld(1,1), cameraToWorld(1,2));
+        newViewMatrix.makeLookAt(cameraWorldPos + worldOffsetVector, cameraWorldPos + targetDir + worldOffsetVector, cameraUp);
         GetCurrentCameraManipulator()->setByInverseMatrix(newViewMatrix);
         return;
     }

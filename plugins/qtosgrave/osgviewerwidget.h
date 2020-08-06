@@ -102,7 +102,7 @@ public:
     virtual void PanCameraYDirection(float dy);
     /// \param factor > 1.0 = zoom in. < 1.0 = zoom out
     /// \param isPan, if true, then focal distance will not change, but rather camera position will move along with focal point
-    void MoveCameraZoom(float factor, bool isPan);
+    void MoveCameraZoom(float factor, bool isPan, float panDelta);
     /// \brief changes current focal distance (if in perspective mode) or the current projection plane size (if in ortho mode) in order
     /// to zoom in/out towards/from focal point (if factor < 1). This function never changes de focal point position.
     void Zoom(float factor);

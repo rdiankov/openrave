@@ -1234,7 +1234,12 @@ bool QtOSGViewer::_MoveCameraZoomCommand(ostream& sout, istream& sinput)
 
     bool isPan;
     sinput >> isPan;
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, isPan));
+
+    float panDelta = 0;
+    if(isPan) {
+        sinput >> panDelta;
+    }
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, isPan, panDelta));
     return true;
 }
 
@@ -1836,9 +1841,9 @@ void QtOSGViewer::Move(int x, int y)
     _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
 }
 
-void QtOSGViewer::MoveCameraZoom(float factor, bool isPan)
+void QtOSGViewer::MoveCameraZoom(float factor, bool isPan, float panDelta)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, isPan));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, isPan, panDelta));
 }
 
 void QtOSGViewer::_RotateCameraXDirection(float thetaX)
@@ -1861,9 +1866,9 @@ void QtOSGViewer::_PanCameraYDirection(float dy)
     _posgWidget->PanCameraYDirection(dy);
 }
 
-void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan)
+void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)
 {
-    _posgWidget->MoveCameraZoom(factor, isPan);
+    _posgWidget->MoveCameraZoom(factor, isPan, panDelta);
 }
 
 void QtOSGViewer::SetName(const string& name)
