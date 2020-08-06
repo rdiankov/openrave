@@ -1156,6 +1156,7 @@ void QOSGViewerWidget::Zoom(float factor)
         const int height = _osgview->getCamera()->getViewport()->height();
         const double aspect = static_cast<double>(width)/static_cast<double>(height);
         const double nearplane = GetCameraNearPlane();
+        factor = std::min(std::max(factor, 0.01f), 100.0f);
         const double distance = 0.5 * _osgDefaultManipulator->getDistance() / factor;
 
         _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, nearplane, 10000*nearplane);
