@@ -1401,7 +1401,11 @@ bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& 
     KinBodyPtr parent = link->GetParent();
     KinBodyItemPtr parentIem = _posgWidget->GetItemFromKinBody(parent);
     OSGNodePtr osgNode = parentIem->GetOSGLink(link->GetIndex());
-    assert(osgNode);
+    if(!osgNode) {
+        // something gone seriously wrong...
+        RAVELOG_ERROR(str(boost::format("Corresponding OSG Node is invalid for Link %d of KinBody %s")%link->GetIndex()%parentIem->GetName()));
+        return false;
+    }
 
     osg::Vec3d linkOffset(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]);
     if (infoText.size() == 0) {
