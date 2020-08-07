@@ -2122,6 +2122,7 @@ private:
        \param pnodeparent Node parent
        \param strModelUri
        \param vjoints Vector of joints
+       \param setJointSids Vector of joint ids which is already written
      */
     virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints, std::set<std::string>& setJointSids)
     {
