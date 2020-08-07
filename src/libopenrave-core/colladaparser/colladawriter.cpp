@@ -1464,7 +1464,8 @@ private:
         daeElementRef nodehead = _nodesLib;
         bool bHasAddedInstance = false;
         while(listunusedlinks.size()>0) {
-            LINKOUTPUT childinfo = _WriteLink(pbody->GetLinks().at(listunusedlinks.front()), ktec, nodehead, kmodel->getID(), vjoints);
+            std::set<std::string> setJointSids;
+            LINKOUTPUT childinfo = _WriteLink(pbody->GetLinks().at(listunusedlinks.front()), ktec, nodehead, kmodel->getID(), vjoints, setJointSids);
             Transform t = pbody->GetLinks()[listunusedlinks.front()]->GetTransform();
             _WriteTransformation(childinfo.plink, t);
             if( IsWrite("visual") ) {
@@ -2122,7 +2123,7 @@ private:
        \param strModelUri
        \param vjoints Vector of joints
      */
-    virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints)
+    virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints, std::set<std::string>& setJointSids)
     {
         std::string nodeparentid;
         if( !!pnodeparent && !!pnodeparent->getID() ) {
@@ -2180,9 +2181,14 @@ private:
 
             domLink::domAttachment_fullRef pattfull = daeSafeCast<domLink::domAttachment_full>(pdomlink->add(COLLADA_TYPE_ATTACHMENT_FULL));
             string jointid = str(boost::format("%s/joint%d")%strModelUri%itjoint->first);
+            if (setJointSids.find(jointid) != setJointSids.end()) {
+                RAVELOG_VERBOSE_FORMAT("joint id \"%s\" (joint name \"%s\") for body %s is previously written, so skip. maybe part of closed loop?", jointid%pjoint->GetName()%plink->GetParent()->GetName());
+                continue;
+            }
+            setJointSids.insert(jointid);
             pattfull->setJoint(jointid.c_str());
 
-            LINKOUTPUT childinfo = _WriteLink(pchild, pattfull, pnode, strModelUri, vjoints);
+            LINKOUTPUT childinfo = _WriteLink(pchild, pattfull, pnode, strModelUri, vjoints, setJointSids);
             out.listusedlinks.insert(out.listusedlinks.end(),childinfo.listusedlinks.begin(),childinfo.listusedlinks.end());
 
             _WriteTransformation(pattfull, pjoint->GetInternalHierarchyLeftTransform());
