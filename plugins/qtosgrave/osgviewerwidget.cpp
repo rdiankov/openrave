@@ -597,10 +597,12 @@ void QOSGViewerWidget::SetSceneData()
     _osgLightsGroup->addChild(_osgSceneRoot);
     rootscene->addChild(_osgFigureRoot);
 
+    _osgview->setSceneData(rootscene);
+
+    // must come after setSceneData, since we want to add our pipeline after the normal pipeline
     _outlineRenderPipeline.InitializeOutlinePipelineState(GetCamera(), rootscene->getOrCreateStateSet(), _osgSceneRoot, 1024, 768);
-    // std::cout << "WIDTH x HEIGHT = " << width() << ", " << height() << std::endl;
-    //_osgview->setSceneData(rootscene);
-    GetCamera()->insertChild(0, rootscene);
+
+    rootscene->addChild(_outlineRenderPipeline._secondPassState.secondPassCamera);
 
     osgViewer::Viewer::Windows windows;
     _osgviewer->getWindows(windows);

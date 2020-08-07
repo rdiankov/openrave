@@ -77,23 +77,26 @@ public:
         }
     }
 
-    static osg::Camera *CreateHUDCamera(double left = 0, double right = 1, double bottom = 0, double top = 1)
+    static osg::Camera *CreateHUDCamera()
     {
         osg::ref_ptr<osg::Camera> camera = new osg::Camera;
         camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
         camera->setClearMask(GL_DEPTH_BUFFER_BIT);
-        camera->setRenderOrder(osg::Camera::POST_RENDER);
         camera->setAllowEventFocus(false);
-        camera->setProjectionMatrix(osg::Matrix::ortho2D(left, right, bottom, top));
+        camera->setProjectionMatrix(osg::Matrix::identity());
+        camera->setViewMatrix(osg::Matrix::identity());
+        camera->setProjectionMatrix(osg::Matrix::identity());
         camera->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
         return camera.release();
     }
 
-    static osg::ref_ptr<osg::Camera> CreateTextureDisplayQuad( const osg::Vec3 &pos, osg::StateAttribute *tex, float scale, float width = 1,float height = 1)
+    static osg::ref_ptr<osg::Camera> CreateTextureDisplayQuadCamera(const osg::Vec3 &pos, osg::ref_ptr<osg::StateSet> quadStateSet, osg::StateAttribute *tex, float scale=1, float width = 2,float height = 2)
     {
         osg::ref_ptr<osg::Camera> hc = CreateHUDCamera();
-        hc->addChild(CreateScreenQuad(width, height, scale, pos));
-        hc->getOrCreateStateSet()->setTextureAttributeAndModes(0, tex);
+        osg::Geode* quad = CreateScreenQuad(width, height, scale, pos);
+        quad->setStateSet(quadStateSet.get());
+        hc->addChild(quad);
+        //hc->getOrCreateStateSet()->setTextureAttributeAndModes(0, tex);
         return hc;
     }
 };
