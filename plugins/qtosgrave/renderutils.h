@@ -10,7 +10,6 @@
 #include <osg/Texture2D>
 #include <osg/PolygonMode>
 #include <osg/TextureRectangle>
-#include <osg/Texture2DMultisample>
 
 class RenderUtils {
 public:
@@ -25,12 +24,12 @@ public:
 
         onwerStateSet->setAttributeAndModes(
             program.get(),
-            osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+            osg::StateAttribute::ON);
     }
 
-    static osg::Texture2DMultisample *createFloatTextureRectangle(int width, int height)
+    static osg::TextureRectangle *CreateFloatTextureRectangle(int width, int height)
     {
-        osg::ref_ptr<osg::Texture2DMultisample> tex2D = new osg::Texture2DMultisample;
+        osg::ref_ptr<osg::TextureRectangle> tex2D = new osg::TextureRectangle;
         tex2D->setTextureSize(width, height);
         tex2D->setInternalFormat(GL_RGBA16F_ARB);
         tex2D->setSourceFormat(GL_RGBA);
@@ -59,32 +58,22 @@ public:
         return quad.release();
     }
 
-    static osg::Camera* CreateRenderToTextureCamera(osg::Camera::BufferComponent buffer, osg::Texture *tex, bool isAbsolute)
+    static osg::Camera* CreateRenderToTextureCamera(osg::Camera::BufferComponent buffer, osg::Texture *tex)
     {
         osg::ref_ptr<osg::Camera> camera = new osg::Camera;
-        SetupRenderToTextureCamera(camera, buffer, tex, isAbsolute);
+        SetupRenderToTextureCamera(camera, buffer, tex);
         return camera.release();
     }
 
-    static void SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, osg::Camera::BufferComponent buffer, osg::Texture *tex, bool isAbsolute)
+    static void SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, osg::Camera::BufferComponent buffer, osg::Texture *tex)
     {
-        camera->setClearColor(osg::Vec4());
-        camera->setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         camera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
-        camera->setRenderOrder(osg::Camera::PRE_RENDER);
         if (tex)
         {
             tex->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
             tex->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
             camera->setViewport(0, 0, tex->getTextureWidth(), tex->getTextureHeight());
-            camera->attach(buffer, tex);
-        }
-        if (isAbsolute)
-        {
-            camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
-            camera->setProjectionMatrix(osg::Matrix::ortho2D(0.0, 1.0, 0.0, 1.0));
-            camera->setViewMatrix(osg::Matrix::identity());
-            camera->addChild(CreateScreenQuad(1.0f, 1.0f));
+            camera->attach(buffer, tex, 0, 0, false, 4, 4);
         }
     }
 

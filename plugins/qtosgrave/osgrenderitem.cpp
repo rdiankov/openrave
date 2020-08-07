@@ -373,6 +373,11 @@ void KinBodyItem::Load()
                         // fast
                         state->setMode(GL_BLEND, osg::StateAttribute::ON);
                         state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+
+                        // fix transparency oclusion: 
+                        osg::Depth* depth = new osg::Depth;
+                        depth->setWriteMask( false );
+                        state->setAttributeAndModes( depth, osg::StateAttribute::ON);
                     }
                     else {
                         // slow
@@ -390,9 +395,7 @@ void KinBodyItem::Load()
                         // Conversely, disable writing to depth buffer so that
                         // a transparent polygon will allow polygons behind it to shine thru.
                         // OSG renders transparent polygons after opaque ones.
-                        osg::Depth* depth = new osg::Depth;
-                        depth->setWriteMask( false );
-                        state->setAttributeAndModes( depth, osg::StateAttribute::ON );
+                        
 
                         // Disable conflicting modes.
                         state->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
