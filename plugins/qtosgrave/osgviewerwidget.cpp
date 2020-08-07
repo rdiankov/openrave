@@ -735,11 +735,18 @@ void QOSGViewerWidget::SetSceneData()
     _osgLightsGroup->addChild(_osgSceneRoot);
     rootscene->addChild(_osgFigureRoot);
 
-    _outlineRenderPipeline = OutlineShaderPipeline::CreateOutlineRenderingScene(GetCamera(), rootscene, 1024, 768);
-    std::cout << "WIDTH x HEIGHT = " << width() << ", " << height() << std::endl;
-    //outlineGroup->addChild(rootscene);
-    _osgview->setSceneData(_outlineRenderPipeline.firstPassGroup);
-    //GetCamera()->setSceneData(outlineGroup);
+    _outlineRenderPipeline.InitializeOutlinePipelineState(GetCamera(), _osgSceneRoot, 1024, 768);
+    // std::cout << "WIDTH x HEIGHT = " << width() << ", " << height() << std::endl;
+    //_osgview->setSceneData(rootscene);
+    GetCamera()->insertChild(0, rootscene);
+
+    osgViewer::Viewer::Windows windows;
+    _osgviewer->getWindows(windows);
+    for(osgViewer::Viewer::Windows::iterator itr = windows.begin();itr != windows.end();++itr)
+    {
+      (*itr)->getState()->setUseModelViewAndProjectionUniforms(true);
+      (*itr)->getState()->setUseVertexAttributeAliasing(true);
+    }
 }
 
 void QOSGViewerWidget::ResetViewToHome()
@@ -1059,6 +1066,7 @@ void QOSGViewerWidget::SetViewType(int isorthogonal)
     else {
         _osgview->getCamera()->setProjectionMatrixAsPerspective(45.0f, aspect, _zNear, _zNear * 10000.0);
     }
+    _outlineRenderPipeline.UpdateOutlineCameraFromOriginal(GetCamera(), width, height);
 }
 
 void QOSGViewerWidget::SetViewport(int width, int height)
@@ -1188,7 +1196,7 @@ void QOSGViewerWidget::SetTextureCubeMap(const std::string& posx, const std::str
 void QOSGViewerWidget::_SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view,
                                     osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview)
 {
-    //view->setCamera( camera.get() );
+    view->setCamera( camera.get() );
     hudview->setCamera( hudcamera.get() );
     _osgviewer->addView( view.get() );
     _osgviewer->addView( hudview.get() );
