@@ -20,9 +20,10 @@
 #include <osgDB/ReadFile>
 #include <osg/FrontFace>
 #include <osg/CullFace>
-#include <osg/CoordinateSystemNode>
 #include <osg/BlendFunc>
 #include <osgGA/NodeTrackerManipulator>
+#include <osg/PolygonOffset>
+#include <osg/CoordinateSystemNode>
 #include <osgManipulator/CommandManager>
 #include <osgManipulator/TabBoxDragger>
 #include <osgManipulator/TabPlaneDragger>
@@ -730,12 +731,16 @@ void QOSGViewerWidget::SetSceneData()
     //  Normalize object normals
     rootscene->getOrCreateStateSet()->setMode(GL_NORMALIZE,osg::StateAttribute::ON);
     rootscene->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::ON);
+    osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
+    polyoffset->setFactor(1.0f);
+    polyoffset->setUnits(1.0f);
+    rootscene->getOrCreateStateSet()->setAttributeAndModes(polyoffset.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
 
     rootscene->addChild(_osgLightsGroup);
     _osgLightsGroup->addChild(_osgSceneRoot);
     rootscene->addChild(_osgFigureRoot);
 
-    _outlineRenderPipeline.InitializeOutlinePipelineState(GetCamera(), _osgSceneRoot, 1024, 768);
+    _outlineRenderPipeline.InitializeOutlinePipelineState(GetCamera(), rootscene->getOrCreateStateSet(), _osgSceneRoot, 1024, 768);
     // std::cout << "WIDTH x HEIGHT = " << width() << ", " << height() << std::endl;
     //_osgview->setSceneData(rootscene);
     GetCamera()->insertChild(0, rootscene);
@@ -1066,7 +1071,6 @@ void QOSGViewerWidget::SetViewType(int isorthogonal)
     else {
         _osgview->getCamera()->setProjectionMatrixAsPerspective(45.0f, aspect, _zNear, _zNear * 10000.0);
     }
-    _outlineRenderPipeline.UpdateOutlineCameraFromOriginal(GetCamera(), width, height);
 }
 
 void QOSGViewerWidget::SetViewport(int width, int height)

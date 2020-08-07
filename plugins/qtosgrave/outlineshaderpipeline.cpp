@@ -1,18 +1,19 @@
 
 #include "renderutils.h"
 #include "outlineshaderpipeline.h"
-#include <iostream>
+#include <osg/CullFace>
 
 	namespace {
 	const std::string normalColorFragShaderStr =
 			"#version 300 es\n"
-			"precision mediump float;                  \n"
+			"precision highp float;                  \n"
 			"\n"
 			"in vec3 normal;\n"
 			"uniform vec4 maincolor;\n"
 			"out vec4 fragColor;\n"
 			"\n"
 			"in vec3 position;\n"
+			"in vec3 color;\n"
 			"\n"
 			"void main()\n"
 			"{\n"
@@ -21,23 +22,25 @@
 
 	const std::string normalColorVertShaderStr =
 			"#version 300 es\n"
-			"precision mediump float;                  \n"
+			"precision highp float;                  \n"
 			"\n"
-			"in vec3 vertexPosition;\n"
-			"in vec3 vertexNormal;\n"
+			"in vec4 osg_Vertex;\n"
+			"in vec3 osg_Normal;\n"
+			"in vec4 osg_Color;\n"
 			"\n"
 			"out vec3 normal;\n"
 			"out vec3 position;\n"
+			"out vec3 color;\n"
 			"\n"
 			"uniform mat4 osg_ModelViewProjectionMatrix;\n"
-			"uniform mat3 osg_NormalMatrix;\n"
 			"\n"
 			"void main()\n"
 			"{\n"
-			"    normal = normalize(osg_NormalMatrix * vertexNormal);\n"
-			"    position = vertexPosition;\n"
+			"	 color = osg_Color.xyz;\n"
+			"    normal = normalize(osg_Normal);\n"
+			"    position = osg_Vertex.xyz;\n"
 			"    // Calculate vertex position in clip coordinates\n"
-			"    gl_Position = osg_ModelViewProjectionMatrix * vec4(vertexPosition, 1.0);\n"
+			"    gl_Position = osg_ModelViewProjectionMatrix * vec4(osg_Vertex.xyz, 1);\n"
 			"}\n";
 
 	const std::string outlineFragShaderStr =
@@ -124,11 +127,11 @@ OutlineShaderPipeline::OutlineShaderPipeline()
 	// empty
 }
 
-void OutlineShaderPipeline::InitializeOutlinePipelineState(osg::ref_ptr<osg::Camera> originalSceneCamera, osg::ref_ptr<osg::Node> originalSceneRoot, int viewportWidth, int viewportHeight)
+void OutlineShaderPipeline::InitializeOutlinePipelineState(osg::ref_ptr<osg::Camera> originalSceneCamera, osg::ref_ptr<osg::StateSet> inheritedStateSet, osg::ref_ptr<osg::Node> originalSceneRoot, int viewportWidth, int viewportHeight)
 {
 	// First pass will render the same scene using a special shader that render objects with different colors
 	// different from background, so to prepare for outline edge detection post processing shader
-	osg::ref_ptr<osg::StateSet> firstPassStateSet = new osg::StateSet;
+	osg::ref_ptr<osg::StateSet> firstPassStateSet = new osg::StateSet((*inheritedStateSet.get()), osg::CopyOp::DEEP_COPY_ALL);
 	RenderUtils::SetShaderProgramOnStateSet(firstPassStateSet.get(), normalColorVertShaderStr, normalColorFragShaderStr);
 	_firstPassState.firstPassGroup = new osg::Group();
 	_firstPassState.firstPassGroup->addChild(originalSceneRoot);
@@ -136,12 +139,14 @@ void OutlineShaderPipeline::InitializeOutlinePipelineState(osg::ref_ptr<osg::Cam
 
 	// clone main camera settings so to render same scene
 	_firstPassState.firstPassCamera = new osg::Camera();
-	_firstPassState.firstPassCamera->setReferenceFrame(osg::Camera::RELATIVE_RF);
+
+	_firstPassState.firstPassRenderTexture = RenderUtils::CreateFloatTextureRectangle(viewportWidth, viewportHeight);
+	RenderUtils::SetupRenderToTextureCamera(_firstPassState.firstPassCamera, osg::Camera::COLOR_BUFFER, _firstPassState.firstPassRenderTexture.get());
 	// render after main camera
-	_firstPassState.firstPassCamera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	_firstPassState.firstPassCamera->setClearColor(osg::Vec4(0.95, 0, 0, 1.0));
+	_firstPassState.firstPassCamera->setClearMask(0);
+	//_firstPassState.firstPassCamera->setClearColor(osg::Vec4(0.95, 0, 0, 1.0));
 	_firstPassState.firstPassCamera->setViewMatrix(osg::Matrix::identity());
-	_firstPassState.firstPassCamera->setComputeNearFarMode(osg::Camera::DO_NOT_COMPUTE_NEAR_FAR);
+	_firstPassState.firstPassCamera->setProjectionMatrix(osg::Matrix::identity());
 
 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
 	originalSceneCamera->addChild(_firstPassState.firstPassCamera);
@@ -152,23 +157,4 @@ void OutlineShaderPipeline::InitializeOutlinePipelineState(osg::ref_ptr<osg::Cam
 	// createTextureDisplayQuad(osg::Vec3(-1, -1, 0),
 	//                          p.pass2Normals,
 	//                          p.textureSize);
-}
-
-void printOSGMAtrix(const osg::Matrixd& m) {
-	for(int i = 0 ; i < 4; ++i) {
-			std::cout << m(i,0) << ", " << m(i,1) << m(i,2) << ", " << m(i,3) << std::endl;
-	}
-}
-
-void OutlineShaderPipeline::UpdateOutlineCameraFromOriginal(osg::ref_ptr<osg::Camera> originalSceneCamera, int width, int height)
-{
-	if(!_firstPassState.firstPassGroup || !_firstPassState.firstPassCamera) {
-			return;
-	}
-	_firstPassState.firstPassCamera->setViewport(0,0,width,height);
-
-	// copy projection matrix from original scene camera to our first pass camera, so to render same view
-	// (ps: dont need to copy viewMatrix because our outline first pass camera is set to be child of scene original camera, so it will follow rigid body transformations)
-	osg::Matrixd originalSceneCameraProjection = originalSceneCamera->getProjectionMatrix();
-	_firstPassState.firstPassCamera->setProjectionMatrix(originalSceneCameraProjection);
 }
