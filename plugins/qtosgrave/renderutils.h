@@ -22,6 +22,7 @@ public:
 
         osg::Shader* fragShader = new osg::Shader(osg::Shader::FRAGMENT, fragShaderString);
         program->addShader(fragShader);
+
         onwerStateSet->setAttributeAndModes(
             program.get(),
             osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
@@ -65,7 +66,7 @@ public:
         return camera.release();
     }
 
-    static void SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, osg::Camera::BufferComponent buffer, osg::Texture *tex, bool isAbsolute) 
+    static void SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, osg::Camera::BufferComponent buffer, osg::Texture *tex, bool isAbsolute)
     {
         camera->setClearColor(osg::Vec4());
         camera->setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
