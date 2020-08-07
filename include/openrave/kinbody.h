@@ -2674,6 +2674,12 @@ private:
     /// \return md5 hash string of body state
     virtual const std::string& GetBodyStateHash() const;
 
+    /// \brief A md5 hash unique to the particular joint control information of a KinBody.
+    ///
+    /// This 32 byte string can be used to check if two bodies have the same joint control properties including actuator properties and limits
+    /// \return md5 hash string of joint control
+    virtual const std::string& GetJointControlHash() const;
+
     /// \brief Sets the joint offsets so that the current configuration becomes the new zero state of the robot.
     ///
     /// When this function returns, the returned DOF values should be all zero for controllable joints.
@@ -2948,7 +2954,7 @@ protected:
     std::string _referenceUri; ///< reference uri saved from InitFromInfo
 
 private:
-    mutable std::string __hashkinematics, __hashbodystate;
+    mutable std::string __hashkinematics, __hashbodystate, __hashjointcontrol;
     mutable std::vector<dReal> _vTempJoints;
     virtual const char* GetHash() const {
         return OPENRAVE_KINBODY_HASH;

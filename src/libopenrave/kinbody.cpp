@@ -4351,7 +4351,8 @@ void KinBody::_ComputeInternalInformation()
 
     __hashkinematics.resize(0);
     __hashbodystate.resize(0);
-
+    __hashjointcontrol.resize(0);
+    
     // create the adjacency list
     {
         _setAdjacentLinks.clear();
@@ -4828,6 +4829,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
     __hashkinematics = r->__hashkinematics;
     __hashbodystate = r->__hashbodystate;
+    __hashjointcontrol = r->__hashjointcontrol;
     _vTempJoints = r->_vTempJoints;
 
     _veclinks.resize(0); _veclinks.reserve(r->_veclinks.size());
@@ -5007,6 +5009,11 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
         __hashbodystate.resize(0);
     }
 
+    // for now electric motor info cannot be set so it is not supposed to change
+    if( !!(parameters & (Prop_JointLimits|Prop_JointAccelerationVelocityTorqueLimits|Prop_JointProperties)) ) {
+        __hashjointcontrol.resize(0);
+    }
+
     if( (parameters&Prop_LinkEnable) == Prop_LinkEnable ) {
         // check if any regrabbed bodies have the link in _listNonCollidingLinks and the link is enabled, or are missing the link in _listNonCollidingLinks and the link is disabled
         std::map<GrabbedPtr, list<KinBody::LinkConstPtr> > mapcheckcollisions;
@@ -5130,7 +5137,7 @@ const std::string& KinBody::GetKinematicsGeometryHash() const
 const std::string& KinBody::GetBodyStateHash() const
 {
     CHECK_INTERNAL_COMPUTATION;
-    if( __hashbodystate.size() == 0 ) {
+    if( __hashbodystate.empty() ) {
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         // should add dynamics since that affects a lot how part is treated.
@@ -5138,6 +5145,19 @@ const std::string& KinBody::GetBodyStateHash() const
         __hashbodystate = utils::GetMD5HashString(ss.str());
     }
     return __hashbodystate;
+}
+
+const std::string& KinBody::GetJointControlHash() const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    if( __hashjointcontrol.empty() ) {
+        ostringstream ss;
+        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+        // should add dynamics since that affects a lot how part is treated.
+        serialize(ss,SO_Actuator|SO_JointLimits);
+        __hashjointcontrol = utils::GetMD5HashString(ss.str());
+    }
+    return __hashjointcontrol;
 }
 
 void KinBody::SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, uint32_t checklimits)

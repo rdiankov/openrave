@@ -2546,6 +2546,36 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
             SerializeRound(o,GetValue(i));
         }
     }    
+
+    if( options & SO_Actuator ) {
+        if (!!_info._infoElectricMotor) {
+            const ElectricMotorActuatorInfoPtr& motor = _info._infoElectricMotor;
+            SerializeRound(o,motor->assigned_power_rating);
+            SerializeRound(o,motor->coloumb_friction);
+            SerializeRound(o,motor->gear_ratio);
+            SerializeRound(o,motor->max_instantaneous_torque);
+            SerializeRound(o,motor->max_speed);
+            for (const std::pair<dReal, dReal>& points : motor->max_speed_torque_points) {
+                SerializeRound(o,points.first);
+                SerializeRound(o,points.second);
+            }
+            o << motor->model_type << " ";
+            SerializeRound(o,motor->no_load_speed);
+            for (const std::pair<dReal, dReal>& points : motor->nominal_speed_torque_points) {
+                SerializeRound(o,points.first);
+                SerializeRound(o,points.second);
+            }
+            SerializeRound(o,motor->nominal_torque);
+            SerializeRound(o,motor->nominal_voltage);
+            SerializeRound(o,motor->rotor_inertia);
+            SerializeRound(o,motor->speed_constant);
+            SerializeRound(o,motor->stall_torque);
+            SerializeRound(o,motor->starting_current);
+            SerializeRound(o,motor->terminal_resistance);
+            SerializeRound(o,motor->torque_constant);
+            SerializeRound(o,motor->viscous_friction);
+        }
+    }
 }
 
 void KinBody::MimicInfo::Reset()
