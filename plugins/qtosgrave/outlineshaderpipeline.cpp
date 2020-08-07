@@ -4,6 +4,37 @@
 #include <osg/CullFace>
 
 	namespace {
+	const std::string simpleTextureVert = 
+			"#version 300 es\n"
+			"precision highp float;\n"
+			"in vec4 osg_Vertex;\n"
+			"out vec2 textCoord;\n"
+			"\n"
+			"// Pass the texture coordinate further to the fragment shader.\n"
+			"textCoord = osg_MultiTexCoord0.xy;\n"
+			"\n"
+			"void main()\n"
+			"{\n"
+			"\n"
+			"    // Calculate vertex position in clip coordinates\n"
+			"    gl_Position = osg_Vertex;\n"
+			"}\n";
+
+	const std::string simpleTextureFrag =
+			"#version 300 es\n"
+			"precision highp float;\n"
+			"in vec2 textCoord;\n"
+			"\n"
+			"uniform sampler2DMS diffuseTexture;\n"
+			"\n"
+			"\n"
+			"out vec4 fragColor;\n"
+			"void main()\n"
+			"{\n"
+			"    fragColor = vec4(0,1,0,1);//texture(diffuseTexture, texCoord);\n"
+			"}\n";
+
+
 	const std::string normalColorFragShaderStr =
 			"#version 300 es\n"
 			"precision highp float;                  \n"
@@ -13,11 +44,11 @@
 			"out vec4 fragColor;\n"
 			"\n"
 			"in vec3 position;\n"
-			"in vec3 color;\n"
+			"in highp vec3 color;\n"
 			"\n"
 			"void main()\n"
 			"{\n"
-			"    fragColor = vec4(normal, 1);\n"
+			"    fragColor = vec4(color, 1);\n"
 			"}\n";
 
 	const std::string normalColorVertShaderStr =
@@ -36,7 +67,7 @@
 			"\n"
 			"void main()\n"
 			"{\n"
-			"	 color = osg_Color.xyz;\n"
+			"	 color = osg_Normal;\n"
 			"    normal = normalize(osg_Normal);\n"
 			"    position = osg_Vertex.xyz;\n"
 			"    // Calculate vertex position in clip coordinates\n"
@@ -143,8 +174,8 @@ void OutlineShaderPipeline::InitializeOutlinePipelineState(osg::ref_ptr<osg::Cam
 	_firstPassState.firstPassRenderTexture = RenderUtils::CreateFloatTextureRectangle(viewportWidth, viewportHeight);
 	RenderUtils::SetupRenderToTextureCamera(_firstPassState.firstPassCamera, osg::Camera::COLOR_BUFFER, _firstPassState.firstPassRenderTexture.get());
 	// render after main camera
-	_firstPassState.firstPassCamera->setClearMask(0);
-	//_firstPassState.firstPassCamera->setClearColor(osg::Vec4(0.95, 0, 0, 1.0));
+	_firstPassState.firstPassCamera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	_firstPassState.firstPassCamera->setClearColor(osg::Vec4(0.95, 0, 0, 1.0));
 	_firstPassState.firstPassCamera->setViewMatrix(osg::Matrix::identity());
 	_firstPassState.firstPassCamera->setProjectionMatrix(osg::Matrix::identity());
 
@@ -152,6 +183,13 @@ void OutlineShaderPipeline::InitializeOutlinePipelineState(osg::ref_ptr<osg::Cam
 	originalSceneCamera->addChild(_firstPassState.firstPassCamera);
 	_firstPassState.firstPassCamera->addChild(_firstPassState.firstPassGroup);
 
+	osg::ref_ptr<osg::StateSet> secondPassStateSet = new osg::StateSet();
+	RenderUtils::SetShaderProgramOnStateSet(secondPassStateSet.get(), simpleTextureVert, simpleTextureFrag);
+	_secondPassState.secondPassCamera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), secondPassStateSet, _firstPassState.firstPassRenderTexture.get());
+	secondPassStateSet->setTextureAttributeAndModes(0, _firstPassState.firstPassRenderTexture.get());
+    secondPassStateSet->addUniform(new osg::Uniform("diffuseTexture", 0));
+	// secondPassStateSet->setTextureAttributeAndModes(0, p.pass1Shadows);
+    // ss->addUniform(new osg::Uniform("posMap",    0));
 	// osg::Texture* renderToTexture = createFloatTextureRectangle(viewportWidth, viewportHeight);
 	// osg::ref_ptr<osg::Camera> renderPassCamera =
 	// createTextureDisplayQuad(osg::Vec3(-1, -1, 0),

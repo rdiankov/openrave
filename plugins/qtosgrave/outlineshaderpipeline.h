@@ -13,6 +13,10 @@ struct OutlineFirstPassState {
     osg::ref_ptr<osg::TextureRectangle> firstPassRenderTexture;
 };
 
+struct OutlineSecondPassState {
+    osg::ref_ptr<osg::Camera> secondPassCamera;
+};
+
 class OutlineShaderPipeline {
 public:
     OutlineShaderPipeline();
@@ -23,6 +27,7 @@ public:
 
 public:
     OutlineFirstPassState _firstPassState;
+    OutlineSecondPassState _secondPassState;
 };
 
 #endif
