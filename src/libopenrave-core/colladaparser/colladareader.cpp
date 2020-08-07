@@ -2029,10 +2029,6 @@ public:
                     pjoint->_info._name = str(boost::format("dummy%d")%pjoint->jointindex);
                 }
 
-                if( _mapJointSids.find(jointsidref) != _mapJointSids.end() ) {
-                    RAVELOG_WARN_FORMAT("jointid '%s' is duplicated!", jointsidref);
-                    continue;
-                }
                 if( pjoint->_info._bIsActive ) {
                     pkinbody->_vecjoints.push_back(pjoint);
                 }
@@ -2041,6 +2037,9 @@ public:
                     pkinbody->_vPassiveJoints.push_back(pjoint);
                 }
 
+                if( _mapJointSids.find(jointsidref) != _mapJointSids.end() ) {
+                    RAVELOG_WARN_FORMAT("jointid '%s' is duplicated!", jointsidref);
+                }
                 _mapJointSids[jointsidref] = pjoint;
                 size_t lastJointSidIndex = jointsidref.find_last_of('/');
                 if( lastJointSidIndex != string::npos ) {
