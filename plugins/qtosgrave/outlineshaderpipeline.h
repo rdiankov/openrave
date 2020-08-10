@@ -2,7 +2,7 @@
 #include <osg/Node>
 #include <osg/Group>
 #include <osg/Uniform>
-#include <osg/TextureRectangle>
+#include <osg/Texture2D>
 
 #ifndef OPENRAVE_QTOSG_OUTLINESHADERPIPELINE_H
 #define OPENRAVE_QTOSG_OUTLINESHADERPIPELINE_H
