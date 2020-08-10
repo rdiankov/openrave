@@ -1454,19 +1454,22 @@ private:
             vdomjoints.at(itjoint->first) = pdomjoint;
         }
 
-        list<int> listunusedlinks;
+        std::list<int> listunusedlinks;
+        const std::vector<KinBody::LinkPtr>& links = pbody->GetLinks();
         for(int ilink = 0; ilink < (int)vConnectedLinks.size(); ++ilink) {
             if (!vConnectedLinks[ilink]) {
-                listunusedlinks.push_back(pbody->GetLinks()[ilink]->GetIndex());
+                listunusedlinks.push_back(links[ilink]->GetIndex());
             }
         }
 
         daeElementRef nodehead = _nodesLib;
         bool bHasAddedInstance = false;
-        while(listunusedlinks.size()>0) {
-            std::set<std::string> setJointSids;
-            LINKOUTPUT childinfo = _WriteLink(pbody->GetLinks().at(listunusedlinks.front()), ktec, nodehead, kmodel->getID(), vjoints, setJointSids);
-            Transform t = pbody->GetLinks()[listunusedlinks.front()]->GetTransform();
+        std::set<std::string> setJointSids;
+        while( !listunusedlinks.empty() ) {
+            setJointSids.clear();
+            const int firstunusedlinkindex = listunusedlinks.front();
+            const LINKOUTPUT childinfo = _WriteLink(links.at(firstunusedlinkindex), ktec, nodehead, kmodel->getID(), vjoints, setJointSids);
+            const Transform t = links[firstunusedlinkindex]->GetTransform();
             _WriteTransformation(childinfo.plink, t);
             if( IsWrite("visual") ) {
                 _WriteTransformation(childinfo.pnode, t);
@@ -2122,6 +2125,7 @@ private:
        \param pnodeparent Node parent
        \param strModelUri
        \param vjoints Vector of joints
+       \param setJointSids Vector of joint ids which is already written
      */
     virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints, std::set<std::string>& setJointSids)
     {
