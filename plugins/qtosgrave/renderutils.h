@@ -8,8 +8,9 @@
 #include <osg/Shader>
 #include <osg/Geometry>
 #include <osg/Texture2D>
+#include <osgDB/ReadFile>
 #include <osg/PolygonMode>
-#include <osg/TextureRectangle>
+#include <osg/Texture2D>
 
 class RenderUtils {
 public:
@@ -27,12 +28,24 @@ public:
             osg::StateAttribute::ON);
     }
 
-    static osg::TextureRectangle *CreateFloatTextureRectangle(int width, int height)
+    static osg::Texture2D *CreateTexture(const std::string &fileName)
     {
-        osg::ref_ptr<osg::TextureRectangle> tex2D = new osg::TextureRectangle;
+        osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
+        texture->setImage(osgDB::readRefImageFile(fileName));
+        texture->setWrap(osg::Texture2D::WRAP_S, osg::Texture2D::REPEAT);
+        texture->setWrap(osg::Texture2D::WRAP_T, osg::Texture2D::REPEAT);
+        texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+        texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+        texture->setMaxAnisotropy(16.0f);
+        return texture.release();
+    }
+
+    static osg::Texture2D *CreateFloatTextureRectangle(int width, int height)
+    {
+        osg::ref_ptr<osg::Texture2D> tex2D = new osg::Texture2D;
         tex2D->setTextureSize(width, height);
-        tex2D->setInternalFormat(GL_RGBA16F_ARB);
         tex2D->setSourceFormat(GL_RGBA);
+        tex2D->setInternalFormat(GL_RGBA32F_ARB);
         tex2D->setSourceType(GL_FLOAT);
         return tex2D.release();
     }
@@ -67,22 +80,28 @@ public:
 
     static void SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, osg::Camera::BufferComponent buffer, osg::Texture *tex)
     {
-        camera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
-        if (tex)
-        {
-            tex->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
-            tex->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
-            camera->setViewport(0, 0, tex->getTextureWidth(), tex->getTextureHeight());
-            camera->attach(buffer, tex, 0, 0, false, 4, 4);
+        //
+        if(!tex) {
+            return;
         }
+        tex->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+        tex->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+        camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+        camera->setClearColor(osg::Vec4(0,0,1,1));
+        camera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+        camera->setRenderOrder(osg::Camera::PRE_RENDER);
+        camera->setViewport(0, 0, tex->getTextureWidth(), tex->getTextureHeight());
+        camera->setViewMatrix(osg::Matrix::identity());
+        camera->attach(buffer, tex, 0, 0, false, 4, 4);
     }
 
     static osg::Camera *CreateHUDCamera()
     {
         osg::ref_ptr<osg::Camera> camera = new osg::Camera;
         camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
-        camera->setClearMask(GL_DEPTH_BUFFER_BIT);
+        camera->setClearMask(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
         camera->setAllowEventFocus(false);
+        camera->setClearColor(osg::Vec4(0,1,0,1));
         camera->setProjectionMatrix(osg::Matrix::identity());
         camera->setViewMatrix(osg::Matrix::identity());
         camera->setProjectionMatrix(osg::Matrix::identity());
@@ -90,13 +109,12 @@ public:
         return camera.release();
     }
 
-    static osg::ref_ptr<osg::Camera> CreateTextureDisplayQuadCamera(const osg::Vec3 &pos, osg::ref_ptr<osg::StateSet> quadStateSet, osg::StateAttribute *tex, float scale=1, float width = 2,float height = 2)
+    static osg::ref_ptr<osg::Camera> CreateTextureDisplayQuadCamera(const osg::Vec3 &pos, osg::ref_ptr<osg::StateSet> quadStateSet, float scale=1, float width = 2,float height = 2)
     {
         osg::ref_ptr<osg::Camera> hc = CreateHUDCamera();
         osg::Geode* quad = CreateScreenQuad(width, height, scale, pos);
         quad->setStateSet(quadStateSet.get());
         hc->addChild(quad);
-        //hc->getOrCreateStateSet()->setTextureAttributeAndModes(0, tex);
         return hc;
     }
 };

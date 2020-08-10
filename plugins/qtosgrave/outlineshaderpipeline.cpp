@@ -5,33 +5,27 @@
 
 	namespace {
 	const std::string simpleTextureVert = 
-			"#version 300 es\n"
-			"precision highp float;\n"
-			"in vec4 osg_Vertex;\n"
-			"out vec2 textCoord;\n"
-			"\n"
-			"// Pass the texture coordinate further to the fragment shader.\n"
-			"textCoord = osg_MultiTexCoord0.xy;\n"
-			"\n"
+			"#version 120\n"
 			"void main()\n"
 			"{\n"
-			"\n"
-			"    // Calculate vertex position in clip coordinates\n"
-			"    gl_Position = osg_Vertex;\n"
+			"	// Vertex position in main camera Screen space.\n"
+			"	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
 			"}\n";
 
 	const std::string simpleTextureFrag =
-			"#version 300 es\n"
-			"precision highp float;\n"
-			"in vec2 textCoord;\n"
+			"#version 120\n"
 			"\n"
 			"uniform sampler2DMS diffuseTexture;\n"
 			"\n"
 			"\n"
-			"out vec4 fragColor;\n"
+			"vec4 accessTexel(sampler2DMS tex, ivec2 tc) {\n"
+			"    vec4 c = texelFetch(tex, tc, 0) + texelFetch(tex, tc, 1) + texelFetch(tex, tc, 2) + texelFetch(tex, tc, 3);\n"
+			"    return c / 4.0;\n"
+			"}\n"
 			"void main()\n"
 			"{\n"
-			"    fragColor = vec4(0,1,0,1);//texture(diffuseTexture, texCoord);\n"
+			"    gl_FragColor = accessTexel(diffuseTexture,  ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
+			"    //gl_FragColor = vec4(0,1,0,1);\n"
 			"}\n";
 
 
@@ -48,7 +42,7 @@
 			"\n"
 			"void main()\n"
 			"{\n"
-			"    fragColor = vec4(color, 1);\n"
+			"    fragColor = vec4(normal*position, 1);\n"
 			"}\n";
 
 	const std::string normalColorVertShaderStr =
@@ -163,36 +157,26 @@ void OutlineShaderPipeline::InitializeOutlinePipelineState(osg::ref_ptr<osg::Cam
 	// First pass will render the same scene using a special shader that render objects with different colors
 	// different from background, so to prepare for outline edge detection post processing shader
 	osg::ref_ptr<osg::StateSet> firstPassStateSet = new osg::StateSet((*inheritedStateSet.get()), osg::CopyOp::DEEP_COPY_ALL);
-	RenderUtils::SetShaderProgramOnStateSet(firstPassStateSet.get(), normalColorVertShaderStr, normalColorFragShaderStr);
+	//RenderUtils::SetShaderProgramOnStateSet(firstPassStateSet.get(), normalColorVertShaderStr, normalColorFragShaderStr);
 	_firstPassState.firstPassGroup = new osg::Group();
+	//_firstPassState.firstPassGroup->setStateSet(inheritedStateSet);
 	_firstPassState.firstPassGroup->addChild(originalSceneRoot);
-	_firstPassState.firstPassGroup->setStateSet(firstPassStateSet);
 
 	// clone main camera settings so to render same scene
 	_firstPassState.firstPassCamera = new osg::Camera();
-
 	_firstPassState.firstPassRenderTexture = RenderUtils::CreateFloatTextureRectangle(viewportWidth, viewportHeight);
 	RenderUtils::SetupRenderToTextureCamera(_firstPassState.firstPassCamera, osg::Camera::COLOR_BUFFER, _firstPassState.firstPassRenderTexture.get());
-	// render after main camera
 	_firstPassState.firstPassCamera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	_firstPassState.firstPassCamera->setClearColor(osg::Vec4(0.95, 0, 0, 1.0));
 	_firstPassState.firstPassCamera->setViewMatrix(osg::Matrix::identity());
 	_firstPassState.firstPassCamera->setProjectionMatrix(osg::Matrix::identity());
-
 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
-	originalSceneCamera->addChild(_firstPassState.firstPassCamera);
-	_firstPassState.firstPassCamera->addChild(_firstPassState.firstPassGroup);
+	originalSceneCamera->addChild(_firstPassState.firstPassCamera.get());
+	_firstPassState.firstPassCamera->addChild(_firstPassState.firstPassGroup.get());
 
 	osg::ref_ptr<osg::StateSet> secondPassStateSet = new osg::StateSet();
 	RenderUtils::SetShaderProgramOnStateSet(secondPassStateSet.get(), simpleTextureVert, simpleTextureFrag);
-	_secondPassState.secondPassCamera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), secondPassStateSet, _firstPassState.firstPassRenderTexture.get());
-	secondPassStateSet->setTextureAttributeAndModes(0, _firstPassState.firstPassRenderTexture.get());
+	_secondPassState.secondPassCamera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), secondPassStateSet);
+	secondPassStateSet->setTextureAttributeAndModes(0, _firstPassState.firstPassRenderTexture.get(), osg::StateAttribute::ON);
     secondPassStateSet->addUniform(new osg::Uniform("diffuseTexture", 0));
-	// secondPassStateSet->setTextureAttributeAndModes(0, p.pass1Shadows);
-    // ss->addUniform(new osg::Uniform("posMap",    0));
-	// osg::Texture* renderToTexture = createFloatTextureRectangle(viewportWidth, viewportHeight);
-	// osg::ref_ptr<osg::Camera> renderPassCamera =
-	// createTextureDisplayQuad(osg::Vec3(-1, -1, 0),
-	//                          p.pass2Normals,
-	//                          p.textureSize);
 }

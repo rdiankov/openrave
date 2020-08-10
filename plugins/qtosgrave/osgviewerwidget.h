@@ -42,7 +42,7 @@ class OpenRAVETracker;
 class OpenRAVETrackball;
 
 /// \brief  Class of the openscene graph 3d viewer
-class QOSGViewerWidget : public QOpenGLWidget
+class QOSGViewerWidget : public QGLWidget
 {
 public:
 

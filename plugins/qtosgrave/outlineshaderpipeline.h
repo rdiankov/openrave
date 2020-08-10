@@ -10,7 +10,7 @@
 struct OutlineFirstPassState {
     osg::ref_ptr<osg::Group> firstPassGroup;
     osg::ref_ptr<osg::Camera> firstPassCamera;
-    osg::ref_ptr<osg::TextureRectangle> firstPassRenderTexture;
+    osg::ref_ptr<osg::Texture2D> firstPassRenderTexture;
 };
 
 struct OutlineSecondPassState {

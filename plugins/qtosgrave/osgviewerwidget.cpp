@@ -529,7 +529,7 @@ private:
 
 QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
                                    const boost::function<bool(int)>& onKeyDown, double metersinunit,
-                                   QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
+                                   QWidget* parent) : QGLWidget(parent), _onKeyDown(onKeyDown)
 {
 
     setFocus( Qt::ActiveWindowFocusReason );
@@ -577,7 +577,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 
     {
         _osgSkybox = new Skybox;
-        _osgFigureRoot->addChild(_osgSkybox);
+        //_osgFigureRoot->addChild(_osgSkybox);
         _osgFigureRoot->setNodeMask(~OSG_IS_PICKABLE_MASK);
     }
 
@@ -740,20 +740,26 @@ void QOSGViewerWidget::SetSceneData()
     _osgLightsGroup->addChild(_osgSceneRoot);
     rootscene->addChild(_osgFigureRoot);
 
-    _osgview->setSceneData(rootscene);
 
     // must come after setSceneData, since we want to add our pipeline after the normal pipeline
-    _outlineRenderPipeline.InitializeOutlinePipelineState(GetCamera(), rootscene->getOrCreateStateSet(), _osgSceneRoot, 1024, 768);
+    _outlineRenderPipeline.InitializeOutlinePipelineState(GetCamera(), rootscene->getOrCreateStateSet(), rootscene, 1024, 768);
 
-    rootscene->addChild(_outlineRenderPipeline._secondPassState.secondPassCamera);
+    //GetCamera()->addChild(rootscene);
+    osg::Group* grp = new osg::Group();
+    grp->addChild(_outlineRenderPipeline._firstPassState.firstPassCamera);
+    grp->addChild(_outlineRenderPipeline._secondPassState.secondPassCamera);
+    //GetCamera()->addChild(_outlineRenderPipeline._firstPassState.firstPassCamera.get());
+    //GetCamera()->addChild(_outlineRenderPipeline._secondPassState.secondPassCamera.get());
 
-    osgViewer::Viewer::Windows windows;
-    _osgviewer->getWindows(windows);
-    for(osgViewer::Viewer::Windows::iterator itr = windows.begin();itr != windows.end();++itr)
-    {
-      (*itr)->getState()->setUseModelViewAndProjectionUniforms(true);
-      (*itr)->getState()->setUseVertexAttributeAliasing(true);
-    }
+    _osgview->setSceneData(grp);
+    
+    // osgViewer::Viewer::Windows windows;
+    // _osgviewer->getWindows(windows);
+    // for(osgViewer::Viewer::Windows::iterator itr = windows.begin();itr != windows.end();++itr)
+    // {
+    //   (*itr)->getState()->setUseModelViewAndProjectionUniforms(true);
+    //   (*itr)->getState()->setUseVertexAttributeAliasing(true);
+    // }
 }
 
 void QOSGViewerWidget::ResetViewToHome()
@@ -1205,7 +1211,7 @@ void QOSGViewerWidget::_SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_p
     view->setCamera( camera.get() );
     hudview->setCamera( hudcamera.get() );
     _osgviewer->addView( view.get() );
-    _osgviewer->addView( hudview.get() );
+    //_osgviewer->addView( hudview.get() );
 
     _osgDefaultManipulator = new OpenRAVETrackball(this);
     _osgDefaultManipulator->setWheelZoomFactor(0.2);
@@ -1238,28 +1244,13 @@ void QOSGViewerWidget::_GetRAVEEnvironmentUpVector(osg::Vec3d& upVector)
 
 osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateCamera( int x, int y, int w, int h, double metersinunit)
 {
-    osg::ref_ptr<osg::DisplaySettings> ds = osg::DisplaySettings::instance();
+    osg::ref_ptr<osg::Camera> camera = GetCamera();
+    camera->setGraphicsContext(new osgViewer::GraphicsWindowEmbedded(x,y, w, h));
 
-    osg::ref_ptr<osg::GraphicsContext::Traits> traits = new osg::GraphicsContext::Traits;
-    traits->windowName = "";
-    traits->windowDecoration = false;
-    traits->x = x;
-    traits->y = y;
-    traits->width = w;
-    traits->height = h;
-    traits->doubleBuffer = true;
-    traits->alpha = ds->getMinimumNumAlphaBits();
-    traits->stencil = ds->getMinimumNumStencilBits();
-    traits->sampleBuffers = ds->getMultiSamples();
-    traits->samples = ds->getNumMultiSamples();
-
-    osg::ref_ptr<osg::Camera> camera(new osg::Camera());
-    camera->setGraphicsContext(new osgViewer::GraphicsWindowEmbedded(traits.get()));
-
-    camera->setClearColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
-    camera->setViewport(new osg::Viewport(0, 0, traits->width, traits->height));
+    camera->setClearColor(osg::Vec4(0, 0.95, 0.95, 1.0));
+    camera->setViewport(new osg::Viewport(0, 0, w, h));
     _zNear = 0.01/metersinunit;
-    camera->setProjectionMatrixAsPerspective(45.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), _zNear, 100.0/metersinunit);
+    camera->setProjectionMatrixAsPerspective(45.0f, static_cast<double>(w)/static_cast<double>(h), _zNear, 100.0/metersinunit);
     camera->setCullingMode(camera->getCullingMode() & ~osg::CullSettings::SMALL_FEATURE_CULLING); // need this for allowing small points with zero bunding voluem to be displayed correctly
     return camera;
 }
@@ -1728,7 +1719,7 @@ void QOSGViewerWidget::keyReleaseEvent(QKeyEvent *event)
 
 bool QOSGViewerWidget::event(QEvent *event)
 {
-    bool handled = QOpenGLWidget::event(event);
+    bool handled = QGLWidget::event(event);
     this->update();
     return handled;
 }
