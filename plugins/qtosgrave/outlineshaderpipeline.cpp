@@ -1,7 +1,10 @@
 
 #include "renderutils.h"
 #include "outlineshaderpipeline.h"
+
+#include <osg/Depth>
 #include <osg/CullFace>
+#include <osg/BlendFunc>
 
 	namespace {
 	const std::string simpleTextureVert = 
@@ -9,63 +12,76 @@
 			"void main()\n"
 			"{\n"
 			"	// Vertex position in main camera Screen space.\n"
-			"	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
+			"	gl_Position = gl_Vertex;\n"
 			"}\n";
 
 	const std::string simpleTextureFrag =
 			"#version 120\n"
+			//"#extension GL_ARB_texture_multisample : enable \n"
+
 			"\n"
-			"uniform sampler2DMS diffuseTexture;\n"
+			"uniform sampler2D diffuseTexture;\n"
 			"\n"
 			"\n"
-			"vec4 accessTexel(sampler2DMS tex, ivec2 tc) {\n"
-			"    vec4 c = texelFetch(tex, tc, 0) + texelFetch(tex, tc, 1) + texelFetch(tex, tc, 2) + texelFetch(tex, tc, 3);\n"
-			"    return c / 4.0;\n"
+			"float gradientIntensity(float stepSize, vec2 coord ) {\n"
+			"    float h = 1;\n"
+			"\n"
+			"    vec3 xm = (texture2D(diffuseTexture, coord + vec2( -h/1024, 0 ))).rgb;\n"
+			"    vec3 xp = (texture2D(diffuseTexture, coord + vec2( h/1024, 0 ))).rgb;\n"
+			"    vec3 ym = (texture2D(diffuseTexture, coord + vec2( 0.0, -h/768 ))).rgb;\n"
+			"    vec3 yp = (texture2D(diffuseTexture, coord + vec2( 0.0, h/768 ))).rgb;\n"
+			"\n"
+			"    vec3 dx = (xp - xm) / (2 * h);\n"
+			"    vec3 dy = (yp - ym) / (2 * h);\n"
+			"\n"
+			"    return length(dx) + length(dy);\n"
 			"}\n"
+			"\n"
+			// "vec4 accessTexel(sampler2DMS tex, ivec2 tc) {\n"
+			// "    vec4 c = texelFetch(tex, tc, 0) + texelFetch(tex, tc, 1) + texelFetch(tex, tc, 2) + texelFetch(tex, tc, 3);\n"
+			// "    return c / 4.0;\n"
+			// "}\n"
 			"void main()\n"
 			"{\n"
-			"    gl_FragColor = accessTexel(diffuseTexture,  ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
-			"    //gl_FragColor = vec4(0,1,0,1);\n"
+		    //"    gl_FragColor = vec4(gl_FragCoord.x/1024,gl_FragCoord.y/768,0,1);\n"
+			//"    gl_FragColor = vec4(gl_FragCoord.x/1024, gl_FragCoord.y/768,0,1);\n"
+			//"    gl_FragColor = texture2D(diffuseTexture,  vec2(gl_FragCoord.x/1024, gl_FragCoord.y/768));\n"
+			"    float intensity = gradientIntensity(1, vec2(gl_FragCoord.x/1024, gl_FragCoord.y/768));\n"
+			"	gl_FragColor = vec4(1,0,0, sqrt(intensity));\n"
 			"}\n";
 
 
 	const std::string normalColorFragShaderStr =
-			"#version 300 es\n"
-			"precision highp float;                  \n"
+			"#version 120\n"
 			"\n"
-			"in vec3 normal;\n"
-			"uniform vec4 maincolor;\n"
-			"out vec4 fragColor;\n"
+			"varying vec3 normal;\n"
+			
 			"\n"
-			"in vec3 position;\n"
-			"in highp vec3 color;\n"
+			"varying vec3 position;\n"
+			//"out vec4 color;\n"
 			"\n"
 			"void main()\n"
 			"{\n"
-			"    fragColor = vec4(normal*position, 1);\n"
+			"    gl_FragColor = vec4(normal + position, 1);\n"
 			"}\n";
 
 	const std::string normalColorVertShaderStr =
-			"#version 300 es\n"
-			"precision highp float;                  \n"
+			"#version 120\n"
 			"\n"
-			"in vec4 osg_Vertex;\n"
-			"in vec3 osg_Normal;\n"
-			"in vec4 osg_Color;\n"
+			// "in vec4 osg_Vertex;\n"
+			// "in vec3 osg_Normal;\n"
+			// "in vec4 osg_Color;\n"
 			"\n"
-			"out vec3 normal;\n"
-			"out vec3 position;\n"
-			"out vec3 color;\n"
+			"varying vec3 normal;\n"
+			"varying vec3 position;\n"
 			"\n"
-			"uniform mat4 osg_ModelViewProjectionMatrix;\n"
 			"\n"
 			"void main()\n"
 			"{\n"
-			"	 color = osg_Normal;\n"
-			"    normal = normalize(osg_Normal);\n"
-			"    position = osg_Vertex.xyz;\n"
+			"    normal = normalize(gl_Normal);\n"
+			"    position = gl_Vertex.xyz;\n"
 			"    // Calculate vertex position in clip coordinates\n"
-			"    gl_Position = osg_ModelViewProjectionMatrix * vec4(osg_Vertex.xyz, 1);\n"
+			"    gl_Position = gl_ModelViewProjectionMatrix * vec4(gl_Vertex.xyz, 1);\n"
 			"}\n";
 
 	const std::string outlineFragShaderStr =
@@ -157,9 +173,9 @@ void OutlineShaderPipeline::InitializeOutlinePipelineState(osg::ref_ptr<osg::Cam
 	// First pass will render the same scene using a special shader that render objects with different colors
 	// different from background, so to prepare for outline edge detection post processing shader
 	osg::ref_ptr<osg::StateSet> firstPassStateSet = new osg::StateSet((*inheritedStateSet.get()), osg::CopyOp::DEEP_COPY_ALL);
-	//RenderUtils::SetShaderProgramOnStateSet(firstPassStateSet.get(), normalColorVertShaderStr, normalColorFragShaderStr);
+	RenderUtils::SetShaderProgramOnStateSet(firstPassStateSet.get(), normalColorVertShaderStr, normalColorFragShaderStr);
 	_firstPassState.firstPassGroup = new osg::Group();
-	//_firstPassState.firstPassGroup->setStateSet(inheritedStateSet);
+	_firstPassState.firstPassGroup->setStateSet(firstPassStateSet);
 	_firstPassState.firstPassGroup->addChild(originalSceneRoot);
 
 	// clone main camera settings so to render same scene
@@ -179,4 +195,9 @@ void OutlineShaderPipeline::InitializeOutlinePipelineState(osg::ref_ptr<osg::Cam
 	_secondPassState.secondPassCamera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), secondPassStateSet);
 	secondPassStateSet->setTextureAttributeAndModes(0, _firstPassState.firstPassRenderTexture.get(), osg::StateAttribute::ON);
     secondPassStateSet->addUniform(new osg::Uniform("diffuseTexture", 0));
+	secondPassStateSet->setMode(GL_BLEND, osg::StateAttribute::ON);
+	secondPassStateSet->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+	osg::Depth* depth = new osg::Depth;
+	depth->setWriteMask( false );
+	secondPassStateSet->setAttributeAndModes( depth, osg::StateAttribute::ON);
 }
