@@ -10,7 +10,7 @@
 #include <osg/Texture2D>
 #include <osgDB/ReadFile>
 #include <osg/PolygonMode>
-#include <osg/Texture2D>
+#include <osg/Texture2DMultisample>
 
 class RenderUtils {
 public:
@@ -40,13 +40,27 @@ public:
         return texture.release();
     }
 
-    static osg::Texture2D *CreateFloatTextureRectangle(int width, int height)
+    static osg::Texture2DMultisample *CreateFloatTextureRectangle(int width, int height)
     {
-        osg::ref_ptr<osg::Texture2D> tex2D = new osg::Texture2D;
+        osg::ref_ptr<osg::Texture2DMultisample> tex2D = new osg::Texture2DMultisample;
         tex2D->setTextureSize(width, height);
         tex2D->setSourceFormat(GL_RGBA);
         tex2D->setInternalFormat(GL_RGBA32F_ARB);
         tex2D->setSourceType(GL_FLOAT);
+        tex2D->setNumSamples(4);
+        return tex2D.release();
+    }
+
+    static osg::Texture2DMultisample *CreateDepthFloatTextureRectangle(int width, int height)
+    {
+        osg::ref_ptr<osg::Texture2DMultisample> tex2D = new osg::Texture2DMultisample;
+        tex2D->setTextureSize(width, height);
+        tex2D->setSourceFormat(GL_DEPTH_COMPONENT);
+        tex2D->setInternalFormat(GL_DEPTH_COMPONENT24);
+        tex2D->setSourceType(GL_UNSIGNED_INT);
+        tex2D->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+	    tex2D->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+        tex2D->setNumSamples(4);
         return tex2D.release();
     }
 
@@ -92,16 +106,18 @@ public:
         camera->setRenderOrder(osg::Camera::PRE_RENDER);
         camera->setViewport(0, 0, tex->getTextureWidth(), tex->getTextureHeight());
         camera->setViewMatrix(osg::Matrix::identity());
-        camera->attach(buffer, tex, 0, 0, false, 4, 4);
+        camera->attach(buffer, tex);
+
+        osg::ref_ptr<osg::Texture2DMultisample> depthTexture = RenderUtils::CreateDepthFloatTextureRectangle( tex->getTextureWidth(), tex->getTextureHeight());
+        camera->attach(osg::Camera::DEPTH_BUFFER, depthTexture.get());
     }
 
     static osg::Camera *CreateHUDCamera()
     {
         osg::ref_ptr<osg::Camera> camera = new osg::Camera;
         camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
-        camera->setClearMask(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+        camera->setClearMask(GL_DEPTH_BUFFER_BIT);
         camera->setAllowEventFocus(false);
-        camera->setClearColor(osg::Vec4(0,1,0,1));
         camera->setProjectionMatrix(osg::Matrix::identity());
         camera->setViewMatrix(osg::Matrix::identity());
         camera->setProjectionMatrix(osg::Matrix::identity());
