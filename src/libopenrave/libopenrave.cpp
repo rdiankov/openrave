@@ -2694,16 +2694,7 @@ void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, ra
 
     if (_mapCustomData.size() > 0) {
         // TODO have to scale _mapCustomData by fUnitScale
-        rapidjson::Value parameters;
-        parameters.SetArray();
-        FOREACHC(it, _mapCustomData) {
-            rapidjson::Value parameter;
-            parameter.SetObject();
-            orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
-            orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
-            parameters.PushBack(parameter, allocator);
-        }
-        rIkParameterization.AddMember("customData", parameters, allocator);
+        orjson::SetJsonValueByKey(rIkParameterization, "customData", _mapCustomData, allocator);
     }
 }
 
@@ -2736,15 +2727,8 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     }
 
     _mapCustomData.clear();
-    if (rIkParameterization.HasMember("customData") && rIkParameterization["customData"].IsArray()) {
-        for (rapidjson::Value::ConstValueIterator it = rIkParameterization["customData"].Begin(); it != rIkParameterization["customData"].End(); ++it) {
-            std::string id;
-            orjson::LoadJsonValueByKey(*it, "id", id);
-            if (id.empty()) {
-                continue;
-            }
-            orjson::LoadJsonValueByKey(*it, "values", _mapCustomData[id]);
-        }
+    if (rIkParameterization.HasMember("customData")) {
+        orjson::LoadJsonValueByKey(rIkParameterization, "customData", _mapCustomData);
     }
     // TODO have to scale _mapCustomData by fUnitScale
 }

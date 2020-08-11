@@ -190,42 +190,15 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
 
     if(_mapFloatParameters.size() > 0)
     {
-        rapidjson::Value parameters;
-        parameters.SetArray();
-        FOREACHC(it, _mapFloatParameters) {
-            rapidjson::Value parameter;
-            parameter.SetObject();
-            orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
-            orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
-            parameters.PushBack(parameter, allocator);
-        }
-        value.AddMember("floatParameters", parameters, allocator);
+        orjson::SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
     }
     if(_mapIntParameters.size() > 0)
     {
-        rapidjson::Value parameters;
-        parameters.SetArray();
-        FOREACHC(it, _mapIntParameters) {
-            rapidjson::Value parameter;
-            parameter.SetObject();
-            orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
-            orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
-            parameters.PushBack(parameter, allocator);
-        }
-        value.AddMember("intParameters", parameters, allocator);
+        orjson::SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
     }
     if(_mapStringParameters.size() > 0)
     {
-        rapidjson::Value parameters;
-        parameters.SetArray();
-        FOREACHC(it, _mapStringParameters) {
-            rapidjson::Value parameter;
-            parameter.SetObject();
-            orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
-            orjson::SetJsonValueByKey(parameter, "value", it->second, allocator);
-            parameters.PushBack(parameter, allocator);
-        }
-        value.AddMember("stringParameters", parameters, allocator);
+        orjson::SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
     }
 
     if (!!_infoElectricMotor) {
@@ -340,29 +313,17 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
         _vmimic = newmimic;
     }
 
-    if (value.HasMember("floatParameters") && value["floatParameters"].IsArray()) {
+    if (value.HasMember("floatParameters")) {
         _mapFloatParameters.clear();
-        for (rapidjson::Value::ConstValueIterator it = value["floatParameters"].Begin(); it != value["floatParameters"].End(); ++it) {
-            std::string key;
-            orjson::LoadJsonValueByKey(*it, "key", key);
-            orjson::LoadJsonValueByKey(*it, "values", _mapFloatParameters[key]);
-        }
+        orjson::LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
     }
-    if (value.HasMember("intParameters") && value["intParameters"].IsArray()) {
+    if (value.HasMember("intParameters")) {
         _mapIntParameters.clear();
-        for (rapidjson::Value::ConstValueIterator it = value["intParameters"].Begin(); it != value["intParameters"].End(); ++it) {
-            std::string key;
-            orjson::LoadJsonValueByKey(*it, "key", key);
-            orjson::LoadJsonValueByKey(*it, "values", _mapIntParameters[key]);
-        }
+        orjson::LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
     }
-    if (value.HasMember("stringParameters") && value["stringParameters"].IsArray()) {
+    if (value.HasMember("stringParameters")) {
         _mapStringParameters.clear();
-        for (rapidjson::Value::ConstValueIterator it = value["stringParameters"].Begin(); it != value["stringParameters"].End(); ++it) {
-            std::string key;
-            orjson::LoadJsonValueByKey(*it, "key", key);
-            orjson::LoadJsonValueByKey(*it, "value", _mapStringParameters[key]);
-        }
+        orjson::LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
     }
 
     if (value.HasMember("electricMotorActuator")) {
