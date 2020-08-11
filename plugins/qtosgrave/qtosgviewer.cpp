@@ -220,7 +220,7 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
     // Configure sample buffers in the default surface format, which will allow Qt to enable the sample
     // buffers so color buffer can be oversampled to achieve antialiasing (MSAA antialiasing)
     QSurfaceFormat surfaceFormat;
-    surfaceFormat.setSamples(4);
+    surfaceFormat.setSamples(8);
     // surfaceFormat.setVersion(3, 2);
     // surfaceFormat.setProfile(QSurfaceFormat::CoreProfile);
     QSurfaceFormat::setDefaultFormat(surfaceFormat);

@@ -380,7 +380,7 @@ private:
 
 QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
                                    const boost::function<bool(int)>& onKeyDown, double metersinunit,
-                                   QWidget* parent) : QGLWidget(parent), _onKeyDown(onKeyDown)
+                                   QWidget* parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), parent), _onKeyDown(onKeyDown)
 {
 
     setFocus( Qt::ActiveWindowFocusReason );
@@ -597,26 +597,8 @@ void QOSGViewerWidget::SetSceneData()
     _osgLightsGroup->addChild(_osgSceneRoot);
     rootscene->addChild(_osgFigureRoot);
 
-
-    // must come after setSceneData, since we want to add our pipeline after the normal pipeline
-    _outlineRenderPipeline.InitializeOutlinePipelineState(GetCamera(), rootscene->getOrCreateStateSet(), rootscene, 1024, 768);
-
-    //GetCamera()->addChild(rootscene);
-    osg::Group* grp = new osg::Group();
-    grp->addChild(_outlineRenderPipeline._firstPassState.firstPassCamera);
-    grp->addChild(_outlineRenderPipeline._secondPassState.secondPassCamera);
-    //GetCamera()->addChild(_outlineRenderPipeline._firstPassState.firstPassCamera.get());
-    //GetCamera()->addChild(_outlineRenderPipeline._secondPassState.secondPassCamera.get());
-
-    _osgview->setSceneData(grp);
-    
-    // osgViewer::Viewer::Windows windows;
-    // _osgviewer->getWindows(windows);
-    // for(osgViewer::Viewer::Windows::iterator itr = windows.begin();itr != windows.end();++itr)
-    // {
-    //   (*itr)->getState()->setUseModelViewAndProjectionUniforms(true);
-    //   (*itr)->getState()->setUseVertexAttributeAliasing(true);
-    // }
+    osg::ref_ptr<osg::Group> outlineScene = _outlineRenderPipeline.CreateOutlineSceneFromOriginalScene(GetCamera(), rootscene);
+    _osgview->setSceneData(outlineScene);
 }
 
 void QOSGViewerWidget::ResetViewToHome()
@@ -972,7 +954,7 @@ osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateCamera( int x, int y, int w, 
     osg::ref_ptr<osg::Camera> camera = GetCamera();
     camera->setGraphicsContext(new osgViewer::GraphicsWindowEmbedded(x,y, w, h));
 
-    camera->setClearColor(osg::Vec4(0, 0.95, 0.95, 1.0));
+    camera->setClearColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
     camera->setViewport(new osg::Viewport(0, 0, w, h));
     _zNear = 0.01/metersinunit;
     camera->setProjectionMatrixAsPerspective(45.0f, static_cast<double>(w)/static_cast<double>(h), _zNear, 100.0/metersinunit);
@@ -1106,7 +1088,7 @@ void QOSGViewerWidget::_InitializeLights()
 
     int nlights = sizeof(lightPosition) / sizeof(osg::Vec4);
 
-    double lightFactor = 0.4;
+    double lightFactor = 0.5;
     for (int i = 0; i < nlights; i++)
     {
         osg::ref_ptr<osg::Light> light = _CreateLight(osg::Vec4(lightFactor, lightFactor, lightFactor, 1.0), i);
@@ -1315,7 +1297,6 @@ void QOSGViewerWidget::paintGL()
 
 void QOSGViewerWidget::resizeGL(int width, int height)
 {
-
     float scale = this->devicePixelRatio();
     osgViewer::Viewer::Windows windows;
     _osgviewer->getWindows(windows);
@@ -1329,6 +1310,7 @@ void QOSGViewerWidget::resizeGL(int width, int height)
     camera->setViewport(0, 0, width * scale, height * scale);
     osg::Camera *hudcamera = _osghudview->getCamera();
     hudcamera->setViewport(0, 0, width * scale, height * scale);
+    _outlineRenderPipeline.HandleResize(width * scale, height * scale);
 }
 
 void QOSGViewerWidget::mouseMoveEvent(QMouseEvent *event)

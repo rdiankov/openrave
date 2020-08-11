@@ -2,32 +2,28 @@
 #include <osg/Node>
 #include <osg/Group>
 #include <osg/Uniform>
-#include <osg/Texture2D>
+#include <osg/Texture2DMultisample>
 
 #ifndef OPENRAVE_QTOSG_OUTLINESHADERPIPELINE_H
 #define OPENRAVE_QTOSG_OUTLINESHADERPIPELINE_H
 
-struct OutlineFirstPassState {
-    osg::ref_ptr<osg::Group> firstPassGroup;
-    osg::ref_ptr<osg::Camera> firstPassCamera;
-    osg::ref_ptr<osg::Texture2D> firstPassRenderTexture;
-};
-
-struct OutlineSecondPassState {
-    osg::ref_ptr<osg::Camera> secondPassCamera;
+struct RenderPassState {
+    void HandleResize(int width, int height);
+    osg::ref_ptr<osg::Camera> camera;
+    osg::ref_ptr<osg::Texture2DMultisample> colorFboTexture;
 };
 
 class OutlineShaderPipeline {
 public:
     OutlineShaderPipeline();
-    virtual ~OutlineShaderPipeline() {;}
+    virtual ~OutlineShaderPipeline();
 
     /// \brief This function creates a outline scene pipeline with two passes to render a regular scene with outline edges
-    void InitializeOutlinePipelineState(osg::ref_ptr<osg::Camera> originalSceneCamera, osg::ref_ptr<osg::StateSet> inheritedStateSet, osg::ref_ptr<osg::Node> originalSceneRoot, int viewportWidth, int viewportHeight);
+    osg::ref_ptr<osg::Group> CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot);
+    void HandleResize(int width, int height);
 
 public:
-    OutlineFirstPassState _firstPassState;
-    OutlineSecondPassState _secondPassState;
+    std::vector<RenderPassState*> _renderPassStates;
 };
 
 #endif
