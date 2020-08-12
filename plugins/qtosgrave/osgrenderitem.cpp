@@ -316,7 +316,6 @@ void KinBodyItem::Load()
                         // fast
                         state->setMode(GL_BLEND, osg::StateAttribute::ON);
                         state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-
                         // fix transparency oclusion: 
                         osg::Depth* depth = new osg::Depth;
                         depth->setWriteMask( false );

@@ -16,6 +16,9 @@
 #include "osgskybox.h"
 #include "outlineshaderpipeline.h"
 
+#include <QApplication>
+#include <QDesktopWidget>
+
 #include <osg/ShadeModel>
 #include <osgDB/ReadFile>
 #include <osg/FrontFace>
@@ -406,7 +409,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 
     //  Sets pickhandler
     _picker = new OSGPickHandler(boost::bind(&QOSGViewerWidget::HandleRayPick, this, _1, _2, _3), boost::bind(&QOSGViewerWidget::UpdateFromOSG,this));
-    //_osgview->addEventHandler(_picker);
+    _osgview->addEventHandler(_picker);
 
     _keyhandler = new OpenRAVEKeyboardEventHandler(boost::bind(&QOSGViewerWidget::HandleOSGKeyDown, this, _1, _2));
     _osgview->addEventHandler(_keyhandler);
@@ -597,7 +600,8 @@ void QOSGViewerWidget::SetSceneData()
     _osgLightsGroup->addChild(_osgSceneRoot);
     rootscene->addChild(_osgFigureRoot);
 
-    osg::ref_ptr<osg::Group> outlineScene = _outlineRenderPipeline.CreateOutlineSceneFromOriginalScene(GetCamera(), rootscene);
+    QRect screenGeometry = QApplication::screens()[0]->geometry();
+    osg::ref_ptr<osg::Group> outlineScene = _outlineRenderPipeline.CreateOutlineSceneFromOriginalScene(GetCamera(), rootscene, screenGeometry.width(), screenGeometry.height());
     _osgview->setSceneData(outlineScene);
 }
 

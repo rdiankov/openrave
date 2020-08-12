@@ -19,7 +19,7 @@ public:
     virtual ~OutlineShaderPipeline();
 
     /// \brief This function creates a outline scene pipeline with two passes to render a regular scene with outline edges
-    osg::ref_ptr<osg::Group> CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot);
+    osg::ref_ptr<osg::Group> CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight);
     void HandleResize(int width, int height);
 
 public:

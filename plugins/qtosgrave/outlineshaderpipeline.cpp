@@ -74,9 +74,9 @@ namespace {
 			"{\n"
 			" 	 vec4 samples[4];"
 			"    getNeighbors(samples, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
-			"    float alphaIntensity = abs(samples[1].a - samples[0].a) + abs(samples[3].a - samples[2].a);\n"
+			"    float alphaIntensity = length(vec2(samples[0].a - samples[1].a, samples[2].a - samples[3].a));\n"
 			"    float intensity = gradientIntensity(samples);\n"
-			 "    bool selected = alphaIntensity > 0.5 || texelFetch(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y), 0).a > 0.5;\n"
+			 "    bool selected = alphaIntensity > 0 || texelFetch(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y), 0).a > 0;\n"
 			"    if(selected) {"
 			"  		  gl_FragColor = vec4(selectionColor.xyz, intensity + 0.2);\n" // sum a constant offset in alpha so to create the filling highlight effect 
 			"         return;\n"
@@ -145,6 +145,7 @@ namespace {
 			"\n"
 			"varying vec3 normal;\n"
 
+
 			"\n"
 			"varying vec3 position;\n"
 			"varying vec4 color;\n"
@@ -154,7 +155,8 @@ namespace {
 			"\n"
 			"void main()\n"
 			"{\n"
-			"  gl_FragColor = vec4((linkPosition + normal)*(gl_FragCoord.w*3), isSelected);\n"
+			" float depthVal = min(2, 4*gl_FragCoord.w);\n"
+			"  gl_FragColor = vec4((linkPosition + normalize(normal)) * depthVal, isSelected);\n"
 			"}\n";
 
 	const std::string preRenderVertShaderStr =
@@ -197,7 +199,7 @@ OutlineShaderPipeline::~OutlineShaderPipeline()
 }
 
 // First pass is render the scene using special shaders to enhance edges
-inline RenderPassState* createFirstRenderPass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot)
+inline RenderPassState* createFirstRenderPass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight)
 {
 	// First pass will render the same scene using a special shader that render objects with different colors
 	// different from background, so to prepare for outline edge detection post processing shader
@@ -210,7 +212,7 @@ inline RenderPassState* createFirstRenderPass(osg::ref_ptr<osg::Camera> mainScen
 
 	// clone main camera settings so to render same scene
 	renderPassState->camera = new osg::Camera();
-	renderPassState->colorFboTexture = RenderUtils::CreateFloatTextureRectangle(1920, 1080);
+	renderPassState->colorFboTexture = RenderUtils::CreateFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
 #	if !SHOW_PRERENDER_SCENE_ONLY
 	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, osg::Camera::COLOR_BUFFER, renderPassState->colorFboTexture.get());
 #endif
@@ -221,18 +223,24 @@ inline RenderPassState* createFirstRenderPass(osg::ref_ptr<osg::Camera> mainScen
 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
 	mainSceneCamera->addChild(renderPassState->camera.get());
 	renderPassState->camera->addChild(firstPassGroup.get());
+	firstPassStateSet->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE );
 	firstPassStateSet->addUniform(new osg::Uniform("linkPosition", osg::Vec3(0, 0, 0)));
 	firstPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
+    firstPassStateSet->setRenderingHint(osg::StateSet::DEFAULT_BIN);
+	firstPassStateSet->setRenderBinDetails(osg::StateSet::DEFAULT_BIN, "", osg::StateSet::OVERRIDE_RENDERBIN_DETAILS);
+	osg::Depth* depth = new osg::Depth;
+	depth->setWriteMask( true );
+	firstPassStateSet->setAttributeAndModes( depth, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
 	return renderPassState;
 }
 
-inline RenderPassState* createSecondRenderPass(RenderPassState* firstPassState)
+inline RenderPassState* createSecondRenderPass(RenderPassState* firstPassState, int maxFBOBufferWidth, int maxFBOBufferHeight)
 {
 	RenderPassState* renderPassState = new RenderPassState();
 	osg::ref_ptr<osg::StateSet> secondPassStateSet = new osg::StateSet();
 	RenderUtils::SetShaderProgramOnStateSet(secondPassStateSet.get(), outlineVertStr, outlineFragStr);
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), secondPassStateSet);
-	renderPassState->colorFboTexture = RenderUtils::CreateFloatTextureRectangle(1920, 1080);
+	renderPassState->colorFboTexture = RenderUtils::CreateFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
 	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, osg::Camera::COLOR_BUFFER, renderPassState->colorFboTexture.get());
 
 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
@@ -262,10 +270,11 @@ inline RenderPassState* createThirdRenderPass(RenderPassState* secondPassState)
 	return renderPassState;
 }
 
-osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot)
+osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, 
+	osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight)
 {
-	_renderPassStates.push_back(createFirstRenderPass(mainSceneCamera, mainSceneRoot));
-	_renderPassStates.push_back(createSecondRenderPass(_renderPassStates[0]));
+	_renderPassStates.push_back(createFirstRenderPass(mainSceneCamera, mainSceneRoot, maxFBOBufferWidth, maxFBOBufferHeight));
+	_renderPassStates.push_back(createSecondRenderPass(_renderPassStates[0], maxFBOBufferWidth, maxFBOBufferHeight));
 	_renderPassStates.push_back(createThirdRenderPass(_renderPassStates[1]));
 
 	osg::ref_ptr<osg::Group> thirdPassCameraGroup = new osg::Group();
