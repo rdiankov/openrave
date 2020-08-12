@@ -142,13 +142,40 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     orjson::SetJsonValueByKey(value, "inertiaMoments", _vinertiamoments*fUnitScale*fUnitScale, allocator);
 
     if(_mapFloatParameters.size() > 0) {
-        orjson::SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
+        rapidjson::Value parameters;
+        parameters.SetArray();
+        FOREACHC(it, _mapFloatParameters) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        value.AddMember("floatParameters", parameters, allocator);
     }
     if(_mapIntParameters.size() > 0) {
-        orjson::SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
+        rapidjson::Value parameters;
+        parameters.SetArray();
+        FOREACHC(it, _mapIntParameters) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        value.AddMember("intParameters", parameters, allocator);
     }
     if(_mapStringParameters.size() > 0) {
-        orjson::SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
+        rapidjson::Value parameters;
+        parameters.SetArray();
+        FOREACHC(it, _mapStringParameters) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "value", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        value.AddMember("stringParameters", parameters, allocator);
     }
 
     if (_vForcedAdjacentLinks.size() > 0) {
@@ -211,17 +238,29 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     orjson::LoadJsonValueByKey(value, "inertiaMoments", _vinertiamoments);
     _vinertiamoments *= fUnitScale*fUnitScale;
 
-    if (value.HasMember("floatParameters")) {
+    if (value.HasMember("floatParameters") && value["floatParameters"].IsArray()) {
         _mapFloatParameters.clear();
-        orjson::LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
+        for (rapidjson::Value::ConstValueIterator it = value["floatParameters"].Begin(); it != value["floatParameters"].End(); ++it) {
+            std::string key;
+            orjson::LoadJsonValueByKey(*it, "key", key);
+            orjson::LoadJsonValueByKey(*it, "values", _mapFloatParameters[key]);
+        }
     }
-    if (value.HasMember("intParameters")) {
+    if (value.HasMember("intParameters") && value["intParameters"].IsArray()) {
         _mapIntParameters.clear();
-        orjson::LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
+        for (rapidjson::Value::ConstValueIterator it = value["intParameters"].Begin(); it != value["intParameters"].End(); ++it) {
+            std::string key;
+            orjson::LoadJsonValueByKey(*it, "key", key);
+            orjson::LoadJsonValueByKey(*it, "values", _mapIntParameters[key]);
+        }
     }
-    if (value.HasMember("stringParameters")) {
+    if (value.HasMember("stringParameters") && value["stringParameters"].IsArray()) {
         _mapStringParameters.clear();
-        orjson::LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
+        for (rapidjson::Value::ConstValueIterator it = value["stringParameters"].Begin(); it != value["stringParameters"].End(); ++it) {
+            std::string key;
+            orjson::LoadJsonValueByKey(*it, "key", key);
+            orjson::LoadJsonValueByKey(*it, "value", _mapStringParameters[key]);
+        }
     }
 
     orjson::LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
