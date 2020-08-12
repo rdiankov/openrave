@@ -45,7 +45,7 @@ public:
         osg::ref_ptr<osg::Texture2DMultisample> tex2D = new osg::Texture2DMultisample;
         tex2D->setTextureSize(width, height);
         tex2D->setSourceFormat(GL_RGBA);
-        tex2D->setInternalFormat(GL_RGBA32F_ARB);
+        tex2D->setInternalFormat(GL_RGBA16F_ARB);
         tex2D->setSourceType(GL_FLOAT);
         tex2D->setNumSamples(4);
         return tex2D.release();
@@ -101,7 +101,7 @@ public:
         tex->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
         tex->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
         camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-        camera->setClearColor(osg::Vec4(0,0,1,1));
+        camera->setClearColor(osg::Vec4(0,0,0,0));
         camera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
         camera->setRenderOrder(osg::Camera::PRE_RENDER);
         camera->setViewport(0, 0, tex->getTextureWidth(), tex->getTextureHeight());

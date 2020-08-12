@@ -140,6 +140,7 @@ Item::Item(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot) : _osgSceneRoot(
     _osgWorldTransform->addChild(_osgdata);
 
     _osgSceneRoot->addChild(_osgWorldTransform);
+    _osgSceneRoot->getOrCreateStateSet()->addUniform(new osg::Uniform("isSelected", 0));
 }
 
 Item::~Item()
@@ -157,67 +158,9 @@ bool Item::ContainsOSGNode(OSGNodePtr pNode)
 void Item::SetVisualizationMode(const std::string& visualizationmode)
 {
     if( _visualizationmode != visualizationmode ) {
-
-        // have to undo the previous mode
-        if( !!_osgwireframe ) {
-            _osgWorldTransform->removeChild(_osgwireframe);
-            _osgwireframe.release();
-        }
-
-        // start the new node
         _visualizationmode = visualizationmode;
-
-        if( _visualizationmode == "selected" ) {
-            _osgwireframe = new osg::Group;
-            _osgWorldTransform->addChild(_osgwireframe);
-            _osgwireframe->addChild(_osgdata);
-
-            // set up the state so that the underlying color is not seen through
-            // and that the drawing mode is changed to wireframe, and a polygon offset
-            // is added to ensure that we see the wireframe itself, and turn off
-            // so texturing too.
-            osg::ref_ptr<osg::StateSet> stateset = new osg::StateSet;
-            osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
-            polyoffset->setFactor(-1.0f);
-            polyoffset->setUnits(-1.0f);
-            osg::ref_ptr<osg::PolygonMode> polymode = new osg::PolygonMode;
-            polymode->setMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE);
-            stateset->setAttributeAndModes(polyoffset,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            stateset->setAttributeAndModes(polymode,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-
-#if 1
-            osg::ref_ptr<osg::Material> material = new osg::Material;
-            material->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
-            material->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
-
-            stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
-#else
-            // version which sets the color of the wireframe.
-            osg::ref_ptr<osg::Material> material = new osg::Material;
-            material->setColorMode(osg::Material::OFF); // switch glColor usage off
-            // turn all lighting off
-            material->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-            material->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-            material->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-            // except emission... in which we set the color we desire
-            material->setEmission(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,1.0f,0.0f,1.0f));
-            stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-#endif
-
-            stateset->setTextureMode(0,GL_TEXTURE_2D,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
-
-            osg::ref_ptr<osg::LineStipple> linestipple = new osg::LineStipple;
-            linestipple->setFactor(1);
-            linestipple->setPattern(0xf0f0);
-            stateset->setAttributeAndModes(linestipple,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-
-            _osgwireframe->setStateSet(stateset);
-        }
-        else if( _visualizationmode.size() > 0 ) {
-            RAVELOG_INFO_FORMAT("unknown visualization type %s", visualizationmode);
-        }
+        // need to force cast int to match correct function call so to match shader uniform type
+        _osgdata->getOrCreateStateSet()->addUniform(new osg::Uniform("isSelected",  (int)(_visualizationmode == "selected") ));
     }
 }
 
@@ -484,7 +427,6 @@ void KinBodyItem::Load()
                 pgeometryroot->setName(str(boost::format("geom%d")%igeom));
                 //  Apply external transform to local transform
                 posglinktrans->addChild(pgeometryroot);
-
                 _vecgeoms[linkindex][igeom] = GeomNodes(pgeometrydata, pgeometryroot); // overwrite
             }
         }
@@ -522,7 +464,17 @@ void KinBodyItem::Load()
     // have to add the left over links to the root group
     for(size_t ilink = 0; ilink < addedlinks.size(); ++ilink) {
         if( addedlinks[ilink] == 0 ) {
-            _osgdata->addChild(_veclinks.at(ilink).first);
+            OSGGroupPtr osgLink = _veclinks.at(ilink).first;
+            _osgdata->addChild(osgLink);
+            osg::ref_ptr<osg::StateSet> state = osgLink->getOrCreateStateSet();
+
+            // calculate a link position to be used by the shaders
+            // this position is used as a material technique by outline algorithm in order to create a unique color per object, so the post processing edge detection algorithm can work
+            osg::Matrixd localToWorld = osg::computeLocalToWorld(osgLink->getParentalNodePaths()[0]);
+            osg::Vec3 position(localToWorld(3,0), localToWorld(3,1), localToWorld(3,2));
+            position = osg::Vec3(1,1,1) - position;
+            position.normalize();
+            state->addUniform(new osg::Uniform("linkPosition", position * 2 ));
         }
     }
 
