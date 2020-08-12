@@ -242,10 +242,16 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
         _mapFloatParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["floatParameters"].Begin(); it != value["floatParameters"].End(); ++it) {
             std::string key;
-            orjson::LoadJsonValueByKey(*it, "id", key);
-            if (key.empty()) {
+            if( it->HasMember("id") ) {
+                orjson::LoadJsonValueByKey(*it, "id", key);
+            }
+            else if( it->HasMember("key") ) {
                 // backward compatibility
                 orjson::LoadJsonValueByKey(*it, "key", key);
+            }
+            if (key.empty()) {
+                RAVELOG_WARN_FORMAT("ignored an entry in floatParameters in link %s due to missing or empty id", _id);
+                continue;
             }
             orjson::LoadJsonValueByKey(*it, "values", _mapFloatParameters[key]);
         }
@@ -254,10 +260,16 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
         _mapIntParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["intParameters"].Begin(); it != value["intParameters"].End(); ++it) {
             std::string key;
-            orjson::LoadJsonValueByKey(*it, "id", key);
-            if (key.empty()) {
+            if( it->HasMember("id") ) {
+                orjson::LoadJsonValueByKey(*it, "id", key);
+            }
+            else if( it->HasMember("key") ) {
                 // backward compatibility
                 orjson::LoadJsonValueByKey(*it, "key", key);
+            }
+            if (key.empty()) {
+                RAVELOG_WARN_FORMAT("ignored an entry in intParameters in link %s due to missing or empty id", _id);
+                continue;
             }
             orjson::LoadJsonValueByKey(*it, "values", _mapIntParameters[key]);
         }
@@ -266,10 +278,16 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
         _mapStringParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["stringParameters"].Begin(); it != value["stringParameters"].End(); ++it) {
             std::string key;
-            orjson::LoadJsonValueByKey(*it, "id", key);
-            if (key.empty()) {
+            if( it->HasMember("id") ) {
+                orjson::LoadJsonValueByKey(*it, "id", key);
+            }
+            else if( it->HasMember("key") ) {
                 // backward compatibility
                 orjson::LoadJsonValueByKey(*it, "key", key);
+            }
+            if (key.empty()) {
+                RAVELOG_WARN_FORMAT("ignored an entry in stringParameters in link %s due to missing or empty id", _id);
+                continue;
             }
             orjson::LoadJsonValueByKey(*it, "value", _mapStringParameters[key]);
         }
