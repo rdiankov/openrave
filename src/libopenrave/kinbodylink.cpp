@@ -147,7 +147,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         FOREACHC(it, _mapFloatParameters) {
             rapidjson::Value parameter;
             parameter.SetObject();
-            orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
             orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
             parameters.PushBack(parameter, allocator);
         }
@@ -159,7 +159,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         FOREACHC(it, _mapIntParameters) {
             rapidjson::Value parameter;
             parameter.SetObject();
-            orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
             orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
             parameters.PushBack(parameter, allocator);
         }
@@ -171,7 +171,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         FOREACHC(it, _mapStringParameters) {
             rapidjson::Value parameter;
             parameter.SetObject();
-            orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
             orjson::SetJsonValueByKey(parameter, "value", it->second, allocator);
             parameters.PushBack(parameter, allocator);
         }
@@ -242,7 +242,11 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
         _mapFloatParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["floatParameters"].Begin(); it != value["floatParameters"].End(); ++it) {
             std::string key;
-            orjson::LoadJsonValueByKey(*it, "key", key);
+            orjson::LoadJsonValueByKey(*it, "id", key);
+            if (key.empty()) {
+                // backward compatibility
+                orjson::LoadJsonValueByKey(*it, "key", key);
+            }
             orjson::LoadJsonValueByKey(*it, "values", _mapFloatParameters[key]);
         }
     }
@@ -250,7 +254,11 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
         _mapIntParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["intParameters"].Begin(); it != value["intParameters"].End(); ++it) {
             std::string key;
-            orjson::LoadJsonValueByKey(*it, "key", key);
+            orjson::LoadJsonValueByKey(*it, "id", key);
+            if (key.empty()) {
+                // backward compatibility
+                orjson::LoadJsonValueByKey(*it, "key", key);
+            }
             orjson::LoadJsonValueByKey(*it, "values", _mapIntParameters[key]);
         }
     }
@@ -258,7 +266,11 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
         _mapStringParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["stringParameters"].Begin(); it != value["stringParameters"].End(); ++it) {
             std::string key;
-            orjson::LoadJsonValueByKey(*it, "key", key);
+            orjson::LoadJsonValueByKey(*it, "id", key);
+            if (key.empty()) {
+                // backward compatibility
+                orjson::LoadJsonValueByKey(*it, "key", key);
+            }
             orjson::LoadJsonValueByKey(*it, "value", _mapStringParameters[key]);
         }
     }
