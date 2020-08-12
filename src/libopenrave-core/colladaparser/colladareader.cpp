@@ -433,7 +433,7 @@ public:
                         RAVELOG_DEBUG("collada reader backcompat parsing for joint values\n");
                     }
                 }
-            }
+            }            
         }
         FOREACHC(itatt,atts) {
             if( itatt->first == "scalegeometry" ) {
@@ -477,6 +477,31 @@ public:
                     _penv->GetPhysicsEngine()->SetGravity(Vector(0,0,f));
                 }
             }
+            // set name
+
+            // set keywords
+            if(!!_dom->getAsset()->getKeywords()) {
+                daeString pkeywords = _dom->getAsset()->getKeywords()->getValue();
+                std::string keyword {};
+                for(;!!pkeywords && (*pkeywords) != '\0'; pkeywords++) {
+                    if((*pkeywords) == ',') {
+                        _penv->keywords.push_back(keyword);
+                        keyword.clear();
+                        continue;
+                    }
+                    keyword.push_back(*pkeywords);
+                }
+                if (keyword.size() > 0){
+                    _penv->keywords.push_back(keyword);
+                }
+            }
+
+            // set description
+            if (!!_dom->getAsset()->getDescription()) {
+                daeString pDescription = _dom->getAsset()->getDescription()->getValue();
+                // _penv->description = pDescription->getValue();
+            }
+
         }
 
         for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {

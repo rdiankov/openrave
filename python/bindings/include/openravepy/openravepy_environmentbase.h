@@ -39,11 +39,13 @@ public:
     py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
     void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
     EnvironmentBase::EnvironmentBaseInfoPtr GetEnvironmentBaseInfo() const;
-
+    py::list keywords;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos;
+    std::string description;
 #else
     py::object _vBodyInfos = py::none_();
+    py::object description = py::none_();
 #endif
     virtual std::string __str__();
     virtual py::object __unicode__();
@@ -270,6 +272,14 @@ public:
 
     py::object ExtractInfo() const;
     void UpdateFromInfo(PyEnvironmentBaseInfoPtr info);
+
+
+    py::list keywords;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::string description;
+#else
+    py::object _description = py::none_();
+#endif
 
     bool __eq__(PyEnvironmentBasePtr p);
     bool __ne__(PyEnvironmentBasePtr p);

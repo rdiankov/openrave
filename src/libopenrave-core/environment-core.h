@@ -2428,6 +2428,8 @@ public:
                 _vecbodies[i]->ExtractInfo(*info._vBodyInfos[i]);
             }
         }
+        info.keywords = this->keywords;
+        info.description = this->description;
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
@@ -2439,6 +2441,10 @@ public:
 
         // TODO: revision error checking ?
         SetRevision(info._revision);
+
+        // set keywords and description
+        keywords = info.keywords;
+        description = info.description;
 
         FOREACHC(itBodyInfo, info._vBodyInfos) {
             KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;

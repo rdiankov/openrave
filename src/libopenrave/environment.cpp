@@ -38,6 +38,7 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& value
         }
         value.AddMember("bodies", rBodiesValue, allocator);
     }
+    orjson::SetJsonValueByKey(value, "keywords", keywords, allocator);
 }
 
 void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -47,6 +48,10 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
 
     if (value.HasMember("revision")) {
         orjson::LoadJsonValueByKey(value, "revision", _revision);
+    }
+
+    if (value.HasMember("keywords")) {
+        orjson::LoadJsonValueByKey(value, "keywords", keywords);
     }
 
     if (value.HasMember("bodies")) {

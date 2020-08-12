@@ -960,12 +960,20 @@ EnvironmentBase::EnvironmentBaseInfoPtr PyEnvironmentBase::PyEnvironmentBaseInfo
     EnvironmentBase::EnvironmentBaseInfoPtr pInfo(new EnvironmentBase::EnvironmentBaseInfo());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     pInfo->_vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(_vBodyInfos), end(_vBodyInfos));
+    pInfo->keywords = keywords;
+    pInfo->description = description;
 #else
     std::vector<KinBody::KinBodyInfoPtr> vBodyInfo = _ExtractBodyInfoArray(_vBodyInfos);
     pInfo->_vBodyInfos.clear();
     pInfo->_vBodyInfos.reserve(vBodyInfo.size());
     FOREACHC(it, vBodyInfo) {
         pInfo->_vBodyInfos.push_back(*it);
+    }
+    for(size_t i=0; i < py::len(keywords); i++){
+        pInfo->keywords.push_back(py::extract<std::string>(keywords[i]));
+    }
+    if (!description.is_none()) {
+        pInfo->description = py::extract<std::string>(description);
     }
 #endif
     return pInfo;
@@ -990,6 +998,9 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON(py::object obj, d
 void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::EnvironmentBaseInfo& info) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     _vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(info._vBodyInfos), end(info._vBodyInfos));
+    keywords = std::vector<std::string>(begin(info.keywords), end(info.keywords));
+    description = info.description;
+
 #else
     py::list vBodyInfos;
     FOREACHC(itBodyInfo, info._vBodyInfos) {
@@ -1003,7 +1014,17 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
         }
     }
     _vBodyInfos = vBodyInfos;
+
+    py::list vKeywords;
+    FOREACHC(itKeyword, info.keywords) {
+        py::object keyword = ConvertStringToUnicode(*itKeyword);
+        vKeywords.append(keyword);
+    }
+    keywords = vKeywords;
+    description = ConvertStringToUnicode(info.description);
+
 #endif
+
 }
 
 std::string PyEnvironmentBase::PyEnvironmentBaseInfo::__str__() {
