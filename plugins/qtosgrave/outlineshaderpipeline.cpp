@@ -143,7 +143,15 @@ namespace {
 			"void main()\n"
 			"{\n"
 			" float depthVal = min(2, 4*gl_FragCoord.w);\n"
-			"  gl_FragColor = vec4((uniqueColorId + normalize(normal)) * depthVal, isSelected);\n"
+			"  if(isSelected == 1) {\n"
+			"    gl_FragDepth = gl_FragCoord.z / 50;\n"
+			"  }   \n"
+			"else {\n"
+			"  gl_FragDepth = gl_FragCoord.z;\n"
+			"}\n"
+
+			"\n"
+			" gl_FragColor = vec4((uniqueColorId + normalize(normal)) * depthVal, isSelected);\n"
 			"}\n";
 
 	const std::string preRenderVertShaderStr =
@@ -264,14 +272,14 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	_renderPassStates.push_back(createSecondRenderPass(_renderPassStates[0], maxFBOBufferWidth, maxFBOBufferHeight));
 	_renderPassStates.push_back(createThirdRenderPass(_renderPassStates[1]));
 
-	osg::ref_ptr<osg::Group> thirdPassCameraGroup = new osg::Group();
-	thirdPassCameraGroup->addChild(_renderPassStates[0]->camera.get());
+	osg::ref_ptr<osg::Group> passesGroup = new osg::Group();
+	passesGroup->addChild(_renderPassStates[0]->camera.get());
 #	if !SHOW_PRERENDER_SCENE_ONLY
-	thirdPassCameraGroup->addChild(_renderPassStates[1]->camera.get());
-	thirdPassCameraGroup->addChild(mainSceneRoot);
-	thirdPassCameraGroup->addChild(_renderPassStates[2]->camera.get());
+	passesGroup->addChild(_renderPassStates[1]->camera.get());
+	passesGroup->addChild(mainSceneRoot);
+	passesGroup->addChild(_renderPassStates[2]->camera.get());
 #endif
-	return thirdPassCameraGroup.release();
+	return passesGroup.release();
 
 }
 void OutlineShaderPipeline::HandleResize(int width, int height)
