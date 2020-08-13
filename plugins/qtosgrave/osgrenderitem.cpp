@@ -100,13 +100,13 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
 // Generates a unique color id that will be further used by shaders to perform object based operations, such as shader based picking, edge detection and others.
 inline void GenerateAndSetGeometryUniqueColorId( OSGNodePtr geometryNode, int geometryIndex ) {
     osg::ref_ptr<osg::StateSet> state = geometryNode->getOrCreateStateSet();
-    osg::Matrixd localToWorld = osg::computeLocalToWorld(geometryNode->getParentalNodePaths()[0]);
-    osg::Vec3 position(localToWorld(3,0), localToWorld(3,1), localToWorld(3,2));
+    // osg::Matrixd localToWorld = osg::computeLocalToWorld(geometryNode->getParentalNodePaths()[0]);
+    osg::Vec3 position(0,0,0);
 
     // perturb the position based on the geometry index, in order to create a different color for close geometries.
     position[geometryIndex % 3] = geometryIndex;
 
-    position.normalize();
+//    position.normalize();
     state->addUniform(new osg::Uniform("uniqueColorId", position));
 }
 

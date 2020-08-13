@@ -6,8 +6,19 @@
 #include <osg/CullFace>
 #include <osg/BlendFunc>
 
-#define SHOW_PRERENDER_SCENE_ONLY 0
-#define BYPASS_THIRD_RENDER_PASS 0
+// state control
+namespace {
+	const float SELECTED_OBJECT_HIGHLIGHT_INTENSITY(1.0f); //< from 0 to +inf, a multiplier on the highligh intensity, 0 means off, 1 means normal (e.g: 2 means double intensity)
+	const osg::Vec3 SELECTED_OBJECT_HIGHLIGHT_COLOR(0, 1, 0); //< color of the selected object highlight
+	const osg::Vec3 OUTLINE_COLOR(0, 0, 0);
+}
+
+// debug variables
+#define SHOW_BLUR_PASS_ONLY 0
+#define SHOW_COLORID_SCENE_ONLY 0
+#define SHOW_EDGE_DETECTION_PASS_ONLY 0
+#define BYPASS_BLUR_RENDER_PASS 0
+#define FADE_OUTLINE_WITH_FRAGMENT_DEPTH 1 // will fade out the edges proportionally to view distance. This prevent edges from becoming proportinally too big compared to the distance scene
 
 namespace {
 	const std::string outlineVertStr =
@@ -23,6 +34,7 @@ namespace {
 			"#extension GL_ARB_texture_multisample : enable \n"
 			"uniform vec3 outlineColor;"
 			"uniform vec3 selectionColor;"
+			"uniform float highlightIntensity;"
 
 			"\n"
 			"uniform sampler2DMS diffuseTexture;\n"
@@ -45,13 +57,13 @@ namespace {
 			"float gradientIntensity(in vec4 n[4]) {\n"
 			"    float h = 1;\n"
 			"\n"
-			"    vec3 xm = n[0].rgb;\n"
-			"    vec3 xp = n[1].rgb;\n"
-			"    vec3 ym = n[2].rgb;\n"
-			"    vec3 yp = n[3].rgb;\n"
+			"    vec4 xm = n[0].rgba;\n"
+			"    vec4 xp = n[1].rgba;\n"
+			"    vec4 ym = n[2].rgba;\n"
+			"    vec4 yp = n[3].rgba;\n"
 			"\n"
-			"    vec3 dx = (xp - xm) / (2 * h);\n"
-			"    vec3 dy = (yp - ym) / (2 * h);\n"
+			"    vec4 dx = (xp - xm) / (2 * h);\n"
+			"    vec4 dy = (yp - ym) / (2 * h);\n"
 			"\n"
 			"    return length(dx) + length(dy);\n"
 			"}\n"
@@ -61,18 +73,22 @@ namespace {
 			"{\n"
 			" 	 vec4 samples[4];"
 			"    getNeighbors(samples, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
-			"    float alphaIntensity = length(vec2(samples[0].a - samples[1].a, samples[2].a - samples[3].a));\n"
+			"    float alphaIntensity = length(vec2((samples[0].a - samples[1].a)/2, (samples[2].a - samples[3].a)/2));\n"
 			"    float intensity = gradientIntensity(samples);\n"
-			 "    bool selected = alphaIntensity > 0 || accessTexel(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y)).a > 0;\n"
+			"    bool selected = alphaIntensity > 0 || accessTexel(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y)).a > 0;\n"
+#if			SHOW_BLUR_PASS_ONLY
+			"    gl_FragColor = vec4(intensity, intensity, intensity, 1);\n"
+#else
 			"    if(selected) {"
-			"  		  gl_FragColor = vec4(selectionColor.xyz, intensity*0.3 + 0.15);\n" // sum a constant offset in alpha so to create the filling highlight effect
+			"  		  gl_FragColor = vec4(selectionColor.xyz, intensity * highlightIntensity*0.3 + 0.1);\n" // sum a constant offset in alpha so to create the filling highlight effect
 			"         return;\n"
 			"    }\n"
-			"    gl_FragColor = vec4(outlineColor, intensity);\n"
-
+			"    intensity = intensity * intensity;\n"
+		    "    gl_FragColor = vec4(outlineColor, intensity);\n"
+#endif
 			"}\n";
 
-	const std::string blueVertStr =
+	const std::string blurVertStr =
 			"#version 120\n"
 			"void main()\n"
 			"{\n"
@@ -122,7 +138,11 @@ namespace {
 
 			"void main()\n"
 			"{\n"
+#if         BYPASS_BLUR_RENDER_PASS || RENDER_EDGE_DETECTION_PASS_ONLY
+			"    vec4 blur = accessTexel(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
+#else
 			"    vec4 blur = applyBlur(ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
+#endif
 			"    gl_FragColor = blur;\n"
 			"}\n";
 
@@ -151,7 +171,11 @@ namespace {
 			"}\n"
 
 			"\n"
-			" gl_FragColor = vec4((uniqueColorId + normalize(normal)) * min(2, depthVal * 2), isSelected);\n"
+			"float depthMult = 1.0;\n"
+#if         FADE_OUTLINE_WITH_FRAGMENT_DEPTH
+			"depthMult = min(2, depthVal * 4);\n"
+#endif
+			" gl_FragColor = vec4((uniqueColorId*0.5 + normalize(normal)) * depthMult, isSelected);\n"
 			"}\n";
 
 	const std::string preRenderVertShaderStr =
@@ -160,13 +184,12 @@ namespace {
 			"varying vec3 normal;\n"
 			"varying vec3 position;\n"
 			"varying vec4 color;\n"
-			"uniform vec3 uniqueColorId;"
 			"\n"
 			"\n"
 			"void main()\n"
 			"{\n"
 			"    color = gl_Color;\n"
-			"    normal = normalize(gl_Normal);\n"
+			"    normal = (gl_Normal);\n"
 			"    position = gl_Vertex.xyz;\n"
 			"    // Calculate vertex position in clip coordinates\n"
 			"    gl_Position = gl_ModelViewProjectionMatrix * vec4(gl_Vertex.xyz, 1);\n"
@@ -208,7 +231,7 @@ inline RenderPassState* createFirstRenderPass(osg::ref_ptr<osg::Camera> mainScen
 	// clone main camera settings so to render same scene
 	renderPassState->camera = new osg::Camera();
 	renderPassState->colorFboTexture = RenderUtils::CreateFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
-#	if !SHOW_PRERENDER_SCENE_ONLY
+#	if !RENDER_COLORID_SCENE_ONLY
 	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, osg::Camera::COLOR_BUFFER, renderPassState->colorFboTexture.get());
 #endif
 	renderPassState->camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -218,11 +241,11 @@ inline RenderPassState* createFirstRenderPass(osg::ref_ptr<osg::Camera> mainScen
 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
 	mainSceneCamera->addChild(renderPassState->camera.get());
 	renderPassState->camera->addChild(firstPassGroup.get());
-	firstPassStateSet->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE );
 	firstPassStateSet->addUniform(new osg::Uniform("uniqueColorId", osg::Vec3(0, 0, 0)));
 	firstPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
-    firstPassStateSet->setRenderingHint(osg::StateSet::DEFAULT_BIN);
-	firstPassStateSet->setRenderBinDetails(osg::StateSet::DEFAULT_BIN, "", osg::StateSet::OVERRIDE_RENDERBIN_DETAILS);
+	firstPassStateSet->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE );
+    //firstPassStateSet->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+	firstPassStateSet->setRenderBinDetails(osg::StateSet::TRANSPARENT_BIN, "", osg::StateSet::OVERRIDE_RENDERBIN_DETAILS);
 	osg::Depth* depth = new osg::Depth;
 	depth->setWriteMask( true );
 	firstPassStateSet->setAttributeAndModes( depth, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
@@ -233,7 +256,7 @@ inline RenderPassState* createSecondRenderPass(RenderPassState* firstPassState, 
 {
 	RenderPassState* renderPassState = new RenderPassState();
 	osg::ref_ptr<osg::StateSet> secondPassStateSet = new osg::StateSet();
-	RenderUtils::SetShaderProgramOnStateSet(secondPassStateSet.get(), outlineVertStr, outlineFragStr);
+	RenderUtils::SetShaderProgramOnStateSet(secondPassStateSet.get(), blurVertStr, blurFragStr);
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), secondPassStateSet);
 	renderPassState->colorFboTexture = RenderUtils::CreateFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
 	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, osg::Camera::COLOR_BUFFER, renderPassState->colorFboTexture.get());
@@ -241,8 +264,8 @@ inline RenderPassState* createSecondRenderPass(RenderPassState* firstPassState, 
 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
 	secondPassStateSet->setTextureAttributeAndModes(0, firstPassState->colorFboTexture.get(), osg::StateAttribute::ON);
     secondPassStateSet->addUniform(new osg::Uniform("diffuseTexture", 0));
-	secondPassStateSet->addUniform(new osg::Uniform("outlineColor", osg::Vec3(0, 0, 0)));
-	secondPassStateSet->addUniform(new osg::Uniform("selectionColor", osg::Vec3(0, 1, 0)));
+	secondPassStateSet->addUniform(new osg::Uniform("outlineColor", OUTLINE_COLOR));
+	secondPassStateSet->addUniform(new osg::Uniform("selectionColor", SELECTED_OBJECT_HIGHLIGHT_COLOR));
 	secondPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
 
 	return renderPassState;
@@ -252,7 +275,7 @@ inline RenderPassState* createThirdRenderPass(RenderPassState* secondPassState)
 {
 	RenderPassState* renderPassState = new RenderPassState();
 	osg::ref_ptr<osg::StateSet> thirdPassStateSet = new osg::StateSet();
-	RenderUtils::SetShaderProgramOnStateSet(thirdPassStateSet.get(), blueVertStr, blurFragStr);
+	RenderUtils::SetShaderProgramOnStateSet(thirdPassStateSet.get(), outlineVertStr, outlineFragStr);
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), thirdPassStateSet);
 	thirdPassStateSet->setTextureAttributeAndModes(0, secondPassState->colorFboTexture.get(), osg::StateAttribute::ON);
     thirdPassStateSet->addUniform(new osg::Uniform("diffuseTexture", 0));
@@ -261,6 +284,10 @@ inline RenderPassState* createThirdRenderPass(RenderPassState* secondPassState)
 	osg::Depth* depth = new osg::Depth;
 	depth->setWriteMask( false );
 	thirdPassStateSet->setAttributeAndModes(depth, osg::StateAttribute::ON);
+	thirdPassStateSet->addUniform(new osg::Uniform("outlineColor", OUTLINE_COLOR));
+	thirdPassStateSet->addUniform(new osg::Uniform("selectionColor", SELECTED_OBJECT_HIGHLIGHT_COLOR));
+	thirdPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
+	thirdPassStateSet->addUniform(new osg::Uniform("highlightIntensity", SELECTED_OBJECT_HIGHLIGHT_INTENSITY));
 
 	return renderPassState;
 }
@@ -274,7 +301,7 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 
 	osg::ref_ptr<osg::Group> passesGroup = new osg::Group();
 	passesGroup->addChild(_renderPassStates[0]->camera.get());
-#	if !SHOW_PRERENDER_SCENE_ONLY
+#	if !RENDER_COLORID_SCENE_ONLY
 	passesGroup->addChild(_renderPassStates[1]->camera.get());
 	passesGroup->addChild(mainSceneRoot);
 	passesGroup->addChild(_renderPassStates[2]->camera.get());

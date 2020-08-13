@@ -47,7 +47,7 @@ public:
         tex2D->setSourceFormat(GL_RGBA);
         tex2D->setInternalFormat(GL_RGBA16F_ARB);
         tex2D->setSourceType(GL_FLOAT);
-        tex2D->setNumSamples(4);
+        tex2D->setNumSamples(8);
         return tex2D.release();
     }
 
@@ -60,7 +60,7 @@ public:
         tex2D->setSourceType(GL_UNSIGNED_INT);
         tex2D->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
 	    tex2D->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
-        tex2D->setNumSamples(4);
+        tex2D->setNumSamples(8);
         return tex2D.release();
     }
 
