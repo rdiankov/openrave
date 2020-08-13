@@ -100,14 +100,12 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
 // Generates a unique color id that will be further used by shaders to perform object based operations, such as shader based picking, edge detection and others.
 inline void GenerateAndSetGeometryUniqueColorId( OSGNodePtr geometryNode, int geometryIndex ) {
     osg::ref_ptr<osg::StateSet> state = geometryNode->getOrCreateStateSet();
-    // osg::Matrixd localToWorld = osg::computeLocalToWorld(geometryNode->getParentalNodePaths()[0]);
-    osg::Vec3 position(0,0,0);
-
+    osg::Vec3 uniqueColorId(0,0,0);
     // perturb the position based on the geometry index, in order to create a different color for close geometries.
-    position[geometryIndex % 3] = geometryIndex;
+    uniqueColorId[geometryIndex % 3] = geometryIndex;
 
 //    position.normalize();
-    state->addUniform(new osg::Uniform("uniqueColorId", position));
+    state->addUniform(new osg::Uniform("uniqueColorId", uniqueColorId));
 }
 
 // Visitor to return the coordinates of a node with respect to another node
@@ -328,6 +326,7 @@ void KinBodyItem::Load()
                         // fast
                         state->setMode(GL_BLEND, osg::StateAttribute::ON);
                         state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+                        //state->setRenderBinDetails(9999, "RenderBin", osg::StateSet::USE_RENDERBIN_DETAILS);
                         // fix transparency oclusion: 
                         osg::Depth* depth = new osg::Depth;
                         depth->setWriteMask( false );
