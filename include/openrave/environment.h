@@ -752,7 +752,7 @@ public:
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info) = 0;
 
-
+    std::string name;   ///< environment name
     std::string description;   ///< environment description
     std::vector<std::string> keywords;  ///< some string values for describinging the environment
 

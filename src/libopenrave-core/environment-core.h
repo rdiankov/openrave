@@ -2428,6 +2428,7 @@ public:
                 _vecbodies[i]->ExtractInfo(*info._vBodyInfos[i]);
             }
         }
+        info.name = this->name;
         info.keywords = this->keywords;
         info.description = this->description;
     }
@@ -2443,6 +2444,7 @@ public:
         SetRevision(info._revision);
 
         // set keywords and description
+        name = info.name;
         keywords = info.keywords;
         description = info.description;
 

@@ -477,6 +477,13 @@ public:
                 }
             }
             // set name
+            if(!!_dom->getAsset()->getName()) {
+                daeString pName = _dom->getAsset()->getName()->getValue();
+                _penv->name.clear();
+                for(;!!pName && (*pName) != '\0'; pName++) {
+                    _penv->name.push_back(*pName);
+                }
+            }
 
             // set keywords
             if(!!_dom->getAsset()->getKeywords()) {
@@ -499,7 +506,7 @@ public:
             if (!!_dom->getAsset()->getDescription()) {
                 daeString pDescription = _dom->getAsset()->getDescription()->getValue();
                 _penv->description.clear();
-                for (;!!pDescription && (*pDescription) != '\0'; pDescription++) {
+                for(;!!pDescription && (*pDescription) != '\0'; pDescription++) {
                     _penv->description.push_back(*pDescription);
                 }
             }

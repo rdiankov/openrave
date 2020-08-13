@@ -42,9 +42,11 @@ public:
     py::list keywords;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos;
+    std::string name;
     std::string description;
 #else
     py::object _vBodyInfos = py::none_();
+    py::object name = py::none_();
     py::object description = py::none_();
 #endif
     virtual std::string __str__();
@@ -276,9 +278,11 @@ public:
 
     py::list keywords;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::string name;
     std::string description;
 #else
-    py::object _description = py::none_();
+    py::object name = py::none_();
+    py::object description = py::none_();
 #endif
 
     bool __eq__(PyEnvironmentBasePtr p);
