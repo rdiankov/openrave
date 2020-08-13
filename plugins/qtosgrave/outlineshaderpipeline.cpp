@@ -80,7 +80,7 @@ namespace {
 			"    gl_FragColor = vec4(intensity, intensity, intensity, 1);\n"
 #else
 			"    if(selected) {"
-			"  		  gl_FragColor = vec4(selectionColor.xyz, intensity * highlightIntensity*0.5 + 0.15);\n" // sum a constant offset in alpha so to create the filling highlight effect
+			"  		  gl_FragColor = vec4(selectionColor.xyz, intensity * highlightIntensity*0.5 + 0.25);\n" // sum a constant offset in alpha so to create the filling highlight effect
 			"         return;\n"
 			"    }\n"
 			"    intensity = intensity * intensity;\n"
@@ -209,7 +209,7 @@ OutlineShaderPipeline::OutlineShaderPipeline()
 {
 	_outlineColor = osg::Vec3(0, 0, 0);
 	_selectedObjectHighlightIntensity = 1.0f; //< from 0 to +inf, a multiplier on the highligh intensity, 0 means off, 1 means normal (e.g: 2 means double intensity)
-	_selectedObjectHighlightColor = osg::Vec3(0, 191.0/255, 50.0/255.0); //< color of the selected object highlight
+	_selectedObjectHighlightColor = osg::Vec3(0, 0.95, 0); //< color of the selected object highlight
 }
 
 OutlineShaderPipeline::~OutlineShaderPipeline()
@@ -234,7 +234,7 @@ inline RenderPassState* OutlineShaderPipeline::createFirstRenderPass(osg::ref_pt
 	// clone main camera settings so to render same scene
 	renderPassState->camera = new osg::Camera();
 	renderPassState->colorFboTexture = RenderUtils::CreateFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
-#	if !RENDER_COLORID_SCENE_ONLY
+#	if !SHOW_COLORID_SCENE_ONLY
 	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, osg::Camera::COLOR_BUFFER, renderPassState->colorFboTexture.get());
 #endif
 	renderPassState->camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -246,12 +246,8 @@ inline RenderPassState* OutlineShaderPipeline::createFirstRenderPass(osg::ref_pt
 	renderPassState->camera->addChild(firstPassGroup.get());
 	firstPassStateSet->addUniform(new osg::Uniform("uniqueColorId", osg::Vec3(0, 0, 0)));
 	firstPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
-	firstPassStateSet->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE );
-    //firstPassStateSet->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-	firstPassStateSet->setRenderBinDetails(osg::StateSet::TRANSPARENT_BIN, "", osg::StateSet::OVERRIDE_RENDERBIN_DETAILS);
-	osg::Depth* depth = new osg::Depth;
-	depth->setWriteMask( true );
-	firstPassStateSet->setAttributeAndModes( depth, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+	// disable blend because we use alpha channel for encoding other information
+	firstPassStateSet->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
 	return renderPassState;
 }
 
@@ -313,7 +309,7 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 
 	osg::ref_ptr<osg::Group> passesGroup = new osg::Group();
 	passesGroup->addChild(_renderPassStates[0]->camera.get());
-#	if !RENDER_COLORID_SCENE_ONLY
+#	if !SHOW_COLORID_SCENE_ONLY
 	passesGroup->addChild(_renderPassStates[1]->camera.get());
 	passesGroup->addChild(mainSceneRoot);
 	passesGroup->addChild(_renderPassStates[2]->camera.get());
