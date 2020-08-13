@@ -22,7 +22,15 @@ public:
     osg::ref_ptr<osg::Group> CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight);
     void HandleResize(int width, int height);
 
+protected:
+    RenderPassState* createFirstRenderPass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight);
+    RenderPassState* createSecondRenderPass(RenderPassState* firstPassState, int maxFBOBufferWidth, int maxFBOBufferHeight);
+    RenderPassState* createThirdRenderPass(RenderPassState* secondPassState);
+
 public:
+	osg::Vec3 _outlineColor;
+	osg::Vec3 _selectedObjectHighlightColor; //< color of the selected object highlight
+    float _selectedObjectHighlightIntensity; //< from 0 to +inf, a multiplier on the highligh intensity, 0 means off, 1 means normal (e.g: 2 means double intensity)
     std::vector<RenderPassState*> _renderPassStates;
 };
 

@@ -7,17 +7,14 @@
 #include <osg/BlendFunc>
 
 // state control
+
+// predefined state control preprocessor variables
+// to change programable state such as highligh color, see OutlineShaderPipeline constructor
 #define ENABLE_SHOW_HIGHLIGHT_BEHIND_OBJECTS 1 //< if on, will show selection highlight over other objects
 #define FADE_OUTLINE_WITH_FRAGMENT_DEPTH 1 // will fade out the edges proportionally to view distance. This prevent edges from becoming proportinally too big compared to the distance scene
 #define INVERT_BLUR_AND_EDGE_DETECTION_PASS_ORDER 0 // < normal pipeline order is first edge detection, then blur to soften edges. Inverse order result in slightly different rendering
 
-namespace {
-	const float SELECTED_OBJECT_HIGHLIGHT_INTENSITY(1.0f); //< from 0 to +inf, a multiplier on the highligh intensity, 0 means off, 1 means normal (e.g: 2 means double intensity)
-	const osg::Vec3 SELECTED_OBJECT_HIGHLIGHT_COLOR(0, 191.0/255, 50.0/255.0); //< color of the selected object highlight
-	const osg::Vec3 OUTLINE_COLOR(0, 0, 0);
-}
-
-// debug variables
+// debug preprocessor variables
 #define SHOW_BLUR_PASS_ONLY 0
 #define SHOW_COLORID_SCENE_ONLY 0
 #define SHOW_EDGE_DETECTION_PASS_ONLY 0
@@ -210,7 +207,9 @@ void RenderPassState::HandleResize(int width, int height)
 
 OutlineShaderPipeline::OutlineShaderPipeline()
 {
-	// empty
+	_outlineColor = osg::Vec3(0, 0, 0);
+	_selectedObjectHighlightIntensity = 1.0f; //< from 0 to +inf, a multiplier on the highligh intensity, 0 means off, 1 means normal (e.g: 2 means double intensity)
+	_selectedObjectHighlightColor = osg::Vec3(0, 191.0/255, 50.0/255.0); //< color of the selected object highlight
 }
 
 OutlineShaderPipeline::~OutlineShaderPipeline()
@@ -221,7 +220,7 @@ OutlineShaderPipeline::~OutlineShaderPipeline()
 }
 
 // First pass is render the scene using special shaders to enhance edges
-inline RenderPassState* createFirstRenderPass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight)
+inline RenderPassState* OutlineShaderPipeline::createFirstRenderPass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight)
 {
 	// First pass will render the same scene using a special shader that render objects with different colors
 	// different from background, so to prepare for outline edge detection post processing shader
@@ -256,7 +255,7 @@ inline RenderPassState* createFirstRenderPass(osg::ref_ptr<osg::Camera> mainScen
 	return renderPassState;
 }
 
-inline RenderPassState* createSecondRenderPass(RenderPassState* firstPassState, int maxFBOBufferWidth, int maxFBOBufferHeight)
+RenderPassState* OutlineShaderPipeline::createSecondRenderPass(RenderPassState* firstPassState, int maxFBOBufferWidth, int maxFBOBufferHeight)
 {
 	RenderPassState* renderPassState = new RenderPassState();
 	osg::ref_ptr<osg::StateSet> secondPassStateSet = new osg::StateSet();
@@ -273,14 +272,14 @@ inline RenderPassState* createSecondRenderPass(RenderPassState* firstPassState, 
 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
 	secondPassStateSet->setTextureAttributeAndModes(0, firstPassState->colorFboTexture.get(), osg::StateAttribute::ON);
     secondPassStateSet->addUniform(new osg::Uniform("diffuseTexture", 0));
-	secondPassStateSet->addUniform(new osg::Uniform("outlineColor", OUTLINE_COLOR));
-	secondPassStateSet->addUniform(new osg::Uniform("selectionColor", SELECTED_OBJECT_HIGHLIGHT_COLOR));
+	secondPassStateSet->addUniform(new osg::Uniform("outlineColor", _outlineColor));
+	secondPassStateSet->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
 	secondPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
 
 	return renderPassState;
 }
 
-inline RenderPassState* createThirdRenderPass(RenderPassState* secondPassState)
+ RenderPassState* OutlineShaderPipeline::createThirdRenderPass(RenderPassState* secondPassState)
 {
 	RenderPassState* renderPassState = new RenderPassState();
 	osg::ref_ptr<osg::StateSet> thirdPassStateSet = new osg::StateSet();
@@ -297,10 +296,10 @@ inline RenderPassState* createThirdRenderPass(RenderPassState* secondPassState)
 	osg::Depth* depth = new osg::Depth;
 	depth->setWriteMask( false );
 	thirdPassStateSet->setAttributeAndModes(depth, osg::StateAttribute::ON);
-	thirdPassStateSet->addUniform(new osg::Uniform("outlineColor", OUTLINE_COLOR));
-	thirdPassStateSet->addUniform(new osg::Uniform("selectionColor", SELECTED_OBJECT_HIGHLIGHT_COLOR));
+	thirdPassStateSet->addUniform(new osg::Uniform("outlineColor", _outlineColor));
+	thirdPassStateSet->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
 	thirdPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
-	thirdPassStateSet->addUniform(new osg::Uniform("highlightIntensity", SELECTED_OBJECT_HIGHLIGHT_INTENSITY));
+	thirdPassStateSet->addUniform(new osg::Uniform("highlightIntensity", _selectedObjectHighlightIntensity));
 
 	return renderPassState;
 }
