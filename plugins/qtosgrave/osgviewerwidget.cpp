@@ -18,6 +18,7 @@
 
 #include <QApplication>
 #include <QDesktopWidget>
+#include <QOpenGLFunctions>
 
 #include <osg/ShadeModel>
 #include <osgDB/ReadFile>
@@ -383,7 +384,7 @@ private:
 
 QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
                                    const boost::function<bool(int)>& onKeyDown, double metersinunit,
-                                   QWidget* parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), parent), _onKeyDown(onKeyDown)
+                                   QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
 {
 
     setFocus( Qt::ActiveWindowFocusReason );
@@ -393,6 +394,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     _bSwitchMouseLeftMiddleButton = false;
     _bLightOn = true;
     _bIsSelectiveActive = false;
+    _fboInitialized = false;
 
     _osgview = new osgViewer::View();
     // disable viewer default light since we are settinup custom lights
@@ -421,11 +423,6 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     {
         _osgFigureRoot = new osg::Group();
         osg::ref_ptr<osg::StateSet> stateset = _osgFigureRoot->getOrCreateStateSet();
-        //stateset->setAttribute(new osg::CullFace(osg::CullFace::FRONT_AND_BACK));
-        //stateset->setMode(GL_CULL_FACE, osg::StateAttribute::OFF);
-        //stateset->setAttributeAndModes(new osg::CullFace, osg::StateAttribute::OFF);
-        //stateset->setMode(GL_NORMALIZE,osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE);
-        //stateset->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
         stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
         stateset->setMode(GL_BLEND, osg::StateAttribute::ON);
         stateset->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
@@ -1292,6 +1289,11 @@ OSGNodePtr QOSGViewerWidget::_AddDraggerToObject(const std::string& draggerName,
 void QOSGViewerWidget::paintGL()
 {
     try {
+        if(!_fboInitialized) {
+            // need to do this in order to make OSG to work with QOpenGLWidget if one wants to use FBO and Render to Texture
+            GetCamera()->getGraphicsContext()->setDefaultFboId(defaultFramebufferObject());
+            _fboInitialized = true;
+        }
         _osgviewer->frame(); // osgViewer::CompositeViewer
     }
     catch(const std::exception& ex) {
@@ -1394,7 +1396,7 @@ void QOSGViewerWidget::keyReleaseEvent(QKeyEvent *event)
 
 bool QOSGViewerWidget::event(QEvent *event)
 {
-    bool handled = QGLWidget::event(event);
+    bool handled = QOpenGLWidget::event(event);
     this->update();
     return handled;
 }

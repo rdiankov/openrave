@@ -23,7 +23,7 @@
 #include <QtCore/QTimer>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLayout>
-#include <QGLWidget>
+#include <QOpenGLWidget>
 #include <osgViewer/CompositeViewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osg/PositionAttitudeTransform>
@@ -37,7 +37,7 @@ using namespace OpenRAVE;
 class OpenRAVETrackball;
 
 /// \brief  Class of the openscene graph 3d viewer
-class QOSGViewerWidget : public QGLWidget
+class QOSGViewerWidget : public QOpenGLWidget
 {
 public:
 
@@ -223,6 +223,7 @@ protected:
     virtual bool event(QEvent *event);
 
     OutlineShaderPipeline _outlineRenderPipeline;
+    bool _fboInitialized;
 
     OSGGroupPtr _osgSceneRoot; ///< root scene node
     OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into

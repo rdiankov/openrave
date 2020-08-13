@@ -151,7 +151,7 @@ namespace {
 			"}\n"
 
 			"\n"
-			" gl_FragColor = vec4((uniqueColorId + normalize(normal)) * depthVal, isSelected);\n"
+			" gl_FragColor = vec4((uniqueColorId + normalize(normal)) * min(2, depthVal * 2), isSelected);\n"
 			"}\n";
 
 	const std::string preRenderVertShaderStr =
