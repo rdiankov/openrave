@@ -2801,7 +2801,6 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
         return UFIR_RequireRemoveFromEnvironment;
     }
 
-
     // gripperinfos
     FOREACHC(itGripperInfo, info._vGripperInfos) {
         // find exisiting gripperinfo in robot
@@ -2810,14 +2809,14 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
             if ((*itExistingGripperInfo)->_id == (*itGripperInfo)->_id) {
                 // find existing gripperinfo
                 if ((*itExistingGripperInfo) != (*itGripperInfo)) {
-                    return UFIR_RequireReinitialize;
+                    return UFIR_RequireRemoveFromEnvironment;
                 }
                 break;
             }
         }
         if (itExistingGripperInfo == _vecGripperInfos.end()) {
             // new gripper info
-            return UFIR_RequireReinitialize;
+            return UFIR_RequireRemoveFromEnvironment;
         }
     }
 
