@@ -1465,10 +1465,12 @@ private:
         daeElementRef nodehead = _nodesLib;
         bool bHasAddedInstance = false;
         std::set<std::string> setJointSids;
+        std::set<std::string> setLinkSids;
         while( !listunusedlinks.empty() ) {
             setJointSids.clear();
+            setLinkSids.clear();
             const int firstunusedlinkindex = listunusedlinks.front();
-            const LINKOUTPUT childinfo = _WriteLink(links.at(firstunusedlinkindex), ktec, nodehead, kmodel->getID(), vjoints, setJointSids);
+            const LINKOUTPUT childinfo = _WriteLink(links.at(firstunusedlinkindex), ktec, nodehead, kmodel->getID(), vjoints, setJointSids, setLinkSids);
             const Transform t = links[firstunusedlinkindex]->GetTransform();
             _WriteTransformation(childinfo.plink, t);
             if( IsWrite("visual") ) {
@@ -2125,9 +2127,10 @@ private:
        \param pnodeparent Node parent
        \param strModelUri
        \param vjoints Vector of joints
-       \param setJointSids Vector of joint ids which is already written
+       \param setJointSids Set of joint ids which is already written
+       \param setLinkSids Set of link ids which is already written
      */
-    virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints, std::set<std::string>& setJointSids)
+    virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints, std::set<std::string>& setJointSids, std::set<std::string>& setLinkSids)
     {
         std::string nodeparentid;
         if( !!pnodeparent && !!pnodeparent->getID() ) {
@@ -2154,7 +2157,16 @@ private:
             pnode->setSid(nodesid.c_str());
             pnode->setName(linkname.c_str());
 
-            if( IsWrite("geometry") ) {
+            const bool alreadyHandled = setLinkSids.find(linksid) != setLinkSids.end();
+            if (!alreadyHandled) {
+                setLinkSids.insert(linksid);
+            }
+            else {
+                RAVELOG_VERBOSE_FORMAT("geometry for link (name=\"%s\", sid=\"%s\") is already handled so skip. maybe part of closed loop?", linkname%linksid);
+            }
+            // for closed loop kinematics, we do want to describe the closed loop, so visiting same link twice is fine.
+            // but do not want to write same geometry twice, so just skip geometry part
+            if(!alreadyHandled && IsWrite("geometry") ) {
                 int igeom = 0;
                 FOREACHC(itgeom, plink->GetGeometries()) {
                     string geomid = _GetGeometryId(plink,igeom);
@@ -2192,7 +2204,7 @@ private:
             setJointSids.insert(jointid);
             pattfull->setJoint(jointid.c_str());
 
-            LINKOUTPUT childinfo = _WriteLink(pchild, pattfull, pnode, strModelUri, vjoints, setJointSids);
+            LINKOUTPUT childinfo = _WriteLink(pchild, pattfull, pnode, strModelUri, vjoints, setJointSids, setLinkSids);
             out.listusedlinks.insert(out.listusedlinks.end(),childinfo.listusedlinks.begin(),childinfo.listusedlinks.end());
 
             _WriteTransformation(pattfull, pjoint->GetInternalHierarchyLeftTransform());
