@@ -56,19 +56,6 @@ namespace {
 			"    return length(dx) + length(dy);\n"
 			"}\n"
 			"\n"
-			"float alphaIntensity(in vec4 s[4]) {\n"
-			"    float h = 1;\n"
-			"\n"
-			"    float xm = s[0].a;\n"
-			"    float xp = s[1].a;\n"
-			"    float ym = s[2].a;\n"
-			"    float yp = s[3].a;\n"
-			"\n"
-			"    float dx = (xp - xm) / (2 * h);\n"
-			"    float dy = (yp - ym) / (2 * h);\n"
-			"\n"
-			"    return abs(s[0].a - s[1].a) + abs(s[2].a - s[3].a);\n"
-			"}\n"
 
 			"void main()\n"
 			"{\n"
@@ -76,9 +63,9 @@ namespace {
 			"    getNeighbors(samples, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
 			"    float alphaIntensity = length(vec2(samples[0].a - samples[1].a, samples[2].a - samples[3].a));\n"
 			"    float intensity = gradientIntensity(samples);\n"
-			 "    bool selected = alphaIntensity > 0 || texelFetch(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y), 0).a > 0;\n"
+			 "    bool selected = alphaIntensity > 0 || accessTexel(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y)).a > 0;\n"
 			"    if(selected) {"
-			"  		  gl_FragColor = vec4(selectionColor.xyz, intensity + 0.2);\n" // sum a constant offset in alpha so to create the filling highlight effect 
+			"  		  gl_FragColor = vec4(selectionColor.xyz, intensity*0.3 + 0.15);\n" // sum a constant offset in alpha so to create the filling highlight effect
 			"         return;\n"
 			"    }\n"
 			"    gl_FragColor = vec4(outlineColor, intensity);\n"
@@ -149,14 +136,14 @@ namespace {
 			"\n"
 			"varying vec3 position;\n"
 			"varying vec4 color;\n"
-			"uniform vec3 linkPosition;"
+			"uniform vec3 uniqueColorId;"
 			"uniform int isSelected;"
 
 			"\n"
 			"void main()\n"
 			"{\n"
 			" float depthVal = min(2, 4*gl_FragCoord.w);\n"
-			"  gl_FragColor = vec4((linkPosition + normalize(normal)) * depthVal, isSelected);\n"
+			"  gl_FragColor = vec4((uniqueColorId + normalize(normal)) * depthVal, isSelected);\n"
 			"}\n";
 
 	const std::string preRenderVertShaderStr =
@@ -165,7 +152,7 @@ namespace {
 			"varying vec3 normal;\n"
 			"varying vec3 position;\n"
 			"varying vec4 color;\n"
-			"uniform vec3 linkPosition;"
+			"uniform vec3 uniqueColorId;"
 			"\n"
 			"\n"
 			"void main()\n"
@@ -224,7 +211,7 @@ inline RenderPassState* createFirstRenderPass(osg::ref_ptr<osg::Camera> mainScen
 	mainSceneCamera->addChild(renderPassState->camera.get());
 	renderPassState->camera->addChild(firstPassGroup.get());
 	firstPassStateSet->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE );
-	firstPassStateSet->addUniform(new osg::Uniform("linkPosition", osg::Vec3(0, 0, 0)));
+	firstPassStateSet->addUniform(new osg::Uniform("uniqueColorId", osg::Vec3(0, 0, 0)));
 	firstPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
     firstPassStateSet->setRenderingHint(osg::StateSet::DEFAULT_BIN);
 	firstPassStateSet->setRenderBinDetails(osg::StateSet::DEFAULT_BIN, "", osg::StateSet::OVERRIDE_RENDERBIN_DETAILS);
