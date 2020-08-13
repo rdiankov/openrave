@@ -7,9 +7,13 @@
 #include <osg/BlendFunc>
 
 // state control
+#define ENABLE_SHOW_HIGHLIGHT_BEHIND_OBJECTS 1 //< if on, will show selection highlight over other objects
+#define FADE_OUTLINE_WITH_FRAGMENT_DEPTH 1 // will fade out the edges proportionally to view distance. This prevent edges from becoming proportinally too big compared to the distance scene
+#define INVERT_BLUR_AND_EDGE_DETECTION_PASS_ORDER 0 // < normal pipeline order is first edge detection, then blur to soften edges. Inverse order result in slightly different rendering
+
 namespace {
 	const float SELECTED_OBJECT_HIGHLIGHT_INTENSITY(1.0f); //< from 0 to +inf, a multiplier on the highligh intensity, 0 means off, 1 means normal (e.g: 2 means double intensity)
-	const osg::Vec3 SELECTED_OBJECT_HIGHLIGHT_COLOR(0, 1, 0); //< color of the selected object highlight
+	const osg::Vec3 SELECTED_OBJECT_HIGHLIGHT_COLOR(0, 191.0/255, 50.0/255.0); //< color of the selected object highlight
 	const osg::Vec3 OUTLINE_COLOR(0, 0, 0);
 }
 
@@ -18,7 +22,6 @@ namespace {
 #define SHOW_COLORID_SCENE_ONLY 0
 #define SHOW_EDGE_DETECTION_PASS_ONLY 0
 #define BYPASS_BLUR_RENDER_PASS 0
-#define FADE_OUTLINE_WITH_FRAGMENT_DEPTH 1 // will fade out the edges proportionally to view distance. This prevent edges from becoming proportinally too big compared to the distance scene
 
 namespace {
 	const std::string outlineVertStr =
@@ -76,11 +79,11 @@ namespace {
 			"    float alphaIntensity = length(vec2((samples[0].a - samples[1].a)/2, (samples[2].a - samples[3].a)/2));\n"
 			"    float intensity = gradientIntensity(samples);\n"
 			"    bool selected = alphaIntensity > 0 || accessTexel(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y)).a > 0;\n"
-#if			SHOW_BLUR_PASS_ONLY
+#if			SHOW_BLUR_PASS_ONLY || SHOW_EDGE_DETECTION_PASS_ONLY
 			"    gl_FragColor = vec4(intensity, intensity, intensity, 1);\n"
 #else
 			"    if(selected) {"
-			"  		  gl_FragColor = vec4(selectionColor.xyz, intensity * highlightIntensity*0.3 + 0.1);\n" // sum a constant offset in alpha so to create the filling highlight effect
+			"  		  gl_FragColor = vec4(selectionColor.xyz, intensity * highlightIntensity*0.5 + 0.15);\n" // sum a constant offset in alpha so to create the filling highlight effect
 			"         return;\n"
 			"    }\n"
 			"    intensity = intensity * intensity;\n"
@@ -138,7 +141,7 @@ namespace {
 
 			"void main()\n"
 			"{\n"
-#if         BYPASS_BLUR_RENDER_PASS || RENDER_EDGE_DETECTION_PASS_ONLY
+#if         BYPASS_BLUR_RENDER_PASS
 			"    vec4 blur = accessTexel(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
 #else
 			"    vec4 blur = applyBlur(ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
@@ -163,19 +166,20 @@ namespace {
 			"void main()\n"
 			"{\n"
 			" float depthVal = min(2, 4*gl_FragCoord.w);\n"
+#if 	ENABLE_SHOW_HIGHLIGHT_BEHIND_OBJECTS
 			"  if(isSelected == 1) {\n"
 			"    gl_FragDepth = gl_FragCoord.z / 50;\n"
 			"  }   \n"
 			"else {\n"
 			"  gl_FragDepth = gl_FragCoord.z;\n"
 			"}\n"
-
+#endif
 			"\n"
 			"float depthMult = 1.0;\n"
 #if         FADE_OUTLINE_WITH_FRAGMENT_DEPTH
-			"depthMult = min(2, depthVal * 4);\n"
+			"depthMult = min(2, depthVal * 3);\n"
 #endif
-			" gl_FragColor = vec4((uniqueColorId*0.5 + normalize(normal)) * depthMult, isSelected);\n"
+			" gl_FragColor = vec4(normalize(uniqueColorId*0.5 + normalize(normal)) * depthMult, isSelected);\n"
 			"}\n";
 
 	const std::string preRenderVertShaderStr =
@@ -256,7 +260,12 @@ inline RenderPassState* createSecondRenderPass(RenderPassState* firstPassState, 
 {
 	RenderPassState* renderPassState = new RenderPassState();
 	osg::ref_ptr<osg::StateSet> secondPassStateSet = new osg::StateSet();
+#if INVERT_BLUR_AND_EDGE_DETECTION_PASS_ORDER
+	RenderUtils::SetShaderProgramOnStateSet(secondPassStateSet.get(), outlineVertStr, outlineFragStr);
+#else
 	RenderUtils::SetShaderProgramOnStateSet(secondPassStateSet.get(), blurVertStr, blurFragStr);
+#endif
+
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), secondPassStateSet);
 	renderPassState->colorFboTexture = RenderUtils::CreateFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
 	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, osg::Camera::COLOR_BUFFER, renderPassState->colorFboTexture.get());
@@ -275,7 +284,11 @@ inline RenderPassState* createThirdRenderPass(RenderPassState* secondPassState)
 {
 	RenderPassState* renderPassState = new RenderPassState();
 	osg::ref_ptr<osg::StateSet> thirdPassStateSet = new osg::StateSet();
+#if INVERT_BLUR_AND_EDGE_DETECTION_PASS_ORDER
+	RenderUtils::SetShaderProgramOnStateSet(thirdPassStateSet.get(), blurVertStr, blurFragStr);
+#else
 	RenderUtils::SetShaderProgramOnStateSet(thirdPassStateSet.get(), outlineVertStr, outlineFragStr);
+#endif
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), thirdPassStateSet);
 	thirdPassStateSet->setTextureAttributeAndModes(0, secondPassState->colorFboTexture.get(), osg::StateAttribute::ON);
     thirdPassStateSet->addUniform(new osg::Uniform("diffuseTexture", 0));
