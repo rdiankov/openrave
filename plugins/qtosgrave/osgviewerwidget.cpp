@@ -18,6 +18,7 @@
 
 #include <QApplication>
 #include <QDesktopWidget>
+#include <QOpenGLFunctions>
 
 #include <osg/ShadeModel>
 #include <osgDB/ReadFile>
@@ -532,7 +533,7 @@ private:
 
 QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
                                    const boost::function<bool(int)>& onKeyDown, double metersinunit,
-                                   QWidget* parent) : QGLWidget(QGLFormat(QGL::SampleBuffers), parent), _onKeyDown(onKeyDown)
+                                   QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
 {
 
     setFocus( Qt::ActiveWindowFocusReason );
@@ -543,6 +544,8 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     _bLightOn = true;
     _bIsSelectiveActive = false;
     _metersinunit = metersinunit;
+    _fboInitialized = false;
+
     _osgview = new osgViewer::View();
     // disable viewer default light since we are settinup custom lights
     _osgview->setLightingMode(osg::View::NO_LIGHT);
@@ -1618,6 +1621,11 @@ void QOSGViewerWidget::initializeGL() {
 void QOSGViewerWidget::paintGL()
 {
     try {
+        if(!_fboInitialized) {
+            // need to do this in order to make OSG to work with QOpenGLWidget if one wants to use FBO and Render to Texture
+            GetCamera()->getGraphicsContext()->setDefaultFboId(defaultFramebufferObject());
+            _fboInitialized = true;
+        }
         _osgviewer->frame(); // osgViewer::CompositeViewer
     }
     catch(const std::exception& ex) {
@@ -1705,7 +1713,7 @@ void QOSGViewerWidget::keyReleaseEvent(QKeyEvent *event)
 
 bool QOSGViewerWidget::event(QEvent *event)
 {
-    bool handled = QGLWidget::event(event);
+    bool handled = QOpenGLWidget::event(event);
     this->update();
     return handled;
 }

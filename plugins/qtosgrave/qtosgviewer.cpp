@@ -231,8 +231,20 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
     // buffers so color buffer can be oversampled to achieve antialiasing (MSAA antialiasing)
     QSurfaceFormat surfaceFormat;
     surfaceFormat.setSamples(8);
-    // surfaceFormat.setVersion(3, 2);
-    // surfaceFormat.setProfile(QSurfaceFormat::CoreProfile);
+#ifdef OSG_GL3_AVAILABLE
+    surfaceFormat.setVersion(3, 2);
+    surfaceFormat.setProfile(QSurfaceFormat::CoreProfile);
+    surfaceFormat.setRenderableType(QSurfaceFormat::OpenGL);
+    surfaceFormat.setOption(QSurfaceFormat::DebugContext);
+#else
+    surfaceFormat.setVersion(2, 0);
+    surfaceFormat.setProfile(QSurfaceFormat::CompatibilityProfile);
+    surfaceFormat.setRenderableType(QSurfaceFormat::OpenGL);
+#endif
+    surfaceFormat.setOption(QSurfaceFormat::DebugContext);
+    surfaceFormat.setDepthBufferSize(24);
+    surfaceFormat.setStencilBufferSize(8);
+    surfaceFormat.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
     QSurfaceFormat::setDefaultFormat(surfaceFormat);
 
     _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
