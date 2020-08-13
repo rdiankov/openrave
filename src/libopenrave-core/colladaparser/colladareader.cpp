@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "colladacommon.h"
-#include <boost/algorithm/string.hpp>
 #include <openrave/xmlreaders.h>
 #include <openrave/openravejson.h>
 #include <libxml/xmlversion.h>
@@ -499,7 +498,10 @@ public:
             // set description
             if (!!_dom->getAsset()->getDescription()) {
                 daeString pDescription = _dom->getAsset()->getDescription()->getValue();
-                // _penv->description = pDescription->getValue();
+                _penv->description.clear();
+                for (;!!pDescription && (*pDescription) != '\0'; pDescription++) {
+                    _penv->description.push_back(*pDescription);
+                }
             }
 
         }

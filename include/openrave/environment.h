@@ -729,6 +729,7 @@ public:
 
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
         uint64_t _revision;
+        std::string name;   ///< environment name
         std::string description;   ///< environment description
         std::vector<std::string> keywords;  ///< some string values for describinging the environment
     };

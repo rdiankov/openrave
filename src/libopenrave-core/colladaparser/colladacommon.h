@@ -39,6 +39,7 @@ namespace ColladaDOM150 {} // declare in case earlier versions are used
 #include <1.5/dom/domAsset.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 namespace OpenRAVE
 {
