@@ -97,6 +97,18 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
     return proot;
 }
 
+// Generates a unique color id that will be further used by shaders to perform object based operations, such as shader based picking, edge detection and others.
+inline void GenerateAndSetGeometryUniqueColorId( OSGNodePtr geometryNode, int geometryIndex ) {
+    osg::ref_ptr<osg::StateSet> state = geometryNode->getOrCreateStateSet();
+    osg::Matrixd localToWorld = osg::computeLocalToWorld(geometryNode->getParentalNodePaths()[0]);
+    osg::Vec3 position(localToWorld(3,0), localToWorld(3,1), localToWorld(3,2));
+
+    // perturb the position based on the geometry index, in order to create a different color for close geometries.
+    position[geometryIndex % 3] = geometryIndex;
+
+    position.normalize();
+    state->addUniform(new osg::Uniform("uniqueColorId", position));
+}
 
 // Visitor to return the coordinates of a node with respect to another node
 class WorldCoordOfNodeVisitor : public osg::NodeVisitor
@@ -424,6 +436,8 @@ void KinBodyItem::Load()
                 pgeometrydata->setName(str(boost::format("geomdata%d")%igeom));
                 pgeometryroot->addChild(pgeometrydata);
                 pgeometryroot->setName(str(boost::format("geom%d")%igeom));
+
+                GenerateAndSetGeometryUniqueColorId(pgeometryroot, igeom);
                 //  Apply external transform to local transform
                 posglinktrans->addChild(pgeometryroot);
                 _vecgeoms[linkindex][igeom] = GeomNodes(pgeometrydata, pgeometryroot); // overwrite
@@ -464,16 +478,7 @@ void KinBodyItem::Load()
     for(size_t ilink = 0; ilink < addedlinks.size(); ++ilink) {
         if( addedlinks[ilink] == 0 ) {
             OSGGroupPtr osgLink = _veclinks.at(ilink).first;
-            _osgdata->addChild(osgLink);
-            osg::ref_ptr<osg::StateSet> state = osgLink->getOrCreateStateSet();
-
-            // calculate a link position to be used by the shaders
-            // this position is used as a material technique by outline algorithm in order to create a unique color per object, so the post processing edge detection algorithm can work
-            osg::Matrixd localToWorld = osg::computeLocalToWorld(osgLink->getParentalNodePaths()[0]);
-            osg::Vec3 position(localToWorld(3,0), localToWorld(3,1), localToWorld(3,2));
-            position = osg::Vec3(1,1,1) - position;
-            position.normalize();
-            state->addUniform(new osg::Uniform("linkPosition", position * 2 ));
+           _osgdata->addChild(osgLink);
         }
     }
 
