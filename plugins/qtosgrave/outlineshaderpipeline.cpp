@@ -16,26 +16,33 @@
 
 // debug preprocessor variables
 #define SHOW_BLUR_PASS_ONLY 0
-#define SHOW_COLORID_SCENE_ONLY 0
-#define SHOW_EDGE_DETECTION_PASS_ONLY 1
-#define BYPASS_BLUR_RENDER_PASS 0
+#define SHOW_COLORID_SCENE_ONLY 1
+#define SHOW_EDGE_DETECTION_PASS_ONLY 0
+#define BYPASS_BLUR_RENDER_PASS 1
 
 
 namespace {
 	const std::string outlineVertStr =
 			"#version 120\n"
+			"varying vec2 clipPos;"
 			"void main()\n"
 			"{\n"
 			"	// Vertex position in main camera Screen space.\n"
+			"   clipPos = gl_Vertex.xy;\n"
 			"	gl_Position = gl_Vertex;\n"
 			"}\n";
 
 	const std::string outlineFragStr =
 			"#version 120\n"
 			"#extension GL_ARB_texture_multisample : enable \n"
+			"varying vec2 clipPos;"
 			"uniform vec3 outlineColor;"
 			"uniform vec3 selectionColor;"
 			"uniform float highlightIntensity;"
+			"uniform float _DepthThreshold;"
+			"uniform float _NormalThreshold;"
+			"uniform float _DepthNormalThreshold;"
+			"uniform float _DepthNormalThresholdScale;"
 
 			"\n"
 			"uniform sampler2DMS diffuseTexture;\n"
@@ -56,8 +63,7 @@ namespace {
 			"    n[3] = (accessTexel(diffuseTexture, coord + ivec2( -halfScaleFloor, halfScaleCeil )));\n" // topLeftUV
 			"}\n"
 			""
-			"float edgeNormal(in vec4 n[4]) {\n"
-			"    float h = 1;\n"
+			"float edgeNormal(in vec4 n[4], float threshold) {\n"
 			"\n"
 			"    vec3 n0 = n[0].rgb;\n"
 			"    vec3 n1 = n[1].rgb;\n"
@@ -68,36 +74,38 @@ namespace {
 			"    vec3 d1 = (n3 - n2);\n"
 			"\n"
 			"    float edge = sqrt(dot(d0, d0) + dot(d1, d1));\n"
-			"    edge = edge > 0.4 ? 1.0 : 0.0;\n"
 			"    return edge;\n"
 			"}\n"
-			
+
 			"\n"
 
 			"void main()\n"
 			"{\n"
-			" float halfScaleFloor = 0;\n"
-			" float halfScaleCeil = 1;\n"
-			" vec4 samples[4];"
-			" vec4 texelCenter = accessTexel(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
-			" getNeighbors(samples, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
-			" float depthCenterValue = texelCenter.a;\n"
-		//	"    float eNormal = edgeNormal(samples);\n"
+			" 	 vec4 samples[4];"
+			" 	 vec4 texelCenter = accessTexel(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
+			" 	 getNeighbors(samples, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
+			" 	 float depthCenterValue = texelCenter.a;\n"
 			//"    bool selected = alphaIntensity > 0 || texelCenter.a > 0;\n"
 			"    bool selected = false;\n"
-#if			SHOW_BLUR_PASS_ONLY || SHOW_EDGE_DETECTION_PASS_ONLY
 			"\n"
-			 "    float edge = sqrt((samples[1].a - samples[0].a) * (samples[1].a - samples[0].a) + (samples[3].a - samples[2].a)*(samples[3].a - samples[2].a)) * 100;\n"
-			 "    edge = edge > 0.2 * texelCenter.a  ? 1.0 : 0.0;\n"
-			"    gl_FragColor = vec4(edge, edge, edge, 1);\n"
+			"    vec3 normal = normalize(vec3(texelCenter.x, texelCenter.y, texelCenter.z));" // we store normals in 0,1 range, need to unpack to -1,1 range
+			 "   float viewDot = 1 - dot(normalize(normal), normalize(vec3(-clipPos.xy,1)));\n"
+			 "   float normalThreshold01 = clamp((viewDot - _DepthNormalThreshold) / (1 - _DepthNormalThreshold), 0.0, 1.0);\n"
+			 "   float normalThreshold = normalThreshold01 * _DepthNormalThresholdScale + 1;\n"
+			 "   float eNormal = edgeNormal(samples, _NormalThreshold);\n"
+			 "   float edgeDepth = 20*(sqrt((samples[1].a - samples[0].a) * (samples[1].a - samples[0].a)) + ((samples[3].a - samples[2].a)*(samples[3].a - samples[2].a)));\n"
+			 "   float depthThreshold = _DepthThreshold * depthCenterValue * normalThreshold;\n"
+			 "   edgeDepth = edgeDepth > depthThreshold ? 1.0 : 0.0;\n"
+			 "   float edge = max(edgeDepth, eNormal);"
+#if			SHOW_BLUR_PASS_ONLY || SHOW_EDGE_DETECTION_PASS_ONLY
+			"    gl_FragColor = vec4(edge, edge, edge, 1.0);\n"
 		    "    return;\n"
 #else
 			"    if(selected) {"
-			"  		  gl_FragColor = vec4(selectionColor.xyz, intensity * highlightIntensity*0.5 + 0.08);\n" // sum a constant offset in alpha so to create the filling highlight effect
+			"  		  gl_FragColor = vec4(selectionColor.xyz, edge * highlightIntensity*0.5 + 0.08);\n" // sum a constant offset in alpha so to create the filling highlight effect
 			"         return;\n"
 			"    }\n"
-			"    intensity = intensity * intensity;\n"
-		    "    gl_FragColor = vec4(outlineColor, intensity);\n"
+		    "    gl_FragColor = vec4(outlineColor, edge);\n"
 #endif
 			"}\n";
 
@@ -189,7 +197,6 @@ namespace {
 #if         FADE_OUTLINE_WITH_FRAGMENT_DEPTH
 			"depthMult = min(2, depthVal * 3);\n"
 #endif
-			"float viewDot =  1 - abs(dot(normalize(-position), normalize(normal)));"
 			"float depth = gl_FragCoord.w;"
 			" gl_FragColor = vec4(normalize(normal), depth);\n"
 			"}\n";
@@ -287,6 +294,10 @@ RenderPassState* OutlineShaderPipeline::createSecondRenderPass(RenderPassState* 
 	secondPassStateSet->addUniform(new osg::Uniform("outlineColor", _outlineColor));
 	secondPassStateSet->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
 	secondPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
+	secondPassStateSet->addUniform(new osg::Uniform("_DepthThreshold", 1.5f));
+	secondPassStateSet->addUniform(new osg::Uniform("_DepthNormalThreshold", 0.5f));
+	secondPassStateSet->addUniform(new osg::Uniform("_DepthNormalThresholdScale", 7.0f));
+	secondPassStateSet->addUniform(new osg::Uniform("_NormalThreshold", 0.8f));
 
 	return renderPassState;
 }
@@ -312,6 +323,10 @@ RenderPassState* OutlineShaderPipeline::createSecondRenderPass(RenderPassState* 
 	thirdPassStateSet->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
 	thirdPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
 	thirdPassStateSet->addUniform(new osg::Uniform("highlightIntensity", _selectedObjectHighlightIntensity));
+	thirdPassStateSet->addUniform(new osg::Uniform("_DepthThreshold", 0.2f));
+	thirdPassStateSet->addUniform(new osg::Uniform("_DepthNormalThreshold", 0.5f));
+	thirdPassStateSet->addUniform(new osg::Uniform("_DepthNormalThresholdScale", 7.0f));
+	thirdPassStateSet->addUniform(new osg::Uniform("_NormalThreshold", 0.4f));
 
 	return renderPassState;
 }
