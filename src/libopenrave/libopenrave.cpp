@@ -2690,7 +2690,46 @@ void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, ra
 {
     rIkParameterization.SetObject();
     orjson::SetJsonValueByKey(rIkParameterization, "type", GetName(), allocator);
-    orjson::SetJsonValueByKey(rIkParameterization, "transform", _transform, allocator);
+
+    Transform transform = _transform;
+    transform.trans *= fUnitScale;
+    switch (_type & ~IKP_VelocityDataBit) {
+    case IKP_Transform6D:
+        orjson::SetJsonValueByKey(rIkParameterization, "transform", transform, allocator);
+        break;
+    case IKP_Rotation3D:
+        // TODO: need to make this always output 4 values
+        orjson::SetJsonValueByKey(rIkParameterization, "quaternion", transform.rot, allocator);
+        break;
+    case IKP_Translation3D:
+    case IKP_TranslationXY2D:
+    case IKP_TranslationXYOrientation3D:
+        orjson::SetJsonValueByKey(rIkParameterization, "translate", transform.trans, allocator);
+        break;
+    case IKP_Direction3D:
+        orjson::SetJsonValueByKey(rIkParameterization, "direction", transform.rot, allocator);
+        break;
+    case IKP_Ray4D:
+    case IKP_Lookat3D:
+    case IKP_TranslationDirection5D:
+        orjson::SetJsonValueByKey(rIkParameterization, "translate", transform.trans, allocator);
+        orjson::SetJsonValueByKey(rIkParameterization, "direction", transform.rot, allocator);
+        break;
+    case IKP_TranslationLocalGlobal6D:
+        transform.rot *= fUnitScale;
+        orjson::SetJsonValueByKey(rIkParameterization, "translate", transform.trans, allocator);
+        orjson::SetJsonValueByKey(rIkParameterization, "localTranslate", transform.rot, allocator);
+        break;
+    case IKP_TranslationXAxisAngle4D:
+    case IKP_TranslationYAxisAngle4D:
+    case IKP_TranslationZAxisAngle4D:
+    case IKP_TranslationXAxisAngleZNorm4D:
+    case IKP_TranslationYAxisAngleXNorm4D:
+    case IKP_TranslationZAxisAngleYNorm4D:
+        orjson::SetJsonValueByKey(rIkParameterization, "translate", transform.trans, allocator);
+        orjson::SetJsonValueByKey(rIkParameterization, "angle", transform.rot.x, allocator);
+        break;
+    }
 
     if (_mapCustomData.size() > 0) {
         // TODO have to scale _mapCustomData by fUnitScale
@@ -2712,7 +2751,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     if (!rIkParameterization.IsObject()) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("Cannot decode non-object JSON value to IkParameterization"), ORE_InvalidArguments);
     }
-    _type = IKP_None;
+    
     if( rIkParameterization.HasMember("type") ) {
         const char* ptype =  rIkParameterization["type"].GetString();
         if( !!ptype ) {
@@ -2730,12 +2769,65 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
             }
         }
     }
-    if (rIkParameterization.HasMember("transform")) {
-        orjson::LoadJsonValueByKey(rIkParameterization, "transform", _transform);
+
+    switch (_type & ~IKP_VelocityDataBit) {
+    case IKP_Transform6D:
+        if (rIkParameterization.HasMember("transform")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "transform", _transform);
+            _transform.trans *= fUnitScale;
+        }
+        break;
+    case IKP_Rotation3D:
+        if (rIkParameterization.HasMember("quaternion")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "quaternion", _transform.rot);
+        }
+        break;
+    case IKP_Translation3D:
+    case IKP_TranslationXY2D:
+    case IKP_TranslationXYOrientation3D:
+        if (rIkParameterization.HasMember("translate")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+            _transform.trans *= fUnitScale;
+        }
+        break;
+    case IKP_Direction3D:
+        if (rIkParameterization.HasMember("direction")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "direction", _transform.rot);
+        }
+        break;
+    case IKP_Ray4D:
+    case IKP_Lookat3D:
+    case IKP_TranslationDirection5D:
+        if (rIkParameterization.HasMember("translate")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+            _transform.trans *= fUnitScale;
+        }
+        if (rIkParameterization.HasMember("direction")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "direction", _transform.rot);
+        }
+        break;
+    case IKP_TranslationLocalGlobal6D:
+        orjson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
         _transform.trans *= fUnitScale;
+        orjson::LoadJsonValueByKey(rIkParameterization, "localTranslate", _transform.rot);
+        _transform.rot *= fUnitScale;
+        break;
+    case IKP_TranslationXAxisAngle4D:
+    case IKP_TranslationYAxisAngle4D:
+    case IKP_TranslationZAxisAngle4D:
+    case IKP_TranslationXAxisAngleZNorm4D:
+    case IKP_TranslationYAxisAngleXNorm4D:
+    case IKP_TranslationZAxisAngleYNorm4D:
+        if (rIkParameterization.HasMember("translate")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+            _transform.trans *= fUnitScale;
+        }
+        if (rIkParameterization.HasMember("angle")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "angle", _transform.rot.x);
+        }
+        break;
     }
 
-    _mapCustomData.clear();
     if (rIkParameterization.HasMember("customData") && rIkParameterization["customData"].IsArray()) {
         for (rapidjson::Value::ConstValueIterator it = rIkParameterization["customData"].Begin(); it != rIkParameterization["customData"].End(); ++it) {
             std::string id;
