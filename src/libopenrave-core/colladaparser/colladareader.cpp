@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "colladacommon.h"
+#include <boost/algorithm/string.hpp>
 #include <openrave/xmlreaders.h>
 #include <openrave/openravejson.h>
 #include <libxml/xmlversion.h>
@@ -432,7 +433,7 @@ public:
                         RAVELOG_DEBUG("collada reader backcompat parsing for joint values\n");
                     }
                 }
-            }            
+            }
         }
         FOREACHC(itatt,atts) {
             if( itatt->first == "scalegeometry" ) {
