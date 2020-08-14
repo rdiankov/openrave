@@ -45,7 +45,7 @@ public:
         osg::ref_ptr<osg::Texture2DMultisample> tex2D = new osg::Texture2DMultisample;
         tex2D->setTextureSize(width, height);
         tex2D->setSourceFormat(GL_RGBA);
-        tex2D->setInternalFormat(GL_RGBA16F_ARB);
+        tex2D->setInternalFormat(GL_RGBA32F_ARB);
         tex2D->setSourceType(GL_FLOAT);
         tex2D->setNumSamples(4);
         return tex2D.release();

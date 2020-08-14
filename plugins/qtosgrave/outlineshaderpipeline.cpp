@@ -10,15 +10,16 @@
 
 // predefined state control preprocessor variables
 // to change programable state such as highligh color, see OutlineShaderPipeline constructor
-#define ENABLE_SHOW_HIGHLIGHT_BEHIND_OBJECTS 1 //< if on, will show selection highlight over other objects
+#define ENABLE_SHOW_HIGHLIGHT_BEHIND_OBJECTS 0 //< if on, will show selection highlight over other objects
 #define FADE_OUTLINE_WITH_FRAGMENT_DEPTH 1 // will fade out the edges proportionally to view distance. This prevent edges from becoming proportinally too big compared to the distance scene
 #define INVERT_BLUR_AND_EDGE_DETECTION_PASS_ORDER 0 // < normal pipeline order is first edge detection, then blur to soften edges. Inverse order result in slightly different rendering
 
 // debug preprocessor variables
 #define SHOW_BLUR_PASS_ONLY 0
 #define SHOW_COLORID_SCENE_ONLY 0
-#define SHOW_EDGE_DETECTION_PASS_ONLY 0
+#define SHOW_EDGE_DETECTION_PASS_ONLY 1
 #define BYPASS_BLUR_RENDER_PASS 0
+
 
 namespace {
 	const std::string outlineVertStr =
@@ -46,41 +47,53 @@ namespace {
 			"void getNeighbors(inout vec4 n[4], ivec2 coord)\n"
 			"{\n"
 			" // n values are stored from - to +, first x then y \n"
-			"    float h = 1;\n"
+			" float halfScaleFloor = 0;\n"
+			" float halfScaleCeil = 1;\n"
 			"\n"
-			"    n[0] = (accessTexel(diffuseTexture, coord + ivec2( -h, 0 )));\n"
-			"    n[1] = (accessTexel(diffuseTexture, coord + ivec2( h, 0 )));\n"
-			"    n[2] = (accessTexel(diffuseTexture, coord + ivec2( 0.0, -h )));\n"
-			"    n[3] = (accessTexel(diffuseTexture, coord + ivec2( 0.0, h )));\n"
+			"    n[0] = (accessTexel(diffuseTexture, coord + ivec2( -halfScaleFloor, -halfScaleFloor )));\n" // bottomLeftUV
+			"    n[1] = (accessTexel(diffuseTexture, coord + ivec2( halfScaleCeil, halfScaleCeil )));\n" // topRightUV
+			"    n[2] = (accessTexel(diffuseTexture, coord + ivec2( halfScaleCeil, -halfScaleFloor )));\n" // bottomRightUV
+			"    n[3] = (accessTexel(diffuseTexture, coord + ivec2( -halfScaleFloor, halfScaleCeil )));\n" // topLeftUV
 			"}\n"
 			""
-			"float gradientIntensity(in vec4 n[4]) {\n"
+			"float edgeNormal(in vec4 n[4]) {\n"
 			"    float h = 1;\n"
 			"\n"
-			"    vec4 xm = n[0].rgba;\n"
-			"    vec4 xp = n[1].rgba;\n"
-			"    vec4 ym = n[2].rgba;\n"
-			"    vec4 yp = n[3].rgba;\n"
+			"    vec3 n0 = n[0].rgb;\n"
+			"    vec3 n1 = n[1].rgb;\n"
+			"    vec3 n2 = n[2].rgb;\n"
+			"    vec3 n3 = n[3].rgb;\n"
 			"\n"
-			"    vec4 dx = (xp - xm) / (2 * h);\n"
-			"    vec4 dy = (yp - ym) / (2 * h);\n"
+			"    vec3 d0 = (n1 - n0);\n"
+			"    vec3 d1 = (n3 - n2);\n"
 			"\n"
-			"    return length(dx) + length(dy);\n"
+			"    float edge = sqrt(dot(d0, d0) + dot(d1, d1));\n"
+			"    edge = edge > 0.4 ? 1.0 : 0.0;\n"
+			"    return edge;\n"
 			"}\n"
+			
 			"\n"
 
 			"void main()\n"
 			"{\n"
-			" 	 vec4 samples[4];"
-			"    getNeighbors(samples, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
-			"    float alphaIntensity = length(vec2((samples[0].a - samples[1].a)/2, (samples[2].a - samples[3].a)/2));\n"
-			"    float intensity = gradientIntensity(samples);\n"
-			"    bool selected = alphaIntensity > 0 || accessTexel(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y)).a > 0;\n"
+			" float halfScaleFloor = 0;\n"
+			" float halfScaleCeil = 1;\n"
+			" vec4 samples[4];"
+			" vec4 texelCenter = accessTexel(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
+			" getNeighbors(samples, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
+			" float depthCenterValue = texelCenter.a;\n"
+		//	"    float eNormal = edgeNormal(samples);\n"
+			//"    bool selected = alphaIntensity > 0 || texelCenter.a > 0;\n"
+			"    bool selected = false;\n"
 #if			SHOW_BLUR_PASS_ONLY || SHOW_EDGE_DETECTION_PASS_ONLY
-			"    gl_FragColor = vec4(intensity, intensity, intensity, 1);\n"
+			"\n"
+			 "    float edge = sqrt((samples[1].a - samples[0].a) * (samples[1].a - samples[0].a) + (samples[3].a - samples[2].a)*(samples[3].a - samples[2].a)) * 100;\n"
+			 "    edge = edge > 0.2 * texelCenter.a  ? 1.0 : 0.0;\n"
+			"    gl_FragColor = vec4(edge, edge, edge, 1);\n"
+		    "    return;\n"
 #else
 			"    if(selected) {"
-			"  		  gl_FragColor = vec4(selectionColor.xyz, intensity * highlightIntensity*0.5 + 0.25);\n" // sum a constant offset in alpha so to create the filling highlight effect
+			"  		  gl_FragColor = vec4(selectionColor.xyz, intensity * highlightIntensity*0.5 + 0.08);\n" // sum a constant offset in alpha so to create the filling highlight effect
 			"         return;\n"
 			"    }\n"
 			"    intensity = intensity * intensity;\n"
@@ -176,7 +189,9 @@ namespace {
 #if         FADE_OUTLINE_WITH_FRAGMENT_DEPTH
 			"depthMult = min(2, depthVal * 3);\n"
 #endif
-			" gl_FragColor = vec4(normalize(uniqueColorId*0.5 + normalize(normal)) * depthMult, isSelected);\n"
+			"float viewDot =  1 - abs(dot(normalize(-position), normalize(normal)));"
+			"float depth = gl_FragCoord.w;"
+			" gl_FragColor = vec4(normalize(normal), depth);\n"
 			"}\n";
 
 	const std::string preRenderVertShaderStr =
@@ -190,10 +205,11 @@ namespace {
 			"void main()\n"
 			"{\n"
 			"    color = gl_Color;\n"
-			"    normal = (gl_Normal);\n"
-			"    position = gl_Vertex.xyz;\n"
+			"    normal = (gl_ModelViewMatrix * vec4(gl_Normal, 0)).xyz;\n"
+			"    vec4 inPos = vec4(gl_Vertex.xyz, 1);"
+			"    position = (gl_ModelViewMatrix * inPos).xyz;\n"
 			"    // Calculate vertex position in clip coordinates\n"
-			"    gl_Position = gl_ModelViewProjectionMatrix * vec4(gl_Vertex.xyz, 1);\n"
+			"    gl_Position = gl_ModelViewProjectionMatrix * inPos;\n"
 			"}\n";
 }
 
