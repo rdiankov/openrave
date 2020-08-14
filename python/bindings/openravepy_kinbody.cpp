@@ -176,8 +176,11 @@ std::map<std::string, ReadablePtr> ExtractReadableInterfaces(object pyReadableIn
     py::dict pyReadableInterfacesDict = (py::dict)pyReadableInterfaces;
     std::map<std::string, ReadablePtr> mReadableInterfaces;
     try {
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        py::list keys = py::list(pyReadableInterfacesDict);
+#else
         py::list keys = py::list(pyReadableInterfacesDict.keys());
+#endif
         size_t numkeys = len(keys);
         for(size_t iKey = 0; iKey < numkeys; iKey++) {
             std::string name = py::extract<std::string>(keys[iKey]);
@@ -3640,15 +3643,26 @@ object PyKinBody::GetGrabbed() const
     return bodies;
 }
 
-object PyKinBody::GetGrabbedInfo() const
+object PyKinBody::GetGrabbedInfo(py::object ograbbedname) const
 {
-    py::list ograbbed;
-    std::vector<RobotBase::GrabbedInfo> vgrabbedinfo;
-    _pbody->GetGrabbedInfo(vgrabbedinfo);
-    FOREACH(itgrabbed, vgrabbedinfo) {
-        ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(*itgrabbed)));
+    // preferably GetGrabbedInfo return values do not differ as grabbedname changes, but due to back compat, it is unavoidable.
+    if (IS_PYTHONOBJECT_NONE(ograbbedname)) {
+        py::list ograbbed;
+        std::vector<RobotBase::GrabbedInfo> vgrabbedinfo;
+        _pbody->GetGrabbedInfo(vgrabbedinfo);
+        FOREACH(itgrabbed, vgrabbedinfo) {
+            ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(*itgrabbed)));
+        }
+        return ograbbed;
     }
-    return ograbbed;
+    else {
+        std::string grabbedname = py::extract<std::string>(ograbbedname);
+        RobotBase::GrabbedInfo grabbedInfo;
+        if( !_pbody->GetGrabbedInfo(grabbedname, grabbedInfo) ) {
+            return py::none_();
+        }
+        return py::to_object(PyGrabbedInfoPtr(new PyGrabbedInfo(grabbedInfo)));
+    }
 }
 
 void PyKinBody::ResetGrabbed(object ograbbedinfos)
@@ -4265,6 +4279,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromTrimesh_overloads, InitFromTrimes
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromGeometries_overloads, InitFromGeometries, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromLinkInfos_overloads, InitFromLinkInfos, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetGrabbedInfo_overloads, GetGrabbedInfo, 0, 1)
 // SerializeJSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
@@ -5124,7 +5139,14 @@ void init_openravepy_kinbody()
                          .def("RegrabAll",&PyKinBody::RegrabAll, DOXY_FN(KinBody,RegrabAll))
                          .def("IsGrabbing",&PyKinBody::IsGrabbing,PY_ARGS("body") DOXY_FN(KinBody,IsGrabbing))
                          .def("GetGrabbed",&PyKinBody::GetGrabbed, DOXY_FN(KinBody,GetGrabbed))
-                         .def("GetGrabbedInfo",&PyKinBody::GetGrabbedInfo, DOXY_FN(KinBody,GetGrabbedInfo))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("GetGrabbedInfo", &PyKinBody::GetGrabbedInfo,
+                              "grabbedname"_a = py::none_(),
+                              DOXY_FN(KinBody,GetGrabbedInfo)
+                              )
+#else
+                         .def("GetGrabbedInfo",&PyKinBody::GetGrabbedInfo, GetGrabbedInfo_overloads(PY_ARGS("grabbedname") DOXY_FN(KinBody,GetGrabbedInfo)))
+#endif
                          .def("ResetGrabbed",&PyKinBody::ResetGrabbed, PY_ARGS("grabbedinfos") DOXY_FN(KinBody,ResetGrabbed))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("ComputeHessianTranslation", &PyKinBody::ComputeHessianTranslation,

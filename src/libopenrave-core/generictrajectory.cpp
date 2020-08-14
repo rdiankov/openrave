@@ -147,10 +147,17 @@ public:
         if( index2 == string::npos ) {
             index2 = g2.name.size();
         }
-        std::map<string,int>::iterator it1 = _maporder.find(g1.name.substr(0,index1));
-        std::map<string,int>::iterator it2 = _maporder.find(g2.name.substr(0,index2));
+
+        const string g1prefix =  g1.name.substr(0,index1);
+        const string g2prefix =  g2.name.substr(0,index2);
+        std::map<string,int>::iterator it1 = _maporder.find(g1prefix);
+        std::map<string,int>::iterator it2 = _maporder.find(g2prefix);
+        
+        if( it1 == _maporder.end() && it2 == _maporder.end()) {
+            return g1prefix < g2prefix;
+        }
         if( it1 == _maporder.end() ) {
-            return it2 == _maporder.end();
+            return false;
         }
         if( it2 == _maporder.end()) {
             return true;

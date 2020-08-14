@@ -2253,6 +2253,7 @@ object PyEnvironmentBase::GetPublishedBodies(uint64_t timeout)
         ostate["environmentid"] = itstate->environmentid;
         ostate["activeManipulatorName"] = itstate->activeManipulatorName;
         ostate["activeManipulatorTransform"] = ReturnTransform(itstate->activeManipulatorTransform);
+        ostate["numGrabbedInfos"] = itstate->vGrabbedInfos.size();
         ostates.append(ostate);
     }
     return ostates;
@@ -2281,6 +2282,8 @@ object PyEnvironmentBase::GetPublishedBody(const std::string &name, uint64_t tim
     ostate["environmentid"] = bodystate.environmentid;
     ostate["activeManipulatorName"] = bodystate.activeManipulatorName;
     ostate["activeManipulatorTransform"] = ReturnTransform(bodystate.activeManipulatorTransform);
+    ostate["numGrabbedInfos"] = bodystate.vGrabbedInfos.size();
+    //ostate["vGrabbedInfos"] TODO
     return ostate;
 }
 
