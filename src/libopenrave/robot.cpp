@@ -2809,14 +2809,14 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
             if ((*itExistingGripperInfo)->_id == (*itGripperInfo)->_id) {
                 // find existing gripperinfo
                 if ((*itExistingGripperInfo) != (*itGripperInfo)) {
-                    return UFIR_RequireRemoveFromEnvironment;
+                    return UFIR_RequireReinitialize;
                 }
                 break;
             }
         }
         if (itExistingGripperInfo == _vecGripperInfos.end()) {
             // new gripper info
-            return UFIR_RequireRemoveFromEnvironment;
+            return UFIR_RequireReinitialize;
         }
     }
 

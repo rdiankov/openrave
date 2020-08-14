@@ -494,7 +494,7 @@ std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArray(objec
 
 std::vector<RobotBase::GripperInfoPtr> ExtractGripperInfoArray(object pyGripperInfoList)
 {
-    if( IS_PYTHONOBJECT_NONE(pyGripperInfoList) ) {
+    if(IS_PYTHONOBJECT_NONE(pyGripperInfoList)) {
         return {};
     }
     std::vector<RobotBase::GripperInfoPtr> vGripperInfos;
