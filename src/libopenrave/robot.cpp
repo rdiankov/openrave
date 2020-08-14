@@ -2800,7 +2800,6 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
         return UFIR_RequireRemoveFromEnvironment;
     }
 
-
     // gripperinfos
     FOREACHC(itGripperInfo, info._vGripperInfos) {
         // find exisiting gripperinfo in robot
