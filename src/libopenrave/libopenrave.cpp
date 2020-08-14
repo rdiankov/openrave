@@ -2751,7 +2751,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     if (!rIkParameterization.IsObject()) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("Cannot decode non-object JSON value to IkParameterization"), ORE_InvalidArguments);
     }
-    _type = IKP_None;
+    
     if( rIkParameterization.HasMember("type") ) {
         const char* ptype =  rIkParameterization["type"].GetString();
         if( !!ptype ) {
@@ -2828,7 +2828,6 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
         break;
     }
 
-    _mapCustomData.clear();
     if (rIkParameterization.HasMember("customData") && rIkParameterization["customData"].IsArray()) {
         for (rapidjson::Value::ConstValueIterator it = rIkParameterization["customData"].Begin(); it != rIkParameterization["customData"].End(); ++it) {
             std::string id;
