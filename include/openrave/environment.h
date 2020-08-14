@@ -729,6 +729,9 @@ public:
 
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
         uint64_t _revision;
+        std::string name;   ///< environment name
+        std::string description;   ///< environment description
+        std::vector<std::string> keywords;  ///< some string values for describinging the environment
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;
@@ -749,6 +752,9 @@ public:
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info) = 0;
 
+    std::string name;   ///< environment name
+    std::string description;   ///< environment description
+    std::vector<std::string> keywords;  ///< some string values for describinging the environment
 
 protected:
     virtual const char* GetHash() const {

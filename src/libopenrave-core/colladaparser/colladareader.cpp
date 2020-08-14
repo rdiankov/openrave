@@ -477,6 +477,41 @@ public:
                     _penv->GetPhysicsEngine()->SetGravity(Vector(0,0,f));
                 }
             }
+            // set name
+            if(!!_dom->getAsset()->getName()) {
+                daeString pName = _dom->getAsset()->getName()->getValue();
+                _penv->name.clear();
+                for(;!!pName && (*pName) != '\0'; pName++) {
+                    _penv->name.push_back(*pName);
+                }
+            }
+
+            // set keywords
+            if(!!_dom->getAsset()->getKeywords()) {
+                daeString pkeywords = _dom->getAsset()->getKeywords()->getValue();
+                std::string keyword {};
+                for(;!!pkeywords && (*pkeywords) != '\0'; pkeywords++) {
+                    if((*pkeywords) == ',') {
+                        _penv->keywords.push_back(keyword);
+                        keyword.clear();
+                        continue;
+                    }
+                    keyword.push_back(*pkeywords);
+                }
+                if (keyword.size() > 0){
+                    _penv->keywords.push_back(keyword);
+                }
+            }
+
+            // set description
+            if (!!_dom->getAsset()->getDescription()) {
+                daeString pDescription = _dom->getAsset()->getDescription()->getValue();
+                _penv->description.clear();
+                for(;!!pDescription && (*pDescription) != '\0'; pDescription++) {
+                    _penv->description.push_back(*pDescription);
+                }
+            }
+
         }
 
         for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {

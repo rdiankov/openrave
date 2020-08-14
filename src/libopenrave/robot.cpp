@@ -555,7 +555,6 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& rRobotBaseInfo, r
     KinBody::KinBodyInfo::SerializeJSON(rRobotBaseInfo, allocator, fUnitScale, options);
 
     orjson::SetJsonValueByKey(rRobotBaseInfo, "isRobot", true, allocator);
-
     if (_vManipulatorInfos.size() > 0) {
         rapidjson::Value rManipulatorInfoValues;
         rManipulatorInfoValues.SetArray();
@@ -2651,7 +2650,6 @@ const std::string& RobotBase::GetRobotStructureHash() const
 void RobotBase::ExtractInfo(RobotBaseInfo& info)
 {
     KinBody::ExtractInfo(info);
-
     info._isRobot = true;
     // need to avoid extracting info from connectedbodies
     std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);
@@ -2721,6 +2719,7 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
 UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
 {
     UpdateFromInfoResult updateFromInfoResult = UpdateFromKinBodyInfo(info);
+
     if (updateFromInfoResult != UFIR_Success) {
         return updateFromInfoResult;
     }
@@ -2800,7 +2799,6 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
         }
         return UFIR_RequireRemoveFromEnvironment;
     }
-
 
     // gripperinfos
     FOREACHC(itGripperInfo, info._vGripperInfos) {

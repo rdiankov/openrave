@@ -2258,6 +2258,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _id = info._id;
     _name = info._name;
     _uri = info._uri;
+    _interfaceType = info._interfaceType;
     _referenceUri = info._referenceUri;
     _vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(info._vLinkInfos), end(info._vLinkInfos));
     _vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(info._vJointInfos), end(info._vJointInfos));
@@ -2267,6 +2268,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _name = ConvertStringToUnicode(info._name);
     _uri = ConvertStringToUnicode(info._uri);
     _referenceUri = ConvertStringToUnicode(info._referenceUri);
+    _interfaceType = ConvertStringToUnicode(info._interfaceType);
     py::list vLinkInfos;
     FOREACHC(itLinkInfo, info._vLinkInfos) {
         PyLinkInfo info = PyLinkInfo(**itLinkInfo);
@@ -4795,6 +4797,7 @@ void init_openravepy_kinbody()
                          .def_readwrite("_vGrabbedInfos",&PyKinBody::PyKinBodyInfo::_vGrabbedInfos)
                          .def_readwrite("_id", &PyKinBody::PyKinBodyInfo::_id)
                          .def_readwrite("_name", &PyKinBody::PyKinBodyInfo::_name)
+                         .def_readwrite("_interfaceType", &PyKinBody::PyKinBodyInfo::_interfaceType)
                          .def_readwrite("_uri", &PyKinBody::PyKinBodyInfo::_uri)
                          .def_readwrite("_referenceUri", &PyKinBody::PyKinBodyInfo::_referenceUri)
                          .def_readwrite("_dofValues", &PyKinBody::PyKinBodyInfo::_dofValues)
