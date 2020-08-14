@@ -488,6 +488,7 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     pInfo->_id = _id;
     pInfo->_name = _name;
+    pInfo->_interfaceType = _interfaceType;
     pInfo->_uri = _uri;
     pInfo->_referenceUri = _referenceUri;
     pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
@@ -502,6 +503,9 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     }
     if (!IS_PYTHONOBJECT_NONE(_name)) {
         pInfo->_name = py::extract<std::string>(_name);
+    }
+    if (!IS_PYTHONOBJECT_NONE(_interfaceType)) {
+        pInfo->_interfaceType = py::extract<std::string>(_interfaceType);
     }
     if (!IS_PYTHONOBJECT_NONE(_uri)) {
         pInfo->_uri = py::extract<std::string>(_uri);

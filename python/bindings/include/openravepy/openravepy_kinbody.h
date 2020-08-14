@@ -141,6 +141,7 @@ public:
     std::string _uri;
     std::string _id;
     std::string _name;
+    std::string _interfaceType;
     std::string _referenceUri;
 #else
     py::object _vLinkInfos = py::none_();
@@ -150,6 +151,7 @@ public:
     py::object _referenceUri = py::none_();
     py::object _id = py::none_();
     py::object _name = py::none_();
+    py::object _interfaceType = py::none_();
 #endif
     py::object _transform = ReturnTransform(Transform());
     bool _isRobot = false;
