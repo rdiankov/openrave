@@ -2448,11 +2448,13 @@ public:
         keywords = info.keywords;
         description = info.description;
 
+        RAVELOG_DEBUG("=== UpdateFromInfo start ===");
         FOREACHC(itBodyInfo, info._vBodyInfos) {
             KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
             if(pKinBodyInfo->_id.empty()){
                 pKinBodyInfo->_id = pKinBodyInfo->_name;
             }
+            RAVELOG_DEBUG_FORMAT("==== %s ===", pKinBodyInfo->_id);
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
 
             // find existing body in the env
@@ -2460,6 +2462,7 @@ public:
             FOREACH(itBody, _vecbodies) {
                 if ((*itBody)->_id == (*itBodyInfo)->_id) {
                     itExistingBody = itBody;
+                    RAVELOG_DEBUG_FORMAT("found existing body %s in environment", (*itBody)->_id);
                     break;
                 }
             }
@@ -2469,6 +2472,7 @@ public:
                 pBody = *itExistingBody;
                 bool bInterfaceMatches = pBody->GetXMLId() == pKinBodyInfo->_interfaceType;
                 if( !bInterfaceMatches || pBody->IsRobot() != pKinBodyInfo->_isRobot ) {
+                    RAVELOG_DEBUG_FORMAT("body %s interface is changed, remove old body from environment. xmlid=%s, _interfaceType=%s, isRobot %d != %d", pBody->_id%pBody->GetXMLId()%pKinBodyInfo->_interfaceType%pBody->IsRobot()%pKinBodyInfo->_isRobot);
                     boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                     _RemoveKinBodyFromIterator(itExistingBody);
                     itExistingBody = _vecbodies.end();
@@ -2476,8 +2480,8 @@ public:
             }
     
             if(itExistingBody != _vecbodies.end()) {
+                RAVELOG_DEBUG_FORMAT("update existing body %s", (*itExistingBody)->_id);
                 // interface should match at this point
-
                 // update existing body or robot
                 UpdateFromInfoResult updateFromInfoResult = UFIR_RequireRemoveFromEnvironment;
                 pBody = *itExistingBody;
@@ -2493,7 +2497,7 @@ public:
                 else if (!pKinBodyInfo->_isRobot && !pBody->IsRobot()) {
                     updateFromInfoResult = pBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                 }
-
+                RAVELOG_DEBUG_FORMAT("update body %s from info result %d", pBody->_id%updateFromInfoResult);
                 if (updateFromInfoResult == UFIR_Success) {
                     continue;
                 }
@@ -2536,6 +2540,7 @@ public:
             else {
                 // for new body or robot
                 if (pKinBodyInfo->_isRobot) {
+                    RAVELOG_DEBUG_FORMAT("add new robot %s", pKinBodyInfo->_id);
                     RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), pKinBodyInfo->_interfaceType);
                     if( !pRobot ) {
                         pRobot = RaveCreateRobot(shared_from_this(), "");
@@ -2551,6 +2556,7 @@ public:
                     pBody = RaveInterfaceCast<KinBody>(pRobot);
                 }
                 else {
+                    RAVELOG_DEBUG_FORMAT("add new kinbody %s", pKinBodyInfo->_id);
                     pBody = RaveCreateKinBody(shared_from_this(), pKinBodyInfo->_interfaceType);
                     if( !pBody ) {
                         pBody = RaveCreateKinBody(shared_from_this(), "");
@@ -2592,6 +2598,7 @@ public:
                 ++itBody;
                 continue;
             }
+            RAVELOG_DEBUG_FORMAT("remove extra body id=%s, name=%s", (*itBody)->_id%(*itBody)->_name);
             {
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                 _RemoveKinBodyFromIterator(itBody);
