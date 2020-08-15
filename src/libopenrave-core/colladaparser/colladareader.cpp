@@ -464,6 +464,18 @@ public:
             return false;
         }
 
+
+        // set name
+        const domInstance_kinematics_scene_Array& ikscene = allscene->getInstance_kinematics_scene_array();
+        if (ikscene.getCount() == 0) {
+            return false;
+        }
+        daeString pName = ikscene[0]->getName();
+        _penv->name.clear();
+        for(;!!pName && (*pName) != '\0'; pName++) {
+            _penv->name.push_back(*pName);
+        }
+
         if( !!_dom->getAsset() ) {
             if( !!_dom->getAsset()->getUp_axis() && !!_penv->GetPhysicsEngine() ) {
                 float f = -9.7979302;
@@ -477,15 +489,6 @@ public:
                     _penv->GetPhysicsEngine()->SetGravity(Vector(0,0,f));
                 }
             }
-            // set name
-            if(!!_dom->getAsset()->getName()) {
-                daeString pName = _dom->getAsset()->getName()->getValue();
-                _penv->name.clear();
-                for(;!!pName && (*pName) != '\0'; pName++) {
-                    _penv->name.push_back(*pName);
-                }
-            }
-
             // set keywords
             if(!!_dom->getAsset()->getKeywords()) {
                 daeString pkeywords = _dom->getAsset()->getKeywords()->getValue();
@@ -504,8 +507,8 @@ public:
             }
 
             // set description
-            if (!!_dom->getAsset()->getDescription()) {
-                daeString pDescription = _dom->getAsset()->getDescription()->getValue();
+            if (!!_dom->getAsset()->getSubject()) {
+                daeString pDescription = _dom->getAsset()->getSubject()->getValue();
                 _penv->description.clear();
                 for(;!!pDescription && (*pDescription) != '\0'; pDescription++) {
                     _penv->description.push_back(*pDescription);
