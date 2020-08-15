@@ -2117,6 +2117,7 @@ public:
     inline void Swap(IkParameterization& r) {
         std::swap(_transform, r._transform);
         std::swap(_type, r._type);
+        std::swap(id, r.id);
         _mapCustomData.swap(r._mapCustomData);
     }
 
@@ -2125,7 +2126,8 @@ public:
     void DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale=1.0);
 
     virtual bool operator==(const IkParameterization& other) const {
-        return _type == other._type
+        return id == other.id
+            && _type == other._type
             && _transform == other._transform
             && _mapCustomData == other._mapCustomData;
     }
@@ -2133,6 +2135,9 @@ public:
     virtual bool operator!=(const IkParameterization& other) const {
         return !operator==(other);
     }
+
+    std::string id;
+
 
 protected:
     inline static bool _IsValidCharInName(char c) {
@@ -2240,6 +2245,7 @@ protected:
 
     Transform _transform;
     IkParameterizationType _type;
+
     std::map<std::string, std::vector<dReal> > _mapCustomData;
 
     friend IkParameterization operator* (const Transform &t, const IkParameterization &ikparam);
