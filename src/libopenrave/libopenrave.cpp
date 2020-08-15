@@ -2840,6 +2840,11 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
             if (id.empty()) {
                 continue;
             }
+            // delete
+            if (OpenRAVE::orjson::GetJsonValueByKey<bool>(*it, "__deleted__", false)) {
+                _mapCustomData.erase(id);
+                continue;
+            }
             orjson::LoadJsonValueByKey(*it, "values", _mapCustomData[id]);
         }
     }
