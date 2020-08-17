@@ -310,18 +310,23 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 }
 
 void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value) {
-    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, KinBodyPtr(), AttributesList());
+    std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
+    ReadablePtr pReadable;
+    if(itReadable != _mReadableInterfaces.end()) {
+        pReadable = itReadable->second;
+    }
+    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, pReadable, AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value);
-        ReadablePtr pReadable = pReader->GetReadable();
-        if (!!pReadable) {
-            _mReadableInterfaces[id] = pReadable;
-        }
+        _mReadableInterfaces[id] = pReader->GetReadable();
+        return;
     }
-    else if (value.IsString()) {
+    if (value.IsString()) {
         StringReadablePtr pReadable(new StringReadable(id, value.GetString()));
         _mReadableInterfaces[id] = pReadable;
+        return;
     }
+    RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)

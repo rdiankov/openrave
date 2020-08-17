@@ -477,7 +477,7 @@ public:
 };
 typedef boost::shared_ptr<BaseJSONReader> BaseJSONReaderPtr;
 typedef boost::shared_ptr<BaseJSONReader const> BaseJSONReaderConstPtr;
-typedef boost::function<BaseJSONReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateJSONReaderFn;
+typedef boost::function<BaseJSONReaderPtr(ReadablePtr, const AttributesList&)> CreateJSONReaderFn;
 
 } // end namespace OpenRAVE
 
@@ -2702,7 +2702,7 @@ OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::s
 /// \brief Returns the current registered json reader for the interface type/id
 ///
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
-OPENRAVE_API BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, InterfaceBasePtr pinterface, const AttributesList& atts);
+OPENRAVE_API BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, ReadablePtr pReadable, const AttributesList& atts);
 
 /** \brief Returns the absolute path of the filename on the local filesystem resolving relative paths from OpenRAVE paths.
 

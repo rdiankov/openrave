@@ -701,14 +701,14 @@ protected:
         return UserDataPtr(new JSONReaderFunctionData(type,id,fn,shared_from_this()));
     }
 
-    const BaseJSONReaderPtr CallJSONReader(InterfaceType type, const std::string& id, InterfaceBasePtr pinterface, const AttributesList& atts)
+    const BaseJSONReaderPtr CallJSONReader(InterfaceType type, const std::string& id, ReadablePtr pReadable, const AttributesList& atts)
     {
         JSONREADERSMAP::iterator it = _mapjsonreaders[type].find(id);
         if( it == _mapjsonreaders[type].end() ) {
             //throw openrave_exception(str(boost::format(_("No function registered for interface %s xml tag %s"))%GetInterfaceName(type)%id),ORE_InvalidArguments);
             return BaseJSONReaderPtr();
         }
-        return it->second(pinterface,atts);
+        return it->second(pReadable, atts);
     }
 
     boost::shared_ptr<RaveDatabase> GetDatabase() const {
@@ -1366,9 +1366,9 @@ BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag
     return RaveGlobal::instance()->CallXMLReader(type,xmltag,pinterface,atts);
 }
 
-BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, InterfaceBasePtr pinterface, const AttributesList& atts)
+BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, ReadablePtr pReadable, const AttributesList& atts)
 {
-    return RaveGlobal::instance()->CallJSONReader(type,id,pinterface,atts);
+    return RaveGlobal::instance()->CallJSONReader(type, id, pReadable, atts);
 }
 
 std::string RaveFindLocalFile(const std::string& filename, const std::string& curdir)

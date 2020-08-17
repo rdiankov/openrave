@@ -167,7 +167,8 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
         if( !!_psensor ) {
             _psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%_info._name)); // need a unique targettable name
             if(_info._docSensorGeometry.IsObject()) {
-                BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, _info._sensorname, InterfaceBasePtr(), AttributesList());
+                ReadablePtr pReadable;
+                BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, _info._sensorname, pReadable, AttributesList());
                 if (!!pReader) {
                     pReader->DeserializeJSON(_info._docSensorGeometry);
                     ReadablePtr pReadable = pReader->GetReadable();
@@ -658,18 +659,23 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
 }
 
 void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value) {
-    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, RobotBasePtr(), AttributesList());
+    std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
+    ReadablePtr pReadable;
+    if(itReadable != _mReadableInterfaces.end()) {
+        pReadable = itReadable->second;
+    }
+    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, pReadable, AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value);
-        ReadablePtr pReadable = pReader->GetReadable();
-        if (!!pReadable) {
-            _mReadableInterfaces[id] = pReadable;
-        }
+        _mReadableInterfaces[id] = pReader->GetReadable();
+        return;
     }
-    else if (value.IsString()) {
+    if (value.IsString()) {
         StringReadablePtr pReadable(new StringReadable(id, value.GetString()));
         _mReadableInterfaces[id] = pReadable;
+        return;
     }
+    RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
 }
 
 RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
