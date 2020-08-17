@@ -464,17 +464,12 @@ public:
             return false;
         }
 
-
         // set name
         const domInstance_kinematics_scene_Array& ikscene = allscene->getInstance_kinematics_scene_array();
         if (ikscene.getCount() == 0) {
             return false;
         }
-        daeString pName = ikscene[0]->getName();
-        _penv->name.clear();
-        for(;!!pName && (*pName) != '\0'; pName++) {
-            _penv->name.push_back(*pName);
-        }
+        _penv->name = ikscene[0]->getName();
 
         if( !!_dom->getAsset() ) {
             if( !!_dom->getAsset()->getUp_axis() && !!_penv->GetPhysicsEngine() ) {
@@ -491,30 +486,13 @@ public:
             }
             // set keywords
             if(!!_dom->getAsset()->getKeywords()) {
-                daeString pkeywords = _dom->getAsset()->getKeywords()->getValue();
-                std::string keyword {};
-                for(;!!pkeywords && (*pkeywords) != '\0'; pkeywords++) {
-                    if((*pkeywords) == ',') {
-                        _penv->keywords.push_back(keyword);
-                        keyword.clear();
-                        continue;
-                    }
-                    keyword.push_back(*pkeywords);
-                }
-                if (keyword.size() > 0){
-                    _penv->keywords.push_back(keyword);
-                }
+                std::string keywords = _dom->getAsset()->getKeywords()->getValue();;
+                boost::split(_penv->keywords, keywords, boost::is_any_of(", "), boost::token_compress_on);
             }
-
             // set description
             if (!!_dom->getAsset()->getSubject()) {
-                daeString pDescription = _dom->getAsset()->getSubject()->getValue();
-                _penv->description.clear();
-                for(;!!pDescription && (*pDescription) != '\0'; pDescription++) {
-                    _penv->description.push_back(*pDescription);
-                }
+                _penv->description = _dom->getAsset()->getSubject()->getValue();
             }
-
         }
 
         for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {
