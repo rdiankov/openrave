@@ -97,17 +97,6 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
     return proot;
 }
 
-// Generates a unique color id that will be further used by shaders to perform object based operations, such as shader based picking, edge detection and others.
-inline void GenerateAndSetGeometryUniqueColorId( OSGNodePtr geometryNode, int geometryIndex ) {
-    osg::ref_ptr<osg::StateSet> state = geometryNode->getOrCreateStateSet();
-    osg::Vec3 uniqueColorId(0,0,0);
-    // perturb the position based on the geometry index, in order to create a different color for close geometries.
-    uniqueColorId[geometryIndex % 3] = geometryIndex;
-
-//    position.normalize();
-    state->addUniform(new osg::Uniform("uniqueColorId", uniqueColorId));
-}
-
 // Visitor to return the coordinates of a node with respect to another node
 class WorldCoordOfNodeVisitor : public osg::NodeVisitor
 {
@@ -435,8 +424,6 @@ void KinBodyItem::Load()
                 pgeometrydata->setName(str(boost::format("geomdata%d")%igeom));
                 pgeometryroot->addChild(pgeometrydata);
                 pgeometryroot->setName(str(boost::format("geom%d")%igeom));
-
-                GenerateAndSetGeometryUniqueColorId(pgeometryroot, igeom);
                 //  Apply external transform to local transform
                 posglinktrans->addChild(pgeometryroot);
                 _vecgeoms[linkindex][igeom] = GeomNodes(pgeometrydata, pgeometryroot); // overwrite

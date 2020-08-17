@@ -1,6 +1,7 @@
 
 #include "renderutils.h"
 #include "outlineshaderpipeline.h"
+#include <sstream>
 
 #include <osg/Depth>
 #include <osg/CullFace>
@@ -12,13 +13,11 @@
 // to change programable state such as highligh color, see OutlineShaderPipeline constructor
 #define ENABLE_SHOW_HIGHLIGHT_BEHIND_OBJECTS 0 //< if on, will show selection highlight over other objects
 #define FADE_OUTLINE_WITH_FRAGMENT_DEPTH 1 // will fade out the edges proportionally to view distance. This prevent edges from becoming proportinally too big compared to the distance scene
-#define INVERT_BLUR_AND_EDGE_DETECTION_PASS_ORDER 0 // < normal pipeline order is first edge detection, then blur to soften edges. Inverse order result in slightly different rendering
+
 
 // debug preprocessor variables
-#define SHOW_BLUR_PASS_ONLY 0
-#define SHOW_COLORID_SCENE_ONLY 1
+#define SHOW_PRERENDER_SCENE_ONLY 0
 #define SHOW_EDGE_DETECTION_PASS_ONLY 0
-#define BYPASS_BLUR_RENDER_PASS 1
 
 
 namespace {
@@ -39,28 +38,46 @@ namespace {
 			"uniform vec3 outlineColor;"
 			"uniform vec3 selectionColor;"
 			"uniform float highlightIntensity;"
-			"uniform float _DepthThreshold;"
-			"uniform float _NormalThreshold;"
-			"uniform float _DepthNormalThreshold;"
-			"uniform float _DepthNormalThresholdScale;"
+			"uniform float depthThreshold;"
+			"uniform float normalThreshold;"
+			"uniform float depthNormalThreshold;"
+			"uniform float depthNormalThresholdScale;"
 
 			"\n"
-			"uniform sampler2DMS diffuseTexture;\n"
+			"uniform sampler2DMS colorTexture0;\n"
 			"\n"
 			"vec4 accessTexel(sampler2DMS tex, ivec2 tc) {\n"
 			"    vec4 c = texelFetch(tex, tc, 0) + texelFetch(tex, tc, 1) + texelFetch(tex, tc, 2) + texelFetch(tex, tc, 3);\n"
 			"    return c / 4.0;\n"
 			"}\n"
-			"void getNeighbors(inout vec4 n[4], ivec2 coord)\n"
+			"void getNeighbors(inout vec4 n[9], ivec2 coord)\n"
+			"{\n"
+			" // n values are stored from - to +, first x then y \n"
+			" float h = 1;\n"
+			" float w = 1;\n"
+			"\n"
+
+    		"		n[0] = accessTexel(colorTexture0, coord + ivec2( -w, -h));"
+    		"		n[1] = accessTexel(colorTexture0, coord + ivec2(0.0, -h));"
+    		"		n[2] = accessTexel(colorTexture0, coord + ivec2(  w, -h));"
+    		"		n[3] = accessTexel(colorTexture0, coord + ivec2( -w, 0.0));"
+    		"		n[4] = accessTexel(colorTexture0, coord);"
+    		"		n[5] = accessTexel(colorTexture0, coord + ivec2(  w, 0.0));"
+    		"		n[6] = accessTexel(colorTexture0, coord + ivec2( -w, h));"
+    		"		n[7] = accessTexel(colorTexture0, coord + ivec2(0.0, h));"
+    		"		n[8] = accessTexel(colorTexture0, coord + ivec2(  w, h));"
+			"}\n"
+
+			"void getNeighbors4(inout vec4 n[4], ivec2 coord)\n"
 			"{\n"
 			" // n values are stored from - to +, first x then y \n"
 			" float halfScaleFloor = 0;\n"
 			" float halfScaleCeil = 1;\n"
 			"\n"
-			"    n[0] = (accessTexel(diffuseTexture, coord + ivec2( -halfScaleFloor, -halfScaleFloor )));\n" // bottomLeftUV
-			"    n[1] = (accessTexel(diffuseTexture, coord + ivec2( halfScaleCeil, halfScaleCeil )));\n" // topRightUV
-			"    n[2] = (accessTexel(diffuseTexture, coord + ivec2( halfScaleCeil, -halfScaleFloor )));\n" // bottomRightUV
-			"    n[3] = (accessTexel(diffuseTexture, coord + ivec2( -halfScaleFloor, halfScaleCeil )));\n" // topLeftUV
+			"    n[0] = (accessTexel(colorTexture0, coord + ivec2( -halfScaleFloor, -halfScaleFloor )));\n" // bottomLeftUV
+			"    n[1] = (accessTexel(colorTexture0, coord + ivec2( halfScaleCeil, halfScaleCeil )));\n" // topRightUV
+			"    n[2] = (accessTexel(colorTexture0, coord + ivec2( halfScaleCeil, -halfScaleFloor )));\n" // bottomRightUV
+			"    n[3] = (accessTexel(colorTexture0, coord + ivec2( -halfScaleFloor, halfScaleCeil )));\n" // topLeftUV
 			"}\n"
 			""
 			"float edgeNormal(in vec4 n[4], float threshold) {\n"
@@ -79,26 +96,40 @@ namespace {
 
 			"\n"
 
+			"float sobelIntensity(in vec4 n[9]) {\n"
+			"	vec4 sobel_edge_h = n[2] + (2.0*n[5]) + n[8] - (n[0] + (2.0*n[3]) + n[6]);\n"
+			"	vec4 sobel_edge_v = n[0] + (2.0*n[1]) + n[2] - (n[6] + (2.0*n[7]) + n[8]);\n"
+			"	vec4 sobel = sqrt((sobel_edge_h * sobel_edge_h) + (sobel_edge_v * sobel_edge_v));\n"
+			"	return length(sobel.rgb);\n"
+			"}\n"
+
+			"float sobelSlphaIntensity(in vec4 n[9]) {\n"
+			"	float sobel_edge_h = n[2].a + (2.0*n[5].a) + n[8].a - (n[0].a + (2.0*n[3].a) + n[6].a);\n"
+			"	float sobel_edge_v = n[0].a + (2.0*n[1].a) + n[2].a - (n[6].a + (2.0*n[7].a) + n[8].a);\n"
+			"	float sobel = sqrt((sobel_edge_h * sobel_edge_h) + (sobel_edge_v * sobel_edge_v));\n"
+			"	return sobel;\n"
+			"}\n"
+
 			"void main()\n"
 			"{\n"
 			" 	 vec4 samples[4];"
-			" 	 vec4 texelCenter = accessTexel(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
-			" 	 getNeighbors(samples, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
+			" 	 vec4 texelCenter = accessTexel(colorTexture0, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
+			" 	 getNeighbors4(samples, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
 			" 	 float depthCenterValue = texelCenter.a;\n"
-			//"    bool selected = alphaIntensity > 0 || texelCenter.a > 0;\n"
 			"    bool selected = false;\n"
 			"\n"
 			"    vec3 normal = normalize(vec3(texelCenter.x, texelCenter.y, texelCenter.z));" // we store normals in 0,1 range, need to unpack to -1,1 range
 			 "   float viewDot = 1 - dot(normalize(normal), normalize(vec3(-clipPos.xy,1)));\n"
-			 "   float normalThreshold01 = clamp((viewDot - _DepthNormalThreshold) / (1 - _DepthNormalThreshold), 0.0, 1.0);\n"
-			 "   float normalThreshold = normalThreshold01 * _DepthNormalThresholdScale + 1;\n"
-			 "   float eNormal = edgeNormal(samples, _NormalThreshold);\n"
-			 "   float edgeDepth = 20*(sqrt((samples[1].a - samples[0].a) * (samples[1].a - samples[0].a)) + ((samples[3].a - samples[2].a)*(samples[3].a - samples[2].a)));\n"
-			 "   float depthThreshold = _DepthThreshold * depthCenterValue * normalThreshold;\n"
+			 "   float normalThreshold01 = clamp((viewDot - depthNormalThreshold) / (1 - depthNormalThreshold), 0.0, 1.0);\n"
+			 "   float normalThreshold = normalThreshold01 * depthNormalThresholdScale + 1;\n"
+			 "   float eNormal = edgeNormal(samples, 0);\n"
+			 //"   eNormal = eNormal > 0.8 ? 1.0 : 0.0;\n"
+			 "   float edgeDepth = 20*(sqrt((samples[1].a - samples[0].a) * (samples[1].a - samples[0].a)) + ((samples[3].a - samples[2].a)*(samples[3].a - samples[2].a)));//sobelSlphaIntensity(samples);//\n"
+			 "   float depthThreshold = depthThreshold * depthCenterValue * normalThreshold;\n"
 			 "   edgeDepth = edgeDepth > depthThreshold ? 1.0 : 0.0;\n"
-			 "   float edge = max(edgeDepth, eNormal);"
-#if			SHOW_BLUR_PASS_ONLY || SHOW_EDGE_DETECTION_PASS_ONLY
-			"    gl_FragColor = vec4(edge, edge, edge, 1.0);\n"
+			 "   float edge = max(edgeDepth, eNormal);\n"
+#if			SHOW_EDGE_DETECTION_PASS_ONLY
+			"    gl_FragColor = vec4(edgeDepth, edgeDepth, edgeDepth, 1.0);\n"
 		    "    return;\n"
 #else
 			"    if(selected) {"
@@ -106,67 +137,9 @@ namespace {
 			"         return;\n"
 			"    }\n"
 		    "    gl_FragColor = vec4(outlineColor, edge);\n"
+			//"    gl_FragColor = vec4(edge, edge, edge, 1.0);\n"
 #endif
 			"}\n";
-
-	const std::string blurVertStr =
-			"#version 120\n"
-			"void main()\n"
-			"{\n"
-			"	// Vertex position in main camera Screen space.\n"
-			"	gl_Position = gl_Vertex;\n"
-			"}\n";
-
-	const std::string blurFragStr =
-			"#version 120\n"
-			"#extension GL_ARB_texture_multisample : enable \n"
-
-			"\n"
-			"uniform sampler2DMS diffuseTexture;\n"
-			"\n"
-			"vec4 accessTexel(sampler2DMS tex, ivec2 tc) {\n"
-			"    vec4 c = texelFetch(tex, tc, 0) + texelFetch(tex, tc, 1) + texelFetch(tex, tc, 2) + texelFetch(tex, tc, 3);\n"
-			"    return c / 4.0;\n"
-			"}\n"
-			"void getNeighbors(inout vec4 n[9], ivec2 coord)\n"
-			"{\n"
-			" // n values are stored from - to +, first x then y \n"
-			"    float h = 1;\n"
-			"    float w = 1;\n"
-				"\tn[0] = accessTexel(diffuseTexture, coord + ivec2( -w, -h));\n"
-				"\tn[1] = accessTexel(diffuseTexture, coord + ivec2(0.0, -h));\n"
-				"\tn[2] = accessTexel(diffuseTexture, coord + ivec2(  w, -h));\n"
-				"\tn[3] = accessTexel(diffuseTexture, coord + ivec2( -w, 0.0));\n"
-				"\tn[4] = accessTexel(diffuseTexture, coord);\n"
-				"\tn[5] = accessTexel(diffuseTexture, coord + ivec2(  w, 0.0));\n"
-				"\tn[6] = accessTexel(diffuseTexture, coord + ivec2( -w, h));\n"
-				"\tn[7] = accessTexel(diffuseTexture, coord + ivec2(0.0, h));\n"
-				"\tn[8] = accessTexel(diffuseTexture, coord + ivec2(  w, h));\n"
-			"}\n"
-			""
-			"vec4 applyBlur(ivec2 coord) {\n"
-			"    vec4 n[9];\n"
-			"    getNeighbors(n, coord);\n"
-			"\n"
-			"    vec4 sum = (1.0 * n[0] + 2.0 * n[1] + 1.0 * n[2] +\n"
-			"                2.0 * n[3] + 4.0 * n[4] + 2.0 * n[5] +\n"
-			"                1.0 * n[6] + 2.0 * n[7] + 1.0 * n[8]) / 16.0;\n"
-			"\n"
-			"    return sum;\n"
-			"}\n"
-			"\n"
-
-
-			"void main()\n"
-			"{\n"
-#if         BYPASS_BLUR_RENDER_PASS
-			"    vec4 blur = accessTexel(diffuseTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
-#else
-			"    vec4 blur = applyBlur(ivec2(gl_FragCoord.x, gl_FragCoord.y));\n"
-#endif
-			"    gl_FragColor = blur;\n"
-			"}\n";
-
 
 	const std::string preRenderFragShaderStr =
 			"#version 120\n"
@@ -177,7 +150,6 @@ namespace {
 			"\n"
 			"varying vec3 position;\n"
 			"varying vec4 color;\n"
-			"uniform vec3 uniqueColorId;"
 			"uniform int isSelected;"
 
 			"\n"
@@ -218,6 +190,133 @@ namespace {
 			"    // Calculate vertex position in clip coordinates\n"
 			"    gl_Position = gl_ModelViewProjectionMatrix * inPos;\n"
 			"}\n";
+
+	const std::string fxaaRenderFragShaderStr =
+		"#version 120\n"
+		"#extension GL_ARB_texture_multisample : enable \n"
+		"\n"
+		"uniform vec2 viewportSize;\n"
+		"uniform sampler2DMS colorTexture0;\n"
+		"\n"
+		"\n"
+		"varying vec2 v_rgbNW;\n"
+		"varying vec2 v_rgbNE;\n"
+		"varying vec2 v_rgbSW;\n"
+		"varying vec2 v_rgbSE;\n"
+		"varying vec2 v_rgbM;\n"
+		"varying vec2 texCoord;\n"
+		"\n"
+		"\n"
+		"#ifndef FXAA_REDUCE_MIN\n"
+		"    #define FXAA_REDUCE_MIN   (1.0/ 128.0)\n"
+		"#endif\n"
+		"#ifndef FXAA_REDUCE_MUL\n"
+		"    #define FXAA_REDUCE_MUL   (1.0 / 8.0)\n"
+		"#endif\n"
+		"#ifndef FXAA_SPAN_MAX\n"
+		"    #define FXAA_SPAN_MAX     8.0\n"
+		"#endif\n"
+		"\n"
+		"vec4 accessTexel(sampler2DMS tex, vec2 coord) {\n"
+		"	ivec2 tc = ivec2(floor(textureSize(tex) * coord));\n"
+		"	vec4 c = texelFetch(tex, tc, 0) + texelFetch(tex, tc, 1) + texelFetch(tex, tc, 2) + texelFetch(tex, tc, 3);\n"
+    	"	return c / 4.0;\n"
+		//"   return texelFetch(tex, tc, 0);"
+		"}\n"
+		"\n"
+		"//optimized version for mobile, where dependent \n"
+		"//texture reads can be a bottleneck\n"
+		"vec4 fxaa(sampler2DMS tex, vec2 fragCoord, vec2 resolution,\n"
+		"            vec2 v_rgbNW, vec2 v_rgbNE, \n"
+		"            vec2 v_rgbSW, vec2 v_rgbSE, \n"
+		"            vec2 v_rgbM) {\n"
+		"    vec4 color;\n"
+		"    mediump vec2 inverseVP = vec2(1.0 / resolution.x, 1.0 / resolution.y);\n"
+		"    vec3 rgbNW = accessTexel(tex, v_rgbNW).xyz;\n"
+		"    vec3 rgbNE = accessTexel(tex, v_rgbNE).xyz;\n"
+		"    vec3 rgbSW = accessTexel(tex, v_rgbSW).xyz;\n"
+		"    vec3 rgbSE = accessTexel(tex, v_rgbSE).xyz;\n"
+		"    vec4 texColor = accessTexel(tex, v_rgbM);\n"
+		"    vec3 rgbM  = texColor.xyz;\n"
+		"    vec3 luma = vec3(0.299, 0.587, 0.114);\n"
+		"    float lumaNW = dot(rgbNW, luma);\n"
+		"    float lumaNE = dot(rgbNE, luma);\n"
+		"    float lumaSW = dot(rgbSW, luma);\n"
+		"    float lumaSE = dot(rgbSE, luma);\n"
+		"    float lumaM  = dot(rgbM,  luma);\n"
+		"    float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));\n"
+		"    float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));\n"
+		"    \n"
+		"    mediump vec2 dir;\n"
+		"    dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));\n"
+		"    dir.y =  ((lumaNW + lumaSW) - (lumaNE + lumaSE));\n"
+		"    \n"
+		"    float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) *\n"
+		"                          (0.25 * FXAA_REDUCE_MUL), FXAA_REDUCE_MIN);\n"
+		"    \n"
+		"    float rcpDirMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + dirReduce);\n"
+		"    dir = min(vec2(FXAA_SPAN_MAX, FXAA_SPAN_MAX),\n"
+		"              max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX),\n"
+		"              dir * rcpDirMin)) * inverseVP;\n"
+		"    \n"
+		"    vec3 rgbA = 0.5 * (\n"
+		"        accessTexel(tex, fragCoord * inverseVP + dir * (1.0 / 3.0 - 0.5)).xyz +\n"
+		"        accessTexel(tex, fragCoord * inverseVP + dir * (2.0 / 3.0 - 0.5)).xyz);\n"
+		"    vec3 rgbB = rgbA * 0.5 + 0.25 * (\n"
+		"        accessTexel(tex, fragCoord * inverseVP + dir * -0.5).xyz +\n"
+		"        accessTexel(tex, fragCoord * inverseVP + dir * 0.5).xyz);\n"
+		"\n"
+		"    float lumaB = dot(rgbB, luma);\n"
+		"    if ((lumaB < lumaMin) || (lumaB > lumaMax))\n"
+		"        color = vec4(rgbA, texColor.a);\n"
+		"    else\n"
+		"        color = vec4(rgbB, texColor.a);\n"
+		"    return color;\n"
+		"}\n"
+		"\n"
+		"void main()\n"
+		"{\n"
+		"   vec2 fragCoord = vec2(gl_FragCoord.x, gl_FragCoord.y) / viewportSize;\n"
+		//"   gl_FragColor = fxaa(colorTexture0, fragCoord * viewportSize, viewportSize, v_rgbNW, v_rgbNE, v_rgbSW, v_rgbSE, v_rgbM);\n"
+		"   gl_FragColor = accessTexel(colorTexture0,  fragCoord);\n"
+		//"  gl_FragColor = vec4(fragCoord.xy, 0, 1);\n"
+		"}\n";
+
+	const std::string fxaaRenderVertShaderStr =
+		"#version 120\n"
+		"#extension GL_ARB_texture_multisample : enable \n"
+		"\n"
+		"uniform mat4 modelMatrix;\n"
+		"uniform vec2 viewportSize;\n"
+		"uniform sampler2DMS colorTexture0;\n"
+		"\n"
+		"varying vec2 v_rgbNW;\n"
+		"varying vec2 v_rgbNE;\n"
+		"varying vec2 v_rgbSW;\n"
+		"varying vec2 v_rgbSE;\n"
+		"varying vec2 v_rgbM;\n"
+		"varying vec2 texCoord;\n"
+		"\n"
+		"\n"
+		"void texcoords(vec2 fragCoord, vec2 resolution,\n"
+		"\t\t\tout vec2 v_rgbNW, out vec2 v_rgbNE,\n"
+		"\t\t\tout vec2 v_rgbSW, out vec2 v_rgbSE,\n"
+		"\t\t\tout vec2 v_rgbM) {\n"
+		"\tvec2 inverseVP = 1.0 / resolution.xy;\n"
+		"\tv_rgbNW = (fragCoord + vec2(-1.0, -1.0)) * inverseVP;\n"
+		"\tv_rgbNE = (fragCoord + vec2(1.0, -1.0)) * inverseVP;\n"
+		"\tv_rgbSW = (fragCoord + vec2(-1.0, 1.0)) * inverseVP;\n"
+		"\tv_rgbSE = (fragCoord + vec2(1.0, 1.0)) * inverseVP;\n"
+		"\tv_rgbM = vec2(fragCoord * inverseVP);\n"
+		"}\n"
+		"void main()\n"
+		"{\n"
+		"    vec4 viewPos = vec4(gl_Vertex.xyz, 1.0);\n"
+		"    texCoord = (viewPos.xy*0.5 + vec2(0.5));\n"
+		"    texcoords(texCoord * viewportSize, viewportSize, v_rgbNW, v_rgbNE, v_rgbSW, v_rgbSE, v_rgbM);\n"
+		"    gl_Position = viewPos;\n"
+		"}\n";
+
 }
 
 void RenderPassState::HandleResize(int width, int height)
@@ -225,6 +324,12 @@ void RenderPassState::HandleResize(int width, int height)
 	if(camera) {
 		camera->setRenderingCache(0);
 		camera->setViewport(0, 0, width, height);
+		state->addUniform(new osg::Uniform("viewportSize", osg::Vec2f(width, height)));
+		for(unsigned int i = 0; i < colorFboTextures.size(); ++i) {
+			if(colorFboTextures[i]) {
+				colorFboTextures[i]->setTextureSize(width, height);
+			}
+		}
 	}
 }
 
@@ -242,24 +347,21 @@ OutlineShaderPipeline::~OutlineShaderPipeline()
 	}
 }
 
-// First pass is render the scene using special shaders to enhance edges
-inline RenderPassState* OutlineShaderPipeline::createFirstRenderPass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight)
+RenderPassState* OutlineShaderPipeline::createSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int numColorAttachments, const std::string& vshader, const std::string& fshader)
 {
 	// First pass will render the same scene using a special shader that render objects with different colors
 	// different from background, so to prepare for outline edge detection post processing shader
 	RenderPassState* renderPassState = new RenderPassState();
-	osg::ref_ptr<osg::StateSet> firstPassStateSet = new osg::StateSet();
-	RenderUtils::SetShaderProgramOnStateSet(firstPassStateSet.get(), preRenderVertShaderStr, preRenderFragShaderStr);
+	renderPassState->state = new osg::StateSet();
+	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
 	osg::ref_ptr<osg::Group> firstPassGroup = new osg::Group();
-	firstPassGroup->setStateSet(firstPassStateSet);
+	firstPassGroup->setStateSet(renderPassState->state.get());
 	firstPassGroup->addChild(mainSceneRoot);
 
 	// clone main camera settings so to render same scene
 	renderPassState->camera = new osg::Camera();
-	renderPassState->colorFboTexture = RenderUtils::CreateFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
-#	if !SHOW_COLORID_SCENE_ONLY
-	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, osg::Camera::COLOR_BUFFER, renderPassState->colorFboTexture.get());
-#endif
+	renderPassState->colorFboTextures = RenderUtils::SetupRenderToTextureCamera(renderPassState->camera);
+
 	renderPassState->camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	renderPassState->camera->setClearColor(osg::Vec4(0, 0, 0, 0));
 	renderPassState->camera->setViewMatrix(osg::Matrix::identity());
@@ -267,83 +369,174 @@ inline RenderPassState* OutlineShaderPipeline::createFirstRenderPass(osg::ref_pt
 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
 	mainSceneCamera->addChild(renderPassState->camera.get());
 	renderPassState->camera->addChild(firstPassGroup.get());
-	firstPassStateSet->addUniform(new osg::Uniform("uniqueColorId", osg::Vec3(0, 0, 0)));
-	firstPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
+	renderPassState->state->addUniform(new osg::Uniform("isSelected", 0));
 	// disable blend because we use alpha channel for encoding other information
-	firstPassStateSet->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+	renderPassState->state->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
 	return renderPassState;
 }
 
-RenderPassState* OutlineShaderPipeline::createSecondRenderPass(RenderPassState* firstPassState, int maxFBOBufferWidth, int maxFBOBufferHeight)
+RenderPassState* OutlineShaderPipeline::createTextureToTexturePass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader)
 {
 	RenderPassState* renderPassState = new RenderPassState();
-	osg::ref_ptr<osg::StateSet> secondPassStateSet = new osg::StateSet();
-#if INVERT_BLUR_AND_EDGE_DETECTION_PASS_ORDER
-	RenderUtils::SetShaderProgramOnStateSet(secondPassStateSet.get(), outlineVertStr, outlineFragStr);
-#else
-	RenderUtils::SetShaderProgramOnStateSet(secondPassStateSet.get(), blurVertStr, blurFragStr);
-#endif
+	renderPassState->state = new osg::StateSet();
+	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
 
-	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), secondPassStateSet);
-	renderPassState->colorFboTexture = RenderUtils::CreateFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
-	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, osg::Camera::COLOR_BUFFER, renderPassState->colorFboTexture.get());
+	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), renderPassState->state.get());
+
+	std::vector<osg::ref_ptr<osg::Texture2DMultisample>> inputTextures = inputPass->colorFboTextures;
+	for(unsigned int i = 0; i < inputTextures.size(); ++i) {
+		std::ostringstream bufferNumStr;
+		bufferNumStr << "colorTexture";
+		bufferNumStr << i;
+		renderPassState->state->setTextureAttributeAndModes(0, inputTextures[i].get(), osg::StateAttribute::ON);
+		renderPassState->state->addUniform(new osg::Uniform(bufferNumStr.str().c_str(), i));
+
+	}
+
+	renderPassState->colorFboTextures = RenderUtils::SetupRenderToTextureCamera(renderPassState->camera);
 
 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
-	secondPassStateSet->setTextureAttributeAndModes(0, firstPassState->colorFboTexture.get(), osg::StateAttribute::ON);
-    secondPassStateSet->addUniform(new osg::Uniform("diffuseTexture", 0));
-	secondPassStateSet->addUniform(new osg::Uniform("outlineColor", _outlineColor));
-	secondPassStateSet->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
-	secondPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
-	secondPassStateSet->addUniform(new osg::Uniform("_DepthThreshold", 1.5f));
-	secondPassStateSet->addUniform(new osg::Uniform("_DepthNormalThreshold", 0.5f));
-	secondPassStateSet->addUniform(new osg::Uniform("_DepthNormalThresholdScale", 7.0f));
-	secondPassStateSet->addUniform(new osg::Uniform("_NormalThreshold", 0.8f));
-
+	renderPassState->state->addUniform(new osg::Uniform("outlineColor", _outlineColor));
+	renderPassState->state->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
+	renderPassState->state->addUniform(new osg::Uniform("isSelected", 0));
+	renderPassState->state->addUniform(new osg::Uniform("depthThreshold", 1.5f));
+	renderPassState->state->addUniform(new osg::Uniform("depthNormalThreshold", 0.5f));
+	renderPassState->state->addUniform(new osg::Uniform("depthNormalThresholdScale", 7.0f));
+	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", 0.8f));
 	return renderPassState;
 }
 
- RenderPassState* OutlineShaderPipeline::createThirdRenderPass(RenderPassState* secondPassState)
+RenderPassState* OutlineShaderPipeline::createTextureToColorBufferPass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader)
 {
 	RenderPassState* renderPassState = new RenderPassState();
-	osg::ref_ptr<osg::StateSet> thirdPassStateSet = new osg::StateSet();
-#if INVERT_BLUR_AND_EDGE_DETECTION_PASS_ORDER
-	RenderUtils::SetShaderProgramOnStateSet(thirdPassStateSet.get(), blurVertStr, blurFragStr);
-#else
-	RenderUtils::SetShaderProgramOnStateSet(thirdPassStateSet.get(), outlineVertStr, outlineFragStr);
-#endif
-	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), thirdPassStateSet);
-	thirdPassStateSet->setTextureAttributeAndModes(0, secondPassState->colorFboTexture.get(), osg::StateAttribute::ON);
-    thirdPassStateSet->addUniform(new osg::Uniform("diffuseTexture", 0));
-	thirdPassStateSet->setMode(GL_BLEND, osg::StateAttribute::ON);
-	thirdPassStateSet->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+	renderPassState->state = new osg::StateSet();
+	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), outlineVertStr, outlineFragStr);
+	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), renderPassState->state.get());
+	std::vector<osg::ref_ptr<osg::Texture2DMultisample>> inputTextures = inputPass->colorFboTextures;
+	for(unsigned int i = 0; i < inputTextures.size(); ++i) {
+		std::ostringstream bufferNumStr;
+		bufferNumStr << "colorTexture";
+		bufferNumStr << i;
+		renderPassState->state->setTextureAttributeAndModes(0, inputTextures[i].get(), osg::StateAttribute::ON);
+		renderPassState->state->addUniform(new osg::Uniform(bufferNumStr.str().c_str(), i));
+
+	}
+
+    renderPassState->state->setMode(GL_BLEND, osg::StateAttribute::ON);
+	renderPassState->state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
 	osg::Depth* depth = new osg::Depth;
 	depth->setWriteMask( false );
-	thirdPassStateSet->setAttributeAndModes(depth, osg::StateAttribute::ON);
-	thirdPassStateSet->addUniform(new osg::Uniform("outlineColor", _outlineColor));
-	thirdPassStateSet->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
-	thirdPassStateSet->addUniform(new osg::Uniform("isSelected", 0));
-	thirdPassStateSet->addUniform(new osg::Uniform("highlightIntensity", _selectedObjectHighlightIntensity));
-	thirdPassStateSet->addUniform(new osg::Uniform("_DepthThreshold", 0.2f));
-	thirdPassStateSet->addUniform(new osg::Uniform("_DepthNormalThreshold", 0.5f));
-	thirdPassStateSet->addUniform(new osg::Uniform("_DepthNormalThresholdScale", 7.0f));
-	thirdPassStateSet->addUniform(new osg::Uniform("_NormalThreshold", 0.4f));
+	renderPassState->state->setAttributeAndModes(depth, osg::StateAttribute::ON);
+	renderPassState->state->addUniform(new osg::Uniform("outlineColor", _outlineColor));
+	renderPassState->state->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
+	renderPassState->state->addUniform(new osg::Uniform("isSelected", 0));
+	renderPassState->state->addUniform(new osg::Uniform("highlightIntensity", _selectedObjectHighlightIntensity));
+	renderPassState->state->addUniform(new osg::Uniform("depthThreshold", 0.2f));
+	renderPassState->state->addUniform(new osg::Uniform("depthNormalThreshold", 0.5f));
+	renderPassState->state->addUniform(new osg::Uniform("depthNormalThresholdScale", 7.0f));
+	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", 0.4f));
 
 	return renderPassState;
 }
+
+
+// // First pass is render the scene using special shaders to enhance edges
+// inline RenderPassState* OutlineShaderPipeline::createFirstRenderPass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight)
+// {
+// 	// First pass will render the same scene using a special shader that render objects with different colors
+// 	// different from background, so to prepare for outline edge detection post processing shader
+// 	RenderPassState* renderPassState = new RenderPassState();
+// 	renderPassState->state = new osg::StateSet();
+// 	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), preRenderVertShaderStr, preRenderFragShaderStr);
+// 	osg::ref_ptr<osg::Group> firstPassGroup = new osg::Group();
+// 	firstPassGroup->setStateSet(renderPassState->state.get());
+// 	firstPassGroup->addChild(mainSceneRoot);
+
+// 	// clone main camera settings so to render same scene
+// 	renderPassState->camera = new osg::Camera();
+// 	renderPassState->colorFboTexture = RenderUtils::CreateFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
+// #	if !SHOW_PRERENDER_SCENE_ONLY
+// 	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, osg::Camera::COLOR_BUFFER, renderPassState->colorFboTexture.get());
+// #endif
+// 	renderPassState->camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+// 	renderPassState->camera->setClearColor(osg::Vec4(0, 0, 0, 0));
+// 	renderPassState->camera->setViewMatrix(osg::Matrix::identity());
+// 	renderPassState->camera->setProjectionMatrix(osg::Matrix::identity());
+// 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
+// 	mainSceneCamera->addChild(renderPassState->camera.get());
+// 	renderPassState->camera->addChild(firstPassGroup.get());
+// 	renderPassState->state->addUniform(new osg::Uniform("isSelected", 0));
+// 	// disable blend because we use alpha channel for encoding other information
+// 	renderPassState->state->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+// 	return renderPassState;
+// }
+
+// RenderPassState* OutlineShaderPipeline::createSecondRenderPass(RenderPassState* firstPassState, int maxFBOBufferWidth, int maxFBOBufferHeight)
+// {
+// 	RenderPassState* renderPassState = new RenderPassState();
+// 	renderPassState->state = new osg::StateSet();
+// 	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), outlineVertStr, outlineFragStr);
+
+// 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), renderPassState->state.get());
+// 	renderPassState->colorFboTexture = RenderUtils::CreateFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
+// 	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, osg::Camera::COLOR_BUFFER, renderPassState->colorFboTexture.get());
+
+// 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
+// 	renderPassState->state->setTextureAttributeAndModes(0, firstPassState->colorFboTexture.get(), osg::StateAttribute::ON);
+//     renderPassState->state->addUniform(new osg::Uniform("colorTexture0", 0));
+// 	renderPassState->state->addUniform(new osg::Uniform("outlineColor", _outlineColor));
+// 	renderPassState->state->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
+// 	renderPassState->state->addUniform(new osg::Uniform("isSelected", 0));
+// 	renderPassState->state->addUniform(new osg::Uniform("depthThreshold", 1.5f));
+// 	renderPassState->state->addUniform(new osg::Uniform("depthNormalThreshold", 0.5f));
+// 	renderPassState->state->addUniform(new osg::Uniform("depthNormalThresholdScale", 7.0f));
+// 	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", 0.8f));
+
+// 	return renderPassState;
+// }
+
+// RenderPassState* OutlineShaderPipeline::createThirdRenderPass(RenderPassState* secondPassState, int maxFBOBufferWidth, int maxFBOBufferHeight)
+// {
+// 	RenderPassState* renderPassState = new RenderPassState();
+// 	renderPassState->state = new osg::StateSet();
+// 	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), outlineVertStr, outlineFragStr);
+// 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), renderPassState->state.get());
+// 	renderPassState->state->setTextureAttributeAndModes(0, secondPassState->colorFboTexture.get(), osg::StateAttribute::ON);
+//     renderPassState->state->addUniform(new osg::Uniform("colorTexture0", 0));
+// 	renderPassState->state->setMode(GL_BLEND, osg::StateAttribute::ON);
+// 	renderPassState->state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+// 	osg::Depth* depth = new osg::Depth;
+// 	depth->setWriteMask( false );
+// 	renderPassState->state->setAttributeAndModes(depth, osg::StateAttribute::ON);
+// 	renderPassState->state->addUniform(new osg::Uniform("outlineColor", _outlineColor));
+// 	renderPassState->state->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
+// 	renderPassState->state->addUniform(new osg::Uniform("isSelected", 0));
+// 	renderPassState->state->addUniform(new osg::Uniform("highlightIntensity", _selectedObjectHighlightIntensity));
+// 	renderPassState->state->addUniform(new osg::Uniform("depthThreshold", 0.2f));
+// 	renderPassState->state->addUniform(new osg::Uniform("depthNormalThreshold", 0.5f));
+// 	renderPassState->state->addUniform(new osg::Uniform("depthNormalThresholdScale", 7.0f));
+// 	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", 0.4f));
+
+// 	return renderPassState;
+// }
 
 osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, 
 	osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight)
 {
-	_renderPassStates.push_back(createFirstRenderPass(mainSceneCamera, mainSceneRoot, maxFBOBufferWidth, maxFBOBufferHeight));
-	_renderPassStates.push_back(createSecondRenderPass(_renderPassStates[0], maxFBOBufferWidth, maxFBOBufferHeight));
-	_renderPassStates.push_back(createThirdRenderPass(_renderPassStates[1]));
+	setMaxFBOSize(maxFBOBufferWidth, maxFBOBufferHeight);
+	RenderPassState* normalAndDepthMapPass = createSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, preRenderVertShaderStr, preRenderFragShaderStr);
+	RenderPassState* outlinePass = createTextureToColorBufferPass(normalAndDepthMapPass, 1, outlineVertStr, outlineFragStr);
+
+	_renderPassStates.push_back(normalAndDepthMapPass);
+	_renderPassStates.push_back(outlinePass);
+
 
 	osg::ref_ptr<osg::Group> passesGroup = new osg::Group();
 	passesGroup->addChild(_renderPassStates[0]->camera.get());
-#	if !SHOW_COLORID_SCENE_ONLY
-	passesGroup->addChild(_renderPassStates[1]->camera.get());
+#	if !SHOW_PRERENDER_SCENE_ONLY
 	passesGroup->addChild(mainSceneRoot);
-	passesGroup->addChild(_renderPassStates[2]->camera.get());
+	passesGroup->addChild(_renderPassStates[1]->camera.get());
+	//passesGroup->addChild(_renderPassStates[2]->camera.get());
 #endif
 	return passesGroup.release();
 
