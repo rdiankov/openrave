@@ -469,11 +469,7 @@ public:
         if (ikscene.getCount() == 0) {
             return false;
         }
-        daeString pName = ikscene[0]->getName();
-        _penv->name.clear();
-        for(;!!pName && (*pName) != '\0'; pName++) {
-            _penv->name.push_back(*pName);
-        }
+        _penv->_name = ikscene[0]->getName();
 
         if( !!_dom->getAsset() ) {
             if( !!_dom->getAsset()->getUp_axis() && !!_penv->GetPhysicsEngine() ) {
@@ -491,28 +487,13 @@ public:
 
             // set keywords
             if(!!_dom->getAsset()->getKeywords()) {
-                daeString pkeywords = _dom->getAsset()->getKeywords()->getValue();
-                std::string keyword {};
-                for(;!!pkeywords && (*pkeywords) != '\0'; pkeywords++) {
-                    if((*pkeywords) == ',') {
-                        _penv->keywords.push_back(keyword);
-                        keyword.clear();
-                        continue;
-                    }
-                    keyword.push_back(*pkeywords);
-                }
-                if (keyword.size() > 0){
-                    _penv->keywords.push_back(keyword);
-                }
+                std::string keywords = _dom->getAsset()->getKeywords()->getValue();
+                boost::split(_penv->_keywords, keywords, boost::is_any_of(","));
             }
 
             // set description
             if (!!_dom->getAsset()->getSubject()) {
-                daeString pDescription = _dom->getAsset()->getSubject()->getValue();
-                _penv->description.clear();
-                for(;!!pDescription && (*pDescription) != '\0'; pDescription++) {
-                    _penv->description.push_back(*pDescription);
-                }
+                _penv->_description = _dom->getAsset()->getSubject()->getValue();
             }
         }
 

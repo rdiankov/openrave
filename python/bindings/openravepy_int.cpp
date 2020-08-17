@@ -960,25 +960,22 @@ EnvironmentBase::EnvironmentBaseInfoPtr PyEnvironmentBase::PyEnvironmentBaseInfo
     EnvironmentBase::EnvironmentBaseInfoPtr pInfo(new EnvironmentBase::EnvironmentBaseInfo());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     pInfo->_vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(_vBodyInfos), end(_vBodyInfos));
-    pInfo->name = name;
-    pInfo->keywords = keywords;
-    pInfo->description = description;
+    pInfo->_revision = _revision;
+    pInfo->_name = _name;
+    pInfo->_keywords = _keywords;
+    pInfo->_description = _description;
 #else
-    std::vector<KinBody::KinBodyInfoPtr> vBodyInfo = _ExtractBodyInfoArray(_vBodyInfos);
-    pInfo->_vBodyInfos.clear();
-    pInfo->_vBodyInfos.reserve(vBodyInfo.size());
-    FOREACHC(it, vBodyInfo) {
-        pInfo->_vBodyInfos.push_back(*it);
+    pInfo->_vBodyInfos = _ExtractBodyInfoArray(_vBodyInfos);
+    if (!_name.is_none()) {
+        pInfo->_name = py::extract<std::string>(_name);
     }
-    if (!name.is_none()) {
-        pInfo->name = py::extract<std::string>(name);
+    for(size_t i=0; i < py::len(_keywords); i++){
+        pInfo->_keywords.push_back(py::extract<std::string>(_keywords[i]));
     }
-    for(size_t i=0; i < py::len(keywords); i++){
-        pInfo->keywords.push_back(py::extract<std::string>(keywords[i]));
+    if (!_description.is_none()) {
+        pInfo->_description = py::extract<std::string>(_description);
     }
-    if (!description.is_none()) {
-        pInfo->description = py::extract<std::string>(description);
-    }
+    pInfo->_revision = _revision;
 #endif
     return pInfo;
 }
@@ -1002,10 +999,10 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON(py::object obj, d
 void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::EnvironmentBaseInfo& info) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     _vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(info._vBodyInfos), end(info._vBodyInfos));
-    name = info.name;
-    keywords = std::vector<std::string>(begin(info.keywords), end(info.keywords));
-    description = info.description;
-
+    _revision = info._revision;
+    _name = info._name;
+    _keywords = std::vector<std::string>(begin(info._keywords), end(info._keywords));
+    _description = info._description;
 #else
     py::list vBodyInfos;
     FOREACHC(itBodyInfo, info._vBodyInfos) {
@@ -1019,15 +1016,15 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
         }
     }
     _vBodyInfos = vBodyInfos;
-    name = ConvertStringToUnicode(info.name);
+    _name = ConvertStringToUnicode(info._name);
     py::list vKeywords;
-    FOREACHC(itKeyword, info.keywords) {
+    FOREACHC(itKeyword, info._keywords) {
         py::object keyword = ConvertStringToUnicode(*itKeyword);
         vKeywords.append(keyword);
     }
-    keywords = vKeywords;
-    description = ConvertStringToUnicode(info.description);
-
+    _keywords = vKeywords;
+    _description = ConvertStringToUnicode(info._description);
+    _revision = info._revision;
 #endif
 
 }
@@ -2379,13 +2376,8 @@ object PyEnvironmentBase::GetUnit() const {
     return py::make_tuple(unit.first, unit.second);
 }
 
-void PyEnvironmentBase::SetRevision(const uint64_t revision) {
-    _penv->SetRevision(revision);
-}
-
-object PyEnvironmentBase::GetRevision() const {
-    uint64_t revision = _penv->GetRevision();
-    return py::to_object(revision);
+int PyEnvironmentBase::GetRevision() const {
+    return _penv->GetRevision();
 }
 
 object PyEnvironmentBase::ExtractInfo() const {
@@ -3135,7 +3127,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetUnit",&PyEnvironmentBase::GetUnit, DOXY_FN(EnvironmentBase,GetUnit))
                      .def("SetUnit",&PyEnvironmentBase::SetUnit, PY_ARGS("unitname","unitmult") DOXY_FN(EnvironmentBase,SetUnit))
                      .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
-                     .def("SetRevision", &PyEnvironmentBase::SetRevision, PY_ARGS("revision") DOXY_FN(EnvironmentBase, SetRevision))
                      .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
                      .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info") DOXY_FN(EnvironmentBase,UpdateFromInfo))
                      .def("__enter__",&PyEnvironmentBase::__enter__)

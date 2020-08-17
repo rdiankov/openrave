@@ -2689,7 +2689,7 @@ double RaveRandomDouble(IntervalType interval)
 void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale) const
 {
     rIkParameterization.SetObject();
-    orjson::SetJsonValueByKey(rIkParameterization, "id", id, allocator);
+    orjson::SetJsonValueByKey(rIkParameterization, "id", GetId(), allocator);
     orjson::SetJsonValueByKey(rIkParameterization, "type", GetName(), allocator);
 
     Transform transform = _transform;
@@ -2752,7 +2752,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     if (!rIkParameterization.IsObject()) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("Cannot decode non-object JSON value to IkParameterization"), ORE_InvalidArguments);
     }
-    orjson::LoadJsonValueByKey(rIkParameterization, "id", id);
+    orjson::LoadJsonValueByKey(rIkParameterization, "id", _id);
     
     if( rIkParameterization.HasMember("type") ) {
         const char* ptype =  rIkParameterization["type"].GetString();

@@ -39,15 +39,16 @@ public:
     py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
     void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
     EnvironmentBase::EnvironmentBaseInfoPtr GetEnvironmentBaseInfo() const;
-    py::list keywords;
+    int _revision = 0;
+    py::list _keywords;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos;
-    std::string name;
-    std::string description;
+    std::string _name;
+    std::string _description;
 #else
     py::object _vBodyInfos = py::none_();
-    py::object name = py::none_();
-    py::object description = py::none_();
+    py::object _name = py::none_();
+    py::object _description = py::none_();
 #endif
     virtual std::string __str__();
     virtual py::object __unicode__();
@@ -77,8 +78,7 @@ public:
     void Reset();
     void Destroy();
 
-    object GetRevision() const;
-    void SetRevision(const uint64_t revision);
+    int GetRevision() const;
 
     PyEnvironmentBasePtr CloneSelf(int options);
 
@@ -272,17 +272,17 @@ public:
 
     object GetUnit() const;
 
-    py::object ExtractInfo() const;
+    object ExtractInfo() const;
     void UpdateFromInfo(PyEnvironmentBaseInfoPtr info);
 
-
-    py::list keywords;
+    int _revision = 0;
+    py::list _keywords;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::string name;
-    std::string description;
+    std::string _name;
+    std::string _description;
 #else
-    py::object name = py::none_();
-    py::object description = py::none_();
+    object _name = py::none_();
+    object _description = py::none_();
 #endif
 
     bool __eq__(PyEnvironmentBasePtr p);
