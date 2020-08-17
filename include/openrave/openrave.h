@@ -2136,8 +2136,9 @@ public:
         return !operator==(other);
     }
 
-    std::string id;
-
+    const std::string& GetId() const {
+        return id;
+    }
 
 protected:
     inline static bool _IsValidCharInName(char c) {
@@ -2245,6 +2246,7 @@ protected:
 
     Transform _transform;
     IkParameterizationType _type;
+    std::string id;
 
     std::map<std::string, std::vector<dReal> > _mapCustomData;
 

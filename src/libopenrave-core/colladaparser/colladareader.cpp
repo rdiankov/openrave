@@ -464,6 +464,17 @@ public:
             return false;
         }
 
+        // set name
+        const domInstance_kinematics_scene_Array& ikscene = allscene->getInstance_kinematics_scene_array();
+        if (ikscene.getCount() == 0) {
+            return false;
+        }
+        daeString pName = ikscene[0]->getName();
+        _penv->name.clear();
+        for(;!!pName && (*pName) != '\0'; pName++) {
+            _penv->name.push_back(*pName);
+        }
+
         if( !!_dom->getAsset() ) {
             if( !!_dom->getAsset()->getUp_axis() && !!_penv->GetPhysicsEngine() ) {
                 float f = -9.7979302;
@@ -475,6 +486,32 @@ public:
                 }
                 else if( _dom->getAsset()->getUp_axis()->getValue() == UP_AXIS_Z_UP ) {
                     _penv->GetPhysicsEngine()->SetGravity(Vector(0,0,f));
+                }
+            }
+
+            // set keywords
+            if(!!_dom->getAsset()->getKeywords()) {
+                daeString pkeywords = _dom->getAsset()->getKeywords()->getValue();
+                std::string keyword {};
+                for(;!!pkeywords && (*pkeywords) != '\0'; pkeywords++) {
+                    if((*pkeywords) == ',') {
+                        _penv->keywords.push_back(keyword);
+                        keyword.clear();
+                        continue;
+                    }
+                    keyword.push_back(*pkeywords);
+                }
+                if (keyword.size() > 0){
+                    _penv->keywords.push_back(keyword);
+                }
+            }
+
+            // set description
+            if (!!_dom->getAsset()->getSubject()) {
+                daeString pDescription = _dom->getAsset()->getSubject()->getValue();
+                _penv->description.clear();
+                for(;!!pDescription && (*pDescription) != '\0'; pDescription++) {
+                    _penv->description.push_back(*pDescription);
                 }
             }
         }
