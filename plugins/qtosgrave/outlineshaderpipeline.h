@@ -31,9 +31,6 @@ public:
 
 protected:
     void  setMaxFBOSize(int maxFBOBufferWidth, int maxFBOBufferHeight) { _maxFBOBufferWidth = maxFBOBufferWidth; _maxFBOBufferHeight = maxFBOBufferHeight; }
-    // RenderPassState* createFirstRenderPass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot const std::string& vshader, const std::string& fshader);
-    // RenderPassState* createSecondRenderPass(RenderPassState* firstPassState, int maxFBOBufferWidth, int maxFBOBufferHeight);
-    // RenderPassState* createThirdRenderPass(RenderPassState* secondPassState, int maxFBOBufferWidth, int maxFBOBufferHeight);
 
 public:
 	osg::Vec3 _outlineColor;

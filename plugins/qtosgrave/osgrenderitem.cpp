@@ -295,6 +295,7 @@ void KinBodyItem::Load()
                 w = 1;
 
                 mat->setDiffuse( osg::Material::FRONT, osg::Vec4f(x,y,z,w) );
+                state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(x,y,z,w)));
 
                 x = orgeom->GetAmbientColor().x;
                 y = orgeom->GetAmbientColor().y;
@@ -302,6 +303,7 @@ void KinBodyItem::Load()
                 w = 1.0f;
 
                 mat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
+                state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(x,y,z,w)));
 
                 //mat->setShininess( osg::Material::FRONT, 25.0);
                 mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
@@ -310,6 +312,7 @@ void KinBodyItem::Load()
                 if (transparency > 0) {
                     mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
                     state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+                    state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(x,y,z, 1 - transparency)));
 
                     if( 1 ) {
                         // fast

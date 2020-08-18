@@ -85,7 +85,7 @@ public:
         return quad.release();
     }
 
-    static std::vector<osg::ref_ptr<osg::Texture2D>> SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, int numColorAttachments=1)
+    static std::vector<osg::ref_ptr<osg::Texture2D>> SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, int width, int height, int numColorAttachments=1)
     {
         std::vector<osg::ref_ptr<osg::Texture2D>> result;
         camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -95,7 +95,7 @@ public:
         camera->setViewport(0, 0, 1024, 768);
         camera->setViewMatrix(osg::Matrix::identity());
         for(int i = 0; i < numColorAttachments; ++i) {
-            osg::Texture2D* tex = RenderUtils::CreateFloatTextureRectangle(1024, 768);
+            osg::Texture2D* tex = RenderUtils::CreateFloatTextureRectangle(width, height);
             camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex);
             result.push_back(tex);
         }

@@ -18,74 +18,11 @@
 // debug preprocessor variables
 #define SHOW_PRERENDER_SCENE_ONLY 0
 #define SHOW_EDGE_DETECTION_PASS_ONLY 1
-#define DISABLE_FXAA_PASS 0
+#define DISABLE_FXAA_PASS 1
 
 
 namespace {
-	const std::string outlineVertStr =
-			"#version 120\n"
-			"varying vec2 texCoord;"
-			"void main()\n"
-			"{\n"
-			"	// Vertex position in main camera Screen space.\n"
-			"   texCoord = gl_Vertex.xy*0.5 + vec2(0.5);\n"
-			"	gl_Position = gl_Vertex;\n"
-			"}\n";
-
-	const std::string outlineFragStr =
-			"#version 120\n"
-			"varying vec2 texCoord;"
-			"uniform vec3 outlineColor;"
-			"uniform vec3 selectionColor;"
-			"uniform float highlightIntensity;"
-			"uniform float depthThreshold;"
-			"uniform float normalThreshold;"
-			"uniform float depthNormalThreshold;"
-			"uniform float depthNormalThresholdScale;"
-			"uniform vec2 viewportSize;\n"
-			"\n"
-			"uniform sampler2D colorTexture0;\n"
-			"uniform sampler2D colorTexture1;\n"
-			"\n"
-			"vec4 accessTexel(sampler2D tex, vec2 tc) {\n"
-			"    return texture2D(tex, tc);\n"
-			"}\n"
-			"void getNeighbors(sampler2D tex, inout vec4 n[9], vec2 coord)\n"
-			"{\n"
-			" // n values are stored from - to +, first x then y \n"
-			"  float lineSize = 1.0;\n"
-			"  float w = lineSize / viewportSize.x;\n"
-    		"  float h = lineSize / viewportSize.y;\n"
-			"\n"
-
-    		"		n[0] = accessTexel(tex, coord + vec2( -w, -h));"
-    		"		n[1] = accessTexel(tex, coord + vec2(0.0, -h));"
-    		"		n[2] = accessTexel(tex, coord + vec2(  w, -h));"
-    		"		n[3] = accessTexel(tex, coord + vec2( -w, 0.0));"
-    		"		n[4] = accessTexel(tex, coord);"
-    		"		n[5] = accessTexel(tex, coord + vec2(  w, 0.0));"
-    		"		n[6] = accessTexel(tex, coord + vec2( -w, h));"
-    		"		n[7] = accessTexel(tex, coord + vec2(0.0, h));"
-    		"		n[8] = accessTexel(tex, coord + vec2(  w, h));"
-			"}\n"
-
-		
-			"float sobelIntensity(in vec4 n[9]) {\n"
-			"	vec4 sobel_edge_h = n[2] + (2.0*n[5]) + n[8] - (n[0] + (2.0*n[3]) + n[6]);\n"
-			"	vec4 sobel_edge_v = n[0] + (2.0*n[1]) + n[2] - (n[6] + (2.0*n[7]) + n[8]);\n"
-			"	vec4 sobel = sqrt((sobel_edge_h * sobel_edge_h) + (sobel_edge_v * sobel_edge_v));\n"
-			"	return length(sobel.rgb);\n"
-			"}\n"
-
-			"void main()\n"
-			"{\n"
-			" 	 vec4 samples[9];"
-			" 	 getNeighbors(colorTexture1, samples, texCoord);\n"
-			"    float intensity = sobelIntensity(samples);\n"
-			"    vec4 originalColor = accessTexel(colorTexture0, texCoord);"
-		    "    gl_FragColor = vec4(mix(originalColor.xyz, vec3(0, 1, 0), intensity), 1.0);\n"
-			"}\n";
-
+	// Debug only shader, simpleFrag and simpleVert
 	const std::string simpleFrag =
 		"	#version 120\n"
 			"varying vec2 texCoord;\n"
@@ -106,21 +43,123 @@ namespace {
 			"	gl_Position = gl_Vertex;\n"
 			"}\n";
 
+	const std::string outlineVertStr =
+			"#version 120\n"
+			"varying vec2 clipPos;"
+			"void main()\n"
+			"{\n"
+			"	// Vertex position in main camera Screen space.\n"
+			"   clipPos = gl_Vertex.xy;\n"
+			"	gl_Position = gl_Vertex;\n"
+			"}\n";
+
+	const std::string outlineFragStr =
+			"#version 120\n"
+			"varying vec2 clipPos;"
+			"uniform vec3 outlineColor;"
+			"uniform vec3 selectionColor;"
+			"uniform float highlightIntensity;"
+			"uniform float depthThreshold;"
+			"uniform float normalThreshold;"
+			"uniform float depthNormalThreshold;"
+			"uniform float depthNormalThresholdScale;"
+			"uniform vec2 textureSize;\n"
+			"\n"
+			"uniform sampler2D colorTexture0;\n"
+			"uniform sampler2D colorTexture1;\n"
+			"uniform sampler2D colorTexture2;\n"
+			"\n"
+			"vec4 accessTexel(sampler2D tex, vec2 tc) {\n"
+			"    return texture2D(tex, tc);\n"
+			"}\n"
+			"void getNeighbors(sampler2D tex, inout vec4 n[9], vec2 coord)\n"
+			"{\n"
+			" // n values are stored from - to +, first x then y \n"
+			"  float lineSize = 1.0;\n"
+			"  float w = lineSize / textureSize.x;\n"
+    		"  float h = lineSize / textureSize.y;\n"
+			"\n"
+
+    		"		n[0] = accessTexel(tex, coord + vec2( -w, -h));"
+    		"		n[1] = accessTexel(tex, coord + vec2(0.0, -h));"
+    		"		n[2] = accessTexel(tex, coord + vec2(  w, -h));"
+    		"		n[3] = accessTexel(tex, coord + vec2( -w, 0.0));"
+    		"		n[4] = accessTexel(tex, coord);"
+    		"		n[5] = accessTexel(tex, coord + vec2(  w, 0.0));"
+    		"		n[6] = accessTexel(tex, coord + vec2( -w, h));"
+    		"		n[7] = accessTexel(tex, coord + vec2(0.0, h));"
+    		"		n[8] = accessTexel(tex, coord + vec2(  w, h));"
+			"}\n"
+
+			"float sobelDepthIntensity(in vec4 n[9]) {\n"
+			"	float sobel_edge_h = n[2].r + (2.0*n[5].r) + n[8].r - (n[0].r + (2.0*n[3].r) + n[6].r);\n"
+			"	float sobel_edge_v = n[0].r + (2.0*n[1].r) + n[2].r - (n[6].r + (2.0*n[7].r) + n[8].r);\n"
+			"	float sobel = sqrt((sobel_edge_h * sobel_edge_h) + (sobel_edge_v * sobel_edge_v));\n"
+			"	return sobel;\n"
+			"}\n"
+
+			"float sobelIntensity(in vec4 n[9]) {\n"
+			"	vec4 sobel_edge_h = n[2] + (2.0*n[5]) + n[8] - (n[0] + (2.0*n[3]) + n[6]);\n"
+			"	vec4 sobel_edge_v = n[0] + (2.0*n[1]) + n[2] - (n[6] + (2.0*n[7]) + n[8]);\n"
+			"	vec4 sobel = sqrt((sobel_edge_h * sobel_edge_h) + (sobel_edge_v * sobel_edge_v));\n"
+			"	return length(sobel.rgb);\n"
+			"}\n"
+
+			"float edgeNormal(in vec4 n[9]) {\n"
+			"\n"
+			"    vec3 n0 = n[0].rgb;\n"
+			"    vec3 n1 = n[1].rgb;\n"
+			"    vec3 n2 = n[2].rgb;\n"
+			"    vec3 n3 = n[3].rgb;\n"
+			"\n"
+			"    vec3 d0 = (n1 - n0);\n"
+			"    vec3 d1 = (n3 - n2);\n"
+			"\n"
+			"    float edge = sqrt(dot(d0, d0) + dot(d1, d1));\n"
+			"    return edge;\n"
+			"}\n"
+
+			"\n"
+
+			"void main()\n"
+			 "{\n"
+			"    vec2 texCoord = gl_FragCoord.xy / textureSize;\n"
+			" 	 vec4 normalSamples[9];"
+			" 	 getNeighbors(colorTexture1, normalSamples, texCoord);\n"
+			" 	 vec4 depthSamples[9];"
+			" 	 getNeighbors(colorTexture2, depthSamples, texCoord);\n"
+			" 	 float depthValue = depthSamples[4].r;\n"
+			"    vec3 normal = normalize(vec3(normalSamples[4].xyz));\n"
+			"    float viewDot = 1 - dot(normalize(normal), normalize(vec3(-clipPos.xy,1)));\n"
+			"    float normalThreshold01 = clamp((viewDot - depthNormalThreshold) / (1 - depthNormalThreshold), 0.0, 1.0);\n"
+			"    float normalThreshold = normalThreshold01 * depthNormalThresholdScale + 1;\n"
+			"    float eNormal = sobelIntensity(normalSamples);\n"
+			"    eNormal = eNormal > normalThreshold ? 1.0 : 0.0;\n"
+			"    float edgeDepth = 20 * sobelDepthIntensity(depthSamples);\n"
+			"    float depthThreshold = depthThreshold * depthValue * normalThreshold;\n"
+			"    edgeDepth = edgeDepth > depthThreshold ? 1.0 : 0.0;\n"
+			"    float edge = max(edgeDepth, eNormal);\n"
+			"    vec4 originalColor = accessTexel(colorTexture0, texCoord);"
+			"    gl_FragColor = vec4(accessTexel(colorTexture0, texCoord).xyz, 1.0);\n"
+		    //"    gl_FragColor = vec4(mix(originalColor.xyz, vec3(0, 0, 0), edge), 1.0);\n"
+			"    gl_FragColor = vec4(edge, edge, edge, 1.0);\n"
+			"}\n";
+
 	const std::string preRenderFragShaderStr =
 			"#version 120\n"
 			"\n"
-			"varying vec3 normal;\n"
 
 			"\n"
+			"varying vec3 normal;\n"
 			"varying vec3 position;\n"
 			"varying vec4 color;\n"
-			"uniform int isSelected;"
 
 			"\n"
 			"void main()\n"
 			"{\n"
 			" gl_FragData[0] = color;\n"
-			" gl_FragData[1] = vec4(normalize(normal), gl_FragCoord.w);\n"
+			" gl_FragData[1] = vec4(normal, 1.0);\n"
+			" gl_FragData[2] = vec4(gl_FragCoord.w, 0, 0, 1.0);\n"
 			"}\n";
 
 	const std::string preRenderVertShaderStr =
@@ -129,11 +168,14 @@ namespace {
 			"varying vec3 normal;\n"
 			"varying vec3 position;\n"
 			"varying vec4 color;\n"
+			"uniform vec4 osg_MaterialDiffuseColor;\n"
+			"uniform vec4 osg_MaterialAmbientColor;\n"
+
 			"\n"
 			"\n"
 			"void main()\n"
 			"{\n"
-			"    color = osg_Color;\n"
+			"    color = osg_MaterialDiffuseColor;\n"
 			"    normal = (gl_ModelViewMatrix * vec4(gl_Normal, 0)).xyz;\n"
 			"    vec4 inPos = vec4(gl_Vertex.xyz, 1);"
 			"    position = (gl_ModelViewMatrix * inPos).xyz;\n"
@@ -144,16 +186,10 @@ namespace {
 	const std::string fxaaRenderFragShaderStr =
 		"#version 120\n"
 		"\n"
-		"uniform vec2 viewportSize;\n"
+		"uniform vec2 textureSize;\n"
 		"uniform sampler2D colorTexture0;\n"
 		"\n"
 		"\n"
-		"varying vec2 v_rgbNW;\n"
-		"varying vec2 v_rgbNE;\n"
-		"varying vec2 v_rgbSW;\n"
-		"varying vec2 v_rgbSE;\n"
-		"varying vec2 v_rgbM;\n"
-		"varying vec2 texCoord;\n"
 		"\n"
 		"\n"
 		"#ifndef FXAA_REDUCE_MIN\n"
@@ -217,30 +253,6 @@ namespace {
 		"    return color;\n"
 		"}\n"
 		"\n"
-		"void main()\n"
-		"{\n"
-		"   vec2 fragCoord = vec2(gl_FragCoord.x, gl_FragCoord.y) / viewportSize;\n"
-#if DISABLE_FXAA_PASS
-		"   gl_FragColor = texture2D(colorTexture0, fragCoord);\n"
-#else
-		"   gl_FragColor = fxaa(colorTexture0, fragCoord * viewportSize, viewportSize, v_rgbNW, v_rgbNE, v_rgbSW, v_rgbSE, v_rgbM);\n"
-#endif
-		"}\n";
-
-	const std::string fxaaRenderVertShaderStr =
-		"#version 120\n"
-		"\n"
-		"uniform mat4 modelMatrix;\n"
-		"uniform vec2 viewportSize;\n"
-		"\n"
-		"varying vec2 v_rgbNW;\n"
-		"varying vec2 v_rgbNE;\n"
-		"varying vec2 v_rgbSW;\n"
-		"varying vec2 v_rgbSE;\n"
-		"varying vec2 v_rgbM;\n"
-		"varying vec2 texCoord;\n"
-		"\n"
-		"\n"
 		"void texcoords(vec2 fragCoord, vec2 resolution,\n"
 		"\t\t\tout vec2 v_rgbNW, out vec2 v_rgbNE,\n"
 		"\t\t\tout vec2 v_rgbSW, out vec2 v_rgbSE,\n"
@@ -254,9 +266,30 @@ namespace {
 		"}\n"
 		"void main()\n"
 		"{\n"
+		"   vec2 fragCoord = gl_FragCoord.xy / textureSize;\n"
+#if DISABLE_FXAA_PASS
+		"   gl_FragColor = texture2D(colorTexture0, fragCoord);\n"
+#else
+		"	vec2 v_rgbNW;\n"
+		"	vec2 v_rgbNE;\n"
+		"	vec2 v_rgbSW;\n"
+		"	vec2 v_rgbSE;\n"
+		"	vec2 v_rgbM;\n"
+		"   texcoords(fragCoord * textureSize, textureSize, v_rgbNW, v_rgbNE, v_rgbSW, v_rgbSE, v_rgbM);\n"
+		"   gl_FragColor = fxaa(colorTexture0, fragCoord * textureSize, textureSize, v_rgbNW, v_rgbNE, v_rgbSW, v_rgbSE, v_rgbM);\n"
+#endif
+		"}\n";
+
+	const std::string fxaaRenderVertShaderStr =
+		"#version 120\n"
+		"\n"
+		"uniform mat4 modelMatrix;\n"
+		"\n"
+		"\n"
+		"\n"
+		"void main()\n"
+		"{\n"
 		"    vec4 viewPos = vec4(gl_Vertex.xyz, 1.0);\n"
-		"    texCoord = (viewPos.xy*0.5 + vec2(0.5));\n"
-		"    texcoords(texCoord * viewportSize, viewportSize, v_rgbNW, v_rgbNE, v_rgbSW, v_rgbSE, v_rgbM);\n"
 		"    gl_Position = viewPos;\n"
 		"}\n";
 }
@@ -266,12 +299,12 @@ void RenderPassState::HandleResize(int width, int height)
 	if(camera) {
 		camera->setRenderingCache(0);
 		camera->setViewport(0, 0, width, height);
-		state->addUniform(new osg::Uniform("viewportSize", osg::Vec2f(width, height)));
-		for(unsigned int i = 0; i < colorFboTextures.size(); ++i) {
-			if(colorFboTextures[i]) {
-				colorFboTextures[i]->setTextureSize(width, height);
-			}
-		}
+		//state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(width, height)));
+		// for(unsigned int i = 0; i < colorFboTextures.size(); ++i) {
+		// 	if(colorFboTextures[i]) {
+		// 		colorFboTextures[i]->setTextureSize(width, height);
+		// 	}
+		// }
 	}
 }
 
@@ -302,7 +335,7 @@ RenderPassState* OutlineShaderPipeline::createSceneToTexturePass(osg::ref_ptr<os
 
 	// clone main camera settings so to render same scene
 	renderPassState->camera = new osg::Camera();
-	renderPassState->colorFboTextures = RenderUtils::SetupRenderToTextureCamera(renderPassState->camera);
+	renderPassState->colorFboTextures = RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, _maxFBOBufferWidth, _maxFBOBufferHeight, numColorAttachments);
 
 	renderPassState->camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	renderPassState->camera->setClearColor(osg::Vec4(0, 0, 0, 0));
@@ -312,6 +345,10 @@ RenderPassState* OutlineShaderPipeline::createSceneToTexturePass(osg::ref_ptr<os
 	mainSceneCamera->addChild(renderPassState->camera.get());
 	renderPassState->camera->addChild(firstPassGroup.get());
 	renderPassState->state->addUniform(new osg::Uniform("isSelected", 0));
+	renderPassState->state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(_maxFBOBufferWidth, _maxFBOBufferHeight)));
+	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0,0,0,1)));
+	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(0,0,0,1)));
+	renderPassState->state->setRenderBinDetails(0, "RenderBin", osg::StateSet::OVERRIDE_RENDERBIN_DETAILS);
 	// disable blend because we use alpha channel for encoding other information
 	//renderPassState->state->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
 	return renderPassState;
@@ -321,7 +358,6 @@ RenderPassState* OutlineShaderPipeline::createTextureToTexturePass(RenderPassSta
 {
 	RenderPassState* renderPassState = new RenderPassState();
 	renderPassState->state = new osg::StateSet();
-	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
 
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), renderPassState->state.get());
 
@@ -330,12 +366,12 @@ RenderPassState* OutlineShaderPipeline::createTextureToTexturePass(RenderPassSta
 		std::ostringstream bufferNumStr;
 		bufferNumStr << "colorTexture";
 		bufferNumStr << i;
-		renderPassState->state->setTextureAttributeAndModes(0, inputTextures[i].get(), osg::StateAttribute::ON);
-		renderPassState->state->addUniform(new osg::Uniform(bufferNumStr.str().c_str(), i));
-
+		renderPassState->state->setTextureAttributeAndModes((int)i, inputTextures[i].get(), osg::StateAttribute::ON);
+		renderPassState->state->addUniform(new osg::Uniform(bufferNumStr.str().c_str(), (int)i));
 	}
 
-	renderPassState->colorFboTextures = RenderUtils::SetupRenderToTextureCamera(renderPassState->camera);
+	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
+	renderPassState->colorFboTextures = RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, _maxFBOBufferWidth, _maxFBOBufferHeight, numColorAttachments);
 
 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
 	renderPassState->state->addUniform(new osg::Uniform("outlineColor", _outlineColor));
@@ -344,8 +380,10 @@ RenderPassState* OutlineShaderPipeline::createTextureToTexturePass(RenderPassSta
 	renderPassState->state->addUniform(new osg::Uniform("depthThreshold", 1.5f));
 	renderPassState->state->addUniform(new osg::Uniform("depthNormalThreshold", 0.5f));
 	renderPassState->state->addUniform(new osg::Uniform("depthNormalThresholdScale", 7.0f));
-	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", 0.8f));
-	renderPassState->state->addUniform(new osg::Uniform("viewportSize", osg::Vec2f(1024, 768)));
+	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", 0.6f));
+	renderPassState->state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(_maxFBOBufferWidth, _maxFBOBufferHeight)));
+	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0,0,0,1)));
+	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(0,0,0,1)));
 	return renderPassState;
 }
 
@@ -360,8 +398,8 @@ RenderPassState* OutlineShaderPipeline::createTextureToColorBufferPass(RenderPas
 		std::ostringstream bufferNumStr;
 		bufferNumStr << "colorTexture";
 		bufferNumStr << i;
-		renderPassState->state->setTextureAttributeAndModes(0, inputTextures[i].get(), osg::StateAttribute::ON);
-		renderPassState->state->addUniform(new osg::Uniform(bufferNumStr.str().c_str(), i));
+		renderPassState->state->setTextureAttributeAndModes((int)i, inputTextures[i].get(), osg::StateAttribute::ON);
+		renderPassState->state->addUniform(new osg::Uniform(bufferNumStr.str().c_str(), (int)i));
 
 	}
 
@@ -373,11 +411,12 @@ RenderPassState* OutlineShaderPipeline::createTextureToColorBufferPass(RenderPas
 	renderPassState->state->addUniform(new osg::Uniform("outlineColor", _outlineColor));
 	renderPassState->state->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
 	renderPassState->state->addUniform(new osg::Uniform("isSelected", 0));
-	renderPassState->state->addUniform(new osg::Uniform("highlightIntensity", _selectedObjectHighlightIntensity));
-	renderPassState->state->addUniform(new osg::Uniform("depthThreshold", 0.2f));
+	renderPassState->state->addUniform(new osg::Uniform("depthThreshold", 1.5f));
 	renderPassState->state->addUniform(new osg::Uniform("depthNormalThreshold", 0.5f));
 	renderPassState->state->addUniform(new osg::Uniform("depthNormalThresholdScale", 7.0f));
-	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", 0.4f));
+	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", 0.6f));
+	renderPassState->state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(_maxFBOBufferWidth, _maxFBOBufferHeight)));
+	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0,0,0,1)));
 
 	return renderPassState;
 }
@@ -386,7 +425,7 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight)
 {
 	setMaxFBOSize(maxFBOBufferWidth, maxFBOBufferHeight);
-	RenderPassState* normalAndDepthMapPass = createSceneToTexturePass(mainSceneCamera, mainSceneRoot, 2, preRenderVertShaderStr, preRenderFragShaderStr);
+	RenderPassState* normalAndDepthMapPass = createSceneToTexturePass(mainSceneCamera, mainSceneRoot, 3, preRenderVertShaderStr, preRenderFragShaderStr);
 	RenderPassState* outlinePass = createTextureToTexturePass(normalAndDepthMapPass, 1, outlineVertStr, outlineFragStr);
 	RenderPassState* fxaaPass = createTextureToColorBufferPass(outlinePass, 1, fxaaRenderVertShaderStr, fxaaRenderFragShaderStr);
 
