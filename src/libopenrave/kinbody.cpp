@@ -2331,6 +2331,9 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                             }
                             index = itindex - dofindices.begin(); ///< index of an active joint
                         }
+                        else {
+                            index = dofindex;
+                        }
                         OPENRAVE_ASSERT_OP_FORMAT(index, >=, 0, "index should be >= 0; now %d", index, ORE_InvalidArguments);
                         const dReal partialderiv = dofindexDerivativePair.second;
                         vjacobian[index                ] += v.x * partialderiv;
@@ -2579,6 +2582,9 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                                 continue;
                             }
                             index = itindex - dofindices.begin(); ///< index of an active joint
+                        }
+                        else {
+                            index = dofindex;
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(index, >=, 0, "index should be >= 0; now %d", index, ORE_InvalidArguments);
                         const dReal partialderiv = dofindexDerivativePair.second;
