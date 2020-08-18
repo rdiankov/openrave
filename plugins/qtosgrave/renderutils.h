@@ -8,9 +8,9 @@
 #include <osg/Shader>
 #include <osg/Geometry>
 #include <osg/Texture2D>
-#include <osg/TextureRectangle>
 #include <osgDB/ReadFile>
 #include <osg/PolygonMode>
+#include <osg/TextureRectangle>
 
 class RenderUtils {
 public:
@@ -22,6 +22,17 @@ public:
 
         osg::Shader* fragShader = new osg::Shader(osg::Shader::FRAGMENT, fragShaderString);
         program->addShader(fragShader);
+
+        onwerStateSet->setAttributeAndModes(
+            program.get(),
+            osg::StateAttribute::ON);
+    }
+
+    static void SetShaderProgramFileOnStateSet(osg::ref_ptr<osg::StateSet> onwerStateSet, const std::string& vertShaderFilePath, const std::string& fragShaderFilePath )
+    {
+        osg::ref_ptr<osg::Program> program = new osg::Program;
+        program->addShader(osgDB::readShaderFile(vertShaderFilePath));
+        program->addShader(osgDB::readShaderFile(fragShaderFilePath));
 
         onwerStateSet->setAttributeAndModes(
             program.get(),
@@ -99,7 +110,7 @@ public:
             camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex);
             result.push_back(tex);
         }
-        osg::ref_ptr<osg::Texture2D> depthTexture = RenderUtils::CreateDepthFloatTextureRectangle(1024, 768);
+        osg::ref_ptr<osg::Texture2D> depthTexture = RenderUtils::CreateDepthFloatTextureRectangle(width, height);
         camera->attach(osg::Camera::DEPTH_BUFFER, depthTexture.get());
 
         return result;

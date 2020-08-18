@@ -6,8 +6,18 @@
 #include <osg/Depth>
 #include <osg/CullFace>
 #include <osg/BlendFunc>
+#include <QFileSystemWatcher>
+
+class RenderStatePassShaderReloader {
+
+public:
+	RenderStatePassShaderReloader(RenderStatePassShaderReloader* state);
+};
 
 // state control
+namespace {
+	const float g_NormalThreshold = 0.8f;
+}
 
 // predefined state control preprocessor variables
 // to change programable state such as highligh color, see OutlineShaderPipeline constructor
@@ -18,7 +28,7 @@
 // debug preprocessor variables
 #define SHOW_PRERENDER_SCENE_ONLY 0
 #define SHOW_EDGE_DETECTION_PASS_ONLY 1
-#define DISABLE_FXAA_PASS 1
+#define DISABLE_FXAA_PASS 0
 
 
 namespace {
@@ -98,10 +108,10 @@ namespace {
 			"	return sobel;\n"
 			"}\n"
 
-			"float sobelIntensity(in vec4 n[9]) {\n"
-			"	vec4 sobel_edge_h = n[2] + (2.0*n[5]) + n[8] - (n[0] + (2.0*n[3]) + n[6]);\n"
-			"	vec4 sobel_edge_v = n[0] + (2.0*n[1]) + n[2] - (n[6] + (2.0*n[7]) + n[8]);\n"
-			"	vec4 sobel = sqrt((sobel_edge_h * sobel_edge_h) + (sobel_edge_v * sobel_edge_v));\n"
+			"float sobelNormalIntensity(in vec4 n[9]) {\n"
+			"	vec3 sobel_edge_h = n[2].rgb + (2.0*n[5].rgb) + n[8].rgb - (n[0].rgb + (2.0*n[3].rgb) + n[6].rgb);\n"
+			"	vec3 sobel_edge_v = n[0].rgb + (2.0*n[1].rgb) + n[2].rgb - (n[6].rgb + (2.0*n[7].rgb) + n[8].rgb);\n"
+			"	vec3 sobel = sqrt((sobel_edge_h * sobel_edge_h) + (sobel_edge_v * sobel_edge_v));\n"
 			"	return length(sobel.rgb);\n"
 			"}\n"
 
@@ -132,17 +142,17 @@ namespace {
 			"    vec3 normal = normalize(vec3(normalSamples[4].xyz));\n"
 			"    float viewDot = 1 - dot(normalize(normal), normalize(vec3(-clipPos.xy,1)));\n"
 			"    float normalThreshold01 = clamp((viewDot - depthNormalThreshold) / (1 - depthNormalThreshold), 0.0, 1.0);\n"
-			"    float normalThreshold = normalThreshold01 * depthNormalThresholdScale + 1;\n"
-			"    float eNormal = sobelIntensity(normalSamples);\n"
+			"    float normalThresholdDynamic = normalThreshold01 * depthNormalThresholdScale + 1;\n"
+			"    float eNormal = sobelNormalIntensity(normalSamples);\n"
 			"    eNormal = eNormal > normalThreshold ? 1.0 : 0.0;\n"
 			"    float edgeDepth = 20 * sobelDepthIntensity(depthSamples);\n"
-			"    float depthThreshold = depthThreshold * depthValue * normalThreshold;\n"
+			"    float depthThreshold = depthThreshold * depthValue * normalThresholdDynamic;\n"
 			"    edgeDepth = edgeDepth > depthThreshold ? 1.0 : 0.0;\n"
 			"    float edge = max(edgeDepth, eNormal);\n"
 			"    vec4 originalColor = accessTexel(colorTexture0, texCoord);"
-			"    gl_FragColor = vec4(accessTexel(colorTexture0, texCoord).xyz, 1.0);\n"
-		    //"    gl_FragColor = vec4(mix(originalColor.xyz, vec3(0, 0, 0), edge), 1.0);\n"
-			"    gl_FragColor = vec4(edge, edge, edge, 1.0);\n"
+			"    gl_FragColor = vec4(accessTexel(colorTexture1, texCoord).xyz, 1.0);\n"
+		    "    gl_FragColor = vec4(mix(originalColor.xyz, vec3(0, 0, 0), edge * depthValue), 1.0);\n"
+			//"    gl_FragColor = vec4(eNormal, eNormal, eNormal, 1.0);\n"
 			"}\n";
 
 	const std::string preRenderFragShaderStr =
@@ -159,7 +169,7 @@ namespace {
 			"{\n"
 			" gl_FragData[0] = color;\n"
 			" gl_FragData[1] = vec4(normal, 1.0);\n"
-			" gl_FragData[2] = vec4(gl_FragCoord.w, 0, 0, 1.0);\n"
+			" gl_FragData[2] = vec4(gl_FragCoord.z, 0, 0, 1.0);\n"
 			"}\n";
 
 	const std::string preRenderVertShaderStr =
@@ -176,7 +186,7 @@ namespace {
 			"void main()\n"
 			"{\n"
 			"    color = osg_MaterialDiffuseColor;\n"
-			"    normal = (gl_ModelViewMatrix * vec4(gl_Normal, 0)).xyz;\n"
+			"    normal = normalize(gl_Normal);\n"
 			"    vec4 inPos = vec4(gl_Vertex.xyz, 1);"
 			"    position = (gl_ModelViewMatrix * inPos).xyz;\n"
 			"    // Calculate vertex position in clip coordinates\n"
@@ -210,7 +220,7 @@ namespace {
 		"            vec2 v_rgbSW, vec2 v_rgbSE, \n"
 		"            vec2 v_rgbM) {\n"
 		"    vec4 color;\n"
-		"    mediump vec2 inverseVP = vec2(1.0 / resolution.x, 1.0 / resolution.y);\n"
+		"    vec2 inverseVP = vec2(1.0 / resolution.x, 1.0 / resolution.y);\n"
 		"    vec3 rgbNW = texture2D(tex, v_rgbNW).xyz;\n"
 		"    vec3 rgbNE = texture2D(tex, v_rgbNE).xyz;\n"
 		"    vec3 rgbSW = texture2D(tex, v_rgbSW).xyz;\n"
@@ -226,7 +236,7 @@ namespace {
 		"    float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));\n"
 		"    float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));\n"
 		"    \n"
-		"    mediump vec2 dir;\n"
+		"    vec2 dir;\n"
 		"    dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));\n"
 		"    dir.y =  ((lumaNW + lumaSW) - (lumaNE + lumaSE));\n"
 		"    \n"
@@ -294,18 +304,26 @@ namespace {
 		"}\n";
 }
 
+RenderPassState::RenderPassState()
+{
+	state = new osg::StateSet();
+	autoReloadShaders = false;
+}
+
 void RenderPassState::HandleResize(int width, int height)
 {
 	if(camera) {
 		camera->setRenderingCache(0);
 		camera->setViewport(0, 0, width, height);
-		//state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(width, height)));
-		// for(unsigned int i = 0; i < colorFboTextures.size(); ++i) {
-		// 	if(colorFboTextures[i]) {
-		// 		colorFboTextures[i]->setTextureSize(width, height);
-		// 	}
-		// }
 	}
+}
+
+void RenderPassState::SetShaderFiles(const std::string& vertShader, const std::string& fragShader, bool autoReload)
+{
+	vertShaderFile = vertShader;
+	fragShaderFile = fragShader;
+	RenderUtils::SetShaderProgramFileOnStateSet(state, vertShader, fragShader);
+	autoReloadShaders = autoReload;
 }
 
 OutlineShaderPipeline::OutlineShaderPipeline()
@@ -322,13 +340,13 @@ OutlineShaderPipeline::~OutlineShaderPipeline()
 	}
 }
 
-RenderPassState* OutlineShaderPipeline::createSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int numColorAttachments, const std::string& vshader, const std::string& fshader)
+RenderPassState* OutlineShaderPipeline::CreateSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int numColorAttachments, const std::string& vshader, const std::string& fshader)
 {
 	// First pass will render the same scene using a special shader that render objects with different colors
 	// different from background, so to prepare for outline edge detection post processing shader
 	RenderPassState* renderPassState = new RenderPassState();
-	renderPassState->state = new osg::StateSet();
-	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
+	//RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
+	renderPassState->SetShaderFiles(vshader, fshader, true);
 	osg::ref_ptr<osg::Group> firstPassGroup = new osg::Group();
 	firstPassGroup->setStateSet(renderPassState->state.get());
 	firstPassGroup->addChild(mainSceneRoot);
@@ -354,11 +372,9 @@ RenderPassState* OutlineShaderPipeline::createSceneToTexturePass(osg::ref_ptr<os
 	return renderPassState;
 }
 
-RenderPassState* OutlineShaderPipeline::createTextureToTexturePass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader)
+RenderPassState* OutlineShaderPipeline::CreateTextureToTexturePass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader)
 {
 	RenderPassState* renderPassState = new RenderPassState();
-	renderPassState->state = new osg::StateSet();
-
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), renderPassState->state.get());
 
 	std::vector<osg::ref_ptr<osg::Texture2D>> inputTextures = inputPass->colorFboTextures;
@@ -370,7 +386,8 @@ RenderPassState* OutlineShaderPipeline::createTextureToTexturePass(RenderPassSta
 		renderPassState->state->addUniform(new osg::Uniform(bufferNumStr.str().c_str(), (int)i));
 	}
 
-	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
+	//RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
+	renderPassState->SetShaderFiles(vshader, fshader, true);
 	renderPassState->colorFboTextures = RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, _maxFBOBufferWidth, _maxFBOBufferHeight, numColorAttachments);
 
 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
@@ -380,19 +397,20 @@ RenderPassState* OutlineShaderPipeline::createTextureToTexturePass(RenderPassSta
 	renderPassState->state->addUniform(new osg::Uniform("depthThreshold", 1.5f));
 	renderPassState->state->addUniform(new osg::Uniform("depthNormalThreshold", 0.5f));
 	renderPassState->state->addUniform(new osg::Uniform("depthNormalThresholdScale", 7.0f));
-	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", 0.6f));
+	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", g_NormalThreshold));
 	renderPassState->state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(_maxFBOBufferWidth, _maxFBOBufferHeight)));
 	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0,0,0,1)));
 	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(0,0,0,1)));
 	return renderPassState;
 }
 
-RenderPassState* OutlineShaderPipeline::createTextureToColorBufferPass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader)
+RenderPassState* OutlineShaderPipeline::CreateTextureToColorBufferPass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader)
 {
 	RenderPassState* renderPassState = new RenderPassState();
-	renderPassState->state = new osg::StateSet();
-	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
+	//RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
+	renderPassState->SetShaderFiles(vshader, fshader, true);
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), renderPassState->state.get());
+	renderPassState->camera->setClearColor(osg::Vec4(1, 1, 1, 1));
 	std::vector<osg::ref_ptr<osg::Texture2D>> inputTextures = inputPass->colorFboTextures;
 	for(unsigned int i = 0; i < inputTextures.size(); ++i) {
 		std::ostringstream bufferNumStr;
@@ -414,7 +432,7 @@ RenderPassState* OutlineShaderPipeline::createTextureToColorBufferPass(RenderPas
 	renderPassState->state->addUniform(new osg::Uniform("depthThreshold", 1.5f));
 	renderPassState->state->addUniform(new osg::Uniform("depthNormalThreshold", 0.5f));
 	renderPassState->state->addUniform(new osg::Uniform("depthNormalThresholdScale", 7.0f));
-	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", 0.6f));
+	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", g_NormalThreshold));
 	renderPassState->state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(_maxFBOBufferWidth, _maxFBOBufferHeight)));
 	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0,0,0,1)));
 
@@ -425,9 +443,15 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight)
 {
 	setMaxFBOSize(maxFBOBufferWidth, maxFBOBufferHeight);
-	RenderPassState* normalAndDepthMapPass = createSceneToTexturePass(mainSceneCamera, mainSceneRoot, 3, preRenderVertShaderStr, preRenderFragShaderStr);
-	RenderPassState* outlinePass = createTextureToTexturePass(normalAndDepthMapPass, 1, outlineVertStr, outlineFragStr);
-	RenderPassState* fxaaPass = createTextureToColorBufferPass(outlinePass, 1, fxaaRenderVertShaderStr, fxaaRenderFragShaderStr);
+	static const std::string preRenderVertShaderPath = "/data/shaders/prerender.vert";
+	static const std::string preRenderFragShaderPath = "/data/shaders/prerender.frag";
+	static const std::string outlineVertPath = "/data/shaders/outline.vert";
+	static const std::string outlineFragPath = "/data/shaders/outline.frag";
+	static const std::string fxaaVertPath = "/data/shaders/fxaa.vert";
+	static const std::string fxaaFragPath = "/data/shaders/fxaa.frag";
+	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 3, preRenderVertShaderPath, preRenderFragShaderPath);
+	RenderPassState* outlinePass = CreateTextureToTexturePass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
+	RenderPassState* fxaaPass = CreateTextureToColorBufferPass(outlinePass, 1, fxaaVertPath, fxaaFragPath);
 
 	_renderPassStates.push_back(normalAndDepthMapPass);
 	_renderPassStates.push_back(outlinePass);

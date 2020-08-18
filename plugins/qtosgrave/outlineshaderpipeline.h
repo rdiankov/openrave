@@ -10,10 +10,16 @@
 #define OPENRAVE_QTOSG_OUTLINESHADERPIPELINE_H
 
 struct RenderPassState {
+    RenderPassState();
     void HandleResize(int width, int height);
+    void SetShaderFiles(const std::string& vertShader, const std::string& fragShader, bool autoReload);
+
     osg::ref_ptr<osg::Camera> camera;
     osg::ref_ptr<osg::StateSet> state;
     std::vector<osg::ref_ptr<osg::Texture2D>> colorFboTextures;
+    std::string vertShaderFile;
+    std::string fragShaderFile;
+    bool autoReloadShaders;
 };
 
 class OutlineShaderPipeline {
@@ -24,9 +30,9 @@ public:
     /// \brief This function creates a outline scene pipeline with two passes to render a regular scene with outline edges
     osg::ref_ptr<osg::Group> CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight);
     void HandleResize(int width, int height);
-    RenderPassState* createSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int numColorAttachments, const std::string& vshader, const std::string& fshader);
-    RenderPassState* createTextureToTexturePass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader);
-    RenderPassState* createTextureToColorBufferPass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader);
+    RenderPassState* CreateSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int numColorAttachments, const std::string& vshader, const std::string& fshader);
+    RenderPassState* CreateTextureToTexturePass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader);
+    RenderPassState* CreateTextureToColorBufferPass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader);
 
 
 protected:
