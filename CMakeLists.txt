@@ -759,7 +759,7 @@ endif()
 #endif()
 
 # function expression parser library
-find_package(fparser 4.5.2 QUIET)
+find_package(fparser 4.5)
 if( fparser_FOUND )
     message(STATUS "Found fparser, version ${fparser_VERSION}")
     set(FPARSER_INCLUDE_DIRS "${fparser_INCLUDE_DIR}")
