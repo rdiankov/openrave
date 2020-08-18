@@ -9,17 +9,22 @@
 #ifndef OPENRAVE_QTOSG_OUTLINESHADERPIPELINE_H
 #define OPENRAVE_QTOSG_OUTLINESHADERPIPELINE_H
 
+class RenderStatePassShaderReloader;
+
 struct RenderPassState {
     RenderPassState();
     void HandleResize(int width, int height);
     void SetShaderFiles(const std::string& vertShader, const std::string& fragShader, bool autoReload);
-
+    void ReloadShaders();
     osg::ref_ptr<osg::Camera> camera;
     osg::ref_ptr<osg::StateSet> state;
     std::vector<osg::ref_ptr<osg::Texture2D>> colorFboTextures;
     std::string vertShaderFile;
     std::string fragShaderFile;
     bool autoReloadShaders;
+
+private:
+    RenderStatePassShaderReloader* _shaderReloader;
 };
 
 class OutlineShaderPipeline {
