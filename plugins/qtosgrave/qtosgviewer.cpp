@@ -233,6 +233,7 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
     surfaceFormat.setSamples(4);
     surfaceFormat.setRenderableType(QSurfaceFormat::OpenGL);
     surfaceFormat.setOption(QSurfaceFormat::DebugContext);
+    //surfaceFormat.setAlphaBufferSize(8);
     surfaceFormat.setDepthBufferSize(24);
     surfaceFormat.setStencilBufferSize(8);
     surfaceFormat.setSwapBehavior(QSurfaceFormat::DoubleBuffer);

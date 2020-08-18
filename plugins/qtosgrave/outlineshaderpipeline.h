@@ -2,7 +2,7 @@
 #include <osg/Node>
 #include <osg/Group>
 #include <osg/Uniform>
-#include <osg/Texture2DMultisample>
+#include <osg/Texture2D>
 
 #include <vector>
 
@@ -13,7 +13,7 @@ struct RenderPassState {
     void HandleResize(int width, int height);
     osg::ref_ptr<osg::Camera> camera;
     osg::ref_ptr<osg::StateSet> state;
-    std::vector<osg::ref_ptr<osg::Texture2DMultisample>> colorFboTextures;
+    std::vector<osg::ref_ptr<osg::Texture2D>> colorFboTextures;
 };
 
 class OutlineShaderPipeline {

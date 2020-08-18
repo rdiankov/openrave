@@ -8,9 +8,9 @@
 #include <osg/Shader>
 #include <osg/Geometry>
 #include <osg/Texture2D>
+#include <osg/TextureRectangle>
 #include <osgDB/ReadFile>
 #include <osg/PolygonMode>
-#include <osg/Texture2DMultisample>
 
 class RenderUtils {
 public:
@@ -40,19 +40,23 @@ public:
         return texture.release();
     }
 
-    static osg::Texture2DMultisample *CreateFloatTextureRectangle(int width, int height)
+    static osg::Texture2D *CreateFloatTextureRectangle(int width, int height)
     {
-        osg::ref_ptr<osg::Texture2DMultisample> tex2D = new osg::Texture2DMultisample(4, true);
+        osg::ref_ptr<osg::Texture2D> tex2D = new osg::Texture2D();
+        //tex2D->setNumSamples(4);
         tex2D->setTextureSize(width, height);
         tex2D->setSourceFormat(GL_RGBA);
-        tex2D->setInternalFormat(GL_RGBA16F_ARB);
+        tex2D->setInternalFormat(GL_RGBA32F_ARB);
         tex2D->setSourceType(GL_FLOAT);
+        tex2D->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+        tex2D->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
         return tex2D.release();
     }
 
-    static osg::Texture2DMultisample *CreateDepthFloatTextureRectangle(int width, int height)
+    static osg::Texture2D *CreateDepthFloatTextureRectangle(int width, int height)
     {
-        osg::ref_ptr<osg::Texture2DMultisample> tex2D = new osg::Texture2DMultisample(4, true);
+        osg::ref_ptr<osg::Texture2D> tex2D = new osg::Texture2D();
+        //tex2D->setNumSamples(4);
         tex2D->setTextureSize(width, height);
         tex2D->setSourceFormat(GL_DEPTH_COMPONENT);
         tex2D->setInternalFormat(GL_DEPTH_COMPONENT24);
@@ -81,26 +85,22 @@ public:
         return quad.release();
     }
 
-    static std::vector<osg::ref_ptr<osg::Texture2DMultisample>> SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, int numColorAttachments=1)
+    static std::vector<osg::ref_ptr<osg::Texture2D>> SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, int numColorAttachments=1)
     {
-        std::vector<osg::ref_ptr<osg::Texture2DMultisample>> result;
-        camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        std::vector<osg::ref_ptr<osg::Texture2D>> result;
+        camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
         camera->setClearColor(osg::Vec4(0,0,0,0));
         camera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
         camera->setRenderOrder(osg::Camera::PRE_RENDER);
         camera->setViewport(0, 0, 1024, 768);
         camera->setViewMatrix(osg::Matrix::identity());
         for(int i = 0; i < numColorAttachments; ++i) {
-            osg::Texture2DMultisample* tex = RenderUtils::CreateFloatTextureRectangle(1024, 768);
-            tex->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
-            tex->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
-            camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex, 0, 0, false, 4, 4);
+            osg::Texture2D* tex = RenderUtils::CreateFloatTextureRectangle(1024, 768);
+            camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex);
             result.push_back(tex);
         }
-        osg::ref_ptr<osg::Texture2DMultisample> depthTexture = RenderUtils::CreateDepthFloatTextureRectangle(1024, 768);
-        depthTexture->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
-        depthTexture->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
-        camera->attach(osg::Camera::DEPTH_BUFFER, depthTexture.get(), 0, 0, false, 4, 4);
+        osg::ref_ptr<osg::Texture2D> depthTexture = RenderUtils::CreateDepthFloatTextureRectangle(1024, 768);
+        camera->attach(osg::Camera::DEPTH_BUFFER, depthTexture.get());
 
         return result;
     }

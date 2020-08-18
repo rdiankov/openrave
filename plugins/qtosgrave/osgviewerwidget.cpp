@@ -533,7 +533,7 @@ private:
 
 QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
                                    const boost::function<bool(int)>& onKeyDown, double metersinunit,
-                                   QWidget* parent) : QGLWidget(QGLFormat(QGL::SampleBuffers),parent), _onKeyDown(onKeyDown)
+                                   QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
 {
 
     setFocus( Qt::ActiveWindowFocusReason );
@@ -749,6 +749,17 @@ void QOSGViewerWidget::SetSceneData()
     QRect screenGeometry = QApplication::screens()[0]->geometry();
     osg::ref_ptr<osg::Group> outlineScene = _outlineRenderPipeline.CreateOutlineSceneFromOriginalScene(GetCamera(), rootscene, screenGeometry.width(), screenGeometry.height());
     _osgview->setSceneData(outlineScene);
+
+    osgViewer::Viewer::Windows windows;
+    _osgviewer->getWindows(windows);
+    for(osgViewer::Viewer::Windows::iterator itr = windows.begin();
+        itr != windows.end();
+        ++itr)
+    {
+        osg::State *s=(*itr)->getState();
+        s->setUseModelViewAndProjectionUniforms(true);
+        s->setUseVertexAttributeAliasing(true);
+    }
 }
 
 void QOSGViewerWidget::ResetViewToHome()
@@ -1623,10 +1634,11 @@ void QOSGViewerWidget::paintGL()
     try {
         if(!_fboInitialized) {
             // need to do this in order to make OSG to work with QOpenGLWidget if one wants to use FBO and Render to Texture
-            //GetCamera()->getGraphicsContext()->setDefaultFboId(defaultFramebufferObject());
+            GetCamera()->getGraphicsContext()->setDefaultFboId(defaultFramebufferObject());
             _fboInitialized = true;
-            dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
-            dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
+            // show fps
+            // dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
+            // dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
         }
         _osgviewer->frame(); // osgViewer::CompositeViewer
     }
@@ -1715,7 +1727,7 @@ void QOSGViewerWidget::keyReleaseEvent(QKeyEvent *event)
 
 bool QOSGViewerWidget::event(QEvent *event)
 {
-    bool handled = QGLWidget::event(event);
+    bool handled = QOpenGLWidget::event(event);
     this->update();
     return handled;
 }

@@ -24,7 +24,7 @@
 #include <QtCore/QTimer>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLayout>
-#include <QGLWidget>
+#include <QOpenGLWidget>
 #include <osgViewer/CompositeViewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osg/PositionAttitudeTransform>
@@ -39,7 +39,7 @@ class OpenRAVETracker;
 class OpenRAVETrackball;
 
 /// \brief  Class of the openscene graph 3d viewer
-class QOSGViewerWidget : public QGLWidget
+class QOSGViewerWidget : public QOpenGLWidget
 {
 public:
 
