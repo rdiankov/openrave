@@ -895,11 +895,15 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 _meshcollision.Clear();
             }
             else {
+                bool bSideWallChanged = false;
                 for(unsigned iSideWall=0; iSideWall < vSideWalls.size(); iSideWall++) {
                     if (vSideWalls[iSideWall].Compare(_vSideWalls[iSideWall], fUnitScale) > 0) {
                         _vSideWalls[iSideWall] = std::move(vSideWalls[iSideWall]);
-                        _meshcollision.Clear();
+                        bSideWallChanged = true;
                     }
+                }
+                if (bSideWallChanged) {
+                    _meshcollision.Clear();
                 }
             }
         }
