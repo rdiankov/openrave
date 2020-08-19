@@ -10,7 +10,7 @@
 #include <osg/Texture2D>
 #include <osgDB/ReadFile>
 #include <osg/PolygonMode>
-#include <osg/TextureRectangle>
+#include <osg/Texture2DMultisample>
 
 class RenderUtils {
 public:
@@ -39,40 +39,44 @@ public:
             osg::StateAttribute::ON);
     }
 
-    static osg::Texture2D *CreateTexture(const std::string &fileName)
+    static osg::Texture *CreateFloatTextureRectangle(int width, int height, bool useMultiSamples=false)
     {
-        osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
-        texture->setImage(osgDB::readRefImageFile(fileName));
-        texture->setWrap(osg::Texture2D::WRAP_S, osg::Texture2D::REPEAT);
-        texture->setWrap(osg::Texture2D::WRAP_T, osg::Texture2D::REPEAT);
-        texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
-        texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
-        texture->setMaxAnisotropy(16.0f);
-        return texture.release();
+        osg::ref_ptr<osg::Texture> tex = nullptr;
+        if(useMultiSamples) {
+            osg::Texture2DMultisample* texMS = new osg::Texture2DMultisample(4, false);
+            texMS->setTextureSize(width, height);
+            tex = texMS;
+        }
+        else {
+            osg::Texture2D* tex2D = new osg::Texture2D();
+            tex2D->setTextureSize(width, height);
+            tex = tex2D;
+        }
+        tex->setSourceFormat(GL_RGBA);
+        tex->setInternalFormat(GL_RGBA32F_ARB);
+        tex->setSourceType(GL_FLOAT);
+        tex->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
+        tex->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+        return tex.release();
     }
 
-    static osg::Texture2D *CreateFloatTextureRectangle(int width, int height)
+    static osg::Texture *CreateDepthFloatTextureRectangle(int width, int height, bool useMultiSamples=false)
     {
-        osg::ref_ptr<osg::Texture2D> tex2D = new osg::Texture2D();
-        //tex2D->setNumSamples(4);
-        tex2D->setTextureSize(width, height);
-        tex2D->setSourceFormat(GL_RGBA);
-        tex2D->setInternalFormat(GL_RGBA32F_ARB);
-        tex2D->setSourceType(GL_FLOAT);
-        tex2D->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
-        tex2D->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
-        return tex2D.release();
-    }
-
-    static osg::Texture2D *CreateDepthFloatTextureRectangle(int width, int height)
-    {
-        osg::ref_ptr<osg::Texture2D> tex2D = new osg::Texture2D();
-        //tex2D->setNumSamples(4);
-        tex2D->setTextureSize(width, height);
-        tex2D->setSourceFormat(GL_DEPTH_COMPONENT);
-        tex2D->setInternalFormat(GL_DEPTH_COMPONENT24);
-        tex2D->setSourceType(GL_UNSIGNED_INT);
-        return tex2D.release();
+        osg::ref_ptr<osg::Texture> tex = nullptr;
+        if(useMultiSamples) {
+            osg::Texture2DMultisample* texMS = new osg::Texture2DMultisample(4,false);
+            texMS->setTextureSize(width, height);
+            tex = texMS;
+        }
+        else {
+            osg::Texture2D* tex2D = new osg::Texture2D();
+            tex2D->setTextureSize(width, height);
+            tex = tex2D;
+        }
+        tex->setSourceFormat(GL_DEPTH_COMPONENT);
+        tex->setInternalFormat(GL_DEPTH_COMPONENT24);
+        tex->setSourceType(GL_UNSIGNED_INT);
+        return tex.release();
     }
 
     static osg::Geode *CreateScreenQuad(float width, float height, float scale = 1, osg::Vec3 corner = osg::Vec3())
@@ -96,9 +100,9 @@ public:
         return quad.release();
     }
 
-    static std::vector<osg::ref_ptr<osg::Texture2D>> SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, int width, int height, int numColorAttachments=1)
+    static std::vector<osg::ref_ptr<osg::Texture>> SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, int width, int height, int numColorAttachments=1, bool useMultiSamples=false)
     {
-        std::vector<osg::ref_ptr<osg::Texture2D>> result;
+        std::vector<osg::ref_ptr<osg::Texture>> result;
         camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
         camera->setClearColor(osg::Vec4(0,0,0,0));
         camera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
@@ -106,24 +110,24 @@ public:
         camera->setViewport(0, 0, 1024, 768);
         camera->setViewMatrix(osg::Matrix::identity());
         for(int i = 0; i < numColorAttachments; ++i) {
-            osg::Texture2D* tex = RenderUtils::CreateFloatTextureRectangle(width, height);
-            camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex);
+            osg::Texture* tex = RenderUtils::CreateFloatTextureRectangle(width, height, useMultiSamples);
+            camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex, 0, 0, false, 4, 4);
             result.push_back(tex);
         }
-        osg::ref_ptr<osg::Texture2D> depthTexture = RenderUtils::CreateDepthFloatTextureRectangle(width, height);
-        camera->attach(osg::Camera::DEPTH_BUFFER, depthTexture.get());
+        osg::ref_ptr<osg::Texture> depthTexture = RenderUtils::CreateDepthFloatTextureRectangle(width, height, useMultiSamples);
+        camera->attach(osg::Camera::DEPTH_BUFFER, depthTexture.get(), 0, 0, false, 4, 4);
 
         return result;
     }
 
-    static osg::Camera *CreateFBOTextureDisplayHUDViewPort(osg::Texture2D* texture, const osg::Vec2f& corner, const osg::Vec2f& size)
+    static osg::Camera *CreateFBOTextureDisplayHUDViewPort(osg::Texture* texture, const osg::Vec2f& corner, const osg::Vec2f& size, int fboWidth, int fboHeight)
     {
         osg::ref_ptr<osg::Camera> hc = CreateHUDCamera();
         osg::Geode* quad = CreateScreenQuad(size.x(), size.y(), 1, osg::Vec3(corner.x(), corner.y(), 0));
         osg::StateSet* stateSet = quad->getOrCreateStateSet();
         stateSet->setTextureAttributeAndModes(0, texture);
         RenderUtils::SetShaderProgramFileOnStateSet(stateSet, "/data/shaders/simpleTexture.vert", "/data/shaders/simpleTexture.frag");
-        stateSet->addUniform(new osg::Uniform("textureSize", osg::Vec2f(texture->getTextureWidth(), texture->getTextureHeight())));
+        stateSet->addUniform(new osg::Uniform("textureSize", osg::Vec2f(fboWidth, fboHeight)));
         osg::Vec2f scale = corner * 0.5 + osg::Vec2f(0.5, 0.5);
         stateSet->addUniform(new osg::Uniform("offSet", scale));
         hc->addChild(quad);

@@ -19,6 +19,7 @@ public:
 
 		QObject::connect(&_shaderFileWatcher, &QFileSystemWatcher::fileChanged, [=](const QString& file){
             state->ReloadShaders();
+			std::cout << "file " << file.toStdString() << " has changed " << std::endl;
         });
 	}
 
@@ -76,7 +77,8 @@ OutlineShaderPipeline::~OutlineShaderPipeline()
 	}
 }
 
-RenderPassState* OutlineShaderPipeline::CreateSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int numColorAttachments, const std::string& vshader, const std::string& fshader)
+RenderPassState* OutlineShaderPipeline::CreateSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera,
+	osg::ref_ptr<osg::Node> mainSceneRoot, int numColorAttachments, const std::string& vshader, const std::string& fshader, bool useMultiSamples)
 {
 	// First pass will render the same scene using a special shader that render objects with different colors
 	// different from background, so to prepare for outline edge detection post processing shader
@@ -89,7 +91,7 @@ RenderPassState* OutlineShaderPipeline::CreateSceneToTexturePass(osg::ref_ptr<os
 
 	// clone main camera settings so to render same scene
 	renderPassState->camera = new osg::Camera();
-	renderPassState->colorFboTextures = RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, _maxFBOBufferWidth, _maxFBOBufferHeight, numColorAttachments);
+	renderPassState->colorFboTextures = RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, _maxFBOBufferWidth, _maxFBOBufferHeight, numColorAttachments, useMultiSamples);
 
 	renderPassState->camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	renderPassState->camera->setClearColor(osg::Vec4(0, 0, 0, 0));
@@ -104,7 +106,7 @@ RenderPassState* OutlineShaderPipeline::CreateSceneToTexturePass(osg::ref_ptr<os
 	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(0,0,0,1)));
 	renderPassState->state->setRenderBinDetails(0, "RenderBin", osg::StateSet::OVERRIDE_RENDERBIN_DETAILS);
 	// disable blend because we use alpha channel for encoding other information
-	//renderPassState->state->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+	renderPassState->state->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
 	return renderPassState;
 }
 
@@ -113,7 +115,7 @@ RenderPassState* OutlineShaderPipeline::CreateTextureToTexturePass(RenderPassSta
 	RenderPassState* renderPassState = new RenderPassState();
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), renderPassState->state.get());
 
-	std::vector<osg::ref_ptr<osg::Texture2D>> inputTextures = inputPass->colorFboTextures;
+	std::vector<osg::ref_ptr<osg::Texture>> inputTextures = inputPass->colorFboTextures;
 	for(unsigned int i = 0; i < inputTextures.size(); ++i) {
 		std::ostringstream bufferNumStr;
 		bufferNumStr << "colorTexture";
@@ -147,7 +149,7 @@ RenderPassState* OutlineShaderPipeline::CreateTextureToColorBufferPass(RenderPas
 	renderPassState->SetShaderFiles(vshader, fshader, true);
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), renderPassState->state.get());
 	renderPassState->camera->setClearColor(osg::Vec4(1, 1, 1, 1));
-	std::vector<osg::ref_ptr<osg::Texture2D>> inputTextures = inputPass->colorFboTextures;
+	std::vector<osg::ref_ptr<osg::Texture>> inputTextures = inputPass->colorFboTextures;
 	for(unsigned int i = 0; i < inputTextures.size(); ++i) {
 		std::ostringstream bufferNumStr;
 		bufferNumStr << "colorTexture";
@@ -184,14 +186,14 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	static const std::string outlineFragPath = "/data/shaders/outline.frag";
 	static const std::string fxaaVertPath = "/data/shaders/fxaa.vert";
 	static const std::string fxaaFragPath = "/data/shaders/fxaa.frag";
-	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 3, preRenderVertShaderPath, preRenderFragShaderPath);
+	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 2, preRenderVertShaderPath, preRenderFragShaderPath, false);
 	RenderPassState* outlinePass = CreateTextureToTexturePass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
-	RenderPassState* fxaaPass = CreateTextureToTexturePass(outlinePass, 1, fxaaVertPath, fxaaFragPath);
+	RenderPassState* fxaaPass = CreateTextureToColorBufferPass(outlinePass, 1, fxaaVertPath, fxaaFragPath);
 
-	osg::Camera* normalHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(normalAndDepthMapPass->colorFboTextures[0].get(), osg::Vec2f(-1, 0), osg::Vec2f(1,1));
-	osg::Camera* depthHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(normalAndDepthMapPass->colorFboTextures[1].get(), osg::Vec2f(0,0), osg::Vec2f(1,1));
-	osg::Camera* outlineNoFxaaHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(outlinePass->colorFboTextures[0].get(), osg::Vec2f(-1,-1), osg::Vec2f(1,1));
-	osg::Camera* outlineFxaaHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(fxaaPass->colorFboTextures[0].get(), osg::Vec2f(0,-1), osg::Vec2f(1,1));
+	// osg::Camera* normalHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(normalAndDepthMapPass->colorFboTextures[0].get(), osg::Vec2f(-1, 0), osg::Vec2f(1,1), maxFBOBufferWidth, maxFBOBufferHeight);
+	// osg::Camera* depthHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(normalAndDepthMapPass->colorFboTextures[1].get(), osg::Vec2f(0,0), osg::Vec2f(1,1), maxFBOBufferWidth, maxFBOBufferHeight);
+	// osg::Camera* outlineNoFxaaHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(outlinePass->colorFboTextures[0].get(), osg::Vec2f(-1,-1), osg::Vec2f(1,1), maxFBOBufferWidth, maxFBOBufferHeight);
+	// osg::Camera* outlineFxaaHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(fxaaPass->colorFboTextures[0].get(), osg::Vec2f(0,-1), osg::Vec2f(1,1), maxFBOBufferWidth, maxFBOBufferHeight);
 
 	_renderPassStates.push_back(normalAndDepthMapPass);
 	_renderPassStates.push_back(outlinePass);
@@ -201,13 +203,13 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	osg::ref_ptr<osg::Group> passesGroup = new osg::Group();
 	passesGroup->addChild(_renderPassStates[0]->camera.get());
 #	if !SHOW_PRERENDER_SCENE_ONLY
-	//passesGroup->addChild(mainSceneRoot);
+	passesGroup->addChild(mainSceneRoot);
 	passesGroup->addChild(_renderPassStates[1]->camera.get());
 	passesGroup->addChild(_renderPassStates[2]->camera.get());
-	passesGroup->addChild(normalHud);
-	passesGroup->addChild(depthHud);
-	passesGroup->addChild(outlineNoFxaaHud);
-	passesGroup->addChild(outlineFxaaHud);
+	// passesGroup->addChild(normalHud);
+	// passesGroup->addChild(depthHud);
+	// passesGroup->addChild(outlineNoFxaaHud);
+	// passesGroup->addChild(outlineFxaaHud);
 #endif
 	return passesGroup.release();
 

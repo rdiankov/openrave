@@ -2,7 +2,7 @@
 #include <osg/Node>
 #include <osg/Group>
 #include <osg/Uniform>
-#include <osg/Texture2D>
+#include <osg/Texture>
 
 #include <vector>
 
@@ -18,7 +18,7 @@ struct RenderPassState {
     void ReloadShaders();
     osg::ref_ptr<osg::Camera> camera;
     osg::ref_ptr<osg::StateSet> state;
-    std::vector<osg::ref_ptr<osg::Texture2D>> colorFboTextures;
+    std::vector<osg::ref_ptr<osg::Texture>> colorFboTextures;
     std::string vertShaderFile;
     std::string fragShaderFile;
     bool autoReloadShaders;
@@ -35,7 +35,8 @@ public:
     /// \brief This function creates a outline scene pipeline with two passes to render a regular scene with outline edges
     osg::ref_ptr<osg::Group> CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight);
     void HandleResize(int width, int height);
-    RenderPassState* CreateSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int numColorAttachments, const std::string& vshader, const std::string& fshader);
+    RenderPassState* CreateSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, 
+        int numColorAttachments, const std::string& vshader, const std::string& fshader, bool useMultiSamples=false);
     RenderPassState* CreateTextureToTexturePass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader);
     RenderPassState* CreateTextureToColorBufferPass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader);
 

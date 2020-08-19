@@ -752,14 +752,6 @@ void QOSGViewerWidget::SetSceneData()
 
     osgViewer::Viewer::Windows windows;
     _osgviewer->getWindows(windows);
-    for(osgViewer::Viewer::Windows::iterator itr = windows.begin();
-        itr != windows.end();
-        ++itr)
-    {
-        osg::State *s=(*itr)->getState();
-        s->setUseModelViewAndProjectionUniforms(true);
-        s->setUseVertexAttributeAliasing(true);
-    }
 }
 
 void QOSGViewerWidget::ResetViewToHome()
