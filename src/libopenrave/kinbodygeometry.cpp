@@ -866,6 +866,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 _meshcollision.Clear();
             }
         }
+        vGeomDataTemp = _vGeomData2;
         if (value.HasMember("innerSizeX")) {
             orjson::LoadJsonValueByKey(value, "innerSizeX", vGeomDataTemp.x);
             vGeomDataTemp.x *= fUnitScale;
@@ -909,6 +910,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         }
         break;
     case GT_Sphere:
+        vGeomDataTemp = _vGeomData;
         if (value.HasMember("radius")) {
             orjson::LoadJsonValueByKey(value, "radius", vGeomDataTemp.x);
             vGeomDataTemp *= fUnitScale;
@@ -919,9 +921,10 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         }
         break;
     case GT_Cylinder:
+        vGeomDataTemp = _vGeomData;
         if (value.HasMember("radius")) {
             orjson::LoadJsonValueByKey(value, "radius", vGeomDataTemp.x);
-            vGeomDataTemp *= fUnitScale;
+            vGeomDataTemp.x *= fUnitScale;
         }
         if (value.HasMember("height")) {
             orjson::LoadJsonValueByKey(value, "height", vGeomDataTemp.y);
