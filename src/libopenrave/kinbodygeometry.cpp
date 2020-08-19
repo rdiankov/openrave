@@ -896,10 +896,12 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 _vSideWalls = std::move(vSideWalls);
                 bInitCollisionMesh = true;
             }
-            for(unsigned iSideWall=0; iSideWall < vSideWalls.size(); iSideWall++) {
-                if (vSideWalls[iSideWall].Compare(_vSideWalls[iSideWall], fUnitScale) > 0) {
-                    _vSideWalls[iSideWall] = std::move(vSideWalls[iSideWall]);
-                    bInitCollisionMesh = true;
+            else {
+                for(unsigned iSideWall=0; iSideWall < vSideWalls.size(); iSideWall++) {
+                    if (vSideWalls[iSideWall].Compare(_vSideWalls[iSideWall], fUnitScale) > 0) {
+                        _vSideWalls[iSideWall] = std::move(vSideWalls[iSideWall]);
+                        bInitCollisionMesh = true;
+                    }
                 }
             }
         }
