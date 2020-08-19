@@ -1402,7 +1402,7 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
     }
     else if (GetType() == GT_Cylinder) {
         // TODO
-        if (GetCylinderRadius() != _info._vGeomData.x || GetCylinderHeight() != _info._vGeomData.y) {
+        if (GetCylinderRadius() != info._vGeomData.x || GetCylinderHeight() != info._vGeomData.y) {
             return UFIR_RequireRemoveFromEnvironment;
         }
     }
