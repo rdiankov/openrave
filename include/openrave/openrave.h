@@ -2344,6 +2344,17 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
 OPENRAVE_API std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam);
 OPENRAVE_API std::istream& operator>>(std::istream& I, IkParameterization& ikparam);
 
+
+inline bool IsZeroWithEpsilon3(const Vector v, dReal fEpsilon)
+{
+    return RaveFabs(v.x) <= fEpsilon && RaveFabs(v.y) <= fEpsilon && RaveFabs(v.z) <= fEpsilon;
+}
+
+inline bool IsZeroWithEpsilon4(const Vector v, dReal fEpsilon)
+{
+    return RaveFabs(v.x) <= fEpsilon && RaveFabs(v.y) <= fEpsilon && RaveFabs(v.z) <= fEpsilon && RaveFabs(v.w) <= fEpsilon;
+}
+
 /// \brief User data for trimesh geometries. Vertices are defined in counter-clockwise order for outward pointing faces.
 class OPENRAVE_API TriMesh
 {
@@ -2357,6 +2368,9 @@ public:
     /// append another TRIMESH to this tri mesh
     void Append(const TriMesh& mesh);
     void Append(const TriMesh& mesh, const Transform& trans);
+
+    /// clear vertices and indices vector
+    void Clear();
 
     AABB ComputeAABB() const;
     void serialize(std::ostream& o, int options=0) const;

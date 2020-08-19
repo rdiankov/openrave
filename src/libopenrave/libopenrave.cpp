@@ -2145,6 +2145,12 @@ void TriMesh::Append(const TriMesh& mesh, const Transform& trans)
     }
 }
 
+void TriMesh::Clear()
+{
+    vertices.clear();
+    indices.clear();
+}
+
 AABB TriMesh::ComputeAABB() const
 {
     AABB ab;

@@ -284,6 +284,7 @@ public:
             Transform transf;
             Vector vExtents;
             SideWallType type;
+            int Compare(const SideWall& rhs, dReal fUnitScale=1.0, dReal fEpsilon=10e-7) const;
         };
         std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
 
