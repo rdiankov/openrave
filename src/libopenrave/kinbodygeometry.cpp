@@ -813,7 +813,6 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         }
     }
     Vector vGeomDataTemp;
-    bool bInitCollisionMesh = false;
     switch (_type) {
     case GT_Box:
         if (value.HasMember("halfExtents")) {
@@ -821,8 +820,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vGeomData) {
                 _vGeomData = vGeomDataTemp;
-                bInitCollisionMesh = true;
-            }
+                _meshcollision.Clear();            }
         }
         break;
     case GT_Container:
@@ -831,7 +829,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vGeomData) {
                 _vGeomData = vGeomDataTemp;
-                bInitCollisionMesh = true;
+                _meshcollision.Clear();
             }
         }
         if (value.HasMember("innerExtents")) {
@@ -839,7 +837,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vGeomData2) {
                 _vGeomData2 = vGeomDataTemp;
-                bInitCollisionMesh = true;
+                _meshcollision.Clear();
             }
         }
         if (value.HasMember("bottomCross")) {
@@ -847,7 +845,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vGeomData3) {
                 _vGeomData3 = vGeomDataTemp;
-                bInitCollisionMesh = true;
+                _meshcollision.Clear();
             }
         }
         if (value.HasMember("bottom")) {
@@ -855,7 +853,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vGeomData4) {
                 _vGeomData4 = vGeomDataTemp;
-                bInitCollisionMesh = true;
+                _meshcollision.Clear();
             }
         }
         break;
@@ -865,7 +863,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vGeomData) {
                 _vGeomData = vGeomDataTemp;
-                bInitCollisionMesh = true;
+                _meshcollision.Clear();
             }
         }
         if (value.HasMember("innerSizeX")) {
@@ -882,7 +880,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         }
         if (vGeomDataTemp != _vGeomData2) {
             _vGeomData2 = vGeomDataTemp;
-            bInitCollisionMesh = true;
+            _meshcollision.Clear();
         }
 
         if (value.HasMember("sideWalls")) {
@@ -894,13 +892,13 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             }
             if (vSideWalls.size() != _vSideWalls.size()) {
                 _vSideWalls = std::move(vSideWalls);
-                bInitCollisionMesh = true;
+                _meshcollision.Clear();
             }
             else {
                 for(unsigned iSideWall=0; iSideWall < vSideWalls.size(); iSideWall++) {
                     if (vSideWalls[iSideWall].Compare(_vSideWalls[iSideWall], fUnitScale) > 0) {
                         _vSideWalls[iSideWall] = std::move(vSideWalls[iSideWall]);
-                        bInitCollisionMesh = true;
+                        _meshcollision.Clear();
                     }
                 }
             }
@@ -912,7 +910,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vGeomData) {
                 _vGeomData = vGeomDataTemp;
-                bInitCollisionMesh = true;
+                _meshcollision.Clear();
             }
         }
         break;
@@ -927,7 +925,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         }
         if (vGeomDataTemp != _vGeomData) {
             _vGeomData = vGeomDataTemp;
-            bInitCollisionMesh = true;
+            _meshcollision.Clear();
         }
         break;
     case GT_TriMesh:
@@ -940,10 +938,6 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         break;
     default:
         break;
-    }
-
-    if (bInitCollisionMesh) {
-        InitCollisionMesh();
     }
 
     orjson::LoadJsonValueByKey(value, "transparency", _fTransparency);
