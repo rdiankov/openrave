@@ -116,7 +116,21 @@ public:
         return result;
     }
 
-    static osg::Camera *CreateHUDCamera()
+    static osg::Camera *CreateFBOTextureDisplayHUDViewPort(osg::Texture2D* texture, const osg::Vec2f& corner, const osg::Vec2f& size)
+    {
+        osg::ref_ptr<osg::Camera> hc = CreateHUDCamera();
+        osg::Geode* quad = CreateScreenQuad(size.x(), size.y(), 1, osg::Vec3(corner.x(), corner.y(), 0));
+        osg::StateSet* stateSet = quad->getOrCreateStateSet();
+        stateSet->setTextureAttributeAndModes(0, texture);
+        RenderUtils::SetShaderProgramFileOnStateSet(stateSet, "/data/shaders/simpleTexture.vert", "/data/shaders/simpleTexture.frag");
+        stateSet->addUniform(new osg::Uniform("textureSize", osg::Vec2f(texture->getTextureWidth(), texture->getTextureHeight())));
+        osg::Vec2f scale = corner * 0.5 + osg::Vec2f(0.5, 0.5);
+        stateSet->addUniform(new osg::Uniform("offSet", scale));
+        hc->addChild(quad);
+        return hc.release();
+    }
+
+    static osg::Camera* CreateHUDCamera()
     {
         osg::ref_ptr<osg::Camera> camera = new osg::Camera;
         camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);

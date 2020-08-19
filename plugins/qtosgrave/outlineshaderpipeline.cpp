@@ -154,7 +154,6 @@ RenderPassState* OutlineShaderPipeline::CreateTextureToColorBufferPass(RenderPas
 		bufferNumStr << i;
 		renderPassState->state->setTextureAttributeAndModes((int)i, inputTextures[i].get(), osg::StateAttribute::ON);
 		renderPassState->state->addUniform(new osg::Uniform(bufferNumStr.str().c_str(), (int)i));
-
 	}
 
     renderPassState->state->setMode(GL_BLEND, osg::StateAttribute::ON);
@@ -187,7 +186,12 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	static const std::string fxaaFragPath = "/data/shaders/fxaa.frag";
 	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 3, preRenderVertShaderPath, preRenderFragShaderPath);
 	RenderPassState* outlinePass = CreateTextureToTexturePass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
-	RenderPassState* fxaaPass = CreateTextureToColorBufferPass(outlinePass, 1, fxaaVertPath, fxaaFragPath);
+	RenderPassState* fxaaPass = CreateTextureToTexturePass(outlinePass, 1, fxaaVertPath, fxaaFragPath);
+
+	osg::Camera* normalHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(normalAndDepthMapPass->colorFboTextures[0].get(), osg::Vec2f(-1, 0), osg::Vec2f(1,1));
+	osg::Camera* depthHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(normalAndDepthMapPass->colorFboTextures[1].get(), osg::Vec2f(0,0), osg::Vec2f(1,1));
+	osg::Camera* outlineNoFxaaHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(outlinePass->colorFboTextures[0].get(), osg::Vec2f(-1,-1), osg::Vec2f(1,1));
+	osg::Camera* outlineFxaaHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(fxaaPass->colorFboTextures[0].get(), osg::Vec2f(0,-1), osg::Vec2f(1,1));
 
 	_renderPassStates.push_back(normalAndDepthMapPass);
 	_renderPassStates.push_back(outlinePass);
@@ -200,6 +204,10 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	//passesGroup->addChild(mainSceneRoot);
 	passesGroup->addChild(_renderPassStates[1]->camera.get());
 	passesGroup->addChild(_renderPassStates[2]->camera.get());
+	passesGroup->addChild(normalHud);
+	passesGroup->addChild(depthHud);
+	passesGroup->addChild(outlineNoFxaaHud);
+	passesGroup->addChild(outlineFxaaHud);
 #endif
 	return passesGroup.release();
 
