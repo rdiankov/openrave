@@ -10,8 +10,15 @@ uniform float depthNormalThresholdScale;
 uniform vec2 textureSize;
 
 varying vec2 clipPos;
+
+/* Input textures */
+
 uniform sampler2D colorTexture0;
 uniform sampler2D colorTexture1;
+
+/* Utilitary functions and macros */
+
+const float PI = 3.14159265359;
 
 #define NEW_GAUSSIAN_KERNEL_5x5(variable) \
 float variable[25]; \
@@ -34,13 +41,20 @@ variable[0][0] = 1; variable[1][0] = 2; variable[2][0] = 1; \
 variable[0][1] = 0; variable[1][1] = 0; variable[2][1] = 0; \
 variable[0][2] = -1; variable[1][2] = -2; variable[2][2] = -1; \
 
-float luminanceFromRgb(vec3 rgb)
+// rotates a vector 'rad' radians over the regular cartesian axes
+vec2 Rotate2D(vec2 v, float rad) {
+  float s = sin(rad);
+  float c = cos(rad);
+  return mat2(c, s, -s, c) * v;
+}
+
+float LuminanceFromRgb(vec3 rgb)
 {
   return 0.2126*rgb.r + 0.7152*rgb.g + 0.0722*rgb.b;
 }
 
 // fetches a 3x3 window of pixels centered on coord
-void fetch3x3(inout mat3 n, sampler2D tex, vec2 coord, vec2 resolution)
+void Fetch3x3(inout mat3 n, sampler2D tex, vec2 coord, vec2 resolution)
 {
 	float w = 1.0 / textureSize.x;
 	float h = 1.0 / textureSize.y;
@@ -49,14 +63,14 @@ void fetch3x3(inout mat3 n, sampler2D tex, vec2 coord, vec2 resolution)
     float row = h*(i-1); // from top to bottom
     for(int j = 0; j < 3; ++j) {
       float col = w*(j-1);
-      n[i][j] = luminanceFromRgb(texture2D(tex, coord + vec2(col, row)).rgb);
+      n[i][j] = LuminanceFromRgb(texture2D(tex, coord + vec2(col, row)).rgb);
     }
   }
 }
 
 
 // fetches a 5x5 window of pixels centered on coord
-void fetch5x5(inout float n[25], sampler2D tex, vec2 coord, vec2 resolution)
+void Fetch5x5(inout float n[25], sampler2D tex, vec2 coord, vec2 resolution)
 {
 	float w = 1.0 / textureSize.x;
 	float h = 1.0 / textureSize.y;
@@ -65,19 +79,19 @@ void fetch5x5(inout float n[25], sampler2D tex, vec2 coord, vec2 resolution)
     float row = h*(i-2); // from top to bottom
     for(int j = 0; j < 5; ++j) {
       float col = w*(j-2);
-      n[5*i + j] = luminanceFromRgb(texture2D(tex, coord + vec2(col, row)).rgb);
+      n[5*i + j] = LuminanceFromRgb(texture2D(tex, coord + vec2(col, row)).rgb);
     }
   }
 }
 
 // convolutes two 3x3 kernels
-float convolute3x3(mat3 filter, mat3 samples)
+float Convolute3x3(mat3 filter, mat3 samples)
 {
   return dot(filter[0], samples[0]) + dot(filter[1], samples[1]) + dot(filter[2], samples[2]);
 }
 
 // convolutes two 5x5 kernels
-float convolute5x5(float filter[25], float samples[25])
+float Convolute5x5(float filter[25], float samples[25])
 {
   float result = 0;
   for(int i = 0; i < 5; ++i) {
@@ -89,7 +103,7 @@ float convolute5x5(float filter[25], float samples[25])
 }
 
 // fetch 3x3 but applying a 5x5 blur gaussian kernel first
-void fetch3x3Blurred(inout mat3 n, sampler2D tex, vec2 coord, vec2 resolution)
+void Fetch3x3Blurred(inout mat3 n, sampler2D tex, vec2 coord, vec2 resolution)
 {
 	float w = 1.0 / textureSize.x;
 	float h = 1.0 / textureSize.y;
@@ -102,52 +116,40 @@ void fetch3x3Blurred(inout mat3 n, sampler2D tex, vec2 coord, vec2 resolution)
     float row = h*(i-1); // from top to bottom
     for(int j = 0; j < 3; ++j) {
       float col = w*(j-1);
-      fetch5x5(samples, tex, coord + vec2(col, row), resolution);
-      n[i][j] = convolute5x5(normal5x5Kernel, samples);
+      Fetch5x5(samples, tex, coord + vec2(col, row), resolution);
+      n[i][j] = Convolute5x5(normal5x5Kernel, samples);
     }
   }
 }
 
-void sobel(sampler2D tex, vec2 coord, vec2 resolution, inout float normalGradientMagnitude, inout float normalGradientAngle, inout vec2 gradient)
+void CalculateIntensityGradient(sampler2D tex, vec2 coord, vec2 resolution, inout vec2 gradient)
 {
   NEW_SOBEL_X_3x3(opX);
   NEW_SOBEL_Y_3x3(opY);
 
   mat3 samples;
-  fetch3x3Blurred(samples, tex, coord, resolution);
+  Fetch3x3Blurred(samples, tex, coord, resolution);
 
-  gradient[0] = convolute3x3(opX, samples);
-  gradient[1] = convolute3x3(opY, samples);
-
-  normalGradientMagnitude = sqrt(gradient[0] * gradient[0] + gradient[1] * gradient[1]);
-  normalGradientAngle = atan(gradient[1]/gradient[0]);
+  gradient[0] = Convolute3x3(opX, samples);
+  gradient[1] = Convolute3x3(opY, samples);
 }
 
-void canny(sampler2D tex, vec2 coord, vec2 resolution, int channelIndex, float weakThreshold, float strongThreshold)
+void Canny(sampler2D tex, vec2 coord, vec2 resolution, int channelIndex, float weakThreshold, float strongThreshold)
 {
-  float depthGradientMagnitude[3];
-  float depthGradientAngle[3];
-
   vec2 gradient;
-  sobel(colorTexture1, coord, resolution, depthGradientMagnitude[0], depthGradientAngle[0], gradient);
+  CalculateIntensityGradient(colorTexture1, coord, resolution, gradient);
 }
 
 void main()
 {
     vec2 texCoord = gl_FragCoord.xy / textureSize;
 
-    vec2 gradient;
-    float normalGradientMagnitude;
-    float normalGradientAngle;
-    sobel(colorTexture0, texCoord, textureSize, normalGradientMagnitude, normalGradientAngle, gradient);
+    vec2 gradient1;
+    CalculateIntensityGradient(colorTexture0, texCoord, textureSize, gradient1);
 
-    float normalSobel = normalGradientMagnitude;
+    vec2 gradient2;
+    CalculateIntensityGradient(colorTexture1, texCoord, textureSize, gradient2);
 
-    float depthGradientMagnitude;
-    float depthGradientAngle;
-    sobel(colorTexture1, texCoord, textureSize, depthGradientMagnitude, depthGradientAngle, gradient);
-
-    float depthSobel = depthGradientMagnitude;
-    gl_FragColor = vec4(vec3(max(normalSobel,depthSobel)), 1);
+    gl_FragColor = vec4(vec3(dot(gradient1, gradient2)), 1);
 };
 
