@@ -74,17 +74,17 @@ protected:
                 "void main( void )\n"
                 "{\n"
                 "    vec4 LightPosition = gl_LightSource["<<_lightnum<<"].position;\n"
-                                                                   "    vec3 LightDirection;\n"
-                                                                   "    if (LightPosition[3]!=0.0) { \n"
-                                                                   "        vec4 eye_space_position = gl_ModelViewMatrix * gl_Vertex;\n"
-                                                                   "        LightDirection = (LightPosition.xyz-eye_space_position.xyz);\n"
-                                                                   "    } else {\n"
-                                                                   "        LightDirection = LightPosition.xyz;\n"
-                                                                   "    }\n"
-                                                                   "    vec3 eye_space_normal = normalize(gl_NormalMatrix * gl_Normal);\n"
-                                                                   "    CartoonTexCoord = max(0.0, dot(normalize(LightDirection), eye_space_normal));\n"
-                                                                   "    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
-                                                                   "}\n";
+                "    vec3 LightDirection;\n"
+                "    if (LightPosition[3]!=0.0) { \n"
+                "        vec4 eye_space_position = gl_ModelViewMatrix * gl_Vertex;\n"
+                "        LightDirection = (LightPosition.xyz-eye_space_position.xyz);\n"
+                "    } else {\n"
+                "        LightDirection = LightPosition.xyz;\n"
+                "    }\n"
+                "    vec3 eye_space_normal = normalize(gl_NormalMatrix * gl_Normal);\n"
+                "    CartoonTexCoord = max(0.0, dot(normalize(LightDirection), eye_space_normal));\n"
+                "    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
+                "}\n";
 
             const char * frag_source =
                 "uniform sampler1D CartoonTexUnit;"
