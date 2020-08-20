@@ -1,6 +1,6 @@
 #version 120
 
-//#define DISABLE_FXAA_PASS
+#define DISABLE_FXAA_PASS
 
 #ifndef FXAA_REDUCE_MIN
     #define FXAA_REDUCE_MIN   (1.0/ 128.0)
@@ -9,7 +9,7 @@
     #define FXAA_REDUCE_MUL   (1.0 / 8.0)
 #endif
 #ifndef FXAA_SPAN_MAX
-    #define FXAA_SPAN_MAX     8.0
+    #define FXAA_SPAN_MAX     4.0
 #endif
 
 uniform vec2 textureSize;
