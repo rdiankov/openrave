@@ -24,6 +24,7 @@ public:
 	}
 
 private:
+
 	QFileSystemWatcher _shaderFileWatcher;
 
 };
@@ -60,7 +61,7 @@ void RenderPassState::SetShaderFiles(const std::string& vertShader, const std::s
 }
 void RenderPassState::ReloadShaders()
 {
-	SetShaderFiles(vertShaderFile, fragShaderFile, autoReloadShaders);
+	RenderUtils::SetShaderProgramFileOnStateSet(state, vertShaderFile, fragShaderFile);
 }
 
 OutlineShaderPipeline::OutlineShaderPipeline()
@@ -186,7 +187,7 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	static const std::string outlineFragPath = "/data/shaders/outline.frag";
 	static const std::string fxaaVertPath = "/data/shaders/fxaa.vert";
 	static const std::string fxaaFragPath = "/data/shaders/fxaa.frag";
-	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 2, preRenderVertShaderPath, preRenderFragShaderPath, false);
+	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 2, preRenderVertShaderPath, preRenderFragShaderPath, true);
 	RenderPassState* outlinePass = CreateTextureToTexturePass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
 	RenderPassState* fxaaPass = CreateTextureToColorBufferPass(outlinePass, 1, fxaaVertPath, fxaaFragPath);
 

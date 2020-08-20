@@ -52,11 +52,11 @@ public:
             tex2D->setTextureSize(width, height);
             tex = tex2D;
         }
+        tex->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
+        tex->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
         tex->setSourceFormat(GL_RGBA);
         tex->setInternalFormat(GL_RGBA32F_ARB);
         tex->setSourceType(GL_FLOAT);
-        tex->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
-        tex->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
         return tex.release();
     }
 
@@ -73,6 +73,8 @@ public:
             tex2D->setTextureSize(width, height);
             tex = tex2D;
         }
+        tex->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
+        tex->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
         tex->setSourceFormat(GL_DEPTH_COMPONENT);
         tex->setInternalFormat(GL_DEPTH_COMPONENT24);
         tex->setSourceType(GL_UNSIGNED_INT);
@@ -110,12 +112,22 @@ public:
         camera->setViewport(0, 0, 1024, 768);
         camera->setViewMatrix(osg::Matrix::identity());
         for(int i = 0; i < numColorAttachments; ++i) {
-            osg::Texture* tex = RenderUtils::CreateFloatTextureRectangle(width, height, useMultiSamples);
-            camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex, 0, 0, false, 4, 4);
+            osg::Texture* tex = RenderUtils::CreateFloatTextureRectangle(width, height);
+            if(useMultiSamples) {
+                camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex, 0, 0, false, 4, 4);
+            }
+            else {
+                camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex);
+            }
             result.push_back(tex);
         }
-        osg::ref_ptr<osg::Texture> depthTexture = RenderUtils::CreateDepthFloatTextureRectangle(width, height, useMultiSamples);
-        camera->attach(osg::Camera::DEPTH_BUFFER, depthTexture.get(), 0, 0, false, 4, 4);
+        osg::ref_ptr<osg::Texture> depthTexture = RenderUtils::CreateDepthFloatTextureRectangle(width, height);
+        if(useMultiSamples) {
+            camera->attach(osg::Camera::DEPTH_BUFFER, depthTexture.get(), 0, 0, false, 4, 4);
+        }
+        else {
+            camera->attach(osg::Camera::DEPTH_BUFFER, depthTexture.get());
+        }
 
         return result;
     }
