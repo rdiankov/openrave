@@ -48,6 +48,26 @@ vec2 Rotate2D(vec2 v, float rad) {
   return mat2(c, s, -s, c) * v;
 }
 
+// Returns a vector with the same length as v but its direction is rounded to the nearest
+// of 8 cardinal directions of the pixel grid. This function is used by GetSuppressedTextureIntensityGradient
+// to cancel out edges perpendicular to gradient that are not the strongest ones
+vec2 Round2DVectorAngleToGrid(vec2 v) {
+  float len = length(v);
+  vec2 n = normalize(v);
+  float maximum = -1.;
+  float bestAngle;
+  for (int i = 0; i < 8; i++) {
+    float theta = (float(i) * 2. * PI) / 8.;
+    vec2 u = Rotate2D(vec2(1., 0.), theta);
+    float scalarProduct = dot(u, n);
+    if (scalarProduct > maximum) {
+      bestAngle = theta;
+      maximum = scalarProduct;
+    }
+  }
+  return len * Rotate2D(vec2(1., 0.), bestAngle);
+}
+
 float LuminanceFromRgb(vec3 rgb)
 {
   return 0.2126*rgb.r + 0.7152*rgb.g + 0.0722*rgb.b;
@@ -122,7 +142,7 @@ void Fetch3x3Blurred(inout mat3 n, sampler2D tex, vec2 coord, vec2 resolution)
   }
 }
 
-void CalculateIntensityGradient(sampler2D tex, vec2 coord, vec2 resolution, inout vec2 gradient)
+vec2 CalculateIntensityGradient(sampler2D tex, vec2 coord, vec2 resolution)
 {
   NEW_SOBEL_X_3x3(opX);
   NEW_SOBEL_Y_3x3(opY);
@@ -130,26 +150,43 @@ void CalculateIntensityGradient(sampler2D tex, vec2 coord, vec2 resolution, inou
   mat3 samples;
   Fetch3x3Blurred(samples, tex, coord, resolution);
 
-  gradient[0] = Convolute3x3(opX, samples);
-  gradient[1] = Convolute3x3(opY, samples);
+  return vec2(Convolute3x3(opX, samples), Convolute3x3(opY, samples));
 }
+
+/*
+ * Get the texture intensity gradient of an image
+ * where the angle of the direction is rounded to
+ * one of the 8 cardinal directions and gradients
+ * that are not local extrema are zeroed out
+ */
+vec2 GetSuppressedTextureIntensityGradient(sampler2D tex, vec2 textureCoord, vec2 resolution) {
+  vec2 gradient = CalculateIntensityGradient(tex, textureCoord, resolution);
+  gradient = Round2DVectorAngleToGrid(gradient);
+  vec2 gradientStep = normalize(gradient) / resolution;
+  float gradientLength = length(gradient);
+  vec2 gradientPlusStep = CalculateIntensityGradient(
+    tex, textureCoord + gradientStep, resolution);
+  if (length(gradientPlusStep) >= gradientLength) return vec2(0.);
+  vec2 gradientMinusStep = CalculateIntensityGradient(
+    tex, textureCoord - gradientStep, resolution);
+  if (length(gradientMinusStep) >= gradientLength) return vec2(0.);
+  return gradient;
+}
+
 
 void Canny(sampler2D tex, vec2 coord, vec2 resolution, int channelIndex, float weakThreshold, float strongThreshold)
 {
-  vec2 gradient;
-  CalculateIntensityGradient(colorTexture1, coord, resolution, gradient);
+  vec2 gradient = CalculateIntensityGradient(colorTexture1, coord, resolution);
 }
 
 void main()
 {
     vec2 texCoord = gl_FragCoord.xy / textureSize;
 
-    vec2 gradient1;
-    CalculateIntensityGradient(colorTexture0, texCoord, textureSize, gradient1);
+    vec2 gradient1 = GetSuppressedTextureIntensityGradient(colorTexture0, texCoord, textureSize);
 
-    vec2 gradient2;
-    CalculateIntensityGradient(colorTexture1, texCoord, textureSize, gradient2);
+    vec2 gradient2 = GetSuppressedTextureIntensityGradient(colorTexture1, texCoord, textureSize);
 
-    gl_FragColor = vec4(vec3(dot(gradient1, gradient2)), 1);
+    gl_FragColor = vec4(vec3(dot(gradient2, gradient2)), 1);
 };
 
