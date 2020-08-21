@@ -187,7 +187,7 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	static const std::string outlineFragPath = "/data/shaders/outline.frag";
 	static const std::string fxaaVertPath = "/data/shaders/fxaa.vert";
 	static const std::string fxaaFragPath = "/data/shaders/fxaa.frag";
-	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 2, preRenderVertShaderPath, preRenderFragShaderPath, true);
+	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, preRenderVertShaderPath, preRenderFragShaderPath, true);
 	RenderPassState* outlinePass = CreateTextureToTexturePass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
 	RenderPassState* fxaaPass = CreateTextureToColorBufferPass(outlinePass, 1, fxaaVertPath, fxaaFragPath);
 
