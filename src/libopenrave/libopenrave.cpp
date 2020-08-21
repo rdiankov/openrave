@@ -2739,7 +2739,12 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     if (rIkParameterization.HasMember("customData") && rIkParameterization["customData"].IsArray()) {
         for (rapidjson::Value::ConstValueIterator it = rIkParameterization["customData"].Begin(); it != rIkParameterization["customData"].End(); ++it) {
             std::string id;
-            orjson::LoadJsonValueByKey(*it, "id", id);
+            if( it->HasMember("id") ) {
+                orjson::LoadJsonValueByKey(*it, "id", id);
+            }
+            else if( it->HasMember("key") ) {
+                orjson::LoadJsonValueByKey(*it, "key", id); // back compat
+            }
             if (id.empty()) {
                 continue;
             }
