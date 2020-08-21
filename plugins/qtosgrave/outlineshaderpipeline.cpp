@@ -203,7 +203,6 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 
 	osg::ref_ptr<osg::Group> passesGroup = new osg::Group();
 	passesGroup->addChild(_renderPassStates[0]->camera.get());
-#	if !SHOW_PRERENDER_SCENE_ONLY
 	//passesGroup->addChild(mainSceneRoot);
 	passesGroup->addChild(_renderPassStates[1]->camera.get());
 	passesGroup->addChild(_renderPassStates[2]->camera.get());
@@ -211,7 +210,7 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	// passesGroup->addChild(depthHud);
 	// passesGroup->addChild(outlineNoFxaaHud);
 	// passesGroup->addChild(outlineFxaaHud);
-#endif
+
 	return passesGroup.release();
 
 }

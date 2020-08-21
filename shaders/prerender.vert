@@ -4,6 +4,7 @@ varying vec3 normal;
 varying vec3 position;
 varying vec4 color;
 varying float depth;
+
 uniform vec4 osg_MaterialDiffuseColor;
 uniform vec4 osg_MaterialAmbientColor;
 

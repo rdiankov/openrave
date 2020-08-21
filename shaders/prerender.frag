@@ -4,6 +4,7 @@ varying vec3 normal;
 varying vec3 position;
 varying vec4 color;
 varying float depth;
+uniform int isSelected;
 
 float LuminanceFromRgb(vec3 rgb)
 {
@@ -22,7 +23,7 @@ void main()
 {
     vec3 nNormal = normalize(normal);
     gl_FragData[0] = color;
-    gl_FragData[1] = vec4(nNormal, 1);
-    gl_FragData[2] = vec4(LuminanceFromRgb(nNormal), depth, 0, 1);;
+    gl_FragData[1] = vec4(nNormal, gl_FragCoord.z);
+    gl_FragData[2] = vec4(LuminanceFromRgb(nNormal), depth, isSelected, 1);;
     
 };

@@ -3,8 +3,6 @@
 uniform vec3 outlineColor;
 uniform vec3 selectionColor;
 uniform float highlightIntensity;
-uniform float depthThreshold;
-uniform float normalThreshold;
 uniform float depthNormalThreshold;
 uniform float depthNormalThresholdScale;
 uniform vec2 textureSize;
@@ -254,23 +252,48 @@ vec3 LightModel(vec3 normal, vec3 diffuseColor)
     return vec3(lightIntensity, lightIntensity, lightIntensity) * ((ka + diffuse) * diffuseColor + specular * ks);
 }
 
+bool isSelected(sampler2D tex, vec2 coord, int selectionChannelIndex, vec2 resolution)
+{
+  mat3 samples;
+  Fetch3x3(samples, tex, selectionChannelIndex, coord, resolution);
+   for(int i = 0; i < 3; ++i) {
+    for(int j = 0; j < 3; ++j) {
+      if(samples[i][j] == 1) {
+        return true;
+      }
+    }
+   }
+   return false;
+}
+
 void main()
 {
     vec2 texCoord = gl_FragCoord.xy / textureSize;
-    vec2 threshold = vec2(0.3, 0.1);
     float depthValue = texture2D(colorTexture2,texCoord).y;
+    float originalFragCoordZ = texture2D(colorTexture1, texCoord).a;
+    vec2 normalThreshold = vec2(0.3, 0.1);
+
+    // adaptative threshold: image gradient norm change with image resolution, so wee need to adapt our threshold
+    vec2 depthThreshold = vec2(0.3 * depthValue, 0.09);
+
+    bool selected = isSelected(colorTexture2, texCoord, 2, textureSize);
     vec4 mainColor = texture2D(colorTexture0,texCoord);
     vec3 normal = texture2D(colorTexture1,texCoord).xyz;
-    float edgeNormal = Canny(colorTexture2, 0, texCoord, textureSize, threshold.x, threshold.y);
+    float edgeNormal = Canny(colorTexture2, 0, texCoord, textureSize, normalThreshold.x, normalThreshold.y);
 
-    float depthMinThreshold = 0.03 * depthValue; // adaptative threshold
-    
-    float edgeDepth = Canny(colorTexture2, 1, texCoord, textureSize, depthMinThreshold, 0.01);
+    float edgeDepth = Canny(colorTexture2, 1, texCoord, textureSize, depthThreshold.x, depthThreshold.y);
     float edge = max(edgeDepth, edgeNormal);
     vec3 lighting = LightModel(normal, mainColor.rgb);
     vec4 lightnedColor = vec4(vec3(lighting), mainColor.a);
-    gl_FragColor = mix(lightnedColor, vec4(0, 0, 0,1), clamp(edge, 0, 1));
-    
-    
+
+    if(selected) {
+      gl_FragDepth = originalFragCoordZ / 50;
+      gl_FragColor = mix(lightnedColor, vec4(selectionColor,1), clamp(edge+0.1, 0, 1));
+      return;
+    }
+    gl_FragDepth = originalFragCoordZ;
+    gl_FragColor = mix(lightnedColor, vec4(outlineColor,1), clamp(edge, 0, 1));
+
+
 };
 
