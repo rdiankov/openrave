@@ -113,7 +113,7 @@ public:
         camera->setViewMatrix(osg::Matrix::identity());
         for(int i = 0; i < numColorAttachments; ++i) {
             osg::Texture* tex = RenderUtils::CreateFloatTextureRectangle(width, height);
-            if(useMultiSamples) {
+            if(useMultiSamples && i == 0) {
                 camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex, 0, 0, false, 4, 4);
             }
             else {

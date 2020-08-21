@@ -15,7 +15,13 @@ varying vec2 clipPos;
 
 uniform sampler2D colorTexture0;
 uniform sampler2D colorTexture1;
+uniform sampler2D colorTexture2;
 
+const float lightIntensity = 0.75f;
+const float shininess = 50.0f;    // Specular shininess factor
+const vec3 lightColor = vec3(1, 1, 1);
+const vec3 ka = vec3(0.2, 0.2, 0.2);            // Ambient reflectivity
+const vec3 ks = vec3(0.4, 0.4, 0.4);            // Specular reflectivity
 /* Utilitary functions and macros */
 
 const float PI = 3.14159265359;
@@ -76,6 +82,11 @@ vec2 Round2DVectorAngleToGrid(vec2 v) {
   return len * Rotate2D(vec2(1., 0.), bestAngle);
 }
 
+float LuminanceFromRgb(vec3 rgb)
+{
+  return 0.2126*rgb.r + 0.7152*rgb.g + 0.0722*rgb.b;
+}
+
 // fetches a 3x3 window of pixels centered on coord
 void Fetch3x3(inout mat3 n, sampler2D tex, int channelIndex, vec2 coord, vec2 resolution)
 {
@@ -86,7 +97,12 @@ void Fetch3x3(inout mat3 n, sampler2D tex, int channelIndex, vec2 coord, vec2 re
     float row = h*(i-1); // from top to bottom
     for(int j = 0; j < 3; ++j) {
       float col = w*(j-1);
-      n[i][j] = texture2D(tex, coord + vec2(col, row))[channelIndex];
+      if(channelIndex == -1) {
+        n[i][j] = LuminanceFromRgb(texture2D(tex, coord + vec2(col, row)).rgb);
+      }
+      else {
+        n[i][j] = texture2D(tex, coord + vec2(col, row))[channelIndex];
+      }
     }
   }
 }
@@ -101,7 +117,13 @@ void Fetch5x5(inout float n[25], sampler2D tex, int channelIndex, vec2 coord, ve
     float row = h*(i-2); // from top to bottom
     for(int j = 0; j < 5; ++j) {
       float col = w*(j-2);
-      n[5*i + j] = texture2D(tex, coord + vec2(col, row))[channelIndex];
+      if(channelIndex == -1) {
+        n[5*i + j] = LuminanceFromRgb(texture2D(tex, coord + vec2(col, row)).rgb);
+      }
+      else{
+        vec4 color = texture2D(tex, coord + vec2(col, row));
+        n[5*i + j] = color[channelIndex];
+      }
     }
   }
 }
@@ -144,34 +166,39 @@ void Fetch3x3Blurred(inout mat3 n, sampler2D tex, int channelIndex, vec2 coord, 
   }
 }
 
+float l1norm(vec2 v)
+{
+  return abs(v.x) + abs(v.y);
+}
+
 vec2 CalculateIntensityGradient(sampler2D tex, int channelIndex, vec2 coord, vec2 resolution)
 {
   NEW_SOBEL_X_3x3(opX);
   NEW_SOBEL_Y_3x3(opY);
 
   mat3 samples;
-  Fetch3x3Blurred(samples, tex, channelIndex, coord, resolution);
+  Fetch3x3(samples, tex, channelIndex, coord, resolution);
 
   return vec2(Convolute3x3(opX, samples), Convolute3x3(opY, samples));
 }
 
 /*
- * Get the texture intensity gradient of an image
- * where the angle of the direction is rounded to
- * one of the 8 cardinal directions and gradients
- * that are not local extrema are zeroed out
+  Get the texture intensity gradient of an image
+  where the angle of the direction is rounded to
+  one of the 8 cardinal directions and gradients
+  that are not local extrema are zeroed out
  */
 vec2 GetSuppressedTextureIntensityGradient(sampler2D tex, int channelIndex, vec2 textureCoord, vec2 resolution) {
   float delta = 0;
   vec2 gradientOriginal = CalculateIntensityGradient(tex, channelIndex, textureCoord, resolution);
   float gradientLength = length(gradientOriginal);
-  vec2 gradient = gradientOriginal;
+  vec2 gradient = Round2DVectorAngleToGrid(gradientOriginal);
   vec2 gradientStep = normalize(gradient) / resolution;
   vec2 gradientPlusStep = CalculateIntensityGradient(tex, channelIndex, textureCoord + gradientStep, resolution);
   if (length(gradientPlusStep)-delta >= gradientLength) return vec2(0.);
   vec2 gradientMinusStep = CalculateIntensityGradient(tex, channelIndex, textureCoord - gradientStep, resolution);
   if (length(gradientMinusStep)-delta >= gradientLength) return vec2(0.);
-  return gradientOriginal;
+  return gradient;
 }
 
 float ApplyHysteresis( sampler2D tex, int channelIndex, vec2 textureCoord, vec2 resolution, float weakThreshold, float strongThreshold) {
@@ -193,7 +220,7 @@ float ApplyHysteresis( sampler2D tex, int channelIndex, vec2 textureCoord, vec2 
 
 float Canny(sampler2D tex, int channelIndex, vec2 coord, vec2 resolution, float weakThreshold, float strongThreshold)
 {
-  vec2 gradient = GetSuppressedTextureIntensityGradient(colorTexture1, channelIndex, coord, resolution);
+  vec2 gradient = GetSuppressedTextureIntensityGradient(tex, channelIndex, coord, resolution);
   float edge = ApplyDoubleThreshold(gradient, weakThreshold, strongThreshold);
   if(edge == .5) {
     edge = ApplyHysteresis(tex, channelIndex, coord, resolution, weakThreshold, strongThreshold);
@@ -201,11 +228,49 @@ float Canny(sampler2D tex, int channelIndex, vec2 coord, vec2 resolution, float 
   return edge;
 }
 
+
+vec3 LightModel(vec3 normal, vec3 diffuseColor)
+{
+    // Calculate the vector from the light to the fragment
+    vec3 s = normalize(vec3(-clipPos.xy,1));
+
+    // Calculate the vector from the fragment to the eye position
+    // (origin since this is in "eye" or "camera" space)
+    vec3 v = s;;
+
+    // Reflect the light beam using the normal at this fragment
+    vec3 r = reflect(-s, normal);
+
+    // Calculate the diffuse component
+    float diffuse = max(dot(s, normal), 0.0);
+
+    // Calculate the specular component
+    float specular = 0.0;
+    if (dot(s, normal) > 0.0)
+        specular = (shininess / (8.0 * 3.14)) * pow(max(dot(r, v), 0.0), shininess);
+
+    // Lookup diffuse and specular factor
+    // Combine the ambient, diffuse and specular contributions
+    return vec3(lightIntensity, lightIntensity, lightIntensity) * ((ka + diffuse) * diffuseColor + specular * ks);
+}
+
 void main()
 {
     vec2 texCoord = gl_FragCoord.xy / textureSize;
+    vec2 threshold = vec2(0.3, 0.1);
+    float depthValue = texture2D(colorTexture2,texCoord).y;
+    vec4 mainColor = texture2D(colorTexture0,texCoord);
+    vec3 normal = texture2D(colorTexture1,texCoord).xyz;
+    float edgeNormal = Canny(colorTexture2, 0, texCoord, textureSize, threshold.x, threshold.y);
 
-    float edge = Canny(colorTexture0, 0, texCoord, textureSize, 0.1, 0.2);
-    gl_FragColor = vec4(vec3(edge), 1);
+    float depthMinThreshold = 0.03 * depthValue; // adaptative threshold
+    
+    float edgeDepth = Canny(colorTexture2, 1, texCoord, textureSize, depthMinThreshold, 0.01);
+    float edge = max(edgeDepth, edgeNormal);
+    vec3 lighting = LightModel(normal, mainColor.rgb);
+    vec4 lightnedColor = vec4(vec3(lighting), mainColor.a);
+    gl_FragColor = mix(lightnedColor, vec4(0, 0, 0,1), clamp(edge, 0, 1));
+    
+    
 };
 
