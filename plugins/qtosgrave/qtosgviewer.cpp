@@ -1426,7 +1426,7 @@ bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& 
     if (infoText.size() == 0) {
         infoText = str(boost::format("%s/%s")%parentIem->GetName()%link->GetName());
     }
-    _posgWidget->TrackNode(osgNode.get(), infoText, linkOffset, _posgWidget->GetCurrentManipulatorDistanceToFocus());
+    _posgWidget->TrackNode(osgNode, infoText, linkOffset, _posgWidget->GetCurrentManipulatorDistanceToFocus());
     if(_cameraMoveModeButton != NULL) {
         _cameraMoveModeButton->setEnabled(false);
     }

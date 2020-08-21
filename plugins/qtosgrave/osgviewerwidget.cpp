@@ -42,7 +42,7 @@ public:
         _transitionAnimationPath->setLoopMode(osg::AnimationPath::NO_LOOPING);
     }
 
-    void TrackNode(osg::Node* node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
+    void TrackNode(OSGNodePtr node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
     {
         _offset = offset;
         _distance = trackDistance;
@@ -54,7 +54,7 @@ public:
         NodeTrackerManipulator::setTrackNodePath(nodeParents[0]);
         _transitionAnimationDuration = 1.0; //< transition animation time
         _currentTransitionAnimationTime = 0;
-        _CreateTransitionAnimationPath(node, currentCamera, worldUpVector);
+        _CreateTransitionAnimationPath(currentCamera, worldUpVector);
         _time.restart();
     }
 
@@ -100,7 +100,7 @@ public:
     }
 
 private:
-    void _CreateTransitionAnimationPath(osg::Node* node, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
+    void _CreateTransitionAnimationPath(osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
     {
         _transitionAnimationPath->clear();
 
@@ -929,7 +929,7 @@ void QOSGViewerWidget::TrackNode(OSGNodePtr node, const std::string& trackInfoTe
 
     osg::Vec3d worldUpVector;
     _GetRAVEEnvironmentUpVector(worldUpVector);
-    _osgTrackModeManipulator->TrackNode(node.get(), offset, trackDistance, GetCamera(), worldUpVector);
+    _osgTrackModeManipulator->TrackNode(node, offset, trackDistance, GetCamera(), worldUpVector);
 }
 
 void QOSGViewerWidget::StopTrackNode()
