@@ -2417,11 +2417,60 @@ public:
         _unit = unit;
     }
 
+    /// \brief go through all boides id and make sure they are unique
+    virtual void _ResolveBodyIds() {
+        char sTempIndexConversion[9]; //temp memory space for converting indices to hex strings, enough space to convert uint32_t
+        uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
+        static const char pBodyIdPrefix[] = "body";
+        int nBodyId = 0;
+        int numBodies = _vecbodies.size();
+        for(int iBody = 0; iBody < numBodies; iBody++) {
+            bool bGeneratedNewId = _vecbodies[iBody]->_id.empty();
+            if (!bGeneratedNewId) {
+                for(int iTestBody = 0; iTestBody < iBody; iTestBody++) {
+                    if (iTestBody == iBody) {
+                        continue;
+                    }
+                    if(_vecbodies[iBody]->_id == _vecbodies[iBody]->_id) {
+                        bGeneratedNewId = true;
+                        break;
+                    }
+                }
+            }
+            if (bGeneratedNewId) {
+                while(1) {
+                    nTempIndexConversion = ConvertUIntToHex(nBodyId, sTempIndexConversion);
+                    bool bHasSame = false;
+                    for(int iTestBody = 0; iTestBody < numBodies; ++iTestBody) {
+                        const std::string& testid = _vecbodies[iTestBody]->_id;
+                        if( testid.size() == sizeof(pBodyIdPrefix)-1+nTempIndexConversion ) {
+                            if( strncmp(testid.c_str() + (sizeof(pBodyIdPrefix)-1), sTempIndexConversion,nTempIndexConversion) == 0 ) {
+                                // matches
+                                bHasSame = true;
+                                break;
+                            }
+                        }
+                    }
+                    if( bHasSame ) {
+                        nBodyId++;
+                        continue;
+                    }
+                    break;
+                }
+            }
+
+            _vecbodies[iBody]->_id = pBodyIdPrefix;
+            _vecbodies[iBody]->_id += sTempIndexConversion;
+            nBodyId++;
+        }
+    }
+
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
     virtual void ExtractInfo(EnvironmentBaseInfo& info)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         info._vBodyInfos.resize(_vecbodies.size());
+        _ResolveBodyIds();
         for(size_t i = 0; i < info._vBodyInfos.size(); ++i) {
             if (_vecbodies[i]->IsRobot()) {
                 info._vBodyInfos[i].reset(new RobotBase::RobotBaseInfo());
@@ -2453,7 +2502,7 @@ public:
         FOREACHC(itBodyInfo, info._vBodyInfos) {
             KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
             if(pKinBodyInfo->_id.empty()){
-                pKinBodyInfo->_id = pKinBodyInfo->_name;
+                pKinBodyInfo->_id = pKinBodyInfo->_name;  //TODO: use generator instead of set to name
             }
             RAVELOG_VERBOSE_FORMAT("==== %s ===", pKinBodyInfo->_id);
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
