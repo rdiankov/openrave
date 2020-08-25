@@ -1,20 +1,15 @@
 #version 120
 
+uniform vec2 textureSize;
 uniform vec3 outlineColor;
 uniform bool outlineEnabled;
 uniform vec3 selectionColor;
-uniform float highlightIntensity;
-uniform float depthNormalThreshold;
-uniform float depthNormalThresholdScale;
-uniform vec2 textureSize;
 
 varying vec2 clipPos;
 
 /* Input textures */
 
 uniform sampler2D colorTexture0;
-uniform sampler2D colorTexture1;
-uniform sampler2D colorTexture2;
 
 const float lightIntensity = 1.0f;
 const float shininess = 35.0f;    // Specular shininess factor
@@ -268,26 +263,22 @@ bool isSelected(sampler2D tex, vec2 coord, int selectionChannelIndex, vec2 resol
 void main()
 {
   vec2 texCoord = gl_FragCoord.xy / textureSize;
-  vec3 normal = normalize(texture2D(colorTexture1,texCoord).xyz);
-  vec4 mainColor = texture2D(colorTexture0,texCoord);
-  vec3 lighting = LightModel(normal, mainColor.rgb);
-  vec4 lightnedColor = vec4(vec3(lighting), mainColor.a);
   if(!outlineEnabled) {
-    gl_FragColor = lightnedColor;
+    gl_FragColor = vec4(0,0,0,0);
     return;
   }
-  float depthValue = texture2D(colorTexture2,texCoord).y;
+  float depthValue = texture2D(colorTexture0,texCoord).y;
   float adaptativeDepthThreshold = smoothstep(0, depthValue, 1);
   vec2 normalThreshold = vec2(0.3, 0.4);
   vec2 depthThreshold = vec2(0.09, 0.09);
 
-  bool selected = isSelected(colorTexture2, texCoord, 2, textureSize);
-  float edgeNormal = Canny(colorTexture2, 0, texCoord, textureSize, normalThreshold.x, normalThreshold.y);
-  float edgeDepth = Canny(colorTexture2, 1, texCoord, textureSize, depthThreshold.x, depthThreshold.y);
+  bool selected = isSelected(colorTexture0, texCoord, 2, textureSize);
+  float edgeNormal = Canny(colorTexture0, 0, texCoord, textureSize, normalThreshold.x, normalThreshold.y);
+  float edgeDepth = Canny(colorTexture0, 1, texCoord, textureSize, depthThreshold.x, depthThreshold.y);
 
   // mix between orignal intensity gradient (sobel) and the canny filter in order to add some antialising effect
-  float depthEdgeMix = mix(edgeDepth, length(CalculateIntensityGradient(colorTexture2, 1, texCoord, textureSize)), 0.02);
-  float normalEdgeMix = mix(edgeNormal, length(CalculateIntensityGradient(colorTexture2, 0, texCoord, textureSize)), 0.02);
+  float normalEdgeMix = mix(edgeNormal, length(CalculateIntensityGradient(colorTexture0, 0, texCoord, textureSize)), 0.02);
+  float depthEdgeMix = mix(edgeDepth, length(CalculateIntensityGradient(colorTexture0, 1, texCoord, textureSize)), 0.02);
 
   float edge = max(depthEdgeMix, normalEdgeMix) * 5 * adaptativeDepthThreshold;
 

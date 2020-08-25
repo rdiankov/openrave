@@ -1,9 +1,9 @@
 #version 120
 
 varying vec3 normal;
-varying vec3 position;
 varying vec4 color;
 varying float depth;
+varying vec3 position;
 uniform int isSelected;
 uniform vec2 textureSize;
 
@@ -23,9 +23,7 @@ void main()
 {
     vec2 texCoord = gl_FragCoord.xy / textureSize;
     vec3 nNormal = normalize(normal);
-    gl_FragData[0] = color;
-    gl_FragData[1] = vec4(nNormal, 1);
-    gl_FragData[2] = vec4(LuminanceFromRgb(nNormal), depth , isSelected, 1);
+    gl_FragColor = vec4(LuminanceFromRgb(nNormal), depth , isSelected, 1);
     if(isSelected == 1) {
         gl_FragDepth = gl_FragCoord.z / 10;
         return;

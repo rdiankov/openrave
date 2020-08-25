@@ -152,16 +152,12 @@ RenderPassState* OutlineShaderPipeline::CreateTextureToColorBufferPass(RenderPas
 
 void OutlineShaderPipeline::_SetupOutlineShaderUniforms(RenderPassState* pass)
 {
-	pass->state->addUniform(new osg::Uniform("outlineColor", _outlineColor));
-	pass->state->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
 	pass->state->addUniform(new osg::Uniform("isSelected", 0));
 	pass->state->addUniform(new osg::Uniform("outlineEnabled", true));
-	pass->state->addUniform(new osg::Uniform("depthThreshold", 1.5f));
-	pass->state->addUniform(new osg::Uniform("depthNormalThreshold", 0.5f));
-	pass->state->addUniform(new osg::Uniform("depthNormalThresholdScale", 7.0f));
-	pass->state->addUniform(new osg::Uniform("normalThreshold", g_NormalThreshold));
-	pass->state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(_maxFBOBufferWidth, _maxFBOBufferHeight)));
+	pass->state->addUniform(new osg::Uniform("outlineColor", _outlineColor));
+	pass->state->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
 	pass->state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0,0,0,1)));
+	pass->state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(_maxFBOBufferWidth, _maxFBOBufferHeight)));
 }
 
 osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera,
@@ -177,15 +173,16 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 
     osg::ref_ptr<osg::Texture> depthBuffer = RenderUtils::CreateDepthFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
 	mainSceneCamera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
-	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 3, preRenderVertShaderPath, preRenderFragShaderPath, depthBuffer.get(), true);
+	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, preRenderVertShaderPath, preRenderFragShaderPath, depthBuffer.get(), true);
 	normalAndDepthMapPass->camera->setCullMask(~qtosgrave::TRANSPARENT_ITEM_MASK);
 
 	RenderPassState* outlinePass = CreateTextureToColorBufferPass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
-	RenderPassState* normalAndDepthMapPassTransparency = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 3, preRenderTransparentVertShaderPath, preRenderTransparentFragShaderPath, depthBuffer.get(), true);
+	RenderPassState* normalAndDepthMapPassTransparency = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, preRenderTransparentVertShaderPath, preRenderTransparentFragShaderPath, depthBuffer.get(), true);
 	normalAndDepthMapPassTransparency->camera->setCullMask(qtosgrave::TRANSPARENT_ITEM_MASK);
-	
+
 	RenderPassState* outlinePassTransparency = CreateTextureToColorBufferPass(normalAndDepthMapPassTransparency, 1, outlineVertPath, outlineFragPath);
-	
+
+	// export opaque pipiline resulting depth texture to pre-render shader of transparent objects to perform z test
 	normalAndDepthMapPassTransparency->state->setTextureAttributeAndModes(5, depthBuffer.get(), osg::StateAttribute::ON);
 	normalAndDepthMapPassTransparency->state->addUniform(new osg::Uniform("depthTexture", 5));
 
