@@ -276,18 +276,19 @@ void KinBodyItem::Load()
                 // set a diffuse color
                 osg::ref_ptr<osg::Material> mat = new osg::Material;
                 float transparency = orgeom->GetTransparency();
-                if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisible()) ) {
-                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
-                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
-                    transparency = 0.5f;
-                }
 
                 // create custom
                 if( !pgeometrydata ) {
                     pgeometrydata = new osg::Group();
                 }
                 osg::ref_ptr<osg::StateSet> state = pgeometrydata->getOrCreateStateSet();
-                state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(1,0,0,1)));
+                if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisible()) ) {
+                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
+                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
+                    state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0.6f,0.6f,1.0f, 0.5f)));
+                    state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(0.4f,0.4f,1.0f, 0.5f)));
+                    transparency = 0.5f;
+                }
 
                 x = orgeom->GetDiffuseColor().x;
                 y = orgeom->GetDiffuseColor().y;
@@ -307,44 +308,18 @@ void KinBodyItem::Load()
 
                 //mat->setShininess( osg::Material::FRONT, 25.0);
                 mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
-
+                pgeometrydata->setNodeMask(~TRANSPARENT_ITEM_MASK);
                 // getting the object to be displayed with transparency
                 if (transparency > 0) {
                     mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
                     state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
                     state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(x, y, z, 1 - transparency)));
 
-                    if( 1 ) {
-                        // fast
-                        state->setMode(GL_BLEND, osg::StateAttribute::ON);
-                        state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-                        //state->setRenderBinDetails(9999, "RenderBin", osg::StateSet::USE_RENDERBIN_DETAILS);
-                        // fix transparency oclusion: 
-                        osg::Depth* depth = new osg::Depth;
-                        depth->setWriteMask( false );
-                        state->setAttributeAndModes( depth, osg::StateAttribute::ON);
-                    }
-                    else {
-                        // slow
-                        //state->setAttribute(mat,osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-                        //state->setRenderBinDetails(0, "transparent");
-                        //ss->setRenderBinDetails(10, "RenderBin", osg::StateSet::USE_RENDERBIN_DETAILS);
+                    pgeometrydata->setNodeMask(TRANSPARENT_ITEM_MASK);
+                    osg::Depth* depth = new osg::Depth;
+                    depth->setWriteMask( false );
+                    state->setAttributeAndModes( depth, osg::StateAttribute::ON);
 
-                        // Enable blending, select transparent bin.
-                        state->setMode( GL_BLEND, osg::StateAttribute::ON );
-                        state->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
-
-                        // Enable depth test so that an opaque polygon will occlude a transparent one behind it.
-                        state->setMode( GL_DEPTH_TEST, osg::StateAttribute::ON );
-
-                        // Conversely, disable writing to depth buffer so that
-                        // a transparent polygon will allow polygons behind it to shine thru.
-                        // OSG renders transparent polygons after opaque ones.
-                        
-
-                        // Disable conflicting modes.
-                        state->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
-                    }
                 }
                 state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
                 //pgeometrydata->setStateSet(state);
@@ -863,6 +838,7 @@ void RobotItem::Load()
             SetMatrixTransform(*ptrans, (*itmanip)->GetTransform());
 
             peesep->addChild(CreateOSGXYZAxes(0.1, 0.0005));
+            peesep->getOrCreateStateSet()->addUniform(new osg::Uniform("outlineEnabled", false));
 
             // add text
             {

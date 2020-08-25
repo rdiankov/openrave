@@ -626,7 +626,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
         _osgCameraHUD->addChild(geodetext);
     }
 
-    _InitializeLights();
+    //_InitializeLights();
     SetLight(true);
 
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
@@ -742,8 +742,9 @@ void QOSGViewerWidget::SetSceneData()
     polyoffset->setUnits(1.0f);
     rootscene->getOrCreateStateSet()->setAttributeAndModes(polyoffset.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
 
-    rootscene->addChild(_osgLightsGroup);
-    _osgLightsGroup->addChild(_osgSceneRoot);
+    //rootscene->addChild(_osgLightsGroup);
+    //_osgLightsGroup->addChild(_osgSceneRoot);
+    rootscene->addChild(_osgSceneRoot);
     rootscene->addChild(_osgFigureRoot);
 
     QRect screenGeometry = QApplication::screens()[0]->geometry();
@@ -762,18 +763,18 @@ void QOSGViewerWidget::ResetViewToHome()
 
 void QOSGViewerWidget::SetHome()
 {
-    if (!!_osgLightsGroup) {
+    //if (!!_osgLightsGroup) {
         const osg::BoundingSphere& bs = _osgSceneRoot->getBound();
         _osgview->getCameraManipulator()->setHomePosition(osg::Vec3d(1.5*bs.radius(),0,1.5*bs.radius()),bs.center(),osg::Vec3d(0.0,0.0,1.0));
         _osgview->home();
-    }
+    //}
 }
 
 void QOSGViewerWidget::SetLight(bool enabled)
 {
     _bLightOn = enabled;
-    osg::ref_ptr<osg::StateSet> stateset = _osgLightsGroup->getOrCreateStateSet();
-    stateset->setMode(GL_LIGHTING, (_bLightOn?osg::StateAttribute::ON : osg::StateAttribute::OFF) | osg::StateAttribute::OVERRIDE);
+    // osg::ref_ptr<osg::StateSet> stateset = _osgLightsGroup->getOrCreateStateSet();
+    // stateset->setMode(GL_LIGHTING, (_bLightOn?osg::StateAttribute::ON : osg::StateAttribute::OFF) | osg::StateAttribute::OVERRIDE);
 }
 
 void QOSGViewerWidget::SetFacesMode(bool enabled)

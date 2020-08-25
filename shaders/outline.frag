@@ -1,6 +1,7 @@
 #version 120
 
 uniform vec3 outlineColor;
+uniform bool outlineEnabled;
 uniform vec3 selectionColor;
 uniform float highlightIntensity;
 uniform float depthNormalThreshold;
@@ -15,8 +16,10 @@ uniform sampler2D colorTexture0;
 uniform sampler2D colorTexture1;
 uniform sampler2D colorTexture2;
 
-const float lightIntensity = 0.75f;
-const float shininess = 50.0f;    // Specular shininess factor
+uniform sampler2D depthTexture;
+
+const float lightIntensity = 1.0f;
+const float shininess = 35.0f;    // Specular shininess factor
 const vec3 lightColor = vec3(1, 1, 1);
 const vec3 ka = vec3(0.2, 0.2, 0.2);            // Ambient reflectivity
 const vec3 ks = vec3(0.4, 0.4, 0.4);            // Specular reflectivity
@@ -54,7 +57,7 @@ vec2 Rotate2D(vec2 v, float rad) {
 }
 
 float ApplyDoubleThreshold(vec2 gradient, float weakThreshold, float strongThreshold) {
-  float gradientLength = length(gradient);
+  float gradientLength = abs(gradient.x) + abs(gradient.y);
   if (gradientLength < weakThreshold) return 0.;
   if (gradientLength < strongThreshold) return .5;
   return 1.;
@@ -258,7 +261,7 @@ bool isSelected(sampler2D tex, vec2 coord, int selectionChannelIndex, vec2 resol
   Fetch3x3(samples, tex, selectionChannelIndex, coord, resolution);
    for(int i = 0; i < 3; ++i) {
     for(int j = 0; j < 3; ++j) {
-      if(samples[i][j] == 1) {
+      if(samples[i][j] > 0.5) {
         return true;
       }
     }
@@ -268,32 +271,44 @@ bool isSelected(sampler2D tex, vec2 coord, int selectionChannelIndex, vec2 resol
 
 void main()
 {
-    vec2 texCoord = gl_FragCoord.xy / textureSize;
-    float depthValue = texture2D(colorTexture2,texCoord).y;
-    float originalFragCoordZ = texture2D(colorTexture1, texCoord).a;
-    vec2 normalThreshold = vec2(0.3, 0.1);
+  vec2 texCoord = gl_FragCoord.xy / textureSize;
+  vec3 normal = normalize(texture2D(colorTexture1,texCoord).xyz);
+  vec4 mainColor = texture2D(colorTexture0,texCoord);
+  vec3 lighting = LightModel(normal, mainColor.rgb);
+  vec4 lightnedColor = vec4(vec3(lighting), mainColor.a);
+  if(!outlineEnabled) {
+    gl_FragColor = lightnedColor;
+    return;
+  }
+  float depthValue = texture2D(colorTexture2,texCoord).y;
+  float adaptativeDepthThreshold = smoothstep(0, depthValue, 1);
+  vec2 normalThreshold = vec2(0.3, 0.4);
+  vec2 depthThreshold = vec2(0.01, 0.09);
 
-    // adaptative threshold: image gradient norm change with image resolution, so wee need to adapt our threshold
-    vec2 depthThreshold = vec2(0.3 * depthValue, 0.09);
+  bool selected = isSelected(colorTexture2, texCoord, 2, textureSize);
+  float edgeNormal = Canny(colorTexture2, 0, texCoord, textureSize, normalThreshold.x, normalThreshold.y);
+  float edgeDepth = Canny(colorTexture2, 1, texCoord, textureSize, depthThreshold.x, depthThreshold.y);
 
-    bool selected = isSelected(colorTexture2, texCoord, 2, textureSize);
-    vec4 mainColor = texture2D(colorTexture0,texCoord);
-    vec3 normal = texture2D(colorTexture1,texCoord).xyz;
-    float edgeNormal = Canny(colorTexture2, 0, texCoord, textureSize, normalThreshold.x, normalThreshold.y);
+  // mix between orignal intensity gradient (sobel) and the canny filter in order to add some antialising effect
+  float depthEdgeMix = mix(edgeDepth, length(CalculateIntensityGradient(colorTexture2, 1, texCoord, textureSize)), 0.01);
+  float normalEdgeMix = mix(edgeNormal, length(CalculateIntensityGradient(colorTexture2, 0, texCoord, textureSize)), 0.01);
 
-    float edgeDepth = Canny(colorTexture2, 1, texCoord, textureSize, depthThreshold.x, depthThreshold.y);
-    float edge = max(edgeDepth, edgeNormal);
-    vec3 lighting = LightModel(normal, mainColor.rgb);
-    vec4 lightnedColor = vec4(vec3(lighting), mainColor.a);
+  float edge = max(depthEdgeMix, normalEdgeMix) * 5 * adaptativeDepthThreshold;
 
-    if(selected) {
-      gl_FragDepth = originalFragCoordZ / 50;
-      gl_FragColor = mix(lightnedColor, vec4(selectionColor,1), clamp(edge+0.1, 0, 1));
-      return;
-    }
-    gl_FragDepth = originalFragCoordZ;
-    gl_FragColor = mix(lightnedColor, vec4(outlineColor,1), clamp(edge, 0, 1));
+  if(selected) {
+    gl_FragColor = vec4(selectionColor, edge+0.25);
+    return;
+  }
 
-
+  // gl_FragColor = vec4(adaptativeDepthThreshold, adaptativeDepthThreshold, adaptativeDepthThreshold ,1.0);
+  // gl_FragColor = vec4(edgeDepth,edgeDepth,edgeDepth,1);
+   gl_FragColor = vec4(outlineColor, 1);
+   float v = texture2D(depthTexture,texCoord).g;
+   gl_FragColor = vec4(vec3(depthValue),1);
+   gl_FragColor = mainColor;
+   gl_FragColor = vec4(vec3(edge),1);
+   gl_FragColor = lightnedColor;
+   gl_FragColor = vec4(vec3(normal), 1);
+   gl_FragColor = mix(lightnedColor, vec4(outlineColor,mainColor.a), clamp(edge, 0, 1));
 };
 

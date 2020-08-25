@@ -9,6 +9,8 @@
 #include <osg/BlendFunc>
 #include <QFileSystemWatcher>
 
+#include "qtosg.h"
+
 class RenderStatePassShaderReloader {
 
 public:
@@ -24,7 +26,6 @@ public:
 	}
 
 private:
-
 	QFileSystemWatcher _shaderFileWatcher;
 
 };
@@ -79,12 +80,9 @@ OutlineShaderPipeline::~OutlineShaderPipeline()
 }
 
 RenderPassState* OutlineShaderPipeline::CreateSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera,
-	osg::ref_ptr<osg::Node> mainSceneRoot, int numColorAttachments, const std::string& vshader, const std::string& fshader, bool useMultiSamples)
+	osg::ref_ptr<osg::Node> mainSceneRoot, int numColorAttachments, const std::string& vshader, const std::string& fshader, osg::Texture* reusedDepthTexture, bool useMultiSamples)
 {
-	// First pass will render the same scene using a special shader that render objects with different colors
-	// different from background, so to prepare for outline edge detection post processing shader
 	RenderPassState* renderPassState = new RenderPassState();
-	//RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
 	renderPassState->SetShaderFiles(vshader, fshader, true);
 	osg::ref_ptr<osg::Group> firstPassGroup = new osg::Group();
 	firstPassGroup->setStateSet(renderPassState->state.get());
@@ -92,30 +90,28 @@ RenderPassState* OutlineShaderPipeline::CreateSceneToTexturePass(osg::ref_ptr<os
 
 	// clone main camera settings so to render same scene
 	renderPassState->camera = new osg::Camera();
-	renderPassState->colorFboTextures = RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, _maxFBOBufferWidth, _maxFBOBufferHeight, numColorAttachments, useMultiSamples);
+	RenderUtils::FBOData fboData;
+	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, _maxFBOBufferWidth, _maxFBOBufferHeight, fboData, reusedDepthTexture, numColorAttachments, useMultiSamples);
+	renderPassState->colorFboTextures = fboData.colorTextures;
+	renderPassState->depthFboTexture = fboData.depthTexture;
 
-	renderPassState->camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	renderPassState->camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	renderPassState->camera->setClearColor(osg::Vec4(0, 0, 0, 0));
 	renderPassState->camera->setViewMatrix(osg::Matrix::identity());
 	renderPassState->camera->setProjectionMatrix(osg::Matrix::identity());
 	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
 	mainSceneCamera->addChild(renderPassState->camera.get());
 	renderPassState->camera->addChild(firstPassGroup.get());
-	renderPassState->state->addUniform(new osg::Uniform("isSelected", 0));
-	renderPassState->state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(_maxFBOBufferWidth, _maxFBOBufferHeight)));
-	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0,0,0,1)));
-	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(0,0,0,1)));
-	renderPassState->state->setRenderBinDetails(0, "RenderBin", osg::StateSet::OVERRIDE_RENDERBIN_DETAILS);
-	// disable blend because we use alpha channel for encoding other information
-	renderPassState->state->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+    renderPassState->state->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+	_SetupOutlineShaderUniforms(renderPassState);
 	return renderPassState;
 }
 
-RenderPassState* OutlineShaderPipeline::CreateTextureToTexturePass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader)
+RenderPassState* OutlineShaderPipeline::CreateTextureToTexturePass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader, osg::Texture* reusedDepthTexture)
 {
 	RenderPassState* renderPassState = new RenderPassState();
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), renderPassState->state.get());
-
+	renderPassState->camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	std::vector<osg::ref_ptr<osg::Texture>> inputTextures = inputPass->colorFboTextures;
 	for(unsigned int i = 0; i < inputTextures.size(); ++i) {
 		std::ostringstream bufferNumStr;
@@ -127,26 +123,18 @@ RenderPassState* OutlineShaderPipeline::CreateTextureToTexturePass(RenderPassSta
 
 	//RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
 	renderPassState->SetShaderFiles(vshader, fshader, true);
-	renderPassState->colorFboTextures = RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, _maxFBOBufferWidth, _maxFBOBufferHeight, numColorAttachments);
 
-	// add outline camera as child of original scene camera so we can iherit transform and render same scene in the first pass (except we will render to texture)
-	renderPassState->state->addUniform(new osg::Uniform("outlineColor", _outlineColor));
-	renderPassState->state->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
-	renderPassState->state->addUniform(new osg::Uniform("isSelected", 0));
-	renderPassState->state->addUniform(new osg::Uniform("depthThreshold", 1.5f));
-	renderPassState->state->addUniform(new osg::Uniform("depthNormalThreshold", 0.5f));
-	renderPassState->state->addUniform(new osg::Uniform("depthNormalThresholdScale", 7.0f));
-	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", g_NormalThreshold));
-	renderPassState->state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(_maxFBOBufferWidth, _maxFBOBufferHeight)));
-	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0,0,0,1)));
-	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(0,0,0,1)));
+	RenderUtils::FBOData fboData;
+	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, _maxFBOBufferWidth, _maxFBOBufferHeight, fboData, reusedDepthTexture, numColorAttachments);
+	renderPassState->colorFboTextures = fboData.colorTextures;
+	renderPassState->depthFboTexture = fboData.depthTexture;
+	_SetupOutlineShaderUniforms(renderPassState);
 	return renderPassState;
 }
 
 RenderPassState* OutlineShaderPipeline::CreateTextureToColorBufferPass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader)
 {
 	RenderPassState* renderPassState = new RenderPassState();
-	//RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
 	renderPassState->SetShaderFiles(vshader, fshader, true);
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), renderPassState->state.get());
 	renderPassState->camera->setClearColor(osg::Vec4(1, 1, 1, 1));
@@ -159,22 +147,22 @@ RenderPassState* OutlineShaderPipeline::CreateTextureToColorBufferPass(RenderPas
 		renderPassState->state->addUniform(new osg::Uniform(bufferNumStr.str().c_str(), (int)i));
 	}
 
-    renderPassState->state->setMode(GL_BLEND, osg::StateAttribute::ON);
-	renderPassState->state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
-	osg::Depth* depth = new osg::Depth;
-	depth->setWriteMask( false );
-	renderPassState->state->setAttributeAndModes(depth, osg::StateAttribute::ON);
-	renderPassState->state->addUniform(new osg::Uniform("outlineColor", _outlineColor));
-	renderPassState->state->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
-	renderPassState->state->addUniform(new osg::Uniform("isSelected", 0));
-	renderPassState->state->addUniform(new osg::Uniform("depthThreshold", 1.5f));
-	renderPassState->state->addUniform(new osg::Uniform("depthNormalThreshold", 0.5f));
-	renderPassState->state->addUniform(new osg::Uniform("depthNormalThresholdScale", 7.0f));
-	renderPassState->state->addUniform(new osg::Uniform("normalThreshold", g_NormalThreshold));
-	renderPassState->state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(_maxFBOBufferWidth, _maxFBOBufferHeight)));
-	renderPassState->state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0,0,0,1)));
-
+	_SetupOutlineShaderUniforms(renderPassState);
 	return renderPassState;
+}
+
+void OutlineShaderPipeline::_SetupOutlineShaderUniforms(RenderPassState* pass)
+{
+	pass->state->addUniform(new osg::Uniform("outlineColor", _outlineColor));
+	pass->state->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
+	pass->state->addUniform(new osg::Uniform("isSelected", 0));
+	pass->state->addUniform(new osg::Uniform("outlineEnabled", true));
+	pass->state->addUniform(new osg::Uniform("depthThreshold", 1.5f));
+	pass->state->addUniform(new osg::Uniform("depthNormalThreshold", 0.5f));
+	pass->state->addUniform(new osg::Uniform("depthNormalThresholdScale", 7.0f));
+	pass->state->addUniform(new osg::Uniform("normalThreshold", g_NormalThreshold));
+	pass->state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(_maxFBOBufferWidth, _maxFBOBufferHeight)));
+	pass->state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0,0,0,1)));
 }
 
 osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera,
@@ -185,31 +173,45 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	static const std::string preRenderFragShaderPath = "/data/shaders/prerender.frag";
 	static const std::string outlineVertPath = "/data/shaders/outline.vert";
 	static const std::string outlineFragPath = "/data/shaders/outline.frag";
-	static const std::string fxaaVertPath = "/data/shaders/fxaa.vert";
-	static const std::string fxaaFragPath = "/data/shaders/fxaa.frag";
-	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 3, preRenderVertShaderPath, preRenderFragShaderPath, true);
-	RenderPassState* outlinePass = CreateTextureToTexturePass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
-	RenderPassState* fxaaPass = CreateTextureToColorBufferPass(outlinePass, 1, fxaaVertPath, fxaaFragPath);
+	static const std::string depthTestVertPath = "/data/shaders/depthtest.vert";
+	static const std::string depthTestFragPath = "/data/shaders/depthtest.frag";
 
-	// osg::Camera* normalHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(normalAndDepthMapPass->colorFboTextures[0].get(), osg::Vec2f(-1, 0), osg::Vec2f(1,1), maxFBOBufferWidth, maxFBOBufferHeight);
-	// osg::Camera* depthHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(normalAndDepthMapPass->colorFboTextures[1].get(), osg::Vec2f(0,0), osg::Vec2f(1,1), maxFBOBufferWidth, maxFBOBufferHeight);
-	// osg::Camera* outlineNoFxaaHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(outlinePass->colorFboTextures[0].get(), osg::Vec2f(-1,-1), osg::Vec2f(1,1), maxFBOBufferWidth, maxFBOBufferHeight);
-	// osg::Camera* outlineFxaaHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(fxaaPass->colorFboTextures[0].get(), osg::Vec2f(0,-1), osg::Vec2f(1,1), maxFBOBufferWidth, maxFBOBufferHeight);
+	mainSceneCamera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+    osg::ref_ptr<osg::Texture> depthBuffer = RenderUtils::CreateDepthFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
+	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 3, preRenderVertShaderPath, preRenderFragShaderPath, nullptr, true);
+	normalAndDepthMapPass->camera->setCullMask(~qtosgrave::TRANSPARENT_ITEM_MASK);
+	normalAndDepthMapPass->state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+	normalAndDepthMapPass->state->setMode(GL_BLEND, osg::StateAttribute::ON);
+	normalAndDepthMapPass->state->setRenderBinDetails(0, "DepthSortedBin", osg::StateSet::USE_RENDERBIN_DETAILS);
+
+	RenderPassState* outlinePass = CreateTextureToColorBufferPass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
+	// RenderPassState* normalAndDepthMapPassTransparency = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 3, preRenderVertShaderPath, preRenderFragShaderPath, depthBuffer.get(), true);
+	// normalAndDepthMapPassTransparency->camera->setClearMask(GL_COLOR_BUFFER_BIT);
+	// normalAndDepthMapPassTransparency->camera->setCullMask(qtosgrave::TRANSPARENT_ITEM_MASK);
+
+	// RenderPassState* outlinePassTransparency = CreateTextureToColorBufferPass(normalAndDepthMapPassTransparency, 1, depthTestVertPath, depthTestFragPath);
+
+	// normalAndDepthMapPassTransparency->state->setTextureAttributeAndModes(5, depthBuffer.get(), osg::StateAttribute::ON);
+	// normalAndDepthMapPassTransparency->state->addUniform(new osg::Uniform("depthTexture", 5));
+	// outlinePassTransparency->state->setTextureAttributeAndModes(5, depthBuffer.get(), osg::StateAttribute::ON);
+	// outlinePassTransparency->state->addUniform(new osg::Uniform("depthTexture", 5));
 
 	_renderPassStates.push_back(normalAndDepthMapPass);
 	_renderPassStates.push_back(outlinePass);
-	_renderPassStates.push_back(fxaaPass);
-
+	// _renderPassStates.push_back(normalAndDepthMapPassTransparency);
+	// _renderPassStates.push_back(outlinePassTransparency);
 
 	osg::ref_ptr<osg::Group> passesGroup = new osg::Group();
-	passesGroup->addChild(_renderPassStates[0]->camera.get());
-	//passesGroup->addChild(mainSceneRoot);
-	passesGroup->addChild(_renderPassStates[1]->camera.get());
-	passesGroup->addChild(_renderPassStates[2]->camera.get());
-	// passesGroup->addChild(normalHud);
-	// passesGroup->addChild(depthHud);
-	// passesGroup->addChild(outlineNoFxaaHud);
-	// passesGroup->addChild(outlineFxaaHud);
+	passesGroup->addChild(normalAndDepthMapPass->camera.get());
+	// passesGroup->addChild(normalAndDepthMapPassTransparency->camera.get());
+	osg::Group* grp = new osg::Group();
+	//RenderUtils::SetShaderProgramFileOnStateSet(grp->getOrCreateStateSet(), "/data/shaders/perpixellighting.vert", "/data/shaders/perpixellighting.frag");
+	// grp->addChild(mainSceneRoot);
+	// passesGroup->addChild(grp);
+	//passesGroup->addChild(outlinePassTransparency->camera.get());
+	passesGroup->addChild(outlinePass->camera.get());
+
+
 
 	return passesGroup.release();
 

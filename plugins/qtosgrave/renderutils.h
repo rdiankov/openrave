@@ -3,6 +3,7 @@
 #define OPENRAVE_QTOSG_RENDERUTILS_H
 
 #include <osg/Geode>
+#include <osg/Depth>
 #include <osg/Group>
 #include <osg/Camera>
 #include <osg/Shader>
@@ -14,6 +15,10 @@
 
 class RenderUtils {
 public:
+    struct FBOData {
+        std::vector<osg::ref_ptr<osg::Texture>> colorTextures;
+        osg::ref_ptr<osg::Texture> depthTexture;
+    };
     static void SetShaderProgramOnStateSet(osg::ref_ptr<osg::StateSet> onwerStateSet, const std::string& vertShaderString, const std::string& fragShaderString)
     {
         osg::ref_ptr<osg::Program> program = new osg::Program;
@@ -77,11 +82,11 @@ public:
         tex->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
         tex->setSourceFormat(GL_DEPTH_COMPONENT);
         tex->setInternalFormat(GL_DEPTH_COMPONENT24);
-        tex->setSourceType(GL_UNSIGNED_INT);
+        tex->setSourceType(GL_FLOAT);
         return tex.release();
     }
 
-    static osg::Geode *CreateScreenQuad(float width, float height, float scale = 1, osg::Vec3 corner = osg::Vec3())
+    static osg::Geode *CreateScreenQuad(float width, float height, float scale = 1, osg::Vec3 corner = osg::Vec3(), osg::ref_ptr<osg::StateSet> stateSet=nullptr)
     {
         osg::Geometry* geom = osg::createTexturedQuadGeometry(
             corner,
@@ -92,6 +97,9 @@ public:
             scale,
             scale);
         osg::ref_ptr<osg::Geode> quad = new osg::Geode;
+        if(stateSet) {
+            quad->setStateSet(stateSet.get());
+        }
         quad->addDrawable(geom);
         int values = osg::StateAttribute::OFF | osg::StateAttribute::PROTECTED;
         quad->getOrCreateStateSet()->setAttribute(
@@ -99,37 +107,41 @@ public:
                                 osg::PolygonMode::FILL),
             values);
         quad->getOrCreateStateSet()->setMode(GL_LIGHTING, values);
+        osg::Depth* depth = new osg::Depth;
+        depth->setWriteMask( false );
+        quad->getOrCreateStateSet()->setAttributeAndModes( depth, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE );
         return quad.release();
     }
 
-    static std::vector<osg::ref_ptr<osg::Texture>> SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, int width, int height, int numColorAttachments=1, bool useMultiSamples=false)
+    static void SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, int width, int height, FBOData& result, osg::Texture* reusedDepthTexture = nullptr, int numColorAttachments=1, bool useMultiSamples=false)
     {
-        std::vector<osg::ref_ptr<osg::Texture>> result;
         camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-        camera->setClearColor(osg::Vec4(0,0,0,0));
+        camera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+        camera->setClearColor(osg::Vec4(1,1,1,1));
         camera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
         camera->setRenderOrder(osg::Camera::PRE_RENDER);
         camera->setViewport(0, 0, 1024, 768);
         camera->setViewMatrix(osg::Matrix::identity());
         for(int i = 0; i < numColorAttachments; ++i) {
             osg::Texture* tex = RenderUtils::CreateFloatTextureRectangle(width, height);
-            if(useMultiSamples && i == 0) {
+            if(useMultiSamples) {
                 camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex, 0, 0, false, 4, 4);
             }
             else {
                 camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex);
             }
-            result.push_back(tex);
+            result.colorTextures.push_back(tex);
         }
-        osg::ref_ptr<osg::Texture> depthTexture = RenderUtils::CreateDepthFloatTextureRectangle(width, height);
+        if(reusedDepthTexture == nullptr) {
+            return;
+        }
+        result.depthTexture = reusedDepthTexture;
         if(useMultiSamples) {
-            camera->attach(osg::Camera::DEPTH_BUFFER, depthTexture.get(), 0, 0, false, 4, 4);
+            camera->attach(osg::Camera::DEPTH_BUFFER, result.depthTexture.get(), 0, 0, false, 4, 4);
         }
         else {
-            camera->attach(osg::Camera::DEPTH_BUFFER, depthTexture.get());
+            camera->attach(osg::Camera::DEPTH_BUFFER, result.depthTexture.get());
         }
-
-        return result;
     }
 
     static osg::Camera *CreateFBOTextureDisplayHUDViewPort(osg::Texture* texture, const osg::Vec2f& corner, const osg::Vec2f& size, int fboWidth, int fboHeight)
@@ -149,6 +161,7 @@ public:
     static osg::Camera* CreateHUDCamera()
     {
         osg::ref_ptr<osg::Camera> camera = new osg::Camera;
+        camera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
         camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
         camera->setClearMask(GL_DEPTH_BUFFER_BIT);
         camera->setAllowEventFocus(false);
@@ -162,8 +175,7 @@ public:
     static osg::ref_ptr<osg::Camera> CreateTextureDisplayQuadCamera(const osg::Vec3 &pos, osg::ref_ptr<osg::StateSet> quadStateSet, float scale=1, float width = 2,float height = 2)
     {
         osg::ref_ptr<osg::Camera> hc = CreateHUDCamera();
-        osg::Geode* quad = CreateScreenQuad(width, height, scale, pos);
-        quad->setStateSet(quadStateSet.get());
+        osg::Geode* quad = CreateScreenQuad(width, height, scale, pos, quadStateSet);
         hc->addChild(quad);
         return hc;
     }

@@ -4,7 +4,9 @@ varying vec3 normal;
 varying vec3 position;
 varying vec4 color;
 varying float depth;
+varying vec3 wireInterpColor;
 uniform int isSelected;
+uniform vec2 textureSize;
 
 float LuminanceFromRgb(vec3 rgb)
 {
@@ -21,9 +23,15 @@ float linearize_depth(float d, float zNear,float zFar)
 
 void main()
 {
+    vec2 texCoord = gl_FragCoord.xy / textureSize;
     vec3 nNormal = normalize(normal);
     gl_FragData[0] = color;
-    gl_FragData[1] = vec4(nNormal, gl_FragCoord.z);
-    gl_FragData[2] = vec4(LuminanceFromRgb(nNormal), depth, isSelected, 1);;
+    gl_FragData[1] = vec4(nNormal, 1);
+    gl_FragData[2] = vec4(LuminanceFromRgb(nNormal), depth , isSelected, 1);
+    if(isSelected == 1) {
+        gl_FragDepth = gl_FragCoord.z / 10;
+        return;
+    }
+    gl_FragDepth = gl_FragCoord.z;
     
 };
