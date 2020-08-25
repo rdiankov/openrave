@@ -174,8 +174,6 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	static const std::string preRenderTransparentFragShaderPath = "/data/shaders/prerender_transparent.frag";
 	static const std::string outlineVertPath = "/data/shaders/outline.vert";
 	static const std::string outlineFragPath = "/data/shaders/outline.frag";
-	static const std::string depthTestVertPath = "/data/shaders/depthtest.vert";
-	static const std::string depthTestFragPath = "/data/shaders/depthtest.frag";
 
     osg::ref_ptr<osg::Texture> depthBuffer = RenderUtils::CreateDepthFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
 	mainSceneCamera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
@@ -183,24 +181,13 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	normalAndDepthMapPass->camera->setCullMask(~qtosgrave::TRANSPARENT_ITEM_MASK);
 
 	RenderPassState* outlinePass = CreateTextureToColorBufferPass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
-	//std::vector<osg::ref_ptr<osg::Texture>> inheritedColorTextures = std::vector<osg::ref_ptr<osg::Texture>>(1, outlinePass->colorFboTextures[0]);
 	RenderPassState* normalAndDepthMapPassTransparency = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 3, preRenderTransparentVertShaderPath, preRenderTransparentFragShaderPath, depthBuffer.get(), true);
-	//normalAndDepthMapPassTransparency->camera->setClearMask(GL_COLOR_BUFFER_BIT);
 	normalAndDepthMapPassTransparency->camera->setCullMask(qtosgrave::TRANSPARENT_ITEM_MASK);
 	
-
 	RenderPassState* outlinePassTransparency = CreateTextureToColorBufferPass(normalAndDepthMapPassTransparency, 1, outlineVertPath, outlineFragPath);
 	
 	normalAndDepthMapPassTransparency->state->setTextureAttributeAndModes(5, depthBuffer.get(), osg::StateAttribute::ON);
 	normalAndDepthMapPassTransparency->state->addUniform(new osg::Uniform("depthTexture", 5));
-	// outlinePassTransparency->state->setTextureAttributeAndModes(5, depthBuffer.get(), osg::StateAttribute::ON);
-	// outlinePassTransparency->state->addUniform(new osg::Uniform("depthTexture", 5));
-
-	// osg::Camera* depthHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(normalAndDepthMapPass->depthFboTexture.get(), osg::Vec2f(-1, 0), osg::Vec2f(1,1), maxFBOBufferWidth, maxFBOBufferHeight);
-	// osg::Camera* outlineHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(outlinePass->colorFboTextures[0].get(), osg::Vec2f(0,0), osg::Vec2f(1,1), maxFBOBufferWidth, maxFBOBufferHeight);
-	// osg::Camera* outlineTransparencyHud = RenderUtils::CreateFBOTextureDisplayHUDViewPort(outlinePassTransparency->colorFboTextures[0].get(), osg::Vec2f(-1,-1), osg::Vec2f(1,1), maxFBOBufferWidth, maxFBOBufferHeight);
-
-
 
 	_renderPassStates.push_back(normalAndDepthMapPass);
 	_renderPassStates.push_back(outlinePass);
@@ -216,11 +203,6 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	passesGroup->addChild(grp);
 	passesGroup->addChild(outlinePass->camera.get());
 	passesGroup->addChild(outlinePassTransparency->camera.get());
-	// passesGroup->addChild(depthHud);
-	// passesGroup->addChild(outlineHud);
-	// passesGroup->addChild(outlineTransparencyHud);
-
-
 
 	return passesGroup.release();
 
