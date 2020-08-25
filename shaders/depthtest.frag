@@ -8,9 +8,6 @@ varying vec3 wireInterpColor;
 uniform int isSelected;
 uniform vec2 textureSize;
 
-
-uniform sampler2D depthTexture;
-
 uniform sampler2D colorTexture0;
 uniform sampler2D colorTexture1;
 uniform sampler2D colorTexture2;

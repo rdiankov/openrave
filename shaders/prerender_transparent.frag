@@ -8,7 +8,6 @@ varying vec3 wireInterpColor;
 uniform int isSelected;
 uniform vec2 textureSize;
 
-
 uniform sampler2D depthTexture;
 
 
@@ -29,6 +28,8 @@ void main()
 {
     vec2 texCoord = gl_FragCoord.xy / textureSize;
     vec3 nNormal = normalize(normal);
+
+    // perform the depth test manually using depth texture
     if(texture2D(depthTexture,texCoord).r < gl_FragCoord.z) {
         discard;
     }

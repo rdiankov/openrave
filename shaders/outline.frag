@@ -16,8 +16,6 @@ uniform sampler2D colorTexture0;
 uniform sampler2D colorTexture1;
 uniform sampler2D colorTexture2;
 
-uniform sampler2D depthTexture;
-
 const float lightIntensity = 1.0f;
 const float shininess = 35.0f;    // Specular shininess factor
 const vec3 lightColor = vec3(1, 1, 1);
@@ -184,10 +182,8 @@ vec2 CalculateIntensityGradient(sampler2D tex, int channelIndex, vec2 coord, vec
 }
 
 /*
-  Get the texture intensity gradient of an image
-  where the angle of the direction is rounded to
-  one of the 8 cardinal directions and gradients
-  that are not local extrema are zeroed out
+  Get the texture intensity gradient of an image where the angle of the direction is rounded to
+  one of the 8 cardinal directions and gradients that are not local extrema are zeroed out
  */
 vec2 GetSuppressedTextureIntensityGradient(sampler2D tex, int channelIndex, vec2 textureCoord, vec2 resolution) {
   float delta = 0;
@@ -290,8 +286,8 @@ void main()
   float edgeDepth = Canny(colorTexture2, 1, texCoord, textureSize, depthThreshold.x, depthThreshold.y);
 
   // mix between orignal intensity gradient (sobel) and the canny filter in order to add some antialising effect
-  float depthEdgeMix = mix(edgeDepth, length(CalculateIntensityGradient(colorTexture2, 1, texCoord, textureSize)), 0.01);
-  float normalEdgeMix = mix(edgeNormal, length(CalculateIntensityGradient(colorTexture2, 0, texCoord, textureSize)), 0.01);
+  float depthEdgeMix = mix(edgeDepth, length(CalculateIntensityGradient(colorTexture2, 1, texCoord, textureSize)), 0.02);
+  float normalEdgeMix = mix(edgeNormal, length(CalculateIntensityGradient(colorTexture2, 0, texCoord, textureSize)), 0.02);
 
   float edge = max(depthEdgeMix, normalEdgeMix) * 5 * adaptativeDepthThreshold;
 
@@ -300,15 +296,6 @@ void main()
     return;
   }
 
-  // gl_FragColor = vec4(adaptativeDepthThreshold, adaptativeDepthThreshold, adaptativeDepthThreshold ,1.0);
-  // gl_FragColor = vec4(edgeDepth,edgeDepth,edgeDepth,1);
-   float v = texture2D(depthTexture,texCoord).g;
-   gl_FragColor = vec4(vec3(normal), 1);
-   gl_FragColor = mix(lightnedColor, vec4(outlineColor,1), clamp(edge, 0, 1));
-   gl_FragColor = mainColor;
-   gl_FragColor = vec4(vec3(depthValue),1);
-   gl_FragColor = lightnedColor;
-   gl_FragColor = vec4(vec3(edge),1);
    gl_FragColor = vec4(outlineColor, edge);
 };
 
