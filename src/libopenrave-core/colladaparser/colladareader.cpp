@@ -327,7 +327,7 @@ public:
         if( !uriresolved.empty() ) {
             _mapInverseResolvedURIList.insert(make_pair(uriresolved, daeURI(*_dae,urioriginal.str())));
         }
-
+        _originalURI = urioriginal.str();
         return _InitPostOpen(atts);
     }
 
@@ -340,7 +340,9 @@ public:
         if (!_dom) {
             return false;
         }
-        _filename=filename;
+        _filename = filename;
+
+        _originalURI = "file:" + cdom::nativePathToUri(RaveFindLocalFile(_filename, ""));;
         return _InitPostOpen(atts);
     }
 
@@ -1071,6 +1073,12 @@ public:
         }
         if( !!pbody ) {
             pbody->__struri = struri;
+            // set referenceUri if it's external one
+            daeURI urioriginal(*_dae, struri);
+            urioriginal.fragment(std::string()); // set the fragment to empty
+            if (_originalURI.compare(urioriginal.str()) != 0 ) {
+                pbody->_referenceUri = struri;
+            }
         }
 
         std::string strname = strParentName;
@@ -5662,6 +5670,7 @@ private:
     int _nGlobalSensorId, _nGlobalManipulatorId, _nGlobalIndex, _nGlobalGripperInfoId;
     bool _bResetGlobalDae;  ///< Global Dae will be reset in destructor if true. have to manually reset if set to false
     std::string _filename;
+    std::string _originalURI; ///< uri for tracking original opened document
     std::set<KinBody::LinkPtr> _setInitialLinks;
     std::set<KinBody::JointPtr> _setInitialJoints;
     std::set<RobotBase::ManipulatorPtr> _setInitialManipulators;
