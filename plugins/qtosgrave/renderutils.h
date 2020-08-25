@@ -9,6 +9,7 @@
 #include <osg/Shader>
 #include <osg/Geometry>
 #include <osg/Texture2D>
+#include <osg/BlendFunc>
 #include <osgDB/ReadFile>
 #include <osg/PolygonMode>
 #include <osg/Texture2DMultisample>
@@ -110,25 +111,33 @@ public:
         osg::Depth* depth = new osg::Depth;
         depth->setWriteMask( false );
         quad->getOrCreateStateSet()->setAttributeAndModes( depth, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE );
+        quad->getOrCreateStateSet()->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+	    quad->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
         return quad.release();
     }
 
-    static void SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, int width, int height, FBOData& result, osg::Texture* reusedDepthTexture = nullptr, int numColorAttachments=1, bool useMultiSamples=false)
+    static void SetupRenderToTextureCamera(osg::ref_ptr<osg::Camera> camera, int width, int height, FBOData& result, osg::Texture* reusedDepthTexture = nullptr, int numColorAttachments=1, bool useMultiSamples=false, const std::vector<osg::ref_ptr<osg::Texture>>& inheritedColorBuffers = std::vector<osg::ref_ptr<osg::Texture>>())
     {
         camera->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
         camera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
-        camera->setClearColor(osg::Vec4(1,1,1,1));
+        camera->setClearColor(osg::Vec4(0, 0, 0, 0));
         camera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
-        camera->setRenderOrder(osg::Camera::PRE_RENDER);
+        //camera->setRenderOrder(osg::Camera::PRE_RENDER);
         camera->setViewport(0, 0, 1024, 768);
         camera->setViewMatrix(osg::Matrix::identity());
         for(int i = 0; i < numColorAttachments; ++i) {
-            osg::Texture* tex = RenderUtils::CreateFloatTextureRectangle(width, height);
-            if(useMultiSamples) {
-                camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex, 0, 0, false, 4, 4);
+            osg::ref_ptr<osg::Texture> tex = nullptr;
+            if(i < (int)inheritedColorBuffers.size()) {
+                tex = inheritedColorBuffers[i].get();
             }
             else {
-                camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex);
+                tex = RenderUtils::CreateFloatTextureRectangle(width, height);
+            }
+            if(useMultiSamples) {
+                camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex.get(), 0, 0, false, 4, 4);
+            }
+            else {
+                camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex.get());
             }
             result.colorTextures.push_back(tex);
         }

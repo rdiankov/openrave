@@ -37,8 +37,8 @@ public:
     osg::ref_ptr<osg::Group> CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight);
     void HandleResize(int width, int height);
     RenderPassState* CreateSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot,
-        int numColorAttachments, const std::string& vshader, const std::string& fshader, osg::Texture* reusedDepthTexture = nullptr, bool useMultiSamples=false);
-    RenderPassState* CreateTextureToTexturePass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader, osg::Texture* reusedDepthTexture = nullptr);
+        int numColorAttachments, const std::string& vshader, const std::string& fshader, osg::Texture* reusedDepthTexture = nullptr, bool useMultiSamples=false, const std::vector<osg::ref_ptr<osg::Texture>>& inheritedColorBuffers = std::vector<osg::ref_ptr<osg::Texture>>());
+    RenderPassState* CreateTextureToTexturePass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader, bool useMultiSamples=false, osg::Texture* reusedDepthTexture = nullptr);
     RenderPassState* CreateTextureToColorBufferPass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader);
 
 

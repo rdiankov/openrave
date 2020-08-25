@@ -313,6 +313,7 @@ void KinBodyItem::Load()
                 if (transparency > 0) {
                     mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
                     state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+            	    state->setMode(GL_BLEND, osg::StateAttribute::ON);
                     state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(x, y, z, 1 - transparency)));
 
                     pgeometrydata->setNodeMask(TRANSPARENT_ITEM_MASK);

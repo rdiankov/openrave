@@ -11,6 +11,9 @@ uniform vec2 textureSize;
 
 uniform sampler2D depthTexture;
 
+uniform sampler2D colorTexture0;
+uniform sampler2D colorTexture1;
+uniform sampler2D colorTexture2;
 
 float LuminanceFromRgb(vec3 rgb)
 {
@@ -29,16 +32,16 @@ void main()
 {
     vec2 texCoord = gl_FragCoord.xy / textureSize;
     vec3 nNormal = normalize(normal);
-    // if(texture2D(depthTexture,texCoord).r >= gl_FragCoord.z) {
-    //     discard;
-    // }
+
+    float d = texture2D(colorTexture2,texCoord).r;
+
     gl_FragData[0] = color;
-    gl_FragData[1] = vec4(nNormal, 1);
-    gl_FragData[2] = vec4(LuminanceFromRgb(nNormal), depth , isSelected, 1);
-    if(isSelected == 1) {
-        gl_FragDepth = gl_FragCoord.z / 10;
-        return;
-    }
-    gl_FragDepth = gl_FragCoord.z;
+    gl_FragData[1] = vec4(nNormal, 0);
+    gl_FragData[2] = vec4(LuminanceFromRgb(nNormal), depth, isSelected, 1);
+    // if(isSelected == 1) {
+    //     gl_FragDepth = gl_FragCoord.z / 10;
+    //     return;
+    // }
+    // gl_FragDepth = gl_FragCoord.z;
     
 };

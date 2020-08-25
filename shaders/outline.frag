@@ -283,7 +283,7 @@ void main()
   float depthValue = texture2D(colorTexture2,texCoord).y;
   float adaptativeDepthThreshold = smoothstep(0, depthValue, 1);
   vec2 normalThreshold = vec2(0.3, 0.4);
-  vec2 depthThreshold = vec2(0.01, 0.09);
+  vec2 depthThreshold = vec2(0.09, 0.09);
 
   bool selected = isSelected(colorTexture2, texCoord, 2, textureSize);
   float edgeNormal = Canny(colorTexture2, 0, texCoord, textureSize, normalThreshold.x, normalThreshold.y);
@@ -302,13 +302,13 @@ void main()
 
   // gl_FragColor = vec4(adaptativeDepthThreshold, adaptativeDepthThreshold, adaptativeDepthThreshold ,1.0);
   // gl_FragColor = vec4(edgeDepth,edgeDepth,edgeDepth,1);
-   gl_FragColor = vec4(outlineColor, 1);
    float v = texture2D(depthTexture,texCoord).g;
-   gl_FragColor = vec4(vec3(depthValue),1);
-   gl_FragColor = mainColor;
-   gl_FragColor = vec4(vec3(edge),1);
-   gl_FragColor = lightnedColor;
    gl_FragColor = vec4(vec3(normal), 1);
-   gl_FragColor = mix(lightnedColor, vec4(outlineColor,mainColor.a), clamp(edge, 0, 1));
+   gl_FragColor = mix(lightnedColor, vec4(outlineColor,1), clamp(edge, 0, 1));
+   gl_FragColor = mainColor;
+   gl_FragColor = vec4(vec3(depthValue),1);
+   gl_FragColor = lightnedColor;
+   gl_FragColor = vec4(vec3(edge),1);
+   gl_FragColor = vec4(outlineColor, edge);
 };
 
