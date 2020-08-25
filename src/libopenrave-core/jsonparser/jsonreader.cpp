@@ -186,6 +186,13 @@ public:
         }
 
         if (!bFoundBody) {
+            // remove fragment before find local file
+            if(!fragment.empty() && uri.size() > fragment.size() + 1) {  // 1 size for #
+                uri = uri.substr(0, uri.size() - fragment.size() - 1);
+            }
+            fullFilename = ResolveURI(uri, GetOpenRAVESchemeAliases());
+
+            _ReplaceFilenameSuffix(fullFilename, "dae", "json");
             boost::shared_ptr<const rapidjson::Document> expandedDoc = _GetJsonDocumentFromUri(fullFilename, alloc);
             if (!expandedDoc || !(*expandedDoc).HasMember("bodies")) {
                 return false;
@@ -486,6 +493,17 @@ protected:
             }
         }
     }
+    /// \brief if filename endswith oldSuffix, replace it with newSuffix;
+    inline void _ReplaceFilenameSuffix(std::string& filename, const std::string& oldSuffix, const std::string& newSuffix) {
+        // fix extension, replace dae with json
+        // this is done for ease of migration
+        size_t len = filename.size();
+        size_t suffixLen = oldSuffix.size();
+        if (len >= suffixLen && filename.substr(len-suffixLen) == oldSuffix) {
+            filename = filename.substr(0, len-suffixLen) + newSuffix;
+            RAVELOG_DEBUG_FORMAT("change filename to %s", filename);
+        }
+    }
 
     bool _ProcessConnectedBodyURI(RobotBase::ConnectedBodyInfo& connectedInfo, const std::string& uri, dReal fUnitScale, std::set<std::string>& circularReference, rapidjson::Document::AllocatorType& alloc)
     {
@@ -508,6 +526,8 @@ protected:
         if (fullFilename.empty() && fragment.empty()) {
             return false;
         }
+
+        _ReplaceFilenameSuffix(fullFilename, "dae", "json");
 
         circularReference.insert(uri);
         boost::shared_ptr<const rapidjson::Document> prConnectedBody = _GetJsonDocumentFromUri(fullFilename, alloc);
