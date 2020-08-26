@@ -1079,9 +1079,10 @@ public:
 
             std::string scheme, authority, path, query, fragment;
             cdom::parseUriRef(struri, scheme, authority, path, query, fragment);
-            // collada dom will set path to current directory when reading from memory
-            // so here we check for file and currentdir to avoid setting wrong referenceUri
-            if (scheme != "file" || path == cdom::getCurrentDir()) {
+            
+            // only set referenceUri if it's in OpenRAVEScheme
+            std::vector<std::string>::iterator itScheme = std::find(_vOpenRAVESchemeAliases.begin(),  _vOpenRAVESchemeAliases.end(), scheme);
+            if (itScheme != _vOpenRAVESchemeAliases.end()) {
                 if (_originalURI.compare(urioriginal.str()) != 0 ) {
                     pbody->_referenceUri = struri;
                 }
