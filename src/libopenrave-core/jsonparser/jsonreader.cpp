@@ -192,7 +192,7 @@ public:
             }
             fullFilename = ResolveURI(uri, GetOpenRAVESchemeAliases());
 
-            _ReplaceFilenameSuffix(fullFilename, "dae", "json");
+            _ReplaceFilenameSuffix(fullFilename, ".dae", ".json");
             boost::shared_ptr<const rapidjson::Document> expandedDoc = _GetJsonDocumentFromUri(fullFilename, alloc);
             if (!expandedDoc || !(*expandedDoc).HasMember("bodies")) {
                 return false;
@@ -527,7 +527,7 @@ protected:
             return false;
         }
 
-        _ReplaceFilenameSuffix(fullFilename, "dae", "json");
+        _ReplaceFilenameSuffix(fullFilename, ".dae", ".json");
 
         circularReference.insert(uri);
         boost::shared_ptr<const rapidjson::Document> prConnectedBody = _GetJsonDocumentFromUri(fullFilename, alloc);
