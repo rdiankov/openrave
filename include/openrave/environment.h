@@ -768,7 +768,7 @@ public:
     virtual void ExtractInfo(EnvironmentBaseInfo& info) = 0;
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo
-    virtual void UpdateFromInfo(const EnvironmentBaseInfo& info) = 0;
+    virtual void UpdateFromInfo(EnvironmentBaseInfo& info) = 0;
 
     int _revision = 0;  ///< environment current revision
     std::string _name;   ///< environment name
