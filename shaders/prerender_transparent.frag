@@ -29,7 +29,8 @@ void main()
     vec3 nNormal = normalize(normal);
 
     // perform the depth test manually using depth texture
-    if(texture2D(depthTexture,texCoord).r < gl_FragCoord.z) {
+    float v = texture2D(depthTexture,texCoord).a;
+    if(v > 0 && v < gl_FragCoord.z) {
         discard;
     }
     gl_FragColor = vec4(LuminanceFromRgb(nNormal), depth, isSelected, 1);

@@ -6,7 +6,8 @@ varying vec3 normal;
 varying vec3 position;
 
 
-const float lightIntensity = 1f;
+
+const float lightIntensity = 1.0f;
 const float shininess = 40.0f;    // Specular shininess factor
 const vec3 lightColor = vec3(1, 1, 1);
 const vec3 ka = vec3(0.2, 0.2, 0.2);            // Ambient reflectivity

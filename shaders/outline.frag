@@ -269,24 +269,25 @@ void main()
   }
   float depthValue = texture2D(colorTexture0,texCoord).y;
   float adaptativeDepthThreshold = smoothstep(0, depthValue, 1);
-  vec2 normalThreshold = vec2(0.3, 0.4);
-  vec2 depthThreshold = vec2(0.09, 0.09);
+  vec2 normalThreshold = vec2(0.3 + (1-adaptativeDepthThreshold), 0.01);
+  vec2 depthThreshold = vec2(0.01 + 0.5*(1-adaptativeDepthThreshold), 0.01);
 
   bool selected = isSelected(colorTexture0, texCoord, 2, textureSize);
   float edgeNormal = Canny(colorTexture0, 0, texCoord, textureSize, normalThreshold.x, normalThreshold.y);
   float edgeDepth = Canny(colorTexture0, 1, texCoord, textureSize, depthThreshold.x, depthThreshold.y);
 
   // mix between orignal intensity gradient (sobel) and the canny filter in order to add some antialising effect
-  float normalEdgeMix = mix(edgeNormal, length(CalculateIntensityGradient(colorTexture0, 0, texCoord, textureSize)), 0.02);
-  float depthEdgeMix = mix(edgeDepth, length(CalculateIntensityGradient(colorTexture0, 1, texCoord, textureSize)), 0.02);
+  float normalEdgeMix = mix(edgeNormal, length(CalculateIntensityGradient(colorTexture0, 0, texCoord, textureSize)), 0.0);
+  float depthEdgeMix = mix(edgeDepth, length(CalculateIntensityGradient(colorTexture0, 1, texCoord, textureSize)), 0.00);
 
-  float edge = max(depthEdgeMix, normalEdgeMix) * 5 * adaptativeDepthThreshold;
+  float edge = max(normalEdgeMix, depthEdgeMix) * 6 * adaptativeDepthThreshold;
 
   if(selected) {
     gl_FragColor = vec4(selectionColor, edge+0.25);
     return;
   }
 
+   gl_FragColor = mix(vec4(vec3(edgeNormal),1.0), vec4(vec3(texture2D(colorTexture0, texCoord).r),1),0.5);
    gl_FragColor = vec4(outlineColor, edge);
 };
 

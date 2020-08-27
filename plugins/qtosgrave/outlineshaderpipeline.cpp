@@ -11,6 +11,8 @@
 
 #include "qtosg.h"
 
+#define DEBUG_FBO_BUFFERS 0
+
 class RenderStatePassShaderReloader {
 
 public:
@@ -45,9 +47,24 @@ RenderPassState::RenderPassState()
 void RenderPassState::HandleResize(int width, int height)
 {
 	if(camera) {
-		camera->setRenderingCache(0);
 		camera->setViewport(0, 0, width, height);
 	}
+
+	// for(unsigned int i = 0; i < colorFboTextures.size(); ++i) {
+
+	// 	if(!colorFboTextures[i]) {
+	// 		continue;
+	// 	}
+	// 	osg::Texture2D* tex2D = dynamic_cast<osg::Texture2D*>(colorFboTextures[i].get());
+	// 	if(tex2D) {
+	// 		tex2D->setTextureSize(width, height);
+	// 		std::cout << "RESIZING! "  << std::endl;
+	// 	}
+	// 	else {
+	// 		dynamic_cast<osg::Texture2DMultisample*>(colorFboTextures[i].get())->setTextureSize(width, height);
+	// 	}
+	// }
+	// state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(width, height)));
 }
 
 void RenderPassState::SetShaderFiles(const std::string& vertShader, const std::string& fragShader, bool autoReload)
@@ -90,6 +107,8 @@ RenderPassState* OutlineShaderPipeline::CreateSceneToTexturePass(osg::ref_ptr<os
 
 	// clone main camera settings so to render same scene
 	renderPassState->camera = new osg::Camera();
+
+	renderPassState->camera->setRenderingCache(0);
 	RenderUtils::FBOData fboData;
 	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, _maxFBOBufferWidth, _maxFBOBufferHeight, fboData, reusedDepthTexture, numColorAttachments, useMultiSamples, inheritedColorBuffers);
 	renderPassState->colorFboTextures = fboData.colorTextures;
@@ -163,7 +182,7 @@ void OutlineShaderPipeline::_SetupOutlineShaderUniforms(RenderPassState* pass)
 osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera,
 	osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight)
 {
-	setMaxFBOSize(maxFBOBufferWidth, maxFBOBufferHeight);
+	setMaxFBOSize(1024, 1024);
 	static const std::string preRenderVertShaderPath = "/data/shaders/prerender.vert";
 	static const std::string preRenderFragShaderPath = "/data/shaders/prerender.frag";
 	static const std::string preRenderTransparentVertShaderPath = "/data/shaders/prerender_transparent.vert";
@@ -171,35 +190,59 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	static const std::string outlineVertPath = "/data/shaders/outline.vert";
 	static const std::string outlineFragPath = "/data/shaders/outline.frag";
 
-    osg::ref_ptr<osg::Texture> depthBuffer = RenderUtils::CreateDepthFloatTextureRectangle(maxFBOBufferWidth, maxFBOBufferHeight);
+    osg::ref_ptr<osg::Texture> depthBuffer = nullptr;
 	mainSceneCamera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
 	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, preRenderVertShaderPath, preRenderFragShaderPath, depthBuffer.get(), true);
 	normalAndDepthMapPass->camera->setCullMask(~qtosgrave::TRANSPARENT_ITEM_MASK);
 
+#if DEBUG_FBO_BUFFERS
+	RenderPassState* outlinePass = CreateTextureToTexturePass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
+#else
 	RenderPassState* outlinePass = CreateTextureToColorBufferPass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
+#endif
 	RenderPassState* normalAndDepthMapPassTransparency = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, preRenderTransparentVertShaderPath, preRenderTransparentFragShaderPath, depthBuffer.get(), true);
 	normalAndDepthMapPassTransparency->camera->setCullMask(qtosgrave::TRANSPARENT_ITEM_MASK);
 
+#if DEBUG_FBO_BUFFERS
+	RenderPassState* outlinePassTransparency = CreateTextureToTexturePass(normalAndDepthMapPassTransparency, 1, outlineVertPath, outlineFragPath);
+#else
 	RenderPassState* outlinePassTransparency = CreateTextureToColorBufferPass(normalAndDepthMapPassTransparency, 1, outlineVertPath, outlineFragPath);
-
+#endif
 	// export opaque pipiline resulting depth texture to pre-render shader of transparent objects to perform z test
-	normalAndDepthMapPassTransparency->state->setTextureAttributeAndModes(5, depthBuffer.get(), osg::StateAttribute::ON);
+	normalAndDepthMapPassTransparency->state->setTextureAttributeAndModes(5, normalAndDepthMapPass->colorFboTextures[0].get(), osg::StateAttribute::ON);
 	normalAndDepthMapPassTransparency->state->addUniform(new osg::Uniform("depthTexture", 5));
-
 	_renderPassStates.push_back(normalAndDepthMapPass);
 	_renderPassStates.push_back(outlinePass);
 	_renderPassStates.push_back(normalAndDepthMapPassTransparency);
 	_renderPassStates.push_back(outlinePassTransparency);
 
+#if DEBUG_FBO_BUFFERS
+	osg::Camera* fboInputDepthBuffer = RenderUtils::CreateFBOTextureDisplayHUDViewPort(depthBuffer.get(), osg::Vec2f(-1, 0), osg::Vec2f(1,1), _maxFBOBufferWidth, _maxFBOBufferHeight);
+	osg::Camera* transparentObjectsPreRenderNormals = RenderUtils::CreateFBOTextureDisplayHUDViewPort(normalAndDepthMapPassTransparency->colorFboTextures[0].get(), osg::Vec2f(0, 0), osg::Vec2f(1,1), _maxFBOBufferWidth, _maxFBOBufferHeight);
+	osg::Camera* opaqueObjectsEdges = RenderUtils::CreateFBOTextureDisplayHUDViewPort(outlinePass->colorFboTextures[0].get(), osg::Vec2f(-1, -1), osg::Vec2f(1,1), _maxFBOBufferWidth, _maxFBOBufferHeight);
+	osg::Camera* transparentObjectsEdges = RenderUtils::CreateFBOTextureDisplayHUDViewPort(outlinePassTransparency->colorFboTextures[0].get(), osg::Vec2f(0, -1), osg::Vec2f(1,1), _maxFBOBufferWidth, _maxFBOBufferHeight);
+#endif
+
 	osg::ref_ptr<osg::Group> passesGroup = new osg::Group();
 	passesGroup->addChild(normalAndDepthMapPass->camera.get());
 	passesGroup->addChild(normalAndDepthMapPassTransparency->camera.get());
+
+
+#if DEBUG_FBO_BUFFERS
+	passesGroup->addChild(fboInputDepthBuffer);
+	passesGroup->addChild(outlinePass->camera.get());
+	passesGroup->addChild(outlinePassTransparency->camera.get());
+	passesGroup->addChild(transparentObjectsPreRenderNormals);
+	passesGroup->addChild(opaqueObjectsEdges);
+	passesGroup->addChild(transparentObjectsEdges);
+#else
 	osg::Group* grp = new osg::Group();
 	RenderUtils::SetShaderProgramFileOnStateSet(grp->getOrCreateStateSet(), "/data/shaders/perpixellighting.vert", "/data/shaders/perpixellighting.frag");
 	grp->addChild(mainSceneRoot);
 	passesGroup->addChild(grp);
-	passesGroup->addChild(outlinePass->camera.get());
 	passesGroup->addChild(outlinePassTransparency->camera.get());
+	passesGroup->addChild(outlinePass->camera.get());
+#endif
 
 	return passesGroup.release();
 

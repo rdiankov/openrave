@@ -1630,8 +1630,8 @@ void QOSGViewerWidget::paintGL()
             GetCamera()->getGraphicsContext()->setDefaultFboId(defaultFramebufferObject());
             _fboInitialized = true;
             // show fps
-            // dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
-            // dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
+            dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
+            dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
         }
         _osgviewer->frame(); // osgViewer::CompositeViewer
     }

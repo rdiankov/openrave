@@ -14,6 +14,8 @@
 #include <osg/PolygonMode>
 #include <osg/Texture2DMultisample>
 
+#include "osgpick.h"
+
 class RenderUtils {
 public:
     struct FBOData {
@@ -60,6 +62,8 @@ public:
         }
         tex->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
         tex->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+        tex->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+        tex->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
         tex->setSourceFormat(GL_RGBA);
         tex->setInternalFormat(GL_RGBA32F_ARB);
         tex->setSourceType(GL_FLOAT);
@@ -79,11 +83,14 @@ public:
             tex2D->setTextureSize(width, height);
             tex = tex2D;
         }
-        tex->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
-        tex->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+        tex->setFilter(osg::Texture::MIN_FILTER, osg::Texture::NEAREST);
+        tex->setFilter(osg::Texture::MAG_FILTER, osg::Texture::NEAREST);
+        tex->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_BORDER);
+        tex->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_BORDER);
         tex->setSourceFormat(GL_DEPTH_COMPONENT);
         tex->setInternalFormat(GL_DEPTH_COMPONENT24);
         tex->setSourceType(GL_FLOAT);
+
         return tex.release();
     }
 
@@ -113,6 +120,7 @@ public:
         quad->getOrCreateStateSet()->setAttributeAndModes( depth, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE );
         quad->getOrCreateStateSet()->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
 	    quad->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
+        quad->setNodeMask(~OSG_IS_PICKABLE_MASK);
         return quad.release();
     }
 
@@ -122,8 +130,8 @@ public:
         camera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
         camera->setClearColor(osg::Vec4(0, 0, 0, 0));
         camera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
-        //camera->setRenderOrder(osg::Camera::PRE_RENDER);
-        camera->setViewport(0, 0, 1024, 768);
+        camera->setRenderOrder(osg::Camera::PRE_RENDER);
+        camera->setViewport(0, 0, width, height);
         camera->setViewMatrix(osg::Matrix::identity());
         for(int i = 0; i < numColorAttachments; ++i) {
             osg::ref_ptr<osg::Texture> tex = nullptr;
@@ -133,8 +141,9 @@ public:
             else {
                 tex = RenderUtils::CreateFloatTextureRectangle(width, height);
             }
+
             if(useMultiSamples) {
-                camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex.get(), 0, 0, false, 4, 4);
+                camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex.get(), 0, 0, true, 4, 4);
             }
             else {
                 camera->attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0+i), tex.get());
@@ -145,12 +154,7 @@ public:
             return;
         }
         result.depthTexture = reusedDepthTexture;
-        if(useMultiSamples) {
-            camera->attach(osg::Camera::DEPTH_BUFFER, result.depthTexture.get(), 0, 0, false, 4, 4);
-        }
-        else {
-            camera->attach(osg::Camera::DEPTH_BUFFER, result.depthTexture.get());
-        }
+        camera->attach(osg::Camera::DEPTH_BUFFER, result.depthTexture.get());
     }
 
     static osg::Camera *CreateFBOTextureDisplayHUDViewPort(osg::Texture* texture, const osg::Vec2f& corner, const osg::Vec2f& size, int fboWidth, int fboHeight)
