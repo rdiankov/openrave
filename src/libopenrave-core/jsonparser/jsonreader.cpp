@@ -128,7 +128,7 @@ public:
         return true;
     }
 
-    boost::shared_ptr<const rapidjson::Document> _GetJsonDocumentFromUri(const std::string& fullFilename, rapidjson::Document::AllocatorType& alloc)
+    boost::shared_ptr<const rapidjson::Document> _GetJsonDocumentFromFilename(const std::string& fullFilename, rapidjson::Document::AllocatorType& alloc)
     {
         boost::shared_ptr<const rapidjson::Document> expandedDoc;
         // TODO: optimize this. for the first time expandedDoc is cached, all the expandable object will never get cached, because we are not update document cache after expand any body
@@ -159,6 +159,7 @@ public:
         if (fullFilename.empty() && fragment.empty()) {
             return false;
         }
+        _mapInverseResolvedURI[fullFilename] = uri;
         rapidjson::Document rEnv(&alloc);
         rEnv.SetObject();
 
@@ -191,10 +192,21 @@ public:
                 uri = uri.substr(0, uri.size() - fragment.size() - 1);
             }
             fullFilename = ResolveURI(uri, GetOpenRAVESchemeAliases());
+            // replace .dae to .json or .msgpack, depends on orignal document file suffix
+            std::string docFilename = _filename;
+            if (docFilename.empty()) {
+                docFilename = ResolveURI(_uri, GetOpenRAVESchemeAliases());
+            }
+            if (EndsWith(docFilename, ".json")) {
+                ReplaceFilenameSuffix(fullFilename, ".dae", ".json");
+            }
+            else if(EndsWith(docFilename, ".msgpack")) {
+                ReplaceFilenameSuffix(fullFilename, ".dae", ".msgpack");
+            }
 
-            _ReplaceFilenameSuffix(fullFilename, ".dae", ".json");
-            boost::shared_ptr<const rapidjson::Document> expandedDoc = _GetJsonDocumentFromUri(fullFilename, alloc);
+            boost::shared_ptr<const rapidjson::Document> expandedDoc = _GetJsonDocumentFromFilename(fullFilename, alloc);
             if (!expandedDoc || !(*expandedDoc).HasMember("bodies")) {
+                RAVELOG_DEBUG_FORMAT("expand json document %s failed or doc has no bodies member ", fullFilename);
                 return false;
             }
             if (_rapidJSONObjects[expandedDoc].find(fragment) == _rapidJSONObjects[expandedDoc].end()) {
@@ -230,6 +242,7 @@ public:
             envInfo.DeserializeJSON(rEnv, fUnitScale, _deserializeOptions);
             return true;
         }
+        RAVELOG_DEBUG_FORMAT("expand json document %s, failed to find body %s", fullFilename%bodyId);
         return false;
     }
 
@@ -254,6 +267,21 @@ public:
             envInfo.DeserializeJSON(doc, fUnitScale, _deserializeOptions);
             FOREACH(itBodyInfo, envInfo._vBodyInfos) {
                 KinBody::KinBodyInfoPtr& pKinBodyInfo = *itBodyInfo;
+                if (pKinBodyInfo->_uri.empty()) {
+                    if (!pKinBodyInfo->_referenceUri.empty()) {
+                        pKinBodyInfo->_uri = pKinBodyInfo->_referenceUri;
+                    }
+                    else {
+                        std::string docFullFilename = _filename;
+                        if (docFullFilename.empty()) {
+                            docFullFilename = ResolveURI(pKinBodyInfo->_uri, GetOpenRAVESchemeAliases());
+                        }
+                        std::map<std::string, std::string>::iterator itResolvedURI = _mapInverseResolvedURI.find(docFullFilename);
+                        if (itResolvedURI != _mapInverseResolvedURI.end()) {
+                            pKinBodyInfo->_uri = itResolvedURI->second + '#' + pKinBodyInfo->_id;
+                        }
+                    }
+                }
                 RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
                 if( !!pRobotBaseInfo ) {
                     _ProcessURIsInInfo(*pRobotBaseInfo, fUnitScale, alloc);
@@ -337,6 +365,10 @@ public:
     }
     void SetFilename(const std::string& filename) {
         _filename = filename;
+    }
+
+    void SetInverseResolvedURI(const std::string& filename, const std::string& uri) {
+        _mapInverseResolvedURI[filename] = uri;
     }
 
 protected:
@@ -488,24 +520,23 @@ protected:
         FOREACH(itConnected, robotinfo._vConnectedBodyInfos) {
             RobotBase::ConnectedBodyInfoPtr& pConnected = *itConnected;
             if( !pConnected->_uri.empty() ) {
+                RAVELOG_DEBUG_FORMAT("process connected body %s, %s", pConnected->_uri%pConnected->_name);
                 std::set<std::string> circularReference;
-                _ProcessConnectedBodyURI(*pConnected, pConnected->_uri, fUnitScale, circularReference, alloc);
+                RobotBase::RobotBaseInfo kinbdoyInfo;
+                _ProcessConnectedBodyURI(kinbdoyInfo, pConnected->_uri, fUnitScale, circularReference, alloc);
+
+                pConnected->_vLinkInfos = kinbdoyInfo._vLinkInfos;
+                pConnected->_vJointInfos = kinbdoyInfo._vJointInfos;
+                pConnected->_vManipulatorInfos = kinbdoyInfo._vManipulatorInfos;
+                pConnected->_vAttachedSensorInfos = kinbdoyInfo._vAttachedSensorInfos;
+                pConnected->_vGripperInfos = kinbdoyInfo._vGripperInfos;
+                
+                RAVELOG_DEBUG_FORMAT("process connected body after %s, %s", pConnected->_uri%pConnected->_name);
             }
         }
     }
-    /// \brief if filename endswith oldSuffix, replace it with newSuffix;
-    inline void _ReplaceFilenameSuffix(std::string& filename, const std::string& oldSuffix, const std::string& newSuffix) {
-        // fix extension, replace dae with json
-        // this is done for ease of migration
-        size_t len = filename.size();
-        size_t suffixLen = oldSuffix.size();
-        if (len >= suffixLen && filename.substr(len-suffixLen) == oldSuffix) {
-            filename = filename.substr(0, len-suffixLen) + newSuffix;
-            RAVELOG_DEBUG_FORMAT("change filename to %s", filename);
-        }
-    }
 
-    bool _ProcessConnectedBodyURI(RobotBase::ConnectedBodyInfo& connectedInfo, const std::string& uri, dReal fUnitScale, std::set<std::string>& circularReference, rapidjson::Document::AllocatorType& alloc)
+    bool _ProcessConnectedBodyURI(RobotBase::RobotBaseInfo& robotBaseInfo, const std::string& uri, dReal fUnitScale, std::set<std::string>& circularReference, rapidjson::Document::AllocatorType& alloc)
     {
         if( uri.empty() ) {
             return false;
@@ -518,7 +549,6 @@ protected:
             return false;
         }
 
-        //pConnected->_uri;
         std::string scheme, path, fragment;
         ParseURI(uri, scheme, path, fragment);
 
@@ -527,10 +557,20 @@ protected:
             return false;
         }
 
-        _ReplaceFilenameSuffix(fullFilename, ".dae", ".json");
+        // replace .dae to .json or .msgpack, depends on orignal document file suffix
+        std::string docFilename = _filename;
+        if (docFilename.empty()) {
+            docFilename = ResolveURI(_uri, GetOpenRAVESchemeAliases());
+        }
 
+        if (EndsWith(docFilename, ".json")) {
+            ReplaceFilenameSuffix(fullFilename, ".dae", ".json");
+        }
+        else if(EndsWith(docFilename, ".msgpack")) {
+            ReplaceFilenameSuffix(fullFilename, ".dae", ".msgpack");
+        }
         circularReference.insert(uri);
-        boost::shared_ptr<const rapidjson::Document> prConnectedBody = _GetJsonDocumentFromUri(fullFilename, alloc);
+        boost::shared_ptr<const rapidjson::Document> prConnectedBody = _GetJsonDocumentFromFilename(fullFilename, alloc);
 
         if (!!prConnectedBody && prConnectedBody->HasMember("bodies")) {
             const rapidjson::Document& rConnectedBody = *prConnectedBody;
@@ -539,12 +579,12 @@ protected:
                 if ( id == fragment || fragment.empty() ) { // if fragment is empty, deserialize the first one
                     std::string newReferenceUri = orjson::GetJsonValueByKey<std::string>(*itBody, "referenceUri", "");
                     if (!newReferenceUri.empty()) {
-                        return _ProcessConnectedBodyURI(connectedInfo, newReferenceUri, fUnitScale, circularReference, alloc);
+                        if(!_ProcessConnectedBodyURI(robotBaseInfo, newReferenceUri, fUnitScale, circularReference, alloc)) {
+                            return false;
+                        }
                     }
-                    else {
-                        connectedInfo.DeserializeJSON(*itBody, fUnitScale, _deserializeOptions);
-                        return true;
-                    }
+                    robotBaseInfo.DeserializeJSON(*itBody, fUnitScale, _deserializeOptions);
+                    return true;
                 }
             }
         }
@@ -563,6 +603,8 @@ protected:
 
     std::map<std::string, boost::shared_ptr<const rapidjson::Document> > _rapidJSONDocuments; ///< cache for opened rapidjson Documents
     std::map<boost::shared_ptr<const rapidjson::Document>, std::map<std::string, rapidjson::Value::ConstValueIterator> > _rapidJSONObjects;  ///< cache for opened rapidjson objects
+
+    std::map<std::string, std::string> _mapInverseResolvedURI;   ///< for reverse find uri from fullfilename, key is filename, value is uri
 };
 
 bool RaveParseJSON(EnvironmentBasePtr penv, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
@@ -590,6 +632,7 @@ bool RaveParseJSONFile(EnvironmentBasePtr penv, const std::string& filename, con
         return false;
     }
     JSONReader reader(atts, penv);
+    reader.SetInverseResolvedURI(fullFilename, "file:" + fullFilename);
     reader.SetFilename(fullFilename);
     rapidjson::Document doc(&alloc);
     OpenRapidJsonDocument(fullFilename, doc);
@@ -605,6 +648,7 @@ bool RaveParseJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::s
     rapidjson::Document doc(&alloc);
     OpenRapidJsonDocument(fullFilename, doc);
     JSONReader reader(atts, penv);
+    reader.SetInverseResolvedURI(fullFilename, "file:" + fullFilename);
     reader.SetFilename(fullFilename);
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
@@ -618,6 +662,7 @@ bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std
     rapidjson::Document doc(&alloc);
     OpenRapidJsonDocument(fullFilename, doc);
     JSONReader reader(atts, penv);
+    reader.SetInverseResolvedURI(fullFilename, "file:" + fullFilename);
     reader.SetFilename(fullFilename);
     return reader.ExtractFirst(doc, pprobot, alloc);
 }
@@ -629,6 +674,7 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, const Att
     if (fullFilename.size() == 0 ) {
         return false;
     }
+    reader.SetInverseResolvedURI(fullFilename, uri);
     reader.SetURI(uri);
     rapidjson::Document doc(&alloc);
     OpenRapidJsonDocument(fullFilename, doc);
@@ -642,6 +688,7 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::st
     if (fullFilename.size() == 0 ) {
         return false;
     }
+    reader.SetInverseResolvedURI(fullFilename, uri);
     reader.SetURI(uri);
     rapidjson::Document doc(&alloc);
     OpenRapidJsonDocument(fullFilename, doc);
@@ -655,6 +702,7 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std:
     if (fullFilename.size() == 0 ) {
         return false;
     }
+    reader.SetInverseResolvedURI(fullFilename, uri);
     reader.SetURI(uri);
     rapidjson::Document doc(&alloc);
     OpenRapidJsonDocument(fullFilename, doc);
@@ -694,6 +742,7 @@ bool RaveParseMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, 
     rapidjson::Document doc(&alloc);
     OpenMsgPackDocument(fullFilename, doc);
     JSONReader reader(atts, penv);
+    reader.SetInverseResolvedURI(fullFilename, "file:" + fullFilename);
     reader.SetFilename(fullFilename);
     return reader.ExtractAll(doc, alloc);
 }
@@ -707,6 +756,7 @@ bool RaveParseMsgPackFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std
     rapidjson::Document doc(&alloc);
     OpenMsgPackDocument(fullFilename, doc);
     JSONReader reader(atts, penv);
+    reader.SetInverseResolvedURI(fullFilename, "file:" + fullFilename);
     reader.SetFilename(fullFilename);
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
@@ -720,6 +770,7 @@ bool RaveParseMsgPackFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const 
     rapidjson::Document doc(&alloc);
     OpenMsgPackDocument(fullFilename, doc);
     JSONReader reader(atts, penv);
+    reader.SetInverseResolvedURI(fullFilename, "file:" + fullFilename);
     reader.SetFilename(fullFilename);
     return reader.ExtractFirst(doc, pprobot, alloc);
 }
@@ -731,6 +782,7 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, const std::string& uri, const 
     if (fullFilename.size() == 0 ) {
         return false;
     }
+    reader.SetInverseResolvedURI(fullFilename, uri);
     reader.SetURI(uri);
     rapidjson::Document doc(&alloc);
     OpenMsgPackDocument(fullFilename, doc);
@@ -744,6 +796,7 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std:
     if (fullFilename.size() == 0 ) {
         return false;
     }
+    reader.SetInverseResolvedURI(fullFilename, uri);
     reader.SetURI(uri);
     rapidjson::Document doc(&alloc);
     OpenMsgPackDocument(fullFilename, doc);
@@ -757,6 +810,7 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const s
     if (fullFilename.size() == 0 ) {
         return false;
     }
+    reader.SetInverseResolvedURI(fullFilename, uri);
     reader.SetURI(uri);
     rapidjson::Document doc(&alloc);
     OpenMsgPackDocument(fullFilename, doc);

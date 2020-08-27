@@ -677,6 +677,13 @@ void KinBody::SetName(const std::string& newname)
     }
 }
 
+void KinBody::SetId(const std::string& newId) {
+    OPENRAVE_ASSERT_OP(newId.size(), >, 0);
+    if (_id != newId) {
+        _id = newId; // TODO;
+    }
+}
+
 void KinBody::SetDOFTorques(const std::vector<dReal>& torques, bool bAdd)
 {
     OPENRAVE_ASSERT_OP_FORMAT((int)torques.size(), >=, GetDOF(), "not enough values %d<%d", torques.size()%GetDOF(),ORE_InvalidArguments);
@@ -5291,7 +5298,7 @@ void KinBody::_ResolveInfoIds()
     static const char pLinkIdPrefix[] = "link";
     static const char pGeometryIdPrefix[] = "geom";
     int nLinkId = 0;
-    int numlinks = (int)_veclinks.size();
+    const int numlinks = (int)_veclinks.size();
     for(int ilink = 0; ilink < numlinks; ++ilink) {
         KinBody::LinkInfo& linkinfo = _veclinks[ilink]->_info;
         bool bGenerateNewId = linkinfo._id.empty();
@@ -5336,7 +5343,7 @@ void KinBody::_ResolveInfoIds()
         {
             int nGeometryId = 0;
             const std::vector<Link::GeometryPtr>& vgeometries = _veclinks[ilink]->GetGeometries();
-            int numgeometries = (int)vgeometries.size();
+            const int numgeometries = (int)vgeometries.size();
             for(int igeometry = 0; igeometry < numgeometries; ++igeometry) {
                 KinBody::GeometryInfo& geometryinfo = vgeometries[igeometry]->_info;
                 bool bGenerateNewId = geometryinfo._id.empty();
@@ -5382,7 +5389,7 @@ void KinBody::_ResolveInfoIds()
 
     static const char pJointIdPrefix[] = "joint";
     int nJointId = 0;
-    int numjoints = (int)_vecjoints.size();
+    const int numjoints = (int)_vecjoints.size();
     for(int ijoint = 0; ijoint < numjoints; ++ijoint) {
         KinBody::JointInfo& jointinfo = _vecjoints[ijoint]->_info;
         bool bGenerateNewId = jointinfo._id.empty();
@@ -5424,7 +5431,7 @@ void KinBody::_ResolveInfoIds()
         }
     }
 
-    int numPassiveJoints = (int)_vPassiveJoints.size();
+    const int numPassiveJoints = (int)_vPassiveJoints.size();
     for(int ijoint = 0; ijoint < numPassiveJoints; ++ijoint) {
         KinBody::JointInfo& jointinfo = _vPassiveJoints[ijoint]->_info;
         bool bGenerateNewId = jointinfo._id.empty();

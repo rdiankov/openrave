@@ -2029,6 +2029,9 @@ private:
     /// \brief Set the name of the body, notifies the environment and checks for uniqueness.
     virtual void SetName(const std::string& name);
 
+    /// \brief Set the Id of the body
+    virtual void SetId(const std::string& newId);
+
     /// Methods for accessing basic information about joints
     /// @name Basic Information
     //@{

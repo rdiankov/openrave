@@ -75,5 +75,23 @@ void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector
 
 void RemoveExpandedRapidJSON(rapidjson::Value& value, const rapidjson::Value& shadowValue, rapidjson::Document::AllocatorType& alloc);
 
+inline bool EndsWith(const std::string& fullString, const std::string& endString) {
+    if (fullString.length() >= endString.length()) {
+        return fullString.compare(fullString.length() - endString.length(), endString.length(), endString) == 0;
+    }
+    return false;
+}
+/// \brief if filename endswith oldSuffix, replace it with newSuffix;
+inline void ReplaceFilenameSuffix(std::string& filename, const std::string& oldSuffix, const std::string& newSuffix) {
+    // fix extension, replace dae with json
+    // this is done for ease of migration
+    size_t len = filename.size();
+    size_t suffixLen = oldSuffix.size();
+    if (EndsWith(filename, oldSuffix)) {
+        filename = filename.substr(0, len-suffixLen) + newSuffix;
+        RAVELOG_DEBUG_FORMAT("change filename to %s", filename);
+    }
+}
+
 }
 #endif

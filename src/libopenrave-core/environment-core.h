@@ -2428,10 +2428,7 @@ public:
             bool bGeneratedNewId = _vecbodies[iBody]->_id.empty();
             if (!bGeneratedNewId) {
                 for(int iTestBody = 0; iTestBody < iBody; iTestBody++) {
-                    if (iTestBody == iBody) {
-                        continue;
-                    }
-                    if(_vecbodies[iBody]->_id == _vecbodies[iBody]->_id) {
+                    if(_vecbodies[iBody]->_id == _vecbodies[iTestBody]->_id) {
                         bGeneratedNewId = true;
                         break;
                     }
@@ -2457,11 +2454,12 @@ public:
                     }
                     break;
                 }
+
+                _vecbodies[iBody]->_id = pBodyIdPrefix;
+                _vecbodies[iBody]->_id += sTempIndexConversion;
+                nBodyId++;
             }
 
-            _vecbodies[iBody]->_id = pBodyIdPrefix;
-            _vecbodies[iBody]->_id += sTempIndexConversion;
-            nBodyId++;
         }
     }
 
@@ -2496,10 +2494,7 @@ public:
             bool bGeneratedNewId = envInfo._vBodyInfos[iBody]->_id.empty();
             if (!bGeneratedNewId) {
                 for(int iTestBody = 0; iTestBody < iBody; iTestBody++) {
-                    if (iTestBody == iBody) {
-                        continue;
-                    }
-                    if(envInfo._vBodyInfos[iBody]->_id == envInfo._vBodyInfos[iBody]->_id) {
+                    if(envInfo._vBodyInfos[iBody]->_id == envInfo._vBodyInfos[iTestBody]->_id) {
                         bGeneratedNewId = true;
                         break;
                     }
@@ -2525,11 +2520,10 @@ public:
                     }
                     break;
                 }
+                envInfo._vBodyInfos[iBody]->_id = pBodyIdPrefix;
+                envInfo._vBodyInfos[iBody]->_id += sTempIndexConversion;
+                nBodyId++;
             }
-
-            envInfo._vBodyInfos[iBody]->_id = pBodyIdPrefix;
-            envInfo._vBodyInfos[iBody]->_id += sTempIndexConversion;
-            nBodyId++;
         }
     }
 
