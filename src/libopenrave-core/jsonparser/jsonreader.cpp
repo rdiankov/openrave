@@ -520,7 +520,6 @@ protected:
         FOREACH(itConnected, robotinfo._vConnectedBodyInfos) {
             RobotBase::ConnectedBodyInfoPtr& pConnected = *itConnected;
             if( !pConnected->_uri.empty() ) {
-                RAVELOG_DEBUG_FORMAT("process connected body %s, %s", pConnected->_uri%pConnected->_name);
                 std::set<std::string> circularReference;
                 RobotBase::RobotBaseInfo kinbdoyInfo;
                 _ProcessConnectedBodyURI(kinbdoyInfo, pConnected->_uri, fUnitScale, circularReference, alloc);
@@ -529,9 +528,7 @@ protected:
                 pConnected->_vJointInfos = kinbdoyInfo._vJointInfos;
                 pConnected->_vManipulatorInfos = kinbdoyInfo._vManipulatorInfos;
                 pConnected->_vAttachedSensorInfos = kinbdoyInfo._vAttachedSensorInfos;
-                pConnected->_vGripperInfos = kinbdoyInfo._vGripperInfos;
-                
-                RAVELOG_DEBUG_FORMAT("process connected body after %s, %s", pConnected->_uri%pConnected->_name);
+                pConnected->_vGripperInfos = kinbdoyInfo._vGripperInfos;                
             }
         }
     }
