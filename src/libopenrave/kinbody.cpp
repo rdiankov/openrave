@@ -677,13 +677,6 @@ void KinBody::SetName(const std::string& newname)
     }
 }
 
-void KinBody::SetId(const std::string& newId) {
-    OPENRAVE_ASSERT_OP(newId.size(), >, 0);
-    if (_id != newId) {
-        _id = newId; // TODO;
-    }
-}
-
 void KinBody::SetDOFTorques(const std::vector<dReal>& torques, bool bAdd)
 {
     OPENRAVE_ASSERT_OP_FORMAT((int)torques.size(), >=, GetDOF(), "not enough values %d<%d", torques.size()%GetDOF(),ORE_InvalidArguments);

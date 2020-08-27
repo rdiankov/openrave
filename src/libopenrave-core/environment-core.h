@@ -2423,7 +2423,7 @@ public:
         uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
         static const char pBodyIdPrefix[] = "body";
         int nBodyId = 0;
-        int numBodies = _vecbodies.size();
+        const int numBodies = _vecbodies.size();
         for(int iBody = 0; iBody < numBodies; iBody++) {
             bool bGeneratedNewId = _vecbodies[iBody]->_id.empty();
             if (!bGeneratedNewId) {
@@ -2483,55 +2483,11 @@ public:
         info._description = _description;
     }
 
-    /// \brief go through all boides id and make sure they are unique
-    virtual void _ResolveBodyInfoIds(EnvironmentBase::EnvironmentBaseInfo& envInfo) {
-        char sTempIndexConversion[9]; //temp memory space for converting indices to hex strings, enough space to convert uint32_t
-        uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
-        static const char pBodyIdPrefix[] = "body";
-        int nBodyId = 0;
-        int numBodies = envInfo._vBodyInfos.size();
-        for(int iBody = 0; iBody < numBodies; iBody++) {
-            bool bGeneratedNewId = envInfo._vBodyInfos[iBody]->_id.empty();
-            if (!bGeneratedNewId) {
-                for(int iTestBody = 0; iTestBody < iBody; iTestBody++) {
-                    if(envInfo._vBodyInfos[iBody]->_id == envInfo._vBodyInfos[iTestBody]->_id) {
-                        bGeneratedNewId = true;
-                        break;
-                    }
-                }
-            }
-            if (bGeneratedNewId) {
-                while(1) {
-                    nTempIndexConversion = ConvertUIntToHex(nBodyId, sTempIndexConversion);
-                    bool bHasSame = false;
-                    for(int iTestBody = 0; iTestBody < numBodies; ++iTestBody) {
-                        const std::string& testid = envInfo._vBodyInfos[iTestBody]->_id;
-                        if( testid.size() == sizeof(pBodyIdPrefix)-1+nTempIndexConversion ) {
-                            if( strncmp(testid.c_str() + (sizeof(pBodyIdPrefix)-1), sTempIndexConversion,nTempIndexConversion) == 0 ) {
-                                // matches
-                                bHasSame = true;
-                                break;
-                            }
-                        }
-                    }
-                    if( bHasSame ) {
-                        nBodyId++;
-                        continue;
-                    }
-                    break;
-                }
-                envInfo._vBodyInfos[iBody]->_id = pBodyIdPrefix;
-                envInfo._vBodyInfos[iBody]->_id += sTempIndexConversion;
-                nBodyId++;
-            }
-        }
-    }
-
-
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
-    virtual void UpdateFromInfo(EnvironmentBaseInfo& info)
+    virtual void UpdateFromInfo(const EnvironmentBaseInfo& info)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        _ResolveBodyIds();
 
         std::vector<dReal> vDOFValues;
 
@@ -2542,7 +2498,6 @@ public:
         _description = info._description;
 
         RAVELOG_VERBOSE("=== UpdateFromInfo start ===");
-        _ResolveBodyInfoIds(info);
         FOREACHC(itBodyInfo, info._vBodyInfos) {
             KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
             RAVELOG_VERBOSE_FORMAT("==== %s ===", pKinBodyInfo->_id);

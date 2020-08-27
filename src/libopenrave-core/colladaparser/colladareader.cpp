@@ -1141,11 +1141,9 @@ public:
             if (!!pbody) {
                 // get motion body id and set to openrave body
                 // this is for keeping id consisdent if later on we serialize openrave body to other format.
-                std::string id;
                 if(!!articulated_system->getId()) {
-                    id = articulated_system->getId();
+                    pbody->_id = articulated_system->getId();
                 }
-                pbody->SetId(id);
             }
             listInstanceScope.push_back(ias);
             bool bsuccess = ExtractArticulatedSystem(pbody, ias_new, bindings, listInstanceScope, struri, strname);
