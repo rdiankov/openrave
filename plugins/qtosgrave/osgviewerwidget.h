@@ -275,7 +275,6 @@ protected:
     virtual bool event(QEvent *event);
 
     OutlineShaderPipeline _outlineRenderPipeline;
-    bool _fboInitialized;
 
     OSGGroupPtr _osgSceneRoot; ///< root scene node
     OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into

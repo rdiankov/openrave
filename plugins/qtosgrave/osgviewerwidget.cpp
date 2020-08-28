@@ -544,7 +544,6 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     _bLightOn = true;
     _bIsSelectiveActive = false;
     _metersinunit = metersinunit;
-    _fboInitialized = false;
 
     _osgview = new osgViewer::View();
     // disable viewer default light since we are settinup custom lights
@@ -1625,16 +1624,8 @@ void QOSGViewerWidget::initializeGL() {
 void QOSGViewerWidget::paintGL()
 {
     try {
-        if(!_fboInitialized) {
-            // need to do this in order to make OSG to work with QOpenGLWidget if one wants to use FBO and Render to Texture
-           // set the default id for osg to switch back after using fbos.
-            _fboInitialized = true;
-            GetCamera()->getGraphicsContext()->setDefaultFboId(defaultFramebufferObject());
-
-            // show fps
-            dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
-            dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
-        }
+        // need to set this every frame since defaultFrameBufferObject can change due to resize or other situations.
+        GetCamera()->getGraphicsContext()->setDefaultFboId(defaultFramebufferObject());
         _osgviewer->frame(); // osgViewer::CompositeViewer
     }
     catch(const std::exception& ex) {
