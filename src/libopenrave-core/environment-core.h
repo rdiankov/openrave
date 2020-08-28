@@ -2425,16 +2425,16 @@ public:
         int nBodyId = 0;
         const int numBodies = _vecbodies.size();
         for(int iBody = 0; iBody < numBodies; iBody++) {
-            bool bGeneratedNewId = _vecbodies[iBody]->_id.empty();
-            if (!bGeneratedNewId) {
+            bool bGenerateNewId = _vecbodies[iBody]->_id.empty();
+            if (!bGenerateNewId) {
                 for(int iTestBody = 0; iTestBody < iBody; iTestBody++) {
                     if(_vecbodies[iBody]->_id == _vecbodies[iTestBody]->_id) {
-                        bGeneratedNewId = true;
+                        bGenerateNewId = true;
                         break;
                     }
                 }
             }
-            if (bGeneratedNewId) {
+            if (bGenerateNewId) {
                 while(1) {
                     nTempIndexConversion = ConvertUIntToHex(nBodyId, sTempIndexConversion);
                     bool bHasSame = false;

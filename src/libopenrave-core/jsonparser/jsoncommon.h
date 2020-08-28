@@ -85,9 +85,9 @@ inline bool EndsWith(const std::string& fullString, const std::string& endString
 inline void ReplaceFilenameSuffix(std::string& filename, const std::string& oldSuffix, const std::string& newSuffix) {
     // fix extension, replace dae with json
     // this is done for ease of migration
-    size_t len = filename.size();
-    size_t suffixLen = oldSuffix.size();
     if (EndsWith(filename, oldSuffix)) {
+        size_t len = filename.size();
+        size_t suffixLen = oldSuffix.size();
         filename = filename.substr(0, len-suffixLen) + newSuffix;
         RAVELOG_DEBUG_FORMAT("change filename to %s", filename);
     }
