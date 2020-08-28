@@ -281,22 +281,15 @@ void KinBodyItem::Load()
                 if( !pgeometrydata ) {
                     pgeometrydata = new osg::Group();
                 }
-                osg::ref_ptr<osg::StateSet> state = pgeometrydata->getOrCreateStateSet();
-                if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisible()) ) {
-                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
-                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
-                    state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0.6f,0.6f,1.0f, 0.5f)));
-                    state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(0.4f,0.4f,1.0f, 0.5f)));
-                    transparency = 0.5f;
-                }
 
+                osg::ref_ptr<osg::StateSet> state = pgeometrydata->getOrCreateStateSet();
                 x = orgeom->GetDiffuseColor().x;
                 y = orgeom->GetDiffuseColor().y;
                 z = orgeom->GetDiffuseColor().z;
                 w = 1;
 
                 mat->setDiffuse( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
-                state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(x,y,z,w)));
+                state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(x,y,z,1 - transparency)));
 
                 x = orgeom->GetAmbientColor().x;
                 y = orgeom->GetAmbientColor().y;
@@ -305,6 +298,15 @@ void KinBodyItem::Load()
 
                 mat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
                 state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(x,y,z,w)));
+
+
+                if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisible()) ) {
+                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
+                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
+                    state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0.6f,0.6f,1.0f, 0.5f)));
+                    state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(0.4f,0.4f,1.0f, 0.5f)));
+                    transparency = 0.5f;
+                }
 
                 //mat->setShininess( osg::Material::FRONT, 25.0);
                 mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
@@ -315,7 +317,6 @@ void KinBodyItem::Load()
                     state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
             	    state->setMode(GL_BLEND, osg::StateAttribute::ON);
                     state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-                    state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(x, y, z, 1 - transparency)));
 
                     pgeometrydata->setNodeMask(TRANSPARENT_ITEM_MASK);
                     osg::Depth* depth = new osg::Depth;
