@@ -1,6 +1,5 @@
 #version 120
 
-varying vec4 color;
 varying vec3 normal;
 varying float depth;
 varying vec3 position;
