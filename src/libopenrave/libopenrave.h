@@ -263,6 +263,16 @@ inline dReal GetClosestValueAlongCircle(dReal angle, dReal testvalue)
     return angle;
 }
 
+inline bool IsZeroWithEpsilon3(const Vector v, dReal fEpsilon)
+{
+    return RaveFabs(v.x) <= fEpsilon && RaveFabs(v.y) <= fEpsilon && RaveFabs(v.z) <= fEpsilon;
+}
+
+inline bool IsZeroWithEpsilon4(const Vector v, dReal fEpsilon)
+{
+    return RaveFabs(v.x) <= fEpsilon && RaveFabs(v.y) <= fEpsilon && RaveFabs(v.z) <= fEpsilon && RaveFabs(v.w) <= fEpsilon;
+}
+
 inline dReal ComputeQuatDistance2(const Vector& quat0, const Vector& quat1)
 {
     dReal e1 = (quat0-quat1).lengthsqr4();
