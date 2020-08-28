@@ -841,9 +841,6 @@ public:
                 }
             }
         }
-        if (pbody->_id.empty()) {
-            pbody->_id = pbody->GetName();
-        }
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             _vecbodies.push_back(pbody);
