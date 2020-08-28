@@ -1627,8 +1627,10 @@ void QOSGViewerWidget::paintGL()
     try {
         if(!_fboInitialized) {
             // need to do this in order to make OSG to work with QOpenGLWidget if one wants to use FBO and Render to Texture
-            GetCamera()->getGraphicsContext()->setDefaultFboId(defaultFramebufferObject());
+           // set the default id for osg to switch back after using fbos.
             _fboInitialized = true;
+            GetCamera()->getGraphicsContext()->setDefaultFboId(defaultFramebufferObject());
+
             // show fps
             dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
             dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
