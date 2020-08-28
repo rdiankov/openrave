@@ -166,7 +166,9 @@ public:
 
         std::string scheme, path, fragment;
         ParseURI(uri, scheme, path, fragment);
-        std::string fullFilename = ResolveURI(uri, GetOpenRAVESchemeAliases());
+        // replace .dae to .json or .msgpack, depends on orignal document file defaultSuffix
+        ReplaceFilenameSuffix(path, ".dae", _defaultSuffix);
+        std::string fullFilename = ResolveURI(scheme, path, GetOpenRAVESchemeAliases());
         if (fullFilename.empty() && fragment.empty()) {
             return false;
         }
@@ -201,9 +203,10 @@ public:
             if(!fragment.empty() && uri.size() > fragment.size() + 1) {  // 1 size for #
                 uri = uri.substr(0, uri.size() - fragment.size() - 1);
             }
-            fullFilename = ResolveURI(uri, GetOpenRAVESchemeAliases());
+            ParseURI(uri, scheme, path, fragment);
             // replace .dae to .json or .msgpack, depends on orignal document file defaultSuffix
-            ReplaceFilenameSuffix(fullFilename, ".dae", _defaultSuffix);
+            ReplaceFilenameSuffix(path, ".dae", _defaultSuffix);
+            fullFilename = ResolveURI(scheme, path, GetOpenRAVESchemeAliases());
 
             boost::shared_ptr<const rapidjson::Document> expandedDoc = _GetDocumentFromFilename(fullFilename, alloc);
             if (!expandedDoc || !(*expandedDoc).HasMember("bodies")) {
@@ -529,20 +532,18 @@ protected:
             RAVELOG_ERROR_FORMAT("Load connected body failed: circular reference in '%s' found", uri);
             return false;
         }
+        circularReference.insert(uri);
 
         std::string scheme, path, fragment;
         ParseURI(uri, scheme, path, fragment);
-
-        std::string fullFilename = ResolveURI(uri, GetOpenRAVESchemeAliases());
+        // replace .dae to .json or .msgpack, depends on orignal document file defaultSuffix
+        ReplaceFilenameSuffix(path, ".dae", _defaultSuffix);
+        std::string fullFilename = ResolveURI(scheme, path, GetOpenRAVESchemeAliases());
         if (fullFilename.empty() && fragment.empty()) {
             return false;
         }
 
-        // replace .dae to .json or .msgpack, depends on orignal document file defaultSuffix
-        ReplaceFilenameSuffix(fullFilename, ".dae", _defaultSuffix);
-        circularReference.insert(uri);
         boost::shared_ptr<const rapidjson::Document> prConnectedBody = _GetDocumentFromFilename(fullFilename, alloc);
-
         if (!!prConnectedBody && prConnectedBody->HasMember("bodies")) {
             const rapidjson::Document& rConnectedBody = *prConnectedBody;
             for(rapidjson::Value::ConstValueIterator itBody = rConnectedBody["bodies"].Begin(); itBody != rConnectedBody["bodies"].End(); itBody++) {
