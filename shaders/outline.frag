@@ -276,11 +276,7 @@ void main()
   float edgeNormal = Canny(colorTexture0, 0, texCoord, textureSize, normalThreshold.x, normalThreshold.y);
   float edgeDepth = Canny(colorTexture0, 1, texCoord, textureSize, depthThreshold.x, depthThreshold.y);
 
-  // mix between orignal intensity gradient (sobel) and the canny filter in order to add some antialising effect
-  float normalEdgeMix = mix(edgeNormal, length(CalculateIntensityGradient(colorTexture0, 0, texCoord, textureSize)), 0.01);
-  float depthEdgeMix = mix(edgeDepth, length(CalculateIntensityGradient(colorTexture0, 1, texCoord, textureSize)), 0.01);
-
-  float edge = max(normalEdgeMix, depthEdgeMix) * 5 * adaptativeDepthThreshold;
+  float edge = max(edgeNormal, edgeDepth) * 5 * adaptativeDepthThreshold;
 
   if(selected) {
     gl_FragColor = vec4(selectionColor, edge+0.25);
