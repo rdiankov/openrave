@@ -19,6 +19,9 @@
 #include <osg/ArgumentParser>
 #include "osgviewerwidget.h"
 
+#define ENABLE_OPENGL_MULTISAMPLING 0 //< this brings lots of improvements into final geometry edges rendering, but its slow on controllers on board cards. One should enable that if using standalone video card
+#define OPENGL_NUM_MULTISAMPLING_SAMPLES 8 //< can be set to 8 in standalone graphics cards. This settings will only be effective if ENABLE_OPENGL_MULTISAMPLING is set to 1
+
 namespace qtosgrave {
 
 #define ITEM_DELETER boost::bind(DeleteItemCallbackSafe,weak_viewer(),_1)
@@ -232,7 +235,9 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
     QSurfaceFormat surfaceFormat;
     surfaceFormat.setProfile(QSurfaceFormat::CompatibilityProfile);
     surfaceFormat.setDepthBufferSize(24);
-    surfaceFormat.setSamples(4);
+#if ENABLE_OPENGL_MULTISAMPLING
+    surfaceFormat.setSamples(OPENGL_NUM_MULTISAMPLING_SAMPLES);
+#endif
     QSurfaceFormat::setDefaultFormat(surfaceFormat);
 
     _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
