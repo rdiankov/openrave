@@ -47,24 +47,10 @@ RenderPassState::RenderPassState()
 void RenderPassState::HandleResize(int width, int height)
 {
 	if(camera) {
-		camera->setViewport(0, 0, width, height);
+		camera->resize(width, height);
 	}
 
-	// for(unsigned int i = 0; i < colorFboTextures.size(); ++i) {
-
-	// 	if(!colorFboTextures[i]) {
-	// 		continue;
-	// 	}
-	// 	osg::Texture2D* tex2D = dynamic_cast<osg::Texture2D*>(colorFboTextures[i].get());
-	// 	if(tex2D) {
-	// 		tex2D->setTextureSize(width, height);
-	// 		std::cout << "RESIZING! "  << std::endl;
-	// 	}
-	// 	else {
-	// 		dynamic_cast<osg::Texture2DMultisample*>(colorFboTextures[i].get())->setTextureSize(width, height);
-	// 	}
-	// }
-	// state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(width, height)));
+	state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(width, height)));
 }
 
 void RenderPassState::SetShaderFiles(const std::string& vertShader, const std::string& fragShader, bool autoReload)
@@ -217,7 +203,6 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	_renderPassStates.push_back(outlinePassTransparency);
 
 #if DEBUG_FBO_BUFFERS
-	osg::Camera* fboInputDepthBuffer = RenderUtils::CreateFBOTextureDisplayHUDViewPort(depthBuffer.get(), osg::Vec2f(-1, 0), osg::Vec2f(1,1), _maxFBOBufferWidth, _maxFBOBufferHeight);
 	osg::Camera* transparentObjectsPreRenderNormals = RenderUtils::CreateFBOTextureDisplayHUDViewPort(normalAndDepthMapPassTransparency->colorFboTextures[0].get(), osg::Vec2f(0, 0), osg::Vec2f(1,1), _maxFBOBufferWidth, _maxFBOBufferHeight);
 	osg::Camera* opaqueObjectsEdges = RenderUtils::CreateFBOTextureDisplayHUDViewPort(outlinePass->colorFboTextures[0].get(), osg::Vec2f(-1, -1), osg::Vec2f(1,1), _maxFBOBufferWidth, _maxFBOBufferHeight);
 	osg::Camera* transparentObjectsEdges = RenderUtils::CreateFBOTextureDisplayHUDViewPort(outlinePassTransparency->colorFboTextures[0].get(), osg::Vec2f(0, -1), osg::Vec2f(1,1), _maxFBOBufferWidth, _maxFBOBufferHeight);
@@ -229,7 +214,6 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 
 
 #if DEBUG_FBO_BUFFERS
-	passesGroup->addChild(fboInputDepthBuffer);
 	passesGroup->addChild(outlinePass->camera.get());
 	passesGroup->addChild(outlinePassTransparency->camera.get());
 	passesGroup->addChild(transparentObjectsPreRenderNormals);
