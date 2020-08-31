@@ -740,8 +740,6 @@ void QOSGViewerWidget::SetSceneData()
     polyoffset->setUnits(1.0f);
     rootscene->getOrCreateStateSet()->setAttributeAndModes(polyoffset.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
 
-    //rootscene->addChild(_osgLightsGroup);
-    //_osgLightsGroup->addChild(_osgSceneRoot);
     rootscene->addChild(_osgSceneRoot);
     rootscene->addChild(_osgFigureRoot);
 
@@ -749,6 +747,7 @@ void QOSGViewerWidget::SetSceneData()
     osg::ref_ptr<osg::Group> outlineScene = _outlineRenderPipeline.CreateOutlineSceneFromOriginalScene(GetCamera(), rootscene, screenGeometry.width(), screenGeometry.height());
     _osgview->setSceneData(outlineScene);
 
+    // set DISABLE_ADVANCED_CONTOUR_LINE_SHADERS to true to run using compatible code
     _outlineRenderPipeline.SetCompatibilityModeEnabled(DISABLE_ADVANCED_CONTOUR_LINE_SHADERS);
 
     osgViewer::Viewer::Windows windows;
