@@ -16,6 +16,41 @@
 
 #include "osgpick.h"
 
+#include <string>
+
+///data/shaders/simpleTexture.vert
+const std::string simpleTexture_vert =
+    "#version 120\n"
+    "\n"
+    "varying vec2 clipPos;\n"
+    "void main()\n"
+    "{\n"
+    "    // Vertex position in main camera Screen space.\n"
+    "    clipPos = gl_Vertex.xy*0.5 + vec2(0.5);\n"
+    "    gl_Position = gl_Vertex;\n"
+    "};\n";
+
+///data/shaders/simpleTexture.frag
+const std::string simpleTexture_frag =
+    "#version 120\n"
+    "\n"
+    "uniform vec2 textureSize;\n"
+    "uniform vec2 offSet;\n"
+    "varying vec2 clipPos;\n"
+    "\n"
+    "uniform sampler2D colorTexture0;\n"
+    "\n"
+    "vec4 accessTexel(sampler2D tex, vec2 tc) {\n"
+    "    return texture2D(tex, tc);\n"
+    "}\n"
+    "\n"
+    "void main()\n"
+    "    {\n"
+    "    vec2 texCoord = clipPos - offSet;\n"
+    "    gl_FragColor = accessTexel(colorTexture0, texCoord);\n"
+    "};\n"
+"\n";
+
 class RenderUtils {
 public:
     struct FBOData {
@@ -163,7 +198,7 @@ public:
         osg::Geode* quad = CreateScreenQuad(size.x(), size.y(), 1, osg::Vec3(corner.x(), corner.y(), 0));
         osg::StateSet* stateSet = quad->getOrCreateStateSet();
         stateSet->setTextureAttributeAndModes(0, texture);
-        RenderUtils::SetShaderProgramFileOnStateSet(stateSet, "/data/shaders/simpleTexture.vert", "/data/shaders/simpleTexture.frag");
+        RenderUtils::SetShaderProgramOnStateSet(stateSet, simpleTexture_vert, simpleTexture_frag);
         stateSet->addUniform(new osg::Uniform("textureSize", osg::Vec2f(fboWidth, fboHeight)));
         osg::Vec2f scale = corner * 0.5 + osg::Vec2f(0.5, 0.5);
         stateSet->addUniform(new osg::Uniform("offSet", scale));
