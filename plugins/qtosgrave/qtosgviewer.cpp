@@ -1497,6 +1497,8 @@ void QtOSGViewer::_Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertic
     osg::ref_ptr<osg::Geode> geode(new osg::Geode());
     osg::ref_ptr<osg::Geometry> geometry(new osg::Geometry());
 
+    geode->getOrCreateStateSet()->addUniform(new osg::Uniform("osg_LightEnabled", false));
+
     geometry->setVertexArray(vertices.get());
     geometry->setColorArray(colors.get());
     geometry->setColorBinding(colors->size() == vertices->size() ? osg::Geometry::BIND_PER_VERTEX : osg::Geometry::BIND_OVERALL);

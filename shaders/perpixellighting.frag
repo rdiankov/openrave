@@ -4,8 +4,7 @@
 varying vec4 color;
 varying vec3 normal;
 varying vec3 position;
-
-
+uniform bool osg_LightEnabled;
 
 const float lightIntensity = 1.0f;
 const float shininess = 40.0f;    // Specular shininess factor
@@ -44,6 +43,10 @@ vec3 LightModel(vec3 normal, vec3 position, vec3 diffuseColor)
 
 void main()
 {
+    if(!osg_LightEnabled) {
+        gl_FragColor = vec4(color.xyz,1);
+        return;
+    }
     vec3 lighting = LightModel(normal, position, color.rgb);
     gl_FragColor = vec4(vec3(lighting), color.a);
 };

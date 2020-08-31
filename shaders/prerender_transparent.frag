@@ -5,7 +5,7 @@ varying float depth;
 varying vec3 position;
 uniform int isSelected;
 uniform vec2 textureSize;
-
+uniform bool outlineEnabled;
 uniform sampler2D depthTexture;
 
 
@@ -26,6 +26,10 @@ void main()
 {
     vec2 texCoord = gl_FragCoord.xy / textureSize;
     vec3 nNormal = normalize(normal);
+
+    if(!outlineEnabled) {
+        discard;
+    }
 
     // perform the depth test manually using depth texture
     float v = texture2D(depthTexture,texCoord).a;

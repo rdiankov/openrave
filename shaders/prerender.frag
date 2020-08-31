@@ -6,6 +6,7 @@ varying float depth;
 varying vec3 position;
 uniform int isSelected;
 uniform vec2 textureSize;
+uniform bool outlineEnabled;
 
 float LuminanceFromRgb(vec3 rgb)
 {
@@ -23,6 +24,9 @@ void main()
 {
     vec2 texCoord = gl_FragCoord.xy / textureSize;
     vec3 nNormal = normalize(normal);
+    if(!outlineEnabled) {
+        discard;
+    }
     if(isSelected == 1) {
         gl_FragColor = vec4(LuminanceFromRgb(nNormal), depth, isSelected, gl_FragCoord.z / 10);
         gl_FragDepth = gl_FragCoord.z / 10;

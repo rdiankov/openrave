@@ -48,9 +48,12 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
 
         // set a diffuse color
         osg::ref_ptr<osg::StateSet> state = psep->getOrCreateStateSet();
+
         osg::ref_ptr<osg::Material> mat = new osg::Material;
         mat->setDiffuse(osg::Material::FRONT, colors[i]);
         mat->setAmbient(osg::Material::FRONT, colors[i]);
+        state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", colors[i]));
+        state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", colors[i]));
         state->setAttribute( mat );
 
         osg::Matrix matrix;
@@ -208,6 +211,8 @@ void KinBodyItem::Load()
         posglinktrans->setName(str(boost::format("link%dtrans")%porlink->GetIndex()));
 
         posglinkroot->addChild(posglinktrans);
+
+        posglinkroot->getOrCreateStateSet()->addUniform(new osg::Uniform("outlineEnabled", true));
 
 //        std::vector< boost::shared_ptr<KinBody::Link> > vParentLinks;
 //        porlink->GetParentLinks(vParentLinks);
@@ -841,7 +846,6 @@ void RobotItem::Load()
             SetMatrixTransform(*ptrans, (*itmanip)->GetTransform());
 
             peesep->addChild(CreateOSGXYZAxes(0.1, 0.0005));
-            peesep->getOrCreateStateSet()->addUniform(new osg::Uniform("outlineEnabled", false));
 
             // add text
             {

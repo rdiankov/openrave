@@ -2,7 +2,6 @@
 
 uniform vec2 textureSize;
 uniform vec3 outlineColor;
-uniform bool outlineEnabled;
 uniform vec3 selectionColor;
 
 varying vec2 clipPos;
@@ -263,10 +262,6 @@ bool isSelected(sampler2D tex, vec2 coord, int selectionChannelIndex, vec2 resol
 void main()
 {
   vec2 texCoord = gl_FragCoord.xy / textureSize;
-  if(!outlineEnabled) {
-    gl_FragColor = vec4(0,0,0,0);
-    return;
-  }
   float depthValue = texture2D(colorTexture0,texCoord).y;
   float adaptativeDepthThreshold = smoothstep(0, depthValue, 1);
   vec2 normalThreshold = vec2(0.6, 0.01);

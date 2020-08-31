@@ -172,7 +172,7 @@ RenderPassState* OutlineShaderPipeline::CreateTextureToColorBufferPass(RenderPas
 void OutlineShaderPipeline::_SetupOutlineShaderUniforms(RenderPassState* pass)
 {
 	pass->state->addUniform(new osg::Uniform("isSelected", 0));
-	pass->state->addUniform(new osg::Uniform("outlineEnabled", true));
+	pass->state->addUniform(new osg::Uniform("outlineEnabled", false));
 	pass->state->addUniform(new osg::Uniform("outlineColor", _outlineColor));
 	pass->state->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
 	pass->state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0,0,0,1)));
@@ -238,6 +238,7 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 #else
 	osg::Group* grp = new osg::Group();
 	RenderUtils::SetShaderProgramFileOnStateSet(grp->getOrCreateStateSet(), "/data/shaders/perpixellighting.vert", "/data/shaders/perpixellighting.frag");
+	grp->getOrCreateStateSet()->addUniform(new osg::Uniform("osg_LightEnabled", true));
 	grp->addChild(mainSceneRoot);
 	passesGroup->addChild(grp);
 	passesGroup->addChild(outlinePassTransparency->camera.get());
