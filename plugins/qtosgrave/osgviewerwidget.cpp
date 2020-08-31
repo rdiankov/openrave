@@ -46,12 +46,17 @@ public:
     {
         _offset = offset;
         _distance = trackDistance;
+
+        // have to set the track node and can use NodeTrackerManipulator::setTrackNode(node.get()).
+        // Unfortunately, the node can compute to have two different paths probably due to the multi-pass rendering method, and OSG will complain internally.
+        // In order to avoid warning, take the logic of choosing the node path outside and call setTrackNodePath instead.
         osg::NodePathList nodeParents = node->getParentalNodePaths();
         if(nodeParents.empty()) {
             RAVELOG_WARN("Could not track node, node has no transform chain");
             return;
         }
         NodeTrackerManipulator::setTrackNodePath(nodeParents[0]);
+
         _transitionAnimationDuration = 1.0; //< transition animation time
         _currentTransitionAnimationTime = 0;
         _CreateTransitionAnimationPath(currentCamera, worldUpVector);
@@ -80,7 +85,7 @@ public:
     {
         if(!_IsTransitionAnimationFinished()) {
             // a very small const encapsulation break, since this allow all animation logic to be totally contained in the manipulator
-            return const_cast<OpenRAVETracker*>(this)->_GetTransitionAnimationMatrix();
+            return const_cast<OpenRAVETracker*>(this)->_ComputeNextTransitionAnimationMatrix();
         }
 
         osg::Vec3d nodeCenter;
@@ -109,12 +114,12 @@ private:
 
         osg::Vec3d cameraWorldPos(viewMatrix(3,0), viewMatrix(3,1), viewMatrix(3,2));
 
-         // now calculate a pose that will look to the node using current position
+        // now calculate a pose that will look to the node using current position
         osg::Matrixd localToWorld;
         computeNodeLocalToWorld(localToWorld);
 
         // openscenegraph has transposed matrix form to match opengl spec
-        osg::Vec3d nodeCenterWorld = osg::Vec3d(_offset) * localToWorld;
+        osg::Vec3d nodeCenterWorld = osg::Vec3d(_offset) * localToWorld; // transform to world
         osg::Vec3d towardsNodeVector = nodeCenterWorld - cameraWorldPos;
         if(towardsNodeVector.length() < 1e-3) {
             // already very close to desired position, no need to animate
@@ -135,7 +140,7 @@ private:
         towardsNodeVector.normalize();
         lookAtNodeMatrix.makeLookAt(nodeCenterWorld - towardsNodeVector * _distance, nodeCenterWorld, worldUpVector);
         _transitionAnimationPath->insert(_transitionAnimationDuration,
-            osg::AnimationPath::ControlPoint(nodeCenterWorld - (towardsNodeVector * _distance), lookAtNodeMatrix.getRotate().inverse()));
+                                         osg::AnimationPath::ControlPoint(nodeCenterWorld - (towardsNodeVector * _distance), lookAtNodeMatrix.getRotate().inverse()));
     }
 
     bool _IsTransitionAnimationFinished() const
@@ -143,7 +148,7 @@ private:
         return _transitionAnimationDuration == 0 || _currentTransitionAnimationTime >= _transitionAnimationDuration;
     }
 
-    osg::Matrixd _GetTransitionAnimationMatrix()
+    osg::Matrixd _ComputeNextTransitionAnimationMatrix()
     {
         if(_IsTransitionAnimationFinished()) {
             return osg::Matrixd();
@@ -169,10 +174,10 @@ private:
     }
 
 private:
-    QTime _time;
-    osg::Vec3d _offset;
+    QTime _time; ///< tracks the time of the last _ComputeNextTransitionAnimationMatrix call, so that can compute the time passed from that last call.
+    osg::Vec3d _offset; ///< the translation offset in the getTrackNode() coordinate system.
     double _transitionAnimationDuration; //< specifies how long the transition will take
-    double _currentTransitionAnimationTime;
+    double _currentTransitionAnimationTime; ///< tracks the time since the transition was made. Incremeneted whenever computing _ComputeNextTransitionAnimationMatrix
     osg::ref_ptr<osg::AnimationPath> _transitionAnimationPath;
 };
 
