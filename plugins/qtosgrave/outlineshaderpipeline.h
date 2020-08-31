@@ -4,6 +4,7 @@
 #include <osg/Uniform>
 #include <osg/Texture>
 
+#include <osg/Switch>
 #include <vector>
 
 #ifndef OPENRAVE_QTOSG_OUTLINESHADERPIPELINE_H
@@ -33,6 +34,10 @@ public:
     OutlineShaderPipeline();
     virtual ~OutlineShaderPipeline();
 
+    // if enabled, will disable advanced shaders for outline rendering and use fallback (toon shading) that is more compatible with old controllers
+    // default is: disabled (false)
+    void SetCompatibilityModeEnabled(bool value);
+
     /// \brief This function creates a outline scene pipeline with two passes to render a regular scene with outline edges
     osg::ref_ptr<osg::Group> CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight);
     void HandleResize(int width, int height);
@@ -52,7 +57,9 @@ public:
     int _maxFBOBufferHeight;
 	osg::Vec3 _selectedObjectHighlightColor; //< color of the selected object highlight
     float _selectedObjectHighlightIntensity; //< from 0 to +inf, a multiplier on the highligh intensity, 0 means off, 1 means normal (e.g: 2 means double intensity)
+    osg::ref_ptr<osg::Switch> _compatibilityModeSwitch;
     std::vector<RenderPassState*> _renderPassStates;
+    bool _compatibilityMode;
 };
 
 #endif

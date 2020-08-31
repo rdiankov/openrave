@@ -1,17 +1,17 @@
 
+#include "osgcartoon.h"
 #include "renderutils.h"
 #include "outlineshaderpipeline.h"
 #include <sstream>
 
 #include <QObject>
+#include <QDateTime>
 #include <osg/Depth>
 #include <osg/CullFace>
 #include <osg/BlendFunc>
 #include <QFileSystemWatcher>
 
 #include "qtosg.h"
-
-#define DEBUG_FBO_BUFFERS 0
 
 class RenderStatePassShaderReloader {
 
@@ -23,7 +23,7 @@ public:
 
 		QObject::connect(&_shaderFileWatcher, &QFileSystemWatcher::fileChanged, [=](const QString& file){
             state->ReloadShaders();
-			std::cout << "file " << file.toStdString() << " has changed " << std::endl;
+			std::cout << "file " << file.toStdString() << " has changed, change timestamp is: " << QDateTime::currentDateTime().toString().toStdString() << std::endl;
         });
 	}
 
@@ -71,6 +71,8 @@ void RenderPassState::ReloadShaders()
 OutlineShaderPipeline::OutlineShaderPipeline()
 {
 	_outlineColor = osg::Vec3(0, 0, 0);
+	_compatibilityMode = false;
+	_compatibilityModeSwitch = new osg::Switch();
 	_selectedObjectHighlightIntensity = 1.0f; //< from 0 to +inf, a multiplier on the highligh intensity, 0 means off, 1 means normal (e.g: 2 means double intensity)
 	_selectedObjectHighlightColor = osg::Vec3(0, 0.95, 0); //< color of the selected object highlight
 }
@@ -80,6 +82,12 @@ OutlineShaderPipeline::~OutlineShaderPipeline()
 	for(RenderPassState* state : _renderPassStates) {
 		delete state;
 	}
+}
+
+void OutlineShaderPipeline::SetCompatibilityModeEnabled(bool value)
+{
+	_compatibilityMode = value;
+	_compatibilityModeSwitch->setSingleChildOn(_compatibilityMode? 1 : 0);
 }
 
 RenderPassState* OutlineShaderPipeline::CreateSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera,
@@ -176,24 +184,17 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	static const std::string outlineVertPath = "/data/shaders/outline.vert";
 	static const std::string outlineFragPath = "/data/shaders/outline.frag";
 
-    osg::ref_ptr<osg::Texture> depthBuffer = nullptr;
+    osg::ref_ptr<osg::Texture> depthBuffer = nullptr; // do not use extra depth buffer texture, use color to store depth buffer
 	mainSceneCamera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
 	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, preRenderVertShaderPath, preRenderFragShaderPath, depthBuffer.get(), true);
 	normalAndDepthMapPass->camera->setCullMask(~qtosgrave::TRANSPARENT_ITEM_MASK);
 
-#if DEBUG_FBO_BUFFERS
-	RenderPassState* outlinePass = CreateTextureToTexturePass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
-#else
 	RenderPassState* outlinePass = CreateTextureToColorBufferPass(normalAndDepthMapPass, 1, outlineVertPath, outlineFragPath);
-#endif
 	RenderPassState* normalAndDepthMapPassTransparency = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, preRenderTransparentVertShaderPath, preRenderTransparentFragShaderPath, depthBuffer.get(), true);
 	normalAndDepthMapPassTransparency->camera->setCullMask(qtosgrave::TRANSPARENT_ITEM_MASK);
 
-#if DEBUG_FBO_BUFFERS
-	RenderPassState* outlinePassTransparency = CreateTextureToTexturePass(normalAndDepthMapPassTransparency, 1, outlineVertPath, outlineFragPath);
-#else
 	RenderPassState* outlinePassTransparency = CreateTextureToColorBufferPass(normalAndDepthMapPassTransparency, 1, outlineVertPath, outlineFragPath);
-#endif
+
 	// export opaque pipiline resulting depth texture to pre-render shader of transparent objects to perform z test
 	normalAndDepthMapPassTransparency->state->setTextureAttributeAndModes(5, normalAndDepthMapPass->colorFboTextures[0].get(), osg::StateAttribute::ON);
 	normalAndDepthMapPassTransparency->state->addUniform(new osg::Uniform("depthTexture", 5));
@@ -202,24 +203,10 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	_renderPassStates.push_back(normalAndDepthMapPassTransparency);
 	_renderPassStates.push_back(outlinePassTransparency);
 
-#if DEBUG_FBO_BUFFERS
-	osg::Camera* transparentObjectsPreRenderNormals = RenderUtils::CreateFBOTextureDisplayHUDViewPort(normalAndDepthMapPassTransparency->colorFboTextures[0].get(), osg::Vec2f(0, 0), osg::Vec2f(1,1), _maxFBOBufferWidth, _maxFBOBufferHeight);
-	osg::Camera* opaqueObjectsEdges = RenderUtils::CreateFBOTextureDisplayHUDViewPort(outlinePass->colorFboTextures[0].get(), osg::Vec2f(-1, -1), osg::Vec2f(1,1), _maxFBOBufferWidth, _maxFBOBufferHeight);
-	osg::Camera* transparentObjectsEdges = RenderUtils::CreateFBOTextureDisplayHUDViewPort(outlinePassTransparency->colorFboTextures[0].get(), osg::Vec2f(0, -1), osg::Vec2f(1,1), _maxFBOBufferWidth, _maxFBOBufferHeight);
-#endif
-
 	osg::ref_ptr<osg::Group> passesGroup = new osg::Group();
 	passesGroup->addChild(normalAndDepthMapPass->camera.get());
 	passesGroup->addChild(normalAndDepthMapPassTransparency->camera.get());
 
-
-#if DEBUG_FBO_BUFFERS
-	passesGroup->addChild(outlinePass->camera.get());
-	passesGroup->addChild(outlinePassTransparency->camera.get());
-	passesGroup->addChild(transparentObjectsPreRenderNormals);
-	passesGroup->addChild(opaqueObjectsEdges);
-	passesGroup->addChild(transparentObjectsEdges);
-#else
 	osg::Group* grp = new osg::Group();
 	RenderUtils::SetShaderProgramFileOnStateSet(grp->getOrCreateStateSet(), "/data/shaders/perpixellighting.vert", "/data/shaders/perpixellighting.frag");
 	grp->getOrCreateStateSet()->addUniform(new osg::Uniform("osg_LightEnabled", true));
@@ -227,11 +214,16 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 	passesGroup->addChild(grp);
 	passesGroup->addChild(outlinePassTransparency->camera.get());
 	passesGroup->addChild(outlinePass->camera.get());
-#endif
 
-	return passesGroup.release();
+	osg::ref_ptr<qtosgrave::OpenRAVECartoon> toon = new qtosgrave::OpenRAVECartoon();
+	toon->addChild(mainSceneRoot);
+	_compatibilityModeSwitch->addChild(passesGroup.get());
+	_compatibilityModeSwitch->addChild(toon);
+	_compatibilityModeSwitch->setSingleChildOn(_compatibilityMode? 1 : 0);
 
+	return _compatibilityModeSwitch.get();
 }
+
 void OutlineShaderPipeline::HandleResize(int width, int height)
 {
 	for(RenderPassState* state : _renderPassStates) {

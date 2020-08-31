@@ -689,22 +689,6 @@ void QtOSGViewer::_ChangeViewToYZ()
 
 }
 
-//void QtOSGViewer::_ProcessLightChange()
-//{
-//    if (lightAct->isChecked()) {
-//        lightAct->setIcon(QIcon(":/images/lightoff.png"));
-//    }
-//    else {
-//        lightAct->setIcon(QIcon(":/images/lighton.png"));
-//    }
-//    _posgWidget->SetLight(!lightAct->isChecked());
-//}
-
-//void QtOSGViewer::_ProcessFacesModeChange()
-//{
-//    _posgWidget->SetFacesMode(!facesAct->isChecked());
-//}
-
 void QtOSGViewer::polygonMode()
 {
     _posgWidget->SetPolygonMode(wireAct->isChecked() ? 2 : 0);
@@ -860,7 +844,6 @@ void QtOSGViewer::_CreateDockWidgets()
 
 void QtOSGViewer::_CreateControlButtons()
 {
-
     QWidget *controlWidget = new QWidget(_posgWidget);
     controlWidget->setGeometry(10, 10, 50, 150);
 

@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "osgviewerwidget.h"
-#include "osgcartoon.h"
 #include "osgskybox.h"
 #include "outlineshaderpipeline.h"
 
@@ -36,6 +35,9 @@
 #include <osgManipulator/Translate1DDragger>
 #include <osgManipulator/Translate2DDragger>
 #include <osgManipulator/TranslateAxisDragger>
+
+// set to true if want to compile using fallback toon shading for countours (no advanced shaders will be used:more compatible with older controllers)
+#define DISABLE_ADVANCED_CONTOUR_LINE_SHADERS false
 
 namespace qtosgrave {
 
@@ -258,6 +260,7 @@ public:
     {
         return osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
     }
+
     void applyAnimationStep( const double currentProgress, const double prevProgress )
     {
         OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData* >( _animationData.get() );
@@ -371,7 +374,6 @@ public:
 
         return true;
     }
-
 
     virtual bool seekToMousePointer( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
     {
@@ -625,9 +627,6 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
         _osgCameraHUD->addChild(geodetext);
     }
 
-    //_InitializeLights();
-    SetLight(true);
-
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
     _timer.start( 10 );
 
@@ -750,6 +749,8 @@ void QOSGViewerWidget::SetSceneData()
     osg::ref_ptr<osg::Group> outlineScene = _outlineRenderPipeline.CreateOutlineSceneFromOriginalScene(GetCamera(), rootscene, screenGeometry.width(), screenGeometry.height());
     _osgview->setSceneData(outlineScene);
 
+    _outlineRenderPipeline.SetCompatibilityModeEnabled(DISABLE_ADVANCED_CONTOUR_LINE_SHADERS);
+
     osgViewer::Viewer::Windows windows;
     _osgviewer->getWindows(windows);
 }
@@ -767,13 +768,6 @@ void QOSGViewerWidget::SetHome()
         _osgview->getCameraManipulator()->setHomePosition(osg::Vec3d(1.5*bs.radius(),0,1.5*bs.radius()),bs.center(),osg::Vec3d(0.0,0.0,1.0));
         _osgview->home();
     //}
-}
-
-void QOSGViewerWidget::SetLight(bool enabled)
-{
-    _bLightOn = enabled;
-    // osg::ref_ptr<osg::StateSet> stateset = _osgLightsGroup->getOrCreateStateSet();
-    // stateset->setMode(GL_LIGHTING, (_bLightOn?osg::StateAttribute::ON : osg::StateAttribute::OFF) | osg::StateAttribute::OVERRIDE);
 }
 
 void QOSGViewerWidget::SetFacesMode(bool enabled)
@@ -1361,33 +1355,6 @@ osg::ref_ptr<osg::Light> QOSGViewerWidget::_CreateAmbientLight(osg::Vec4 color, 
     light->setConstantAttenuation(1);
     light->setQuadraticAttenuation(0.2);
     return light;
-}
-
-void QOSGViewerWidget::_InitializeLights()
-{
-    // we need the scene's state set to enable the light for the entire scene
-    _osgLightsGroup = new osg::Group();
-    _lightStateSet = _osgLightsGroup->getOrCreateStateSet();
-
-    // w = 0 means light at infinity
-    osg::Vec4 lightPosition[] = { osg::Vec4(1, 1, 1, 0),
-                                  osg::Vec4(-1, -1, 1, 0),
-                                  osg::Vec4(-1, 1, 1, 0),
-                                  osg::Vec4(1, -1, 1, 0)};
-
-    int nlights = sizeof(lightPosition) / sizeof(osg::Vec4);
-
-    double lightFactor = 0.5;
-    for (int i = 0; i < nlights; i++)
-    {
-        osg::ref_ptr<osg::Light> light = _CreateLight(osg::Vec4(lightFactor, lightFactor, lightFactor, 1.0), i);
-        light->setPosition(lightPosition[i]);
-         osg::ref_ptr<osg::LightSource> lightSource = new osg::LightSource();
-         lightSource->setLight(light.get());
-        lightSource->setLocalStateSetModes(osg::StateAttribute::ON);
-        lightSource->setStateSetModes(*_lightStateSet, osg::StateAttribute::ON);
-        _osgLightsGroup->addChild(lightSource);
-    }
 }
 
 osg::Camera *QOSGViewerWidget::GetCamera()
