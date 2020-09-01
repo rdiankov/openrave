@@ -547,6 +547,7 @@ endif()
 
 find_package(RapidJSON)
 if( RAPIDJSON_FOUND )
+  include_directories(${RAPIDJSON_INCLUDES})
 else()
   message(FATAL_ERROR "rapidjson library not found")
 endif()
