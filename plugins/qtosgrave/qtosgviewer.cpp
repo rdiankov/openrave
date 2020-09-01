@@ -148,8 +148,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "Accepts 0/1 value that decides whether to render the cross hairs");
     RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
                     "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
-    // RegisterCommand("SetTextureCubeMap", boost::bind(&QtOSGViewer::_SetTextureCubeMap, this, _1, _2),
-    //                 "Sets the skybox with cubemap");
+    RegisterCommand("SetTextureCubeMap", boost::bind(&QtOSGViewer::_SetTextureCubeMap, this, _1, _2),
+                     "Sets the skybox with cubemap");
     RegisterCommand("TrackLink", boost::bind(&QtOSGViewer::_TrackLinkCommand, this, _1, _2),
                     "camera tracks the link maintaining a specific relative transform: robotname, manipname, focalDistance");
     RegisterCommand("TrackManipulator", boost::bind(&QtOSGViewer::_TrackManipulatorCommand, this, _1, _2),
@@ -1427,7 +1427,7 @@ bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& 
     if (infoText.size() == 0) {
         infoText = str(boost::format("%s/%s")%parentIem->GetName()%link->GetName());
     }
-    _posgWidget->TrackNode(osgNode.get(), infoText, linkOffset, _posgWidget->GetCameraDistanceToFocus());
+    _posgWidget->TrackNode(osgNode, infoText, linkOffset, _posgWidget->GetCameraDistanceToFocus());
     if(_cameraMoveModeButton != NULL) {
         _cameraMoveModeButton->setEnabled(false);
     }
