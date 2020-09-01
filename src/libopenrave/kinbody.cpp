@@ -4541,7 +4541,7 @@ bool KinBody::IsAttached(const KinBody &body) const
     return _IsAttached(body, dummy);
 }
 
-void KinBody::GetAttached(std::set<KinBodyPtr>&setAttached) const
+void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     FOREACHC(itbody,_listAttachedBodies) {
@@ -4552,13 +4552,45 @@ void KinBody::GetAttached(std::set<KinBodyPtr>&setAttached) const
     }
 }
 
-void KinBody::GetAttached(std::set<KinBodyConstPtr>&setAttached) const
+void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 {
     setAttached.insert(shared_kinbody_const());
     FOREACHC(itbody,_listAttachedBodies) {
         KinBodyConstPtr pattached = itbody->lock();
         if( !!pattached && setAttached.insert(pattached).second ) {
             pattached->GetAttached(setAttached);
+        }
+    }
+}
+
+void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
+{
+    if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
+        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+    }
+    FOREACHC(itbody,_listAttachedBodies) {
+        KinBodyPtr pattached = itbody->lock();
+        if( !!pattached ) {
+            if( find(vAttached.begin(), vAttached.end(), pattached) == vAttached.end() ) {
+                vAttached.push_back(pattached);
+                pattached->GetAttached(vAttached);
+            }
+        }
+    }
+}
+
+void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
+{
+    if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
+        vAttached.push_back(shared_kinbody_const());
+    }
+    FOREACHC(itbody,_listAttachedBodies) {
+        KinBodyConstPtr pattached = itbody->lock();
+        if( !!pattached ) {
+            if( find(vAttached.begin(), vAttached.end(), pattached) == vAttached.end() ) {
+                vAttached.push_back(pattached);
+                pattached->GetAttached(vAttached);
+            }
         }
     }
 }
@@ -4935,7 +4967,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _ResetInternalCollisionCache();
 
     // clone the grabbed bodies, note that this can fail if the new cloned environment hasn't added the bodies yet (check out Environment::Clone)
-    _vGrabbedBodies.resize(0);
+    _vGrabbedBodies.clear(); _vGrabbedBodies.reserve(r->_vGrabbedBodies.size());
     FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
         GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
         if( !pgrabbedref ) {
@@ -4949,7 +4981,12 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
             //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentId());
             pgrabbedbody = GetEnv()->GetKinBody(pbodyref->GetName());
             if( !pgrabbedbody ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("When cloning body '%s', could not find grabbed object '%s' in environmentid=%d"), GetName()%pbodyref->GetName()%pbodyref->GetEnv()->GetId(), ORE_InvalidState);
+                if( cloningoptions & Clone_PassOnMissingBodyReferences ) {
+                    continue;
+                }
+                else {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("When cloning body '%s', could not find grabbed object '%s' in environmentid=%d"), GetName()%pbodyref->GetName()%pbodyref->GetEnv()->GetId(), ORE_InvalidState);
+                }
             }
             //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
 
