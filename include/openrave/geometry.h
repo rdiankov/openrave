@@ -491,6 +491,13 @@ public:
         return !operator==(right);
     }
 
+    inline bool Compare(const RaveTransform<T>& rhs, T epsilon=1e-7) const {
+        T e1 = (rot-rhs.rot).lengthsqr4();
+        T e2 = (rot+rhs.rot).lengthsqr4();
+        T e = e1 < e2 ? e1 : e2;
+        return RaveSqrt((trans-rhs.trans).lengthsqr3() + e) <= epsilon;
+    }
+
     inline RaveTransform<T> inverse() const {
         RaveTransform<T> inv;
         inv.rot.x = rot.x;
