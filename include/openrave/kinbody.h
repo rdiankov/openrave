@@ -1656,7 +1656,7 @@ public:
             _grabbedname = other._grabbedname;
             _robotlinkname = other._robotlinkname;
             _trelative = other._trelative;
-            _setRobotLinksToIgnore = other._setRobotLinksToIgnore;
+            _setIgnoreRobotLinkNames = other._setIgnoreRobotLinkNames;
             return *this;
         }
         bool operator==(const GrabbedInfo& other) const {
@@ -1664,7 +1664,7 @@ public:
                    && _grabbedname == other._grabbedname
                    && _robotlinkname == other._robotlinkname
                    && _trelative == other._trelative
-                   && _setRobotLinksToIgnore == other._setRobotLinksToIgnore;
+                   && _setIgnoreRobotLinkNames == other._setIgnoreRobotLinkNames;
         }
         bool operator!=(const GrabbedInfo& other) const {
             return !operator==(other);
@@ -1678,7 +1678,7 @@ public:
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
-        std::set<int> _setRobotLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
+        std::set<std::string> _setIgnoreRobotLinkNames; ///< names of links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;

@@ -118,9 +118,9 @@ public:
 #endif
     py::object _trelative = ReturnTransform(Transform());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<int> _setRobotLinksToIgnore;
+    std::vector<std::string> _setIgnoreRobotLinkNames;
 #else
-    py::object _setRobotLinksToIgnore = py::none_();
+    py::object _setIgnoreRobotLinkNames = py::none_();
 #endif
 }; // class PyGrabbedInfo
 typedef OPENRAVE_SHARED_PTR<PyGrabbedInfo> PyGrabbedInfoPtr;
