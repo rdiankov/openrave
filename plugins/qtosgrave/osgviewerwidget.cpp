@@ -1197,7 +1197,6 @@ void QOSGViewerWidget::_PanCameraTowardsDirection(double delta, const osg::Vec3d
 
 void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
 {
-    std::cout << "MOVE CAMERA ZOOM factor = " << factor << " isPan = " << isPan << " panDelta = "  << panDelta << "is ortho = " << IsInOrthoMode() << std::endl;
     if(!IsInOrthoMode() && isPan) {
         // move focal point along with camera position by using camera space foward direction to pan
         _PanCameraTowardsDirection((panDelta / _metersinunit), osg::Vec3d(0,0,1));
@@ -1210,7 +1209,6 @@ void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
 // see header, this function never changes focal point position
 void QOSGViewerWidget::Zoom(float factor)
 {
-    std::cout << "ZOOM" << std::endl;
     if (IsInOrthoMode()) {
         // if we increase _currentOrthoFrustumSize, we zoom out since a bigger frustum maps object to smaller part of screen
         _currentOrthoFrustumSize = _currentOrthoFrustumSize / factor;
