@@ -130,6 +130,15 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
     return true;
 }
 
+bool KinBody::Grab(KinBodyPtr pbody, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames)
+{
+    std::set<int> setBodyLinksToIgnore;
+    FOREACHC(itLinkName, setIgnoreBodyLinkNames) {
+        setBodyLinksToIgnore.insert(GetLink(*itLinkName)->GetIndex());
+    }
+    return Grab(pbody, pBodyLinkToGrabWith, setBodyLinksToIgnore);
+}
+
 bool KinBody::Grab(KinBodyPtr pbody, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore)
 {
     OPENRAVE_ASSERT_FORMAT(!!pbody, "env=%d, grab body is invalid grab arguments for grabbing '%s'", GetEnv()->GetId()%GetName(), ORE_InvalidArguments);
