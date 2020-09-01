@@ -1244,14 +1244,14 @@ bool QtOSGViewer::_MoveCameraZoomCommand(ostream& sout, istream& sinput)
     float factor = 1.0f;
     sinput >> factor;
 
-    bool isPan;
+    int isPan;
     sinput >> isPan;
 
     float panDelta = 0;
     if(isPan) {
         sinput >> panDelta;
     }
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, isPan, panDelta));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, (bool)isPan, panDelta));
     return true;
 }
 

@@ -239,7 +239,7 @@ protected:
     /// \brief update hud display axis from current manipulator transform
     void _UpdateHUDAxisTransform(int width, int height);
 
-    /// \brief performs a rotation of the camera over the current focal point (see GetCurrentManipulatorDistanceToFocus()).
+    /// \brief performs a rotation of the camera over the current focal point (see GetCameraDistanceToFocus()).
     /// Camera will keep looking ate the focal point after performing the rotation.
     /// \param angle in radians, -pi < angle < pi, camSpaceRotationOverDirection is the direction in camera space over which to rotate to.
     /// \param useCameraUpDirection in radians, -pi < angle < pi, camSpaceRotationOverDirection is the direction, in camera, space over which to rotate to.

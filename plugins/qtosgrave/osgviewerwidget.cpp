@@ -1197,32 +1197,11 @@ void QOSGViewerWidget::_PanCameraTowardsDirection(double delta, const osg::Vec3d
 
 void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
 {
-    if(isPan) {
+    std::cout << "MOVE CAMERA ZOOM factor = " << factor << " isPan = " << isPan << " panDelta = "  << panDelta << "is ortho = " << IsInOrthoMode() << std::endl;
+    if(!IsInOrthoMode() && isPan) {
         // move focal point along with camera position by using camera space foward direction to pan
         _PanCameraTowardsDirection((panDelta / _metersinunit), osg::Vec3d(0,0,1));
         return;
-    }
-    // If in ortho mode, camera position cannot move, but rather we need to change projection plane size. Zoom() method will automatically handle this.
-    // so isPan has no effect if in ortho mode. Similarly, nodetrackmanipulator, by definition, cannot have its focal point changed. So we also ignore
-    // isPan in this case. Parameter isPan will only be applied if using default manipulator in perspective mode.
-    if(!IsInOrthoMode() && IsUsingDefaultCameraManipulator()) {
-        if(isPan) {
-            // move focal point
-            double cameraDistanceToFocus = GetCameraDistanceToFocus();
-            osg::Matrixd cameraToWorld = osg::Matrixd::inverse(GetCamera()->getViewMatrix());
-            osg::Vec3d targetDir = cameraToWorld.getRotate() * osg::Vec3d(0,0,-cameraDistanceToFocus);
-            osg::Vec3d cameraWorldPos(cameraToWorld(3,0), cameraToWorld(3,1), cameraToWorld(3,2));
-
-            osg::Matrixd newViewMatrix;
-            float worldUnitOffset = (panDelta / _metersinunit);
-            osg::Vec3 worldOffsetVector = targetDir;
-            worldOffsetVector.normalize();
-            worldOffsetVector = worldOffsetVector * worldUnitOffset;
-            osg::Vec3d cameraUp(cameraToWorld(1,0),cameraToWorld(1,1), cameraToWorld(1,2));
-            newViewMatrix.makeLookAt(cameraWorldPos + worldOffsetVector, cameraWorldPos + targetDir + worldOffsetVector, cameraUp);
-            GetCurrentCameraManipulator()->setByInverseMatrix(newViewMatrix);
-            return;
-        }
     }
 
     Zoom(factor);
@@ -1231,15 +1210,18 @@ void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
 // see header, this function never changes focal point position
 void QOSGViewerWidget::Zoom(float factor)
 {
-    double distanceToFocus = 0;
+    std::cout << "ZOOM" << std::endl;
     if (IsInOrthoMode()) {
         // if we increase _currentOrthoFrustumSize, we zoom out since a bigger frustum maps object to smaller part of screen
-        distanceToFocus = 2 * _currentOrthoFrustumSize / factor;
+        _currentOrthoFrustumSize = _currentOrthoFrustumSize / factor;
+        const int width = _osgview->getCamera()->getViewport()->width();
+        const int height = _osgview->getCamera()->getViewport()->height();
+        const double aspect = static_cast<double>(width)/static_cast<double>(height);
+        const double nearplane = GetCameraNearPlane();
+        _osgview->getCamera()->setProjectionMatrixAsOrtho(-_currentOrthoFrustumSize, _currentOrthoFrustumSize, -_currentOrthoFrustumSize/aspect, _currentOrthoFrustumSize/aspect, nearplane, 10000*nearplane);
+        return;
     }
-    else {
-        distanceToFocus = GetCameraDistanceToFocus() / factor;
-    }
-    SetCameraDistanceToFocus(distanceToFocus);
+    SetCameraDistanceToFocus(GetCameraDistanceToFocus() / factor);
 }
 
 
@@ -1522,7 +1504,6 @@ double QOSGViewerWidget::GetCameraDistanceToFocus()
 {
     osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());
     return currentManip->getDistance();
-
 }
 
 void QOSGViewerWidget::SetCameraDistanceToFocus(double distance)
@@ -1530,18 +1511,13 @@ void QOSGViewerWidget::SetCameraDistanceToFocus(double distance)
     if( distance <= 0 ) {
         return;
     }
-    if (IsInOrthoMode()) {
-        _currentOrthoFrustumSize = distance * 0.5;
-        const int width = _osgview->getCamera()->getViewport()->width();
-        const int height = _osgview->getCamera()->getViewport()->height();
-        const double aspect = static_cast<double>(width)/static_cast<double>(height);
-        const double nearplane = GetCameraNearPlane();
-        _osgview->getCamera()->setProjectionMatrixAsOrtho(-_currentOrthoFrustumSize, _currentOrthoFrustumSize, -_currentOrthoFrustumSize/aspect, _currentOrthoFrustumSize/aspect, nearplane, 10000*nearplane);
+
+    if(IsInOrthoMode()) {
+        RAVELOG_WARN("performing hard SetCameraDistanceToFocus when in ortho mode, please use Zoom() to change zoom independently from the current view mode.");
     }
-    else {
-        osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());
-        currentManip->setDistance(distance);
-    }
+
+    osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());
+    currentManip->setDistance(distance);
 }
 
 void QOSGViewerWidget::RestoreDefaultManipulator()
