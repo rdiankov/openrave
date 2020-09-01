@@ -223,7 +223,7 @@ public:
 
         /// \brief converts the unit scale of the geometry
         void ConvertUnitScale(dReal fUnitScale);
-        
+
         /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
         /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
         bool InitCollisionMesh(float fTessellation=1);
@@ -1580,7 +1580,7 @@ protected:
          */
         virtual void _ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
 
-        /// \brief once all the joints have been computed and initiailzed, call this function 
+        /// \brief once all the joints have been computed and initiailzed, call this function
         virtual void _ComputeInternalStaticInformation();
 
         /// \brief evaluates the mimic joint equation using vdependentvalues
@@ -2584,6 +2584,8 @@ private:
     /// \param setAttached fills with the attached bodies. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
     virtual void GetAttached(std::set<KinBodyPtr>& setAttached) const;
     virtual void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
+    virtual void GetAttached(std::vector<KinBodyPtr>& vAttached) const;
+    virtual void GetAttached(std::vector<KinBodyConstPtr>& vAttached) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
     virtual bool HasAttached() const;
@@ -2777,7 +2779,7 @@ private:
     ///
     /// \param iGrabbed index into the grabbed body. Max is GetNumGrabbed()-1
     virtual KinBodyPtr GetGrabbedBody(int iGrabbed) const;
-    
+
     /** \brief gets all grabbed bodies of the body
 
         \param[out] vgrabbedinfo filled with the grabbed info for every body. The pointers are newly created.
