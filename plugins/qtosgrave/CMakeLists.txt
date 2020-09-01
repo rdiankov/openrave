@@ -10,8 +10,8 @@ if(NOT OPENGL_FOUND)
   message(STATUS "WARNING: OpenGL not found")
 endif()
 
-include(${CMAKE_SOURCE_DIR}/modules-cmake/FindOSG.cmake)
-find_package(OpenSceneGraph 3.7.0 COMPONENTS osgDB osgGA osgFX osgText osgViewer osgManipulator)
+#include(${CMAKE_SOURCE_DIR}/modules-cmake/FindOSG.cmake)
+find_package(OpenSceneGraph 3.4 COMPONENTS osgDB osgGA osgFX osgText osgViewer osgManipulator)
 
 if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND OPENGL_FOUND AND OPENSCENEGRAPH_FOUND)
   message(STATUS "Detected Qt/OSG GUI, making plugin")
@@ -21,7 +21,7 @@ if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND 
   
   link_directories(${OPENRAVE_LINK_DIRS})
 
-  set(QTOSG_SRCS objecttree.cpp outlineshaderpipeline.h renderutils.h outlineshaderpipeline.cpp osgcartoon.cpp osgviewerwidget.cpp osgviewerwidget.h osgpick.cpp osgpick.h qtreemodel.cpp qtreemodel.h osgrenderitem.cpp osgrenderitem.h qtreeitem.cpp qtreeitem.h qtosgviewer.cpp qtosgrave.cpp osgskybox.cpp osgskybox.h)
+  set(QTOSG_SRCS objecttree.cpp osgcartoon.cpp osgviewerwidget.cpp osgviewerwidget.h osgpick.cpp osgpick.h qtreemodel.cpp qtreemodel.h osgrenderitem.cpp osgrenderitem.h qtreeitem.cpp qtreeitem.h qtosgviewer.cpp qtosgrave.cpp osgskybox.cpp osgskybox.h)
   set(QTOSG_MOCS qtosgviewer.h qtreemodel.h)
   set(QTOSG_RCCS qtosgviewer.qrc)
 
