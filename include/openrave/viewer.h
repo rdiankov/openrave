@@ -108,6 +108,21 @@ public:
      */
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& intrinsics) OPENRAVE_DUMMY_IMPLEMENTATION;
 
+    /** \brief Renders color/depth/pointcloud/normals images of dimensions width and height from the current scene.
+
+        The camera is meant to show the underlying OpenRAVE world as a robot would see it, so all graphs
+        rendered with the plotX and drawX functions are hidden by default. Some viewers support the SetFiguresInCamera command to allow graphs to be also displayed.
+        \param width width of the image, if 0 the width of the viewer is used
+        \param height height of the image, if 0 the width of the viewer is used
+        \param t the rotation and translation of the camera. Note that +z is treated as the camera direction axis! So all points in front of the camera have a positive dot product with its +z direction.
+        \param intrinsics the intrinsic parameters of the camera defining FOV, distortion, principal point, and focal length. The focal length is used to define the near plane for culling.
+        \param color the optional memory where the color image will be stored at, has to store 3*width*height
+        \param depth the optional memory where the depth image will be stored at, has to store width*height
+        \param pointcloud the optional memory where the organized pointcloud will be stored at, has to store 3*width*height
+        \param normals the optional memory where the organized surface-normals image will be stored at, has to store 3*width*height
+     */
+    virtual bool GetCameraImages(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& intrinsics,
+                                 std::vector<uint8_t>* color = nullptr, std::vector<float>* depth = nullptr, std::vector<float>* pointcloud = nullptr, std::vector<float>* normals = nullptr) OPENRAVE_DUMMY_IMPLEMENTATION;
     //@}
 
     virtual void Reset() OPENRAVE_DUMMY_IMPLEMENTATION;

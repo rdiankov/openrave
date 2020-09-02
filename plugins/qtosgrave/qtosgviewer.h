@@ -60,6 +60,8 @@ public:
     /// extrinsic is the rotation and translation of the camera
     /// pKK is 4 values such that the intrinsic matrix can be reconstructed [pKK[0] 0 pKK[2]; 0 pKK[1] pKK[3]; 0 0 1];
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
+    virtual bool GetCameraImages(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK,
+                                 std::vector<uint8_t>* color = nullptr, std::vector<float>* depth = nullptr, std::vector<float>* pointcloud = nullptr, std::vector<float>* normals = nullptr);
     virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0);
     virtual float GetCameraDistanceToFocus() const;

@@ -140,6 +140,8 @@ public:
     }
 
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
+    virtual bool GetCameraImages(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK,
+                                 std::vector<uint8_t>* color = nullptr, std::vector<float>* depth = nullptr, std::vector<float>* pointcloud = nullptr, std::vector<float>* normals = nullptr);
 
     virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0);
@@ -294,6 +296,8 @@ public:
     virtual void _SetName(const string& ptitle);
 
     virtual bool _GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
+    virtual bool _GetCameraImages(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK,
+                                  std::vector<uint8_t>* color = nullptr, std::vector<float>* depth = nullptr, std::vector<float>* pointcloud = nullptr, std::vector<float>* normals = nullptr);
     virtual bool _WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void _SetCamera(const RaveTransform<float>& trans, float focalDistance);
 
@@ -501,6 +505,7 @@ public:
     friend class ViewerMoveMessage;
     friend class ViewerSetNameMessage;
     friend class GetCameraImageMessage;
+    friend class GetCameraImagesMessage;
     friend class WriteCameraImageMessage;
     friend class SetCameraMessage;
     friend class DrawMessage;
