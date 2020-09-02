@@ -104,7 +104,7 @@ public:
 
     /// \brief sets the zoom factor. only affects orthogonal view
     /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
-    virtual void Zoom(float factor);
+    virtual void MoveCameraZoom(float factor, bool isPan, float panDelta);
 
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
@@ -309,14 +309,14 @@ public:
     virtual void _InitGUI(bool bCreateStatusBar, bool bCreateMenu);
 
     /// \brief Update model and camera transform
-    virtual void _UpdateEnvironment(float fTimeElapsed);
+    virtual void _UpdateEnvironment();
     virtual bool _ForceUpdatePublishedBodies();
 
     /// \brief Reset update from model
     virtual void _Reset();
 
     /// \brief reset the camera depending on its mode
-    virtual void _UpdateCameraTransform(float fTimeElapsed);
+    virtual void _UpdateViewport();
     virtual void _SetCameraTransform();
 
     virtual OSGSwitchPtr _CreateGraphHandle();
@@ -332,12 +332,19 @@ public:
 
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
+    virtual double _GetCameraDistanceToFocus();
+    virtual void _StopTrackLink();
+    virtual bool _TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText="");
     virtual void _SetItemVisualization(std::string& itemname, std::string& visualizationmode);
     virtual void _SetProjectionMode(const std::string& projectionMode);
     virtual void _SetBkgndColor(const RaveVector<float>& color);
 
     virtual void _SetName(const std::string& name);
-    virtual void _Zoom(float factor);
+    virtual void _MoveCameraZoom(float factor, bool isPan, float panDelta);
+    virtual void _RotateCameraXDirection(float thetaX);
+    virtual void _RotateCameraYDirection(float thetaY);
+    virtual void _PanCameraXDirection(float dx);
+    virtual void _PanCameraYDirection(float dy);
 
     /// \brief posts a function to be executed in the GUI thread
     ///
@@ -384,7 +391,11 @@ public:
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
     bool _SetProjectionModeCommand(ostream& sout, istream& sinput);
-    bool _ZoomCommand(ostream& sout, istream& sinput);
+    bool _MoveCameraZoomCommand(ostream& sout, istream& sinput);
+    bool _RotateCameraXDirectionCommand(ostream& sout, istream& sinput);
+    bool _RotateCameraYDirectionCommand(ostream& sout, istream& sinput);
+    bool _PanCameraXDirectionCommand(ostream& sout, istream& sinput);
+    bool _PanCameraYDirectionCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
@@ -404,7 +415,6 @@ public:
 
     //@{ camera
     RaveTransform<float> _Tcamera; ///< current position of the camera representing the current view, updated periodically, read only.
-    float _focalDistance;  ///< current focal distance of the camera, read-only
     geometry::RaveCameraIntrinsics<float> _camintrinsics; ///< intrinsics of the camera representing the current view, updated periodically, read only.
     //@}
 
@@ -438,7 +448,6 @@ public:
     QAction* loadAct;
     QAction* multiAct;
     QAction* simpleAct;
-
     QAction* importAct;
     QAction* saveAct;
     QAction* viewCamAct;
@@ -478,6 +487,7 @@ public:
     QTreeView* _qtree;
 
     //QActionGroup* shapeGroup;
+    QPushButton* _cameraMoveModeButton;
     QButtonGroup* _pointerTypeGroup;
     QButtonGroup* buttonGroup;
     QButtonGroup* draggerTypeGroup;
@@ -489,8 +499,7 @@ public:
     /// tracking parameters
     //@{
     KinBody::LinkPtr _ptrackinglink; ///< current link tracking
-    Transform _tTrackingLinkRelative; ///< relative transform in the _ptrackinglink coord system  that should be tracking.
-    RobotBase::ManipulatorPtr _ptrackingmanip; ///< current manipulator tracking
+    Transform _currentTrackLinkRelTransform; ///< relative transform in the _ptrackinglink coord system  that should be tracking.
     Transform _tTrackingCameraVelocity; ///< camera velocity
     float _fTrackAngleToUp; ///< tilt a little when looking at the point
     //@}
