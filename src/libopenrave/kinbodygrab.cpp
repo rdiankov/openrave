@@ -132,8 +132,10 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
 
 bool KinBody::Grab(KinBodyPtr pbody, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore)
 {
-    OPENRAVE_ASSERT_FORMAT(!!pbody && !!pBodyLinkToGrabWith && pBodyLinkToGrabWith->GetParent().get() == this, "body %s invalid grab arguments",GetName(), ORE_InvalidArguments);
-    OPENRAVE_ASSERT_FORMAT(pbody.get() != this, "body %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(!!pbody, "env=%d, grab body is invalid grab arguments for grabbing '%s'", GetEnv()->GetId()%GetName(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(!!pBodyLinkToGrabWith, "env=%d, pBodyLinkToGrabWith is invalid for grabbing body '%s' and grab body '%s' ",GetEnv()->GetId()%GetName()%pbody->GetName(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(pBodyLinkToGrabWith->GetParent().get() == this, "env=%d, pBodyLinkToGrabWith '%s' parent does not match grabbing body '%s'",GetEnv()->GetId()%pBodyLinkToGrabWith->GetName()%GetName(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(pbody.get() != this, "env=%d, body %s cannot grab itself", GetEnv()->GetId()%pbody->GetName(), ORE_InvalidArguments);
     if( IsGrabbing(*pbody) ) {
         if( setBodyLinksToIgnore.size() > 0 ) {
             // update the current grabbed info with setBodyLinksToIgnore

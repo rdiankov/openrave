@@ -29,7 +29,7 @@
 
 #define CHECK_INTERFACE(pinterface) { \
         if( (pinterface)->GetEnv() != shared_from_this() ) \
-            throw openrave_exception(str(boost::format(_("Interface %s:%s is from a different environment (env=%d) than the current one being used (env=%d)"))%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()%(pinterface)->GetEnv()->GetId()%GetId()),ORE_InvalidArguments); \
+            throw openrave_exception(str(boost::format(_("env=%d, Interface %s:%s is from a different environment (env=%d) than the current one."))%GetId()%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()%(pinterface)->GetEnv()->GetId()),ORE_InvalidArguments); \
 } \
 
 #define CHECK_COLLISION_BODY(body) { \
