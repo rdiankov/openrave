@@ -57,6 +57,7 @@ PyManipulatorInfo::PyManipulatorInfo() {
     _vChuckingDirection = py::empty_array_astype<dReal>();
     _vdirection = toPyVector3(Vector(0,0,1));
     _vGripperJointNames = py::list();
+    _vRestrictGraspSetNames = py::list();
 }
 
 PyManipulatorInfo::PyManipulatorInfo(const RobotBase::ManipulatorInfo& info) {
@@ -79,6 +80,11 @@ void PyManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info) {
     _vGripperJointNames = vGripperJointNames;
     _grippername = ConvertStringToUnicode(info._grippername);
     _toolChangerConnectedBodyToolName = ConvertStringToUnicode(info._toolChangerConnectedBodyToolName);
+    py::list vRestrictGraspSetNames;
+    FOREACHC(itname, info._vRestrictGraspSetNames) {
+        vRestrictGraspSetNames.append(ConvertStringToUnicode(*itname));
+    }
+    _vRestrictGraspSetNames = vRestrictGraspSetNames;
 }
 
 RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
@@ -125,6 +131,12 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
     else {
         RAVELOG_WARN_FORMAT("python manipulator %s has toolChangerConnectedBodyToolName that is None", pinfo->_name);
         pinfo->_toolChangerConnectedBodyToolName.clear();
+    }
+    if( !IS_PYTHONOBJECT_NONE(_vRestrictGraspSetNames) ) {
+        pinfo->_vRestrictGraspSetNames = ExtractArray<std::string>(_vRestrictGraspSetNames);
+    }
+    else {
+        pinfo->_vRestrictGraspSetNames.clear();
     }
     return pinfo;
 }
@@ -635,6 +647,14 @@ object PyRobotBase::PyManipulator::GetGripperName() const {
 
 object PyRobotBase::PyManipulator::GetToolChangerConnectedBodyToolName() const {
     return ConvertStringToUnicode(_pmanip->GetToolChangerConnectedBodyToolName());
+}
+
+object PyRobotBase::PyManipulator::GetRestrictGraspSetNames() const {
+    py::list names;
+    FOREACHC(itname, _pmanip->GetRestrictGraspSetNames()) {
+        names.append(ConvertStringToUnicode(*itname));
+    }
+    return names;
 }
 
 void PyRobotBase::PyManipulator::SetName(const std::string& s) {
@@ -2107,7 +2127,7 @@ class ManipulatorInfo_pickle_suite
 public:
     static py::tuple getstate(const PyManipulatorInfo& r)
     {
-        return py::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames, r._grippername, r._toolChangerConnectedBodyToolName);
+        return py::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames, r._grippername, r._toolChangerConnectedBodyToolName, r._vRestrictGraspSetNames);
     }
     static void setstate(PyManipulatorInfo& r, py::tuple state) {
         r._name = state[0];
@@ -2129,6 +2149,12 @@ public:
         }
         else {
             r._toolChangerConnectedBodyToolName = py::none_();
+        }
+        if( len(state) > 10 ) {
+            r._vRestrictGraspSetNames = state[10];
+        }
+        else {
+            r._vRestrictGraspSetNames = py::none_();
         }
     }
 };
@@ -2282,6 +2308,7 @@ void init_openravepy_robot()
                              .def_readwrite("_vGripperJointNames",&PyManipulatorInfo::_vGripperJointNames)
                              .def_readwrite("_grippername",&PyManipulatorInfo::_grippername)
                              .def_readwrite("_toolChangerConnectedBodyToolName",&PyManipulatorInfo::_toolChangerConnectedBodyToolName)
+                             .def_readwrite("_vRestrictGraspSetNames",&PyManipulatorInfo::_vRestrictGraspSetNames)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                              .def("SerializeJSON", &PyManipulatorInfo::SerializeJSON,
                                   "unitScale"_a = 1.0,
@@ -2626,6 +2653,7 @@ void init_openravepy_robot()
         .def("SetName",&PyRobotBase::PyManipulator::SetName, PY_ARGS("name") DOXY_FN(RobotBase::Manipulator,SetName))
         .def("GetGripperName",&PyRobotBase::PyManipulator::GetGripperName, DOXY_FN(RobotBase::Manipulator,GetGripperName))
         .def("GetToolChangerConnectedBodyToolName",&PyRobotBase::PyManipulator::GetToolChangerConnectedBodyToolName, DOXY_FN(RobotBase::Manipulator,GetToolChangerConnectedBodyToolName))
+        .def("GetRestrictGraspSetNames",&PyRobotBase::PyManipulator::GetRestrictGraspSetNames, DOXY_FN(RobotBase::Manipulator,GetRestrictGraspSetNames))
         .def("GetRobot",&PyRobotBase::PyManipulator::GetRobot, DOXY_FN(RobotBase::Manipulator,GetRobot))
         .def("SetIkSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))
         .def("GetIkSolver",&PyRobotBase::PyManipulator::GetIkSolver, DOXY_FN(RobotBase::Manipulator,GetIkSolver))
