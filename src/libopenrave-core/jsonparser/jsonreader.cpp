@@ -414,9 +414,7 @@ protected:
             suffix += 1;
         }
         _bodyUniqueIds.insert(bodyInfo._id);
-
-        bodyInfo._uri = "#" + bodyInfo._id;
-        _CanonicalizeURI(bodyInfo._uri);
+        bodyInfo._uri = _CanonicalizeURI("#" + bodyInfo._id);
     }
 
     template<typename T>
