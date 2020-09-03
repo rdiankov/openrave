@@ -1141,6 +1141,53 @@ void QOSGViewerWidget::_UpdateHUDAxisTransform(int width, int height)
     _osgWorldAxis->setMatrix(m);
 }
 
+void QOSGViewerWidget::_SetCameraViewOrthoProjectionPlaneSize(double size) 
+{
+    const int width = _osgview->getCamera()->getViewport()->width();
+    const int height = _osgview->getCamera()->getViewport()->height();
+    const double aspect = static_cast<double>(width)/static_cast<double>(height);
+    const double nearplane = GetCameraNearPlane();
+    _osgview->getCamera()->setProjectionMatrixAsOrtho(-size, size, -size/aspect, size/aspect, nearplane, 10000*nearplane);
+}
+
+void QOSGViewerWidget::_MoveCameraPointOfView(const osg::Vec3d& axis)
+{
+    const osg::BoundingSphere& boundingSphere = _osgSceneRoot->getBound();
+
+    // calculate a the distance necessary to be able to see the whole scene bounding sphere
+    double sceneSize = boundingSphere.radius();
+
+    // if in perspective mode, then we can use fovy to calculate the distance we need to use in order to sceneSize to fit screen height
+    // (see SetViewType)
+    double fovy = 45.0 * M_PI / 180.0;
+    double cameraDistance = (sceneSize * 0.5) / tan(fovy*0.5);
+
+    if(IsInOrthoMode()) {
+        _SetCameraViewOrthoProjectionPlaneSize(sceneSize);
+    }
+    else {
+        //SetCameraDistanceToFocus(cameraDistance);
+    }
+
+    osg::Vec3d worldUpVector;
+    _GetRAVEEnvironmentUpVector(worldUpVector);
+    double worldUpAlignment = abs(axis * worldUpVector);
+
+    if((1-worldUpAlignment) < 1e-3) {
+        // view direction is aligned with world up, use another up axis
+        worldUpVector = osg::Vec3d(0,1,0);
+        // try to find another vector that is not aligned with worldUp
+        if(1 - abs(worldUpVector*axis) < 1e-3) {
+            worldUpVector = osg::Vec3d(1,0,0);
+        }
+    }
+
+    osg::Matrixd newViewMatrix;
+    osg::Vec3d newCameraPos = boundingSphere.center() + axis * cameraDistance;
+    newViewMatrix.makeLookAt(newCameraPos, newCameraPos - axis, worldUpVector);
+    GetCurrentCameraManipulator()->setByInverseMatrix(newViewMatrix);
+}
+
 void QOSGViewerWidget::_RotateCameraOverDirection(double angle, const osg::Vec3d& camSpaceRotationOverDirection, bool useCameraUpDirection)
 {
     osg::Matrixd cameraToWorld = osg::Matrixd::inverse(GetCamera()->getViewMatrix());
@@ -1195,6 +1242,26 @@ void QOSGViewerWidget::_PanCameraTowardsDirection(double delta, const osg::Vec3d
     GetCurrentCameraManipulator()->setByInverseMatrix(viewMatrix);
 }
 
+void QOSGViewerWidget::MoveCameraPointOfView(const std::string& axis)
+{
+    static const std::map<std::string, osg::Vec3d> axes = {
+        { "+x", osg::Vec3d(1,0,0) },
+        { "-x", osg::Vec3d(-1,0,0) },
+        { "+y", osg::Vec3d(0,1,0) },
+        { "-y", osg::Vec3d(0,-1,0) },
+        { "+z", osg::Vec3d(0,0,1) },
+        { "-z", osg::Vec3d(0,0,-1) }
+    };
+    std::map<std::string, osg::Vec3d>::const_iterator it = axes.find(axis);
+    if(it == axes.end()) {
+        // could not  find
+        RAVELOG_WARN("invalid axis name to move camera to: %s", axis);
+        return;
+    }
+
+    _MoveCameraPointOfView(it->second);
+}
+
 void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
 {
     if(!IsInOrthoMode() && isPan) {
@@ -1212,11 +1279,7 @@ void QOSGViewerWidget::Zoom(float factor)
     if (IsInOrthoMode()) {
         // if we increase _currentOrthoFrustumSize, we zoom out since a bigger frustum maps object to smaller part of screen
         _currentOrthoFrustumSize = _currentOrthoFrustumSize / factor;
-        const int width = _osgview->getCamera()->getViewport()->width();
-        const int height = _osgview->getCamera()->getViewport()->height();
-        const double aspect = static_cast<double>(width)/static_cast<double>(height);
-        const double nearplane = GetCameraNearPlane();
-        _osgview->getCamera()->setProjectionMatrixAsOrtho(-_currentOrthoFrustumSize, _currentOrthoFrustumSize, -_currentOrthoFrustumSize/aspect, _currentOrthoFrustumSize/aspect, nearplane, 10000*nearplane);
+        _SetCameraViewOrthoProjectionPlaneSize(_currentOrthoFrustumSize);
         return;
     }
     SetCameraDistanceToFocus(GetCameraDistanceToFocus() / factor);
@@ -1512,6 +1575,7 @@ void QOSGViewerWidget::SetCameraDistanceToFocus(double distance)
 
     if(IsInOrthoMode()) {
         RAVELOG_WARN("performing hard SetCameraDistanceToFocus when in ortho mode, please use Zoom() to change zoom independently from the current view mode.");
+        return;
     }
 
     osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());

@@ -160,6 +160,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
     RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
                     "sets the viewer projection mode, perspective or orthogonal");
+    RegisterCommand("MoveCameraPointOfView", boost::bind(&QtOSGViewer::_MoveCameraPointOfViewCommand, this, _1, _2),
+                    "Change ghe camera point of view to be aligned to one of the main world axes, centered at scene bounding box.");
     RegisterCommand("MoveCameraZoom", boost::bind(&QtOSGViewer::_MoveCameraZoomCommand, this, _1, _2),
                     "Set the zooming factor of the view");
     RegisterCommand("RotateCameraXDirection", boost::bind(&QtOSGViewer::_RotateCameraXDirectionCommand, this, _1, _2),
@@ -1239,6 +1241,15 @@ bool QtOSGViewer::_SetProjectionModeCommand(ostream& sout, istream& sinput)
     return true;
 }
 
+bool QtOSGViewer::_MoveCameraPointOfViewCommand(ostream& sout, istream& sinput)
+{
+    std::string axis = "";
+    sinput >> axis;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraPointOfView, this, axis));
+    return true;
+}
+
 bool QtOSGViewer::_MoveCameraZoomCommand(ostream& sout, istream& sinput)
 {
     float factor = 1.0f;
@@ -1849,11 +1860,6 @@ void QtOSGViewer::Move(int x, int y)
     _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
 }
 
-void QtOSGViewer::MoveCameraZoom(float factor, bool isPan, float panDelta)
-{
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, isPan, panDelta));
-}
-
 void QtOSGViewer::_RotateCameraXDirection(float thetaX)
 {
     _posgWidget->RotateCameraXDirection(thetaX);
@@ -1872,6 +1878,11 @@ void QtOSGViewer::_PanCameraXDirection(float dx)
 void QtOSGViewer::_PanCameraYDirection(float dy)
 {
     _posgWidget->PanCameraYDirection(dy);
+}
+
+void QtOSGViewer::_MoveCameraPointOfView(const std::string& axis) 
+{
+    _posgWidget->MoveCameraPointOfView(axis);
 }
 
 void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)

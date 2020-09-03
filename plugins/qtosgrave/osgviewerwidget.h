@@ -101,6 +101,10 @@ public:
     /// \brief Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.
     virtual void PanCameraYDirection(float dy);
 
+
+    /// \param axis, the axis to align camera to. It will translate the camera so the whole scene can be visible, and new center of view will be the scene's bounding box center.
+    void MoveCameraPointOfView(const std::string& axis);
+
     /// \param factor > 1.0 = zoom in. < 1.0 = zoom out
     /// \param isPan, if true, then focal distance will not change, but rather camera position will move along with focal point
     /// \param panDelta, if true, then focal distance will not change, but rather camera position will move along with focal point
@@ -238,6 +242,13 @@ protected:
 
     /// \brief update hud display axis from current manipulator transform
     void _UpdateHUDAxisTransform(int width, int height);
+
+    /// \brief set camera projection matrix as orthogonal using the given projection plane size
+    void _SetCameraViewOrthoProjectionPlaneSize(double size);
+
+    /// \brief will move the camera to sceneBoudingBox.center + axis * distance, and set view center to camerapos - axis, where distance is some distance that provide good visualization of the whole scene
+    /// \param axis is an arbitrary *unitary* axis vector
+    void _MoveCameraPointOfView(const osg::Vec3d& axis);
 
     /// \brief performs a rotation of the camera over the current focal point (see GetCameraDistanceToFocus()).
     /// Camera will keep looking ate the focal point after performing the rotation.
