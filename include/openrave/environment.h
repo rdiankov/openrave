@@ -710,21 +710,13 @@ public:
         EnvironmentBaseInfo(const EnvironmentBaseInfo& other) {
             *this = other;
         }
-        EnvironmentBaseInfo& operator=(const EnvironmentBaseInfo& other) {
-            _vBodyInfos = other._vBodyInfos;
-            _revision = other._revision;
-            _name = other._name;
-            _description = other._description;
-            _keywords = other._keywords;
-            // TODO: deep copy infos
-            return *this;
-        }
         bool operator==(const EnvironmentBaseInfo& other) const {
             return _vBodyInfos == other._vBodyInfos
                 && _revision == other._revision
                 && _name == other._name
                 && _description == other._description
-                && _keywords == other._keywords;
+                && _keywords == other._keywords
+                && _gravity == other._gravity;
             // TODO: deep compare infos
         }
         bool operator!=(const EnvironmentBaseInfo& other) const{
@@ -736,10 +728,11 @@ public:
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
-        int _revision;  ///< environment revision number
+        int _revision = 0;  ///< environment revision number
         std::string _name;   ///< environment name
         std::string _description;   ///< environment description
         std::vector<std::string> _keywords;  ///< some string values for describinging the environment
+        Vector _gravity = Vector(0,0,-9.797930195020351);  ///< gravity and gravity direction of the environment
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;

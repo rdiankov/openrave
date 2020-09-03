@@ -2478,6 +2478,9 @@ public:
         info._name = _name;
         info._keywords = _keywords;
         info._description = _description;
+        if (!!_pPhysicsEngine) {
+            info._gravity = _pPhysicsEngine->GetGravity();
+        }
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
@@ -2493,6 +2496,14 @@ public:
         _name = info._name;
         _keywords = info._keywords;
         _description = info._description;
+
+        // set gravity
+        if (!!_pPhysicsEngine) {
+            Vector gravityDiff = _pPhysicsEngine->GetGravity() - info._gravity;
+            if (OpenRAVE::RaveFabs(gravityDiff.x) > 1e-7 || OpenRAVE::RaveFabs(gravityDiff.y) > 1e-7 || OpenRAVE::RaveFabs(gravityDiff.z) > 1e-7) {
+                _pPhysicsEngine->SetGravity(info._gravity);
+            }
+        }
 
         RAVELOG_VERBOSE("=== UpdateFromInfo start ===");
         FOREACHC(itBodyInfo, info._vBodyInfos) {

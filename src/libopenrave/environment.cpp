@@ -30,6 +30,7 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& value
     orjson::SetJsonValueByKey(value, "name", _name, allocator);
     orjson::SetJsonValueByKey(value, "keywords", _keywords, allocator);
     orjson::SetJsonValueByKey(value, "description", _description, allocator);
+    orjson::SetJsonValueByKey(value, "gravity", _gravity, allocator);
 
     if (_vBodyInfos.size() > 0) {
         rapidjson::Value rBodiesValue;
@@ -63,6 +64,10 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
 
     if (value.HasMember("description")) {
         orjson::LoadJsonValueByKey(value, "description", _description);
+    }
+
+    if (value.HasMember("gravity")) {
+        orjson::LoadJsonValueByKey(value, "gravity", _gravity);
     }
 
     if (value.HasMember("bodies")) {
