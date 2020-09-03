@@ -353,7 +353,6 @@ std::string PyIkParameterization::__str__() {
 object PyIkParameterization::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
-
 PyIkParameterizationPtr PyIkParameterization::__mul__(object otrans)
 {
     return PyIkParameterizationPtr(new PyIkParameterization(_param * ExtractTransform(otrans)));
