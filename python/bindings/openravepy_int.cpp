@@ -977,6 +977,7 @@ EnvironmentBase::EnvironmentBaseInfoPtr PyEnvironmentBase::PyEnvironmentBaseInfo
     }
     pInfo->_revision = _revision;
 #endif
+    pInfo->_gravity = ExtractVector34<dReal>(_gravity,0);
     return pInfo;
 }
 
@@ -1026,7 +1027,7 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
     _description = ConvertStringToUnicode(info._description);
     _revision = info._revision;
 #endif
-
+    _gravity = toPyVector3(info._gravity);
 }
 
 std::string PyEnvironmentBase::PyEnvironmentBaseInfo::__str__() {
@@ -2768,6 +2769,11 @@ Because race conditions can pop up when trying to lock the openrave environment 
     object environmentbaseinfo = class_<PyEnvironmentBase::PyEnvironmentBaseInfo, OPENRAVE_SHARED_PTR<PyEnvironmentBase::PyEnvironmentBaseInfo> >("EnvironmentBaseInfo", DOXY_CLASS(EnvironmentBase::EnvironmentBaseInfo))
 #endif
                                  .def_readwrite("_vBodyInfos",&PyEnvironmentBase::PyEnvironmentBaseInfo::_vBodyInfos)
+                                 .def_readwrite("_revision",&PyEnvironmentBase::PyEnvironmentBaseInfo::_revision)
+                                 .def_readwrite("_name",&PyEnvironmentBase::PyEnvironmentBaseInfo::_name)
+                                 .def_readwrite("_description",&PyEnvironmentBase::PyEnvironmentBaseInfo::_description)
+                                 .def_readwrite("_keywords",&PyEnvironmentBase::PyEnvironmentBaseInfo::_keywords)
+                                 .def_readwrite("_gravity",&PyEnvironmentBase::PyEnvironmentBaseInfo::_gravity)
                                  .def("__str__",&PyEnvironmentBase::PyEnvironmentBaseInfo::__str__)
                                  .def("__unicode__",&PyEnvironmentBase::PyEnvironmentBaseInfo::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
