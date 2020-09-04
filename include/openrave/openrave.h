@@ -312,6 +312,7 @@ enum CloningOptions {
     Clone_RealControllers = 8, ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
     Clone_Sensors = 0x0010, ///< if specified, will clone the sensors attached to the robot and added to the environment
     Clone_Modules = 0x0020, ///< if specified, will clone the modules attached to the environment
+    Clone_PassOnMissingBodyReferences=0x00008000, ///< if specified, then does not throw an exception if a body reference is missing in the environment. For example, the grabbed body in GrabbedInfo
     Clone_IgnoreAttachedBodies = 0x00010001, ///< if set, then ignore cloning any attached bodies so _listAttachedBodies becomes empty. Usually used to control grabbing states.
     Clone_All = 0xffffffff,
 };
