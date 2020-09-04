@@ -650,33 +650,18 @@ void QtOSGViewer::_SetDebugLevelVerbose()
 
 void QtOSGViewer::_ChangeViewToXY()
 {
-    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
-    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(0));
-    _Tcamera.trans.x = center.x();
-    _Tcamera.trans.y = center.y();
-    _Tcamera.trans.z = center.z() + _posgWidget->GetCameraDistanceToFocus();
-    _SetCameraTransform();
+    _MoveCameraPointOfView("+z");
 }
 
 void QtOSGViewer::_ChangeViewToXZ()
 {
-    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
-    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2));
-    _Tcamera.trans.x = center.x();
-    _Tcamera.trans.y = center.y() - _posgWidget->GetCameraDistanceToFocus();
-    _Tcamera.trans.z = center.z();
-    _SetCameraTransform();
+    _MoveCameraPointOfView("+y");
 
 }
 
 void QtOSGViewer::_ChangeViewToYZ()
 {
-    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
-    _Tcamera.rot = quatMultiply(quatFromAxisAngle(RaveVector<float>(0,0,1), float(M_PI/2)), quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2)));
-    _Tcamera.trans.x = center.x() + _posgWidget->GetCameraDistanceToFocus();
-    _Tcamera.trans.y = center.y();
-    _Tcamera.trans.z = center.z();
-    _SetCameraTransform();
+    _MoveCameraPointOfView("+x");
 
 }
 
