@@ -19,6 +19,7 @@
 #include <osgDB/ReadFile>
 #include <osg/FrontFace>
 #include <osg/CullFace>
+#include <osg/ComputeBoundsVisitor>
 #include <osg/CoordinateSystemNode>
 #include <osg/BlendFunc>
 #include <osgGA/NodeTrackerManipulator>
@@ -1152,10 +1153,15 @@ void QOSGViewerWidget::_SetCameraViewOrthoProjectionPlaneSize(double size)
 
 void QOSGViewerWidget::_MoveCameraPointOfView(const osg::Vec3d& axis)
 {
-    const osg::BoundingSphere& boundingSphere = _osgSceneRoot->getBound();
 
-    // calculate a the distance necessary to be able to see the whole scene bounding sphere
-    double sceneSize = boundingSphere.radius();
+    osg::ComputeBoundsVisitor boundingBoxVisitor;
+    _osgSceneRoot->accept(boundingBoxVisitor);
+    osg::BoundingBox boundingBox = boundingBoxVisitor.getBoundingBox();
+
+    osg::Vec3d bboxDiagonal = osg::Vec3d(boundingBox.xMax(),boundingBox.yMax(), boundingBox.zMax()) - osg::Vec3d(boundingBox.xMin(),boundingBox.yMin(), boundingBox.zMin());
+
+    // use sceneSize as the diagonal of the boundingbox
+    double sceneSize = bboxDiagonal.length() * 0.75;
 
     // if in perspective mode, then we can use fovy to calculate the distance we need to use in order to sceneSize to fit screen height
     // (see SetViewType)
@@ -1163,10 +1169,10 @@ void QOSGViewerWidget::_MoveCameraPointOfView(const osg::Vec3d& axis)
     double cameraDistance = (sceneSize * 0.5) / tan(fovy*0.5);
 
     if(IsInOrthoMode()) {
-        _SetCameraViewOrthoProjectionPlaneSize(sceneSize);
+        _SetCameraViewOrthoProjectionPlaneSize(sceneSize*0.5);
     }
     else {
-        //SetCameraDistanceToFocus(cameraDistance);
+        SetCameraDistanceToFocus(cameraDistance);
     }
 
     osg::Vec3d worldUpVector;
@@ -1183,7 +1189,7 @@ void QOSGViewerWidget::_MoveCameraPointOfView(const osg::Vec3d& axis)
     }
 
     osg::Matrixd newViewMatrix;
-    osg::Vec3d newCameraPos = boundingSphere.center() + axis * cameraDistance;
+    osg::Vec3d newCameraPos = boundingBox.center() + axis * cameraDistance;
     newViewMatrix.makeLookAt(newCameraPos, newCameraPos - axis, worldUpVector);
     GetCurrentCameraManipulator()->setByInverseMatrix(newViewMatrix);
 }
@@ -1255,7 +1261,7 @@ void QOSGViewerWidget::MoveCameraPointOfView(const std::string& axis)
     std::map<std::string, osg::Vec3d>::const_iterator it = axes.find(axis);
     if(it == axes.end()) {
         // could not  find
-        RAVELOG_WARN("invalid axis name to move camera to: %s", axis);
+        RAVELOG_WARN(str(boost::format("invalid axis name to move camera to: %s\n")%axis));
         return;
     }
 
