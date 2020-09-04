@@ -642,7 +642,7 @@ PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& 
 PySensorGeometryPtr toPySensorGeometry(const std::string& sensorname, const rapidjson::Document& docSensorGeometry)
 {
     SensorBase::SensorGeometryPtr pgeom;
-    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, sensorname, InterfaceBasePtr(), AttributesList());
+    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, sensorname, ReadablePtr(), AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(docSensorGeometry);
         ReadablePtr pReadable = pReader->GetReadable();

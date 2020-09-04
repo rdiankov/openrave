@@ -503,6 +503,7 @@ void RobotBase::ConnectedBody::GetResolvedGripperInfos(std::vector<RobotBase::Gr
 
 void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) const
 {
+    // TODO: extract info from connectedbody to make extra geometry working
     info = _info;
 }
 
@@ -824,6 +825,10 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 plink.reset(new KinBody::Link(shared_kinbody()));
             }
             plink->_info = *connectedBodyInfo._vLinkInfos[ilink]; // copy
+            // reset old id to empty
+            // we want to keep robot id suffix start from 0
+            // it will break the name convention when we extract robot info if we keep the old id
+            plink->_info._id = "";
             plink->_info._name = connectedBody._nameprefix + plink->_info._name;
             plink->_info._t = tBaseLinkInWorld * plink->_info._t;
             _InitAndAddLink(plink);
@@ -840,6 +845,10 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 pjoint.reset(new KinBody::Joint(shared_kinbody()));
             }
             pjoint->_info = *connectedBodyInfo._vJointInfos[ijoint]; // copy
+            // reset old id to empty
+            // we want to keep robot id suffix start from 0
+            // it will break the name convention when we extract robot info if we keep the old id
+            pjoint->_info._id = "";
             pjoint->_info._name = connectedBody._nameprefix + pjoint->_info._name;
 
             // search for the correct resolved _linkname0 and _linkname1
@@ -947,7 +956,10 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                     throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for Manipulator %s, could not find joint %s in connected body joint infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%gripperJointName, ORE_InvalidArguments);
                 }
             }
-
+            // reset old id to empty
+            // we want to keep robot id suffix start from 0
+            // it will break the name convention when we extract robot info if we keep the old id
+            pnewmanipulator->_info._id = "";
             _vecManipulators.push_back(pnewmanipulator);
             connectedBody._vResolvedManipulatorNames[imanipulator].first = pnewmanipulator->_info._name;
         }
@@ -963,7 +975,10 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 pnewattachedSensor->_info = *connectedBodyInfo._vAttachedSensorInfos[iattachedsensor];
             }
             pnewattachedSensor->_info._name = connectedBody._nameprefix + pnewattachedSensor->_info._name;
-
+            // reset old id to empty
+            // we want to keep robot id suffix start from 0
+            // it will break the name convention when we extract robot info if we keep the old id
+            pnewattachedSensor->_info._id = "";
             FOREACH(ittestattachedSensor, _vecAttachedSensors) {
                 if( pnewattachedSensor->_info._name == (*ittestattachedSensor)->GetName() ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, got resolved attachedSensor with same name %s!", connectedBody.GetName()%GetName()%pnewattachedSensor->_info._name, ORE_InvalidArguments);
@@ -995,6 +1010,10 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 pnewgripperInfo.reset(new RobotBase::GripperInfo());
             }
             *pnewgripperInfo = *connectedBodyInfo._vGripperInfos[iGripperInfo];
+            // reset old id to empty
+            // we want to keep robot id suffix start from 0
+            // it will break the name convention when we extract robot info if we keep the old id
+            pnewgripperInfo->_id = "";
             pnewgripperInfo->name = connectedBody._nameprefix + pnewgripperInfo->name;
 
             FOREACH(ittestgripperInfo, _vecGripperInfos) {
@@ -1042,6 +1061,10 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             connectedBody._pDummyJointCache.reset(new KinBody::Joint(shared_kinbody()));
         }
         KinBody::JointInfo& dummyJointInfo = connectedBody._pDummyJointCache->_info;
+        // reset old id to empty
+        // we want to keep id suffix start from 0
+        // it will break the name convention when we extract robot info if we keep the old id
+        dummyJointInfo._id = "";
         dummyJointInfo._name = connectedBody._dummyPassiveJointName;
         dummyJointInfo._bIsActive = false;
         dummyJointInfo._type = KinBody::JointType::JointPrismatic;

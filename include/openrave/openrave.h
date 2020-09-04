@@ -312,6 +312,7 @@ enum CloningOptions {
     Clone_RealControllers = 8, ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
     Clone_Sensors = 0x0010, ///< if specified, will clone the sensors attached to the robot and added to the environment
     Clone_Modules = 0x0020, ///< if specified, will clone the modules attached to the environment
+    Clone_PassOnMissingBodyReferences=0x00008000, ///< if specified, then does not throw an exception if a body reference is missing in the environment. For example, the grabbed body in GrabbedInfo
     Clone_IgnoreAttachedBodies = 0x00010001, ///< if set, then ignore cloning any attached bodies so _listAttachedBodies becomes empty. Usually used to control grabbing states.
     Clone_All = 0xffffffff,
 };
@@ -477,7 +478,7 @@ public:
 };
 typedef boost::shared_ptr<BaseJSONReader> BaseJSONReaderPtr;
 typedef boost::shared_ptr<BaseJSONReader const> BaseJSONReaderConstPtr;
-typedef boost::function<BaseJSONReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateJSONReaderFn;
+typedef boost::function<BaseJSONReaderPtr(ReadablePtr, const AttributesList&)> CreateJSONReaderFn;
 
 } // end namespace OpenRAVE
 
@@ -2117,6 +2118,7 @@ public:
     inline void Swap(IkParameterization& r) {
         std::swap(_transform, r._transform);
         std::swap(_type, r._type);
+        std::swap(_id, r._id);
         _mapCustomData.swap(r._mapCustomData);
     }
 
@@ -2125,13 +2127,18 @@ public:
     void DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale=1.0);
 
     virtual bool operator==(const IkParameterization& other) const {
-        return _type == other._type
+        return _id == other._id
+            && _type == other._type
             && _transform == other._transform
             && _mapCustomData == other._mapCustomData;
     }
 
     virtual bool operator!=(const IkParameterization& other) const {
         return !operator==(other);
+    }
+
+    const std::string& GetId() const {
+        return _id;
     }
 
 protected:
@@ -2240,6 +2247,8 @@ protected:
 
     Transform _transform;
     IkParameterizationType _type;
+    std::string _id;
+
     std::map<std::string, std::vector<dReal> > _mapCustomData;
 
     friend IkParameterization operator* (const Transform &t, const IkParameterization &ikparam);
@@ -2336,6 +2345,29 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
 OPENRAVE_API std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam);
 OPENRAVE_API std::istream& operator>>(std::istream& I, IkParameterization& ikparam);
 
+
+/// \brief converts the value into output and writes a null terminator
+///
+/// \return length of string (ie strlen(output))
+inline uint32_t ConvertUIntToHex(uint32_t value, char* output)
+{
+    uint32_t length = 1; // in case value is 0, still requires one character '0'
+    if( value > 0 ) {
+        length = 8-(__builtin_clz(value)/4);
+    }
+    for(uint32_t index = 0; index < length; ++index) {
+        uint32_t nibble = (value>>(4*(length-1-index)))&0xf;
+        if( nibble < 10 ) {
+            output[index] = '0'+nibble;
+        }
+        else {
+            output[index] = 'A'+(nibble-10);
+        }
+    }
+    output[length] = 0; // null terminator
+    return length;
+}
+
 /// \brief User data for trimesh geometries. Vertices are defined in counter-clockwise order for outward pointing faces.
 class OPENRAVE_API TriMesh
 {
@@ -2349,6 +2381,9 @@ public:
     /// append another TRIMESH to this tri mesh
     void Append(const TriMesh& mesh);
     void Append(const TriMesh& mesh, const Transform& trans);
+
+    /// clear vertices and indices vector
+    void Clear();
 
     AABB ComputeAABB() const;
     void serialize(std::ostream& o, int options=0) const;
@@ -2694,7 +2729,7 @@ OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::s
 /// \brief Returns the current registered json reader for the interface type/id
 ///
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
-OPENRAVE_API BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, InterfaceBasePtr pinterface, const AttributesList& atts);
+OPENRAVE_API BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, ReadablePtr pReadable, const AttributesList& atts);
 
 /** \brief Returns the absolute path of the filename on the local filesystem resolving relative paths from OpenRAVE paths.
 

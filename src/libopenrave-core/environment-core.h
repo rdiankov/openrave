@@ -29,7 +29,7 @@
 
 #define CHECK_INTERFACE(pinterface) { \
         if( (pinterface)->GetEnv() != shared_from_this() ) \
-            throw openrave_exception(str(boost::format(_("Interface %s:%s is from a different environment (env=%d) than the current one being used (env=%d)"))%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()%(pinterface)->GetEnv()->GetId()%GetId()),ORE_InvalidArguments); \
+            throw openrave_exception(str(boost::format(_("env=%d, Interface %s:%s is from a different environment (env=%d) than the current one."))%GetId()%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()%(pinterface)->GetEnv()->GetId()),ORE_InvalidArguments); \
 } \
 
 #define CHECK_COLLISION_BODY(body) { \
@@ -2414,11 +2414,58 @@ public:
         _unit = unit;
     }
 
+    /// \brief go through all boides id and make sure they are unique
+    virtual void _ResolveBodyIds() {
+        char sTempIndexConversion[9]; //temp memory space for converting indices to hex strings, enough space to convert uint32_t
+        uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
+        static const char pBodyIdPrefix[] = "body";
+        int nBodyId = 0;
+        const int numBodies = _vecbodies.size();
+        for(int iBody = 0; iBody < numBodies; iBody++) {
+            bool bGenerateNewId = _vecbodies[iBody]->_id.empty();
+            if (!bGenerateNewId) {
+                for(int iTestBody = 0; iTestBody < iBody; iTestBody++) {
+                    if(_vecbodies[iBody]->_id == _vecbodies[iTestBody]->_id) {
+                        bGenerateNewId = true;
+                        break;
+                    }
+                }
+            }
+            if (bGenerateNewId) {
+                while(1) {
+                    nTempIndexConversion = ConvertUIntToHex(nBodyId, sTempIndexConversion);
+                    bool bHasSame = false;
+                    for(int iTestBody = 0; iTestBody < numBodies; ++iTestBody) {
+                        const std::string& testid = _vecbodies[iTestBody]->_id;
+                        if( testid.size() == sizeof(pBodyIdPrefix)-1+nTempIndexConversion ) {
+                            if( strncmp(testid.c_str() + (sizeof(pBodyIdPrefix)-1), sTempIndexConversion,nTempIndexConversion) == 0 ) {
+                                // matches
+                                bHasSame = true;
+                                break;
+                            }
+                        }
+                    }
+                    if( bHasSame ) {
+                        nBodyId++;
+                        continue;
+                    }
+                    break;
+                }
+
+                _vecbodies[iBody]->_id = pBodyIdPrefix;
+                _vecbodies[iBody]->_id += sTempIndexConversion;
+                nBodyId++;
+            }
+
+        }
+    }
+
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
     virtual void ExtractInfo(EnvironmentBaseInfo& info)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         info._vBodyInfos.resize(_vecbodies.size());
+        _ResolveBodyIds();
         for(size_t i = 0; i < info._vBodyInfos.size(); ++i) {
             if (_vecbodies[i]->IsRobot()) {
                 info._vBodyInfos[i].reset(new RobotBase::RobotBaseInfo());
@@ -2428,23 +2475,40 @@ public:
                 _vecbodies[i]->ExtractInfo(*info._vBodyInfos[i]);
             }
         }
+        info._name = _name;
+        info._keywords = _keywords;
+        info._description = _description;
+        if (!!_pPhysicsEngine) {
+            info._gravity = _pPhysicsEngine->GetGravity();
+        }
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        _ResolveBodyIds();
 
         std::vector<dReal> vDOFValues;
 
-        // TODO: revision error checking ?
-        SetRevision(info._revision);
+        // copy basic info into EnvironmentBase
+        _revision = info._revision;
+        _name = info._name;
+        _keywords = info._keywords;
+        _description = info._description;
 
+        // set gravity
+        if (!!_pPhysicsEngine) {
+            Vector gravityDiff = _pPhysicsEngine->GetGravity() - info._gravity;
+            if (OpenRAVE::RaveFabs(gravityDiff.x) > 1e-7 || OpenRAVE::RaveFabs(gravityDiff.y) > 1e-7 || OpenRAVE::RaveFabs(gravityDiff.z) > 1e-7) {
+                _pPhysicsEngine->SetGravity(info._gravity);
+            }
+        }
+
+        RAVELOG_VERBOSE("=== UpdateFromInfo start ===");
         FOREACHC(itBodyInfo, info._vBodyInfos) {
             KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
-            if(pKinBodyInfo->_id.empty()){
-                pKinBodyInfo->_id = pKinBodyInfo->_name;
-            }
+            RAVELOG_VERBOSE_FORMAT("==== %s ===", pKinBodyInfo->_id);
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
 
             // find existing body in the env
@@ -2452,6 +2516,7 @@ public:
             FOREACH(itBody, _vecbodies) {
                 if ((*itBody)->_id == (*itBodyInfo)->_id) {
                     itExistingBody = itBody;
+                    RAVELOG_VERBOSE_FORMAT("found existing body %s in environment", (*itBody)->_id);
                     break;
                 }
             }
@@ -2461,6 +2526,7 @@ public:
                 pBody = *itExistingBody;
                 bool bInterfaceMatches = pBody->GetXMLId() == pKinBodyInfo->_interfaceType;
                 if( !bInterfaceMatches || pBody->IsRobot() != pKinBodyInfo->_isRobot ) {
+                    RAVELOG_VERBOSE_FORMAT("body %s interface is changed, remove old body from environment. xmlid=%s, _interfaceType=%s, isRobot %d != %d", pBody->_id%pBody->GetXMLId()%pKinBodyInfo->_interfaceType%pBody->IsRobot()%pKinBodyInfo->_isRobot);
                     boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                     _RemoveKinBodyFromIterator(itExistingBody);
                     itExistingBody = _vecbodies.end();
@@ -2468,8 +2534,8 @@ public:
             }
     
             if(itExistingBody != _vecbodies.end()) {
+                RAVELOG_VERBOSE_FORMAT("update existing body %s", (*itExistingBody)->_id);
                 // interface should match at this point
-
                 // update existing body or robot
                 UpdateFromInfoResult updateFromInfoResult = UFIR_RequireRemoveFromEnvironment;
                 pBody = *itExistingBody;
@@ -2485,7 +2551,7 @@ public:
                 else if (!pKinBodyInfo->_isRobot && !pBody->IsRobot()) {
                     updateFromInfoResult = pBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                 }
-
+                RAVELOG_VERBOSE_FORMAT("update body %s from info result %d", pBody->_id%updateFromInfoResult);
                 if (updateFromInfoResult == UFIR_Success) {
                     continue;
                 }
@@ -2528,6 +2594,7 @@ public:
             else {
                 // for new body or robot
                 if (pKinBodyInfo->_isRobot) {
+                    RAVELOG_VERBOSE_FORMAT("add new robot %s", pKinBodyInfo->_id);
                     RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), pKinBodyInfo->_interfaceType);
                     if( !pRobot ) {
                         pRobot = RaveCreateRobot(shared_from_this(), "");
@@ -2543,6 +2610,7 @@ public:
                     pBody = RaveInterfaceCast<KinBody>(pRobot);
                 }
                 else {
+                    RAVELOG_VERBOSE_FORMAT("add new kinbody %s", pKinBodyInfo->_id);
                     pBody = RaveCreateKinBody(shared_from_this(), pKinBodyInfo->_interfaceType);
                     if( !pBody ) {
                         pBody = RaveCreateKinBody(shared_from_this(), "");
@@ -2584,6 +2652,7 @@ public:
                 ++itBody;
                 continue;
             }
+            RAVELOG_VERBOSE_FORMAT("remove extra body id=%s, name=%s", (*itBody)->_id%(*itBody)->_name);
             {
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                 _RemoveKinBodyFromIterator(itBody);

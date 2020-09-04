@@ -223,7 +223,7 @@ public:
 
         /// \brief converts the unit scale of the geometry
         void ConvertUnitScale(dReal fUnitScale);
-        
+
         /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
         /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
         bool InitCollisionMesh(float fTessellation=1);
@@ -284,6 +284,7 @@ public:
             Transform transf;
             Vector vExtents;
             SideWallType type;
+            int Compare(const SideWall& rhs, dReal fUnitScale=1.0, dReal fEpsilon=10e-7) const;
         };
         std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
 
@@ -1580,7 +1581,7 @@ protected:
          */
         virtual void _ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
 
-        /// \brief once all the joints have been computed and initiailzed, call this function 
+        /// \brief once all the joints have been computed and initiailzed, call this function
         virtual void _ComputeInternalStaticInformation();
 
         /// \brief evaluates the mimic joint equation using vdependentvalues
@@ -1655,7 +1656,7 @@ public:
             _grabbedname = other._grabbedname;
             _robotlinkname = other._robotlinkname;
             _trelative = other._trelative;
-            _setRobotLinksToIgnore = other._setRobotLinksToIgnore;
+            _setIgnoreRobotLinkNames = other._setIgnoreRobotLinkNames;
             return *this;
         }
         bool operator==(const GrabbedInfo& other) const {
@@ -1663,7 +1664,7 @@ public:
                    && _grabbedname == other._grabbedname
                    && _robotlinkname == other._robotlinkname
                    && _trelative == other._trelative
-                   && _setRobotLinksToIgnore == other._setRobotLinksToIgnore;
+                   && _setIgnoreRobotLinkNames == other._setIgnoreRobotLinkNames;
         }
         bool operator!=(const GrabbedInfo& other) const {
             return !operator==(other);
@@ -1677,7 +1678,7 @@ public:
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
-        std::set<int> _setRobotLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
+        std::set<std::string> _setIgnoreRobotLinkNames; ///< names of links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
@@ -2584,6 +2585,8 @@ private:
     /// \param setAttached fills with the attached bodies. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
     virtual void GetAttached(std::set<KinBodyPtr>& setAttached) const;
     virtual void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
+    virtual void GetAttached(std::vector<KinBodyPtr>& vAttached) const;
+    virtual void GetAttached(std::vector<KinBodyConstPtr>& vAttached) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
     virtual bool HasAttached() const;
@@ -2736,6 +2739,16 @@ private:
      */
     virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore);
 
+    /** \brief Grab the body with the specified link.
+
+        \param[in] body the body to be grabbed
+        \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
+        \param[in] setBodyLinksToIgnore Additional body link names that collision checker ignore
+        when checking collisions between the grabbed body and the body.
+        \return true if successful and body is grabbed.
+    */
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames);
+
     /** \brief Grab a body with the specified link.
 
         \param[in] body the body to be grabbed
@@ -2789,7 +2802,7 @@ private:
     ///
     /// \param iGrabbed index into the grabbed body. Max is GetNumGrabbed()-1
     virtual KinBodyPtr GetGrabbedBody(int iGrabbed) const;
-    
+
     /** \brief gets all grabbed bodies of the body
 
         \param[out] vgrabbedinfo filled with the grabbed info for every body. The pointers are newly created.

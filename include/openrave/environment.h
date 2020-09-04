@@ -710,13 +710,13 @@ public:
         EnvironmentBaseInfo(const EnvironmentBaseInfo& other) {
             *this = other;
         }
-        EnvironmentBaseInfo& operator=(const EnvironmentBaseInfo& other) {
-            _vBodyInfos = other._vBodyInfos;
-            // TODO: deep copy infos
-            return *this;
-        }
         bool operator==(const EnvironmentBaseInfo& other) const {
-            return _vBodyInfos == other._vBodyInfos;
+            return _vBodyInfos == other._vBodyInfos
+                && _revision == other._revision
+                && _name == other._name
+                && _description == other._description
+                && _keywords == other._keywords
+                && _gravity == other._gravity;
             // TODO: deep compare infos
         }
         bool operator!=(const EnvironmentBaseInfo& other) const{
@@ -728,20 +728,34 @@ public:
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
-        uint64_t _revision;
+        int _revision = 0;  ///< environment revision number
+        std::string _name;   ///< environment name
+        std::string _description;   ///< environment description
+        std::vector<std::string> _keywords;  ///< some string values for describinging the environment
+        Vector _gravity = Vector(0,0,-9.797930195020351);  ///< gravity and gravity direction of the environment
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;
 
-    inline uint64_t GetRevision() const {
+    /// \brief returns environment revision number
+    inline int GetRevision() const {
         return _revision;
     }
 
-    virtual void SetRevision(const uint64_t revision) {
-        _revision = revision;
+    /// \brief returns the scene name
+    inline const std::string& GetName() const {
+        return _name;
     }
 
-    uint64_t _revision = 0;  ///< environment current revision
+    /// \brief returns the scene description
+    inline const std::string& GetDescription() const {
+        return _description;
+    }
+
+    /// \brief returns the scene keywords
+    inline const std::vector<std::string>& GetKeywords() const {
+        return _keywords;
+    }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
     virtual void ExtractInfo(EnvironmentBaseInfo& info) = 0;
@@ -749,6 +763,10 @@ public:
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info) = 0;
 
+    int _revision = 0;  ///< environment current revision
+    std::string _name;   ///< environment name
+    std::string _description;   ///< environment description
+    std::vector<std::string> _keywords;  ///< some string values for describinging the environment
 
 protected:
     virtual const char* GetHash() const {

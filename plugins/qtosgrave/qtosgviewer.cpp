@@ -17,7 +17,6 @@
 #include <iostream>
 
 #include <osg/ArgumentParser>
-
 #include "osgviewerwidget.h"
 
 namespace qtosgrave {
@@ -80,12 +79,12 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
 
     _qobjectTree = NULL;
     _qdetailsTree = NULL;
-    _focalDistance = 0.0;
     _fTrackAngleToUp = 0.3;
     _pointerTypeGroup = NULL;
     _posgWidget = NULL;
     _nQuitMainLoop = 0;
     _qactPerspectiveView = NULL;
+    _cameraMoveModeButton = NULL;
     _qactChangeViewtoXY = _qactChangeViewtoYZ = _qactChangeViewtoXZ = NULL;
     //osg::setNotifyLevel(osg::DEBUG_FP);
     _userdatakey = std::string("qtosg") + boost::lexical_cast<std::string>(this);
@@ -161,8 +160,19 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
     RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
                     "sets the viewer projection mode, perspective or orthogonal");
-    RegisterCommand("Zoom", boost::bind(&QtOSGViewer::_ZoomCommand, this, _1, _2),
+    RegisterCommand("MoveCameraZoom", boost::bind(&QtOSGViewer::_MoveCameraZoomCommand, this, _1, _2),
                     "Set the zooming factor of the view");
+    RegisterCommand("RotateCameraXDirection", boost::bind(&QtOSGViewer::_RotateCameraXDirectionCommand, this, _1, _2),
+    "Rotates the camera around the current focal point in the direction of the screen x vector (in world coordinates). The argument thetaX is in radians -pi < dx < pi.");
+    RegisterCommand("RotateCameraYDirection", boost::bind(&QtOSGViewer::_RotateCameraYDirectionCommand, this, _1, _2),
+    "Rotates the camera around the current focal point in the direction of the screen y vector (in world coordinates). The argument thetaY is in radians -pi < dy < pi.");
+
+    // Pan commands. This commands will be ignored if currently in TrackLink or TrackManipulator mode (e.g: using osgviewerwidget NodeTrackManipulator or activating TrackLink or TrackManipulator commands)
+    // since pan is not a valid operation during track mode, because when tracking we always keep focus in the tracked object.
+    RegisterCommand("PanCameraXDirection", boost::bind(&QtOSGViewer::_PanCameraXDirectionCommand, this, _1, _2),
+    "Pans the camera in the direction of the screen x vector, parallel to screen plane. The argument dx is in normalized coordinates 0 < dx < 1, where 1 means canvas width.");
+    RegisterCommand("PanCameraYDirection", boost::bind(&QtOSGViewer::_PanCameraYDirectionCommand, this, _1, _2),
+    "Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.");
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
@@ -436,7 +446,7 @@ void QtOSGViewer::_CreateActions()
 void QtOSGViewer::_UpdateViewerCallback()
 {
     try {
-        _UpdateEnvironment(1.0/60.0);
+        _UpdateEnvironment();
         //UpdateFromModel();
 
         {
@@ -637,22 +647,20 @@ void QtOSGViewer::_SetDebugLevelVerbose()
 
 void QtOSGViewer::_ChangeViewToXY()
 {
-    _UpdateCameraTransform(0);
     osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
     _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(0));
     _Tcamera.trans.x = center.x();
     _Tcamera.trans.y = center.y();
-    _Tcamera.trans.z = center.z()+_focalDistance;
+    _Tcamera.trans.z = center.z() + _posgWidget->GetCurrentManipulatorDistanceToFocus();
     _SetCameraTransform();
 }
 
 void QtOSGViewer::_ChangeViewToXZ()
 {
-    _UpdateCameraTransform(0);
     osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
     _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2));
     _Tcamera.trans.x = center.x();
-    _Tcamera.trans.y = center.y()-_focalDistance;
+    _Tcamera.trans.y = center.y() - _posgWidget->GetCurrentManipulatorDistanceToFocus();
     _Tcamera.trans.z = center.z();
     _SetCameraTransform();
 
@@ -660,10 +668,9 @@ void QtOSGViewer::_ChangeViewToXZ()
 
 void QtOSGViewer::_ChangeViewToYZ()
 {
-    _UpdateCameraTransform(0);
     osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
     _Tcamera.rot = quatMultiply(quatFromAxisAngle(RaveVector<float>(0,0,1), float(M_PI/2)), quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2)));
-    _Tcamera.trans.x = center.x()+_focalDistance;
+    _Tcamera.trans.x = center.x() + _posgWidget->GetCurrentManipulatorDistanceToFocus();
     _Tcamera.trans.y = center.y();
     _Tcamera.trans.z = center.z();
     _SetCameraTransform();
@@ -860,16 +867,16 @@ void QtOSGViewer::_CreateControlButtons()
             this->_posgWidget->Zoom(0.9);
         });
 
-    QPushButton *cameraMoveModeButton = new QPushButton("Rot");
-    cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
-    connect(cameraMoveModeButton, &QPushButton::pressed, [=]() {
+    _cameraMoveModeButton = new QPushButton("Rot");
+    _cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
+    connect(_cameraMoveModeButton, &QPushButton::pressed, [=]() {
             _posgWidget->ToggleCameraMoveMode();
-            cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
+            _cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
         });
 
     qvBoxLayout->addWidget(zoomInButton);
     qvBoxLayout->addWidget(zoomOutButton);
-    qvBoxLayout->addWidget(cameraMoveModeButton);
+    qvBoxLayout->addWidget(_cameraMoveModeButton);
 
     controlWidget->setLayout(qvBoxLayout);
 }
@@ -1036,102 +1043,13 @@ void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
     RAVELOG_VERBOSE("End _FillObjectTree....\n");
 }
 
-void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
+void QtOSGViewer::_UpdateViewport()
 {
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
-    // set the viewport size correctly so we can draw stuff on the hud using window coordinates
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
-    _posgWidget->SetViewport(width, height, GetEnv()->GetUnit().second);
-
-    _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getMatrix());
-    osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
-    if( !!ptrackball ) {
-        _focalDistance = ptrackball->getDistance();
-    }
-    else {
-        _focalDistance = 0;
-    }
-
-    if( fTimeElapsed > 0 ) {
-        // animate the camera if necessary
-        bool bTracking=false;
-        Transform tTrack;
-        KinBody::LinkPtr ptrackinglink = _ptrackinglink;
-        if( !!ptrackinglink ) {
-            bTracking = true;
-            tTrack = ptrackinglink->GetTransform()*_tTrackingLinkRelative;
-            //tTrack.trans = ptrackinglink->ComputeAABB().pos;
-        }
-        RobotBase::ManipulatorPtr ptrackingmanip=_ptrackingmanip;
-        if( !!ptrackingmanip ) {
-            bTracking = true;
-            tTrack = ptrackingmanip->GetTransform();
-        }
-
-        if( bTracking ) {
-
-            RaveVector<float> vup(0,0,1); // up vector that camera should always be oriented to
-            if( !!GetEnv()->GetPhysicsEngine() ) {
-                Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
-                if( vgravity.lengthsqr3() > g_fEpsilon ) {
-                    vup = -vgravity*(1.0/RaveSqrt(vgravity.lengthsqr3()));
-                }
-            }
-            RaveVector<float> vlookatdir = _Tcamera.trans - tTrack.trans;
-            vlookatdir -= vup*vup.dot3(vlookatdir);
-            float flookatlen = sqrtf(vlookatdir.lengthsqr3());
-            vlookatdir = vlookatdir*cosf(_fTrackAngleToUp) + flookatlen*sinf(_fTrackAngleToUp)*vup; // flookatlen shouldn't change
-            if( flookatlen > g_fEpsilon ) {
-                vlookatdir *= 1/flookatlen;
-            }
-            else {
-                vlookatdir = Vector(1,0,0);
-            }
-            vup -= vlookatdir*vlookatdir.dot3(vup);
-            vup.normalize3();
-
-            //RaveVector<float> vcameradir = ExtractAxisFromQuat(_Tcamera.rot, 2);
-            //RaveVector<float> vToDesiredQuat = quatRotateDirection(vcameradir, vlookatdir);
-            //RaveVector<float> vDestQuat = quatMultiply(vToDesiredQuat, _Tcamera.rot);
-            //vDestQuat = quatMultiply(quatRotateDirection(ExtractAxisFromQuat(vDestQuat,1), vup), vDestQuat);
-            float angle = normalizeAxisRotation(vup, _Tcamera.rot).first;
-            RaveVector<float> vDestQuat = quatMultiply(quatFromAxisAngle(vup, -angle), quatRotateDirection(RaveVector<float>(0,1,0), vup));
-            //transformLookat(tTrack.trans, _Tcamera.trans, vup);
-
-            // focal distance is the tracking radius. ie how far from the coord system camera shoud be
-            RaveVector<float> vDestPos = tTrack.trans + ExtractAxisFromQuat(vDestQuat,2)*_focalDistance;
-
-            if(1) {
-                // PID animation
-                float pconst = 0.02;
-                float dconst = 0.2;
-                RaveVector<float> newtrans = _Tcamera.trans + fTimeElapsed*_tTrackingCameraVelocity.trans;
-                newtrans += pconst*(vDestPos - _Tcamera.trans); // proportional term
-                newtrans -= dconst*_tTrackingCameraVelocity.trans*fTimeElapsed; // derivative term (target is zero velocity)
-
-                pconst = 0.001;
-                dconst = 0.04;
-                RaveVector<float> newquat = _Tcamera.rot + fTimeElapsed*_tTrackingCameraVelocity.rot;
-                newquat += pconst*(vDestQuat - _Tcamera.rot);
-                newquat -= dconst*_tTrackingCameraVelocity.rot*fTimeElapsed;
-                newquat.normalize4();
-                // have to make sure newquat's y vector aligns with vup
-
-                _tTrackingCameraVelocity.trans = (newtrans-_Tcamera.trans)*(2/fTimeElapsed) - _tTrackingCameraVelocity.trans;
-                _tTrackingCameraVelocity.rot = (newquat-_Tcamera.rot)*(2/fTimeElapsed) - _tTrackingCameraVelocity.rot;
-                _Tcamera.trans = newtrans;
-                _Tcamera.rot = newquat;
-            }
-            else {
-                _Tcamera.trans = vDestPos;
-                _Tcamera.rot = vDestQuat;
-            }
-
-            _SetCameraTransform();
-        }
-    }
+    _posgWidget->SetViewport(width, height); // < need to do this since resizeGL is not properly called when using viewer in embedded apps (other than openrave standalone viewer)
 
     double fovy, aspectRatio, zNear, zFar;
     _posgWidget->GetCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
@@ -1208,27 +1126,28 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
     if( focalDistance > 0 ) {
         _SetCameraDistanceToFocus(focalDistance);
     }
-    _ptrackinglink.reset();
-    _ptrackingmanip.reset();
     EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
     KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
     if( !pbody ) {
+        // restore navigation manipulator
+        _StopTrackLink();
         return false;
     }
-    _ptrackinglink = pbody->GetLink(linkname);
-    if( !!_ptrackinglink ) {
-        sinput >> tTrackingLinkRelative;
-        if( !!sinput ) {
-            _tTrackingLinkRelative = tTrackingLinkRelative;
-        }
-        else {
+    KinBody::LinkPtr requestedLink = pbody->GetLink(linkname);
+    RaveTransform<float> requestedLinkRelativeTransform;
+
+    if( !!requestedLink ) {
+        sinput >> requestedLinkRelativeTransform;
+        if( !sinput ) {
             RAVELOG_WARN("failed to get tracking link relative trans\n");
-            _tTrackingLinkRelative = Transform(); // use the identity
+            requestedLinkRelativeTransform = Transform(); // use the identity
         }
     }
-    if( bresetvelocity ) {
-        _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
+
+    if(!_TrackLink(requestedLink, requestedLinkRelativeTransform)) {
+        return false;
     }
+
     return !!_ptrackinglink;
 }
 
@@ -1242,18 +1161,24 @@ bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
         // not sure if this is thread safe...
         _SetCameraDistanceToFocus(focalDistance);
     }
-    _ptrackinglink.reset();
-    _ptrackingmanip.reset();
+
     EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
     RobotBasePtr probot = GetEnv()->GetRobot(robotname);
-    if( !probot ) {
+    RobotBase::ManipulatorPtr requestedManipulator = NULL;
+    if( !!probot ) {
+        requestedManipulator = probot->GetManipulator(manipname);
+    }
+    if( !requestedManipulator ) {
+        _StopTrackLink();
         return false;
     }
-    _ptrackingmanip = probot->GetManipulator(manipname);
-    if( bresetvelocity ) {
-        _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
+
+    RaveTransform<float> relativeTransform = requestedManipulator->GetLocalToolTransform();
+    if( !_TrackLink(requestedManipulator->GetEndEffector(), relativeTransform, str(boost::format("%s manipulator %s")%robotname%manipname)) ) {
+        return false;
     }
-    return !!_ptrackingmanip;
+
+    return !!_ptrackinglink;
 }
 
 bool QtOSGViewer::_SetTrackingAngleToUpCommand(ostream& sout, istream& sinput)
@@ -1313,11 +1238,55 @@ bool QtOSGViewer::_SetProjectionModeCommand(ostream& sout, istream& sinput)
     return true;
 }
 
-bool QtOSGViewer::_ZoomCommand(ostream& sout, istream& sinput)
+bool QtOSGViewer::_MoveCameraZoomCommand(ostream& sout, istream& sinput)
 {
     float factor = 1.0f;
     sinput >> factor;
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Zoom, this, factor));
+
+    bool isPan;
+    sinput >> isPan;
+
+    float panDelta = 0;
+    if(isPan) {
+        sinput >> panDelta;
+    }
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, isPan, panDelta));
+    return true;
+}
+
+bool QtOSGViewer::_RotateCameraXDirectionCommand(ostream& sout, istream& sinput)
+{
+    float thetaX = 0.0f;
+    sinput >> thetaX;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraXDirection, this, thetaX));
+    return true;
+}
+
+bool QtOSGViewer::_RotateCameraYDirectionCommand(ostream& sout, istream& sinput)
+{
+    float thetaY = 0.0f;
+    sinput >> thetaY;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraYDirection, this, thetaY));
+    return true;
+}
+
+bool QtOSGViewer::_PanCameraXDirectionCommand(ostream& sout, istream& sinput)
+{
+    float dx = 0.0f;
+    sinput >> dx;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraXDirection, this, dx));
+    return true;
+}
+
+bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
+{
+    float dy = 0.0f;
+    sinput >> dy;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraYDirection, this, dy));
     return true;
 }
 
@@ -1406,17 +1375,7 @@ bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<fl
 
 void QtOSGViewer::_SetCameraTransform()
 {
-    osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
-    if( !!ptrackball ) {
-        ptrackball->setDistance(_focalDistance);
-    }
-
-    // has to come after setting distance because internally orbit manipulator uses the distance to deduct view center
-    _posgWidget->GetCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
-
-    //osg::Vec3d eye, center, up;
-    //osg::Matrix::inverse(GetMatrixFromRaveTransform(_Tcamera)).getLookAt(eye, center, up, _focalDistance);
-    //_posgWidget->GetCameraManipulator()->setTransformation(eye, center, up);
+    _posgWidget->GetDefaultCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
 }
 
 void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
@@ -1424,12 +1383,7 @@ void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
     _Tcamera = trans*trot;
 
-    if (focalDistance > 0) {
-        _focalDistance = focalDistance;
-    }
-
-    _SetCameraTransform();
-    _UpdateCameraTransform(0);
+    _SetCameraDistanceToFocus(focalDistance);
 }
 
 void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistance)
@@ -1437,14 +1391,57 @@ void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistan
     _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance));
 }
 
-void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
+void QtOSGViewer::_StopTrackLink()
 {
-    if (focalDistance > 0) {
-        _focalDistance = focalDistance;
+    _ptrackinglink.reset();
+    _posgWidget->StopTrackNode();
+    if(_cameraMoveModeButton != NULL) {
+        _cameraMoveModeButton->setEnabled(true);
+    }
+}
+
+bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText)
+{
+    if(!!_ptrackinglink && _ptrackinglink == link && _currentTrackLinkRelTransform.Compare(linkRelativeTranslation)) {
+        // already tracking the requested link, nothing to be done
+        return true;
+    }
+    _ptrackinglink = link;
+    _currentTrackLinkRelTransform = linkRelativeTranslation;
+    if(!link) {
+        RAVELOG_ERROR("Could not set track manipulator to track link");
+        return false;
     }
 
+    KinBodyPtr parent = link->GetParent();
+    KinBodyItemPtr parentIem = _posgWidget->GetItemFromKinBody(parent);
+    OSGNodePtr osgNode = parentIem->GetOSGLink(link->GetIndex());
+    if(!osgNode) {
+        // something gone seriously wrong...
+        RAVELOG_ERROR(str(boost::format("Corresponding OSG Node is invalid for Link %d of KinBody %s")%link->GetIndex()%parentIem->GetName()));
+        return false;
+    }
+
+    osg::Vec3d linkOffset(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]);
+    if (infoText.size() == 0) {
+        infoText = str(boost::format("%s/%s")%parentIem->GetName()%link->GetName());
+    }
+    _posgWidget->TrackNode(osgNode, infoText, linkOffset, _posgWidget->GetCurrentManipulatorDistanceToFocus());
+    if(_cameraMoveModeButton != NULL) {
+        _cameraMoveModeButton->setEnabled(false);
+    }
+    return true;
+}
+
+void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
+{
+    _posgWidget->SetCurrentManipulatorDistanceToFocus(focalDistance);
     _SetCameraTransform();
-    _UpdateCameraTransform(0);
+}
+
+double QtOSGViewer::_GetCameraDistanceToFocus()
+{
+    return _posgWidget->GetCurrentManipulatorDistanceToFocus();
 }
 
 RaveTransform<float> QtOSGViewer::GetCameraTransform() const
@@ -1458,7 +1455,7 @@ RaveTransform<float> QtOSGViewer::GetCameraTransform() const
 float QtOSGViewer::GetCameraDistanceToFocus() const
 {
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
-    return _focalDistance;
+    return _posgWidget->GetCurrentManipulatorDistanceToFocus();
 }
 
 geometry::RaveCameraIntrinsics<float> QtOSGViewer::GetCameraIntrinsics() const
@@ -1855,14 +1852,34 @@ void QtOSGViewer::Move(int x, int y)
     _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
 }
 
-void QtOSGViewer::Zoom(float factor)
+void QtOSGViewer::MoveCameraZoom(float factor, bool isPan, float panDelta)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Zoom, this, factor));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, isPan, panDelta));
 }
 
-void QtOSGViewer::_Zoom(float factor)
+void QtOSGViewer::_RotateCameraXDirection(float thetaX)
 {
-    _posgWidget->Zoom(factor);
+    _posgWidget->RotateCameraXDirection(thetaX);
+}
+
+void QtOSGViewer::_RotateCameraYDirection(float thetaY)
+{
+    _posgWidget->RotateCameraYDirection(thetaY);
+}
+
+void QtOSGViewer::_PanCameraXDirection(float dx)
+{
+    _posgWidget->PanCameraXDirection(dx);
+}
+
+void QtOSGViewer::_PanCameraYDirection(float dy)
+{
+    _posgWidget->PanCameraYDirection(dy);
+}
+
+void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)
+{
+    _posgWidget->MoveCameraZoom(factor, isPan, panDelta);
 }
 
 void QtOSGViewer::SetName(const string& name)
@@ -2066,7 +2083,7 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtOSGViewer::LockEnvironmen
             break;
         }
         if( bUpdateEnvironment ) {
-            _UpdateEnvironment(0);
+            _UpdateEnvironment();
         }
     }
 
@@ -2076,7 +2093,7 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtOSGViewer::LockEnvironmen
     return lockenv;
 }
 
-void QtOSGViewer::_UpdateEnvironment(float fTimeElapsed)
+void QtOSGViewer::_UpdateEnvironment()
 {
     boost::mutex::scoped_lock lockupd(_mutexUpdating);
 
@@ -2099,7 +2116,7 @@ void QtOSGViewer::_UpdateEnvironment(float fTimeElapsed)
 
         // have to update model after messages since it can lock the environment
         UpdateFromModel();
-        _UpdateCameraTransform(fTimeElapsed);
+        _UpdateViewport();
     }
 }
 
