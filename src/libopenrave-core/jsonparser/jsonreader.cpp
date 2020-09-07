@@ -218,6 +218,12 @@ public:
 
     void SetFilename(const std::string& filename) {
         _filename = filename;
+
+        // need to convert absolute filename back to openrave:/filename
+        std::string newFilename;
+        if (RaveInvertFileLookup(newFilename, filename)) {
+            _uri = _vOpenRAVESchemeAliases[0] + ":/" + newFilename;
+        }
     }
 
 protected:
