@@ -336,7 +336,7 @@ protected:
     double _zNear; ///< In OSG, znear and zfar are updated by CullVisitor, which
                    ///  causing getProjectionMatrixAsXXX to return negative
                    ///  values. Therefore, we manage zNear ourselves
-    double _currentOrthoFrustumSize;
+    double _currentOrthoFrustumSize; ///< coordinate for the right vertical clipping plane 
 
     void GetSwitchedButtonValue(unsigned int &button);
 };

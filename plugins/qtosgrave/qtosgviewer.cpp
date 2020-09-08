@@ -1432,7 +1432,6 @@ bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& 
 
 void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
 {
-    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
     _posgWidget->SetCameraDistanceToFocus(focalDistance);
     _SetCameraTransform();
 }
@@ -1865,7 +1864,7 @@ void QtOSGViewer::_PanCameraYDirection(float dy)
     _posgWidget->PanCameraYDirection(dy);
 }
 
-void QtOSGViewer::_MoveCameraPointOfView(const std::string& axis) 
+void QtOSGViewer::_MoveCameraPointOfView(const std::string& axis)
 {
     _posgWidget->MoveCameraPointOfView(axis);
 }
