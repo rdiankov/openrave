@@ -3326,6 +3326,9 @@ public:
                                 }
                             }
                         }
+                        else if( pmanipchild->getElementName() == string("restrict_graspset_name") ) {
+                            manipinfo._vRestrictGraspSetNames.push_back(pmanipchild->getCharData());
+                        }
                         else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_tip") && pmanipchild->getElementName() != string("grippername") && pmanipchild->getElementName() != string("toolChangerConnectedBodyToolName") ) {
                             RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%manipinfo._name));
                         }
