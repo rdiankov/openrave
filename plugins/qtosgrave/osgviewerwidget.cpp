@@ -1177,9 +1177,9 @@ void QOSGViewerWidget::_MoveCameraPointOfView(const osg::Vec3d& axis)
 
     osg::Vec3d worldUpVector;
     _GetRAVEEnvironmentUpVector(worldUpVector);
-    double worldUpAlignment = abs(axis * worldUpVector);
+    double cosWorldUpAlignment = abs(axis * worldUpVector);
 
-    if((1-worldUpAlignment) < 1e-3) {
+    if((1-cosWorldUpAlignment) < 1e-3) {
         // view direction is aligned with world up, use another up axis
         worldUpVector = osg::Vec3d(0,1,0);
         // try to find another vector that is not aligned with worldUp
