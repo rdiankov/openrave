@@ -533,7 +533,7 @@ private:
 //    }
 //}
 
-QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
+QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, bool useMultiSamples,
                                    const boost::function<bool(int)>& onKeyDown, double metersinunit,
                                    QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
 {
@@ -542,6 +542,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     setMouseTracking(true);
     _userdatakey = userdatakey;
     _penv = penv;
+    _useMultiSamples = useMultiSamples;
     _bSwitchMouseLeftMiddleButton = false;
     _bLightOn = true;
     _bIsSelectiveActive = false;
@@ -744,7 +745,7 @@ void QOSGViewerWidget::SetSceneData()
     rootscene->addChild(_osgFigureRoot);
 
     QRect screenGeometry = QApplication::screens()[0]->geometry();
-    osg::ref_ptr<osg::Group> outlineScene = _outlineRenderPipeline.CreateOutlineSceneFromOriginalScene(GetCamera(), rootscene, screenGeometry.width(), screenGeometry.height());
+    osg::ref_ptr<osg::Group> outlineScene = _outlineRenderPipeline.CreateOutlineSceneFromOriginalScene(GetCamera(), rootscene, screenGeometry.width(), screenGeometry.height(), _useMultiSamples);
     _osgview->setSceneData(outlineScene);
 
     // set DISABLE_ADVANCED_CONTOUR_LINE_SHADERS to true to run using compatible code
@@ -1047,6 +1048,11 @@ void QOSGViewerWidget::PanCameraYDirection(float dy)
     _PanCameraTowardsDirection(dy, osg::Vec3d(0,1,0));
 }
 
+void QOSGViewerWidget::SetEnabledRenderingShaders(bool value)
+{
+    _outlineRenderPipeline.SetCompatibilityModeEnabled(!value);
+}
+
 double QOSGViewerWidget::GetCameraNearPlane()
 {
     return _zNear;
@@ -1090,6 +1096,8 @@ void QOSGViewerWidget::SetViewport(int width, int height)
     _osgHudText->setPosition(osg::Vec3(-width * scale / 2 + 10, height * scale / 2 - textheight, -50));
     _osgHudText->setCharacterSize(textheight);
     _UpdateHUDAxisTransform(width, height);
+
+    _outlineRenderPipeline.HandleResize(width, height);
 }
 
 void QOSGViewerWidget::_UpdateHUDAxisTransform(int width, int height)
@@ -1585,6 +1593,8 @@ OSGNodePtr QOSGViewerWidget::_AddDraggerToObject(const std::string& draggerName,
 
 void QOSGViewerWidget::initializeGL() {
     resizeGL(width(), height());
+    dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
+    dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
 }
 
 void QOSGViewerWidget::paintGL()

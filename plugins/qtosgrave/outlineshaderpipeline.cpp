@@ -387,7 +387,6 @@ const std::string outline_frag =
 	"    return;\n"
 	"  }\n"
 	"\n"
-	"   gl_FragColor = mix(vec4(vec3(edgeNormal),1.0), vec4(vec3(texture2D(colorTexture0, texCoord).r),1),0.5);\n"
 	"   gl_FragColor = vec4(outlineColor, edge);\n"
 	"};\n"
 	"\n";
@@ -547,7 +546,7 @@ public:
 
 		QObject::connect(&_shaderFileWatcher, &QFileSystemWatcher::fileChanged, [=](const QString& file){
             state->ReloadShaders();
-			std::cout << "file " << file.toStdString() << " has changed, change timestamp is: " << QDateTime::currentDateTime().toString().toStdString() << std::endl;
+			RAVELOG_INFO(str(boost::format("file %s has changed, timestamp is: %s..\n")%file.toStdString()%QDateTime::currentDateTime().toString().toStdString()));
         });
 	}
 
@@ -697,17 +696,17 @@ void OutlineShaderPipeline::_SetupOutlineShaderUniforms(RenderPassState* pass)
 }
 
 osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera,
-	osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight)
+	osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight, bool useMultiSamples)
 {
 	setMaxFBOSize(1024, 1024);
 
     osg::ref_ptr<osg::Texture> depthBuffer = nullptr; // do not use extra depth buffer texture, use color to store depth buffer
 	mainSceneCamera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
-	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, prerender_vert, prerender_frag, depthBuffer.get(), true);
+	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, prerender_vert, prerender_frag, depthBuffer.get(), useMultiSamples);
 	normalAndDepthMapPass->camera->setCullMask(~qtosgrave::TRANSPARENT_ITEM_MASK);
 
 	RenderPassState* outlinePass = CreateTextureToColorBufferPass(normalAndDepthMapPass, 1, outline_vert, outline_frag);
-	RenderPassState* normalAndDepthMapPassTransparency = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, prerender_transparent_vert, prerender_transparent_frag, depthBuffer.get(), true);
+	RenderPassState* normalAndDepthMapPassTransparency = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, prerender_transparent_vert, prerender_transparent_frag, depthBuffer.get(), useMultiSamples);
 	normalAndDepthMapPassTransparency->camera->setCullMask(qtosgrave::TRANSPARENT_ITEM_MASK);
 
 	RenderPassState* outlinePassTransparency = CreateTextureToColorBufferPass(normalAndDepthMapPassTransparency, 1, outline_vert, outline_frag);

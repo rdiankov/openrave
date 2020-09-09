@@ -176,6 +176,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     "Pans the camera in the direction of the screen x vector, parallel to screen plane. The argument dx is in normalized coordinates 0 < dx < 1, where 1 means canvas width.");
     RegisterCommand("PanCameraYDirection", boost::bind(&QtOSGViewer::_PanCameraYDirectionCommand, this, _1, _2),
     "Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.");
+    RegisterCommand("SetEnableRenderingShaders", boost::bind(&QtOSGViewer::_SetEnableRenderingShadersCommand, this, _1, _2),
+    "Turn on/off the advanced rendering shaders for the 3D scene. Default is disabled");
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
@@ -240,7 +242,7 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
 #endif
     QSurfaceFormat::setDefaultFormat(surfaceFormat);
 
-    _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
+    _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, ENABLE_OPENGL_MULTISAMPLING == 1, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
 
     setCentralWidget(_posgWidget);
 
@@ -1285,6 +1287,15 @@ bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
     return true;
 }
 
+bool QtOSGViewer::_SetEnableRenderingShadersCommand(ostream& sout, istream& sinput)
+{
+    bool enabled = false;
+    sinput >> enabled;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetEnableRenderingShaders, this, enabled));
+    return true;
+}
+
 void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
 {
     if (projectionMode == "orthogonal")
@@ -1867,6 +1878,11 @@ void QtOSGViewer::_RotateCameraYDirection(float thetaY)
 void QtOSGViewer::_PanCameraXDirection(float dx)
 {
     _posgWidget->PanCameraXDirection(dx);
+}
+
+void QtOSGViewer::_SetEnableRenderingShaders(bool value)
+{
+    _posgWidget->SetEnabledRenderingShaders(value);
 }
 
 void QtOSGViewer::_PanCameraYDirection(float dy)

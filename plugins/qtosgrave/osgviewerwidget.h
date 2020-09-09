@@ -43,7 +43,7 @@ class QOSGViewerWidget : public QOpenGLWidget
 {
 public:
 
-    QOSGViewerWidget(EnvironmentBasePtr penv, const std::string &userdatakey,
+    QOSGViewerWidget(EnvironmentBasePtr penv, const std::string &userdatakey, bool useMultiSamples=false,
                      const boost::function<bool(int)> &onKeyDown = boost::function<bool(int)>(),
                      double metersinunit = 1, QWidget *parent = 0);
 
@@ -98,6 +98,10 @@ public:
 
     /// \brief Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.
     virtual void PanCameraYDirection(float dy);
+
+    /// \param value Enables / disables avanced rendering shaders. It can be heavy on GPU usage.
+    virtual void SetEnabledRenderingShaders(bool value);
+
     /// \param factor > 1.0 = zoom in. < 1.0 = zoom out
     /// \param isPan, if true, then focal distance will not change, but rather camera position will move along with focal point
     void MoveCameraZoom(float factor, bool isPan, float panDelta);
@@ -274,6 +278,7 @@ protected:
 
     virtual bool event(QEvent *event);
 
+    bool _useMultiSamples;
     OutlineShaderPipeline _outlineRenderPipeline;
 
     OSGGroupPtr _osgSceneRoot; ///< root scene node

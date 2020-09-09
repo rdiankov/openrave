@@ -39,7 +39,7 @@ public:
     void SetCompatibilityModeEnabled(bool value);
 
     /// \brief This function creates a outline scene pipeline with two passes to render a regular scene with outline edges
-    osg::ref_ptr<osg::Group> CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight);
+    osg::ref_ptr<osg::Group> CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight, bool useMultiSamples=false);
     void HandleResize(int width, int height);
     RenderPassState* CreateSceneToTexturePass(osg::ref_ptr<osg::Camera> mainSceneCamera, osg::ref_ptr<osg::Node> mainSceneRoot,
         int numColorAttachments, const std::string& vshader, const std::string& fshader, osg::Texture* reusedDepthTexture = nullptr, bool useMultiSamples=false, const std::vector<osg::ref_ptr<osg::Texture>>& inheritedColorBuffers = std::vector<osg::ref_ptr<osg::Texture>>());

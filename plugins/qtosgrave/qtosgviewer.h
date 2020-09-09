@@ -345,6 +345,7 @@ public:
     virtual void _RotateCameraYDirection(float thetaY);
     virtual void _PanCameraXDirection(float dx);
     virtual void _PanCameraYDirection(float dy);
+    virtual void _SetEnableRenderingShaders(bool value);
 
     /// \brief posts a function to be executed in the GUI thread
     ///
@@ -396,6 +397,7 @@ public:
     bool _RotateCameraYDirectionCommand(ostream& sout, istream& sinput);
     bool _PanCameraXDirectionCommand(ostream& sout, istream& sinput);
     bool _PanCameraYDirectionCommand(ostream& sout, istream& sinput);
+    bool _SetEnableRenderingShadersCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
