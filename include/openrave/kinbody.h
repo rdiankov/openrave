@@ -343,7 +343,6 @@ public:
         LinkInfo(const LinkInfo& other) {
             *this = other;
         }
-        LinkInfo& operator=(const LinkInfo& other);
         bool operator==(const LinkInfo& other) const;
         bool operator!=(const LinkInfo& other) const {
             return !operator==(other);
@@ -1046,7 +1045,6 @@ public:
         JointInfo(const JointInfo& other) {
             *this = other;
         }
-        JointInfo& operator=(const JointInfo& other);
         bool operator==(const JointInfo& other) const;
         bool operator!=(const JointInfo& other) const {
             return !operator==(other);
@@ -1668,14 +1666,6 @@ public:
         GrabbedInfo(const GrabbedInfo& other) {
             *this = other;
         }
-        GrabbedInfo& operator=(const GrabbedInfo& other) {
-            _id = other._id;
-            _grabbedname = other._grabbedname;
-            _robotlinkname = other._robotlinkname;
-            _trelative = other._trelative;
-            _setIgnoreRobotLinkNames = other._setIgnoreRobotLinkNames;
-            return *this;
-        }
         bool operator==(const GrabbedInfo& other) const {
             return _id == other._id
                    && _grabbedname == other._grabbedname
@@ -1810,38 +1800,7 @@ public:
         KinBodyInfo(const KinBodyInfo& other) {
             *this = other;
         }
-        KinBodyInfo& operator=(const KinBodyInfo& other) {
-            _id = other._id;
-            _uri = other._uri;
-            _name = other._name;
-            _referenceUri = other._referenceUri;
-            _interfaceType = other._interfaceType;
-            _dofValues = other._dofValues;
-            _transform = other._transform;
-            _vLinkInfos = other._vLinkInfos;
-            _vJointInfos = other._vJointInfos;
-            _vGrabbedInfos = other._vGrabbedInfos;
-            _mReadableInterfaces = other._mReadableInterfaces;
-            _isRobot = other._isRobot;
-
-            // TODO: deep copy infos
-            return *this;
-        }
-        bool operator==(const KinBodyInfo& other) const {
-            return _id == other._id
-                   && _uri == other._uri
-                   && _name == other._name
-                   && _referenceUri == other._referenceUri
-                   && _interfaceType == other._interfaceType
-                   && _dofValues == other._dofValues
-                   && _transform == other._transform
-                   && _vLinkInfos == other._vLinkInfos
-                   && _vJointInfos == other._vJointInfos
-                   && _vGrabbedInfos == other._vGrabbedInfos
-                   && _mReadableInterfaces == other._mReadableInterfaces
-                   && _isRobot == other._isRobot;
-            // TODO: deep compare infos
-        }
+        bool operator==(const KinBodyInfo& other) const;
         bool operator!=(const KinBodyInfo& other) const {
             return !operator==(other);
         }
