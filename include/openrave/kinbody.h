@@ -366,7 +366,7 @@ public:
         /// the frame for inertia and center of mass of the link in the link's coordinate system
         Transform _tMassFrame;
         /// mass of link
-        dReal _mass; ///< kg
+        dReal _mass = 1e-10; ///< kg, set default to non-zero value to avoid divide by 0 for inverse dynamics/physics computations
 
         Vector _vinertiamoments; ///< kg*unit**2 inertia along the axes of _tMassFrame
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
