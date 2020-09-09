@@ -1420,7 +1420,7 @@ public:
         }
         KinBody::LinkPtr plink(new KinBody::Link(pkinbody));
         plink->_info._name = name;
-        plink->_info._mass = 1.0;
+        plink->_info._mass = 1e-10; // default should be small mass
         plink->_info._bStatic = false;
         plink->_info._t = getNodeParentTransform(pdomnode) * _ExtractFullTransform(pdomnode);
         bool bhasgeometry = ExtractGeometries(pdomnode, plink->_info._t, plink, bindings, vprocessednodes);
@@ -3325,6 +3325,9 @@ public:
                                     RAVELOG_WARN("invalid interface_type\n");
                                 }
                             }
+                        }
+                        else if( pmanipchild->getElementName() == string("restrict_graspset_name") ) {
+                            manipinfo._vRestrictGraspSetNames.push_back(pmanipchild->getCharData());
                         }
                         else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_tip") && pmanipchild->getElementName() != string("grippername") && pmanipchild->getElementName() != string("toolChangerConnectedBodyToolName") ) {
                             RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%manipinfo._name));
