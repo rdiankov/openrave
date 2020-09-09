@@ -138,6 +138,22 @@ void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, d
     orjson::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
 }
 
+
+bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
+    return _id == other._id
+           && _uri == other._uri
+           && _name == other._name
+           && _referenceUri == other._referenceUri
+           && _interfaceType == other._interfaceType
+           && _dofValues == other._dofValues
+           && _transform == other._transform
+           && _isRobot == other._isRobot
+           && AreVectorsDeepEqual(_vLinkInfos, other._vLinkInfos)
+           && AreVectorsDeepEqual(_vJointInfos, other._vJointInfos)
+           && AreVectorsDeepEqual(_vGrabbedInfos, other._vGrabbedInfos)
+           && _mReadableInterfaces == other._mReadableInterfaces; // TODO
+}
+
 void KinBody::KinBodyInfo::Reset()
 {
     _id.clear();

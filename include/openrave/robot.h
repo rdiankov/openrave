@@ -82,6 +82,7 @@ public:
         GripperInfo(const GripperInfo& other) {
             *this = other;
         };
+        // need this because of _docGripperInfo
         GripperInfo& operator=(const GripperInfo& other);
         bool operator==(const GripperInfo& other) const {
             return _id == other._id
@@ -502,6 +503,7 @@ public:
         AttachedSensorInfo(const AttachedSensorInfo& other) {
             *this = other;
         };
+        // need this because of _docSensorGeometry
         AttachedSensorInfo& operator=(const AttachedSensorInfo& other) {
             _id = other._id;
             _name = other._name;
@@ -651,7 +653,6 @@ public:
         ConnectedBodyInfo(const ConnectedBodyInfo& other) {
             *this = other;
         };
-        ConnectedBodyInfo& operator=(const ConnectedBodyInfo& other);
         bool operator==(const ConnectedBodyInfo& other) const;
         bool operator!=(const ConnectedBodyInfo& other) const {
             return !operator==(other);
@@ -809,7 +810,6 @@ public:
         RobotBaseInfo(const RobotBaseInfo& other) : KinBodyInfo(other) {
             *this = other;
         };
-        RobotBaseInfo& operator=(const RobotBaseInfo& other);
         bool operator==(const RobotBaseInfo& other) const;
         bool operator!=(const RobotBaseInfo& other) const{
             return !operator==(other);

@@ -260,49 +260,13 @@ bool RobotBase::ConnectedBodyInfo::operator==(const RobotBase::ConnectedBodyInfo
            && _linkname == other._linkname
            && _uri == other._uri
            && _trelative == other._trelative
-           && _vLinkInfos == other._vLinkInfos
-           && _vJointInfos == other._vJointInfos
-           && _vManipulatorInfos == other._vManipulatorInfos
-           && _vAttachedSensorInfos == other._vAttachedSensorInfos
-           && _vGripperInfos == other._vGripperInfos
            && _bIsActive == other._bIsActive
-           && IsInfoVectorEqual(_vLinkInfos, other._vLinkInfos)
-           && IsInfoVectorEqual(_vJointInfos, other._vJointInfos)
-           && IsInfoVectorEqual(_vManipulatorInfos, other._vManipulatorInfos)
-           && IsInfoVectorEqual(_vAttachedSensorInfos, other._vAttachedSensorInfos)
-           && IsInfoVectorEqual(_vGripperInfos, other._vGripperInfos);
+           && AreVectorsDeepEqual(_vLinkInfos, other._vLinkInfos)
+           && AreVectorsDeepEqual(_vJointInfos, other._vJointInfos)
+           && AreVectorsDeepEqual(_vManipulatorInfos, other._vManipulatorInfos)
+           && AreVectorsDeepEqual(_vAttachedSensorInfos, other._vAttachedSensorInfos)
+           && AreVectorsDeepEqual(_vGripperInfos, other._vGripperInfos);
 }
-
-RobotBase::ConnectedBodyInfo& RobotBase::ConnectedBodyInfo::operator=(const RobotBase::ConnectedBodyInfo& other) {
-    _id = other._id;
-    _name = other._name;
-    _linkname = other._linkname;
-    _uri = other._uri;
-    _trelative = other._trelative;
-    _vLinkInfos.resize(other._vLinkInfos.size());
-    for (size_t iLink = 0; iLink < other._vLinkInfos.size(); iLink++) {
-        _vLinkInfos[iLink].reset(new LinkInfo(*other._vLinkInfos[iLink]));
-    }
-    _vJointInfos.resize(other._vJointInfos.size());
-    for (size_t iJoint = 0; iJoint < other._vJointInfos.size(); iJoint++) {
-        _vJointInfos[iJoint].reset(new JointInfo(*other._vJointInfos[iJoint]));
-    }
-    _vManipulatorInfos.resize(other._vManipulatorInfos.size());
-    for (size_t iManipulator = 0; iManipulator < other._vManipulatorInfos.size(); iManipulator++) {
-        _vManipulatorInfos[iManipulator].reset(new ManipulatorInfo(*other._vManipulatorInfos[iManipulator]));
-    }
-    _vAttachedSensorInfos.resize(other._vAttachedSensorInfos.size());
-    for (size_t iAttachedSensor = 0; iAttachedSensor < other._vAttachedSensorInfos.size(); iAttachedSensor++) {
-        _vAttachedSensorInfos[iAttachedSensor].reset(new AttachedSensorInfo(*other._vAttachedSensorInfos[iAttachedSensor]));
-    }
-    _vGripperInfos.resize(other._vGripperInfos.size());
-    for (size_t iGripperInfo = 0; iGripperInfo < other._vGripperInfos.size(); iGripperInfo++) {
-        _vGripperInfos[iGripperInfo].reset(new GripperInfo(*other._vGripperInfos[iGripperInfo]));
-    }
-    _bIsActive = other._bIsActive;
-    return *this;
-}
-
 
 RobotBase::ConnectedBody::ConnectedBody(RobotBasePtr probot) : _pattachedrobot(probot)
 {
@@ -530,84 +494,27 @@ UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::C
         return UFIR_RequireReinitialize;
     }
 
-    // TODO: all these GetResolvedXXX is not correct, if the robot is not in the env, they will return empty
-
-    // _vLinkInfos, links has orders, so only compare one by one
-    std::vector<KinBody::LinkPtr> links;
-    GetResolvedLinks(links);
-    if (links.size() != info._vLinkInfos.size()) {
+    if (!AreVectorsDeepEqual(info._vLinkInfos, _info._vLinkInfos)) {
         RAVELOG_VERBOSE_FORMAT("connected body %s links changed", _info._id);
         return UFIR_RequireReinitialize;
     }
-    for(size_t iLink = 0; iLink < links.size(); iLink++) {
-        KinBody::LinkInfo linkInfo;
-        links[iLink]->ExtractInfo(linkInfo);  // might be slow
-        if (linkInfo != (*info._vLinkInfos[iLink])) {
-            RAVELOG_VERBOSE_FORMAT("connected body %s links changed", _info._id);
-            return UFIR_RequireReinitialize;
-        }
-    }
 
-    // _vJointInfos
-    std::vector<KinBody::JointPtr> joints;
-    GetResolvedJoints(joints);
-    std::vector<KinBody::JointInfoPtr> jointInfos;
-    jointInfos.reserve(joints.size());
-    for(std::vector<KinBody::JointPtr>::iterator itJoint = joints.begin(); itJoint != joints.end(); itJoint++) {
-        KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo());
-        (*itJoint)->ExtractInfo(*pJointInfo);  // might be slow
-        jointInfos.push_back(pJointInfo);
-    }
-    std::vector<KinBody::JointInfoPtr> diffJointInfo;
-    GetInfoVectorDiff(jointInfos, info._vJointInfos, diffJointInfo);
-    if (diffJointInfo.size() > 0) {
+    if (!AreVectorsDeepEqual(info._vJointInfos, _info._vJointInfos)) {
         RAVELOG_VERBOSE_FORMAT("connected body %s joints changed", _info._id);
         return UFIR_RequireReinitialize;
     }
 
-    // _vManipulatorInfos
-    std::vector<RobotBase::ManipulatorPtr> manipulators;
-    GetResolvedManipulators(manipulators);
-
-    std::vector<RobotBase::ManipulatorInfoPtr> manipulatorInfos;
-    manipulatorInfos.reserve(manipulators.size());
-    for(std::vector<RobotBase::ManipulatorPtr>::iterator itManip = manipulators.begin(); itManip != manipulators.end(); itManip++) {
-        RobotBase::ManipulatorInfoPtr pManipInfo(new RobotBase::ManipulatorInfo());
-        (*itManip)->ExtractInfo(*pManipInfo);
-        manipulatorInfos.push_back(pManipInfo);
-    }
-    std::vector<RobotBase::ManipulatorInfoPtr> diffManipInfo;
-    GetInfoVectorDiff(manipulatorInfos, info._vManipulatorInfos, diffManipInfo);
-
-    if (diffManipInfo.size() > 0) {
+    if (!AreVectorsDeepEqual(info._vManipulatorInfos, _info._vManipulatorInfos)) {
         RAVELOG_VERBOSE_FORMAT("connected body %s manipulators changed", _info._id);
         return UFIR_RequireReinitialize;
     }
 
-    // _vAttachedSensorInfos
-    std::vector<RobotBase::AttachedSensorPtr> attachedSensors;
-    GetResolvedAttachedSensors(attachedSensors);
-    std::vector<RobotBase::AttachedSensorInfoPtr> attachedSensorInfos;
-    attachedSensorInfos.reserve(attachedSensors.size());
-    for(std::vector<RobotBase::AttachedSensorPtr>::iterator itAttachedSensor = attachedSensors.begin(); itAttachedSensor != attachedSensors.end(); itAttachedSensor++) {
-        RobotBase::AttachedSensorInfoPtr pAttachedSensorInfo(new RobotBase::AttachedSensorInfo());
-        (*itAttachedSensor)->ExtractInfo(*pAttachedSensorInfo);
-        attachedSensorInfos.push_back(pAttachedSensorInfo);
-    }
-    std::vector<RobotBase::AttachedSensorInfoPtr> diffAttachedSensorInfo;
-    GetInfoVectorDiff(attachedSensorInfos, info._vAttachedSensorInfos, diffAttachedSensorInfo);
-
-    if (diffAttachedSensorInfo.size() > 0) {
+    if (!AreVectorsDeepEqual(info._vAttachedSensorInfos, _info._vAttachedSensorInfos)) {
         RAVELOG_VERBOSE_FORMAT("connected body %s attached sensors changed", _info._id);
         return UFIR_RequireReinitialize;
     }
 
-    // _vGripperInfos
-    std::vector<RobotBase::GripperInfoPtr> gripperInfos;
-    GetResolvedGripperInfos(gripperInfos);
-    std::vector<RobotBase::GripperInfoPtr> diffGripperInfo;
-    GetInfoVectorDiff(gripperInfos, info._vGripperInfos, diffGripperInfo);
-    if (diffGripperInfo.size() > 0) {
+    if (!AreVectorsDeepEqual(info._vGripperInfos, _info._vGripperInfos)) {
         RAVELOG_VERBOSE_FORMAT("connected body %s gripper infos changed", _info._id);
         return UFIR_RequireReinitialize;
     }

@@ -439,7 +439,7 @@ bool KinBody::JointInfo::operator==(const KinBody::JointInfo& other) const
            && _vlowerlimit == other._vlowerlimit
            && _vupperlimit == other._vupperlimit
            && _trajfollow == other._trajfollow
-           && _vmimic == other._vmimic
+           && AreArraysDeepEqual(_vmimic, other._vmimic)
            && _mapFloatParameters == other._mapFloatParameters
            && _mapIntParameters == other._mapIntParameters
            && _mapStringParameters == other._mapStringParameters
@@ -450,91 +450,6 @@ bool KinBody::JointInfo::operator==(const KinBody::JointInfo& other) const
            && _jci_robotcontroller == other._jci_robotcontroller
            && _jci_io == other._jci_io
            && _jci_externaldevice == other._jci_externaldevice;
-}
-
-KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
-{
-    _id = other._id;
-    _type = other._type;
-    _name = other._name;
-    _linkname0 = other._linkname0;
-    _linkname1 = other._linkname1;
-    _vanchor = other._vanchor;
-    _vaxes = other._vaxes;
-    _vcurrentvalues = other._vcurrentvalues;
-    _vresolution = other._vresolution;
-    _vmaxvel = other._vmaxvel;
-    _vhardmaxvel = other._vhardmaxvel;
-    _vmaxaccel = other._vmaxaccel;
-    _vhardmaxaccel = other._vhardmaxaccel;
-    _vmaxjerk = other._vmaxjerk;
-    _vhardmaxjerk = other._vhardmaxjerk;
-    _vmaxtorque = other._vmaxtorque;
-    _vmaxinertia = other._vmaxinertia;
-    _vweights = other._vweights;
-    _voffsets = other._voffsets;
-    _vlowerlimit = other._vlowerlimit;
-    _vupperlimit = other._vupperlimit;
-
-    if( !other._trajfollow ) {
-        _trajfollow.reset();
-    }
-    else {
-        _trajfollow = RaveClone<TrajectoryBase>(other._trajfollow, Clone_All);
-    }
-
-    for( size_t i = 0; i < _vmimic.size(); ++i ) {
-        if( !other._vmimic[i] ) {
-            _vmimic[i].reset();
-        }
-        else {
-            _vmimic[i].reset(new MimicInfo(*(other._vmimic[i])));
-        }
-    }
-
-    _mapFloatParameters = other._mapFloatParameters;
-    _mapIntParameters = other._mapIntParameters;
-    _mapStringParameters = other._mapStringParameters;
-
-    if( !other._infoElectricMotor ) {
-        _infoElectricMotor.reset();
-    }
-    else {
-        _infoElectricMotor.reset(new ElectricMotorActuatorInfo(*other._infoElectricMotor));
-    }
-
-    _bIsCircular = other._bIsCircular;
-    _bIsActive = other._bIsActive;
-
-    _controlMode = other._controlMode;
-    _jci_robotcontroller.reset();
-    _jci_io.reset();
-    _jci_externaldevice.reset();
-    if( _controlMode == KinBody::JCM_RobotController ) {
-        if( !other._jci_robotcontroller ) {
-            _jci_robotcontroller.reset();
-        }
-        else {
-            _jci_robotcontroller.reset(new JointControlInfo_RobotController(*other._jci_robotcontroller));
-        }
-    }
-    else if( _controlMode == KinBody::JCM_IO ) {
-        if( !other._jci_io ) {
-            _jci_io.reset();
-        }
-        else {
-            _jci_io.reset(new JointControlInfo_IO(*other._jci_io));
-        }
-    }
-    else if( _controlMode == KinBody::JCM_ExternalDevice ) {
-        if( !other._jci_externaldevice ) {
-            _jci_externaldevice.reset();
-        }
-        else {
-            _jci_externaldevice.reset(new JointControlInfo_ExternalDevice(*other._jci_externaldevice));
-        }
-    }
-    return *this;
 }
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
@@ -2501,22 +2416,9 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     // TODO: _trajfollow (not needed?)
 
     // _vmimic
-    if (_info._vmimic.size() != info._vmimic.size()) {
+    if (!AreArraysDeepEqual(_info._vmimic, info._vmimic)) {
         RAVELOG_VERBOSE_FORMAT("joint %s mimic changed", _info._id);
         return UFIR_RequireReinitialize;
-    }
-    for (size_t iMimic = 0; iMimic < _info._vmimic.size(); ++iMimic) {
-        if (!_info._vmimic[iMimic] || !info._vmimic[iMimic]) {
-            if (!!_info._vmimic[iMimic] || !!info._vmimic[iMimic]) {
-                RAVELOG_VERBOSE_FORMAT("joint %s mimic changed", _info._id);
-                return UFIR_RequireReinitialize;
-            }
-        } else {
-            if ((*_info._vmimic[iMimic]) != (*info._vmimic[iMimic])) {
-                RAVELOG_VERBOSE_FORMAT("joint %s mimic changed", _info._id);
-                return UFIR_RequireReinitialize;
-            }
-        }
     }
 
     // _mapFloatParameters
