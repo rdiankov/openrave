@@ -961,6 +961,13 @@ public:
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
         boost::array< std::string, 3>  _equations;         ///< the original equations
+
+        bool operator==(const MimicInfo& other) const {
+            return _equations == other._equations;
+        }
+        bool operator!=(const MimicInfo& other) const {
+            return !operator==(other);
+        }
     };
     typedef boost::shared_ptr<MimicInfo> MimicInfoPtr;
     typedef boost::shared_ptr<MimicInfo const> MimicInfoConstPtr;

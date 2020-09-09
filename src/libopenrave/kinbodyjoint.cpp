@@ -2501,9 +2501,22 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     // TODO: _trajfollow (not needed?)
 
     // _vmimic
-    if (_info._vmimic != info._vmimic) {
+    if (_info._vmimic.size() != info._vmimic.size()) {
         RAVELOG_VERBOSE_FORMAT("joint %s mimic changed", _info._id);
         return UFIR_RequireReinitialize;
+    }
+    for (size_t iMimic = 0; iMimic < _info._vmimic.size(); ++iMimic) {
+        if (!_info._vmimic[iMimic] || !info._vmimic[iMimic]) {
+            if (!!_info._vmimic[iMimic] || !!info._vmimic[iMimic]) {
+                RAVELOG_VERBOSE_FORMAT("joint %s mimic changed", _info._id);
+                return UFIR_RequireReinitialize;
+            }
+        } else {
+            if ((*_info._vmimic[iMimic]) != (*info._vmimic[iMimic])) {
+                RAVELOG_VERBOSE_FORMAT("joint %s mimic changed", _info._id);
+                return UFIR_RequireReinitialize;
+            }
+        }
     }
 
     // _mapFloatParameters

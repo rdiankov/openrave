@@ -1041,6 +1041,8 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
                 for(size_t j = 0; j < 3; ++j) {
                     info._vmimic[i]->_equations.at(j) = py::extract<std::string>(omimic[j]);
                 }
+            } else {
+                info._vmimic[i].reset();
             }
         }
     }
