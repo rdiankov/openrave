@@ -1651,7 +1651,7 @@ void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
 void KinBody::Joint::GetResolutions(std::vector<dReal>& resolutions, bool bAppend) const
 {
     if( !bAppend ) {
-        resolutions.resize(GetDOF());
+        resolutions.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
         resolutions.push_back(_info._vresolution[i]);
@@ -1672,7 +1672,7 @@ void KinBody::Joint::SetResolution(dReal resolution, int iaxis)
 void KinBody::Joint::GetWeights(std::vector<dReal>& weights, bool bAppend) const
 {
     if( !bAppend ) {
-        weights.resize(GetDOF());
+        weights.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
         weights.push_back(_info._vweights[i]);
@@ -2320,31 +2320,38 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
 {
     BOOST_ASSERT(info._id == _info._id);
     bool isDiff = false;
+    UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
+
     // _name
     if (GetName() != info._name) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("joint %s name changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _type
     if (GetType() != info._type) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("joint %s type changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _linkname0
     // _linkname1
     if (GetFirstAttached()->GetName() != info._linkname0 || GetSecondAttached()->GetName() != info._linkname1) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("joint %s link hierachy changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // TODO: maybe only need to call _ComputeInternalInformation?
     // _vanchor
     if (_info._vanchor != info._vanchor) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("joint %s anchor changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _vaxes
     if (_info._vaxes != info._vaxes) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("joint %s axes changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _vcurrentvalues(not needed)
@@ -2352,18 +2359,21 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     // _vresolution
     for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
         if (GetResolution(iaxis) != info._vresolution[iaxis]) {
-            return UFIR_RequireRemoveFromEnvironment;
+            RAVELOG_VERBOSE_FORMAT("joint %s resolution changed", _info._id);
+            return UFIR_RequireReinitialize;
         }
     }
 
     // _vmaxvel
     if (_info._vmaxvel != info._vmaxvel) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("joint %s max velocity changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _vhardmaxvel
     std::vector<dReal> vHardVelocityLimits;
     GetHardVelocityLimits(vHardVelocityLimits);
+    isDiff = false;
     for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
         if (vHardVelocityLimits[iaxis] != info._vhardmaxvel[iaxis]) {
             vHardVelocityLimits[iaxis] = info._vhardmaxvel[iaxis];
@@ -2372,16 +2382,19 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     }
     if (isDiff) {
         SetHardVelocityLimits(vHardVelocityLimits);
-        isDiff = false;
+        RAVELOG_VERBOSE_FORMAT("joint %s hard velocity limits changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
     // _vmaxaccel
     if (_info._vmaxaccel != info._vmaxaccel) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("joint %s max acceleration changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _vhardmaxaccel
     std::vector<dReal> vHardAccelerationLimits;
     GetHardAccelerationLimits(vHardAccelerationLimits);
+    isDiff = false;
     for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
         if (vHardAccelerationLimits[iaxis] != info._vhardmaxaccel[iaxis]) {
             vHardAccelerationLimits[iaxis] = info._vhardmaxaccel[iaxis];
@@ -2390,17 +2403,20 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     }
     if (isDiff) {
         SetHardAccelerationLimits(vHardAccelerationLimits);
-        isDiff = false;
+        RAVELOG_VERBOSE_FORMAT("joint %s hard acceleration limits changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _vmaxjerk
     if (_info._vmaxjerk != info._vmaxjerk) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("joint %s max jerk changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _vhardmaxjerk
     std::vector<dReal> vHardJerkLimits;
     GetHardJerkLimits(vHardJerkLimits);
+    isDiff = false;
     for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
         if (vHardJerkLimits[iaxis] != info._vhardmaxjerk[iaxis]) {
             vHardJerkLimits[iaxis] = info._vhardmaxjerk[iaxis];
@@ -2409,13 +2425,15 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     }
     if (isDiff) {
         SetHardJerkLimits(vHardJerkLimits);
-        isDiff = false;
+        RAVELOG_VERBOSE_FORMAT("joint %s hard jerk limits changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _vmaxtorque
     std::vector<dReal> vMaxTorque;
 
     GetTorqueLimits(vMaxTorque);
+    isDiff = false;
     for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
         if (vMaxTorque[iaxis] != info._vmaxtorque[iaxis]) {
             vMaxTorque[iaxis] = info._vmaxtorque[iaxis];
@@ -2424,12 +2442,14 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     }
     if (isDiff) {
         SetTorqueLimits(vMaxTorque);
-        isDiff = false;
+        RAVELOG_VERBOSE_FORMAT("joint %s max torque changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _vmaxinertia
     std::vector<dReal> vMaxInertialLimits;
     GetInertiaLimits(vMaxInertialLimits);
+    isDiff = false;
     for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
         if (vMaxInertialLimits[iaxis] != info._vmaxinertia[iaxis]) {
             vMaxInertialLimits[iaxis] = info._vmaxinertia[iaxis];
@@ -2438,13 +2458,14 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     }
     if (isDiff) {
         SetInertiaLimits(vMaxInertialLimits);
-        isDiff = false;
+        RAVELOG_VERBOSE_FORMAT("joint %s inertia limits changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _vweights
     std::vector<dReal> vWeights;
     GetWeights(vWeights);
-
+    isDiff = false;
     for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
         if (vWeights[iaxis] != info._vweights[iaxis]) {
             vWeights[iaxis] = info._vweights[iaxis];
@@ -2453,12 +2474,14 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     }
     if (isDiff) {
         SetWeights(vWeights);
-        isDiff = false;
+        RAVELOG_VERBOSE_FORMAT("joint %s weights changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _voffsets
     if (_info._voffsets != info._voffsets) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("joint %s offset changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _vlowerlimit
@@ -2469,13 +2492,8 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
         if (vUpperLimit[iaxis] != info._vupperlimit[iaxis] || vLowerLimit[iaxis] != info._vlowerlimit[iaxis]) {
             SetLimits(vLowerLimit, vUpperLimit);
-            break;
-        }
-    }
-
-    for(int iaxis = 0; iaxis < GetDOF(); iaxis++) {
-        if (info._vupperlimit[iaxis] != vUpperLimit[iaxis] || info._vlowerlimit[iaxis] != vLowerLimit[iaxis]) {
-            SetLimits(vLowerLimit, vUpperLimit);
+            RAVELOG_VERBOSE_FORMAT("joint %s limits changed", _info._id);
+            updateFromInfoResult = UFIR_Success;
             break;
         }
     }
@@ -2484,7 +2502,8 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
 
     // _vmimic
     if (_info._vmimic != info._vmimic) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("joint %s mimic changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _mapFloatParameters
@@ -2493,10 +2512,11 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
         FOREACH(itParam, floatParameters) {
             SetFloatParameters(itParam->first, {}); // erase current parameters
         }
-
         FOREACH(itParam, info._mapFloatParameters) {
             SetFloatParameters(itParam->first, itParam->second);  // update with new info
         }
+        RAVELOG_VERBOSE_FORMAT("joint %s float parameters changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _mapIntParameters
@@ -2508,6 +2528,8 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
         FOREACH(itParam, info._mapIntParameters) {
             SetIntParameters(itParam->first, itParam->second);
         }
+        RAVELOG_VERBOSE_FORMAT("joint %s int parameters changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _mapStringParameters
@@ -2519,6 +2541,8 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
         FOREACH(itParam, info._mapStringParameters) {
             SetStringParameters(itParam->first, itParam->second);
         }
+        RAVELOG_VERBOSE_FORMAT("joint %s string parameters changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _infoElectricMotor
@@ -2527,31 +2551,40 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
             // both are not empty, compare the content
             if (*(_info._infoElectricMotor) != *(info._infoElectricMotor)) {
                 *_info._infoElectricMotor = *info._infoElectricMotor;
+                RAVELOG_VERBOSE_FORMAT("joint %s electric motor changed", _info._id);
+                updateFromInfoResult = UFIR_Success;
             }
         }
         else {
             _info._infoElectricMotor.reset();
+            RAVELOG_VERBOSE_FORMAT("joint %s electric motor removed", _info._id);
+            updateFromInfoResult = UFIR_Success;
         }
     }
     else if (!!info._infoElectricMotor) {
         _info._infoElectricMotor.reset(new ElectricMotorActuatorInfo(*info._infoElectricMotor));
+        RAVELOG_VERBOSE_FORMAT("joint %s electric motor added", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _bIsCircular
     if (_info._bIsCircular != info._bIsCircular) {
+        RAVELOG_VERBOSE_FORMAT("joint %s is circular changed", _info._id);
         return UFIR_RequireReinitialize;
     }
 
     // _bIsActive
     if (_info._bIsActive != info._bIsActive) {
+        RAVELOG_VERBOSE_FORMAT("joint %s is active changed", _info._id);
         return UFIR_RequireReinitialize;
     }
 
     // _controlMode, it will reset _jci_robotcontroller, _jci_io, _jci_externaldevice
     if (GetControlMode() != _info._controlMode) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("joint %s control mode changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
-    return UFIR_Success;
+    return updateFromInfoResult;
 }
 
 void KinBody::Joint::serialize(std::ostream& o, int options) const

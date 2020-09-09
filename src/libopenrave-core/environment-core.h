@@ -2484,8 +2484,12 @@ public:
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
-    virtual void UpdateFromInfo(const EnvironmentBaseInfo& info)
+    virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies)
     {
+        vCreatedBodies.clear();
+        vModifiedBodies.clear();
+        vRemovedBodies.clear();
+
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         _ResolveBodyIds();
 
@@ -2521,24 +2525,25 @@ public:
                 }
             }
 
-            KinBodyPtr pBody;
             if (itExistingBody != _vecbodies.end()) {
-                pBody = *itExistingBody;
+                KinBodyPtr pBody = *itExistingBody;
                 bool bInterfaceMatches = pBody->GetXMLId() == pKinBodyInfo->_interfaceType;
                 if( !bInterfaceMatches || pBody->IsRobot() != pKinBodyInfo->_isRobot ) {
                     RAVELOG_VERBOSE_FORMAT("body %s interface is changed, remove old body from environment. xmlid=%s, _interfaceType=%s, isRobot %d != %d", pBody->_id%pBody->GetXMLId()%pKinBodyInfo->_interfaceType%pBody->IsRobot()%pKinBodyInfo->_isRobot);
                     boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                     _RemoveKinBodyFromIterator(itExistingBody);
                     itExistingBody = _vecbodies.end();
+                    vRemovedBodies.push_back(pBody);
                 }
             }
     
+            KinBodyPtr pInitBody; // body that has been Init() again
             if(itExistingBody != _vecbodies.end()) {
                 RAVELOG_VERBOSE_FORMAT("update existing body %s", (*itExistingBody)->_id);
                 // interface should match at this point
                 // update existing body or robot
-                UpdateFromInfoResult updateFromInfoResult = UFIR_RequireRemoveFromEnvironment;
-                pBody = *itExistingBody;
+                UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
+                KinBodyPtr pBody = *itExistingBody;
                 if (pKinBodyInfo->_isRobot && pBody->IsRobot()) {
                     RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
                     if( !!pRobotBaseInfo ) {
@@ -2547,11 +2552,14 @@ public:
                     else {
                         updateFromInfoResult = pRobot->UpdateFromKinBodyInfo(*pKinBodyInfo);
                     }
-                }
-                else if (!pKinBodyInfo->_isRobot && !pBody->IsRobot()) {
+                } else {
                     updateFromInfoResult = pBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                 }
                 RAVELOG_VERBOSE_FORMAT("update body %s from info result %d", pBody->_id%updateFromInfoResult);
+                if (updateFromInfoResult == UFIR_NoChange) {
+                    continue;
+                }
+                vModifiedBodies.push_back(pBody);
                 if (updateFromInfoResult == UFIR_Success) {
                     continue;
                 }
@@ -2564,6 +2572,7 @@ public:
                 if (pBody->IsRobot()) {
                     RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
                     if (updateFromInfoResult == UFIR_RequireRemoveFromEnvironment) {
+                        // first try udpating again after removing from env
                         if( !!pRobotBaseInfo ) {
                             updateFromInfoResult = pRobot->UpdateFromRobotInfo(*pRobotBaseInfo);
                         }
@@ -2571,28 +2580,34 @@ public:
                             updateFromInfoResult = pRobot->UpdateFromKinBodyInfo(*pKinBodyInfo);
                         }
                     }
-                    if (updateFromInfoResult != UFIR_Success) {
+                    if (updateFromInfoResult != UFIR_NoChange && updateFromInfoResult != UFIR_Success) {
+                        // have to reinit
                         if( !!pRobotBaseInfo ) {
                             pRobot->InitFromRobotInfo(*pRobotBaseInfo);
                         }
                         else {
                             pRobot->InitFromKinBodyInfo(*pKinBodyInfo);
                         }
+                        pInitBody = pRobot;
                     }
                     _AddRobot(pRobot, true);
                 }
                 else {
                     if (updateFromInfoResult == UFIR_RequireRemoveFromEnvironment) {
+                        // first try udpating again after removing from env
                         updateFromInfoResult = pBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                     }
-                    if (updateFromInfoResult != UFIR_Success) {
+                    if (updateFromInfoResult != UFIR_NoChange && updateFromInfoResult != UFIR_Success) {
+                        // have to reinit
                         pBody->InitFromKinBodyInfo(*pKinBodyInfo);
+                        pInitBody = pBody;
                     }
                     _AddKinBody(pBody, true);
                 }
             }
             else {
                 // for new body or robot
+                KinBodyPtr pBody;
                 if (pKinBodyInfo->_isRobot) {
                     RAVELOG_VERBOSE_FORMAT("add new robot %s", pKinBodyInfo->_id);
                     RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), pKinBodyInfo->_interfaceType);
@@ -2606,6 +2621,7 @@ public:
                     else {
                         pRobot->InitFromKinBodyInfo(*pKinBodyInfo);
                     }
+                    pInitBody = pRobot;
                     _AddRobot(pRobot, true);
                     pBody = RaveInterfaceCast<KinBody>(pRobot);
                 }
@@ -2616,26 +2632,27 @@ public:
                         pBody = RaveCreateKinBody(shared_from_this(), "");
                     }
                     pBody->InitFromKinBodyInfo(*pKinBodyInfo);
+                    pInitBody = pBody;
                     _AddKinBody(pBody, true);
                 }
+                vCreatedBodies.push_back(pBody);
             }
 
-            if (!!pBody) {
-                pBody->SetName(pKinBodyInfo->_name);
+            if (!!pInitBody) {
+                // only for init body we need to set name and dofvalues again
+                pInitBody->SetName(pKinBodyInfo->_name);
 
                 // dof value
-                pBody->GetDOFValues(vDOFValues);
-
+                pInitBody->GetDOFValues(vDOFValues);
                 FOREACH(it, pKinBodyInfo->_dofValues) {
-                    FOREACH(itJoint, pBody->_vecjoints) {
+                    FOREACH(itJoint, pInitBody->_vecjoints) {
                         if ((*itJoint)->GetName() == it->first.first) {
                             vDOFValues[(*itJoint)->GetDOFIndex()+it->first.second] = (*it).second;
                             break;
                         }
                     }
                 }
-
-                pBody->SetDOFValues(vDOFValues, pKinBodyInfo->_transform, KinBody::CLA_Nothing);
+                pInitBody->SetDOFValues(vDOFValues, pKinBodyInfo->_transform, KinBody::CLA_Nothing);
             }
         }
 
@@ -2653,6 +2670,7 @@ public:
                 continue;
             }
             RAVELOG_VERBOSE_FORMAT("remove extra body id=%s, name=%s", (*itBody)->_id%(*itBody)->_name);
+            vRemovedBodies.push_back(*itBody);
             {
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                 _RemoveKinBodyFromIterator(itBody);

@@ -2387,9 +2387,34 @@ object PyEnvironmentBase::ExtractInfo() const {
     return py::to_object(boost::shared_ptr<PyEnvironmentBase::PyEnvironmentBaseInfo>(new PyEnvironmentBase::PyEnvironmentBaseInfo(info)));
 }
 
-void PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info) {
+object PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info) {
     EnvironmentBase::EnvironmentBaseInfoPtr pInfo = info->GetEnvironmentBaseInfo();
-    _penv->UpdateFromInfo(*pInfo);
+    std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
+    _penv->UpdateFromInfo(*pInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies);
+
+    py::list createdBodies, modifiedBodies, removedBodies;
+    FOREACHC(itbody, vCreatedBodies) {
+        if ((*itbody)->IsRobot()) {
+            createdBodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        } else {
+            createdBodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    FOREACHC(itbody, vModifiedBodies) {
+        if ((*itbody)->IsRobot()) {
+            modifiedBodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        } else {
+            modifiedBodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    FOREACHC(itbody, vRemovedBodies) {
+        if ((*itbody)->IsRobot()) {
+            removedBodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        } else {
+            removedBodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    return py::make_tuple(createdBodies, modifiedBodies, removedBodies);
 }
 
 bool PyEnvironmentBase::__eq__(PyEnvironmentBasePtr p) {

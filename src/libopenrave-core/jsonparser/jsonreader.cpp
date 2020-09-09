@@ -139,7 +139,8 @@ public:
                     _ProcessURIsInRobotBaseInfo(*pRobotBaseInfo, doc, fUnitScale, alloc);
                 }
             }
-            _penv->UpdateFromInfo(envInfo);
+            std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
+            _penv->UpdateFromInfo(envInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies);
         }
         return true;
     }
