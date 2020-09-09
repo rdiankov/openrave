@@ -955,6 +955,12 @@ private:
     class OPENRAVE_API MimicInfo : public InfoBase
     {
 public:
+        MimicInfo() {
+        };
+        MimicInfo(const MimicInfo& other) {
+            *this = other;
+        }
+
         void Reset() override;
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
