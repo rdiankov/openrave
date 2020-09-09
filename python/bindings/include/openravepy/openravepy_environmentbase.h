@@ -274,7 +274,7 @@ public:
     object GetUnit() const;
 
     object ExtractInfo() const;
-    void UpdateFromInfo(PyEnvironmentBaseInfoPtr info);
+    object UpdateFromInfo(PyEnvironmentBaseInfoPtr info);
 
     int _revision = 0;
     py::list _keywords;

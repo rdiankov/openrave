@@ -29,9 +29,10 @@ typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRe
 
 /// \brief Result of UpdateFromInfo() call
 enum UpdateFromInfoResult {
-    UFIR_Success = 0, ///< Updated successfully
-    UFIR_RequireRemoveFromEnvironment, ///< Failed to update, require the kinbody to be removed from environment before update can succeed
-    UFIR_RequireReinitialize, ///< Failed to update, require InitFromInfo() to be called before update can succeed
+    UFIR_NoChange = 0, ///< Nothing changed
+    UFIR_Success = 1, ///< Updated successfully
+    UFIR_RequireRemoveFromEnvironment = 2, ///< Failed to update, require the kinbody to be removed from environment before update can succeed
+    UFIR_RequireReinitialize = 3, ///< Failed to update, require InitFromInfo() to be called before update can succeed
 };
 
 /// \brief The type of geometry primitive.
@@ -189,10 +190,10 @@ public:
                    && _vGeomData2 == other._vGeomData2
                    && _vGeomData3 == other._vGeomData3
                    && _vGeomData4 == other._vGeomData4
-                   // && _vSideWalls == other._vSideWalls
+                   && _vSideWalls == other._vSideWalls
                    && _vDiffuseColor == other._vDiffuseColor
                    && _vAmbientColor == other._vAmbientColor
-                   // && _meshcollision == other._meshcollision
+                   && _meshcollision == other._meshcollision
                    && _id == other._id
                    && _name == other._name
                    && _type == other._type
@@ -285,6 +286,15 @@ public:
             Vector vExtents;
             SideWallType type;
             int Compare(const SideWall& rhs, dReal fUnitScale=1.0, dReal fEpsilon=10e-7) const;
+
+            bool operator==(const SideWall& other) const {
+                return transf == other.transf
+                       && vExtents == other.vExtents
+                       && type == other.type;
+            }
+            bool operator!=(const SideWall& other) const {
+                return !operator==(other);
+            }
         };
         std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
 

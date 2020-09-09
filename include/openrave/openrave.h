@@ -2390,6 +2390,13 @@ public:
 
     friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh &trimesh);
     friend OPENRAVE_API std::istream& operator>>(std::istream& I, TriMesh& trimesh);
+
+    bool operator==(const TriMesh& other) const {
+        return vertices == other.vertices && indices == other.indices;
+    }
+    bool operator!=(const TriMesh& other) const {
+        return !operator==(other);
+    }
 };
 
 OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh& trimesh);

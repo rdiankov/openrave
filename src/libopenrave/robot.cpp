@@ -248,9 +248,11 @@ void RobotBase::AttachedSensor::ExtractInfo(AttachedSensorInfo& info) const
 UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::AttachedSensorInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
+    UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
 
     // _name
     if (GetName() != info._name) {
+        RAVELOG_VERBOSE_FORMAT("attached sensor %s name changed", _info._id);
         return UFIR_RequireReinitialize; // no SetName function defeined now. Maybe add later.
     }
 
@@ -258,29 +260,35 @@ UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::
     KinBody::LinkPtr attachingLink = GetAttachingLink();
     if (!!attachingLink) {
         if (attachingLink->GetName() != info._linkname) {
+            RAVELOG_VERBOSE_FORMAT("attached sensor %s link name changed", _info._id);
             return UFIR_RequireReinitialize;
         }
     }
     else if (!info._linkname.empty()) {
+        RAVELOG_VERBOSE_FORMAT("attached sensor %s link name changed", _info._id);
         return UFIR_RequireReinitialize;
     }
 
     // sensor name
     if (_info._sensorname != info._sensorname) {
+        RAVELOG_VERBOSE_FORMAT("attached sensor %s sensor name changed", _info._id);
         return UFIR_RequireReinitialize;
     }
 
     // sensor geometry
     if (_info._docSensorGeometry != info._docSensorGeometry) {
+        RAVELOG_VERBOSE_FORMAT("attached sensor %s sensor geometry changed", _info._id);
         return UFIR_RequireReinitialize;
     }
 
     // _trelative
-    if (GetRelativeTransform() != info._trelative) {
+    if (!GetRelativeTransform().Compare(info._trelative)) {
         SetRelativeTransform(info._trelative);
+        RAVELOG_VERBOSE_FORMAT("attached sensor %s relative transform changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
-    return UFIR_Success;
+    return updateFromInfoResult;
 }
 
 void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
@@ -2707,17 +2715,17 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
     }
 
     info._vConnectedBodyInfos.resize(_vecConnectedBodies.size());
-    for(size_t i = 0; i < _vecConnectedBodies.size(); ++i) {
-        info._vConnectedBodyInfos[i].reset(new RobotBase::ConnectedBodyInfo());
-        _vecConnectedBodies[i]->ExtractInfo(*info._vConnectedBodyInfos[i]);
+    for(size_t iConnectedBody = 0; iConnectedBody < _vecConnectedBodies.size(); ++iConnectedBody) {
+        info._vConnectedBodyInfos[iConnectedBody].reset(new RobotBase::ConnectedBodyInfo());
+        _vecConnectedBodies[iConnectedBody]->ExtractInfo(*info._vConnectedBodyInfos[iConnectedBody]);
     }
 
     info._vGripperInfos.reserve(_vecGripperInfos.size());
-    for(size_t i = 0; i < _vecGripperInfos.size(); ++i) {
-        if (isConnectedGripperInfo[i]) {
+    for(size_t iGripperInfo = 0; iGripperInfo < _vecGripperInfos.size(); ++iGripperInfo) {
+        if (isConnectedGripperInfo[iGripperInfo]) {
             continue;
         }
-        RobotBase::GripperInfoPtr pGripperInfo(new RobotBase::GripperInfo(*_vecGripperInfos[i]));
+        RobotBase::GripperInfoPtr pGripperInfo(new RobotBase::GripperInfo(*_vecGripperInfos[iGripperInfo]));
         info._vGripperInfos.push_back(pGripperInfo);
     }
 }
@@ -2725,9 +2733,37 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
 UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
 {
     UpdateFromInfoResult updateFromInfoResult = UpdateFromKinBodyInfo(info);
-
-    if (updateFromInfoResult != UFIR_Success) {
+    if (updateFromInfoResult != UFIR_NoChange && updateFromInfoResult != UFIR_Success) {
         return updateFromInfoResult;
+    }
+
+    // need to avoid checking links and joints belonging to connected bodies
+    std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);
+    std::vector<bool> isConnectedAttachedSensor(_vecAttachedSensors.size(), false);
+    std::vector<bool> isConnectedGripperInfo(_vecConnectedBodies.size(), false);
+
+    FOREACHC(itConnectedBody, _vecConnectedBodies) {
+        std::vector<RobotBase::ManipulatorPtr> resolvedManipulators;
+        std::vector<RobotBase::AttachedSensorPtr> resolvedAttachedSensors;
+        std::vector<RobotBase::GripperInfoPtr> resolvedGripperInfos;
+        (*itConnectedBody)->GetResolvedManipulators(resolvedManipulators);
+        (*itConnectedBody)->GetResolvedAttachedSensors(resolvedAttachedSensors);
+        (*itConnectedBody)->GetResolvedGripperInfos(resolvedGripperInfos);
+        FOREACHC(itManipulator, _vecManipulators) {
+            if (std::find(resolvedManipulators.begin(), resolvedManipulators.end(), *itManipulator) != resolvedManipulators.end()) {
+                isConnectedManipulator[itManipulator - _vecManipulators.begin()] = true;
+            }
+        }
+        FOREACHC(itAttachedSensor, _vecAttachedSensors) {
+            if (std::find(resolvedAttachedSensors.begin(), resolvedAttachedSensors.end(), *itAttachedSensor) != resolvedAttachedSensors.end()) {
+                isConnectedAttachedSensor[itAttachedSensor - _vecAttachedSensors.begin()] = true;
+            }
+        }
+        FOREACHC(itGripperInfo, _vecGripperInfos) {
+            if (std::find(resolvedGripperInfos.begin(), resolvedGripperInfos.end(), *itGripperInfo) != resolvedGripperInfos.end()) {
+                isConnectedGripperInfo[itGripperInfo - _vecGripperInfos.begin()] = true;
+            }
+        }
     }
 
     // manipulators
@@ -2743,17 +2779,39 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
         RobotBase::ManipulatorInfoPtr pManipulatorInfo = *itManipulatorInfo;
         if (itExistingManipulator != _vecManipulators.end()) {
             // update existing manipulator
-            UpdateFromInfoResult updateFromManipulatorInfoResult = UFIR_Success;
             RobotBase::ManipulatorPtr pManipulator = *itExistingManipulator;
-            updateFromManipulatorInfoResult = pManipulator->UpdateFromInfo(*pManipulatorInfo);
-
+            UpdateFromInfoResult updateFromManipulatorInfoResult = pManipulator->UpdateFromInfo(*pManipulatorInfo);
+            if (updateFromManipulatorInfoResult == UFIR_NoChange) {
+                continue;
+            }
+            RAVELOG_VERBOSE_FORMAT("body %s manipulator %s needed update: %d", _id%pManipulatorInfo->_id%updateFromManipulatorInfoResult);
             if (updateFromManipulatorInfoResult == UFIR_Success) {
+                updateFromInfoResult = UFIR_Success;
                 continue;
             }
             // manipulator update failed;
             return updateFromManipulatorInfoResult;
         }
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("body %s new manipulator %s added", _id%pManipulatorInfo->_id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // delete manipulators
+    for(size_t iManipulator = 0; iManipulator < _vecManipulators.size(); ++iManipulator) {
+        if (isConnectedManipulator[iManipulator]) {
+            continue;
+        }
+        bool stillExists = false;
+        FOREACHC(itManipulatorInfo, info._vManipulatorInfos) {
+            if (_vecManipulators[iManipulator]->_info._id == (*itManipulatorInfo)->_id) {
+                stillExists = true;
+                break;
+            }
+        }
+        if (!stillExists) {
+            RAVELOG_VERBOSE_FORMAT("body %s existing manipulator %s removed", _id%_vecManipulators[iManipulator]->_info._id);
+            return UFIR_RequireReinitialize;
+        }
     }
 
     // attachedsensors
@@ -2769,16 +2827,39 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
         RobotBase::AttachedSensorInfoPtr pAttachedSensorInfo = *itAttachedSensorInfo;
         if (itExistingAttachedSensor != _vecAttachedSensors.end()) {
             // update existing attachedsensor
-            UpdateFromInfoResult updateFromAttachedSensorInfoResult = UFIR_Success;
             RobotBase::AttachedSensorPtr pAttachedSensor = *itExistingAttachedSensor;
-            updateFromAttachedSensorInfoResult = pAttachedSensor->UpdateFromInfo(*pAttachedSensorInfo);
+            UpdateFromInfoResult updateFromAttachedSensorInfoResult = pAttachedSensor->UpdateFromInfo(*pAttachedSensorInfo);
+            if (updateFromAttachedSensorInfoResult == UFIR_NoChange) {
+                continue;
+            }
+            RAVELOG_VERBOSE_FORMAT("body %s attached sensor %s needed update: %d", _id%pAttachedSensorInfo->_id%updateFromAttachedSensorInfoResult);
             if (updateFromAttachedSensorInfoResult == UFIR_Success) {
+                updateFromInfoResult = UFIR_Success;
                 continue;
             }
             // attachedsensor update failed;
             return updateFromAttachedSensorInfoResult;
         }
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("body %s new attached sensor %s added", _id%pAttachedSensorInfo->_id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // delete attachedsensors
+    for(size_t iAttachedSensor = 0; iAttachedSensor < _vecAttachedSensors.size(); ++iAttachedSensor) {
+        if (isConnectedAttachedSensor[iAttachedSensor]) {
+            continue;
+        }
+        bool stillExists = false;
+        FOREACHC(itAttachedSensorInfo, info._vAttachedSensorInfos) {
+            if (_vecAttachedSensors[iAttachedSensor]->_info._id == (*itAttachedSensorInfo)->_id) {
+                stillExists = true;
+                break;
+            }
+        }
+        if (!stillExists) {
+            RAVELOG_VERBOSE_FORMAT("body %s existing attached sensor %s removed", _id%_vecAttachedSensors[iAttachedSensor]->_info._id);
+            return UFIR_RequireReinitialize;
+        }
     }
 
     // connectedbodies
@@ -2794,16 +2875,36 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
         RobotBase::ConnectedBodyInfoPtr pConnectedBodyInfo = *itConnectedBodyInfo;
         if (itExistingConnectedBody != _vecConnectedBodies.end()) {
             // update existing connectedbody
-            UpdateFromInfoResult updateFromConnectedBodyInfoResult = UFIR_Success;
             RobotBase::ConnectedBodyPtr pConnectedBody = *itExistingConnectedBody;
-            updateFromConnectedBodyInfoResult = pConnectedBody->UpdateFromInfo(*pConnectedBodyInfo);
+            UpdateFromInfoResult updateFromConnectedBodyInfoResult = pConnectedBody->UpdateFromInfo(*pConnectedBodyInfo);
+            if (updateFromConnectedBodyInfoResult == UFIR_NoChange) {
+                continue;
+            }
+            RAVELOG_VERBOSE_FORMAT("body %s connected body %s needed update: %d", _id%pConnectedBodyInfo->_id%updateFromConnectedBodyInfoResult);
             if (updateFromConnectedBodyInfoResult == UFIR_Success) {
+                updateFromInfoResult = UFIR_Success;
                 continue;
             }
             // connectedbody update failed;
             return updateFromConnectedBodyInfoResult;
         }
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("body %s new connected body %s added", _id%pConnectedBodyInfo->_id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // delete connectedbodies
+    FOREACH(itConnectedBody, _vecConnectedBodies) {
+        bool stillExists = false;
+        FOREACHC(itConnectedBodyInfo, info._vConnectedBodyInfos) {
+            if ((*itConnectedBody)->_info._id == (*itConnectedBodyInfo)->_id) {
+                stillExists = true;
+                break;
+            }
+        }
+        if (!stillExists) {
+            RAVELOG_VERBOSE_FORMAT("body %s existing connected body %s removed", _id%(*itConnectedBody)->_info._id);
+            return UFIR_RequireReinitialize;
+        }
     }
 
     // gripperinfos
@@ -2814,6 +2915,7 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
             if ((*itExistingGripperInfo)->_id == (*itGripperInfo)->_id) {
                 // find existing gripperinfo
                 if ((*itExistingGripperInfo) != (*itGripperInfo)) {
+                    RAVELOG_VERBOSE_FORMAT("body %s gripper info %s needed update", _id%(*itGripperInfo)->_id);
                     return UFIR_RequireReinitialize;
                 }
                 break;
@@ -2821,11 +2923,30 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
         }
         if (itExistingGripperInfo == _vecGripperInfos.end()) {
             // new gripper info
+            RAVELOG_VERBOSE_FORMAT("body %s new gripper info %s added", _id%(*itGripperInfo)->_id);
             return UFIR_RequireReinitialize;
         }
     }
 
-    return UFIR_Success;
+    // delete gripperinfos
+    for(size_t iGripperInfo = 0; iGripperInfo < _vecGripperInfos.size(); ++iGripperInfo) {
+        if (isConnectedGripperInfo[iGripperInfo]) {
+            continue;
+        }
+        bool stillExists = false;
+        FOREACHC(itGrippreInfoInfo, info._vGripperInfos) {
+            if (_vecGripperInfos[iGripperInfo]->_id == (*itGrippreInfoInfo)->_id) {
+                stillExists = true;
+                break;
+            }
+        }
+        if (!stillExists) {
+            RAVELOG_VERBOSE_FORMAT("body %s existing gripper info %s removed", _id%_vecGripperInfos[iGripperInfo]->_id);
+            return UFIR_RequireReinitialize;
+        }
+    }
+
+    return updateFromInfoResult;
 }
 
 } // end namespace OpenRAVE

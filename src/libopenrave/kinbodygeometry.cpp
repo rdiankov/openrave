@@ -255,15 +255,13 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         if( _meshcollision.vertices.size() != rhs._meshcollision.vertices.size() ) {
             return 17;
         }
-        // TODO necessary to compare index values?
-        if( _meshcollision.indices.size() != rhs._meshcollision.indices.size() ) {
-            return 18;
-        }
-
         for(int ivertex = 0; ivertex < (int)_meshcollision.vertices.size(); ++ivertex) {
             if( !IsZeroWithEpsilon3(_meshcollision.vertices[ivertex]-rhs._meshcollision.vertices[ivertex]*fUnitScale, fEpsilon) ) {
-                return 19;
+                return 18;
             }
+        }
+        if( _meshcollision.indices != rhs._meshcollision.indices ) {
+            return 19;
         }
 
         break;
@@ -1369,74 +1367,97 @@ void KinBody::Link::Geometry::ExtractInfo(KinBody::GeometryInfo& info) const
 UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::GeometryInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
+    UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
 
     if (GetName() != info._name) {
         SetName(info._name);
+        RAVELOG_VERBOSE_FORMAT("geometry %s name changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     if (GetType() != info._type) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("geometry %s type changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
-    if (GetTransform() != info._t) {
-        return UFIR_RequireRemoveFromEnvironment;
+    if (!GetTransform().Compare(info._t)) {
+        RAVELOG_VERBOSE_FORMAT("geometry %s transform changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     if (GetType() == GT_Box) {
         if (GetBoxExtents() != info._vGeomData) {
-            return UFIR_RequireRemoveFromEnvironment;
+            RAVELOG_VERBOSE_FORMAT("geometry %s box extents changed", _info._id);
+            return UFIR_RequireReinitialize;
         }
     }
     else if (GetType() == GT_Container) {
         if (GetContainerOuterExtents() != info._vGeomData || GetContainerInnerExtents() != info._vGeomData2 || GetContainerBottomCross() != info._vGeomData3 || GetContainerBottom() != info._vGeomData4) {
-            return UFIR_RequireRemoveFromEnvironment;
+            RAVELOG_VERBOSE_FORMAT("geometry %s container extents changed", _info._id);
+            return UFIR_RequireReinitialize;
         }
     }
     else if (GetType() == GT_Cage) {
-        // TODO
-        return UFIR_RequireRemoveFromEnvironment;
+        if (GetCageBaseExtents() != info._vGeomData || _info._vGeomData2 != info._vGeomData2 || _info._vSideWalls != info._vSideWalls) {
+            RAVELOG_VERBOSE_FORMAT("geometry %s cage changed", _info._id);
+            return UFIR_RequireReinitialize;
+        }
     }
     else if (GetType() == GT_Sphere) {
-        // TODO
-        return UFIR_RequireRemoveFromEnvironment;
+        if (GetSphereRadius() != info._vGeomData.x) {
+            RAVELOG_VERBOSE_FORMAT("geometry %s sphere changed", _info._id);
+        }
+        return UFIR_RequireReinitialize;
     }
     else if (GetType() == GT_Cylinder) {
-        // TODO
         if (GetCylinderRadius() != info._vGeomData.x || GetCylinderHeight() != info._vGeomData.y) {
-            return UFIR_RequireRemoveFromEnvironment;
+            RAVELOG_VERBOSE_FORMAT("geometry %s cylinder changed", _info._id);
+            return UFIR_RequireReinitialize;
         }
     }
     else if (GetType() == GT_TriMesh) {
-        // TODO
-        return UFIR_RequireRemoveFromEnvironment;
+        if (info._meshcollision.vertices != _info._meshcollision.vertices || info._meshcollision.indices != _info._meshcollision.indices) {
+            RAVELOG_VERBOSE_FORMAT("geometry %s trimesh changed", _info._id);
+            return UFIR_RequireReinitialize;
+        }
     }
 
     // transparency
     if (GetTransparency() != info._fTransparency) {
         SetTransparency(info._fTransparency);
+        RAVELOG_VERBOSE_FORMAT("geometry %s transparency changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // visible
     if (IsVisible() != info._bVisible) {
         SetVisible(info._bVisible);
+        RAVELOG_VERBOSE_FORMAT("geometry %s visible changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // diffuseColor
     if (GetDiffuseColor() != info._vDiffuseColor) {
         SetDiffuseColor(info._vDiffuseColor);
+        RAVELOG_VERBOSE_FORMAT("geometry %s diffuse color changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // ambientColor
     if (GetAmbientColor() != info._vAmbientColor) {
         SetAmbientColor(info._vAmbientColor);
+        RAVELOG_VERBOSE_FORMAT("geometry %s ambient color changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // modifiable
     if (IsModifiable() != info._bModifiable) {
         _info._bModifiable = info._bModifiable;
+        RAVELOG_VERBOSE_FORMAT("geometry %s modifiable changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
-    return UFIR_Success;
+    return updateFromInfoResult;
 }
 
 }

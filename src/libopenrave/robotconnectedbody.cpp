@@ -510,32 +510,41 @@ void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) c
 UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
+    UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
+
     // name
     if (_info._name != info._name) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("connected body %s name changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // linkname
     if (_info._linkname != info._linkname) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("connected body %s link name changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _trelative
-    if (GetRelativeTransform() != info._trelative) {
-        return UFIR_RequireRemoveFromEnvironment;
+    if (!GetRelativeTransform().Compare(info._trelative)) {
+        RAVELOG_VERBOSE_FORMAT("connected body %s relative transform changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
+
+    // TODO: all these GetResolvedXXX is not correct, if the robot is not in the env, they will return empty
 
     // _vLinkInfos, links has orders, so only compare one by one
     std::vector<KinBody::LinkPtr> links;
     GetResolvedLinks(links);
     if (links.size() != info._vLinkInfos.size()) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("connected body %s links changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
     for(size_t iLink = 0; iLink < links.size(); iLink++) {
         KinBody::LinkInfo linkInfo;
         links[iLink]->ExtractInfo(linkInfo);  // might be slow
         if (linkInfo != (*info._vLinkInfos[iLink])) {
-            return UFIR_RequireRemoveFromEnvironment;
+            RAVELOG_VERBOSE_FORMAT("connected body %s links changed", _info._id);
+            return UFIR_RequireReinitialize;
         }
     }
 
@@ -552,7 +561,8 @@ UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::C
     std::vector<KinBody::JointInfoPtr> diffJointInfo;
     GetInfoVectorDiff(jointInfos, info._vJointInfos, diffJointInfo);
     if (diffJointInfo.size() > 0) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("connected body %s joints changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _vManipulatorInfos
@@ -570,7 +580,8 @@ UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::C
     GetInfoVectorDiff(manipulatorInfos, info._vManipulatorInfos, diffManipInfo);
 
     if (diffManipInfo.size() > 0) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("connected body %s manipulators changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _vAttachedSensorInfos
@@ -587,7 +598,8 @@ UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::C
     GetInfoVectorDiff(attachedSensorInfos, info._vAttachedSensorInfos, diffAttachedSensorInfo);
 
     if (diffAttachedSensorInfo.size() > 0) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("connected body %s attached sensors changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _vGripperInfos
@@ -596,15 +608,25 @@ UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::C
     std::vector<RobotBase::GripperInfoPtr> diffGripperInfo;
     GetInfoVectorDiff(gripperInfos, info._vGripperInfos, diffGripperInfo);
     if (diffGripperInfo.size() > 0) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("connected body %s gripper infos changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _bIsActive
     if (IsActive() != info._bIsActive) {
-        return UFIR_RequireRemoveFromEnvironment;
+        // we can only change isActive if the robot is not in the environment
+        RobotBasePtr pattachedrobot = _pattachedrobot.lock();
+        if (!!pattachedrobot && pattachedrobot->_nHierarchyComputed == 0) {
+            _info._bIsActive = info._bIsActive;
+            RAVELOG_VERBOSE_FORMAT("connected body %s is active changed", _info._id);
+            updateFromInfoResult = UFIR_Success;
+        } else {
+            RAVELOG_VERBOSE_FORMAT("connected body %s is active changed", _info._id);
+            return UFIR_RequireRemoveFromEnvironment;
+        }
     }
 
-    return UFIR_Success;
+    return updateFromInfoResult;
 }
 
 bool RobotBase::ConnectedBody::CanProvideManipulator(const std::string& resolvedManipulatorName) const
