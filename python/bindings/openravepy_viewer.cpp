@@ -321,6 +321,37 @@ public:
         return toPyArray(memory,dims);
     }
 
+    object GetCameraImages(int width, int height, object extrinsic, object oKK,
+                           bool return_color, bool return_depth, bool return_pointcloud, bool return_normals)
+    {
+        std::vector<float> vKK = ExtractArray<float>(oKK);
+        if( vKK.size() != 4 ) {
+            throw openrave_exception(_("KK needs to be of size 4"));
+        }
+        if (return_pointcloud) {
+            RAVELOG_WARN("pointcloud not supported for now! Disabling...\n");
+            return_pointcloud = false;
+        }
+        if (return_normals) {
+            RAVELOG_WARN("normals not supported for now! Disabling...\n");
+            return_normals = false;
+        }
+        SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
+        std::vector<uint8_t>* color = return_color ? new std::vector<uint8_t>() : nullptr;
+        std::vector<float>* depth = return_depth ? new std::vector<float>() : nullptr;
+        std::vector<float>* pointcloud = return_pointcloud ? new std::vector<float>() : nullptr;
+        std::vector<float>* normals = return_normals ? new std::vector<float>() : nullptr;
+        if( !_pviewer->GetCameraImages(width, height, RaveTransform<float>(ExtractTransform(extrinsic)), KK, color, depth, pointcloud, normals) ) {
+            throw openrave_exception(_("failed to get camera color/depth/pointcloud/normals image(s)"));
+        }
+        std::vector<npy_intp> dims2D(2); dims2D[0] = height; dims2D[1] = width;
+        std::vector<npy_intp> dims3D(dims2D); dims3D.push_back(3);
+        return py::make_tuple(return_color ? toPyArray(*color, dims3D) : py::object(),
+                              return_depth ? toPyArray(*depth, dims2D) : py::object(),
+                              return_pointcloud ? toPyArray(*pointcloud, dims3D) : py::object(),
+                              return_normals ? toPyArray(*normals, dims3D) : py::object());
+    }
+
     object GetCameraIntrinsics() {
         return py::to_object(toPyCameraIntrinsics(_pviewer->GetCameraIntrinsics()));
     }
@@ -394,6 +425,8 @@ void init_openravepy_viewer()
                        .def("GetCameraIntrinsics",&PyViewerBase::GetCameraIntrinsics, DOXY_FN(ViewerBase,GetCameraIntrinsics))
                        .def("GetCameraDistanceToFocus", &PyViewerBase::GetCameraDistanceToFocus, DOXY_FN(ViewerBase, GetCameraDistanceToFocus))
                        .def("GetCameraImage",&PyViewerBase::GetCameraImage, PY_ARGS("width","height","transform","K") DOXY_FN(ViewerBase,GetCameraImage))
+                       .def("GetCameraImages",&PyViewerBase::GetCameraImages, (py::arg("width"), py::arg("height"), py::arg("transform"), py::arg("K"), py::arg("return_color")=true, py::arg("return_depth")=true,
+                                                                               py::arg("return_pointcloud")=true, py::arg("return_normals")=true), DOXY_FN(ViewerBase,GetCameraImages))
         ;
 
 //        enum_<ViewerBase::ViewerEvents>("Events" DOXY_ENUM(ViewerEvents))
