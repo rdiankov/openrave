@@ -2889,16 +2889,18 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
     // gripperinfos
     FOREACHC(itGripperInfo, info._vGripperInfos) {
         // find exisiting gripperinfo in robot
-        typename std::vector<RobotBase::GripperInfoPtr>::iterator itExistingGripperInfo;
+        typename std::vector<RobotBase::GripperInfoPtr>::iterator itExistingGripperInfo = _vecGripperInfos.end();
         for(itExistingGripperInfo = _vecGripperInfos.begin(); itExistingGripperInfo != _vecGripperInfos.end(); itExistingGripperInfo++) {
-            if ((*itExistingGripperInfo)->_id == (*itGripperInfo)->_id) {
-                // find existing gripperinfo
-                if ((*itExistingGripperInfo) != (*itGripperInfo)) {
-                    RAVELOG_VERBOSE_FORMAT("body %s gripper info %s needed update", _id%(*itGripperInfo)->_id);
-                    return UFIR_RequireReinitialize;
-                }
-                break;
+            // find existing gripperinfo
+            if ((*itExistingGripperInfo)->_id != (*itGripperInfo)->_id) {
+                continue;
             }
+            if ((**itExistingGripperInfo) != (**itGripperInfo)) {
+                **itExistingGripperInfo = **itGripperInfo;
+                RAVELOG_VERBOSE_FORMAT("body %s gripper info %s needed update", _id%(*itGripperInfo)->_id);
+                updateFromInfoResult = UFIR_Success;
+            }
+            break;
         }
         if (itExistingGripperInfo == _vecGripperInfos.end()) {
             // new gripper info

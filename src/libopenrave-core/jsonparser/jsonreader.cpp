@@ -127,7 +127,10 @@ public:
                 std::string referenceUri = orjson::GetJsonValueByKey<std::string>(*it, "referenceUri", "");
                 if (_IsExpandableReferenceUri(referenceUri)) {
                     std::set<std::string> circularReference;
-                    _ExpandRapidJSON(envInfo, bodyId, doc, referenceUri, circularReference, fUnitScale, alloc);
+                    if (!_ExpandRapidJSON(envInfo, bodyId, doc, referenceUri, circularReference, fUnitScale, alloc)) {
+                        RAVELOG_ERROR_FORMAT("failed to load referenced body from uri '%s'", referenceUri);
+                        return false;
+                    }
                 }
             }
             envInfo.DeserializeJSON(doc, fUnitScale, _deserializeOptions);
@@ -230,6 +233,9 @@ public:
 protected:
 
     bool _IsExpandableReferenceUri(const std::string& referenceUri) {
+        if (_deserializeOptions & IDO_IgnoreReferenceUri) {
+            return false;
+        }
         if (referenceUri.empty()) {
             return false;
         }
