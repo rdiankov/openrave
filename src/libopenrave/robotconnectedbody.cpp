@@ -753,7 +753,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             if( !plink ) {
                 plink.reset(new KinBody::Link(shared_kinbody()));
             }
-            plink->_info = *connectedBodyInfo._vLinkInfos[ilink]; // copy
+            plink->_info = *connectedBodyInfo._vLinkInfos[ilink]; // shallow copy
             // reset old id to empty
             // we want to keep robot id suffix start from 0
             // it will break the name convention when we extract robot info if we keep the old id
@@ -773,12 +773,17 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             if( !pjoint ) {
                 pjoint.reset(new KinBody::Joint(shared_kinbody()));
             }
-            pjoint->_info = *connectedBodyInfo._vJointInfos[ijoint]; // copy
+            pjoint->_info = *connectedBodyInfo._vJointInfos[ijoint]; // shallow copy
             // reset old id to empty
             // we want to keep robot id suffix start from 0
             // it will break the name convention when we extract robot info if we keep the old id
             pjoint->_info._id = "";
             pjoint->_info._name = connectedBody._nameprefix + pjoint->_info._name;
+            for (size_t iMimic = 0; iMimic < pjoint->_info._vmimic.size(); ++iMimic) {
+                if (!!pjoint->_info._vmimic[iMimic]) {
+                    pjoint->_info._vmimic[iMimic].reset(new MimicInfo(*(pjoint->_info._vmimic[iMimic])));
+                }
+            }
 
             // search for the correct resolved _linkname0 and _linkname1
             bool bfoundlink0 = false, bfoundlink1 = false;
