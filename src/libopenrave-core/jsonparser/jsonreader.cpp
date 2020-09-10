@@ -128,8 +128,8 @@ public:
                 if (_IsExpandableReferenceUri(referenceUri)) {
                     std::set<std::string> circularReference;
                     if (!_ExpandRapidJSON(envInfo, bodyId, doc, referenceUri, circularReference, fUnitScale, alloc)) {
-                        RAVELOG_ERROR_FORMAT("failed to load referenced body from uri '%s'", referenceUri);
-                        return false;
+                        RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s'", referenceUri);
+                        // TODO store the warning somewhere for later retrieval
                     }
                 }
             }
