@@ -2137,8 +2137,14 @@ public:
         return !operator==(other);
     }
 
+    /// \brief Gets the id for ikparam
     const std::string& GetId() const {
         return _id;
+    }
+
+    /// \brief Sets the id for ikparam, used by scene lodaer
+    void SetId(const std::string& id) {
+        _id = id;
     }
 
 protected:
