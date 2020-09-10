@@ -43,10 +43,12 @@ public:
     std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos;
     std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos;
     std::vector<RobotBase::ConnectedBodyInfoPtr> _vConnectedBodyInfos;
+    std::vector<RobotBase::GripperInfoPtr> _vGripperInfo;
 #else
     py::object _vManipulatorInfos = py::none_();
     py::object _vAttachedSensorInfos = py::none_();
     py::object _vConnectedBodyInfos = py::none_();
+    py::object _vGripperInfos = py::none_();
 #endif
     virtual std::string __str__();
     virtual py::object __unicode__();

@@ -412,6 +412,16 @@ void PyRobotBase::PyRobotBaseInfo::_Update(const RobotBase::RobotBaseInfo& info)
         vConnectedBodyInfos.append(pconnectedbodyinfo);
     }
     _vConnectedBodyInfos = vConnectedBodyInfos;
+
+    py::list vGripperInfos;
+    FOREACHC(itGripperInfo, info._vGripperInfos) {
+        rapidjson::Document rGripperInfo;
+        dReal fUnitScale = 1;
+        int options = 0;
+        (*itGripperInfo)->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator(), fUnitScale, options);
+        vGripperInfos.append(toPyObject(rGripperInfo));
+    }
+    _vGripperInfos = vGripperInfos;
 #endif
 }
 
@@ -494,12 +504,38 @@ std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArray(objec
     return vConnectedBodyInfos;
 }
 
+std::vector<RobotBase::GripperInfoPtr> ExtractGripperInfoArray(object pyGripperInfoList)
+{
+    if(IS_PYTHONOBJECT_NONE(pyGripperInfoList)) {
+        return {};
+    }
+    std::vector<RobotBase::GripperInfoPtr> vGripperInfos;
+    try {
+        const size_t arraySize = len(pyGripperInfoList);
+        vGripperInfos.reserve(arraySize);
+        dReal fUnitScale=1;
+        int options = 0;
+        for(size_t iGripperInfo = 0; iGripperInfo < arraySize; iGripperInfo++) {
+            RobotBase::GripperInfoPtr pInfo(new RobotBase::GripperInfo());
+            rapidjson::Document rGripperInfo;
+            toRapidJSONValue(pyGripperInfoList[iGripperInfo], rGripperInfo, rGripperInfo.GetAllocator());
+            pInfo->DeserializeJSON(rGripperInfo, fUnitScale, options);
+            vGripperInfos.push_back(pInfo);
+        }
+    }
+    catch(...) {
+        RAVELOG_WARN("Cannot do ExtractArray for GripperInfo");
+    }
+    return vGripperInfos;
+}
+
 
 RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() const {
     RobotBase::RobotBaseInfoPtr pInfo(new RobotBase::RobotBaseInfo);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     pInfo->_id = _id;
     pInfo->_name = _name;
+    pInfo->_interfaceType = _interfaceType;
     pInfo->_uri = _uri;
     pInfo->_referenceUri = _referenceUri;
     pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
@@ -508,12 +544,16 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     pInfo->_vManipulatorInfos = std::vector<RobotBase::ManipulatorInfoPtr>(begin(_vManipulatorInfos), end(_vManipulatorInfos));
     pInfo->_vAttachedSensorInfos = std::vector<RobotBase::AttachedSensorInfoPtr>(begin(_vAttachedSensorInfos), end(_vAttachedSensorInfos));
     pInfo->_vConnectedBodyInfos = std::vector<RobotBase::ConnectedBodyInfoPtr>(begin(_vConnectedBodyInfos), end(_vConnectedBodyInfos));
+    pInfo->_vGripperInfos = std::vector<RobotBase::GripperInfoPtr>(begin(_vGripperInfos), end(_vGripperInfos));
 #else
     if (!IS_PYTHONOBJECT_NONE(_id)) {
         pInfo->_id = py::extract<std::string>(_id);
     }
     if (!IS_PYTHONOBJECT_NONE(_name)) {
         pInfo->_name = py::extract<std::string>(_name);
+    }
+    if (!IS_PYTHONOBJECT_NONE(_interfaceType)) {
+        pInfo->_interfaceType = py::extract<std::string>(_interfaceType);
     }
     if (!IS_PYTHONOBJECT_NONE(_uri)) {
         pInfo->_uri = py::extract<std::string>(_uri);
@@ -557,6 +597,13 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     pInfo->_vConnectedBodyInfos.reserve(vConnectedBodyInfos.size());
     FOREACHC(it, vConnectedBodyInfos) {
         pInfo->_vConnectedBodyInfos.push_back(*it);
+    }
+
+    std::vector<RobotBase::GripperInfoPtr> vGripperInfos = ExtractGripperInfoArray(_vGripperInfos);
+    pInfo->_vGripperInfos.clear();
+    pInfo->_vGripperInfos.reserve(vGripperInfos.size());
+    FOREACHC(it, vGripperInfos) {
+        pInfo->_vGripperInfos.push_back(*it);
     }
 #endif
     pInfo->_transform = ExtractTransform(_transform);
