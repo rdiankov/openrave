@@ -191,11 +191,6 @@ public:
         bool SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
         bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
 
-        virtual SensorGeometry& operator=(const SensorGeometry& r) {
-            hardware_id = r.hardware_id;
-            return *this;
-        }
-
         bool operator==(const Readable& r) override {
             const SensorGeometry* pOther = dynamic_cast<const SensorGeometry*>(&r);
             if (!pOther) {

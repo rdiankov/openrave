@@ -165,6 +165,20 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
+int KinBody::GeometryInfo::SideWall::Compare(const SideWall& rhs, dReal fUnitScale, dReal fEpsilon) const
+{
+    if(!IsZeroWithEpsilon3(transf.trans - rhs.transf.trans*fUnitScale, fEpsilon)) {
+        return 1;
+    }
+    if(!IsZeroWithEpsilon4(transf.rot - rhs.transf.rot, fEpsilon)) {
+        return 2;
+    }
+    if(!IsZeroWithEpsilon3(vExtents - rhs.vExtents*fUnitScale, fEpsilon)) {
+        return 3;
+    }
+    return 0;
+}
+
 int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dReal fEpsilon) const
 {
     if( _type != rhs._type ) {
@@ -230,14 +244,8 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         }
 
         for(int iwall = 0; iwall < (int)_vSideWalls.size(); ++iwall) {
-            if( !IsZeroWithEpsilon3(_vSideWalls[iwall].transf.trans - rhs._vSideWalls[iwall].transf.trans*fUnitScale, fEpsilon) ) {
+            if(_vSideWalls[iwall].Compare(rhs._vSideWalls[iwall], fUnitScale, fEpsilon) > 0) {
                 return 16;
-            }
-            if( !IsZeroWithEpsilon4(_vSideWalls[iwall].transf.rot - rhs._vSideWalls[iwall].transf.rot, fEpsilon) ) {
-                return 17;
-            }
-            if( !IsZeroWithEpsilon3(_vSideWalls[iwall].vExtents - rhs._vSideWalls[iwall].vExtents*fUnitScale, fEpsilon) ) {
-                return 18;
             }
         }
         break;
@@ -245,17 +253,15 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
 
     case GT_TriMesh:
         if( _meshcollision.vertices.size() != rhs._meshcollision.vertices.size() ) {
-            return 19;
+            return 17;
         }
-        // TODO necessary to compare index values?
-        if( _meshcollision.indices.size() != rhs._meshcollision.indices.size() ) {
-            return 20;
-        }
-
         for(int ivertex = 0; ivertex < (int)_meshcollision.vertices.size(); ++ivertex) {
             if( !IsZeroWithEpsilon3(_meshcollision.vertices[ivertex]-rhs._meshcollision.vertices[ivertex]*fUnitScale, fEpsilon) ) {
-                return 21;
+                return 18;
             }
+        }
+        if( _meshcollision.indices != rhs._meshcollision.indices ) {
+            return 19;
         }
 
         break;
@@ -662,92 +668,6 @@ void KinBody::GeometryInfo::Reset()
     _bModifiable = true;
 }
 
-void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
-{
-    orjson::SetJsonValueByKey(rGeometryInfo, "id", _id, allocator);
-    orjson::SetJsonValueByKey(rGeometryInfo, "name", _name, allocator);
-    Transform tscaled = _t;
-    tscaled.trans *= fUnitScale;
-    orjson::SetJsonValueByKey(rGeometryInfo, "transform", tscaled, allocator);
-
-    switch(_type) {
-    case GT_Box:
-        orjson::SetJsonValueByKey(rGeometryInfo, "type", "box", allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "halfExtents", _vGeomData*fUnitScale, allocator);
-        break;
-
-    case GT_Container:
-        orjson::SetJsonValueByKey(rGeometryInfo, "type", "container", allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "outerExtents", _vGeomData*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "innerExtents", _vGeomData2*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "bottomCross", _vGeomData3*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "bottom", _vGeomData4*fUnitScale, allocator);
-        break;
-
-    case GT_Cage: {
-        orjson::SetJsonValueByKey(rGeometryInfo, "type", "cage", allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "baseExtents", _vGeomData*fUnitScale, allocator);
-
-        std::vector<SideWall> vScaledSideWalls = _vSideWalls;
-        FOREACH(itwall, vScaledSideWalls) {
-            itwall->transf.trans *= fUnitScale;
-            itwall->vExtents *= fUnitScale;
-        }
-        if( _vGeomData2.x > g_fEpsilon ) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "innerSizeX", _vGeomData2.x*fUnitScale, allocator);
-        }
-        if( _vGeomData2.y > g_fEpsilon ) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "innerSizeY", _vGeomData2.y*fUnitScale, allocator);
-        }
-        if( _vGeomData2.z > g_fEpsilon ) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "innerSizeZ", _vGeomData2.z*fUnitScale, allocator);
-        }
-        orjson::SetJsonValueByKey(rGeometryInfo, "sideWalls", vScaledSideWalls, allocator);
-        break;
-    }
-    case GT_Sphere:
-        orjson::SetJsonValueByKey(rGeometryInfo, "type", "sphere", allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "radius", _vGeomData.x*fUnitScale, allocator);
-        break;
-
-    case GT_Cylinder:
-        orjson::SetJsonValueByKey(rGeometryInfo, "type", "cylinder", allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "radius", _vGeomData.x*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "height", _vGeomData.y*fUnitScale, allocator);
-        break;
-
-    case GT_TriMesh:
-        orjson::SetJsonValueByKey(rGeometryInfo, "type", "trimesh", allocator);
-        // has to be scaled correctly
-
-        {
-            rapidjson::Value rTriMesh;
-            rTriMesh.SetObject();
-            rapidjson::Value rVertices;
-            rVertices.SetArray();
-            rVertices.Reserve(_meshcollision.vertices.size()*3, allocator);
-            for(size_t ivertex = 0; ivertex < _meshcollision.vertices.size(); ++ivertex) {
-                rVertices.PushBack(_meshcollision.vertices[ivertex][0]*fUnitScale, allocator);
-                rVertices.PushBack(_meshcollision.vertices[ivertex][1]*fUnitScale, allocator);
-                rVertices.PushBack(_meshcollision.vertices[ivertex][2]*fUnitScale, allocator);
-            }
-            rTriMesh.AddMember("vertices", rVertices, allocator);
-            orjson::SetJsonValueByKey(rTriMesh, "indices", _meshcollision.indices, allocator);
-            rGeometryInfo.AddMember(rapidjson::Document::StringRefType("mesh"), rTriMesh, allocator);
-        }
-        break;
-
-    default:
-        break;
-    }
-
-    orjson::SetJsonValueByKey(rGeometryInfo, "transparency", _fTransparency, allocator);
-    orjson::SetJsonValueByKey(rGeometryInfo, "visible", _bVisible, allocator);
-    orjson::SetJsonValueByKey(rGeometryInfo, "diffuseColor", _vDiffuseColor, allocator);
-    orjson::SetJsonValueByKey(rGeometryInfo, "ambientColor", _vAmbientColor, allocator);
-    orjson::SetJsonValueByKey(rGeometryInfo, "modifiable", _bModifiable, allocator);
-}
-
 inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
 {
     switch(geometryType) {
@@ -769,6 +689,85 @@ inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
     return "";
 }
 
+void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
+{
+    orjson::SetJsonValueByKey(rGeometryInfo, "id", _id, allocator);
+    orjson::SetJsonValueByKey(rGeometryInfo, "name", _name, allocator);
+    Transform tscaled = _t;
+    tscaled.trans *= fUnitScale;
+    orjson::SetJsonValueByKey(rGeometryInfo, "transform", tscaled, allocator);
+
+    orjson::SetJsonValueByKey(rGeometryInfo, "type", _GetGeometryTypeString(_type), allocator);
+
+    switch(_type) {
+    case GT_Box:
+        orjson::SetJsonValueByKey(rGeometryInfo, "halfExtents", _vGeomData*fUnitScale, allocator);
+        break;
+
+    case GT_Container:
+        orjson::SetJsonValueByKey(rGeometryInfo, "outerExtents", _vGeomData*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "innerExtents", _vGeomData2*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "bottomCross", _vGeomData3*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "bottom", _vGeomData4*fUnitScale, allocator);
+        break;
+
+    case GT_Cage: {
+        orjson::SetJsonValueByKey(rGeometryInfo, "baseExtents", _vGeomData*fUnitScale, allocator);
+
+        std::vector<SideWall> vScaledSideWalls = _vSideWalls;
+        FOREACH(itwall, vScaledSideWalls) {
+            itwall->transf.trans *= fUnitScale;
+            itwall->vExtents *= fUnitScale;
+        }
+        if( _vGeomData2.x > g_fEpsilon ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "innerSizeX", _vGeomData2.x*fUnitScale, allocator);
+        }
+        if( _vGeomData2.y > g_fEpsilon ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "innerSizeY", _vGeomData2.y*fUnitScale, allocator);
+        }
+        if( _vGeomData2.z > g_fEpsilon ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "innerSizeZ", _vGeomData2.z*fUnitScale, allocator);
+        }
+        orjson::SetJsonValueByKey(rGeometryInfo, "sideWalls", vScaledSideWalls, allocator);
+        break;
+    }
+    case GT_Sphere:
+        orjson::SetJsonValueByKey(rGeometryInfo, "radius", _vGeomData.x*fUnitScale, allocator);
+        break;
+
+    case GT_Cylinder:
+        orjson::SetJsonValueByKey(rGeometryInfo, "radius", _vGeomData.x*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "height", _vGeomData.y*fUnitScale, allocator);
+        break;
+
+    case GT_TriMesh: {
+        // has to be scaled correctly
+        rapidjson::Value rTriMesh;
+        rTriMesh.SetObject();
+        rapidjson::Value rVertices;
+        rVertices.SetArray();
+        rVertices.Reserve(_meshcollision.vertices.size()*3, allocator);
+        for(size_t ivertex = 0; ivertex < _meshcollision.vertices.size(); ++ivertex) {
+            rVertices.PushBack(_meshcollision.vertices[ivertex][0]*fUnitScale, allocator);
+            rVertices.PushBack(_meshcollision.vertices[ivertex][1]*fUnitScale, allocator);
+            rVertices.PushBack(_meshcollision.vertices[ivertex][2]*fUnitScale, allocator);
+        }
+        rTriMesh.AddMember("vertices", rVertices, allocator);
+        orjson::SetJsonValueByKey(rTriMesh, "indices", _meshcollision.indices, allocator);
+        rGeometryInfo.AddMember(rapidjson::Document::StringRefType("mesh"), rTriMesh, allocator);
+        break;
+    }
+    default:
+        break;
+    }
+
+    orjson::SetJsonValueByKey(rGeometryInfo, "transparency", _fTransparency, allocator);
+    orjson::SetJsonValueByKey(rGeometryInfo, "visible", _bVisible, allocator);
+    orjson::SetJsonValueByKey(rGeometryInfo, "diffuseColor", _vDiffuseColor, allocator);
+    orjson::SetJsonValueByKey(rGeometryInfo, "ambientColor", _vAmbientColor, allocator);
+    orjson::SetJsonValueByKey(rGeometryInfo, "modifiable", _bModifiable, allocator);
+}
+
 void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale, int options)
 {
     orjson::LoadJsonValueByKey(value, "id", _id);
@@ -781,93 +780,171 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         _t.trans *= fUnitScale;
     }
 
-    std::string typestr = _GetGeometryTypeString(_type);
-    orjson::LoadJsonValueByKey(value, "type", typestr, typestr);
-    if (typestr == "box") {
-        _type = GT_Box;
-        if (value.HasMember("halfExtents")) {
-            orjson::LoadJsonValueByKey(value, "halfExtents", _vGeomData);
-            _vGeomData *= fUnitScale;
+    if (value.HasMember("type")) {
+        std::string typestr;
+        GeometryType type;
+        orjson::LoadJsonValueByKey(value, "type", typestr);
+        if (typestr == "box") {
+            type = GT_Box;
+        }
+        else if (typestr == "container") {
+            type = GT_Container;
+        }
+        else if (typestr == "cage") {
+            type = GT_Cage;
+        }
+        else if (typestr == "sphere") {
+            type = GT_Sphere;
+        }
+        else if (typestr == "cylinder") {
+            type = GT_Cylinder;
+        }
+        else if (typestr == "trimesh" || typestr == "mesh") {
+            type = GT_TriMesh;
+        }
+        else {
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
+        }
+        if (_type != type) {
+            _meshcollision.Clear();
+            _type = type;
         }
     }
-    else if (typestr == "container") {
-        _type = GT_Container;
+    Vector vGeomDataTemp;
+    switch (_type) {
+    case GT_Box:
+        if (value.HasMember("halfExtents")) {
+            orjson::LoadJsonValueByKey(value, "halfExtents", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vGeomData) {
+                _vGeomData = vGeomDataTemp;
+                _meshcollision.Clear();            }
+        }
+        break;
+    case GT_Container:
         if (value.HasMember("outerExtents")) {
-            orjson::LoadJsonValueByKey(value, "outerExtents", _vGeomData);
-            _vGeomData *= fUnitScale;
+            orjson::LoadJsonValueByKey(value, "outerExtents", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vGeomData) {
+                _vGeomData = vGeomDataTemp;
+                _meshcollision.Clear();
+            }
         }
         if (value.HasMember("innerExtents")) {
-            orjson::LoadJsonValueByKey(value, "innerExtents", _vGeomData2);
-            _vGeomData2 *= fUnitScale;
+            orjson::LoadJsonValueByKey(value, "innerExtents", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vGeomData2) {
+                _vGeomData2 = vGeomDataTemp;
+                _meshcollision.Clear();
+            }
         }
         if (value.HasMember("bottomCross")) {
-            orjson::LoadJsonValueByKey(value, "bottomCross", _vGeomData3);
-            _vGeomData3 *= fUnitScale;
+            orjson::LoadJsonValueByKey(value, "bottomCross", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vGeomData3) {
+                _vGeomData3 = vGeomDataTemp;
+                _meshcollision.Clear();
+            }
         }
         if (value.HasMember("bottom")) {
-            orjson::LoadJsonValueByKey(value, "bottom", _vGeomData4);
-            _vGeomData4 *= fUnitScale;
+            orjson::LoadJsonValueByKey(value, "bottom", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vGeomData4) {
+                _vGeomData4 = vGeomDataTemp;
+                _meshcollision.Clear();
+            }
         }
-    }
-    else if (typestr == "cage") {
-        _type = GT_Cage;
+        break;
+    case GT_Cage:
         if (value.HasMember("baseExtents")) {
-            orjson::LoadJsonValueByKey(value, "baseExtents", _vGeomData);
-            _vGeomData *= fUnitScale;
+            orjson::LoadJsonValueByKey(value, "baseExtents", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vGeomData) {
+                _vGeomData = vGeomDataTemp;
+                _meshcollision.Clear();
+            }
         }
+        vGeomDataTemp = _vGeomData2;
         if (value.HasMember("innerSizeX")) {
-            orjson::LoadJsonValueByKey(value, "innerSizeX", _vGeomData2.x);
-            _vGeomData2.x *= fUnitScale;
+            orjson::LoadJsonValueByKey(value, "innerSizeX", vGeomDataTemp.x);
+            vGeomDataTemp.x *= fUnitScale;
         }
         if (value.HasMember("innerSizeY")) {
-            orjson::LoadJsonValueByKey(value, "innerSizeY", _vGeomData2.y);
-            _vGeomData2.y *= fUnitScale;
+            orjson::LoadJsonValueByKey(value, "innerSizeY", vGeomDataTemp.y);
+            vGeomDataTemp.y *= fUnitScale;
         }
         if (value.HasMember("innerSizeZ")) {
-            orjson::LoadJsonValueByKey(value, "innerSizeZ", _vGeomData2.z);
-            _vGeomData2.z *= fUnitScale;
+            orjson::LoadJsonValueByKey(value, "innerSizeZ", vGeomDataTemp.z);
+            vGeomDataTemp.z *= fUnitScale;
         }
+        if (vGeomDataTemp != _vGeomData2) {
+            _vGeomData2 = vGeomDataTemp;
+            _meshcollision.Clear();
+        }
+
         if (value.HasMember("sideWalls")) {
-            orjson::LoadJsonValueByKey(value, "sideWalls", _vSideWalls);
-            FOREACH(itsidewall, _vSideWalls) {
+            std::vector<SideWall> vSideWalls;
+            orjson::LoadJsonValueByKey(value, "sideWalls", vSideWalls);
+            FOREACH(itsidewall, vSideWalls) {
                 itsidewall->transf.trans *= fUnitScale;
                 itsidewall->vExtents *= fUnitScale;
             }
+            if (vSideWalls.size() != _vSideWalls.size()) {
+                _vSideWalls = std::move(vSideWalls);
+                _meshcollision.Clear();
+            }
+            else {
+                bool bSideWallChanged = false;
+                for(unsigned iSideWall=0; iSideWall < vSideWalls.size(); iSideWall++) {
+                    if (vSideWalls[iSideWall].Compare(_vSideWalls[iSideWall], fUnitScale) > 0) {
+                        _vSideWalls[iSideWall] = std::move(vSideWalls[iSideWall]);
+                        bSideWallChanged = true;
+                    }
+                }
+                if (bSideWallChanged) {
+                    _meshcollision.Clear();
+                }
+            }
         }
-    }
-    else if (typestr == "sphere") {
-        _type = GT_Sphere;
+        break;
+    case GT_Sphere:
+        vGeomDataTemp = _vGeomData;
         if (value.HasMember("radius")) {
-            orjson::LoadJsonValueByKey(value, "radius", _vGeomData.x);
-            _vGeomData *= fUnitScale;
+            orjson::LoadJsonValueByKey(value, "radius", vGeomDataTemp.x);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vGeomData) {
+                _vGeomData = vGeomDataTemp;
+                _meshcollision.Clear();
+            }
         }
-    }
-    else if (typestr == "cylinder") {
-        _type = GT_Cylinder;
+        break;
+    case GT_Cylinder:
+        vGeomDataTemp = _vGeomData;
         if (value.HasMember("radius")) {
-            orjson::LoadJsonValueByKey(value, "radius", _vGeomData.x);
-            _vGeomData.x *= fUnitScale;
+            orjson::LoadJsonValueByKey(value, "radius", vGeomDataTemp.x);
+            vGeomDataTemp.x *= fUnitScale;
         }
         if (value.HasMember("height")) {
-            orjson::LoadJsonValueByKey(value, "height", _vGeomData.y);
-            _vGeomData.y *= fUnitScale;
+            orjson::LoadJsonValueByKey(value, "height", vGeomDataTemp.y);
+            vGeomDataTemp.y *= fUnitScale;
         }
-    }
-    else if (typestr == "trimesh" or typestr == "mesh") {
-        _type = GT_TriMesh;
+        if (vGeomDataTemp != _vGeomData) {
+            _vGeomData = vGeomDataTemp;
+            _meshcollision.Clear();
+        }
+        break;
+    case GT_TriMesh:
         if (value.HasMember("mesh")) {
             orjson::LoadJsonValueByKey(value, "mesh", _meshcollision);
             FOREACH(itvertex, _meshcollision.vertices) {
                 *itvertex *= fUnitScale;
             }
         }
+        break;
+    default:
+        break;
     }
-    else {
-        // this maybe a partial deserialize json. so only throw error if _type is not initialized
-        if (_type == GT_None) {
-            throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
-        }
-    }
+
     orjson::LoadJsonValueByKey(value, "transparency", _fTransparency);
     orjson::LoadJsonValueByKey(value, "visible", _bVisible);
     orjson::LoadJsonValueByKey(value, "diffuseColor", _vDiffuseColor);
@@ -1290,74 +1367,97 @@ void KinBody::Link::Geometry::ExtractInfo(KinBody::GeometryInfo& info) const
 UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::GeometryInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
+    UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
 
     if (GetName() != info._name) {
         SetName(info._name);
+        RAVELOG_VERBOSE_FORMAT("geometry %s name changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     if (GetType() != info._type) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("geometry %s type changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
-    if (GetTransform() != info._t) {
-        return UFIR_RequireRemoveFromEnvironment;
+    if (!GetTransform().Compare(info._t)) {
+        RAVELOG_VERBOSE_FORMAT("geometry %s transform changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     if (GetType() == GT_Box) {
         if (GetBoxExtents() != info._vGeomData) {
-            return UFIR_RequireRemoveFromEnvironment;
+            RAVELOG_VERBOSE_FORMAT("geometry %s box extents changed", _info._id);
+            return UFIR_RequireReinitialize;
         }
     }
     else if (GetType() == GT_Container) {
         if (GetContainerOuterExtents() != info._vGeomData || GetContainerInnerExtents() != info._vGeomData2 || GetContainerBottomCross() != info._vGeomData3 || GetContainerBottom() != info._vGeomData4) {
-            return UFIR_RequireRemoveFromEnvironment;
+            RAVELOG_VERBOSE_FORMAT("geometry %s container extents changed", _info._id);
+            return UFIR_RequireReinitialize;
         }
     }
     else if (GetType() == GT_Cage) {
-        // TODO
-        return UFIR_RequireRemoveFromEnvironment;
+        if (GetCageBaseExtents() != info._vGeomData || _info._vGeomData2 != info._vGeomData2 || _info._vSideWalls != info._vSideWalls) {
+            RAVELOG_VERBOSE_FORMAT("geometry %s cage changed", _info._id);
+            return UFIR_RequireReinitialize;
+        }
     }
     else if (GetType() == GT_Sphere) {
-        // TODO
-        return UFIR_RequireRemoveFromEnvironment;
+        if (GetSphereRadius() != info._vGeomData.x) {
+            RAVELOG_VERBOSE_FORMAT("geometry %s sphere changed", _info._id);
+        }
+        return UFIR_RequireReinitialize;
     }
     else if (GetType() == GT_Cylinder) {
-        // TODO
-        if (GetCylinderRadius() != _info._vGeomData.x || GetCylinderHeight() != _info._vGeomData.y) {
-            return UFIR_RequireRemoveFromEnvironment;
+        if (GetCylinderRadius() != info._vGeomData.x || GetCylinderHeight() != info._vGeomData.y) {
+            RAVELOG_VERBOSE_FORMAT("geometry %s cylinder changed", _info._id);
+            return UFIR_RequireReinitialize;
         }
     }
     else if (GetType() == GT_TriMesh) {
-        // TODO
-        return UFIR_RequireRemoveFromEnvironment;
+        if (info._meshcollision.vertices != _info._meshcollision.vertices || info._meshcollision.indices != _info._meshcollision.indices) {
+            RAVELOG_VERBOSE_FORMAT("geometry %s trimesh changed", _info._id);
+            return UFIR_RequireReinitialize;
+        }
     }
 
     // transparency
     if (GetTransparency() != info._fTransparency) {
         SetTransparency(info._fTransparency);
+        RAVELOG_VERBOSE_FORMAT("geometry %s transparency changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // visible
     if (IsVisible() != info._bVisible) {
         SetVisible(info._bVisible);
+        RAVELOG_VERBOSE_FORMAT("geometry %s visible changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // diffuseColor
     if (GetDiffuseColor() != info._vDiffuseColor) {
         SetDiffuseColor(info._vDiffuseColor);
+        RAVELOG_VERBOSE_FORMAT("geometry %s diffuse color changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // ambientColor
     if (GetAmbientColor() != info._vAmbientColor) {
         SetAmbientColor(info._vAmbientColor);
+        RAVELOG_VERBOSE_FORMAT("geometry %s ambient color changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // modifiable
     if (IsModifiable() != info._bModifiable) {
         _info._bModifiable = info._bModifiable;
+        RAVELOG_VERBOSE_FORMAT("geometry %s modifiable changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
-    return UFIR_Success;
+    return updateFromInfoResult;
 }
 
 }

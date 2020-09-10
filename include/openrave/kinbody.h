@@ -29,9 +29,10 @@ typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRe
 
 /// \brief Result of UpdateFromInfo() call
 enum UpdateFromInfoResult {
-    UFIR_Success = 0, ///< Updated successfully
-    UFIR_RequireRemoveFromEnvironment, ///< Failed to update, require the kinbody to be removed from environment before update can succeed
-    UFIR_RequireReinitialize, ///< Failed to update, require InitFromInfo() to be called before update can succeed
+    UFIR_NoChange = 0, ///< Nothing changed
+    UFIR_Success = 1, ///< Updated successfully
+    UFIR_RequireRemoveFromEnvironment = 2, ///< Failed to update, require the kinbody to be removed from environment before update can succeed
+    UFIR_RequireReinitialize = 3, ///< Failed to update, require InitFromInfo() to be called before update can succeed
 };
 
 /// \brief The type of geometry primitive.
@@ -189,10 +190,10 @@ public:
                    && _vGeomData2 == other._vGeomData2
                    && _vGeomData3 == other._vGeomData3
                    && _vGeomData4 == other._vGeomData4
-                   // && _vSideWalls == other._vSideWalls
+                   && _vSideWalls == other._vSideWalls
                    && _vDiffuseColor == other._vDiffuseColor
                    && _vAmbientColor == other._vAmbientColor
-                   // && _meshcollision == other._meshcollision
+                   && _meshcollision == other._meshcollision
                    && _id == other._id
                    && _name == other._name
                    && _type == other._type
@@ -284,6 +285,16 @@ public:
             Transform transf;
             Vector vExtents;
             SideWallType type;
+            int Compare(const SideWall& rhs, dReal fUnitScale=1.0, dReal fEpsilon=10e-7) const;
+
+            bool operator==(const SideWall& other) const {
+                return transf == other.transf
+                       && vExtents == other.vExtents
+                       && type == other.type;
+            }
+            bool operator!=(const SideWall& other) const {
+                return !operator==(other);
+            }
         };
         std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
 
@@ -332,7 +343,6 @@ public:
         LinkInfo(const LinkInfo& other) {
             *this = other;
         }
-        LinkInfo& operator=(const LinkInfo& other);
         bool operator==(const LinkInfo& other) const;
         bool operator!=(const LinkInfo& other) const {
             return !operator==(other);
@@ -366,7 +376,7 @@ public:
         /// the frame for inertia and center of mass of the link in the link's coordinate system
         Transform _tMassFrame;
         /// mass of link
-        dReal _mass; ///< kg
+        dReal _mass = 1e-10; ///< kg, set default to non-zero value to avoid divide by 0 for inverse dynamics/physics computations
 
         Vector _vinertiamoments; ///< kg*unit**2 inertia along the axes of _tMassFrame
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
@@ -945,11 +955,24 @@ private:
     class OPENRAVE_API MimicInfo : public InfoBase
     {
 public:
+        MimicInfo() {
+        };
+        MimicInfo(const MimicInfo& other) {
+            *this = other;
+        }
+
         void Reset() override;
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
         boost::array< std::string, 3>  _equations;         ///< the original equations
+
+        bool operator==(const MimicInfo& other) const {
+            return _equations == other._equations;
+        }
+        bool operator!=(const MimicInfo& other) const {
+            return !operator==(other);
+        }
     };
     typedef boost::shared_ptr<MimicInfo> MimicInfoPtr;
     typedef boost::shared_ptr<MimicInfo const> MimicInfoConstPtr;
@@ -1028,7 +1051,6 @@ public:
         JointInfo(const JointInfo& other) {
             *this = other;
         }
-        JointInfo& operator=(const JointInfo& other);
         bool operator==(const JointInfo& other) const;
         bool operator!=(const JointInfo& other) const {
             return !operator==(other);
@@ -1650,20 +1672,12 @@ public:
         GrabbedInfo(const GrabbedInfo& other) {
             *this = other;
         }
-        GrabbedInfo& operator=(const GrabbedInfo& other) {
-            _id = other._id;
-            _grabbedname = other._grabbedname;
-            _robotlinkname = other._robotlinkname;
-            _trelative = other._trelative;
-            _setRobotLinksToIgnore = other._setRobotLinksToIgnore;
-            return *this;
-        }
         bool operator==(const GrabbedInfo& other) const {
             return _id == other._id
                    && _grabbedname == other._grabbedname
                    && _robotlinkname == other._robotlinkname
                    && _trelative == other._trelative
-                   && _setRobotLinksToIgnore == other._setRobotLinksToIgnore;
+                   && _setIgnoreRobotLinkNames == other._setIgnoreRobotLinkNames;
         }
         bool operator!=(const GrabbedInfo& other) const {
             return !operator==(other);
@@ -1677,7 +1691,7 @@ public:
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
-        std::set<int> _setRobotLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
+        std::set<std::string> _setIgnoreRobotLinkNames; ///< names of links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
@@ -1792,38 +1806,7 @@ public:
         KinBodyInfo(const KinBodyInfo& other) {
             *this = other;
         }
-        KinBodyInfo& operator=(const KinBodyInfo& other) {
-            _id = other._id;
-            _uri = other._uri;
-            _name = other._name;
-            _referenceUri = other._referenceUri;
-            _interfaceType = other._interfaceType;
-            _dofValues = other._dofValues;
-            _transform = other._transform;
-            _vLinkInfos = other._vLinkInfos;
-            _vJointInfos = other._vJointInfos;
-            _vGrabbedInfos = other._vGrabbedInfos;
-            _mReadableInterfaces = other._mReadableInterfaces;
-            _isRobot = other._isRobot;
-
-            // TODO: deep copy infos
-            return *this;
-        }
-        bool operator==(const KinBodyInfo& other) const {
-            return _id == other._id
-                   && _uri == other._uri
-                   && _name == other._name
-                   && _referenceUri == other._referenceUri
-                   && _interfaceType == other._interfaceType
-                   && _dofValues == other._dofValues
-                   && _transform == other._transform
-                   && _vLinkInfos == other._vLinkInfos
-                   && _vJointInfos == other._vJointInfos
-                   && _vGrabbedInfos == other._vGrabbedInfos
-                   && _mReadableInterfaces == other._mReadableInterfaces
-                   && _isRobot == other._isRobot;
-            // TODO: deep compare infos
-        }
+        bool operator==(const KinBodyInfo& other) const;
         bool operator!=(const KinBodyInfo& other) const {
             return !operator==(other);
         }
@@ -2725,6 +2708,16 @@ private:
         \return true if successful and body is grabbed.
      */
     virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore);
+
+    /** \brief Grab the body with the specified link.
+
+        \param[in] body the body to be grabbed
+        \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
+        \param[in] setBodyLinksToIgnore Additional body link names that collision checker ignore
+        when checking collisions between the grabbed body and the body.
+        \return true if successful and body is grabbed.
+    */
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames);
 
     /** \brief Grab a body with the specified link.
 
