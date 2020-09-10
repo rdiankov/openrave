@@ -90,7 +90,7 @@ public:
     object _name = py::none_();
     object _t = ReturnTransform(Transform());
     object _tMassFrame = ReturnTransform(Transform());
-    dReal _mass = 0.0;
+    dReal _mass = 1e-10;
     object _vinertiamoments = toPyVector3(Vector(1,1,1));
     py::dict _mapFloatParameters;
     py::dict _mapIntParameters;
