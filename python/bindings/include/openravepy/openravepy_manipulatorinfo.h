@@ -44,6 +44,7 @@ public:
     object _vGripperJointNames = py::none_();
     object _grippername = py::none_();
     object _toolChangerConnectedBodyToolName = py::none_();
+    object _vRestrictGraspSetNames = py::none_();
 
 private:
     void _Update(const RobotBase::ManipulatorInfo& info);
