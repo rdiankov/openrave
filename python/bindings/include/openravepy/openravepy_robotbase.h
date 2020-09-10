@@ -86,6 +86,8 @@ public:
 
         object GetToolChangerConnectedBodyToolName() const;
 
+        object GetRestrictGraspSetNames() const;
+
         PyRobotBasePtr GetRobot();
 
         bool SetIkSolver(PyIkSolverBasePtr iksolver);
