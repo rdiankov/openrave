@@ -49,7 +49,8 @@ public:
 
 protected:
     void _SetupOutlineShaderUniforms(RenderPassState* pass);
-    void  setMaxFBOSize(int maxFBOBufferWidth, int maxFBOBufferHeight) { _maxFBOBufferWidth = maxFBOBufferWidth; _maxFBOBufferHeight = maxFBOBufferHeight; }
+    // sets the initial size fort FBO buffers. They will be resized if HandleResize is called.
+    void  SetInitialFBOTextureSize(int maxFBOBufferWidth, int maxFBOBufferHeight) { _maxFBOBufferWidth = maxFBOBufferWidth; _maxFBOBufferHeight = maxFBOBufferHeight; }
 
 public:
 	osg::Vec3 _outlineColor;

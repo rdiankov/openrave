@@ -721,7 +721,7 @@ void OutlineShaderPipeline::_SetupOutlineShaderUniforms(RenderPassState* pass)
 osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera,
 	osg::ref_ptr<osg::Node> mainSceneRoot, int maxFBOBufferWidth, int maxFBOBufferHeight, bool useMultiSamples)
 {
-	setMaxFBOSize(1024, 1024);
+	SetInitialFBOTextureSize(1024, 1024);
 
     osg::ref_ptr<osg::Texture> depthBuffer = nullptr; // do not use extra depth buffer texture, use color to store depth buffer
 	mainSceneCamera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
