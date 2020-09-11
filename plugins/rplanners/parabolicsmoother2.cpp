@@ -835,7 +835,7 @@ public:
 
                     std::vector<RampOptimizer::RampND>& rampndVectOut = _cacheRampNDVectOut;
                     if( bCheck ) {
-                        RampOptimizer::CheckReturn checkret = _feasibilitychecker.Check2(rampndTrimmed, 0xffff, rampndVectOut);
+                        RampOptimizer::CheckReturn checkret = _feasibilitychecker.Check2(rampndTrimmed, 0xffff|CFO_FromTrajectorySmoother, rampndVectOut);
 #ifdef SMOOTHER2_TIMING_DEBUG
                         _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                         _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -874,7 +874,7 @@ public:
                                 if( result ) {
                                     // Stretching is successful
                                     RAVELOG_VERBOSE_FORMAT("env=%d, duration %.15e -> %.15e", _environmentid%rampndTrimmed.GetDuration()%newDuration);
-                                    RampOptimizer::CheckReturn newrampndret = _feasibilitychecker.Check2(rampndVectOut, 0xffff, tempRampNDVect);
+                                    RampOptimizer::CheckReturn newrampndret = _feasibilitychecker.Check2(rampndVectOut, 0xffff|CFO_FromTrajectorySmoother, tempRampNDVect);
 #ifdef SMOOTHER2_TIMING_DEBUG
                                     _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                                     _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -1018,7 +1018,7 @@ public:
         }
         catch (const std::exception& ex) {
             RAVELOG_WARN_FORMAT("env=%d, CheckPathAllConstraints threw an exception: %s", _environmentid%ex.what());
-            return 0xffff;
+            return 0xffff|CFO_FromTrajectorySmoother;
         }
     }
 
@@ -1048,7 +1048,7 @@ public:
         }
         catch (const std::exception& ex) {
             RAVELOG_WARN_FORMAT("env=%d, CheckPathAllConstraints threw an exception: %s", _environmentid%ex.what());
-            return 0xffff;
+            return 0xffff|CFO_FromTrajectorySmoother;
         }
     }
 
@@ -1106,7 +1106,7 @@ public:
             }
             catch (const std::exception& ex) {
                 RAVELOG_WARN_FORMAT("env=%d, CheckManipConstraints2 (modified=%d) threw an exception: %s", _environmentid%((int) bExpectedModifiedConfigurations)%ex.what());
-                return RampOptimizer::CheckReturn(0xffff);
+                return RampOptimizer::CheckReturn(0xffff|CFO_FromTrajectorySmoother);
             }
             rampndVectOut.resize(0);
         }
@@ -1139,7 +1139,7 @@ public:
         }
         catch (const std::exception& ex) {
             RAVELOG_WARN_FORMAT("env=%d, CheckPathAllConstraints threw an exception: %s", _environmentid%ex.what());
-            return RampOptimizer::CheckReturn(0xffff);
+            return RampOptimizer::CheckReturn(0xffff|CFO_FromTrajectorySmoother);
         }
 
         // Configurations between (q0, dq0) and (q1, dq1) may have been modified.
@@ -1305,7 +1305,7 @@ public:
             }
             catch (const std::exception& ex) {
                 RAVELOG_VERBOSE_FORMAT("env=%d, CheckManipConstraints2 (modified=%d) threw an exception: %s", _environmentid%((int) bExpectedModifiedConfigurations)%ex.what());
-                return RampOptimizer::CheckReturn(0xffff);
+                return RampOptimizer::CheckReturn(0xffff|CFO_FromTrajectorySmoother);
             }
         }
 
@@ -1539,7 +1539,7 @@ protected:
         for (; itry < numTries; ++itry) {
             bool res = _interpolator.ComputeZeroVelNDTrajectory(x0VectIn, x1VectIn, vellimits, accellimits, rampndVectOut);
             if( !res ) {
-                retseg.retcode = 0xffff;
+                retseg.retcode = 0xffff|CFO_FromTrajectorySmoother;
                 std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 ss << "x0=[";
                 SerializeValues(ss, x0VectIn);
@@ -1901,7 +1901,7 @@ protected:
                         _parameters->_getstatefn(x1Vect);
                         iIterProgress += 0x10;
 
-                        retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff, shortcutRampNDVectOut);
+                        retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff|CFO_FromTrajectorySmoother, shortcutRampNDVectOut);
 #ifdef SMOOTHER2_TIMING_DEBUG
                         _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                         _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -1987,7 +1987,7 @@ protected:
                                 break;
                             }
 
-                            retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff, shortcutRampNDVectOut1);
+                            retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff|CFO_FromTrajectorySmoother, shortcutRampNDVectOut1);
 #ifdef SMOOTHER2_TIMING_DEBUG
                             _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                             _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -2765,7 +2765,7 @@ protected:
                         _parameters->_getstatefn(x1Vect);
                         iIterProgress += 0x10;
 
-                        retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff, shortcutRampNDVectOut);
+                        retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff|CFO_FromTrajectorySmoother, shortcutRampNDVectOut);
 #ifdef SMOOTHER2_TIMING_DEBUG
                         _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                         _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -2851,7 +2851,7 @@ protected:
                                 break;
                             }
 
-                            retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff, shortcutRampNDVectOut1);
+                            retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff|CFO_FromTrajectorySmoother, shortcutRampNDVectOut1);
 #ifdef SMOOTHER2_TIMING_DEBUG
                             _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                             _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;

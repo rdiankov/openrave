@@ -299,7 +299,7 @@ public:
                 // Change timing of ramps so that they satisfy minswitchtime, _fStepLength, and dynamics and collision constraints
 
                 // Disable usePerturbation for this particular stage
-                int options = 0xffff;
+                int options = 0xffff|CFO_FromTrajectorySmoother;
                 // Reset all ramps
                 FOREACH(itramp, ramps) {
                     itramp->modified = true;
@@ -382,7 +382,7 @@ public:
             // Sanity check before any shortcutting
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 RAVELOG_VERBOSE("Sanity check before starting shortcutting...\n");
-                int options = 0xffff;
+                int options = 0xffff|CFO_FromTrajectorySmoother;
                 int iramp = 0;
                 FOREACHC(itramp,ramps){
                     if(checker.Check(*itramp,options) != 0) {
@@ -443,7 +443,7 @@ public:
 
                 //  Further merge if possible
 
-                int options = 0xffff;
+                int options = 0xffff|CFO_FromTrajectorySmoother;
                 dReal upperbound = 1.05;
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
                 bool resmerge = mergewaypoints::FurtherMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,checker,options);
@@ -568,7 +568,7 @@ public:
             //                if(_parameters->verifyinitialpath) {
             if(!!pchecker) {
                 // part of original trajectory which might not have been processed with perturbations, so ignore them
-                int options = 0xffff; // no perturbation
+                int options = 0xffff|CFO_FromTrajectorySmoother; // no perturbation
                 if( pchecker->Check(*itrampnd,options) != 0) {
                     // unfortunately happens sometimes when the robot is close to corners.. not sure if returning is failing is the right solution here..
 
@@ -614,7 +614,7 @@ public:
             ramps.front().SetConstant(x[0]);
         }
         else if( x.size() > 1 ) {
-            int options = 0xffff; // no perturbation
+            int options = 0xffff|CFO_FromTrajectorySmoother; // no perturbation
             if(!_parameters->verifyinitialpath) {
                 RAVELOG_VERBOSE("Initial path verification is disabled (in SetMilestones)\n");
                 options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions); // no collision checking
@@ -787,7 +787,7 @@ public:
             itramp1->Derivative(u1,dx0);
             itramp2->Derivative(u2,dx1);
 
-            int options = 0xffff;
+            int options = 0xffff|CFO_FromTrajectorySmoother;
             // If we run mergewaypoints afterwards, no need to check for collision at this stage
             if(_parameters->minswitchtime > 0) {
                 options = options &(~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
@@ -854,7 +854,7 @@ public:
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
                 dReal upperbound = (durationbeforeshortcut-fimprovetimethresh)/mergewaypoints::ComputeRampsDuration(ramps);
                 // Do not check collision during merge, check later
-                int options = 0xffff & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+                int options = (0xffff|CFO_FromTrajectorySmoother) & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
 
 
                 bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,check,options);
@@ -875,7 +875,7 @@ public:
                         // Perturbations are applied when a configuration is outside the "radius" of start and goal config
                         int itx = 0;
                         dReal radius_around_endpoints = 0.1;
-                        options = 0xffff;
+                        options = 0xffff|CFO_FromTrajectorySmoother;
                         FOREACH(itramp, resramps) {
                             if(!itramp->modified) {
                                 continue;

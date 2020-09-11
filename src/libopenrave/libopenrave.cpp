@@ -701,14 +701,14 @@ protected:
         return UserDataPtr(new JSONReaderFunctionData(type,id,fn,shared_from_this()));
     }
 
-    const BaseJSONReaderPtr CallJSONReader(InterfaceType type, const std::string& id, InterfaceBasePtr pinterface, const AttributesList& atts)
+    const BaseJSONReaderPtr CallJSONReader(InterfaceType type, const std::string& id, ReadablePtr pReadable, const AttributesList& atts)
     {
         JSONREADERSMAP::iterator it = _mapjsonreaders[type].find(id);
         if( it == _mapjsonreaders[type].end() ) {
             //throw openrave_exception(str(boost::format(_("No function registered for interface %s xml tag %s"))%GetInterfaceName(type)%id),ORE_InvalidArguments);
             return BaseJSONReaderPtr();
         }
-        return it->second(pinterface,atts);
+        return it->second(pReadable, atts);
     }
 
     boost::shared_ptr<RaveDatabase> GetDatabase() const {
@@ -1366,9 +1366,9 @@ BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag
     return RaveGlobal::instance()->CallXMLReader(type,xmltag,pinterface,atts);
 }
 
-BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, InterfaceBasePtr pinterface, const AttributesList& atts)
+BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, ReadablePtr pReadable, const AttributesList& atts)
 {
-    return RaveGlobal::instance()->CallJSONReader(type,id,pinterface,atts);
+    return RaveGlobal::instance()->CallJSONReader(type, id, pReadable, atts);
 }
 
 std::string RaveFindLocalFile(const std::string& filename, const std::string& curdir)
@@ -2145,6 +2145,12 @@ void TriMesh::Append(const TriMesh& mesh, const Transform& trans)
     }
 }
 
+void TriMesh::Clear()
+{
+    vertices.clear();
+    indices.clear();
+}
+
 AABB TriMesh::ComputeAABB() const
 {
     AABB ab;
@@ -2689,8 +2695,48 @@ double RaveRandomDouble(IntervalType interval)
 void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale) const
 {
     rIkParameterization.SetObject();
+    orjson::SetJsonValueByKey(rIkParameterization, "id", GetId(), allocator);
     orjson::SetJsonValueByKey(rIkParameterization, "type", GetName(), allocator);
-    orjson::SetJsonValueByKey(rIkParameterization, "transform", _transform, allocator);
+
+    Transform transform = _transform;
+    transform.trans *= fUnitScale;
+    switch (_type & ~IKP_VelocityDataBit) {
+    case IKP_Transform6D:
+        orjson::SetJsonValueByKey(rIkParameterization, "transform", transform, allocator);
+        break;
+    case IKP_Rotation3D:
+        // TODO: need to make this always output 4 values
+        orjson::SetJsonValueByKey(rIkParameterization, "quaternion", transform.rot, allocator);
+        break;
+    case IKP_Translation3D:
+    case IKP_TranslationXY2D:
+    case IKP_TranslationXYOrientation3D:
+        orjson::SetJsonValueByKey(rIkParameterization, "translate", transform.trans, allocator);
+        break;
+    case IKP_Direction3D:
+        orjson::SetJsonValueByKey(rIkParameterization, "direction", transform.rot, allocator);
+        break;
+    case IKP_Ray4D:
+    case IKP_Lookat3D:
+    case IKP_TranslationDirection5D:
+        orjson::SetJsonValueByKey(rIkParameterization, "translate", transform.trans, allocator);
+        orjson::SetJsonValueByKey(rIkParameterization, "direction", transform.rot, allocator);
+        break;
+    case IKP_TranslationLocalGlobal6D:
+        transform.rot *= fUnitScale;
+        orjson::SetJsonValueByKey(rIkParameterization, "translate", transform.trans, allocator);
+        orjson::SetJsonValueByKey(rIkParameterization, "localTranslate", transform.rot, allocator);
+        break;
+    case IKP_TranslationXAxisAngle4D:
+    case IKP_TranslationYAxisAngle4D:
+    case IKP_TranslationZAxisAngle4D:
+    case IKP_TranslationXAxisAngleZNorm4D:
+    case IKP_TranslationYAxisAngleXNorm4D:
+    case IKP_TranslationZAxisAngleYNorm4D:
+        orjson::SetJsonValueByKey(rIkParameterization, "translate", transform.trans, allocator);
+        orjson::SetJsonValueByKey(rIkParameterization, "angle", transform.rot.x, allocator);
+        break;
+    }
 
     if (_mapCustomData.size() > 0) {
         // TODO have to scale _mapCustomData by fUnitScale
@@ -2712,7 +2758,8 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     if (!rIkParameterization.IsObject()) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("Cannot decode non-object JSON value to IkParameterization"), ORE_InvalidArguments);
     }
-    _type = IKP_None;
+    orjson::LoadJsonValueByKey(rIkParameterization, "id", _id);
+    
     if( rIkParameterization.HasMember("type") ) {
         const char* ptype =  rIkParameterization["type"].GetString();
         if( !!ptype ) {
@@ -2730,12 +2777,65 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
             }
         }
     }
-    if (rIkParameterization.HasMember("transform")) {
-        orjson::LoadJsonValueByKey(rIkParameterization, "transform", _transform);
+
+    switch (_type & ~IKP_VelocityDataBit) {
+    case IKP_Transform6D:
+        if (rIkParameterization.HasMember("transform")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "transform", _transform);
+            _transform.trans *= fUnitScale;
+        }
+        break;
+    case IKP_Rotation3D:
+        if (rIkParameterization.HasMember("quaternion")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "quaternion", _transform.rot);
+        }
+        break;
+    case IKP_Translation3D:
+    case IKP_TranslationXY2D:
+    case IKP_TranslationXYOrientation3D:
+        if (rIkParameterization.HasMember("translate")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+            _transform.trans *= fUnitScale;
+        }
+        break;
+    case IKP_Direction3D:
+        if (rIkParameterization.HasMember("direction")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "direction", _transform.rot);
+        }
+        break;
+    case IKP_Ray4D:
+    case IKP_Lookat3D:
+    case IKP_TranslationDirection5D:
+        if (rIkParameterization.HasMember("translate")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+            _transform.trans *= fUnitScale;
+        }
+        if (rIkParameterization.HasMember("direction")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "direction", _transform.rot);
+        }
+        break;
+    case IKP_TranslationLocalGlobal6D:
+        orjson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
         _transform.trans *= fUnitScale;
+        orjson::LoadJsonValueByKey(rIkParameterization, "localTranslate", _transform.rot);
+        _transform.rot *= fUnitScale;
+        break;
+    case IKP_TranslationXAxisAngle4D:
+    case IKP_TranslationYAxisAngle4D:
+    case IKP_TranslationZAxisAngle4D:
+    case IKP_TranslationXAxisAngleZNorm4D:
+    case IKP_TranslationYAxisAngleXNorm4D:
+    case IKP_TranslationZAxisAngleYNorm4D:
+        if (rIkParameterization.HasMember("translate")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+            _transform.trans *= fUnitScale;
+        }
+        if (rIkParameterization.HasMember("angle")) {
+            orjson::LoadJsonValueByKey(rIkParameterization, "angle", _transform.rot.x);
+        }
+        break;
     }
 
-    _mapCustomData.clear();
     if (rIkParameterization.HasMember("customData") && rIkParameterization["customData"].IsArray()) {
         for (rapidjson::Value::ConstValueIterator it = rIkParameterization["customData"].Begin(); it != rIkParameterization["customData"].End(); ++it) {
             std::string id;
@@ -2746,6 +2846,11 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
                 orjson::LoadJsonValueByKey(*it, "key", id); // back compat
             }
             if (id.empty()) {
+                continue;
+            }
+            // delete
+            if (OpenRAVE::orjson::GetJsonValueByKey<bool>(*it, "__deleted__", false)) {
+                _mapCustomData.erase(id);
                 continue;
             }
             orjson::LoadJsonValueByKey(*it, "values", _mapCustomData[id]);
