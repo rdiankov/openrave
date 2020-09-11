@@ -15,7 +15,12 @@
 
 #include <string>
 
-#define LOAD_SHADERS_FROM_FOLDER_PATH "/home/mujin/mujin/checkoutroot/openrave/shaders/"
+// LOAD_SHADERS_FROM_FOLDER_PATH: if defined, will make pipeline load (and automatically auto refresh when changed) shaders from the given path set by LOAD_SHADERS_FROM_FOLDER_PATH
+// this is tipically used during development / debugging. Once shipping, the shader must be embedded in c++ code. See https://github.com/pablocael/shaderfile-to-embed-c-string
+// to auto generate c++ strings from shaders.
+// if LOAD_SHADERS_FROM_FOLDER_PATH is undefiend, it will not auto reload shaders or read from any folder. Instead, it will use the embedded C++ code.
+// < uncomment the below line to load/auto reload shaders from files>
+//#define LOAD_SHADERS_FROM_FOLDER_PATH "/home/mujin/mujin/checkoutroot/openrave/shaders"
 
 // To convert glsl files into embedable strings please refer to git@github.com:pablocael/shaderfile-to-embed-c-string.git
 ///data/shaders/outline.vert
@@ -285,7 +290,7 @@ const std::string prerender_vert =
 	"  Fetch3x3(samples, tex, channelIndex, coord, resolution);\n"
 	"\n"
 	"  return vec2(Convolute3x3(sobelOpX, samples), Convolute3x3(sobelOpY, samples));\n"
-	//"  return CalculateIntensityGradient_Fast(tex, channelIndex, coord, resolution);\n"
+	//"  return CalculateIntensityGradient_Fast(tex, channelIndex, coord, resolution);\n" //< much faster but with poor quality edges for some viewing positions
 	"}\n"
 	"\n"
 	"\n"
@@ -360,19 +365,6 @@ const std::string prerender_vert =
 	"    return vec3(lightIntensity, lightIntensity, lightIntensity) * ((ka + diffuse) * diffuseColor + specular * ks);\n"
 	"}\n"
 	"\n"
-	"bool isSelected(sampler2D tex, vec2 coord, int selectionChannelIndex, vec2 resolution)\n"
-	"{\n"
-	"  mat3 samples;\n"
-	"  Fetch3x3(samples, tex, selectionChannelIndex, coord, resolution);\n"
-	"   for(int i = 0; i < 3; ++i) {\n"
-	"    for(int j = 0; j < 3; ++j) {\n"
-	"      if(samples[i][j] > 0.5) {\n"
-	"        return true;\n"
-	"      }\n"
-	"    }\n"
-	"   }\n"
-	"   return false;\n"
-	"}\n"
 	"\n"
 	"void main()\n"
 	"{\n"
@@ -393,7 +385,6 @@ const std::string prerender_vert =
 	"    return;\n"
 	"  }\n"
 	"\n"
-	//"   gl_FragColor = vec4(vec3(texture2D(colorTexture0, texCoord)[0]), 1);\n"
 	"   gl_FragColor = vec4(outlineColor, edge);\n"
 	"};\n"
 	"\n"
@@ -627,7 +618,11 @@ RenderPassState* OutlineShaderPipeline::CreateSceneToTexturePass(osg::ref_ptr<os
 	osg::ref_ptr<osg::Node> mainSceneRoot, int numColorAttachments, const std::string& vshader, const std::string& fshader, osg::Texture* reusedDepthTexture, bool useMultiSamples, const std::vector<osg::ref_ptr<osg::Texture>>& inheritedColorBuffers)
 {
 	RenderPassState* renderPassState = new RenderPassState();
+#ifdef LOAD_SHADERS_FROM_FOLDER_PATH
+	renderPassState->SetShaderFiles(vshader, fshader, true);
+#else
 	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
+#endif
 	osg::ref_ptr<osg::Group> firstPassGroup = new osg::Group();
 	firstPassGroup->setStateSet(renderPassState->state.get());
 	firstPassGroup->addChild(mainSceneRoot);
@@ -666,7 +661,11 @@ RenderPassState* OutlineShaderPipeline::CreateTextureToTexturePass(RenderPassSta
 		renderPassState->state->addUniform(new osg::Uniform(bufferNumStr.str().c_str(), (int)i));
 	}
 
+#ifdef LOAD_SHADERS_FROM_FOLDER_PATH
+	renderPassState->SetShaderFiles(vshader, fshader, true);
+#else
 	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
+#endif
 
 	RenderUtils::FBOData fboData;
 	RenderUtils::SetupRenderToTextureCamera(renderPassState->camera, _maxFBOBufferWidth, _maxFBOBufferHeight, fboData, reusedDepthTexture, numColorAttachments, useMultiSamples);
@@ -679,7 +678,11 @@ RenderPassState* OutlineShaderPipeline::CreateTextureToTexturePass(RenderPassSta
 RenderPassState* OutlineShaderPipeline::CreateTextureToColorBufferPass(RenderPassState* inputPass, int numColorAttachments, const std::string& vshader, const std::string& fshader)
 {
 	RenderPassState* renderPassState = new RenderPassState();
+#ifdef LOAD_SHADERS_FROM_FOLDER_PATH
+	renderPassState->SetShaderFiles(vshader, fshader, true);
+#else
 	RenderUtils::SetShaderProgramOnStateSet(renderPassState->state.get(), vshader, fshader);
+#endif
 	renderPassState->camera = RenderUtils::CreateTextureDisplayQuadCamera(osg::Vec3(-1.0, -1.0, 0), renderPassState->state.get());
 	renderPassState->camera->setClearColor(osg::Vec4(0, 0, 0, 0));
 	std::vector<osg::ref_ptr<osg::Texture>> inputTextures = inputPass->colorFboTextures;
@@ -725,25 +728,29 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 
     osg::ref_ptr<osg::Texture> depthBuffer = nullptr; // do not use extra depth buffer texture, use color to store depth buffer
 	mainSceneCamera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
-    std::string preRenderVertShader = "/data/shaders/prerender.vert";
-    std::string preRenderFragShader = "/data/shaders/prerender.frag";
-    std::string preRenderTransparentVertShader = "/data/shaders/prerender_transparent.vert";
-    std::string preRenderTransparentFragShader = "/data/shaders/prerender_transparent.frag";
-    std::string outlineVert = "/data/shaders/outline.vert";
-    std::string outlineFrag = "/data/shaders/outline.frag";
+    std::string preRenderVertShader = prerender_vert;
+    std::string preRenderFragShader = prerender_frag;
+    std::string preRenderTransparentVertShader = prerender_transparent_vert;
+    std::string preRenderTransparentFragShader = prerender_transparent_frag;
+    std::string outlineVert = outline_vert;
+    std::string outlineFrag = outline_frag;
 
 #ifdef LOAD_SHADERS_FROM_FOLDER_PATH
-	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, prerender_vert, prerender_frag, depthBuffer.get(), useMultiSamples);
-#else 
-	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, LOAD_SHADERS_FROM_FOLDER_PATH/"prerender.vert", LOAD_SHADERS_FROM_FOLDER_PATH/"prerender.frag", depthBuffer.get(), useMultiSamples);
+	preRenderVertShader = LOAD_SHADERS_FROM_FOLDER_PATH"/prerender.vert";
+    preRenderFragShader = LOAD_SHADERS_FROM_FOLDER_PATH"/prerender.frag";
+    preRenderTransparentVertShader = LOAD_SHADERS_FROM_FOLDER_PATH"/prerender_transparent.vert";
+    preRenderTransparentFragShader = LOAD_SHADERS_FROM_FOLDER_PATH"/prerender_transparent.frag";
+    outlineVert = LOAD_SHADERS_FROM_FOLDER_PATH"/outline.vert";
+    outlineFrag = LOAD_SHADERS_FROM_FOLDER_PATH"/outline.frag";
 #endif
+	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, preRenderVertShader, preRenderFragShader, depthBuffer.get(), useMultiSamples);
 	normalAndDepthMapPass->camera->setCullMask(~qtosgrave::TRANSPARENT_ITEM_MASK);
 
-	RenderPassState* outlinePass = CreateTextureToColorBufferPass(normalAndDepthMapPass, 1, outline_vert, outline_frag);
-	RenderPassState* normalAndDepthMapPassTransparency = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, prerender_transparent_vert, prerender_transparent_frag, depthBuffer.get(), useMultiSamples);
+	RenderPassState* outlinePass = CreateTextureToColorBufferPass(normalAndDepthMapPass, 1, outlineVert, outlineFrag);
+	RenderPassState* normalAndDepthMapPassTransparency = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, preRenderTransparentVertShader, preRenderTransparentFragShader, depthBuffer.get(), useMultiSamples);
 	normalAndDepthMapPassTransparency->camera->setCullMask(qtosgrave::TRANSPARENT_ITEM_MASK);
 
-	RenderPassState* outlinePassTransparency = CreateTextureToColorBufferPass(normalAndDepthMapPassTransparency, 1, outline_vert, outline_frag);
+	RenderPassState* outlinePassTransparency = CreateTextureToColorBufferPass(normalAndDepthMapPassTransparency, 1, outlineVert, outlineFrag);
 
 	// export opaque pipiline resulting depth texture to pre-render shader of transparent objects to perform z test
 	normalAndDepthMapPassTransparency->state->setTextureAttributeAndModes(5, normalAndDepthMapPass->colorFboTextures[0].get(), osg::StateAttribute::ON);
