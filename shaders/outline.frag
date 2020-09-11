@@ -3,7 +3,8 @@
 uniform vec2 textureSize;
 uniform vec3 outlineColor;
 uniform vec3 selectionColor;
-
+uniform mat3 sobelOpX;
+uniform mat3 sobelOpY;
 varying vec2 clipPos;
 
 /* Input textures */
@@ -27,19 +28,6 @@ variable[10] = 0.0314465408805; variable[11] = 0.0754716981132; variable[12] = 0
 variable[15] = 0.0251572327044; variable[16] = 0.0566037735849; variable[17] = 0.0754716981132; variable[18] = 0.0566037735849; variable[19] = 0.0251572327044; \
 variable[20] = 0.0125786163522; variable[21] = 0.0251572327044; variable[22] = 0.0314465408805; variable[23] = 0.0251572327044; variable[24] = 0.0125786163522;
 
-// GLSL matrix are column major matrix, so its transposed from usual notation!
-#define NEW_SOBEL_Y_3x3(variable) \
-mat3 variable; \
-variable[0][0] = -1; variable[1][0] = 0; variable[2][0] = 1; \
-variable[0][1] = -2; variable[1][1] = 0; variable[2][1] = 2; \
-variable[0][2] = -1; variable[1][2] = 0; variable[2][2] = 1; \
-
-// GLSL matrix are column major matrix, so its transposed from usual notation!
-#define NEW_SOBEL_X_3x3(variable) \
-mat3 variable; \
-variable[0][0] = 1; variable[1][0] = 2; variable[2][0] = 1; \
-variable[0][1] = 0; variable[1][1] = 0; variable[2][1] = 0; \
-variable[0][2] = -1; variable[1][2] = -2; variable[2][2] = -1; \
 
 // Rotates a vector 'rad' radians over the regular cartesian axes
 vec2 Rotate2D(vec2 v, float rad) {
@@ -86,9 +74,9 @@ void Fetch3x3(inout mat3 n, sampler2D tex, int channelIndex, vec2 coord, vec2 re
 	float w = 1.0 / textureSize.x;
 	float h = 1.0 / textureSize.y;
 
-  for(int i = 0; i < 3; ++i) {
+  for(int i = 1; i < 3; ++i) {
     float row = h*(i-1); // from top to bottom
-    for(int j = 0; j < 3; ++j) {
+    for(int j = 1; j < 3; ++j) {
       float col = w*(j-1);
       if(channelIndex == -1) {
         n[i][j] = LuminanceFromRgb(texture2D(tex, coord + vec2(col, row)).rgb);
@@ -164,16 +152,31 @@ float l1norm(vec2 v)
   return abs(v.x) + abs(v.y);
 }
 
+vec2 CalculateIntensityGradient_Fast(sampler2D tex, int channelIndex, vec2 coord, vec2 resolution) {
+  float w = 1.0 / textureSize.x;
+	float h = 1.0 / textureSize.y;
+
+  float xm = (texture2D(tex, coord + vec2( -w, 0 )))[channelIndex];
+  float xp = (texture2D(tex, coord + vec2( w, 0 )))[channelIndex];
+  float ym = (texture2D(tex, coord + vec2( 0.0, -h )))[channelIndex];
+  float yp = (texture2D(tex, coord + vec2( 0.0, h )))[channelIndex];
+
+  float dx = (xp - xm) / (2 * h);
+  float dy = (yp - ym) / (2 * h);
+
+  return vec2(abs(dx), abs(dy));
+}
+
+
 vec2 CalculateIntensityGradient(sampler2D tex, int channelIndex, vec2 coord, vec2 resolution)
 {
-  NEW_SOBEL_X_3x3(opX);
-  NEW_SOBEL_Y_3x3(opY);
-
   mat3 samples;
   Fetch3x3(samples, tex, channelIndex, coord, resolution);
 
-  return vec2(Convolute3x3(opX, samples), Convolute3x3(opY, samples));
+  return vec2(Convolute3x3(sobelOpX, samples), Convolute3x3(sobelOpY, samples));
+//  return CalculateIntensityGradient_Fast(tex, channelIndex, coord, resolution);
 }
+
 
 /*
   Get the texture intensity gradient of an image where the angle of the direction is rounded to

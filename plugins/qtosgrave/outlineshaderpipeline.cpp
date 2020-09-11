@@ -15,6 +15,8 @@
 
 #include <string>
 
+#define LOAD_SHADERS_FROM_FOLDER_PATH "/home/mujin/mujin/checkoutroot/openrave/shaders/"
+
 // To convert glsl files into embedable strings please refer to git@github.com:pablocael/shaderfile-to-embed-c-string.git
 ///data/shaders/outline.vert
 const std::string outline_vert =
@@ -105,14 +107,15 @@ const std::string prerender_vert =
 	"    gl_Position = gl_ModelViewProjectionMatrix * inPos;\n"
 	"}";
 
-///data/shaders/outline.frag
-const std::string outline_frag =
+	//openrave/shaders/outline.frag
+	const std::string outline_frag =
 	"#version 120\n"
 	"\n"
 	"uniform vec2 textureSize;\n"
 	"uniform vec3 outlineColor;\n"
 	"uniform vec3 selectionColor;\n"
-	"\n"
+	"uniform mat3 sobelOpX;\n"
+	"uniform mat3 sobelOpY;\n"
 	"varying vec2 clipPos;\n"
 	"\n"
 	"/* Input textures */\n"
@@ -136,21 +139,8 @@ const std::string outline_frag =
 	"variable[15] = 0.0251572327044; variable[16] = 0.0566037735849; variable[17] = 0.0754716981132; variable[18] = 0.0566037735849; variable[19] = 0.0251572327044; \\\n"
 	"variable[20] = 0.0125786163522; variable[21] = 0.0251572327044; variable[22] = 0.0314465408805; variable[23] = 0.0251572327044; variable[24] = 0.0125786163522;\n"
 	"\n"
-	"// GLSL matrix are column major matrix, so its transposed from usual notation!\n"
-	"#define NEW_SOBEL_Y_3x3(variable) \\\n"
-	"mat3 variable; \\\n"
-	"variable[0][0] = -1; variable[1][0] = 0; variable[2][0] = 1; \\\n"
-	"variable[0][1] = -2; variable[1][1] = 0; variable[2][1] = 2; \\\n"
-	"variable[0][2] = -1; variable[1][2] = 0; variable[2][2] = 1; \\\n"
 	"\n"
-	"// GLSL matrix are column major matrix, so its transposed from usual notation!\n"
-	"#define NEW_SOBEL_X_3x3(variable) \\\n"
-	"mat3 variable; \\\n"
-	"variable[0][0] = 1; variable[1][0] = 2; variable[2][0] = 1; \\\n"
-	"variable[0][1] = 0; variable[1][1] = 0; variable[2][1] = 0; \\\n"
-	"variable[0][2] = -1; variable[1][2] = -2; variable[2][2] = -1; \\\n"
-	"\n"
-	"// Rotates a vector 'rad' radians over the regular cartesian axes\n"
+	"// Rotates a vector rad radians over the regular cartesian axes\n"
 	"vec2 Rotate2D(vec2 v, float rad) {\n"
 	"  float s = sin(rad);\n"
 	"  float c = cos(rad);\n"
@@ -173,7 +163,7 @@ const std::string outline_frag =
 	"  float maximum = -1.;\n"
 	"  float bestAngle = 0;\n"
 	"  for (int i = 0; i < 8; i++) {\n"
-	"    float theta = (float(i) * PI) / 4.;\n"
+	"    float theta = (float(i) * PI) / 2.;\n"
 	"    vec2 u = Rotate2D(vec2(1., 0.), theta);\n"
 	"    float scalarProduct = dot(u, n);\n"
 	"    if (scalarProduct > maximum) {\n"
@@ -273,16 +263,31 @@ const std::string outline_frag =
 	"  return abs(v.x) + abs(v.y);\n"
 	"}\n"
 	"\n"
+	"vec2 CalculateIntensityGradient_Fast(sampler2D tex, int channelIndex, vec2 coord, vec2 resolution) {\n"
+	"  float w = 1.0 / textureSize.x;\n"
+	"\tfloat h = 1.0 / textureSize.y;\n"
+	"\n"
+	"  float xm = (texture2D(tex, coord + vec2( -w, 0 )))[channelIndex];\n"
+	"  float xp = (texture2D(tex, coord + vec2( w, 0 )))[channelIndex];\n"
+	"  float ym = (texture2D(tex, coord + vec2( 0.0, -h )))[channelIndex];\n"
+	"  float yp = (texture2D(tex, coord + vec2( 0.0, h )))[channelIndex];\n"
+	"\n"
+	"  float dx = (2*xp - 2*xm);\n"
+	"  float dy = (2*yp - 2*ym);\n"
+	"\n"
+	"  return vec2(abs(dx), abs(dy));\n"
+	"}\n"
+	"\n"
+	"\n"
 	"vec2 CalculateIntensityGradient(sampler2D tex, int channelIndex, vec2 coord, vec2 resolution)\n"
 	"{\n"
-	"  NEW_SOBEL_X_3x3(opX);\n"
-	"  NEW_SOBEL_Y_3x3(opY);\n"
-	"\n"
 	"  mat3 samples;\n"
 	"  Fetch3x3(samples, tex, channelIndex, coord, resolution);\n"
 	"\n"
-	"  return vec2(Convolute3x3(opX, samples), Convolute3x3(opY, samples));\n"
+	"  return vec2(Convolute3x3(sobelOpX, samples), Convolute3x3(sobelOpY, samples));\n"
+	//"  return CalculateIntensityGradient_Fast(tex, channelIndex, coord, resolution);\n"
 	"}\n"
+	"\n"
 	"\n"
 	"/*\n"
 	"  Get the texture intensity gradient of an image where the angle of the direction is rounded to\n"
@@ -299,6 +304,7 @@ const std::string outline_frag =
 	"  vec2 gradientMinusStep = CalculateIntensityGradient(tex, channelIndex, textureCoord - gradientStep, resolution);\n"
 	"  if (length(gradientMinusStep)-delta >= gradientLength) return vec2(0.);\n"
 	"  return gradient;\n"
+
 	"}\n"
 	"\n"
 	"float ApplyHysteresis( sampler2D tex, int channelIndex, vec2 textureCoord, vec2 resolution, float weakThreshold, float strongThreshold) {\n"
@@ -335,7 +341,7 @@ const std::string outline_frag =
 	"    vec3 s = normalize(vec3(-clipPos.xy,1));\n"
 	"\n"
 	"    // Calculate the vector from the fragment to the eye position\n"
-	"    // (origin since this is in 'eye' or 'camera' space)\n"
+	"    // (origin since this is in eye or camera space)\n"
 	"    vec3 v = s;;\n"
 	"\n"
 	"    // Reflect the light beam using the normal at this fragment\n"
@@ -374,9 +380,9 @@ const std::string outline_frag =
 	"  float depthValue = texture2D(colorTexture0,texCoord).y;\n"
 	"  float adaptativeDepthThreshold = smoothstep(0, depthValue, 1);\n"
 	"  vec2 normalThreshold = vec2(0.6, 0.01);\n"
-	"  vec2 depthThreshold = vec2(0.1, 0.01);\n"
+	"  vec2 depthThreshold = vec2(0.05, 0.01);\n"
 	"\n"
-	"  bool selected = isSelected(colorTexture0, texCoord, 2, textureSize);\n"
+	"  bool selected = texture2D(colorTexture0, texCoord)[2] > 0.5;\n"
 	"  float edgeNormal = Canny(colorTexture0, 0, texCoord, textureSize, normalThreshold.x, normalThreshold.y);\n"
 	"  float edgeDepth = Canny(colorTexture0, 1, texCoord, textureSize, depthThreshold.x, depthThreshold.y);\n"
 	"\n"
@@ -387,9 +393,13 @@ const std::string outline_frag =
 	"    return;\n"
 	"  }\n"
 	"\n"
+	//"   gl_FragColor = vec4(vec3(texture2D(colorTexture0, texCoord)[0]), 1);\n"
 	"   gl_FragColor = vec4(outlineColor, edge);\n"
 	"};\n"
+	"\n"
 	"\n";
+
+
 
 ///data/shaders/perpixellighting.frag
 const std::string perpixellighting_frag =
@@ -693,6 +703,19 @@ void OutlineShaderPipeline::_SetupOutlineShaderUniforms(RenderPassState* pass)
 	pass->state->addUniform(new osg::Uniform("selectionColor", _selectedObjectHighlightColor));
 	pass->state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0,0,0,1)));
 	pass->state->addUniform(new osg::Uniform("textureSize", osg::Vec2f(_maxFBOBufferWidth, _maxFBOBufferHeight)));
+
+	osg::Matrix3 sobelY;
+	sobelY(0,0) = -1; sobelY(1,0) = 0; sobelY(2,0) = 1;
+	sobelY(0,1) = -2; sobelY(1,1) = 0; sobelY(2,1) = 2;
+	sobelY(0,2) = -1; sobelY(1,2) = 0; sobelY(2,2) = 1;
+
+	// GLSL matrix are column major matrix, so its transposed from usual notation!
+	osg::Matrix3 sobelX;
+	sobelX(0,0) = 1; sobelX(1,0) = 2; sobelX(2,0) = 1;
+	sobelX(0,1) = 0; sobelX(1,1) = 0; sobelX(2,1) = 0;
+	sobelX(0,2) = -1; sobelX(1,2) = -2;sobelX(2,2) = -1;
+	pass->state->addUniform(new osg::Uniform("sobelOpX", sobelX));
+	pass->state->addUniform(new osg::Uniform("sobelOpY", sobelY));
 }
 
 osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalScene(osg::ref_ptr<osg::Camera> mainSceneCamera,
@@ -702,7 +725,18 @@ osg::ref_ptr<osg::Group> OutlineShaderPipeline::CreateOutlineSceneFromOriginalSc
 
     osg::ref_ptr<osg::Texture> depthBuffer = nullptr; // do not use extra depth buffer texture, use color to store depth buffer
 	mainSceneCamera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+    std::string preRenderVertShader = "/data/shaders/prerender.vert";
+    std::string preRenderFragShader = "/data/shaders/prerender.frag";
+    std::string preRenderTransparentVertShader = "/data/shaders/prerender_transparent.vert";
+    std::string preRenderTransparentFragShader = "/data/shaders/prerender_transparent.frag";
+    std::string outlineVert = "/data/shaders/outline.vert";
+    std::string outlineFrag = "/data/shaders/outline.frag";
+
+#ifdef LOAD_SHADERS_FROM_FOLDER_PATH
 	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, prerender_vert, prerender_frag, depthBuffer.get(), useMultiSamples);
+#else 
+	RenderPassState* normalAndDepthMapPass = CreateSceneToTexturePass(mainSceneCamera, mainSceneRoot, 1, LOAD_SHADERS_FROM_FOLDER_PATH/"prerender.vert", LOAD_SHADERS_FROM_FOLDER_PATH/"prerender.frag", depthBuffer.get(), useMultiSamples);
+#endif
 	normalAndDepthMapPass->camera->setCullMask(~qtosgrave::TRANSPARENT_ITEM_MASK);
 
 	RenderPassState* outlinePass = CreateTextureToColorBufferPass(normalAndDepthMapPass, 1, outline_vert, outline_frag);
