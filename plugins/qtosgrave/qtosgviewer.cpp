@@ -1814,6 +1814,35 @@ GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const 
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
+class GlobalLOD : public osg::LOD
+{
+public:
+    void traverse(osg::NodeVisitor& nv)
+    {
+        osg::CullStack *cs;
+        if (nv.getTraversalMode() == osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN && _rangeMode==DISTANCE_FROM_EYE_POINT) {
+            float required_range = nv.getDistanceToViewPoint(getCenter(),true);
+            if ((cs = dynamic_cast<osg::CullStack *>(&nv))) {
+                osg::RefMatrix* modelView = cs->getModelViewMatrix();
+                required_range = osg::Vec3d((*modelView)(3,0), (*modelView)(3,1), (*modelView)(3,2)).length();
+            }
+            std::cout << required_range << std::endl;
+
+            unsigned int numChildren = _children.size();
+            if (_rangeList.size()<numChildren) numChildren=_rangeList.size();
+            for(unsigned int i=0;i<numChildren;++i)
+            {
+                if (_rangeList[i].first<=required_range && required_range<_rangeList[i].second)
+                {
+                    _children[i]->accept(nv);
+                }
+            }
+        } else {
+            osg::LOD::traverse(nv);
+        }
+    }
+};
+
 void QtOSGViewer::_Deselect()
 {
 

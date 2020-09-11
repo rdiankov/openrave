@@ -132,6 +132,81 @@ private:
     bool done;
 };
 
+class OSGLODLabel : public osg::MatrixTransform
+{
+public:
+    class GlobalLOD : public osg::LOD
+    {
+    public:
+        void traverse(osg::NodeVisitor& nv)
+        {
+            RAVELOG_DEBUG("Running GlobalLOD!\n");
+            osg::CullStack *cs;
+            if (nv.getTraversalMode() == osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN && _rangeMode==DISTANCE_FROM_EYE_POINT) {
+                float required_range = nv.getDistanceToViewPoint(getCenter(),true);
+                if ((cs = dynamic_cast<osg::CullStack *>(&nv))) {
+                    osg::RefMatrix* modelView = cs->getModelViewMatrix();
+                    required_range = osg::Vec3d((*modelView)(3,0), (*modelView)(3,1), (*modelView)(3,2)).length();
+                }
+                unsigned int numChildren = _children.size();
+                if (_rangeList.size()<numChildren) numChildren=_rangeList.size();
+                for(unsigned int i=0;i<numChildren;++i)
+                {
+                    if (_rangeList[i].first<=required_range && required_range<_rangeList[i].second)
+                    {
+                        _children[i]->accept(nv);
+                    }
+                }
+            } else {
+                osg::LOD::traverse(nv);
+            }
+        }
+    };
+    OSGLODLabel(const std::string& label, const osg::Vec3f& offset) : MatrixTransform() {
+        /* Transform structure of a labeled object: 
+        *
+        * [Target Transform (this)]
+        *           |
+        *           |
+        * [Label Offset Transform]
+        *           |
+        *           |
+        * [Global LOD (controls label visibility)]--[Label Geode]--[Label Text]
+        */
+
+        // Set up offset node for label
+        osg::Matrix offsetMatrix;
+        offsetMatrix.makeTranslate(offset);
+        this->setMatrix(offsetMatrix);
+
+        // Add label text to label transform
+        osg::ref_ptr<osgText::Text> text = new osgText::Text();
+        text->setText(label);
+        text->setCharacterSize(50.0);
+        text->setAutoRotateToScreen(true);
+        // text->setFont( "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf" );
+        text->setPosition( ::osg::Vec3( 0.0, 0.0, 0.0 ) );
+        text->getOrCreateStateSet()->setMode( GL_LIGHTING, ::osg::StateAttribute::PROTECTED | ::osg::StateAttribute::OFF );
+        text->setDrawMode( osgText::Text::TEXT );
+        text->setColor( ::osg::Vec4( 1.0, 1.0f, 1.0f, 1.0f ) );
+        text->setColor(osg::Vec4(0,0,0,1));
+        text->setBackdropColor( ::osg::Vec4( 0.0, 0.0f, 0.0f, 1.0f ) );
+        text->setBackdropType( osgText::Text::OUTLINE );
+        text->setAlignment( osgText::Text::CENTER_CENTER );
+        text->setCharacterSizeMode( osgText::Text::OBJECT_COORDS_WITH_MAXIMUM_SCREEN_SIZE_CAPPED_BY_FONT_HEIGHT );
+        text->setMaximumHeight(50);
+        text->setFontResolution(128,128);
+
+        osg::ref_ptr<osg::Geode> textGeode = new osg::Geode();
+        textGeode->addDrawable(text);
+        text->getOrCreateStateSet()->setAttribute(new osg::Depth(osg::Depth::ALWAYS));
+
+        osg::ref_ptr<GlobalLOD> lod = new GlobalLOD();
+        lod->addChild(textGeode, 0, 75);
+        this->addChild(lod);
+    }
+};
+
 Item::Item(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot) : _osgSceneRoot(osgSceneRoot), _osgFigureRoot(osgFigureRoot)
 {
     // set up the Inventor nodes
@@ -261,11 +336,13 @@ void KinBodyItem::Load()
         OSGGroupPtr posglinkroot = new osg::Group();
         posglinkroot->setName(str(boost::format("link%d")%porlink->GetIndex()));
 
-        OSGMatrixTransformPtr posglinktrans = new osg::MatrixTransform();
-        SetMatrixTransform(*posglinktrans, tbodyinv * porlink->GetTransform());
-        posglinktrans->setName(str(boost::format("link%dtrans")%porlink->GetIndex()));
+        // OSGMatrixTransformPtr posglinktrans = new osg::MatrixTransform();
+        // SetMatrixTransform(*posglinktrans, tbodyinv * porlink->GetTransform());
+        // posglinktrans->setName(str(boost::format("link%dtrans")%porlink->GetIndex()));
 
-        posglinkroot->addChild(posglinktrans);
+        osg::ref_ptr<OSGLODLabel> plodlabel = new OSGLODLabel(str(boost::format("link%dtrans")%porlink->GetIndex()), osg::Vec3f(0, 0, 0));
+
+        posglinkroot->addChild(plodlabel);
 
 //        std::vector< boost::shared_ptr<KinBody::Link> > vParentLinks;
 //        porlink->GetParentLinks(vParentLinks);
@@ -278,7 +355,7 @@ void KinBodyItem::Load()
 //
 //        }
 
-        _veclinks.push_back(LinkNodes(posglinkroot, posglinktrans));
+        _veclinks.push_back(LinkNodes(posglinkroot, plodlabel));
         size_t linkindex = itlink - _pbody->GetLinks().begin();
         _vecgeoms.at(linkindex).resize(0);
 
@@ -480,7 +557,7 @@ void KinBodyItem::Load()
                 pgeometryroot->addChild(pgeometrydata);
                 pgeometryroot->setName(str(boost::format("geom%d")%igeom));
                 //  Apply external transform to local transform
-                posglinktrans->addChild(pgeometryroot);
+                plodlabel->addChild(pgeometryroot);
 
                 _vecgeoms[linkindex][igeom] = GeomNodes(pgeometrydata, pgeometryroot); // overwrite
             }
