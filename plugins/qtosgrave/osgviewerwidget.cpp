@@ -1593,8 +1593,6 @@ OSGNodePtr QOSGViewerWidget::_AddDraggerToObject(const std::string& draggerName,
 
 void QOSGViewerWidget::initializeGL() {
     resizeGL(width(), height());
-    dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
-    dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(GetCamera()->getGraphicsContext())->getEventQueue()->keyPress(osgGA::GUIEventAdapter::KeySymbol('s'));
 }
 
 void QOSGViewerWidget::paintGL()
