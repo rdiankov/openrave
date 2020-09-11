@@ -28,7 +28,7 @@ void KinBody::LinkInfo::Reset()
     _name.clear();
     _t = Transform();
     _tMassFrame = Transform();
-    _mass = 0;
+    _mass = 1e-10; // to avoid divide by 0 for inverse dynamics/physics computations
     _vinertiamoments = Vector();
     _mapFloatParameters.clear();
     _mapIntParameters.clear();

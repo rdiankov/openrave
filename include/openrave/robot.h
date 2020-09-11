@@ -50,6 +50,8 @@ public:
                 && _sIkSolverXMLId == other._sIkSolverXMLId
                 && _vGripperJointNames == other._vGripperJointNames
                 && _grippername == other._grippername
+                && _toolChangerConnectedBodyToolName == other._toolChangerConnectedBodyToolName
+                && _vRestrictGraspSetNames == other._vRestrictGraspSetNames
                 && _id == other._id;
         }
         bool operator!=(const ManipulatorInfo& other) const {
@@ -70,6 +72,7 @@ public:
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
         std::string _grippername; ///< associates the manipulator with a GripperInfo
         std::string _toolChangerConnectedBodyToolName; ///< When this parameter is non-empty, then this manipulator's end effector points to the mounting link of a tool changer system, then all the connected bodies that are mounted on this link become mutually exclusive in the sense that only one can be connected at a time. The value of the parameter targets a tool (manipulator) name inside those related connected bodies to select when the tool changing is complete.
+        std::vector<std::string> _vRestrictGraspSetNames; ///< When this parameter is non-empty, only grasp sets listed here are applicable for this manipulator.
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
@@ -194,6 +197,10 @@ public:
 
         virtual const std::string& GetToolChangerConnectedBodyToolName() const {
             return _info._toolChangerConnectedBodyToolName;
+        }
+
+        virtual const std::vector<std::string>& GetRestrictGraspSetNames() const {
+            return _info._vRestrictGraspSetNames;
         }
 
         /// \brief Release all bodies grabbed by the end effector of this manipualtor

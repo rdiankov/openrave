@@ -2454,6 +2454,11 @@ private:
 
             daeElementRef pToolChangerConnectedBodyToolName = ptec->add("toolChangerConnectedBodyToolName");
             pToolChangerConnectedBodyToolName->setCharData((*itmanip)->GetToolChangerConnectedBodyToolName().c_str());
+
+            FOREACHC(itname, (*itmanip)->GetRestrictGraspSetNames()) {
+                daeElementRef restrict_graspset_name = ptec->add("restrict_graspset_name");
+                restrict_graspset_name->setCharData(*itname);
+            }
         }
     }
 

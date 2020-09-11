@@ -30,6 +30,7 @@ void RobotBase::ManipulatorInfo::Reset()
     _vGripperJointNames.clear();
     _grippername.clear();
     _toolChangerConnectedBodyToolName.clear();
+    _vRestrictGraspSetNames.clear();
 }
 
 void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -45,6 +46,7 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
     orjson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
     orjson::SetJsonValueByKey(value, "grippername", _grippername, allocator);
     orjson::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
+    orjson::SetJsonValueByKey(value, "restrictGraspSetNames", _vRestrictGraspSetNames, allocator);
 }
 
 void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -60,6 +62,7 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
     orjson::LoadJsonValueByKey(value, "grippername", _grippername);
     orjson::LoadJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName);
+    orjson::LoadJsonValueByKey(value, "restrictGraspSetNames", _vRestrictGraspSetNames);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
