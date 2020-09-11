@@ -29,7 +29,7 @@ variable[15] = 0.0251572327044; variable[16] = 0.0566037735849; variable[17] = 0
 variable[20] = 0.0125786163522; variable[21] = 0.0251572327044; variable[22] = 0.0314465408805; variable[23] = 0.0251572327044; variable[24] = 0.0125786163522;
 
 
-// Rotates a vector 'rad' radians over the regular cartesian axes
+// Rotates a vector rad radians over the regular cartesian axes
 vec2 Rotate2D(vec2 v, float rad) {
   float s = sin(rad);
   float c = cos(rad);
@@ -52,7 +52,7 @@ vec2 Round2DVectorAngleToGrid(vec2 v) {
   float maximum = -1.;
   float bestAngle = 0;
   for (int i = 0; i < 8; i++) {
-    float theta = (float(i) * PI) / 4.;
+    float theta = (float(i) * PI) / 2.;
     vec2 u = Rotate2D(vec2(1., 0.), theta);
     float scalarProduct = dot(u, n);
     if (scalarProduct > maximum) {
@@ -71,12 +71,12 @@ float LuminanceFromRgb(vec3 rgb)
 // fetches a 3x3 window of pixels centered on coord
 void Fetch3x3(inout mat3 n, sampler2D tex, int channelIndex, vec2 coord, vec2 resolution)
 {
-	float w = 1.0 / textureSize.x;
-	float h = 1.0 / textureSize.y;
+  float w = 1.0 / textureSize.x;
+  float h = 1.0 / textureSize.y;
 
-  for(int i = 1; i < 3; ++i) {
+  for(int i = 0; i < 3; ++i) {
     float row = h*(i-1); // from top to bottom
-    for(int j = 1; j < 3; ++j) {
+    for(int j = 0; j < 3; ++j) {
       float col = w*(j-1);
       if(channelIndex == -1) {
         n[i][j] = LuminanceFromRgb(texture2D(tex, coord + vec2(col, row)).rgb);
@@ -91,8 +91,8 @@ void Fetch3x3(inout mat3 n, sampler2D tex, int channelIndex, vec2 coord, vec2 re
 // fetches a 5x5 window of pixels centered on coord
 void Fetch5x5(inout float n[25], sampler2D tex, int channelIndex, vec2 coord, vec2 resolution)
 {
-	float w = 1.0 / textureSize.x;
-	float h = 1.0 / textureSize.y;
+  float w = 1.0 / textureSize.x;
+  float h = 1.0 / textureSize.y;
 
   for(int i = 0; i < 5; ++i) {
     float row = h*(i-2); // from top to bottom
@@ -130,8 +130,8 @@ float Convolute5x5(float filter[25], float samples[25])
 // fetch 3x3 but applying a 5x5 blur gaussian kernel first
 void Fetch3x3Blurred(inout mat3 n, sampler2D tex, int channelIndex, vec2 coord, vec2 resolution)
 {
-	float w = 1.0 / textureSize.x;
-	float h = 1.0 / textureSize.y;
+  float w = 1.0 / textureSize.x;
+  float h = 1.0 / textureSize.y;
 
   NEW_GAUSSIAN_KERNEL_5x5(normal5x5Kernel);
 
@@ -154,15 +154,15 @@ float l1norm(vec2 v)
 
 vec2 CalculateIntensityGradient_Fast(sampler2D tex, int channelIndex, vec2 coord, vec2 resolution) {
   float w = 1.0 / textureSize.x;
-	float h = 1.0 / textureSize.y;
+  float h = 1.0 / textureSize.y;
 
   float xm = (texture2D(tex, coord + vec2( -w, 0 )))[channelIndex];
   float xp = (texture2D(tex, coord + vec2( w, 0 )))[channelIndex];
   float ym = (texture2D(tex, coord + vec2( 0.0, -h )))[channelIndex];
   float yp = (texture2D(tex, coord + vec2( 0.0, h )))[channelIndex];
 
-  float dx = (xp - xm) / (2 * h);
-  float dy = (yp - ym) / (2 * h);
+  float dx = (2*xp - 2*xm);
+  float dy = (2*yp - 2*ym);
 
   return vec2(abs(dx), abs(dy));
 }
@@ -174,7 +174,7 @@ vec2 CalculateIntensityGradient(sampler2D tex, int channelIndex, vec2 coord, vec
   Fetch3x3(samples, tex, channelIndex, coord, resolution);
 
   return vec2(Convolute3x3(sobelOpX, samples), Convolute3x3(sobelOpY, samples));
-//  return CalculateIntensityGradient_Fast(tex, channelIndex, coord, resolution);
+	//  return CalculateIntensityGradient_Fast(tex, channelIndex, coord, resolution); //< much faster but with poor quality edges for some viewing positions
 }
 
 
@@ -193,6 +193,7 @@ vec2 GetSuppressedTextureIntensityGradient(sampler2D tex, int channelIndex, vec2
   vec2 gradientMinusStep = CalculateIntensityGradient(tex, channelIndex, textureCoord - gradientStep, resolution);
   if (length(gradientMinusStep)-delta >= gradientLength) return vec2(0.);
   return gradient;
+
 }
 
 float ApplyHysteresis( sampler2D tex, int channelIndex, vec2 textureCoord, vec2 resolution, float weakThreshold, float strongThreshold) {
@@ -229,7 +230,7 @@ vec3 LightModel(vec3 normal, vec3 diffuseColor)
     vec3 s = normalize(vec3(-clipPos.xy,1));
 
     // Calculate the vector from the fragment to the eye position
-    // (origin since this is in "eye" or "camera" space)
+    // (origin since this is in eye or camera space)
     vec3 v = s;;
 
     // Reflect the light beam using the normal at this fragment
@@ -248,19 +249,6 @@ vec3 LightModel(vec3 normal, vec3 diffuseColor)
     return vec3(lightIntensity, lightIntensity, lightIntensity) * ((ka + diffuse) * diffuseColor + specular * ks);
 }
 
-bool isSelected(sampler2D tex, vec2 coord, int selectionChannelIndex, vec2 resolution)
-{
-  mat3 samples;
-  Fetch3x3(samples, tex, selectionChannelIndex, coord, resolution);
-   for(int i = 0; i < 3; ++i) {
-    for(int j = 0; j < 3; ++j) {
-      if(samples[i][j] > 0.5) {
-        return true;
-      }
-    }
-   }
-   return false;
-}
 
 void main()
 {
@@ -268,9 +256,9 @@ void main()
   float depthValue = texture2D(colorTexture0,texCoord).y;
   float adaptativeDepthThreshold = smoothstep(0, depthValue, 1);
   vec2 normalThreshold = vec2(0.6, 0.01);
-  vec2 depthThreshold = vec2(0.1, 0.01);
+  vec2 depthThreshold = vec2(0.05, 0.01);
 
-  bool selected = isSelected(colorTexture0, texCoord, 2, textureSize);
+  bool selected = texture2D(colorTexture0, texCoord)[2] > 0.5;
   float edgeNormal = Canny(colorTexture0, 0, texCoord, textureSize, normalThreshold.x, normalThreshold.y);
   float edgeDepth = Canny(colorTexture0, 1, texCoord, textureSize, depthThreshold.x, depthThreshold.y);
 
@@ -281,7 +269,5 @@ void main()
     return;
   }
 
-   gl_FragColor = mix(vec4(vec3(edgeNormal),1.0), vec4(vec3(texture2D(colorTexture0, texCoord).r),1),0.5);
    gl_FragColor = vec4(outlineColor, edge);
 };
-
