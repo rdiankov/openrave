@@ -182,27 +182,28 @@ public:
         // Add label text to label transform
         osg::ref_ptr<osgText::Text> text = new osgText::Text();
         text->setText(label);
-        text->setCharacterSize(50.0);
+        text->setCharacterSize(5.0);
         text->setAutoRotateToScreen(true);
-        // text->setFont( "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf" );
-        text->setPosition( ::osg::Vec3( 0.0, 0.0, 0.0 ) );
-        text->getOrCreateStateSet()->setMode( GL_LIGHTING, ::osg::StateAttribute::PROTECTED | ::osg::StateAttribute::OFF );
+
+        text->setFont( "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf" );
+        text->setPosition( osg::Vec3( 0.0, 0.0, 0.0 ) );
+        text->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
         text->setDrawMode( osgText::Text::TEXT );
-        text->setColor( ::osg::Vec4( 1.0, 1.0f, 1.0f, 1.0f ) );
         text->setColor(osg::Vec4(0,0,0,1));
-        text->setBackdropColor( ::osg::Vec4( 0.0, 0.0f, 0.0f, 1.0f ) );
+        text->setBackdropColor( osg::Vec4( 1.0, 1.0f, 1.0f, 1.0f ) );
         text->setBackdropType( osgText::Text::OUTLINE );
         text->setAlignment( osgText::Text::CENTER_CENTER );
+        text->setAxisAlignment(osgText::Text::SCREEN);
         text->setCharacterSizeMode( osgText::Text::OBJECT_COORDS_WITH_MAXIMUM_SCREEN_SIZE_CAPPED_BY_FONT_HEIGHT );
-        text->setMaximumHeight(50);
+        text->getOrCreateStateSet()->setAttribute( new osg::Depth(osg::Depth::ALWAYS) );
+        text->setMaximumHeight(5);
         text->setFontResolution(128,128);
 
         osg::ref_ptr<osg::Geode> textGeode = new osg::Geode();
         textGeode->addDrawable(text);
-        text->getOrCreateStateSet()->setAttribute(new osg::Depth(osg::Depth::ALWAYS));
 
         osg::ref_ptr<GlobalLOD> lod = new GlobalLOD();
-        lod->addChild(textGeode, 0, 75);
+        lod->addChild(textGeode, 0, 20);
         this->addChild(lod);
     }
 };
