@@ -2142,6 +2142,18 @@ public:
         }
         return handles;
     }
+    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& voffset)
+    {
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawlabel(label, voffset));
+        }
+        return handles;
+    }
     virtual OpenRAVE::GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);

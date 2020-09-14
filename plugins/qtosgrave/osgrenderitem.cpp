@@ -189,7 +189,7 @@ OSGLODLabel::OSGLODLabel(const std::string& label, const osg::Vec3f& offset) : M
         "in vec4 vertexColor;\n"
         "void main(void)\n"
         "{\n"
-        "    gl_FragColor = texture(glyphTexture, texCoord);\n"
+        "    gl_FragColor = vertexColor * texture(glyphTexture, texCoord);\n"
         "}\n"
     };
 
@@ -219,7 +219,7 @@ OSGLODLabel::OSGLODLabel(const std::string& label, const osg::Vec3f& offset) : M
     text->setBackdropColor( osg::Vec4( 1.0, 1.0f, 1.0f, 1.0f ) );
     text->setBackdropType( osgText::Text::OUTLINE );
     text->setAlignment( osgText::Text::CENTER_CENTER );
-    text->setAxisAlignment(osgText::Text::SCREEN);
+    text->setAxisAlignment( osgText::Text::SCREEN );
     text->setCharacterSizeMode( osgText::Text::OBJECT_COORDS_WITH_MAXIMUM_SCREEN_SIZE_CAPPED_BY_FONT_HEIGHT );
     text->setMaximumHeight(5);
     text->setFontResolution(128,128);

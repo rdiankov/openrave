@@ -648,6 +648,12 @@ public:
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual OpenRAVE::GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
 
+    /// \brief Draws a label. <b>[multi-thread safe]</b>
+    ///
+    /// \param offset is position offset of label to whatever the label is affixed to
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
+    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& voffset) = 0;
+
     /// \brief Draws a box. <b>[multi-thread safe]</b>
     ///
     /// extents are half the width, height, and depth of the box
