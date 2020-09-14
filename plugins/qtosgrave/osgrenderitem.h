@@ -30,6 +30,17 @@ enum ViewGeometry {
 /// \brief creates XYZ axes and returns their osg objects
 OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness);
 
+class OSGLODLabel : public osg::MatrixTransform
+{
+public:
+    class GlobalLOD : public osg::LOD
+    {
+    public:
+        void traverse(osg::NodeVisitor& nv);
+    };
+    OSGLODLabel(const std::string& label, const osg::Vec3f& offset);
+};
+
 /// \brief Encapsulate the Inventor rendering of an Item
 class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
 {
