@@ -168,31 +168,6 @@ OSGLODLabel::OSGLODLabel(const std::string& label, const osg::Vec3f& offset) : M
     * [Global LOD (controls label visibility)]--[Label Geode]--[Label Text]
     */
 
-    // Custom shaders for labels to disable cartoon shading
-    static const char * vert_source = {
-        "#version 130\n"
-        "uniform mat4 osg_ModelViewProjectionMatrix;\n"
-        "out vec2 texCoord;\n"
-        "out vec4 vertexColor;\n"
-        "void main(void)\n"
-        "{\n"
-        "    texCoord = gl_MultiTexCoord0.xy;\n"
-        "    vertexColor = gl_Color; \n"
-        "    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
-        "}\n"
-    };
-
-    static const char * frag_source = {
-        "#version 130\n"
-        "uniform sampler2D glyphTexture;\n"
-        "in vec2 texCoord;\n"
-        "in vec4 vertexColor;\n"
-        "void main(void)\n"
-        "{\n"
-        "    gl_FragColor = vertexColor * texture(glyphTexture, texCoord);\n"
-        "}\n"
-    };
-
     // Set up offset node for label
     osg::Matrix offsetMatrix;
     offsetMatrix.makeTranslate(offset);
@@ -208,8 +183,6 @@ OSGLODLabel::OSGLODLabel(const std::string& label, const osg::Vec3f& offset) : M
     text->setPosition( osg::Vec3( 0.0, 0.0, 0.0 ) );
     text->getOrCreateStateSet()->removeAttribute((new osg::Program)->getType(), 1);
     osg::ref_ptr<osg::Program> program = new osg::Program;
-    program->addShader(new osg::Shader(osg::Shader::VERTEX, vert_source));
-    program->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag_source));
     text->getOrCreateStateSet()->setAttributeAndModes(program.get(), osg::StateAttribute::PROTECTED | osg::StateAttribute::ON);
     text->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
     text->getOrCreateStateSet()->setAttributeAndModes( new osg::Depth(osg::Depth::ALWAYS), osg::StateAttribute::PROTECTED | osg::StateAttribute::ON);
