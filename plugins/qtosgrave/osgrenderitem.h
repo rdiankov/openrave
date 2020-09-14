@@ -30,15 +30,18 @@ enum ViewGeometry {
 /// \brief creates XYZ axes and returns their osg objects
 OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness);
 
+/// \brief OSG text label that scales by camera distance and also disappears if far away enough
 class OSGLODLabel : public osg::MatrixTransform
 {
 public:
+    /// \brief LOD node that properly measures distance from viewpoint in world space
     class GlobalLOD : public osg::LOD
     {
     public:
         void traverse(osg::NodeVisitor& nv);
     };
     OSGLODLabel(const std::string& label, const osg::Vec3f& offset);
+    ~OSGLODLabel();
 };
 
 /// \brief Encapsulate the Inventor rendering of an Item

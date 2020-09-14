@@ -134,7 +134,6 @@ private:
 
 void OSGLODLabel::GlobalLOD::traverse(osg::NodeVisitor& nv)
 {
-    RAVELOG_DEBUG("Running GlobalLOD!\n");
     osg::CullStack *cs;
     if (nv.getTraversalMode() == osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN && _rangeMode==DISTANCE_FROM_EYE_POINT) {
         float required_range = nv.getDistanceToViewPoint(getCenter(),true);
@@ -203,6 +202,10 @@ OSGLODLabel::OSGLODLabel(const std::string& label, const osg::Vec3f& offset) : M
     osg::ref_ptr<GlobalLOD> lod = new GlobalLOD();
     lod->addChild(textGeode, 0, 20);
     this->addChild(lod);
+}
+
+OSGLODLabel::~OSGLODLabel() {
+    RAVELOG_DEBUG("Destroying OSGLODLabel!");
 }
 
 Item::Item(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot) : _osgSceneRoot(osgSceneRoot), _osgFigureRoot(osgFigureRoot)

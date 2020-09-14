@@ -1606,7 +1606,7 @@ GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVec
 
 void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& voffset)
 {
-    OSGMatrixTransformPtr trans(new qtosgrave::OSGLODLabel(label, osg::Vec3(voffset.x, voffset.y, voffset.z)));
+    OSGMatrixTransformPtr trans(new OSGLODLabel(label, osg::Vec3(voffset.x, voffset.y, voffset.z)));
     handle->addChild(trans);
     _posgWidget->GetFigureRoot()->insertChild(0, handle);
 }
@@ -1615,7 +1615,7 @@ GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
     _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawLabel, this, handle, label, voffset)); // copies ref counts
-    return GraphHandlePtr();
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency)
