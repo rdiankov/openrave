@@ -1925,7 +1925,9 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     }
 
     const MimicPtr pmimic(new Mimic());
-    pmimic->_equations = {poseq, veleq, acceleq}; ///< joint value, partial derivatives w.r.t depended joints, second-order derivatives (?)
+    pmimic->_equations.at(0) = poseq; ///< joint value
+    pmimic->_equations.at(1) = veleq; ///< partial derivatives w.r.t depended joints
+    pmimic->_equations.at(2) = acceleq; ///< second-order derivatives (?)
 
     // copy equations into the info
     if( !_info._vmimic.at(iaxis) ) {
@@ -2121,15 +2123,13 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         thisdofformat.jointindex = nActiveJoints + (find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
 
-    FOREACH(itTotalDeriv, mTotalderivativepairValue) {
-        bool bCached = itTotalDeriv->first.first == thisdofformat;
-        if( bCached ) {
+    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mTotalderivativepairValue) {
+        if( keyvalue.first.first == thisdofformat ) {
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 RAVELOG_VERBOSE_FORMAT("Found cached derivatives of jointindex %d with respect to others", thisdofformat.jointindex);
             }
-
-            const int dependedJointIndex = itTotalDeriv->first.second;
-            const dReal partialDerivative = itTotalDeriv->second;
+            const int dependedJointIndex = keyvalue.first.second;
+            const dReal partialDerivative = keyvalue.second;
             vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
             return;
         }
