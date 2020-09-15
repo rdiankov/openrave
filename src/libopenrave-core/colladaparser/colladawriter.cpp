@@ -2454,6 +2454,11 @@ private:
 
             daeElementRef pToolChangerConnectedBodyToolName = ptec->add("toolChangerConnectedBodyToolName");
             pToolChangerConnectedBodyToolName->setCharData((*itmanip)->GetToolChangerConnectedBodyToolName().c_str());
+
+            FOREACHC(itname, (*itmanip)->GetRestrictGraspSetNames()) {
+                daeElementRef restrict_graspset_name = ptec->add("restrict_graspset_name");
+                restrict_graspset_name->setCharData(*itname);
+            }
         }
     }
 
@@ -2907,7 +2912,22 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
         }
     }
 
+    if ( keywords.size() == 0 ) {
+        // if keywords is not provided via atts, use the environment keywords
+        keywords = boost::join(penv->GetKeywords(), ",");
+    }
+
+    if ( subject.size() == 0 ) {
+        // if keywords is not provided via atts, use the environment description
+        subject = penv->GetDescription();
+    }
+
     writer.Init("openrave_snapshot", keywords, subject, author);
+
+    if( scenename.size() == 0 ) {
+        // if scene name is not provided via atts, use the environment scene name
+        scenename = penv->GetName();
+    }
 
     if( scenename.size() == 0 ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
@@ -2960,7 +2980,8 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     if( listbodies.size() > 0 ) {
-        ColladaWriter writer(listbodies.front()->GetEnv(),atts);
+        EnvironmentBasePtr penv = listbodies.front()->GetEnv();
+        ColladaWriter writer(penv,atts);
         std::string scenename, keywords, subject, author;
         FOREACHC(itatt,atts) {
             if( itatt->first == "scenename" ) {
@@ -2977,7 +2998,23 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
                 author = itatt->second;
             }
         }
+
+        if ( keywords.size() == 0 ) {
+            // if keywords is not provided via atts, use the environment keywords
+            keywords = boost::join(penv->GetKeywords(), ",");
+        }
+
+        if ( subject.size() == 0 ) {
+            // if keywords is not provided via atts, use the environment description
+            subject = penv->GetDescription();
+        }
+
         writer.Init("openrave_snapshot", keywords, subject, author);
+
+        if( scenename.size() == 0 ) {
+            // if scene name is not provided via atts, use the environment scene name
+            scenename = penv->GetName();
+        }
 
         if( scenename.size() == 0 ) {
     #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
@@ -3023,7 +3060,22 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
         }
     }
 
+    if ( keywords.size() == 0 ) {
+        // if keywords is not provided via atts, use the environment keywords
+        keywords = boost::join(penv->GetKeywords(), ",");
+    }
+
+    if ( subject.size() == 0 ) {
+        // if keywords is not provided via atts, use the environment description
+        subject = penv->GetDescription();
+    }
+
     writer.Init("openrave_snapshot", keywords, subject, author);
+
+    if( scenename.size() == 0 ) {
+        // if scene name is not provided via atts, use the environment scene name
+        scenename = penv->GetName();
+    }
 
     if( scenename.size() == 0 ) {
         scenename = "scene";
@@ -3064,7 +3116,8 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     output.clear();
     if( listbodies.size() > 0 ) {
-        ColladaWriter writer(listbodies.front()->GetEnv(),atts);
+        EnvironmentBasePtr penv = listbodies.front()->GetEnv();
+        ColladaWriter writer(penv,atts);
         std::string scenename, keywords, subject, author;
         FOREACHC(itatt,atts) {
             if( itatt->first == "scenename" ) {
@@ -3081,7 +3134,23 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
                 author = itatt->second;
             }
         }
+
+        if ( keywords.size() == 0 ) {
+            // if keywords is not provided via atts, use the environment keywords
+            keywords = boost::join(penv->GetKeywords(), ",");
+        }
+
+        if ( subject.size() == 0 ) {
+            // if keywords is not provided via atts, use the environment description
+            subject = penv->GetDescription();
+        }
+
         writer.Init("openrave_snapshot", keywords, subject, author);
+
+        if( scenename.size() == 0 ) {
+            // if scene name is not provided via atts, use the environment scene name
+            scenename = penv->GetName();
+        }
 
         if( scenename.size() == 0 ) {
             scenename = "scene";
