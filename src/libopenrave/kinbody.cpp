@@ -2349,7 +2349,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                     }
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    vDofindexDerivativePairs.clear(); ///< vector of (dof index, total derivative) pairs
+                    // vDofindexDerivativePairs is a vector of (dof index, total derivative) pairs
                     pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
@@ -2475,7 +2475,7 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                     vColumn = pjoint->GetAxis(idof);
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    vDofindexDerivativePairs.clear(); ///< vector of (dof index, total derivative) pairs
+                    // vDofindexDerivativePairs is a vector of (dof index, total derivative) pairs
                     pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
@@ -2601,7 +2601,7 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                     vColumn = pjoint->GetAxis(idof);
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    vDofindexDerivativePairs.clear(); ///< vector of (dof index, total derivative) pairs
+                    // vDofindexDerivativePairs is a vector of (dof index, total derivative) pairs
                     pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
