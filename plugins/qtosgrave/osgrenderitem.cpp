@@ -132,12 +132,17 @@ private:
     bool done;
 };
 
+// Encapsulate the Inventor rendering of an Item
 void OSGLODLabel::GlobalLOD::traverse(osg::NodeVisitor& nv)
 {
+    // The input node visitor, represented as a CullStack
     osg::CullStack *cs;
+    // Use global distance instead of local distance from camera if node visitor settings are applicable
+    // Otherwise, use the default LOD node implementation of this function
     if (nv.getTraversalMode() == osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN && _rangeMode==DISTANCE_FROM_EYE_POINT) {
         float required_range = nv.getDistanceToViewPoint(getCenter(),true);
         if ((cs = dynamic_cast<osg::CullStack *>(&nv))) {
+            // Use cull stack's model view matrix to obtain world distance to camera
             osg::RefMatrix* modelView = cs->getModelViewMatrix();
             required_range = osg::Vec3d((*modelView)(3,0), (*modelView)(3,1), (*modelView)(3,2)).length();
         }
@@ -155,16 +160,23 @@ void OSGLODLabel::GlobalLOD::traverse(osg::NodeVisitor& nv)
     }
 }
 
+// OSG text label that scales by camera distance and also disappears if far away enough
 OSGLODLabel::OSGLODLabel(const std::string& label, const osg::Vec3f& offset) : MatrixTransform() {
-    /* Transform structure of a labeled object: 
+    /* Transform structure of an OSGLODLabel: 
     *
-    * [Target Transform (this)]
+    * [Target Transform (usually the global transform)]
     *           |
     *           |
-    * [Label Offset Transform]
+    * [Label Offset Transform (this)]
     *           |
     *           |
-    * [Global LOD (controls label visibility)]--[Label Geode]--[Label Text]
+    * [Global LOD (controls label visibility)]
+    *           |
+    *           |
+    *     [Label Geode]
+    *           |
+    *           |
+    *     [Label Text]
     */
 
     // Set up offset node for label
@@ -172,20 +184,14 @@ OSGLODLabel::OSGLODLabel(const std::string& label, const osg::Vec3f& offset) : M
     offsetMatrix.makeTranslate(offset);
     this->setMatrix(offsetMatrix);
 
-    // Add label text to label transform
+    // Set up text element and its properties
     osg::ref_ptr<osgText::Text> text = new osgText::Text();
     text->setText(label);
     text->setCharacterSize(5.0);
     text->setAutoRotateToScreen(true);
-
     text->setFont( "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf" );
     text->setPosition( osg::Vec3( 0.0, 0.0, 0.0 ) );
     text->getOrCreateStateSet()->removeAttribute((new osg::Program)->getType(), 1);
-    osg::ref_ptr<osg::Program> program = new osg::Program;
-    text->getOrCreateStateSet()->setAttributeAndModes(program.get(), osg::StateAttribute::PROTECTED | osg::StateAttribute::ON);
-    text->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
-    text->getOrCreateStateSet()->setAttributeAndModes( new osg::Depth(osg::Depth::ALWAYS), osg::StateAttribute::PROTECTED | osg::StateAttribute::ON);
-    text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
     text->setDrawMode( osgText::Text::TEXT );
     text->setColor(osg::Vec4(0,0,0,1));
     text->setBackdropColor( osg::Vec4( 1.0, 1.0f, 1.0f, 1.0f ) );
@@ -196,16 +202,28 @@ OSGLODLabel::OSGLODLabel(const std::string& label, const osg::Vec3f& offset) : M
     text->setMaximumHeight(5);
     text->setFontResolution(128,128);
 
+    // Override the cartoon shader with the default shader for text
+    osg::ref_ptr<osg::Program> program = new osg::Program;
+    text->getOrCreateStateSet()->setAttributeAndModes(program.get(), osg::StateAttribute::PROTECTED | osg::StateAttribute::ON);
+
+    // Ensure that the text is drawn over any shape in the scene
+    text->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
+    text->getOrCreateStateSet()->setAttributeAndModes( new osg::Depth(osg::Depth::ALWAYS), osg::StateAttribute::PROTECTED | osg::StateAttribute::ON);
+    text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
+
+    // Place text element into geode node
     osg::ref_ptr<osg::Geode> textGeode = new osg::Geode();
     textGeode->addDrawable(text);
 
+    // Place geode node into LOD node for distance-based culling
     osg::ref_ptr<GlobalLOD> lod = new GlobalLOD();
     lod->addChild(textGeode, 0, 20);
     this->addChild(lod);
 }
 
+// Debug print during label destruction for testing
 OSGLODLabel::~OSGLODLabel() {
-    RAVELOG_DEBUG("Destroying OSGLODLabel!");
+    // RAVELOG_DEBUG("Destroying OSGLODLabel!");
 }
 
 Item::Item(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot) : _osgSceneRoot(osgSceneRoot), _osgFigureRoot(osgFigureRoot)

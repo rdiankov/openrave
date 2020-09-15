@@ -1606,6 +1606,7 @@ GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVec
 
 void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& voffset)
 {
+    // Most of the OSG node setup logic is done within the OSGLODLabel class defined in osgrenderitem.h
     OSGMatrixTransformPtr trans(new OSGLODLabel(label, osg::Vec3(voffset.x, voffset.y, voffset.z)));
     handle->addChild(trans);
     _posgWidget->GetFigureRoot()->insertChild(0, handle);

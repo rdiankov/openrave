@@ -38,6 +38,7 @@ public:
     class GlobalLOD : public osg::LOD
     {
     public:
+        /// \brief traverses OSG nodes and culls based on distance from viewpoint in world space
         void traverse(osg::NodeVisitor& nv);
     };
     OSGLODLabel(const std::string& label, const osg::Vec3f& offset);
