@@ -102,10 +102,6 @@ public:
     virtual void SetSize(int w, int h);
     virtual void Move(int x, int y);
 
-    /// \brief sets the zoom factor. only affects orthogonal view
-    /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
-    virtual void MoveCameraZoom(float factor, bool isPan, float panDelta);
-
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
 
@@ -332,7 +328,6 @@ public:
 
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
-    virtual double _GetCameraDistanceToFocus();
     virtual void _StopTrackLink();
     virtual bool _TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText="");
     virtual void _SetItemVisualization(std::string& itemname, std::string& visualizationmode);
@@ -340,6 +335,7 @@ public:
     virtual void _SetBkgndColor(const RaveVector<float>& color);
 
     virtual void _SetName(const std::string& name);
+    virtual void _MoveCameraPointOfView(const std::string& axis);
     virtual void _MoveCameraZoom(float factor, bool isPan, float panDelta);
     virtual void _RotateCameraXDirection(float thetaX);
     virtual void _RotateCameraYDirection(float thetaY);
@@ -391,6 +387,7 @@ public:
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
     bool _SetProjectionModeCommand(ostream& sout, istream& sinput);
+    bool _MoveCameraPointOfViewCommand(ostream& sout, istream& sinput);
     bool _MoveCameraZoomCommand(ostream& sout, istream& sinput);
     bool _RotateCameraXDirectionCommand(ostream& sout, istream& sinput);
     bool _RotateCameraYDirectionCommand(ostream& sout, istream& sinput);
