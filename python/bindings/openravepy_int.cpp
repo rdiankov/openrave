@@ -2138,9 +2138,9 @@ object PyEnvironmentBase::drawarrow(object op1, object op2, float linewidth, obj
     return toPyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor));
 }
 
-object PyEnvironmentBase::drawlabel(const std::string &label, object ooffset)
+object PyEnvironmentBase::drawlabel(const std::string &label, object worldPosition)
 {
-    return toPyGraphHandle(_penv->drawlabel(label, ExtractVector3(ooffset)));
+    return toPyGraphHandle(_penv->drawlabel(label, ExtractVector3(worldPosition)));
 }
 
 object PyEnvironmentBase::drawbox(object opos, object oextents, object ocolor)
@@ -3057,11 +3057,11 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                      .def("drawlabel", &PyEnvironmentBase::drawlabel,
                           "label"_a,
-                          "offset"_a,
+                          "worldPosition"_a,
                           DOXY_FN(EnvironmentBase,drawlabel)
                           )
 #else
-                     .def("drawlabel",&PyEnvironmentBase::drawlabel,drawlabel_overloads(PY_ARGS("label","offset") DOXY_FN(EnvironmentBase,drawlabel)))
+                     .def("drawlabel",&PyEnvironmentBase::drawlabel,drawlabel_overloads(PY_ARGS("label","worldPosition") DOXY_FN(EnvironmentBase,drawlabel)))
 #endif                
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                      .def("drawbox", &PyEnvironmentBase::drawbox,

@@ -132,33 +132,42 @@ private:
     bool done;
 };
 
-// Encapsulate the Inventor rendering of an Item
-void OSGLODLabel::GlobalLOD::traverse(osg::NodeVisitor& nv)
+// LOD node that properly measures distance from viewpoint in world space
+class GlobalLOD : public osg::LOD
 {
-    // The input node visitor, represented as a CullStack
-    osg::CullStack *cs;
-    // Use global distance instead of local distance from camera if node visitor settings are applicable
-    // Otherwise, use the default LOD node implementation of this function
-    if (nv.getTraversalMode() == osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN && _rangeMode==DISTANCE_FROM_EYE_POINT) {
-        float required_range = nv.getDistanceToViewPoint(getCenter(),true);
-        if ((cs = dynamic_cast<osg::CullStack *>(&nv))) {
-            // Use cull stack's model view matrix to obtain world distance to camera
-            osg::RefMatrix* modelView = cs->getModelViewMatrix();
-            required_range = osg::Vec3d((*modelView)(3,0), (*modelView)(3,1), (*modelView)(3,2)).length();
-        }
-        unsigned int numChildren = _children.size();
-        if (_rangeList.size()<numChildren) numChildren=_rangeList.size();
-        for(unsigned int i=0;i<numChildren;++i)
-        {
-            if (_rangeList[i].first<=required_range && required_range<_rangeList[i].second)
-            {
-                _children[i]->accept(nv);
+public:
+    void traverse(osg::NodeVisitor& nv)
+    {
+        // Use global distance instead of local distance from camera if node visitor settings are applicable
+        // Otherwise, use the default LOD node implementation of this function
+        if (nv.getTraversalMode() == osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN && _rangeMode==DISTANCE_FROM_EYE_POINT) {
+            float requiredRange = nv.getDistanceToViewPoint(getCenter(),true);
+            // The input node visitor, represented as a CullStack
+            osg::CullStack *cullStack = dynamic_cast<osg::CullStack *>(&nv);
+            if (cullStack != NULL) {
+                // Use cull stack's model view matrix to obtain world distance to camera
+                osg::RefMatrix* modelView = cullStack->getModelViewMatrix();
+                // We use the last column of the modelview matrix to acquire object space camera translation
+
+                // Note that OSG matrix accesses are transposed, i.e. we access the matrix
+                // with (col, row) rather than (row, col)
+                requiredRange = osg::Vec3d((*modelView)(3,0), (*modelView)(3,1), (*modelView)(3,2)).length();
             }
+
+            unsigned int numChildren = _children.size();
+            if (_rangeList.size()<numChildren) numChildren=_rangeList.size();
+            for(unsigned int i=0;i<numChildren;++i)
+            {
+                if (_rangeList[i].first<=requiredRange && requiredRange<_rangeList[i].second)
+                {
+                    _children[i]->accept(nv);
+                }
+            }
+        } else {
+            osg::LOD::traverse(nv);
         }
-    } else {
-        osg::LOD::traverse(nv);
     }
-}
+};
 
 // OSG text label that scales by camera distance and also disappears if far away enough
 OSGLODLabel::OSGLODLabel(const std::string& label, const osg::Vec3f& offset) : MatrixTransform() {
@@ -355,13 +364,11 @@ void KinBodyItem::Load()
         OSGGroupPtr posglinkroot = new osg::Group();
         posglinkroot->setName(str(boost::format("link%d")%porlink->GetIndex()));
 
-        // OSGMatrixTransformPtr posglinktrans = new osg::MatrixTransform();
-        // SetMatrixTransform(*posglinktrans, tbodyinv * porlink->GetTransform());
-        // posglinktrans->setName(str(boost::format("link%dtrans")%porlink->GetIndex()));
+        OSGMatrixTransformPtr posglinktrans = new osg::MatrixTransform();
+        SetMatrixTransform(*posglinktrans, tbodyinv * porlink->GetTransform());
+        posglinktrans->setName(str(boost::format("link%dtrans")%porlink->GetIndex()));
 
-        osg::ref_ptr<OSGLODLabel> plodlabel = new OSGLODLabel(str(boost::format("link%dtrans")%porlink->GetIndex()), osg::Vec3f(0, 0, 0));
-
-        posglinkroot->addChild(plodlabel);
+        posglinkroot->addChild(posglinktrans);
 
 //        std::vector< boost::shared_ptr<KinBody::Link> > vParentLinks;
 //        porlink->GetParentLinks(vParentLinks);
@@ -374,7 +381,7 @@ void KinBodyItem::Load()
 //
 //        }
 
-        _veclinks.push_back(LinkNodes(posglinkroot, plodlabel));
+        _veclinks.push_back(LinkNodes(posglinkroot, posglinktrans));
         size_t linkindex = itlink - _pbody->GetLinks().begin();
         _vecgeoms.at(linkindex).resize(0);
 
@@ -576,7 +583,7 @@ void KinBodyItem::Load()
                 pgeometryroot->addChild(pgeometrydata);
                 pgeometryroot->setName(str(boost::format("geom%d")%igeom));
                 //  Apply external transform to local transform
-                plodlabel->addChild(pgeometryroot);
+                posglinktrans->addChild(pgeometryroot);
 
                 _vecgeoms[linkindex][igeom] = GeomNodes(pgeometrydata, pgeometryroot); // overwrite
             }

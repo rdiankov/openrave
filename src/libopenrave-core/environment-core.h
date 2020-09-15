@@ -2142,7 +2142,7 @@ public:
         }
         return handles;
     }
-    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& voffset)
+    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition)
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
@@ -2150,7 +2150,7 @@ public:
         }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
-            handles->Add((*itviewer)->drawlabel(label, voffset));
+            handles->Add((*itviewer)->drawlabel(label, worldPosition));
         }
         return handles;
     }
