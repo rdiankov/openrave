@@ -2736,7 +2736,7 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
                             RAVELOG_WARN("ComputeHessianTranslation joint %d not supported\n", pjoint->GetType());
                         }
                         PartialInfo& partialinfo = mappartialsinserted[vinsertedindices.size()];
-                        partialinfo.first.clear(); // resize(vinsertedindices.size());
+                        partialinfo.first.resize(vinsertedindices.size());
                         pjoint->_ComputePartialVelocities(partialinfo.second, idof, mapcachedpartials);
                         vinsertedindices.push_back(-1);
                     }
@@ -2951,7 +2951,7 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
                             RAVELOG_WARN("ComputeHessianTranslation joint %d not supported\n", pjoint->GetType());
                         }
                         PartialInfo& partialinfo = mappartialsinserted[vinsertedindices.size()];
-                        partialinfo.first.clear(); // resize(vinsertedindices.size());
+                        partialinfo.first.resize(vinsertedindices.size());
                         pjoint->_ComputePartialVelocities(partialinfo.second, idof, mapcachedpartials);
                         vinsertedindices.push_back(-1);
                     }
@@ -3194,7 +3194,6 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 // TODO how to process this correctly? what is velocity of this joint? pjoint->GetVelocity(0)?
             }
 
-            vDofindexDerivativePairs.clear();
             pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, 0, mapcachedpartials);
             for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                 doftorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
@@ -3346,7 +3345,6 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
 
         bool bIsMimic = pjoint->GetDOFIndex() < 0 && pjoint->IsMimic(0);
         if( bIsMimic ) {
-            vpartials.clear();
             pjoint->_ComputePartialVelocities(vpartials, 0, mapcachedpartials);
         }
 
@@ -3787,7 +3785,7 @@ void KinBody::_ComputeInternalInformation()
 
     try {
         // initialize all the mimic equations
-        for(bool bPassiveJoints : {false, true}) {
+        for(int bPassiveJoints = 0; bPassiveJoints < 2; ++bPassiveJoints) { // simulate false/true
             const std::vector<JointPtr>& vjoints = bPassiveJoints ? _vPassiveJoints : _vecjoints;
             for(const JointPtr& pjoint : vjoints) {
                 const int ndof = pjoint->GetDOF();
@@ -3807,7 +3805,7 @@ void KinBody::_ComputeInternalInformation()
         // fill Mimic::_vmimicdofs, check that there are no circular dependencies between the mimic joints
         const int nActiveJoints = _vecjoints.size();
         std::map<Mimic::DOFFormat, MimicPtr> mapmimic; ///< collects if thisdofformat.jointaxis depends on a mimic joint
-        for(bool bPassiveJoints : {false, true}) {
+        for(int bPassiveJoints = 0; bPassiveJoints < 2; ++bPassiveJoints) { // simulate false/true
             const std::vector<JointPtr>& vjoints = bPassiveJoints ? _vPassiveJoints : _vecjoints;
             const int njoints = vjoints.size();
             for(int ijoint = 0; ijoint < njoints; ++ijoint) {
@@ -3835,7 +3833,7 @@ void KinBody::_ComputeInternalInformation()
                             const JointPtr pjointDepended = dofformat.GetJoint(*this);
                             if( pjointDepended->IsMimic(dofformat.axis) ) {
                                 mapmimic[thisdofformat] = pmimic; ///< pjoint depends on pjointDepended
-                                RAVELOG_DEBUG_FORMAT("mimic joint %s depends on mimic joint %s", pjoint->GetName() % pjointDepended->GetName());
+                                RAVELOG_VERBOSE_FORMAT("mimic joint %s depends on mimic joint %s", pjoint->GetName() % pjointDepended->GetName());
                                 break;
                             }
                         }
@@ -3888,7 +3886,7 @@ void KinBody::_ComputeInternalInformation()
     }
     catch(const std::exception& ex) {
         RAVELOG_ERROR(str(boost::format("failed to set mimic equations on kinematics body %s: %s\n")%GetName()%ex.what()));
-        for(bool bPassiveJoints : {false, true}) {
+        for(int bPassiveJoints = 0; bPassiveJoints < 2; ++bPassiveJoints) { // simulate false/true
             const std::vector<JointPtr>& vjoints = bPassiveJoints ? _vPassiveJoints : _vecjoints;
             for(const JointPtr& pjoint : vjoints) {
                 const int ndof = pjoint->GetDOF();
