@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "qtosgviewer.h"
+#include "osglodlabel.h"
 
 #include <boost/lexical_cast.hpp>
 #include <iostream>
@@ -1606,8 +1607,13 @@ GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVec
 
 void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition)
 {
-    // Most of the OSG node setup logic is done within the OSGLODLabel class defined in osgrenderitem.h
-    OSGMatrixTransformPtr trans(new OSGLODLabel(label, osg::Vec3(worldPosition.x, worldPosition.y, worldPosition.z)));
+    // Set up offset node for label
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    osg::Matrix offsetMatrix;
+    offsetMatrix.makeTranslate(osg::Vec3(worldPosition.x, worldPosition.y, worldPosition.z));
+    trans->setMatrix(offsetMatrix);
+    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label);
+    trans->addChild(labelTrans);
     handle->addChild(trans);
     _posgWidget->GetFigureRoot()->insertChild(0, handle);
 }

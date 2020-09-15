@@ -30,14 +30,6 @@ enum ViewGeometry {
 /// \brief creates XYZ axes and returns their osg objects
 OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness);
 
-/// \brief OSG text label that scales by camera distance and also disappears if far away enough
-class OSGLODLabel : public osg::MatrixTransform
-{
-public:
-    OSGLODLabel(const std::string& label, const osg::Vec3f& offset);
-    ~OSGLODLabel();
-};
-
 /// \brief Encapsulate the Inventor rendering of an Item
 class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
 {
