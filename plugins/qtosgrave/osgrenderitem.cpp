@@ -196,7 +196,7 @@ OSGLODLabel::OSGLODLabel(const std::string& label, const osg::Vec3f& offset) : M
     // Set up text element and its properties
     osg::ref_ptr<osgText::Text> text = new osgText::Text();
     text->setText(label);
-    text->setCharacterSize(5.0);
+    text->setCharacterSize(0.05);
     text->setAutoRotateToScreen(true);
     text->setFont( "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf" );
     text->setPosition( osg::Vec3( 0.0, 0.0, 0.0 ) );
@@ -208,7 +208,7 @@ OSGLODLabel::OSGLODLabel(const std::string& label, const osg::Vec3f& offset) : M
     text->setAlignment( osgText::Text::CENTER_CENTER );
     text->setAxisAlignment( osgText::Text::SCREEN );
     text->setCharacterSizeMode( osgText::Text::OBJECT_COORDS_WITH_MAXIMUM_SCREEN_SIZE_CAPPED_BY_FONT_HEIGHT );
-    text->setMaximumHeight(5);
+    text->setMaximumHeight(0.5);
     text->setFontResolution(128,128);
 
     // Override the cartoon shader with the default shader for text
