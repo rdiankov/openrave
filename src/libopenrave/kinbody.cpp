@@ -2266,8 +2266,8 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     const int nlinks = _veclinks.size();
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
-                           this->GetName() % linkindex % nlinks, ORE_InvalidArguments
-                           );
+        this->GetName() % linkindex % nlinks, ORE_InvalidArguments
+    );
     const size_t dofstride = dofindices.empty() ? this->GetDOF() : dofindices.size();
     vjacobian.resize(3 * dofstride);
     if( dofstride == 0 ) {
@@ -2278,12 +2278,12 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, total derivative) pairs
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
 
-    Vector v; ///< cache for a column of the linear velocity Jacobian
+    Vector vColumn; ///< cache for a column of the linear velocity Jacobian
     const int offset = linkindex * nlinks;
     for(int curlink = 0;
         _vAllPairsShortestPaths[offset + curlink].first >= 0;     // parent link is still available
         curlink = _vAllPairsShortestPaths[offset + curlink].first // get index of parent link
-        ) {
+    ) {
         const int jointindex = _vAllPairsShortestPaths[offset + curlink].second; ///< generalized joint index, which counts in [_vecjoints, _vPassiveJoints]
         if( jointindex < nActiveJoints ) {
             // active joint
@@ -2296,15 +2296,20 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                     continue; ///< not affect
                 }
 
-                if( !(pjoint->IsRevolute(idof) || pjoint->IsPrismatic(idof)) ) {
+                const bool bPrismatic = pjoint->IsPrismatic(idof);
+                const bool bRevolute = pjoint->IsRevolute(idof);
+                if( !bPrismatic && !bRevolute ) {
                     RAVELOG_WARN("ComputeJacobianTranslation only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                     continue;
                 }
 
                 // formula for active joint's linear velocity Jacobian
-                v = pjoint->IsPrismatic(idof) ? pjoint->GetAxis(idof) // prismatic
-                    : pjoint->GetAxis(idof).cross(position - pjoint->GetAnchor()) // revolute
-                ;
+                if(bPrismatic) {
+                    vColumn = pjoint->GetAxis(idof);
+                }
+                else {
+                    vColumn =  pjoint->GetAxis(idof).cross(position - pjoint->GetAnchor());
+                }
 
                 int index = -1;
                 if( !dofindices.empty() ) {
@@ -2317,9 +2322,9 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                 else {
                     index = dofindex + idof;
                 }
-                vjacobian[index                ] += v.x;
-                vjacobian[index + dofstride    ] += v.y;
-                vjacobian[index + dofstride * 2] += v.z;
+                vjacobian[index                ] += vColumn.x;
+                vjacobian[index + dofstride    ] += vColumn.y;
+                vjacobian[index + dofstride * 2] += vColumn.z;
             }
         }
         else {
@@ -2328,18 +2333,23 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
             const int ndof = pjoint->GetDOF();
             for(int idof = 0; idof < ndof; ++idof) {
                 if( pjoint->IsMimic(idof) ) {
-                    if( !(pjoint->IsRevolute(idof) || pjoint->IsPrismatic(idof)) ) {
+                    const bool bPrismatic = pjoint->IsPrismatic(idof);
+                    const bool bRevolute = pjoint->IsRevolute(idof);
+                    if( !bPrismatic && !bRevolute ) {
                         RAVELOG_WARN("ComputeJacobianTranslation only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                         continue;
                     }
 
                     // if this joint were active, then this is its column in the linear velocity Jacobian
-                    v = pjoint->IsPrismatic(idof) ? pjoint->GetAxis(idof) // prismatic
-                        : pjoint->GetAxis(idof).cross(position - pjoint->GetAnchor()) // revolute
-                    ;
+                    if(bPrismatic) {
+                        vColumn = pjoint->GetAxis(idof);
+                    }
+                    else {
+                        vColumn =  pjoint->GetAxis(idof).cross(position - pjoint->GetAnchor());
+                    }
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    vDofindexDerivativePairs.clear(); ///< vector of (dof index, total derivative) pairs
+                    // vDofindexDerivativePairs is a vector of (dof index, total derivative) pairs
                     pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
@@ -2357,9 +2367,9 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(index, >=, 0, "index should be >= 0; now %d", index, ORE_InvalidArguments);
                         const dReal partialderiv = dofindexDerivativePair.second;
-                        vjacobian[index                ] += v.x * partialderiv;
-                        vjacobian[index + dofstride    ] += v.y * partialderiv;
-                        vjacobian[index + dofstride * 2] += v.z * partialderiv;
+                        vjacobian[index                ] += vColumn.x * partialderiv;
+                        vjacobian[index + dofstride    ] += vColumn.y * partialderiv;
+                        vjacobian[index + dofstride * 2] += vColumn.z * partialderiv;
                     }
                 }
             }
@@ -2413,7 +2423,7 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
     std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, total derivative) pairs
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
 
-    Vector v; ///< cache for a column of the quaternion velocity Jacobian
+    Vector vColumn; ///< cache for a column of the quaternion velocity Jacobian
     const int offset = linkindex * nlinks;
 
     for(int curlink = 0;
@@ -2439,12 +2449,12 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                     RAVELOG_WARN("CalculateRotationJacobian only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                     continue;
                 }
-                v = pjoint->GetAxis(idof); ///< joint axis of a revolute joint
+                vColumn = pjoint->GetAxis(idof); ///< joint axis of a revolute joint
                 const size_t index = dofindex + idof;
-                vjacobian[index                ] += dReal(0.5) * (-quat.y * v.x - quat.z * v.y - quat.w * v.z);
-                vjacobian[index + dofstride    ] += dReal(0.5) * ( quat.x * v.x - quat.z * v.z + quat.w * v.y);
-                vjacobian[index + dofstride * 2] += dReal(0.5) * ( quat.x * v.y + quat.y * v.z - quat.w * v.x);
-                vjacobian[index + dofstride * 3] += dReal(0.5) * ( quat.x * v.z - quat.y * v.y + quat.z * v.x);
+                vjacobian[index                ] += 0.5 * (-quat.y * vColumn.x - quat.z * vColumn.y - quat.w * vColumn.z);
+                vjacobian[index + dofstride    ] += 0.5 * ( quat.x * vColumn.x - quat.z * vColumn.z + quat.w * vColumn.y);
+                vjacobian[index + dofstride * 2] += 0.5 * ( quat.x * vColumn.y + quat.y * vColumn.z - quat.w * vColumn.x);
+                vjacobian[index + dofstride * 3] += 0.5 * ( quat.x * vColumn.z - quat.y * vColumn.y + quat.z * vColumn.x);
             }
         }
         else {
@@ -2462,10 +2472,10 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                     }
 
                     // if this revolute joint were active, then this is its column in the quaternion velocity Jacobian
-                    v = pjoint->GetAxis(idof);
+                    vColumn = pjoint->GetAxis(idof);
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    vDofindexDerivativePairs.clear(); ///< vector of (dof index, total derivative) pairs
+                    // vDofindexDerivativePairs is a vector of (dof index, total derivative) pairs
                     pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
@@ -2479,10 +2489,10 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                         OPENRAVE_ASSERT_OP_FORMAT(dofindex, >=, 0, "dofindex should be >= 0; now %d", dofindex, ORE_InvalidArguments);
                         const size_t index = dofindex + idof;
                         const dReal partialderiv = dofindexDerivativePair.second;
-                        vjacobian[index                ] += dReal(0.5) * partialderiv * (-quat.y * v.x - quat.z * v.y - quat.w * v.z);
-                        vjacobian[index + dofstride    ] += dReal(0.5) * partialderiv * ( quat.x * v.x - quat.z * v.z + quat.w * v.y);
-                        vjacobian[index + dofstride * 2] += dReal(0.5) * partialderiv * ( quat.x * v.y + quat.y * v.z - quat.w * v.x);
-                        vjacobian[index + dofstride * 3] += dReal(0.5) * partialderiv * ( quat.x * v.z - quat.y * v.y + quat.z * v.x);
+                        vjacobian[index                ] += 0.5 * partialderiv * (-quat.y * vColumn.x - quat.z * vColumn.y - quat.w * vColumn.z);
+                        vjacobian[index + dofstride    ] += 0.5 * partialderiv * ( quat.x * vColumn.x - quat.z * vColumn.z + quat.w * vColumn.y);
+                        vjacobian[index + dofstride * 2] += 0.5 * partialderiv * ( quat.x * vColumn.y + quat.y * vColumn.z - quat.w * vColumn.x);
+                        vjacobian[index + dofstride * 3] += 0.5 * partialderiv * ( quat.x * vColumn.z - quat.y * vColumn.y + quat.z * vColumn.x);
                     }
                 }
             }
@@ -2529,7 +2539,7 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
     std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, total derivative) pairs
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
 
-    Vector v; ///< cache for a column of the angular velocity Jacobian
+    Vector vColumn; ///< cache for a column of the angular velocity Jacobian
     const int offset = linkindex * nlinks;
 
     for(int curlink = 0;
@@ -2555,7 +2565,7 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                     }
 
                     // axis of an (active) revolute joint is its corresponding column in the angular velocity Jacobian
-                    v = pjoint->GetAxis(dof);
+                    vColumn = pjoint->GetAxis(dof);
                     int index = -1;
                     if( !dofindices.empty() ) {
                         const std::vector<int>::const_iterator itindex = find(dofindices.begin(),dofindices.end(),dofindex+dof);
@@ -2567,9 +2577,9 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                     else {
                         index = dofindex + dof;
                     }
-                    vjacobian[index                ] += v.x;
-                    vjacobian[index + dofstride    ] += v.y;
-                    vjacobian[index + dofstride * 2] += v.z;
+                    vjacobian[index                ] += vColumn.x;
+                    vjacobian[index + dofstride    ] += vColumn.y;
+                    vjacobian[index + dofstride * 2] += vColumn.z;
                 }
             }
         }
@@ -2588,10 +2598,10 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                     }
 
                     // if this revolute joint were active, then this is its column in the angular velocity Jacobian
-                    v = pjoint->GetAxis(idof);
+                    vColumn = pjoint->GetAxis(idof);
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    vDofindexDerivativePairs.clear(); ///< vector of (dof index, total derivative) pairs
+                    // vDofindexDerivativePairs is a vector of (dof index, total derivative) pairs
                     pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
@@ -2609,9 +2619,9 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(index, >=, 0, "index should be >= 0; now %d", index, ORE_InvalidArguments);
                         const dReal partialderiv = dofindexDerivativePair.second;
-                        vjacobian[index                ] += v.x * partialderiv;
-                        vjacobian[index + dofstride    ] += v.y * partialderiv;
-                        vjacobian[index + dofstride * 2] += v.z * partialderiv;
+                        vjacobian[index                ] += vColumn.x * partialderiv;
+                        vjacobian[index + dofstride    ] += vColumn.y * partialderiv;
+                        vjacobian[index + dofstride * 2] += vColumn.z * partialderiv;
                     }
                 }
             }
@@ -2736,7 +2746,7 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
                             RAVELOG_WARN("ComputeHessianTranslation joint %d not supported\n", pjoint->GetType());
                         }
                         PartialInfo& partialinfo = mappartialsinserted[vinsertedindices.size()];
-                        partialinfo.first.clear(); // resize(vinsertedindices.size());
+                        partialinfo.first.resize(vinsertedindices.size());
                         pjoint->_ComputePartialVelocities(partialinfo.second, idof, mapcachedpartials);
                         vinsertedindices.push_back(-1);
                     }
@@ -2951,7 +2961,7 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
                             RAVELOG_WARN("ComputeHessianTranslation joint %d not supported\n", pjoint->GetType());
                         }
                         PartialInfo& partialinfo = mappartialsinserted[vinsertedindices.size()];
-                        partialinfo.first.clear(); // resize(vinsertedindices.size());
+                        partialinfo.first.resize(vinsertedindices.size());
                         pjoint->_ComputePartialVelocities(partialinfo.second, idof, mapcachedpartials);
                         vinsertedindices.push_back(-1);
                     }
@@ -3194,7 +3204,6 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 // TODO how to process this correctly? what is velocity of this joint? pjoint->GetVelocity(0)?
             }
 
-            vDofindexDerivativePairs.clear();
             pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, 0, mapcachedpartials);
             for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                 doftorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
@@ -3346,7 +3355,6 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
 
         bool bIsMimic = pjoint->GetDOFIndex() < 0 && pjoint->IsMimic(0);
         if( bIsMimic ) {
-            vpartials.clear();
             pjoint->_ComputePartialVelocities(vpartials, 0, mapcachedpartials);
         }
 
@@ -3787,7 +3795,7 @@ void KinBody::_ComputeInternalInformation()
 
     try {
         // initialize all the mimic equations
-        for(bool bPassiveJoints : {false, true}) {
+        for(int bPassiveJoints = 0; bPassiveJoints < 2; ++bPassiveJoints) { // simulate false/true
             const std::vector<JointPtr>& vjoints = bPassiveJoints ? _vPassiveJoints : _vecjoints;
             for(const JointPtr& pjoint : vjoints) {
                 const int ndof = pjoint->GetDOF();
@@ -3807,7 +3815,7 @@ void KinBody::_ComputeInternalInformation()
         // fill Mimic::_vmimicdofs, check that there are no circular dependencies between the mimic joints
         const int nActiveJoints = _vecjoints.size();
         std::map<Mimic::DOFFormat, MimicPtr> mapmimic; ///< collects if thisdofformat.jointaxis depends on a mimic joint
-        for(bool bPassiveJoints : {false, true}) {
+        for(int bPassiveJoints = 0; bPassiveJoints < 2; ++bPassiveJoints) { // simulate false/true
             const std::vector<JointPtr>& vjoints = bPassiveJoints ? _vPassiveJoints : _vecjoints;
             const int njoints = vjoints.size();
             for(int ijoint = 0; ijoint < njoints; ++ijoint) {
@@ -3835,7 +3843,7 @@ void KinBody::_ComputeInternalInformation()
                             const JointPtr pjointDepended = dofformat.GetJoint(*this);
                             if( pjointDepended->IsMimic(dofformat.axis) ) {
                                 mapmimic[thisdofformat] = pmimic; ///< pjoint depends on pjointDepended
-                                RAVELOG_DEBUG_FORMAT("mimic joint %s depends on mimic joint %s", pjoint->GetName() % pjointDepended->GetName());
+                                RAVELOG_VERBOSE_FORMAT("mimic joint %s depends on mimic joint %s", pjoint->GetName() % pjointDepended->GetName());
                                 break;
                             }
                         }
@@ -3888,7 +3896,7 @@ void KinBody::_ComputeInternalInformation()
     }
     catch(const std::exception& ex) {
         RAVELOG_ERROR(str(boost::format("failed to set mimic equations on kinematics body %s: %s\n")%GetName()%ex.what()));
-        for(bool bPassiveJoints : {false, true}) {
+        for(int bPassiveJoints = 0; bPassiveJoints < 2; ++bPassiveJoints) { // simulate false/true
             const std::vector<JointPtr>& vjoints = bPassiveJoints ? _vPassiveJoints : _vecjoints;
             for(const JointPtr& pjoint : vjoints) {
                 const int ndof = pjoint->GetDOF();

@@ -1925,7 +1925,9 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     }
 
     const MimicPtr pmimic(new Mimic());
-    pmimic->_equations = {poseq, veleq, acceleq}; ///< joint value, partial derivatives w.r.t depended joints, second-order derivatives (?)
+    pmimic->_equations.at(0) = poseq; ///< joint value
+    pmimic->_equations.at(1) = veleq; ///< partial derivatives w.r.t depended joints
+    pmimic->_equations.at(2) = acceleq; ///< second-order derivatives (?)
 
     // copy equations into the info
     if( !_info._vmimic.at(iaxis) ) {
@@ -2003,11 +2005,11 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
 
     // need to set sVars to resultVars since that's what the user will be feeding with the input
     std::stringstream sVars;
-    if( !!nVars ) {
-        sVars << resultVars[0];
-        for(size_t i = 1; i < nVars; ++i) {
-            sVars << "," << resultVars[i];
+    for(size_t ivar = 0; ivar < resultVars.size(); ++ivar) {
+        if( ivar != 0 ) {
+            sVars << ",";
         }
+        sVars << resultVars[ivar];
     }
 
     for(int itype = 1; itype < 3; ++itype) {
@@ -2031,7 +2033,10 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
          */
         utils::SearchAndReplace(eq, pmimic->_equations[itype], jointnamepairs);
         size_t index = eq.find('|');
-        const std::string sCommonSubexpressions = (index != std::string::npos) ? eq.substr(0, index) : ""; ///< common subexpressions
+        std::string sCommonSubexpressions = (index != std::string::npos) ? eq.substr(0, index) : ""; ///< common subexpressions
+        if( !sCommonSubexpressions.empty() ) {
+            sCommonSubexpressions += ';'; // just in case, separate out the equations
+        }
 
         while(index != std::string::npos) {
             size_t startindex = index + 1;
@@ -2094,7 +2099,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
                                                const int iaxis,
                                                std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue) const
 {
-    OPENRAVE_ASSERT_FORMAT(vDofindexDerivativePairs.empty(), "Expect empty vDofindexDerivativePairs; now it has size %d", vDofindexDerivativePairs.size(), ORE_InvalidArguments);
+    vDofindexDerivativePairs.clear();
     if( this->dofindex >= 0 ) {
         vDofindexDerivativePairs.emplace_back(this->dofindex + iaxis, 1.0); // this joint is active; return immediately
         return;
@@ -2118,25 +2123,16 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         thisdofformat.jointindex = nActiveJoints + (find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
 
-    const std::map< std::pair<Mimic::DOFFormat, int>, dReal >::const_iterator mit = find_if(begin(mTotalderivativepairValue), end(mTotalderivativepairValue),
-                                                                                            [&thisdofformat](const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal> &keyvalue) {
-            const bool bfound = keyvalue.first.first == thisdofformat;
-            if( IS_DEBUGLEVEL(Level_Verbose) && bfound ) {
+    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mTotalderivativepairValue) {
+        if( keyvalue.first.first == thisdofformat ) {
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 RAVELOG_VERBOSE_FORMAT("Found cached derivatives of jointindex %d with respect to others", thisdofformat.jointindex);
             }
-            return bfound;
+            const int dependedJointIndex = keyvalue.first.second;
+            const dReal partialDerivative = keyvalue.second;
+            vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
+            return;
         }
-                                                                                            );
-    const bool bCached = mit != end(mTotalderivativepairValue);
-    if(bCached) {
-        for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal> &keyvalue : mTotalderivativepairValue) {
-            if(keyvalue.first.first == thisdofformat) {
-                const int dependedJointIndex = keyvalue.first.second;
-                const dReal partialDerivative = keyvalue.second;
-                vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
-            }
-        }
-        return;
     }
 
     /* ========== Collect values of joints on which joint z depends ========== */
@@ -2181,12 +2177,26 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
             vLocalIndexPartialPairs.clear();
             dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mTotalderivativepairValue); ///< recursion: computes ∂y/∂x
             for(const std::pair<int, dReal>& pIndexPartial : vLocalIndexPartialPairs) {
-                localmap[{thisdofformat, pIndexPartial.first}] += fvel * pIndexPartial.second; ///< dz/dx += ∂z/∂y * ∂y/∂x
+                std::pair<Mimic::DOFFormat, int> key = {thisdofformat, pIndexPartial.first};
+                ///< dz/dx += ∂z/∂y * ∂y/∂x
+                if( localmap.count(key) ) {
+                    localmap[key] += fvel * pIndexPartial.second;
+                }
+                else {
+                    localmap[key] = fvel * pIndexPartial.second;
+                }
             }
         }
         else {
             // depended joint is active
-            localmap[{thisdofformat, jointindex}] += fvel; ///< dz/dx += ∂z/∂x, as z may depend on others who depend on x
+            std::pair<Mimic::DOFFormat, int> key = {thisdofformat, jointindex};
+            ///< dz/dx += ∂z/∂x, as z may depend on others who depend on x
+            if( localmap.count(key) ) {
+                localmap[key] += fvel;
+            }
+            else {
+                localmap[key] = fvel;
+            }
         }
     }
 
