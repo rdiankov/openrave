@@ -650,9 +650,9 @@ public:
 
     /// \brief Draws a label. <b>[multi-thread safe]</b>
     ///
-    /// \param offset is position offset of label to whatever the label is affixed to
+    /// \param worldPosition is the position of the label in world space.
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
-    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& voffset) = 0;
+    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition) = 0;
 
     /// \brief Draws a box. <b>[multi-thread safe]</b>
     ///

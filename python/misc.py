@@ -318,7 +318,7 @@ def DrawLabel(env,label="Label",worldPosition=numpy.array([0,0,0])):
     
     :param env: Environment
     :param label: string to be used in the label
-    :param worldPosition: a 3-element vector for positional offset relative to the root transform
+    :param worldPosition: a 3-element vector for positional offset relative to the root world transform
     """
     return env.drawlabel(label, worldPosition)
 
