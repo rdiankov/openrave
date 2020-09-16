@@ -251,6 +251,7 @@ public:
     bool performMovementRightMouseButton( const double eventTimeDelta, const double dx, const double dy )
     {
         bool result = osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
+        // adjust camera perspective if zoom changed while in ortho view
         if (result && _posgviewerwidget->GetViewType()) {
             _posgviewerwidget->SetViewType(1);
         }
