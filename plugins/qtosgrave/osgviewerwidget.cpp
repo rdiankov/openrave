@@ -240,7 +240,7 @@ public:
         }
 
         unsigned int buttonMask = _ga_t1->getButtonMask();
-        if((buttonMask & osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON) && (_ga_t1->getModKeyMask()&osgGA::GUIEventAdapter::MODKEY_SHIFT)) {
+        if( (buttonMask & osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON) && (_ga_t1->getModKeyMask()&osgGA::GUIEventAdapter::MODKEY_SHIFT) ) {
             return performMovementMiddleMouseButton( eventTimeDelta, dx, dy );
         }
 
