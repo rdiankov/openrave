@@ -2590,6 +2590,7 @@ public:
                         }
                         pInitBody = pRobot;
                     }
+                    pRobot->SetName(pKinBodyInfo->_name);
                     _AddRobot(pRobot, true);
                 }
                 else {
@@ -2602,6 +2603,7 @@ public:
                         pBody->InitFromKinBodyInfo(*pKinBodyInfo);
                         pInitBody = pBody;
                     }
+                    pBody->SetName(pKinBodyInfo->_name);
                     _AddKinBody(pBody, true);
                 }
             }
@@ -2621,9 +2623,10 @@ public:
                     else {
                         pRobot->InitFromKinBodyInfo(*pKinBodyInfo);
                     }
-                    pInitBody = pRobot;
+                    pRobot->SetName(pKinBodyInfo->_name);
                     _AddRobot(pRobot, true);
                     pBody = RaveInterfaceCast<KinBody>(pRobot);
+                    pInitBody = pBody;
                 }
                 else {
                     RAVELOG_VERBOSE_FORMAT("add new kinbody %s", pKinBodyInfo->_id);
@@ -2632,16 +2635,15 @@ public:
                         pBody = RaveCreateKinBody(shared_from_this(), "");
                     }
                     pBody->InitFromKinBodyInfo(*pKinBodyInfo);
-                    pInitBody = pBody;
+                    pBody->SetName(pKinBodyInfo->_name);
                     _AddKinBody(pBody, true);
+                    pInitBody = pBody;
                 }
                 vCreatedBodies.push_back(pBody);
             }
 
             if (!!pInitBody) {
-                // only for init body we need to set name and dofvalues again
-                pInitBody->SetName(pKinBodyInfo->_name);
-
+                // only for init body we need to set dofvalues again
                 // dof value
                 pInitBody->GetDOFValues(vDOFValues);
                 FOREACH(it, pKinBodyInfo->_dofValues) {
@@ -2678,15 +2680,15 @@ public:
         }
 
         // after all bodies are added, update the grab states
+        std::vector<KinBody::GrabbedInfoConstPtr> vGrabbedInfos;
         FOREACHC(itBodyInfo, info._vBodyInfos) {
             KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
-
-            const std::string& bodyid = (*itBodyInfo)->_id;
+            const std::string& bodyId = (*itBodyInfo)->_id;
             
             // find existing body in the env
             std::vector<KinBodyPtr>::iterator itExistingBody = _vecbodies.end();
             FOREACH(itBody, _vecbodies) {
-                if ((*itBody)->_id == bodyid) {
+                if ((*itBody)->_id == bodyId) {
                     itExistingBody = itBody;
                     break;
                 }
@@ -2694,11 +2696,24 @@ public:
 
             if (itExistingBody != _vecbodies.end()) {
                 // grabbed infos
-                std::vector<KinBody::GrabbedInfoConstPtr> grabbedInfo(pKinBodyInfo->_vGrabbedInfos.begin(), pKinBodyInfo->_vGrabbedInfos.end());
-                (*itExistingBody)->ResetGrabbed(grabbedInfo);
+                vGrabbedInfos.resize(0);
+                vGrabbedInfos.reserve(pKinBodyInfo->_vGrabbedInfos.size());
+                FOREACHC(itGrabbedInfo, pKinBodyInfo->_vGrabbedInfos) {
+                    if (!!GetKinBody((*itGrabbedInfo)->_grabbedname)) {
+                        vGrabbedInfos.push_back(*itGrabbedInfo);
+                    } else {
+                        RAVELOG_WARN_FORMAT("body %s grabbed by %s is gone, ignoring grabbed info %s", (*itGrabbedInfo)->_grabbedname%pKinBodyInfo->_name%(*itGrabbedInfo)->_id);
+                    }
+                }
+                try {
+                    (*itExistingBody)->ResetGrabbed(vGrabbedInfos);
+                }
+                catch(const std::exception &ex) {
+                    RAVELOG_ERROR_FORMAT("failed to reset grabbed on %s: %s", pKinBodyInfo->_name%ex.what());
+                }
             }
             else {
-                RAVELOG_WARN_FORMAT("could not find body with id='%s', name='%s'", bodyid%(*itBodyInfo)->_name);
+                RAVELOG_WARN_FORMAT("could not find body with id='%s', name='%s'", bodyId%(*itBodyInfo)->_name);
             }
         }
 
