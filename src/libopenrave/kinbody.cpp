@@ -2313,7 +2313,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
 
                 int index = -1;
                 if( !dofindices.empty() ) {
-                    const std::vector<int>::const_iterator itindex = find(dofindices.begin(), dofindices.end(), dofindex + idof);
+                    const std::vector<int>::const_iterator itindex = std::find(dofindices.begin(), dofindices.end(), dofindex + idof);
                     if( itindex == dofindices.end() ) {
                         continue;
                     }
@@ -2356,7 +2356,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                         int index = -1;
                         const int dofindex = dofindexDerivativePair.first;
                         if( !dofindices.empty() ) {
-                            const std::vector<int>::const_iterator itindex = find(dofindices.begin(), dofindices.end(), dofindex);
+                            const std::vector<int>::const_iterator itindex = std::find(dofindices.begin(), dofindices.end(), dofindex);
                             if( itindex == dofindices.end() ) {
                                 continue;
                             }
@@ -2568,7 +2568,7 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                     vColumn = pjoint->GetAxis(dof);
                     int index = -1;
                     if( !dofindices.empty() ) {
-                        const std::vector<int>::const_iterator itindex = find(dofindices.begin(),dofindices.end(),dofindex+dof);
+                        const std::vector<int>::const_iterator itindex = std::find(dofindices.begin(),dofindices.end(),dofindex+dof);
                         if( itindex == dofindices.end() ) {
                             continue;
                         }
@@ -2608,7 +2608,7 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                         int index = -1;
                         const int dofindex = dofindexDerivativePair.first;
                         if( !dofindices.empty() ) {
-                            const std::vector<int>::const_iterator itindex = find(dofindices.begin(), dofindices.end(), dofindex);
+                            const std::vector<int>::const_iterator itindex = std::find(dofindices.begin(), dofindices.end(), dofindex);
                             if( itindex == dofindices.end() ) {
                                 continue;
                             }
