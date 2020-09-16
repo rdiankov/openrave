@@ -583,7 +583,7 @@ private:
 
 QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
                                    const boost::function<bool(int)>& onKeyDown, double metersinunit,
-                                   QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown), _isOrthogonal(0)
+                                   QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
 {
 
     setFocus( Qt::ActiveWindowFocusReason );
@@ -1110,7 +1110,6 @@ double QOSGViewerWidget::GetCameraNearPlane()
 
 void QOSGViewerWidget::SetViewType(int isorthogonal)
 {
-    _isOrthogonal = isorthogonal;
     int width = _osgview->getCamera()->getViewport()->width();
     int height = _osgview->getCamera()->getViewport()->height();
     double aspect = static_cast<double>(width)/static_cast<double>(height);
