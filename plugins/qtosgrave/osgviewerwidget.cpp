@@ -240,7 +240,7 @@ public:
         }
 
         unsigned int buttonMask = _ga_t1->getButtonMask();
-        if( (buttonMask & osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON) && (_ga_t1->getModKeyMask()&osgGA::GUIEventAdapter::MODKEY_SHIFT) ) {
+        if((buttonMask & osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON) && (_ga_t1->getModKeyMask()&osgGA::GUIEventAdapter::MODKEY_SHIFT)) {
             return performMovementMiddleMouseButton( eventTimeDelta, dx, dy );
         }
 
@@ -250,8 +250,27 @@ public:
     // make zooming faster
     bool performMovementRightMouseButton( const double eventTimeDelta, const double dx, const double dy )
     {
-        return osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
+        bool result = osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
+        if (result && _posgviewerwidget->GetViewType()) {
+            _posgviewerwidget->SetViewType(1);
+        }
+        return result;
     }
+
+    // make rotation faster
+    bool performMovementLeftMouseButton( const double eventTimeDelta, const double dx, const double dy )
+    {
+        // amplify dx and dy
+        if( getVerticalAxisFixed() )
+            rotateWithFixedVertical( 4*dx, 4*dy );
+        else {
+            rotateTrackball( _ga_t0->getXnormalized(), _ga_t0->getYnormalized(),
+                             _ga_t0->getXnormalized() - 4*dx, _ga_t0->getYnormalized() - 4*dy,
+                             getThrowScale( eventTimeDelta ) );
+        }
+        return true;
+    }
+
     void applyAnimationStep( const double currentProgress, const double prevProgress )
     {
         OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData* >( _animationData.get() );
@@ -527,7 +546,7 @@ private:
 
 QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
                                    const boost::function<bool(int)>& onKeyDown, double metersinunit,
-                                   QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
+                                   QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown), _isOrthogonal(0)
 {
 
     setFocus( Qt::ActiveWindowFocusReason );
@@ -1053,6 +1072,7 @@ double QOSGViewerWidget::GetCameraNearPlane()
 
 void QOSGViewerWidget::SetViewType(int isorthogonal)
 {
+    _isOrthogonal = isorthogonal;
     int width = _osgview->getCamera()->getViewport()->width();
     int height = _osgview->getCamera()->getViewport()->height();
     double aspect = static_cast<double>(width)/static_cast<double>(height);

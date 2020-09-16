@@ -86,6 +86,11 @@ public:
     /// \brief set the viewport to perspective or orthogonal
     void SetViewType(int isorthogonal);
 
+    /// \brief get whether the viewport is perspective or orthogonal
+    int GetViewType() const {
+        return _isOrthogonal;
+    };
+
     /// \brief sets the near plane for the camera
     void SetNearPlane(double nearplane);
 
@@ -320,6 +325,7 @@ protected:
     double _zNear; ///< In OSG, znear and zfar are updated by CullVisitor, which
                    ///  causing getProjectionMatrixAsXXX to return negative
                    ///  values. Therefore, we manage zNear ourselves
+    int _isOrthogonal; ///< Whether the viewport is in perspective or orthogonal mode
 
     void GetSwitchedButtonValue(unsigned int &button);
 };
