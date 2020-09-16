@@ -2035,7 +2035,10 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         size_t index = eq.find('|');
         std::string sCommonSubexpressions = (index != std::string::npos) ? eq.substr(0, index) : ""; ///< common subexpressions
         if( !sCommonSubexpressions.empty() ) {
-            sCommonSubexpressions += ';'; // just in case, separate out the equations
+            const size_t semicolonindex = sCommonSubexpressions.find_last_of(";"); // avoid double semicolons
+            if(semicolonindex != std::string::npos) {
+                sCommonSubexpressions += sCommonSubexpressions.substr(0, semicolonindex) + ';'; // just in case, separate out the equations
+            }
         }
 
         while(index != std::string::npos) {
@@ -2063,7 +2066,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             }
 
             // ensure varname is indeed in the variable list
-            std::vector<string>::iterator itnameindex = find(resultVars.begin(), resultVars.end(), varname);
+            std::vector<string>::iterator itnameindex = std::find(resultVars.begin(), resultVars.end(), varname);
             OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(), "variable %s from velocity equation is not referenced in the position, skipping...", mapinvnames[varname],ORE_InvalidArguments);
 
             OpenRAVEFunctionParserRealPtr fn = CreateJointFunctionParser();
@@ -2120,7 +2123,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         const size_t nActiveJoints = vActiveJoints.size();
         const std::vector<JointPtr>& vPassiveJoints = parent->GetPassiveJoints();
         // this is the *generalized* joint index for a mimic joint
-        thisdofformat.jointindex = nActiveJoints + (find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
+        thisdofformat.jointindex = nActiveJoints + (std::find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
 
     for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mTotalderivativepairValue) {
