@@ -279,12 +279,12 @@ public:
     // make zooming faster
     bool performMovementRightMouseButton( const double eventTimeDelta, const double dx, const double dy )
     {
-        bool result = osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
         // adjust camera perspective if zoom changed while in ortho view
         if (_posgviewerwidget->IsInOrthoMode()) {
-            _posgviewerwidget->SetViewType(1);
+            _posgviewerwidget->Zoom( dy < 0 ? 1.1 : 0.9 );
+            return true;
         }
-        return result;
+        return osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
     }
 
     // make rotation faster
