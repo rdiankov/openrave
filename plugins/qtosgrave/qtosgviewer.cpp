@@ -149,7 +149,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
                     "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
     RegisterCommand("SetTextureCubeMap", boost::bind(&QtOSGViewer::_SetTextureCubeMap, this, _1, _2),
-                    "Sets the skybox with cubemap");
+                     "Sets the skybox with cubemap");
     RegisterCommand("TrackLink", boost::bind(&QtOSGViewer::_TrackLinkCommand, this, _1, _2),
                     "camera tracks the link maintaining a specific relative transform: robotname, manipname, focalDistance");
     RegisterCommand("TrackManipulator", boost::bind(&QtOSGViewer::_TrackManipulatorCommand, this, _1, _2),
@@ -160,6 +160,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
     RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
                     "sets the viewer projection mode, perspective or orthogonal");
+    RegisterCommand("MoveCameraPointOfView", boost::bind(&QtOSGViewer::_MoveCameraPointOfViewCommand, this, _1, _2),
+                    "Change ghe camera point of view to be aligned to one of the main world axes, centered at scene bounding box.");
     RegisterCommand("MoveCameraZoom", boost::bind(&QtOSGViewer::_MoveCameraZoomCommand, this, _1, _2),
                     "Set the zooming factor of the view");
     RegisterCommand("RotateCameraXDirection", boost::bind(&QtOSGViewer::_RotateCameraXDirectionCommand, this, _1, _2),
@@ -173,6 +175,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     "Pans the camera in the direction of the screen x vector, parallel to screen plane. The argument dx is in normalized coordinates 0 < dx < 1, where 1 means canvas width.");
     RegisterCommand("PanCameraYDirection", boost::bind(&QtOSGViewer::_PanCameraYDirectionCommand, this, _1, _2),
     "Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.");
+
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
@@ -647,33 +650,18 @@ void QtOSGViewer::_SetDebugLevelVerbose()
 
 void QtOSGViewer::_ChangeViewToXY()
 {
-    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
-    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(0));
-    _Tcamera.trans.x = center.x();
-    _Tcamera.trans.y = center.y();
-    _Tcamera.trans.z = center.z() + _posgWidget->GetCurrentManipulatorDistanceToFocus();
-    _SetCameraTransform();
+    _MoveCameraPointOfView("+z");
 }
 
 void QtOSGViewer::_ChangeViewToXZ()
 {
-    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
-    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2));
-    _Tcamera.trans.x = center.x();
-    _Tcamera.trans.y = center.y() - _posgWidget->GetCurrentManipulatorDistanceToFocus();
-    _Tcamera.trans.z = center.z();
-    _SetCameraTransform();
+    _MoveCameraPointOfView("+y");
 
 }
 
 void QtOSGViewer::_ChangeViewToYZ()
 {
-    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
-    _Tcamera.rot = quatMultiply(quatFromAxisAngle(RaveVector<float>(0,0,1), float(M_PI/2)), quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2)));
-    _Tcamera.trans.x = center.x() + _posgWidget->GetCurrentManipulatorDistanceToFocus();
-    _Tcamera.trans.y = center.y();
-    _Tcamera.trans.z = center.z();
-    _SetCameraTransform();
+    _MoveCameraPointOfView("+x");
 
 }
 
@@ -1238,19 +1226,28 @@ bool QtOSGViewer::_SetProjectionModeCommand(ostream& sout, istream& sinput)
     return true;
 }
 
+bool QtOSGViewer::_MoveCameraPointOfViewCommand(ostream& sout, istream& sinput)
+{
+    std::string axis = "";
+    sinput >> axis;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraPointOfView, this, axis));
+    return true;
+}
+
 bool QtOSGViewer::_MoveCameraZoomCommand(ostream& sout, istream& sinput)
 {
     float factor = 1.0f;
     sinput >> factor;
 
-    bool isPan;
+    int isPan;
     sinput >> isPan;
 
     float panDelta = 0;
     if(isPan) {
         sinput >> panDelta;
     }
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, isPan, panDelta));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, (bool)isPan, panDelta));
     return true;
 }
 
@@ -1426,7 +1423,7 @@ bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& 
     if (infoText.size() == 0) {
         infoText = str(boost::format("%s/%s")%parentIem->GetName()%link->GetName());
     }
-    _posgWidget->TrackNode(osgNode, infoText, linkOffset, _posgWidget->GetCurrentManipulatorDistanceToFocus());
+    _posgWidget->TrackNode(osgNode, infoText, linkOffset, _posgWidget->GetCameraDistanceToFocus());
     if(_cameraMoveModeButton != NULL) {
         _cameraMoveModeButton->setEnabled(false);
     }
@@ -1435,13 +1432,8 @@ bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& 
 
 void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
 {
-    _posgWidget->SetCurrentManipulatorDistanceToFocus(focalDistance);
+    _posgWidget->SetCameraDistanceToFocus(focalDistance);
     _SetCameraTransform();
-}
-
-double QtOSGViewer::_GetCameraDistanceToFocus()
-{
-    return _posgWidget->GetCurrentManipulatorDistanceToFocus();
 }
 
 RaveTransform<float> QtOSGViewer::GetCameraTransform() const
@@ -1455,7 +1447,7 @@ RaveTransform<float> QtOSGViewer::GetCameraTransform() const
 float QtOSGViewer::GetCameraDistanceToFocus() const
 {
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
-    return _posgWidget->GetCurrentManipulatorDistanceToFocus();
+    return _posgWidget->GetCameraDistanceToFocus();
 }
 
 geometry::RaveCameraIntrinsics<float> QtOSGViewer::GetCameraIntrinsics() const
@@ -1852,11 +1844,6 @@ void QtOSGViewer::Move(int x, int y)
     _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
 }
 
-void QtOSGViewer::MoveCameraZoom(float factor, bool isPan, float panDelta)
-{
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, isPan, panDelta));
-}
-
 void QtOSGViewer::_RotateCameraXDirection(float thetaX)
 {
     _posgWidget->RotateCameraXDirection(thetaX);
@@ -1875,6 +1862,11 @@ void QtOSGViewer::_PanCameraXDirection(float dx)
 void QtOSGViewer::_PanCameraYDirection(float dy)
 {
     _posgWidget->PanCameraYDirection(dy);
+}
+
+void QtOSGViewer::_MoveCameraPointOfView(const std::string& axis)
+{
+    _posgWidget->MoveCameraPointOfView(axis);
 }
 
 void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)

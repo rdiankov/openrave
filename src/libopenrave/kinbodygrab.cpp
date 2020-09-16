@@ -130,6 +130,15 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
     return true;
 }
 
+bool KinBody::Grab(KinBodyPtr pbody, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames)
+{
+    std::set<int> setBodyLinksToIgnore;
+    FOREACHC(itLinkName, setIgnoreBodyLinkNames) {
+        setBodyLinksToIgnore.insert(GetLink(*itLinkName)->GetIndex());
+    }
+    return Grab(pbody, pBodyLinkToGrabWith, setBodyLinksToIgnore);
+}
+
 bool KinBody::Grab(KinBodyPtr pbody, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore)
 {
     OPENRAVE_ASSERT_FORMAT(!!pbody, "env=%d, grab body is invalid grab arguments for grabbing '%s'", GetEnv()->GetId()%GetName(), ORE_InvalidArguments);
@@ -340,10 +349,13 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo)
             poutputinfo->_grabbedname = pgrabbedbody->GetName();
             poutputinfo->_robotlinkname = pgrabbed->_plinkrobot->GetName();
             poutputinfo->_trelative = pgrabbed->_troot;
-            poutputinfo->_setRobotLinksToIgnore = pgrabbed->_setRobotLinksToIgnore;
+            poutputinfo->_setIgnoreRobotLinkNames.clear();
             FOREACHC(itlink, _veclinks) {
-                if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
-                    poutputinfo->_setRobotLinksToIgnore.insert((*itlink)->GetIndex());
+                if( find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ) {
+                    poutputinfo->_setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+                }
+                else if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
+                    poutputinfo->_setIgnoreRobotLinkNames.insert((*itlink)->GetName());
                 }
             }
             vgrabbedinfo.push_back(poutputinfo);
@@ -366,10 +378,13 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const
             outputinfo._grabbedname = pgrabbedbody->GetName();
             outputinfo._robotlinkname = pgrabbed->_plinkrobot->GetName();
             outputinfo._trelative = pgrabbed->_troot;
-            outputinfo._setRobotLinksToIgnore = pgrabbed->_setRobotLinksToIgnore;
+            outputinfo._setIgnoreRobotLinkNames.clear();
             FOREACHC(itlink, _veclinks) {
-                if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
-                    outputinfo._setRobotLinksToIgnore.insert((*itlink)->GetIndex());
+                if( find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ) {
+                    outputinfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+                }
+                else if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
+                    outputinfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
                 }
             }
         }
@@ -387,10 +402,13 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
                 grabbedInfo._grabbedname = pgrabbedbody->GetName();
                 grabbedInfo._robotlinkname = pgrabbed->_plinkrobot->GetName();
                 grabbedInfo._trelative = pgrabbed->_troot;
-                grabbedInfo._setRobotLinksToIgnore = pgrabbed->_setRobotLinksToIgnore;
+                grabbedInfo._setIgnoreRobotLinkNames.clear();
                 FOREACHC(itlink, _veclinks) {
-                    if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
-                        grabbedInfo._setRobotLinksToIgnore.insert((*itlink)->GetIndex());
+                    if( find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ) {
+                        grabbedInfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+                    }
+                    else if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
+                        grabbedInfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
                     }
                 }
                 return true;
@@ -407,7 +425,7 @@ void KinBody::GrabbedInfo::Reset()
     _grabbedname.clear();
     _robotlinkname.clear();
     _trelative = Transform();
-    _setRobotLinksToIgnore.clear();
+    _setIgnoreRobotLinkNames.clear();
 }
 
 void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -418,7 +436,7 @@ void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
     Transform transform = _trelative;
     transform.trans *= fUnitScale;
     orjson::SetJsonValueByKey(value, "transform", transform, allocator);
-    orjson::SetJsonValueByKey(value, "ignoreRobotLinkNames", _setRobotLinksToIgnore, allocator);
+    orjson::SetJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames, allocator);
 }
 
 void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -430,7 +448,7 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         orjson::LoadJsonValueByKey(value, "transform", _trelative);
         _trelative.trans *= fUnitScale;
     }
-    orjson::LoadJsonValueByKey(value, "ignoreRobotLinkNames", _setRobotLinksToIgnore);
+    orjson::LoadJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames);
 }
 
 void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgrabbedinfo)
@@ -457,7 +475,11 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgra
                 // collision checking will not be automatically updated with environment calls, so need to do this manually
                 _selfcollisionchecker->InitKinBody(pbody);
             }
-            pgrabbed->ProcessCollidingLinks(pgrabbedinfo->_setRobotLinksToIgnore);
+            std::set<int> setRobotLinksToIgnore;
+            FOREACHC(itLinkName, pgrabbedinfo->_setIgnoreRobotLinkNames) {
+                setRobotLinksToIgnore.insert(GetLink(*itLinkName)->GetIndex());
+            }
+            pgrabbed->ProcessCollidingLinks(setRobotLinksToIgnore);
             Transform tlink = pBodyLinkToGrabWith->GetTransform();
             Transform tbody = tlink * pgrabbed->_troot;
             pbody->SetTransform(tbody);
