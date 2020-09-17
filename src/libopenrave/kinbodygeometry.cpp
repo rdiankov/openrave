@@ -165,6 +165,27 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
+void AppendCylinderTriangulation(const dReal& rad, const dReal& len, const int& numverts, TriMesh& tri) {
+    // once again, cylinder is on z axis
+    dReal dtheta = 2 * PI / (dReal)numverts;
+    tri.vertices.push_back(Vector(0,0,len));
+    tri.vertices.push_back(Vector(0,0,-len));
+    tri.vertices.push_back(Vector(rad,0,len));
+    tri.vertices.push_back(Vector(rad,0,-len));
+    for(int i = 0; i < numverts+1; ++i) {
+        dReal s = rad * RaveSin(dtheta * (dReal)i);
+        dReal c = rad * RaveCos(dtheta * (dReal)i);
+        int off = (int)tri.vertices.size();
+        tri.vertices.push_back(Vector(c, s, len));
+        tri.vertices.push_back(Vector(c, s, -len));
+
+        tri.indices.push_back(0);       tri.indices.push_back(off-2);       tri.indices.push_back(off);
+        tri.indices.push_back(1);       tri.indices.push_back(off+1);       tri.indices.push_back(off-1);
+        tri.indices.push_back(off-2);   tri.indices.push_back(off-1);       tri.indices.push_back(off);
+        tri.indices.push_back(off);     tri.indices.push_back(off-1);       tri.indices.push_back(off+1);
+    }
+}
+
 int KinBody::GeometryInfo::SideWall::Compare(const SideWall& rhs, dReal fUnitScale, dReal fEpsilon) const
 {
     if(!IsZeroWithEpsilon3(transf.trans - rhs.transf.trans*fUnitScale, fEpsilon)) {
@@ -332,23 +353,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         // cylinder is on z axis
         dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
         int numverts = (int)(fTessellation*48.0f) + 3;
-        dReal dtheta = 2 * PI / (dReal)numverts;
-        _meshcollision.vertices.push_back(Vector(0,0,len));
-        _meshcollision.vertices.push_back(Vector(0,0,-len));
-        _meshcollision.vertices.push_back(Vector(rad,0,len));
-        _meshcollision.vertices.push_back(Vector(rad,0,-len));
-        for(int i = 0; i < numverts+1; ++i) {
-            dReal s = rad * RaveSin(dtheta * (dReal)i);
-            dReal c = rad * RaveCos(dtheta * (dReal)i);
-            int off = (int)_meshcollision.vertices.size();
-            _meshcollision.vertices.push_back(Vector(c, s, len));
-            _meshcollision.vertices.push_back(Vector(c, s, -len));
-
-            _meshcollision.indices.push_back(0);       _meshcollision.indices.push_back(off-2);       _meshcollision.indices.push_back(off);
-            _meshcollision.indices.push_back(1);       _meshcollision.indices.push_back(off+1);       _meshcollision.indices.push_back(off-1);
-            _meshcollision.indices.push_back(off-2);   _meshcollision.indices.push_back(off-1);         _meshcollision.indices.push_back(off);
-            _meshcollision.indices.push_back(off);   _meshcollision.indices.push_back(off-1);         _meshcollision.indices.push_back(off+1);
-        }
+        AppendCylinderTriangulation(rad, len, numverts, _meshcollision);
         break;
     }
     case GT_Cage: {
