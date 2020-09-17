@@ -1,9 +1,18 @@
 #include "osglodlabel.h"
 #include "qtosg.h"
 #include <iostream>
+#include <sstream>
 #include <osg/Depth>
+#include <QFile>
 
 namespace qtosgrave {
+
+struct membuf : std::streambuf
+{
+    membuf(char* begin, char* end) {
+        this->setg(begin, begin, end);
+    }
+};
 
 // OSG text label that scales by camera distance and also disappears if far away enough
 OSGLODLabel::OSGLODLabel(const std::string& label) : osg::LOD() {
@@ -24,14 +33,18 @@ OSGLODLabel::OSGLODLabel(const std::string& label) : osg::LOD() {
     *     [Label Text]
     */
 
-    // Set up text element and its properties
+    // Create text element
     osg::ref_ptr<osgText::Text> text = new osgText::Text();
+    // Read copy QT resource to temp location and stream that into OSG to use
+    std::string tmp = std::tmpnam(NULL);
+    QFile::copy(":/fonts/NotoSans-Regular.ttf", QString::fromStdString(tmp));
+    std::ifstream fontStream(tmp);
+    text->setFont(osgText::readFontStream(fontStream));
+    // Set up other text element properties
     text->setText(label);
     text->setCharacterSize(0.05);
     text->setAutoRotateToScreen(true);
-    text->setFont( "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf" );
     text->setPosition( osg::Vec3( 0.0, 0.0, 0.0 ) );
-    text->getOrCreateStateSet()->removeAttribute((new osg::Program)->getType(), 1);
     text->setDrawMode( osgText::Text::TEXT );
     text->setColor(osg::Vec4(0,0,0,1));
     text->setBackdropColor( osg::Vec4( 1.0, 1.0f, 1.0f, 1.0f ) );
