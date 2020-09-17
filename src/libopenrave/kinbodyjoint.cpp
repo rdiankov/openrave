@@ -2126,16 +2126,25 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         thisdofformat.jointindex = nActiveJoints + (std::find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
 
+    bool bCached = false;
     for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mTotalderivativepairValue) {
         if( keyvalue.first.first == thisdofformat ) {
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 RAVELOG_VERBOSE_FORMAT("Found cached derivatives of jointindex %d with respect to others", thisdofformat.jointindex);
             }
-            const int dependedJointIndex = keyvalue.first.second;
-            const dReal partialDerivative = keyvalue.second;
-            vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
-            return;
+            bCached = true;
+            break;
         }
+    }
+    if(bCached) {
+        for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal> &keyvalue : mTotalderivativepairValue) {
+            if(keyvalue.first.first == thisdofformat) {
+                const int dependedJointIndex = keyvalue.first.second;
+                const dReal partialDerivative = keyvalue.second;
+                vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
+            }
+        }
+        return;
     }
 
     /* ========== Collect values of joints on which joint z depends ========== */
