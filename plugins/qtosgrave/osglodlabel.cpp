@@ -75,7 +75,7 @@ void OSGLODLabel::traverse(osg::NodeVisitor& nv)
         float requiredRange = nv.getDistanceToViewPoint(getCenter(),true);
         // The input node visitor, represented as a CullStack
         osg::CullStack *cullStack = dynamic_cast<osg::CullStack *>(&nv);
-        if (cullStack != NULL) {
+        if (cullStack != nullptr) {
             // Use cull stack's model view matrix to obtain world distance to camera
             osg::RefMatrix* modelView = cullStack->getModelViewMatrix();
             // We use the last column of the modelview matrix to acquire object space camera translation
@@ -86,7 +86,9 @@ void OSGLODLabel::traverse(osg::NodeVisitor& nv)
         }
 
         unsigned int numChildren = _children.size();
-        if (_rangeList.size()<numChildren) numChildren=_rangeList.size();
+        if (_rangeList.size()<numChildren) {
+            numChildren=_rangeList.size();
+        }
         for(unsigned int i=0;i<numChildren;++i)
         {
             if (_rangeList[i].first<=requiredRange && requiredRange<_rangeList[i].second)
