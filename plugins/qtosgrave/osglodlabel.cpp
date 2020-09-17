@@ -3,12 +3,11 @@
 #include <iostream>
 #include <sstream>
 #include <osg/Depth>
-#include <QFile>
 
 namespace qtosgrave {
 
 // OSG text label that scales by camera distance and also disappears if far away enough
-OSGLODLabel::OSGLODLabel(const std::string& label) : osg::LOD() {
+OSGLODLabel::OSGLODLabel(const std::string& label, std::string& fontString) : osg::LOD() {
     /* Transform structure of an OSGLODLabel: 
     *
     * [Target Transform (usually the global transform)]
@@ -28,15 +27,8 @@ OSGLODLabel::OSGLODLabel(const std::string& label) : osg::LOD() {
 
     // Create text element
     osg::ref_ptr<osgText::Text> text = new osgText::Text();
-    // Read copy QT resource to temp location and stream that into OSG to use
-    std::string tmp = std::tmpnam(NULL);
-    QFile file(":/fonts/NotoSans-Regular.ttf");
-    file.open(QIODevice::ReadOnly | QIODevice::Unbuffered);
-    QByteArray ba = file.readAll();
-    std::string fontString = ba.toStdString();
     std::istringstream fontStream(fontString);
     text->setFont(osgText::readFontStream(fontStream));
-    file.close();
     // Set up other text element properties
     text->setText(label);
     text->setCharacterSize(0.05);

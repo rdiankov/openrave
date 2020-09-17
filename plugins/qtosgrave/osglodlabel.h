@@ -8,7 +8,7 @@ namespace qtosgrave {
 	class OSGLODLabel : public osg::LOD
 	{
 	public:
-	    OSGLODLabel(const std::string& label);
+	    OSGLODLabel(const std::string& label, std::string& fontString);
 	    ~OSGLODLabel();
 	    void traverse(osg::NodeVisitor& nv);
 	};

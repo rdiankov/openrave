@@ -178,6 +178,13 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
     _bExternalLoop = false;
+
+    // Read copy QT resource to temp location and later stream that into OSG to use when making labels
+    QFile fontFile(":/fonts/NotoSans-Regular.ttf");
+    fontFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered);
+    QByteArray ba = fontFile.readAll();
+    _fontString = ba.toStdString();
+    fontFile.close();
 }
 
 QtOSGViewer::~QtOSGViewer()
@@ -1612,7 +1619,7 @@ void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, cons
     osg::Matrix offsetMatrix;
     offsetMatrix.makeTranslate(osg::Vec3(worldPosition.x, worldPosition.y, worldPosition.z));
     trans->setMatrix(offsetMatrix);
-    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label);
+    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label, _fontString);
     trans->addChild(labelTrans);
     handle->addChild(trans);
     _posgWidget->GetFigureRoot()->insertChild(0, handle);
