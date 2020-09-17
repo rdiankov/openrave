@@ -7,13 +7,6 @@
 
 namespace qtosgrave {
 
-struct membuf : std::streambuf
-{
-    membuf(char* begin, char* end) {
-        this->setg(begin, begin, end);
-    }
-};
-
 // OSG text label that scales by camera distance and also disappears if far away enough
 OSGLODLabel::OSGLODLabel(const std::string& label) : osg::LOD() {
     /* Transform structure of an OSGLODLabel: 
