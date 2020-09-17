@@ -290,12 +290,12 @@ public:
     // make rotation faster
     bool performMovementLeftMouseButton( const double eventTimeDelta, const double dx, const double dy )
     {
-        // amplify dx and dy
+        double rotationSensitivityMultiplier = 4.0; // dx / dy angle multiplier
         if( getVerticalAxisFixed() )
-            rotateWithFixedVertical( 4*dx, 4*dy );
+            rotateWithFixedVertical( rotationSensitivityMultiplier*dx, rotationSensitivityMultiplier*dy );
         else {
             rotateTrackball( _ga_t0->getXnormalized(), _ga_t0->getYnormalized(),
-                             _ga_t0->getXnormalized() - 4*dx, _ga_t0->getYnormalized() - 4*dy,
+                             _ga_t0->getXnormalized() - rotationSensitivityMultiplier*dx, _ga_t0->getYnormalized() - rotationSensitivityMultiplier*dy,
                              getThrowScale( eventTimeDelta ) );
         }
         return true;
