@@ -127,7 +127,7 @@ public:
     bool performMovementRightMouseButton( const double eventTimeDelta, const double dx, const double dy )
     {
         if(_posgviewerwidget->IsInOrthoMode()) {
-            _posgviewerwidget->Zoom( dy < 0 ? 0.9 : 1.1 );
+            _posgviewerwidget->Zoom( dy < 0 ? 1.1 : 0.9 );
             return true;
         }
         return osgGA::NodeTrackerManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
@@ -281,7 +281,7 @@ public:
     {
         // adjust camera perspective if zoom changed while in ortho view
         if (_posgviewerwidget->IsInOrthoMode()) {
-            _posgviewerwidget->Zoom( dy < 0 ? 0.9 : 1.1 );
+            _posgviewerwidget->Zoom( dy < 0 ? 1.1 : 0.9 );
             return true;
         }
         return osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
