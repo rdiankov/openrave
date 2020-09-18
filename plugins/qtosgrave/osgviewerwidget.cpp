@@ -73,7 +73,7 @@ public:
         {
         case osgGA::GUIEventAdapter::SCROLL:
             if(_posgviewerwidget->IsInOrthoMode()) {
-                double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_UP ? 1.1 : 0.9;
+                double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
@@ -281,7 +281,7 @@ public:
     {
         // adjust camera perspective if zoom changed while in ortho view
         if (_posgviewerwidget->IsInOrthoMode()) {
-            _posgviewerwidget->Zoom( dy < 0 ? 1.1 : 0.9 );
+            _posgviewerwidget->Zoom( dy < 0 ? 0.9 : 1.1 );
             return true;
         }
         return osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
@@ -334,7 +334,7 @@ public:
 
         case osgGA::GUIEventAdapter::SCROLL:
             if(_posgviewerwidget->IsInOrthoMode()) {
-                double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_UP ? 1.1 : 0.9;
+                double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
