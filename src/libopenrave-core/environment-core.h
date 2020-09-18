@@ -2590,7 +2590,6 @@ public:
                         }
                         pInitBody = pRobot;
                     }
-                    pRobot->SetName(pKinBodyInfo->_name);
                     _AddRobot(pRobot, true);
                 }
                 else {
@@ -2603,7 +2602,6 @@ public:
                         pBody->InitFromKinBodyInfo(*pKinBodyInfo);
                         pInitBody = pBody;
                     }
-                    pBody->SetName(pKinBodyInfo->_name);
                     _AddKinBody(pBody, true);
                 }
             }
@@ -2623,10 +2621,9 @@ public:
                     else {
                         pRobot->InitFromKinBodyInfo(*pKinBodyInfo);
                     }
-                    pRobot->SetName(pKinBodyInfo->_name);
+                    pInitBody = pRobot;
                     _AddRobot(pRobot, true);
                     pBody = RaveInterfaceCast<KinBody>(pRobot);
-                    pInitBody = pBody;
                 }
                 else {
                     RAVELOG_VERBOSE_FORMAT("add new kinbody %s", pKinBodyInfo->_id);
@@ -2635,15 +2632,16 @@ public:
                         pBody = RaveCreateKinBody(shared_from_this(), "");
                     }
                     pBody->InitFromKinBodyInfo(*pKinBodyInfo);
-                    pBody->SetName(pKinBodyInfo->_name);
-                    _AddKinBody(pBody, true);
                     pInitBody = pBody;
+                    _AddKinBody(pBody, true);
                 }
                 vCreatedBodies.push_back(pBody);
             }
 
             if (!!pInitBody) {
-                // only for init body we need to set dofvalues again
+                // only for init body we need to set name and dofvalues again
+                pInitBody->SetName(pKinBodyInfo->_name);
+
                 // dof value
                 pInitBody->GetDOFValues(vDOFValues);
                 FOREACH(it, pKinBodyInfo->_dofValues) {
