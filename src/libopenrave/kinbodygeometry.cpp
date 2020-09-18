@@ -411,6 +411,14 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         }
         break;
     }
+    case GT_CalibrationBoard: {
+        AppendBoxTriangulation(Vector(0, 0, 0), GetBoxExtents(), _meshcollision);
+        CalibrationBoardParams params = _calibrationBoardParams;
+        if (params.numDotsX >= 3 && params.numDotsY >= 3) {
+            
+        }
+        break;
+    }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized geom type %d!"), _type, ORE_InvalidArguments);
     }

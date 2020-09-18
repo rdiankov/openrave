@@ -204,7 +204,8 @@ public:
                    && _vCollisionScale == other._vCollisionScale
                    && _fTransparency == other._fTransparency
                    && _bVisible == other._bVisible
-                   && _bModifiable == other._bModifiable;
+                   && _bModifiable == other._bModifiable
+                   && _calibrationBoardParams == other._calibrationBoardParams;
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
@@ -330,6 +331,31 @@ public:
         float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
+
+        struct CalibrationBoardParams { ///< used by GT_CalibrationBoard
+            int numDotsX; ///< number of dots in x direction, minimum 3
+            int numDotsY; ///< number of dots in y direction, minimum 3
+            float dotsDistanceX; ///< distance between center of dots in x direction
+            float dotsDistanceY; ///< distance between center of dots in y direction
+            Vector dotColor;
+            std::string patternName;
+            float dotDiameterDistanceRatio; ///< dot diameter divided by minimum of dot distances x and y
+            float bigDotDiameterDistanceRatio; ///< big dot diameter divided by minimum of dot distances x and y
+            bool operator==(const CalibrationBoardParams& other) const {
+                return numDotsX == other.numDotsX
+                       && numDotsY == other.numDotsY
+                       && dotsDistanceX == other.dotsDistanceX
+                       && dotsDistanceY == other.dotsDistanceY
+                       && dotColor == other.dotColor
+                       && patternName == other.patternName
+                       && dotDiameterDistanceRatio == other.dotDiameterDistanceRatio
+                       && bigDotDiameterDistanceRatio == other.bigDotDiameterDistanceRatio;
+            }
+            bool operator!=(const CalibrationBoardParams& other) const {
+                return !operator==(other);
+            }
+        }
+        CalibrationBoardParams _calibrationBoardParams;
 
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
