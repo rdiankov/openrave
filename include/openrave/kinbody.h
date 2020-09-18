@@ -337,10 +337,13 @@ public:
             int numDotsY; ///< number of dots in y direction, minimum 3
             float dotsDistanceX; ///< distance between center of dots in x direction
             float dotsDistanceY; ///< distance between center of dots in y direction
-            Vector dotColor;
+            RaveVector<float> dotColor;
             std::string patternName;
             float dotDiameterDistanceRatio; ///< dot diameter divided by minimum of dot distances x and y
             float bigDotDiameterDistanceRatio; ///< big dot diameter divided by minimum of dot distances x and y
+            ///< trimesh representation of the collision data of calibration board dot grid in this local coordinate system
+            /// Shares the same caveats as _meshcollision.
+            TriMesh _dotmeshcollision;
             bool operator==(const CalibrationBoardParams& other) const {
                 return numDotsX == other.numDotsX
                        && numDotsY == other.numDotsY
@@ -354,8 +357,11 @@ public:
             bool operator!=(const CalibrationBoardParams& other) const {
                 return !operator==(other);
             }
-        }
+        };
         CalibrationBoardParams _calibrationBoardParams;
+
+        /// \brief Generates the calibration board's dot grid mesh based on calibration board settings
+        void GenerateCalibrationBoardDotMesh(float fTessellation=1);
 
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
@@ -593,6 +599,13 @@ public:
 
             /// \brief sets the name of the geometry
             virtual void SetName(const std::string& name);
+
+            inline const TriMesh& GetCalibrationBoardDotMesh() const {
+                return _info._calibrationBoardParams._dotmeshcollision;
+            }
+            inline const RaveVector<float>& GetCalibrationBoardDotColor() const {
+                return _info._calibrationBoardParams.dotColor;
+            }
 
 protected:
             boost::weak_ptr<Link> _parent;

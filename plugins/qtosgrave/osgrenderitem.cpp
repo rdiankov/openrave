@@ -469,6 +469,52 @@ void KinBodyItem::Load()
                     pgeometrydata->addChild(geode);
                     break;
                 }
+                //  Board is a Box, dots are a separate Mesh
+                case GT_CalibrationBoard: {
+                    // Make board
+                    Vector v;
+                    osg::ref_ptr<osg::Box> board = new osg::Box();
+                    board->setHalfLengths(osg::Vec3f(orgeom->GetBoxExtents().x,orgeom->GetBoxExtents().y,orgeom->GetBoxExtents().z));
+
+                    // Make dot mesh
+                    osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
+
+                    const TriMesh& mesh = orgeom->GetCalibrationBoardDotMesh();
+                    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
+                    vertices->reserveArray(mesh.vertices.size());
+                    for(size_t i = 0; i < mesh.vertices.size(); ++i) {
+                        RaveVector<float> v = mesh.vertices[i];
+                        vertices->push_back(osg::Vec3(v.x, v.y, v.z));
+                    }
+                    geom->setVertexArray(vertices.get());
+
+                    osg::DrawElementsUInt* geom_prim = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, mesh.indices.size());
+                    for(size_t i = 0; i < mesh.indices.size(); ++i) {
+                        (*geom_prim)[i] = mesh.indices[i];
+                    }
+                    geom->addPrimitiveSet(geom_prim);
+                    osgUtil::SmoothingVisitor::smooth(*geom);
+
+                    // Set color of dot grid mesh
+                    RaveVector<float> dotColor = orgeom->GetCalibrationBoardDotColor();
+                    osg::ref_ptr<osg::Material> dotMat = new osg::Material;
+                    dotMat->setDiffuse( osg::Material::FRONT, osg::Vec4f(dotColor.x,dotColor.y,dotColor.z,1) );
+                    dotMat->setDiffuse( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
+                    dotMat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
+                    // Place the two parts into the same pgeometrydata
+                    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
+                    osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(board.get());
+                    geode->addDrawable(sd.get());
+                    osg::ref_ptr<osg::Geode> geode2 = new osg::Geode;
+                    geode2->addDrawable(geom);
+                    osg::ref_ptr<osg::StateSet> state = geode2->getOrCreateStateSet();
+                    state->setAttributeAndModes(mat, osg::StateAttribute::OFF | osg::StateAttribute::PROTECTED);
+                    state->setAttributeAndModes(dotMat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+
+                    pgeometrydata->addChild(geode.get());
+                    pgeometrydata->addChild(geode2.get());
+                    break;
+                }
                 default:
                     break;
                 }

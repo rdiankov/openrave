@@ -165,24 +165,67 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
-void AppendCylinderTriangulation(const dReal& rad, const dReal& len, const int& numverts, TriMesh& tri) {
+void AppendCylinderTriangulation(const Vector& pos, const dReal& rad, const dReal& len, const int& numverts, TriMesh& tri) {
     // once again, cylinder is on z axis
     dReal dtheta = 2 * PI / (dReal)numverts;
-    tri.vertices.push_back(Vector(0,0,len));
-    tri.vertices.push_back(Vector(0,0,-len));
-    tri.vertices.push_back(Vector(rad,0,len));
-    tri.vertices.push_back(Vector(rad,0,-len));
+    int base = tri.vertices.size();
+    tri.vertices.push_back(Vector(0,0,len) + pos);
+    tri.vertices.push_back(Vector(0,0,-len) + pos);
+    tri.vertices.push_back(Vector(rad,0,len) + pos);
+    tri.vertices.push_back(Vector(rad,0,-len) + pos);
     for(int i = 0; i < numverts+1; ++i) {
         dReal s = rad * RaveSin(dtheta * (dReal)i);
         dReal c = rad * RaveCos(dtheta * (dReal)i);
         int off = (int)tri.vertices.size();
-        tri.vertices.push_back(Vector(c, s, len));
-        tri.vertices.push_back(Vector(c, s, -len));
+        tri.vertices.push_back(Vector(c, s, len) + pos);
+        tri.vertices.push_back(Vector(c, s, -len) + pos);
 
-        tri.indices.push_back(0);       tri.indices.push_back(off-2);       tri.indices.push_back(off);
-        tri.indices.push_back(1);       tri.indices.push_back(off+1);       tri.indices.push_back(off-1);
+        tri.indices.push_back(base);       tri.indices.push_back(off-2);       tri.indices.push_back(off);
+        tri.indices.push_back(base+1);       tri.indices.push_back(off+1);       tri.indices.push_back(off-1);
         tri.indices.push_back(off-2);   tri.indices.push_back(off-1);       tri.indices.push_back(off);
         tri.indices.push_back(off);     tri.indices.push_back(off-1);       tri.indices.push_back(off+1);
+    }
+}
+
+void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(float fTessellation) {
+    if (_type != GT_CalibrationBoard) {
+        return;
+    }
+    Vector boardEx = _vGeomData;
+    CalibrationBoardParams params = _calibrationBoardParams;
+    // reset dots mesh
+    params._dotmeshcollision.indices.clear();
+    params._dotmeshcollision.vertices.clear();
+    // create mesh for dot grid
+    float dotDx = params.dotsDistanceX;
+    float dotDy = params.dotsDistanceY;
+    float dotRadius = params.dotDiameterDistanceRatio * std::min(dotDx, dotDy) / 2;
+    float bigDotRadius = params.bigDotDiameterDistanceRatio * std::min(dotDx, dotDy) / 2;
+    float selectedRadius = dotRadius;
+    float dotLength = 0.01f * boardEx[2];
+    float dotZOffset = boardEx[2] + (dotLength)/2;
+    int numverts = (int)(fTessellation*48.0f) + 3;
+
+    if (params.numDotsX >= 3 && params.numDotsY >= 3) {
+        for (float rowPos = -(params.numDotsX-1)/2; rowPos <= (params.numDotsX-1)/2; rowPos++ ) {
+            for (float colPos = -(params.numDotsY-1)/2; colPos <= (params.numDotsY-1)/2; colPos++ ) {
+                Vector dotPos = Vector(rowPos * dotDx, colPos * dotDy, dotZOffset);
+                // calibration board pattern types
+                if (params.patternName == "threeBigDotsDotGrid") {
+                    float cRowPos = std::ceil(rowPos);
+                    float cColPos = std::ceil(colPos);
+                    // use big dot radius if dot pos coords is at (0, 0), (0, 1), or (1, 0) when ceiling'd
+                    // otherwise, use normal dot radius
+                    if ((cRowPos == 0 && (cColPos == 0 || cColPos == 1))
+                        || (cRowPos == 1 && cColPos == 0)) {
+                        selectedRadius = bigDotRadius;
+                    } else {
+                        selectedRadius = dotRadius;
+                    }
+                }
+                AppendCylinderTriangulation(dotPos, selectedRadius, dotLength, numverts, _calibrationBoardParams._dotmeshcollision);
+            }
+        }
     }
 }
 
@@ -286,6 +329,15 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         }
 
         break;
+
+    case GT_CalibrationBoard:
+        if( !IsZeroWithEpsilon3(_vGeomData - rhs._vGeomData*fUnitScale, fEpsilon) ) {
+            return 20;
+        }
+        if(_calibrationBoardParams != rhs._calibrationBoardParams) {
+            return 21;
+        }
+
     case GT_None:
         break;
     }
@@ -353,7 +405,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         // cylinder is on z axis
         dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
         int numverts = (int)(fTessellation*48.0f) + 3;
-        AppendCylinderTriangulation(rad, len, numverts, _meshcollision);
+        AppendCylinderTriangulation(Vector(0, 0, 0), rad, len, numverts, _meshcollision);
         break;
     }
     case GT_Cage: {
@@ -412,11 +464,10 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         break;
     }
     case GT_CalibrationBoard: {
-        AppendBoxTriangulation(Vector(0, 0, 0), GetBoxExtents(), _meshcollision);
-        CalibrationBoardParams params = _calibrationBoardParams;
-        if (params.numDotsX >= 3 && params.numDotsY >= 3) {
-            
-        }
+        // create board mesh
+        Vector boardEx = GetBoxExtents();
+        AppendBoxTriangulation(Vector(0, 0, 0), boardEx, _meshcollision);
+        GenerateCalibrationBoardDotMesh(fTessellation);
         break;
     }
     default:
@@ -613,6 +664,32 @@ inline void LoadJsonValue(const rapidjson::Value& rValue, KinBody::GeometryInfo:
     }
 }
 
+inline void LoadJsonValue(const rapidjson::Value& rValue, KinBody::GeometryInfo::CalibrationBoardParams& p) {
+    if (!rValue.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
+    }
+    const char *calibrationBoardParamNames[] = {
+        "numDotsX", "numDotsY", "dotsDistanceX",
+        "dotsDistanceY", "dotColor", "patternName", 
+        "dotDiameterDistanceRatio", "bigDotDiameterDistanceRatio"
+    };
+    for (int idx = 0; idx < 8; idx++) {
+        if (!rValue.HasMember(calibrationBoardParamNames[idx])) {
+            char paramError[1024];
+            sprintf(paramError, "Missing calibration board parameter \"%s\".", calibrationBoardParamNames[idx]);
+            throw OPENRAVE_EXCEPTION_FORMAT0(paramError, OpenRAVE::ORE_InvalidArguments);
+        }
+    }
+    orjson::LoadJsonValue(rValue["numDotsX"], p.numDotsX);
+    orjson::LoadJsonValue(rValue["numDotsY"], p.numDotsY);
+    orjson::LoadJsonValue(rValue["dotsDistanceX"], p.dotsDistanceX);
+    orjson::LoadJsonValue(rValue["dotsDistanceY"], p.dotsDistanceY);
+    orjson::LoadJsonValue(rValue["dotColor"], p.dotColor);
+    orjson::LoadJsonValue(rValue["patternName"], p.patternName);
+    orjson::LoadJsonValue(rValue["dotDiameterDistanceRatio"], p.dotDiameterDistanceRatio);
+    orjson::LoadJsonValue(rValue["bigDotDiameterDistanceRatio"], p.bigDotDiameterDistanceRatio);
+}
+
 void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
 {
     _t.trans *= fUnitScale;
@@ -652,6 +729,13 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
             *itvertex *= fUnitScale;
         }
         break;
+
+    case GT_CalibrationBoard:
+        _vGeomData *= fUnitScale;
+        _calibrationBoardParams.dotsDistanceX *= fUnitScale;
+        _calibrationBoardParams.dotsDistanceY *= fUnitScale;
+        break;
+
     case GT_None:
         break;
     }
@@ -679,6 +763,7 @@ void KinBody::GeometryInfo::Reset()
     _fTransparency = 0;
     _bVisible = true;
     _bModifiable = true;
+    _calibrationBoardParams = CalibrationBoardParams();
 }
 
 inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
@@ -696,6 +781,8 @@ inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
         return "cylinder";
     case GT_TriMesh:
         return "trimesh";
+    case GT_CalibrationBoard:
+        return "calibrationboard";
     case GT_None:
         return "";
     }
@@ -770,6 +857,21 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         rGeometryInfo.AddMember(rapidjson::Document::StringRefType("mesh"), rTriMesh, allocator);
         break;
     }
+    case GT_CalibrationBoard: {
+        orjson::SetJsonValueByKey(rGeometryInfo, "halfExtents", _vGeomData*fUnitScale, allocator);
+        rapidjson::Value rCalibrationBoardParams;
+        rCalibrationBoardParams.SetObject();
+        orjson::SetJsonValueByKey(rCalibrationBoardParams, "numDotsX", _calibrationBoardParams.numDotsX, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParams, "numDotsY", _calibrationBoardParams.numDotsY, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParams, "dotsDistanceX", _calibrationBoardParams.dotsDistanceX*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParams, "dotsDistanceY", _calibrationBoardParams.dotsDistanceY*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParams, "dotColor", _calibrationBoardParams.dotColor, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParams, "patternName", _calibrationBoardParams.patternName, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParams, "dotDiameterDistanceRatio", _calibrationBoardParams.dotDiameterDistanceRatio, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParams, "bigDotDiameterDistanceRatio", _calibrationBoardParams.bigDotDiameterDistanceRatio, allocator);
+        rGeometryInfo.AddMember(rapidjson::Document::StringRefType("calibrationBoardParameters"), rCalibrationBoardParams, allocator);
+        break;
+    }
     default:
         break;
     }
@@ -815,6 +917,9 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         else if (typestr == "trimesh" || typestr == "mesh") {
             type = GT_TriMesh;
         }
+        else if (typestr == "calibrationboard") {
+            type = GT_CalibrationBoard;
+        }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
         }
@@ -824,6 +929,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         }
     }
     Vector vGeomDataTemp;
+    CalibrationBoardParams calibrationBoardParamsTemp;
     switch (_type) {
     case GT_Box:
         if (value.HasMember("halfExtents")) {
@@ -951,6 +1057,26 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             orjson::LoadJsonValueByKey(value, "mesh", _meshcollision);
             FOREACH(itvertex, _meshcollision.vertices) {
                 *itvertex *= fUnitScale;
+            }
+        }
+        break;
+    case GT_CalibrationBoard:
+        if (value.HasMember("halfExtents")) {
+            orjson::LoadJsonValueByKey(value, "halfExtents", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vGeomData) {
+                _vGeomData = vGeomDataTemp;
+                _meshcollision.Clear();            
+            }
+        }
+        calibrationBoardParamsTemp = _calibrationBoardParams;
+        if (value.HasMember("calibrationBoardParameters")) {
+            orjson::LoadJsonValueByKey(value, "calibrationBoardParameters", calibrationBoardParamsTemp);
+            calibrationBoardParamsTemp.dotsDistanceX *= fUnitScale;
+            calibrationBoardParamsTemp.dotsDistanceY *= fUnitScale;
+            if (calibrationBoardParamsTemp != _calibrationBoardParams) {
+                _calibrationBoardParams = calibrationBoardParamsTemp;
+                _meshcollision.Clear();
             }
         }
         break;
@@ -1144,6 +1270,12 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
         }
         break;
     }
+    case GT_CalibrationBoard: // the tangible part of the board is basically the box
+        ab.extents.x = RaveFabs(tglobal.m[0])*_vGeomData.x + RaveFabs(tglobal.m[1])*_vGeomData.y + RaveFabs(tglobal.m[2])*_vGeomData.z;
+        ab.extents.y = RaveFabs(tglobal.m[4])*_vGeomData.x + RaveFabs(tglobal.m[5])*_vGeomData.y + RaveFabs(tglobal.m[6])*_vGeomData.z;
+        ab.extents.z = RaveFabs(tglobal.m[8])*_vGeomData.x + RaveFabs(tglobal.m[9])*_vGeomData.y + RaveFabs(tglobal.m[10])*_vGeomData.z;
+        ab.pos = tglobal.trans;
+        break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("unknown geometry type %d"), _type, ORE_InvalidArguments);
     }
@@ -1431,6 +1563,11 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
     else if (GetType() == GT_TriMesh) {
         if (info._meshcollision.vertices != _info._meshcollision.vertices || info._meshcollision.indices != _info._meshcollision.indices) {
             RAVELOG_VERBOSE_FORMAT("geometry %s trimesh changed", _info._id);
+            return UFIR_RequireReinitialize;
+        }
+    } else if (GetType() == GT_CalibrationBoard) {
+        if (GetBoxExtents() != info._vGeomData || info._calibrationBoardParams != _info._calibrationBoardParams) {
+            RAVELOG_VERBOSE_FORMAT("geometry %s calibrationboard changed", _info._id);
             return UFIR_RequireReinitialize;
         }
     }

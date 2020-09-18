@@ -1995,6 +1995,35 @@ private:
                 }
                 break;
             }
+            case GT_CalibrationBoard: {
+                daeElementRef pcalibrationboard = ptec->add("calibration_board");
+                ss << geom->GetBoxExtents().x << " " << geom->GetBoxExtents().y << " " << geom->GetBoxExtents().z;
+                pcalibrationboard->add("half_extents")->setCharData(ss.str());
+
+                daeElementRef pparams = pcalibrationboard->add("parameters");
+                const KinBody::GeometryInfo::CalibrationBoardParams& paramsInfo = geom->GetInfo()._calibrationBoardParams;
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.numDotsX << " " << paramsInfo.numDotsY;
+                pparams->add("grid_size")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotsDistanceX << " " << paramsInfo.dotsDistanceY;
+                pparams->add("dot_distance")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotColor.x << " " << paramsInfo.dotColor.y << " " << paramsInfo.dotColor.z << " " << paramsInfo.dotColor.w;
+                pparams->add("dot_color")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.patternName;
+                pparams->add("pattern")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotDiameterDistanceRatio << " " << paramsInfo.bigDotDiameterDistanceRatio;
+                pparams->add("dot_ratios")->setCharData(ss.str());
+                break;
+            }
             case GT_Sphere:
                 ptec->add("sphere")->add("radius")->setCharData(ss.str());
                 break;

@@ -2434,6 +2434,11 @@ public:
             case GT_TriMesh:
                 itgeominfo->_meshcollision.ApplyTransform(TransformMatrix(tmnodegeom * toriginal).inverse() * TransformMatrix(toriginal));
                 break;
+            case GT_CalibrationBoard:
+                itgeominfo->_vGeomData *= vscale;
+                itgeominfo->_calibrationBoardParams.dotsDistanceX *= vscale.x;
+                itgeominfo->_calibrationBoardParams.dotsDistanceY *= vscale.y;
+                break;
             default:
                 RAVELOG_WARN(str(boost::format("unknown geometry type: 0x%x")%itgeominfo->_type));
             }
@@ -3110,6 +3115,61 @@ public:
                                     geominfo._vGeomData4 = vextents;
                                     geominfo._t = tlocalgeom;
                                     bfoundgeom = true;
+                                }
+                            }
+                        }
+                        else if( name == "calibration_board" ) {
+                            daeElementRef phalf_extents = children[i]->getChild("half_extents");
+                            daeElementRef pparams = children[i]->getChild("parameters");
+                            if (!!phalf_extents && !!pparams) {
+                                daeElementRef pgrid_size = pparams->getChild("grid_size");
+                                daeElementRef pdot_distance = pparams->getChild("dot_distance");
+                                daeElementRef pdot_color = pparams->getChild("dot_color");
+                                daeElementRef ppattern = pparams->getChild("pattern");
+                                daeElementRef pdot_ratios = pparams->getChild("dot_ratios");
+                                if (!!pgrid_size
+                                    && !!pdot_distance
+                                    && !!pdot_color
+                                    && !!ppattern
+                                    && !!pdot_ratios) {
+                                    stringstream ss(pgrid_size->getCharData());
+                                    int numDotsX, numDotsY;
+                                    ss >> numDotsX >> numDotsY;
+                                    stringstream ss2(pdot_distance->getCharData());
+                                    float dotsDistanceX, dotsDistanceY;
+                                    ss2 >> dotsDistanceX >> dotsDistanceY;
+                                    stringstream ss3(pdot_color->getCharData());
+                                    Vector dotColor;
+                                    ss3 >> dotColor.x >> dotColor.y >> dotColor.z >> dotColor.w;
+                                    stringstream ss4(ppattern->getCharData());
+                                    std::string pattern;
+                                    ss4 >> pattern;
+                                    stringstream ss5(pdot_ratios->getCharData());
+                                    float dotDiameterDistanceRatio, bigDotDiameterDistanceRatio;
+                                    ss5 >> dotDiameterDistanceRatio >> bigDotDiameterDistanceRatio;
+                                    stringstream ss6(phalf_extents->getCharData());
+                                    Vector vextents;
+                                    ss6 >> vextents.x >> vextents.y >> vextents.z;
+                                    if ((ss.eof() || !!ss)
+                                        && (ss2.eof() || !!ss2)
+                                        && (ss3.eof() || !!ss3)
+                                        && (ss4.eof() || !!ss4)
+                                        && (ss5.eof() || !!ss5)
+                                        && (ss6.eof() || !!ss6)) {
+                                        geominfo._type = GT_CalibrationBoard;
+                                        geominfo._vGeomData = vextents;
+                                        geominfo._calibrationBoardParams.numDotsX = numDotsX;
+                                        geominfo._calibrationBoardParams.numDotsY = numDotsY;
+                                        geominfo._calibrationBoardParams.dotsDistanceX = dotsDistanceX;
+                                        geominfo._calibrationBoardParams.dotsDistanceY = dotsDistanceY;
+                                        geominfo._calibrationBoardParams.dotColor = dotColor;
+                                        geominfo._calibrationBoardParams.patternName = pattern;
+                                        geominfo._calibrationBoardParams.dotDiameterDistanceRatio = dotDiameterDistanceRatio;
+                                        geominfo._calibrationBoardParams.bigDotDiameterDistanceRatio = bigDotDiameterDistanceRatio;
+                                        geominfo._t = tlocalgeom;
+                                        bfoundgeom = true;
+                                        geominfo.GenerateCalibrationBoardDotMesh();
+                                    }
                                 }
                             }
                         }
