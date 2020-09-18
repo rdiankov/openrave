@@ -2033,13 +2033,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
          */
         utils::SearchAndReplace(eq, pmimic->_equations[itype], jointnamepairs);
         size_t index = eq.find('|');
-        std::string sCommonSubexpressions = (index != std::string::npos) ? eq.substr(0, index) : ""; ///< common subexpressions
-        if( !sCommonSubexpressions.empty() ) {
-            const size_t semicolonindex = sCommonSubexpressions.find_last_of(";"); // avoid double semicolons
-            if(semicolonindex != std::string::npos) {
-                sCommonSubexpressions += sCommonSubexpressions.substr(0, semicolonindex) + ';'; // just in case, separate out the equations
-            }
-        }
+        const std::string sCommonSubexpressions = (index != std::string::npos) ? eq.substr(0, index) : ""; ///< common subexpressions
 
         while(index != std::string::npos) {
             size_t startindex = index + 1;
