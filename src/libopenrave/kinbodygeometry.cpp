@@ -197,6 +197,8 @@ void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(float fTessellation)
     params._dotmeshcollision.indices.clear();
     params._dotmeshcollision.vertices.clear();
     // create mesh for dot grid
+    float nDotsX = params.numDotsX;
+    float nDotsY = params.numDotsY;
     float dotDx = params.dotsDistanceX;
     float dotDy = params.dotsDistanceY;
     float dotRadius = params.dotDiameterDistanceRatio * std::min(dotDx, dotDy) / 2;
@@ -207,8 +209,8 @@ void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(float fTessellation)
     int numverts = (int)(fTessellation*48.0f) + 3;
 
     if (params.numDotsX >= 3 && params.numDotsY >= 3) {
-        for (float rowPos = -(params.numDotsX-1)/2; rowPos <= (params.numDotsX-1)/2; rowPos++ ) {
-            for (float colPos = -(params.numDotsY-1)/2; colPos <= (params.numDotsY-1)/2; colPos++ ) {
+        for (float rowPos = -(nDotsX-1)/2; rowPos <= (nDotsX-1)/2; rowPos++ ) {
+            for (float colPos = -(nDotsY-1)/2; colPos <= (nDotsY-1)/2; colPos++ ) {
                 Vector dotPos = Vector(rowPos * dotDx, colPos * dotDy, dotZOffset);
                 // calibration board pattern types
                 if (params.patternName == "threeBigDotsDotGrid") {
