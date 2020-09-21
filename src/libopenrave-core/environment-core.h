@@ -2524,7 +2524,7 @@ public:
                 std::vector<KinBodyPtr>::iterator itExistingSameIdName = _vecbodies.end();
                 FOREACH(itBody, _vecbodies) {
                     bool bIdMatch = !(*itBody)->_id.empty() && (*itBody)->_id == (*itBodyInfo)->_id;
-                    bool bNameMatch = (*itBody)->_name.empty() && (*itBody)->_name == (*itBodyInfo)->_name;
+                    bool bNameMatch = !(*itBody)->_name.empty() && (*itBody)->_name == (*itBodyInfo)->_name;
                     if( bIdMatch && bNameMatch ) {
                         itExistingSameIdName = itBody;
                         break;
