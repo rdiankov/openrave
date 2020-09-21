@@ -337,8 +337,10 @@ public:
             int numDotsY; ///< number of dots in y direction, minimum 3
             float dotsDistanceX; ///< distance between center of dots in x direction
             float dotsDistanceY; ///< distance between center of dots in y direction
-            RaveVector<float> dotColor;
-            std::string patternName;
+            RaveVector<float> dotColor; ///< color of dot mesh, which can differ from the color of the board mesh
+            std::string patternName; ///< string that determines pattern of big and normal dots
+                                     /// currently, the only supported type is "threeBigDotsDotGrid"
+                                     /// any unsupported pattern will generate a full grid of normal dots
             float dotDiameterDistanceRatio; ///< dot diameter divided by minimum of dot distances x and y
             float bigDotDiameterDistanceRatio; ///< big dot diameter divided by minimum of dot distances x and y
             ///< trimesh representation of the collision data of calibration board dot grid in this local coordinate system
@@ -347,12 +349,12 @@ public:
             bool operator==(const CalibrationBoardParams& other) const {
                 return numDotsX == other.numDotsX
                        && numDotsY == other.numDotsY
-                       && dotsDistanceX == other.dotsDistanceX
-                       && dotsDistanceY == other.dotsDistanceY
+                       && dotsDistanceX - other.dotsDistanceX < dotsDistanceX*1e-7
+                       && dotsDistanceY - other.dotsDistanceY < dotsDistanceY*1e-7
                        && dotColor == other.dotColor
                        && patternName == other.patternName
-                       && dotDiameterDistanceRatio == other.dotDiameterDistanceRatio
-                       && bigDotDiameterDistanceRatio == other.bigDotDiameterDistanceRatio;
+                       && dotDiameterDistanceRatio - other.dotDiameterDistanceRatio < dotDiameterDistanceRatio*1e-7
+                       && bigDotDiameterDistanceRatio - other.bigDotDiameterDistanceRatio < bigDotDiameterDistanceRatio*1e-7;
             }
             bool operator!=(const CalibrationBoardParams& other) const {
                 return !operator==(other);
@@ -600,9 +602,11 @@ public:
             /// \brief sets the name of the geometry
             virtual void SetName(const std::string& name);
 
+            /// \brief returns the dot mesh of a calibration board
             inline const TriMesh& GetCalibrationBoardDotMesh() const {
                 return _info._calibrationBoardParams._dotmeshcollision;
             }
+            /// \brief returns the color of the calibration board's dot mesh
             inline const RaveVector<float>& GetCalibrationBoardDotColor() const {
                 return _info._calibrationBoardParams.dotColor;
             }

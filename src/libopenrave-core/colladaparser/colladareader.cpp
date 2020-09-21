@@ -3119,43 +3119,63 @@ public:
                             }
                         }
                         else if( name == "calibration_board" ) {
-                            daeElementRef phalf_extents = children[i]->getChild("half_extents");
+                            // get locations of required attributes
                             daeElementRef pparams = children[i]->getChild("parameters");
-                            if (!!phalf_extents && !!pparams) {
+                            if (!!pparams) {
+                                // grid_size contains two integer values:
+                                // number of columns along x axis, and number of rows along y axis
                                 daeElementRef pgrid_size = pparams->getChild("grid_size");
+                                // dot_distance contains two float values:
+                                // x distance between centers of adjacent dots, and y distance between centers of adjacent dots
                                 daeElementRef pdot_distance = pparams->getChild("dot_distance");
+                                // dot_color has four float values denoting RGB dot color, distinct from board color
                                 daeElementRef pdot_color = pparams->getChild("dot_color");
+                                // pattern is a string indicating what pattern of dot types to use
                                 daeElementRef ppattern = pparams->getChild("pattern");
+                                // dot_ratios contains two float values:
+                                // normal dot diameter to x distance ratio, and big dot diameter to x distance ratio
                                 daeElementRef pdot_ratios = pparams->getChild("dot_ratios");
+                                daeElementRef phalf_extents = children[i]->getChild("half_extents");
+
                                 if (!!pgrid_size
                                     && !!pdot_distance
                                     && !!pdot_color
                                     && !!ppattern
-                                    && !!pdot_ratios) {
+                                    && !!pdot_ratios
+                                    && !!phalf_extents) {
+                                    // set up each stringstream to get each calibration board attribute
                                     stringstream ss(pgrid_size->getCharData());
                                     int numDotsX, numDotsY;
                                     ss >> numDotsX >> numDotsY;
+
                                     stringstream ss2(pdot_distance->getCharData());
                                     float dotsDistanceX, dotsDistanceY;
                                     ss2 >> dotsDistanceX >> dotsDistanceY;
+
                                     stringstream ss3(pdot_color->getCharData());
                                     Vector dotColor;
                                     ss3 >> dotColor.x >> dotColor.y >> dotColor.z >> dotColor.w;
+
                                     stringstream ss4(ppattern->getCharData());
                                     std::string pattern;
                                     ss4 >> pattern;
+
                                     stringstream ss5(pdot_ratios->getCharData());
                                     float dotDiameterDistanceRatio, bigDotDiameterDistanceRatio;
                                     ss5 >> dotDiameterDistanceRatio >> bigDotDiameterDistanceRatio;
+
                                     stringstream ss6(phalf_extents->getCharData());
                                     Vector vextents;
                                     ss6 >> vextents.x >> vextents.y >> vextents.z;
+
                                     if ((ss.eof() || !!ss)
                                         && (ss2.eof() || !!ss2)
                                         && (ss3.eof() || !!ss3)
                                         && (ss4.eof() || !!ss4)
                                         && (ss5.eof() || !!ss5)
                                         && (ss6.eof() || !!ss6)) {
+                                        // if every attribute required for calibration board is found,
+                                        // put all attributes into geometry info
                                         geominfo._type = GT_CalibrationBoard;
                                         geominfo._vGeomData = vextents;
                                         geominfo._calibrationBoardParams.numDotsX = numDotsX;
@@ -3169,6 +3189,7 @@ public:
                                         geominfo._t = tlocalgeom;
                                         bfoundgeom = true;
                                         geominfo.GenerateCalibrationBoardDotMesh();
+
                                     }
                                 }
                             }

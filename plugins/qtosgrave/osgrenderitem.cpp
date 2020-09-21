@@ -469,7 +469,7 @@ void KinBodyItem::Load()
                     pgeometrydata->addChild(geode);
                     break;
                 }
-                //  Board is a Box, dots are a separate Mesh
+                // Board is a Box, dots are a separate Mesh from the board's collision Mesh
                 case GT_CalibrationBoard: {
                     // Make board
                     Vector v;
@@ -501,6 +501,7 @@ void KinBodyItem::Load()
                     dotMat->setDiffuse( osg::Material::FRONT, osg::Vec4f(dotColor.x,dotColor.y,dotColor.z,1) );
                     dotMat->setDiffuse( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
                     dotMat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
+                    
                     // Place the two parts into the same pgeometrydata
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
                     osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(board.get());
