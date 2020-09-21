@@ -2515,6 +2515,7 @@ public:
             RAVELOG_VERBOSE_FORMAT("==== %s ===", pKinBodyInfo->_id);
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
 
+            bool bNameModified = false;
             KinBodyPtr pMatchExistingBody; // matche sto pKinBodyInfo
             {
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
@@ -2560,6 +2561,9 @@ public:
                 if( itExisting != _vecbodies.end() ) {
                     if( itExistingSameName != _vecbodies.end() ) {
                         // should swap the names so that when naming itExisting correctly, there are no exceptions
+                        if( (*itExisting)->_name != (*itExistingSameName)->_name ) {
+                            bNameModified = true;
+                        }
                         std::swap((*itExisting)->_name, (*itExistingSameName)->_name);
                     }
                     pMatchExistingBody = *itExisting;
@@ -2592,6 +2596,9 @@ public:
                 }
                 RAVELOG_VERBOSE_FORMAT("env=%d, update body %s from info result %d", GetId()%pMatchExistingBody->_id%updateFromInfoResult);
                 if (updateFromInfoResult == UFIR_NoChange) {
+                    if( bNameModified ) {
+                        vModifiedBodies.push_back(pMatchExistingBody);
+                    }
                     continue;
                 }
                 vModifiedBodies.push_back(pMatchExistingBody);
