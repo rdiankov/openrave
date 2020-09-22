@@ -2647,7 +2647,7 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
     // need to avoid extracting info from connectedbodies
     std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);
     std::vector<bool> isConnectedAttachedSensor(_vecAttachedSensors.size(), false);
-    std::vector<bool> isConnectedGripperInfo(_vecConnectedBodies.size(), false);
+    std::vector<bool> isConnectedGripperInfo(_vecGripperInfos.size(), false);
 
     FOREACHC(itConnectedBody, _vecConnectedBodies) {
         std::vector<RobotBase::ManipulatorPtr> resolvedManipulators;
@@ -2719,7 +2719,7 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
     // need to avoid checking links and joints belonging to connected bodies
     std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);
     std::vector<bool> isConnectedAttachedSensor(_vecAttachedSensors.size(), false);
-    std::vector<bool> isConnectedGripperInfo(_vecConnectedBodies.size(), false);
+    std::vector<bool> isConnectedGripperInfo(_vecGripperInfos.size(), false);
 
     FOREACHC(itConnectedBody, _vecConnectedBodies) {
         std::vector<RobotBase::ManipulatorPtr> resolvedManipulators;
