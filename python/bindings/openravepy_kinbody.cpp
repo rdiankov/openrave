@@ -1272,6 +1272,21 @@ object PyLink::PyGeometry::GetAmbientColor() const {
 object PyLink::PyGeometry::GetInfo() {
     return py::to_object(PyGeometryInfoPtr(new PyGeometryInfo(_pgeometry->GetInfo())));
 }
+object PyLink::PyGeometry::GetCalibrationBoardGridSize() const {
+    return py::make_tuple(_pgeometry->GetCalibrationBoardNumDotsX(), _pgeometry->GetCalibrationBoardNumDotsY());
+}
+object PyLink::PyGeometry::GetCalibrationBoardDotsDistance() const {
+    return py::make_tuple(_pgeometry->GetCalibrationBoardDotsDistanceX(), _pgeometry->GetCalibrationBoardDotsDistanceY());
+}
+object PyLink::PyGeometry::GetCalibrationBoardDotColor() const {
+    return toPyVector3(_pgeometry->GetCalibrationBoardDotColor());
+}
+object PyLink::PyGeometry::GetCalibrationBoardPattern() const {
+    return ConvertStringToUnicode(_pgeometry->GetCalibrationBoardPattern());
+}
+object PyLink::PyGeometry::GetCalibrationBoardDotRatios() const {
+    return py::make_tuple(_pgeometry->GetCalibrationBoardDotDiameterDistanceRatio(), _pgeometry->GetCalibrationBoardBigDotDiameterDistanceRatio());
+}
 object PyLink::PyGeometry::ComputeInnerEmptyVolume() const
 {
     Transform tInnerEmptyVolume;
@@ -5463,6 +5478,11 @@ void init_openravepy_kinbody()
                                   .def("GetTransparency",&PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
                                   .def("GetDiffuseColor",&PyLink::PyGeometry::GetDiffuseColor,DOXY_FN(KinBody::Link::Geometry,GetDiffuseColor))
                                   .def("GetAmbientColor",&PyLink::PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))
+                                  .def("GetCalibrationBoardGridSize",&PyLink::PyGeometry::GetCalibrationBoardGridSize, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardGridSize))
+                                  .def("GetCalibrationBoardDotsDistance",&PyLink::PyGeometry::GetCalibrationBoardDotsDistance, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotsDistance))
+                                  .def("GetCalibrationBoardDotColor",&PyLink::PyGeometry::GetCalibrationBoardDotColor, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotColor))
+                                  .def("GetCalibrationBoardPattern",&PyLink::PyGeometry::GetCalibrationBoardPattern, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardPattern))
+                                  .def("GetCalibrationBoardDotRatios",&PyLink::PyGeometry::GetCalibrationBoardDotRatios, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotRatios))
                                   .def("ComputeInnerEmptyVolume",&PyLink::PyGeometry::ComputeInnerEmptyVolume,DOXY_FN(KinBody::Link::Geometry,ComputeInnerEmptyVolume))
                                   .def("GetInfo",&PyLink::PyGeometry::GetInfo,DOXY_FN(KinBody::Link::Geometry,GetInfo))
                                   .def("__eq__",&PyLink::PyGeometry::__eq__)

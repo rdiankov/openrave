@@ -252,7 +252,7 @@ public:
         object GetTransform();
         object GetTransformPose();
         dReal GetSphereRadius() const;
-        dReal GetCylinderRadius() const ;
+        dReal GetCylinderRadius() const;
         dReal GetCylinderHeight() const;
         object GetBoxExtents() const;
         object GetContainerOuterExtents() const;
@@ -265,6 +265,11 @@ public:
         float GetTransparency() const;
         object GetDiffuseColor() const;
         object GetAmbientColor() const;
+        object GetCalibrationBoardGridSize() const;
+        object GetCalibrationBoardDotsDistance() const;
+        object GetCalibrationBoardDotColor() const;
+        object GetCalibrationBoardPattern() const;
+        object GetCalibrationBoardDotRatios() const;
         object GetInfo();
         object ComputeInnerEmptyVolume() const;
         bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);

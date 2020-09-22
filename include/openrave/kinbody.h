@@ -610,6 +610,34 @@ public:
             inline const RaveVector<float>& GetCalibrationBoardDotColor() const {
                 return _info._calibrationBoardParams.dotColor;
             }
+            /// \brief returns x dimension (in dots) of the calibration board dot grid 
+            inline const int& GetCalibrationBoardNumDotsX() const {
+                return _info._calibrationBoardParams.numDotsX;
+            }
+            /// \brief returns y dimension (in dots) of the calibration board dot grid 
+            inline const int& GetCalibrationBoardNumDotsY() const {
+                return _info._calibrationBoardParams.numDotsY;
+            }
+            /// \brief returns x dot distance of the calibration board dot grid 
+            inline const float& GetCalibrationBoardDotsDistanceX() const {
+                return _info._calibrationBoardParams.dotsDistanceX;
+            }
+            /// \brief returns y dot distance of the calibration board dot grid 
+            inline const float& GetCalibrationBoardDotsDistanceY() const {
+                return _info._calibrationBoardParams.dotsDistanceY;
+            }
+            /// \brief returns pattern name of the calibration board dot grid 
+            inline const std::string& GetCalibrationBoardPattern() const {
+                return _info._calibrationBoardParams.patternName;
+            }
+            /// \brief returns x dot distance of the calibration board dot grid 
+            inline const float& GetCalibrationBoardDotDiameterDistanceRatio() const {
+                return _info._calibrationBoardParams.dotDiameterDistanceRatio;
+            }
+            /// \brief returns x dot distance of the calibration board dot grid 
+            inline const float& GetCalibrationBoardBigDotDiameterDistanceRatio() const {
+                return _info._calibrationBoardParams.bigDotDiameterDistanceRatio;
+            }
 
 protected:
             boost::weak_ptr<Link> _parent;

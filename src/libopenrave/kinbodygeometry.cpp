@@ -863,9 +863,6 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         orjson::SetJsonValueByKey(rGeometryInfo, "halfExtents", _vGeomData*fUnitScale, allocator);
         rapidjson::Value rCalibrationBoardParams;
         rCalibrationBoardParams.SetObject();
-        RAVELOG_WARN("==== CALIBRATION BOARD PARAMS ====\n");
-        RAVELOG_WARN_FORMAT("numDots: %d %d", _calibrationBoardParams.numDotsX % _calibrationBoardParams.numDotsY);
-        RAVELOG_WARN_FORMAT("dotsDistance: %f %f", _calibrationBoardParams.dotsDistanceX % _calibrationBoardParams.dotsDistanceY);
         orjson::SetJsonValueByKey(rCalibrationBoardParams, "numDotsX", _calibrationBoardParams.numDotsX, allocator);
         orjson::SetJsonValueByKey(rCalibrationBoardParams, "numDotsY", _calibrationBoardParams.numDotsY, allocator);
         orjson::SetJsonValueByKey(rCalibrationBoardParams, "dotsDistanceX", _calibrationBoardParams.dotsDistanceX*fUnitScale, allocator);
