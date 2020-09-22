@@ -2033,10 +2033,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
          */
         utils::SearchAndReplace(eq, pmimic->_equations[itype], jointnamepairs);
         size_t index = eq.find('|');
-        std::string sCommonSubexpressions = (index != std::string::npos) ? eq.substr(0, index) : ""; ///< common subexpressions
-        if( !sCommonSubexpressions.empty() ) {
-            sCommonSubexpressions += ';'; // just in case, separate out the equations
-        }
+        const std::string sCommonSubexpressions = (index != std::string::npos) ? eq.substr(0, index) : ""; ///< common subexpressions
 
         while(index != std::string::npos) {
             size_t startindex = index + 1;
@@ -2063,7 +2060,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             }
 
             // ensure varname is indeed in the variable list
-            std::vector<string>::iterator itnameindex = find(resultVars.begin(), resultVars.end(), varname);
+            std::vector<string>::iterator itnameindex = std::find(resultVars.begin(), resultVars.end(), varname);
             OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(), "variable %s from velocity equation is not referenced in the position, skipping...", mapinvnames[varname],ORE_InvalidArguments);
 
             OpenRAVEFunctionParserRealPtr fn = CreateJointFunctionParser();
@@ -2120,7 +2117,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         const size_t nActiveJoints = vActiveJoints.size();
         const std::vector<JointPtr>& vPassiveJoints = parent->GetPassiveJoints();
         // this is the *generalized* joint index for a mimic joint
-        thisdofformat.jointindex = nActiveJoints + (find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
+        thisdofformat.jointindex = nActiveJoints + (std::find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
 
     for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mTotalderivativepairValue) {
@@ -2131,8 +2128,10 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
             const int dependedJointIndex = keyvalue.first.second;
             const dReal partialDerivative = keyvalue.second;
             vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
-            return;
         }
+    }
+    if(!vDofindexDerivativePairs.empty()) {
+        return;
     }
 
     /* ========== Collect values of joints on which joint z depends ========== */
