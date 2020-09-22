@@ -349,12 +349,12 @@ public:
             bool operator==(const CalibrationBoardParams& other) const {
                 return numDotsX == other.numDotsX
                        && numDotsY == other.numDotsY
-                       && dotsDistanceX - other.dotsDistanceX < dotsDistanceX*1e-7
-                       && dotsDistanceY - other.dotsDistanceY < dotsDistanceY*1e-7
+                       && dotsDistanceX - other.dotsDistanceX < dotsDistanceX*g_fEpsilon
+                       && dotsDistanceY - other.dotsDistanceY < dotsDistanceY*g_fEpsilon
                        && dotColor == other.dotColor
                        && patternName == other.patternName
-                       && dotDiameterDistanceRatio - other.dotDiameterDistanceRatio < dotDiameterDistanceRatio*1e-7
-                       && bigDotDiameterDistanceRatio - other.bigDotDiameterDistanceRatio < bigDotDiameterDistanceRatio*1e-7;
+                       && dotDiameterDistanceRatio - other.dotDiameterDistanceRatio < dotDiameterDistanceRatio*g_fEpsilon
+                       && bigDotDiameterDistanceRatio - other.bigDotDiameterDistanceRatio < bigDotDiameterDistanceRatio*g_fEpsilon;
             }
             bool operator!=(const CalibrationBoardParams& other) const {
                 return !operator==(other);

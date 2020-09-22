@@ -289,6 +289,15 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _fTransparency = info._fTransparency;
     _bVisible = info._bVisible;
     _bModifiable = info._bModifiable;
+    KinBody::GeometryInfo::CalibrationBoardParams params = info._calibrationBoardParams;
+    _calibrationBoardParams = py::make_tuple(params.numDotsX,
+                                             params.numDotsY,
+                                             params.dotsDistanceX, 
+                                             params.dotsDistanceY,
+                                             toPyVector3(params.dotColor),
+                                             ConvertStringToUnicode(params.patternName),
+                                             params.dotDiameterDistanceRatio,
+                                             params.bigDotDiameterDistanceRatio);
 }
 
 object PyGeometryInfo::ComputeInnerEmptyVolume()
@@ -364,6 +373,14 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     info._fTransparency = _fTransparency;
     info._bVisible = _bVisible;
     info._bModifiable = _bModifiable;
+    info._calibrationBoardParams.numDotsX = py::extract<int>(_calibrationBoardParams[0]);
+    info._calibrationBoardParams.numDotsY = py::extract<int>(_calibrationBoardParams[1]);
+    info._calibrationBoardParams.dotsDistanceX = py::extract<float>(_calibrationBoardParams[2]);
+    info._calibrationBoardParams.dotsDistanceY = py::extract<float>(_calibrationBoardParams[3]);
+    info._calibrationBoardParams.dotColor = ExtractVector34<dReal>(_calibrationBoardParams[4],0);
+    info._calibrationBoardParams.patternName = py::extract<std::string>(_calibrationBoardParams[5]);
+    info._calibrationBoardParams.dotDiameterDistanceRatio = py::extract<float>(_calibrationBoardParams[6]);
+    info._calibrationBoardParams.bigDotDiameterDistanceRatio = py::extract<float>(_calibrationBoardParams[7]);
     return pinfo;
 }
 
@@ -3974,7 +3991,8 @@ public:
             r._vCollisionScale,
             r._fTransparency,
             r._bVisible,
-            r._bModifiable
+            r._bModifiable,
+            r._calibrationBoardParams
             );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
@@ -3990,7 +4008,7 @@ public:
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)py::extract<int>(state[5]);
-
+        
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         bool bIsState6Str = IS_PYTHONOBJECT_STRING(state[6]);
 #else
@@ -4017,6 +4035,9 @@ public:
             r._fTransparency = py::extract<float>(state[9]);
             r._bVisible = py::extract<bool>(state[10]);
             r._bModifiable = py::extract<bool>(state[11]);
+        }
+        if (r._type == GT_CalibrationBoard) {
+            r._calibrationBoardParams = state[12];
         }
     }
 };
@@ -4344,6 +4365,7 @@ void init_openravepy_kinbody()
                           .value("Trimesh",GT_TriMesh)
                           .value("Container",GT_Container)
                           .value("Cage",GT_Cage)
+                          .value("CalibrationBoard",GT_CalibrationBoard)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object sidewalltype = enum_<KinBody::GeometryInfo::SideWallType>(m, "SideWallType" DOXY_ENUM(KinBody::GeometryInfo::SideWallType))
@@ -4474,6 +4496,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
+                          .def_readwrite("_calibrationBoardParams", &PyGeometryInfo::_calibrationBoardParams)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

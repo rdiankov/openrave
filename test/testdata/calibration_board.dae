@@ -58,7 +58,7 @@
 						<parameters>
 							<grid_size>5 6</grid_size>
 							<dot_distance>0.04 0.03</dot_distance>
-							<dot_color>0 0 0 1</dot_color>
+							<dot_color>1 1 1 1</dot_color>
 							<pattern>threeBigDotsDotGrid</pattern>
 							<dot_ratios>0.4 0.8</dot_ratios>
 						</parameters>

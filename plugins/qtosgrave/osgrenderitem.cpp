@@ -499,7 +499,7 @@ void KinBodyItem::Load()
                     RaveVector<float> dotColor = orgeom->GetCalibrationBoardDotColor();
                     osg::ref_ptr<osg::Material> dotMat = new osg::Material;
                     dotMat->setDiffuse( osg::Material::FRONT, osg::Vec4f(dotColor.x,dotColor.y,dotColor.z,1) );
-                    dotMat->setDiffuse( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
+                    dotMat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,1) );
                     dotMat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
                     
                     // Place the two parts into the same pgeometrydata
@@ -509,7 +509,6 @@ void KinBodyItem::Load()
                     osg::ref_ptr<osg::Geode> geode2 = new osg::Geode;
                     geode2->addDrawable(geom);
                     osg::ref_ptr<osg::StateSet> state = geode2->getOrCreateStateSet();
-                    state->setAttributeAndModes(mat, osg::StateAttribute::OFF | osg::StateAttribute::PROTECTED);
                     state->setAttributeAndModes(dotMat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
 
                     pgeometrydata->addChild(geode.get());

@@ -71,6 +71,7 @@ public:
     float _fTransparency = 0.0;
     bool _bVisible = true;
     bool _bModifiable = true;
+    object _calibrationBoardParams = py::make_tuple(0, 0, 0.0f, 0.0f, toPyVector3(Vector(0,0,0)), "", 0.0, 0.0);
 };
 
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
