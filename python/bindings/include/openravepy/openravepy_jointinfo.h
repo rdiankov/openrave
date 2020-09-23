@@ -71,7 +71,7 @@ public:
     float _fTransparency = 0.0;
     bool _bVisible = true;
     bool _bModifiable = true;
-    object _calibrationBoardParams = py::make_tuple(0, 0, 0.0f, 0.0f, toPyVector3(Vector(0,0,0)), "", 0.0, 0.0);
+    py::dict _calibrationBoardParams;
 };
 
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
@@ -265,11 +265,11 @@ public:
         float GetTransparency() const;
         object GetDiffuseColor() const;
         object GetAmbientColor() const;
-        object GetCalibrationBoardGridSize() const;
-        object GetCalibrationBoardDotsDistance() const;
+        object GetCalibrationBoardNumDots() const;
+        object GetCalibrationBoardDotsDistances() const;
         object GetCalibrationBoardDotColor() const;
-        object GetCalibrationBoardPattern() const;
-        object GetCalibrationBoardDotRatios() const;
+        object GetCalibrationBoardPatternName() const;
+        object GetCalibrationBoardDotDiameterDistanceRatios() const;
         object GetInfo();
         object ComputeInnerEmptyVolume() const;
         bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);

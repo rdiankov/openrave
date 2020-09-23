@@ -627,7 +627,7 @@ public:
                 return _info._calibrationBoardParams.dotsDistanceY;
             }
             /// \brief returns pattern name of the calibration board dot grid 
-            inline const std::string& GetCalibrationBoardPattern() const {
+            inline const std::string& GetCalibrationBoardPatternName() const {
                 return _info._calibrationBoardParams.patternName;
             }
             /// \brief returns x dot distance of the calibration board dot grid 

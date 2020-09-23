@@ -3143,7 +3143,7 @@ public:
                                     && !!phalf_extents) {
                                     // set up each stringstream to get each calibration board attribute
                                     stringstream ss(pnum_dots_x->getCharData());
-                                    stringstream ss2(pnums_dots_y->getCharData());
+                                    stringstream ss2(pnum_dots_y->getCharData());
                                     int numDotsX, numDotsY;
                                     ss >> numDotsX;
                                     ss2 >> numDotsY;
