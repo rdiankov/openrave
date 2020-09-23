@@ -3122,58 +3122,65 @@ public:
                             // get locations of required attributes
                             daeElementRef pparams = children[i]->getChild("parameters");
                             if (!!pparams) {
-                                // grid_size contains two integer values:
-                                // number of columns along x axis, and number of rows along y axis
-                                daeElementRef pgrid_size = pparams->getChild("grid_size");
-                                // dot_distance contains two float values:
-                                // x distance between centers of adjacent dots, and y distance between centers of adjacent dots
-                                daeElementRef pdot_distance = pparams->getChild("dot_distance");
-                                // dot_color has four float values denoting RGB dot color, distinct from board color
+                                daeElementRef pnum_dots_x = pparams->getChild("num_dots_x");
+                                daeElementRef pnum_dots_y = pparams->getChild("num_dots_y");
+                                daeElementRef pdots_distance_x = pparams->getChild("dots_distance_x");
+                                daeElementRef pdots_distance_y = pparams->getChild("dots_distance_y");
                                 daeElementRef pdot_color = pparams->getChild("dot_color");
-                                // pattern is a string indicating what pattern of dot types to use
-                                daeElementRef ppattern = pparams->getChild("pattern");
-                                // dot_ratios contains two float values:
-                                // normal dot diameter to x distance ratio, and big dot diameter to x distance ratio
-                                daeElementRef pdot_ratios = pparams->getChild("dot_ratios");
+                                daeElementRef ppattern_name = pparams->getChild("pattern_name");
+                                daeElementRef pdot_diameter_distance_ratio = pparams->getChild("dot_diameter_distance_ratio");
+                                daeElementRef pbig_dot_diameter_distance_ratio = pparams->getChild("big_dot_diameter_distance_ratio");
                                 daeElementRef phalf_extents = children[i]->getChild("half_extents");
 
-                                if (!!pgrid_size
-                                    && !!pdot_distance
+                                if (!!pnum_dots_x
+                                    && !!pnum_dots_y
+                                    && !!pdots_distance_x
+                                    && !!pdots_distance_y
                                     && !!pdot_color
-                                    && !!ppattern
-                                    && !!pdot_ratios
+                                    && !!ppattern_name
+                                    && !!pdot_diameter_distance_ratio
+                                    && !!pbig_dot_diameter_distance_ratio
                                     && !!phalf_extents) {
                                     // set up each stringstream to get each calibration board attribute
-                                    stringstream ss(pgrid_size->getCharData());
+                                    stringstream ss(pnum_dots_x->getCharData());
+                                    stringstream ss2(pnums_dots_y->getCharData());
                                     int numDotsX, numDotsY;
-                                    ss >> numDotsX >> numDotsY;
+                                    ss >> numDotsX;
+                                    ss2 >> numDotsY;
 
-                                    stringstream ss2(pdot_distance->getCharData());
-                                    float dotsDistanceX, dotsDistanceY;
-                                    ss2 >> dotsDistanceX >> dotsDistanceY;
+                                    stringstream ss3(pdots_distance_x->getCharData());
+                                    stringstream ss4(pdots_distance_y->getCharData());
+                                    dReal dotsDistanceX, dotsDistanceY;
+                                    ss3 >> dotsDistanceX;
+                                    ss4 >> dotsDistanceY;
 
-                                    stringstream ss3(pdot_color->getCharData());
+                                    stringstream ss5(pdot_color->getCharData());
                                     Vector dotColor;
-                                    ss3 >> dotColor.x >> dotColor.y >> dotColor.z >> dotColor.w;
+                                    ss5 >> dotColor.x >> dotColor.y >> dotColor.z >> dotColor.w;
 
-                                    stringstream ss4(ppattern->getCharData());
+                                    stringstream ss6(ppattern_name->getCharData());
                                     std::string pattern;
-                                    ss4 >> pattern;
+                                    ss6 >> pattern;
 
-                                    stringstream ss5(pdot_ratios->getCharData());
-                                    float dotDiameterDistanceRatio, bigDotDiameterDistanceRatio;
-                                    ss5 >> dotDiameterDistanceRatio >> bigDotDiameterDistanceRatio;
+                                    stringstream ss7(pdot_diameter_distance_ratio->getCharData());
+                                    stringstream ss8(pbig_dot_diameter_distance_ratio->getCharData());
+                                    dReal dotDiameterDistanceRatio, bigDotDiameterDistanceRatio;
+                                    ss7 >> dotDiameterDistanceRatio;
+                                    ss8 >> bigDotDiameterDistanceRatio;
 
-                                    stringstream ss6(phalf_extents->getCharData());
+                                    stringstream ss9(phalf_extents->getCharData());
                                     Vector vextents;
-                                    ss6 >> vextents.x >> vextents.y >> vextents.z;
+                                    ss9 >> vextents.x >> vextents.y >> vextents.z;
 
                                     if ((ss.eof() || !!ss)
                                         && (ss2.eof() || !!ss2)
                                         && (ss3.eof() || !!ss3)
                                         && (ss4.eof() || !!ss4)
                                         && (ss5.eof() || !!ss5)
-                                        && (ss6.eof() || !!ss6)) {
+                                        && (ss6.eof() || !!ss6)
+                                        && (ss7.eof() || !!ss7)
+                                        && (ss8.eof() || !!ss8)
+                                        && (ss9.eof() || !!ss9)) {
                                         // if every attribute required for calibration board is found,
                                         // put all attributes into geometry info
                                         geominfo._type = GT_CalibrationBoard;

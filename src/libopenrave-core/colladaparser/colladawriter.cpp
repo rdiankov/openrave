@@ -2004,12 +2004,20 @@ private:
                 const KinBody::GeometryInfo::CalibrationBoardParameters& paramsInfo = geom->GetInfo()._calibrationBoardParams;
 
                 ss.str(""); ss.clear();
-                ss << paramsInfo.numDotsX << " " << paramsInfo.numDotsY;
-                pparams->add("grid_size")->setCharData(ss.str());
+                ss << paramsInfo.numDotsX;
+                pparams->add("num_dots_x")->setCharData(ss.str());
 
                 ss.str(""); ss.clear();
-                ss << paramsInfo.dotsDistanceX << " " << paramsInfo.dotsDistanceY;
-                pparams->add("dot_distance")->setCharData(ss.str());
+                ss << paramsInfo.numDotsX;
+                pparams->add("num_dots_y")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotsDistanceX;
+                pparams->add("dots_distance_x")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotsDistanceY;
+                pparams->add("dots_distance_y")->setCharData(ss.str());
 
                 ss.str(""); ss.clear();
                 ss << paramsInfo.dotColor.x << " " << paramsInfo.dotColor.y << " " << paramsInfo.dotColor.z << " " << paramsInfo.dotColor.w;
@@ -2017,11 +2025,15 @@ private:
 
                 ss.str(""); ss.clear();
                 ss << paramsInfo.patternName;
-                pparams->add("pattern")->setCharData(ss.str());
+                pparams->add("pattern_name")->setCharData(ss.str());
 
                 ss.str(""); ss.clear();
-                ss << paramsInfo.dotDiameterDistanceRatio << " " << paramsInfo.bigDotDiameterDistanceRatio;
-                pparams->add("dot_ratios")->setCharData(ss.str());
+                ss << paramsInfo.dotDiameterDistanceRatio;
+                pparams->add("dot_diameter_distance_ratio")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.bigDotDiameterDistanceRatio;
+                pparams->add("big_dot_diameter_distance_ratio")->setCharData(ss.str());
                 break;
             }
             case GT_Sphere:
