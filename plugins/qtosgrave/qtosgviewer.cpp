@@ -470,6 +470,13 @@ void QtOSGViewer::_UpdateViewerCallback()
                 }
             }
         }
+        if (!_excessGUIFunctions.empty()) {
+            int excessSize = _excessGUIFunctions.size();
+            for (int idx = 0; idx < excessSize && idx < 1000; idx++) {
+                _listGUIFunctions.push_back(_excessGUIFunctions.front());
+                _excessGUIFunctions.pop_front();
+            }
+        }
     }
     catch(const std::exception& ex) {
         RAVELOG_ERROR_FORMAT("got an exception in the viewer thread: %s", ex.what());
@@ -2120,13 +2127,13 @@ void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block
     }
 
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
     if( _listGUIFunctions.size() > 1000 ) {
         // can happen if system is especially slow
-        //RAVELOG_WARN_FORMAT("too many gui post commands, ignoring %d", _listGUIFunctions.size());
-        return;
+        _excessGUIFunctions.push_back(pfn);
+    } else {
+        _listGUIFunctions.push_back(pfn);
     }
-    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
-    _listGUIFunctions.push_back(pfn);
     if( block ) {
         while(!pfn->IsFinished()) {
             _notifyGUIFunctionComplete.wait(_mutexGUIFunctions);
