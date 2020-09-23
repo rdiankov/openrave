@@ -496,9 +496,9 @@ void KinBodyItem::Load()
                     osgUtil::SmoothingVisitor::smooth(*geom);
 
                     // Set color of dot grid mesh
-                    RaveVector<float> dotColor = orgeom->GetCalibrationBoardDotColor();
+                    RaveVector<dReal> dotColor = orgeom->GetCalibrationBoardDotColor();
                     osg::ref_ptr<osg::Material> dotMat = new osg::Material;
-                    dotMat->setDiffuse( osg::Material::FRONT, osg::Vec4f(dotColor.x,dotColor.y,dotColor.z,1) );
+                    dotMat->setDiffuse( osg::Material::FRONT, osg::Vec4(dotColor.x,dotColor.y,dotColor.z,1) );
                     dotMat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,1) );
                     dotMat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
                     

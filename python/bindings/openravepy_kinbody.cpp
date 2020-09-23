@@ -289,7 +289,7 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _fTransparency = info._fTransparency;
     _bVisible = info._bVisible;
     _bModifiable = info._bModifiable;
-    KinBody::GeometryInfo::CalibrationBoardParams params = info._calibrationBoardParams;
+    KinBody::GeometryInfo::CalibrationBoardParameters params = info._calibrationBoardParams;
     _calibrationBoardParams = py::make_tuple(params.numDotsX,
                                              params.numDotsY,
                                              params.dotsDistanceX, 

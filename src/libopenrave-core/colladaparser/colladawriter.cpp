@@ -2001,7 +2001,7 @@ private:
                 pcalibrationboard->add("half_extents")->setCharData(ss.str());
 
                 daeElementRef pparams = pcalibrationboard->add("parameters");
-                const KinBody::GeometryInfo::CalibrationBoardParams& paramsInfo = geom->GetInfo()._calibrationBoardParams;
+                const KinBody::GeometryInfo::CalibrationBoardParameters& paramsInfo = geom->GetInfo()._calibrationBoardParams;
 
                 ss.str(""); ss.clear();
                 ss << paramsInfo.numDotsX << " " << paramsInfo.numDotsY;
