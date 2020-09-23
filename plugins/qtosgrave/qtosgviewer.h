@@ -396,6 +396,7 @@ public:
 
     //@{ Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
+    list<GUIThreadFunctionPtr> _excessGUIFunctions; ///< list of GUI functions that exceed the queue limit and are thus stashed.
     mutable list<Item*> _listRemoveItems; ///< raw points of items to be deleted in the viewer update thread, triggered from _DeleteItemCallback. proteced by _mutexItems
     boost::mutex _mutexItems; ///< protects _listRemoveItems
     mutable boost::mutex _mutexGUIFunctions;
