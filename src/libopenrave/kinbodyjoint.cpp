@@ -2130,17 +2130,20 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             OPENRAVE_ASSERT_FORMAT(mapinvnames.count(varxi) && mapinvnames.count(varxj), "mapinvnames should have both variables %s and %s", varxi % varxj,
                 ORE_InvalidArguments
             );
+            const std::string& jointnamei = mapinvnames.at(varxi);
+            const std::string& jointnamej = mapinvnames.at(varxj);
+
             std::string sequation = (firstvert==std::string::npos) ? eq.substr(space+1) : eq.substr(space+1, firstvert-space-1);
             boost::trim(sequation);
 
             // ensure varname is indeed in the variable list; not many independent variables for now, so no need to create a map from varxi to ivar
             std::vector<std::string>::iterator itnameindex = std::find(resultVars.begin(), resultVars.end(), varxi);
-            OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(), "variable %s from velocity equation is not referenced in the position, skipping...", mapinvnames.at(varxi),
+            OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(), "variable %s from velocity equation is not referenced in the position, skipping...", jointnamei,
                 ORE_InvalidArguments
             );
             const int ivar = itnameindex - resultVars.begin();
             itnameindex = std::find(resultVars.begin(), resultVars.end(), varxj);
-            OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(), "variable %s from velocity equation is not referenced in the position, skipping...", mapinvnames.at(varxj),ORE_InvalidArguments);
+            OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(), "variable %s from velocity equation is not referenced in the position, skipping...", jointnamej, ORE_InvalidArguments);
             const int jvar = itnameindex - resultVars.begin();
             const int indexij = ivar * nVars + jvar;
             const int indexji = jvar * nVars + ivar;
@@ -2149,36 +2152,36 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             sequation = sCommonSubexpressions + sequation; ///< compute common subexpressions
             ret = fn->Parse(sequation, sVars.str());
             if( ret >= 0 ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set equation '%s' on %s:%s, at %d. Error is %s"), sequation%parent->GetName()%GetName()%ret%fn->ErrorMsg(),ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set equation '%s' on %s:%s, at %d. Error is %s"),
+                    sequation % parent->GetName() % _info._name % ret % fn->ErrorMsg(), ORE_InvalidArguments);
             }
 
             if(!vfns.at(indexij) && !vfns.at(indexji)) {
-                vfns[indexij] = vfns[indexji] = fn;
+                vfns[indexji] = fn; // copy to indexji
             }
             else if(!!vfns.at(indexij)) {
                 RAVELOG_WARN_FORMAT("Rewrite (%d,%d) for ∂^2(%s)/∂(%s)∂(%s) that was initialzied as ∂^2(%s)/∂(%s)∂(%s); the user should ensure they compute the same value",
-                    ivar % jvar % _info._name % mapinvnames.at(varxi) % mapinvnames.at(varxj) % _info._name % mapinvnames.at(varxj) % mapinvnames.at(varxi)
+                    ivar % jvar % _info._name % jointnamei % jointnamej % _info._name % jointnamej % jointnamei
                 );
-                vfns[indexij] = fn;
             }
-            else {
-                vfns[indexij] = fn;
-            }
+            vfns[indexij] = fn;
         }
 
         // check if anything is missing
-        for(size_t indexij = 0; indexij < nVars*nVars; ++indexij) {
-            const size_t i = indexij / nVars;
-            const size_t j = indexij % nVars;
-            OpenRAVEFunctionParserRealPtr& fn = vfns[indexij];
-            if( !fn ) {
-                // print a message instead of throwing an exception since it might be common for only position equations to be specified
-                RAVELOG_WARN(str(boost::format("SetMimicEquations: missing pair of variables (%s, %s) from second-order partial derivatives of joint %s!") % mapinvnames.at(resultVars.at(i)) % mapinvnames.at(resultVars.at(j)) % _info._name));
-                fn = CreateJointFunctionParser();
-                fn->Parse("0","");
+        for(size_t i = 0, indexij = 0; i < nVars; ++i) {
+            const std::string& jointnamei = mapinvnames.at(resultVars.at(i));
+            for(size_t j = 0; j < nVars; ++j, ++indexij) {
+                OpenRAVEFunctionParserRealPtr& fn = vfns[indexij];
+                if( !fn ) {
+                    // print a message instead of throwing an exception since it might be common for only position equations to be specified
+                    RAVELOG_WARN(str(boost::format("SetMimicEquations: missing pair of joint variables (%s, %s) from second-order partial derivatives of joint %s; set the value to 0")
+                        % jointnamei % mapinvnames.at(resultVars.at(j)) % _info._name)
+                    );
+                    fn = CreateJointFunctionParser();
+                    fn->Parse("0", "");
+                }
             }
         }
-
         pmimic->_accelfns.swap(vfns);
     }
 
