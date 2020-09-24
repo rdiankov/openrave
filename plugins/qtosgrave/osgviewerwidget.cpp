@@ -73,7 +73,7 @@ public:
         {
         case osgGA::GUIEventAdapter::SCROLL:
             if(_posgviewerwidget->IsInOrthoMode()) {
-                double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_UP ? 1.1 : 0.9;
+                double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
@@ -127,7 +127,7 @@ public:
     bool performMovementRightMouseButton( const double eventTimeDelta, const double dx, const double dy )
     {
         if(_posgviewerwidget->IsInOrthoMode()) {
-            _posgviewerwidget->Zoom( dy < 0 ? 0.9 : 1.1 );
+            _posgviewerwidget->Zoom( dy < 0 ? 1.1 : 0.9 );
             return true;
         }
         return osgGA::NodeTrackerManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
@@ -279,12 +279,28 @@ public:
     // make zooming faster
     bool performMovementRightMouseButton( const double eventTimeDelta, const double dx, const double dy )
     {
-        if(_posgviewerwidget->IsInOrthoMode()) {
-            _posgviewerwidget->Zoom( dy < 0 ? 0.9 : 1.1 );
+        // adjust camera perspective if zoom changed while in ortho view
+        if (_posgviewerwidget->IsInOrthoMode()) {
+            _posgviewerwidget->Zoom( dy < 0 ? 1.1 : 0.9 );
             return true;
         }
         return osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
     }
+
+    // make rotation faster
+    bool performMovementLeftMouseButton( const double eventTimeDelta, const double dx, const double dy )
+    {
+        double rotationSensitivityMultiplier = 4.0; // dx / dy angle multiplier
+        if( getVerticalAxisFixed() )
+            rotateWithFixedVertical( rotationSensitivityMultiplier*dx, rotationSensitivityMultiplier*dy );
+        else {
+            rotateTrackball( _ga_t0->getXnormalized(), _ga_t0->getYnormalized(),
+                             _ga_t0->getXnormalized() - rotationSensitivityMultiplier*dx, _ga_t0->getYnormalized() - rotationSensitivityMultiplier*dy,
+                             getThrowScale( eventTimeDelta ) );
+        }
+        return true;
+    }
+
     void applyAnimationStep( const double currentProgress, const double prevProgress )
     {
         OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData* >( _animationData.get() );
@@ -318,7 +334,7 @@ public:
 
         case osgGA::GUIEventAdapter::SCROLL:
             if(_posgviewerwidget->IsInOrthoMode()) {
-                double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_UP ? 1.1 : 0.9;
+                double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
