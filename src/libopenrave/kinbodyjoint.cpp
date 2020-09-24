@@ -2123,12 +2123,11 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
                 break;
             }
             firstvert = eq.find('|', startxj); // the next first "|"
-
-            // check if we specify another partial derivative
-            const std::string varxi = eq.substr(startxi, secondvert-startxi);
-            const std::string varxj = eq.substr(startxj, space-startxj);
-            OPENRAVE_ASSERT_FORMAT(mapinvnames.count(varxi) && mapinvnames.count(varxj), "mapinvnames should have both variables %s and %s", varxi % varxj,
-                ORE_InvalidArguments
+            const std::string varxi = eq.substr(startxi, secondvert-startxi); // "xi"
+            const std::string varxj = eq.substr(startxj, space-startxj); // "xj"
+            OPENRAVE_ASSERT_FORMAT(mapinvnames.count(varxi) && mapinvnames.count(varxj),
+                "mapinvnames should have both variables %s and %s",
+                varxi % varxj, ORE_InvalidArguments
             );
             const std::string& jointnamei = mapinvnames.at(varxi);
             const std::string& jointnamej = mapinvnames.at(varxj);
@@ -2138,12 +2137,16 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
 
             // ensure varname is indeed in the variable list; not many independent variables for now, so no need to create a map from varxi to ivar
             std::vector<std::string>::iterator itnameindex = std::find(resultVars.begin(), resultVars.end(), varxi);
-            OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(), "variable %s from velocity equation is not referenced in the position, skipping...", jointnamei,
-                ORE_InvalidArguments
+            OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(),
+                "variable %s from velocity equation is not referenced in the position, skipping...",
+                jointnamei, ORE_InvalidArguments
             );
             const int ivar = itnameindex - resultVars.begin();
             itnameindex = std::find(resultVars.begin(), resultVars.end(), varxj);
-            OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(), "variable %s from velocity equation is not referenced in the position, skipping...", jointnamej, ORE_InvalidArguments);
+            OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(),
+                "variable %s from velocity equation is not referenced in the position, skipping...",
+                jointnamej, ORE_InvalidArguments
+            );
             const int jvar = itnameindex - resultVars.begin();
             const int indexij = ivar * nVars + jvar;
             const int indexji = jvar * nVars + ivar;
@@ -2153,11 +2156,12 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             ret = fn->Parse(sequation, sVars.str());
             if( ret >= 0 ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set equation '%s' on %s:%s, at %d. Error is %s"),
-                    sequation % parent->GetName() % _info._name % ret % fn->ErrorMsg(), ORE_InvalidArguments);
+                    sequation % parent->GetName() % _info._name % ret % fn->ErrorMsg(), ORE_InvalidArguments
+                );
             }
 
             if(!vfns.at(indexij) && !vfns.at(indexji)) {
-                vfns[indexji] = fn; // copy to indexji
+                vfns[indexji] = fn; // initialize to indexji
             }
             else if(!!vfns.at(indexij)) {
                 RAVELOG_WARN_FORMAT("Rewrite (%d,%d) for ∂^2(%s)/∂(%s)∂(%s) that was initialzied as ∂^2(%s)/∂(%s)∂(%s); the user should ensure they compute the same value",

@@ -3548,6 +3548,7 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
     vlinkscomputed[0] = 1;
 
     // compute the link accelerations going through topological order
+    const int nActiveJoints = _vecjoints.size();
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
         const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
         const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint];
@@ -3568,17 +3569,18 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
             // compute both partial velocity and acceleration information
             for(int i = 0; i < pjoint->GetDOF(); ++i) {
                 if( pjoint->IsMimic(i) ) {
-                    vtempvalues.resize(0);
+                    vtempvalues.clear();
                     const std::vector<Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[i]->_vdofformat;
-                    FOREACHC(itdof,vdofformat) {
-                        JointPtr pj = itdof->jointindex < (int)_vecjoints.size() ? _vecjoints[itdof->jointindex] : _vPassiveJoints.at(itdof->jointindex-_vecjoints.size());
-                        vtempvalues.push_back(pj->GetValue(itdof->axis));
+                    for(const Mimic::DOFFormat& dofformat : vdofformat) {
+                        const int16_t jointindex = dofformat.jointindex;
+                        const JointPtr& pjoint = jointindex < nActiveJoints ? _vecjoints.at(jointindex) : _vPassiveJoints.at(jointindex-nActiveJoints);
+                        vtempvalues.push_back(pjoint->GetValue(dofformat.axis));
                     }
                     dummyvelocities[i] = 0;
                     dummyaccelerations[i] = 0;
 
                     // velocity
-                    if( vDOFVelocities.size() > 0 ) {
+                    if( !vDOFVelocities.empty() ) {
                         int err = pjoint->_Eval(i,1,vtempvalues,veval);
                         if( err ) {
                             RAVELOG_WARN_FORMAT("failed to evaluate joint %s, fparser error %d", pjoint->GetName()%err);
@@ -3606,9 +3608,10 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
                         }
                     }
 
-                    // acceleration
-                    if( vDOFAccelerations.size() > 0 ) {
-                        int err = pjoint->_Eval(i,2,vtempvalues,veval);
+                    // acceleration (need velocity non-empty as well)
+                    if( !vDOFVelocities.empty() && !vDOFAccelerations.empty() ) {
+                        RAVELOG_WARN_FORMAT("Computing for mimic joint %s", pjoint->GetName());
+                        const int err = pjoint->_Eval(i, 2, vtempvalues, veval);
                         if( err ) {
                             RAVELOG_WARN(str(boost::format("failed to evaluate joint %s, fparser error %d")%pjoint->GetName()%err));
                         }
