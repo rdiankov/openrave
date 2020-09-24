@@ -5878,42 +5878,6 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
-    // grabbedinfos
-    bool resetGrabbed = false;
-    std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfos;
-    GetGrabbedInfo(vGrabbedInfos);
-    if (vGrabbedInfos.size() != info._vGrabbedInfos.size()) {
-        resetGrabbed = true;
-    }
-    else {
-        FOREACHC(itExistingGrabbedInfo, vGrabbedInfos) {
-            bool foundGrabbedInfo = false;
-            FOREACHC(itGrabbedInfo, info._vGrabbedInfos) {
-                // find existing grabbedinfo
-                if ((*itGrabbedInfo)->_id == (*itExistingGrabbedInfo)->_id) {
-                    foundGrabbedInfo = true;
-                    if ((**itGrabbedInfo) != (**itExistingGrabbedInfo)) {
-                        resetGrabbed = true;
-                        break;
-                    }
-                }
-            }
-            if (!foundGrabbedInfo) {
-                resetGrabbed = true;
-            }
-            if (resetGrabbed) {
-                break;
-            }
-        }
-    }
-
-    if (resetGrabbed) {
-        std::vector<KinBody::GrabbedInfoConstPtr> grabbedInfos(info._vGrabbedInfos.begin(), info._vGrabbedInfos.end());
-        ResetGrabbed(grabbedInfos);
-        updateFromInfoResult = UFIR_Success;
-        RAVELOG_VERBOSE_FORMAT("body %s updated due to grabbed reset", _id);
-    }
-
     // name
     if (GetName() != info._name) {
         SetName(info._name);
