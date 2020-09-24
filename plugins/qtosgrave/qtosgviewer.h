@@ -313,7 +313,6 @@ public:
 
     /// \brief reset the camera depending on its mode
     virtual void _UpdateViewport();
-    virtual void _SetCameraTransform();
 
     virtual OSGSwitchPtr _CreateGraphHandle();
     virtual void _CloseGraphHandle(OSGSwitchPtr handle);
@@ -327,6 +326,7 @@ public:
     virtual void _DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
 
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
+    virtual void _SetCameraTransform(const RaveTransform<float>& transform);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
     virtual void _StopTrackLink();
     virtual bool _TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText="");
@@ -411,7 +411,6 @@ public:
     ItemPtr _pSelectedItem;     ///< the currently selected item
 
     //@{ camera
-    RaveTransform<float> _Tcamera; ///< current position of the camera representing the current view, updated periodically, read only.
     geometry::RaveCameraIntrinsics<float> _camintrinsics; ///< intrinsics of the camera representing the current view, updated periodically, read only.
     //@}
 
