@@ -228,6 +228,8 @@ void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(float fTessellation)
                 AppendCylinderTriangulation(dotPos, selectedRadius, dotLength, numverts, _calibrationBoardParams._dotmeshcollision);
             }
         }
+    } else {
+        RAVELOG_WARN_FORMAT("Cannot generate calibration board dot grid of size %sx%s - minimum size is 3 x 3.", params.numDotsX%params.numDotsY);
     }
 }
 
@@ -677,9 +679,7 @@ inline void LoadJsonValue(const rapidjson::Value& rValue, KinBody::GeometryInfo:
     };
     for (int idx = 0; idx < 8; idx++) {
         if (!rValue.HasMember(calibrationBoardParamNames[idx])) {
-            char paramError[1024];
-            sprintf(paramError, "Missing calibration board parameter \"%s\".", calibrationBoardParamNames[idx]);
-            throw OPENRAVE_EXCEPTION_FORMAT0(paramError, OpenRAVE::ORE_InvalidArguments);
+            RAVELOG_ERROR_FORMAT("Missing calibration board parameter \"%s\".", calibrationBoardParamNames[idx]);
         }
     }
     orjson::LoadJsonValue(rValue["numDotsX"], p.numDotsX);
@@ -1104,6 +1104,7 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
         ab.extents.y = 0;
         ab.extents.z = 0;
         break;
+    case GT_CalibrationBoard: // the tangible part of the board is basically the box
     case GT_Box: // origin of box is at the center
         ab.extents.x = RaveFabs(tglobal.m[0])*_vGeomData.x + RaveFabs(tglobal.m[1])*_vGeomData.y + RaveFabs(tglobal.m[2])*_vGeomData.z;
         ab.extents.y = RaveFabs(tglobal.m[4])*_vGeomData.x + RaveFabs(tglobal.m[5])*_vGeomData.y + RaveFabs(tglobal.m[6])*_vGeomData.z;
@@ -1272,12 +1273,6 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
         }
         break;
     }
-    case GT_CalibrationBoard: // the tangible part of the board is basically the box
-        ab.extents.x = RaveFabs(tglobal.m[0])*_vGeomData.x + RaveFabs(tglobal.m[1])*_vGeomData.y + RaveFabs(tglobal.m[2])*_vGeomData.z;
-        ab.extents.y = RaveFabs(tglobal.m[4])*_vGeomData.x + RaveFabs(tglobal.m[5])*_vGeomData.y + RaveFabs(tglobal.m[6])*_vGeomData.z;
-        ab.extents.z = RaveFabs(tglobal.m[8])*_vGeomData.x + RaveFabs(tglobal.m[9])*_vGeomData.y + RaveFabs(tglobal.m[10])*_vGeomData.z;
-        ab.pos = tglobal.trans;
-        break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("unknown geometry type %d"), _type, ORE_InvalidArguments);
     }
