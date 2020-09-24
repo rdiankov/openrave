@@ -1441,7 +1441,7 @@ RaveTransform<float> QtOSGViewer::GetCameraTransform() const
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
     // have to flip Z axis
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
-    return _Tcamera*trot;
+    return GetRaveTransformFromMatrix(_posgWidget->GetCurrentCameraManipulator()->getMatrix()) * trot;
 }
 
 float QtOSGViewer::GetCameraDistanceToFocus() const
