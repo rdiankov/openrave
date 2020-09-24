@@ -84,7 +84,7 @@ public:
     /// \param[out] angularvel - angular velocity rotation_axis*theta_dot
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr link, Vector& linearvel, Vector& angularvel) = 0;
 
-    /// \brief Sets the velocities for each link, velocities correspond to the link's coordinate system origin.
+    /// \brief Gets the velocities for each link, velocities correspond to the link's coordinate system origin.
     /// \param[out] velocities the linear and angular (axis * angular_speed) velocities for each link.
     virtual bool GetLinkVelocities(KinBodyConstPtr body, std::vector<std::pair<Vector,Vector> >& velocities) = 0;
 
