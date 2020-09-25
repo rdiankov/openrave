@@ -473,7 +473,7 @@ void QtOSGViewer::_UpdateViewerCallback()
         if (!_excessGUIFunctions.empty()) {
             boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
             int excessSize = _excessGUIFunctions.size();
-            for (int idx = 0; idx < excessSize && idx < 1000; idx++) {
+            for (int idx = 0; idx < excessSize && _listGUIFunctions.size() < 1000; idx++) {
                 _listGUIFunctions.push_back(_excessGUIFunctions.front());
                 _excessGUIFunctions.pop_front();
             }
