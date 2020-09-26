@@ -62,6 +62,9 @@ public:
                 if( uri.scheme() == _scheme ) {
                     std::string uriNativePath = cdom::uriToFilePath(uri.path());
                     if( uriNativePath.size() == 0 ) {
+                        if (_preader->_bMustResolveURI) {
+                            throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve uri \"%s\"", uri.str(), ORE_InvalidArguments);
+                        }
                         return NULL;
                     }
                     // remove first slash because we need relative file
@@ -74,6 +77,9 @@ public:
                     }
                     if( docurifull.size() == 5 ) {
                         RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
+                        if (_preader->_bMustResolveURI) {
+                            throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve uri \"%s\"", uri.str(), ORE_InvalidArguments);
+                        }
                         return NULL;
                     }
 
@@ -115,12 +121,18 @@ public:
                 }
                 if (!doc) {
                     RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
+                    if (_preader->_bMustResolveURI) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve uri \"%s\"", uri.str(), ORE_InvalidArguments);
+                    }
                     return NULL;
                 }
             }
             daeElement* elt = dae->getDatabase()->idLookup(uri.id(), doc);
             if (!elt) {
                 RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
+                if (_preader->_bMustResolveURI) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve uri \"%s\", found document but element does not exist inside", uri.str(), ORE_InvalidArguments);
+                }
             }
             return elt;
         }
@@ -264,6 +276,7 @@ public:
         _bSkipGeometry = false;
         _bReadGeometryGroups = false;
         _bExtractConnectedBodies = bExtractConnectedBodies;
+        _bMustResolveURI = false;
         _fGlobalScale = 1.0/penv->GetUnit().second;
         _bBackCompatValuesInRadians = false;
         if( sizeof(daeFloat) == 4 ) {
@@ -363,6 +376,7 @@ public:
         _dae = GetGlobalDAE(false);
         _bSkipGeometry = false;
         _bReadGeometryGroups = false;
+        _bMustResolveURI = false;
         _vOpenRAVESchemeAliases.resize(0);
         FOREACHC(itatt,atts) {
             if( itatt->first == "skipgeometry" ) {
@@ -395,6 +409,9 @@ public:
                 stringstream ss(itatt->second);
                 std::list<string> newelts((istream_iterator<string>(ss)), istream_iterator<string>());
                 _bReadGeometryGroups = find(newelts.begin(), newelts.end(), "bind_instance_geometry") != newelts.end();
+            }
+            else if( itatt->first == "mustresolveuri" ) {
+                _bMustResolveURI = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else {
                 //RAVELOG_WARN(str(boost::format("collada reader unprocessed attribute pair: %s:%s")%itatt->first%itatt->second));
@@ -5703,6 +5720,7 @@ private:
     bool _bReadGeometryGroups; ///< if true, then read the bind_instance_geometry tag to initialize all the geometry groups
     bool _bBackCompatValuesInRadians; ///< if true, will assume the speed, acceleration, and dofvalues are in radians instead of degrees (for back compat)
     bool _bExtractConnectedBodies; ///< if true, calls ExtractRobotConnectedBodies and initializes the connected bodies.
+    bool _bMustResolveURI; ///< if true, throw exception if uri does not resolve
 };
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
