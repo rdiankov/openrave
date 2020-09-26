@@ -562,6 +562,10 @@ public:
     virtual void Save(const std::string& filename, SelectionOptions options, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            _ResolveBodyIds(); // assumes _mutexInterfaces
+        }
         std::list<KinBodyPtr> listbodies;
         switch(options) {
         case SO_Everything:
@@ -718,6 +722,10 @@ public:
         }
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            _ResolveBodyIds(); // assumes _mutexInterfaces
+        }
         std::list<KinBodyPtr> listbodies;
         switch(options) {
         case SO_Everything:
@@ -2415,6 +2423,8 @@ public:
     }
 
     /// \brief go through all boides id and make sure they are unique
+    //
+    /// assumes environment and _mutexInterfaces are locked
     virtual void _ResolveBodyIds() {
         char sTempIndexConversion[9]; //temp memory space for converting indices to hex strings, enough space to convert uint32_t
         uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
@@ -2464,15 +2474,20 @@ public:
     virtual void ExtractInfo(EnvironmentBaseInfo& info)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        info._vBodyInfos.resize(_vecbodies.size());
-        _ResolveBodyIds();
+        std::vector<KinBodyPtr> vBodies;
+        {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            _ResolveBodyIds(); // assumes _mutexInterfaces
+            vBodies = _vecbodies;
+        }
+        info._vBodyInfos.resize(vBodies.size());
         for(size_t i = 0; i < info._vBodyInfos.size(); ++i) {
-            if (_vecbodies[i]->IsRobot()) {
+            if (vBodies[i]->IsRobot()) {
                 info._vBodyInfos[i].reset(new RobotBase::RobotBaseInfo());
-                RaveInterfaceCast<RobotBase>(_vecbodies[i])->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(info._vBodyInfos[i])));
+                RaveInterfaceCast<RobotBase>(vBodies[i])->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(info._vBodyInfos[i])));
             } else {
                 info._vBodyInfos[i].reset(new KinBody::KinBodyInfo());
-                _vecbodies[i]->ExtractInfo(*info._vBodyInfos[i]);
+                vBodies[i]->ExtractInfo(*info._vBodyInfos[i]);
             }
         }
         info._name = _name;
@@ -2491,7 +2506,10 @@ public:
         vRemovedBodies.clear();
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        _ResolveBodyIds();
+        {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            _ResolveBodyIds(); // assumes _mutexInterfaces
+        }
 
         std::vector<dReal> vDOFValues;
 
