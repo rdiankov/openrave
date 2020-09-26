@@ -96,6 +96,9 @@ public:
                 std::stringstream ss(itatt->second);
                 _vOpenRAVESchemeAliases = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
             }
+            else if (itatt->first == "mustresolveuri") {
+                _bMustResolveURI = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+            }
         }
         if (_vOpenRAVESchemeAliases.size() == 0) {
             _vOpenRAVESchemeAliases.push_back("openrave");
@@ -129,7 +132,9 @@ public:
                     std::set<std::string> circularReference;
                     if (!_ExpandRapidJSON(envInfo, bodyId, doc, referenceUri, circularReference, fUnitScale, alloc)) {
                         RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s'", referenceUri);
-                        // TODO store the warning somewhere for later retrieval
+                        if (_bMustResolveURI) {
+                            throw OPENRAVE_EXCEPTION_FORMAT("failed to load referenced body from uri '%s'", referenceUri, ORE_InvalidArguments);
+                        }
                     }
                 }
             }
@@ -281,6 +286,9 @@ protected:
         }
         if (circularReference.find(referenceUri) != circularReference.end()) {
             RAVELOG_ERROR_FORMAT("failed to load scene, circular reference to '%s' found on body %s", referenceUri%originBodyId);
+            if (_bMustResolveURI) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to load scene, circular reference to '%s' found on body %s", referenceUri%originBodyId, ORE_InvalidArguments);
+            }
             return false;
         }
         RAVELOG_DEBUG_FORMAT("adding '%s' for tracking circular reference, so far %d uris tracked", referenceUri%circularReference.size());
@@ -309,6 +317,9 @@ protected:
             }
             if (!bFoundBody) {
                 RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body %s", referenceUri%originBodyId);
+                if (_bMustResolveURI) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to find body using referenceUri '%s' in body %s", referenceUri%originBodyId, ORE_InvalidArguments);
+                }
                 return false;
             }
 
@@ -326,12 +337,18 @@ protected:
             std::string fullFilename = ResolveURI(scheme, path, GetOpenRAVESchemeAliases());
             if (fullFilename.empty()) {
                 RAVELOG_ERROR_FORMAT("failed to resolve referenceUri '%s' in body %s", referenceUri%originBodyId);
+                if (_bMustResolveURI) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve referenceUri '%s' in body %s", referenceUri%originBodyId, ORE_InvalidArguments);
+                }
                 return false;
             }
 
             boost::shared_ptr<const rapidjson::Document> referenceDoc = _GetDocumentFromFilename(fullFilename, alloc);
             if (!referenceDoc || !(*referenceDoc).HasMember("bodies")) {
                 RAVELOG_ERROR_FORMAT("referenced document cannot be loaded, or has no bodies: %s", fullFilename);
+                if (_bMustResolveURI) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("referenced document cannot be loaded, or has no bodies: %s", fullFilename, ORE_InvalidArguments);
+                }
                 return false;
             }
 
@@ -346,6 +363,9 @@ protected:
             }
             if (!bFoundBody) {
                 RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body %s", referenceUri%originBodyId);
+                if (_bMustResolveURI) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to find body using referenceUri '%s' in body %s", referenceUri%originBodyId, ORE_InvalidArguments);
+                }
                 return false;
             }
 
@@ -358,6 +378,9 @@ protected:
         }
         else {
             RAVELOG_WARN_FORMAT("ignoring invalid referenceUri '%s' in body %s", referenceUri%originBodyId);
+            if (_bMustResolveURI) {
+                throw OPENRAVE_EXCEPTION_FORMAT("invalid referenceUri '%s' in body %s", referenceUri%originBodyId, ORE_InvalidArguments);
+            }
             return false;
         }
 
@@ -531,16 +554,25 @@ protected:
             EnvironmentBase::EnvironmentBaseInfo envInfo;
             if (!_ExpandRapidJSON(envInfo, "__connectedBody__", doc, pConnected->_uri, circularReference, fUnitScale, alloc)) {
                 RAVELOG_ERROR_FORMAT("failed to load connected body from uri '%s'", pConnected->_uri);
+                if (_bMustResolveURI) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri '%s'", pConnected->_uri, ORE_InvalidArguments);
+                }
                 continue;
             }
             if (envInfo._vBodyInfos.size() != 1) {
                 RAVELOG_ERROR_FORMAT("failed to load connected body from uri '%s', number of bodies loaded %d", pConnected->_uri%envInfo._vBodyInfos.size());
+                if (_bMustResolveURI) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri '%s', number of bodies loaded %d", pConnected->_uri%envInfo._vBodyInfos.size(), ORE_InvalidArguments);
+                }
                 continue;
             }
             KinBody::KinBodyInfoPtr pKinBodyInfo = envInfo._vBodyInfos[0];
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
             if (!pRobotBaseInfo) {
                 RAVELOG_ERROR_FORMAT("failed to load connected body from uri '%s', referenced body not a robot", pConnected->_uri);
+                if (_bMustResolveURI) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri '%s', referenced body not a robot", pConnected->_uri, ORE_InvalidArguments);
+                }
                 continue;
             }
             pConnected->_vLinkInfos = pRobotBaseInfo->_vLinkInfos;
@@ -551,13 +583,14 @@ protected:
         }
     }
 
-    dReal _fGlobalScale;
+    dReal _fGlobalScale = 1.0;
     EnvironmentBasePtr _penv;
-    int _deserializeOptions; ///< options used for deserializing
+    int _deserializeOptions = 0; ///< options used for deserializing
     std::string _filename; ///< original filename used to open reader
     std::string _uri; ///< original uri used to open reader
     std::string _defaultSuffix; ///< defaultSuffix of the main document, either ".json" or ".msgpack"
     std::vector<std::string> _vOpenRAVESchemeAliases;
+    bool _bMustResolveURI = false; ///< if true, throw exception if uri does not resolve
 
     std::set<std::string> _bodyUniqueIds; ///< unique id for bodies in current doc
 
