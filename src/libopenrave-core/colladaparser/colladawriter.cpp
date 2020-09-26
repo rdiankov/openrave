@@ -519,11 +519,11 @@ private:
             const std::string& bodyId = (*itbody)->_id;
             // try to restore what id was used
             // check for id that has format bodyX_motion
-            if (!bodyId.size() > 11 && bodyId.substr(0, 4) == "body" && bodyId.substr(bodyId.size()-7) == "_motion") {
+            if (bodyId.size() > 11 && bodyId.substr(0, 4) == "body" && bodyId.substr(bodyId.size()-7) == "_motion") {
                 try {
                     int numericBodyId = boost::lexical_cast<int>(bodyId.substr(4, bodyId.size()-11));
-                    if (numericBodyId > globalid) { 
-                        globalid = numericBodyId;
+                    if (numericBodyId >= globalid) {
+                        globalid = numericBodyId+1;
                     }
                     _mapBodyIds[(*itbody)->GetEnvironmentId()] = numericBodyId;
                 }
@@ -535,7 +535,7 @@ private:
         FOREACHC(itbody,listbodies) {
             // for unassigned body id, use new unique numeric ids
             if (_mapBodyIds.find((*itbody)->GetEnvironmentId()) == _mapBodyIds.end()) {
-                _mapBodyIds[(*itbody)->GetEnvironmentId()] = ++globalid;
+                _mapBodyIds[(*itbody)->GetEnvironmentId()] = globalid++;
             }
         }
         FOREACHC(itbody,listbodies) {
