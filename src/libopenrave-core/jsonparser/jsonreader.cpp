@@ -281,14 +281,8 @@ protected:
     }
 
     bool _ExpandRapidJSON(EnvironmentBase::EnvironmentBaseInfo& envInfo, const std::string& originBodyId, const rapidjson::Value& currentDoc, const std::string& referenceUri, std::set<std::string>& circularReference, dReal fUnitScale, rapidjson::Document::AllocatorType& alloc) {
-        if( _deserializeOptions & IDO_IgnoreReferenceUri ) {
-            return false;
-        }
         if (circularReference.find(referenceUri) != circularReference.end()) {
             RAVELOG_ERROR_FORMAT("failed to load scene, circular reference to '%s' found on body %s", referenceUri%originBodyId);
-            if (_bMustResolveURI) {
-                throw OPENRAVE_EXCEPTION_FORMAT("failed to load scene, circular reference to '%s' found on body %s", referenceUri%originBodyId, ORE_InvalidArguments);
-            }
             return false;
         }
         RAVELOG_DEBUG_FORMAT("adding '%s' for tracking circular reference, so far %d uris tracked", referenceUri%circularReference.size());
@@ -317,9 +311,6 @@ protected:
             }
             if (!bFoundBody) {
                 RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body %s", referenceUri%originBodyId);
-                if (_bMustResolveURI) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to find body using referenceUri '%s' in body %s", referenceUri%originBodyId, ORE_InvalidArguments);
-                }
                 return false;
             }
 
@@ -337,18 +328,12 @@ protected:
             std::string fullFilename = ResolveURI(scheme, path, GetOpenRAVESchemeAliases());
             if (fullFilename.empty()) {
                 RAVELOG_ERROR_FORMAT("failed to resolve referenceUri '%s' in body %s", referenceUri%originBodyId);
-                if (_bMustResolveURI) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve referenceUri '%s' in body %s", referenceUri%originBodyId, ORE_InvalidArguments);
-                }
                 return false;
             }
 
             boost::shared_ptr<const rapidjson::Document> referenceDoc = _GetDocumentFromFilename(fullFilename, alloc);
             if (!referenceDoc || !(*referenceDoc).HasMember("bodies")) {
                 RAVELOG_ERROR_FORMAT("referenced document cannot be loaded, or has no bodies: %s", fullFilename);
-                if (_bMustResolveURI) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("referenced document cannot be loaded, or has no bodies: %s", fullFilename, ORE_InvalidArguments);
-                }
                 return false;
             }
 
@@ -363,9 +348,6 @@ protected:
             }
             if (!bFoundBody) {
                 RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body %s", referenceUri%originBodyId);
-                if (_bMustResolveURI) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to find body using referenceUri '%s' in body %s", referenceUri%originBodyId, ORE_InvalidArguments);
-                }
                 return false;
             }
 
@@ -378,9 +360,6 @@ protected:
         }
         else {
             RAVELOG_WARN_FORMAT("ignoring invalid referenceUri '%s' in body %s", referenceUri%originBodyId);
-            if (_bMustResolveURI) {
-                throw OPENRAVE_EXCEPTION_FORMAT("invalid referenceUri '%s' in body %s", referenceUri%originBodyId, ORE_InvalidArguments);
-            }
             return false;
         }
 

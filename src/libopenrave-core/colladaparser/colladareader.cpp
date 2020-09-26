@@ -62,9 +62,6 @@ public:
                 if( uri.scheme() == _scheme ) {
                     std::string uriNativePath = cdom::uriToFilePath(uri.path());
                     if( uriNativePath.size() == 0 ) {
-                        if (_preader->_bMustResolveURI) {
-                            throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve uri \"%s\"", uri.str(), ORE_InvalidArguments);
-                        }
                         return NULL;
                     }
                     // remove first slash because we need relative file
@@ -77,9 +74,6 @@ public:
                     }
                     if( docurifull.size() == 5 ) {
                         RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
-                        if (_preader->_bMustResolveURI) {
-                            throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve uri \"%s\"", uri.str(), ORE_InvalidArguments);
-                        }
                         return NULL;
                     }
 
@@ -121,18 +115,12 @@ public:
                 }
                 if (!doc) {
                     RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
-                    if (_preader->_bMustResolveURI) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve uri \"%s\"", uri.str(), ORE_InvalidArguments);
-                    }
                     return NULL;
                 }
             }
             daeElement* elt = dae->getDatabase()->idLookup(uri.id(), doc);
             if (!elt) {
                 RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
-                if (_preader->_bMustResolveURI) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve uri \"%s\", found document but element does not exist inside", uri.str(), ORE_InvalidArguments);
-                }
             }
             return elt;
         }
@@ -1056,6 +1044,9 @@ public:
 
         domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
         if( !articulated_system ) {
+            if (_bMustResolveURI) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve uri \"%s\"", ias->getUrl().str(), ORE_InvalidArguments);
+            }
             return false;
         }
         if( !pbody ) {
