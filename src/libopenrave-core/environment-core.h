@@ -562,10 +562,6 @@ public:
     virtual void Save(const std::string& filename, SelectionOptions options, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            _ResolveBodyIds(); // assumes _mutexInterfaces
-        }
         std::list<KinBodyPtr> listbodies;
         switch(options) {
         case SO_Everything:
@@ -722,10 +718,6 @@ public:
         }
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            _ResolveBodyIds(); // assumes _mutexInterfaces
-        }
         std::list<KinBodyPtr> listbodies;
         switch(options) {
         case SO_Everything:
