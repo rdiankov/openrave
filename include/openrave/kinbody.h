@@ -1580,14 +1580,29 @@ protected:
 
         boost::array< MimicPtr,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
 
-        /** \brief computes the partial velocities with respect to all dependent DOFs specified by Mimic::_vmimicdofs.
+        /** \brief computes the first-order partial with respect to all dependent DOFs specified by Mimic::_vmimicdofs.
 
             If the joint is not mimic, then just returns its own index
-            \param[out] vpartials A list of dofindex/velocity_partial pairs. The final velocity is computed by taking the dot product. The dofindices do not repeat.
+            \param[out] vDofindexDerivativePairs: A vector of (x's dof index, total derivative dz/dx) pairs, where z is this joint, and x's are all joints on which z depends
             \param[in] iaxis the axis
-            \param[in,out] vcachedpartials set of cached partials for each degree of freedom
+            \param[in,out] mTotalderivativepairValue: A map of all (cached) joint pairs (z, x) to the first-order total derivatives dz/dx
          */
-        virtual void _ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, const int iaxis, std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mapcachedpartials) const;
+        virtual void _ComputePartialVelocities(std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs, const int iaxis, std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue) const;
+
+        /** \brief computes the second-order partial derivatives with respect to all dependent DOFs specified by Mimic::_vmimicdofs.
+
+            If the joint is not mimic, then just returns its own index
+            \param[out] vDofindex2ndDerivativePairs: A vector of (x's dof index, total derivative d^2 z/dx^2) pairs, where z is this joint, and x's are all joints on which z depends
+            \param[in] iaxis the axis
+            \param[in] mTotalderivativepairValue: A map of all previously computed (!!!) joint pairs (z, x) to the first-order total derivatives dz/dx
+            \param[in,out] mTotalderivativepairValue: A map of all (cached) joint pairs (z, x) to the second-order total derivatives d^2 z/dx^2
+         */
+        virtual void _ComputePartialAccelerations(
+            std::vector<std::pair<int,dReal> >& vDofindex2ndDerivativePairs,
+            const int iaxis,
+            std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotal2ndderivativepairValue,
+            const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue
+        ) const;
 
         /** \brief Compute internal transformations and specify the attached links of the joint.
 

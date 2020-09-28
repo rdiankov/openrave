@@ -3562,7 +3562,7 @@ void KinBody::_ComputeLinkAccelerations(
         if( bHasAccelerations ) {
             std::vector<std::pair<int, dReal> > vDofindex2ndDerivativePairs; ///< vector of (x's dof index, total derivative d^2 z/dx^2) pairs
             std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotal2ndderivativepairValue; ///< map a joint pair (z, x) to the total derivative d^2 z/dx^2
-            
+
             // compute all dof accelerations in topological order
             for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
                 const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
@@ -3575,7 +3575,7 @@ void KinBody::_ComputeLinkAccelerations(
                 for(int idof = 0; idof < ndof; ++idof) {
                     if( pjoint->IsMimic(idof) ) {
                         // TBI
-                        pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mTotal2ndderivativepairValue);
+                        pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mTotal2ndderivativepairValue, mTotalderivativepairValue);
                     }
                 }
             }
@@ -3861,8 +3861,8 @@ void KinBody::_ComputeInternalInformation()
             for(const std::pair<const Mimic::DOFFormat, MimicPtr>& keyvalue : mapmimic) {
                 const Mimic::DOFFormat& thisdofformat = keyvalue.first;
                 const MimicPtr& pmimic = keyvalue.second;
-                std::vector<Mimic::DOFHierarchy>& vmimicdofs = pmimic->_vmimicdofs; ///< to collect information of active joints on which pmimic depends on
-                const std::vector<Mimic::DOFFormat>& vdofformat = pmimic->_vdofformat; ///<  collected information of all joints on which pmimic depends on
+                std::vector<Mimic::DOFHierarchy>& vmimicdofs = pmimic->_vmimicdofs; ///< to collect information of active joints on which pmimic depends
+                const std::vector<Mimic::DOFFormat>& vdofformat = pmimic->_vdofformat; ///<  collected information of all joints on which pmimic depends
 
                 const JointPtr pjoint = thisdofformat.GetJoint(*this); ///< pjoint depends on all [dofformat.GetJoint(*this) for dofformat in vdofformat]
                 const int ndofformat = vdofformat.size();

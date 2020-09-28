@@ -2189,13 +2189,14 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     parent->_PostprocessChangedParameters(Prop_JointMimic);
 }
 
-void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
-                                               const int iaxis,
-                                               std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue) const
-{
+void KinBody::Joint::_ComputePartialVelocities(
+    std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
+    const int iaxis,
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue
+) const {
     vDofindexDerivativePairs.clear();
     if( this->dofindex >= 0 ) {
-        vDofindexDerivativePairs.emplace_back(this->dofindex + iaxis, 1.0); // this joint is active; return immediately
+        vDofindexDerivativePairs.emplace_back(this->dofindex + iaxis, 1.0); // this joint is active, and hence dx/dx = 1
         return;
     }
 
@@ -2214,7 +2215,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         const size_t nActiveJoints = vActiveJoints.size();
         const std::vector<JointPtr>& vPassiveJoints = parent->GetPassiveJoints();
         // this is the *generalized* joint index for a mimic joint
-        thisdofformat.jointindex = nActiveJoints + (std::find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
+        thisdofformat.jointindex = nActiveJoints + (std::find(vPassiveJoints.begin(), vPassiveJoints.end(), shared_from_this()) - vPassiveJoints.begin());
     }
 
     for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mTotalderivativepairValue) {
@@ -2235,7 +2236,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
     const MimicPtr& pmimic = _vmimic[iaxis];
     const std::vector<Mimic::DOFFormat>& vdofformats = pmimic->_vdofformat; ///< collection of information of joints
 
-    std::vector<dReal> vDependedJointValues; ///< collect values of joints on which this joint *directly* depends on
+    std::vector<dReal> vDependedJointValues; ///< collect values of joints on which this joint *directly* depends
     for(const Mimic::DOFFormat& dofformat : vdofformats) {
         const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
         vDependedJointValues.push_back(dependedjoint->GetValue(dofformat.axis));
@@ -2252,7 +2253,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
     }
 
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > localmap;
-    const size_t nvars = vdofformats.size(); ///< number of joints on which this joint depends on
+    const size_t nvars = vdofformats.size(); ///< number of joints on which this joint depends
     std::vector<std::pair<int, dReal> > vLocalIndexPartialPairs;
     for(size_t ivar = 0; ivar < nvars; ++ivar) {
         const Mimic::DOFFormat& dofformat = vdofformats[ivar]; ///< information about the ivar-th depended joint
@@ -2270,7 +2271,6 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
             if( IS_DEBUGLEVEL(Level_Verbose) )  {
                 RAVELOG_VERBOSE_FORMAT("Joint \"%s\" calls recursion _ComputePartialVelocities on joint \"%s\"", this->GetName() % dependedjoint->GetName());
             }
-            vLocalIndexPartialPairs.clear();
             dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mTotalderivativepairValue); ///< recursion: computes ∂y/∂x
             for(const std::pair<int, dReal>& pIndexPartial : vLocalIndexPartialPairs) {
                 std::pair<Mimic::DOFFormat, int> key = {thisdofformat, pIndexPartial.first};
@@ -2307,6 +2307,194 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         std::make_move_iterator(localmap.begin()),
         std::make_move_iterator(localmap.end())
     );
+}
+
+void KinBody::Joint::_ComputePartialAccelerations(
+    std::vector<std::pair<int, dReal> >& vDofindex2ndDerivativePairs,
+    const int iaxis,
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotal2ndderivativepairValue
+    const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue
+) const {
+    vDofindex2ndDerivativePairs.clear();
+    if( this->dofindex >= 0 ) {
+        vDofindex2ndDerivativePairs.emplace_back(this->dofindex + iaxis, 0.0); // d^2 z/dz^2 = 0
+        return;
+    }
+
+    OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis),
+        "Cannot compute partial accelerations of joint %s because its axis %d is not mimic",
+        this->GetName() % iaxis, ORE_Failed
+    );
+
+    /* ========== Set up information about this mimic joint, call it z ========== */
+    Mimic::DOFFormat thisdofformat;
+    thisdofformat.dofindex = -1; ///< dofindex being -1 means it is a mimic joint
+    thisdofformat.axis = iaxis;  ///< from input
+    thisdofformat.jointindex = this->GetJointIndex(); ///< mimic joint has jointindex < 0, because it does not belong to _vecjoints
+    const KinBodyConstPtr parent(_parent); // body to count the "generalized" joint index of a mimic joint in _vecjoints and _vPassiveJoints
+    if( jointindex < 0 ) {
+        const std::vector<JointPtr>& vActiveJoints = parent->GetJoints();
+        const size_t nActiveJoints = vActiveJoints.size();
+        const std::vector<JointPtr>& vPassiveJoints = parent->GetPassiveJoints();
+        // this is the *generalized* joint index for a mimic joint
+        thisdofformat.jointindex = nActiveJoints + (std::find(vPassiveJoints.begin(), vPassiveJoints.end(), shared_from_this()) - vPassiveJoints.begin());
+    }
+
+    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mTotal2ndderivativepairValue) {
+        if( keyvalue.first.first == thisdofformat ) {
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                RAVELOG_VERBOSE_FORMAT("Found cached second-order derivatives of jointindex %d with respect to others", thisdofformat.jointindex);
+            }
+            const int dependedDofIndex = keyvalue.first.second;
+            const dReal partial2ndDerivative = keyvalue.second;
+            vDofindex2ndDerivativePairs.emplace_back(dependedDofIndex, partial2ndDerivative); // collect all d^2 z/d x^2
+        }
+    }
+    if(!vDofindex2ndDerivativePairs.empty()) {
+        return;
+    }
+    
+    /* ========== Collect values of joints on which joint z depends ========== */
+    const MimicPtr& pmimic = _vmimic[iaxis];
+    const std::vector<Mimic::DOFFormat>& vdofformats = pmimic->_vdofformat; ///< collection of information of joints
+
+    std::vector<dReal> vDependedJointValues; ///< collect values of joints y on which this joint *directly* depends
+    for(const Mimic::DOFFormat& dofformat : vdofformats) {
+        const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
+        vDependedJointValues.push_back(dependedjoint->GetValue(dofformat.axis));
+    }
+
+    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+        std::stringstream ss;
+        ss << "joint \"" << this->GetName() << "\" of jointindex " << thisdofformat.jointindex << " depends on joints ";
+        for(const Mimic::DOFFormat& dofformat : vdofformats) {
+            const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
+            ss << dependedjoint->GetName() << ", ";
+        }
+        RAVELOG_VERBOSE(ss.str());
+    }
+
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > localmap;
+    const int nvars = vdofformats.size(); ///< number of joints yi on which this joint z directly depends
+    std::vector<std::pair<int, dReal> > vLocalIndexPartialPairs;
+    for(int ivar = 0; ivar < nvars; ++ivar) {
+        const Mimic::DOFFormat& dofformati = vdofformats[ivar]; ///< information about the ivar-th depended joint
+        const JointConstPtr dependedjointi = dofformati.GetJoint(*parent); ///< a joint yi on which this joint directly depends on
+        const int jointindexi = dofformati.jointindex; ///< index of this depended joint yi
+
+        const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂yi
+        const dReal fvel = velfn->Eval(vDependedJointValues.data()); ///< value of ∂z/∂yi
+
+        const bool bIsJointMimicI = dependedjointi->IsMimic(dofformati.axis); // yi is mimic
+        if(bIsJointMimicI) {
+            // depended joint yi is also mimic; go down the dependency tree and collect second-order partial derivatives by chain rule
+            if( IS_DEBUGLEVEL(Level_Verbose) )  {
+                RAVELOG_VERBOSE_FORMAT("Joint \"%s\" calls recursion _ComputePartialAccelerations on joints \"%s\"",
+                    this->GetName() % dependedjointi->GetName()
+                );
+            }
+            /*
+                This handles the first part (with mimic yi)
+
+                \sum (∂z/∂yi * d^2 yi/dx^2)
+
+                of the second-order full derivative
+
+                d^2 z/d x^2 = \sum (∂z/∂yi * d^2 yi/dx^2) + \sum (∂^2 z/∂yi∂yj * dyi/dx * dyj/dx)
+
+                where z directly depends on yi, yj, etc.
+            */
+            dependedjointi->_ComputePartialAccelerations(vLocalIndexPartialPairs, iaxis, mTotal2ndderivativepairValue, mTotalderivativepairValue); ///< recursion: computes d^2 yi/dx^2
+            for(const std::pair<int, dReal>& pIndexPartial : vLocalIndexPartialPairs) {
+                const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, pIndexPartial.first};
+                if( localmap.count(key) ) {
+                    localmap[key] += fvel * pIndexPartial.second; // ∂z/∂yi * d^2 yi/dx^2
+                }
+                else {
+                    localmap[key] = fvel * pIndexPartial.second;
+                }
+
+                /*
+                    This handles the second part 
+
+                    \sum (∂^2 z/∂yi∂yj * dyi/dx * dyj/dx)
+                */
+                const std::pair<Mimic::DOFFormat, int> keyi = {dofformati, pIndexPartial.first}; // for dyi/dx
+                BOOST_ASSERT(mTotalderivativepairValue.cound(keyi));
+                for(int jvar = 0; jvar < nvars; ++jvar) {
+                    const Mimic::DOFFormat& dofformatj = vdofformats[jvar]; ///< information about the jvar-th depended joint
+                    const JointConstPtr dependedjointj = dofformatj.GetJoint(*parent); ///< a joint on which this joint depends on
+                    const int jointindexj = dofformatj.jointindex; ///< index of this depended joint yj
+
+                    const int indexij = ivar * nvars + jvar; // (i, j)
+                    const int indexji = jvar * nvars + ivar; // (j, i)
+
+                    const OpenRAVEFunctionParserRealPtr accelfn = pmimic->_accelfns.at(indexij); ///< function that evaluates the partial derivative ∂^2 z/∂yi∂yj
+                    const dReal faccel = accelfn->Eval(vDependedJointValues.data()); ///< ∂^2 z/∂yi∂yj
+
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        RAVELOG_VERBOSE_FORMAT("∂^2(J%d)/∂(J%d)∂(J%d) = ∂^2(%s)/∂(%s)∂(%s) = %.8e",
+                            thisdofformat.jointindex % jointindexi % jointindexj % this->GetName() % dependedjointi->GetName() % dependedjointj->GetName() % faccel
+                        );
+                    }
+
+                    const bool bIsJointMimicJ = dependedjointj->IsMimic(dofformatj.axis);
+                    if(bIsJointMimicJ) {
+                        const std::pair<Mimic::DOFFormat, int> keyj = {dofformatj, pIndexPartial.first}; // for dyj/dx
+                        if(mTotalderivativepairValue.count(keyj)) {
+                            localmap[key] += faccel * mTotalderivativepairValue.at(keyi) * mTotalderivativepairValue.at(keyj); // ∂^2 z/∂yi∂yj * dyi/dx * dyj/dx
+                        }
+                    }
+                    else if (jointindexj == pIndexPartial.first) {
+                        localmap[key] += faccel * mTotalderivativepairValue.at(keyi); // ∂^2 z/∂yi∂x * dyi/dx * dx/dx
+                    }
+                }
+            }
+        }
+        // !bIsJointMimicI
+        else {
+            // depended joint yi is active (so it is some x), and d^2 yi/d x^2 is always 0, even when yi==x
+            const std::pair<Mimic::DOFFormat, int> keyi = {thisdofformat, jointindexi}; // yi = x; iterate over yj
+            for(int jvar = 0; jvar < nvars; ++jvar) {
+                const Mimic::DOFFormat& dofformatj = vdofformats[jvar]; ///< information about the jvar-th depended joint
+                const JointConstPtr dependedjointj = dofformatj.GetJoint(*parent); ///< a joint on which this joint depends on
+                const int jointindexj = dofformatj.jointindex; ///< index of this depended joint yj
+
+                const int indexij = ivar * nvars + jvar; // (i, j)
+                const int indexji = jvar * nvars + ivar; // (j, i)
+
+                const OpenRAVEFunctionParserRealPtr accelfn = pmimic->_accelfns.at(indexij); ///< function that evaluates the partial derivative ∂^2 z/∂x∂yj
+                const dReal faccel = accelfn->Eval(vDependedJointValues.data()); ///< value of ∂^2 z/∂x∂yj
+
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    RAVELOG_VERBOSE_FORMAT("∂^2(J%d)/∂(J%d)∂(J%d) = ∂^2(%s)/∂(%s)∂(%s) = %.8e",
+                        thisdofformat.jointindex % jointindexi % jointindexj % this->GetName() % dependedjointi->GetName() % dependedjointj->GetName() % faccel
+                    );
+                }
+
+                const bool bIsJointMimicJ = dependedjointj->IsMimic(dofformatj.axis);
+                if(bIsJointMimicJ) {
+                    const std::pair<Mimic::DOFFormat, int> keyj = {dofformatj, jointindexi}; // for dyj/dx
+                    if(mTotalderivativepairValue.count(keyj)) { // if yj is mimic and it depends on x (=yi)
+                        localmap[key] += faccel * mTotalderivativepairValue.at(keyj); // ∂^2 z/∂yi∂yj * dx/dx * dyj/dx
+                    }
+                }
+            }
+        }
+    }
+
+    // collect results in vDofindexDerivativePairs
+    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : localmap) {
+        const int dependedDofIndex = keyvalue.first.second;
+        const dReal partialDerivative = keyvalue.second;
+        vDofindex2ndDerivativePairs.emplace_back(dependedDofIndex, partialDerivative); // collect all total derivatives dz/dx
+    }
+
+    mTotal2ndderivativepairValue.insert(
+        std::make_move_iterator(localmap.begin()),
+        std::make_move_iterator(localmap.end())
+    );
+
 }
 
 int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput) const
