@@ -472,13 +472,12 @@ void QtOSGViewer::_UpdateViewerCallback()
         }
         if (!_listGUIFunctionsBuffer.empty()) {
             boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-            int excessSize = _listGUIFunctionsBuffer.size();
             auto insertPos = _listGUIFunctions.begin();
             auto bufferStartPos = _listGUIFunctionsBuffer.begin();
             auto bufferEndPos = _listGUIFunctionsBuffer.begin();
             std::advance(insertPos, _listGUIFunctions.size());
-            std::advance(bufferStartPos, 1);
-            std::advance(bufferEndPos, std::min(1000 - _listGUIFunctions.size(), _listGUIFunctionsBuffer.size())+1);
+            int itemsToAdd = 1000 < _listGUIFunctions.size() ? 0 : 1000 - _listGUIFunctions.size();
+            std::advance(bufferEndPos, std::min(itemsToAdd, (int) _listGUIFunctionsBuffer.size()));
             _listGUIFunctions.splice(insertPos, _listGUIFunctionsBuffer, bufferStartPos, bufferEndPos);
         }
     }
