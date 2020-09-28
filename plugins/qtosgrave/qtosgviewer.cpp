@@ -470,13 +470,16 @@ void QtOSGViewer::_UpdateViewerCallback()
                 }
             }
         }
-        if (!_excessGUIFunctions.empty()) {
+        if (!_listGUIFunctionsBuffer.empty()) {
             boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-            int excessSize = _excessGUIFunctions.size();
-            for (int idx = 0; idx < excessSize && _listGUIFunctions.size() < 1000; idx++) {
-                _listGUIFunctions.push_back(_excessGUIFunctions.front());
-                _excessGUIFunctions.pop_front();
-            }
+            int excessSize = _listGUIFunctionsBuffer.size();
+            auto insertPos = _listGUIFunctions.begin();
+            auto bufferStartPos = _listGUIFunctionsBuffer.begin();
+            auto bufferEndPos = _listGUIFunctionsBuffer.begin();
+            std::advance(insertPos, _listGUIFunctions.size());
+            std::advance(bufferStartPos, 1);
+            std::advance(bufferEndPos, std::min(1000 - _listGUIFunctions.size(), _listGUIFunctionsBuffer.size())+1);
+            _listGUIFunctions.splice(insertPos, _listGUIFunctionsBuffer, bufferStartPos, bufferEndPos);
         }
     }
     catch(const std::exception& ex) {
@@ -1512,7 +1515,7 @@ GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int strid
     }
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize),color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, OSGSwitchPtr(handle), vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize),color.w<1)); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1533,7 +1536,7 @@ GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int strid
         }
     }
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, osg::ref_ptr<osg::Point>(new osg::Point(fPointSize)), bhasalpha)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, OSGSwitchPtr(handle), vvertices, vcolors, osg::PrimitiveSet::POINTS, osg::ref_ptr<osg::Point>(new osg::Point(fPointSize)), bhasalpha)); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1548,7 +1551,7 @@ GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, i
     }
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, OSGSwitchPtr(handle), vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
@@ -1563,7 +1566,7 @@ GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, i
         (*vcolors)[i] = osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f);
     }
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, OSGSwitchPtr(handle), vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1577,7 +1580,7 @@ GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, in
     }
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, OSGSwitchPtr(handle), vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
@@ -1592,7 +1595,7 @@ GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, in
         (*vcolors)[i] = osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f);
     }
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, OSGSwitchPtr(handle), vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1626,7 +1629,7 @@ void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, c
 GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vpos, vextents, false)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, OSGSwitchPtr(handle), vpos, vextents, false)); // copies ref counts
     return GraphHandlePtr();
 }
 
@@ -1708,7 +1711,7 @@ void QtOSGViewer::_DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tp
 GraphHandlePtr QtOSGViewer::drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawPlane, this, handle, tplane, vextents, vtexture)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawPlane, this, OSGSwitchPtr(handle), tplane, vextents, vtexture)); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1773,7 +1776,7 @@ GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const 
     osg::ref_ptr<osg::Vec4Array> osgcolors = new osg::Vec4Array(1);
     (*osgcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, OSGSwitchPtr(handle), osgvertices, osgcolors, osgindices, color.w<1)); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1808,7 +1811,7 @@ GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const 
     }
 
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, bhasalpha)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, OSGSwitchPtr(handle), osgvertices, osgcolors, osgindices, bhasalpha)); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -2131,7 +2134,7 @@ void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block
     GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
     if( _listGUIFunctions.size() > 1000 ) {
         // can happen if system is especially slow
-        _excessGUIFunctions.push_back(pfn);
+        _listGUIFunctionsBuffer.push_back(pfn);
     } else {
         _listGUIFunctions.push_back(pfn);
     }
