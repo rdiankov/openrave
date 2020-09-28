@@ -859,26 +859,27 @@ void RobotItem::Load()
                 matrix.setTrans(osg::Vec3f(0, 0, 0));//.02f,0.02f,0.02f));
                 ptextsep->addChild(ptrans);
 
-                osg::ref_ptr<osgText::Text> text = new osgText::Text();
+                // Temporarily disable this code since it conflicts with shaders. Text labels are improved in the MR https://github.com/rdiankov/openrave/pull/887
+                // osg::ref_ptr<osgText::Text> text = new osgText::Text();
 
-                //Set the screen alignment - always face the screen
-                text->setAxisAlignment(osgText::Text::SCREEN);
-                text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
-                text->setCharacterSize(50.0);
+                // //Set the screen alignment - always face the screen
+                // text->setAxisAlignment(osgText::Text::SCREEN);
+                // text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+                // text->setCharacterSize(50.0);
 
-                text->setColor(osg::Vec4(0,0,0,1));
-                text->setEnableDepthWrites(false);
+                // text->setColor(osg::Vec4(0,0,0,1));
+                // text->setEnableDepthWrites(false);
 
-                text->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
-                text->setBackdropColor(osg::Vec4(1,1,1,1));
+                // text->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
+                // text->setBackdropColor(osg::Vec4(1,1,1,1));
 
 
-                text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
-                //text->setFontResolution(18,18);
+                // text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
+                // //text->setFontResolution(18,18);
 
-                text->setText((*itmanip)->GetName());//str(boost::format("EE%d")%index));
-                textGeode->addDrawable(text);
-                ptextsep->addChild(textGeode);
+                // text->setText((*itmanip)->GetName());//str(boost::format("EE%d")%index));
+                // textGeode->addDrawable(text);
+                // ptextsep->addChild(textGeode);
             }
         }
     }
