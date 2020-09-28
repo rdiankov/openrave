@@ -3477,10 +3477,6 @@ void KinBody::_ComputeLinkAccelerations(
         return;
     }
 
-    std::vector<dReal> vtempvalues, veval;
-    boost::array<dReal,3> dummyvelocities = {{0,0,0}};
-    boost::array<dReal,3> dummyaccelerations = {{0,0,0}}; // dummy values for a joint
-
     // set accelerations of all links as if they were the base link
     for(size_t ilink = 0; ilink < vLinkAccelerations.size(); ++ilink) {
         vLinkAccelerations.at(ilink).first += vLinkVelocities.at(ilink).second.cross(vLinkVelocities.at(ilink).first);
@@ -3509,7 +3505,7 @@ void KinBody::_ComputeLinkAccelerations(
     // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
     std::vector< std::vector<dReal> > vPassiveJointVelocities(nPassiveJoints);
     std::vector< std::vector<dReal> > vPassiveJointAccelerations(nPassiveJoints);
-    for(size_t i = 0; i < nPassiveJoints; ++i) {
+    for(int i = 0; i < nPassiveJoints; ++i) {
         const JointPtr& pjoint = _vPassiveJoints[i];
         if( bHasAccelerations ) {
             vPassiveJointAccelerations[i].resize(pjoint->GetDOF(), 0);
@@ -3539,8 +3535,6 @@ void KinBody::_ComputeLinkAccelerations(
             if( !pjoint->IsMimic() ) {
                 continue;
             }
-            const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint]; ///< for all joints, >= 0
-            const int dofindex = pjoint->GetDOFIndex(); ///< for passive joints, < 0            
             const int ndof = pjoint->GetDOF();
             for(int idof = 0; idof < ndof; ++idof) {
                 if( pjoint->IsMimic(idof) ) {
@@ -3555,7 +3549,7 @@ void KinBody::_ComputeLinkAccelerations(
             const int jointindex = thisdofformat.jointindex; // index of z
             const int dependedDofIndex = keyvalue.first.second; // index of x
             const dReal totalPartialDerivative = keyvalue.second; // we still use dz/dx even though x=x(t) is time-dependent
-            vPassiveJointVelocities.at(jointindex) += vDOFVelocities.at(dependedDofIndex) * totalPartialDerivative; // dz/dt = \sum_{z depends on x} dz/dx * dx/dt
+            vPassiveJointVelocities.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += vDOFVelocities.at(dependedDofIndex) * totalPartialDerivative; // dz/dt = \sum_{z depends on x} dz/dx * dx/dt
         }
 
         // compute the link accelerations in topological order
@@ -3569,12 +3563,9 @@ void KinBody::_ComputeLinkAccelerations(
                 if( !pjoint->IsMimic() ) {
                     continue;
                 }
-                const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint]; ///< for all joints, >= 0
-                const int dofindex = pjoint->GetDOFIndex(); ///< for passive joints, < 0
                 const int ndof = pjoint->GetDOF();
                 for(int idof = 0; idof < ndof; ++idof) {
                     if( pjoint->IsMimic(idof) ) {
-                        // TBI
                         pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mTotal2ndderivativepairValue, mTotalderivativepairValue);
                     }
                 }
@@ -3587,58 +3578,52 @@ void KinBody::_ComputeLinkAccelerations(
                 const int dependedDofIndex = keyvalue.first.second; // index of x
                 const dReal d2zdx2 = keyvalue.second; // we still use d^2 z/dx^2 even though x=x(t) is time-dependent
                 const dReal dxdt = vDOFVelocities.at(dependedDofIndex);
-                const dReal dzdx = mTotalderivativepairValue.at(thisdofformat);
+                const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, dependedDofIndex};
+                const dReal dzdx = mTotalderivativepairValue.at(key);
                 const dReal d2xdt2 = vDOFAccelerations.at(dependedDofIndex);
-                vPassiveJointAccelerations.at(jointindex) += d2zdx2 * dxdt * dxdt + dzdx * d2xdt2;
+                vPassiveJointAccelerations.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += d2zdx2 * dxdt * dxdt + dzdx * d2xdt2;
                 /*
-                d^2 z                          d^2 z   ( dx )       d^z     d^2 x
-                -----  = \sum_{z depends on x} ----- x (----)^2  + ----- * ------
-                d t^2                          d x^2   ( dt )       d^x     d t^2
+                d^2 z                          [ d^2 z   ( dx )       d^z     d^2 x ]
+                -----  = \sum_{z depends on x} [ ----- x (----)^2  + ----- * ------ ]
+                d t^2                          [ d x^2   ( dt )       d^x     d t^2 ]
                 */
             }
         }
     }
 
-
-
-
-
-
-
-
-
-
-
-
     // compute the link accelerations going through topological order
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
+        const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
+        const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint]; ///< for all joints, >= 0
+        dReal const* pdofaccelerations = NULL;
+        dReal const* pdofvelocities = NULL;
 
         // do the test after mimic computation!?
         if( vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] ) {
             continue;
         }
 
-        if( vDOFVelocities.size() > 0 && !pdofvelocities ) {
+        if( bHasVelocities && !pdofvelocities ) {
             // has to be a passive joint
-            pdofvelocities = &vPassiveJointVelocities.at(jointindex-(int)_vecjoints.size()).at(0);
+            pdofvelocities = &vPassiveJointVelocities.at(jointindex-nActiveJoints).at(0);
         }
-        if( vDOFAccelerations.size() > 0 && !pdofaccelerations ) {
+        if( bHasAccelerations && !pdofaccelerations ) {
             // has to be a passive joint
-            pdofaccelerations = &vPassiveJointAccelerations.at(jointindex-(int)_vecjoints.size()).at(0);
+            pdofaccelerations = &vPassiveJointAccelerations.at(jointindex-nActiveJoints).at(0);
         }
 
         int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
         const Transform& tchild = pjoint->GetHierarchyChildLink()->GetTransform();
-        const pair<Vector, Vector>& vChildVelocities = vLinkVelocities.at(childindex);
-        pair<Vector, Vector>& vChildAccelerations = vLinkAccelerations.at(childindex);
+        const std::pair<Vector, Vector>& vChildVelocities = vLinkVelocities.at(childindex);
+        std::pair<Vector, Vector>& vChildAccelerations = vLinkAccelerations.at(childindex);
 
         int parentindex = 0;
         if( !!pjoint->GetHierarchyParentLink() ) {
             parentindex = pjoint->GetHierarchyParentLink()->GetIndex();
         }
 
-        const pair<Vector, Vector>& vParentVelocities = vLinkVelocities.at(parentindex);
-        const pair<Vector, Vector>& vParentAccelerations = vLinkAccelerations.at(parentindex);
+        const std::pair<Vector, Vector>& vParentVelocities = vLinkVelocities.at(parentindex);
+        const std::pair<Vector, Vector>& vParentAccelerations = vLinkAccelerations.at(parentindex);
         Vector xyzdelta = tchild.trans - _veclinks.at(parentindex)->_info._t.trans;
         if( !!pdofaccelerations || !!pdofvelocities ) {
             tdelta = _veclinks.at(parentindex)->_info._t * pjoint->GetInternalHierarchyLeftTransform();
