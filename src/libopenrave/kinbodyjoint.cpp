@@ -2222,9 +2222,9 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 RAVELOG_VERBOSE_FORMAT("Found cached derivatives of jointindex %d with respect to others", thisdofformat.jointindex);
             }
-            const int dependedJointIndex = keyvalue.first.second;
+            const int dependedDofIndex = keyvalue.first.second;
             const dReal partialDerivative = keyvalue.second;
-            vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
+            vDofindexDerivativePairs.emplace_back(dependedDofIndex, partialDerivative); // collect all dz/dx
         }
     }
     if(!vDofindexDerivativePairs.empty()) {
@@ -2259,7 +2259,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< a joint on which this joint depends on
         const int jointindex = dofformat.jointindex; ///< index of this depended joint
         const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
-        const dReal fvel = velfn->Eval(vDependedJointValues.empty() ? NULL : &vDependedJointValues[0]); ///< value of ∂z/∂x
+        const dReal fvel = velfn->Eval(vDependedJointValues.data()); ///< value of ∂z/∂x
 
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
             RAVELOG_VERBOSE_FORMAT("∂(J%d)/∂(J%d) = ∂(%s)/∂(%s) = %.8e", thisdofformat.jointindex % jointindex % this->GetName() % dependedjoint->GetName() % fvel);
@@ -2298,27 +2298,27 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
 
     // collect results in vDofindexDerivativePairs
     for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : localmap) {
-        const int dependedJointIndex = keyvalue.first.second;
+        const int dependedDofIndex = keyvalue.first.second;
         const dReal partialDerivative = keyvalue.second;
-        vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all total derivatives dz/dx
+        vDofindexDerivativePairs.emplace_back(dependedDofIndex, partialDerivative); // collect all total derivatives dz/dx
     }
 
     mTotalderivativepairValue.insert(
-        std::make_move_iterator(begin(localmap)),
-        std::make_move_iterator(end(localmap))
-        );
+        std::make_move_iterator(localmap.begin()),
+        std::make_move_iterator(localmap.end())
+    );
 }
 
 int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput) const
 {
     if( timederiv == 0 ) {
-        _vmimic.at(axis)->_posfn->EvalMulti(voutput, vdependentvalues.empty() ? NULL : &vdependentvalues[0]);
+        _vmimic.at(axis)->_posfn->EvalMulti(voutput, vdependentvalues.data());
         return _vmimic.at(axis)->_posfn->EvalError();
     }
     else if( timederiv == 1 ) {
         voutput.resize(_vmimic.at(axis)->_velfns.size());
         for(size_t i = 0; i < voutput.size(); ++i) {
-            voutput[i] = _vmimic.at(axis)->_velfns.at(i)->Eval(vdependentvalues.empty() ? NULL : &vdependentvalues[0]);
+            voutput[i] = _vmimic.at(axis)->_velfns.at(i)->Eval(vdependentvalues.data());
             int err = _vmimic.at(axis)->_velfns.at(i)->EvalError();
             if( err ) {
                 return err;
@@ -2328,7 +2328,7 @@ int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>
     else if( timederiv == 2 ) {
         voutput.resize(_vmimic.at(axis)->_accelfns.size());
         for(size_t i = 0; i < voutput.size(); ++i) {
-            voutput[i] = _vmimic.at(axis)->_accelfns.at(i)->Eval(vdependentvalues.empty() ? NULL : &vdependentvalues[0]);
+            voutput[i] = _vmimic.at(axis)->_accelfns.at(i)->Eval(vdependentvalues.data());
             int err = _vmimic.at(axis)->_accelfns.at(i)->EvalError();
             if( err ) {
                 return err;
