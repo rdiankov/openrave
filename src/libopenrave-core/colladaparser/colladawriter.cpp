@@ -533,14 +533,12 @@ private:
             }
         }
         FOREACHC(itbody,listbodies) {
-            // for unassigned body id, use new unique numeric ids
+            // for body ids not in bodyX_motion format that cannot be restored, use new unique numeric ids
             if (_mapBodyIds.find((*itbody)->GetEnvironmentId()) == _mapBodyIds.end()) {
                 _mapBodyIds[(*itbody)->GetEnvironmentId()] = globalid++;
             }
         }
         FOREACHC(itbody,listbodies) {
-            BOOST_ASSERT((*itbody)->GetEnv()==_penv);
-
             boost::shared_ptr<instance_articulated_system_output> iasout;
             if( _CheckForExternalWrite(*itbody) ) {
                 iasout = _WriteKinBodyExternal(*itbody,_scene.kiscene);
