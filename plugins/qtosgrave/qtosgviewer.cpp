@@ -2130,12 +2130,8 @@ void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block
 
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
     GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
-    if( _listGUIFunctions.size() > 1000 || !_listGUIFunctionsBuffer.empty() ) {
-        // can happen if system is especially slow
-        _listGUIFunctionsBuffer.push_back(pfn);
-    } else {
-        _listGUIFunctions.push_back(pfn);
-    }
+    // pushing to buffer directly is thread-safe
+    _listGUIFunctionsBuffer.push_back(pfn);
     if( block ) {
         while(!pfn->IsFinished()) {
             _notifyGUIFunctionComplete.wait(_mutexGUIFunctions);
