@@ -212,12 +212,10 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
         value.SetInt64(PyLong_AsLong(obj.ptr()));
 #endif
     }
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
     else if (PyLong_Check(obj.ptr()))
     {
         value.SetInt64(PyLong_AsLong(obj.ptr()));
     }
-#endif
     else if (PyString_Check(obj.ptr()))
     {
         value.SetString(PyString_AsString(obj.ptr()), PyString_GET_SIZE(obj.ptr()), allocator);
@@ -356,7 +354,9 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
     }
     else
     {
-        throw OPENRAVE_EXCEPTION_FORMAT0(_("unsupported python type"), ORE_InvalidArguments);
+        std::string reprstr = extract<std::string>(obj.attr("__repr__")());
+        std::string classstr = extract<std::string>(obj.attr("__class__").attr("__name__"));
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Unsupported python class '%s' for object %s"), classstr%reprstr, ORE_InvalidArguments);
     }
 }
 
@@ -960,14 +960,24 @@ EnvironmentBase::EnvironmentBaseInfoPtr PyEnvironmentBase::PyEnvironmentBaseInfo
     EnvironmentBase::EnvironmentBaseInfoPtr pInfo(new EnvironmentBase::EnvironmentBaseInfo());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     pInfo->_vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(_vBodyInfos), end(_vBodyInfos));
+    pInfo->_revision = _revision;
+    pInfo->_name = _name;
+    pInfo->_keywords = _keywords;
+    pInfo->_description = _description;
 #else
-    std::vector<KinBody::KinBodyInfoPtr> vBodyInfo = _ExtractBodyInfoArray(_vBodyInfos);
-    pInfo->_vBodyInfos.clear();
-    pInfo->_vBodyInfos.reserve(vBodyInfo.size());
-    FOREACHC(it, vBodyInfo) {
-        pInfo->_vBodyInfos.push_back(*it);
+    pInfo->_vBodyInfos = _ExtractBodyInfoArray(_vBodyInfos);
+    if (!_name.is_none()) {
+        pInfo->_name = py::extract<std::string>(_name);
     }
+    for(size_t i=0; i < py::len(_keywords); i++){
+        pInfo->_keywords.push_back(py::extract<std::string>(_keywords[i]));
+    }
+    if (!_description.is_none()) {
+        pInfo->_description = py::extract<std::string>(_description);
+    }
+    pInfo->_revision = _revision;
 #endif
+    pInfo->_gravity = ExtractVector34<dReal>(_gravity,0);
     return pInfo;
 }
 
@@ -990,6 +1000,10 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON(py::object obj, d
 void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::EnvironmentBaseInfo& info) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     _vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(info._vBodyInfos), end(info._vBodyInfos));
+    _revision = info._revision;
+    _name = info._name;
+    _keywords = std::vector<std::string>(begin(info._keywords), end(info._keywords));
+    _description = info._description;
 #else
     py::list vBodyInfos;
     FOREACHC(itBodyInfo, info._vBodyInfos) {
@@ -1003,7 +1017,17 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
         }
     }
     _vBodyInfos = vBodyInfos;
+    _name = ConvertStringToUnicode(info._name);
+    py::list vKeywords;
+    FOREACHC(itKeyword, info._keywords) {
+        py::object keyword = ConvertStringToUnicode(*itKeyword);
+        vKeywords.append(keyword);
+    }
+    _keywords = vKeywords;
+    _description = ConvertStringToUnicode(info._description);
+    _revision = info._revision;
 #endif
+    _gravity = toPyVector3(info._gravity);
 }
 
 std::string PyEnvironmentBase::PyEnvironmentBaseInfo::__str__() {
@@ -2358,13 +2382,8 @@ object PyEnvironmentBase::GetUnit() const {
     return py::make_tuple(unit.first, unit.second);
 }
 
-void PyEnvironmentBase::SetRevision(const uint64_t revision) {
-    _penv->SetRevision(revision);
-}
-
-object PyEnvironmentBase::GetRevision() const {
-    uint64_t revision = _penv->GetRevision();
-    return py::to_object(revision);
+int PyEnvironmentBase::GetRevision() const {
+    return _penv->GetRevision();
 }
 
 object PyEnvironmentBase::ExtractInfo() const {
@@ -2373,9 +2392,34 @@ object PyEnvironmentBase::ExtractInfo() const {
     return py::to_object(boost::shared_ptr<PyEnvironmentBase::PyEnvironmentBaseInfo>(new PyEnvironmentBase::PyEnvironmentBaseInfo(info)));
 }
 
-void PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info) {
+object PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info) {
     EnvironmentBase::EnvironmentBaseInfoPtr pInfo = info->GetEnvironmentBaseInfo();
-    _penv->UpdateFromInfo(*pInfo);
+    std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
+    _penv->UpdateFromInfo(*pInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies);
+
+    py::list createdBodies, modifiedBodies, removedBodies;
+    FOREACHC(itbody, vCreatedBodies) {
+        if ((*itbody)->IsRobot()) {
+            createdBodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        } else {
+            createdBodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    FOREACHC(itbody, vModifiedBodies) {
+        if ((*itbody)->IsRobot()) {
+            modifiedBodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        } else {
+            modifiedBodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    FOREACHC(itbody, vRemovedBodies) {
+        if ((*itbody)->IsRobot()) {
+            removedBodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        } else {
+            removedBodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    return py::make_tuple(createdBodies, modifiedBodies, removedBodies);
 }
 
 bool PyEnvironmentBase::__eq__(PyEnvironmentBasePtr p) {
@@ -2756,6 +2800,11 @@ Because race conditions can pop up when trying to lock the openrave environment 
     object environmentbaseinfo = class_<PyEnvironmentBase::PyEnvironmentBaseInfo, OPENRAVE_SHARED_PTR<PyEnvironmentBase::PyEnvironmentBaseInfo> >("EnvironmentBaseInfo", DOXY_CLASS(EnvironmentBase::EnvironmentBaseInfo))
 #endif
                                  .def_readwrite("_vBodyInfos",&PyEnvironmentBase::PyEnvironmentBaseInfo::_vBodyInfos)
+                                 .def_readwrite("_revision",&PyEnvironmentBase::PyEnvironmentBaseInfo::_revision)
+                                 .def_readwrite("_name",&PyEnvironmentBase::PyEnvironmentBaseInfo::_name)
+                                 .def_readwrite("_description",&PyEnvironmentBase::PyEnvironmentBaseInfo::_description)
+                                 .def_readwrite("_keywords",&PyEnvironmentBase::PyEnvironmentBaseInfo::_keywords)
+                                 .def_readwrite("_gravity",&PyEnvironmentBase::PyEnvironmentBaseInfo::_gravity)
                                  .def("__str__",&PyEnvironmentBase::PyEnvironmentBaseInfo::__str__)
                                  .def("__unicode__",&PyEnvironmentBase::PyEnvironmentBaseInfo::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -3124,7 +3173,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetUnit",&PyEnvironmentBase::GetUnit, DOXY_FN(EnvironmentBase,GetUnit))
                      .def("SetUnit",&PyEnvironmentBase::SetUnit, PY_ARGS("unitname","unitmult") DOXY_FN(EnvironmentBase,SetUnit))
                      .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
-                     .def("SetRevision", &PyEnvironmentBase::SetRevision, PY_ARGS("revision") DOXY_FN(EnvironmentBase, SetRevision))
                      .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
                      .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info") DOXY_FN(EnvironmentBase,UpdateFromInfo))
                      .def("__enter__",&PyEnvironmentBase::__enter__)

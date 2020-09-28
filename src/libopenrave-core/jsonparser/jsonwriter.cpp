@@ -45,10 +45,11 @@ public:
     }
 
     virtual void Write(EnvironmentBasePtr penv) {
-        std::vector<KinBodyPtr> vbodies;
-        penv->GetBodies(vbodies);
-        std::list<KinBodyPtr> listbodies(vbodies.begin(), vbodies.end());
-        _Write(listbodies);
+        dReal fUnitScale = 1.0;
+        EnvironmentBase::EnvironmentBaseInfo info;
+        penv->ExtractInfo(info);
+        _rEnvironment.SetObject();
+        info.SerializeJSON(_rEnvironment, _allocator, fUnitScale, _serializeOptions);
     }
 
     virtual void Write(KinBodyPtr pbody) {

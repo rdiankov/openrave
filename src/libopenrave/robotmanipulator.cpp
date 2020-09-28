@@ -30,6 +30,7 @@ void RobotBase::ManipulatorInfo::Reset()
     _vGripperJointNames.clear();
     _grippername.clear();
     _toolChangerConnectedBodyToolName.clear();
+    _vRestrictGraspSetNames.clear();
 }
 
 void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -45,6 +46,7 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
     orjson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
     orjson::SetJsonValueByKey(value, "grippername", _grippername, allocator);
     orjson::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
+    orjson::SetJsonValueByKey(value, "restrictGraspSetNames", _vRestrictGraspSetNames, allocator);
 }
 
 void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -60,6 +62,7 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
     orjson::LoadJsonValueByKey(value, "grippername", _grippername);
     orjson::LoadJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName);
+    orjson::LoadJsonValueByKey(value, "restrictGraspSetNames", _vRestrictGraspSetNames);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
@@ -108,44 +111,58 @@ void RobotBase::Manipulator::ExtractInfo(RobotBase::ManipulatorInfo& info) const
 UpdateFromInfoResult RobotBase::Manipulator::UpdateFromInfo(const RobotBase::ManipulatorInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
-    // TODO: test
+
     if (_info._sBaseLinkName != info._sBaseLinkName) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("manipulator %s base link name changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     if (_info._sEffectorLinkName != info._sEffectorLinkName) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("manipulator %s effector link name changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     if (_info._grippername != info._grippername) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("manipulator %s gripper name changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     if (_info._vGripperJointNames != info._vGripperJointNames) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("manipulator %s gripper joint names changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     if (info._sIkSolverXMLId != info._sIkSolverXMLId) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("manipulator %s ik solver xml id changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
+    UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
     if (GetName() != info._name) {
         SetName(info._name);
+        RAVELOG_VERBOSE_FORMAT("manipulator %s name changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     if (GetChuckingDirection() != info._vChuckingDirection) {
         SetChuckingDirection(info._vChuckingDirection);
+        RAVELOG_VERBOSE_FORMAT("manipulator %s chucking direction changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
-    if (GetLocalToolTransform() != info._tLocalTool) {
+    if (!GetLocalToolTransform().Compare(info._tLocalTool)) {
         SetLocalToolTransform(info._tLocalTool);
+        RAVELOG_VERBOSE_FORMAT("manipulator %s local tool transform changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     if (GetLocalToolDirection() != info._vdirection) {
         SetLocalToolDirection(info._vdirection);
+        RAVELOG_VERBOSE_FORMAT("manipulator %s direction changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
-    return UFIR_Success;
+    return updateFromInfoResult;
 }
 
 int RobotBase::Manipulator::GetArmDOF() const
