@@ -3517,9 +3517,11 @@ void KinBody::_ComputeLinkAccelerations(
     }
 
     if( !!pexternalaccelerations ) {
-        FOREACHC(itaccel, *pexternalaccelerations) {
-            vLinkAccelerations.at(itaccel->first).first += itaccel->second.first;
-            vLinkAccelerations.at(itaccel->first).second += itaccel->second.second;
+        for(const std::pair<const int, std::pair<Vector,Vector> >& keyvalue : *pexternalaccelerations) {
+            const int linkindex = keyvalue.first;
+            const std::pair<Vector, Vector>& paccels = keyvalue.second;
+            vLinkAccelerations.at(linkindex).first += paccels.first;
+            vLinkAccelerations.at(linkindex).second += paccels.second;
         }
     }
 
