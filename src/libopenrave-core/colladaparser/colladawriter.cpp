@@ -525,7 +525,17 @@ private:
                     if (numericBodyId >= globalid) {
                         globalid = numericBodyId+1;
                     }
-                    _mapBodyIds[(*itbody)->GetEnvironmentId()] = numericBodyId;
+                    // make sure numericBodyId is not already in _mapBodyIds
+                    bool bDuplicateIdFound = false;
+                    FOREACHC(itBodyId, _mapBodyIds) {
+                        if (itBodyId->second == numericBodyId) {
+                            bDuplicateIdFound = true;
+                            break;
+                        }
+                    }
+                    if (!bDuplicateIdFound) {
+                        _mapBodyIds[(*itbody)->GetEnvironmentId()] = numericBodyId;
+                    }
                 }
                 catch (const boost::bad_lexical_cast&) {
                     // strange body id, pass
