@@ -5435,34 +5435,13 @@ void KinBody::_ResolveInfoIds()
     static const char pLinkIdPrefix[] = "link";
     static const char pGeometryIdPrefix[] = "geom";
     int nLinkId = 0;
-
-    // when assigning link id, keep order consistent using _vTopologicallySortedJointsAll
-    std::vector<KinBody::LinkPtr> vUnusedLinks = _veclinks;
-    std::vector<KinBody::LinkPtr> vOrderedLinks;
-    vOrderedLinks.reserve(vUnusedLinks.size());
-    FOREACHC(itJoint, _vTopologicallySortedJointsAll) {
-        if (vOrderedLinks.size() == 0) {
-            KinBody::LinkPtr pParentLink = (*itJoint)->GetHierarchyParentLink();
-            vOrderedLinks.push_back(pParentLink);
-            vUnusedLinks[pParentLink->GetIndex()].reset();
-        }
-        KinBody::LinkPtr pChildLink = (*itJoint)->GetHierarchyChildLink();
-        vOrderedLinks.push_back(pChildLink);
-        vUnusedLinks[pChildLink->GetIndex()].reset();
-    }
-    FOREACHC(itUnusedLink, vUnusedLinks) {
-        if (!!*itUnusedLink) {
-            vOrderedLinks.push_back(*itUnusedLink);
-        }
-    }
-
-    const int numlinks = (int)vOrderedLinks.size();
+    const int numlinks = (int)_veclinks.size();
     for(int ilink = 0; ilink < numlinks; ++ilink) {
-        KinBody::LinkInfo& linkinfo = vOrderedLinks[ilink]->_info;
+        KinBody::LinkInfo& linkinfo = _veclinks[ilink]->_info;
         bool bGenerateNewId = linkinfo._id.empty();
         if( !bGenerateNewId ) {
             for(int itestlink = 0; itestlink < ilink; ++itestlink) {
-                if( vOrderedLinks[itestlink]->_info._id == linkinfo._id ) {
+                if( _veclinks[itestlink]->_info._id == linkinfo._id ) {
                     bGenerateNewId = true;
                     break;
                 }
@@ -5474,7 +5453,7 @@ void KinBody::_ResolveInfoIds()
                 nTempIndexConversion = ConvertUIntToHex(nLinkId, sTempIndexConversion);
                 bool bHasSame = false;
                 for(int itestlink = 0; itestlink < numlinks; ++itestlink) {
-                    const std::string& testid = vOrderedLinks[itestlink]->_info._id;
+                    const std::string& testid = _veclinks[itestlink]->_info._id;
                     if( testid.size() == sizeof(pLinkIdPrefix)-1+nTempIndexConversion ) {
                         if( strncmp(testid.c_str() + (sizeof(pLinkIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
                             // matches
@@ -5500,7 +5479,7 @@ void KinBody::_ResolveInfoIds()
         // geometries
         {
             int nGeometryId = 0;
-            const std::vector<Link::GeometryPtr>& vgeometries = vOrderedLinks[ilink]->GetGeometries();
+            const std::vector<Link::GeometryPtr>& vgeometries = _veclinks[ilink]->GetGeometries();
             const int numgeometries = (int)vgeometries.size();
             for(int igeometry = 0; igeometry < numgeometries; ++igeometry) {
                 KinBody::GeometryInfo& geometryinfo = vgeometries[igeometry]->_info;

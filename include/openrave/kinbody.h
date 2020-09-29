@@ -908,6 +908,7 @@ private:
 #endif
 #endif
         friend class ColladaReader;
+        friend class ColladaWriter;
         friend class KinBody;
         friend class RobotBase;
     };
