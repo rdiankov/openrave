@@ -321,6 +321,9 @@ public:
 
     py::object ExtractInfo() const;
 
+    py::object ComputeMimicJointFirstOrderFullDerivatives();
+    py::object ComputeMimicJointSecondOrderFullDerivatives();
+
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);
     virtual std::string __repr__();
     virtual std::string __str__();

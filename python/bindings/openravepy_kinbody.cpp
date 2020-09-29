@@ -3772,6 +3772,29 @@ object PyKinBody::ExtractInfo() const {
     return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
 }
 
+object PyKinBody::ComputeMimicJointFirstOrderFullDerivatives() {
+    using Mimic = OpenRAVE::KinBody::Mimic;
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue;
+    _pbody->ComputeMimicJointFirstOrderFullDerivatives(mTotalderivativepairValue);
+    py::dict d;
+    for(const auto& keyvalue : mTotalderivativepairValue) {
+        const Mimic::DOFFormat& dofformat = keyvalue.first.first;
+        d[py::make_tuple(dofformat.jointindex, keyvalue.first.second)] = keyvalue.second;
+    }
+    return d;
+}
+
+object PyKinBody::ComputeMimicJointSecondOrderFullDerivatives() {
+    using Mimic = OpenRAVE::KinBody::Mimic;
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotal2ndderivativepairValue;
+    _pbody->ComputeMimicJointSecondOrderFullDerivatives(mTotal2ndderivativepairValue);
+    py::dict d;
+    for(const auto& keyvalue : mTotal2ndderivativepairValue) {
+        const Mimic::DOFFormat& dofformat = keyvalue.first.first;
+        d[py::make_tuple(dofformat.jointindex, keyvalue.first.second)] = keyvalue.second;
+    }
+    return d;
+}
 
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
 {
@@ -5247,6 +5270,8 @@ void init_openravepy_kinbody()
                          .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
 #endif
                          .def("ExtractInfo", &PyKinBody::ExtractInfo, DOXY_FN(KinBody, ExtractInfo))
+                         .def("ComputeMimicJointFirstOrderFullDerivatives", &PyKinBody::ComputeMimicJointFirstOrderFullDerivatives, DOXY_FN(KinBody, ComputeMimicJointFirstOrderFullDerivatives))
+                         .def("ComputeMimicJointSecondOrderFullDerivatives", &PyKinBody::ComputeMimicJointSecondOrderFullDerivatives, DOXY_FN(KinBody, ComputeMimicJointSecondOrderFullDerivatives))
                          .def("__enter__",&PyKinBody::__enter__)
                          .def("__exit__",&PyKinBody::__exit__)
                          .def("__repr__",&PyKinBody::__repr__)
