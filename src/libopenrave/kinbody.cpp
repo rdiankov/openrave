@@ -5436,29 +5436,17 @@ void KinBody::_ResolveInfoIds()
     static const char pGeometryIdPrefix[] = "geom";
     int nLinkId = 0;
 
-    // when assigning link id, keep order consistent using _vecjoints and _vPassiveJoints
+    // when assigning link id, keep order consistent using _vTopologicallySortedJointsAll
     std::vector<KinBody::LinkPtr> vUnusedLinks = _veclinks;
     std::vector<KinBody::LinkPtr> vOrderedLinks;
     vOrderedLinks.reserve(vUnusedLinks.size());
-    for(size_t iJoint = 0; iJoint < _vecjoints.size(); ++iJoint) {
-        KinBody::JointPtr& pJoint = _vecjoints[iJoint];
+    FOREACHC(itJoint, _vTopologicallySortedJointsAll) {
         if (vOrderedLinks.size() == 0) {
-            KinBody::LinkPtr pParentLink = pJoint->GetHierarchyParentLink();
+            KinBody::LinkPtr pParentLink = (*itJoint)->GetHierarchyParentLink();
             vOrderedLinks.push_back(pParentLink);
             vUnusedLinks[pParentLink->GetIndex()].reset();
         }
-        KinBody::LinkPtr pChildLink = pJoint->GetHierarchyChildLink();
-        vOrderedLinks.push_back(pChildLink);
-        vUnusedLinks[pChildLink->GetIndex()].reset();
-    }
-    for(size_t iJoint = 0; iJoint < _vPassiveJoints.size(); ++iJoint) {
-        KinBody::JointPtr& pPassiveJoint = _vPassiveJoints[iJoint];
-        if (vOrderedLinks.size() == 0) {
-            KinBody::LinkPtr pParentLink = pPassiveJoint->GetHierarchyParentLink();
-            vOrderedLinks.push_back(pParentLink);
-            vUnusedLinks[pParentLink->GetIndex()].reset();
-        }
-        KinBody::LinkPtr pChildLink = pPassiveJoint->GetHierarchyChildLink();
+        KinBody::LinkPtr pChildLink = (*itJoint)->GetHierarchyChildLink();
         vOrderedLinks.push_back(pChildLink);
         vUnusedLinks[pChildLink->GetIndex()].reset();
     }
