@@ -5474,13 +5474,27 @@ void KinBody::_ResolveInfoIds()
     static const char pLinkIdPrefix[] = "link";
     static const char pGeometryIdPrefix[] = "geom";
     int nLinkId = 0;
-    const int numlinks = (int)_veclinks.size();
+
+    // when assigning link id, keep order consistent using _vTopologicallySortedJointsAll
+    std::vector<KinBody::LinkPtr> veclinks;
+    veclinks.reserve(_veclinks.size());
+    for(size_t iJoint = 0; iJoint < _vTopologicallySortedJointsAll.size(); ++iJoint) {
+        JointPtr& pjoint = _vTopologicallySortedJointsAll[iJoint];
+        LinkPtr& pParentLink = pjoint->_attachedbodies[0];
+        LinkPtr& pChildLink = pjoint->_attachedbodies[1];
+        if (iJoint == 0) {
+            veclinks.push_back(pParentLink);
+        }
+        veclinks.push_back(pChildLink);
+    }
+
+    const int numlinks = (int)veclinks.size();
     for(int ilink = 0; ilink < numlinks; ++ilink) {
-        KinBody::LinkInfo& linkinfo = _veclinks[ilink]->_info;
+        KinBody::LinkInfo& linkinfo = veclinks[ilink]->_info;
         bool bGenerateNewId = linkinfo._id.empty();
         if( !bGenerateNewId ) {
             for(int itestlink = 0; itestlink < ilink; ++itestlink) {
-                if( _veclinks[itestlink]->_info._id == linkinfo._id ) {
+                if( veclinks[itestlink]->_info._id == linkinfo._id ) {
                     bGenerateNewId = true;
                     break;
                 }
@@ -5492,7 +5506,7 @@ void KinBody::_ResolveInfoIds()
                 nTempIndexConversion = ConvertUIntToHex(nLinkId, sTempIndexConversion);
                 bool bHasSame = false;
                 for(int itestlink = 0; itestlink < numlinks; ++itestlink) {
-                    const std::string& testid = _veclinks[itestlink]->_info._id;
+                    const std::string& testid = veclinks[itestlink]->_info._id;
                     if( testid.size() == sizeof(pLinkIdPrefix)-1+nTempIndexConversion ) {
                         if( strncmp(testid.c_str() + (sizeof(pLinkIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
                             // matches
@@ -5518,7 +5532,7 @@ void KinBody::_ResolveInfoIds()
         // geometries
         {
             int nGeometryId = 0;
-            const std::vector<Link::GeometryPtr>& vgeometries = _veclinks[ilink]->GetGeometries();
+            const std::vector<Link::GeometryPtr>& vgeometries = veclinks[ilink]->GetGeometries();
             const int numgeometries = (int)vgeometries.size();
             for(int igeometry = 0; igeometry < numgeometries; ++igeometry) {
                 KinBody::GeometryInfo& geometryinfo = vgeometries[igeometry]->_info;
