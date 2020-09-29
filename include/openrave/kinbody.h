@@ -2396,6 +2396,10 @@ private:
     /// \brief sets the link enable states
     virtual void SetLinkEnableStates(const std::vector<uint8_t>& enablestates);
 
+
+    void ComputeMimicJointFirstOrderFullDerivatives(std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue);
+    void ComputeMimicJointSecondOrderFullDerivatives(std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotal2ndderivativepairValue);
+
     /// \brief Computes the translation jacobian with respect to a world position.
     ///
     /// Gets the jacobian with respect to a link by computing the partial differentials for all joints that in the path from the root node to GetLinks()[index]

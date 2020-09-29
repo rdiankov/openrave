@@ -2257,6 +2257,37 @@ KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
     return JointPtr();
 }
 
+void KinBody::ComputeMimicJointFirstOrderFullDerivatives(
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue
+) {
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
+    for(const JointPtr& pjoint : _vPassiveJoints) {
+        const int ndof = pjoint->GetDOF();
+        for(int idof = 0; idof < ndof; ++idof) {
+            if( pjoint->IsMimic(idof) ) {
+                pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
+            }
+        }
+    }
+}
+
+void KinBody::ComputeMimicJointSecondOrderFullDerivatives(
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotal2ndderivativepairValue
+) {
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue;
+    this->ComputeMimicJointFirstOrderFullDerivatives(mTotalderivativepairValue);
+
+    std::vector<std::pair<int, dReal> > vDofindex2ndDerivativePairs;
+    for(const JointPtr& pjoint : _vPassiveJoints) {
+        const int ndof = pjoint->GetDOF();
+        for(int idof = 0; idof < ndof; ++idof) {
+            if( pjoint->IsMimic(idof) ) {
+                pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mTotal2ndderivativepairValue, mTotalderivativepairValue);
+            }
+        }
+    }
+}
+
 void KinBody::ComputeJacobianTranslation(const int linkindex,
                                          const Vector& position,
                                          std::vector<dReal>& vjacobian,
@@ -2374,7 +2405,6 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                 }
             }
         }
-
     }
 }
 
