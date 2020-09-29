@@ -2436,8 +2436,8 @@ public:
                 break;
             case GT_CalibrationBoard:
                 itgeominfo->_vGeomData *= vscale;
-                itgeominfo->_calibrationBoardParams.dotsDistanceX *= vscale.x;
-                itgeominfo->_calibrationBoardParams.dotsDistanceY *= vscale.y;
+                itgeominfo->_calibrationBoardParams[0].dotsDistanceX *= vscale.x;
+                itgeominfo->_calibrationBoardParams[0].dotsDistanceY *= vscale.y;
                 break;
             default:
                 RAVELOG_WARN(str(boost::format("unknown geometry type: 0x%x")%itgeominfo->_type));
@@ -3119,6 +3119,7 @@ public:
                             }
                         }
                         else if( name == "calibration_board" ) {
+                            geominfo._calibrationBoardParams.clear();
                             // get locations of required attributes
                             daeElementRef pparams = children[i]->getChild("parameters");
                             if (!!pparams) {
@@ -3185,18 +3186,17 @@ public:
                                         // put all attributes into geometry info
                                         geominfo._type = GT_CalibrationBoard;
                                         geominfo._vGeomData = vextents;
-                                        geominfo._calibrationBoardParams.numDotsX = numDotsX;
-                                        geominfo._calibrationBoardParams.numDotsY = numDotsY;
-                                        geominfo._calibrationBoardParams.dotsDistanceX = dotsDistanceX;
-                                        geominfo._calibrationBoardParams.dotsDistanceY = dotsDistanceY;
-                                        geominfo._calibrationBoardParams.dotColor = dotColor;
-                                        geominfo._calibrationBoardParams.patternName = pattern;
-                                        geominfo._calibrationBoardParams.dotDiameterDistanceRatio = dotDiameterDistanceRatio;
-                                        geominfo._calibrationBoardParams.bigDotDiameterDistanceRatio = bigDotDiameterDistanceRatio;
+                                        geominfo._calibrationBoardParams.push_back(KinBody::GeometryInfo::CalibrationBoardParameters());
+                                        geominfo._calibrationBoardParams[0].numDotsX = numDotsX;
+                                        geominfo._calibrationBoardParams[0].numDotsY = numDotsY;
+                                        geominfo._calibrationBoardParams[0].dotsDistanceX = dotsDistanceX;
+                                        geominfo._calibrationBoardParams[0].dotsDistanceY = dotsDistanceY;
+                                        geominfo._calibrationBoardParams[0].dotColor = dotColor;
+                                        geominfo._calibrationBoardParams[0].patternName = pattern;
+                                        geominfo._calibrationBoardParams[0].dotDiameterDistanceRatio = dotDiameterDistanceRatio;
+                                        geominfo._calibrationBoardParams[0].bigDotDiameterDistanceRatio = bigDotDiameterDistanceRatio;
                                         geominfo._t = tlocalgeom;
                                         bfoundgeom = true;
-                                        geominfo.GenerateCalibrationBoardDotMesh();
-
                                     }
                                 }
                             }

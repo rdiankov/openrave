@@ -187,15 +187,19 @@ void AppendCylinderTriangulation(const Vector& pos, const dReal& rad, const dRea
     }
 }
 
-void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(float fTessellation) {
+void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation) {
     if (_type != GT_CalibrationBoard) {
+        RAVELOG_WARN_FORMAT("Cannot generate calibration board dot grid for geometry of type %d.", _type);
         return;
     }
     Vector boardEx = _vGeomData;
-    CalibrationBoardParameters params = _calibrationBoardParams;
+    if (_calibrationBoardParams.size() == 0) {
+        _calibrationBoardParams.push_back(CalibrationBoardParameters());
+    }
+    CalibrationBoardParameters params = _calibrationBoardParams[0];
     // reset dots mesh
-    params._dotmeshcollision.indices.clear();
-    params._dotmeshcollision.vertices.clear();
+    tri.indices.clear();
+    tri.vertices.clear();
     // create mesh for dot grid
     dReal nDotsX = params.numDotsX;
     dReal nDotsY = params.numDotsY;
@@ -225,7 +229,7 @@ void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(float fTessellation)
                         selectedRadius = dotRadius;
                     }
                 }
-                AppendCylinderTriangulation(dotPos, selectedRadius, dotLength, numverts, _calibrationBoardParams._dotmeshcollision);
+                AppendCylinderTriangulation(dotPos, selectedRadius, dotLength, numverts, tri);
             }
         }
     } else {
@@ -243,6 +247,34 @@ int KinBody::GeometryInfo::SideWall::Compare(const SideWall& rhs, dReal fUnitSca
     }
     if(!IsZeroWithEpsilon3(vExtents - rhs.vExtents*fUnitScale, fEpsilon)) {
         return 3;
+    }
+    return 0;
+}
+
+int KinBody::GeometryInfo::CalibrationBoardParameters::Compare(const CalibrationBoardParameters& other, dReal fEpsilon) const {
+    if (numDotsX != other.numDotsX) {
+        return 1;
+    }
+    if (numDotsY != other.numDotsY) {
+        return 2;
+    }
+    if (dotsDistanceX - other.dotsDistanceX > fEpsilon) {
+        return 3;
+    }
+    if (dotsDistanceY - other.dotsDistanceY > fEpsilon) {
+        return 4;
+    }
+    if (!IsZeroWithEpsilon3(dotColor - other.dotColor, fEpsilon)) {
+        return 5;
+    }
+    if (patternName != other.patternName) {
+        return 6;
+    }
+    if (dotDiameterDistanceRatio - other.dotDiameterDistanceRatio > fEpsilon) {
+        return 7;
+    }
+    if (bigDotDiameterDistanceRatio - other.bigDotDiameterDistanceRatio > fEpsilon) {
+        return 8;
     }
     return 0;
 }
@@ -338,9 +370,13 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         if( !IsZeroWithEpsilon3(_vGeomData - rhs._vGeomData*fUnitScale, fEpsilon) ) {
             return 20;
         }
-        if(_calibrationBoardParams != rhs._calibrationBoardParams) {
-            return 21;
+        for(int iparams = 0; iparams < (int)_calibrationBoardParams.size(); ++iparams) {
+            if(_calibrationBoardParams[iparams].Compare(rhs._calibrationBoardParams[iparams], fEpsilon) > 0) {
+                return 21;
+            }
         }
+
+        break;
 
     case GT_None:
         break;
@@ -471,7 +507,6 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         // create board mesh
         Vector boardEx = GetBoxExtents();
         AppendBoxTriangulation(Vector(0, 0, 0), boardEx, _meshcollision);
-        GenerateCalibrationBoardDotMesh(fTessellation);
         break;
     }
     default:
@@ -734,8 +769,10 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
 
     case GT_CalibrationBoard:
         _vGeomData *= fUnitScale;
-        _calibrationBoardParams.dotsDistanceX *= fUnitScale;
-        _calibrationBoardParams.dotsDistanceY *= fUnitScale;
+        FOREACH(itparams, _calibrationBoardParams) {
+            itparams->dotsDistanceX *= fUnitScale;
+            itparams->dotsDistanceY *= fUnitScale;
+        }
         break;
 
     case GT_None:
@@ -765,7 +802,7 @@ void KinBody::GeometryInfo::Reset()
     _fTransparency = 0;
     _bVisible = true;
     _bModifiable = true;
-    _calibrationBoardParams = CalibrationBoardParameters();
+    _calibrationBoardParams.clear();
 }
 
 inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
@@ -863,14 +900,15 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         orjson::SetJsonValueByKey(rGeometryInfo, "halfExtents", _vGeomData*fUnitScale, allocator);
         rapidjson::Value rCalibrationBoardParameters;
         rCalibrationBoardParameters.SetObject();
-        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "numDotsX", _calibrationBoardParams.numDotsX, allocator);
-        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "numDotsY", _calibrationBoardParams.numDotsY, allocator);
-        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "dotsDistanceX", _calibrationBoardParams.dotsDistanceX*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "dotsDistanceY", _calibrationBoardParams.dotsDistanceY*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "dotColor", _calibrationBoardParams.dotColor, allocator);
-        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "patternName", _calibrationBoardParams.patternName, allocator);
-        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "dotDiameterDistanceRatio", _calibrationBoardParams.dotDiameterDistanceRatio, allocator);
-        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "bigDotDiameterDistanceRatio", _calibrationBoardParams.bigDotDiameterDistanceRatio, allocator);
+        CalibrationBoardParameters params = _calibrationBoardParams.size() > 0 ? _calibrationBoardParams[0] : CalibrationBoardParameters();
+        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "numDotsX", params.numDotsX, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "numDotsY", params.numDotsY, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "dotsDistanceX", params.dotsDistanceX*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "dotsDistanceY", params.dotsDistanceY*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "dotColor", params.dotColor, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "patternName", params.patternName, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "dotDiameterDistanceRatio", params.dotDiameterDistanceRatio, allocator);
+        orjson::SetJsonValueByKey(rCalibrationBoardParameters, "bigDotDiameterDistanceRatio", params.bigDotDiameterDistanceRatio, allocator);
         rGeometryInfo.AddMember(rapidjson::Document::StringRefType("calibrationBoardParameters"), rCalibrationBoardParameters, allocator);
         break;
     }
@@ -939,7 +977,8 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vGeomData) {
                 _vGeomData = vGeomDataTemp;
-                _meshcollision.Clear();            }
+                _meshcollision.Clear();            
+            }
         }
         break;
     case GT_Container:
@@ -1071,13 +1110,16 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 _meshcollision.Clear();            
             }
         }
-        calibrationBoardParamsTemp = _calibrationBoardParams;
+        if (_calibrationBoardParams.size() == 0) {
+            _calibrationBoardParams.push_back(CalibrationBoardParameters());
+        }
+        calibrationBoardParamsTemp = _calibrationBoardParams[0];
         if (value.HasMember("calibrationBoardParameters")) {
             orjson::LoadJsonValueByKey(value, "calibrationBoardParameters", calibrationBoardParamsTemp);
             calibrationBoardParamsTemp.dotsDistanceX *= fUnitScale;
             calibrationBoardParamsTemp.dotsDistanceY *= fUnitScale;
-            if (calibrationBoardParamsTemp != _calibrationBoardParams) {
-                _calibrationBoardParams = calibrationBoardParamsTemp;
+            if (calibrationBoardParamsTemp != _calibrationBoardParams[0]) {
+                _calibrationBoardParams[0] = calibrationBoardParamsTemp;
                 _meshcollision.Clear();
             }
         }

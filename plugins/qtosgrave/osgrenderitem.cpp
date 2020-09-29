@@ -479,7 +479,8 @@ void KinBodyItem::Load()
                     // Make dot mesh
                     osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
 
-                    const TriMesh& mesh = orgeom->GetCalibrationBoardDotMesh();
+                    TriMesh mesh = TriMesh();
+                    orgeom->GetCalibrationBoardDotMesh(mesh);
                     osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
                     vertices->reserveArray(mesh.vertices.size());
                     for(size_t i = 0; i < mesh.vertices.size(); ++i) {
@@ -496,7 +497,7 @@ void KinBodyItem::Load()
                     osgUtil::SmoothingVisitor::smooth(*geom);
 
                     // Set color of dot grid mesh
-                    RaveVector<dReal> dotColor = orgeom->GetCalibrationBoardDotColor();
+                    RaveVector<float> dotColor = orgeom->GetCalibrationBoardDotColor();
                     osg::ref_ptr<osg::Material> dotMat = new osg::Material;
                     dotMat->setDiffuse( osg::Material::FRONT, osg::Vec4(dotColor.x,dotColor.y,dotColor.z,1) );
                     dotMat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,1) );
