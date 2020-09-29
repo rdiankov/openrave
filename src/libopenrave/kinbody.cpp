@@ -2272,12 +2272,12 @@ void KinBody::ComputeMimicJointFirstOrderFullDerivatives(
 }
 
 void KinBody::ComputeMimicJointSecondOrderFullDerivatives(
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotal2ndderivativepairValue
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mTotal2ndderivativepairValue
 ) {
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue;
     this->ComputeMimicJointFirstOrderFullDerivatives(mTotalderivativepairValue);
 
-    std::vector<std::pair<int, dReal> > vDofindex2ndDerivativePairs;
+    std::vector<std::pair<std::array<int, 2>, dReal> > vDofindex2ndDerivativePairs;
     for(const JointPtr& pjoint : _vPassiveJoints) {
         const int ndof = pjoint->GetDOF();
         for(int idof = 0; idof < ndof; ++idof) {
@@ -3619,8 +3619,8 @@ void KinBody::_ComputeLinkAccelerations(
 
         // compute the link accelerations in topological order
         if( bHasAccelerations ) {
-            std::vector<std::pair<int, dReal> > vDofindex2ndDerivativePairs; ///< vector of (x's dof index, total derivative d^2 z/dx^2) pairs
-            std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotal2ndderivativepairValue; ///< map a joint pair (z, x) to the total derivative d^2 z/dx^2
+            std::vector<std::pair<std::array<int, 2>, dReal> > vDofindex2ndDerivativePairs; ///< vector of (x's dof index, total derivative d^2 z/dx^2) pairs
+            std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mTotal2ndderivativepairValue; ///< map a joint pair (z, x) to the total derivative d^2 z/dx^2
 
             // compute all dof accelerations in topological order
             for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
@@ -3637,20 +3637,30 @@ void KinBody::_ComputeLinkAccelerations(
             }
 
             // collect results in mTotal2ndderivativepairValue
-            for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mTotal2ndderivativepairValue) {
+            std::set<int> sActive;
+            for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2>>, dReal>& keyvalue : mTotal2ndderivativepairValue) {
                 const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
                 const int jointindex = thisdofformat.jointindex; // index of z
-                const int dependedDofIndex = keyvalue.first.second; // index of x
-                const dReal d2zdx2 = keyvalue.second; // we still use d^2 z/dx^2 even though x=x(t) is time-dependent
-                const dReal dxdt = vDOFVelocities.at(dependedDofIndex);
-                const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, dependedDofIndex};
-                const dReal dzdx = mTotalderivativepairValue.at(key);
-                const dReal d2xdt2 = vDOFAccelerations.at(dependedDofIndex);
-                vPassiveJointAccelerations.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += d2zdx2 * dxdt * dxdt + dzdx * d2xdt2;
+                const std::array<int, 2>& indexpair = keyvalue.first.second;
+                const int kactive = indexpair[0]; // index of xk
+                const int lactive = indexpair[1]; // index of xl
+                const dReal d2zdxkdxl = keyvalue.second; // ∂^2 z/∂xk ∂xl
+                const dReal dxkdt = vDOFVelocities.at(kactive); // dxk/dt
+                const dReal dxldt = vDOFVelocities.at(lactive); // dxl/dt
+
+                vPassiveJointAccelerations.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += d2zdxkdxl * dxkdt * dxldt;
+
+                if(!sActive.count(kactive)) {
+                    sActive.insert(kactive);
+                    const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, kactive};
+                    const dReal dzdx = mTotalderivativepairValue.at(key);
+                    const dReal d2xdt2 = vDOFAccelerations.at(kactive);
+                    vPassiveJointAccelerations.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += dzdx * d2xdt2;
+                }
                 /*
-                d^2 z                          [ d^2 z   ( dx )       d^z     d^2 x ]
-                -----  = \sum_{z depends on x} [ ----- x (----)^2  + ----- * ------ ]
-                d t^2                          [ d x^2   ( dt )       d^x     d t^2 ]
+                d^2 z                               [  ∂^2 z     ( dxk )   ( dxl ) ]                          [ ∂z      d^2 xk ]
+                -----  = \sum_{z depends on xk, xl} [ -------- x (-----) x (-----) ] + \sum_{z depends on xk} [----- * ------- ]
+                d t^2                               [ ∂xk ∂xl    ( dt  )   ( dt  ) ]                          [ ∂xk     d t^2  ]
                 */
             }
         }
