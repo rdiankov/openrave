@@ -549,6 +549,7 @@ private:
             }
         }
         FOREACHC(itbody,listbodies) {
+            (*itbody)->_ResolveInfoIds();
             boost::shared_ptr<instance_articulated_system_output> iasout;
             if( _CheckForExternalWrite(*itbody) ) {
                 iasout = _WriteKinBodyExternal(*itbody,_scene.kiscene);
@@ -574,6 +575,7 @@ private:
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         _CreateScene(probot->GetName());
         _mapBodyIds[probot->GetEnvironmentId()] = 0;
+        probot->_ResolveInfoIds();
 
         boost::shared_ptr<instance_articulated_system_output> iasout;
         if( _CheckForExternalWrite(probot) ) {
@@ -598,6 +600,7 @@ private:
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         _CreateScene(pbody->GetName());
         _mapBodyIds[pbody->GetEnvironmentId()] = 0;
+        pbody->_ResolveInfoIds();
 
         boost::shared_ptr<instance_articulated_system_output> iasout;
         if( _CheckForExternalWrite(pbody) ) {
@@ -1096,18 +1099,18 @@ private:
         kmodelid += "/";
         FOREACHC(itjoint,pbody->GetJoints()) {
             domExtraRef pextra = daeSafeCast<domExtra>(articulated_system_motion->add(COLLADA_ELEMENT_EXTRA));
-            pextra->setName(str(boost::format("motor%d")%(*itjoint)->GetJointIndex()).c_str());
+            pextra->setName(str(boost::format("motor_%s")%(*itjoint)->_info._id).c_str());
             pextra->setType("attach_actuator");
             domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
             ptec->setProfile("OpenRAVE");
             daeElementRef bind_actuator = ptec->add("bind_actuator");
-            bind_actuator->setAttribute("joint",str(boost::format("%sjoint%d")%kmodelid%(*itjoint)->GetJointIndex()).c_str());
+            bind_actuator->setAttribute("joint",str(boost::format("%s%s")%kmodelid%(*itjoint)->_info._id).c_str());
 
             if( !!(*itjoint)->GetInfo()._infoElectricMotor ) {
                 ElectricMotorActuatorInfoPtr infoElectricMotor = (*itjoint)->GetInfo()._infoElectricMotor;
                 daeElementRef instance_actuator = ptec->add("instance_actuator");
 
-                std::string stractuator = str(boost::format("body%d_actuator%d")%_mapBodyIds[pbody->GetEnvironmentId()]%(*itjoint)->GetJointIndex());
+                std::string stractuator = str(boost::format("body%d_actuator_%s")%_mapBodyIds[pbody->GetEnvironmentId()]%(*itjoint)->_info._id);
                 std::string url = std::string("#") + stractuator;
                 instance_actuator->setAttribute("url",url.c_str());
 
@@ -1201,7 +1204,7 @@ private:
             kbind->setSid((symscope+ikmsid).c_str());
             daeSafeCast<domKinematics_newparam::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid).c_str());
             // needs to be node0 instead of _GetNodeId(pbody) since the kinematics hierarchy origin does not have the current body's transform
-            ikmout->vkinematicsbindings.emplace_back(kbind->getSid(),  str(boost::format("%s/node0")%_GetNodeId(pbody)));
+            ikmout->vkinematicsbindings.emplace_back(kbind->getSid(), str(boost::format("%s/%s")%_GetNodeId(pbody)%_GetNodeSid(pbody->GetLinks().at(0))));
         }
 
         ikmout->vaxissids.reserve(kmout->vaxissids.size());
@@ -1446,7 +1449,7 @@ private:
             }
 
             domJointRef pdomjoint = daeSafeCast<domJoint>(ktec->add(COLLADA_ELEMENT_JOINT));
-            string jointsid = str(boost::format("joint%d")%itjoint->first);
+            string jointsid = pjoint->_info._id;
             pdomjoint->setSid( jointsid.c_str() );
             pdomjoint->setName(pjoint->GetName().c_str());
             pjoint->GetLimits(lmin, lmax);
@@ -1547,7 +1550,7 @@ private:
         FOREACH(itaxissid, kmout->vaxissids) {
             size_t index = itaxissid->sid.find("/");
             if( index == string::npos ) {
-                itaxissid->joint_sidref = str(boost::format("%s/joint%d")%kmodelid%itaxissid->pjoint->GetJointIndex());
+                itaxissid->joint_sidref = str(boost::format("%s/%s")%kmodelid%itaxissid->pjoint->_info._id);
             }
             else {
                 itaxissid->joint_sidref = kmodelid + itaxissid->sid.substr(index);
@@ -1609,7 +1612,7 @@ private:
                 if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 && pjoint->GetStringParameters().size() == 0 && pjoint->GetControlMode() == KinBody::JCM_None ) {
                     continue;
                 }
-                string jointsid = str(boost::format("joint%d")%itjoint->first);
+                string jointsid = pjoint->_info._id;
                 domExtraRef pextra = daeSafeCast<domExtra>(kmout->kmodel->add(COLLADA_ELEMENT_EXTRA));
                 pextra->setType("joint_info");
                 pextra->setName(jointsid.c_str());
@@ -1734,7 +1737,7 @@ private:
         // create the formulas for all mimic joints
         std::map<std::string,std::string> mapjointnames;
         FOREACHC(itjoint,vjoints) {
-            mapjointnames[str(boost::format("<csymbol>%s</csymbol>")%itjoint->second->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/joint%d</csymbol>")%kmodel->getID()%itjoint->first);
+            mapjointnames[str(boost::format("<csymbol>%s</csymbol>")%itjoint->second->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/%s</csymbol>")%kmodel->getID()%itjoint->second->_info._id);
         }
 
         FOREACHC(itjoint, vjoints) {
@@ -1746,10 +1749,10 @@ private:
                 RAVELOG_WARN("collada writer might not support multi-dof joint formulas...");
             }
             domFormulaRef pf = daeSafeCast<domFormula>(ktec->add(COLLADA_ELEMENT_FORMULA));
-            string formulaid = str(boost::format("joint%d.formula")%itjoint->first);
+            string formulaid = str(boost::format("%s.formula")%itjoint->second->_info._id);
             pf->setSid(formulaid.c_str());
             domCommon_float_or_paramRef ptarget = daeSafeCast<domCommon_float_or_param>(pf->add(COLLADA_ELEMENT_TARGET));
-            string targetjointid = str(boost::format("%s/joint%d")%kmodel->getID()%itjoint->first);
+            string targetjointid = str(boost::format("%s/%s")%kmodel->getID()%itjoint->second->_info._id);
             daeSafeCast<domCommon_param>(ptarget->add(COLLADA_TYPE_PARAM))->setValue(targetjointid.c_str());
 
             int iaxis = 0;
@@ -1780,19 +1783,7 @@ private:
                         daeElementRef pelt = pftec->add("equation");
                         pelt->setAttribute("type",sequationids[itype]);
                         KinBody::JointPtr pmimic = itdofformat->jointindex < (int)pbody->GetJoints().size() ? pbody->GetJoints().at(itdofformat->jointindex) : pbody->GetPassiveJoints().at(itdofformat->jointindex-(int)pbody->GetJoints().size());
-
-                        int mimicjointindex = -1;
-                        FOREACH(ittestjoint, vjoints) {
-                            if( ittestjoint->second == pmimic ) {
-                                mimicjointindex = ittestjoint->first;
-                                break;
-                            }
-                        }
-                        if( mimicjointindex < 0 ) {
-                            RAVELOG_WARN_FORMAT("cannot find index from joint %s", pmimic->GetName());
-                            mimicjointindex = 0;
-                        }
-                        std::string smimicid = str(boost::format("%s/joint%d")%kmodel->getID()%mimicjointindex);
+                        std::string smimicid = str(boost::format("%s/%s")%kmodel->getID()%pmimic->_info._id);
                         pelt->setAttribute("target",smimicid.c_str());
                         offset += XMLtoDAE::Parse(pelt, sequations[itype].c_str()+offset, sequations[itype].size()-offset);
                         if( offset == 0 ) {
@@ -1843,12 +1834,12 @@ private:
                 continue;
             }
             domRigid_bodyRef rigid_body = daeSafeCast<domRigid_body>(pmout->pmodel->add(COLLADA_ELEMENT_RIGID_BODY));
-            string rigidsid = str(boost::format("rigid%d")%(*itlink)->GetIndex());
+            string rigidsid = str(boost::format("rigid_%s")%(*itlink)->_info._id);
             pmout->vrigidbodysids.push_back(rigidsid);
             rigid_body->setSid(rigidsid.c_str());
             std::string linkname = (*itlink)->GetName();
             if( linkname.size() == 0 ) {
-                linkname = str(boost::format("_dummylink%d_")%(*itlink)->GetIndex());
+                linkname = str(boost::format("_dummy%s_")%(*itlink)->_info._id);
             }
             rigid_body->setName(linkname.c_str());
             domRigid_body::domTechnique_commonRef ptec = daeSafeCast<domRigid_body::domTechnique_common>(rigid_body->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
@@ -2173,7 +2164,7 @@ private:
         domLinkRef pdomlink = daeSafeCast<domLink>(pkinparent->add(COLLADA_ELEMENT_LINK));
         std::string linkname = plink->GetName();
         if( linkname.size() == 0 ) {
-            linkname = str(boost::format("_dummylink%d_")%plink->GetIndex());
+            linkname = str(boost::format("_dummylink_%s_")%plink->_info._id);
             RAVELOG_WARN_FORMAT("body %s link %d has empty name, so setting to %s!", plink->GetParent()->GetName()%plink->GetIndex()%linkname);
         }
         pdomlink->setName(linkname.c_str());
@@ -2227,7 +2218,7 @@ private:
             }
 
             domLink::domAttachment_fullRef pattfull = daeSafeCast<domLink::domAttachment_full>(pdomlink->add(COLLADA_TYPE_ATTACHMENT_FULL));
-            string jointid = str(boost::format("%s/joint%d")%strModelUri%itjoint->first);
+            string jointid = str(boost::format("%s/%s")%strModelUri%itjoint->second->_info._id);
             if (setJointSids.find(jointid) != setJointSids.end()) {
                 RAVELOG_VERBOSE_FORMAT("joint id \"%s\" (joint name \"%s\") for body %s is previously written, so skip. maybe part of closed loop?", jointid%pjoint->GetName()%plink->GetParent()->GetName());
                 continue;
@@ -2810,14 +2801,19 @@ private:
         return str(boost::format("visual%d")%_mapBodyIds[pbody->GetEnvironmentId()]);
     }
     virtual std::string _GetNodeId(KinBody::LinkConstPtr plink) {
-        return str(boost::format("v%d.node%d")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%plink->GetIndex());
+        return str(boost::format("v%d.%s")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%_GetNodeSid(plink));
     }
     virtual std::string _GetNodeSid(KinBody::LinkConstPtr plink) {
-        return str(boost::format("node%d")%plink->GetIndex());
+        const std::string& linkId = plink->_info._id;
+        if (linkId.size() > 4 && linkId.substr(0, 4) == "link") {
+            // try to reuse linkXXX as nodeXXX
+            return "node" + linkId.substr(4);
+        }
+        return str(boost::format("node_%s")%plink->_info._id);
     }
 
     virtual std::string _GetLinkSid(KinBody::LinkConstPtr plink) {
-        return str(boost::format("link%d")%plink->GetIndex());
+        return plink->_info._id;
     }
     virtual std::string _GetMotionId(KinBodyConstPtr pbody) {
         return str(boost::format("body%d_motion")%_mapBodyIds[pbody->GetEnvironmentId()]);
@@ -2832,17 +2828,7 @@ private:
     }
 
     virtual std::string _GetJointNodeSid(KinBody::JointConstPtr pjoint, int iaxis) {
-        int index = pjoint->GetJointIndex();
-        if( index < 0 ) {     // must be passive
-            index = (int)pjoint->GetParent()->GetJoints().size();
-            FOREACHC(itpjoint,pjoint->GetParent()->GetPassiveJoints()) {
-                if( pjoint == *itpjoint ) {
-                    break;
-                }
-                ++index;
-            }
-        }
-        return str(boost::format("node_joint%d_axis%d")%index%iaxis);
+        return str(boost::format("node_%s_axis%d")%pjoint->_info._id%iaxis);
     }
 
     virtual std::string _GetKinematicsModelId(KinBodyConstPtr pbody) {

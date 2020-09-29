@@ -1848,6 +1848,7 @@ public:
         KinBody::LinkPtr plink = pkinbody->GetLink(linkname);
         if( !plink ) {
             plink.reset(new KinBody::Link(pkinbody));
+            plink->_info._id = pdomlink->getSid();
             plink->_info._name = linkname;
             plink->_info._mass = 1e-10;
             plink->_info._vinertiamoments = Vector(1e-7,1e-7,1e-7);
@@ -2023,6 +2024,7 @@ public:
                 // create the joints before creating the child links
                 KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
                 int jointtype = vdomaxes.getCount();
+                pjoint->_info._id = pdomjoint->getSid();
                 pjoint->_info._bIsActive = true;     // if not active, put into the passive list
                 FOREACH(it,pjoint->_info._vweights) {
                     *it = 1;
