@@ -2307,7 +2307,7 @@ protected:
                                 RAVELOG_VERBOSE_FORMAT("env=%d, the final SolveMinTime generated feasible segment, inserting it to outramps", GetEnv()->GetId());
                                 outramps.pop_back();
                                 outramps.insert(outramps.end(), outramps2.begin(), outramps2.end());
-                                break;
+                                // continue to inserting outramps to accumoutramps.
                             }
                             else if (retcheck.retcode == CFO_CheckTimeBasedConstraints) {
                                 nNumTimeBasedConstraintsFailed++;
