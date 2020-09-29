@@ -133,7 +133,7 @@ public:
                     if (!_ExpandRapidJSON(envInfo, bodyId, doc, referenceUri, circularReference, fUnitScale, alloc)) {
                         RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s'", referenceUri);
                         if (_bMustResolveURI) {
-                            throw OPENRAVE_EXCEPTION_FORMAT("failed to load referenced body from uri '%s'", referenceUri, ORE_InvalidArguments);
+                            throw OPENRAVE_EXCEPTION_FORMAT("failed to load referenced body from uri '%s'", referenceUri, ORE_InvalidURI);
                         }
                     }
                 }
@@ -534,14 +534,14 @@ protected:
             if (!_ExpandRapidJSON(envInfo, "__connectedBody__", doc, pConnected->_uri, circularReference, fUnitScale, alloc)) {
                 RAVELOG_ERROR_FORMAT("failed to load connected body from uri '%s'", pConnected->_uri);
                 if (_bMustResolveURI) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri '%s'", pConnected->_uri, ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri '%s'", pConnected->_uri, ORE_InvalidURI);
                 }
                 continue;
             }
             if (envInfo._vBodyInfos.size() != 1) {
                 RAVELOG_ERROR_FORMAT("failed to load connected body from uri '%s', number of bodies loaded %d", pConnected->_uri%envInfo._vBodyInfos.size());
                 if (_bMustResolveURI) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri '%s', number of bodies loaded %d", pConnected->_uri%envInfo._vBodyInfos.size(), ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri '%s', number of bodies loaded %d", pConnected->_uri%envInfo._vBodyInfos.size(), ORE_InvalidURI);
                 }
                 continue;
             }
@@ -550,7 +550,7 @@ protected:
             if (!pRobotBaseInfo) {
                 RAVELOG_ERROR_FORMAT("failed to load connected body from uri '%s', referenced body not a robot", pConnected->_uri);
                 if (_bMustResolveURI) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri '%s', referenced body not a robot", pConnected->_uri, ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri '%s', referenced body not a robot", pConnected->_uri, ORE_InvalidURI);
                 }
                 continue;
             }

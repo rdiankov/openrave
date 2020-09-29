@@ -1045,7 +1045,7 @@ public:
         domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
         if( !articulated_system ) {
             if (_bMustResolveURI) {
-                throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve uri \"%s\"", ias->getUrl().str(), ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve uri \"%s\"", ias->getUrl().str(), ORE_InvalidURI);
             }
             return false;
         }
@@ -3681,14 +3681,14 @@ public:
                     } else {
                         RAVELOG_DEBUG_FORMAT("Found %d robots, Do not support this case for uri %s", robots.size() % uri);
                         if (_bMustResolveURI) {
-                            throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri \"%s\", more than one robot found", uri, ORE_InvalidArguments);
+                            throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri \"%s\", more than one robot found", uri, ORE_InvalidURI);
                         }
                     }
                 }
                 else {
                     RAVELOG_WARN_FORMAT("Could not load uri %s for connected body %s", uri%connectedBodyInfo._name);
                     if (_bMustResolveURI) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri \"%s\"", uri, ORE_InvalidArguments);
+                        throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri \"%s\"", uri, ORE_InvalidURI);
                     }
                 }
 
