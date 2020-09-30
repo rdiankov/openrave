@@ -2458,7 +2458,6 @@ void KinBody::Joint::_ComputePartialAccelerations(
             const int jointindexj = dofformatj.jointindex; ///< index of this depended joint yj
             const int indexij = ivar * nvars + jvar; // (i, j)
             const OpenRAVEFunctionParserRealPtr& accelfn = pmimic->_accelfns.at(indexij); ///< function that evaluates the partial derivative ∂^2 f/∂yi∂yj
-            BOOST_ASSERT(!!accelfn);
             dReal faccel;
             if(!!accelfn) {
                 faccel = accelfn->Eval(vDependedJointValues.data()); ///< ∂^2 f/∂yi∂yj
@@ -2485,7 +2484,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
             for(const std::array<int, 2>& indexpair : vIndexPairs) {
                 const int kactive = indexpair[0];
                 const int lactive = indexpair[1];
-                RAVELOG_DEBUG_FORMAT("Working on (i=%d,k=%d), (j=%d,l=%d), that is, ∂^2(%s)/∂(%s)∂(%s) += ∂^2 f/∂(%s)∂(%s) * (∂(%s)/∂(%s) * ∂(%s)/∂(%s))",
+                RAVELOG_DEBUG_FORMAT("WorkiVERBOSE (i=%d,k=%d), (j=%d,l=%d), that is, ∂^2(%s)/∂(%s)∂(%s) += ∂^2 f/∂(%s)∂(%s) * (∂(%s)/∂(%s) * ∂(%s)/∂(%s))",
                     jointindexi % kactive % jointindexj % lactive
                     % this->GetName() % vActiveJoints.at(kactive)->GetName() % vActiveJoints.at(lactive)->GetName()
                     % dependedjointi->GetName() % dependedjointj->GetName()
@@ -2496,22 +2495,20 @@ void KinBody::Joint::_ComputePartialAccelerations(
                 dyjdxl.second = lactive; // ∂yj/∂xl
                 d2zdxkxl.second = indexpair;
 
-                if(jointindexi == kactive) { // yi == xk
-                    if(jointindexj == lactive) { // yj == xl
-                        AccumulateSecondOrderPartialDerivatives(localmap, d2zdxkxl, faccel);
-                    }
-                    else if (mTotalderivativepairValue.count(dyjdxl)) { // yj depends on xl
-                        AccumulateSecondOrderPartialDerivatives(localmap, d2zdxkxl, faccel * mTotalderivativepairValue.at(dyjdxl));
-                    }
+                dReal faccellocal = faccel;
+                if (mTotalderivativepairValue.count(dyidxk)) { // yi depends on xk
+                    faccellocal *= mTotalderivativepairValue.at(dyidxk);
                 }
-                else if (mTotalderivativepairValue.count(dyidxk)) { // yi depends on xk
-                    if(jointindexj == lactive) { // yj == xl
-                        AccumulateSecondOrderPartialDerivatives(localmap, d2zdxkxl, faccel * mTotalderivativepairValue.at(dyidxk));
-                    }
-                    else if (mTotalderivativepairValue.count(dyjdxl)) { // yj depends on xl
-                        AccumulateSecondOrderPartialDerivatives(localmap, d2zdxkxl, faccel * mTotalderivativepairValue.at(dyidxk) * mTotalderivativepairValue.at(dyjdxl));
-                    }
+                else if (jointindexi != kactive) { // yi != xk
+                    continue;
                 }
+                if (mTotalderivativepairValue.count(dyjdxl)) { // yj depends on xl
+                    faccellocal *= mTotalderivativepairValue.at(dyjdxl);
+                }
+                else if (jointindexj != lactive) { // yj != xl
+                    continue;
+                }
+                AccumulateSecondOrderPartialDerivatives(localmap, d2zdxkxl, faccellocal);
             }
         } // for(int jvar = 0; jvar < nvars; ++jvar)
 
@@ -2523,7 +2520,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
             d2ydxkxl.second = indexpair; // ∂^2 yi/∂xk ∂xl
             d2zdxkxl.second = indexpair; // ∂^2  z/∂xk ∂xl          
             if(mTotal2ndderivativepairValue.count(d2ydxkxl)) { // yi depends on both xk and xl
-                RAVELOG_DEBUG_FORMAT("Working on (i=%d,k=%d,l=%d), that is, ∂^2(%s)/∂(%s)∂(%s) += ∂f/∂(%s) * ∂^2(%s)/∂(%s) ∂(%s)",
+                RAVELOG_VERBOSE_FORMAT("Working on (i=%d,k=%d,l=%d), that is, ∂^2(%s)/∂(%s)∂(%s) += ∂f/∂(%s) * ∂^2(%s)/∂(%s) ∂(%s)",
                     jointindexi % indexpair[0] % indexpair[1]
                     % this->GetName() % vActiveJoints.at(kactive)->GetName() % vActiveJoints.at(lactive)->GetName()
                     % dependedjointi->GetName()
