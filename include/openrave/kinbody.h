@@ -1596,9 +1596,9 @@ protected:
         /** \brief computes the second-order partial derivatives with respect to all dependent DOFs specified by Mimic::_vmimicdofs.
 
             If the joint is not mimic, then just returns its own index
-            \param[out] vDofindex2ndDerivativePairs: A vector of (x's dof index, partial derivative ∂^2 f/∂xk1 ∂xk2) pairs, where z=f(y1,...yn) is this joint, yi are all active/passive joints z directly depends, and x's are all the active joints on which z directly/indirectly depends
+            \param[out] vDofindex2ndDerivativePairs: A vector of (x's dof index, partial derivative ∂^2 f/∂xk ∂xl) pairs, where z=f(y1,...yn) is this joint, yi are all active/passive joints z directly depends, and x's are all the active joints on which z directly/indirectly depends
             \param[in] iaxis the axis 0, 1, or 2
-            \param[in,out] mTotal2ndderivativepairValue: A map of all (cached) joint pairs (z, (xk1, xk2)) to the second-order partial derivatives ∂^2 z/∂xk1 ∂xk2
+            \param[in,out] mTotal2ndderivativepairValue: A map of all (cached) joint pairs (z, (xk, xl)) to the second-order partial derivatives ∂^2 z/∂xk ∂xl
             \param[in] mTotalderivativepairValue: A map of all previously computed (!!!) joint pairs (z, x) to the first-order partial derivatives ∂z/∂x
          */
         virtual void _ComputePartialAccelerations(

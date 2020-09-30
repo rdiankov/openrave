@@ -2278,7 +2278,7 @@ void KinBody::Joint::_ComputePartialVelocities(
             dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mTotalderivativepairValue); ///< recursion: computes ∂y/∂x
             for(const std::pair<int, dReal>& pIndexPartial : vLocalIndexPartialPairs) {
                 std::pair<Mimic::DOFFormat, int> key = {thisdofformat, pIndexPartial.first};
-                ///< dz/dx += ∂z/∂y * ∂y/∂x
+                ///< ∂z/∂x += ∂f/∂y * ∂y/∂x
                 if( localmap.count(key) ) {
                     localmap[key] += fvel * pIndexPartial.second;
                 }
@@ -2290,7 +2290,7 @@ void KinBody::Joint::_ComputePartialVelocities(
         else {
             // depended joint is active
             std::pair<Mimic::DOFFormat, int> key = {thisdofformat, jointindex};
-            ///< dz/dx += ∂z/∂x, as z may depend on others who depend on x
+            ///< ∂z/∂x += ∂f/∂x, as z may depend on others who depend on x
             if( localmap.count(key) ) {
                 localmap[key] += fvel;
             }
@@ -2406,17 +2406,38 @@ void KinBody::Joint::_ComputePartialAccelerations(
         const int jointindexi = dofformati.jointindex; ///< index of this depended joint yi
 
         if( IS_DEBUGLEVEL(Level_Verbose) )  {
-            RAVELOG_VERBOSE_FORMAT("Joint \"%s\" calls recursion _ComputePartialAccelerations on joints \"%s\"",
-                this->GetName() % dependedjointi->GetName()
+            RAVELOG_VERBOSE_FORMAT("Joint \"%s\" with index %d calls recursion _ComputePartialAccelerations on joints \"%s\"",
+                this->GetName() % jointindexi % dependedjointi->GetName()
             );
         }
-        dependedjointi->_ComputePartialAccelerations(vLocalIndexPartialPairs, iaxis, mTotal2ndderivativepairValue, mTotalderivativepairValue); ///< recursion: computes ∂^2 yi/∂xk ∂xl
+        ///< recursion: collect all ∂^2 yi/∂xk ∂xl
+        dependedjointi->_ComputePartialAccelerations(vLocalIndexPartialPairs, iaxis, mTotal2ndderivativepairValue, mTotalderivativepairValue);
+    }
+
+    std::set<int> sIndices;
+    for(auto& keyvalue : mTotalderivativepairValue) {
+        sIndices.insert(keyvalue.first.second);
+    }
+    std::vector<int> vIndices(sIndices.begin(), sIndices.end());
+    std::vector<std::array<int, 2>> vIndexPairs;
+    for(auto k : vIndices) {
+        for(auto l : vIndices) {
+            vIndexPairs.push_back({k, l});
+        }
+    }
+
+    for(int ivar = 0; ivar < nvars; ++ivar) {
+        const Mimic::DOFFormat& dofformati = vdofformats[ivar]; ///< information about the ivar-th depended joint
+        const JointConstPtr dependedjointi = dofformati.GetJoint(*parent); ///< a joint yi on which this joint directly depends on
+        const int jointindexi = dofformati.jointindex; ///< index of this depended joint yi
 
         const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂f/∂yi
         const dReal fvel = velfn->Eval(vDependedJointValues.data()); ///< value of ∂f/∂yi
 
-        for(auto& keyvalue : mTotal2ndderivativepairValue) {
-            const std::array<int, 2>& indexpair = keyvalue.first.second;
+        // for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& keyvalue : mTotal2ndderivativepairValue) {
+        // for(const std::pair<std::array<int, 2>, dReal>& localindexpartialpair : vLocalIndexPartialPairs) {
+            // const std::array<int, 2>& indexpair = localindexpartialpair.first;
+        for(const std::array<int, 2>& indexpair : vIndexPairs) {
             const int kactive = indexpair[0];
             const int lactive = indexpair[1];
             const std::pair<Mimic::DOFFormat, int> dyidxk {dofformati, kactive}; // ∂yi/∂xk
@@ -2430,27 +2451,29 @@ void KinBody::Joint::_ComputePartialAccelerations(
                 const int jointindexj = dofformatj.jointindex; ///< index of this depended joint yj
                 const std::pair<Mimic::DOFFormat, int> dyjdxl {dofformatj, lactive}; // ∂yj/∂xl
                 const int indexij = ivar * nvars + jvar; // (i, j)
-                const OpenRAVEFunctionParserRealPtr accelfn = pmimic->_accelfns.at(indexij); ///< function that evaluates the partial derivative ∂^2 f/∂yi∂yj
+                const OpenRAVEFunctionParserRealPtr& accelfn = pmimic->_accelfns.at(indexij); ///< function that evaluates the partial derivative ∂^2 f/∂yi∂yj
                 BOOST_ASSERT(!!accelfn);
                 const dReal faccel = accelfn->Eval(vDependedJointValues.data()); ///< ∂^2 f/∂yi∂yj where j <= i
                 if(jointindexi == kactive) { // yi == xk
                     if(jointindexj == lactive) { // yj == xl
                         localmap[d2zdxkxl] += faccel;
                     }
-                    else {
+                    else if (mTotalderivativepairValue.count(dyjdxl)) { // yj depends on xl
                         localmap[d2zdxkxl] += faccel * mTotalderivativepairValue.at(dyjdxl);
                     }
                 }
-                else {
+                else if (mTotalderivativepairValue.count(dyidxk)) { // yi depends on xk
                     if(jointindexj == lactive) { // yj == xl
                         localmap[d2zdxkxl] += faccel * mTotalderivativepairValue.at(dyidxk);
                     }
-                    else {
+                    else if (mTotalderivativepairValue.count(dyjdxl)) { // yj depends on xl
                         localmap[d2zdxkxl] += faccel * mTotalderivativepairValue.at(dyidxk) * mTotalderivativepairValue.at(dyjdxl);
                     }
                 }
             }
-            localmap[d2zdxkxl] = fvel * keyvalue.second;
+            if(mTotal2ndderivativepairValue.count(d2ydxkxl)) {
+                localmap[d2zdxkxl] = fvel * mTotal2ndderivativepairValue.at(d2ydxkxl); // ∂^2  z/∂xk ∂xl += ∂f/∂yi * ∂^2 yi/∂xk ∂xl
+            }
         }
     } // for(int ivar = 0; ivar < nvars; ++ivar)
 
