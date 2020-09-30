@@ -809,6 +809,8 @@ protected:
         size_t workspacedim = 3;
         ublas::vector<double> S(workspacedim);
         ublas::matrix<double, ublas::column_major> U(workspacedim, workspacedim), V(numdof, numdof);
+        boost::numeric::ublas::vector<double> P(workspacedim);
+
         // J * dofvelocities = P
         // compute single value decomposition: Jacobian = U*diag(S)*transpose(V)
         int ret = boost::numeric::bindings::lapack::gesdd('O', 'A', J, S, U, V);
@@ -844,7 +846,6 @@ protected:
                         continue;
                     }
 
-                    boost::numeric::ublas::vector<double> P(workspacedim);
                     // P(i) = _vbiasdirection[i]; // TODO: compute vBiasDirection given the set of bases and idirection
                     Vector vCurDirection = _mults[ix]*_vBasisBiasDirections[0] + _mults[iy]*_vBasisBiasDirections[1] + _mults[iz]*_vBasisBiasDirections[2];
                     vCurDirection /= RaveSqrt(vCurDirection.lengthsqr3());
