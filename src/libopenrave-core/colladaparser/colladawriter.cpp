@@ -2001,7 +2001,7 @@ private:
                 pcalibrationboard->add("half_extents")->setCharData(ss.str());
 
                 daeElementRef pparams = pcalibrationboard->add("parameters");
-                std::vector<KinBody::GeometryInfo::CalibrationBoardParameters> vParamsInfo = geom->GetInfo()._calibrationBoardParams;
+                std::vector<KinBody::GeometryInfo::CalibrationBoardParameters> vParamsInfo = geom->GetInfo()._calibrationBoardParameters;
                 if (vParamsInfo.size() == 0) {
                     vParamsInfo.push_back(KinBody::GeometryInfo::CalibrationBoardParameters());
                 }
