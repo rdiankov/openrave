@@ -2478,7 +2478,7 @@ public:
         RAVELOG_VERBOSE("=== UpdateFromInfo start ===");
         FOREACHC(itBodyInfo, info._vBodyInfos) {
             if ((*itBodyInfo)->_id.empty()) {
-                RAVELOG_WARN_FORMAT("body %s has empty id, skipping", (*itBodyInfo)->_name);
+                RAVELOG_DEBUG_FORMAT("body %s has empty id, skipping", (*itBodyInfo)->_name);
                 continue;
             }
             KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
@@ -2670,7 +2670,7 @@ public:
             // remove extra bodies
             FOREACH_NOINC(itBody, _vecbodies) {
                 if ((*itBody)->_id.empty()) {
-                    RAVELOG_WARN_FORMAT("body %s has empty id", (*itBody)->_name);
+                    RAVELOG_DEBUG_FORMAT("body %s has empty id", (*itBody)->_name);
                     continue;
                 }
 
