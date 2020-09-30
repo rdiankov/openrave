@@ -3544,7 +3544,8 @@ void KinBody::ComputePassiveJointVelocitiesAccelerations(
     if(!bHasVelocities && !bHasAccelerations) {
         return;
     }
-
+    
+    const int nActiveJoints = _vecjoints.size();
     const int nPassiveJoints = _vPassiveJoints.size();
     vPassiveJointVelocities.resize(nPassiveJoints);
     vPassiveJointAccelerations.resize(nPassiveJoints);
@@ -3573,7 +3574,7 @@ void KinBody::ComputePassiveJointVelocitiesAccelerations(
         const int jointindex = thisdofformat.jointindex; // index of z
         const int dependedDofIndex = keyvalue.first.second; // index of x
         const dReal totalPartialDerivative = keyvalue.second; // ∂z/dx where x=x(t) is time-dependent
-        vPassiveJointVelocities.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += vDOFVelocities.at(dependedDofIndex) * totalPartialDerivative; // dz/dt = \sum_{z depends on x} ∂z/∂x * dx/dt
+        vPassiveJointVelocities.at(jointindex - nActiveJoints).at(thisdofformat.axis) += vDOFVelocities.at(dependedDofIndex) * totalPartialDerivative; // dz/dt = \sum_{z depends on x} ∂z/∂x * dx/dt
     }
 
     // compute the link accelerations in topological order
@@ -3590,7 +3591,7 @@ void KinBody::ComputePassiveJointVelocitiesAccelerations(
         const int kactive = indexpair[0]; // index of xk
         const int lactive = indexpair[1]; // index of xl
         const dReal d2zdxkdxl = keyvalue.second; // ∂^2 z/∂xk ∂xl
-        dReal& d2zdt2 = vPassiveJointAccelerations.at(jointindex - nPassiveJoints).at(thisdofformat.axis);
+        dReal& d2zdt2 = vPassiveJointAccelerations.at(jointindex - nActiveJoints).at(thisdofformat.axis);
 
         if(bHasVelocities) {
             const dReal dxkdt = vDOFVelocities.at(kactive); // dxk/dt
