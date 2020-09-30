@@ -2016,16 +2016,16 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         const int itype = 1; // working on velocity mimic equations
         std::vector<OpenRAVEFunctionParserRealPtr> vfns(nVars);
         /*
-            extract from `eq` the partial derivative formulas ∂z/∂xi for joint z:=z(x1,x2,...xn) defined in `poseq`.
+            extract from `eq` the partial derivative formulas ∂z/∂yi for joint z=f(y1,y2,...,yn) defined in `poseq`.
             `eq` takes form
 
             c0:=......; c1:=......; ......;
-         |x1 formula ∂z/∂x1
-         |x2 formula ∂z/∂x2
+         |y1 formula ∂f/∂y1
+         |y2 formula ∂f/∂y2
             ......
-         |xn formula ∂z/∂xn
+         |yn formula ∂f/∂yn
 
-            where xi's are joints on which z depends, and ci are common subexpressions in formulas ∂z/∂xi.
+            where yi's are joints on which z depends, and ci are common subexpressions in formulas ∂f/∂yi.
 
          */
         utils::SearchAndReplace(eq, pmimic->_equations[itype], jointnamepairs);
@@ -2035,7 +2035,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         while(index != std::string::npos) {
             size_t startindex = index + 1;
             index = eq.find('|', startindex); // check if we specify another partial derivative
-            std::string sequation; ///< takes form "|xi formula_∂z_∂xi"
+            std::string sequation; ///< takes form "|yi formula_∂f_∂yi"
             if( index != std::string::npos) {
                 sequation = eq.substr(startindex, index - startindex); // extract up to the next '|'
             }
@@ -2044,7 +2044,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             }
 
             boost::trim(sequation);
-            size_t nameendindex = sequation.find(' '); // a space right after "|xi"
+            size_t nameendindex = sequation.find(' '); // a space right after "|yi"
             std::string varname;
             if( nameendindex == std::string::npos ) {
                 RAVELOG_WARN(str(boost::format("invalid equation syntax '%s' for joint %s")%sequation%_info._name));
@@ -2052,7 +2052,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
                 sequation = "0";
             }
             else {
-                varname = sequation.substr(0, nameendindex); // variable for the depended joint xi
+                varname = sequation.substr(0, nameendindex); // variable for the depended joint yi
                 sequation = sequation.substr(nameendindex);
             }
 
@@ -2087,62 +2087,63 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         std::vector<OpenRAVEFunctionParserRealPtr> vfns(nVars * nVars); // it's ok to make it n*n instead of n*(n+1)/2
 
         /*
-            extract from `eq` the second-order partial derivative formulas ∂^2z/∂xi∂xj for joint z:=z(x1,x2,...xn) defined in `poseq`.
+            extract from `eq` the second-order partial derivative formulas ∂^2z/∂yi ∂yj for joint z=f(y1,y2,...,yn) defined in `poseq`.
             `eq` takes form
 
             c0:=......; c1:=......; ......;
-         |x1|x1 formula ∂^2 z/∂x1^2
-         |x1|x2 formula ∂^2 z/∂x1∂x2
+         |y1|y1 formula ∂^2 f/∂y1^2
+         |y1|y2 formula ∂^2 f/∂y1∂y2
          ...
-         |x1|xn formula ∂^2 z/∂x1∂xn
-         |x2|x1 formula ∂^2 z/∂x2∂x1
+         |y1|yn formula ∂^2 f/∂y1∂yn
+         |y2|y1 formula ∂^2 f/∂y2∂y1
+         |y2|y1 formula ∂^2 f/∂y2^2
          ...
-         |xn|xn formula ∂^2 z/∂xn∂xn
+         |yn|yn formula ∂^2 f/∂yn^2
 
-            where xi's are joints on which z depends, and ci are common subexpressions in formulas ∂^2z/∂xi∂xj.
+            where yi's are joints on which z depends, and ci are common subexpressions in all formulas ∂^2f/∂yi∂yj.
 
-            We initialize ∂^2 z/∂x2∂x1 as ∂^2 z/∂x1∂x2, and overwrite them later if a different formula is also supplied.
+            We initialize ∂^2 f/∂y2∂y1 as ∂^2 f/∂y1∂y2, and overwrite them later if a different formula is also supplied.
          */
         utils::SearchAndReplace(eq, pmimic->_equations[itype], jointnamepairs);
         
-        // takes form "|xi|xj formula ∂^2z/∂xi∂xj"
-        size_t firstvert = eq.find('|'); // the "|" before xi
+        // takes form "|yi|yj formula ∂^2f/∂yi∂yj"
+        size_t firstvert = eq.find('|'); // the "|" before yi
         const std::string sCommonSubexpressions = (firstvert != std::string::npos) ? eq.substr(0, firstvert) : ""; ///< common subexpressions
 
         while(firstvert != std::string::npos) {
-            size_t startxi = firstvert + 1; // xi
-            size_t secondvert = eq.find('|', startxi); // the "|" before xj
+            size_t startyi = firstvert + 1; // yi
+            size_t secondvert = eq.find('|', startyi); // the "|" before yj
             if( secondvert == std::string::npos) {
                 RAVELOG_WARN_FORMAT("Cannot continue for %s", this->GetName());
                 break;
             }
-            size_t startxj = secondvert + 1; // xj
-            size_t space = eq.find(' ', startxj); // the space ' ' between "|xi|xj" and formula
+            size_t startyj = secondvert + 1; // yj
+            size_t space = eq.find(' ', startyj); // the space ' ' between "|yi|yj" and formula
             if( space == std::string::npos) {
                 RAVELOG_WARN_FORMAT("Cannot continue for %s", this->GetName());
                 break;
             }
-            firstvert = eq.find('|', startxj); // the next first "|"
-            const std::string varxi = eq.substr(startxi, secondvert-startxi); // "xi"
-            const std::string varxj = eq.substr(startxj, space-startxj); // "xj"
-            OPENRAVE_ASSERT_FORMAT(mapinvnames.count(varxi) && mapinvnames.count(varxj),
+            firstvert = eq.find('|', startyj); // the next first "|"
+            const std::string varyi = eq.substr(startyi, secondvert-startyi); // "yi"
+            const std::string varyj = eq.substr(startyj, space-startyj); // "yj"
+            OPENRAVE_ASSERT_FORMAT(mapinvnames.count(varyi) && mapinvnames.count(varyj),
                 "mapinvnames should have both variables %s and %s",
-                varxi % varxj, ORE_InvalidArguments
+                varyi % varyj, ORE_InvalidArguments
             );
-            const std::string& jointnamei = mapinvnames.at(varxi);
-            const std::string& jointnamej = mapinvnames.at(varxj);
+            const std::string& jointnamei = mapinvnames.at(varyi);
+            const std::string& jointnamej = mapinvnames.at(varyj);
 
             std::string sequation = (firstvert==std::string::npos) ? eq.substr(space+1) : eq.substr(space+1, firstvert-space-1);
             boost::trim(sequation);
 
-            // ensure varname is indeed in the variable list; not many independent variables for now, so no need to create a map from varxi to ivar
-            std::vector<std::string>::iterator itnameindex = std::find(resultVars.begin(), resultVars.end(), varxi);
+            // ensure varname is indeed in the variable list; not many independent variables for now, so no need to create a map from varyi to ivar
+            std::vector<std::string>::iterator itnameindex = std::find(resultVars.begin(), resultVars.end(), varyi);
             OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(),
                 "variable %s from velocity equation is not referenced in the position, skipping...",
                 jointnamei, ORE_InvalidArguments
             );
             const int ivar = itnameindex - resultVars.begin();
-            itnameindex = std::find(resultVars.begin(), resultVars.end(), varxj);
+            itnameindex = std::find(resultVars.begin(), resultVars.end(), varyj);
             OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(),
                 "variable %s from velocity equation is not referenced in the position, skipping...",
                 jointnamej, ORE_InvalidArguments
@@ -2196,7 +2197,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
 void KinBody::Joint::_ComputePartialVelocities(
     std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
     const int iaxis,
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue
 ) const {
     vDofindexDerivativePairs.clear();
     if( this->dofindex >= 0 ) {
@@ -2222,14 +2223,14 @@ void KinBody::Joint::_ComputePartialVelocities(
         thisdofformat.jointindex = nActiveJoints + (std::find(vPassiveJoints.begin(), vPassiveJoints.end(), shared_from_this()) - vPassiveJoints.begin());
     }
 
-    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mTotalderivativepairValue) {
+    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mPartialderivativepairValue) {
         if( keyvalue.first.first == thisdofformat ) {
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 RAVELOG_VERBOSE_FORMAT("Found cached derivatives of jointindex %d with respect to others", thisdofformat.jointindex);
             }
             const int dependedDofIndex = keyvalue.first.second;
             const dReal partialDerivative = keyvalue.second;
-            vDofindexDerivativePairs.emplace_back(dependedDofIndex, partialDerivative); // collect all dz/dx
+            vDofindexDerivativePairs.emplace_back(dependedDofIndex, partialDerivative); // collect all ∂z/∂x
         }
     }
     if(!vDofindexDerivativePairs.empty()) {
@@ -2275,7 +2276,7 @@ void KinBody::Joint::_ComputePartialVelocities(
             if( IS_DEBUGLEVEL(Level_Verbose) )  {
                 RAVELOG_VERBOSE_FORMAT("Joint \"%s\" calls recursion _ComputePartialVelocities on joint \"%s\"", this->GetName() % dependedjoint->GetName());
             }
-            dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mTotalderivativepairValue); ///< recursion: computes ∂y/∂x
+            dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mPartialderivativepairValue); ///< recursion: computes ∂y/∂x
             for(const std::pair<int, dReal>& pIndexPartial : vLocalIndexPartialPairs) {
                 std::pair<Mimic::DOFFormat, int> key = {thisdofformat, pIndexPartial.first};
                 ///< ∂z/∂x += ∂f/∂y * ∂y/∂x
@@ -2304,10 +2305,10 @@ void KinBody::Joint::_ComputePartialVelocities(
     for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : localmap) {
         const int dependedDofIndex = keyvalue.first.second;
         const dReal partialDerivative = keyvalue.second;
-        vDofindexDerivativePairs.emplace_back(dependedDofIndex, partialDerivative); // collect all total derivatives dz/dx
+        vDofindexDerivativePairs.emplace_back(dependedDofIndex, partialDerivative); // collect all partial derivatives ∂z/∂x
     }
 
-    mTotalderivativepairValue.insert(
+    mPartialderivativepairValue.insert(
         std::make_move_iterator(localmap.begin()),
         std::make_move_iterator(localmap.end())
     );
@@ -2329,8 +2330,8 @@ inline void AccumulateSecondOrderPartialDerivatives(
 void KinBody::Joint::_ComputePartialAccelerations(
     std::vector<std::pair<std::array<int, 2>, dReal> >& vDofindex2ndDerivativePairs,
     const int iaxis,
-    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mTotal2ndderivativepairValue,
-    const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue,
+    const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue
 ) const {
     vDofindex2ndDerivativePairs.clear();
     if( this->dofindex >= 0 ) {
@@ -2357,7 +2358,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
         thisdofformat.jointindex = nActiveJoints + (std::find(vPassiveJoints.begin(), vPassiveJoints.end(), shared_from_this()) - vPassiveJoints.begin());
     }
 
-    for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal>& keyvalue : mTotal2ndderivativepairValue) {
+    for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal>& keyvalue : mSecondorderpartialderivativepairValue) {
         if( keyvalue.first.first == thisdofformat ) {
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 RAVELOG_VERBOSE_FORMAT("Found cached second-order derivatives of jointindex %d with respect to others", thisdofformat.jointindex);
@@ -2406,11 +2407,11 @@ void KinBody::Joint::_ComputePartialAccelerations(
 
      Input:
      - ∂^2 f/∂yi ∂yj      by pmimic->_accelfns
-     - ∂z/∂xk, ∂yi/∂xk    by mTotalderivativepairValue, except when yi=xk, ∂yi/∂xk = 1!
+     - ∂z/∂xk, ∂yi/∂xk    by mPartialderivativepairValue, except when yi=xk, ∂yi/∂xk = 1!
      - ∂f/∂yi             by pmimic->_velfns
 
      Compute:
-     - ∂^2 yi/∂xk ∂xl   by recursion
+     - ∂^2 yi/∂xk ∂xl     by recursion
 
     */
     for(int ivar = 0; ivar < nvars; ++ivar) {
@@ -2424,11 +2425,11 @@ void KinBody::Joint::_ComputePartialAccelerations(
             );
         }
         ///< recursion: collect all ∂^2 yi/∂xk ∂xl
-        dependedjointi->_ComputePartialAccelerations(vLocalIndexPartialPairs, iaxis, mTotal2ndderivativepairValue, mTotalderivativepairValue);
+        dependedjointi->_ComputePartialAccelerations(vLocalIndexPartialPairs, iaxis, mSecondorderpartialderivativepairValue, mPartialderivativepairValue);
     }
 
     std::set<int> sIndices;
-    for(auto& keyvalue : mTotalderivativepairValue) {
+    for(auto& keyvalue : mPartialderivativepairValue) {
         sIndices.insert(keyvalue.first.second);
     }
     std::vector<int> vIndices(sIndices.begin(), sIndices.end());
@@ -2496,14 +2497,14 @@ void KinBody::Joint::_ComputePartialAccelerations(
                 d2zdxkxl.second = indexpair;
 
                 dReal faccellocal = faccel;
-                if (mTotalderivativepairValue.count(dyidxk)) { // yi depends on xk
-                    faccellocal *= mTotalderivativepairValue.at(dyidxk);
+                if (mPartialderivativepairValue.count(dyidxk)) { // yi depends on xk
+                    faccellocal *= mPartialderivativepairValue.at(dyidxk);
                 }
                 else if (jointindexi != kactive) { // yi != xk
                     continue;
                 }
-                if (mTotalderivativepairValue.count(dyjdxl)) { // yj depends on xl
-                    faccellocal *= mTotalderivativepairValue.at(dyjdxl);
+                if (mPartialderivativepairValue.count(dyjdxl)) { // yj depends on xl
+                    faccellocal *= mPartialderivativepairValue.at(dyjdxl);
                 }
                 else if (jointindexj != lactive) { // yj != xl
                     continue;
@@ -2519,14 +2520,14 @@ void KinBody::Joint::_ComputePartialAccelerations(
             const int lactive = indexpair[1];
             d2ydxkxl.second = indexpair; // ∂^2 yi/∂xk ∂xl
             d2zdxkxl.second = indexpair; // ∂^2  z/∂xk ∂xl          
-            if(mTotal2ndderivativepairValue.count(d2ydxkxl)) { // yi depends on both xk and xl
+            if(mSecondorderpartialderivativepairValue.count(d2ydxkxl)) { // yi depends on both xk and xl
                 RAVELOG_VERBOSE_FORMAT("Working on (i=%d,k=%d,l=%d), that is, ∂^2(%s)/∂(%s)∂(%s) += ∂f/∂(%s) * ∂^2(%s)/∂(%s) ∂(%s)",
                     jointindexi % indexpair[0] % indexpair[1]
                     % this->GetName() % vActiveJoints.at(kactive)->GetName() % vActiveJoints.at(lactive)->GetName()
                     % dependedjointi->GetName()
                     % dependedjointi->GetName() % vActiveJoints.at(kactive)->GetName() % vActiveJoints.at(lactive)->GetName()
                 );
-                AccumulateSecondOrderPartialDerivatives(localmap, d2zdxkxl, fvel * mTotal2ndderivativepairValue.at(d2ydxkxl)); // ∂^2  z/∂xk ∂xl += ∂f/∂yi * ∂^2 yi/∂xk ∂xl
+                AccumulateSecondOrderPartialDerivatives(localmap, d2zdxkxl, fvel * mSecondorderpartialderivativepairValue.at(d2ydxkxl)); // ∂^2  z/∂xk ∂xl += ∂f/∂yi * ∂^2 yi/∂xk ∂xl
             }
         }
     } // for(int ivar = 0; ivar < nvars; ++ivar)
@@ -2535,10 +2536,10 @@ void KinBody::Joint::_ComputePartialAccelerations(
     for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal>& keyvalue : localmap) {
         const std::array<int, 2>& dependedDofIndexPair = keyvalue.first.second;
         const dReal partialDerivative = keyvalue.second;
-        vDofindex2ndDerivativePairs.emplace_back(dependedDofIndexPair, partialDerivative); // collect all total derivatives ∂^2z/∂xl ∂xk
+        vDofindex2ndDerivativePairs.emplace_back(dependedDofIndexPair, partialDerivative); // collect all partial derivatives ∂^2z/∂xl ∂xk
     }
 
-    mTotal2ndderivativepairValue.insert(
+    mSecondorderpartialderivativepairValue.insert(
         std::make_move_iterator(localmap.begin()),
         std::make_move_iterator(localmap.end())
     );

@@ -2257,32 +2257,32 @@ KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
     return JointPtr();
 }
 
-void KinBody::ComputeMimicJointFirstOrderFullDerivatives(
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue
+void KinBody::ComputeMimicJointFirstOrderPartialDerivatives(
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue
 ) {
     std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
     for(const JointPtr& pjoint : _vPassiveJoints) {
         const int ndof = pjoint->GetDOF();
         for(int idof = 0; idof < ndof; ++idof) {
             if( pjoint->IsMimic(idof) ) {
-                pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
+                pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mPartialderivativepairValue);
             }
         }
     }
 }
 
-void KinBody::ComputeMimicJointSecondOrderFullDerivatives(
-    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mTotal2ndderivativepairValue
+void KinBody::ComputeMimicJointSecondOrderPartialDerivatives(
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue
 ) {
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue;
-    this->ComputeMimicJointFirstOrderFullDerivatives(mTotalderivativepairValue);
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
+    this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
 
     std::vector<std::pair<std::array<int, 2>, dReal> > vDofindex2ndDerivativePairs;
     for(const JointPtr& pjoint : _vPassiveJoints) {
         const int ndof = pjoint->GetDOF();
         for(int idof = 0; idof < ndof; ++idof) {
             if( pjoint->IsMimic(idof) ) {
-                pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mTotal2ndderivativepairValue, mTotalderivativepairValue);
+                pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mSecondorderpartialderivativepairValue, mPartialderivativepairValue);
             }
         }
     }
@@ -2306,8 +2306,8 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     }
     std::fill(vjacobian.begin(), vjacobian.end(), 0.0);
 
-    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, total derivative) pairs
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, partial derivative) pairs
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
 
     Vector vColumn; ///< cache for a column of the linear velocity Jacobian
     const int offset = linkindex * nlinks;
@@ -2380,8 +2380,8 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                     }
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    // vDofindexDerivativePairs is a vector of (dof index, total derivative) pairs
-                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
+                    // vDofindexDerivativePairs is a vector of (dof index, partial derivative) pairs
+                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mPartialderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                         int index = -1;
@@ -2450,8 +2450,8 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
     }
     std::fill(vjacobian.begin(), vjacobian.end(), 0.0);
 
-    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, total derivative) pairs
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, partial derivative) pairs
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
 
     Vector vColumn; ///< cache for a column of the quaternion velocity Jacobian
     const int offset = linkindex * nlinks;
@@ -2505,8 +2505,8 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                     vColumn = pjoint->GetAxis(idof);
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    // vDofindexDerivativePairs is a vector of (dof index, total derivative) pairs
-                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
+                    // vDofindexDerivativePairs is a vector of (dof index, partial derivative) pairs
+                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mPartialderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                         const int dofindex = dofindexDerivativePair.first;
@@ -2566,8 +2566,8 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
     }
     std::fill(vjacobian.begin(), vjacobian.end(), 0.0);
 
-    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, total derivative) pairs
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, partial derivative) pairs
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
 
     Vector vColumn; ///< cache for a column of the angular velocity Jacobian
     const int offset = linkindex * nlinks;
@@ -2631,8 +2631,8 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                     vColumn = pjoint->GetAxis(idof);
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    // vDofindexDerivativePairs is a vector of (dof index, total derivative) pairs
-                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
+                    // vDofindexDerivativePairs is a vector of (dof index, partial derivative) pairs
+                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mPartialderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                         int index = -1;
@@ -3591,8 +3591,8 @@ void KinBody::_ComputeLinkAccelerations(
     vlinkscomputed[0] = 1;
 
     if( bHasVelocities ) {
-        std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< a vector of (x's dof index, total derivative dz/dx) pairs for a mimic joint z
-        std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
+        std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< a vector of (x's dof index, partial derivative ∂z/∂x) pairs for a mimic joint z
+        std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
 
         // compute all dof velocities in topological order
         for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
@@ -3603,24 +3603,24 @@ void KinBody::_ComputeLinkAccelerations(
             const int ndof = pjoint->GetDOF();
             for(int idof = 0; idof < ndof; ++idof) {
                 if( pjoint->IsMimic(idof) ) {
-                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
+                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mPartialderivativepairValue);
                 }
             }
         }
 
-        // collect results in mTotalderivativepairValue
-        for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mTotalderivativepairValue) {
+        // collect results in mPartialderivativepairValue
+        for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mPartialderivativepairValue) {
             const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
             const int jointindex = thisdofformat.jointindex; // index of z
             const int dependedDofIndex = keyvalue.first.second; // index of x
-            const dReal totalPartialDerivative = keyvalue.second; // we still use dz/dx even though x=x(t) is time-dependent
-            vPassiveJointVelocities.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += vDOFVelocities.at(dependedDofIndex) * totalPartialDerivative; // dz/dt = \sum_{z depends on x} dz/dx * dx/dt
+            const dReal totalPartialDerivative = keyvalue.second; // ∂z/dx where x=x(t) is time-dependent
+            vPassiveJointVelocities.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += vDOFVelocities.at(dependedDofIndex) * totalPartialDerivative; // dz/dt = \sum_{z depends on x} ∂z/∂x * dx/dt
         }
 
         // compute the link accelerations in topological order
         if( bHasAccelerations ) {
-            std::vector<std::pair<std::array<int, 2>, dReal> > vDofindex2ndDerivativePairs; ///< vector of (x's dof index, total derivative d^2 z/dx^2) pairs
-            std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mTotal2ndderivativepairValue; ///< map a joint pair (z, x) to the total derivative d^2 z/dx^2
+            std::vector<std::pair<std::array<int, 2>, dReal> > vDofindex2ndDerivativePairs; ///< vector of ((l, k), ∂^2 z/∂xk ∂xl) pairs
+            std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue; ///< map a joint pair (z, (xl, xk)) to the partial derivative ∂^2 z/∂xk ∂xl
 
             // compute all dof accelerations in topological order
             for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
@@ -3631,14 +3631,14 @@ void KinBody::_ComputeLinkAccelerations(
                 const int ndof = pjoint->GetDOF();
                 for(int idof = 0; idof < ndof; ++idof) {
                     if( pjoint->IsMimic(idof) ) {
-                        pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mTotal2ndderivativepairValue, mTotalderivativepairValue);
+                        pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mSecondorderpartialderivativepairValue, mPartialderivativepairValue);
                     }
                 }
             }
 
-            // collect results in mTotal2ndderivativepairValue
+            // collect results in mSecondorderpartialderivativepairValue
             std::set<int> sActive;
-            for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2>>, dReal>& keyvalue : mTotal2ndderivativepairValue) {
+            for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2>>, dReal>& keyvalue : mSecondorderpartialderivativepairValue) {
                 const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
                 const int jointindex = thisdofformat.jointindex; // index of z
                 const std::array<int, 2>& indexpair = keyvalue.first.second;
@@ -3653,7 +3653,7 @@ void KinBody::_ComputeLinkAccelerations(
                 if(!sActive.count(kactive)) {
                     sActive.insert(kactive);
                     const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, kactive};
-                    const dReal dzdx = mTotalderivativepairValue.at(key);
+                    const dReal dzdx = mPartialderivativepairValue.at(key);
                     const dReal d2xdt2 = vDOFAccelerations.at(kactive);
                     vPassiveJointAccelerations.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += dzdx * d2xdt2;
                 }
@@ -3944,7 +3944,7 @@ void KinBody::_ComputeInternalInformation()
                         }
 
                         // TGN: Since Mimic::_vmimicdofs only contains active joints (c.f. KinBody::Joint::SetMimicEquations),
-                        // when computing partial/total derivatives by chain rule, we shall use Mimic::_vdofformat
+                        // when computing partial derivatives by chain rule, we shall use Mimic::_vdofformat
                         Mimic::DOFHierarchy h;
                         h.dofformatindex = idofformat; ///< index in vdofformat
                         h.dofindex = mimicdofDepended.dofindex; // >= 0, dofindex of active joint

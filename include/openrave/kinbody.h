@@ -1585,12 +1585,12 @@ protected:
             If the joint is not mimic, then just returns its own index
             \param[out] vDofindexDerivativePairs: A vector of (x's dof index, partial derivative ∂z/∂x) pairs, where z=f(y1,...yn) is this joint, yi are all active/passive joints z directly depends, and x's are all the active joints on which z directly/indirectly depends
             \param[in] iaxis the axis 0, 1, or 2
-            \param[in,out] mTotalderivativepairValue: A map of all (cached) joint pairs (z, x) to the first-order partial derivatives dz/dx
+            \param[in,out] mPartialderivativepairValue: A map of all (cached) joint pairs (z, x) to the first-order partial derivatives ∂z/∂x
          */
         virtual void _ComputePartialVelocities(
             std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
             const int iaxis,
-            std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue
+            std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue
         ) const;
 
         /** \brief computes the second-order partial derivatives with respect to all dependent DOFs specified by Mimic::_vmimicdofs.
@@ -1598,14 +1598,14 @@ protected:
             If the joint is not mimic, then just returns its own index
             \param[out] vDofindex2ndDerivativePairs: A vector of (x's dof index, partial derivative ∂^2 f/∂xk ∂xl) pairs, where z=f(y1,...yn) is this joint, yi are all active/passive joints z directly depends, and x's are all the active joints on which z directly/indirectly depends
             \param[in] iaxis the axis 0, 1, or 2
-            \param[in,out] mTotal2ndderivativepairValue: A map of all (cached) joint pairs (z, (xk, xl)) to the second-order partial derivatives ∂^2 z/∂xk ∂xl
-            \param[in] mTotalderivativepairValue: A map of all previously computed (!!!) joint pairs (z, x) to the first-order partial derivatives ∂z/∂x
+            \param[in,out] mSecondorderpartialderivativepairValue: A map of all (cached) joint pairs (z, (xk, xl)) to the second-order partial derivatives ∂^2 z/∂xk ∂xl
+            \param[in] mPartialderivativepairValue: A map of all previously computed (!!!) joint pairs (z, x) to the first-order partial derivatives ∂z/∂x
          */
         virtual void _ComputePartialAccelerations(
             std::vector<std::pair<std::array<int, 2>, dReal> >& vDofindex2ndDerivativePairs,
             const int iaxis,
-            std::map< std::pair<Mimic::DOFFormat, std::array<int, 2>>, dReal >& mTotal2ndderivativepairValue,
-            const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue
+            std::map< std::pair<Mimic::DOFFormat, std::array<int, 2>>, dReal >& mSecondorderpartialderivativepairValue,
+            const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue
         ) const;
 
         /** \brief Compute internal transformations and specify the attached links of the joint.
@@ -2401,8 +2401,8 @@ private:
     virtual void SetLinkEnableStates(const std::vector<uint8_t>& enablestates);
 
 
-    void ComputeMimicJointFirstOrderFullDerivatives(std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue);
-    void ComputeMimicJointSecondOrderFullDerivatives(std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mTotal2ndderivativepairValue);
+    void ComputeMimicJointFirstOrderPartialDerivatives(std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue);
+    void ComputeMimicJointSecondOrderPartialDerivatives(std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue);
 
     /// \brief Computes the translation jacobian with respect to a world position.
     ///
