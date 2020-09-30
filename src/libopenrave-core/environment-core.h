@@ -2503,10 +2503,10 @@ public:
 
         RAVELOG_VERBOSE("=== UpdateFromInfo start ===");
         FOREACHC(itBodyInfo, info._vBodyInfos) {
-            if ((*itBodyInfo)->_id.empty()) {
-                RAVELOG_DEBUG_FORMAT("body %s has empty id, skipping", (*itBodyInfo)->_name);
-                continue;
-            }
+            // if ((*itBodyInfo)->_id.empty()) {
+            //     RAVELOG_DEBUG_FORMAT("body %s has empty id, skipping", (*itBodyInfo)->_name);
+            //     continue;
+            // }
             KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
             RAVELOG_VERBOSE_FORMAT("==== %s ===", pKinBodyInfo->_id);
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
