@@ -2228,6 +2228,22 @@ object PyEnvironmentBase::GetBodies()
     return bodies;
 }
 
+object PyEnvironmentBase::GetBodiesSortedByName()
+{
+    std::vector<KinBodyPtr> vbodies;
+    _penv->GetBodiesSortedByName(vbodies);
+    py::list bodies;
+    FOREACHC(itbody, vbodies) {
+        if( (*itbody)->IsRobot() ) {
+            bodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        }
+        else {
+            bodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    return bodies;
+}
+
 object PyEnvironmentBase::GetRobots()
 {
     std::vector<RobotBasePtr> vrobots;
@@ -3121,6 +3137,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
                      .def("GetRobots",&PyEnvironmentBase::GetRobots, DOXY_FN(EnvironmentBase,GetRobots))
                      .def("GetBodies",&PyEnvironmentBase::GetBodies, DOXY_FN(EnvironmentBase,GetBodies))
+                     .def("GetBodiesSortedByName",&PyEnvironmentBase::GetBodiesSortedByName, DOXY_FN(EnvironmentBase,GetBodies))
                      .def("GetSensors",&PyEnvironmentBase::GetSensors, DOXY_FN(EnvironmentBase,GetSensors))
                      .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies, DOXY_FN(EnvironmentBase,UpdatePublishedBodies))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

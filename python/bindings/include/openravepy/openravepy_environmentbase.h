@@ -242,6 +242,8 @@ public:
 
     object GetBodies();
 
+    object GetBodiesSortedByName();
+
     object GetRobots();
 
     object GetSensors();
