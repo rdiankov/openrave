@@ -25,6 +25,25 @@
 
 namespace OpenRAVE {
 
+static bool _EndsWith(const std::string& fullString, const std::string& endString) {
+    if (fullString.length() >= endString.length()) {
+        return fullString.compare(fullString.length() - endString.length(), endString.length(), endString) == 0;
+    }
+    return false;
+}
+
+/// \brief if filename endswith oldSuffix, replace it with newSuffix
+static void _ReplaceFilenameSuffix(std::string& filename, const std::string& oldSuffix, const std::string& newSuffix) {
+    // fix extension, replace dae with json
+    // this is done for ease of migration
+    if (_EndsWith(filename, oldSuffix)) {
+        size_t len = filename.size();
+        size_t suffixLen = oldSuffix.size();
+        filename = filename.substr(0, len-suffixLen) + newSuffix;
+        RAVELOG_DEBUG_FORMAT("change filename to %s", filename);
+    }
+}
+
 /// \brief open and cache a msgpack document
 static void OpenMsgPackDocument(const std::string& filename, rapidjson::Document& doc)
 {
@@ -264,11 +283,11 @@ protected:
         }
         else {
             boost::shared_ptr<rapidjson::Document> newDoc;
-            if (EndsWith(fullFilename, ".json")) {
+            if (_EndsWith(fullFilename, ".json")) {
                 newDoc.reset(new rapidjson::Document(&alloc));
                 OpenRapidJsonDocument(fullFilename, *newDoc);
             }
-            else if (EndsWith(fullFilename, ".msgpack")) {
+            else if (_EndsWith(fullFilename, ".msgpack")) {
                 newDoc.reset(new rapidjson::Document(&alloc));
                 OpenMsgPackDocument(fullFilename, *newDoc);
             }
@@ -324,7 +343,7 @@ protected:
         // deal with uri with scheme:/path#fragment
         else if (!scheme.empty() && !path.empty()) {
             // replace .dae to .json or .msgpack, depends on orignal document file defaultSuffix
-            ReplaceFilenameSuffix(path, ".dae", _defaultSuffix);
+            _ReplaceFilenameSuffix(path, ".dae", _defaultSuffix);
             std::string fullFilename = ResolveURI(scheme, path, GetOpenRAVESchemeAliases());
             if (fullFilename.empty()) {
                 RAVELOG_ERROR_FORMAT("failed to resolve referenceUri '%s' in body %s", referenceUri%originBodyId);
