@@ -36,14 +36,6 @@
         CHECK_INTERFACE(body); \
 }
 
-namespace
-{
-    bool _CompareBodyByName(KinBodyWeakPtr a, KinBodyWeakPtr b)
-    {
-        return KinBodyPtr(a)->GetName() < KinBodyPtr(b)->GetName();
-    }
-}
-
 class Environment : public EnvironmentBase
 {
     class GraphHandleMulti : public GraphHandle
@@ -126,7 +118,7 @@ public:
         RAVELOG_DEBUG_FORMAT("setting openrave home directory to %s", _homedirectory);
 
         _nBodiesModifiedStamp = 0;
-        _nBodiesSortedStamp = _nBodiesModifiedStamp;
+        _nBodiesSortedStamp = 0;
         _nEnvironmentIndex = 1;
 
         _fDeltaSimTime = 0.01f;
@@ -161,7 +153,7 @@ public:
         }
 
         _nBodiesModifiedStamp = 0;
-        _nBodiesSortedStamp = _nBodiesModifiedStamp;
+        _nBodiesSortedStamp = 0;
         _nEnvironmentIndex = 1;
 
         _fDeltaSimTime = 0.01f;
@@ -367,6 +359,7 @@ public:
             _nBodiesModifiedStamp++;
 
             _mapBodies.clear();
+            _setsortedbodies.clear();
 
             FOREACH(itsensor,_listSensors) {
                 (*itsensor)->Configure(SensorBase::CC_PowerOff);
@@ -1304,26 +1297,25 @@ public:
     virtual void GetBodiesSortedByName(std::vector<KinBodyPtr>& bodies, uint64_t timeout) const
     {
         if (_nBodiesModifiedStamp != _nBodiesSortedStamp || _nBodiesSortedStamp == 0) {
-            _vecsortedbodies.clear();
+            _setsortedbodies.clear();
 
             if( timeout == 0 ) {
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-                _vecsortedbodies.insert(_vecsortedbodies.begin(), _vecbodies.begin(), _vecbodies.end());
+                std::copy(_vecbodies.begin(), _vecbodies.end(), std::inserter(_setsortedbodies, _setsortedbodies.begin()));
             }
             else {
                 boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
                 if (!lock.owns_lock()) {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
                 }
-                _vecsortedbodies.insert(_vecsortedbodies.begin(), _vecbodies.begin(), _vecbodies.end());
+                std::copy(_vecbodies.begin(), _vecbodies.end(), std::inserter(_setsortedbodies, _setsortedbodies.begin()));
             }
 
-            sort(_vecsortedbodies.begin(), _vecsortedbodies.end(), _CompareBodyByName);
             _nBodiesSortedStamp = _nBodiesModifiedStamp;
         }
 
         bodies.clear();
-        for (const KinBodyWeakPtr& body : _vecsortedbodies) {
+        for (const KinBodyWeakPtr& body : _setsortedbodies) {
             bodies.push_back(KinBodyPtr(body));
         }
     }
@@ -2841,7 +2833,7 @@ protected:
         }
 
         _nBodiesModifiedStamp = r->_nBodiesModifiedStamp;
-        _nBodiesSortedStamp = r->_nBodiesSortedStamp;
+        _nBodiesSortedStamp = 0;
         _homedirectory = r->_homedirectory;
         _fDeltaSimTime = r->_fDeltaSimTime;
         _nCurSimTime = 0;
@@ -2874,12 +2866,18 @@ protected:
             }
             // a little tricky due to a deadlocking situation
             std::map<int, KinBodyWeakPtr> mapBodies;
+            NameSortedBodySet setsortedbodies;
             {
                 boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
                 mapBodies = _mapBodies;
                 _mapBodies.clear();
+
+                _setsortedbodies = setsortedbodies;
+                _setsortedbodies.clear();
+
             }
             mapBodies.clear();
+            setsortedbodies.clear();
         }
 
         list<ViewerBasePtr> listViewers = _listViewers;
@@ -2949,6 +2947,7 @@ protected:
             std::vector<KinBodyPtr> vecbodies;
             std::vector<std::pair<Vector,Vector> > linkvelocities;
             _mapBodies.clear();
+            _setsortedbodies.clear();
             if( bCheckSharedResources ) {
                 // delete any bodies/robots from mapBodies that are not in r->_vecrobots and r->_vecbodies
                 vecrobots.swap(_vecrobots);
@@ -2982,6 +2981,7 @@ protected:
                     _vecbodies.push_back(pnewrobot);
                     _vecrobots.push_back(pnewrobot);
                     _mapBodies[pnewrobot->GetEnvironmentId()] = pnewrobot;
+                    _setsortedbodies.insert(pnewrobot);
                 }
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR_FORMAT("failed to clone robot %s: %s", (*itrobot)->GetName()%ex.what());
@@ -3017,6 +3017,8 @@ protected:
                     pnewbody->_environmentid = (*itbody)->GetEnvironmentId();
                     _vecbodies.push_back(pnewbody);
                     _mapBodies[pnewbody->GetEnvironmentId()] = pnewbody;
+                    _setsortedbodies.insert(pnewbody);
+
                 }
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR_FORMAT("env=%d, failed to clone body %s: %s", GetId()%(*itbody)->GetName()%ex.what());
@@ -3535,9 +3537,18 @@ protected:
         _prLoadEnvAlloc->Clear();
     }
 
+    struct name_compare {
+        bool operator() (const KinBodyWeakPtr& body1, const KinBodyWeakPtr& body2) const
+        {
+            return KinBodyPtr(body1)->GetName() < KinBodyPtr(body2)->GetName();
+        }
+    };
+    typedef std::set<KinBodyWeakPtr, name_compare> NameSortedBodySet;
+
     std::vector<RobotBasePtr> _vecrobots;      ///< robots (possibly controlled). protected by _mutexInterfaces
     std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots). protected by _mutexInterfaces
-    mutable std::vector<KinBodyWeakPtr> _vecsortedbodies;     ///< contains same elements as _vecbodies but sorted by names in ascending order. protected by _mutexInterfaces
+    
+    mutable NameSortedBodySet _setsortedbodies;     ///< contains same elements (lazily computed) as _vecbodies but sorted by names in ascending order. protected by _mutexInterfaces
 
     list< std::pair<ModuleBasePtr, std::string> > _listModules;     ///< modules loaded in the environment and the strings they were intialized with. Initialization strings are used for cloning.
     list<SensorBasePtr> _listSensors;     ///< sensors loaded in the environment
@@ -3547,7 +3558,7 @@ protected:
     uint64_t _nCurSimTime;                        ///< simulation time since the start of the environment
     uint64_t _nSimStartTime;
     int _nBodiesModifiedStamp;     ///< incremented every time bodies vector is modified
-    mutable int _nBodiesSortedStamp;     ///< incremented every time _vecsortedbodies is updated
+    mutable int _nBodiesSortedStamp;     ///< incremented every time _setsortedbodies is updated
 
     CollisionCheckerBasePtr _pCurrentChecker;
     PhysicsEngineBasePtr _pPhysicsEngine;
