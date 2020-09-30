@@ -3577,7 +3577,7 @@ void KinBody::ComputePassiveJointVelocitiesAccelerations(
         }
         /*
             d^2 z                               [  ∂^2 z     ( dxk )   ( dxl ) ]                          [ ∂z      d^2 xk ]
-            -----  = \sum_{z depends on xk, xl} [ -------- x (-----) x (-----) ] + \sum_{z depends on xk} [----- * ------- ]
+            -----  = \sum_{z depends on xk, xl} [ -------- x (-----) x (-----) ] + \sum_{z depends on xk} [----- x ------- ]
             d t^2                               [ ∂xk ∂xl    ( dt  )   ( dt  ) ]                          [ ∂xk     d t^2  ]
 
             where dx/dt comes from vDOFVelocities    if bHasVelocities, while
