@@ -2450,54 +2450,6 @@ public:
         _unit = unit;
     }
 
-    /// \brief go through all boides id and make sure they are unique
-    //
-    /// assumes environment and _mutexInterfaces are locked
-    virtual void _ResolveBodyIds() {
-        char sTempIndexConversion[9]; //temp memory space for converting indices to hex strings, enough space to convert uint32_t
-        uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
-        static const char pBodyIdPrefix[] = "body";
-        int nBodyId = 0;
-        const int numBodies = _vecbodies.size();
-        for(int iBody = 0; iBody < numBodies; iBody++) {
-            bool bGenerateNewId = _vecbodies[iBody]->_id.empty();
-            if (!bGenerateNewId) {
-                for(int iTestBody = 0; iTestBody < iBody; iTestBody++) {
-                    if(_vecbodies[iBody]->_id == _vecbodies[iTestBody]->_id) {
-                        bGenerateNewId = true;
-                        break;
-                    }
-                }
-            }
-            if (bGenerateNewId) {
-                while(1) {
-                    nTempIndexConversion = ConvertUIntToHex(nBodyId, sTempIndexConversion);
-                    bool bHasSame = false;
-                    for(int iTestBody = 0; iTestBody < numBodies; ++iTestBody) {
-                        const std::string& testid = _vecbodies[iTestBody]->_id;
-                        if( testid.size() == sizeof(pBodyIdPrefix)-1+nTempIndexConversion ) {
-                            if( strncmp(testid.c_str() + (sizeof(pBodyIdPrefix)-1), sTempIndexConversion,nTempIndexConversion) == 0 ) {
-                                // matches
-                                bHasSame = true;
-                                break;
-                            }
-                        }
-                    }
-                    if( bHasSame ) {
-                        nBodyId++;
-                        continue;
-                    }
-                    break;
-                }
-
-                _vecbodies[iBody]->_id = pBodyIdPrefix;
-                _vecbodies[iBody]->_id += sTempIndexConversion;
-                nBodyId++;
-            }
-
-        }
-    }
-
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
     virtual void ExtractInfo(EnvironmentBaseInfo& info)
     {
@@ -2505,7 +2457,6 @@ public:
         std::vector<KinBodyPtr> vBodies;
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            _ResolveBodyIds(); // assumes _mutexInterfaces
             vBodies = _vecbodies;
         }
         info._vBodyInfos.resize(vBodies.size());
@@ -2534,11 +2485,6 @@ public:
         vRemovedBodies.clear();
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            _ResolveBodyIds(); // assumes _mutexInterfaces
-        }
-
         std::vector<dReal> vDOFValues;
 
         // copy basic info into EnvironmentBase
@@ -2557,6 +2503,10 @@ public:
 
         RAVELOG_VERBOSE("=== UpdateFromInfo start ===");
         FOREACHC(itBodyInfo, info._vBodyInfos) {
+            if ((*itBodyInfo)->_id.empty()) {
+                RAVELOG_DEBUG_FORMAT("body %s has empty id, skipping", (*itBodyInfo)->_name);
+                continue;
+            }
             KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
             RAVELOG_VERBOSE_FORMAT("==== %s ===", pKinBodyInfo->_id);
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
@@ -2620,7 +2570,7 @@ public:
                 }
             }
 
-            KinBodyPtr pInitBody; // body that has been Init() again
+            KinBodyPtr pInitBody; // body that has to be Init() again
             if(!!pMatchExistingBody ) {
                 RAVELOG_VERBOSE_FORMAT("env=%d, update existing body %s", GetId()%pMatchExistingBody->_id);
                 // interface should match at this point
@@ -2745,6 +2695,10 @@ public:
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             // remove extra bodies
             FOREACH_NOINC(itBody, _vecbodies) {
+                if ((*itBody)->_id.empty()) {
+                    RAVELOG_DEBUG_FORMAT("body %s has empty id", (*itBody)->_name);
+                    continue;
+                }
 
                 // find existing body in the env
                 std::vector<KinBodyPtr>::iterator itExistingSameId = _vecbodies.end();

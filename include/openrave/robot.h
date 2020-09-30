@@ -1287,9 +1287,6 @@ protected:
 
     virtual void _UpdateAttachedSensors();
 
-    /// \brief goes through all the link/joint ids and makes sure they are unique
-    void _ResolveInfoIds() override;
-
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
     ManipulatorPtr _pManipActive;
 
