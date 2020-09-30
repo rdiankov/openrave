@@ -2259,7 +2259,8 @@ KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
 
 void KinBody::ComputeMimicJointFirstOrderPartialDerivatives(
     std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue
-) {
+) const {
+    mPartialderivativepairValue.clear();
     std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
     for(const JointPtr& pjoint : _vPassiveJoints) {
         const int ndof = pjoint->GetDOF();
@@ -2272,12 +2273,16 @@ void KinBody::ComputeMimicJointFirstOrderPartialDerivatives(
 }
 
 void KinBody::ComputeMimicJointSecondOrderPartialDerivatives(
-    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue
-) {
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
-    this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
-    const std::vector<std::array<int, 2>> vIndexPairs = CollectSecondOrderPartialDerivativesActiveIndexPairs(mPartialderivativepairValue);
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue,
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
+    const bool bRecomputeFirstOrderPartial
+) const {
+    mSecondorderpartialderivativepairValue.clear();
+    if(bRecomputeFirstOrderPartial) {
+        this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
+    }
 
+    const std::vector<std::array<int, 2>> vIndexPairs = CollectSecondOrderPartialDerivativesActiveIndexPairs(mPartialderivativepairValue);
     std::vector<std::pair<std::array<int, 2>, dReal> > vDofindex2ndDerivativePairs;
     for(const JointPtr& pjoint : _vPassiveJoints) {
         const int ndof = pjoint->GetDOF();
@@ -3592,24 +3597,10 @@ void KinBody::_ComputeLinkAccelerations(
     vlinkscomputed[0] = 1;
 
     if( bHasVelocities ) {
-        std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< a vector of (x's dof index, partial derivative ∂z/∂x) pairs for a mimic joint z
         std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
+        this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
 
-        // compute all dof velocities in topological order
-        for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
-            const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
-            if( !pjoint->IsMimic() ) {
-                continue;
-            }
-            const int ndof = pjoint->GetDOF();
-            for(int idof = 0; idof < ndof; ++idof) {
-                if( pjoint->IsMimic(idof) ) {
-                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mPartialderivativepairValue);
-                }
-            }
-        }
-
-        // collect results in mPartialderivativepairValue
+        // compute all dof velocities in topological order, collect results from mPartialderivativepairValue
         for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mPartialderivativepairValue) {
             const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
             const int jointindex = thisdofformat.jointindex; // index of z
@@ -3620,25 +3611,11 @@ void KinBody::_ComputeLinkAccelerations(
 
         // compute the link accelerations in topological order
         if( bHasAccelerations ) {
-            std::vector<std::pair<std::array<int, 2>, dReal> > vDofindex2ndDerivativePairs; ///< vector of ((l, k), ∂^2 z/∂xk ∂xl) pairs
             std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue; ///< map a joint pair (z, (xl, xk)) to the partial derivative ∂^2 z/∂xk ∂xl
-            const std::vector<std::array<int, 2>> vIndexPairs = CollectSecondOrderPartialDerivativesActiveIndexPairs(mPartialderivativepairValue);
+            const bool bRecomputeFirstOrderPartial = false; // already computed above
+            this->ComputeMimicJointSecondOrderPartialDerivatives(mSecondorderpartialderivativepairValue, mPartialderivativepairValue, bRecomputeFirstOrderPartial);
 
-            // compute all dof accelerations in topological order
-            for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
-                const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
-                if( !pjoint->IsMimic() ) {
-                    continue;
-                }
-                const int ndof = pjoint->GetDOF();
-                for(int idof = 0; idof < ndof; ++idof) {
-                    if( pjoint->IsMimic(idof) ) {
-                        pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mSecondorderpartialderivativepairValue, mPartialderivativepairValue, vIndexPairs);
-                    }
-                }
-            }
-
-            // collect results in mSecondorderpartialderivativepairValue
+            // compute all dof accelerations in topological order; collect results from mSecondorderpartialderivativepairValue
             std::set<int> sActive;
             for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2>>, dReal>& keyvalue : mSecondorderpartialderivativepairValue) {
                 const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
@@ -3650,14 +3627,15 @@ void KinBody::_ComputeLinkAccelerations(
                 const dReal dxkdt = vDOFVelocities.at(kactive); // dxk/dt
                 const dReal dxldt = vDOFVelocities.at(lactive); // dxl/dt
 
-                vPassiveJointAccelerations.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += d2zdxkdxl * dxkdt * dxldt;
+                dReal& d2zdt2 = vPassiveJointAccelerations.at(jointindex - nPassiveJoints).at(thisdofformat.axis);
+                d2zdt2 += d2zdxkdxl * dxkdt * dxldt; // d^2 z/dt^2 += (∂^2 z/∂xk ∂xl) * (dxk/dt) * (dxl/dt)
 
                 if(!sActive.count(kactive)) {
                     sActive.insert(kactive);
                     const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, kactive};
                     const dReal dzdx = mPartialderivativepairValue.at(key);
                     const dReal d2xdt2 = vDOFAccelerations.at(kactive);
-                    vPassiveJointAccelerations.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += dzdx * d2xdt2;
+                    d2zdt2 += dzdx * d2xdt2; // d^2 z/dt^2 += (∂z/∂xk) * (d^2 xk/dt^2)
                 }
                 /*
                 d^2 z                               [  ∂^2 z     ( dxk )   ( dxl ) ]                          [ ∂z      d^2 xk ]
@@ -3671,37 +3649,24 @@ void KinBody::_ComputeLinkAccelerations(
     // compute the link accelerations going through topological order
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
         const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
-        const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint]; ///< for all joints, >= 0
-        dReal const* pdofaccelerations = NULL;
-        dReal const* pdofvelocities = NULL;
-
         // do the test after mimic computation!?
         if( vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] ) {
             continue;
         }
 
-        if( bHasVelocities && !pdofvelocities ) {
-            // has to be a passive joint
-            pdofvelocities = &vPassiveJointVelocities.at(jointindex-nActiveJoints).at(0);
-        }
-        if( bHasAccelerations && !pdofaccelerations ) {
-            // has to be a passive joint
-            pdofaccelerations = &vPassiveJointAccelerations.at(jointindex-nActiveJoints).at(0);
-        }
+        const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint]; ///< for all joints, >= 0
+        dReal const* const pdofaccelerations = bHasAccelerations ? vPassiveJointAccelerations.at(jointindex-nActiveJoints).data() : NULL;
+        dReal const* pdofvelocities = bHasVelocities ? vPassiveJointVelocities.at(jointindex-nActiveJoints).data() : NULL;
 
-        int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
+        const int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
         const Transform& tchild = pjoint->GetHierarchyChildLink()->GetTransform();
         const std::pair<Vector, Vector>& vChildVelocities = vLinkVelocities.at(childindex);
         std::pair<Vector, Vector>& vChildAccelerations = vLinkAccelerations.at(childindex);
 
-        int parentindex = 0;
-        if( !!pjoint->GetHierarchyParentLink() ) {
-            parentindex = pjoint->GetHierarchyParentLink()->GetIndex();
-        }
-
+        const int parentindex = (!pjoint->GetHierarchyParentLink()) ? 0 : pjoint->GetHierarchyParentLink()->GetIndex();
         const std::pair<Vector, Vector>& vParentVelocities = vLinkVelocities.at(parentindex);
         const std::pair<Vector, Vector>& vParentAccelerations = vLinkAccelerations.at(parentindex);
-        Vector xyzdelta = tchild.trans - _veclinks.at(parentindex)->_info._t.trans;
+        const Vector xyzdelta = tchild.trans - _veclinks.at(parentindex)->_info._t.trans;
         if( !!pdofaccelerations || !!pdofvelocities ) {
             tdelta = _veclinks.at(parentindex)->_info._t * pjoint->GetInternalHierarchyLeftTransform();
             vlocalaxis = pjoint->GetInternalHierarchyAxis(0);

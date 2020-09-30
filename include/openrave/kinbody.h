@@ -2407,15 +2407,22 @@ private:
         \return A vector of all (xl, xk) pairs of active joints x
     */
     static std::vector<std::array<int, 2>> CollectSecondOrderPartialDerivativesActiveIndexPairs(const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue);
+
     /** \brief Compute first-order partial derivatives ∂z/∂x of mimic joints z with respect to active joints x
         \param[in,out] mPartialderivativepairValue: a map of (z, x) to ∂z/∂x, where z is dofformat.jointindex, and x is keyvalue.first.second for keyvalue in mPartialderivativepairValue.
     */
-    void ComputeMimicJointFirstOrderPartialDerivatives(std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue);
+    void ComputeMimicJointFirstOrderPartialDerivatives(std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue) const;
 
     /** \brief Compute second-order partial derivatives ∂^2z/∂xk ∂xl of mimic joints z with respect to active joints x
         \param[in,out] mSecondorderpartialderivativepairValue: a map of (z, (xk, xl)) to ∂^2z/∂xk ∂xl, where z is dofformat.jointindex, and (xk,xl) is keyvalue.first.second for keyvalue in mSecondorderpartialderivativepairValue.
+        \param[in,out] mPartialderivativepairValue: a map of (z, x) to ∂z/∂x, where z is dofformat.jointindex, and x is keyvalue.first.second for keyvalue in mPartialderivativepairValue.
+        \param[in] bRecomputeFirstOrderPartial: if false then use mPartialderivativepairValue; otherwise if true we call ComputeMimicJointFirstOrderPartialDerivatives to compute mPartialderivativepairValue
     */
-    void ComputeMimicJointSecondOrderPartialDerivatives(std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue);
+    void ComputeMimicJointSecondOrderPartialDerivatives(
+        std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue,
+        std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
+        const bool bRecomputeFirstOrderPartial
+    ) const;
 
     /// \brief Computes the translation jacobian with respect to a world position.
     ///

@@ -3787,7 +3787,9 @@ object PyKinBody::ComputeMimicJointFirstOrderPartialDerivatives() {
 object PyKinBody::ComputeMimicJointSecondOrderPartialDerivatives() {
     using Mimic = OpenRAVE::KinBody::Mimic;
     std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue;
-    _pbody->ComputeMimicJointSecondOrderPartialDerivatives(mSecondorderpartialderivativepairValue);
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
+    const bool bRecomputeFirstOrderPartial = true;
+    _pbody->ComputeMimicJointSecondOrderPartialDerivatives(mSecondorderpartialderivativepairValue, mPartialderivativepairValue, bRecomputeFirstOrderPartial);
     py::dict d;
     for(const auto& keyvalue : mSecondorderpartialderivativepairValue) {
         const Mimic::DOFFormat& dofformat = keyvalue.first.first;
