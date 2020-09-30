@@ -593,48 +593,28 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
     if (value.HasMember("tools")) {
         _vManipulatorInfos.reserve(value["tools"].Size() + _vManipulatorInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it) {
-            const rapidjson::Value& manipulatorValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(manipulatorValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(manipulatorValue, "name");
-            }
-            UpdateOrCreateInfo(manipulatorValue, id, _vManipulatorInfos, fUnitScale, options);
+            UpdateOrCreateInfo(*it, _vManipulatorInfos, fUnitScale, options);
         }
     }
 
     if (value.HasMember("attachedSensors")) {
         _vAttachedSensorInfos.reserve(value["attachedSensors"].Size() + _vAttachedSensorInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it) {
-            const rapidjson::Value& attachedSensorValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(attachedSensorValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(attachedSensorValue, "name");
-            }
-            UpdateOrCreateInfo(attachedSensorValue, id, _vAttachedSensorInfos, fUnitScale, options);
+            UpdateOrCreateInfo(*it, _vAttachedSensorInfos, fUnitScale, options);
         }
     }
 
     if (value.HasMember("connectedBodies")) {
         _vConnectedBodyInfos.reserve(value["connectedBodies"].Size() + _vConnectedBodyInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["connectedBodies"].Begin(); it != value["connectedBodies"].End(); ++it) {
-            const rapidjson::Value& connectedBodyValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(connectedBodyValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(connectedBodyValue, "name");
-            }
-            UpdateOrCreateInfo(connectedBodyValue, id, _vConnectedBodyInfos, fUnitScale, options);
+            UpdateOrCreateInfo(*it, _vConnectedBodyInfos, fUnitScale, options);
         }
     }
 
     if (value.HasMember("gripperInfos")) {
         _vGripperInfos.reserve(value["gripperInfos"].Size() + _vGripperInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it) {
-            const rapidjson::Value& gripperInfoValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(gripperInfoValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(gripperInfoValue, "name");
-            }
-            UpdateOrCreateInfo(gripperInfoValue, id, _vGripperInfos, fUnitScale, options);
+            UpdateOrCreateInfo(*it, _vGripperInfos, fUnitScale, options);
         }
     }
 }

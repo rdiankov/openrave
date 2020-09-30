@@ -977,6 +977,12 @@ public:
                 break;
             }
         }
+
+        if( bSuccess ) {
+            // for extracting a single body from file, need to assign a random body id to not conflict with what's already in environment
+            pbody->_id = str(boost::format("body%d")%utils::GetNanoTime());
+        }
+
         if( bSuccess ) {
             return true;
         }

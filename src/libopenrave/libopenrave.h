@@ -491,16 +491,20 @@ inline const char *strcasestr(const char *s, const char *find)
 
 ///* \brief Update current info from json value. Create a new one if there is no id matched.
 template<typename T>
-void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string& id, std::vector<boost::shared_ptr<T> >& vInfos, dReal fUnitScale, int options)
+void UpdateOrCreateInfo(const rapidjson::Value& value, std::vector<boost::shared_ptr<T> >& vInfos, dReal fUnitScale, int options)
 {
+    std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(value, "id");
+    bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
     typename std::vector<boost::shared_ptr<T> >::iterator itExistingInfo = vInfos.end();
-    FOREACH(itInfo, vInfos) {
-        if ((*itInfo)->_id == id) {
-            itExistingInfo = itInfo;
-            break;
+    if (!id.empty()) {
+        // only try to find old info if id is not empty
+        FOREACH(itInfo, vInfos) {
+            if ((*itInfo)->_id == id) {
+                itExistingInfo = itInfo;
+                break;
+            }
         }
     }
-    bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
     if (itExistingInfo != vInfos.end()) {
         if (isDeleted) {
             vInfos.erase(itExistingInfo);

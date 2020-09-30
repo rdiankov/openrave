@@ -307,12 +307,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     if (value.HasMember("geometries")) {
         _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["geometries"].Begin(); it != value["geometries"].End(); ++it) {
-            const rapidjson::Value& geometryValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(geometryValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(geometryValue, "name");
-            }
-            UpdateOrCreateInfo(geometryValue, id, _vgeometryinfos, fUnitScale, options);
+            UpdateOrCreateInfo(*it, _vgeometryinfos, fUnitScale, options);
         }
     }
 
@@ -327,12 +322,6 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     //         size_t iGeometry = 0;
     //         for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
     //             std::string id = orjson::GetStringJsonValueByKey(*im, "id");
-    //             if (id.empty()) {
-    //                 id = orjson::GetStringJsonValueByKey(*im, "name");
-    //             }
-    //             if (id.empty()) {
-    //                 id = boost::str(boost::format("geometry%d") % iGeometry);
-    //             }
     //             UpdateOrCreateInfo(*im, id, vgeometries, fUnitScale);
     //         }
     //     }
