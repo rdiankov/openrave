@@ -5428,6 +5428,40 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
 
 void KinBody::_ResolveInfoIds()
 {
+    // need to avoid assigning ids for links and joints belonging to connected bodies
+    std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
+    std::vector<bool> isConnectedJoint(_vecjoints.size(), false); // indicate which joint comes from connectedbody
+    std::vector<bool> isConnectedPassiveJoint(_vPassiveJoints.size(), false); // indicate which passive joint comes from connectedbody
+
+    if (IsRobot()) {
+        RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(shared_from_this());
+        std::vector<KinBody::LinkPtr> resolvedLinks;
+        std::vector<KinBody::JointPtr> resolvedJoints;
+        FOREACHC(itConnectedBody, pRobot->GetConnectedBodies()) {
+            (*itConnectedBody)->GetResolvedLinks(resolvedLinks);
+            (*itConnectedBody)->GetResolvedJoints(resolvedJoints);
+            KinBody::JointPtr resolvedDummyJoint = (*itConnectedBody)->GetResolvedDummyPassiveJoint();
+
+            FOREACHC(itLink, _veclinks) {
+                if (std::find(resolvedLinks.begin(), resolvedLinks.end(), *itLink) != resolvedLinks.end()) {
+                    isConnectedLink[itLink-_veclinks.begin()] = true;
+                }
+            }
+            FOREACHC(itJoint, _vecjoints) {
+                if (std::find(resolvedJoints.begin(), resolvedJoints.end(), *itJoint) != resolvedJoints.end()) {
+                    isConnectedJoint[itJoint-_vecjoints.begin()] = true;
+                }
+            }
+            FOREACHC(itPassiveJoint, _vPassiveJoints) {
+                if (std::find(resolvedJoints.begin(), resolvedJoints.end(), *itPassiveJoint) != resolvedJoints.end()) {
+                    isConnectedPassiveJoint[itPassiveJoint-_vPassiveJoints.begin()] = true;
+                } else if (resolvedDummyJoint == *itPassiveJoint) {
+                    isConnectedPassiveJoint[itPassiveJoint-_vPassiveJoints.begin()] = true;
+                }
+            }
+        }
+    }
+
     char sTempIndexConversion[9]; // temp memory space for converting indices to hex strings, enough space to convert uint32_t
     uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
 
@@ -5437,10 +5471,16 @@ void KinBody::_ResolveInfoIds()
     int nLinkId = 0;
     const int numlinks = (int)_veclinks.size();
     for(int ilink = 0; ilink < numlinks; ++ilink) {
+        if (isConnectedLink[ilink]) {
+            continue;
+        }
         KinBody::LinkInfo& linkinfo = _veclinks[ilink]->_info;
         bool bGenerateNewId = linkinfo._id.empty();
         if( !bGenerateNewId ) {
             for(int itestlink = 0; itestlink < ilink; ++itestlink) {
+                if (isConnectedLink[itestlink]) {
+                    continue;
+                }
                 if( _veclinks[itestlink]->_info._id == linkinfo._id ) {
                     bGenerateNewId = true;
                     break;
@@ -5528,10 +5568,16 @@ void KinBody::_ResolveInfoIds()
     int nJointId = 0;
     const int numjoints = (int)_vecjoints.size();
     for(int ijoint = 0; ijoint < numjoints; ++ijoint) {
+        if (isConnectedJoint[ijoint]) {
+            continue;
+        }
         KinBody::JointInfo& jointinfo = _vecjoints[ijoint]->_info;
         bool bGenerateNewId = jointinfo._id.empty();
         if( !bGenerateNewId ) {
             for(int itestjoint = 0; itestjoint < ijoint; ++itestjoint) {
+                if (isConnectedJoint[itestjoint]) {
+                    continue;
+                }
                 if( _vecjoints[itestjoint]->_info._id == jointinfo._id ) {
                     bGenerateNewId = true;
                     break;
@@ -5569,12 +5615,31 @@ void KinBody::_ResolveInfoIds()
     }
 
     const int numPassiveJoints = (int)_vPassiveJoints.size();
-    for(int ijoint = 0; ijoint < numPassiveJoints; ++ijoint) {
-        KinBody::JointInfo& jointinfo = _vPassiveJoints[ijoint]->_info;
+    for(int iPassiveJoint = 0; iPassiveJoint < numPassiveJoints; ++iPassiveJoint) {
+        if (isConnectedPassiveJoint[iPassiveJoint]) {
+            continue;
+        }
+        KinBody::JointInfo& jointinfo = _vPassiveJoints[iPassiveJoint]->_info;
         bool bGenerateNewId = jointinfo._id.empty();
         if( !bGenerateNewId ) {
-            for(int itestjoint = 0; itestjoint < ijoint; ++itestjoint) {
-                if( _vPassiveJoints[itestjoint]->_info._id == jointinfo._id ) {
+            // check duplicate against _vecjoints
+            for(int itestjoint = 0; itestjoint < numjoints; ++itestjoint) {
+                if (isConnectedJoint[itestjoint]) {
+                    continue;
+                }
+                if( _vecjoints[itestjoint]->_info._id == jointinfo._id ) {
+                    bGenerateNewId = true;
+                    break;
+                }
+            }
+        }
+        if( !bGenerateNewId ) {
+            // check duplicate against _vPassiveJoints
+            for(int iTestPassiveJoint = 0; iTestPassiveJoint < iPassiveJoint; ++iTestPassiveJoint) {
+                if (isConnectedPassiveJoint[iTestPassiveJoint]) {
+                    continue;
+                }
+                if( _vPassiveJoints[iTestPassiveJoint]->_info._id == jointinfo._id ) {
                     bGenerateNewId = true;
                     break;
                 }

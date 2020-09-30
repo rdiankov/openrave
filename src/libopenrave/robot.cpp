@@ -873,6 +873,35 @@ void RobotBase::_ResolveInfoIds()
 {
     KinBody::_ResolveInfoIds();
 
+    // need to avoid assigning id for things coming from connectedbodies
+    std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);
+    std::vector<bool> isConnectedAttachedSensor(_vecAttachedSensors.size(), false);
+    std::vector<bool> isConnectedGripperInfo(_vecGripperInfos.size(), false);
+
+    FOREACHC(itConnectedBody, _vecConnectedBodies) {
+        std::vector<RobotBase::ManipulatorPtr> resolvedManipulators;
+        std::vector<RobotBase::AttachedSensorPtr> resolvedAttachedSensors;
+        std::vector<RobotBase::GripperInfoPtr> resolvedGripperInfos;
+        (*itConnectedBody)->GetResolvedManipulators(resolvedManipulators);
+        (*itConnectedBody)->GetResolvedAttachedSensors(resolvedAttachedSensors);
+        (*itConnectedBody)->GetResolvedGripperInfos(resolvedGripperInfos);
+        FOREACHC(itManipulator, _vecManipulators) {
+            if (std::find(resolvedManipulators.begin(), resolvedManipulators.end(), *itManipulator) != resolvedManipulators.end()) {
+                isConnectedManipulator[itManipulator - _vecManipulators.begin()] = true;
+            }
+        }
+        FOREACHC(itAttachedSensor, _vecAttachedSensors) {
+            if (std::find(resolvedAttachedSensors.begin(), resolvedAttachedSensors.end(), *itAttachedSensor) != resolvedAttachedSensors.end()) {
+                isConnectedAttachedSensor[itAttachedSensor - _vecAttachedSensors.begin()] = true;
+            }
+        }
+        FOREACHC(itGripperInfo, _vecGripperInfos) {
+            if (std::find(resolvedGripperInfos.begin(), resolvedGripperInfos.end(), *itGripperInfo) != resolvedGripperInfos.end()) {
+                isConnectedGripperInfo[itGripperInfo - _vecGripperInfos.begin()] = true;
+            }
+        }
+    }
+
     char sTempIndexConversion[9]; // temp memory space for converting indices to hex strings, enough space to convert uint32_t
     uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
 
@@ -880,10 +909,16 @@ void RobotBase::_ResolveInfoIds()
     int nManipulatorId = 0;
     int nummanipulators = (int)_vecManipulators.size();
     for(int imanipulator = 0; imanipulator < nummanipulators; ++imanipulator) {
+        if (isConnectedManipulator[imanipulator]) {
+            continue;
+        }
         RobotBase::ManipulatorInfo& manipulatorinfo = _vecManipulators[imanipulator]->_info;
         bool bGenerateNewId = manipulatorinfo._id.empty();
         if( !bGenerateNewId ) {
             for(int itestmanipulator = 0; itestmanipulator < imanipulator; ++itestmanipulator) {
+                if (isConnectedManipulator[itestmanipulator]) {
+                    continue;
+                }
                 if( _vecManipulators[itestmanipulator]->_info._id == manipulatorinfo._id ) {
                     bGenerateNewId = true;
                     break;
@@ -924,10 +959,16 @@ void RobotBase::_ResolveInfoIds()
     int nAttachedSensorId = 0;
     int numattachedSensors = (int)_vecAttachedSensors.size();
     for(int iattachedSensor = 0; iattachedSensor < numattachedSensors; ++iattachedSensor) {
+        if (isConnectedAttachedSensor[iattachedSensor]) {
+            continue;
+        }
         RobotBase::AttachedSensorInfo& attachedSensorinfo = _vecAttachedSensors[iattachedSensor]->_info;
         bool bGenerateNewId = attachedSensorinfo._id.empty();
         if( !bGenerateNewId ) {
             for(int itestattachedSensor = 0; itestattachedSensor < iattachedSensor; ++itestattachedSensor) {
+                if (isConnectedAttachedSensor[itestattachedSensor]) {
+                    continue;
+                }
                 if( _vecAttachedSensors[itestattachedSensor]->_info._id == attachedSensorinfo._id ) {
                     bGenerateNewId = true;
                     break;
@@ -1012,10 +1053,16 @@ void RobotBase::_ResolveInfoIds()
     int nGripperInfoId = 0;
     int numgripperInfos = (int)_vecGripperInfos.size();
     for(int igripperInfo = 0; igripperInfo < numgripperInfos; ++igripperInfo) {
+        if (isConnectedGripperInfo[igripperInfo]) {
+            continue;
+        }
         RobotBase::GripperInfo& gripperInfo = *_vecGripperInfos[igripperInfo];
         bool bGenerateNewId = gripperInfo._id.empty();
         if( !bGenerateNewId ) {
             for(int itestgripperInfo = 0; itestgripperInfo < igripperInfo; ++itestgripperInfo) {
+                if (isConnectedGripperInfo[itestgripperInfo]) {
+                    continue;
+                }
                 if( _vecGripperInfos[itestgripperInfo]->_id == gripperInfo._id ) {
                     bGenerateNewId = true;
                     break;
