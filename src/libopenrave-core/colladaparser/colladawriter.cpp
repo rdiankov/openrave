@@ -1836,7 +1836,7 @@ private:
             rigid_body->setSid(rigidsid.c_str());
             std::string linkname = (*itlink)->GetName();
             if( linkname.size() == 0 ) {
-                linkname = str(boost::format("_dummy%s_")%(*itlink)->_info._id);
+                linkname = str(boost::format("_dummylink%d_")%(*itlink)->GetIndex());
             }
             rigid_body->setName(linkname.c_str());
             domRigid_body::domTechnique_commonRef ptec = daeSafeCast<domRigid_body::domTechnique_common>(rigid_body->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
@@ -2161,7 +2161,7 @@ private:
         domLinkRef pdomlink = daeSafeCast<domLink>(pkinparent->add(COLLADA_ELEMENT_LINK));
         std::string linkname = plink->GetName();
         if( linkname.size() == 0 ) {
-            linkname = str(boost::format("_dummy%s_")%plink->_info._id);
+            linkname = str(boost::format("_dummylink%d_")%plink->GetIndex());
             RAVELOG_WARN_FORMAT("body %s link %d has empty name, so setting to %s!", plink->GetParent()->GetName()%plink->GetIndex()%linkname);
         }
         pdomlink->setName(linkname.c_str());
