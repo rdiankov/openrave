@@ -1084,17 +1084,15 @@ public:
             // set referenceUri if it's external one
             daeURI urioriginal(*_dae, struri);
             urioriginal.fragment(std::string()); // set the fragment to empty
-
-            std::string scheme, authority, path, query, fragment;
-            cdom::parseUriRef(struri, scheme, authority, path, query, fragment);
-            
-            // only set referenceUri if it's in OpenRAVEScheme
-            std::vector<std::string>::iterator itScheme = std::find(_vOpenRAVESchemeAliases.begin(),  _vOpenRAVESchemeAliases.end(), scheme);
-            if (itScheme != _vOpenRAVESchemeAliases.end()) {
-                if (_originalURI.compare(urioriginal.str()) != 0 ) {
+            if (_originalURI != urioriginal.str()) {
+                // external reference
+                // only set referenceUri if it's in OpenRAVEScheme
+                std::string scheme, unusedAuthority, unusedPath, unusedQuery, unusedFragment;
+                cdom::parseUriRef(struri, scheme, unusedAuthority, unusedPath, unusedQuery, unusedFragment);
+                if (std::find(_vOpenRAVESchemeAliases.begin(),  _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end()) {
                     pbody->_referenceUri = struri;
                 }
-            } 
+            }
         }
 
         std::string strname = strParentName;
@@ -1147,10 +1145,16 @@ public:
                 }
             }
             if (!!pbody) {
-                // get motion body id and set to openrave body
-                // this is for keeping id consisdent if later on we serialize openrave body to other format.
-                if(!!articulated_system->getId()) {
-                    pbody->_id = articulated_system->getId();
+                if (pbody->_id.empty()) {
+                    if (pbody->_referenceUri.empty()) {
+                        // non-external reference
+                        // use bodyX_motion as the body id, this is necessary to for external reference to target the stable body id
+                        // for external reference, cannot use articulated system id, as it is most likely always body0_motion and will duplicate
+                        pbody->_id = articulated_system->getId();
+                    }
+                }
+                if (pbody->_id.empty()) {
+                    pbody->_id = ias->getSid();
                 }
             }
             listInstanceScope.push_back(ias);
@@ -2449,6 +2453,7 @@ public:
             }
 
             KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,*itgeominfo));
+            pgeom->_info._id = str(boost::format("geom%d")%plink->_vGeometries.size());
             pgeom->_info.InitCollisionMesh();
             plink->_vGeometries.push_back(pgeom);
             //  Append the collision mesh
@@ -3398,6 +3403,7 @@ public:
                     }
                     if( !!pnewmanip ) {
                         // not found so append
+                        pnewmanip->_info._id = str(boost::format("tool%d")%probot->_vecManipulators.size());
                         probot->_vecManipulators.push_back(pnewmanip);
                     }
                 }
@@ -3451,7 +3457,7 @@ public:
                         }
                         listSensorsToExtract.emplace_back(pattachedsensor, result.second);
                     }
-
+                    pattachedsensor->_info._id = str(boost::format("attachedSensor%d")%probot->_vecAttachedSensors.size());
                     probot->_vecAttachedSensors.push_back(pattachedsensor);
                 }
                 else {
@@ -3508,9 +3514,7 @@ public:
                     }
                     // do not let json_data in collada override name attribute of <extra>
                     pGripperInfo->name = _ConvertToOpenRAVEName(grippername);
-                    if( pGripperInfo->_id.empty() ) {
-                        pGripperInfo->_id = pGripperInfo->name;
-                    }
+                    pGripperInfo->_id = str(boost::format("gripperInfo%d")%probot->_vecGripperInfos.size());
                     probot->_vecGripperInfos.push_back(pGripperInfo);
                 }
                 else {
@@ -3699,6 +3703,7 @@ public:
                     connectedBodyInfo._uri = uri;
                     connectedBodyInfo.InitInfoFromBody(*pbody);
                     RobotBase::ConnectedBodyPtr pConnectedBody(new RobotBase::ConnectedBody(probot, connectedBodyInfo));
+                    pConnectedBody->_info._id = str(boost::format("connectedBody%d")%probot->_vecConnectedBodies.size());
                     probot->_vecConnectedBodies.push_back(pConnectedBody);
                 }
             }

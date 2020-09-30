@@ -549,7 +549,6 @@ private:
             }
         }
         FOREACHC(itbody,listbodies) {
-            (*itbody)->_ResolveInfoIds();
             boost::shared_ptr<instance_articulated_system_output> iasout;
             if( _CheckForExternalWrite(*itbody) ) {
                 iasout = _WriteKinBodyExternal(*itbody,_scene.kiscene);
@@ -575,7 +574,6 @@ private:
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         _CreateScene(probot->GetName());
         _mapBodyIds[probot->GetEnvironmentId()] = 0;
-        probot->_ResolveInfoIds();
 
         boost::shared_ptr<instance_articulated_system_output> iasout;
         if( _CheckForExternalWrite(probot) ) {
@@ -600,7 +598,6 @@ private:
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         _CreateScene(pbody->GetName());
         _mapBodyIds[pbody->GetEnvironmentId()] = 0;
-        pbody->_ResolveInfoIds();
 
         boost::shared_ptr<instance_articulated_system_output> iasout;
         if( _CheckForExternalWrite(pbody) ) {

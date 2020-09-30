@@ -420,7 +420,6 @@ protected:
     void _EnsureUniqueIdAndUri(KinBody::KinBodyInfo& bodyInfo)
     {
         if (bodyInfo._id.empty()) {
-            RAVELOG_WARN("info id is empty");
             bodyInfo._id = "body0";
         }
         int suffix = 1;

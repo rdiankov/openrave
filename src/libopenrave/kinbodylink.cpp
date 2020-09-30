@@ -221,9 +221,6 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
 {
     orjson::LoadJsonValueByKey(value, "id", _id);
     orjson::LoadJsonValueByKey(value, "name", _name);
-    if( _id.empty() ) {
-        _id = _name;
-    }
 
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _t);
@@ -942,8 +939,15 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     // geometries
     bool isGeometryChanged = false;
     FOREACHC(itGeometryInfo, info._vgeometryinfos) {
+        if ((*itGeometryInfo)->_id.empty()) {
+            RAVELOG_WARN_FORMAT("link %s geometry info %s has empty id, skipping", _info._id%(*itGeometryInfo)->_name);
+            continue;
+        }
         std::vector<KinBody::Link::GeometryPtr>::iterator itExistingGeometry = _vGeometries.end();
         FOREACH(itGeometry, _vGeometries) {
+            if ((*itGeometry)->_info._id.empty()) {
+                continue;
+            }
             if ((*itGeometry)->_info._id == (*itGeometryInfo)->_id) {
                 itExistingGeometry = itGeometry;
                 break;
@@ -972,6 +976,10 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     }
 
     FOREACHC(itGeometry, _vGeometries) {
+        if ((*itGeometry)->_info._id.empty()) {
+            RAVELOG_WARN_FORMAT("link %s geometry %s has empty id", _info._id%(*itGeometry)->_info._name);
+            continue;
+        }
         bool stillExists = false;
         FOREACHC(itGeometryInfo, info._vgeometryinfos) {
             if ((*itGeometry)->_info._id == (*itGeometryInfo)->_id) {

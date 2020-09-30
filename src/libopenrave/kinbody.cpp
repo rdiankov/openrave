@@ -251,9 +251,6 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 {
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
-    if( _id.empty() ) {
-        _id = _name;
-    }
 
     if( !(options & IDO_IgnoreReferenceUri) ) {
         orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
@@ -4543,7 +4540,6 @@ void KinBody::_ComputeInternalInformation()
         }
         _ResetInternalCollisionCache();
     }
-    _ResolveInfoIds();
     _nHierarchyComputed = 2;
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
@@ -5426,260 +5422,8 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     }
 }
 
-void KinBody::_ResolveInfoIds()
-{
-    // need to avoid assigning ids for links and joints belonging to connected bodies
-    std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
-    std::vector<bool> isConnectedJoint(_vecjoints.size(), false); // indicate which joint comes from connectedbody
-    std::vector<bool> isConnectedPassiveJoint(_vPassiveJoints.size(), false); // indicate which passive joint comes from connectedbody
-
-    if (IsRobot()) {
-        RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(shared_from_this());
-        std::vector<KinBody::LinkPtr> resolvedLinks;
-        std::vector<KinBody::JointPtr> resolvedJoints;
-        FOREACHC(itConnectedBody, pRobot->GetConnectedBodies()) {
-            (*itConnectedBody)->GetResolvedLinks(resolvedLinks);
-            (*itConnectedBody)->GetResolvedJoints(resolvedJoints);
-            KinBody::JointPtr resolvedDummyJoint = (*itConnectedBody)->GetResolvedDummyPassiveJoint();
-
-            FOREACHC(itLink, _veclinks) {
-                if (std::find(resolvedLinks.begin(), resolvedLinks.end(), *itLink) != resolvedLinks.end()) {
-                    isConnectedLink[itLink-_veclinks.begin()] = true;
-                }
-            }
-            FOREACHC(itJoint, _vecjoints) {
-                if (std::find(resolvedJoints.begin(), resolvedJoints.end(), *itJoint) != resolvedJoints.end()) {
-                    isConnectedJoint[itJoint-_vecjoints.begin()] = true;
-                }
-            }
-            FOREACHC(itPassiveJoint, _vPassiveJoints) {
-                if (std::find(resolvedJoints.begin(), resolvedJoints.end(), *itPassiveJoint) != resolvedJoints.end()) {
-                    isConnectedPassiveJoint[itPassiveJoint-_vPassiveJoints.begin()] = true;
-                } else if (resolvedDummyJoint == *itPassiveJoint) {
-                    isConnectedPassiveJoint[itPassiveJoint-_vPassiveJoints.begin()] = true;
-                }
-            }
-        }
-    }
-
-    char sTempIndexConversion[9]; // temp memory space for converting indices to hex strings, enough space to convert uint32_t
-    uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
-
-    // go through all link infos and make sure _id is unique
-    static const char pLinkIdPrefix[] = "link";
-    static const char pGeometryIdPrefix[] = "geom";
-    int nLinkId = 0;
-    const int numlinks = (int)_veclinks.size();
-    for(int ilink = 0; ilink < numlinks; ++ilink) {
-        if (isConnectedLink[ilink]) {
-            continue;
-        }
-        KinBody::LinkInfo& linkinfo = _veclinks[ilink]->_info;
-        bool bGenerateNewId = linkinfo._id.empty();
-        if( !bGenerateNewId ) {
-            for(int itestlink = 0; itestlink < ilink; ++itestlink) {
-                if (isConnectedLink[itestlink]) {
-                    continue;
-                }
-                if( _veclinks[itestlink]->_info._id == linkinfo._id ) {
-                    bGenerateNewId = true;
-                    break;
-                }
-            }
-        }
-
-        if( bGenerateNewId ) {
-            while(1) {
-                nTempIndexConversion = ConvertUIntToHex(nLinkId, sTempIndexConversion);
-                bool bHasSame = false;
-                for(int itestlink = 0; itestlink < numlinks; ++itestlink) {
-                    const std::string& testid = _veclinks[itestlink]->_info._id;
-                    if( testid.size() == sizeof(pLinkIdPrefix)-1+nTempIndexConversion ) {
-                        if( strncmp(testid.c_str() + (sizeof(pLinkIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
-                            // matches
-                            bHasSame = true;
-                            break;
-                        }
-                    }
-                }
-
-                if( bHasSame ) {
-                    nLinkId++;
-                    continue;
-                }
-
-                break;
-            }
-
-            linkinfo._id = pLinkIdPrefix;
-            linkinfo._id += sTempIndexConversion;
-            nLinkId++;
-        }
-
-        // geometries
-        {
-            int nGeometryId = 0;
-            const std::vector<Link::GeometryPtr>& vgeometries = _veclinks[ilink]->GetGeometries();
-            const int numgeometries = (int)vgeometries.size();
-            for(int igeometry = 0; igeometry < numgeometries; ++igeometry) {
-                KinBody::GeometryInfo& geometryinfo = vgeometries[igeometry]->_info;
-                bool bGenerateNewId = geometryinfo._id.empty();
-                if( !bGenerateNewId ) {
-                    for(int itestgeometry = 0; itestgeometry < igeometry; ++itestgeometry) {
-                        if( vgeometries[itestgeometry]->_info._id == geometryinfo._id ) {
-                            bGenerateNewId = true;
-                            break;
-                        }
-                    }
-                }
-
-                if( bGenerateNewId ) {
-                    while(1) {
-                        nTempIndexConversion = ConvertUIntToHex(nGeometryId, sTempIndexConversion);
-                        bool bHasSame = false;
-                        for(int itestgeometry = 0; itestgeometry < numgeometries; ++itestgeometry) {
-                            const std::string& testid = vgeometries[itestgeometry]->_info._id;
-                            if( testid.size() == sizeof(pGeometryIdPrefix)-1+nTempIndexConversion ) {
-                                if( strncmp(testid.c_str() + (sizeof(pGeometryIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
-                                    // matches
-                                    bHasSame = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if( bHasSame ) {
-                            nGeometryId++;
-                            continue;
-                        }
-
-                        break;
-                    }
-
-                    geometryinfo._id = pGeometryIdPrefix;
-                    geometryinfo._id += sTempIndexConversion;
-                    nGeometryId++;
-                }
-            }
-        }
-    }
-
-    static const char pJointIdPrefix[] = "joint";
-    int nJointId = 0;
-    const int numjoints = (int)_vecjoints.size();
-    for(int ijoint = 0; ijoint < numjoints; ++ijoint) {
-        if (isConnectedJoint[ijoint]) {
-            continue;
-        }
-        KinBody::JointInfo& jointinfo = _vecjoints[ijoint]->_info;
-        bool bGenerateNewId = jointinfo._id.empty();
-        if( !bGenerateNewId ) {
-            for(int itestjoint = 0; itestjoint < ijoint; ++itestjoint) {
-                if (isConnectedJoint[itestjoint]) {
-                    continue;
-                }
-                if( _vecjoints[itestjoint]->_info._id == jointinfo._id ) {
-                    bGenerateNewId = true;
-                    break;
-                }
-            }
-        }
-
-        if( bGenerateNewId ) {
-            while(1) {
-                nTempIndexConversion = ConvertUIntToHex(nJointId, sTempIndexConversion);
-                bool bHasSame = false;
-                for(int itestjoint = 0; itestjoint < numjoints; ++itestjoint) {
-                    const std::string& testid = _vecjoints[itestjoint]->_info._id;
-                    if( testid.size() == sizeof(pJointIdPrefix)-1+nTempIndexConversion ) {
-                        if( strncmp(testid.c_str() + (sizeof(pJointIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
-                            // matches
-                            bHasSame = true;
-                            break;
-                        }
-                    }
-                }
-
-                if( bHasSame ) {
-                    nJointId++;
-                    continue;
-                }
-
-                break;
-            }
-
-            jointinfo._id = pJointIdPrefix;
-            jointinfo._id += sTempIndexConversion;
-            nJointId++;
-        }
-    }
-
-    const int numPassiveJoints = (int)_vPassiveJoints.size();
-    for(int iPassiveJoint = 0; iPassiveJoint < numPassiveJoints; ++iPassiveJoint) {
-        if (isConnectedPassiveJoint[iPassiveJoint]) {
-            continue;
-        }
-        KinBody::JointInfo& jointinfo = _vPassiveJoints[iPassiveJoint]->_info;
-        bool bGenerateNewId = jointinfo._id.empty();
-        if( !bGenerateNewId ) {
-            // check duplicate against _vecjoints
-            for(int itestjoint = 0; itestjoint < numjoints; ++itestjoint) {
-                if (isConnectedJoint[itestjoint]) {
-                    continue;
-                }
-                if( _vecjoints[itestjoint]->_info._id == jointinfo._id ) {
-                    bGenerateNewId = true;
-                    break;
-                }
-            }
-        }
-        if( !bGenerateNewId ) {
-            // check duplicate against _vPassiveJoints
-            for(int iTestPassiveJoint = 0; iTestPassiveJoint < iPassiveJoint; ++iTestPassiveJoint) {
-                if (isConnectedPassiveJoint[iTestPassiveJoint]) {
-                    continue;
-                }
-                if( _vPassiveJoints[iTestPassiveJoint]->_info._id == jointinfo._id ) {
-                    bGenerateNewId = true;
-                    break;
-                }
-            }
-        }
-
-        if( bGenerateNewId ) {
-            while(1) {
-                nTempIndexConversion = ConvertUIntToHex(nJointId, sTempIndexConversion);
-                bool bHasSame = false;
-                for(int itestjoint = 0; itestjoint < numPassiveJoints; ++itestjoint) {
-                    const std::string& testid = _vPassiveJoints[itestjoint]->_info._id;
-                    if( testid.size() == sizeof(pJointIdPrefix)-1+nTempIndexConversion ) {
-                        if( strncmp(testid.c_str() + (sizeof(pJointIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
-                            // matches
-                            bHasSame = true;
-                            break;
-                        }
-                    }
-                }
-
-                if( bHasSame ) {
-                    nJointId++;
-                    continue;
-                }
-
-                break;
-            }
-
-            jointinfo._id = pJointIdPrefix;
-            jointinfo._id += sTempIndexConversion;
-            nJointId++;
-        }
-    }
-}
-
 void KinBody::ExtractInfo(KinBodyInfo& info)
 {
-    _ResolveInfoIds();
-
     info._id = _id;
     info._uri = __struri;
     info._name = _name;
@@ -5819,9 +5563,17 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 
     // links
     FOREACHC(itLinkInfo, info._vLinkInfos) {
+        if ((*itLinkInfo)->_id.empty()) {
+            RAVELOG_WARN_FORMAT("body %s link info %s has empty id, skipping", _id%(*itLinkInfo)->_name);
+            continue;
+        }
+
         // find existing link in body
         std::vector<KinBody::LinkPtr>::iterator itExistingLink = _veclinks.end();
         FOREACH(itLink, _veclinks) {
+            if ((*itLink)->_info._id.empty()) {
+                continue;
+            }
             if ((*itLink)->_info._id == (*itLinkInfo)->_id) {
                 itExistingLink = itLink;
                 break;
@@ -5855,6 +5607,10 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         if (isConnectedLink[iLink]) {
             continue;
         }
+        if (_veclinks[iLink]->_info._id.empty()) {
+            RAVELOG_WARN_FORMAT("body %s link %s has empty id", _id%_veclinks[iLink]->_info._id);
+            continue;
+        }
         bool stillExists = false;
         FOREACHC(itLinkInfo, info._vLinkInfos) {
             if (_veclinks[iLink]->_info._id == (*itLinkInfo)->_id) {
@@ -5870,9 +5626,17 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 
     // joints
     FOREACHC(itJointInfo, info._vJointInfos) {
+        if ((*itJointInfo)->_id.empty()) {
+            RAVELOG_WARN_FORMAT("body %s joint info %s has empty id, skipping", _id%(*itJointInfo)->_name);
+            continue;
+        }
+
         // find exsiting joint in body
         std::vector<KinBody::JointPtr>::iterator itExistingJoint = _vecjoints.end();
         FOREACH(itJoint, _vecjoints) {
+            if ((*itJoint)->_info._id.empty()) {
+                continue;
+            }
             if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
                 itExistingJoint = itJoint;
                 break;
@@ -5881,6 +5645,9 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 
         if (itExistingJoint == _vecjoints.end()) {
             FOREACH(itJoint, _vPassiveJoints) {
+                if ((*itJoint)->_info._id.empty()) {
+                    continue;
+                }
                 if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
                     itExistingJoint = itJoint;
                     break;
@@ -5914,6 +5681,10 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         if (isConnectedJoint[iJoint]) {
             continue;
         }
+        if (_vecjoints[iJoint]->_info._id.empty()) {
+            RAVELOG_WARN_FORMAT("body %s joint %s has empty id", _id%_vecjoints[iJoint]->_info._id);
+            continue;
+        }
         bool stillExists = false;
         FOREACHC(itJointInfo, info._vJointInfos) {
             if (_vecjoints[iJoint]->_info._id == (*itJointInfo)->_id) {
@@ -5928,6 +5699,10 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
     for(size_t iJoint = 0; iJoint < _vPassiveJoints.size(); iJoint++) {
         if (isConnectedPassiveJoint[iJoint]) {
+            continue;
+        }
+        if (_vPassiveJoints[iJoint]->_info._id.empty()) {
+            RAVELOG_WARN_FORMAT("body %s passive joint %s has empty id", _id%_vPassiveJoints[iJoint]->_info._id);
             continue;
         }
         bool stillExists = false;
