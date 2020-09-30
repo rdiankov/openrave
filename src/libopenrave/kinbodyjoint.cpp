@@ -2489,7 +2489,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
             for(const std::array<int, 2>& indexpair : vIndexPairs) {
                 const int kactive = indexpair[0];
                 const int lactive = indexpair[1];
-                RAVELOG_DEBUG_FORMAT("WorkiVERBOSE (i=%d,k=%d), (j=%d,l=%d), that is, ∂^2(%s)/∂(%s)∂(%s) += ∂^2 f/∂(%s)∂(%s) * (∂(%s)/∂(%s) * ∂(%s)/∂(%s))",
+                RAVELOG_VERBOSE_FORMAT("WorkiVERBOSE (i=%d,k=%d), (j=%d,l=%d), that is, ∂^2(%s)/∂(%s)∂(%s) += ∂^2 f/∂(%s)∂(%s) * (∂(%s)/∂(%s) * ∂(%s)/∂(%s))",
                     jointindexi % kactive % jointindexj % lactive
                     % this->GetName() % vActiveJoints.at(kactive)->GetName() % vActiveJoints.at(lactive)->GetName()
                     % dependedjointi->GetName() % dependedjointj->GetName()

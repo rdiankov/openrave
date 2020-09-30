@@ -3583,7 +3583,7 @@ void KinBody::ComputePassiveJointVelocitiesAccelerations(
     this->ComputeMimicJointSecondOrderPartialDerivatives(mSecondorderpartialderivativepairValue, mPartialderivativepairValue, bRecomputeFirstOrderPartial);
 
     // compute all dof accelerations in topological order; collect results from mSecondorderpartialderivativepairValue
-    std::set<int> sActive;
+    std::set<std::pair<Mimic::DOFFormat, int>> sPartialPair;
     for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2>>, dReal>& keyvalue : mSecondorderpartialderivativepairValue) {
         const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
         const int jointindex = thisdofformat.jointindex; // index of z
@@ -3599,9 +3599,9 @@ void KinBody::ComputePassiveJointVelocitiesAccelerations(
             d2zdt2 += d2zdxkdxl * dxkdt * dxldt; // d^2 z/dt^2 += (∂^2 z/∂xk ∂xl) * (dxk/dt) * (dxl/dt)
         }
 
-        if(!sActive.count(kactive)) {
-            sActive.insert(kactive);
-            const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, kactive};
+        const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, kactive}; // ∂z/∂xk
+        if(!sPartialPair.count(key)) {
+            sPartialPair.insert(key);
             const dReal dzdx = mPartialderivativepairValue.at(key);
             if(bHasAccelerations) {
                 const dReal d2xdt2 = vDOFAccelerations.at(kactive);
