@@ -3772,6 +3772,51 @@ object PyKinBody::ExtractInfo() const {
     return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
 }
 
+object PyKinBody::ComputeMimicJointFirstOrderPartialDerivatives() {
+    using Mimic = OpenRAVE::KinBody::Mimic;
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
+    _pbody->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
+    py::dict d;
+    for(const auto& keyvalue : mPartialderivativepairValue) {
+        const Mimic::DOFFormat& dofformat = keyvalue.first.first;
+        d[py::make_tuple(dofformat.jointindex, keyvalue.first.second)] = keyvalue.second;
+    }
+    return d;
+}
+
+object PyKinBody::ComputeMimicJointSecondOrderPartialDerivatives() {
+    using Mimic = OpenRAVE::KinBody::Mimic;
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue;
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
+    const bool bRecomputeFirstOrderPartial = true;
+    _pbody->ComputeMimicJointSecondOrderPartialDerivatives(mSecondorderpartialderivativepairValue, mPartialderivativepairValue, bRecomputeFirstOrderPartial);
+    py::dict d;
+    for(const auto& keyvalue : mSecondorderpartialderivativepairValue) {
+        const Mimic::DOFFormat& dofformat = keyvalue.first.first;
+        const std::array<int, 2>& indexpair = keyvalue.first.second;
+        d[py::make_tuple(dofformat.jointindex, indexpair[0], indexpair[1])] = keyvalue.second;
+    }
+    return d;
+}
+
+py::tuple PyKinBody::ComputePassiveJointVelocitiesAccelerations(
+    object pyDOFVelocities,
+    object pyDOFAccelerations
+) {
+    const std::vector<dReal> vDOFVelocities = ExtractArray<dReal>(pyDOFVelocities);
+    const std::vector<dReal> vDOFAccelerations = ExtractArray<dReal>(pyDOFAccelerations);
+    std::vector< std::vector<dReal> > vPassiveJointVelocities;
+    std::vector< std::vector<dReal> > vPassiveJointAccelerations;
+    _pbody->ComputePassiveJointVelocitiesAccelerations(vPassiveJointVelocities, vPassiveJointAccelerations, vDOFVelocities, vDOFAccelerations);
+    py::list lvel, laccel;
+    for(const std::vector<dReal>& velocities : vPassiveJointVelocities) {
+        lvel.append(StdVectorToPyList(velocities));
+    }
+    for(const std::vector<dReal>& accelerations : vPassiveJointAccelerations) {
+        laccel.append(StdVectorToPyList(accelerations));
+    }
+    return py::make_tuple(lvel, laccel);
+}
 
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
 {
@@ -5247,6 +5292,9 @@ void init_openravepy_kinbody()
                          .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
 #endif
                          .def("ExtractInfo", &PyKinBody::ExtractInfo, DOXY_FN(KinBody, ExtractInfo))
+                         .def("ComputeMimicJointFirstOrderPartialDerivatives", &PyKinBody::ComputeMimicJointFirstOrderPartialDerivatives, DOXY_FN(KinBody, ComputeMimicJointFirstOrderPartialDerivatives))
+                         .def("ComputeMimicJointSecondOrderPartialDerivatives", &PyKinBody::ComputeMimicJointSecondOrderPartialDerivatives, DOXY_FN(KinBody, ComputeMimicJointSecondOrderPartialDerivatives))
+                         .def("ComputePassiveJointVelocitiesAccelerations", &PyKinBody::ComputePassiveJointVelocitiesAccelerations, DOXY_FN(KinBody, ComputePassiveJointVelocitiesAccelerations))
                          .def("__enter__",&PyKinBody::__enter__)
                          .def("__exit__",&PyKinBody::__exit__)
                          .def("__repr__",&PyKinBody::__repr__)
