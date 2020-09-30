@@ -1303,7 +1303,7 @@ public:
 
     virtual void GetBodiesSortedByName(std::vector<KinBodyPtr>& bodies, uint64_t timeout) const
     {
-        if (_nBodiesModifiedStamp != _nBodiesSortedStamp) {
+        if (_nBodiesModifiedStamp != _nBodiesSortedStamp || _nBodiesSortedStamp == 0) {
             _vecsortedbodies.clear();
 
             if( timeout == 0 ) {
@@ -1322,6 +1322,7 @@ public:
             _nBodiesSortedStamp = _nBodiesModifiedStamp;
         }
 
+        bodies.clear();
         for (const KinBodyWeakPtr& body : _vecsortedbodies) {
             bodies.push_back(KinBodyPtr(body));
         }
