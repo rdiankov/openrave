@@ -1,7 +1,8 @@
 #ifndef OPENRAVE_OSGLODLABEL_H
 #define OPENRAVE_OSGLODLABEL_H
 
-#include "qtosg.h"
+#include <osgText/Text>
+#include <osg/LOD>
 
 namespace qtosgrave {
 	/// \brief OSG text label that scales by camera distance and also disappears if far away enough

@@ -17,7 +17,7 @@
    -------------------------------------------------------------------- */
 #include "qtosg.h"
 #include "osgrenderitem.h"
-
+#include "osglodlabel.h"
 #include <osgUtil/SmoothingVisitor>
 #include <osg/BlendFunc>
 #include <osg/PolygonOffset>
@@ -917,38 +917,8 @@ void RobotItem::Load()
             peesep->addChild(CreateOSGXYZAxes(0.1, 0.0005));
 
             // add text
-            {
-                OSGGroupPtr ptextsep = new osg::Group();
-                osg::ref_ptr<osg::Geode> textGeode = new osg::Geode;
-                peesep->addChild(ptextsep);
-
-                osg::Matrix matrix;
-                OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
-                ptrans->setReferenceFrame(osg::Transform::RELATIVE_RF);
-                matrix.setTrans(osg::Vec3f(0, 0, 0));//.02f,0.02f,0.02f));
-                ptextsep->addChild(ptrans);
-
-                osg::ref_ptr<osgText::Text> text = new osgText::Text();
-
-                //Set the screen alignment - always face the screen
-                text->setAxisAlignment(osgText::Text::SCREEN);
-                text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
-                text->setCharacterSize(50.0);
-
-                text->setColor(osg::Vec4(0,0,0,1));
-                text->setEnableDepthWrites(false);
-
-                text->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
-                text->setBackdropColor(osg::Vec4(1,1,1,1));
-
-
-                text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
-                //text->setFontResolution(18,18);
-
-                text->setText((*itmanip)->GetName());//str(boost::format("EE%d")%index));
-                textGeode->addDrawable(text);
-                ptextsep->addChild(textGeode);
-            }
+            osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel((*itmanip)->GetName());
+            peesep->addChild(labelTrans);
         }
     }
 
