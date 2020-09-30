@@ -2276,13 +2276,14 @@ void KinBody::ComputeMimicJointSecondOrderPartialDerivatives(
 ) {
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
     this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
+    const std::vector<std::array<int, 2>> vIndexPairs = CollectSecondOrderPartialDerivativesActiveIndexPairs(mPartialderivativepairValue);
 
     std::vector<std::pair<std::array<int, 2>, dReal> > vDofindex2ndDerivativePairs;
     for(const JointPtr& pjoint : _vPassiveJoints) {
         const int ndof = pjoint->GetDOF();
         for(int idof = 0; idof < ndof; ++idof) {
             if( pjoint->IsMimic(idof) ) {
-                pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mSecondorderpartialderivativepairValue, mPartialderivativepairValue);
+                pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mSecondorderpartialderivativepairValue, mPartialderivativepairValue, vIndexPairs);
             }
         }
     }
@@ -3621,6 +3622,7 @@ void KinBody::_ComputeLinkAccelerations(
         if( bHasAccelerations ) {
             std::vector<std::pair<std::array<int, 2>, dReal> > vDofindex2ndDerivativePairs; ///< vector of ((l, k), ∂^2 z/∂xk ∂xl) pairs
             std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue; ///< map a joint pair (z, (xl, xk)) to the partial derivative ∂^2 z/∂xk ∂xl
+            const std::vector<std::array<int, 2>> vIndexPairs = CollectSecondOrderPartialDerivativesActiveIndexPairs(mPartialderivativepairValue);
 
             // compute all dof accelerations in topological order
             for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
@@ -3631,7 +3633,7 @@ void KinBody::_ComputeLinkAccelerations(
                 const int ndof = pjoint->GetDOF();
                 for(int idof = 0; idof < ndof; ++idof) {
                     if( pjoint->IsMimic(idof) ) {
-                        pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mSecondorderpartialderivativepairValue, mPartialderivativepairValue);
+                        pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mSecondorderpartialderivativepairValue, mPartialderivativepairValue, vIndexPairs);
                     }
                 }
             }

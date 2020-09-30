@@ -2328,11 +2328,27 @@ inline void AccumulateSecondOrderPartialDerivatives(
     }
 }
 
+std::vector<std::array<int, 2>> KinBody::CollectSecondOrderPartialDerivativesActiveIndexPairs(const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue) {
+    std::set<int> sIndices;
+    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal >& keyvalue : mPartialderivativepairValue) {
+        sIndices.insert(keyvalue.first.second);
+    }
+    std::vector<int> vIndices(sIndices.begin(), sIndices.end());
+    std::vector<std::array<int, 2>> vIndexPairs;
+    for(int k : vIndices) {
+        for(int l : vIndices) {
+            vIndexPairs.push_back({k, l});
+        }
+    }
+    return vIndexPairs;
+}
+
 void KinBody::Joint::_ComputePartialAccelerations(
     std::vector<std::pair<std::array<int, 2>, dReal> >& vDofindex2ndDerivativePairs,
     const int iaxis,
     std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue,
-    const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue
+    const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
+    const std::vector<std::array<int, 2>>& vIndexPairs
 ) const {
     vDofindex2ndDerivativePairs.clear();
     if( this->dofindex >= 0 ) {
@@ -2425,19 +2441,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
             );
         }
         ///< recursion: collect all ∂^2 yi/∂xk ∂xl
-        dependedjointi->_ComputePartialAccelerations(vLocalIndexPartialPairs, iaxis, mSecondorderpartialderivativepairValue, mPartialderivativepairValue);
-    }
-
-    std::set<int> sIndices;
-    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal >& keyvalue : mPartialderivativepairValue) {
-        sIndices.insert(keyvalue.first.second);
-    }
-    std::vector<int> vIndices(sIndices.begin(), sIndices.end());
-    std::vector<std::array<int, 2>> vIndexPairs;
-    for(int k : vIndices) {
-        for(int l : vIndices) {
-            vIndexPairs.push_back({k, l});
-        }
+        dependedjointi->_ComputePartialAccelerations(vLocalIndexPartialPairs, iaxis, mSecondorderpartialderivativepairValue, mPartialderivativepairValue, vIndexPairs);
     }
 
     std::pair<Mimic::DOFFormat, int> dyidxk; // ∂yi/∂xk
