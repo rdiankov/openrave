@@ -160,7 +160,10 @@ public:
             envInfo.DeserializeJSON(doc, fUnitScale, _deserializeOptions);
             FOREACH(itBodyInfo, envInfo._vBodyInfos) {
                 KinBody::KinBodyInfoPtr& pKinBodyInfo = *itBodyInfo;
-                _EnsureUniqueIdAndUri(*pKinBodyInfo);
+                // ensure uri is set
+                if (pKinBodyInfo->_uri.empty() && !pKinBodyInfo->_id.empty()) {
+                    pKinBodyInfo->_uri = _CanonicalizeURI("#" + pKinBodyInfo->_id);
+                }
                 RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
                 if( !!pRobotBaseInfo ) {
                     _ProcessURIsInRobotBaseInfo(*pRobotBaseInfo, doc, fUnitScale, alloc);
@@ -436,20 +439,6 @@ protected:
         return uri;
     }
 
-    void _EnsureUniqueIdAndUri(KinBody::KinBodyInfo& bodyInfo)
-    {
-        if (bodyInfo._id.empty()) {
-            bodyInfo._id = "body0";
-        }
-        int suffix = 1;
-        while (_bodyUniqueIds.find(bodyInfo._id) != _bodyUniqueIds.end()) {
-            bodyInfo._id = "body" + std::to_string(suffix);
-            suffix += 1;
-        }
-        _bodyUniqueIds.insert(bodyInfo._id);
-        bodyInfo._uri = _CanonicalizeURI("#" + bodyInfo._id);
-    }
-
     template<typename T>
     void _ExtractTransform(const rapidjson::Value& bodyValue, boost::shared_ptr<T> pbody, dReal fUnitScale)
     {
@@ -475,7 +464,6 @@ protected:
 
         KinBody::KinBodyInfoPtr pKinBodyInfo(new KinBody::KinBodyInfo());
         pKinBodyInfo->DeserializeJSON(bodyValue, fUnitScale, _deserializeOptions);
-        _EnsureUniqueIdAndUri(*pKinBodyInfo);
         RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
 
         KinBodyPtr pBody;
@@ -489,6 +477,8 @@ protected:
             if( !pRobot ) {
                 return false;
             }
+            // for extracting a single body from file, need to assign a random body id to not conflict with what's already in environment
+            pRobotBaseInfo->_id = str(boost::format("body%d")%utils::GetNanoTime());
             if (!pRobot->InitFromRobotInfo(*pRobotBaseInfo)) {
                 return false;
             }
@@ -501,6 +491,8 @@ protected:
             if( !pBody ) {
                 return false;
             }
+            // for extracting a single body from file, need to assign a random body id to not conflict with what's already in environment
+            pKinBodyInfo->_id = str(boost::format("body%d")%utils::GetNanoTime());
             if (!pBody->InitFromKinBodyInfo(*pKinBodyInfo)) {
                 return false;
             }
@@ -519,7 +511,6 @@ protected:
 
         RobotBase::RobotBaseInfoPtr pRobotBaseInfo(new RobotBase::RobotBaseInfo());
         pRobotBaseInfo->DeserializeJSON(bodyValue, fUnitScale, _deserializeOptions);
-        _EnsureUniqueIdAndUri(*pRobotBaseInfo);
 
         _ProcessURIsInRobotBaseInfo(*pRobotBaseInfo, doc, fUnitScale, alloc);
 
@@ -530,6 +521,8 @@ protected:
         if( !pRobot ) {
             return false;
         }
+        // for extracting a single body from file, need to assign a random body id to not conflict with what's already in environment
+        pRobotBaseInfo->_id = str(boost::format("body%d")%utils::GetNanoTime());
         if (!pRobot->InitFromRobotInfo(*pRobotBaseInfo)) {
             return false;
         }
@@ -588,8 +581,6 @@ protected:
     std::string _defaultSuffix; ///< defaultSuffix of the main document, either ".json" or ".msgpack"
     std::vector<std::string> _vOpenRAVESchemeAliases;
     bool _bMustResolveURI = false; ///< if true, throw exception if uri does not resolve
-
-    std::set<std::string> _bodyUniqueIds; ///< unique id for bodies in current doc
 
     std::map<std::string, boost::shared_ptr<const rapidjson::Document> > _rapidJSONDocuments; ///< cache for opened rapidjson Documents
 };

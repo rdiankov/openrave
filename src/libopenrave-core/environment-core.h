@@ -1487,8 +1487,6 @@ public:
         // have to set the URI to the passed in one rather than the resolved one, otherwise external components won't be able to compare if a URI is equivalent or not
         if( !!robot ) {
             robot->__struri = filename;
-            // have to clear id otherwise dynamically loaded objects in environment will have conflicting id
-            robot->_id.clear();
         }
 
         return robot;
@@ -1558,8 +1556,6 @@ public:
                     robot->__struri = itatt->second;
                 }
             }
-            // have to clear id otherwise dynamically loaded objects in environment will have conflicting id
-            robot->_id.clear();
         }
 
         return robot;
@@ -1679,8 +1675,6 @@ public:
         // have to set the URI to the passed in one rather than the resolved one, otherwise external components won't be able to compare if a URI is equivalent or not
         if( !!body ) {
             body->__struri = filename;
-            // have to clear id otherwise dynamically loaded objects in environment will have conflicting id
-            body->_id.clear();
         }
 
         return body;
@@ -1750,8 +1744,6 @@ public:
                     body->__struri = itatt->second;
                 }
             }
-            // have to clear id otherwise dynamically loaded objects in environment will have conflicting id
-            body->_id.clear();
         }
         return body;
     }
@@ -1854,7 +1846,6 @@ public:
                         return InterfaceBasePtr();
                     }
                 }
-                pbody->_id.clear();
                 pinterface = pbody;
             }
             else if( type == PT_Robot ) {
@@ -1899,7 +1890,6 @@ public:
                         return InterfaceBasePtr();
                     }
                 }
-                probot->_id.clear();
                 pinterface = probot;
             }
             else {
