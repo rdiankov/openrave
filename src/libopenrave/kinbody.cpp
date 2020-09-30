@@ -263,36 +263,21 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
         size_t iGrabbed = 0;
         for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
-            const rapidjson::Value& grabbedValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(grabbedValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(grabbedValue, "grabbedName");
-            }
-            UpdateOrCreateInfo(grabbedValue, id, _vGrabbedInfos, fUnitScale, options);
+            UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
         }
     }
 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
-            const rapidjson::Value& linkValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(linkValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(linkValue, "name");
-            }
-            UpdateOrCreateInfo(linkValue, id, _vLinkInfos, fUnitScale, options);
+            UpdateOrCreateInfo(*it, _vLinkInfos, fUnitScale, options);
         }
     }
 
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
-            const rapidjson::Value& jointValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(jointValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(jointValue, "name");
-            }
-            UpdateOrCreateInfo(jointValue, id, _vJointInfos, fUnitScale, options);
+            UpdateOrCreateInfo(*it, _vJointInfos, fUnitScale, options);
         }
     }
 
