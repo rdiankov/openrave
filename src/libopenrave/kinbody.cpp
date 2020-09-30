@@ -3533,6 +3533,69 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
     }
 }
 
+void KinBody::_ComputePassiveJointAccelerations(
+    std::vector< std::vector<dReal> >& vPassiveJointVelocities,
+    std::vector< std::vector<dReal> >& vPassiveJointAccelerations,
+    const std::vector<dReal>& vDOFVelocities,
+    const std::vector<dReal>& vDOFAccelerations
+) const {
+    const int nPassiveJoints = _vPassiveJoints.size();
+    const bool bHasVelocities = !vDOFVelocities.empty();
+    const bool bHasAccelerations = !vDOFAccelerations.empty();
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
+    this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
+
+    // compute all dof velocities in topological order, collect results from mPartialderivativepairValue
+    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mPartialderivativepairValue) {
+        const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
+        const int jointindex = thisdofformat.jointindex; // index of z
+        const int dependedDofIndex = keyvalue.first.second; // index of x
+        const dReal totalPartialDerivative = keyvalue.second; // ∂z/dx where x=x(t) is time-dependent
+        vPassiveJointVelocities.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += vDOFVelocities.at(dependedDofIndex) * totalPartialDerivative; // dz/dt = \sum_{z depends on x} ∂z/∂x * dx/dt
+    }
+
+    // compute the link accelerations in topological order
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue; ///< map a joint pair (z, (xl, xk)) to the partial derivative ∂^2 z/∂xk ∂xl
+    const bool bRecomputeFirstOrderPartial = false; // already computed above
+    this->ComputeMimicJointSecondOrderPartialDerivatives(mSecondorderpartialderivativepairValue, mPartialderivativepairValue, bRecomputeFirstOrderPartial);
+
+    // compute all dof accelerations in topological order; collect results from mSecondorderpartialderivativepairValue
+    std::set<int> sActive;
+    for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2>>, dReal>& keyvalue : mSecondorderpartialderivativepairValue) {
+        const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
+        const int jointindex = thisdofformat.jointindex; // index of z
+        const std::array<int, 2>& indexpair = keyvalue.first.second;
+        const int kactive = indexpair[0]; // index of xk
+        const int lactive = indexpair[1]; // index of xl
+        const dReal d2zdxkdxl = keyvalue.second; // ∂^2 z/∂xk ∂xl
+        dReal& d2zdt2 = vPassiveJointAccelerations.at(jointindex - nPassiveJoints).at(thisdofformat.axis);
+
+        if(bHasVelocities) {
+            const dReal dxkdt = vDOFVelocities.at(kactive); // dxk/dt
+            const dReal dxldt = vDOFVelocities.at(lactive); // dxl/dt
+            d2zdt2 += d2zdxkdxl * dxkdt * dxldt; // d^2 z/dt^2 += (∂^2 z/∂xk ∂xl) * (dxk/dt) * (dxl/dt)
+        }
+
+        if(!sActive.count(kactive)) {
+            sActive.insert(kactive);
+            const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, kactive};
+            const dReal dzdx = mPartialderivativepairValue.at(key);
+            if(bHasAccelerations) {
+                const dReal d2xdt2 = vDOFAccelerations.at(kactive);
+                d2zdt2 += dzdx * d2xdt2; // d^2 z/dt^2 += (∂z/∂xk) * (d^2 xk/dt^2)
+            }
+        }
+        /*
+            d^2 z                               [  ∂^2 z     ( dxk )   ( dxl ) ]                          [ ∂z      d^2 xk ]
+            -----  = \sum_{z depends on xk, xl} [ -------- x (-----) x (-----) ] + \sum_{z depends on xk} [----- * ------- ]
+            d t^2                               [ ∂xk ∂xl    ( dt  )   ( dt  ) ]                          [ ∂xk     d t^2  ]
+
+            where dx/dt comes from vDOFVelocities    if bHasVelocities, while
+            d^2 x/ dt^2 comes from vDOFAccelerations if bHasAccelerations.
+        */
+    }
+}
+
 void KinBody::_ComputeLinkAccelerations(
     const std::vector<dReal>& vDOFVelocities,
     const std::vector<dReal>& vDOFAccelerations,
@@ -3546,20 +3609,21 @@ void KinBody::_ComputeLinkAccelerations(
         return;
     }
 
-    /* ========== (1) Compute DOF accelerations for passive joints ========== */
+    /* ========== (1) Check whether input is valid ========== */
     const int nActiveJoints = _vecjoints.size();
-    const int nPassiveJoints = _vPassiveJoints.size();
     const bool bHasVelocities = !vDOFVelocities.empty();
     const bool bHasAccelerations = !vDOFAccelerations.empty();
 
     if(bHasVelocities) {
-        OPENRAVE_ASSERT_OP_FORMAT(vDOFVelocities.size(), ==, nActiveJoints, "Should have the same number as that of the active joints %d", nActiveJoints, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT((int)vDOFVelocities.size(), ==, nActiveJoints, "Should have the same number as that of the active joints %d", nActiveJoints, ORE_InvalidArguments);
     }
     if(bHasAccelerations) {
-        OPENRAVE_ASSERT_OP_FORMAT(vDOFAccelerations.size(), ==, nActiveJoints, "Should have the same number as that of the active joints %d", nActiveJoints, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT((int)vDOFAccelerations.size(), ==, nActiveJoints, "Should have the same number as that of the active joints %d", nActiveJoints, ORE_InvalidArguments);
     }
 
+    /* ========== (2) Compute DOF accelerations for passive joints ========== */
     // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
+    const int nPassiveJoints = _vPassiveJoints.size();
     std::vector< std::vector<dReal> > vPassiveJointVelocities(nPassiveJoints);
     std::vector< std::vector<dReal> > vPassiveJointAccelerations(nPassiveJoints);
     for(int i = 0; i < nPassiveJoints; ++i) {
@@ -3569,71 +3633,20 @@ void KinBody::_ComputeLinkAccelerations(
             vPassiveJointAccelerations[i].resize(jointdof, 0);
         }
         if( bHasVelocities ) {
-            if( !pjoint->IsMimic() ) {
-                pjoint->GetVelocities(vPassiveJointVelocities[i]); // TGN: what does this mean?
+            if( pjoint->IsMimic() ) {
+                vPassiveJointVelocities[i].resize(jointdof, 0); // mimic joints
             }
             else {
-                vPassiveJointVelocities[i].resize(jointdof, 0);
+                pjoint->GetVelocities(vPassiveJointVelocities[i]); // static joints
             }
         }
     }
 
     if( bHasVelocities || bHasAccelerations ) {
-        std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
-        this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
-
-        // compute all dof velocities in topological order, collect results from mPartialderivativepairValue
-        for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mPartialderivativepairValue) {
-            const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
-            const int jointindex = thisdofformat.jointindex; // index of z
-            const int dependedDofIndex = keyvalue.first.second; // index of x
-            const dReal totalPartialDerivative = keyvalue.second; // ∂z/dx where x=x(t) is time-dependent
-            vPassiveJointVelocities.at(jointindex - nPassiveJoints).at(thisdofformat.axis) += vDOFVelocities.at(dependedDofIndex) * totalPartialDerivative; // dz/dt = \sum_{z depends on x} ∂z/∂x * dx/dt
-        }
-
-        // compute the link accelerations in topological order
-        std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue; ///< map a joint pair (z, (xl, xk)) to the partial derivative ∂^2 z/∂xk ∂xl
-        const bool bRecomputeFirstOrderPartial = false; // already computed above
-        this->ComputeMimicJointSecondOrderPartialDerivatives(mSecondorderpartialderivativepairValue, mPartialderivativepairValue, bRecomputeFirstOrderPartial);
-
-        // compute all dof accelerations in topological order; collect results from mSecondorderpartialderivativepairValue
-        std::set<int> sActive;
-        for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2>>, dReal>& keyvalue : mSecondorderpartialderivativepairValue) {
-            const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
-            const int jointindex = thisdofformat.jointindex; // index of z
-            const std::array<int, 2>& indexpair = keyvalue.first.second;
-            const int kactive = indexpair[0]; // index of xk
-            const int lactive = indexpair[1]; // index of xl
-            const dReal d2zdxkdxl = keyvalue.second; // ∂^2 z/∂xk ∂xl
-            dReal& d2zdt2 = vPassiveJointAccelerations.at(jointindex - nPassiveJoints).at(thisdofformat.axis);
-
-            if(bHasVelocities) {
-                const dReal dxkdt = vDOFVelocities.at(kactive); // dxk/dt
-                const dReal dxldt = vDOFVelocities.at(lactive); // dxl/dt
-                d2zdt2 += d2zdxkdxl * dxkdt * dxldt; // d^2 z/dt^2 += (∂^2 z/∂xk ∂xl) * (dxk/dt) * (dxl/dt)
-            }
-
-            if(!sActive.count(kactive)) {
-                sActive.insert(kactive);
-                const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, kactive};
-                const dReal dzdx = mPartialderivativepairValue.at(key);
-                if(bHasAccelerations) {
-                    const dReal d2xdt2 = vDOFAccelerations.at(kactive);
-                    d2zdt2 += dzdx * d2xdt2; // d^2 z/dt^2 += (∂z/∂xk) * (d^2 xk/dt^2)
-                }
-            }
-            /*
-                d^2 z                               [  ∂^2 z     ( dxk )   ( dxl ) ]                          [ ∂z      d^2 xk ]
-                -----  = \sum_{z depends on xk, xl} [ -------- x (-----) x (-----) ] + \sum_{z depends on xk} [----- * ------- ]
-                d t^2                               [ ∂xk ∂xl    ( dt  )   ( dt  ) ]                          [ ∂xk     d t^2  ]
-
-                where dx/dt comes from vDOFVelocities    if bHasVelocities, while
-                d^2 x/ dt^2 comes from vDOFAccelerations if bHasAccelerations.
-            */
-        }
+        _ComputePassiveJointAccelerations(vPassiveJointVelocities, vPassiveJointAccelerations, vDOFVelocities, vDOFAccelerations);
     }
 
-    /* ========== (2) Compute link accelerations ========== */
+    /* ========== (3) Compute link accelerations ========== */
     // set accelerations of all links as if they were the base link
     for(size_t ilink = 0; ilink < nlinks; ++ilink) {
         vLinkAccelerations.at(ilink).first += vLinkVelocities.at(ilink).second.cross(vLinkVelocities.at(ilink).first);

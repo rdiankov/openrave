@@ -2892,6 +2892,17 @@ protected:
     /// \param[in] usebaselinkvelocity if true, will compute all velocities using the base link velocity. otherwise will assume it is 0
     virtual void _ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::vector<std::pair<Vector,Vector> >& linkvelocities, bool usebaselinkvelocity=true) const;
 
+    /// \brief Returns the passive joints' velocities and acceleration (first-order, second-order time full derivatives)
+    ///
+    /// \param[out] vPassiveJointVelocities   : passive joints' velocities    ( first-order time full derivatives)
+    /// \param[out] vPassiveJointAccelerations: passive joints' accelerations (second-order time full derivatives)
+    virtual void _ComputePassiveJointAccelerations(
+        std::vector< std::vector<dReal> >& vPassiveJointVelocities,
+        std::vector< std::vector<dReal> >& vPassiveJointAccelerations,
+        const std::vector<dReal>& vDOFVelocities,
+        const std::vector<dReal>& vDOFAccelerations
+    ) const;
+
     /// \brief Computes accelerations of the links given all the necessary data of the robot. \see GetLinkAccelerations
     ///
     /// for passive joints that are not mimic and are not static, will call Joint::GetVelocities to get their initial velocities (this is state dependent!)
