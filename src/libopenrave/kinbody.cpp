@@ -3533,15 +3533,37 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
     }
 }
 
-void KinBody::_ComputePassiveJointAccelerations(
+void KinBody::ComputePassiveJointVelocitiesAccelerations(
     std::vector< std::vector<dReal> >& vPassiveJointVelocities,
     std::vector< std::vector<dReal> >& vPassiveJointAccelerations,
     const std::vector<dReal>& vDOFVelocities,
     const std::vector<dReal>& vDOFAccelerations
 ) const {
-    const int nPassiveJoints = _vPassiveJoints.size();
     const bool bHasVelocities = !vDOFVelocities.empty();
     const bool bHasAccelerations = !vDOFAccelerations.empty();
+    if(!bHasVelocities && !bHasAccelerations) {
+        return;
+    }
+
+    const int nPassiveJoints = _vPassiveJoints.size();
+    vPassiveJointVelocities.resize(nPassiveJoints);
+    vPassiveJointAccelerations.resize(nPassiveJoints);
+    for(int i = 0; i < nPassiveJoints; ++i) {
+        const JointPtr& pjoint = _vPassiveJoints[i];
+        const int jointdof = pjoint->GetDOF();
+        if( bHasAccelerations ) {
+            vPassiveJointAccelerations[i].resize(jointdof, 0);
+        }
+        if( bHasVelocities ) {
+            if( pjoint->IsMimic() ) {
+                vPassiveJointVelocities[i].resize(jointdof, 0); // mimic joints
+            }
+            else {
+                pjoint->GetVelocities(vPassiveJointVelocities[i]); // static joints
+            }
+        }
+    }
+
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
     this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
 
@@ -3623,28 +3645,9 @@ void KinBody::_ComputeLinkAccelerations(
 
     /* ========== (2) Compute DOF accelerations for passive joints ========== */
     // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
-    const int nPassiveJoints = _vPassiveJoints.size();
-    std::vector< std::vector<dReal> > vPassiveJointVelocities(nPassiveJoints);
-    std::vector< std::vector<dReal> > vPassiveJointAccelerations(nPassiveJoints);
-    for(int i = 0; i < nPassiveJoints; ++i) {
-        const JointPtr& pjoint = _vPassiveJoints[i];
-        const int jointdof = pjoint->GetDOF();
-        if( bHasAccelerations ) {
-            vPassiveJointAccelerations[i].resize(jointdof, 0);
-        }
-        if( bHasVelocities ) {
-            if( pjoint->IsMimic() ) {
-                vPassiveJointVelocities[i].resize(jointdof, 0); // mimic joints
-            }
-            else {
-                pjoint->GetVelocities(vPassiveJointVelocities[i]); // static joints
-            }
-        }
-    }
-
-    if( bHasVelocities || bHasAccelerations ) {
-        _ComputePassiveJointAccelerations(vPassiveJointVelocities, vPassiveJointAccelerations, vDOFVelocities, vDOFAccelerations);
-    }
+    std::vector< std::vector<dReal> > vPassiveJointVelocities;
+    std::vector< std::vector<dReal> > vPassiveJointAccelerations;
+    this->ComputePassiveJointVelocitiesAccelerations(vPassiveJointVelocities, vPassiveJointAccelerations, vDOFVelocities, vDOFAccelerations);
 
     /* ========== (3) Compute link accelerations ========== */
     // set accelerations of all links as if they were the base link

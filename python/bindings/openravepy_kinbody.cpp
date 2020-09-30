@@ -3799,6 +3799,25 @@ object PyKinBody::ComputeMimicJointSecondOrderPartialDerivatives() {
     return d;
 }
 
+py::tuple PyKinBody::ComputePassiveJointVelocitiesAccelerations(
+    object pyDOFVelocities,
+    object pyDOFAccelerations
+) {
+    const std::vector<dReal> vDOFVelocities = ExtractArray<dReal>(pyDOFVelocities);
+    const std::vector<dReal> vDOFAccelerations = ExtractArray<dReal>(pyDOFAccelerations);
+    std::vector< std::vector<dReal> > vPassiveJointVelocities;
+    std::vector< std::vector<dReal> > vPassiveJointAccelerations;
+    _pbody->ComputePassiveJointVelocitiesAccelerations(vPassiveJointVelocities, vPassiveJointAccelerations, vDOFVelocities, vDOFAccelerations);
+    py::list lvel, laccel;
+    for(const std::vector<dReal>& velocities : vPassiveJointVelocities) {
+        lvel.append(StdVectorToPyList(velocities));
+    }
+    for(const std::vector<dReal>& accelerations : vPassiveJointAccelerations) {
+        laccel.append(StdVectorToPyList(accelerations));
+    }
+    return py::make_tuple(lvel, laccel);
+}
+
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
 {
     PyKinBodyStateSaverPtr saver;
@@ -5275,6 +5294,7 @@ void init_openravepy_kinbody()
                          .def("ExtractInfo", &PyKinBody::ExtractInfo, DOXY_FN(KinBody, ExtractInfo))
                          .def("ComputeMimicJointFirstOrderPartialDerivatives", &PyKinBody::ComputeMimicJointFirstOrderPartialDerivatives, DOXY_FN(KinBody, ComputeMimicJointFirstOrderPartialDerivatives))
                          .def("ComputeMimicJointSecondOrderPartialDerivatives", &PyKinBody::ComputeMimicJointSecondOrderPartialDerivatives, DOXY_FN(KinBody, ComputeMimicJointSecondOrderPartialDerivatives))
+                         .def("ComputePassiveJointVelocitiesAccelerations", &PyKinBody::ComputePassiveJointVelocitiesAccelerations, DOXY_FN(KinBody, ComputePassiveJointVelocitiesAccelerations))
                          .def("__enter__",&PyKinBody::__enter__)
                          .def("__exit__",&PyKinBody::__exit__)
                          .def("__repr__",&PyKinBody::__repr__)

@@ -323,6 +323,10 @@ public:
 
     py::object ComputeMimicJointFirstOrderPartialDerivatives();
     py::object ComputeMimicJointSecondOrderPartialDerivatives();
+    py::tuple ComputePassiveJointVelocitiesAccelerations(
+        py::object pyDOFVelocities,
+        py::object pyDOFAccelerations
+    );
 
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);
     virtual std::string __repr__();

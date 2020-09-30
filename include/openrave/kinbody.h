@@ -2424,6 +2424,17 @@ private:
         const bool bRecomputeFirstOrderPartial
     ) const;
 
+    /// \brief Returns the passive joints' velocities and acceleration (first-order, second-order time full derivatives)
+    ///
+    /// \param[out] vPassiveJointVelocities   : passive joints' velocities    ( first-order time full derivatives)
+    /// \param[out] vPassiveJointAccelerations: passive joints' accelerations (second-order time full derivatives)
+    void ComputePassiveJointVelocitiesAccelerations(
+        std::vector< std::vector<dReal> >& vPassiveJointVelocities,
+        std::vector< std::vector<dReal> >& vPassiveJointAccelerations,
+        const std::vector<dReal>& vDOFVelocities,
+        const std::vector<dReal>& vDOFAccelerations
+    ) const;
+
     /// \brief Computes the translation jacobian with respect to a world position.
     ///
     /// Gets the jacobian with respect to a link by computing the partial differentials for all joints that in the path from the root node to GetLinks()[index]
@@ -2891,17 +2902,6 @@ protected:
     ///
     /// \param[in] usebaselinkvelocity if true, will compute all velocities using the base link velocity. otherwise will assume it is 0
     virtual void _ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::vector<std::pair<Vector,Vector> >& linkvelocities, bool usebaselinkvelocity=true) const;
-
-    /// \brief Returns the passive joints' velocities and acceleration (first-order, second-order time full derivatives)
-    ///
-    /// \param[out] vPassiveJointVelocities   : passive joints' velocities    ( first-order time full derivatives)
-    /// \param[out] vPassiveJointAccelerations: passive joints' accelerations (second-order time full derivatives)
-    virtual void _ComputePassiveJointAccelerations(
-        std::vector< std::vector<dReal> >& vPassiveJointVelocities,
-        std::vector< std::vector<dReal> >& vPassiveJointAccelerations,
-        const std::vector<dReal>& vDOFVelocities,
-        const std::vector<dReal>& vDOFAccelerations
-    ) const;
 
     /// \brief Computes accelerations of the links given all the necessary data of the robot. \see GetLinkAccelerations
     ///
