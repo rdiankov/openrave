@@ -2319,6 +2319,7 @@ inline void AccumulateSecondOrderPartialDerivatives(
     const std::pair<KinBody::Mimic::DOFFormat, std::array<int, 2> >& d2zdxkxl,
     dReal addend
 ) {
+    // m[d2zdxkxl] += addend; see zero initialization in https://en.cppreference.com/w/cpp/language/zero_initialization
     if(m.count(d2zdxkxl)) {
         m.at(d2zdxkxl) += addend;
     }
@@ -2335,8 +2336,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
 ) const {
     vDofindex2ndDerivativePairs.clear();
     if( this->dofindex >= 0 ) {
-        // ∂^2 x/∂xk1 ∂xk2 = 0, where x, xk1, xk2 are active joints
-        return;
+        return; // ∂^2 x/∂xk1 ∂xk2 = 0, where x, xk1, xk2 are active joints; handle yi=xk, yj=xl cases separately
     }
 
     OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis),
@@ -2429,13 +2429,13 @@ void KinBody::Joint::_ComputePartialAccelerations(
     }
 
     std::set<int> sIndices;
-    for(auto& keyvalue : mPartialderivativepairValue) {
+    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal >& keyvalue : mPartialderivativepairValue) {
         sIndices.insert(keyvalue.first.second);
     }
     std::vector<int> vIndices(sIndices.begin(), sIndices.end());
     std::vector<std::array<int, 2>> vIndexPairs;
-    for(auto k : vIndices) {
-        for(auto l : vIndices) {
+    for(int k : vIndices) {
+        for(int l : vIndices) {
             vIndexPairs.push_back({k, l});
         }
     }
