@@ -6,9 +6,15 @@
 
 namespace qtosgrave {
 
+osg::ref_ptr<osgText::Font> OSGLODLabel::OSG_FONT;
+
+void OSGLODLabel::SetFont(osgText::Font* font) {
+    OSGLODLabel::OSG_FONT = font;
+}
+
 // OSG text label that scales by camera distance and also disappears if far away enough
-OSGLODLabel::OSGLODLabel(const std::string& label, std::string& fontString) : osg::LOD() {
-    /* Transform structure of an OSGLODLabel: 
+OSGLODLabel::OSGLODLabel(const std::string& label, osg::ref_ptr<osgText::Font> font) : osg::LOD() {
+    /* Transform structure of an OSGLODLabel:
     *
     * [Target Transform (usually the global transform)]
     *           |
@@ -27,8 +33,13 @@ OSGLODLabel::OSGLODLabel(const std::string& label, std::string& fontString) : os
 
     // Create text element
     osg::ref_ptr<osgText::Text> text = new osgText::Text();
-    std::istringstream fontStream(fontString);
-    text->setFont(osgText::readFontStream(fontStream));
+
+    if (font != nullptr && font.valid()) {
+        text->setFont(font.get());
+    } else if (OSGLODLabel::OSG_FONT.valid()) {
+        text->setFont(OSGLODLabel::OSG_FONT.get());
+    }
+
     // Set up other text element properties
     text->setText(label);
     text->setCharacterSize(0.05);

@@ -8,9 +8,13 @@ namespace qtosgrave {
 	class OSGLODLabel : public osg::LOD
 	{
 	public:
-	    OSGLODLabel(const std::string& label, std::string& fontString);
+	    OSGLODLabel(const std::string& label, osg::ref_ptr<osgText::Font> font=0);
 	    ~OSGLODLabel();
 	    void traverse(osg::NodeVisitor& nv);
+        static void SetFont(osgText::Font* font);
+    private:
+        /// \brief fallback font for LOD label if set
+        static osg::ref_ptr<osgText::Font> OSG_FONT;
 	};
 }
 

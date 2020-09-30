@@ -218,9 +218,6 @@ protected:
 
     bool _HandleOSGKeyDown(int);
 
-    /// \brief string containing data for NotoSans font
-    std::string _fontString;
-
     /// \brief contains a function to be called inside the GUI thread.
     class GUIThreadFunction
     {
