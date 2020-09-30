@@ -2446,7 +2446,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
                 RAVELOG_DEBUG_FORMAT("Working on (i=%d,k=%d), (j=%d,l=%d), that is, ∂^2(%s)/∂(%s)∂(%s) += ∂^2 f/∂(%s)∂(%s) * (∂(%s)/∂(%s) * ∂(%s)/∂(%s))",
                     jointindexi % kactive % jointindexj % lactive
                     % this->GetName() % vActiveJoints.at(kactive)->GetName() % vActiveJoints.at(lactive)->GetName()
-                    % vActiveJoints.at(kactive)->GetName() % vActiveJoints.at(lactive)->GetName()
+                    % dependedjointi->GetName() % dependedjointj->GetName()
                     % dependedjointi->GetName() % vActiveJoints.at(kactive)->GetName() % dependedjointj->GetName() % vActiveJoints.at(lactive)->GetName()
                 );
                 const std::pair<Mimic::DOFFormat, int> dyidxk {dofformati, kactive}; // ∂yi/∂xk
@@ -2486,7 +2486,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
                     % dependedjointi->GetName()
                     % dependedjointi->GetName() % vActiveJoints.at(kactive)->GetName() % vActiveJoints.at(lactive)->GetName()
                 );
-                localmap[d2zdxkxl] = fvel * mTotal2ndderivativepairValue.at(d2ydxkxl); // ∂^2  z/∂xk ∂xl += ∂f/∂yi * ∂^2 yi/∂xk ∂xl
+                localmap[d2zdxkxl] += fvel * mTotal2ndderivativepairValue.at(d2ydxkxl); // ∂^2  z/∂xk ∂xl += ∂f/∂yi * ∂^2 yi/∂xk ∂xl
             }
         }
     } // for(int ivar = 0; ivar < nvars; ++ivar)
@@ -2495,7 +2495,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
     for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal>& keyvalue : localmap) {
         const std::array<int, 2>& dependedDofIndexPair = keyvalue.first.second;
         const dReal partialDerivative = keyvalue.second;
-        vDofindex2ndDerivativePairs.emplace_back(dependedDofIndexPair, partialDerivative); // collect all total derivatives dz/dx
+        vDofindex2ndDerivativePairs.emplace_back(dependedDofIndexPair, partialDerivative); // collect all total derivatives ∂^2z/∂xl ∂xk
     }
 
     mTotal2ndderivativepairValue.insert(
