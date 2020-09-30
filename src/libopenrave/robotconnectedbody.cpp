@@ -947,7 +947,12 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             // reset old id to empty
             // we want to keep robot id suffix start from 0
             // it will break the name convention when we extract robot info if we keep the old id
+#if 0
             pnewgripperInfo->_id = "";
+#else
+            pnewgripperInfo->_id = connectedBody._nameprefix + pnewgripperInfo->_id; // This code is temporary. empty string will lead assigning newly generated (unstable) id that disturbs grasping model generation.
+                                                                                     // simon & ziyan will make proper fix avoiding assiging id for anything coming from connected bodies
+#endif
             pnewgripperInfo->name = connectedBody._nameprefix + pnewgripperInfo->name;
 
             FOREACH(ittestgripperInfo, _vecGripperInfos) {
