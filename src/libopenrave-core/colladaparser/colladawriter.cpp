@@ -2161,7 +2161,7 @@ private:
         domLinkRef pdomlink = daeSafeCast<domLink>(pkinparent->add(COLLADA_ELEMENT_LINK));
         std::string linkname = plink->GetName();
         if( linkname.size() == 0 ) {
-            linkname = str(boost::format("_dummylink_%s_")%plink->_info._id);
+            linkname = str(boost::format("_dummy%s_")%plink->_info._id);
             RAVELOG_WARN_FORMAT("body %s link %d has empty name, so setting to %s!", plink->GetParent()->GetName()%plink->GetIndex()%linkname);
         }
         pdomlink->setName(linkname.c_str());
