@@ -1150,11 +1150,15 @@ public:
                         // non-external reference
                         // use bodyX_motion as the body id, this is necessary to for external reference to target the stable body id
                         // for external reference, cannot use articulated system id, as it is most likely always body0_motion and will duplicate
-                        pbody->_id = articulated_system->getId();
+                        if (!!articulated_system->getId()) {
+                            pbody->_id = articulated_system->getId();
+                        }
                     }
                 }
                 if (pbody->_id.empty()) {
-                    pbody->_id = ias->getSid();
+                    if (!!ias->getSid()) {
+                        pbody->_id = ias->getSid();
+                    }
                 }
             }
             listInstanceScope.push_back(ias);
@@ -1852,7 +1856,11 @@ public:
         KinBody::LinkPtr plink = pkinbody->GetLink(linkname);
         if( !plink ) {
             plink.reset(new KinBody::Link(pkinbody));
-            plink->_info._id = pdomlink->getSid();
+            if ( !!pdomlink && !!pdomlink->getSid() ) {
+                plink->_info._id = pdomlink->getSid();
+            } else {
+                plink->_info._id = linkname;
+            }
             plink->_info._name = linkname;
             plink->_info._mass = 1e-10;
             plink->_info._vinertiamoments = Vector(1e-7,1e-7,1e-7);
@@ -2028,7 +2036,6 @@ public:
                 // create the joints before creating the child links
                 KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
                 int jointtype = vdomaxes.getCount();
-                pjoint->_info._id = pdomjoint->getSid();
                 pjoint->_info._bIsActive = true;     // if not active, put into the passive list
                 FOREACH(it,pjoint->_info._vweights) {
                     *it = 1;
@@ -2084,6 +2091,11 @@ public:
                 }
                 else {
                     pjoint->_info._name = str(boost::format("dummy%d")%pjoint->jointindex);
+                }
+                if ( !!pdomjoint->getSid() ) {
+                    pjoint->_info._id = pdomjoint->getSid();
+                } else {
+                    pjoint->_info._id = pjoint->_info._name;
                 }
 
                 if( pjoint->_info._bIsActive ) {
