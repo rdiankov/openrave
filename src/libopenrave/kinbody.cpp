@@ -4603,7 +4603,7 @@ void KinBody::_ComputeInternalInformation()
         }
         _ResetInternalCollisionCache();
     }
-    _ResolveInfoIds();
+    //_ResolveInfoIds(); // do not resolve since that could change the IDs and change some other hashes
     _nHierarchyComputed = 2;
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
@@ -5673,7 +5673,7 @@ void KinBody::_ResolveInfoIds()
 
 void KinBody::ExtractInfo(KinBodyInfo& info)
 {
-    _ResolveInfoIds();
+    //_ResolveInfoIds(); // do not resolve since that could change the IDs and change some other hashes
 
     info._id = _id;
     info._uri = __struri;
