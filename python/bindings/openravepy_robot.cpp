@@ -1701,7 +1701,7 @@ bool PyRobotBase::AddGripperInfo(object oGripperInfo, bool removeduplicate)
     dReal fUnitScale=1;
     int options = 0;
     pGripperInfo->DeserializeJSON(rGripperInfo, fUnitScale, options);
-    return _probot->AddGripperInfo(pGripperInfo);
+    return _probot->AddGripperInfo(pGripperInfo, removeduplicate);
 }
 
 bool PyRobotBase::RemoveGripperInfo(const std::string& name)
