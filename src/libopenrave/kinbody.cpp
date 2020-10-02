@@ -3684,25 +3684,10 @@ void KinBody::_ComputeLinkAccelerations(
         const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint]; ///< for all joints, >= 0
         const int dofindex = pjoint->GetDOFIndex(); ///< -1 for passive joints; >=0 for active CallOnDestruction
 
-        dReal const* pdofvelocities = NULL;
-        dReal const* pdofaccelerations = NULL;
-        if(dofindex >= 0) {
-            if(bHasVelocities) {
-                pdofvelocities = &vDOFVelocities.at(dofindex);
-            }
-            if(bHasAccelerations) {
-                pdofaccelerations = &vDOFAccelerations.at(dofindex);
-            }
-        }
-        else {
-            const int iPassive = jointindex - nActiveJoints;
-            if(bHasVelocities) {
-                pdofvelocities = vPassiveJointVelocities.at(iPassive).data();
-            }
-            if(bHasAccelerations) {
-                pdofaccelerations = vPassiveJointAccelerations.at(iPassive).data();
-            }        
-        }
+        dReal const*const pdofvelocities = !bHasVelocities ? NULL : 
+            (dofindex >= 0) ? &vDOFVelocities.at(dofindex) : vPassiveJointVelocities.at(jointindex - nActiveJoints).data();
+        dReal const*const  pdofaccelerations = !bHasAccelerations ? NULL :
+            (dofindex >= 0) ? &vDOFAccelerations.at(dofindex) : vPassiveJointAccelerations.at(jointindex - nActiveJoints).data();;
 
         const int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
         const Transform& tchild = pjoint->GetHierarchyChildLink()->GetTransform();
