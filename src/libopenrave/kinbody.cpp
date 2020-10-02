@@ -3162,7 +3162,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     
     and differentiate one more time to get
     
-    a_B = a_A + angularaccel x (B-A) + angularvel x (angularvel x (B-A))
+    a_B = a_A + angularaccel x (B-A) + angularvel x (angularvel x (R_B^A * (B-A)))
 
     */
 
@@ -3407,7 +3407,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
     }
 
     std::vector<std::pair<int,dReal> > vDofindexDerivativePairs;
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mapcachedpartials;
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
 
     // go backwards
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
@@ -3424,7 +3424,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
         const int iaxis = 0;
         const bool bIsMimic = pjoint->GetDOFIndex() < 0 && pjoint->IsMimic(iaxis);
         if( bIsMimic ) {
-            pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, iaxis, mapcachedpartials);
+            pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, iaxis, mPartialderivativepairValue);
         }
 
         dReal mass = pjoint->GetHierarchyChildLink()->GetMass();
@@ -3653,8 +3653,10 @@ void KinBody::_ComputeLinkAccelerations(
     /* ========== (3) Compute link accelerations ========== */
     // set accelerations of all links as if they were the base link
     for(size_t ilink = 0; ilink < nlinks; ++ilink) {
-        vLinkAccelerations.at(ilink).first += vLinkVelocities.at(ilink).second.cross(vLinkVelocities.at(ilink).first);
-        vLinkAccelerations.at(ilink).second = Vector();
+        const std::pair<Vector, Vector>& linkvels = vLinkVelocities.at(ilink);
+        std::pair<Vector, Vector>& linkaccels = vLinkAccelerations.at(ilink);
+        linkaccels.first += linkvels.second.cross(linkvels.first);
+        linkaccels.second = Vector();
     }
 
     if( !!pexternalaccelerations ) {
@@ -3680,8 +3682,27 @@ void KinBody::_ComputeLinkAccelerations(
         }
 
         const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint]; ///< for all joints, >= 0
-        dReal const* const pdofaccelerations = bHasAccelerations ? vPassiveJointAccelerations.at(jointindex-nActiveJoints).data() : NULL;
-        dReal const* const pdofvelocities = bHasVelocities ? vPassiveJointVelocities.at(jointindex-nActiveJoints).data() : NULL;
+        const int dofindex = pjoint->GetDOFIndex(); ///< -1 for passive joints; >=0 for active CallOnDestruction
+
+        dReal const* pdofvelocities = NULL;
+        dReal const* pdofaccelerations = NULL;
+        if(dofindex >= 0) {
+            if(bHasVelocities) {
+                pdofvelocities = &vDOFVelocities.at(dofindex);
+            }
+            if(bHasAccelerations) {
+                pdofaccelerations = &vDOFAccelerations.at(dofindex);
+            }
+        }
+        else {
+            const int iPassive = jointindex - nActiveJoints;
+            if(bHasVelocities) {
+                pdofvelocities = vPassiveJointVelocities.at(iPassive).data();
+            }
+            if(bHasAccelerations) {
+                pdofaccelerations = vPassiveJointAccelerations.at(iPassive).data();
+            }        
+        }
 
         const int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
         const Transform& tchild = pjoint->GetHierarchyChildLink()->GetTransform();
@@ -3717,12 +3738,12 @@ void KinBody::_ComputeLinkAccelerations(
             vChildAccelerations.first = vParentAccelerations.first + vParentAccelerations.second.cross(xyzdelta) + vParentVelocities.second.cross((vChildVelocities.first-vParentVelocities.first)*2-vParentVelocities.second.cross(xyzdelta));
             vChildAccelerations.second = vParentAccelerations.second;
             if( !!pdofvelocities ) {
-                Vector gw = tdelta.rotate(vlocalaxis*pdofvelocities[0]);
+                Vector gw = tdelta.rotate(vlocalaxis * (*pdofvelocities));
                 vChildAccelerations.first += gw.cross(gw.cross(tchild.trans-tdelta.trans));
                 vChildAccelerations.second += vParentVelocities.second.cross(gw);
             }
             if( !!pdofaccelerations ) {
-                Vector gdw = tdelta.rotate(vlocalaxis*pdofaccelerations[0]);
+                Vector gdw = tdelta.rotate(vlocalaxis * (*pdofaccelerations));
                 vChildAccelerations.first += gdw.cross(tchild.trans-tdelta.trans);
                 vChildAccelerations.second += gdw;
             }
@@ -3732,11 +3753,11 @@ void KinBody::_ComputeLinkAccelerations(
             vChildAccelerations.first = vParentAccelerations.first + vParentAccelerations.second.cross(xyzdelta);
             Vector angularveloctiycontrib = vChildVelocities.first-vParentVelocities.first;
             if( !!pdofvelocities ) {
-                angularveloctiycontrib += w*pdofvelocities[0];
+                angularveloctiycontrib += w * (*pdofvelocities);
             }
             vChildAccelerations.first += vParentVelocities.second.cross(angularveloctiycontrib);
             if( !!pdofaccelerations ) {
-                vChildAccelerations.first += w*pdofaccelerations[0];
+                vChildAccelerations.first += w * (*pdofaccelerations);
             }
             vChildAccelerations.second = vParentAccelerations.second;
         }
