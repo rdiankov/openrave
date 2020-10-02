@@ -1706,6 +1706,10 @@ private:
             mapjointnames[str(boost::format("<csymbol>%s</csymbol>")%itjoint->second->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/joint%d</csymbol>")%kmodel->getID()%itjoint->first);
         }
 
+        const std::vector<KinBody::JointPtr>& vActiveJoints = pbody->GetJoints();
+        const int nActiveJoints = vActiveJoints.size();
+        const std::vector<KinBody::JointPtr>& vPassiveJoints = pbody->GetPassiveJoints();
+        const int nPassiveJoints = vPassiveJoints.size();
         FOREACHC(itjoint, vjoints) {
             const KinBody::JointConstPtr& pjoint = itjoint->second;
             if( !pjoint->IsMimic() ) {
@@ -1721,7 +1725,7 @@ private:
             string targetjointid = str(boost::format("%s/joint%d")%kmodel->getID()%itjoint->first);
             daeSafeCast<domCommon_param>(ptarget->add(COLLADA_TYPE_PARAM))->setValue(targetjointid.c_str());
 
-            int iaxis = 0;
+            const int iaxis = 0;
             boost::array<string,3> sequations;
             for(int itype = 0; itype < 3; ++itype) {
                 sequations[itype] = pjoint->GetMimicEquation(iaxis,itype,"mathml");
@@ -1779,10 +1783,6 @@ private:
                 if( sequations[itype].empty() ) {
                     continue;
                 }
-                const std::vector<KinBody::JointPtr>& vActiveJoints = pbody->GetJoints();
-                const int nActiveJoints = vActiveJoints.size();
-                const std::vector<KinBody::JointPtr>& vPassiveJoints = pbody->GetPassiveJoints();
-                const int nPassiveJoints = vPassiveJoints.size();
                 const std::vector<KinBody::Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[iaxis]->_vdofformat;
                 size_t offset = 0;
                 for(const KinBody::Mimic::DOFFormat& dofformati : vdofformat) {
