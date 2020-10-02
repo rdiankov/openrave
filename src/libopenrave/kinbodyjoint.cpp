@@ -2534,19 +2534,18 @@ void KinBody::Joint::_ComputePartialAccelerations(
         std::make_move_iterator(localmap.begin()),
         std::make_move_iterator(localmap.end())
     );
-
 }
 
 int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput) const
 {
     if( timederiv == 0 ) {
-        _vmimic.at(axis)->_posfn->EvalMulti(voutput, vdependentvalues.empty() ? NULL : &vdependentvalues[0]);
+        _vmimic.at(axis)->_posfn->EvalMulti(voutput, vdependentvalues.data());
         return _vmimic.at(axis)->_posfn->EvalError();
     }
     else if( timederiv == 1 ) {
         voutput.resize(_vmimic.at(axis)->_velfns.size());
         for(size_t i = 0; i < voutput.size(); ++i) {
-            voutput[i] = _vmimic.at(axis)->_velfns.at(i)->Eval(vdependentvalues.empty() ? NULL : &vdependentvalues[0]);
+            voutput[i] = _vmimic.at(axis)->_velfns.at(i)->Eval(vdependentvalues.data());
             int err = _vmimic.at(axis)->_velfns.at(i)->EvalError();
             if( err ) {
                 return err;
@@ -2556,7 +2555,7 @@ int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>
     else if( timederiv == 2 ) {
         voutput.resize(_vmimic.at(axis)->_accelfns.size());
         for(size_t i = 0; i < voutput.size(); ++i) {
-            voutput[i] = _vmimic.at(axis)->_accelfns.at(i)->Eval(vdependentvalues.empty() ? NULL : &vdependentvalues[0]);
+            voutput[i] = _vmimic.at(axis)->_accelfns.at(i)->Eval(vdependentvalues.data());
             int err = _vmimic.at(axis)->_accelfns.at(i)->EvalError();
             if( err ) {
                 return err;

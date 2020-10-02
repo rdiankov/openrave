@@ -3613,7 +3613,7 @@ void KinBody::ComputePassiveJointVelocitiesAccelerations(
         }
         /*
             d^2 z                               [  ∂^2 z     ( dxk )   ( dxl ) ]                          [ ∂z      d^2 xk ]
-            -----  = \sum_{z depends on xk, xl} [ -------- x (-----) x (-----) ] + \sum_{z depends on xk} [----- * ------- ]
+            -----  = \sum_{z depends on xk, xl} [ -------- x (-----) x (-----) ] + \sum_{z depends on xk} [----- x ------- ]
             d t^2                               [ ∂xk ∂xl    ( dt  )   ( dt  ) ]                          [ ∂xk     d t^2  ]
 
             where dx/dt comes from vDOFVelocities    if bHasVelocities, while
@@ -4607,7 +4607,7 @@ void KinBody::_ComputeInternalInformation()
         }
         _ResetInternalCollisionCache();
     }
-    _ResolveInfoIds();
+    //_ResolveInfoIds(); // do not resolve since that could change the IDs and change some other hashes
     _nHierarchyComputed = 2;
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
@@ -5677,7 +5677,7 @@ void KinBody::_ResolveInfoIds()
 
 void KinBody::ExtractInfo(KinBodyInfo& info)
 {
-    _ResolveInfoIds();
+    //_ResolveInfoIds(); // do not resolve since that could change the IDs and change some other hashes
 
     info._id = _id;
     info._uri = __struri;
