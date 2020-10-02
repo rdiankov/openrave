@@ -1707,7 +1707,7 @@ private:
         }
 
         FOREACHC(itjoint, vjoints) {
-            KinBody::JointConstPtr pjoint = itjoint->second;
+            const KinBody::JointConstPtr& pjoint = itjoint->second;
             if( !pjoint->IsMimic() ) {
                 continue;
             }
@@ -1738,8 +1738,9 @@ private:
             poselt->setAttribute("type",sequationids[0]);
             XMLtoDAE::Parse(poselt, sequations[0].c_str(), sequations[0].size());
 
-            // save partial derivative equations
-            for(int itype = 1; itype < 3; ++itype) {
+            // save first-order partial derivative equations
+            {
+                const int itype = 1;
                 if( sequations[itype].size() == 0 ) {
                     continue;
                 }
@@ -1771,6 +1772,72 @@ private:
                     }
                 }
             }
+
+            // save second-order partial derivative equations
+            {
+                const int itype = 2;
+                if( sequations[itype].empty() ) {
+                    continue;
+                }
+                const std::vector<KinBody::JointPtr>& vActiveJoints = pbody->GetJoints();
+                const int nActiveJoints = vActiveJoints.size();
+                const std::vector<KinBody::JointPtr>& vPassiveJoints = pbody->GetPassiveJoints();
+                const int nPassiveJoints = vPassiveJoints.size();
+                const std::vector<KinBody::Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[iaxis]->_vdofformat;
+                size_t offset = 0;
+                for(const KinBody::Mimic::DOFFormat& dofformati : vdofformat) {
+                    const int jointindexi = dofformati.jointindex;
+                    const KinBody::JointPtr& pmimici = (jointindexi < nActiveJoints) ? vActiveJoints.at(jointindexi) : vPassiveJoints.at(jointindexi-nActiveJoints);
+
+                    int mimicjointindexi = -1;
+                    FOREACH(ittestjoint, vjoints) {
+                        if( ittestjoint->second == pmimici ) {
+                            mimicjointindexi = ittestjoint->first;
+                            break;
+                        }
+                    }
+                    if( mimicjointindexi < 0 ) {
+                        RAVELOG_WARN_FORMAT("cannot find index from joint %s", pmimici->GetName());
+                        mimicjointindexi = 0;
+                    }
+                    const std::string smimicidi = str(boost::format("%s/joint%d") % kmodel->getID() % mimicjointindexi);
+
+                    for(const KinBody::Mimic::DOFFormat& dofformatj : vdofformat) {
+                        const int jointindexj = dofformatj.jointindex;
+                        const KinBody::JointPtr& pmimicj = (jointindexj < nActiveJoints) ? vActiveJoints.at(jointindexj) : vPassiveJoints.at(jointindexj-nActiveJoints);
+                        int mimicjointindexj = -1;
+                        FOREACH(ittestjoint, vjoints) {
+                            if( ittestjoint->second == pmimicj ) {
+                                mimicjointindexj = ittestjoint->first;
+                                break;
+                            }
+                        }
+                        if( mimicjointindexj < 0 ) {
+                            RAVELOG_WARN_FORMAT("cannot find index from joint %s", pmimicj->GetName());
+                            mimicjointindexj = 0;
+                        }
+                        const std::string smimicidj = str(boost::format("%s/joint%d") % kmodel->getID() % mimicjointindexj);
+
+                        daeElementRef pelt = pftec->add("equation");
+                        pelt->setAttribute("type", sequationids[itype]);
+                        pelt->setAttribute("target" , smimicidi.c_str());
+                        pelt->setAttribute("target2", smimicidj.c_str());
+
+                        // parse
+                        if(offset >= sequations[itype].size()) {
+                            break;
+                        }
+                        offset += XMLtoDAE::Parse(pelt, sequations[itype].c_str()+offset, sequations[itype].size()-offset);
+                        if( offset == 0 ) {
+                            RAVELOG_WARN(str(boost::format("failed to parse joint %s first partial: %s\n")%pjoint->GetName()%sequations[itype]));
+                            break;
+                        }
+                        // success
+                        RAVELOG_DEBUG_FORMAT("Writing in DAE for ∂^2(%s)/∂(%s)∂(%s)", pjoint->GetName() % pmimici->GetName() % pmimicj->GetName());
+                    }
+                }
+            }
+
             domFormula_techniqueRef pfdefaulttec = daeSafeCast<domFormula_technique>(pf->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
             XMLtoDAE::Parse(pfdefaulttec, sequations[0].c_str(), sequations[0].size());
         }
