@@ -2313,7 +2313,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
 
                 int index = -1;
                 if( !dofindices.empty() ) {
-                    const std::vector<int>::const_iterator itindex = find(dofindices.begin(), dofindices.end(), dofindex + idof);
+                    const std::vector<int>::const_iterator itindex = std::find(dofindices.begin(), dofindices.end(), dofindex + idof);
                     if( itindex == dofindices.end() ) {
                         continue;
                     }
@@ -2356,7 +2356,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                         int index = -1;
                         const int dofindex = dofindexDerivativePair.first;
                         if( !dofindices.empty() ) {
-                            const std::vector<int>::const_iterator itindex = find(dofindices.begin(), dofindices.end(), dofindex);
+                            const std::vector<int>::const_iterator itindex = std::find(dofindices.begin(), dofindices.end(), dofindex);
                             if( itindex == dofindices.end() ) {
                                 continue;
                             }
@@ -2568,7 +2568,7 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                     vColumn = pjoint->GetAxis(dof);
                     int index = -1;
                     if( !dofindices.empty() ) {
-                        const std::vector<int>::const_iterator itindex = find(dofindices.begin(),dofindices.end(),dofindex+dof);
+                        const std::vector<int>::const_iterator itindex = std::find(dofindices.begin(),dofindices.end(),dofindex+dof);
                         if( itindex == dofindices.end() ) {
                             continue;
                         }
@@ -2608,7 +2608,7 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                         int index = -1;
                         const int dofindex = dofindexDerivativePair.first;
                         if( !dofindices.empty() ) {
-                            const std::vector<int>::const_iterator itindex = find(dofindices.begin(), dofindices.end(), dofindex);
+                            const std::vector<int>::const_iterator itindex = std::find(dofindices.begin(), dofindices.end(), dofindex);
                             if( itindex == dofindices.end() ) {
                                 continue;
                             }
@@ -5876,42 +5876,6 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             RAVELOG_VERBOSE_FORMAT("body %s existing passive joint %s removed", _id%_vPassiveJoints[iJoint]->_info._id);
             return UFIR_RequireReinitialize;
         }
-    }
-
-    // grabbedinfos
-    bool resetGrabbed = false;
-    std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfos;
-    GetGrabbedInfo(vGrabbedInfos);
-    if (vGrabbedInfos.size() != info._vGrabbedInfos.size()) {
-        resetGrabbed = true;
-    }
-    else {
-        FOREACHC(itExistingGrabbedInfo, vGrabbedInfos) {
-            bool foundGrabbedInfo = false;
-            FOREACHC(itGrabbedInfo, info._vGrabbedInfos) {
-                // find existing grabbedinfo
-                if ((*itGrabbedInfo)->_id == (*itExistingGrabbedInfo)->_id) {
-                    foundGrabbedInfo = true;
-                    if ((**itGrabbedInfo) != (**itExistingGrabbedInfo)) {
-                        resetGrabbed = true;
-                        break;
-                    }
-                }
-            }
-            if (!foundGrabbedInfo) {
-                resetGrabbed = true;
-            }
-            if (resetGrabbed) {
-                break;
-            }
-        }
-    }
-
-    if (resetGrabbed) {
-        std::vector<KinBody::GrabbedInfoConstPtr> grabbedInfos(info._vGrabbedInfos.begin(), info._vGrabbedInfos.end());
-        ResetGrabbed(grabbedInfos);
-        updateFromInfoResult = UFIR_Success;
-        RAVELOG_VERBOSE_FORMAT("body %s updated due to grabbed reset", _id);
     }
 
     // name
