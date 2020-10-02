@@ -3127,7 +3127,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         return;
     }
 
-    Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
+    const Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
     std::vector<dReal> vDOFVelocities;
     std::vector<std::pair<Vector, Vector> > vLinkVelocities; // linear, angular velocities
     std::vector<std::pair<Vector, Vector> > vLinkAccelerations; // linear, angular accelerations
@@ -3376,7 +3376,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
     boost::array< std::vector<Vector>, 3> vLinkCOMMomentOfInertia;
     boost::array< std::vector< std::pair<Vector, Vector> >, 3> vLinkForceTorques;
     for(size_t j = 0; j < 3; ++j) {
-        if( vLinkAccelerations[j].size() > 0 ) {
+        if( !vLinkAccelerations[j].empty() ) {
             vLinkCOMLinearAccelerations[j].resize(nlinks);
             vLinkCOMMomentOfInertia[j].resize(nlinks);
             vLinkForceTorques[j].resize(nlinks);
@@ -3387,7 +3387,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
         const Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->_info._t.trans;
         const TransformMatrix tm = _veclinks.at(i)->GetGlobalInertia();
         for(size_t j = 0; j < 3; ++j) {
-            if( vLinkAccelerations[j].size() > 0 ) {
+            if( !vLinkAccelerations[j].empty() ) {
                 Vector vangularaccel = vLinkAccelerations[j].at(i).second;
                 Vector vangularvelocity = vLinkVelocities[j].at(i).second;
                 vLinkCOMLinearAccelerations[j][i] = vLinkAccelerations[j].at(i).first + vangularaccel.cross(vglobalcomfromlink) + vangularvelocity.cross(vangularvelocity.cross(vglobalcomfromlink));
@@ -3406,14 +3406,17 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
         vLinkForceTorques[2].at(it->first) = it->second;
     }
 
-    std::vector<std::pair<int,dReal> > vDofindexDerivativePairs;
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
 
     // go backwards
-    for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
-        const JointPtr pjoint = _vTopologicallySortedJointsAll.at(_vTopologicallySortedJointsAll.size()-1-ijoint);
+    for(std::vector<JointPtr>::const_reverse_iterator crit = _vTopologicallySortedJointsAll.rbegin();
+        crit != _vTopologicallySortedJointsAll.rend();
+        ++crit
+    ) {
+        const JointPtr& pjoint = *crit;
         const KinBody::JointType jointtype = pjoint->GetType();
-        int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
+        const int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
         Vector vchildcomtoparentcom;
         int parentindex = -1;
         if( !!pjoint->GetHierarchyParentLink() ) {
@@ -3652,7 +3655,7 @@ void KinBody::_ComputeLinkAccelerations(
 
     /* ========== (3) Compute link accelerations ========== */
     // set accelerations of all links as if they were the base link
-    for(size_t ilink = 0; ilink < nlinks; ++ilink) {
+    for(int ilink = 0; ilink < nlinks; ++ilink) {
         const std::pair<Vector, Vector>& linkvels = vLinkVelocities.at(ilink);
         std::pair<Vector, Vector>& linkaccels = vLinkAccelerations.at(ilink);
         linkaccels.first += linkvels.second.cross(linkvels.first);
