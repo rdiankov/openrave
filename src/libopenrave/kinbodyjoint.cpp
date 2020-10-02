@@ -2194,6 +2194,17 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     parent->_PostprocessChangedParameters(Prop_JointMimic);
 }
 
+template<typename T>
+inline void AccumulateDerivatives(std::map<T, dReal>& m, const T& key, dReal addend) {
+    // actually can simply do m[key] += addend; see zero initialization in https://en.cppreference.com/w/cpp/language/zero_initialization
+    if(m.count(key)) {
+        m.at(key) += addend;
+    }
+    else {
+        m[key] = addend;
+    }
+}
+
 void KinBody::Joint::_ComputePartialVelocities(
     std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
     const int iaxis,
@@ -2278,26 +2289,16 @@ void KinBody::Joint::_ComputePartialVelocities(
             }
             dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mPartialderivativepairValue); ///< recursion: computes ∂y/∂x
             for(const std::pair<int, dReal>& pIndexPartial : vLocalIndexPartialPairs) {
-                std::pair<Mimic::DOFFormat, int> key = {thisdofformat, pIndexPartial.first};
+                const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, pIndexPartial.first};
                 ///< ∂z/∂x += ∂f/∂y * ∂y/∂x
-                if( localmap.count(key) ) {
-                    localmap[key] += fvel * pIndexPartial.second;
-                }
-                else {
-                    localmap[key] = fvel * pIndexPartial.second;
-                }
+                AccumulateDerivatives(localmap, key, fvel * pIndexPartial.second);
             }
         }
         else {
             // depended joint is active
-            std::pair<Mimic::DOFFormat, int> key = {thisdofformat, jointindex};
+            const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, jointindex};
             ///< ∂z/∂x += ∂f/∂x, as z may depend on others who depend on x
-            if( localmap.count(key) ) {
-                localmap[key] += fvel;
-            }
-            else {
-                localmap[key] = fvel;
-            }
+            AccumulateDerivatives(localmap, key, fvel);
         }
     }
 
@@ -2312,20 +2313,6 @@ void KinBody::Joint::_ComputePartialVelocities(
         std::make_move_iterator(localmap.begin()),
         std::make_move_iterator(localmap.end())
     );
-}
-
-inline void AccumulateSecondOrderPartialDerivatives(
-    std::map<std::pair<KinBody::Mimic::DOFFormat, std::array<int, 2> >, dReal>& m,
-    const std::pair<KinBody::Mimic::DOFFormat, std::array<int, 2> >& d2zdxkxl,
-    dReal addend
-) {
-    // m[d2zdxkxl] += addend; see zero initialization in https://en.cppreference.com/w/cpp/language/zero_initialization
-    if(m.count(d2zdxkxl)) {
-        m.at(d2zdxkxl) += addend;
-    }
-    else {
-        m[d2zdxkxl] = addend;
-    }
 }
 
 std::vector<std::array<int, 2>> KinBody::CollectSecondOrderPartialDerivativesActiveIndexPairs(const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue) {
@@ -2513,7 +2500,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
                 else if (jointindexj != lactive) { // yj != xl
                     continue;
                 }
-                AccumulateSecondOrderPartialDerivatives(localmap, d2zdxkxl, faccellocal);
+                AccumulateDerivatives(localmap, d2zdxkxl, faccellocal);
             }
         } // for(int jvar = 0; jvar < nvars; ++jvar)
 
@@ -2531,7 +2518,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
                     % dependedjointi->GetName()
                     % dependedjointi->GetName() % vActiveJoints.at(kactive)->GetName() % vActiveJoints.at(lactive)->GetName()
                 );
-                AccumulateSecondOrderPartialDerivatives(localmap, d2zdxkxl, fvel * mSecondorderpartialderivativepairValue.at(d2ydxkxl)); // ∂^2  z/∂xk ∂xl += ∂f/∂yi * ∂^2 yi/∂xk ∂xl
+                AccumulateDerivatives(localmap, d2zdxkxl, fvel * mSecondorderpartialderivativepairValue.at(d2ydxkxl)); // ∂^2  z/∂xk ∂xl += ∂f/∂yi * ∂^2 yi/∂xk ∂xl
             }
         }
     } // for(int ivar = 0; ivar < nvars; ++ivar)
