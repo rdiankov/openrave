@@ -2690,6 +2690,7 @@ public:
             FOREACH_NOINC(itBody, _vecbodies) {
                 if ((*itBody)->_id.empty()) {
                     RAVELOG_DEBUG_FORMAT("body %s has empty id", (*itBody)->_name);
+                    ++itBody;
                     continue;
                 }
 
