@@ -903,11 +903,6 @@ public:
             }
         }
 
-        if( bSuccess ) {
-            // for extracting a single body from file, need to assign a random body id to not conflict with what's already in environment
-            probot->_id = str(boost::format("body%d")%utils::GetNanoTime());
-        }
-
         return bSuccess;
     }
 
@@ -979,11 +974,6 @@ public:
         }
 
         if( bSuccess ) {
-            // for extracting a single body from file, need to assign a random body id to not conflict with what's already in environment
-            pbody->_id = str(boost::format("body%d")%utils::GetNanoTime());
-        }
-
-        if( bSuccess ) {
             return true;
         }
 
@@ -1003,11 +993,6 @@ public:
 
         if( bSuccess && _prefix.size() > 0 ) {
             _AddPrefixForKinBody(pbody,_prefix);
-        }
-
-        if( bSuccess ) {
-            // for extracting a single body from file, need to assign a random body id to not conflict with what's already in environment
-            pbody->_id = str(boost::format("body%d")%utils::GetNanoTime());
         }
 
         return bSuccess;
