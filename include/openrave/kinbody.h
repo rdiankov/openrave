@@ -203,7 +203,8 @@ public:
                    && _vCollisionScale == other._vCollisionScale
                    && _fTransparency == other._fTransparency
                    && _bVisible == other._bVisible
-                   && _bModifiable == other._bModifiable;
+                   && _bModifiable == other._bModifiable
+                   && _numVerticesWhenDiscretizing == other._numVerticesWhenDiscretizing;
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
@@ -226,8 +227,8 @@ public:
         void ConvertUnitScale(dReal fUnitScale);
 
         /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
-        /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
-        bool InitCollisionMesh(float fTessellation=1);
+        /// _numVerticesWhenDiscretizing control how fine the triangles need to be for GT_Cylinder (default 102) and GT_Sphere (default .
+        bool InitCollisionMesh();
 
         inline dReal GetSphereRadius() const {
             return _vGeomData.x;
@@ -238,12 +239,31 @@ public:
         inline dReal GetCylinderHeight() const {
             return _vGeomData.y;
         }
-        /// gets number of points circle face of cylinder should be approximated
-        inline dReal GetCylinderNumCircleApproximate() const {
-            if (_vGeomData[2] <= 4) { // cannot discretize with less than 4 points
-                return 51; // default value for backwards compatibility
+
+        /// \brief gets number of points mesh of the geometry will be approxmated. mesh of the geometry is heavily used for
+        inline int GetNumVerticesWhenDiscretizing() const {
+            switch (_type) {
+            case GT_Sphere: {
+                if (_numVerticesWhenDiscretizing < 12) { // cannot discretize with less than 12 points (12 vertices for the first layer of icosahedron)
+                    return 48; // default value for backwards compatibility numLayers = 3+logf(1.0)/logf(2.0) = 3
+                }
+                return _numVerticesWhenDiscretizing;
             }
-            return _vGeomData[2];
+            case GT_Cylinder: {
+                if (_numVerticesWhenDiscretizing < 6 ) { // cannot discretize with less than 6 points (3 points per each circle)
+                    return 102; // default value for backwards compatibility ((fTessellation*48.0)+3)*2.0
+                }
+                return _numVerticesWhenDiscretizing;
+            }
+            case GT_None:
+            case GT_Box:
+            case GT_TriMesh:
+            case GT_Container:
+            case GT_Cage:
+                return _numVerticesWhenDiscretizing;
+            default:
+                return _numVerticesWhenDiscretizing;
+            }
         }
 
         inline const Vector& GetBoxExtents() const {
@@ -263,10 +283,8 @@ public:
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
-        /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
-        /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
-        /// For GT_Cylinder, cylinder radius, cylinder height, number of points circle face of cylinder should be approximated
-
+        ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
+        ///< for cages, (GT_Cage) this is the base box extents with the origin being at the -Z center.
         Vector _vGeomData;
 
         ///< For GT_Container, the first 3 values are the full inner extents.
@@ -278,6 +296,8 @@ public:
         ///  beneath the container bottom). This geometry only valid if the first 3 values are all positive. The origin
         ///  of the container will still be at the outer bottom of the container.
         Vector _vGeomData4;
+
+        int _numVerticesWhenDiscretizing = 0; ///< number of vertices to approximate mesh. used for GT_Cylinder and GT_Sphere
 
         // For GT_Cage
         enum SideWallType
@@ -478,12 +498,8 @@ public:
             inline dReal GetCylinderHeight() const {
                 return _info._vGeomData.y;
             }
-            /// gets number of points circle face of cylinder should be approximated
-            inline dReal GetCylinderNumCircleApproximate() const {
-                if (_info._vGeomData[2] <= 4) { // cannot discretize with less than 4 points
-                    return 54; // default value for backwards compatibility
-                }
-                return _info._vGeomData[2];
+            inline int GetNumVerticesWhenDiscretizing() const {
+                return _info.GetNumVerticesWhenDiscretizing();
             }
             inline const Vector& GetBoxExtents() const {
                 return _info._vGeomData;
@@ -544,7 +560,7 @@ public:
             virtual bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
             //@}
 
-            virtual bool InitCollisionMesh(float fTessellation=1);
+            virtual bool InitCollisionMesh();
 
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
             virtual AABB ComputeAABB(const Transform& trans) const;
@@ -2730,7 +2746,7 @@ private:
         \param[in] setBodyLinksToIgnore Additional body link names that collision checker ignore
         when checking collisions between the grabbed body and the body.
         \return true if successful and body is grabbed.
-    */
+     */
     virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames);
 
     /** \brief Grab a body with the specified link.
