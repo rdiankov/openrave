@@ -1079,14 +1079,14 @@ public:
 
             std::string scheme, authority, path, query, fragment;
             cdom::parseUriRef(struri, scheme, authority, path, query, fragment);
-            
+
             // only set referenceUri if it's in OpenRAVEScheme
             std::vector<std::string>::iterator itScheme = std::find(_vOpenRAVESchemeAliases.begin(),  _vOpenRAVESchemeAliases.end(), scheme);
             if (itScheme != _vOpenRAVESchemeAliases.end()) {
                 if (_originalURI.compare(urioriginal.str()) != 0 ) {
                     pbody->_referenceUri = struri;
                 }
-            } 
+            }
         }
 
         std::string strname = strParentName;
@@ -2933,14 +2933,24 @@ public:
                         }
                         else if( name == "sphere" ) {
                             daeElementRef pradius = children[i]->getChild("radius");
+                            daeElementRef pnumverticeswhendiscretizing = children[i]->getChild("num_vertices_when_discretizing");
                             if( !!pradius ) {
                                 dReal fradius = 0;
+                                int numVerticesWhenDiscretizing = 0;
                                 stringstream ss(pradius->getCharData());
                                 ss >> fradius;
+                                if ( !!pnumverticeswhendiscretizing ) {
+                                    stringstream ss2(pnumverticeswhendiscretizing->getCharData());
+                                    ss2 >> numVerticesWhenDiscretizing;
+                                    if (!(ss2.eof() || !!ss2) ) {
+                                        numVerticesWhenDiscretizing = 0; // reset if invalid number and use default one
+                                    }
+                                }
                                 if( ss.eof() || !!ss ) {
                                     geominfo._type = GT_Sphere;
                                     geominfo._vGeomData.x = fradius;
                                     geominfo._t = tlocalgeom;
+                                    geominfo._numVerticesWhenDiscretizing = numVerticesWhenDiscretizing;
                                     bfoundgeom = true;
                                 }
                             }
@@ -2948,18 +2958,29 @@ public:
                         else if( name == "cylinder" ) {
                             daeElementRef pradius = children[i]->getChild("radius");
                             daeElementRef pheight = children[i]->getChild("height");
+                            daeElementRef pnumverticeswhendiscretizing = children[i]->getChild("num_vertices_when_discretizing");
+
                             if( !!pradius && !!pheight ) {
                                 Vector vGeomData;
+                                int numVerticesWhenDiscretizing = 0;
                                 stringstream ss(pradius->getCharData());
                                 ss >> vGeomData.x;
                                 stringstream ss2(pheight->getCharData());
                                 ss2 >> vGeomData.y;
+                                if ( !!pnumverticeswhendiscretizing ) {
+                                    stringstream ss3(pnumverticeswhendiscretizing->getCharData());
+                                    ss3 >> numVerticesWhenDiscretizing;
+                                    if (!(ss3.eof() || !!ss3) ) {
+                                        numVerticesWhenDiscretizing = 0; // reset if invalid number and use default one
+                                    }
+                                }
                                 if( (ss.eof() || !!ss) && (ss2.eof() || !!ss2) ) {
                                     Transform trot(quatRotateDirection(Vector(0,0,1),Vector(0,1,0)),Vector());
                                     tlocalgeom = tlocalgeom * trot;
                                     geominfo._type = GT_Cylinder;
                                     geominfo._vGeomData = vGeomData;
                                     geominfo._t = tlocalgeom;
+                                    geominfo._numVerticesWhenDiscretizing = numVerticesWhenDiscretizing;
                                     bfoundgeom = true;
                                 }
                             }
@@ -2967,16 +2988,27 @@ public:
                         else if( name == "cylinderz" ) {
                             daeElementRef pradius = children[i]->getChild("radius");
                             daeElementRef pheight = children[i]->getChild("height");
+                            daeElementRef pnumverticeswhendiscretizing = children[i]->getChild("num_vertices_when_discretizing");
+
                             if( !!pradius && !!pheight ) {
                                 Vector vGeomData;
+                                int numVerticesWhenDiscretizing = 0;
                                 stringstream ss(pradius->getCharData());
                                 ss >> vGeomData.x;
                                 stringstream ss2(pheight->getCharData());
                                 ss2 >> vGeomData.y;
+                                if ( !!pnumverticeswhendiscretizing ) {
+                                    stringstream ss3(pnumverticeswhendiscretizing->getCharData());
+                                    ss3 >> numVerticesWhenDiscretizing;
+                                    if (!(ss3.eof() || !!ss3) ) {
+                                        numVerticesWhenDiscretizing = 0; // reset if invalid number and use default one
+                                    }
+                                }
                                 if( (ss.eof() || !!ss) && (ss2.eof() || !!ss2) ) {
                                     geominfo._type = GT_Cylinder;
                                     geominfo._vGeomData = vGeomData;
                                     geominfo._t = tlocalgeom;
+                                    geominfo._numVerticesWhenDiscretizing = numVerticesWhenDiscretizing;
                                     bfoundgeom = true;
                                 }
                             }

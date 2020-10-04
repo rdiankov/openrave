@@ -133,6 +133,46 @@ void GenerateSphereTriangulation(TriMesh& tri, int levels)
     tri = *pcur;
 }
 
+// generate a cylinder triangulation starting with (rad, 0, height*0.5)
+// all triangles are oriented counter clockwise
+void GenerateCylinderTriangulation(TriMesh& tri, dReal radius, dReal halfHeight, int numVerticesWhenDiscretizing)
+{
+    int numVertsCircle = max((int)(numVerticesWhenDiscretizing*0.5f+0.999), 3); // should not be less than 3 to maintain backwards compatibility  (numverts = (int)(fTessellation*48.0f) + 3;)
+    // TODO: we should make collision obstacle bigger than cylinder, treat circle as inscribed circle not as circumscribed
+    dReal dtheta = 2 * PI / (dReal)numVertsCircle;
+    tri.vertices.push_back(Vector(radius,0,halfHeight));
+    tri.vertices.push_back(Vector(radius,0,-halfHeight));
+    dReal s = radius * RaveSin(dtheta * (dReal)1.0);
+    dReal c = radius * RaveCos(dtheta * (dReal)1.0);
+    {
+        int off = (int)tri.vertices.size();
+        tri.vertices.push_back(Vector(c,s,halfHeight));
+        tri.vertices.push_back(Vector(c,s,-halfHeight));
+        // initial side face, not enough vertices for top/bottom face yet
+        tri.indices.push_back(off-2);   tri.indices.push_back(off-1);         tri.indices.push_back(off);
+        tri.indices.push_back(off);     tri.indices.push_back(off-1);         tri.indices.push_back(off+1);
+    }
+    for(int i = 2; i < numVertsCircle; ++i) {
+        s = radius * RaveSin(dtheta * (dReal)i);
+        c = radius * RaveCos(dtheta * (dReal)i);
+        int off = (int)tri.vertices.size();
+        tri.vertices.push_back(Vector(c, s, halfHeight));
+        tri.vertices.push_back(Vector(c, s, -halfHeight));
+
+        tri.indices.push_back(0);       tri.indices.push_back(off-2);       tri.indices.push_back(off);
+        tri.indices.push_back(1);       tri.indices.push_back(off+1);       tri.indices.push_back(off-1);
+        tri.indices.push_back(off-2);   tri.indices.push_back(off-1);       tri.indices.push_back(off);
+        tri.indices.push_back(off);     tri.indices.push_back(off-1);       tri.indices.push_back(off+1);
+    }
+    // final side face, reuse vertex 0 and 1 
+    {
+        int off = (int)tri.vertices.size();
+        tri.indices.push_back(off-2);   tri.indices.push_back(off-1);       tri.indices.push_back(0);
+        tri.indices.push_back(0);     tri.indices.push_back(off-1);       tri.indices.push_back(1);
+    }
+}
+
+    
 /// \param ex half extents
 void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
 {
@@ -206,13 +246,13 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         break;
 
     case GT_Sphere:
-        if( RaveFabs(_vGeomData.x - rhs._vGeomData.x*fUnitScale) > fEpsilon ) {
+        if( RaveFabs(_vGeomData.x - rhs._vGeomData.x*fUnitScale) > fEpsilon || GetNumVerticesWhenDiscretizing() != rhs.GetNumVerticesWhenDiscretizing()) {
             return 7;
         }
         break;
 
     case GT_Cylinder:
-        if( RaveFabs(_vGeomData.x - rhs._vGeomData.x*fUnitScale) > fEpsilon || RaveFabs(_vGeomData.y - rhs._vGeomData.y*fUnitScale) > fEpsilon ) {
+        if( RaveFabs(_vGeomData.x - rhs._vGeomData.x*fUnitScale) > fEpsilon || RaveFabs(_vGeomData.y - rhs._vGeomData.y*fUnitScale) > fEpsilon || GetNumVerticesWhenDiscretizing() != rhs.GetNumVerticesWhenDiscretizing()) {
             return 8;
         }
         break;
@@ -272,7 +312,7 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
     return 0;
 }
 
-bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
+bool KinBody::GeometryInfo::InitCollisionMesh()
 {
     if( _type == GT_TriMesh || _type == GT_None ) {
         return true;
@@ -282,14 +322,12 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     _meshcollision.indices.resize(0);
     _meshcollision.vertices.resize(0);
 
-    if( fTessellation < 0.01f ) {
-        fTessellation = 0.01f;
-    }
     // start tesselating
     switch(_type) {
     case GT_Sphere: {
-        // log_2 (1+ tess)
-        GenerateSphereTriangulation(_meshcollision, 3 + (int)(logf(fTessellation) / logf(2.0f)) );
+        int numverts = max((int)(GetNumVerticesWhenDiscretizing()), 12); // minimum is 12 vertices for a single layer icosahedron.
+        // GenerateSphereTriangulation(_meshcollision, 3 + (int)(logf(fTessellation) / logf(2.0f)) );
+        GenerateSphereTriangulation(_meshcollision, (int)(logf(numverts/6.0) / logf(2.0f)) );
         dReal fRadius = GetSphereRadius();
         FOREACH(it, _meshcollision.vertices) {
             *it *= fRadius;
@@ -331,24 +369,9 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     case GT_Cylinder: {
         // cylinder is on z axis
         dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
-        int numverts = (int)(fTessellation*48.0f) + 3;
-        dReal dtheta = 2 * PI / (dReal)numverts;
-        _meshcollision.vertices.push_back(Vector(0,0,len));
-        _meshcollision.vertices.push_back(Vector(0,0,-len));
-        _meshcollision.vertices.push_back(Vector(rad,0,len));
-        _meshcollision.vertices.push_back(Vector(rad,0,-len));
-        for(int i = 0; i < numverts+1; ++i) {
-            dReal s = rad * RaveSin(dtheta * (dReal)i);
-            dReal c = rad * RaveCos(dtheta * (dReal)i);
-            int off = (int)_meshcollision.vertices.size();
-            _meshcollision.vertices.push_back(Vector(c, s, len));
-            _meshcollision.vertices.push_back(Vector(c, s, -len));
-
-            _meshcollision.indices.push_back(0);       _meshcollision.indices.push_back(off-2);       _meshcollision.indices.push_back(off);
-            _meshcollision.indices.push_back(1);       _meshcollision.indices.push_back(off+1);       _meshcollision.indices.push_back(off-1);
-            _meshcollision.indices.push_back(off-2);   _meshcollision.indices.push_back(off-1);         _meshcollision.indices.push_back(off);
-            _meshcollision.indices.push_back(off);   _meshcollision.indices.push_back(off-1);         _meshcollision.indices.push_back(off+1);
-        }
+        // int numverts = (int)(fTessellation*48.0f) + 3;
+        int numverts = max((int)(GetNumVerticesWhenDiscretizing()), 6); // should not be less than 6 to maintain backwards compatibility  (numverts = (int)(fTessellation*48.0f) + 3;)
+        GenerateCylinderTriangulation(_meshcollision, rad, len, numverts);        
         break;
     }
     case GT_Cage: {
@@ -571,7 +594,7 @@ inline void LoadJsonValue(const rapidjson::Value& rValue, KinBody::GeometryInfo:
             int sideWallType = (int)KinBody::GeometryInfo::SideWallType::SWT_NX;
             orjson::LoadJsonValueByKey(rValue, "type", sideWallType);
             if (!(sideWallType >= KinBody::GeometryInfo::SideWallType::SWT_First
-                && sideWallType <= KinBody::GeometryInfo::SideWallType::SWT_Last)) {
+                  && sideWallType <= KinBody::GeometryInfo::SideWallType::SWT_Last)) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized sidewall type enum range %d for loading from json"), sideWallType, ORE_InvalidArguments);
             }
             sideWall.type = (KinBody::GeometryInfo::SideWallType)sideWallType;
@@ -664,6 +687,7 @@ void KinBody::GeometryInfo::Reset()
     _vRenderScale = Vector(1,1,1);
     _vCollisionScale = Vector(1,1,1);
     _fTransparency = 0;
+    _numVerticesWhenDiscretizing = 0;
     _bVisible = true;
     _bModifiable = true;
 }
@@ -733,11 +757,13 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
     }
     case GT_Sphere:
         orjson::SetJsonValueByKey(rGeometryInfo, "radius", _vGeomData.x*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "numVerticesWhenDiscretizing", _numVerticesWhenDiscretizing, allocator);
         break;
 
     case GT_Cylinder:
         orjson::SetJsonValueByKey(rGeometryInfo, "radius", _vGeomData.x*fUnitScale, allocator);
         orjson::SetJsonValueByKey(rGeometryInfo, "height", _vGeomData.y*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "numVerticesWhenDiscretizing", _numVerticesWhenDiscretizing, allocator);
         break;
 
     case GT_TriMesh: {
@@ -811,14 +837,18 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         }
     }
     Vector vGeomDataTemp;
+    int numVerticesWhenDiscretizingTemp = 0; // for GT_Cylinder, GT_Sphere
     switch (_type) {
+    case GT_None:
+        break;
     case GT_Box:
         if (value.HasMember("halfExtents")) {
             orjson::LoadJsonValueByKey(value, "halfExtents", vGeomDataTemp);
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vGeomData) {
                 _vGeomData = vGeomDataTemp;
-                _meshcollision.Clear();            }
+                _meshcollision.Clear();
+            }
         }
         break;
     case GT_Container:
@@ -909,6 +939,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         break;
     case GT_Sphere:
         vGeomDataTemp = _vGeomData;
+        numVerticesWhenDiscretizingTemp = _numVerticesWhenDiscretizing;
         if (value.HasMember("radius")) {
             orjson::LoadJsonValueByKey(value, "radius", vGeomDataTemp.x);
             vGeomDataTemp *= fUnitScale;
@@ -917,9 +948,17 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 _meshcollision.Clear();
             }
         }
+        if (value.HasMember("numVerticesWhenDiscretizing")) {
+            orjson::LoadJsonValueByKey(value, "numVerticesWhenDiscretizing", numVerticesWhenDiscretizingTemp);
+            if (numVerticesWhenDiscretizingTemp != _numVerticesWhenDiscretizing) {
+                _numVerticesWhenDiscretizing = numVerticesWhenDiscretizingTemp;
+                _meshcollision.Clear();
+            }
+        }
         break;
     case GT_Cylinder:
         vGeomDataTemp = _vGeomData;
+        numVerticesWhenDiscretizingTemp = _numVerticesWhenDiscretizing;
         if (value.HasMember("radius")) {
             orjson::LoadJsonValueByKey(value, "radius", vGeomDataTemp.x);
             vGeomDataTemp.x *= fUnitScale;
@@ -928,8 +967,12 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             orjson::LoadJsonValueByKey(value, "height", vGeomDataTemp.y);
             vGeomDataTemp.y *= fUnitScale;
         }
-        if (vGeomDataTemp != _vGeomData) {
+        if (value.HasMember("numVerticesWhenDiscretizing")) {
+            orjson::LoadJsonValueByKey(value, "numVerticesWhenDiscretizing", numVerticesWhenDiscretizingTemp);
+        }
+        if ( vGeomDataTemp != _vGeomData || numVerticesWhenDiscretizingTemp != _numVerticesWhenDiscretizing ) {
             _vGeomData = vGeomDataTemp;
+            _numVerticesWhenDiscretizing = numVerticesWhenDiscretizingTemp;
             _meshcollision.Clear();
         }
         break;
@@ -1143,9 +1186,9 @@ KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::Geomet
 {
 }
 
-bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
+bool KinBody::Link::Geometry::InitCollisionMesh()
 {
-    return _info.InitCollisionMesh(fTessellation);
+    return _info.InitCollisionMesh();
 }
 
 bool KinBody::Link::Geometry::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
@@ -1181,6 +1224,9 @@ void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
             SerializeRound3(o,_info._vGeomData2);
             SerializeRound3(o,_info._vGeomData3);
             SerializeRound3(o,_info._vGeomData4);
+        }
+        else if (_info._type == GT_Cylinder || _info._type == GT_Sphere) {
+            o << _info._numVerticesWhenDiscretizing << " ";
         }
     }
 }
@@ -1404,13 +1450,13 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
         }
     }
     else if (GetType() == GT_Sphere) {
-        if (GetSphereRadius() != info._vGeomData.x) {
+        if (GetSphereRadius() != info._vGeomData.x || GetNumVerticesWhenDiscretizing() != info._numVerticesWhenDiscretizing) {
             RAVELOG_VERBOSE_FORMAT("geometry %s sphere changed", _info._id);
+            return UFIR_RequireReinitialize;
         }
-        return UFIR_RequireReinitialize;
     }
     else if (GetType() == GT_Cylinder) {
-        if (GetCylinderRadius() != info._vGeomData.x || GetCylinderHeight() != info._vGeomData.y) {
+        if (GetCylinderRadius() != info._vGeomData.x || GetCylinderHeight() != info._vGeomData.y || GetNumVerticesWhenDiscretizing() != info._numVerticesWhenDiscretizing) {
             RAVELOG_VERBOSE_FORMAT("geometry %s cylinder changed", _info._id);
             return UFIR_RequireReinitialize;
         }

@@ -1997,12 +1997,14 @@ private:
             }
             case GT_Sphere:
                 ptec->add("sphere")->add("radius")->setCharData(ss.str());
+                ptec->add("num_vertices_when_discretizing")->setCharData(boost::lexical_cast<std::string>(geom->GetNumVerticesWhenDiscretizing()));
                 break;
             case GT_Cylinder: {
                 daeElementRef pcylinder = ptec->add("cylinderz");
                 ss << geom->GetCylinderRadius() << " " << geom->GetCylinderRadius();
                 pcylinder->add("radius")->setCharData(ss.str());
                 pcylinder->add("height")->setCharData(boost::lexical_cast<std::string>(geom->GetCylinderHeight()));
+                pcylinder->add("num_vertices_when_discretizing")->setCharData(boost::lexical_cast<std::string>(geom->GetNumVerticesWhenDiscretizing()));
                 break;
             }
             case GT_None:

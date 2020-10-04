@@ -287,6 +287,7 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _vRenderScale = toPyVector3(info._vRenderScale);
     _vCollisionScale = toPyVector3(info._vCollisionScale);
     _fTransparency = info._fTransparency;
+    _numVerticesWhenDiscretizing = info._numVerticesWhenDiscretizing;
     _bVisible = info._bVisible;
     _bModifiable = info._bModifiable;
 }
@@ -362,6 +363,7 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     info._vRenderScale = ExtractVector3(_vRenderScale);
     info._vCollisionScale = ExtractVector3(_vCollisionScale);
     info._fTransparency = _fTransparency;
+    info._numVerticesWhenDiscretizing = _numVerticesWhenDiscretizing;
     info._bVisible = _bVisible;
     info._bModifiable = _bModifiable;
     return pinfo;
@@ -1157,8 +1159,8 @@ void PyLink::PyGeometry::SetCollisionMesh(object pytrimesh) {
     }
 }
 
-bool PyLink::PyGeometry::InitCollisionMesh(float fTessellation) {
-    return _pgeometry->InitCollisionMesh(fTessellation);
+bool PyLink::PyGeometry::InitCollisionMesh() {
+    return _pgeometry->InitCollisionMesh();
 }
 uint8_t PyLink::PyGeometry::GetSideWallExists() const {
     return _pgeometry->GetSideWallExists();
@@ -1218,6 +1220,9 @@ dReal PyLink::PyGeometry::GetCylinderRadius() const {
 }
 dReal PyLink::PyGeometry::GetCylinderHeight() const {
     return _pgeometry->GetCylinderHeight();
+}
+int PyLink::PyGeometry::GetNumVerticesWhenDiscretizing() const {
+    return _pgeometry->GetNumVerticesWhenDiscretizing();
 }
 object PyLink::PyGeometry::GetBoxExtents() const {
     return toPyVector3(_pgeometry->GetBoxExtents());
@@ -3974,7 +3979,8 @@ public:
             r._vCollisionScale,
             r._fTransparency,
             r._bVisible,
-            r._bModifiable
+            r._bModifiable,
+            r._numVerticesWhenDiscretizing
             );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
@@ -4006,6 +4012,7 @@ public:
             r._fTransparency = py::extract<float>(state[10]);
             r._bVisible = py::extract<bool>(state[11]);
             r._bModifiable = py::extract<bool>(state[12]);
+            r._numVerticesWhenDiscretizing = py::extract<int>(state[13]);
         }
         else {
             // new format
@@ -4017,6 +4024,7 @@ public:
             r._fTransparency = py::extract<float>(state[9]);
             r._bVisible = py::extract<bool>(state[10]);
             r._bModifiable = py::extract<bool>(state[11]);
+            r._numVerticesWhenDiscretizing = py::extract<int>(state[12]);
         }
     }
 };
@@ -4276,7 +4284,6 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIntParameters_overloads, GetIntParamet
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetStringParameters_overloads, GetStringParameters, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckSelfCollision_overloads, CheckSelfCollision, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkAccelerations_overloads, GetLinkAccelerations, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitCollisionMesh_overloads, InitCollisionMesh, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromBoxes_overloads, InitFromBoxes, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromSpheres_overloads, InitFromSpheres, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromTrimesh_overloads, InitFromTrimesh, 1, 3)
@@ -4474,6 +4481,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
+                          .def_readwrite("_numVerticesWhenDiscretizing",&PyGeometryInfo::_numVerticesWhenDiscretizing)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -5403,14 +5411,7 @@ void init_openravepy_kinbody()
 #endif
                                   .def("SetCollisionMesh",&PyLink::PyGeometry::SetCollisionMesh,PY_ARGS("trimesh") DOXY_FN(KinBody::Link::Geometry,SetCollisionMesh))
                                   .def("GetCollisionMesh",&PyLink::PyGeometry::GetCollisionMesh, DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                  .def("InitCollisionMesh", &PyLink::PyGeometry::InitCollisionMesh,
-                                       "tesselation"_a = 1.0,
-                                       DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh)
-                                       )
-#else
-                                  .def("InitCollisionMesh",&PyLink::PyGeometry::InitCollisionMesh, InitCollisionMesh_overloads(PY_ARGS("tesselation") DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh)))
-#endif
+                                  .def("InitCollisionMesh",&PyLink::PyGeometry::InitCollisionMesh, DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh))
                                   .def("ComputeAABB",&PyLink::PyGeometry::ComputeAABB, PY_ARGS("transform") DOXY_FN(KinBody::Link::Geometry,ComputeAABB))
                                   .def("GetSideWallExists",&PyLink::PyGeometry::GetSideWallExists, DOXY_FN(KinBody::Link::Geometry,GetSideWallExists))
                                   .def("SetDraw",&PyLink::PyGeometry::SetDraw,PY_ARGS("draw") DOXY_FN(KinBody::Link::Geometry,SetDraw))
@@ -5442,6 +5443,7 @@ void init_openravepy_kinbody()
                                   .def("GetAmbientColor",&PyLink::PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))
                                   .def("ComputeInnerEmptyVolume",&PyLink::PyGeometry::ComputeInnerEmptyVolume,DOXY_FN(KinBody::Link::Geometry,ComputeInnerEmptyVolume))
                                   .def("GetInfo",&PyLink::PyGeometry::GetInfo,DOXY_FN(KinBody::Link::Geometry,GetInfo))
+                                  .def("GetNumVerticesWhenDiscretizing",&PyLink::PyGeometry::GetNumVerticesWhenDiscretizing, DOXY_FN(KinBody::Link::Geometry,GetNumVerticesWhenDiscretizing))
                                   .def("__eq__",&PyLink::PyGeometry::__eq__)
                                   .def("__ne__",&PyLink::PyGeometry::__ne__)
                                   .def("__hash__",&PyLink::PyGeometry::__hash__)

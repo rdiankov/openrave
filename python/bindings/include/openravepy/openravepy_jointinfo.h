@@ -69,6 +69,7 @@ public:
     py::list _vSideWalls;
     float _containerBaseHeight = 0.0;
     float _fTransparency = 0.0;
+    int _numVerticesWhenDiscretizing = 0;
     bool _bVisible = true;
     bool _bModifiable = true;
 };
@@ -232,7 +233,7 @@ public:
 
         virtual void SetCollisionMesh(object pytrimesh);
 
-        bool InitCollisionMesh(float fTessellation=1.0);
+        bool InitCollisionMesh();
         uint8_t GetSideWallExists() const;
 
         object GetCollisionMesh();
@@ -251,8 +252,9 @@ public:
         object GetTransform();
         object GetTransformPose();
         dReal GetSphereRadius() const;
-        dReal GetCylinderRadius() const ;
+        dReal GetCylinderRadius() const;
         dReal GetCylinderHeight() const;
+        int GetNumVerticesWhenDiscretizing() const;
         object GetBoxExtents() const;
         object GetContainerOuterExtents() const;
         object GetContainerInnerExtents() const;

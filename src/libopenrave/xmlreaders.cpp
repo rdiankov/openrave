@@ -364,6 +364,9 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
             if( xmlname == "radius" ) {
                 _ss >> _pgeom->_vGeomData.x;
             }
+            else if( xmlname == "numVerticesWhenDiscretizing" ) {
+                _ss >> _pgeom->_numVerticesWhenDiscretizing;
+            }
             break;
         case GT_Box:
             if( xmlname == "extents" || xmlname == "halfextents" ) {
@@ -413,6 +416,9 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
             }
             else if( xmlname == "height" ) {
                 _ss >> _pgeom->_vGeomData.y;
+            }
+            else if( xmlname == "numVerticesWhenDiscretizing" ) {
+                _ss >> _pgeom->_numVerticesWhenDiscretizing;
             }
             break;
         case GT_TriMesh:
