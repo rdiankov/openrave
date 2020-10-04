@@ -133,6 +133,46 @@ void GenerateSphereTriangulation(TriMesh& tri, int levels)
     tri = *pcur;
 }
 
+// generate a cylinder triangulation starting with (rad, 0, height*0.5)
+// all triangles are oriented counter clockwise
+void GenerateCylinderTriangulation(TriMesh& tri, dReal radius, dReal halfHeight, int numVerticesWhenDiscretizing)
+{
+    int numVertsCircle = max((int)(numVerticesWhenDiscretizing*0.5f+0.999), 3); // should not be less than 3 to maintain backwards compatibility  (numverts = (int)(fTessellation*48.0f) + 3;)
+    // TODO: we should make collision obstacle bigger than cylinder, treat circle as inscribed circle not as circumscribed
+    dReal dtheta = 2 * PI / (dReal)numVertsCircle;
+    tri.vertices.push_back(Vector(radius,0,halfHeight));
+    tri.vertices.push_back(Vector(radius,0,-halfHeight));
+    dReal s = radius * RaveSin(dtheta * (dReal)1.0);
+    dReal c = radius * RaveCos(dtheta * (dReal)1.0);
+    {
+        int off = (int)tri.vertices.size();
+        tri.vertices.push_back(Vector(c,s,halfHeight));
+        tri.vertices.push_back(Vector(c,s,-halfHeight));
+        // initial side face, not enough vertices for top/bottom face yet
+        tri.indices.push_back(off-2);   tri.indices.push_back(off-1);         tri.indices.push_back(off);
+        tri.indices.push_back(off);     tri.indices.push_back(off-1);         tri.indices.push_back(off+1);
+    }
+    for(int i = 2; i < numVertsCircle; ++i) {
+        s = radius * RaveSin(dtheta * (dReal)i);
+        c = radius * RaveCos(dtheta * (dReal)i);
+        int off = (int)tri.vertices.size();
+        tri.vertices.push_back(Vector(c, s, halfHeight));
+        tri.vertices.push_back(Vector(c, s, -halfHeight));
+
+        tri.indices.push_back(0);       tri.indices.push_back(off-2);       tri.indices.push_back(off);
+        tri.indices.push_back(1);       tri.indices.push_back(off+1);       tri.indices.push_back(off-1);
+        tri.indices.push_back(off-2);   tri.indices.push_back(off-1);       tri.indices.push_back(off);
+        tri.indices.push_back(off);     tri.indices.push_back(off-1);       tri.indices.push_back(off+1);
+    }
+    // final side face, reuse vertex 0 and 1 
+    {
+        int off = (int)tri.vertices.size();
+        tri.indices.push_back(off-2);   tri.indices.push_back(off-1);       tri.indices.push_back(0);
+        tri.indices.push_back(0);     tri.indices.push_back(off-1);       tri.indices.push_back(1);
+    }
+}
+
+    
 /// \param ex half extents
 void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
 {
@@ -331,25 +371,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh()
         dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
         // int numverts = (int)(fTessellation*48.0f) + 3;
         int numverts = max((int)(GetNumVerticesWhenDiscretizing()), 6); // should not be less than 6 to maintain backwards compatibility  (numverts = (int)(fTessellation*48.0f) + 3;)
-        int numVertsPerCircle = (int)(numverts / 2);
-        // TODO: we should make collision obstacle bigger than cylinder, treat circle as inscribed circle not as circumscribed
-        dReal dtheta = 2 * PI / (dReal)numVertsPerCircle;
-        _meshcollision.vertices.push_back(Vector(0,0,len));
-        _meshcollision.vertices.push_back(Vector(0,0,-len));
-        _meshcollision.vertices.push_back(Vector(rad,0,len));
-        _meshcollision.vertices.push_back(Vector(rad,0,-len));
-        for(int i = 1; i < numVertsPerCircle+1; ++i) {
-            dReal s = rad * RaveSin(dtheta * (dReal)i);
-            dReal c = rad * RaveCos(dtheta * (dReal)i);
-            int off = (int)_meshcollision.vertices.size();
-            _meshcollision.vertices.push_back(Vector(c, s, len));
-            _meshcollision.vertices.push_back(Vector(c, s, -len));
-
-            _meshcollision.indices.push_back(0);       _meshcollision.indices.push_back(off-2);       _meshcollision.indices.push_back(off);
-            _meshcollision.indices.push_back(1);       _meshcollision.indices.push_back(off+1);       _meshcollision.indices.push_back(off-1);
-            _meshcollision.indices.push_back(off-2);   _meshcollision.indices.push_back(off-1);         _meshcollision.indices.push_back(off);
-            _meshcollision.indices.push_back(off);   _meshcollision.indices.push_back(off-1);         _meshcollision.indices.push_back(off+1);
-        }
+        GenerateCylinderTriangulation(_meshcollision, rad, len, numverts);        
         break;
     }
     case GT_Cage: {
@@ -1202,6 +1224,9 @@ void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
             SerializeRound3(o,_info._vGeomData2);
             SerializeRound3(o,_info._vGeomData3);
             SerializeRound3(o,_info._vGeomData4);
+        }
+        else if (_info._type == GT_Cylinder || _info._type == GT_Sphere) {
+            o << _info._numVerticesWhenDiscretizing << " ";
         }
     }
 }
