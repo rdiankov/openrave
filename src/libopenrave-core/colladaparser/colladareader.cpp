@@ -327,7 +327,7 @@ public:
         if( !uriresolved.empty() ) {
             _mapInverseResolvedURIList.insert(make_pair(uriresolved, daeURI(*_dae,urioriginal.str())));
         }
-
+        _originalURI = urioriginal.str();
         return _InitPostOpen(atts);
     }
 
@@ -340,7 +340,9 @@ public:
         if (!_dom) {
             return false;
         }
-        _filename=filename;
+        _filename = filename;
+
+        _originalURI = "file:" + cdom::nativePathToUri(RaveFindLocalFile(_filename, ""));;
         return _InitPostOpen(atts);
     }
 
@@ -464,6 +466,15 @@ public:
             return false;
         }
 
+        // set name
+        const domInstance_kinematics_scene_Array& ikscene = allscene->getInstance_kinematics_scene_array();
+        if (ikscene.getCount() == 0) {
+            return false;
+        }
+        if (!!ikscene[0]->getName()) {
+            _penv->_name = ikscene[0]->getName();
+        }
+
         if( !!_dom->getAsset() ) {
             if( !!_dom->getAsset()->getUp_axis() && !!_penv->GetPhysicsEngine() ) {
                 float f = -9.7979302;
@@ -476,6 +487,17 @@ public:
                 else if( _dom->getAsset()->getUp_axis()->getValue() == UP_AXIS_Z_UP ) {
                     _penv->GetPhysicsEngine()->SetGravity(Vector(0,0,f));
                 }
+            }
+
+            // set keywords
+            if(!!_dom->getAsset()->getKeywords() && !!_dom->getAsset()->getKeywords()->getValue()) {
+                std::string keywords = _dom->getAsset()->getKeywords()->getValue();
+                boost::split(_penv->_keywords, keywords, boost::is_any_of(","));
+            }
+
+            // set description
+            if (!!_dom->getAsset()->getSubject() && !!_dom->getAsset()->getSubject()->getValue()) {
+                _penv->_description = _dom->getAsset()->getSubject()->getValue();
             }
         }
 
@@ -1051,6 +1073,20 @@ public:
         }
         if( !!pbody ) {
             pbody->__struri = struri;
+            // set referenceUri if it's external one
+            daeURI urioriginal(*_dae, struri);
+            urioriginal.fragment(std::string()); // set the fragment to empty
+
+            std::string scheme, authority, path, query, fragment;
+            cdom::parseUriRef(struri, scheme, authority, path, query, fragment);
+            
+            // only set referenceUri if it's in OpenRAVEScheme
+            std::vector<std::string>::iterator itScheme = std::find(_vOpenRAVESchemeAliases.begin(),  _vOpenRAVESchemeAliases.end(), scheme);
+            if (itScheme != _vOpenRAVESchemeAliases.end()) {
+                if (_originalURI.compare(urioriginal.str()) != 0 ) {
+                    pbody->_referenceUri = struri;
+                }
+            } 
         }
 
         std::string strname = strParentName;
@@ -1100,6 +1136,13 @@ public:
                     else {
                         RAVELOG_WARN(str(boost::format("failed to find kinematics axis %s\n")%motion_axis_info->getAxis()));
                     }
+                }
+            }
+            if (!!pbody) {
+                // get motion body id and set to openrave body
+                // this is for keeping id consisdent if later on we serialize openrave body to other format.
+                if(!!articulated_system->getId()) {
+                    pbody->_id = articulated_system->getId();
                 }
             }
             listInstanceScope.push_back(ias);
@@ -1420,7 +1463,7 @@ public:
         }
         KinBody::LinkPtr plink(new KinBody::Link(pkinbody));
         plink->_info._name = name;
-        plink->_info._mass = 1.0;
+        plink->_info._mass = 1e-10; // default should be small mass
         plink->_info._bStatic = false;
         plink->_info._t = getNodeParentTransform(pdomnode) * _ExtractFullTransform(pdomnode);
         bool bhasgeometry = ExtractGeometries(pdomnode, plink->_info._t, plink, bindings, vprocessednodes);
@@ -2266,8 +2309,8 @@ public:
                     //  Rotate axis from the parent offset
                     vAxes[ic] = tatt.rotate(vAxes[ic]);
                 }
-                RAVELOG_DEBUG(str(boost::format("joint dof: %d, links %s->%s\n")%pjoint->dofindex%plink->GetName()%pchildlink->GetName()));
-                pjoint->_ComputeInternalInformation(plink,pchildlink,tatt.trans,vAxes,std::vector<dReal>());
+                RAVELOG_DEBUG_FORMAT("joint dof: %d, links %s->%s", pjoint->dofindex%plink->GetName()%pchildlink->GetName());
+                pjoint->_ComputeJointInternalInformation(plink,pchildlink,tatt.trans,vAxes,std::vector<dReal>());
             }
             if( pdomlink->getAttachment_start_array().getCount() > 0 ) {
                 RAVELOG_WARN("openrave collada reader does not support attachment_start\n");
@@ -3343,6 +3386,9 @@ public:
                                     RAVELOG_WARN("invalid interface_type\n");
                                 }
                             }
+                        }
+                        else if( pmanipchild->getElementName() == string("restrict_graspset_name") ) {
+                            manipinfo._vRestrictGraspSetNames.push_back(pmanipchild->getCharData());
                         }
                         else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_tip") && pmanipchild->getElementName() != string("grippername") && pmanipchild->getElementName() != string("toolChangerConnectedBodyToolName") ) {
                             RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%manipinfo._name));
@@ -5660,6 +5706,7 @@ private:
     int _nGlobalSensorId, _nGlobalManipulatorId, _nGlobalIndex, _nGlobalGripperInfoId;
     bool _bResetGlobalDae;  ///< Global Dae will be reset in destructor if true. have to manually reset if set to false
     std::string _filename;
+    std::string _originalURI; ///< uri for tracking original opened document
     std::set<KinBody::LinkPtr> _setInitialLinks;
     std::set<KinBody::JointPtr> _setInitialJoints;
     std::set<RobotBase::ManipulatorPtr> _setInitialManipulators;

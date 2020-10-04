@@ -1454,18 +1454,24 @@ private:
             vdomjoints.at(itjoint->first) = pdomjoint;
         }
 
-        list<int> listunusedlinks;
+        std::list<int> listunusedlinks;
+        const std::vector<KinBody::LinkPtr>& links = pbody->GetLinks();
         for(int ilink = 0; ilink < (int)vConnectedLinks.size(); ++ilink) {
             if (!vConnectedLinks[ilink]) {
-                listunusedlinks.push_back(pbody->GetLinks()[ilink]->GetIndex());
+                listunusedlinks.push_back(links[ilink]->GetIndex());
             }
         }
 
         daeElementRef nodehead = _nodesLib;
         bool bHasAddedInstance = false;
-        while(listunusedlinks.size()>0) {
-            LINKOUTPUT childinfo = _WriteLink(pbody->GetLinks().at(listunusedlinks.front()), ktec, nodehead, kmodel->getID(), vjoints);
-            Transform t = pbody->GetLinks()[listunusedlinks.front()]->GetTransform();
+        std::set<std::string> setJointSids;
+        std::set<std::string> setLinkSids;
+        while( !listunusedlinks.empty() ) {
+            setJointSids.clear();
+            setLinkSids.clear();
+            const int firstunusedlinkindex = listunusedlinks.front();
+            const LINKOUTPUT childinfo = _WriteLink(links.at(firstunusedlinkindex), ktec, nodehead, kmodel->getID(), vjoints, setJointSids, setLinkSids);
+            const Transform t = links[firstunusedlinkindex]->GetTransform();
             _WriteTransformation(childinfo.plink, t);
             if( IsWrite("visual") ) {
                 _WriteTransformation(childinfo.pnode, t);
@@ -2122,8 +2128,10 @@ private:
        \param pnodeparent Node parent
        \param strModelUri
        \param vjoints Vector of joints
+       \param setJointSids Set of joint ids which is already written
+       \param setLinkSids Set of link ids which is already written
      */
-    virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints)
+    virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints, std::set<std::string>& setJointSids, std::set<std::string>& setLinkSids)
     {
         std::string nodeparentid;
         if( !!pnodeparent && !!pnodeparent->getID() ) {
@@ -2150,7 +2158,16 @@ private:
             pnode->setSid(nodesid.c_str());
             pnode->setName(linkname.c_str());
 
-            if( IsWrite("geometry") ) {
+            const bool alreadyHandled = setLinkSids.find(linksid) != setLinkSids.end();
+            if (!alreadyHandled) {
+                setLinkSids.insert(linksid);
+            }
+            else {
+                RAVELOG_VERBOSE_FORMAT("geometry for link (name=\"%s\", sid=\"%s\") is already handled so skip. maybe part of closed loop?", linkname%linksid);
+            }
+            // for closed loop kinematics, we do want to describe the closed loop, so visiting same link twice is fine.
+            // but do not want to write same geometry twice, so just skip geometry part
+            if(!alreadyHandled && IsWrite("geometry") ) {
                 int igeom = 0;
                 FOREACHC(itgeom, plink->GetGeometries()) {
                     string geomid = _GetGeometryId(plink,igeom);
@@ -2181,9 +2198,14 @@ private:
 
             domLink::domAttachment_fullRef pattfull = daeSafeCast<domLink::domAttachment_full>(pdomlink->add(COLLADA_TYPE_ATTACHMENT_FULL));
             string jointid = str(boost::format("%s/joint%d")%strModelUri%itjoint->first);
+            if (setJointSids.find(jointid) != setJointSids.end()) {
+                RAVELOG_VERBOSE_FORMAT("joint id \"%s\" (joint name \"%s\") for body %s is previously written, so skip. maybe part of closed loop?", jointid%pjoint->GetName()%plink->GetParent()->GetName());
+                continue;
+            }
+            setJointSids.insert(jointid);
             pattfull->setJoint(jointid.c_str());
 
-            LINKOUTPUT childinfo = _WriteLink(pchild, pattfull, pnode, strModelUri, vjoints);
+            LINKOUTPUT childinfo = _WriteLink(pchild, pattfull, pnode, strModelUri, vjoints, setJointSids, setLinkSids);
             out.listusedlinks.insert(out.listusedlinks.end(),childinfo.listusedlinks.begin(),childinfo.listusedlinks.end());
 
             _WriteTransformation(pattfull, pjoint->GetInternalHierarchyLeftTransform());
@@ -2433,6 +2455,11 @@ private:
 
             daeElementRef pToolChangerConnectedBodyToolName = ptec->add("toolChangerConnectedBodyToolName");
             pToolChangerConnectedBodyToolName->setCharData((*itmanip)->GetToolChangerConnectedBodyToolName().c_str());
+
+            FOREACHC(itname, (*itmanip)->GetRestrictGraspSetNames()) {
+                daeElementRef restrict_graspset_name = ptec->add("restrict_graspset_name");
+                restrict_graspset_name->setCharData(*itname);
+            }
         }
     }
 
@@ -2886,7 +2913,22 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
         }
     }
 
+    if ( keywords.size() == 0 ) {
+        // if keywords is not provided via atts, use the environment keywords
+        keywords = boost::join(penv->GetKeywords(), ",");
+    }
+
+    if ( subject.size() == 0 ) {
+        // if keywords is not provided via atts, use the environment description
+        subject = penv->GetDescription();
+    }
+
     writer.Init("openrave_snapshot", keywords, subject, author);
+
+    if( scenename.size() == 0 ) {
+        // if scene name is not provided via atts, use the environment scene name
+        scenename = penv->GetName();
+    }
 
     if( scenename.size() == 0 ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
@@ -2939,7 +2981,8 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     if( listbodies.size() > 0 ) {
-        ColladaWriter writer(listbodies.front()->GetEnv(),atts);
+        EnvironmentBasePtr penv = listbodies.front()->GetEnv();
+        ColladaWriter writer(penv,atts);
         std::string scenename, keywords, subject, author;
         FOREACHC(itatt,atts) {
             if( itatt->first == "scenename" ) {
@@ -2956,7 +2999,23 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
                 author = itatt->second;
             }
         }
+
+        if ( keywords.size() == 0 ) {
+            // if keywords is not provided via atts, use the environment keywords
+            keywords = boost::join(penv->GetKeywords(), ",");
+        }
+
+        if ( subject.size() == 0 ) {
+            // if keywords is not provided via atts, use the environment description
+            subject = penv->GetDescription();
+        }
+
         writer.Init("openrave_snapshot", keywords, subject, author);
+
+        if( scenename.size() == 0 ) {
+            // if scene name is not provided via atts, use the environment scene name
+            scenename = penv->GetName();
+        }
 
         if( scenename.size() == 0 ) {
     #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
@@ -3002,7 +3061,22 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
         }
     }
 
+    if ( keywords.size() == 0 ) {
+        // if keywords is not provided via atts, use the environment keywords
+        keywords = boost::join(penv->GetKeywords(), ",");
+    }
+
+    if ( subject.size() == 0 ) {
+        // if keywords is not provided via atts, use the environment description
+        subject = penv->GetDescription();
+    }
+
     writer.Init("openrave_snapshot", keywords, subject, author);
+
+    if( scenename.size() == 0 ) {
+        // if scene name is not provided via atts, use the environment scene name
+        scenename = penv->GetName();
+    }
 
     if( scenename.size() == 0 ) {
         scenename = "scene";
@@ -3043,7 +3117,8 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     output.clear();
     if( listbodies.size() > 0 ) {
-        ColladaWriter writer(listbodies.front()->GetEnv(),atts);
+        EnvironmentBasePtr penv = listbodies.front()->GetEnv();
+        ColladaWriter writer(penv,atts);
         std::string scenename, keywords, subject, author;
         FOREACHC(itatt,atts) {
             if( itatt->first == "scenename" ) {
@@ -3060,7 +3135,23 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
                 author = itatt->second;
             }
         }
+
+        if ( keywords.size() == 0 ) {
+            // if keywords is not provided via atts, use the environment keywords
+            keywords = boost::join(penv->GetKeywords(), ",");
+        }
+
+        if ( subject.size() == 0 ) {
+            // if keywords is not provided via atts, use the environment description
+            subject = penv->GetDescription();
+        }
+
         writer.Init("openrave_snapshot", keywords, subject, author);
+
+        if( scenename.size() == 0 ) {
+            // if scene name is not provided via atts, use the environment scene name
+            scenename = penv->GetName();
+        }
 
         if( scenename.size() == 0 ) {
             scenename = "scene";

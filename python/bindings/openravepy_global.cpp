@@ -243,6 +243,7 @@ public:
     }
 
     dict toDict() {
+        // for ujson serialization
         dict d;
         d["pos"] = pos();
         d["extents"] = extents();
@@ -1598,7 +1599,7 @@ void init_openravepy_global()
 #endif
     .def("GetXMLId", &PyReadable::GetXMLId, DOXY_FN(eadable, GetXMLId))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def("Serialize", &PyReadable::Serialize,
+    .def("SerializeXML", &PyReadable::SerializeXML,
          "options"_a = 0,
          DOXY_FN(eadable, Serialize)
          )

@@ -835,7 +835,7 @@ public:
 
                     std::vector<RampOptimizer::RampND>& rampndVectOut = _cacheRampNDVectOut;
                     if( bCheck ) {
-                        RampOptimizer::CheckReturn checkret = _feasibilitychecker.Check2(rampndTrimmed, 0xffff, rampndVectOut);
+                        RampOptimizer::CheckReturn checkret = _feasibilitychecker.Check2(rampndTrimmed, 0xffff|CFO_FromTrajectorySmoother, rampndVectOut);
 #ifdef SMOOTHER2_TIMING_DEBUG
                         _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                         _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -874,7 +874,7 @@ public:
                                 if( result ) {
                                     // Stretching is successful
                                     RAVELOG_VERBOSE_FORMAT("env=%d, duration %.15e -> %.15e", _environmentid%rampndTrimmed.GetDuration()%newDuration);
-                                    RampOptimizer::CheckReturn newrampndret = _feasibilitychecker.Check2(rampndVectOut, 0xffff, tempRampNDVect);
+                                    RampOptimizer::CheckReturn newrampndret = _feasibilitychecker.Check2(rampndVectOut, 0xffff|CFO_FromTrajectorySmoother, tempRampNDVect);
 #ifdef SMOOTHER2_TIMING_DEBUG
                                     _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                                     _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -1018,7 +1018,7 @@ public:
         }
         catch (const std::exception& ex) {
             RAVELOG_WARN_FORMAT("env=%d, CheckPathAllConstraints threw an exception: %s", _environmentid%ex.what());
-            return 0xffff;
+            return 0xffff|CFO_FromTrajectorySmoother;
         }
     }
 
@@ -1048,7 +1048,7 @@ public:
         }
         catch (const std::exception& ex) {
             RAVELOG_WARN_FORMAT("env=%d, CheckPathAllConstraints threw an exception: %s", _environmentid%ex.what());
-            return 0xffff;
+            return 0xffff|CFO_FromTrajectorySmoother;
         }
     }
 
@@ -1106,7 +1106,7 @@ public:
             }
             catch (const std::exception& ex) {
                 RAVELOG_WARN_FORMAT("env=%d, CheckManipConstraints2 (modified=%d) threw an exception: %s", _environmentid%((int) bExpectedModifiedConfigurations)%ex.what());
-                return RampOptimizer::CheckReturn(0xffff);
+                return RampOptimizer::CheckReturn(0xffff|CFO_FromTrajectorySmoother);
             }
             rampndVectOut.resize(0);
         }
@@ -1139,7 +1139,7 @@ public:
         }
         catch (const std::exception& ex) {
             RAVELOG_WARN_FORMAT("env=%d, CheckPathAllConstraints threw an exception: %s", _environmentid%ex.what());
-            return RampOptimizer::CheckReturn(0xffff);
+            return RampOptimizer::CheckReturn(0xffff|CFO_FromTrajectorySmoother);
         }
 
         // Configurations between (q0, dq0) and (q1, dq1) may have been modified.
@@ -1305,7 +1305,7 @@ public:
             }
             catch (const std::exception& ex) {
                 RAVELOG_VERBOSE_FORMAT("env=%d, CheckManipConstraints2 (modified=%d) threw an exception: %s", _environmentid%((int) bExpectedModifiedConfigurations)%ex.what());
-                return RampOptimizer::CheckReturn(0xffff);
+                return RampOptimizer::CheckReturn(0xffff|CFO_FromTrajectorySmoother);
             }
         }
 
@@ -1539,7 +1539,7 @@ protected:
         for (; itry < numTries; ++itry) {
             bool res = _interpolator.ComputeZeroVelNDTrajectory(x0VectIn, x1VectIn, vellimits, accellimits, rampndVectOut);
             if( !res ) {
-                retseg.retcode = 0xffff;
+                retseg.retcode = 0xffff|CFO_FromTrajectorySmoother;
                 std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 ss << "x0=[";
                 SerializeValues(ss, x0VectIn);
@@ -1697,6 +1697,7 @@ protected:
         std::vector<RampOptimizer::RampND>& shortcutRampNDVect = _cacheRampNDVect; // for storing interpolated trajectory
         std::vector<RampOptimizer::RampND>& shortcutRampNDVectOut = _cacheRampNDVectOut, &shortcutRampNDVectOut1 = _cacheRampNDVectOut1; // for storing checked trajectory
         std::vector<dReal>& x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect;
+        std::vector<dReal>& tempX0Vect = _cacheTempX0Vect, &tempV0Vect = _cacheTempV0Vect;
         const dReal tOriginal = parabolicpath.GetDuration(); // the original trajectory duration before being shortcut
         dReal tTotal = tOriginal; // keeps track of the latest trajectory duration
 
@@ -1901,7 +1902,7 @@ protected:
                         _parameters->_getstatefn(x1Vect);
                         iIterProgress += 0x10;
 
-                        retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff, shortcutRampNDVectOut);
+                        retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff|CFO_FromTrajectorySmoother, shortcutRampNDVectOut);
 #ifdef SMOOTHER2_TIMING_DEBUG
                         _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                         _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -1951,13 +1952,13 @@ protected:
                             // Modification inside Check2 results in the shortcut trajectory not ending at the desired velocity v1.
                             dReal allowedStretchTime = (t1 - t0) - (segmentTime + minTimeStep); // the time that this segment is allowed to stretch out such that it is still a useful shortcut
 
-                            shortcutRampNDVectOut.back().GetX0Vect(x0Vect);
-                            shortcutRampNDVectOut.back().GetV0Vect(v0Vect);
+                            shortcutRampNDVectOut.back().GetX0Vect(tempX0Vect);
+                            shortcutRampNDVectOut.back().GetV0Vect(tempV0Vect);
 #ifdef SMOOTHER2_TIMING_DEBUG
                             _nCallsInterpolator += 1;
                             _tStartInterpolator = utils::GetMicroTime();
 #endif
-                            bool res2 = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, true);
+                            bool res2 = _interpolator.ComputeArbitraryVelNDTrajectory(tempX0Vect, x1Vect, tempV0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, true);
 #ifdef SMOOTHER2_TIMING_DEBUG
                             _tEndInterpolator = utils::GetMicroTime();
                             _totalTimeInterpolator += 0.000001f*(float)(_tEndInterpolator - _tStartInterpolator);
@@ -1987,7 +1988,7 @@ protected:
                                 break;
                             }
 
-                            retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff, shortcutRampNDVectOut1);
+                            retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff|CFO_FromTrajectorySmoother, shortcutRampNDVectOut1);
 #ifdef SMOOTHER2_TIMING_DEBUG
                             _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                             _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -2448,6 +2449,7 @@ protected:
         std::vector<RampOptimizer::RampND>& shortcutRampNDVect = _cacheRampNDVect; // for storing interpolated trajectory
         std::vector<RampOptimizer::RampND>& shortcutRampNDVectOut = _cacheRampNDVectOut, &shortcutRampNDVectOut1 = _cacheRampNDVectOut1; // for storing checked trajectory
         std::vector<dReal>& x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect;
+        std::vector<dReal>& tempX0Vect = _cacheTempX0Vect, &tempV0Vect = _cacheTempV0Vect;
         const dReal tOriginal = parabolicpath.GetDuration(); // the original trajectory duration before being shortcut
         dReal tTotal = tOriginal; // keeps track of the latest trajectory duration
 
@@ -2765,7 +2767,7 @@ protected:
                         _parameters->_getstatefn(x1Vect);
                         iIterProgress += 0x10;
 
-                        retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff, shortcutRampNDVectOut);
+                        retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff|CFO_FromTrajectorySmoother, shortcutRampNDVectOut);
 #ifdef SMOOTHER2_TIMING_DEBUG
                         _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                         _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -2815,13 +2817,13 @@ protected:
                             // Modification inside Check2 results in the shortcut trajectory not ending at the desired velocity v1.
                             dReal allowedStretchTime = (t1 - t0) - (segmentTime + minTimeStep); // the time that this segment is allowed to stretch out such that it is still a useful shortcut
 
-                            shortcutRampNDVectOut.back().GetX0Vect(x0Vect);
-                            shortcutRampNDVectOut.back().GetV0Vect(v0Vect);
+                            shortcutRampNDVectOut.back().GetX0Vect(tempX0Vect);
+                            shortcutRampNDVectOut.back().GetV0Vect(tempV0Vect);
 #ifdef SMOOTHER2_TIMING_DEBUG
                             _nCallsInterpolator += 1;
                             _tStartInterpolator = utils::GetMicroTime();
 #endif
-                            bool res2 = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, true);
+                            bool res2 = _interpolator.ComputeArbitraryVelNDTrajectory(tempX0Vect, x1Vect, tempV0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, true);
 #ifdef SMOOTHER2_TIMING_DEBUG
                             _tEndInterpolator = utils::GetMicroTime();
                             _totalTimeInterpolator += 0.000001f*(float)(_tEndInterpolator - _tStartInterpolator);
@@ -2851,7 +2853,7 @@ protected:
                                 break;
                             }
 
-                            retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff, shortcutRampNDVectOut1);
+                            retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff|CFO_FromTrajectorySmoother, shortcutRampNDVectOut1);
 #ifdef SMOOTHER2_TIMING_DEBUG
                             _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                             _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -3436,6 +3438,7 @@ protected:
     std::vector<dReal> _cacheWaypoints; ///< stores concatenated waypoints obtained from the input trajectory
     std::vector<std::vector<dReal> > _cacheWaypointVect; ///< each element is a vector storing a waypoint
     std::vector<dReal> _cacheX0Vect, _cacheX1Vect, _cacheV0Vect, _cacheV1Vect, _cacheTVect; ///< used in PlanPath and _Shortcut
+    std::vector<dReal> _cacheTempX0Vect, _cacheTempV0Vect; ///< used in _Shortcut
     RampOptimizer::RampND _cacheRampND, _cacheRemRampND;
     std::vector<RampOptimizer::RampND> _cacheRampNDVect; ///< use cases: 1. being passed to _ComputeRampWithZeroVelEndpoints when retrieving cubic waypoints from input traj
                                                          ///             2. in _SetMileStones: being passed to _ComputeRampWithZeroVelEndpoints

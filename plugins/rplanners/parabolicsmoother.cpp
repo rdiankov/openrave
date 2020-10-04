@@ -611,7 +611,7 @@ public:
                     _bUsePerturbation = false;
                     std::vector<ParabolicRamp::ParabolicRampND> outramps;
                     if( bCheck ) {
-                        ParabolicRamp::CheckReturn checkret = _feasibilitychecker.Check2(rampndtrimmed, 0xffff, outramps);
+                        ParabolicRamp::CheckReturn checkret = _feasibilitychecker.Check2(rampndtrimmed, 0xffff|CFO_FromTrajectorySmoother, outramps);
 #ifdef SMOOTHER1_TIMING_DEBUG
                         _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                         _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -667,7 +667,7 @@ public:
                                     bool bHasBadRamp=false;
                                     RAVELOG_VERBOSE_FORMAT("env=%d, old endtime=%.15e, new endtime=%.15e", GetEnv()->GetId()%rampndtrimmed.endTime%endTime);
                                     FOREACH(itnewrampnd, temprampsnd) {
-                                        ParabolicRamp::CheckReturn newrampret = _feasibilitychecker.Check2(*itnewrampnd, 0xffff, outramps);
+                                        ParabolicRamp::CheckReturn newrampret = _feasibilitychecker.Check2(*itnewrampnd, 0xffff|CFO_FromTrajectorySmoother, outramps);
 #ifdef SMOOTHER1_TIMING_DEBUG
                                         _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                                         _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -1567,7 +1567,7 @@ protected:
 #ifdef OPENRAVE_TIMING_DEBUGGING
                         tcheckstart = utils::GetMicroTime();
 #endif
-                        retcheck = _feasibilitychecker.Check2(intermediate.ramps[iramp], 0xffff, outramps);
+                        retcheck = _feasibilitychecker.Check2(intermediate.ramps[iramp], 0xffff|CFO_FromTrajectorySmoother, outramps);
 #ifdef OPENRAVE_TIMING_DEBUGGING
                         tcheckend = utils::GetMicroTime();
                         checktime += 0.000001f*(float)(tcheckend - tcheckstart);
@@ -1633,7 +1633,7 @@ protected:
 #ifdef OPENRAVE_TIMING_DEBUGGING
                             tcheckstart = utils::GetMicroTime();
 #endif
-                            retcheck = _feasibilitychecker.Check2(intermediate2.ramps[0], 0xffff, outramps2);
+                            retcheck = _feasibilitychecker.Check2(intermediate2.ramps[0], 0xffff|CFO_FromTrajectorySmoother, outramps2);
 #ifdef OPENRAVE_TIMING_DEBUGGING
                             tcheckend = utils::GetMicroTime();
                             checktime += 0.000001f*(float)(tcheckend - tcheckstart);
@@ -1668,7 +1668,7 @@ protected:
                                         bool bhasbadramp = false;
                                         RAVELOG_VERBOSE_FORMAT("env=%d, original endtime = %.15e; new endtime = %.15e", GetEnv()->GetId()%outramp.endTime%endtime);
                                         FOREACH(itnewrampnd, temprampsnd) {
-                                            retcheck = _feasibilitychecker.Check2(*itnewrampnd, 0xffff, outramps2);
+                                            retcheck = _feasibilitychecker.Check2(*itnewrampnd, 0xffff|CFO_FromTrajectorySmoother, outramps2);
                                             if (retcheck.retcode != 0) {
                                                 RAVELOG_VERBOSE_FORMAT("env=%d, has bad ramp: retcode = 0x%x", GetEnv()->GetId()%retcheck.retcode);
                                                 bhasbadramp = true;
@@ -2217,7 +2217,7 @@ protected:
                         _parameters->_getstatefn(intermediate.ramps[irampnd].x1); // not sure what this is for.
                         iIterProgress += 0x10;
 
-                        retcheck = _feasibilitychecker.Check2(intermediate.ramps[irampnd], 0xffff, outramps);
+                        retcheck = _feasibilitychecker.Check2(intermediate.ramps[irampnd], 0xffff|CFO_FromTrajectorySmoother, outramps);
 #ifdef SMOOTHER1_TIMING_DEBUG
                         _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                         _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -2289,7 +2289,7 @@ protected:
                             // Check the newly interpolated segment. Note that intermediate2 should have ramps.size() == 1.
                             OPENRAVE_ASSERT_OP(intermediate2.ramps.size(), ==, 1);
 
-                            retcheck = _feasibilitychecker.Check2(intermediate2.ramps[0], 0xffff, outramps2);
+                            retcheck = _feasibilitychecker.Check2(intermediate2.ramps[0], 0xffff|CFO_FromTrajectorySmoother, outramps2);
 #ifdef SMOOTHER1_TIMING_DEBUG
                             _nCallsCheckPathAllConstraints += _nCallsCheckPathAllConstraints_SegmentFeasible2;
                             _totalTimeCheckPathAllConstraints += _totalTimeCheckPathAllConstraints_SegmentFeasible2;
@@ -2307,7 +2307,7 @@ protected:
                                 RAVELOG_VERBOSE_FORMAT("env=%d, the final SolveMinTime generated feasible segment, inserting it to outramps", GetEnv()->GetId());
                                 outramps.pop_back();
                                 outramps.insert(outramps.end(), outramps2.begin(), outramps2.end());
-                                break;
+                                // continue to inserting outramps to accumoutramps.
                             }
                             else if (retcheck.retcode == CFO_CheckTimeBasedConstraints) {
                                 nNumTimeBasedConstraintsFailed++;

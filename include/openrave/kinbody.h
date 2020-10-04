@@ -29,9 +29,10 @@ typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRe
 
 /// \brief Result of UpdateFromInfo() call
 enum UpdateFromInfoResult {
-    UFIR_Success = 0, ///< Updated successfully
-    UFIR_RequireRemoveFromEnvironment, ///< Failed to update, require the kinbody to be removed from environment before update can succeed
-    UFIR_RequireReinitialize, ///< Failed to update, require InitFromInfo() to be called before update can succeed
+    UFIR_NoChange = 0, ///< Nothing changed
+    UFIR_Success = 1, ///< Updated successfully
+    UFIR_RequireRemoveFromEnvironment = 2, ///< Failed to update, require the kinbody to be removed from environment before update can succeed
+    UFIR_RequireReinitialize = 3, ///< Failed to update, require InitFromInfo() to be called before update can succeed
 };
 
 /// \brief The type of geometry primitive.
@@ -189,10 +190,10 @@ public:
                    && _vGeomData2 == other._vGeomData2
                    && _vGeomData3 == other._vGeomData3
                    && _vGeomData4 == other._vGeomData4
-                   // && _vSideWalls == other._vSideWalls
+                   && _vSideWalls == other._vSideWalls
                    && _vDiffuseColor == other._vDiffuseColor
                    && _vAmbientColor == other._vAmbientColor
-                   // && _meshcollision == other._meshcollision
+                   && _meshcollision == other._meshcollision
                    && _id == other._id
                    && _name == other._name
                    && _type == other._type
@@ -216,12 +217,14 @@ public:
 
         /// \brief compare two geometry infos. If the floating differences are within fEpsilon, then comparison will return true.
         ///
-        /// \return true if geometries are similar within epsilon
-        bool Compare(const GeometryInfo& rhs, dReal fEpsilon=1e-7) const;
+        /// \param rhs the right hand geometry info to compare
+        /// \param fUnitScale rhs should be scaled by fUnitScale when being compared.
+        /// \return 0 if geometries are similar within epsilon. Otherwise a non-zero code indicating what was not the same
+        int Compare(const GeometryInfo& rhs, dReal fUnitScale, dReal fEpsilon) const;
 
         /// \brief converts the unit scale of the geometry
         void ConvertUnitScale(dReal fUnitScale);
-        
+
         /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
         /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
         bool InitCollisionMesh(float fTessellation=1);
@@ -283,6 +286,8 @@ public:
             SWT_PX=1,
             SWT_NY=2,
             SWT_PY=3,
+            SWT_First=SWT_NX,
+            SWT_Last=SWT_PY,
         };
 
         struct SideWall
@@ -290,6 +295,16 @@ public:
             Transform transf;
             Vector vExtents;
             SideWallType type;
+            int Compare(const SideWall& rhs, dReal fUnitScale=1.0, dReal fEpsilon=10e-7) const;
+
+            bool operator==(const SideWall& other) const {
+                return transf == other.transf
+                       && vExtents == other.vExtents
+                       && type == other.type;
+            }
+            bool operator!=(const SideWall& other) const {
+                return !operator==(other);
+            }
         };
         std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
 
@@ -338,7 +353,6 @@ public:
         LinkInfo(const LinkInfo& other) {
             *this = other;
         }
-        LinkInfo& operator=(const LinkInfo& other);
         bool operator==(const LinkInfo& other) const;
         bool operator!=(const LinkInfo& other) const {
             return !operator==(other);
@@ -351,8 +365,9 @@ public:
         /// \brief compare two link infos. If the floating differences are within fEpsilon, then comparison will return true.
         ///
         /// \param linkCompareOptions 0 to compare everything. 1 to ignore _t
-        /// \return true if links are similar within epsilon
-        bool Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fEpsilon=1e-7) const;
+        /// \param fUnitScale rhs should be scaled by fUnitScale when being compared.
+        /// \return 0 if links are similar within epsilon. Otherwise a non-zero code indicating what was not the same
+        int Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fUnitScale, dReal fEpsilon) const;
 
         /// \brief converts the unit scale of the link properties and geometries
         void ConvertUnitScale(dReal fUnitScale);
@@ -371,7 +386,7 @@ public:
         /// the frame for inertia and center of mass of the link in the link's coordinate system
         Transform _tMassFrame;
         /// mass of link
-        dReal _mass; ///< kg
+        dReal _mass = 1e-10; ///< kg, set default to non-zero value to avoid divide by 0 for inverse dynamics/physics computations
 
         Vector _vinertiamoments; ///< kg*unit**2 inertia along the axes of _tMassFrame
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
@@ -957,11 +972,24 @@ private:
     class OPENRAVE_API MimicInfo : public InfoBase
     {
 public:
+        MimicInfo() {
+        };
+        MimicInfo(const MimicInfo& other) {
+            *this = other;
+        }
+
         void Reset() override;
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
         boost::array< std::string, 3>  _equations;         ///< the original equations
+
+        bool operator==(const MimicInfo& other) const {
+            return _equations == other._equations;
+        }
+        bool operator!=(const MimicInfo& other) const {
+            return !operator==(other);
+        }
     };
     typedef boost::shared_ptr<MimicInfo> MimicInfoPtr;
     typedef boost::shared_ptr<MimicInfo const> MimicInfoConstPtr;
@@ -973,14 +1001,15 @@ public:
 
         struct DOFFormat
         {
-            int16_t jointindex;         ///< the index into the joints, if >= GetJoints.size(), then points to the passive joints
-            int16_t dofindex : 14;         ///< if >= 0, then points to a DOF of the robot that is NOT mimiced
-            uint8_t axis : 2;         ///< the axis of the joint index
+            int16_t jointindex = -1; ///< the index into the joints, if >= GetJoints.size(), then points to the passive joints
+            int16_t dofindex = -1; ///< if >= 0, then points to a DOF of the robot that is NOT mimiced
+            uint8_t axis = 0; ///< the axis of the joint index
             bool operator <(const DOFFormat& r) const;
             bool operator ==(const DOFFormat& r) const;
             boost::shared_ptr<Joint> GetJoint(KinBody &parent) const;
             boost::shared_ptr<Joint const> GetJoint(const KinBody &parent) const;
         };
+
         struct DOFHierarchy
         {
             int16_t dofindex;         ///< >=0 dof index
@@ -1040,7 +1069,6 @@ public:
         JointInfo(const JointInfo& other) {
             *this = other;
         }
-        JointInfo& operator=(const JointInfo& other);
         bool operator==(const JointInfo& other) const;
         bool operator!=(const JointInfo& other) const {
             return !operator==(other);
@@ -1576,7 +1604,7 @@ protected:
             \param[in] iaxis the axis
             \param[in,out] vcachedpartials set of cached partials for each degree of freedom
          */
-        virtual void _ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, int iaxis, std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mapcachedpartials) const;
+        virtual void _ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, const int iaxis, std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mapcachedpartials) const;
 
         /** \brief Compute internal transformations and specify the attached links of the joint.
 
@@ -1588,8 +1616,12 @@ protected:
             \param vanchor the anchor of the rotation axes
             \param vaxes the axes in plink0's coordinate system of the joints
             \param vinitialvalues the current values of the robot used to set the 0 offset of the robot
+            \param bProcessStatic if true, then check to see if the joint is static and then set its cache and reduce its limits. If false, treat the joint as non-static.
          */
-        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
+        virtual void _ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
+
+        /// \brief once all the joints have been computed and initiailzed, call this function
+        virtual void _ComputeInternalStaticInformation();
 
         /// \brief evaluates the mimic joint equation using vdependentvalues
         ///
@@ -1623,7 +1655,7 @@ private:
         Transform _tRightNoOffset, _tLeftNoOffset;         ///< same as _tLeft and _tRight except it doesn't not include the offset
         Transform _tinvRight, _tinvLeft;         ///< the inverse transformations of tRight and tLeft
         bool _bInitialized;
-        bool _bStatic; ///< IsStatic with both lower and upper limits equal 0
+        int8_t _nIsStatic; ///< If 1, then joint is static and shouldnot move. If 0, then joint is not static. If -1, then still unknown
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -1658,20 +1690,12 @@ public:
         GrabbedInfo(const GrabbedInfo& other) {
             *this = other;
         }
-        GrabbedInfo& operator=(const GrabbedInfo& other) {
-            _id = other._id;
-            _grabbedname = other._grabbedname;
-            _robotlinkname = other._robotlinkname;
-            _trelative = other._trelative;
-            _setRobotLinksToIgnore = other._setRobotLinksToIgnore;
-            return *this;
-        }
         bool operator==(const GrabbedInfo& other) const {
             return _id == other._id
                    && _grabbedname == other._grabbedname
                    && _robotlinkname == other._robotlinkname
                    && _trelative == other._trelative
-                   && _setRobotLinksToIgnore == other._setRobotLinksToIgnore;
+                   && _setIgnoreRobotLinkNames == other._setIgnoreRobotLinkNames;
         }
         bool operator!=(const GrabbedInfo& other) const {
             return !operator==(other);
@@ -1685,7 +1709,7 @@ public:
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
-        std::set<int> _setRobotLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
+        std::set<std::string> _setIgnoreRobotLinkNames; ///< names of links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
@@ -1800,38 +1824,7 @@ public:
         KinBodyInfo(const KinBodyInfo& other) {
             *this = other;
         }
-        KinBodyInfo& operator=(const KinBodyInfo& other) {
-            _id = other._id;
-            _uri = other._uri;
-            _name = other._name;
-            _referenceUri = other._referenceUri;
-            _interfaceType = other._interfaceType;
-            _dofValues = other._dofValues;
-            _transform = other._transform;
-            _vLinkInfos = other._vLinkInfos;
-            _vJointInfos = other._vJointInfos;
-            _vGrabbedInfos = other._vGrabbedInfos;
-            _mReadableInterfaces = other._mReadableInterfaces;
-            _isRobot = other._isRobot;
-
-            // TODO: deep copy infos
-            return *this;
-        }
-        bool operator==(const KinBodyInfo& other) const {
-            return _id == other._id
-                   && _uri == other._uri
-                   && _name == other._name
-                   && _referenceUri == other._referenceUri
-                   && _interfaceType == other._interfaceType
-                   && _dofValues == other._dofValues
-                   && _transform == other._transform
-                   && _vLinkInfos == other._vLinkInfos
-                   && _vJointInfos == other._vJointInfos
-                   && _vGrabbedInfos == other._vGrabbedInfos
-                   && _mReadableInterfaces == other._mReadableInterfaces
-                   && _isRobot == other._isRobot;
-            // TODO: deep compare infos
-        }
+        bool operator==(const KinBodyInfo& other) const;
         bool operator!=(const KinBodyInfo& other) const {
             return !operator==(other);
         }
@@ -2413,39 +2406,35 @@ private:
     /// \param position position in world space where to compute derivatives from.
     /// \param jacobian 3xDOF matrix
     /// \param dofindices the dof indices to compute the jacobian for. If empty, will compute for all the dofs
-    virtual void ComputeJacobianTranslation(int linkindex, const Vector& position, std::vector<dReal>& jacobian, const std::vector<int>& dofindices=std::vector<int>()) const;
+    virtual void ComputeJacobianTranslation(const int linkindex, const Vector& position, std::vector<dReal>& jacobian, const std::vector<int>& dofindices = {}) const;
 
     /// \brief calls std::vector version of ComputeJacobian internally
-    virtual void CalculateJacobian(int linkindex, const Vector& position, std::vector<dReal>& jacobian) const {
-        ComputeJacobianTranslation(linkindex,position,jacobian);
-    }
+    virtual void CalculateJacobian(const int linkindex, const Vector& position, std::vector<dReal>& jacobian) const;
 
     /// \brief calls std::vector version of ComputeJacobian internally, a little inefficient since it copies memory
-    virtual void CalculateJacobian(int linkindex, const Vector& position, boost::multi_array<dReal,2>& jacobian) const;
+    virtual void CalculateJacobian(const int linkindex, const Vector& position, boost::multi_array<dReal, 2>& jacobian) const;
 
     /// \brief Computes the rotational jacobian as a quaternion with respect to an initial rotation.
     ///
     /// \param linkindex of the link that the rotation is attached to
     /// \param qInitialRot the rotation in world space whose derivative to take from.
     /// \param jacobian 4xDOF matrix
-    virtual void CalculateRotationJacobian(int linkindex, const Vector& quat, std::vector<dReal>& jacobian) const;
+    virtual void CalculateRotationJacobian(const int linkindex, const Vector& quat, std::vector<dReal>& jacobian) const;
 
     /// \brief calls std::vector version of CalculateRotationJacobian internally, a little inefficient since it copies memory
-    virtual void CalculateRotationJacobian(int linkindex, const Vector& quat, boost::multi_array<dReal,2>& jacobian) const;
+    virtual void CalculateRotationJacobian(const int linkindex, const Vector& quat, boost::multi_array<dReal, 2>& jacobian) const;
 
     /// \brief Computes the angular velocity jacobian of a specified link about the axes of world coordinates.
     ///
     /// \param linkindex of the link that the rotation is attached to
     /// \param vjacobian 3xDOF matrix
-    virtual void ComputeJacobianAxisAngle(int linkindex, std::vector<dReal>& jacobian, const std::vector<int>& dofindices=std::vector<int>()) const;
+    virtual void ComputeJacobianAxisAngle(const int linkindex, std::vector<dReal>& jacobian, const std::vector<int>& dofindices = {}) const;
 
     /// \brief Computes the angular velocity jacobian of a specified link about the axes of world coordinates.
-    virtual void CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>& jacobian) const {
-        ComputeJacobianAxisAngle(linkindex,jacobian);
-    }
+    virtual void CalculateAngularVelocityJacobian(const int linkindex, std::vector<dReal>& jacobian) const;
 
     /// \brief calls std::vector version of CalculateAngularVelocityJacobian internally, a little inefficient since it copies memory
-    virtual void CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& jacobian) const;
+    virtual void CalculateAngularVelocityJacobian(const int linkindex, boost::multi_array<dReal, 2>& jacobian) const;
 
     /** \brief Computes the DOFx3xDOF hessian of the linear translation
 
@@ -2592,6 +2581,8 @@ private:
     /// \param setAttached fills with the attached bodies. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
     virtual void GetAttached(std::set<KinBodyPtr>& setAttached) const;
     virtual void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
+    virtual void GetAttached(std::vector<KinBodyPtr>& vAttached) const;
+    virtual void GetAttached(std::vector<KinBodyConstPtr>& vAttached) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
     virtual bool HasAttached() const;
@@ -2732,6 +2723,16 @@ private:
      */
     virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore);
 
+    /** \brief Grab the body with the specified link.
+
+        \param[in] body the body to be grabbed
+        \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
+        \param[in] setBodyLinksToIgnore Additional body link names that collision checker ignore
+        when checking collisions between the grabbed body and the body.
+        \return true if successful and body is grabbed.
+    */
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames);
+
     /** \brief Grab a body with the specified link.
 
         \param[in] body the body to be grabbed
@@ -2777,6 +2778,14 @@ private:
         \param[out] vbodies filled with the grabbed bodies
      */
     virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
+
+    /// \brief returns number of grabbed targets
+    virtual int GetNumGrabbed() const;
+
+    /// \brief return the valid grabbed body. If the grabbed body is not in the environment, will just return empty
+    ///
+    /// \param iGrabbed index into the grabbed body. Max is GetNumGrabbed()-1
+    virtual KinBodyPtr GetGrabbedBody(int iGrabbed) const;
 
     /** \brief gets all grabbed bodies of the body
 

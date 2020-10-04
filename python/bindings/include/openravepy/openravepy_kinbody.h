@@ -118,9 +118,9 @@ public:
 #endif
     py::object _trelative = ReturnTransform(Transform());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<int> _setRobotLinksToIgnore;
+    std::vector<std::string> _setIgnoreRobotLinkNames;
 #else
-    py::object _setRobotLinksToIgnore = py::none_();
+    py::object _setIgnoreRobotLinkNames = py::none_();
 #endif
 }; // class PyGrabbedInfo
 typedef OPENRAVE_SHARED_PTR<PyGrabbedInfo> PyGrabbedInfoPtr;
@@ -141,6 +141,7 @@ public:
     std::string _uri;
     std::string _id;
     std::string _name;
+    std::string _interfaceType;
     std::string _referenceUri;
 #else
     py::object _vLinkInfos = py::none_();
@@ -150,8 +151,10 @@ public:
     py::object _referenceUri = py::none_();
     py::object _id = py::none_();
     py::object _name = py::none_();
+    py::object _interfaceType = py::none_();
 #endif
     py::object _transform = ReturnTransform(Transform());
+    bool _isRobot = false;
     py::object _dofValues = py::none_();
     py::object _readableInterfaces = py::none_();
     virtual std::string __str__();
@@ -299,7 +302,7 @@ public:
     void RegrabAll();
     py::object IsGrabbing(PyKinBodyPtr pbody) const;
     py::object GetGrabbed() const;
-    py::object GetGrabbedInfo() const;
+    py::object GetGrabbedInfo(py::object ograbbedname=py::none_()) const;
     void ResetGrabbed(py::object ograbbedinfos);
     bool IsRobot() const;
     int GetEnvironmentId() const;
