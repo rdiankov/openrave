@@ -1303,9 +1303,9 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         const int dofindex = pjoint->GetDOFIndex();
         const bool bIsMimic = pjoint->IsMimic();
         if( bIsMimic ) {
-            for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                if( pjoint->IsMimic(i) ) {
-                    const std::vector<Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[i]->_vdofformat;
+            for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                if( pjoint->IsMimic(iaxis) ) {
+                    const std::vector<Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[iaxis]->_vdofformat;
                     const int ndofformat = vdofformat.size();
                     vtempvalues.resize(ndofformat, 0);
                     for(int idofformat = 0; idofformat < ndofformat; ++idofformat) {
@@ -1314,12 +1314,12 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                         const JointPtr& pjointlocal = (jointindexlocal < nActiveJoints) ? _vecjoints[jointindexlocal] : _vPassiveJoints.at(jointindexlocal - nActiveJoints);
                         vtempvalues[idofformat] = pjointlocal->GetValue(dofformat.axis);
                     }
-                    dummyvalues[i] = 0;
-                    int err = pjoint->_Eval(i,1,vtempvalues,veval);
+                    dummyvalues[iaxis] = 0;
+                    int err = pjoint->_Eval(iaxis, 1, vtempvalues, veval);
                     if( err ) {
                         RAVELOG_WARN(str(boost::format("env=%d, failed to evaluate joint %s, fparser error %d")%GetEnv()->GetId()%pjoint->GetName()%err));
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            err = pjoint->_Eval(i,1,vtempvalues,veval); // TGN: why do it again?
+                            err = pjoint->_Eval(iaxis, 1, vtempvalues, veval); // TGN: why do it again?
                         }
                     }
                     else {
@@ -1328,7 +1328,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                             const dReal partialvelocity = (dofformat.dofindex >= 0) ? vDOFVelocities.at(dofformat.dofindex)
                                 : vPassiveJointVelocities.at(dofformat.jointindex - nActiveJoints).at(dofformat.axis);
                             if( ipartial < veval.size() ) {
-                                dummyvalues[i] += veval.at(ipartial) * partialvelocity;
+                                dummyvalues[iaxis] += veval.at(ipartial) * partialvelocity;
                             }
                             else {
                                 RAVELOG_DEBUG_FORMAT("env=%d, cannot evaluate partial velocity for mimic joint %s, perhaps equations don't exist", GetEnv()->GetId()%pjoint->GetName());
@@ -1338,15 +1338,18 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
 
                     // if joint is passive, update the stored joint values! This is necessary because joint value might be referenced in the future.
                     if( dofindex < 0 ) {
-                        vPassiveJointVelocities.at(jointindex - nActiveJoints).at(i) = dummyvalues[i];
+                        vPassiveJointVelocities.at(jointindex - nActiveJoints).at(iaxis) = dummyvalues[iaxis];
                     }
                 }
                 else if( dofindex >= 0 ) {
-                    dummyvalues[i] = vDOFVelocities.at(dofindex+i); // is this correct? what is a joint has a mimic and non-mimic axis?
+                    RAVELOG_WARN_FORMAT("Joint \"%s\" is mimic, but has a non-mimic axis %d. Is this possible, or the robot model is wrong? jointindex=%d, dofindex=%d, iaxis=%d",
+                        pjoint->GetName() % iaxis % jointindex % dofindex % iaxis
+                    );
+                    dummyvalues[iaxis] = vDOFVelocities.at(dofindex + iaxis); // is this correct? what is a joint has a mimic and non-mimic axis?
                 }
                 else {
                     // preserve passive joint values
-                    dummyvalues[i] = vPassiveJointVelocities.at(jointindex - nActiveJoints).at(i);
+                    dummyvalues[iaxis] = vPassiveJointVelocities.at(jointindex - nActiveJoints).at(iaxis);
                 }
             }
         }
@@ -1363,27 +1366,28 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
 
         if( checklimits != CLA_Nothing && dofindex >= 0 ) {
             // clamping active joint values
-            for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                if( pvalues[i] < vlower.at(dofindex+i)-g_fEpsilonJointLimit ) {
+            for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                const int dofaxisindex = dofindex + iaxis;
+                if( pvalues[iaxis] < vlower.at(dofaxisindex) - g_fEpsilonJointLimit ) {
                     if( checklimits == CLA_CheckLimits ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e<%.15e")%GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i)));
+                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e<%.15e")%GetEnv()->GetId()%(dofaxisindex)%pvalues[iaxis]%vlower.at(dofaxisindex)));
                     }
                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e<%.15e"), GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i), ORE_InvalidArguments);
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e<%.15e"), GetEnv()->GetId()%(dofaxisindex)%pvalues[iaxis]%vlower.at(dofaxisindex), ORE_InvalidArguments);
                     }
-                    dummyvalues[i] = vlower[dofindex+i];
+                    dummyvalues[iaxis] = vlower[dofaxisindex];
                 }
-                else if( pvalues[i] > vupper.at(dofindex+i)+g_fEpsilonJointLimit ) {
+                else if( pvalues[iaxis] > vupper.at(dofaxisindex)+g_fEpsilonJointLimit ) {
                     if( checklimits == CLA_CheckLimits ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e>%.15e")%GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i)));
+                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e>%.15e")%GetEnv()->GetId()%(dofaxisindex)%pvalues[iaxis]%vupper.at(dofaxisindex)));
                     }
                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e>%.15e"), GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i), ORE_InvalidArguments);
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e>%.15e"), GetEnv()->GetId()%(dofaxisindex)%pvalues[iaxis]%vupper.at(dofaxisindex), ORE_InvalidArguments);
                     }
-                    dummyvalues[i] = vupper[dofindex+i];
+                    dummyvalues[iaxis] = vupper[dofaxisindex];
                 }
                 else {
-                    dummyvalues[i] = pvalues[i];
+                    dummyvalues[iaxis] = pvalues[iaxis];
                 }
             }
             pvalues = dummyvalues.data();
@@ -1436,6 +1440,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         }
         else if( jointtype == JointTrajectory ) {
             Transform tlocalvelocity, tlocal;
+            JointInfo& jointinfo = pjoint->_info;
             if( pjoint->IsMimic(0) ) {
                 // vtempvalues should already be init from previous _Eval call
                 int err = pjoint->_Eval(0,0,vtempvalues,veval);
@@ -1446,14 +1451,15 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                 if( pjoint->IsCircular(0) ) {
                     fvalue = utils::NormalizeCircularAngle(fvalue,pjoint->_vcircularlowerlimit.at(0), pjoint->_vcircularupperlimit.at(0));
                 }
-                pjoint->_info._trajfollow->Sample(vtempvalues, fvalue);
+                jointinfo._trajfollow->Sample(vtempvalues, fvalue);
             }
             else {
                 // calling GetValue() could be extremely slow
-                pjoint->_info._trajfollow->Sample(vtempvalues, pjoint->GetValue(0));
+                jointinfo._trajfollow->Sample(vtempvalues, pjoint->GetValue(0));
             }
-            pjoint->_info._trajfollow->GetConfigurationSpecification().ExtractTransform(tlocal, vtempvalues.begin(), KinBodyConstPtr(),0);
-            pjoint->_info._trajfollow->GetConfigurationSpecification().ExtractTransform(tlocalvelocity, vtempvalues.begin(), KinBodyConstPtr(),1);
+            const ConfigurationSpecification& conf = jointinfo._trajfollow->GetConfigurationSpecification();
+            conf.ExtractTransform(tlocal, vtempvalues.begin(), KinBodyConstPtr(),0);
+            conf.ExtractTransform(tlocalvelocity, vtempvalues.begin(), KinBodyConstPtr(),1);
             Vector gw = tdelta.rotate(quatMultiply(tlocalvelocity.rot, quatInverse(tlocal.rot))*2*pvalues[0]); // qvel = [0,axisangle] * qrot * 0.5 * vel
             gw = Vector(gw.y,gw.z,gw.w);
             Vector gv = tdelta.rotate(tlocalvelocity.trans*pvalues[0]);
