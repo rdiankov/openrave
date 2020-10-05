@@ -1272,16 +1272,16 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
     const int nActiveJoints = _vecjoints.size();
     const int nPassiveJoints = _vPassiveJoints.size();
 
-    std::vector<std::pair<Vector,Vector> > velocities(nlinks);
-    velocities.at(0).first = linearvel;
-    velocities.at(0).second = angularvel;
+    std::vector<std::pair<Vector, Vector> > vLinkVelocities(nlinks); // v for linear velocity, w for angular velocity
+    vLinkVelocities.at(0).first = linearvel;
+    vLinkVelocities.at(0).second = angularvel;
 
-    std::vector<dReal> vlower,vupper,vtempvalues, veval;
+    std::vector<dReal> vlower, vupper, vtempvalues, veval;
     if( checklimits != CLA_Nothing ) {
         GetDOFVelocityLimits(vlower,vupper);
     }
 
-    // have to compute the velocities ahead of time since they are dependent on the link transformations
+    // have to compute the vLinkVelocities ahead of time since they are dependent on the link transformations
     std::vector< std::vector<dReal> > vPassiveJointVelocities(nPassiveJoints);
     for(size_t i = 0; i < vPassiveJointVelocities.size(); ++i) {
         const JointPtr& pjoint = _vPassiveJoints[i];
@@ -1394,21 +1394,12 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         }
 
         // compute for global coordinate system
-        Vector vparent, wparent;
-        Transform tparent;
         const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
-        if( !pparentlink ) {
-            tparent = _veclinks.at(0)->GetTransform();
-            vparent = velocities.at(0).first;
-            wparent = velocities.at(0).second;
-        }
-        else {
-            const int parentindex = pparentlink->GetIndex();
-            tparent = pparentlink->GetTransform();
-            vparent = velocities[parentindex].first;
-            wparent = velocities[parentindex].second;
-        }
-
+        const int parentindex = (!!pparentlink) ? pparentlink->GetIndex() : -1;
+        const Transform tparent = (!!pparentlink) ? pparentlink->GetTransform() : _veclinks.at(0)->GetTransform();
+        const std::pair<Vector, Vector>& parentvelocities = (!!pparentlink) ? vLinkVelocities[parentindex] : vLinkVelocities.at(0);
+        const Vector& vparent = parentvelocities.first;
+        const Vector& wparent = parentvelocities.second;
         const Transform tchild = pchildlink->GetTransform();
         const Vector xyzdelta = tchild.trans - tparent.trans;
         const Transform tdelta = tparent * pjoint->GetInternalHierarchyLeftTransform();
@@ -1433,10 +1424,14 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         const JointType jointtype = pjoint->GetType();
         if( jointtype == JointRevolute ) {
             Vector gw = tdelta.rotate(pvalues[0] * pjoint->GetInternalHierarchyAxis(0));
-            velocities.at(childindex) = {vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans), wparent + gw};
+            std::pair<Vector, Vector>& childvelocities = vLinkVelocities.at(childindex);
+            childvelocities.first = vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans - tdelta.trans);
+            childvelocities.second = wparent + gw;
         }
         else if( jointtype == JointPrismatic ) {
-            velocities.at(childindex) = {vparent + wparent.cross(xyzdelta) + tdelta.rotate(pvalues[0] * pjoint->GetInternalHierarchyAxis(0)), wparent};
+            std::pair<Vector, Vector>& childvelocities = vLinkVelocities.at(childindex);
+            childvelocities.first = vparent + wparent.cross(xyzdelta) + tdelta.rotate(pvalues[0] * pjoint->GetInternalHierarchyAxis(0));
+            childvelocities.second = wparent;
         }
         else if( jointtype == JointTrajectory ) {
             Transform tlocalvelocity, tlocal;
@@ -1463,11 +1458,11 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
             Vector gw = tdelta.rotate(quatMultiply(tlocalvelocity.rot, quatInverse(tlocal.rot))*2*pvalues[0]); // qvel = [0,axisangle] * qrot * 0.5 * vel
             gw = Vector(gw.y,gw.z,gw.w);
             Vector gv = tdelta.rotate(tlocalvelocity.trans*pvalues[0]);
-            velocities.at(childindex) = {vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans) + gv, wparent + gw};
+            vLinkVelocities.at(childindex) = {vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans) + gv, wparent + gw};
         }
         else if( jointtype == JointSpherical ) {
             Vector gw = tdelta.rotate(Vector(pvalues[0],pvalues[1],pvalues[2]));
-            velocities.at(childindex) = {vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans), wparent + gw};
+            vLinkVelocities.at(childindex) = {vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans), wparent + gw};
         }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, joint 0x%x not supported for querying velocities"), GetEnv()->GetId() % jointtype, ORE_Assert);
@@ -1492,7 +1487,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         vlinkscomputed[childindex] = 1;
     }
 
-    this->SetLinkVelocities(velocities);
+    this->SetLinkVelocities(vLinkVelocities);
 }
 
 void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, uint32_t checklimits, const std::vector<int>& dofindices)
@@ -3709,12 +3704,12 @@ void KinBody::_ComputeLinkAccelerations(
 
         const int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
         const Transform& tchild = pjoint->GetHierarchyChildLink()->GetTransform();
-        const std::pair<Vector, Vector>& vChildVelocities = vLinkVelocities.at(childindex);
-        std::pair<Vector, Vector>& vChildAccelerations = vLinkAccelerations.at(childindex);
+        const std::pair<Vector, Vector>& childvelocities = vLinkVelocities.at(childindex);
+        std::pair<Vector, Vector>& childaccelerations = vLinkAccelerations.at(childindex);
 
         const int parentindex = (!pjoint->GetHierarchyParentLink()) ? 0 : pjoint->GetHierarchyParentLink()->GetIndex();
-        const std::pair<Vector, Vector>& vParentVelocities = vLinkVelocities.at(parentindex);
-        const std::pair<Vector, Vector>& vParentAccelerations = vLinkAccelerations.at(parentindex);
+        const std::pair<Vector, Vector>& parentvelocities = vLinkVelocities.at(parentindex);
+        const std::pair<Vector, Vector>& parentaccelerations = vLinkAccelerations.at(parentindex);
         const Vector xyzdelta = tchild.trans - _veclinks.at(parentindex)->_info._t.trans;
         if( !!pdofaccelerations || !!pdofvelocities ) {
             tdelta = _veclinks.at(parentindex)->_info._t * pjoint->GetInternalHierarchyLeftTransform();
@@ -3738,31 +3733,31 @@ void KinBody::_ComputeLinkAccelerations(
         // w = wparent
         // dw = wparent.diff(t)
         if( pjoint->GetType() == JointRevolute ) {
-            vChildAccelerations.first = vParentAccelerations.first + vParentAccelerations.second.cross(xyzdelta) + vParentVelocities.second.cross((vChildVelocities.first-vParentVelocities.first)*2-vParentVelocities.second.cross(xyzdelta));
-            vChildAccelerations.second = vParentAccelerations.second;
+            childaccelerations.first = parentaccelerations.first + parentaccelerations.second.cross(xyzdelta) + parentvelocities.second.cross((childvelocities.first-parentvelocities.first)*2-parentvelocities.second.cross(xyzdelta));
+            childaccelerations.second = parentaccelerations.second;
             if( !!pdofvelocities ) {
                 Vector gw = tdelta.rotate(vlocalaxis * (*pdofvelocities));
-                vChildAccelerations.first += gw.cross(gw.cross(tchild.trans-tdelta.trans));
-                vChildAccelerations.second += vParentVelocities.second.cross(gw);
+                childaccelerations.first += gw.cross(gw.cross(tchild.trans-tdelta.trans));
+                childaccelerations.second += parentvelocities.second.cross(gw);
             }
             if( !!pdofaccelerations ) {
                 Vector gdw = tdelta.rotate(vlocalaxis * (*pdofaccelerations));
-                vChildAccelerations.first += gdw.cross(tchild.trans-tdelta.trans);
-                vChildAccelerations.second += gdw;
+                childaccelerations.first += gdw.cross(tchild.trans-tdelta.trans);
+                childaccelerations.second += gdw;
             }
         }
         else if( pjoint->GetType() == JointPrismatic ) {
             Vector w = tdelta.rotate(vlocalaxis);
-            vChildAccelerations.first = vParentAccelerations.first + vParentAccelerations.second.cross(xyzdelta);
-            Vector angularveloctiycontrib = vChildVelocities.first-vParentVelocities.first;
+            childaccelerations.first = parentaccelerations.first + parentaccelerations.second.cross(xyzdelta);
+            Vector angularveloctiycontrib = childvelocities.first-parentvelocities.first;
             if( !!pdofvelocities ) {
                 angularveloctiycontrib += w * (*pdofvelocities);
             }
-            vChildAccelerations.first += vParentVelocities.second.cross(angularveloctiycontrib);
+            childaccelerations.first += parentvelocities.second.cross(angularveloctiycontrib);
             if( !!pdofaccelerations ) {
-                vChildAccelerations.first += w * (*pdofaccelerations);
+                childaccelerations.first += w * (*pdofaccelerations);
             }
-            vChildAccelerations.second = vParentAccelerations.second;
+            childaccelerations.second = parentaccelerations.second;
         }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT(_("joint type 0x%x not supported for getting link acceleration"),pjoint->GetType(),ORE_Assert);
