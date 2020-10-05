@@ -2275,7 +2275,7 @@ void KinBody::Joint::_ComputePartialVelocities(
         const Mimic::DOFFormat& dofformat = vdofformats[ivar]; ///< information about the ivar-th depended joint
         const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< a joint on which this joint depends on
         const int jointindex = dofformat.jointindex; ///< index of this depended joint
-        const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
+        const OpenRAVEFunctionParserRealPtr& velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
         const dReal fvel = velfn->Eval(vDependedJointValues.data()); ///< value of ∂z/∂x
 
         if( IS_DEBUGLEVEL(Level_Verbose) ) {

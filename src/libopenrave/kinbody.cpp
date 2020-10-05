@@ -1273,13 +1273,8 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
     const int nPassiveJoints = _vPassiveJoints.size();
 
     std::vector<std::pair<Vector, Vector> > vLinkVelocities(nlinks); // v for linear velocity, w for angular velocity
-    vLinkVelocities.at(0).first = linearvel;
+    vLinkVelocities.at(0).first = linearvel; // base link
     vLinkVelocities.at(0).second = angularvel;
-
-    std::vector<dReal> vlower, vupper, vtempvalues, veval;
-    if( checklimits != CLA_Nothing ) {
-        GetDOFVelocityLimits(vlower,vupper);
-    }
 
     // have to compute the vLinkVelocities ahead of time since they are dependent on the link transformations
     std::vector< std::vector<dReal> > vPassiveJointVelocities(nPassiveJoints);
@@ -1296,50 +1291,46 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
     std::vector<uint8_t> vlinkscomputed(nlinks, 0);
     vlinkscomputed[0] = 1;
     boost::array<dReal, 3> dummyvalues; // dummy values for a joint
+    std::vector<dReal> vlower, vupper, vDependedJointValues, veval;
+    const bool bCheckJointLimits = checklimits != CLA_Nothing;
+    if( bCheckJointLimits ) {
+        this->GetDOFVelocityLimits(vlower, vupper);
+    }
 
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
         const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
-        const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint];
-        const int dofindex = pjoint->GetDOFIndex();
-        const bool bIsMimic = pjoint->IsMimic();
+        const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint]; // active joint has jointindex < nActiveJoints; mimic joint has jointindex >= nActiveJoints
+        const int dofindex = pjoint->GetDOFIndex(); // active joint has dofindex >= 0; mimic joint has dofindex == -1
+        const bool bIsMimic = pjoint->IsMimic(-1); // true if whichever axis is mimic
         if( bIsMimic ) {
             for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
                 if( pjoint->IsMimic(iaxis) ) {
                     const std::vector<Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[iaxis]->_vdofformat;
                     const int ndofformat = vdofformat.size();
-                    vtempvalues.resize(ndofformat, 0);
+                    vDependedJointValues.resize(ndofformat, 0);
                     for(int idofformat = 0; idofformat < ndofformat; ++idofformat) {
                         const Mimic::DOFFormat& dofformat = vdofformat[idofformat];
                         const int jointindexlocal = dofformat.jointindex;
                         const JointPtr& pjointlocal = (jointindexlocal < nActiveJoints) ? _vecjoints[jointindexlocal] : _vPassiveJoints.at(jointindexlocal - nActiveJoints);
-                        vtempvalues[idofformat] = pjointlocal->GetValue(dofformat.axis);
+                        vDependedJointValues[idofformat] = pjointlocal->GetValue(dofformat.axis);
                     }
                     dummyvalues[iaxis] = 0;
-                    int err = pjoint->_Eval(iaxis, 1, vtempvalues, veval);
+                    int err = pjoint->_Eval(iaxis, 1, vDependedJointValues, veval);
                     if( err ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, failed to evaluate joint %s, fparser error %d")%GetEnv()->GetId()%pjoint->GetName()%err));
-                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            err = pjoint->_Eval(iaxis, 1, vtempvalues, veval); // TGN: why do it again?
-                        }
+                        RAVELOG_WARN_FORMAT("env=%d, failed to evaluate joint %s, fparser error %d; treat its joint velocity as 0",
+                            GetEnv()->GetId() % pjoint->GetName() % err
+                        );
                     }
                     else {
-                        for(size_t ipartial = 0; ipartial < vdofformat.size(); ++ipartial) {
-                            const Mimic::DOFFormat& dofformat = vdofformat[ipartial];
+                        // veval.size() == pjoint->_vmimic.at(axis)->_velfns.size(); c.f KinBody::Joint::_Eval with timederiv=1
+                        for(int idofformat = 0; idofformat < ndofformat; ++idofformat) {
+                            const Mimic::DOFFormat& dofformat = vdofformat[idofformat];
                             const dReal partialvelocity = (dofformat.dofindex >= 0) ? vDOFVelocities.at(dofformat.dofindex)
                                 : vPassiveJointVelocities.at(dofformat.jointindex - nActiveJoints).at(dofformat.axis);
-                            if( ipartial < veval.size() ) {
-                                dummyvalues[iaxis] += veval.at(ipartial) * partialvelocity;
-                            }
-                            else {
-                                RAVELOG_DEBUG_FORMAT("env=%d, cannot evaluate partial velocity for mimic joint %s, perhaps equations don't exist", GetEnv()->GetId()%pjoint->GetName());
-                            }
+                            dummyvalues[iaxis] += veval.at(idofformat) * partialvelocity;
                         }
                     }
-
-                    // if joint is passive, update the stored joint values! This is necessary because joint value might be referenced in the future.
-                    if( dofindex < 0 ) {
-                        vPassiveJointVelocities.at(jointindex - nActiveJoints).at(iaxis) = dummyvalues[iaxis];
-                    }
+                    vPassiveJointVelocities.at(jointindex - nActiveJoints).at(iaxis) = dummyvalues[iaxis];
                 }
                 else if( dofindex >= 0 ) {
                     RAVELOG_WARN_FORMAT("Joint \"%s\" is mimic, but has a non-mimic axis %d. Is this possible, or the robot model is wrong? jointindex=%d, dofindex=%d, iaxis=%d",
@@ -1348,8 +1339,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                     dummyvalues[iaxis] = vDOFVelocities.at(dofindex + iaxis); // is this correct? what is a joint has a mimic and non-mimic axis?
                 }
                 else {
-                    // preserve passive joint values
-                    dummyvalues[iaxis] = vPassiveJointVelocities.at(jointindex - nActiveJoints).at(iaxis);
+                    dummyvalues[iaxis] = vPassiveJointVelocities.at(jointindex - nActiveJoints).at(iaxis); // preserve passive joint values
                 }
             }
         }
@@ -1364,7 +1354,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         dReal const* pvalues = (dofindex >= 0) ? /* active */ &vDOFVelocities.at(dofindex) : 
             bIsMimic ? /* mimic */dummyvalues.data() : /* static */vPassiveJointVelocities.at(jointindex - nActiveJoints).data();
 
-        if( checklimits != CLA_Nothing && dofindex >= 0 ) {
+        if( bCheckJointLimits && dofindex >= 0 ) {
             // clamping active joint values
             for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
                 const int dofaxisindex = dofindex + iaxis;
@@ -1403,8 +1393,9 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         const Transform tchild = pchildlink->GetTransform();
         const Vector xyzdelta = tchild.trans - tparent.trans;
         const Transform tdelta = tparent * pjoint->GetInternalHierarchyLeftTransform();
-//        if( pjoint->GetType() & JointSpecialBit ) {
-//            switch(pjoint->GetType()) {
+        const JointType jointtype = pjoint->GetType();
+//        if( jointtype & JointSpecialBit ) {
+//            switch(jointtype) {
 //            case JointHinge2: {
 //                Transform tfirst;
 //                tfirst.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pjoint->GetValue(0));
@@ -1415,46 +1406,45 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
 //                w.x = pvalues[0]; w.y = pvalues[1]; w.z = pvalues[2];
 //                break;
 //            default:
-//                RAVELOG_WARN(str(boost::format("env=%d, forward kinematic type %d not supported")%GetEnv()->GetId()%pjoint->GetType()));
+//                RAVELOG_WARN(str(boost::format("env=%d, forward kinematic type %d not supported")%GetEnv()->GetId()%jointtype));
 //                break;
 //            }
 //        }
 //        else {
-
-        const JointType jointtype = pjoint->GetType();
         if( jointtype == JointRevolute ) {
-            Vector gw = tdelta.rotate(pvalues[0] * pjoint->GetInternalHierarchyAxis(0));
+            const Vector wjoint = tdelta.rotate(pvalues[0] * pjoint->GetInternalHierarchyAxis(0));
             std::pair<Vector, Vector>& childvelocities = vLinkVelocities.at(childindex);
-            childvelocities.first = vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans - tdelta.trans);
-            childvelocities.second = wparent + gw;
+            childvelocities.first = vparent + wparent.cross(xyzdelta) + wjoint.cross(tchild.trans - tdelta.trans);
+            childvelocities.second = wparent + wjoint;
         }
         else if( jointtype == JointPrismatic ) {
+            const Vector vjoint = tdelta.rotate(pvalues[0] * pjoint->GetInternalHierarchyAxis(0));
             std::pair<Vector, Vector>& childvelocities = vLinkVelocities.at(childindex);
-            childvelocities.first = vparent + wparent.cross(xyzdelta) + tdelta.rotate(pvalues[0] * pjoint->GetInternalHierarchyAxis(0));
+            childvelocities.first = vparent + wparent.cross(xyzdelta) + vjoint;
             childvelocities.second = wparent;
         }
         else if( jointtype == JointTrajectory ) {
             Transform tlocalvelocity, tlocal;
             JointInfo& jointinfo = pjoint->_info;
             if( pjoint->IsMimic(0) ) {
-                // vtempvalues should already be init from previous _Eval call
-                int err = pjoint->_Eval(0,0,vtempvalues,veval);
+                // vDependedJointValues should already be init from previous _Eval call
+                int err = pjoint->_Eval(0, 0, vDependedJointValues, veval);
                 if( err != 0 ) {
                     RAVELOG_WARN(str(boost::format("env=%d, error with evaluation of joint %s")%GetEnv()->GetId()%pjoint->GetName()));
                 }
                 dReal fvalue = veval[0];
                 if( pjoint->IsCircular(0) ) {
-                    fvalue = utils::NormalizeCircularAngle(fvalue,pjoint->_vcircularlowerlimit.at(0), pjoint->_vcircularupperlimit.at(0));
+                    fvalue = utils::NormalizeCircularAngle(fvalue, pjoint->_vcircularlowerlimit.at(0), pjoint->_vcircularupperlimit.at(0));
                 }
-                jointinfo._trajfollow->Sample(vtempvalues, fvalue);
+                jointinfo._trajfollow->Sample(vDependedJointValues, fvalue);
             }
             else {
                 // calling GetValue() could be extremely slow
-                jointinfo._trajfollow->Sample(vtempvalues, pjoint->GetValue(0));
+                jointinfo._trajfollow->Sample(vDependedJointValues, pjoint->GetValue(0));
             }
             const ConfigurationSpecification& conf = jointinfo._trajfollow->GetConfigurationSpecification();
-            conf.ExtractTransform(tlocal, vtempvalues.begin(), KinBodyConstPtr(),0);
-            conf.ExtractTransform(tlocalvelocity, vtempvalues.begin(), KinBodyConstPtr(),1);
+            conf.ExtractTransform(tlocal, vDependedJointValues.begin(), KinBodyConstPtr(),0);
+            conf.ExtractTransform(tlocalvelocity, vDependedJointValues.begin(), KinBodyConstPtr(),1);
             Vector gw = tdelta.rotate(quatMultiply(tlocalvelocity.rot, quatInverse(tlocal.rot))*2*pvalues[0]); // qvel = [0,axisangle] * qrot * 0.5 * vel
             gw = Vector(gw.y,gw.z,gw.w);
             Vector gv = tdelta.rotate(tlocalvelocity.trans*pvalues[0]);
