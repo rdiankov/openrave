@@ -2452,7 +2452,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
             const int jointindexj = dofformatj.jointindex; ///< index of this depended joint yj
             const int indexij = ivar * nvars + jvar; // (i, j)
             const OpenRAVEFunctionParserRealPtr& accelfn = pmimic->_accelfns.at(indexij); ///< function that evaluates the partial derivative ∂^2 f/∂yi∂yj
-            dReal faccel;
+            dReal faccel = 0.0;
             if(!!accelfn) {
                 faccel = accelfn->Eval(vDependedJointValues.data()); ///< ∂^2 f/∂yi∂yj
             }
@@ -2541,24 +2541,31 @@ void KinBody::Joint::_ComputePartialAccelerations(
 int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput) const
 {
     if( timederiv == 0 ) {
-        _vmimic.at(axis)->_posfn->EvalMulti(voutput, vdependentvalues.data());
-        return _vmimic.at(axis)->_posfn->EvalError();
+        const OpenRAVEFunctionParserRealPtr& posfn = _vmimic.at(axis)->_posfn;
+        posfn->EvalMulti(voutput, vdependentvalues.data());
+        return posfn->EvalError();
     }
     else if( timederiv == 1 ) {
-        voutput.resize(_vmimic.at(axis)->_velfns.size());
-        for(size_t i = 0; i < voutput.size(); ++i) {
-            voutput[i] = _vmimic.at(axis)->_velfns.at(i)->Eval(vdependentvalues.data());
-            int err = _vmimic.at(axis)->_velfns.at(i)->EvalError();
+        const std::vector<OpenRAVEFunctionParserRealPtr>& velfns = _vmimic.at(axis)->_velfns;
+        const int nvelfns = velfns.size();
+        voutput.resize(nvelfns);
+        for(size_t i = 0; i < nvelfns; ++i) {
+            const OpenRAVEFunctionParserRealPtr& velfn = velfns.at(i);
+            voutput[i] = velfn->Eval(vdependentvalues.data());
+            int err = velfn->EvalError();
             if( err ) {
                 return err;
             }
         }
     }
     else if( timederiv == 2 ) {
-        voutput.resize(_vmimic.at(axis)->_accelfns.size());
-        for(size_t i = 0; i < voutput.size(); ++i) {
-            voutput[i] = _vmimic.at(axis)->_accelfns.at(i)->Eval(vdependentvalues.data());
-            int err = _vmimic.at(axis)->_accelfns.at(i)->EvalError();
+        const std::vector<OpenRAVEFunctionParserRealPtr>& accelfns = _vmimic.at(axis)->_accelfns;
+        const int naccelfns = accelfns.size();
+        voutput.resize(naccelfns);
+        for(size_t i = 0; i < naccelfns; ++i) {
+            const OpenRAVEFunctionParserRealPtr& accelfn = accelfns.at(i);
+            voutput[i] = accelfn->Eval(vdependentvalues.data());
+            int err = accelfn->EvalError();
             if( err ) {
                 return err;
             }
