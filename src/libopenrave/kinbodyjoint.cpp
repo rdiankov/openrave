@@ -2294,7 +2294,7 @@ void KinBody::Joint::_ComputePartialVelocities(
                 AccumulateDerivatives(localmap, key, fvel * pIndexPartial.second);
             }
         }
-        else {
+        else if (!dependedjoint->IsStatic()) {
             // depended joint is active
             const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, jointindex};
             ///< ∂z/∂x += ∂f/∂x, as z may depend on others who depend on x
@@ -2428,7 +2428,9 @@ void KinBody::Joint::_ComputePartialAccelerations(
             );
         }
         ///< recursion: collect all ∂^2 yi/∂xk ∂xl
-        dependedjointi->_ComputePartialAccelerations(vLocalIndexPartialPairs, iaxis, mSecondorderpartialderivativepairValue, mPartialderivativepairValue, vIndexPairs);
+        if(!dependedjointi->IsStatic()) {
+            dependedjointi->_ComputePartialAccelerations(vLocalIndexPartialPairs, iaxis, mSecondorderpartialderivativepairValue, mPartialderivativepairValue, vIndexPairs);
+        }
     }
 
     std::pair<Mimic::DOFFormat, int> dyidxk; // ∂yi/∂xk

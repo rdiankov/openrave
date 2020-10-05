@@ -3567,13 +3567,15 @@ void KinBody::ComputePassiveJointVelocitiesAccelerations(
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
     this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
 
-    // compute all dof velocities in topological order, collect results from mPartialderivativepairValue
-    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mPartialderivativepairValue) {
-        const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
-        const int jointindex = thisdofformat.jointindex; // index of z
-        const int dependedDofIndex = keyvalue.first.second; // index of x
-        const dReal totalPartialDerivative = keyvalue.second; // ∂z/dx where x=x(t) is time-dependent
-        vPassiveJointVelocities.at(jointindex - nActiveJoints).at(thisdofformat.axis) += vDOFVelocities.at(dependedDofIndex) * totalPartialDerivative; // dz/dt = \sum_{z depends on x} ∂z/∂x * dx/dt
+    if(bHasVelocities) {
+        // compute all dof velocities in topological order, collect results from mPartialderivativepairValue
+        for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mPartialderivativepairValue) {
+            const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
+            const int jointindex = thisdofformat.jointindex; // index of z
+            const int dependedDofIndex = keyvalue.first.second; // index of x
+            const dReal totalPartialDerivative = keyvalue.second; // ∂z/dx where x=x(t) is time-dependent
+            vPassiveJointVelocities.at(jointindex - nActiveJoints).at(thisdofformat.axis) += vDOFVelocities.at(dependedDofIndex) * totalPartialDerivative; // dz/dt = \sum_{z depends on x} ∂z/∂x * dx/dt
+        }
     }
 
     // compute the link accelerations in topological order
