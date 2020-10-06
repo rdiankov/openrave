@@ -2536,6 +2536,23 @@ private:
      */
     virtual bool CheckLinkCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
 
+    /** \brief checks collision of a robot link with a specified body using a new transform. Attached/Grabbed bodies to this link are also checked for collision.
+
+       \param[in] ilinkindex the index of the link to check
+       \param[in] tlinktrans The transform of the link to check
+       \param[in] pbody the body to check
+       \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks collision of a robot link with a specified body using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[in] pbody the body to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr());
+
     /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
 
         \param[in] ilinkindex the index of the link to check

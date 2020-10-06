@@ -983,6 +983,78 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
     return bincollision;
 }
 
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report) const
+{
+    RobotBasePtr probot(__probot);
+    Transform toldEE = GetTransform();
+    Transform tdelta = tEE*toldEE.inverse();
+    // get all child links of the manipualtor
+    int iattlink = __pEffector->GetIndex();
+    vector<LinkPtr> vattachedlinks;
+    __pEffector->GetRigidlyAttachedLinks(vattachedlinks);
+
+    CollisionCheckerBasePtr pchecker = probot->GetEnv()->GetCollisionChecker();
+    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
+    CollisionReportKeepSaver reportsaver(report);
+    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
+        report->Reset();
+        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+    }
+
+    bool bincollision = false;
+
+    FOREACHC(itlink,vattachedlinks) {
+        if( probot->CheckLinkCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),pbody,report) ) {
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                return true;
+            }
+            bincollision = true;
+        }
+    }
+    FOREACHC(itlink, probot->GetLinks()) {
+        int ilink = (*itlink)->GetIndex();
+        if((ilink == iattlink)|| !(*itlink)->IsEnabled() ) {
+            continue;
+        }
+        // gripper needs to be affected by all joints
+        bool bGripperLink = true;
+        FOREACHC(itarmdof,__varmdofindices) {
+            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
+                bGripperLink = false;
+                break;
+            }
+        }
+        if( !bGripperLink ) {
+            continue;
+        }
+
+        bool bIsAffected = false;
+        for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
+            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+                bIsAffected = true;
+                if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),pbody,report) ) {
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        return true;
+                    }
+                    bincollision = true;
+                }
+                break;
+            }
+        }
+
+        if( !bIsAffected ) {
+            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
+            if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),pbody,report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
+            }
+        }
+    }
+    return bincollision;
+}
+
 bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr report, bool bIgnoreManipulatorLinks) const
 {
     RobotBasePtr probot(__probot);
@@ -1295,37 +1367,78 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
         }
         return true;
     }
+}
 
-//    // only care about the end effector position, so disable all time consuming options. still leave the custom options in case the user wants to call some custom stuff?
-//    // is it necessary to call with IKFO_IgnoreJointLimits knowing that the robot will never reach those solutions?
-//    std::vector< std::vector<dReal> > vsolutions;
-//    if( !pIkSolver->SolveAll(localgoal, IKFO_IgnoreSelfCollisions,vsolutions) ) {
-//        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find ik solution for type 0x%x"),ikparam.GetType(),ORE_InvalidArguments);
-//    }
-//    RobotStateSaver saver(probot);
-//    probot->SetActiveDOFs(GetArmIndices());
-//    // have to check all solutions since the 6D transform can change even though the ik parameterization doesn't
-//    std::list<Transform> listprevtransforms;
-//    FOREACH(itsolution,vsolutions) {
-//        probot->SetActiveDOFValues(*itsolution,false);
-//        Transform t = GetTransform();
-//        // check if previous transforms exist
-//        bool bhassimilar = false;
-//        FOREACH(ittrans,listprevtransforms) {
-//            if( TransformDistanceFast(t,*ittrans) < g_fEpsilonLinear*10 ) {
-//                bhassimilar = true;
-//                break;
-//            }
-//        }
-//        if( !bhassimilar ) {
-//            if( !CheckEndEffectorCollision(GetTransform(),report) ) {
-//                return false;
-//            }
-//            listprevtransforms.push_back(t);
-//        }
-//    }
-//
-//    return true;
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const
+{
+    if( ikparam.GetType() == IKP_Transform6D ) {
+        return CheckEndEffectorCollision(ikparam.GetTransform6D(),pbody,report);
+    }
+    RobotBasePtr probot = GetRobot();
+    if( numredundantsamples > 0 ) {
+        if( ikparam.GetType() == IKP_TranslationDirection5D ) {
+            Transform tStartEE;
+            tStartEE.rot = quatRotateDirection(_info._vdirection, ikparam.GetTranslationDirection5D().dir);
+            tStartEE.trans = ikparam.GetTranslationDirection5D().pos;
+            Vector qdelta = quatFromAxisAngle(_info._vdirection, 2*M_PI/dReal(numredundantsamples));
+            bool bNotInCollision = false;
+            for(int i = 0; i < numredundantsamples; ++i) {
+                if( !CheckEndEffectorCollision(tStartEE,pbody,report) ) {
+                    // doesn't collide, but will need to verify that there actually exists an IK solution there...
+                    // if we accidentally return here even there's no IK solution, then later processes could waste a lot of time looking for it.
+                    bNotInCollision = true;
+                    break;
+                }
+                tStartEE.rot = quatMultiply(tStartEE.rot, qdelta);
+            }
+            if( !bNotInCollision ) {
+                return true;
+            }
+        }
+        else {
+            RAVELOG_WARN_FORMAT("do not support redundant checking for iktype 0x%x", ikparam.GetType());
+        }
+    }
+
+    IkSolverBasePtr pIkSolver = GetIkSolver();
+    //OPENRAVE_ASSERT_OP_FORMAT(GetArmDOF(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(pIkSolver->Supports(ikparam.GetType()),"manipulator %s:%s ik solver %s does not support ik type 0x%x",probot->GetName()%GetName()%pIkSolver->GetXMLId()%ikparam.GetType(),ORE_InvalidState);
+    BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
+    IkParameterization localgoal;
+    if( !!__pBase ) {
+        localgoal = __pBase->GetTransform().inverse()*ikparam;
+    }
+    else {
+        localgoal=ikparam;
+    }
+
+    // if IK can be solved, then there exists a solution for the end effector that is not in collision
+    IkReturn ikreturn(IKRA_Success);
+    IkReturnPtr pikreturn(&ikreturn,utils::null_deleter());
+
+    // need to use free params here since sometimes IK can have 3+ free DOF and it would freeze searching for all of them
+    std::vector<dReal> vFreeParameters;
+    pIkSolver->GetFreeParameters(vFreeParameters);
+    if( pIkSolver->Solve(localgoal, std::vector<dReal>(), vFreeParameters, IKFO_CheckEnvCollisions|IKFO_IgnoreCustomFilters, pikreturn) ) { // TODO need to specify IKFO_IgnoreSelfCollisions?
+        return false;
+    }
+    else {
+        if( (ikreturn._action&IKRA_RejectSelfCollision) != IKRA_RejectSelfCollision && (ikreturn._action&IKRA_RejectEnvCollision) != IKRA_RejectEnvCollision ) {
+            RAVELOG_VERBOSE_FORMAT("ik solution not found due to non-collision reasons (0x%x), returning true anway...", ikreturn._action);
+            // is this a good idea?
+        }
+        if( !!report ) {
+            // solver failed, should have some way of initializing the report...
+            if( numredundantsamples > 0 ) {
+                if( ikparam.GetType() == IKP_TranslationDirection5D || ikparam.GetType() == IKP_TranslationXAxisAngleZNorm4D || ikparam.GetType() == IKP_TranslationYAxisAngleXNorm4D || ikparam.GetType() == IKP_TranslationZAxisAngleYNorm4D ) {
+                    // if here, then already determined that there is a roll that is collision free, so return False
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }
 
 bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterization& ikparam, CollisionReportPtr report, int numredundantsamples, bool bIgnoreManipulatorLinks) const
