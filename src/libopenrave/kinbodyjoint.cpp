@@ -2206,8 +2206,8 @@ inline void AccumulateDerivatives(std::map<T, dReal>& m, const T& key, dReal add
 }
 
 void KinBody::Joint::_ComputePartialVelocities(
-    std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
     const int iaxis,
+    std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
     std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue
 ) const {
     vDofindexDerivativePairs.clear();
@@ -2287,7 +2287,7 @@ void KinBody::Joint::_ComputePartialVelocities(
             if( IS_DEBUGLEVEL(Level_Verbose) )  {
                 RAVELOG_VERBOSE_FORMAT("Joint \"%s\" calls recursion _ComputePartialVelocities on joint \"%s\"", this->GetName() % dependedjoint->GetName());
             }
-            dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mPartialderivativepairValue); ///< recursion: computes ∂y/∂x
+            dependedjoint->_ComputePartialVelocities(iaxis, vLocalIndexPartialPairs, mPartialderivativepairValue); ///< recursion: computes ∂y/∂x
             for(const std::pair<int, dReal>& pIndexPartial : vLocalIndexPartialPairs) {
                 const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, pIndexPartial.first};
                 ///< ∂z/∂x += ∂f/∂y * ∂y/∂x
@@ -2331,11 +2331,11 @@ std::vector<std::array<int, 2>> KinBody::CollectSecondOrderPartialDerivativesAct
 }
 
 void KinBody::Joint::_ComputePartialAccelerations(
-    std::vector<std::pair<std::array<int, 2>, dReal> >& vDofindex2ndDerivativePairs,
     const int iaxis,
-    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue,
     const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
-    const std::vector<std::array<int, 2>>& vIndexPairs
+    const std::vector<std::array<int, 2>>& vIndexPairs,
+    std::vector<std::pair<std::array<int, 2>, dReal> >& vDofindex2ndDerivativePairs,
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue
 ) const {
     vDofindex2ndDerivativePairs.clear();
     if( this->dofindex >= 0 ) {
@@ -2429,7 +2429,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
         }
         ///< recursion: collect all ∂^2 yi/∂xk ∂xl
         if(!dependedjointi->IsStatic()) {
-            dependedjointi->_ComputePartialAccelerations(vLocalIndexPartialPairs, iaxis, mSecondorderpartialderivativepairValue, mPartialderivativepairValue, vIndexPairs);
+            dependedjointi->_ComputePartialAccelerations(iaxis, mPartialderivativepairValue, vIndexPairs, vLocalIndexPartialPairs, mSecondorderpartialderivativepairValue);
         }
     }
 
@@ -2549,7 +2549,7 @@ int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>
         const std::vector<OpenRAVEFunctionParserRealPtr>& velfns = _vmimic.at(axis)->_velfns;
         const int nvelfns = velfns.size();
         voutput.resize(nvelfns);
-        for(size_t i = 0; i < nvelfns; ++i) {
+        for(int i = 0; i < nvelfns; ++i) {
             const OpenRAVEFunctionParserRealPtr& velfn = velfns.at(i);
             voutput[i] = velfn->Eval(vdependentvalues.data());
             int err = velfn->EvalError();
@@ -2562,7 +2562,7 @@ int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>
         const std::vector<OpenRAVEFunctionParserRealPtr>& accelfns = _vmimic.at(axis)->_accelfns;
         const int naccelfns = accelfns.size();
         voutput.resize(naccelfns);
-        for(size_t i = 0; i < naccelfns; ++i) {
+        for(int i = 0; i < naccelfns; ++i) {
             const OpenRAVEFunctionParserRealPtr& accelfn = accelfns.at(i);
             voutput[i] = accelfn->Eval(vdependentvalues.data());
             int err = accelfn->EvalError();

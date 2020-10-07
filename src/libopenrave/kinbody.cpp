@@ -2270,9 +2270,9 @@ void KinBody::ComputeMimicJointFirstOrderPartialDerivatives(
     std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
     for(const JointPtr& pjoint : _vPassiveJoints) {
         const int ndof = pjoint->GetDOF();
-        for(int idof = 0; idof < ndof; ++idof) {
-            if( pjoint->IsMimic(idof) ) {
-                pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mPartialderivativepairValue);
+        for(int iaxis = 0; iaxis < ndof; ++iaxis) {
+            if( pjoint->IsMimic(iaxis) ) {
+                pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
             }
         }
     }
@@ -2294,7 +2294,7 @@ void KinBody::ComputeMimicJointSecondOrderPartialDerivatives(
         const int ndof = pjoint->GetDOF();
         for(int idof = 0; idof < ndof; ++idof) {
             if( pjoint->IsMimic(idof) ) {
-                pjoint->_ComputePartialAccelerations(vDofindex2ndDerivativePairs, idof, mSecondorderpartialderivativepairValue, mPartialderivativepairValue, vIndexPairs);
+                pjoint->_ComputePartialAccelerations(idof, mPartialderivativepairValue, vIndexPairs, vDofindex2ndDerivativePairs, mSecondorderpartialderivativepairValue);
             }
         }
     }
@@ -2374,10 +2374,10 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - nActiveJoints);
             const int ndof = pjoint->GetDOF();
-            for(int idof = 0; idof < ndof; ++idof) {
-                if( pjoint->IsMimic(idof) ) {
-                    const bool bPrismatic = pjoint->IsPrismatic(idof);
-                    const bool bRevolute = pjoint->IsRevolute(idof);
+            for(int iaxis = 0; iaxis < ndof; ++iaxis) {
+                if( pjoint->IsMimic(iaxis) ) {
+                    const bool bPrismatic = pjoint->IsPrismatic(iaxis);
+                    const bool bRevolute = pjoint->IsRevolute(iaxis);
                     if( !bPrismatic && !bRevolute ) {
                         RAVELOG_WARN("ComputeJacobianTranslation only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                         continue;
@@ -2385,15 +2385,15 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
 
                     // if this joint were active, then this is its column in the linear velocity Jacobian
                     if(bPrismatic) {
-                        vColumn = pjoint->GetAxis(idof);
+                        vColumn = pjoint->GetAxis(iaxis);
                     }
                     else {
-                        vColumn =  pjoint->GetAxis(idof).cross(position - pjoint->GetAnchor());
+                        vColumn =  pjoint->GetAxis(iaxis).cross(position - pjoint->GetAnchor());
                     }
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
                     // vDofindexDerivativePairs is a vector of (dof index, partial derivative) pairs
-                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mPartialderivativepairValue);
+                    pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                         int index = -1;
@@ -2479,20 +2479,20 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
             const int dofindex = pjoint->GetDOFIndex();
             const int ndof = pjoint->GetDOF();
             const int8_t affect = DoesAffect(pjoint->GetJointIndex(), linkindex);
-            for(int idof = 0; idof < ndof; ++idof) {
+            for(int iaxis = 0; iaxis < ndof; ++iaxis) {
                 if( !affect ) {
                     RAVELOG_WARN(str(boost::format("link %s should be affected by joint %s")% _veclinks.at(linkindex)->GetName() % pjoint->GetName()));
                     continue;
                 }
-                if( pjoint->IsPrismatic(idof) ) {
+                if( pjoint->IsPrismatic(iaxis) ) {
                     continue;
                 }
-                else if (!pjoint->IsRevolute(idof)) {
+                else if (!pjoint->IsRevolute(iaxis)) {
                     RAVELOG_WARN("CalculateRotationJacobian only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                     continue;
                 }
-                vColumn = pjoint->GetAxis(idof); ///< joint axis of a revolute joint
-                const size_t index = dofindex + idof;
+                vColumn = pjoint->GetAxis(iaxis); ///< joint axis of a revolute joint
+                const size_t index = dofindex + iaxis;
                 vjacobian[index                ] += 0.5 * (-quat.y * vColumn.x - quat.z * vColumn.y - quat.w * vColumn.z);
                 vjacobian[index + dofstride    ] += 0.5 * ( quat.x * vColumn.x - quat.z * vColumn.z + quat.w * vColumn.y);
                 vjacobian[index + dofstride * 2] += 0.5 * ( quat.x * vColumn.y + quat.y * vColumn.z - quat.w * vColumn.x);
@@ -2503,33 +2503,33 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - nActiveJoints);
             const int ndof = pjoint->GetDOF();
-            for(int idof = 0; idof < ndof; ++idof) {
-                if( pjoint->IsMimic(idof) ) {
-                    if( pjoint->IsPrismatic(idof) ) {
+            for(int iaxis = 0; iaxis < ndof; ++iaxis) {
+                if( pjoint->IsMimic(iaxis) ) {
+                    if( pjoint->IsPrismatic(iaxis) ) {
                         continue;
                     }
-                    else if (!pjoint->IsRevolute(idof)) {
+                    else if (!pjoint->IsRevolute(iaxis)) {
                         RAVELOG_WARN("CalculateRotationJacobian only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                         continue;
                     }
 
                     // if this revolute joint were active, then this is its column in the quaternion velocity Jacobian
-                    vColumn = pjoint->GetAxis(idof);
+                    vColumn = pjoint->GetAxis(iaxis);
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
                     // vDofindexDerivativePairs is a vector of (dof index, partial derivative) pairs
-                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mPartialderivativepairValue);
+                    pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                         const int dofindex = dofindexDerivativePair.first;
-                        if(dofindex + idof >= dofstride) {
-                            RAVELOG_WARN_FORMAT("dofindex + idof = %d + %d >= %d = dofstride",
-                                                dofindex % idof % dofstride
+                        if(dofindex + iaxis >= dofstride) {
+                            RAVELOG_WARN_FORMAT("dofindex + iaxis = %d + %d >= %d = dofstride",
+                                                dofindex % iaxis % dofstride
                                                 );
                             continue;
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(dofindex, >=, 0, "dofindex should be >= 0; now %d", dofindex, ORE_InvalidArguments);
-                        const size_t index = dofindex + idof;
+                        const size_t index = dofindex + iaxis;
                         const dReal partialderiv = dofindexDerivativePair.second;
                         vjacobian[index                ] += 0.5 * partialderiv * (-quat.y * vColumn.x - quat.z * vColumn.y - quat.w * vColumn.z);
                         vjacobian[index + dofstride    ] += 0.5 * partialderiv * ( quat.x * vColumn.x - quat.z * vColumn.z + quat.w * vColumn.y);
@@ -2629,22 +2629,22 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - nActiveJoints);
             const int ndof = pjoint->GetDOF();
-            for(int idof = 0; idof < ndof; ++idof) {
-                if( pjoint->IsMimic(idof) ) {
-                    if(pjoint->IsPrismatic(idof)) {
+            for(int iaxis = 0; iaxis < ndof; ++iaxis) {
+                if( pjoint->IsMimic(iaxis) ) {
+                    if(pjoint->IsPrismatic(iaxis)) {
                         continue; // prismatic joint does not affect orientation of manip
                     }
-                    else if( !pjoint->IsRevolute(idof) ) {
+                    else if( !pjoint->IsRevolute(iaxis) ) {
                         RAVELOG_WARN("ComputeJacobianAxisAngle only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                         continue;
                     }
 
                     // if this revolute joint were active, then this is its column in the angular velocity Jacobian
-                    vColumn = pjoint->GetAxis(idof);
+                    vColumn = pjoint->GetAxis(iaxis);
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
                     // vDofindexDerivativePairs is a vector of (dof index, partial derivative) pairs
-                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mPartialderivativepairValue);
+                    pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                         int index = -1;
@@ -2761,11 +2761,11 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
         else {
             // add in the contributions from the passive joint
             JointPtr pjoint = _vPassiveJoints.at(jointindex-_vecjoints.size());
-            for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
-                if( pjoint->IsMimic(idof) ) {
+            for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                if( pjoint->IsMimic(iaxis) ) {
                     bool bhas = dofindices.size() == 0;
                     if( !bhas ) {
-                        FOREACHC(itmimicdof, pjoint->_vmimic[idof]->_vmimicdofs) {
+                        FOREACHC(itmimicdof, pjoint->_vmimic[iaxis]->_vmimicdofs) {
                             if( find(dofindices.begin(),dofindices.end(),itmimicdof->dofindex) != dofindices.end() ) {
                                 bhas = true;
                                 break;
@@ -2774,12 +2774,12 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
                     }
                     if( bhas ) {
                         Vector vaxis;
-                        if( pjoint->IsRevolute(idof) ) {
-                            vaxes.push_back(pjoint->GetAxis(idof));
-                            vjacobian.push_back(pjoint->GetAxis(idof).cross(position-pjoint->GetAnchor()));
+                        if( pjoint->IsRevolute(iaxis) ) {
+                            vaxes.push_back(pjoint->GetAxis(iaxis));
+                            vjacobian.push_back(pjoint->GetAxis(iaxis).cross(position-pjoint->GetAnchor()));
                         }
-                        else if( pjoint->IsPrismatic(idof) ) {
-                            vjacobian.push_back(pjoint->GetAxis(idof));
+                        else if( pjoint->IsPrismatic(iaxis) ) {
+                            vjacobian.push_back(pjoint->GetAxis(iaxis));
                             vaxes.push_back(Vector());
                         }
                         else {
@@ -2789,7 +2789,7 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
                         }
                         PartialInfo& partialinfo = mappartialsinserted[vinsertedindices.size()];
                         partialinfo.first.resize(vinsertedindices.size());
-                        pjoint->_ComputePartialVelocities(partialinfo.second, idof, mapcachedpartials);
+                        pjoint->_ComputePartialVelocities(iaxis, partialinfo.second, mapcachedpartials);
                         vinsertedindices.push_back(-1);
                     }
                 }
@@ -2979,11 +2979,11 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
         else {
             // add in the contributions from the passive joint
             JointPtr pjoint = _vPassiveJoints.at(jointindex-_vecjoints.size());
-            for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
-                if( pjoint->IsMimic(idof) ) {
+            for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                if( pjoint->IsMimic(iaxis) ) {
                     bool bhas = dofindices.size() == 0;
                     if( !bhas ) {
-                        FOREACHC(itmimicdof, pjoint->_vmimic[idof]->_vmimicdofs) {
+                        FOREACHC(itmimicdof, pjoint->_vmimic[iaxis]->_vmimicdofs) {
                             if( find(dofindices.begin(),dofindices.end(),itmimicdof->dofindex) != dofindices.end() ) {
                                 bhas = true;
                                 break;
@@ -2992,10 +2992,10 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
                     }
                     if( bhas ) {
                         Vector vaxis;
-                        if( pjoint->IsRevolute(idof) ) {
-                            vaxes.push_back(pjoint->GetAxis(idof));
+                        if( pjoint->IsRevolute(iaxis) ) {
+                            vaxes.push_back(pjoint->GetAxis(iaxis));
                         }
-                        else if( pjoint->IsPrismatic(idof) ) {
+                        else if( pjoint->IsPrismatic(iaxis) ) {
                             vaxes.push_back(Vector());
                         }
                         else {
@@ -3004,7 +3004,7 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
                         }
                         PartialInfo& partialinfo = mappartialsinserted[vinsertedindices.size()];
                         partialinfo.first.resize(vinsertedindices.size());
-                        pjoint->_ComputePartialVelocities(partialinfo.second, idof, mapcachedpartials);
+                        pjoint->_ComputePartialVelocities(iaxis, partialinfo.second, mapcachedpartials);
                         vinsertedindices.push_back(-1);
                     }
                 }
@@ -3306,7 +3306,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
             }
 
             // extract first-order partial derivatives results from the cached mPartialderivativepairValue
-            pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, iaxis, mPartialderivativepairValue);
+            pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
             for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                 doftorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
             }
@@ -3470,7 +3470,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
         const int iaxis = 0;
         const bool bIsMimic = pjoint->GetDOFIndex() < 0 && pjoint->IsMimic(iaxis);
         if( bIsMimic ) {
-            pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, iaxis, mPartialderivativepairValue);
+            pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
         }
 
         dReal mass = pjoint->GetHierarchyChildLink()->GetMass();
@@ -3580,12 +3580,12 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
 }
 
 void KinBody::ComputePassiveJointVelocitiesAccelerations(
+    const std::vector<dReal>& vDOFVelocities,
+    const std::vector<dReal>& vDOFAccelerations,
     std::vector< std::vector<dReal> >& vPassiveJointVelocities,
     std::vector< std::vector<dReal> >& vPassiveJointAccelerations,
     std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
-    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue,
-    const std::vector<dReal>& vDOFVelocities,
-    const std::vector<dReal>& vDOFAccelerations
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue
 ) const {
     const bool bHasVelocities = !vDOFVelocities.empty();
     const bool bHasAccelerations = !vDOFAccelerations.empty();
@@ -3699,7 +3699,10 @@ void KinBody::_ComputeLinkAccelerations(
 
     /* ========== (2) Compute DOF accelerations for passive joints ========== */
     // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
-    this->ComputePassiveJointVelocitiesAccelerations(vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vDOFVelocities, vDOFAccelerations);
+    this->ComputePassiveJointVelocitiesAccelerations(
+        /* input */vDOFVelocities, vDOFAccelerations,
+        /* output */vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue
+    );
 
     /* ========== (3) Compute link accelerations ========== */
     // set accelerations of all links as if they were the base link
