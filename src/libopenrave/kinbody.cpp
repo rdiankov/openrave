@@ -3140,14 +3140,15 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     const bool usebaselinkvelocity = true;
     _ComputeDOFLinkVelocities(vDOFVelocities, vLinkVelocities, usebaselinkvelocity);
     // check if all velocities are 0, if yes, then can simplify some computations since only have contributions from dofacell and external forces
-    bool bHasVelocity = false;
+    const bool bHasAccelerations = !vDOFAccelerations.empty();
+    bool bHasVelocities = false;
     FOREACH(it,vDOFVelocities) {
         if( RaveFabs(*it) > g_fEpsilonLinear ) {
-            bHasVelocity = true;
+            bHasVelocities = true;
             break;
         }
     }
-    if( !bHasVelocity ) {
+    if( !bHasVelocities ) {
         vDOFVelocities.clear();
     }
     AccelerationMap externalaccelerations; // std::map<int, std::pair<Vector,Vector> >
@@ -3276,7 +3277,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
             ;
 
             const ElectricMotorActuatorInfoPtr& pActuatorInfo = pjoint->_info._infoElectricMotor;
-            if( !!pActuatorInfo ) {
+            if( bHasVelocities && !!pActuatorInfo ) {
                 // TODO how to process this correctly? what is velocity of this joint? pjoint->GetVelocity(iaxis)?
                 // dz/dt = \sum_x (∂z/∂x * dx/dt)
                 dReal fFriction = 0; // torque due to friction
@@ -3296,7 +3297,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 fFriction += dofvelocity * pActuatorInfo->viscous_friction;
 
                 
-                if (pActuatorInfo->rotor_inertia > 0.0) {
+                if (bHasAccelerations && pActuatorInfo->rotor_inertia > 0.0) {
                     // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
                     const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
                     fRotorAccelerationTorque += vPassiveJointAccelerations.at(iPassiveJoint).at(iaxis) * fInertiaOnLoadSide;
@@ -3338,14 +3339,14 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
     vLinkVelocities[0].resize(nlinks);
     _ComputeDOFLinkVelocities(vDOFVelocities, vLinkVelocities[1], false);
     // check if all velocities are 0, if yes, then can simplify some computations since only have contributions from dofacell and external forces
-    bool bHasVelocity = false;
+    bool bHasVelocities = false;
     FOREACH(it,vDOFVelocities) {
         if( RaveFabs(*it) > g_fEpsilonLinear ) {
-            bHasVelocity = true;
+            bHasVelocities = true;
             break;
         }
     }
-    if( !bHasVelocity ) {
+    if( !bHasVelocities ) {
         vDOFVelocities.clear();
     }
 
@@ -3382,7 +3383,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
             vLinkVelocities[2] = vLinkVelocities[0];
         }
         _ComputeLinkAccelerations({}, {}, vLinkVelocities[2], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[2], pexternalaccelerations);
-        if( bHasVelocity ) {
+        if( bHasVelocities ) {
             _ComputeLinkAccelerations(vDOFVelocities, {}, vLinkVelocities[1], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[1]);
             if( bHasAccelerations ) {
                 _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[0]);
@@ -3400,7 +3401,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
     else {
         // no external forces
         vLinkVelocities[2] = vLinkVelocities[0];
-        if( bHasVelocity ) {
+        if( bHasVelocities ) {
             _ComputeLinkAccelerations(vDOFVelocities, {}, vLinkVelocities[1], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[1]);
             if( bHasAccelerations ) {
                 _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[0]);
