@@ -1322,7 +1322,8 @@ private:
         kmout.reset(new kinematics_model_output());
 
         KinBody::KinBodyStateSaver saver(pbody);
-        vector<dReal> vjointvalues, vzero(pbody->GetDOF());
+        std::vector<dReal> vjointvalues;
+        std::vector<dReal> vzero(pbody->GetDOF());
         pbody->GetDOFValues(vjointvalues);
         pbody->SetDOFValues(vzero);
         Transform tnode = pbody->GetTransform();
@@ -1342,9 +1343,16 @@ private:
         }
 
         // note which links and joints are part of connected bodies
-        std::vector<uint8_t> vConnectedLinks; vConnectedLinks.resize(pbody->GetLinks().size(),0);
-        std::vector<uint8_t> vConnectedJoints; vConnectedJoints.resize(pbody->GetJoints().size(),0);
-        std::vector<uint8_t> vConnectedPassiveJoints; vConnectedPassiveJoints.resize(pbody->GetPassiveJoints().size(),0);
+        const std::vector<KinBody::JointPtr>& vActiveJoints = pbody->GetJoints();
+        const int nActiveJoints = vActiveJoints.size();
+        const std::vector<KinBody::JointPtr>& vPassiveJoints = pbody->GetPassiveJoints();
+        const int nPassiveJoints = vPassiveJoints.size();
+        const std::vector<KinBody::LinkPtr>& vLinks = pbody->GetLinks();
+        const int nLinks = vLinks.size();
+
+        std::vector<uint8_t> vConnectedLinks(nLinks, 0);
+        std::vector<uint8_t> vConnectedJoints(nActiveJoints, 0);
+        std::vector<uint8_t> vConnectedPassiveJoints(nPassiveJoints, 0);
         if( pbody->IsRobot() ) {
             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
             FOREACH(itconnectedBody, probot->GetConnectedBodies()) {
@@ -1362,21 +1370,21 @@ private:
                 std::vector<KinBody::JointPtr> vResolvedJoints;
                 connectedBody.GetResolvedJoints(vResolvedJoints);
                 FOREACHC(itResolvedJoint, vResolvedJoints) {
-                    for(int ijointindex = 0; ijointindex < (int)pbody->GetJoints().size(); ++ijointindex) {
-                        if( pbody->GetJoints()[ijointindex] == *itResolvedJoint ) {
+                    for(int ijointindex = 0; ijointindex < nActiveJoints; ++ijointindex) {
+                        if( vActiveJoints[ijointindex] == *itResolvedJoint ) {
                             vConnectedJoints[ijointindex] = 1;
                         }
                     }
-                    for(int ijointindex = 0; ijointindex < (int)pbody->GetPassiveJoints().size(); ++ijointindex) {
-                        if( pbody->GetPassiveJoints()[ijointindex] == *itResolvedJoint ) {
+                    for(int ijointindex = 0; ijointindex < nPassiveJoints; ++ijointindex) {
+                        if( vPassiveJoints[ijointindex] == *itResolvedJoint ) {
                             vConnectedPassiveJoints[ijointindex] = 1;
                         }
                     }
                 }
 
                 KinBody::JointPtr pResolvedDummyPassiveJoint = connectedBody.GetResolvedDummyPassiveJoint();
-                for(int ijointindex = 0; ijointindex < (int)pbody->GetPassiveJoints().size(); ++ijointindex) {
-                    if( pbody->GetPassiveJoints()[ijointindex] == pResolvedDummyPassiveJoint ) {
+                for(int ijointindex = 0; ijointindex < nPassiveJoints; ++ijointindex) {
+                    if( vPassiveJoints[ijointindex] == pResolvedDummyPassiveJoint ) {
                         vConnectedPassiveJoints[ijointindex] = 1;
                     }
                 }
@@ -1384,52 +1392,52 @@ private:
         }
 
         //  Declare all the joints
-        vector< pair<int,KinBody::JointConstPtr> > vjoints;
-        vjoints.reserve(vConnectedJoints.size()+vConnectedPassiveJoints.size());
-        for(int ijoint = 0; ijoint < (int)vConnectedJoints.size(); ++ijoint) {
+        std::vector< std::pair<int, KinBody::JointConstPtr> > vIndexJointPairs; // to-do, rename to vIndexJointPairs
+        vIndexJointPairs.reserve(nActiveJoints + nPassiveJoints);
+        for(int ijoint = 0; ijoint < nActiveJoints; ++ijoint) {
             if (!vConnectedJoints[ijoint]) {
-                KinBody::JointConstPtr pjoint = pbody->GetJoints()[ijoint];
-                vjoints.emplace_back(vjoints.size(), pjoint);
+                vIndexJointPairs.emplace_back(vIndexJointPairs.size(), vActiveJoints[ijoint]); // TGN: does this hold always ipair==vIndexJointPairs[ipair].first?
             }
         }
-        for(int ipassivejoint = 0; ipassivejoint < (int)vConnectedPassiveJoints.size(); ++ipassivejoint) {
+        for(int ipassivejoint = 0; ipassivejoint < nPassiveJoints; ++ipassivejoint) {
             if (!vConnectedPassiveJoints[ipassivejoint]) {
-                KinBody::JointConstPtr ppassivejoint = pbody->GetPassiveJoints()[ipassivejoint];
-                vjoints.emplace_back(vjoints.size(), ppassivejoint);
+                vIndexJointPairs.emplace_back(vIndexJointPairs.size(), vPassiveJoints[ipassivejoint]);
             }
         }
 
-        vector<dReal> lmin, lmax;
-        vector<domJointRef> vdomjoints(vjoints.size());
+        const auto& vjoints = vIndexJointPairs;
+        std::vector<dReal> lmin, lmax;
+        std::vector<domJointRef> vdomjoints(vjoints.size());
         kmout->pbody = pbody;
         kmout->kmodel = kmodel;
-        kmout->vaxissids.resize(0);
-        kmout->vlinksids.resize(pbody->GetLinks().size());
+        kmout->vaxissids.clear();
+        kmout->vlinksids.resize(nLinks);
         kmout->vdofsids.resize(pbody->GetDOF());
 
         FOREACHC(itjoint, vjoints) {
-            KinBody::JointConstPtr pjoint = itjoint->second;
-            if( pjoint->GetType() == KinBody::JointUniversal || pjoint->GetType() == KinBody::JointHinge2 || pjoint->GetType() == KinBody::JointSpherical ) {
-                RAVELOG_WARN(str(boost::format("unsupported joint type specified 0x%x\n")%pjoint->GetType()));
+            const KinBody::JointConstPtr& pjoint = itjoint->second;
+            const KinBody::JointType jointtype = pjoint->GetType();
+            if( jointtype == KinBody::JointUniversal || jointtype == KinBody::JointHinge2 || jointtype == KinBody::JointSpherical ) {
+                RAVELOG_WARN_FORMAT("unsupported joint type specified 0x%x\n", jointtype);
                 continue;
             }
 
             domJointRef pdomjoint = daeSafeCast<domJoint>(ktec->add(COLLADA_ELEMENT_JOINT));
-            string jointsid = str(boost::format("joint%d")%itjoint->first);
+            std::string jointsid = str(boost::format("joint%d")%itjoint->first);
             pdomjoint->setSid( jointsid.c_str() );
             pdomjoint->setName(pjoint->GetName().c_str());
             pjoint->GetLimits(lmin, lmax);
-            vector<domAxis_constraintRef> vaxes(pjoint->GetDOF());
+            std::vector<domAxis_constraintRef> vaxes(pjoint->GetDOF());
             for(int ia = 0; ia < pjoint->GetDOF(); ++ia) {
                 dReal fmult = 1.0;
                 if( pjoint->IsRevolute(ia) ) {
-                    fmult = 180.0f/PI;
+                    fmult = 180.0/PI;
                     vaxes[ia] = daeSafeCast<domAxis_constraint>(pdomjoint->add(COLLADA_ELEMENT_REVOLUTE));
                 }
                 else {
                     vaxes[ia] = daeSafeCast<domAxis_constraint>(pdomjoint->add(COLLADA_ELEMENT_PRISMATIC));
                 }
-                string axisid = str(boost::format("axis%d")%ia);
+                std::string axisid = str(boost::format("axis%d")%ia);
                 vaxes[ia]->setSid(axisid.c_str());
                 kinematics_model_output::axis_output axissid;
                 axissid.pjoint = pjoint;
@@ -1455,10 +1463,9 @@ private:
         }
 
         std::list<int> listunusedlinks;
-        const std::vector<KinBody::LinkPtr>& links = pbody->GetLinks();
-        for(int ilink = 0; ilink < (int)vConnectedLinks.size(); ++ilink) {
+        for(int ilink = 0; ilink < nLinks; ++ilink) {
             if (!vConnectedLinks[ilink]) {
-                listunusedlinks.push_back(links[ilink]->GetIndex());
+                listunusedlinks.push_back(vLinks[ilink]->GetIndex());
             }
         }
 
@@ -1470,8 +1477,8 @@ private:
             setJointSids.clear();
             setLinkSids.clear();
             const int firstunusedlinkindex = listunusedlinks.front();
-            const LINKOUTPUT childinfo = _WriteLink(links.at(firstunusedlinkindex), ktec, nodehead, kmodel->getID(), vjoints, setJointSids, setLinkSids);
-            const Transform t = links[firstunusedlinkindex]->GetTransform();
+            const LINKOUTPUT childinfo = _WriteLink(vLinks.at(firstunusedlinkindex), ktec, nodehead, kmodel->getID(), vjoints, setJointSids, setLinkSids);
+            const Transform& t = vLinks[firstunusedlinkindex]->GetTransform();
             _WriteTransformation(childinfo.plink, t);
             if( IsWrite("visual") ) {
                 _WriteTransformation(childinfo.pnode, t);
@@ -1706,10 +1713,6 @@ private:
             mapjointnames[str(boost::format("<csymbol>%s</csymbol>")%itjoint->second->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/joint%d</csymbol>")%kmodel->getID()%itjoint->first);
         }
 
-        const std::vector<KinBody::JointPtr>& vActiveJoints = pbody->GetJoints();
-        const int nActiveJoints = vActiveJoints.size();
-        const std::vector<KinBody::JointPtr>& vPassiveJoints = pbody->GetPassiveJoints();
-        const int nPassiveJoints = vPassiveJoints.size();
         FOREACHC(itjoint, vjoints) {
             const KinBody::JointConstPtr& pjoint = itjoint->second;
             if( !pjoint->IsMimic() ) {
@@ -1763,7 +1766,7 @@ private:
                             }
                         }
                         if( mimicjointindex < 0 ) {
-                            RAVELOG_WARN_FORMAT("cannot find index from joint %s", pmimic->GetName());
+                            RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindex to 0", pmimic->GetName());
                             mimicjointindex = 0;
                         }
                         std::string smimicid = str(boost::format("%s/joint%d")%kmodel->getID()%mimicjointindex);
@@ -1797,7 +1800,7 @@ private:
                         }
                     }
                     if( mimicjointindexi < 0 ) {
-                        RAVELOG_WARN_FORMAT("cannot find index from joint %s", pmimici->GetName());
+                        RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindexi to 0", pmimici->GetName());
                         mimicjointindexi = 0;
                     }
                     const std::string smimicidi = str(boost::format("%s/joint%d") % kmodel->getID() % mimicjointindexi);
@@ -1813,7 +1816,7 @@ private:
                             }
                         }
                         if( mimicjointindexj < 0 ) {
-                            RAVELOG_WARN_FORMAT("cannot find index from joint %s", pmimicj->GetName());
+                            RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindexj to 0", pmimicj->GetName());
                             mimicjointindexj = 0;
                         }
                         const std::string smimicidj = str(boost::format("%s/joint%d") % kmodel->getID() % mimicjointindexj);

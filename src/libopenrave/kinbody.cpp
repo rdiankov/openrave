@@ -1345,7 +1345,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         }
 
         // do the test after mimic computation!
-        const LinkPtr& pchildlink = pjoint->GetHierarchyChildLink();
+        const LinkPtr pchildlink = pjoint->GetHierarchyChildLink();
         const int childindex = pchildlink->GetIndex();
         if( vlinkscomputed[childindex] ) {
             continue;
@@ -1384,7 +1384,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         }
 
         // compute for global coordinate system
-        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
+        const LinkPtr pparentlink = pjoint->GetHierarchyParentLink();
         const int parentindex = (!pparentlink) ? 0 : pparentlink->GetIndex();
         const Transform tparent = (!!pparentlink) ? pparentlink->GetTransform() : _veclinks.at(0)->GetTransform();
         const std::pair<Vector, Vector>& parentvelocities = vLinkVelocities.at(parentindex);
@@ -3206,8 +3206,8 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         ++crit
     ) {
         const JointPtr& pjoint = *crit;
-        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
-        const LinkPtr& pchildlink = pjoint->GetHierarchyChildLink();
+        const LinkPtr pparentlink = pjoint->GetHierarchyParentLink();
+        const LinkPtr pchildlink = pjoint->GetHierarchyChildLink();
         const int childindex = pchildlink->GetIndex();
         const Vector vcomforce = vLinkCOMLinearAccelerations[childindex] * pchildlink->GetMass() + vLinkForceTorques.at(childindex).first;
         const Vector vjointtorque = vLinkForceTorques.at(childindex).second + vLinkCOMMomentOfInertia.at(childindex);
@@ -3684,7 +3684,7 @@ void KinBody::_ComputeLinkAccelerations(
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
         const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
         // do the test after mimic computation!?
-        const LinkPtr& pchildlink = pjoint->GetHierarchyChildLink();
+        const LinkPtr pchildlink = pjoint->GetHierarchyChildLink();
         const int childindex = pchildlink->GetIndex();
         if( vlinkscomputed[childindex] ) {
             continue;
@@ -3702,7 +3702,7 @@ void KinBody::_ComputeLinkAccelerations(
         const std::pair<Vector, Vector>& childvelocities = vLinkVelocities.at(childindex);
         std::pair<Vector, Vector>& childaccelerations = vLinkAccelerations.at(childindex);
 
-        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
+        const LinkPtr pparentlink = pjoint->GetHierarchyParentLink();
         const int parentindex = (!pparentlink) ? 0 : pparentlink->GetIndex();
         const std::pair<Vector, Vector>& parentvelocities = vLinkVelocities.at(parentindex);
         const std::pair<Vector, Vector>& parentaccelerations = vLinkAccelerations.at(parentindex);
