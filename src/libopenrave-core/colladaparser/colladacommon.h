@@ -96,6 +96,11 @@ public:
         return false;
     }
 
+    virtual bool operator==(const Readable& other) {
+        // compare pointer value
+        return this == &other;
+    }
+
     std::list< std::pair<std::string, bool> > _articulated_systemURIs; ///< pairs of (urls, isexternal) of the articulated_system, ordered in the same way as they are read. The first is the top-most level
     std::vector<ModelBinding> _bindingModelURIs;
     std::vector<AxisBinding> _bindingAxesSIDs; ///< same order as the body DOF
