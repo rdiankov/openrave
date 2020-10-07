@@ -650,7 +650,7 @@ protected:
         virtual AABB ComputeAABBFromTransform(const Transform& tLink) const;
 
         /// \brief Return the current transformation of the link in the world coordinate system.
-        inline Transform GetTransform() const {
+        const Transform& GetTransform() const {
             return _info._t;
         }
 
