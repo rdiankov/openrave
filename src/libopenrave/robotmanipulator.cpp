@@ -919,7 +919,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
 
 bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report) const
 {
-    OPENRAVE_ASSERT_FORMAT(!!pbody, "the body is not specified for collision checking manipulator %s:%s",RobotBasePtr(__probot)->GetName()%GetName(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(!!pbody, "the body is not specified for collision checking with manipulator %s:%s",RobotBasePtr(__probot)->GetName()%GetName(),ORE_InvalidArguments);
     return _CheckEndEffectorCollision(tEE, pbody, report);
 }
 
@@ -996,11 +996,11 @@ bool RobotBase::Manipulator::_CheckEndEffectorCollision(const Transform& tEE, Ki
             // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
             if( !!pbody ) {
                 // check with the specified body
-                bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),pbody,report)
+                bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),pbody,report);
             }
             else {
                 // check with the environment
-                bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report)
+                bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report);
             }
             if( bincollision && !bAllLinkCollisions) { // if checking all collisions, have to continue
                 return true;
@@ -1260,7 +1260,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
 
 bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const
 {
-    OPENRAVE_ASSERT_FORMAT(!!pbody, "the body is not specified for collision checking manipulator %s:%s",RobotBasePtr(__probot)->GetName()%GetName(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(!!pbody, "the body is not specified for collision checking with manipulator %s:%s",RobotBasePtr(__probot)->GetName()%GetName(),ORE_InvalidArguments);
     return _CheckEndEffectorCollision(ikparam, pbody, report, numredundantsamples);
 }
 

@@ -493,7 +493,7 @@ protected:
         /// \brief compute internal information from user-set info
         virtual void _ComputeInternalInformation();
         /// \brief check end-effector collision with the given end-effector transform and with the specified body. if pbody is null, check with the environment.
-        virtual bool _CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const;
+        virtual bool _CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report) const;
         /// \brief check end-effector collision with the given ikparam and the specified body. if pbody is null, check with the environment.
         virtual bool _CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const;
 
