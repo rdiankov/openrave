@@ -1391,31 +1391,36 @@ private:
             }
         }
 
-        //  Declare all the joints
-        std::vector< std::pair<int, KinBody::JointConstPtr> > vIndexJointPairs; // to-do, rename to vIndexJointPairs
-        vIndexJointPairs.reserve(nActiveJoints + nPassiveJoints);
+        // Collect connected joints
+        std::vector<KinBody::JointConstPtr> vjoints; // To-do: rename to vConnectedJoints (TGN)
+        std::map<KinBody::JointPtr, int> mJointIndex;
+        vjoints.reserve(nActiveJoints + nPassiveJoints);
         for(int ijoint = 0; ijoint < nActiveJoints; ++ijoint) {
             if (!vConnectedJoints[ijoint]) {
-                vIndexJointPairs.emplace_back(vIndexJointPairs.size(), vActiveJoints[ijoint]); // TGN: does this hold always ipair==vIndexJointPairs[ipair].first?
+                const KinBody::JointPtr& pjoint = vActiveJoints[ijoint];
+                mJointIndex[pjoint] = vjoints.size();
+                vjoints.push_back(pjoint);
             }
         }
         for(int ipassivejoint = 0; ipassivejoint < nPassiveJoints; ++ipassivejoint) {
             if (!vConnectedPassiveJoints[ipassivejoint]) {
-                vIndexJointPairs.emplace_back(vIndexJointPairs.size(), vPassiveJoints[ipassivejoint]);
+                const KinBody::JointPtr& pjoint = vPassiveJoints[ipassivejoint];
+                mJointIndex[pjoint] = vjoints.size();
+                vjoints.push_back(pjoint);
             }
         }
+        const int nConnectedJoints = vjoints.size(); 
 
-        const auto& vjoints = vIndexJointPairs;
         std::vector<dReal> lmin, lmax;
-        std::vector<domJointRef> vdomjoints(vjoints.size());
+        std::vector<domJointRef> vdomjoints(nConnectedJoints);
         kmout->pbody = pbody;
         kmout->kmodel = kmodel;
         kmout->vaxissids.clear();
         kmout->vlinksids.resize(nLinks);
         kmout->vdofsids.resize(pbody->GetDOF());
 
-        FOREACHC(itjoint, vjoints) {
-            const KinBody::JointConstPtr& pjoint = itjoint->second;
+        for(int iConnectedJoint = 0; iConnectedJoint < nConnectedJoints; ++iConnectedJoint) {
+            const KinBody::JointConstPtr& pjoint = vjoints[iConnectedJoint];
             const KinBody::JointType jointtype = pjoint->GetType();
             if( jointtype == KinBody::JointUniversal || jointtype == KinBody::JointHinge2 || jointtype == KinBody::JointSpherical ) {
                 RAVELOG_WARN_FORMAT("unsupported joint type specified 0x%x\n", jointtype);
@@ -1423,7 +1428,7 @@ private:
             }
 
             domJointRef pdomjoint = daeSafeCast<domJoint>(ktec->add(COLLADA_ELEMENT_JOINT));
-            std::string jointsid = str(boost::format("joint%d")%itjoint->first);
+            std::string jointsid = str(boost::format("joint%d")%iConnectedJoint);
             pdomjoint->setSid( jointsid.c_str() );
             pdomjoint->setName(pjoint->GetName().c_str());
             pjoint->GetLimits(lmin, lmax);
@@ -1459,7 +1464,7 @@ private:
                     kmout->vdofsids.at(pjoint->GetDOFIndex()+ia) = jointsid;
                 }
             }
-            vdomjoints.at(itjoint->first) = pdomjoint;
+            vdomjoints.at(iConnectedJoint) = pdomjoint;
         }
 
         std::list<int> listunusedlinks;
@@ -1531,8 +1536,8 @@ private:
         }
 
         if( IsWrite("link_info") ) {
-            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-            string digits = boost::lexical_cast<std::string>(std::numeric_limits<OpenRAVE::dReal>::digits10);
+            std::stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+            std::string digits = boost::lexical_cast<std::string>(std::numeric_limits<OpenRAVE::dReal>::digits10);
 
             // write the float/int parameters for all links
             for(size_t ilink = 0; ilink < vlinksidrefs.size(); ++ilink) {
@@ -1580,12 +1585,12 @@ private:
             string digits = boost::lexical_cast<std::string>(std::numeric_limits<OpenRAVE::dReal>::digits10);
 
             // write the float/int parameters for all joints
-            FOREACH(itjoint, vjoints) {
-                KinBody::JointConstPtr pjoint = itjoint->second;
+            for(int iConnectedJoint = 0; iConnectedJoint < nConnectedJoints; ++iConnectedJoint) {
+                const KinBody::JointConstPtr& pjoint = vjoints[iConnectedJoint];
                 if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 && pjoint->GetStringParameters().size() == 0 && pjoint->GetControlMode() == KinBody::JCM_None ) {
                     continue;
                 }
-                string jointsid = str(boost::format("joint%d")%itjoint->first);
+                string jointsid = str(boost::format("joint%d") % iConnectedJoint);
                 domExtraRef pextra = daeSafeCast<domExtra>(kmout->kmodel->add(COLLADA_ELEMENT_EXTRA));
                 pextra->setType("joint_info");
                 pextra->setName(jointsid.c_str());
@@ -1709,12 +1714,13 @@ private:
         }
         // create the formulas for all mimic joints
         std::map<std::string,std::string> mapjointnames;
-        FOREACHC(itjoint,vjoints) {
-            mapjointnames[str(boost::format("<csymbol>%s</csymbol>")%itjoint->second->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/joint%d</csymbol>")%kmodel->getID()%itjoint->first);
+        for(int iConnectedJoint = 0; iConnectedJoint < nConnectedJoints; ++iConnectedJoint) {
+            const KinBody::JointConstPtr& pjoint = vjoints[iConnectedJoint];
+            mapjointnames[str(boost::format("<csymbol>%s</csymbol>")% pjoint->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/joint%d</csymbol>")%kmodel->getID()%iConnectedJoint);
         }
 
-        FOREACHC(itjoint, vjoints) {
-            const KinBody::JointConstPtr& pjoint = itjoint->second;
+        for(int iConnectedJoint = 0; iConnectedJoint < nConnectedJoints; ++iConnectedJoint) {
+            const KinBody::JointConstPtr& pjoint = vjoints[iConnectedJoint];
             if( !pjoint->IsMimic() ) {
                 continue;
             }
@@ -1722,10 +1728,10 @@ private:
                 RAVELOG_WARN("collada writer might not support multi-dof joint formulas...");
             }
             domFormulaRef pf = daeSafeCast<domFormula>(ktec->add(COLLADA_ELEMENT_FORMULA));
-            string formulaid = str(boost::format("joint%d.formula")%itjoint->first);
+            std::string formulaid = str(boost::format("joint%d.formula") % iConnectedJoint);
             pf->setSid(formulaid.c_str());
             domCommon_float_or_paramRef ptarget = daeSafeCast<domCommon_float_or_param>(pf->add(COLLADA_ELEMENT_TARGET));
-            string targetjointid = str(boost::format("%s/joint%d")%kmodel->getID()%itjoint->first);
+            string targetjointid = str(boost::format("%s/joint%d")%kmodel->getID() % iConnectedJoint);
             daeSafeCast<domCommon_param>(ptarget->add(COLLADA_TYPE_PARAM))->setValue(targetjointid.c_str());
 
             const int iaxis = 0;
@@ -1758,13 +1764,7 @@ private:
                         pelt->setAttribute("type",sequationids[itype]);
                         KinBody::JointPtr pmimic = itdofformat->jointindex < (int)pbody->GetJoints().size() ? pbody->GetJoints().at(itdofformat->jointindex) : pbody->GetPassiveJoints().at(itdofformat->jointindex-(int)pbody->GetJoints().size());
 
-                        int mimicjointindex = -1;
-                        FOREACH(ittestjoint, vjoints) {
-                            if( ittestjoint->second == pmimic ) {
-                                mimicjointindex = ittestjoint->first;
-                                break;
-                            }
-                        }
+                        int mimicjointindex = mJointIndex.count(pmimic) ? mJointIndex.at(pmimic) : -1;
                         if( mimicjointindex < 0 ) {
                             RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindex to 0", pmimic->GetName());
                             mimicjointindex = 0;
@@ -1792,13 +1792,7 @@ private:
                     const int jointindexi = dofformati.jointindex;
                     const KinBody::JointPtr& pmimici = (jointindexi < nActiveJoints) ? vActiveJoints.at(jointindexi) : vPassiveJoints.at(jointindexi-nActiveJoints);
 
-                    int mimicjointindexi = -1;
-                    FOREACH(ittestjoint, vjoints) {
-                        if( ittestjoint->second == pmimici ) {
-                            mimicjointindexi = ittestjoint->first;
-                            break;
-                        }
-                    }
+                    int mimicjointindexi = mJointIndex.count(pmimici) ? mJointIndex.at(pmimici) : -1;
                     if( mimicjointindexi < 0 ) {
                         RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindexi to 0", pmimici->GetName());
                         mimicjointindexi = 0;
@@ -1808,13 +1802,7 @@ private:
                     for(const KinBody::Mimic::DOFFormat& dofformatj : vdofformat) {
                         const int jointindexj = dofformatj.jointindex;
                         const KinBody::JointPtr& pmimicj = (jointindexj < nActiveJoints) ? vActiveJoints.at(jointindexj) : vPassiveJoints.at(jointindexj-nActiveJoints);
-                        int mimicjointindexj = -1;
-                        FOREACH(ittestjoint, vjoints) {
-                            if( ittestjoint->second == pmimicj ) {
-                                mimicjointindexj = ittestjoint->first;
-                                break;
-                            }
-                        }
+                        int mimicjointindexj = mJointIndex.count(pmimicj) ? mJointIndex.at(pmimicj) : -1;
                         if( mimicjointindexj < 0 ) {
                             RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindexj to 0", pmimicj->GetName());
                             mimicjointindexj = 0;
@@ -2200,7 +2188,7 @@ private:
        \param setJointSids Set of joint ids which is already written
        \param setLinkSids Set of link ids which is already written
      */
-    virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints, std::set<std::string>& setJointSids, std::set<std::string>& setLinkSids)
+    virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const std::string& strModelUri, const std::vector<KinBody::JointConstPtr>& vjoints, std::set<std::string>& setJointSids, std::set<std::string>& setLinkSids)
     {
         std::string nodeparentid;
         if( !!pnodeparent && !!pnodeparent->getID() ) {
@@ -2255,8 +2243,9 @@ private:
         }
 
         // look for all the child links
-        FOREACHC(itjoint, vjoints) {
-            KinBody::JointConstPtr pjoint = itjoint->second;
+        const int nConnectedJoints = vjoints.size();
+        for(int iConnectedJoint = 0; iConnectedJoint < nConnectedJoints; ++iConnectedJoint) {
+            const KinBody::JointConstPtr& pjoint = vjoints[iConnectedJoint];
             if( pjoint->GetHierarchyParentLink() != plink ) {
                 continue;
             }
@@ -2266,7 +2255,7 @@ private:
             }
 
             domLink::domAttachment_fullRef pattfull = daeSafeCast<domLink::domAttachment_full>(pdomlink->add(COLLADA_TYPE_ATTACHMENT_FULL));
-            string jointid = str(boost::format("%s/joint%d")%strModelUri%itjoint->first);
+            string jointid = str(boost::format("%s/joint%d")%strModelUri%iConnectedJoint);
             if (setJointSids.find(jointid) != setJointSids.end()) {
                 RAVELOG_VERBOSE_FORMAT("joint id \"%s\" (joint name \"%s\") for body %s is previously written, so skip. maybe part of closed loop?", jointid%pjoint->GetName()%plink->GetParent()->GetName());
                 continue;
