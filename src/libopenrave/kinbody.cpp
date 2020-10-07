@@ -3153,7 +3153,14 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     AccelerationMap externalaccelerations; // std::map<int, std::pair<Vector,Vector> >
     externalaccelerations[0] = {-vgravity, Vector()};
     AccelerationMapPtr pexternalaccelerations(&externalaccelerations, utils::null_deleter());
-    _ComputeLinkAccelerations(/* input */ vDOFVelocities, vDOFAccelerations, vLinkVelocities, /* output */vLinkAccelerations, pexternalaccelerations);
+    std::vector<std::vector<dReal> > vPassiveJointVelocities;
+    std::vector<std::vector<dReal> > vPassiveJointAccelerations;
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue;
+    _ComputeLinkAccelerations(/* input */ vDOFVelocities, vDOFAccelerations, vLinkVelocities,
+        /* output */vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue,
+        vLinkAccelerations, pexternalaccelerations
+    );
 
     // all values are in the global coordinate system
     /*
@@ -3195,10 +3202,11 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         vLinkForceTorques.at(pLinkindexForceTorque.first) = pLinkindexForceTorque.second;
     }
     std::fill(doftorques.begin(), doftorques.end(), 0);
-
-    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
     const int iaxis = 0;
+    const std::vector<JointPtr>& vPassiveJoints = this->GetPassiveJoints();
+
+    // extract results from the previously computed mPartialderivativepairValue,
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
 
     // go backwards
     for(std::vector<JointPtr>::const_reverse_iterator crit = _vTopologicallySortedJointsAll.rbegin();
@@ -3266,7 +3274,6 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 pjoint->GetAxis(iaxis).dot3(vjointtorque + vcomtoanchor.cross(vcomforce)) : 
                 pjoint->GetAxis(iaxis).dot3(vcomforce) / (2.0 * PI)
             ;
-            pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, iaxis, mPartialderivativepairValue);
 
             const ElectricMotorActuatorInfoPtr& pActuatorInfo = pjoint->_info._infoElectricMotor;
             if( !!pActuatorInfo ) {
@@ -3274,10 +3281,12 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 // dz/dt = \sum_x (∂z/∂x * dx/dt)
                 dReal fFriction = 0; // torque due to friction
                 dReal fRotorAccelerationTorque = 0; // torque due to accelerating motor rotor (and gear)
-                dReal dofvelocity = 0.0;
-                for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
-                    dofvelocity = dofindexDerivativePair.second * vDOFVelocities.at(dofindexDerivativePair.first);
-                }
+                std::vector<JointPtr>::const_iterator itjoint = std::find(vPassiveJoints.cbegin(), vPassiveJoints.cend(), pjoint);
+                OPENRAVE_ASSERT_FORMAT(itjoint != vPassiveJoints.cend(),
+                    "Joint \"%s\" is not in vPassiveJoints", pjoint->GetName(), ORE_InvalidArguments
+                );
+                const int iPassiveJoint = std::distance(vPassiveJoints.begin(), itjoint);
+                const dReal dofvelocity = vPassiveJointVelocities.at(iPassiveJoint).at(iaxis);
                 if( dofvelocity > g_fEpsilonLinear ) {
                     fFriction += pActuatorInfo->coloumb_friction;
                 }
@@ -3286,15 +3295,18 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 }
                 fFriction += dofvelocity * pActuatorInfo->viscous_friction;
 
-                /*
+                
                 if (pActuatorInfo->rotor_inertia > 0.0) {
                     // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
                     const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
-                    fRotorAccelerationTorque += vDOFAccelerations.at(jointdofindex) * fInertiaOnLoadSide;
+                    fRotorAccelerationTorque += vPassiveJointAccelerations.at(iPassiveJoint).at(iaxis) * fInertiaOnLoadSide;
                 }
-                */
+                
                 faxistorque += fFriction + fRotorAccelerationTorque;
             }
+
+            // extract first-order partial derivatives results from the cached mPartialderivativepairValue
+            pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, iaxis, mPartialderivativepairValue);
             for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                 doftorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
             }
@@ -3348,6 +3360,12 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
     const static dReal fEpsilonLinear2 = g_fEpsilonLinear * g_fEpsilonLinear;
     const bool bHasGravity = vgravity.lengthsqr3() > fEpsilonLinear2;
     const bool bHasBaseLinkAccel = vbaseangular.lengthsqr3() > fEpsilonLinear2;
+
+    std::vector<std::vector<dReal> > vPassiveJointVelocities;
+    std::vector<std::vector<dReal> > vPassiveJointAccelerations;
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue;
+    const bool bHasAccelerations = !vDOFAccelerations.empty();
     if( bHasBaseLinkAccel || bHasGravity ) {
         if( bHasBaseLinkAccel ) {
             // remove the base link velocity frame
@@ -3363,19 +3381,19 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
         else {
             vLinkVelocities[2] = vLinkVelocities[0];
         }
-        _ComputeLinkAccelerations({}, {}, vLinkVelocities[2], vLinkAccelerations[2], pexternalaccelerations);
+        _ComputeLinkAccelerations({}, {}, vLinkVelocities[2], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[2], pexternalaccelerations);
         if( bHasVelocity ) {
-            _ComputeLinkAccelerations(vDOFVelocities, {}, vLinkVelocities[1], vLinkAccelerations[1]);
-            if( !vDOFAccelerations.empty() ) {
-                _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0]);
+            _ComputeLinkAccelerations(vDOFVelocities, {}, vLinkVelocities[1], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[1]);
+            if( bHasAccelerations ) {
+                _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[0]);
             }
             else {
                 linkaccelsimilar[0] = 1;
             }
         }
         else {
-            if( !vDOFAccelerations.empty() ) {
-                _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0]);
+            if( bHasAccelerations ) {
+                _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[0]);
             }
         }
     }
@@ -3383,17 +3401,17 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
         // no external forces
         vLinkVelocities[2] = vLinkVelocities[0];
         if( bHasVelocity ) {
-            _ComputeLinkAccelerations(vDOFVelocities, {}, vLinkVelocities[1], vLinkAccelerations[1]);
-            if( !vDOFAccelerations.empty() ) {
-                _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0]);
+            _ComputeLinkAccelerations(vDOFVelocities, {}, vLinkVelocities[1], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[1]);
+            if( bHasAccelerations ) {
+                _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[0]);
             }
             else {
                 linkaccelsimilar[0] = 1;
             }
         }
         else {
-            if( !vDOFAccelerations.empty() ) {
-                _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0]);
+            if( bHasAccelerations ) {
+                _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[0]);
             }
         }
     }
@@ -3433,7 +3451,6 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
     }
 
     std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
 
     // go backwards
     for(std::vector<JointPtr>::const_reverse_iterator crit = _vTopologicallySortedJointsAll.rbegin();
@@ -3517,8 +3534,12 @@ void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, s
     else {
         std::vector<dReal> vDOFVelocities;
         std::vector<pair<Vector, Vector> > vLinkVelocities;
+        std::vector<std::vector<dReal> > vPassiveJointVelocities;
+        std::vector<std::vector<dReal> > vPassiveJointAccelerations;
+        std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
+        std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue;
         _ComputeDOFLinkVelocities(vDOFVelocities,vLinkVelocities);
-        _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkVelocities, vLinkAccelerations, externalaccelerations);
+        _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkVelocities, vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue,vLinkAccelerations, externalaccelerations);
     }
 }
 
@@ -3561,6 +3582,8 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
 void KinBody::ComputePassiveJointVelocitiesAccelerations(
     std::vector< std::vector<dReal> >& vPassiveJointVelocities,
     std::vector< std::vector<dReal> >& vPassiveJointAccelerations,
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue,
     const std::vector<dReal>& vDOFVelocities,
     const std::vector<dReal>& vDOFAccelerations
 ) const {
@@ -3589,9 +3612,7 @@ void KinBody::ComputePassiveJointVelocitiesAccelerations(
             }
         }
     }
-
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
-    this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
+    this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue); ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
 
     if(bHasVelocities) {
         // compute all dof velocities in topological order, collect results from mPartialderivativepairValue
@@ -3603,11 +3624,8 @@ void KinBody::ComputePassiveJointVelocitiesAccelerations(
             vPassiveJointVelocities.at(jointindex - nActiveJoints).at(thisdofformat.axis) += vDOFVelocities.at(dependedDofIndex) * totalPartialDerivative; // dz/dt = \sum_{z depends on x} ∂z/∂x * dx/dt
         }
     }
-
-    // compute the link accelerations in topological order
-    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue; ///< map a joint pair (z, (xl, xk)) to the partial derivative ∂^2 z/∂xk ∂xl
     const bool bRecomputeFirstOrderPartial = false; // already computed above
-    this->ComputeMimicJointSecondOrderPartialDerivatives(mSecondorderpartialderivativepairValue, mPartialderivativepairValue, bRecomputeFirstOrderPartial);
+    this->ComputeMimicJointSecondOrderPartialDerivatives(mSecondorderpartialderivativepairValue, mPartialderivativepairValue, bRecomputeFirstOrderPartial); ///< map a joint pair (z, (xl, xk)) to the partial derivative ∂^2 z/∂xk ∂xl
 
     // compute all dof accelerations in topological order; collect results from mSecondorderpartialderivativepairValue
     std::set<std::pair<Mimic::DOFFormat, int>> sPartialPairs;
@@ -3650,7 +3668,11 @@ void KinBody::_ComputeLinkAccelerations(
     const std::vector<dReal>& vDOFVelocities,
     const std::vector<dReal>& vDOFAccelerations,
     const std::vector< std::pair<Vector, Vector> >& vLinkVelocities,
-    std::vector<std::pair<Vector,Vector> >& vLinkAccelerations,
+    std::vector<std::vector<dReal> >& vPassiveJointVelocities,
+    std::vector<std::vector<dReal> >& vPassiveJointAccelerations,
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue,
+    std::vector<std::pair<Vector, Vector> >& vLinkAccelerations,
     AccelerationMapConstPtr pexternalaccelerations
 ) const {
     const int nlinks = _veclinks.size();
@@ -3665,17 +3687,19 @@ void KinBody::_ComputeLinkAccelerations(
     const bool bHasAccelerations = !vDOFAccelerations.empty();
 
     if(bHasVelocities) {
-        OPENRAVE_ASSERT_OP_FORMAT((int)vDOFVelocities.size(), ==, nActiveJoints, "Should have the same number as that of the active joints %d", nActiveJoints, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT((int)vDOFVelocities.size(), ==, nActiveJoints,
+            "vDOFVelocities should have the same number as that of the active joints %d", nActiveJoints, ORE_InvalidArguments
+        );
     }
     if(bHasAccelerations) {
-        OPENRAVE_ASSERT_OP_FORMAT((int)vDOFAccelerations.size(), ==, nActiveJoints, "Should have the same number as that of the active joints %d", nActiveJoints, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT((int)vDOFAccelerations.size(), ==, nActiveJoints,
+            "vDOFAccelerations should have the same number as that of the active joints %d", nActiveJoints, ORE_InvalidArguments
+        );
     }
 
     /* ========== (2) Compute DOF accelerations for passive joints ========== */
     // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
-    std::vector< std::vector<dReal> > vPassiveJointVelocities;
-    std::vector< std::vector<dReal> > vPassiveJointAccelerations;
-    this->ComputePassiveJointVelocitiesAccelerations(vPassiveJointVelocities, vPassiveJointAccelerations, vDOFVelocities, vDOFAccelerations);
+    this->ComputePassiveJointVelocitiesAccelerations(vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vDOFVelocities, vDOFAccelerations);
 
     /* ========== (3) Compute link accelerations ========== */
     // set accelerations of all links as if they were the base link
@@ -3687,7 +3711,7 @@ void KinBody::_ComputeLinkAccelerations(
     }
 
     if( !!pexternalaccelerations ) {
-        for(const std::pair<const int, std::pair<Vector,Vector> >& keyvalue : *pexternalaccelerations) {
+        for(const std::pair<const int, std::pair<Vector, Vector> >& keyvalue : *pexternalaccelerations) {
             const int linkindex = keyvalue.first;
             const std::pair<Vector, Vector>& paccels = keyvalue.second;
             vLinkAccelerations.at(linkindex).first += paccels.first;

@@ -3807,7 +3807,9 @@ py::tuple PyKinBody::ComputePassiveJointVelocitiesAccelerations(
     const std::vector<dReal> vDOFAccelerations = ExtractArray<dReal>(pyDOFAccelerations);
     std::vector< std::vector<dReal> > vPassiveJointVelocities;
     std::vector< std::vector<dReal> > vPassiveJointAccelerations;
-    _pbody->ComputePassiveJointVelocitiesAccelerations(vPassiveJointVelocities, vPassiveJointAccelerations, vDOFVelocities, vDOFAccelerations);
+    std::map< std::pair<KinBody::Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
+    std::map< std::pair<KinBody::Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue;
+    _pbody->ComputePassiveJointVelocitiesAccelerations(vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vDOFVelocities, vDOFAccelerations);
     py::list lvel, laccel;
     for(const std::vector<dReal>& velocities : vPassiveJointVelocities) {
         lvel.append(StdVectorToPyList(velocities));
