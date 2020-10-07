@@ -1267,7 +1267,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
 bool RobotBase::Manipulator::_CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const
 {
     if( ikparam.GetType() == IKP_Transform6D ) {
-        return CheckEndEffectorCollision(ikparam.GetTransform6D(),pbody,report);
+        return _CheckEndEffectorCollision(ikparam.GetTransform6D(),pbody,report);
     }
     RobotBasePtr probot = GetRobot();
     if( numredundantsamples > 0 ) {
@@ -1278,7 +1278,7 @@ bool RobotBase::Manipulator::_CheckEndEffectorCollision(const IkParameterization
             Vector qdelta = quatFromAxisAngle(_info._vdirection, 2*M_PI/dReal(numredundantsamples));
             bool bNotInCollision = false;
             for(int i = 0; i < numredundantsamples; ++i) {
-                if( !CheckEndEffectorCollision(tStartEE,pbody,report) ) {
+                if( !_CheckEndEffectorCollision(tStartEE,pbody,report) ) {
                     // doesn't collide, but will need to verify that there actually exists an IK solution there...
                     // if we accidentally return here even there's no IK solution, then later processes could waste a lot of time looking for it.
                     bNotInCollision = true;
