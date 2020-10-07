@@ -1719,6 +1719,7 @@ private:
             mapjointnames[str(boost::format("<csymbol>%s</csymbol>")% pjoint->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/joint%d</csymbol>")%kmodel->getID()%iConnectedJoint);
         }
 
+        const boost::array<const char*, 3> sequationids = {{ "position", "first_partial", "second_partial"}};
         for(int iConnectedJoint = 0; iConnectedJoint < nConnectedJoints; ++iConnectedJoint) {
             const KinBody::JointConstPtr& pjoint = vConnectedJoints[iConnectedJoint];
             if( !pjoint->IsMimic() ) {
@@ -1728,21 +1729,20 @@ private:
                 RAVELOG_WARN("collada writer might not support multi-dof joint formulas...");
             }
             domFormulaRef pf = daeSafeCast<domFormula>(ktec->add(COLLADA_ELEMENT_FORMULA));
-            std::string formulaid = str(boost::format("joint%d.formula") % iConnectedJoint);
+            const std::string formulaid = str(boost::format("joint%d.formula") % iConnectedJoint);
             pf->setSid(formulaid.c_str());
             domCommon_float_or_paramRef ptarget = daeSafeCast<domCommon_float_or_param>(pf->add(COLLADA_ELEMENT_TARGET));
-            string targetjointid = str(boost::format("%s/joint%d")%kmodel->getID() % iConnectedJoint);
+            const std::string targetjointid = str(boost::format("%s/joint%d")%kmodel->getID() % iConnectedJoint);
             daeSafeCast<domCommon_param>(ptarget->add(COLLADA_TYPE_PARAM))->setValue(targetjointid.c_str());
 
             const int iaxis = 0;
-            boost::array<string,3> sequations;
+            boost::array<std::string, 3> sequations;
             for(int itype = 0; itype < 3; ++itype) {
-                sequations[itype] = pjoint->GetMimicEquation(iaxis,itype,"mathml");
+                sequations[itype] = pjoint->GetMimicEquation(iaxis, itype, "mathml");
                 FOREACH(itmapping,mapjointnames) {
                     boost::algorithm::replace_all(sequations[itype],itmapping->first,itmapping->second);
                 }
             }
-            boost::array<const char*,3> sequationids = { { "position","first_partial","second_partial"}};
 
             domTechniqueRef pftec = daeSafeCast<domTechnique>(pf->add(COLLADA_ELEMENT_TECHNIQUE));
             pftec->setProfile("OpenRAVE");
@@ -1751,31 +1751,35 @@ private:
             poselt->setAttribute("type",sequationids[0]);
             XMLtoDAE::Parse(poselt, sequations[0].c_str(), sequations[0].size());
 
+            const std::vector<KinBody::Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[iaxis]->_vdofformat;
             // save first-order partial derivative equations
             {
                 const int itype = 1;
-                if( sequations[itype].size() == 0 ) {
+                if( sequations[itype].empty() ) {
                     continue;
                 }
                 size_t offset = 0;
-                FOREACHC(itdofformat, pjoint->_vmimic[iaxis]->_vdofformat) {
-                    if(offset<sequations[itype].size()) {
-                        daeElementRef pelt = pftec->add("equation");
-                        pelt->setAttribute("type",sequationids[itype]);
-                        KinBody::JointPtr pmimic = itdofformat->jointindex < (int)pbody->GetJoints().size() ? pbody->GetJoints().at(itdofformat->jointindex) : pbody->GetPassiveJoints().at(itdofformat->jointindex-(int)pbody->GetJoints().size());
+                for(const KinBody::Mimic::DOFFormat& dofformat : vdofformat) {
+                    daeElementRef pelt = pftec->add("equation");
+                    pelt->setAttribute("type",sequationids[itype]);
+                    const int jointindex = dofformat.jointindex;
+                    const KinBody::JointPtr& pmimic = (jointindex < nActiveJoints) ? vActiveJoints.at(jointindex) : vPassiveJoints.at(jointindex-nActiveJoints);
 
-                        int mimicjointindex = mConnectedjointIndex.count(pmimic) ? mConnectedjointIndex.at(pmimic) : -1;
-                        if( mimicjointindex < 0 ) {
-                            RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindex to 0", pmimic->GetName());
-                            mimicjointindex = 0;
-                        }
-                        std::string smimicid = str(boost::format("%s/joint%d")%kmodel->getID()%mimicjointindex);
-                        pelt->setAttribute("target",smimicid.c_str());
-                        offset += XMLtoDAE::Parse(pelt, sequations[itype].c_str()+offset, sequations[itype].size()-offset);
-                        if( offset == 0 ) {
-                            RAVELOG_WARN(str(boost::format("failed to parse joint %s first partial: %s\n")%pjoint->GetName()%sequations[itype]));
-                            break;
-                        }
+                    int mimicjointindex = mConnectedjointIndex.count(pmimic) ? mConnectedjointIndex.at(pmimic) : -1;
+                    if( mimicjointindex < 0 ) {
+                        RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindex to 0", pmimic->GetName());
+                        mimicjointindex = 0;
+                    }
+                    const std::string smimicid = str(boost::format("%s/joint%d") % kmodel->getID() % mimicjointindex);
+                    pelt->setAttribute("target", smimicid.c_str());
+                    // parse
+                    if(offset >= sequations[itype].size()) {
+                        break;
+                    }
+                    offset += XMLtoDAE::Parse(pelt, sequations[itype].c_str()+offset, sequations[itype].size()-offset);
+                    if( offset == 0 ) {
+                        RAVELOG_WARN(str(boost::format("failed to parse joint %s first partial: %s\n")%pjoint->GetName()%sequations[itype]));
+                        break;
                     }
                 }
             }
@@ -1786,7 +1790,6 @@ private:
                 if( sequations[itype].empty() ) {
                     continue;
                 }
-                const std::vector<KinBody::Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[iaxis]->_vdofformat;
                 size_t offset = 0;
                 for(const KinBody::Mimic::DOFFormat& dofformati : vdofformat) {
                     const int jointindexi = dofformati.jointindex;
