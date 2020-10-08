@@ -477,8 +477,6 @@ protected:
             if( !pRobot ) {
                 return false;
             }
-            // for extracting a single body from file, need to assign a random body id to not conflict with what's already in environment
-            pRobotBaseInfo->_id = str(boost::format("body%d")%utils::GetNanoTime());
             if (!pRobot->InitFromRobotInfo(*pRobotBaseInfo)) {
                 return false;
             }
@@ -491,8 +489,6 @@ protected:
             if( !pBody ) {
                 return false;
             }
-            // for extracting a single body from file, need to assign a random body id to not conflict with what's already in environment
-            pKinBodyInfo->_id = str(boost::format("body%d")%utils::GetNanoTime());
             if (!pBody->InitFromKinBodyInfo(*pKinBodyInfo)) {
                 return false;
             }
@@ -521,8 +517,6 @@ protected:
         if( !pRobot ) {
             return false;
         }
-        // for extracting a single body from file, need to assign a random body id to not conflict with what's already in environment
-        pRobotBaseInfo->_id = str(boost::format("body%d")%utils::GetNanoTime());
         if (!pRobot->InitFromRobotInfo(*pRobotBaseInfo)) {
             return false;
         }

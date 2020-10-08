@@ -2183,7 +2183,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
                 }
             }
         }
-        else {
+        else if (!dependedjoint->IsStatic()) {
             // depended joint is active
             std::pair<Mimic::DOFFormat, int> key = {thisdofformat, jointindex};
             ///< dz/dx += ∂z/∂x, as z may depend on others who depend on x

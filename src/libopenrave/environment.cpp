@@ -82,6 +82,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
             bool isExistingRobot = false;
             std::vector<KinBody::KinBodyInfoPtr>::iterator itExistingBodyInfo = _vBodyInfos.end();
             if (!id.empty()) {
+                // only try to find old info if id is not empty
                 FOREACH(itBodyInfo, _vBodyInfos) {
                     if ((*itBodyInfo)->_id == id ) {
                         itExistingBodyInfo = itBodyInfo;
@@ -91,6 +92,9 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                     }
                 }
             }
+            // here we allow body infos with empty id to be created because
+            // when we load things from json, some id could be missing on file
+            // and for the partial update case, the id should be non-empty
 
             bool isRobot = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "isRobot", isExistingRobot);
             RAVELOG_VERBOSE_FORMAT("body '%s', isRobot=%d", id%isRobot);
