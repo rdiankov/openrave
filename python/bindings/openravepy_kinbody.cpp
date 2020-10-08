@@ -3777,7 +3777,7 @@ object PyKinBody::ComputeMimicJointFirstOrderPartialDerivatives() {
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
     _pbody->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
     py::dict d;
-    for(const auto& keyvalue : mPartialderivativepairValue) {
+    for(const std::pair<std::pair<const Mimic::DOFFormat, int>, dReal>& keyvalue : mPartialderivativepairValue) {
         const Mimic::DOFFormat& dofformat = keyvalue.first.first;
         d[py::make_tuple(dofformat.jointindex, keyvalue.first.second)] = keyvalue.second;
     }
@@ -3791,7 +3791,7 @@ object PyKinBody::ComputeMimicJointSecondOrderPartialDerivatives() {
     const bool bRecomputeFirstOrderPartial = true;
     _pbody->ComputeMimicJointSecondOrderPartialDerivatives(mSecondorderpartialderivativepairValue, mPartialderivativepairValue, bRecomputeFirstOrderPartial);
     py::dict d;
-    for(const auto& keyvalue : mSecondorderpartialderivativepairValue) {
+    for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal>& keyvalue : mSecondorderpartialderivativepairValue) {
         const Mimic::DOFFormat& dofformat = keyvalue.first.first;
         const std::array<int, 2>& indexpair = keyvalue.first.second;
         d[py::make_tuple(dofformat.jointindex, indexpair[0], indexpair[1])] = keyvalue.second;
@@ -3807,7 +3807,14 @@ py::tuple PyKinBody::ComputePassiveJointVelocitiesAccelerations(
     const std::vector<dReal> vDOFAccelerations = ExtractArray<dReal>(pyDOFAccelerations);
     std::vector< std::vector<dReal> > vPassiveJointVelocities;
     std::vector< std::vector<dReal> > vPassiveJointAccelerations;
-    _pbody->ComputePassiveJointVelocitiesAccelerations(vPassiveJointVelocities, vPassiveJointAccelerations, vDOFVelocities, vDOFAccelerations);
+    std::map< std::pair<KinBody::Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
+    std::map< std::pair<KinBody::Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue;
+    _pbody->ComputePassiveJointVelocitiesAccelerations(
+        // input
+        vDOFVelocities, vDOFAccelerations,
+        // output
+        vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue
+    );
     py::list lvel, laccel;
     for(const std::vector<dReal>& velocities : vPassiveJointVelocities) {
         lvel.append(StdVectorToPyList(velocities));

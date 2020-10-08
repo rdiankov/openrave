@@ -1590,11 +1590,12 @@ public:
                                 pjoint->_vmimic[iaxis]->_equations[1] += str(boost::format("|%s %s ")%pjointtarget->GetName()%eq);
                             }
                             else if( equationtype == "second_partial" ) {
-                                if( !pjointtarget ) {
+                                const KinBody::JointPtr pjointtarget2 = _getJointFromRef(pequation->getAttribute("target2").c_str(),pf,pkinbody, bindings).first;
+                                if( !pjointtarget || !pjointtarget2 ) {
                                     RAVELOG_WARN(str(boost::format("second_partial equation '%s' needs a target attribute! ignoring...\n")%eq));
                                     continue;
                                 }
-                                pjoint->_vmimic[iaxis]->_equations[2] += str(boost::format("|%s %s ")%pjointtarget->GetName()%eq);
+                                pjoint->_vmimic[iaxis]->_equations[2] += str(boost::format("|%s|%s %s ") % pjointtarget->GetName() % pjointtarget2->GetName() % eq);
                             }
                             else {
                                 RAVELOG_WARN(str(boost::format("unknown equation type %s")%equationtype));

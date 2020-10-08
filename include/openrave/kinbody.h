@@ -650,7 +650,7 @@ protected:
         virtual AABB ComputeAABBFromTransform(const Transform& tLink) const;
 
         /// \brief Return the current transformation of the link in the world coordinate system.
-        inline Transform GetTransform() const {
+        const Transform& GetTransform() const {
             return _info._t;
         }
 
@@ -1588,8 +1588,8 @@ protected:
             \param[in,out] mPartialderivativepairValue: A map of all (cached) joint pairs (z, x) to the first-order partial derivatives ∂z/∂x
          */
         virtual void _ComputePartialVelocities(
-            std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
             const int iaxis,
+            std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
             std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue
         ) const;
 
@@ -1603,11 +1603,11 @@ protected:
             \param[in] vIndexPairs: a vector of all pairs of active joint indices on which all other mimic joints depend; collected from CollectSecondOrderPartialDerivativesActiveIndexPairs
          */
         virtual void _ComputePartialAccelerations(
-            std::vector<std::pair<std::array<int, 2>, dReal> >& vDofindex2ndDerivativePairs,
             const int iaxis,
-            std::map< std::pair<Mimic::DOFFormat, std::array<int, 2>>, dReal >& mSecondorderpartialderivativepairValue,
             const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
-            const std::vector<std::array<int, 2>>& vIndexPairs
+            const std::vector<std::array<int, 2>>& vIndexPairs,
+            std::vector<std::pair<std::array<int, 2>, dReal> >& vDofindex2ndDerivativePairs,
+            std::map< std::pair<Mimic::DOFFormat, std::array<int, 2>>, dReal >& mSecondorderpartialderivativepairValue
         ) const;
 
         /** \brief Compute internal transformations and specify the attached links of the joint.
@@ -2428,11 +2428,15 @@ private:
     ///
     /// \param[out] vPassiveJointVelocities   : passive joints' velocities    ( first-order time full derivatives)
     /// \param[out] vPassiveJointAccelerations: passive joints' accelerations (second-order time full derivatives)
+    /// \param[out] mPartialderivativepairValue map of all joint pairs (z, x) to the first-order partial derivatives ∂z/∂x
+    /// \param[out] mSecondorderpartialderivativepairValue map of all joint pairs (z, (xk, xl)) to the first-order partial derivatives ∂^2 z/∂xkxl
     void ComputePassiveJointVelocitiesAccelerations(
+        const std::vector<dReal>& vDOFVelocities,
+        const std::vector<dReal>& vDOFAccelerations,
         std::vector< std::vector<dReal> >& vPassiveJointVelocities,
         std::vector< std::vector<dReal> >& vPassiveJointAccelerations,
-        const std::vector<dReal>& vDOFVelocities,
-        const std::vector<dReal>& vDOFAccelerations
+        std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
+        std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue
     ) const;
 
     /// \brief Computes the translation jacobian with respect to a world position.
@@ -2906,10 +2910,26 @@ protected:
     /// \brief Computes accelerations of the links given all the necessary data of the robot. \see GetLinkAccelerations
     ///
     /// for passive joints that are not mimic and are not static, will call Joint::GetVelocities to get their initial velocities (this is state dependent!)
-    /// \param dofvelocities if size is 0, will assume all velocities are 0
-    /// \param dofaccelerations if size is 0, will assume all accelerations are 0
+    /// \param[in] vDOFVelocities if size is 0, will assume all active joints' velocities are 0
+    /// \param[in] vDOFAccelerations if size is 0, will assume all active joints' accelerations are 0
+    /// \param[in] vLinkVelocities link velocities read from a physics engine
+    /// \param[out] vPassiveJointVelocities velocities of mimic joints; requires vDOFVelocities
+    /// \param[out] vPassiveJointAccelerations accelerations of mimic joints; requires vDOFAccelerations
+    /// \param[out] mPartialderivativepairValue map of all joint pairs (z, x) to the first-order partial derivatives ∂z/∂x
+    /// \param[out] mSecondorderpartialderivativepairValue map of all joint pairs (z, (xk, xl)) to the first-order partial derivatives ∂^2 z/∂xkxl
+    /// \param[out] vLinkAccelerations link accelerations
     /// \param[in] externalaccelerations [optional] The external accelerations to add to each link. When doing inverse dynamics, should set the base link's acceleration to -gravity.
-    virtual void _ComputeLinkAccelerations(const std::vector<dReal>& dofvelocities, const std::vector<dReal>& dofaccelerations, const std::vector< std::pair<Vector, Vector> >& linkvelocities, std::vector<std::pair<Vector,Vector> >& linkaccelerations, AccelerationMapConstPtr externalaccelerations=AccelerationMapConstPtr()) const;
+    virtual void _ComputeLinkAccelerations(
+        const std::vector<dReal>& vDOFVelocities,
+        const std::vector<dReal>& vDOFAccelerations,
+        const std::vector< std::pair<Vector, Vector> >& vLinkVelocities,
+        std::vector<std::vector<dReal> >& vPassiveJointVelocities,
+        std::vector<std::vector<dReal> >& vPassiveJointAccelerations,
+        std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
+        std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue,
+        std::vector<std::pair<Vector,Vector> >& vLinkAccelerations,
+        AccelerationMapConstPtr externalaccelerations = AccelerationMapConstPtr()
+    ) const;
 
     /// \brief Called to notify the body that certain groups of parameters have been changed.
     ///

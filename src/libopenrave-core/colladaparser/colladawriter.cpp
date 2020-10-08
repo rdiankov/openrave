@@ -1322,7 +1322,8 @@ private:
         kmout.reset(new kinematics_model_output());
 
         KinBody::KinBodyStateSaver saver(pbody);
-        vector<dReal> vjointvalues, vzero(pbody->GetDOF());
+        std::vector<dReal> vjointvalues;
+        std::vector<dReal> vzero(pbody->GetDOF());
         pbody->GetDOFValues(vjointvalues);
         pbody->SetDOFValues(vzero);
         Transform tnode = pbody->GetTransform();
@@ -1342,9 +1343,17 @@ private:
         }
 
         // note which links and joints are part of connected bodies
-        std::vector<uint8_t> vConnectedLinks; vConnectedLinks.resize(pbody->GetLinks().size(),0);
-        std::vector<uint8_t> vConnectedJoints; vConnectedJoints.resize(pbody->GetJoints().size(),0);
-        std::vector<uint8_t> vConnectedPassiveJoints; vConnectedPassiveJoints.resize(pbody->GetPassiveJoints().size(),0);
+        const std::vector<KinBody::JointPtr>& vActiveJoints = pbody->GetJoints();
+        const int nActiveJoints = vActiveJoints.size();
+        const std::vector<KinBody::JointPtr>& vPassiveJoints = pbody->GetPassiveJoints();
+        const int nPassiveJoints = vPassiveJoints.size();
+        const std::vector<KinBody::LinkPtr>& vLinks = pbody->GetLinks();
+        const int nLinks = vLinks.size();
+
+        /* ========== Collect connected links and joints ========== */
+        std::vector<bool> vIsConnectedLinks(nLinks, false);
+        std::vector<bool> vIsConnectedJoints(nActiveJoints, false);
+        std::vector<bool> vIsConnectedPassiveJoints(nPassiveJoints, false);
         if( pbody->IsRobot() ) {
             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
             FOREACH(itconnectedBody, probot->GetConnectedBodies()) {
@@ -1356,80 +1365,84 @@ private:
                 std::vector<KinBody::LinkPtr> vResolvedLinks;
                 connectedBody.GetResolvedLinks(vResolvedLinks);
                 FOREACHC(itResolvedLink, vResolvedLinks) {
-                    vConnectedLinks.at((*itResolvedLink)->GetIndex()) = 1;
+                    vIsConnectedLinks.at((*itResolvedLink)->GetIndex()) = true;
                 }
 
                 std::vector<KinBody::JointPtr> vResolvedJoints;
                 connectedBody.GetResolvedJoints(vResolvedJoints);
                 FOREACHC(itResolvedJoint, vResolvedJoints) {
-                    for(int ijointindex = 0; ijointindex < (int)pbody->GetJoints().size(); ++ijointindex) {
-                        if( pbody->GetJoints()[ijointindex] == *itResolvedJoint ) {
-                            vConnectedJoints[ijointindex] = 1;
+                    for(int ijointindex = 0; ijointindex < nActiveJoints; ++ijointindex) {
+                        if( vActiveJoints[ijointindex] == *itResolvedJoint ) {
+                            vIsConnectedJoints[ijointindex] = true;
                         }
                     }
-                    for(int ijointindex = 0; ijointindex < (int)pbody->GetPassiveJoints().size(); ++ijointindex) {
-                        if( pbody->GetPassiveJoints()[ijointindex] == *itResolvedJoint ) {
-                            vConnectedPassiveJoints[ijointindex] = 1;
+                    for(int ijointindex = 0; ijointindex < nPassiveJoints; ++ijointindex) {
+                        if( vPassiveJoints[ijointindex] == *itResolvedJoint ) {
+                            vIsConnectedPassiveJoints[ijointindex] = true;
                         }
                     }
                 }
 
                 KinBody::JointPtr pResolvedDummyPassiveJoint = connectedBody.GetResolvedDummyPassiveJoint();
-                for(int ijointindex = 0; ijointindex < (int)pbody->GetPassiveJoints().size(); ++ijointindex) {
-                    if( pbody->GetPassiveJoints()[ijointindex] == pResolvedDummyPassiveJoint ) {
-                        vConnectedPassiveJoints[ijointindex] = 1;
+                for(int ijointindex = 0; ijointindex < nPassiveJoints; ++ijointindex) {
+                    if( vPassiveJoints[ijointindex] == pResolvedDummyPassiveJoint ) {
+                        vIsConnectedPassiveJoints[ijointindex] = true;
                     }
                 }
             }
         }
 
-        //  Declare all the joints
-        vector< pair<int,KinBody::JointConstPtr> > vjoints;
-        vjoints.reserve(vConnectedJoints.size()+vConnectedPassiveJoints.size());
-        for(int ijoint = 0; ijoint < (int)vConnectedJoints.size(); ++ijoint) {
-            if (!vConnectedJoints[ijoint]) {
-                KinBody::JointConstPtr pjoint = pbody->GetJoints()[ijoint];
-                vjoints.emplace_back(vjoints.size(), pjoint);
+        std::vector<KinBody::JointConstPtr> vConnectedJoints;
+        std::map<KinBody::JointPtr, int> mConnectedjointIndex; // maps a (connected) joint to its index in vConnectedJoints
+        vConnectedJoints.reserve(nActiveJoints + nPassiveJoints);
+        for(int ijoint = 0; ijoint < nActiveJoints; ++ijoint) {
+            if (!vIsConnectedJoints[ijoint]) {
+                const KinBody::JointPtr& pjoint = vActiveJoints[ijoint];
+                mConnectedjointIndex[pjoint] = vConnectedJoints.size();
+                vConnectedJoints.push_back(pjoint);
             }
         }
-        for(int ipassivejoint = 0; ipassivejoint < (int)vConnectedPassiveJoints.size(); ++ipassivejoint) {
-            if (!vConnectedPassiveJoints[ipassivejoint]) {
-                KinBody::JointConstPtr ppassivejoint = pbody->GetPassiveJoints()[ipassivejoint];
-                vjoints.emplace_back(vjoints.size(), ppassivejoint);
+        for(int ipassivejoint = 0; ipassivejoint < nPassiveJoints; ++ipassivejoint) {
+            if (!vIsConnectedPassiveJoints[ipassivejoint]) {
+                const KinBody::JointPtr& pjoint = vPassiveJoints[ipassivejoint];
+                mConnectedjointIndex[pjoint] = vConnectedJoints.size();
+                vConnectedJoints.push_back(pjoint);
             }
         }
+        const int nConnectedJoints = vConnectedJoints.size(); 
 
-        vector<dReal> lmin, lmax;
-        vector<domJointRef> vdomjoints(vjoints.size());
+        std::vector<dReal> lmin, lmax;
+        std::vector<domJointRef> vdomjoints(nConnectedJoints);
         kmout->pbody = pbody;
         kmout->kmodel = kmodel;
-        kmout->vaxissids.resize(0);
-        kmout->vlinksids.resize(pbody->GetLinks().size());
+        kmout->vaxissids.clear();
+        kmout->vlinksids.resize(nLinks);
         kmout->vdofsids.resize(pbody->GetDOF());
 
-        FOREACHC(itjoint, vjoints) {
-            KinBody::JointConstPtr pjoint = itjoint->second;
-            if( pjoint->GetType() == KinBody::JointUniversal || pjoint->GetType() == KinBody::JointHinge2 || pjoint->GetType() == KinBody::JointSpherical ) {
-                RAVELOG_WARN(str(boost::format("unsupported joint type specified 0x%x\n")%pjoint->GetType()));
+        for(int iConnectedJoint = 0; iConnectedJoint < nConnectedJoints; ++iConnectedJoint) {
+            const KinBody::JointConstPtr& pjoint = vConnectedJoints[iConnectedJoint];
+            const KinBody::JointType jointtype = pjoint->GetType();
+            if( jointtype == KinBody::JointUniversal || jointtype == KinBody::JointHinge2 || jointtype == KinBody::JointSpherical ) {
+                RAVELOG_WARN_FORMAT("unsupported joint type specified 0x%x\n", jointtype);
                 continue;
             }
 
             domJointRef pdomjoint = daeSafeCast<domJoint>(ktec->add(COLLADA_ELEMENT_JOINT));
-            string jointsid = str(boost::format("joint%d")%itjoint->first);
+            std::string jointsid = str(boost::format("joint%d")%iConnectedJoint);
             pdomjoint->setSid( jointsid.c_str() );
             pdomjoint->setName(pjoint->GetName().c_str());
             pjoint->GetLimits(lmin, lmax);
-            vector<domAxis_constraintRef> vaxes(pjoint->GetDOF());
+            std::vector<domAxis_constraintRef> vaxes(pjoint->GetDOF());
             for(int ia = 0; ia < pjoint->GetDOF(); ++ia) {
                 dReal fmult = 1.0;
                 if( pjoint->IsRevolute(ia) ) {
-                    fmult = 180.0f/PI;
+                    fmult = 180.0/PI;
                     vaxes[ia] = daeSafeCast<domAxis_constraint>(pdomjoint->add(COLLADA_ELEMENT_REVOLUTE));
                 }
                 else {
                     vaxes[ia] = daeSafeCast<domAxis_constraint>(pdomjoint->add(COLLADA_ELEMENT_PRISMATIC));
                 }
-                string axisid = str(boost::format("axis%d")%ia);
+                std::string axisid = str(boost::format("axis%d")%ia);
                 vaxes[ia]->setSid(axisid.c_str());
                 kinematics_model_output::axis_output axissid;
                 axissid.pjoint = pjoint;
@@ -1451,14 +1464,13 @@ private:
                     kmout->vdofsids.at(pjoint->GetDOFIndex()+ia) = jointsid;
                 }
             }
-            vdomjoints.at(itjoint->first) = pdomjoint;
+            vdomjoints.at(iConnectedJoint) = pdomjoint;
         }
 
         std::list<int> listunusedlinks;
-        const std::vector<KinBody::LinkPtr>& links = pbody->GetLinks();
-        for(int ilink = 0; ilink < (int)vConnectedLinks.size(); ++ilink) {
-            if (!vConnectedLinks[ilink]) {
-                listunusedlinks.push_back(links[ilink]->GetIndex());
+        for(int ilink = 0; ilink < nLinks; ++ilink) {
+            if (!vIsConnectedLinks[ilink]) {
+                listunusedlinks.push_back(vLinks[ilink]->GetIndex());
             }
         }
 
@@ -1470,8 +1482,8 @@ private:
             setJointSids.clear();
             setLinkSids.clear();
             const int firstunusedlinkindex = listunusedlinks.front();
-            const LINKOUTPUT childinfo = _WriteLink(links.at(firstunusedlinkindex), ktec, nodehead, kmodel->getID(), vjoints, setJointSids, setLinkSids);
-            const Transform t = links[firstunusedlinkindex]->GetTransform();
+            const LINKOUTPUT childinfo = _WriteLink(vLinks.at(firstunusedlinkindex), ktec, nodehead, kmodel->getID(), vConnectedJoints, setJointSids, setLinkSids);
+            const Transform& t = vLinks[firstunusedlinkindex]->GetTransform();
             _WriteTransformation(childinfo.plink, t);
             if( IsWrite("visual") ) {
                 _WriteTransformation(childinfo.pnode, t);
@@ -1524,8 +1536,8 @@ private:
         }
 
         if( IsWrite("link_info") ) {
-            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-            string digits = boost::lexical_cast<std::string>(std::numeric_limits<OpenRAVE::dReal>::digits10);
+            std::stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+            std::string digits = boost::lexical_cast<std::string>(std::numeric_limits<OpenRAVE::dReal>::digits10);
 
             // write the float/int parameters for all links
             for(size_t ilink = 0; ilink < vlinksidrefs.size(); ++ilink) {
@@ -1573,12 +1585,12 @@ private:
             string digits = boost::lexical_cast<std::string>(std::numeric_limits<OpenRAVE::dReal>::digits10);
 
             // write the float/int parameters for all joints
-            FOREACH(itjoint, vjoints) {
-                KinBody::JointConstPtr pjoint = itjoint->second;
+            for(int iConnectedJoint = 0; iConnectedJoint < nConnectedJoints; ++iConnectedJoint) {
+                const KinBody::JointConstPtr& pjoint = vConnectedJoints[iConnectedJoint];
                 if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 && pjoint->GetStringParameters().size() == 0 && pjoint->GetControlMode() == KinBody::JCM_None ) {
                     continue;
                 }
-                string jointsid = str(boost::format("joint%d")%itjoint->first);
+                string jointsid = str(boost::format("joint%d") % iConnectedJoint);
                 domExtraRef pextra = daeSafeCast<domExtra>(kmout->kmodel->add(COLLADA_ELEMENT_EXTRA));
                 pextra->setType("joint_info");
                 pextra->setName(jointsid.c_str());
@@ -1702,12 +1714,14 @@ private:
         }
         // create the formulas for all mimic joints
         std::map<std::string,std::string> mapjointnames;
-        FOREACHC(itjoint,vjoints) {
-            mapjointnames[str(boost::format("<csymbol>%s</csymbol>")%itjoint->second->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/joint%d</csymbol>")%kmodel->getID()%itjoint->first);
+        for(int iConnectedJoint = 0; iConnectedJoint < nConnectedJoints; ++iConnectedJoint) {
+            const KinBody::JointConstPtr& pjoint = vConnectedJoints[iConnectedJoint];
+            mapjointnames[str(boost::format("<csymbol>%s</csymbol>")% pjoint->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/joint%d</csymbol>")%kmodel->getID()%iConnectedJoint);
         }
 
-        FOREACHC(itjoint, vjoints) {
-            KinBody::JointConstPtr pjoint = itjoint->second;
+        const boost::array<const char*, 3> sequationids = {{ "position", "first_partial", "second_partial"}};
+        for(int iConnectedJoint = 0; iConnectedJoint < nConnectedJoints; ++iConnectedJoint) {
+            const KinBody::JointConstPtr& pjoint = vConnectedJoints[iConnectedJoint];
             if( !pjoint->IsMimic() ) {
                 continue;
             }
@@ -1715,21 +1729,20 @@ private:
                 RAVELOG_WARN("collada writer might not support multi-dof joint formulas...");
             }
             domFormulaRef pf = daeSafeCast<domFormula>(ktec->add(COLLADA_ELEMENT_FORMULA));
-            string formulaid = str(boost::format("joint%d.formula")%itjoint->first);
+            const std::string formulaid = str(boost::format("joint%d.formula") % iConnectedJoint);
             pf->setSid(formulaid.c_str());
             domCommon_float_or_paramRef ptarget = daeSafeCast<domCommon_float_or_param>(pf->add(COLLADA_ELEMENT_TARGET));
-            string targetjointid = str(boost::format("%s/joint%d")%kmodel->getID()%itjoint->first);
+            const std::string targetjointid = str(boost::format("%s/joint%d")%kmodel->getID() % iConnectedJoint);
             daeSafeCast<domCommon_param>(ptarget->add(COLLADA_TYPE_PARAM))->setValue(targetjointid.c_str());
 
-            int iaxis = 0;
-            boost::array<string,3> sequations;
+            const int iaxis = 0;
+            boost::array<std::string, 3> sequations;
             for(int itype = 0; itype < 3; ++itype) {
-                sequations[itype] = pjoint->GetMimicEquation(iaxis,itype,"mathml");
+                sequations[itype] = pjoint->GetMimicEquation(iaxis, itype, "mathml");
                 FOREACH(itmapping,mapjointnames) {
                     boost::algorithm::replace_all(sequations[itype],itmapping->first,itmapping->second);
                 }
             }
-            boost::array<const char*,3> sequationids = { { "position","first_partial","second_partial"}};
 
             domTechniqueRef pftec = daeSafeCast<domTechnique>(pf->add(COLLADA_ELEMENT_TECHNIQUE));
             pftec->setProfile("OpenRAVE");
@@ -1738,39 +1751,87 @@ private:
             poselt->setAttribute("type",sequationids[0]);
             XMLtoDAE::Parse(poselt, sequations[0].c_str(), sequations[0].size());
 
-            // save partial derivative equations
-            for(int itype = 1; itype < 3; ++itype) {
-                if( sequations[itype].size() == 0 ) {
+            const std::vector<KinBody::Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[iaxis]->_vdofformat;
+            // save first-order partial derivative equations
+            {
+                const int itype = 1;
+                if( sequations[itype].empty() ) {
                     continue;
                 }
                 size_t offset = 0;
-                FOREACHC(itdofformat, pjoint->_vmimic[iaxis]->_vdofformat) {
-                    if(offset<sequations[itype].size()) {
-                        daeElementRef pelt = pftec->add("equation");
-                        pelt->setAttribute("type",sequationids[itype]);
-                        KinBody::JointPtr pmimic = itdofformat->jointindex < (int)pbody->GetJoints().size() ? pbody->GetJoints().at(itdofformat->jointindex) : pbody->GetPassiveJoints().at(itdofformat->jointindex-(int)pbody->GetJoints().size());
+                for(const KinBody::Mimic::DOFFormat& dofformat : vdofformat) {
+                    daeElementRef pelt = pftec->add("equation");
+                    pelt->setAttribute("type",sequationids[itype]);
+                    const int jointindex = dofformat.jointindex;
+                    const KinBody::JointPtr& pmimic = (jointindex < nActiveJoints) ? vActiveJoints.at(jointindex) : vPassiveJoints.at(jointindex-nActiveJoints);
 
-                        int mimicjointindex = -1;
-                        FOREACH(ittestjoint, vjoints) {
-                            if( ittestjoint->second == pmimic ) {
-                                mimicjointindex = ittestjoint->first;
-                                break;
-                            }
+                    int mimicjointindex = mConnectedjointIndex.count(pmimic) ? mConnectedjointIndex.at(pmimic) : -1;
+                    if( mimicjointindex < 0 ) {
+                        RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindex to 0", pmimic->GetName());
+                        mimicjointindex = 0;
+                    }
+                    const std::string smimicid = str(boost::format("%s/joint%d") % kmodel->getID() % mimicjointindex);
+                    pelt->setAttribute("target", smimicid.c_str());
+                    // parse
+                    if(offset >= sequations[itype].size()) {
+                        break;
+                    }
+                    offset += XMLtoDAE::Parse(pelt, sequations[itype].c_str()+offset, sequations[itype].size()-offset);
+                    if( offset == 0 ) {
+                        RAVELOG_WARN(str(boost::format("failed to parse joint %s first partial: %s\n")%pjoint->GetName()%sequations[itype]));
+                        break;
+                    }
+                }
+            }
+
+            // save second-order partial derivative equations
+            {
+                const int itype = 2;
+                if( sequations[itype].empty() ) {
+                    continue;
+                }
+                size_t offset = 0;
+                for(const KinBody::Mimic::DOFFormat& dofformati : vdofformat) {
+                    const int jointindexi = dofformati.jointindex;
+                    const KinBody::JointPtr& pmimici = (jointindexi < nActiveJoints) ? vActiveJoints.at(jointindexi) : vPassiveJoints.at(jointindexi-nActiveJoints);
+
+                    int mimicjointindexi = mConnectedjointIndex.count(pmimici) ? mConnectedjointIndex.at(pmimici) : -1;
+                    if( mimicjointindexi < 0 ) {
+                        RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindexi to 0", pmimici->GetName());
+                        mimicjointindexi = 0;
+                    }
+                    const std::string smimicidi = str(boost::format("%s/joint%d") % kmodel->getID() % mimicjointindexi);
+
+                    for(const KinBody::Mimic::DOFFormat& dofformatj : vdofformat) {
+                        const int jointindexj = dofformatj.jointindex;
+                        const KinBody::JointPtr& pmimicj = (jointindexj < nActiveJoints) ? vActiveJoints.at(jointindexj) : vPassiveJoints.at(jointindexj-nActiveJoints);
+                        int mimicjointindexj = mConnectedjointIndex.count(pmimicj) ? mConnectedjointIndex.at(pmimicj) : -1;
+                        if( mimicjointindexj < 0 ) {
+                            RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindexj to 0", pmimicj->GetName());
+                            mimicjointindexj = 0;
                         }
-                        if( mimicjointindex < 0 ) {
-                            RAVELOG_WARN_FORMAT("cannot find index from joint %s", pmimic->GetName());
-                            mimicjointindex = 0;
+                        const std::string smimicidj = str(boost::format("%s/joint%d") % kmodel->getID() % mimicjointindexj);
+
+                        daeElementRef pelt = pftec->add("equation");
+                        pelt->setAttribute("type", sequationids[itype]);
+                        pelt->setAttribute("target" , smimicidi.c_str());
+                        pelt->setAttribute("target2", smimicidj.c_str());
+
+                        // parse
+                        if(offset >= sequations[itype].size()) {
+                            break;
                         }
-                        std::string smimicid = str(boost::format("%s/joint%d")%kmodel->getID()%mimicjointindex);
-                        pelt->setAttribute("target",smimicid.c_str());
                         offset += XMLtoDAE::Parse(pelt, sequations[itype].c_str()+offset, sequations[itype].size()-offset);
                         if( offset == 0 ) {
                             RAVELOG_WARN(str(boost::format("failed to parse joint %s first partial: %s\n")%pjoint->GetName()%sequations[itype]));
                             break;
                         }
+                        // success
+                        RAVELOG_DEBUG_FORMAT("Writing in DAE for ∂^2(%s)/∂(%s)∂(%s)", pjoint->GetName() % pmimici->GetName() % pmimicj->GetName());
                     }
                 }
             }
+
             domFormula_techniqueRef pfdefaulttec = daeSafeCast<domFormula_technique>(pf->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
             XMLtoDAE::Parse(pfdefaulttec, sequations[0].c_str(), sequations[0].size());
         }
@@ -2126,11 +2187,11 @@ private:
        \param pkinparent Kinbody parent
        \param pnodeparent Node parent
        \param strModelUri
-       \param vjoints Vector of joints
+       \param vConnectedJoints Vector of joints
        \param setJointSids Set of joint ids which is already written
        \param setLinkSids Set of link ids which is already written
      */
-    virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints, std::set<std::string>& setJointSids, std::set<std::string>& setLinkSids)
+    virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const std::string& strModelUri, const std::vector<KinBody::JointConstPtr>& vConnectedJoints, std::set<std::string>& setJointSids, std::set<std::string>& setLinkSids)
     {
         std::string nodeparentid;
         if( !!pnodeparent && !!pnodeparent->getID() ) {
@@ -2185,8 +2246,9 @@ private:
         }
 
         // look for all the child links
-        FOREACHC(itjoint, vjoints) {
-            KinBody::JointConstPtr pjoint = itjoint->second;
+        const int nConnectedJoints = vConnectedJoints.size();
+        for(int iConnectedJoint = 0; iConnectedJoint < nConnectedJoints; ++iConnectedJoint) {
+            const KinBody::JointConstPtr& pjoint = vConnectedJoints[iConnectedJoint];
             if( pjoint->GetHierarchyParentLink() != plink ) {
                 continue;
             }
@@ -2196,7 +2258,7 @@ private:
             }
 
             domLink::domAttachment_fullRef pattfull = daeSafeCast<domLink::domAttachment_full>(pdomlink->add(COLLADA_TYPE_ATTACHMENT_FULL));
-            string jointid = str(boost::format("%s/joint%d")%strModelUri%itjoint->first);
+            string jointid = str(boost::format("%s/joint%d")%strModelUri%iConnectedJoint);
             if (setJointSids.find(jointid) != setJointSids.end()) {
                 RAVELOG_VERBOSE_FORMAT("joint id \"%s\" (joint name \"%s\") for body %s is previously written, so skip. maybe part of closed loop?", jointid%pjoint->GetName()%plink->GetParent()->GetName());
                 continue;
@@ -2204,7 +2266,7 @@ private:
             setJointSids.insert(jointid);
             pattfull->setJoint(jointid.c_str());
 
-            LINKOUTPUT childinfo = _WriteLink(pchild, pattfull, pnode, strModelUri, vjoints, setJointSids, setLinkSids);
+            LINKOUTPUT childinfo = _WriteLink(pchild, pattfull, pnode, strModelUri, vConnectedJoints, setJointSids, setLinkSids);
             out.listusedlinks.insert(out.listusedlinks.end(),childinfo.listusedlinks.begin(),childinfo.listusedlinks.end());
 
             _WriteTransformation(pattfull, pjoint->GetInternalHierarchyLeftTransform());

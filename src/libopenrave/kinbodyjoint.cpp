@@ -2206,8 +2206,8 @@ inline void AccumulateDerivatives(std::map<T, dReal>& m, const T& key, dReal add
 }
 
 void KinBody::Joint::_ComputePartialVelocities(
-    std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
     const int iaxis,
+    std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
     std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue
 ) const {
     vDofindexDerivativePairs.clear();
@@ -2275,7 +2275,7 @@ void KinBody::Joint::_ComputePartialVelocities(
         const Mimic::DOFFormat& dofformat = vdofformats[ivar]; ///< information about the ivar-th depended joint
         const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< a joint on which this joint depends on
         const int jointindex = dofformat.jointindex; ///< index of this depended joint
-        const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
+        const OpenRAVEFunctionParserRealPtr& velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
         const dReal fvel = velfn->Eval(vDependedJointValues.data()); ///< value of ∂z/∂x
 
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
@@ -2287,7 +2287,7 @@ void KinBody::Joint::_ComputePartialVelocities(
             if( IS_DEBUGLEVEL(Level_Verbose) )  {
                 RAVELOG_VERBOSE_FORMAT("Joint \"%s\" calls recursion _ComputePartialVelocities on joint \"%s\"", this->GetName() % dependedjoint->GetName());
             }
-            dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mPartialderivativepairValue); ///< recursion: computes ∂y/∂x
+            dependedjoint->_ComputePartialVelocities(iaxis, vLocalIndexPartialPairs, mPartialderivativepairValue); ///< recursion: computes ∂y/∂x
             for(const std::pair<int, dReal>& pIndexPartial : vLocalIndexPartialPairs) {
                 const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, pIndexPartial.first};
                 ///< ∂z/∂x += ∂f/∂y * ∂y/∂x
@@ -2331,11 +2331,11 @@ std::vector<std::array<int, 2>> KinBody::CollectSecondOrderPartialDerivativesAct
 }
 
 void KinBody::Joint::_ComputePartialAccelerations(
-    std::vector<std::pair<std::array<int, 2>, dReal> >& vDofindex2ndDerivativePairs,
     const int iaxis,
-    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue,
     const std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
-    const std::vector<std::array<int, 2>>& vIndexPairs
+    const std::vector<std::array<int, 2>>& vIndexPairs,
+    std::vector<std::pair<std::array<int, 2>, dReal> >& vDofindex2ndDerivativePairs,
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue
 ) const {
     vDofindex2ndDerivativePairs.clear();
     if( this->dofindex >= 0 ) {
@@ -2428,7 +2428,9 @@ void KinBody::Joint::_ComputePartialAccelerations(
             );
         }
         ///< recursion: collect all ∂^2 yi/∂xk ∂xl
-        dependedjointi->_ComputePartialAccelerations(vLocalIndexPartialPairs, iaxis, mSecondorderpartialderivativepairValue, mPartialderivativepairValue, vIndexPairs);
+        if(!dependedjointi->IsStatic()) {
+            dependedjointi->_ComputePartialAccelerations(iaxis, mPartialderivativepairValue, vIndexPairs, vLocalIndexPartialPairs, mSecondorderpartialderivativepairValue);
+        }
     }
 
     std::pair<Mimic::DOFFormat, int> dyidxk; // ∂yi/∂xk
@@ -2450,7 +2452,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
             const int jointindexj = dofformatj.jointindex; ///< index of this depended joint yj
             const int indexij = ivar * nvars + jvar; // (i, j)
             const OpenRAVEFunctionParserRealPtr& accelfn = pmimic->_accelfns.at(indexij); ///< function that evaluates the partial derivative ∂^2 f/∂yi∂yj
-            dReal faccel;
+            dReal faccel = 0.0;
             if(!!accelfn) {
                 faccel = accelfn->Eval(vDependedJointValues.data()); ///< ∂^2 f/∂yi∂yj
             }
@@ -2539,24 +2541,31 @@ void KinBody::Joint::_ComputePartialAccelerations(
 int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput) const
 {
     if( timederiv == 0 ) {
-        _vmimic.at(axis)->_posfn->EvalMulti(voutput, vdependentvalues.data());
-        return _vmimic.at(axis)->_posfn->EvalError();
+        const OpenRAVEFunctionParserRealPtr& posfn = _vmimic.at(axis)->_posfn;
+        posfn->EvalMulti(voutput, vdependentvalues.data());
+        return posfn->EvalError();
     }
     else if( timederiv == 1 ) {
-        voutput.resize(_vmimic.at(axis)->_velfns.size());
-        for(size_t i = 0; i < voutput.size(); ++i) {
-            voutput[i] = _vmimic.at(axis)->_velfns.at(i)->Eval(vdependentvalues.data());
-            int err = _vmimic.at(axis)->_velfns.at(i)->EvalError();
+        const std::vector<OpenRAVEFunctionParserRealPtr>& velfns = _vmimic.at(axis)->_velfns;
+        const int nvelfns = velfns.size();
+        voutput.resize(nvelfns);
+        for(int i = 0; i < nvelfns; ++i) {
+            const OpenRAVEFunctionParserRealPtr& velfn = velfns.at(i);
+            voutput[i] = velfn->Eval(vdependentvalues.data());
+            int err = velfn->EvalError();
             if( err ) {
                 return err;
             }
         }
     }
     else if( timederiv == 2 ) {
-        voutput.resize(_vmimic.at(axis)->_accelfns.size());
-        for(size_t i = 0; i < voutput.size(); ++i) {
-            voutput[i] = _vmimic.at(axis)->_accelfns.at(i)->Eval(vdependentvalues.data());
-            int err = _vmimic.at(axis)->_accelfns.at(i)->EvalError();
+        const std::vector<OpenRAVEFunctionParserRealPtr>& accelfns = _vmimic.at(axis)->_accelfns;
+        const int naccelfns = accelfns.size();
+        voutput.resize(naccelfns);
+        for(int i = 0; i < naccelfns; ++i) {
+            const OpenRAVEFunctionParserRealPtr& accelfn = accelfns.at(i);
+            voutput[i] = accelfn->Eval(vdependentvalues.data());
+            int err = accelfn->EvalError();
             if( err ) {
                 return err;
             }
