@@ -349,7 +349,8 @@ public:
     }
 
     virtual bool operator==(const Readable& other) {
-        return false;
+        // by default, compare pointer value
+        return this == &other;
     }
 
     virtual bool operator!=(const Readable& other) {
