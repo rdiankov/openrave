@@ -2670,7 +2670,7 @@ public:
             }
         }
 
-        // remove extra bodies at the end of _vecbodies
+        // remove extra bodies at the end of vBodies
         if( vBodies.size() > info._vBodyInfos.size() ) {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             for (std::vector<KinBodyPtr>::iterator itBody = vBodies.begin() + info._vBodyInfos.size(); itBody != vBodies.end();) {

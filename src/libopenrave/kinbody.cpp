@@ -5547,161 +5547,33 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
-    // links
-    FOREACHC(itLinkInfo, info._vLinkInfos) {
-        if ((*itLinkInfo)->_id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s link info %s has empty id, skipping", _id%(*itLinkInfo)->_name);
-            continue;
+    // build vectors of links and joints that we will deal with
+    std::vector<KinBody::LinkPtr> vLinks; vLinks.reserve(_veclinks.size());
+    std::vector<KinBody::JointPtr> vJoints; vJoints.reserve(_vecjoints.size() + _vPassiveJoints.size());
+    for (size_t iLink = 0; iLink < _veclinks.size(); ++iLink) {
+        if (!isConnectedLink[iLink]) {
+            vLinks.push_back(_veclinks[iLink]);
         }
-
-        // find existing link in body
-        std::vector<KinBody::LinkPtr>::iterator itExistingLink = _veclinks.end();
-        FOREACH(itLink, _veclinks) {
-            if ((*itLink)->_info._id.empty()) {
-                continue;
-            }
-            if ((*itLink)->_info._id == (*itLinkInfo)->_id) {
-                itExistingLink = itLink;
-                break;
-            }
+    }
+    for(size_t iJoint = 0; iJoint < _vecjoints.size(); iJoint++) {
+        if (!isConnectedJoint[iJoint]) {
+            vJoints.push_back(_vecjoints[iJoint]);
         }
-
-        KinBody::LinkInfoPtr pLinkInfo = *itLinkInfo;
-        if (itExistingLink != _veclinks.end()) {
-            // update existing link
-            KinBody::LinkPtr pLink = *itExistingLink;
-            UpdateFromInfoResult updateFromLinkInfoResult = pLink->UpdateFromInfo(*pLinkInfo);
-            if (updateFromLinkInfoResult == UFIR_NoChange) {
-                continue;
-            }
-            RAVELOG_VERBOSE_FORMAT("body %s link %s needed update: %d", _id%pLinkInfo->_id%updateFromLinkInfoResult);
-            if (updateFromLinkInfoResult == UFIR_Success) {
-                updateFromInfoResult = UFIR_Success;
-                continue;
-            }
-            // link update failed.
-            return updateFromLinkInfoResult;
+    }
+    for(size_t iPassiveJoint = 0; iPassiveJoint < _vPassiveJoints.size(); iPassiveJoint++) {
+        if (!isConnectedPassiveJoint[iPassiveJoint]) {
+            vJoints.push_back(_vPassiveJoints[iPassiveJoint]);
         }
-
-        // new links is added
-        RAVELOG_VERBOSE_FORMAT("body %s new link %s added", _id%pLinkInfo->_id);
-        return UFIR_RequireReinitialize;
     }
 
-    // delete links
-    for(size_t iLink = 0; iLink < _veclinks.size(); ++iLink) {
-        if (isConnectedLink[iLink]) {
-            continue;
-        }
-        if (_veclinks[iLink]->_info._id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s link %s has empty id", _id%_veclinks[iLink]->_info._id);
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itLinkInfo, info._vLinkInfos) {
-            if (_veclinks[iLink]->_info._id == (*itLinkInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing link %s removed", _id%_veclinks[iLink]->_info._id);
-            return UFIR_RequireReinitialize;
-        }
+    // links
+    if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
+        return updateFromInfoResult;
     }
 
     // joints
-    FOREACHC(itJointInfo, info._vJointInfos) {
-        if ((*itJointInfo)->_id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s joint info %s has empty id, skipping", _id%(*itJointInfo)->_name);
-            continue;
-        }
-
-        // find exsiting joint in body
-        std::vector<KinBody::JointPtr>::iterator itExistingJoint = _vecjoints.end();
-        FOREACH(itJoint, _vecjoints) {
-            if ((*itJoint)->_info._id.empty()) {
-                continue;
-            }
-            if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
-                itExistingJoint = itJoint;
-                break;
-            }
-        }
-
-        if (itExistingJoint == _vecjoints.end()) {
-            FOREACH(itJoint, _vPassiveJoints) {
-                if ((*itJoint)->_info._id.empty()) {
-                    continue;
-                }
-                if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
-                    itExistingJoint = itJoint;
-                    break;
-                }
-            }
-        }
-
-        KinBody::JointInfoPtr pJointInfo = *itJointInfo;
-        if (itExistingJoint != _vecjoints.end() || itExistingJoint != _vPassiveJoints.end()) {
-            // update current joint
-            KinBody::JointPtr pJoint = *itExistingJoint;
-            UpdateFromInfoResult updateFromJointInfoResult = pJoint->UpdateFromInfo(*pJointInfo);
-            if (updateFromJointInfoResult == UFIR_NoChange) {
-                continue;
-            }
-            RAVELOG_VERBOSE_FORMAT("body %s joint %s needed update: %d", _id%pJointInfo->_id%updateFromJointInfoResult);
-            if (updateFromJointInfoResult == UFIR_Success) {
-                updateFromInfoResult = UFIR_Success;
-                continue;
-            }
-            // joint update failed;
-            return updateFromJointInfoResult;
-        }
-        // new joints is added or deleted
-        RAVELOG_VERBOSE_FORMAT("body %s new joint %s added", _id%pJointInfo->_id);
-        return UFIR_RequireReinitialize;
-    }
-
-    // delete joints
-    for(size_t iJoint = 0; iJoint < _vecjoints.size(); iJoint++) {
-        if (isConnectedJoint[iJoint]) {
-            continue;
-        }
-        if (_vecjoints[iJoint]->_info._id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s joint %s has empty id", _id%_vecjoints[iJoint]->_info._id);
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itJointInfo, info._vJointInfos) {
-            if (_vecjoints[iJoint]->_info._id == (*itJointInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing joint %s removed", _id%_vecjoints[iJoint]->_info._id);
-            return UFIR_RequireReinitialize;
-        }
-    }
-    for(size_t iJoint = 0; iJoint < _vPassiveJoints.size(); iJoint++) {
-        if (isConnectedPassiveJoint[iJoint]) {
-            continue;
-        }
-        if (_vPassiveJoints[iJoint]->_info._id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s passive joint %s has empty id", _id%_vPassiveJoints[iJoint]->_info._id);
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itJointInfo, info._vJointInfos) {
-            if (_vPassiveJoints[iJoint]->_info._id == (*itJointInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing passive joint %s removed", _id%_vPassiveJoints[iJoint]->_info._id);
-            return UFIR_RequireReinitialize;
-        }
+    if (!UpdateChildrenFromInfo(info._vJointInfos, vJoints, updateFromInfoResult)) {
+        return updateFromInfoResult;
     }
 
     // name

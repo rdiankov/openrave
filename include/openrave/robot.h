@@ -62,6 +62,13 @@ public:
         void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
+
         std::string _id; ///< unique id for manipulator info
         std::string _name;
         std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
@@ -102,6 +109,14 @@ public:
         void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return name;
+        }
+
+        UpdateFromInfoResult UpdateFromInfo(const GripperInfo& info);
 
         std::string _id; /// < unique id
         std::string name; ///< unique name
@@ -155,7 +170,10 @@ public:
             return GetTransform();
         }
 
-        virtual const std::string& GetName() const {
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
+        inline const std::string& GetName() const {
             return _info._name;
         }
 
@@ -540,6 +558,13 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
+
         std::string _id;
         std::string _name;
         std::string _linkname; ///< the robot link that the sensor is attached to
@@ -583,7 +608,11 @@ public:
                 return RobotBasePtr(_probot);
             }
         }
-        virtual const std::string& GetName() const {
+
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
+        inline const std::string& GetName() const {
             return _info._name;
         }
 
@@ -671,6 +700,13 @@ public:
 
         /// \brief Updates the infos depending on the robot at the identity and zero position.
         void InitInfoFromBody(RobotBase& robot);
+
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
 
         std::string _id; ///< unique id of the connected body
         std::string _name; ///< the name of the connected body info
@@ -762,6 +798,9 @@ public:
             }
         }
 
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
         inline const std::string& GetName() const {
             return _info._name;
         }

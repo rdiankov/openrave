@@ -82,6 +82,15 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
     _docGripperInfo.Swap(docGripperInfo);
 }
 
+UpdateFromInfoResult RobotBase::GripperInfo::UpdateFromInfo(const RobotBase::GripperInfo& info)
+{
+    if (info == *this) {
+        return UFIR_NoChange;
+    }
+    *this = info;
+    return UFIR_Success;
+}
+
 void RobotBase::AttachedSensorInfo::Reset()
 {
     _id.clear();
@@ -2506,7 +2515,7 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
         return updateFromInfoResult;
     }
 
-    // need to avoid checking links and joints belonging to connected bodies
+    // need to avoid checking manips, attached sensors, gripper infos belonging to connected bodies
     std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);
     std::vector<bool> isConnectedAttachedSensor(_vecAttachedSensors.size(), false);
     std::vector<bool> isConnectedGripperInfo(_vecGripperInfos.size(), false);
@@ -2535,218 +2544,45 @@ UpdateFromInfoResult RobotBase::UpdateFromRobotInfo(const RobotBaseInfo& info)
         }
     }
 
-    // manipulators
-    FOREACHC(itManipulatorInfo, info._vManipulatorInfos) {
-        if ((*itManipulatorInfo)->_id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s manipulator info %s has empty id, skipping", _id%(*itManipulatorInfo)->_name);
-            continue;
+    // build vectors of manips, attached sensors, gripper infos that we will deal with
+    std::vector<RobotBase::ManipulatorPtr> vManipulators; vManipulators.reserve(_vecManipulators.size());
+    std::vector<RobotBase::AttachedSensorPtr> vAttachedSensors; vAttachedSensors.reserve(_vecAttachedSensors.size());
+    std::vector<RobotBase::GripperInfoPtr> vGripperInfos; vGripperInfos.reserve(_vecGripperInfos.size());
+    for (size_t iManipulator = 0; iManipulator < _vecManipulators.size(); ++iManipulator) {
+        if (!isConnectedManipulator[iManipulator]) {
+            vManipulators.push_back(_vecManipulators[iManipulator]);
         }
-        // find existing manipulator in robot
-        std::vector<RobotBase::ManipulatorPtr>::iterator itExistingManipulator = _vecManipulators.end();
-        FOREACHC(itManipulator, _vecManipulators) {
-            if ((*itManipulator)->_info._id == (*itManipulatorInfo)->_id) {
-                itExistingManipulator = itManipulator;
-                break;
-            }
-        }
-        RobotBase::ManipulatorInfoPtr pManipulatorInfo = *itManipulatorInfo;
-        if (itExistingManipulator != _vecManipulators.end()) {
-            // update existing manipulator
-            RobotBase::ManipulatorPtr pManipulator = *itExistingManipulator;
-            UpdateFromInfoResult updateFromManipulatorInfoResult = pManipulator->UpdateFromInfo(*pManipulatorInfo);
-            if (updateFromManipulatorInfoResult == UFIR_NoChange) {
-                continue;
-            }
-            RAVELOG_VERBOSE_FORMAT("body %s manipulator %s needed update: %d", _id%pManipulatorInfo->_id%updateFromManipulatorInfoResult);
-            if (updateFromManipulatorInfoResult == UFIR_Success) {
-                updateFromInfoResult = UFIR_Success;
-                continue;
-            }
-            // manipulator update failed;
-            return updateFromManipulatorInfoResult;
-        }
-        RAVELOG_VERBOSE_FORMAT("body %s new manipulator %s added", _id%pManipulatorInfo->_id);
-        return UFIR_RequireReinitialize;
     }
+    for (size_t iAttachedSensor = 0; iAttachedSensor < _vecAttachedSensors.size(); ++iAttachedSensor) {
+        if (!isConnectedAttachedSensor[iAttachedSensor]) {
+            vAttachedSensors.push_back(_vecAttachedSensors[iAttachedSensor]);
+        }
+    }
+    for (size_t iGripperInfo = 0; iGripperInfo < _vecGripperInfos.size(); ++iGripperInfo) {
+        if (!isConnectedGripperInfo[iGripperInfo]) {
+            vGripperInfos.push_back(_vecGripperInfos[iGripperInfo]);
+        }
+    }
+    std::vector<RobotBase::ConnectedBodyPtr> vConnectedBodies = _vecConnectedBodies;
 
-    // delete manipulators
-    for(size_t iManipulator = 0; iManipulator < _vecManipulators.size(); ++iManipulator) {
-        if (isConnectedManipulator[iManipulator]) {
-            continue;
-        }
-        if (_vecManipulators[iManipulator]->_info._id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s manipulator %s has empty id", _id%_vecManipulators[iManipulator]->_info._name);
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itManipulatorInfo, info._vManipulatorInfos) {
-            if (_vecManipulators[iManipulator]->_info._id == (*itManipulatorInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing manipulator %s removed", _id%_vecManipulators[iManipulator]->_info._id);
-            return UFIR_RequireReinitialize;
-        }
+    // manipulators
+    if (!UpdateChildrenFromInfo(info._vManipulatorInfos, vManipulators, updateFromInfoResult)) {
+        return updateFromInfoResult;
     }
 
     // attachedsensors
-    FOREACHC(itAttachedSensorInfo, info._vAttachedSensorInfos) {
-        if ((*itAttachedSensorInfo)->_id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s attached sensor info %s has empty id, skipping", _id%(*itAttachedSensorInfo)->_name);
-            continue;
-        }
-        // find existing attachedsensor in robot
-        std::vector<RobotBase::AttachedSensorPtr>::iterator itExistingAttachedSensor = _vecAttachedSensors.end();
-        FOREACHC(itAttachedSensor, _vecAttachedSensors) {
-            if ((*itAttachedSensor)->_info._id == (*itAttachedSensorInfo)->_id) {
-                itExistingAttachedSensor = itAttachedSensor;
-                break;
-            }
-        }
-        RobotBase::AttachedSensorInfoPtr pAttachedSensorInfo = *itAttachedSensorInfo;
-        if (itExistingAttachedSensor != _vecAttachedSensors.end()) {
-            // update existing attachedsensor
-            RobotBase::AttachedSensorPtr pAttachedSensor = *itExistingAttachedSensor;
-            UpdateFromInfoResult updateFromAttachedSensorInfoResult = pAttachedSensor->UpdateFromInfo(*pAttachedSensorInfo);
-            if (updateFromAttachedSensorInfoResult == UFIR_NoChange) {
-                continue;
-            }
-            RAVELOG_VERBOSE_FORMAT("body %s attached sensor %s needed update: %d", _id%pAttachedSensorInfo->_id%updateFromAttachedSensorInfoResult);
-            if (updateFromAttachedSensorInfoResult == UFIR_Success) {
-                updateFromInfoResult = UFIR_Success;
-                continue;
-            }
-            // attachedsensor update failed;
-            return updateFromAttachedSensorInfoResult;
-        }
-        RAVELOG_VERBOSE_FORMAT("body %s new attached sensor %s added", _id%pAttachedSensorInfo->_id);
-        return UFIR_RequireReinitialize;
-    }
-
-    // delete attachedsensors
-    for(size_t iAttachedSensor = 0; iAttachedSensor < _vecAttachedSensors.size(); ++iAttachedSensor) {
-        if (isConnectedAttachedSensor[iAttachedSensor]) {
-            continue;
-        }
-        if (_vecAttachedSensors[iAttachedSensor]->_info._id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s attached sensor %s has empty id", _id%_vecAttachedSensors[iAttachedSensor]->_info._name);
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itAttachedSensorInfo, info._vAttachedSensorInfos) {
-            if (_vecAttachedSensors[iAttachedSensor]->_info._id == (*itAttachedSensorInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing attached sensor %s removed", _id%_vecAttachedSensors[iAttachedSensor]->_info._id);
-            return UFIR_RequireReinitialize;
-        }
-    }
-
-    // connectedbodies
-    FOREACHC(itConnectedBodyInfo, info._vConnectedBodyInfos) {
-        if ((*itConnectedBodyInfo)->_id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s connected body info %s has empty id, skipping", _id%(*itConnectedBodyInfo)->_name);
-            continue;
-        }
-        // find existing connectedbody in robot
-        std::vector<RobotBase::ConnectedBodyPtr>::iterator itExistingConnectedBody = _vecConnectedBodies.end();
-        FOREACHC(itConnectedBody, _vecConnectedBodies) {
-            if ((*itConnectedBody)->_info._id == (*itConnectedBodyInfo)->_id) {
-                itExistingConnectedBody = itConnectedBody;
-                break;
-            }
-        }
-        RobotBase::ConnectedBodyInfoPtr pConnectedBodyInfo = *itConnectedBodyInfo;
-        if (itExistingConnectedBody != _vecConnectedBodies.end()) {
-            // update existing connectedbody
-            RobotBase::ConnectedBodyPtr pConnectedBody = *itExistingConnectedBody;
-            UpdateFromInfoResult updateFromConnectedBodyInfoResult = pConnectedBody->UpdateFromInfo(*pConnectedBodyInfo);
-            if (updateFromConnectedBodyInfoResult == UFIR_NoChange) {
-                continue;
-            }
-            RAVELOG_VERBOSE_FORMAT("body %s connected body %s needed update: %d", _id%pConnectedBodyInfo->_id%updateFromConnectedBodyInfoResult);
-            if (updateFromConnectedBodyInfoResult == UFIR_Success) {
-                updateFromInfoResult = UFIR_Success;
-                continue;
-            }
-            // connectedbody update failed;
-            return updateFromConnectedBodyInfoResult;
-        }
-        RAVELOG_VERBOSE_FORMAT("body %s new connected body %s added", _id%pConnectedBodyInfo->_id);
-        return UFIR_RequireReinitialize;
-    }
-
-    // delete connectedbodies
-    FOREACH(itConnectedBody, _vecConnectedBodies) {
-        if ((*itConnectedBody)->_info._id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s connected body %s has empty id", _id%(*itConnectedBody)->_info._name);
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itConnectedBodyInfo, info._vConnectedBodyInfos) {
-            if ((*itConnectedBody)->_info._id == (*itConnectedBodyInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing connected body %s removed", _id%(*itConnectedBody)->_info._id);
-            return UFIR_RequireReinitialize;
-        }
+    if (!UpdateChildrenFromInfo(info._vAttachedSensorInfos, vAttachedSensors, updateFromInfoResult)) {
+        return updateFromInfoResult;
     }
 
     // gripperinfos
-    FOREACHC(itGripperInfo, info._vGripperInfos) {
-        if ((*itGripperInfo)->_id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s gripper info %s has empty id, skipping", _id%(*itGripperInfo)->name);
-            continue;
-        }
-        // find exisiting gripperinfo in robot
-        typename std::vector<RobotBase::GripperInfoPtr>::iterator itExistingGripperInfo = _vecGripperInfos.end();
-        for(itExistingGripperInfo = _vecGripperInfos.begin(); itExistingGripperInfo != _vecGripperInfos.end(); itExistingGripperInfo++) {
-            // find existing gripperinfo
-            if ((*itExistingGripperInfo)->_id != (*itGripperInfo)->_id) {
-                continue;
-            }
-            if ((**itExistingGripperInfo) != (**itGripperInfo)) {
-                **itExistingGripperInfo = **itGripperInfo;
-                RAVELOG_VERBOSE_FORMAT("body %s gripper info %s needed update", _id%(*itGripperInfo)->_id);
-                updateFromInfoResult = UFIR_Success;
-            }
-            break;
-        }
-        if (itExistingGripperInfo == _vecGripperInfos.end()) {
-            // new gripper info
-            RAVELOG_VERBOSE_FORMAT("body %s new gripper info %s added", _id%(*itGripperInfo)->_id);
-            return UFIR_RequireReinitialize;
-        }
+    if (!UpdateChildrenFromInfo(info._vGripperInfos, vGripperInfos, updateFromInfoResult)) {
+        return updateFromInfoResult;
     }
 
-    // delete gripperinfos
-    for(size_t iGripperInfo = 0; iGripperInfo < _vecGripperInfos.size(); ++iGripperInfo) {
-        if (isConnectedGripperInfo[iGripperInfo]) {
-            continue;
-        }
-        if (_vecGripperInfos[iGripperInfo]->_id.empty()) {
-            RAVELOG_WARN_FORMAT("body %s gripper info %s has empty id", _id%_vecGripperInfos[iGripperInfo]->name);
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itGrippreInfoInfo, info._vGripperInfos) {
-            if (_vecGripperInfos[iGripperInfo]->_id == (*itGrippreInfoInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing gripper info %s removed", _id%_vecGripperInfos[iGripperInfo]->_id);
-            return UFIR_RequireReinitialize;
-        }
+    // connectedbodies
+    if (!UpdateChildrenFromInfo(info._vConnectedBodyInfos, vConnectedBodies, updateFromInfoResult)) {
+        return updateFromInfoResult;
     }
 
     return updateFromInfoResult;
