@@ -3176,25 +3176,25 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     
     and differentiate one more time to get
     
-    a_B = a_A + alpah_A x (B-A) + w_A x (w_A x (R_B^A * (B-A)))
+    a_B = a_A + alpha_A x (B-A) + w_A x (w_A x (R_B^A * (B-A)))
 
     */
 
     // forward recursion
     const size_t nlinks = _veclinks.size();
     std::vector<Vector> vLinkCOMLinearAccelerations(nlinks);
-    std::vector<Vector> vLinkCOMMomentOfInertia(nlinks);
+    std::vector<Vector> vLinkCOMResultantTorques(nlinks);
     for(size_t i = 0; i < vLinkVelocities.size(); ++i) {
         // collect
         const LinkPtr& plink = _veclinks.at(i);
         const Vector CoM = plink->GetGlobalCOM() - plink->_info._t.trans; // B-A
         const Vector& angularvel = vLinkVelocities.at(i).second;
-        const Vector& linearvel = vLinkAccelerations.at(i).first;
+        const Vector& linearaccel = vLinkAccelerations.at(i).first;
         const Vector& angularaccel = vLinkAccelerations.at(i).second;
         const TransformMatrix I = plink->GetGlobalInertia(); // inertia tensor
+        vLinkCOMLinearAccelerations[i] = linearaccel + angularaccel.cross(CoM) + angularvel.cross(angularvel.cross(CoM));
         // compute torque: https://en.wikipedia.org/wiki/Moment_of_inertia#Resultant_torque
-        vLinkCOMLinearAccelerations[i] = linearvel + angularaccel.cross(CoM) + angularvel.cross(angularvel.cross(CoM));
-        vLinkCOMMomentOfInertia[i] = I.rotate(angularaccel) + angularvel.cross(I.rotate(angularvel)); // I * alpha + v x (I * v)
+        vLinkCOMResultantTorques[i] = I.rotate(angularaccel) + angularvel.cross(I.rotate(angularvel)); // tau = I * alpha + v x (I * v)
     }
 
     // backward recursion
@@ -3223,10 +3223,11 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         const LinkPtr pparentlink = pjoint->GetHierarchyParentLink();
         const LinkPtr pchildlink = pjoint->GetHierarchyChildLink();
         const int childindex = pchildlink->GetIndex();
-        //      F_parent =      F_parent_external + m*a + F_child
-        // Torque_parent = Torque_parent_external + Torque_child + MoI_child + (CoM_child - CoM_parent) x F_parent
+        //         F_CoM = m_child * a_child + F_child
+        //      F_parent =      F_parent_external + F_CoM
+        // Torque_parent = Torque_parent_external + Torque_child + tau_child + (CoM_child - CoM_parent) x F_CoM
         const Vector vcomforce = pchildlink->GetMass() * vLinkCOMLinearAccelerations[childindex] + vLinkForceTorques.at(childindex).first;
-        const Vector vjointtorque = vLinkForceTorques.at(childindex).second + vLinkCOMMomentOfInertia.at(childindex);
+        const Vector vjointtorque = vLinkForceTorques.at(childindex).second + vLinkCOMResultantTorques.at(childindex);
 
         if( !!pparentlink ) {
             const Vector vchildcomtoparentcom = pchildlink->GetGlobalCOM() - pparentlink->GetGlobalCOM();
@@ -3247,6 +3248,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         const Vector vcomtoanchor = pchildlink->GetGlobalCOM() - pjoint->GetAnchor();
         dReal faxistorque = (jointtype == JointHinge) ? 
             pjoint->GetAxis(iaxis).dot3(vjointtorque + vcomtoanchor.cross(vcomforce)) : 
+            // TGN: what does dividing by 2*pi mean here?
             pjoint->GetAxis(iaxis).dot3(vcomforce) / (2.0 * PI)
         ;
 
