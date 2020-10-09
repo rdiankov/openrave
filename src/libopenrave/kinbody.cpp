@@ -3235,88 +3235,70 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
             vLinkForceTorques.at(parentindex).second += vjointtorque + vchildcomtoparentcom.cross(vcomforce);
         }
 
-        const Vector vcomtoanchor = pchildlink->GetGlobalCOM() - pjoint->GetAnchor();
         const int jointdofindex = pjoint->GetDOFIndex();
-
-        if( jointdofindex >= 0 ) { // active
-            doftorques.at(jointdofindex) += (jointtype == JointHinge) ?
-                pjoint->GetAxis(iaxis).dot3(vjointtorque + vcomtoanchor.cross(vcomforce)) :
-                pjoint->GetAxis(iaxis).dot3(vcomforce) / (2.0 * PI)
-            ;
-
-            // see if any friction needs to be added. Only add if the velocity is non-zero since with zero velocity do not know the exact torque on the joint...
-            const ElectricMotorActuatorInfoPtr& pActuatorInfo = pjoint->_info._infoElectricMotor;
-            if( !!pActuatorInfo ) {
-                dReal fFriction = 0; // torque due to friction
-                dReal fRotorAccelerationTorque = 0; // torque due to accelerating motor rotor (and gear)
-                if( jointdofindex < (int)vDOFVelocities.size() ) {
-                    const dReal dofvelocity = vDOFVelocities.at(jointdofindex);
-                    if( dofvelocity > g_fEpsilonLinear ) {
-                        fFriction += pActuatorInfo->coloumb_friction;
-                    }
-                    else if( dofvelocity < -g_fEpsilonLinear ) {
-                        fFriction -= pActuatorInfo->coloumb_friction;
-                    }
-                    fFriction += dofvelocity * pActuatorInfo->viscous_friction;
-
-                    if (pActuatorInfo->rotor_inertia > 0.0) {
-                        // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
-                        const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
-                        fRotorAccelerationTorque += vDOFAccelerations.at(jointdofindex) * fInertiaOnLoadSide;
-                    }
-                }
-
-                doftorques.at(jointdofindex) += fFriction + fRotorAccelerationTorque;
-            }
+        const bool bIsActive = jointdofindex >= 0;
+        const bool bIsMimic0 = pjoint->IsMimic(iaxis);
+        if(!bIsActive && !bIsMimic0) {
+            // joint should be static
+            OPENRAVE_ASSERT_FORMAT(pjoint->IsStatic(), "joint %s is expected to be static", pjoint->GetName(), ORE_Assert);
+            continue;
         }
-        else if( pjoint->IsMimic(iaxis) ) { // mimic
-            // transfer the torque of passive joint to its dependent joints
-            dReal faxistorque = (jointtype == JointHinge) ? 
-                pjoint->GetAxis(iaxis).dot3(vjointtorque + vcomtoanchor.cross(vcomforce)) : 
-                pjoint->GetAxis(iaxis).dot3(vcomforce) / (2.0 * PI)
-            ;
 
-            const ElectricMotorActuatorInfoPtr& pActuatorInfo = pjoint->_info._infoElectricMotor;
-            if( bHasVelocities && !!pActuatorInfo ) {
-                // TODO how to process this correctly? what is velocity of this joint? pjoint->GetVelocity(iaxis)?
-                // dz/dt = \sum_x (∂z/∂x * dx/dt)
-                dReal fFriction = 0; // torque due to friction
-                dReal fRotorAccelerationTorque = 0; // torque due to accelerating motor rotor (and gear)
+        const Vector vcomtoanchor = pchildlink->GetGlobalCOM() - pjoint->GetAnchor();
+        dReal faxistorque = (jointtype == JointHinge) ? 
+            pjoint->GetAxis(iaxis).dot3(vjointtorque + vcomtoanchor.cross(vcomforce)) : 
+            pjoint->GetAxis(iaxis).dot3(vcomforce) / (2.0 * PI)
+        ;
+
+        const ElectricMotorActuatorInfoPtr& pActuatorInfo = pjoint->_info._infoElectricMotor;
+        if( !!pActuatorInfo ) {
+            int iPassiveJoint = -1;
+            if(bIsMimic0) {
                 std::vector<JointPtr>::const_iterator itjoint = std::find(vPassiveJoints.cbegin(), vPassiveJoints.cend(), pjoint);
                 OPENRAVE_ASSERT_FORMAT(itjoint != vPassiveJoints.cend(),
                     "Joint \"%s\" is not in vPassiveJoints", pjoint->GetName(), ORE_InvalidArguments
                 );
-                const int iPassiveJoint = std::distance(vPassiveJoints.begin(), itjoint);
-                const dReal dofvelocity = vPassiveJointVelocities.at(iPassiveJoint).at(iaxis);
-                if( dofvelocity > g_fEpsilonLinear ) {
-                    fFriction += pActuatorInfo->coloumb_friction;
-                }
-                else if( dofvelocity < -g_fEpsilonLinear ) {
-                    fFriction -= pActuatorInfo->coloumb_friction;
-                }
-                fFriction += dofvelocity * pActuatorInfo->viscous_friction;
-
-                
-                if (bHasAccelerations && pActuatorInfo->rotor_inertia > 0.0) {
-                    // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
-                    const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
-                    fRotorAccelerationTorque += vPassiveJointAccelerations.at(iPassiveJoint).at(iaxis) * fInertiaOnLoadSide;
-                }
-                
-                faxistorque += fFriction + fRotorAccelerationTorque;
+                iPassiveJoint = std::distance(vPassiveJoints.begin(), itjoint);
             }
 
+            // torque due to friction
+            if(bHasVelocities) {
+                const dReal dofvelocity = bIsActive ? vDOFVelocities.at(jointdofindex) : vPassiveJointVelocities.at(iPassiveJoint).at(iaxis);
+                if( dofvelocity > g_fEpsilonLinear ) {
+                    faxistorque += pActuatorInfo->coloumb_friction;
+                }
+                else if( dofvelocity < -g_fEpsilonLinear ) {
+                    faxistorque -= pActuatorInfo->coloumb_friction;
+                }
+                faxistorque += dofvelocity * pActuatorInfo->viscous_friction;
+            }
+
+            // torque due to accelerating motor rotor (and gear)
+            if (bHasAccelerations) {
+                if(pActuatorInfo->rotor_inertia > 0.0) {
+                    // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
+                    const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
+                    if(bIsActive) {
+                        faxistorque += vDOFAccelerations.at(jointdofindex) * fInertiaOnLoadSide;
+                    }
+                    else { // mimic
+                        faxistorque += vPassiveJointAccelerations.at(iPassiveJoint).at(iaxis) * fInertiaOnLoadSide;
+                    }
+                }
+            }
+        }
+
+        if(bIsActive) {
+            doftorques.at(jointdofindex) += faxistorque;
+        }
+        else { // mimic
             // extract first-order partial derivatives results from the cached mPartialderivativepairValue
             pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
             for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                 doftorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
             }
         }
-        else {
-            // joint should be static
-            OPENRAVE_ASSERT_FORMAT(pjoint->IsStatic(), "joint %s is expected to be static", pjoint->GetName(), ORE_Assert);
-        }
-    }
+    } // std::vector<JointPtr>::const_reverse_iterator crit
 }
 
 void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFTorqueComponents, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
@@ -3672,7 +3654,7 @@ void KinBody::_ComputeLinkAccelerations(
     std::vector<std::vector<dReal> >& vPassiveJointVelocities,
     std::vector<std::vector<dReal> >& vPassiveJointAccelerations,
     std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
-    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue,
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue,
     std::vector<std::pair<Vector, Vector> >& vLinkAccelerations,
     AccelerationMapConstPtr pexternalaccelerations
 ) const {
@@ -3698,15 +3680,14 @@ void KinBody::_ComputeLinkAccelerations(
         );
     }
 
-    /* ========== (2) Compute DOF accelerations for passive joints ========== */
-    // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
+    /* ========== (2) Compute passive joints accelerations ========== */
     this->ComputePassiveJointVelocitiesAccelerations(
         /* input */vDOFVelocities, vDOFAccelerations,
         /* output */vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue
     );
 
     /* ========== (3) Compute link accelerations ========== */
-    // set accelerations of all links as if they were the base link
+    // Set link accelerations as if they were the base link
     for(int ilink = 0; ilink < nlinks; ++ilink) {
         const std::pair<Vector, Vector>& linkvels = vLinkVelocities.at(ilink);
         std::pair<Vector, Vector>& linkaccels = vLinkAccelerations.at(ilink);
@@ -3728,7 +3709,7 @@ void KinBody::_ComputeLinkAccelerations(
     std::vector<uint8_t> vlinkscomputed(nlinks, 0);
     vlinkscomputed[0] = 1;
 
-    // compute the link accelerations going through topological order
+    /* ========== (4) Compute link accelerations through topological order ========== */
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
         const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
         // do the test after mimic computation!?
@@ -3778,6 +3759,9 @@ void KinBody::_ComputeLinkAccelerations(
         // dw = wparent.diff(t)
 
         const JointType jointtype = pjoint->GetType();
+        if(jointtype != JointRevolute && jointtype != JointPrismatic) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("joint type 0x%x not supported for getting link acceleration"), jointtype, ORE_Assert);
+        }
         if( jointtype == JointRevolute ) {
             /*
             
@@ -3825,7 +3809,7 @@ void KinBody::_ComputeLinkAccelerations(
                 childaccelerations.second += alphajoint;
             }
         }
-        else if( jointtype == JointPrismatic ) {
+        else {
             /*
             
             Differentiating
@@ -3863,9 +3847,6 @@ void KinBody::_ComputeLinkAccelerations(
             }
             // alpha_child = alpha_parent
             childaccelerations.second = parentaccelerations.second;
-        }
-        else {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("joint type 0x%x not supported for getting link acceleration"), jointtype, ORE_Assert);
         }
         vlinkscomputed[childindex] = 1;
     }

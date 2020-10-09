@@ -2926,7 +2926,7 @@ protected:
         std::vector<std::vector<dReal> >& vPassiveJointVelocities,
         std::vector<std::vector<dReal> >& vPassiveJointAccelerations,
         std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
-        std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue,
+        std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue,
         std::vector<std::pair<Vector,Vector> >& vLinkAccelerations,
         AccelerationMapConstPtr externalaccelerations = AccelerationMapConstPtr()
     ) const;
