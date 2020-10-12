@@ -250,6 +250,13 @@ public:
         /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
+
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
         ///< for sphere it is radius
@@ -361,6 +368,13 @@ public:
 
         /// \brief converts the unit scale of the link properties and geometries
         void ConvertUnitScale(dReal fUnitScale);
+
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -489,6 +503,9 @@ public:
             inline const RaveVector<float>& GetAmbientColor() const {
                 return _info._vAmbientColor;
             }
+            inline const std::string& GetId() const {
+                return _info._id;
+            }
             inline const std::string& GetName() const {
                 return _info._name;
             }
@@ -591,6 +608,9 @@ protected:
         typedef boost::shared_ptr<Geometry const> GeometryConstPtr;
         typedef Geometry GEOMPROPERTIES RAVE_DEPRECATED;
 
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
         inline const std::string& GetName() const {
             return _info._name;
         }
@@ -1064,6 +1084,13 @@ public:
 
         int GetDOF() const;
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
+
         JointType _type = JointNone; /// The joint type
 
         std::string _id;   // joint unique id
@@ -1148,6 +1175,9 @@ public:
         Joint(KinBodyPtr parent, KinBody::JointType type = KinBody::JointNone);
         virtual ~Joint();
 
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
         /// \brief The unique name of the joint
         inline const std::string& GetName() const {
             return _info._name;

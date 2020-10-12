@@ -330,7 +330,13 @@ RobotBase::ConnectedBodyInfoPtr PyConnectedBodyInfo::GetConnectedBodyInfo() cons
     FOREACHC(it, vAttachedSensorInfos) {
         pinfo->_vAttachedSensorInfos.push_back(*it);
     }
-    // TODO: gripperinfos
+    // gripperinfos
+    std::vector<RobotBase::GripperInfoPtr> vGripperInfos = ExtractGripperInfoArray(_gripperInfos);
+    pinfo->_vGripperInfos.clear();
+    pinfo->_vGripperInfos.reserve(vGripperInfos.size());
+    FOREACHC(it, vGripperInfos) {
+        pinfo->_vGripperInfos.push_back(*it);
+    }
     return pinfo;
 }
 

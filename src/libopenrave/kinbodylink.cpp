@@ -889,6 +889,11 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
 
     UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
 
+    std::vector<KinBody::Link::GeometryPtr> vGeometries = _vGeometries;
+    if (!UpdateChildrenFromInfo(info._vgeometryinfos, vGeometries, updateFromInfoResult)) {
+        return updateFromInfoResult;
+    }
+
     // TODO: what about transform???
 
     // name
@@ -922,70 +927,6 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     if (_info._vinertiamoments != info._vinertiamoments) {
         SetPrincipalMomentsOfInertia(info._vinertiamoments);
         RAVELOG_VERBOSE_FORMAT("link %s inertia moments changed", _info._id);
-        updateFromInfoResult = UFIR_Success;
-    }
-
-    // geometries
-    bool isGeometryChanged = false;
-    FOREACHC(itGeometryInfo, info._vgeometryinfos) {
-        if ((*itGeometryInfo)->_id.empty()) {
-            RAVELOG_WARN_FORMAT("link %s geometry info %s has empty id, skipping", _info._id%(*itGeometryInfo)->_name);
-            continue;
-        }
-        std::vector<KinBody::Link::GeometryPtr>::iterator itExistingGeometry = _vGeometries.end();
-        FOREACH(itGeometry, _vGeometries) {
-            if ((*itGeometry)->_info._id.empty()) {
-                continue;
-            }
-            if ((*itGeometry)->_info._id == (*itGeometryInfo)->_id) {
-                itExistingGeometry = itGeometry;
-                break;
-            }
-        }
-
-        KinBody::GeometryInfoPtr pGeometryInfo = *itGeometryInfo;
-        if (itExistingGeometry != _vGeometries.end()) {
-            // update current geometry
-            KinBody::Link::GeometryPtr pGeometry = *itExistingGeometry;
-            UpdateFromInfoResult updateFromGeometryInfoResult = pGeometry->UpdateFromInfo(*pGeometryInfo);
-            if (updateFromGeometryInfoResult == UFIR_NoChange) {
-                continue;
-            }
-            RAVELOG_VERBOSE_FORMAT("link %s geometry %s needed update: %d", _info._id%pGeometryInfo->_id%updateFromGeometryInfoResult);
-            if (updateFromGeometryInfoResult == UFIR_Success) {
-                updateFromInfoResult = UFIR_Success;
-                continue;
-            }
-            RAVELOG_VERBOSE_FORMAT("link %s new geometry %s added", _info._id%pGeometryInfo->_id);
-            return UFIR_RequireReinitialize;
-        }
-        // new geometry is added;
-        AddGeometry(pGeometryInfo, true); // TODO: add to groups?
-        isGeometryChanged = true;
-    }
-
-    FOREACHC(itGeometry, _vGeometries) {
-        if ((*itGeometry)->_info._id.empty()) {
-            RAVELOG_WARN_FORMAT("link %s geometry %s has empty id", _info._id%(*itGeometry)->_info._name);
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itGeometryInfo, info._vgeometryinfos) {
-            if ((*itGeometry)->_info._id == (*itGeometryInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (stillExists) {
-            continue;
-        }
-        RemoveGeometryByName((*itGeometry)->GetName(), true);
-        RAVELOG_VERBOSE_FORMAT("link %s existing geometry %s removed", _info._id%(*itGeometry)->_info._id);
-        isGeometryChanged = true;
-    }
-    if (isGeometryChanged) {
-        _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
-        RAVELOG_VERBOSE_FORMAT("link %s some geometries added or removed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 

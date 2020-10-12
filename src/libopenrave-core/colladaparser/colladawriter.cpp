@@ -36,6 +36,28 @@ using namespace ColladaDOM150;
 namespace OpenRAVE
 {
 
+/// \brief converts the value into output and writes a null terminator
+///
+/// \return length of string (ie strlen(output))
+inline uint32_t _ConvertUIntToHex(uint32_t value, char* output)
+{
+    uint32_t length = 1; // in case value is 0, still requires one character '0'
+    if( value > 0 ) {
+        length = 8-(__builtin_clz(value)/4);
+    }
+    for(uint32_t index = 0; index < length; ++index) {
+        uint32_t nibble = (value>>(4*(length-1-index)))&0xf;
+        if( nibble < 10 ) {
+            output[index] = '0'+nibble;
+        }
+        else {
+            output[index] = 'A'+(nibble-10);
+        }
+    }
+    output[length] = 0; // null terminator
+    return length;
+}
+
 /// \brief converts raw XML data to DAE using libxml2
 namespace XMLtoDAE
 {
@@ -550,6 +572,8 @@ private:
         }
         FOREACHC(itbody,listbodies) {
             boost::shared_ptr<instance_articulated_system_output> iasout;
+            _AssignLinkSids(*itbody);
+            _AssignJointSids(*itbody);
             if( _CheckForExternalWrite(*itbody) ) {
                 iasout = _WriteKinBodyExternal(*itbody,_scene.kiscene);
             }
@@ -574,6 +598,8 @@ private:
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         _CreateScene(probot->GetName());
         _mapBodyIds[probot->GetEnvironmentId()] = 0;
+        _AssignLinkSids(probot);
+        _AssignJointSids(probot);
 
         boost::shared_ptr<instance_articulated_system_output> iasout;
         if( _CheckForExternalWrite(probot) ) {
@@ -598,6 +624,8 @@ private:
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         _CreateScene(pbody->GetName());
         _mapBodyIds[pbody->GetEnvironmentId()] = 0;
+        _AssignLinkSids(pbody);
+        _AssignJointSids(pbody);
 
         boost::shared_ptr<instance_articulated_system_output> iasout;
         if( _CheckForExternalWrite(pbody) ) {
@@ -2141,8 +2169,8 @@ private:
         }
 
         _mapBodyIds.clear(); // reset the tracked bodies
-        _mapBodyLinkIds.clear();
-        _mapBodyJointIds.clear();
+        _mapBodyLinkSids.clear();
+        _mapBodyJointSids.clear();
     }
 
     /** \brief Write link of a kinematic body
@@ -2815,26 +2843,81 @@ private:
         return str(boost::format("node_%s")%linksid);
     }
 
-    virtual std::string _GetLinkSid(KinBody::LinkConstPtr plink) {
-        std::string linksid = _mapBodyLinkIds[plink->GetParent()->GetEnvironmentId()][plink];
-        if (!linksid.empty()) {
-            return linksid;
+    /// \brief assign unique sid for all links in a body
+    virtual void _AssignLinkSids(KinBodyPtr pBody) {
+        std::vector<uint8_t> vConnectedLinks; vConnectedLinks.resize(pBody->GetLinks().size(),0);
+        if (pBody->IsRobot()) {
+            RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
+            FOREACH(itConnectedBody, pRobot->GetConnectedBodies()) {
+                if ((*itConnectedBody)->IsActive() == 0) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
+                std::vector<KinBody::LinkPtr> vResolvedLinks;
+                (*itConnectedBody)->GetResolvedLinks(vResolvedLinks);
+                FOREACHC(itResolvedLink, vResolvedLinks) {
+                    vConnectedLinks.at((*itResolvedLink)->GetIndex()) = 1;
+                }
+            }
         }
-        linksid = plink->_info._id;
-        if (!linksid.empty()) {
-            // check duplicate
-            FOREACHC(itId, _mapBodyLinkIds[plink->GetParent()->GetEnvironmentId()]) {
-                if (itId->second == linksid) {
-                    linksid.clear();
+        std::vector<KinBody::LinkConstPtr> vLinks;
+        vLinks.reserve(vConnectedLinks.size());
+        FOREACHC(itLink, pBody->GetLinks()) {
+            if (vConnectedLinks.at((*itLink)->GetIndex())) {
+                // skip links that are part of the connected body
+                continue;
+            }
+            vLinks.push_back(*itLink);
+        }
+
+        // assign sid
+        std::map<KinBody::LinkConstPtr, std::string>& mapLinkSids = _mapBodyLinkSids[pBody->GetEnvironmentId()];
+
+        // exisitng link id, if not duplicated, takes priority
+        FOREACHC(itLink, vLinks) {
+            std::string linkSid = (*itLink)->_info._id;
+            if (!linkSid.empty()) {
+                FOREACHC(itId, mapLinkSids) {
+                    if (itId->second == linkSid) {
+                        // sid has duplicate, clear it, will assign later
+                        linkSid.clear();
+                        break;
+                    }
+                }
+            }
+            if (!linkSid.empty()) {
+                mapLinkSids[*itLink] = linkSid;
+            }
+        }
+
+        // for the rest, find next available sid
+        int numericSid = 0;
+        char tempSid[sizeof("link")+9] = "link"; // temp memory space for converting indices to hex strings, enough space to convert "link" + uint32_t
+        FOREACHC(itLink, vLinks) {
+            if (mapLinkSids.find(*itLink) != mapLinkSids.end()) {
+                // skip link whose sid is already assigned
+                continue;
+            }
+            while (true) {
+                numericSid++;
+                _ConvertUIntToHex(numericSid, tempSid+sizeof("link"));
+                bool bDuplicate = false;
+                FOREACHC(itId, mapLinkSids) {
+                    if (itId->second == tempSid) {
+                        bDuplicate = true;
+                        break;
+                    }
+                }
+                if (!bDuplicate) {
+                    mapLinkSids[*itLink] = tempSid;
                     break;
                 }
             }
         }
-        if (linksid.empty()) {
-            linksid = str(boost::format("link%d")%utils::GetNanoTime());
-        }
-        _mapBodyLinkIds[plink->GetParent()->GetEnvironmentId()][plink] = linksid;
-        return linksid;
+    }
+
+    virtual std::string _GetLinkSid(KinBody::LinkConstPtr plink) {
+        return _mapBodyLinkSids[plink->GetParent()->GetEnvironmentId()][plink];
     }
     virtual std::string _GetMotionId(KinBodyConstPtr pbody) {
         return str(boost::format("body%d_motion")%_mapBodyIds[pbody->GetEnvironmentId()]);
@@ -2848,26 +2931,101 @@ private:
         return str(boost::format("g%d_%s_extrageom%d_%s")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%_GetLinkSid(plink)%igeom%groupname);
     }
 
-    virtual std::string _GetJointSid(KinBody::JointConstPtr pjoint) {
-        std::string jointsid = _mapBodyJointIds[pjoint->GetParent()->GetEnvironmentId()][pjoint];
-        if (!jointsid.empty()) {
-            return jointsid;
+    /// \brief assign unique sid for all joints in a body
+    virtual void _AssignJointSids(KinBodyPtr pBody) {
+        std::vector<uint8_t> vConnectedJoints; vConnectedJoints.resize(pBody->GetJoints().size(),0);
+        std::vector<uint8_t> vConnectedPassiveJoints; vConnectedPassiveJoints.resize(pBody->GetPassiveJoints().size(),0);
+        if (pBody->IsRobot()) {
+            RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
+            FOREACH(itConnectedBody, pRobot->GetConnectedBodies()) {
+                if ((*itConnectedBody)->IsActive() == 0) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
+
+                std::vector<KinBody::JointPtr> vResolvedJoints;
+                (*itConnectedBody)->GetResolvedJoints(vResolvedJoints);
+                FOREACHC(itResolvedJoint, vResolvedJoints) {
+                    for(int ijointindex = 0; ijointindex < (int)pBody->GetJoints().size(); ++ijointindex) {
+                        if( pBody->GetJoints()[ijointindex] == *itResolvedJoint ) {
+                            vConnectedJoints[ijointindex] = 1;
+                        }
+                    }
+                    for(int ijointindex = 0; ijointindex < (int)pBody->GetPassiveJoints().size(); ++ijointindex) {
+                        if( pBody->GetPassiveJoints()[ijointindex] == *itResolvedJoint ) {
+                            vConnectedPassiveJoints[ijointindex] = 1;
+                        }
+                    }
+                }
+                KinBody::JointPtr pResolvedDummyPassiveJoint = (*itConnectedBody)->GetResolvedDummyPassiveJoint();
+                for(int ijointindex = 0; ijointindex < (int)pBody->GetPassiveJoints().size(); ++ijointindex) {
+                    if( pBody->GetPassiveJoints()[ijointindex] == pResolvedDummyPassiveJoint ) {
+                        vConnectedPassiveJoints[ijointindex] = 1;
+                    }
+                }
+            }
         }
-        jointsid = pjoint->_info._id;
-        if (!jointsid.empty()) {
-            // check duplicate
-            FOREACHC(itId, _mapBodyJointIds[pjoint->GetParent()->GetEnvironmentId()]) {
-                if (itId->second == jointsid) {
-                    jointsid.clear();
+        std::vector<KinBody::JointConstPtr> vJoints;
+        vJoints.reserve(vConnectedJoints.size()+vConnectedPassiveJoints.size());
+        for(int ijoint = 0; ijoint < (int)vConnectedJoints.size(); ++ijoint) {
+            if (!vConnectedJoints[ijoint]) {
+                vJoints.push_back(pBody->GetJoints()[ijoint]);
+            }
+        }
+        for(int ipassivejoint = 0; ipassivejoint < (int)vConnectedPassiveJoints.size(); ++ipassivejoint) {
+            if (!vConnectedPassiveJoints[ipassivejoint]) {
+                vJoints.push_back(pBody->GetPassiveJoints()[ipassivejoint]);
+            }
+        }
+
+        // assign sid
+        std::map<KinBody::JointConstPtr, std::string>& mapJointSids = _mapBodyJointSids[pBody->GetEnvironmentId()];
+
+        // existing joint id, if not duplicated, takes priority
+        FOREACHC(itJoint, vJoints) {
+            std::string jointSid = (*itJoint)->_info._id;
+            if (!jointSid.empty()) {
+                FOREACHC(itId, mapJointSids) {
+                    if (itId->second == jointSid) {
+                        // sid has duplicate, clear it, will assign later
+                        jointSid.clear();
+                        break;
+                    }
+                }
+            }
+            if (!jointSid.empty()) {
+                mapJointSids[*itJoint] = jointSid;
+            }
+        }
+
+        // for the rest, find next available sid
+        int numericSid = 0;
+        char tempSid[sizeof("joint")+9] = "joint"; // temp memory space for converting indices to hex strings, enough space to convert "joint" + uint32_t
+        FOREACHC(itJoint, vJoints) {
+            if (mapJointSids.find(*itJoint) != mapJointSids.end()) {
+                // skip joint whose sid is already assigned
+                continue;
+            }
+            while (true) {
+                numericSid++;
+                _ConvertUIntToHex(numericSid, tempSid+sizeof("joint"));
+                bool bDuplicate = false;
+                FOREACHC(itId, mapJointSids) {
+                    if (itId->second == tempSid) {
+                        bDuplicate = true;
+                        break;
+                    }
+                }
+                if (!bDuplicate) {
+                    mapJointSids[*itJoint] = tempSid;
                     break;
                 }
             }
         }
-        if (jointsid.empty()) {
-            jointsid = str(boost::format("joint%d")%utils::GetNanoTime());
-        }
-        _mapBodyJointIds[pjoint->GetParent()->GetEnvironmentId()][pjoint] = jointsid;
-        return jointsid;
+    }
+
+    virtual std::string _GetJointSid(KinBody::JointConstPtr pjoint) {
+        return _mapBodyJointSids[pjoint->GetParent()->GetEnvironmentId()][pjoint];
     }
 
     virtual std::string _GetJointNodeSid(KinBody::JointConstPtr pjoint, int iaxis) {
@@ -2938,8 +3096,8 @@ private:
     std::set<std::string> _setSkipWriteOptions;
 
     std::map<int, int> _mapBodyIds; ///< map from body environment id to unique collada ids
-    std::map<int, std::map<KinBody::JointConstPtr, std::string>> _mapBodyJointIds;
-    std::map<int, std::map<KinBody::LinkConstPtr, std::string>> _mapBodyLinkIds;
+    std::map<int, std::map<KinBody::JointConstPtr, std::string>> _mapBodyJointSids;
+    std::map<int, std::map<KinBody::LinkConstPtr, std::string>> _mapBodyLinkSids;
     bool _bExternalRefAllBodies; ///< if true, attempts to externally write all bodies
     bool _bForceWriteAll; ///< if true, attemps to write all modifiable data to externally saved bodies
     bool _bReuseSimilar; ///< if true, attemps to resuse similar looking meshes and structures to reduce size
