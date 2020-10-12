@@ -2414,65 +2414,23 @@ public:
         _unit = unit;
     }
 
-    /// \brief go through all boides id and make sure they are unique
-    virtual void _ResolveBodyIds() {
-        char sTempIndexConversion[9]; //temp memory space for converting indices to hex strings, enough space to convert uint32_t
-        uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
-        static const char pBodyIdPrefix[] = "body";
-        int nBodyId = 0;
-        const int numBodies = _vecbodies.size();
-        for(int iBody = 0; iBody < numBodies; iBody++) {
-            bool bGenerateNewId = _vecbodies[iBody]->_id.empty();
-            if (!bGenerateNewId) {
-                for(int iTestBody = 0; iTestBody < iBody; iTestBody++) {
-                    if(_vecbodies[iBody]->_id == _vecbodies[iTestBody]->_id) {
-                        bGenerateNewId = true;
-                        break;
-                    }
-                }
-            }
-            if (bGenerateNewId) {
-                while(1) {
-                    nTempIndexConversion = ConvertUIntToHex(nBodyId, sTempIndexConversion);
-                    bool bHasSame = false;
-                    for(int iTestBody = 0; iTestBody < numBodies; ++iTestBody) {
-                        const std::string& testid = _vecbodies[iTestBody]->_id;
-                        if( testid.size() == sizeof(pBodyIdPrefix)-1+nTempIndexConversion ) {
-                            if( strncmp(testid.c_str() + (sizeof(pBodyIdPrefix)-1), sTempIndexConversion,nTempIndexConversion) == 0 ) {
-                                // matches
-                                bHasSame = true;
-                                break;
-                            }
-                        }
-                    }
-                    if( bHasSame ) {
-                        nBodyId++;
-                        continue;
-                    }
-                    break;
-                }
-
-                _vecbodies[iBody]->_id = pBodyIdPrefix;
-                _vecbodies[iBody]->_id += sTempIndexConversion;
-                nBodyId++;
-            }
-
-        }
-    }
-
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
     virtual void ExtractInfo(EnvironmentBaseInfo& info)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        info._vBodyInfos.resize(_vecbodies.size());
-        _ResolveBodyIds();
+        std::vector<KinBodyPtr> vBodies;
+        {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            vBodies = _vecbodies;
+        }
+        info._vBodyInfos.resize(vBodies.size());
         for(size_t i = 0; i < info._vBodyInfos.size(); ++i) {
-            if (_vecbodies[i]->IsRobot()) {
+            if (vBodies[i]->IsRobot()) {
                 info._vBodyInfos[i].reset(new RobotBase::RobotBaseInfo());
-                RaveInterfaceCast<RobotBase>(_vecbodies[i])->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(info._vBodyInfos[i])));
+                RaveInterfaceCast<RobotBase>(vBodies[i])->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(info._vBodyInfos[i])));
             } else {
                 info._vBodyInfos[i].reset(new KinBody::KinBodyInfo());
-                _vecbodies[i]->ExtractInfo(*info._vBodyInfos[i]);
+                vBodies[i]->ExtractInfo(*info._vBodyInfos[i]);
             }
         }
         info._name = _name;
@@ -2486,13 +2444,13 @@ public:
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies)
     {
+        RAVELOG_VERBOSE_FORMAT("=== UpdateFromInfo start, env=%d ===", GetId());
+
         vCreatedBodies.clear();
         vModifiedBodies.clear();
         vRemovedBodies.clear();
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        _ResolveBodyIds();
-
         std::vector<dReal> vDOFValues;
 
         // copy basic info into EnvironmentBase
@@ -2509,73 +2467,89 @@ public:
             }
         }
 
-        RAVELOG_VERBOSE("=== UpdateFromInfo start ===");
-        FOREACHC(itBodyInfo, info._vBodyInfos) {
-            KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
-            RAVELOG_VERBOSE_FORMAT("==== %s ===", pKinBodyInfo->_id);
-            RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
+        // make a copy of _vecbodies because we will be doing some reordering
+        std::vector<KinBodyPtr> vBodies;
+        {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            vBodies = _vecbodies;
+        }
 
-            KinBodyPtr pMatchExistingBody; // matche sto pKinBodyInfo
+        // internally manipulates _vecbodies using _AddKinBody/_AddRobot/_RemoveKinBodyFromIterator
+        for(int bodyIndex = 0; bodyIndex < (int)info._vBodyInfos.size(); ++bodyIndex) {
+            const KinBody::KinBodyInfoConstPtr& pKinBodyInfo = info._vBodyInfos[bodyIndex];
+            const KinBody::KinBodyInfo& kinBodyInfo = *pKinBodyInfo;
+            RAVELOG_VERBOSE_FORMAT("==== body: env = %d, id = %s, name = %s ===", GetId()%pKinBodyInfo->_id%pKinBodyInfo->_name);
+            RobotBase::RobotBaseInfoConstPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<const RobotBase::RobotBaseInfo>(pKinBodyInfo);
+            KinBodyPtr pMatchExistingBody; // matches to pKinBodyInfo
             {
-                boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                 // find existing body in the env
-                std::vector<KinBodyPtr>::iterator itExistingSameId = _vecbodies.end();
-                std::vector<KinBodyPtr>::iterator itExistingSameName = _vecbodies.end();
-                std::vector<KinBodyPtr>::iterator itExistingSameIdName = _vecbodies.end();
-                FOREACH(itBody, _vecbodies) {
-                    bool bIdMatch = !(*itBody)->_id.empty() && (*itBody)->_id == (*itBodyInfo)->_id;
-                    bool bNameMatch = !(*itBody)->_name.empty() && (*itBody)->_name == (*itBodyInfo)->_name;
-                    if( bIdMatch && bNameMatch ) {
-                        itExistingSameIdName = itBody;
-                        break;
-                    }
-                    else {
-                        // not ideal
-                        if( bIdMatch && itExistingSameId == _vecbodies.end() ) {
+                std::vector<KinBodyPtr>::iterator itExistingSameId = vBodies.end();
+                std::vector<KinBodyPtr>::iterator itExistingSameName = vBodies.end();
+                std::vector<KinBodyPtr>::iterator itExistingSameIdName = vBodies.end();
+
+                // search only in the unprocessed part of vBodies
+                if( (int)vBodies.size() > bodyIndex ) {
+                    for (std::vector<KinBodyPtr>::iterator itBody = vBodies.begin() + bodyIndex; itBody != vBodies.end(); ++itBody) {
+                        bool bIdMatch = !(*itBody)->_id.empty() && (*itBody)->_id == kinBodyInfo._id;
+                        bool bNameMatch = !(*itBody)->_name.empty() && (*itBody)->_name == kinBodyInfo._name;
+                        if( bIdMatch && bNameMatch ) {
+                            itExistingSameIdName = itBody;
+                            itExistingSameId = itBody;
+                            itExistingSameName = itBody;
+                            break;
+                        }
+                        if( bIdMatch && itExistingSameId == vBodies.end() ) {
                             itExistingSameId = itBody;
                         }
-                        if( bNameMatch && itExistingSameName == _vecbodies.end() ) {
+                        if( bNameMatch && itExistingSameName == vBodies.end() ) {
                             itExistingSameName = itBody;
                         }
                     }
                 }
 
                 std::vector<KinBodyPtr>::iterator itExisting = itExistingSameIdName;
-                if( itExistingSameIdName == _vecbodies.end() ) {
+                if( itExisting == vBodies.end() ) {
                     itExisting = itExistingSameId;
                 }
-                //RAVELOG_VERBOSE_FORMAT("found existing body %s in environment", (*itBody)->_id);
+                if( itExisting == vBodies.end() ) {
+                    itExisting = itExistingSameName;
+                }
 
-                if (itExisting != _vecbodies.end()) {
+                // check if interface type changed, if so, remove the body and treat it as a new body
+                if (itExisting != vBodies.end()) {
                     KinBodyPtr pBody = *itExisting;
                     bool bInterfaceMatches = pBody->GetXMLId() == pKinBodyInfo->_interfaceType;
                     if( !bInterfaceMatches || pBody->IsRobot() != pKinBodyInfo->_isRobot ) {
-                        RAVELOG_VERBOSE_FORMAT("body %s interface is changed, remove old body from environment. xmlid=%s, _interfaceType=%s, isRobot %d != %d", pBody->_id%pBody->GetXMLId()%pKinBodyInfo->_interfaceType%pBody->IsRobot()%pKinBodyInfo->_isRobot);
-                        _RemoveKinBodyFromIterator(itExisting);
-                        itExisting = _vecbodies.end();
+                        RAVELOG_VERBOSE_FORMAT("env=%d, body %s interface is changed, remove old body from environment. xmlid=%s, _interfaceType=%s, isRobot %d != %d", GetId()%pBody->_id%pBody->GetXMLId()%pKinBodyInfo->_interfaceType%pBody->IsRobot()%pKinBodyInfo->_isRobot);
+                        itExisting = vBodies.end();
                         vRemovedBodies.push_back(pBody);
+
+                        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                        vector<KinBodyPtr>::iterator itBodyToRemove = std::find(_vecbodies.begin(), _vecbodies.end(), pBody);
+                        if( itBodyToRemove != _vecbodies.end() ) {
+                            _RemoveKinBodyFromIterator(itBodyToRemove); // requires _mutexInterfaces lock
+                        }
                     }
                 }
 
-                if( itExisting != _vecbodies.end() ) {
-                    if( itExisting != itExistingSameName && itExistingSameName != _vecbodies.end() ) {
+                if( itExisting != vBodies.end() ) {
+                    if( itExisting != itExistingSameName && itExistingSameName != vBodies.end() ) {
                         // new name will conflict with *itExistingSameName, so should change the names to something temporarily
                         // for now, clear since the body should be processed later again
                         (*itExistingSameName)->_name.clear();
                     }
                     pMatchExistingBody = *itExisting;
-                }
-                else {
-                    if( itExistingSameName != _vecbodies.end() ) {
-                        // new name will conflict with *itExistingSameName, so should change the names to something temporarily
-                        // for now, clear since the body should be processed later again
-                        (*itExistingSameName)->_name.clear();
+                    if (bodyIndex != itExisting-vBodies.begin()) {
+                        // re-arrange vBodies according to the order of infos
+                        KinBodyPtr pTempBody = vBodies[bodyIndex];
+                        vBodies[bodyIndex] = pMatchExistingBody;
+                        *itExisting = pTempBody;
                     }
                 }
             }
 
-            KinBodyPtr pInitBody; // body that has been Init() again
-            if(!!pMatchExistingBody ) {
+            KinBodyPtr pInitBody; // body that has to be Init() again
+            if( !!pMatchExistingBody ) {
                 RAVELOG_VERBOSE_FORMAT("env=%d, update existing body %s", GetId()%pMatchExistingBody->_id);
                 // interface should match at this point
                 // update existing body or robot
@@ -2600,6 +2574,7 @@ public:
                     continue;
                 }
 
+                // updating this body requires removing it and re-adding it to env
                 {
                     boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                     vector<KinBodyPtr>::iterator itExisting = std::find(_vecbodies.begin(), _vecbodies.end(), pMatchExistingBody);
@@ -2674,6 +2649,7 @@ public:
                     pInitBody = pNewBody;
                     _AddKinBody(pNewBody, true);
                 }
+                vBodies.insert(vBodies.begin()+bodyIndex, pNewBody);
                 vCreatedBodies.push_back(pNewBody);
             }
 
@@ -2695,57 +2671,38 @@ public:
             }
         }
 
-        {
+        // remove extra bodies at the end of vBodies
+        if( vBodies.size() > info._vBodyInfos.size() ) {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            // remove extra bodies
-            FOREACH_NOINC(itBody, _vecbodies) {
+            for (std::vector<KinBodyPtr>::iterator itBody = vBodies.begin() + info._vBodyInfos.size(); itBody != vBodies.end();) {
+                KinBodyPtr pBody = *itBody;
+                RAVELOG_VERBOSE_FORMAT("remove extra body env=%d, id=%s, name=%s", GetId()%pBody->_id%pBody->_name);
 
-                // find existing body in the env
-                std::vector<KinBodyPtr>::iterator itExistingSameId = _vecbodies.end();
-                std::vector<KinBodyPtr>::iterator itExistingSameName = _vecbodies.end();
-                FOREACHC(itBodyInfo, info._vBodyInfos) {
-                    bool bIdMatch = !(*itBody)->_id.empty() && (*itBody)->_id == (*itBodyInfo)->_id;
-                    bool bNameMatch = !(*itBody)->_name.empty() && (*itBody)->_name == (*itBodyInfo)->_name;
-                    if( bIdMatch && itExistingSameId == _vecbodies.end() ) {
-                        itExistingSameId = itBody;
-                    }
-                    if( bNameMatch && itExistingSameName == _vecbodies.end() ) {
-                        itExistingSameName = itBody;
-                    }
+                vector<KinBodyPtr>::iterator itBodyToRemove = std::find(_vecbodies.begin(), _vecbodies.end(), pBody);
+                if( itBodyToRemove != _vecbodies.end() ) {
+                    _RemoveKinBodyFromIterator(itBodyToRemove); // assumes _mutexInterfaces locked
                 }
 
-                if( itExistingSameId != _vecbodies.end() ) {
-                    // do nothing
-                    ++itBody;
-                }
-                else if( itExistingSameName != _vecbodies.end() ) {
-                    // do nothing since id can be empty
-                    ++itBody;
-                }
-                else {
-                    RAVELOG_VERBOSE_FORMAT("remove extra body id=%s, name=%s", (*itBody)->_id%(*itBody)->_name);
-                    vRemovedBodies.push_back(*itBody);
-                    itBody = _RemoveKinBodyFromIterator(itBody);
-                }
+                vRemovedBodies.push_back(pBody);
+                itBody = vBodies.erase(itBody);
             }
         }
 
         // after all bodies are added, update the grab states
         std::vector<KinBody::GrabbedInfoConstPtr> vGrabbedInfos;
-        FOREACHC(itBodyInfo, info._vBodyInfos) {
-            KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
-            const std::string& bodyName = (*itBodyInfo)->_name;
+        for(const KinBody::KinBodyInfoPtr& pKinBodyInfo : info._vBodyInfos) {
+            const std::string& bodyName = pKinBodyInfo->_name;
 
             // find existing body in the env, use name since that is more guaranteed to be unique
-            std::vector<KinBodyPtr>::iterator itExistingBody = _vecbodies.end();
-            FOREACH(itBody, _vecbodies) {
+            std::vector<KinBodyPtr>::iterator itExistingBody = vBodies.end();
+            FOREACH(itBody, vBodies) {
                 if ((*itBody)->_name == bodyName) {
                     itExistingBody = itBody;
                     break;
                 }
             }
 
-            if (itExistingBody != _vecbodies.end()) {
+            if (itExistingBody != vBodies.end()) {
                 // grabbed infos
                 vGrabbedInfos.clear();
                 vGrabbedInfos.reserve(pKinBodyInfo->_vGrabbedInfos.size());
