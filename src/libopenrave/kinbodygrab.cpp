@@ -345,7 +345,6 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo)
         // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
         if( !!pgrabbedbody ) {
             KinBody::GrabbedInfoPtr poutputinfo(new GrabbedInfo());
-            poutputinfo->_id = "grabbed_" + pgrabbedbody->_id + "_" + pgrabbed->_plinkrobot->GetName();
             poutputinfo->_grabbedname = pgrabbedbody->GetName();
             poutputinfo->_robotlinkname = pgrabbed->_plinkrobot->GetName();
             poutputinfo->_trelative = pgrabbed->_troot;
@@ -374,7 +373,6 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const
         // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
         if( !!pgrabbedbody ) {
             KinBody::GrabbedInfo& outputinfo = vgrabbedinfo[igrabbed];
-            outputinfo._id = "grabbed_" + pgrabbedbody->_id + "_" + pgrabbed->_plinkrobot->GetName();
             outputinfo._grabbedname = pgrabbedbody->GetName();
             outputinfo._robotlinkname = pgrabbed->_plinkrobot->GetName();
             outputinfo._trelative = pgrabbed->_troot;

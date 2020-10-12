@@ -772,9 +772,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
 {
     orjson::LoadJsonValueByKey(value, "id", _id);
     orjson::LoadJsonValueByKey(value, "name", _name);
-    if( _id.empty() ) {
-        _id = _name;
-    }
+
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _t);
         _t.trans *= fUnitScale;
