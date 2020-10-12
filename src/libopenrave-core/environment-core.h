@@ -2474,11 +2474,12 @@ public:
             vBodies = _vecbodies;
         }
 
-        int bodyIndex = 0;
-        for(std::vector<KinBody::KinBodyInfoPtr>::const_iterator itBodyInfo = info._vBodyInfos.begin(); itBodyInfo != info._vBodyInfos.end(); ++itBodyInfo, ++bodyIndex) {
-            KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
+        // internally manipulates _vecbodies using _AddKinBody/_AddRobot/_RemoveKinBodyFromIterator
+        for(int bodyIndex = 0; bodyIndex < (int)info._vBodyInfos.size(); ++bodyIndex) {
+            const KinBody::KinBodyInfoConstPtr& pKinBodyInfo = info._vBodyInfos[bodyIndex];
+            const KinBody::KinBodyInfo& kinBodyInfo = *pKinBodyInfo;
             RAVELOG_VERBOSE_FORMAT("==== body: env = %d, id = %s, name = %s ===", GetId()%pKinBodyInfo->_id%pKinBodyInfo->_name);
-            RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
+            RobotBase::RobotBaseInfoConstPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<const RobotBase::RobotBaseInfo>(pKinBodyInfo);
             KinBodyPtr pMatchExistingBody; // matches to pKinBodyInfo
             {
                 // find existing body in the env
@@ -2489,8 +2490,8 @@ public:
                 // search only in the unprocessed part of vBodies
                 if( (int)vBodies.size() > bodyIndex ) {
                     for (std::vector<KinBodyPtr>::iterator itBody = vBodies.begin() + bodyIndex; itBody != vBodies.end(); ++itBody) {
-                        bool bIdMatch = !(*itBody)->_id.empty() && (*itBody)->_id == (*itBodyInfo)->_id;
-                        bool bNameMatch = !(*itBody)->_name.empty() && (*itBody)->_name == (*itBodyInfo)->_name;
+                        bool bIdMatch = !(*itBody)->_id.empty() && (*itBody)->_id == kinBodyInfo._id;
+                        bool bNameMatch = !(*itBody)->_name.empty() && (*itBody)->_name == kinBodyInfo._name;
                         if( bIdMatch && bNameMatch ) {
                             itExistingSameIdName = itBody;
                             itExistingSameId = itBody;
@@ -2689,9 +2690,8 @@ public:
 
         // after all bodies are added, update the grab states
         std::vector<KinBody::GrabbedInfoConstPtr> vGrabbedInfos;
-        FOREACHC(itBodyInfo, info._vBodyInfos) {
-            KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
-            const std::string& bodyName = (*itBodyInfo)->_name;
+        for(const KinBody::KinBodyInfoPtr& pKinBodyInfo : info._vBodyInfos) {
+            const std::string& bodyName = pKinBodyInfo->_name;
 
             // find existing body in the env, use name since that is more guaranteed to be unique
             std::vector<KinBodyPtr>::iterator itExistingBody = vBodies.end();
