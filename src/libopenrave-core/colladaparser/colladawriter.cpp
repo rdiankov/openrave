@@ -1779,7 +1779,7 @@ private:
         std::map<std::string,std::string> mapjointnames;
         for(int iConnectedJoint = 0; iConnectedJoint < nConnectedJoints; ++iConnectedJoint) {
             const KinBody::JointConstPtr& pjoint = vConnectedJoints[iConnectedJoint];
-            mapjointnames[str(boost::format("<csymbol>%s</csymbol>")% pjoint->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/joint%d</csymbol>")%kmodel->getID()%_GetJointSid(pjoint));
+            mapjointnames[str(boost::format("<csymbol>%s</csymbol>")% pjoint->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/%s</csymbol>")%kmodel->getID()%_GetJointSid(pjoint));
         }
 
         const boost::array<const char*, 3> sequationids = {{ "position", "first_partial", "second_partial"}};
@@ -1792,10 +1792,10 @@ private:
                 RAVELOG_WARN("collada writer might not support multi-dof joint formulas...");
             }
             domFormulaRef pf = daeSafeCast<domFormula>(ktec->add(COLLADA_ELEMENT_FORMULA));
-            const std::string formulaid = str(boost::format("joint%d.formula") % _GetJointSid(pjoint));
+            const std::string formulaid = str(boost::format("%s.formula") % _GetJointSid(pjoint));
             pf->setSid(formulaid.c_str());
             domCommon_float_or_paramRef ptarget = daeSafeCast<domCommon_float_or_param>(pf->add(COLLADA_ELEMENT_TARGET));
-            const std::string targetjointid = str(boost::format("%s/joint%d")%kmodel->getID() % _GetJointSid(pjoint));
+            const std::string targetjointid = str(boost::format("%s/%s")%kmodel->getID() % _GetJointSid(pjoint));
             daeSafeCast<domCommon_param>(ptarget->add(COLLADA_TYPE_PARAM))->setValue(targetjointid.c_str());
 
             const int iaxis = 0;
@@ -1833,7 +1833,7 @@ private:
                         RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindex to 0", pmimic->GetName());
                         mimicjointindex = 0;
                     }
-                    const std::string smimicid = str(boost::format("%s/joint%d") % kmodel->getID() % mimicjointindex);
+                    const std::string smimicid = str(boost::format("%s/%s") % kmodel->getID() % _GetJointSid(pmimic));
                     pelt->setAttribute("target", smimicid.c_str());
                     // parse
                     if(offset >= sequations[itype].size()) {
@@ -1863,7 +1863,7 @@ private:
                         RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindexi to 0", pmimici->GetName());
                         mimicjointindexi = 0;
                     }
-                    const std::string smimicidi = str(boost::format("%s/joint%d") % kmodel->getID() % mimicjointindexi);
+                    const std::string smimicidi = str(boost::format("%s/%s") % kmodel->getID() % _GetJointSid(pmimici));
 
                     for(const KinBody::Mimic::DOFFormat& dofformatj : vdofformat) {
                         const int jointindexj = dofformatj.jointindex;
@@ -1873,7 +1873,7 @@ private:
                             RAVELOG_WARN_FORMAT("Cannot find index from joint %s; set mimicjointindexj to 0", pmimicj->GetName());
                             mimicjointindexj = 0;
                         }
-                        const std::string smimicidj = str(boost::format("%s/joint%d") % kmodel->getID() % mimicjointindexj);
+                        const std::string smimicidj = str(boost::format("%s/%s") % kmodel->getID() % _GetJointSid(pmimicj));
 
                         daeElementRef pelt = pftec->add("equation");
                         pelt->setAttribute("type", sequationids[itype]);
@@ -2323,7 +2323,7 @@ private:
             }
 
             domLink::domAttachment_fullRef pattfull = daeSafeCast<domLink::domAttachment_full>(pdomlink->add(COLLADA_TYPE_ATTACHMENT_FULL));
-            string jointid = str(boost::format("%s/joint%d")%strModelUri%_GetJointSid(pjoint));
+            string jointid = str(boost::format("%s/%s")%strModelUri%_GetJointSid(pjoint));
             if (setJointSids.find(jointid) != setJointSids.end()) {
                 RAVELOG_VERBOSE_FORMAT("joint id \"%s\" (joint name \"%s\") for body %s is previously written, so skip. maybe part of closed loop?", jointid%pjoint->GetName()%plink->GetParent()->GetName());
                 continue;
