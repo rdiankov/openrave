@@ -3125,10 +3125,10 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
     }
 }
 
-void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
+void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFTorques, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    doftorques.resize(GetDOF());
+    vDOFTorques.resize(this->GetDOF());
     if( _vecjoints.empty() ) {
         return;
     }
@@ -3138,22 +3138,29 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     std::vector<std::pair<Vector, Vector> > vLinkVelocities; // linear, angular velocities
     std::vector<std::pair<Vector, Vector> > vLinkAccelerations; // linear, angular accelerations
     const bool usebaselinkvelocity = true;
+
+    /* ========================================== (1) ===============================================
+     - Load link velocities from physics engine; compute DOF velocities based on link velocities
+    ============================================================================================== */
     _ComputeDOFLinkVelocities(vDOFVelocities, vLinkVelocities, usebaselinkvelocity);
     // check if all velocities are 0, if yes, then can simplify some computations since only have contributions from dofacell and external forces
     const bool bHasAccelerations = !vDOFAccelerations.empty();
-    bool bHasVelocities = false;
-    FOREACH(it,vDOFVelocities) {
-        if( RaveFabs(*it) > g_fEpsilonLinear ) {
-            bHasVelocities = true;
-            break;
+    const bool bHasVelocities = vDOFVelocities.end() != std::find_if(vDOFVelocities.begin(), vDOFVelocities.end(),
+        [](dReal dofvelocity) {
+            return RaveFabs(dofvelocity) > g_fEpsilonLinear;
         }
-    }
+    );
     if( !bHasVelocities ) {
         vDOFVelocities.clear();
     }
     AccelerationMap externalaccelerations; // std::map<int, std::pair<Vector,Vector> >
     externalaccelerations[0] = {-vgravity, Vector()};
     AccelerationMapPtr pexternalaccelerations(&externalaccelerations, utils::null_deleter());
+
+    /* ========================================== (2) ===============================================
+     - From active DOF accelerations, compute link accelerations and passive joint accelerations.
+     - Collect all mimic first-, second-order partial derivatives 
+    ============================================================================================== */
     std::vector<std::vector<dReal> > vPassiveJointVelocities;
     std::vector<std::vector<dReal> > vPassiveJointAccelerations;
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
@@ -3180,6 +3187,9 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
 
     */
 
+    /* ========================================== (3) ===============================================
+     - Compute for each link its linear acceleration and resultant torque at its center of mass (CoM) 
+    ============================================================================================== */
     // forward recursion
     const size_t nlinks = _veclinks.size();
     std::vector<Vector> vLinkCOMLinearAccelerations(nlinks);
@@ -3202,13 +3212,17 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     for(const std::pair<const int, std::pair<Vector, Vector> >& pLinkindexForceTorque: mapExternalForceTorque) {
         vLinkForceTorques.at(pLinkindexForceTorque.first) = pLinkindexForceTorque.second;
     }
-    std::fill(doftorques.begin(), doftorques.end(), 0);
+    std::fill(vDOFTorques.begin(), vDOFTorques.end(), 0);
     const int iaxis = 0;
     const std::vector<JointPtr>& vPassiveJoints = this->GetPassiveJoints();
 
+
+    /* ========================================== (4) =======================================================
+     - Compute for each link the force and torque exterted by its child link
+     - Compute the torque of each motor (i.e. each active joint DOF), considering mimic joints' contributions
+    ====================================================================================================== */
     // extract results from the previously computed mPartialderivativepairValue,
     std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
-
     // go backwards
     for(std::vector<JointPtr>::const_reverse_iterator crit = _vTopologicallySortedJointsAll.rbegin();
         crit != _vTopologicallySortedJointsAll.rend();
@@ -3248,7 +3262,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         const Vector vcomtoanchor = pchildlink->GetGlobalCOM() - pjoint->GetAnchor();
         dReal faxistorque = (jointtype == JointHinge) ? 
             pjoint->GetAxis(iaxis).dot3(vjointtorque + vcomtoanchor.cross(vcomforce)) : 
-            // TGN: what does dividing by 2*pi mean here?
+            // TGN: have to figure out from Antoine's experiment data what's better to put here
             pjoint->GetAxis(iaxis).dot3(vcomforce) / (2.0 * PI)
         ;
 
@@ -3263,7 +3277,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 iPassiveJoint = std::distance(vPassiveJoints.begin(), itjoint);
             }
 
-            // torque due to friction
+            // torque due to friction (friction unknown to us; get them from experiments)
             if(bHasVelocities) {
                 const dReal dofvelocity = bIsActive ? vDOFVelocities.at(jointdofindex) : vPassiveJointVelocities.at(iPassiveJoint).at(iaxis);
                 if( dofvelocity > g_fEpsilonLinear ) {
@@ -3275,7 +3289,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 faxistorque += dofvelocity * pActuatorInfo->viscous_friction;
             }
 
-            // torque due to accelerating motor rotor (and gear)
+            // torque due to accelerating motor rotor (and gear) (from robot manufacturer)
             if (bHasAccelerations) {
                 if(pActuatorInfo->rotor_inertia > 0.0) {
                     // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
@@ -3291,13 +3305,13 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         }
 
         if(bIsActive) {
-            doftorques.at(jointdofindex) += faxistorque;
+            vDOFTorques.at(jointdofindex) += faxistorque;
         }
         else { // mimic
             // extract first-order partial derivatives results from the cached mPartialderivativepairValue
             pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
             for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
-                doftorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
+                vDOFTorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
             }
         }
     } // std::vector<JointPtr>::const_reverse_iterator crit
@@ -3528,19 +3542,22 @@ void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, s
     }
 }
 
-void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::vector<std::pair<Vector,Vector> >& vLinkVelocities, bool usebaselinkvelocity) const
+void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& vDOFVelocities, std::vector<std::pair<Vector,Vector> >& vLinkVelocities, bool usebaselinkvelocity) const
 {
-    GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(),vLinkVelocities);
-    if( _veclinks.size() <= 1 ) {
-        dofvelocities.resize(GetDOF());
-        if( !usebaselinkvelocity && _veclinks.size() > 0 ) {
+    /* (1) Get link velocities from physics engine */
+    GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(), vLinkVelocities);
+    const int nlinks = _veclinks.size();
+    const int bodydof = this->GetDOF();
+    if( nlinks <= 1 ) {
+        vDOFVelocities.resize(bodydof);
+        if( !usebaselinkvelocity && nlinks == 1 ) {
             vLinkVelocities[0].first = Vector();
             vLinkVelocities[0].second = Vector();
         }
         return;
     }
     if( !usebaselinkvelocity ) {
-        Vector vbasepos = _veclinks.at(0)->_info._t.trans;
+        const Vector& vbasepos = _veclinks.at(0)->_info._t.trans;
         // v_B = v_A + angularvel x (B-A)
         for(size_t i = 1; i < vLinkVelocities.size(); ++i) {
             Vector voffset = _veclinks.at(i)->_info._t.trans - vbasepos;
@@ -3550,17 +3567,17 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
         vLinkVelocities[0].first = Vector();
         vLinkVelocities[0].second = Vector();
     }
-    dofvelocities.resize(0);
-    if( (int)dofvelocities.capacity() < GetDOF() ) {
-        dofvelocities.reserve(GetDOF());
+
+    /* (2) Compute DOF velocities from link velocities */
+    vDOFVelocities.clear();
+    if( (int)vDOFVelocities.capacity() < bodydof ) {
+        vDOFVelocities.reserve(bodydof);
     }
-    FOREACHC(it, _vDOFOrderedJoints) {
-        int parentindex = 0;
-        if( !!(*it)->_attachedbodies[0] ) {
-            parentindex = (*it)->_attachedbodies[0]->GetIndex();
-        }
-        int childindex = (*it)->_attachedbodies[1]->GetIndex();
-        (*it)->_GetVelocities(dofvelocities,true,vLinkVelocities.at(parentindex),vLinkVelocities.at(childindex));
+    for(const JointPtr& pjoint : _vDOFOrderedJoints) {
+        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
+        const int parentindex = (!pparentlink) ? 0 : pparentlink->GetIndex();
+        const int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
+        pjoint->_GetVelocities(/*out*/ vDOFVelocities, /*in*/true, vLinkVelocities.at(parentindex), vLinkVelocities.at(childindex));
     }
 }
 

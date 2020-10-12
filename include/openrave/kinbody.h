@@ -1451,9 +1451,9 @@ public:
         /// @name Internal Hierarchy Methods
         //@{
         /// \brief Return the parent link which the joint measures its angle off from (either GetFirstAttached() or GetSecondAttached())
-        virtual LinkPtr GetHierarchyParentLink() const;
+        virtual const LinkPtr& GetHierarchyParentLink() const;
         /// \brief Return the child link whose transformation is computed by this joint's values (either GetFirstAttached() or GetSecondAttached())
-        virtual LinkPtr GetHierarchyChildLink() const;
+        virtual const LinkPtr& GetHierarchyChildLink() const;
         /// \brief The axis of the joint in local coordinates.
         virtual const Vector& GetInternalHierarchyAxis(int axis = 0) const;
         /// \brief Left multiply transform given the base body.

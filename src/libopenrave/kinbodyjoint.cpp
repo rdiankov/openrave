@@ -1278,12 +1278,12 @@ void KinBody::Joint::_ComputeInternalStaticInformation()
     }
 }
 
-KinBody::LinkPtr KinBody::Joint::GetHierarchyParentLink() const
+const KinBody::LinkPtr& KinBody::Joint::GetHierarchyParentLink() const
 {
     return _attachedbodies[0];
 }
 
-KinBody::LinkPtr KinBody::Joint::GetHierarchyChildLink() const
+const KinBody::LinkPtr& KinBody::Joint::GetHierarchyChildLink() const
 {
     return _attachedbodies[1];
 }
