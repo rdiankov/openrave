@@ -264,6 +264,7 @@ public:
         _bSkipGeometry = false;
         _bReadGeometryGroups = false;
         _bExtractConnectedBodies = bExtractConnectedBodies;
+        _bMustResolveURI = false;
         _fGlobalScale = 1.0/penv->GetUnit().second;
         _bBackCompatValuesInRadians = false;
         if( sizeof(daeFloat) == 4 ) {
@@ -363,6 +364,7 @@ public:
         _dae = GetGlobalDAE(false);
         _bSkipGeometry = false;
         _bReadGeometryGroups = false;
+        _bMustResolveURI = false;
         _vOpenRAVESchemeAliases.resize(0);
         FOREACHC(itatt,atts) {
             if( itatt->first == "skipgeometry" ) {
@@ -395,6 +397,9 @@ public:
                 stringstream ss(itatt->second);
                 std::list<string> newelts((istream_iterator<string>(ss)), istream_iterator<string>());
                 _bReadGeometryGroups = find(newelts.begin(), newelts.end(), "bind_instance_geometry") != newelts.end();
+            }
+            else if( itatt->first == "mustresolveuri" ) {
+                _bMustResolveURI = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else {
                 //RAVELOG_WARN(str(boost::format("collada reader unprocessed attribute pair: %s:%s")%itatt->first%itatt->second));
@@ -967,6 +972,7 @@ public:
                 break;
             }
         }
+
         if( bSuccess ) {
             return true;
         }
@@ -988,6 +994,7 @@ public:
         if( bSuccess && _prefix.size() > 0 ) {
             _AddPrefixForKinBody(pbody,_prefix);
         }
+
         return bSuccess;
     }
 
@@ -1039,6 +1046,9 @@ public:
 
         domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
         if( !articulated_system ) {
+            if (_bMustResolveURI) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve uri \"%s\"", ias->getUrl().str(), ORE_InvalidURI);
+            }
             return false;
         }
         if( !pbody ) {
@@ -1076,17 +1086,15 @@ public:
             // set referenceUri if it's external one
             daeURI urioriginal(*_dae, struri);
             urioriginal.fragment(std::string()); // set the fragment to empty
-
-            std::string scheme, authority, path, query, fragment;
-            cdom::parseUriRef(struri, scheme, authority, path, query, fragment);
-            
-            // only set referenceUri if it's in OpenRAVEScheme
-            std::vector<std::string>::iterator itScheme = std::find(_vOpenRAVESchemeAliases.begin(),  _vOpenRAVESchemeAliases.end(), scheme);
-            if (itScheme != _vOpenRAVESchemeAliases.end()) {
-                if (_originalURI.compare(urioriginal.str()) != 0 ) {
+            if (_originalURI != urioriginal.str()) {
+                // external reference
+                // only set referenceUri if it's in OpenRAVEScheme
+                std::string scheme, unusedAuthority, unusedPath, unusedQuery, unusedFragment;
+                cdom::parseUriRef(struri, scheme, unusedAuthority, unusedPath, unusedQuery, unusedFragment);
+                if (std::find(_vOpenRAVESchemeAliases.begin(),  _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end()) {
                     pbody->_referenceUri = struri;
                 }
-            } 
+            }
         }
 
         std::string strname = strParentName;
@@ -1139,10 +1147,20 @@ public:
                 }
             }
             if (!!pbody) {
-                // get motion body id and set to openrave body
-                // this is for keeping id consisdent if later on we serialize openrave body to other format.
-                if(!!articulated_system->getId()) {
-                    pbody->_id = articulated_system->getId();
+                if (pbody->_id.empty()) {
+                    if (pbody->_referenceUri.empty()) {
+                        // non-external reference
+                        // use bodyX_motion as the body id, this is necessary to for external reference to target the stable body id
+                        // for external reference, cannot use articulated system id, as it is most likely always body0_motion and will duplicate
+                        if (!!articulated_system->getId()) {
+                            pbody->_id = articulated_system->getId();
+                        }
+                    }
+                }
+                if (pbody->_id.empty()) {
+                    if (!!ias->getSid()) {
+                        pbody->_id = ias->getSid();
+                    }
                 }
             }
             listInstanceScope.push_back(ias);
@@ -1841,6 +1859,11 @@ public:
         KinBody::LinkPtr plink = pkinbody->GetLink(linkname);
         if( !plink ) {
             plink.reset(new KinBody::Link(pkinbody));
+            if ( !!pdomlink && !!pdomlink->getSid() ) {
+                plink->_info._id = pdomlink->getSid();
+            } else {
+                plink->_info._id = linkname;
+            }
             plink->_info._name = linkname;
             plink->_info._mass = 1e-10;
             plink->_info._vinertiamoments = Vector(1e-7,1e-7,1e-7);
@@ -2071,6 +2094,11 @@ public:
                 }
                 else {
                     pjoint->_info._name = str(boost::format("dummy%d")%pjoint->jointindex);
+                }
+                if ( !!pdomjoint->getSid() ) {
+                    pjoint->_info._id = pdomjoint->getSid();
+                } else {
+                    pjoint->_info._id = pjoint->_info._name;
                 }
 
                 if( pjoint->_info._bIsActive ) {
@@ -2440,6 +2468,7 @@ public:
             }
 
             KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,*itgeominfo));
+            pgeom->_info._id = str(boost::format("geom%d")%plink->_vGeometries.size());
             pgeom->_info.InitCollisionMesh();
             plink->_vGeometries.push_back(pgeom);
             //  Append the collision mesh
@@ -3389,6 +3418,7 @@ public:
                     }
                     if( !!pnewmanip ) {
                         // not found so append
+                        pnewmanip->_info._id = str(boost::format("tool%d")%probot->_vecManipulators.size());
                         probot->_vecManipulators.push_back(pnewmanip);
                     }
                 }
@@ -3442,7 +3472,7 @@ public:
                         }
                         listSensorsToExtract.emplace_back(pattachedsensor, result.second);
                     }
-
+                    pattachedsensor->_info._id = str(boost::format("attachedSensor%d")%probot->_vecAttachedSensors.size());
                     probot->_vecAttachedSensors.push_back(pattachedsensor);
                 }
                 else {
@@ -3499,9 +3529,7 @@ public:
                     }
                     // do not let json_data in collada override name attribute of <extra>
                     pGripperInfo->name = _ConvertToOpenRAVEName(grippername);
-                    if( pGripperInfo->_id.empty() ) {
-                        pGripperInfo->_id = pGripperInfo->name;
-                    }
+                    pGripperInfo->_id = str(boost::format("gripperInfo%d")%probot->_vecGripperInfos.size());
                     probot->_vecGripperInfos.push_back(pGripperInfo);
                 }
                 else {
@@ -3673,10 +3701,16 @@ public:
                         pbody = robots.front();
                     } else {
                         RAVELOG_DEBUG_FORMAT("Found %d robots, Do not support this case for uri %s", robots.size() % uri);
+                        if (_bMustResolveURI) {
+                            throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri \"%s\", more than one robot found", uri, ORE_InvalidURI);
+                        }
                     }
                 }
                 else {
                     RAVELOG_WARN_FORMAT("Could not load uri %s for connected body %s", uri%connectedBodyInfo._name);
+                    if (_bMustResolveURI) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri \"%s\"", uri, ORE_InvalidURI);
+                    }
                 }
 
                 if (!!pbody) {
@@ -3684,6 +3718,7 @@ public:
                     connectedBodyInfo._uri = uri;
                     connectedBodyInfo.InitInfoFromBody(*pbody);
                     RobotBase::ConnectedBodyPtr pConnectedBody(new RobotBase::ConnectedBody(probot, connectedBodyInfo));
+                    pConnectedBody->_info._id = str(boost::format("connectedBody%d")%probot->_vecConnectedBodies.size());
                     probot->_vecConnectedBodies.push_back(pConnectedBody);
                 }
             }
@@ -5704,6 +5739,7 @@ private:
     bool _bReadGeometryGroups; ///< if true, then read the bind_instance_geometry tag to initialize all the geometry groups
     bool _bBackCompatValuesInRadians; ///< if true, will assume the speed, acceleration, and dofvalues are in radians instead of degrees (for back compat)
     bool _bExtractConnectedBodies; ///< if true, calls ExtractRobotConnectedBodies and initializes the connected bodies.
+    bool _bMustResolveURI; ///< if true, throw exception if uri does not resolve
 };
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)

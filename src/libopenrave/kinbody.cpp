@@ -251,9 +251,6 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 {
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
-    if( _id.empty() ) {
-        _id = _name;
-    }
 
     if( !(options & IDO_IgnoreReferenceUri) ) {
         orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
@@ -266,36 +263,21 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
         size_t iGrabbed = 0;
         for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
-            const rapidjson::Value& grabbedValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(grabbedValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(grabbedValue, "grabbedName");
-            }
-            UpdateOrCreateInfo(grabbedValue, id, _vGrabbedInfos, fUnitScale, options);
+            UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
         }
     }
 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
-            const rapidjson::Value& linkValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(linkValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(linkValue, "name");
-            }
-            UpdateOrCreateInfo(linkValue, id, _vLinkInfos, fUnitScale, options);
+            UpdateOrCreateInfo(*it, _vLinkInfos, fUnitScale, options);
         }
     }
 
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
-            const rapidjson::Value& jointValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(jointValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(jointValue, "name");
-            }
-            UpdateOrCreateInfo(jointValue, id, _vJointInfos, fUnitScale, options);
+            UpdateOrCreateInfo(*it, _vJointInfos, fUnitScale, options);
         }
     }
 
@@ -3125,10 +3107,10 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
     }
 }
 
-void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
+void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFTorques, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    doftorques.resize(GetDOF());
+    vDOFTorques.resize(this->GetDOF());
     if( _vecjoints.empty() ) {
         return;
     }
@@ -3138,22 +3120,29 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     std::vector<std::pair<Vector, Vector> > vLinkVelocities; // linear, angular velocities
     std::vector<std::pair<Vector, Vector> > vLinkAccelerations; // linear, angular accelerations
     const bool usebaselinkvelocity = true;
+
+    /* ========================================== (1) ===============================================
+     - Load link velocities from physics engine; compute DOF velocities based on link velocities
+    ============================================================================================== */
     _ComputeDOFLinkVelocities(vDOFVelocities, vLinkVelocities, usebaselinkvelocity);
     // check if all velocities are 0, if yes, then can simplify some computations since only have contributions from dofacell and external forces
     const bool bHasAccelerations = !vDOFAccelerations.empty();
-    bool bHasVelocities = false;
-    FOREACH(it,vDOFVelocities) {
-        if( RaveFabs(*it) > g_fEpsilonLinear ) {
-            bHasVelocities = true;
-            break;
+    const bool bHasVelocities = vDOFVelocities.end() != std::find_if(vDOFVelocities.begin(), vDOFVelocities.end(),
+        [](dReal dofvelocity) {
+            return RaveFabs(dofvelocity) > g_fEpsilonLinear;
         }
-    }
+    );
     if( !bHasVelocities ) {
         vDOFVelocities.clear();
     }
     AccelerationMap externalaccelerations; // std::map<int, std::pair<Vector,Vector> >
     externalaccelerations[0] = {-vgravity, Vector()};
     AccelerationMapPtr pexternalaccelerations(&externalaccelerations, utils::null_deleter());
+
+    /* ========================================== (2) ===============================================
+     - From active DOF accelerations, compute link accelerations and passive joint accelerations.
+     - Collect all mimic first-, second-order partial derivatives 
+    ============================================================================================== */
     std::vector<std::vector<dReal> > vPassiveJointVelocities;
     std::vector<std::vector<dReal> > vPassiveJointAccelerations;
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
@@ -3176,25 +3165,28 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     
     and differentiate one more time to get
     
-    a_B = a_A + alpah_A x (B-A) + w_A x (w_A x (R_B^A * (B-A)))
+    a_B = a_A + alpha_A x (B-A) + w_A x (w_A x (R_B^A * (B-A)))
 
     */
 
+    /* ========================================== (3) ===============================================
+     - Compute for each link its linear acceleration and resultant torque at its center of mass (CoM) 
+    ============================================================================================== */
     // forward recursion
     const size_t nlinks = _veclinks.size();
     std::vector<Vector> vLinkCOMLinearAccelerations(nlinks);
-    std::vector<Vector> vLinkCOMMomentOfInertia(nlinks);
+    std::vector<Vector> vLinkCOMResultantTorques(nlinks);
     for(size_t i = 0; i < vLinkVelocities.size(); ++i) {
         // collect
         const LinkPtr& plink = _veclinks.at(i);
         const Vector CoM = plink->GetGlobalCOM() - plink->_info._t.trans; // B-A
         const Vector& angularvel = vLinkVelocities.at(i).second;
-        const Vector& linearvel = vLinkAccelerations.at(i).first;
+        const Vector& linearaccel = vLinkAccelerations.at(i).first;
         const Vector& angularaccel = vLinkAccelerations.at(i).second;
         const TransformMatrix I = plink->GetGlobalInertia(); // inertia tensor
+        vLinkCOMLinearAccelerations[i] = linearaccel + angularaccel.cross(CoM) + angularvel.cross(angularvel.cross(CoM));
         // compute torque: https://en.wikipedia.org/wiki/Moment_of_inertia#Resultant_torque
-        vLinkCOMLinearAccelerations[i] = linearvel + angularaccel.cross(CoM) + angularvel.cross(angularvel.cross(CoM));
-        vLinkCOMMomentOfInertia[i] = I.rotate(angularaccel) + angularvel.cross(I.rotate(angularvel)); // I * alpha + v x (I * v)
+        vLinkCOMResultantTorques[i] = I.rotate(angularaccel) + angularvel.cross(I.rotate(angularvel)); // tau = I * alpha + v x (I * v)
     }
 
     // backward recursion
@@ -3202,13 +3194,17 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     for(const std::pair<const int, std::pair<Vector, Vector> >& pLinkindexForceTorque: mapExternalForceTorque) {
         vLinkForceTorques.at(pLinkindexForceTorque.first) = pLinkindexForceTorque.second;
     }
-    std::fill(doftorques.begin(), doftorques.end(), 0);
+    std::fill(vDOFTorques.begin(), vDOFTorques.end(), 0);
     const int iaxis = 0;
     const std::vector<JointPtr>& vPassiveJoints = this->GetPassiveJoints();
 
+
+    /* ========================================== (4) =======================================================
+     - Compute for each link the force and torque exterted by its child link
+     - Compute the torque of each motor (i.e. each active joint DOF), considering mimic joints' contributions
+    ====================================================================================================== */
     // extract results from the previously computed mPartialderivativepairValue,
     std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
-
     // go backwards
     for(std::vector<JointPtr>::const_reverse_iterator crit = _vTopologicallySortedJointsAll.rbegin();
         crit != _vTopologicallySortedJointsAll.rend();
@@ -3223,10 +3219,11 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         const LinkPtr pparentlink = pjoint->GetHierarchyParentLink();
         const LinkPtr pchildlink = pjoint->GetHierarchyChildLink();
         const int childindex = pchildlink->GetIndex();
-        //      F_parent =      F_parent_external + m*a + F_child
-        // Torque_parent = Torque_parent_external + Torque_child + MoI_child + (CoM_child - CoM_parent) x F_parent
+        //         F_CoM = m_child * a_child + F_child
+        //      F_parent =      F_parent_external + F_CoM
+        // Torque_parent = Torque_parent_external + Torque_child + tau_child + (CoM_child - CoM_parent) x F_CoM
         const Vector vcomforce = pchildlink->GetMass() * vLinkCOMLinearAccelerations[childindex] + vLinkForceTorques.at(childindex).first;
-        const Vector vjointtorque = vLinkForceTorques.at(childindex).second + vLinkCOMMomentOfInertia.at(childindex);
+        const Vector vjointtorque = vLinkForceTorques.at(childindex).second + vLinkCOMResultantTorques.at(childindex);
 
         if( !!pparentlink ) {
             const Vector vchildcomtoparentcom = pchildlink->GetGlobalCOM() - pparentlink->GetGlobalCOM();
@@ -3235,88 +3232,71 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
             vLinkForceTorques.at(parentindex).second += vjointtorque + vchildcomtoparentcom.cross(vcomforce);
         }
 
-        const Vector vcomtoanchor = pchildlink->GetGlobalCOM() - pjoint->GetAnchor();
         const int jointdofindex = pjoint->GetDOFIndex();
-
-        if( jointdofindex >= 0 ) { // active
-            doftorques.at(jointdofindex) += (jointtype == JointHinge) ?
-                pjoint->GetAxis(iaxis).dot3(vjointtorque + vcomtoanchor.cross(vcomforce)) :
-                pjoint->GetAxis(iaxis).dot3(vcomforce) / (2.0 * PI)
-            ;
-
-            // see if any friction needs to be added. Only add if the velocity is non-zero since with zero velocity do not know the exact torque on the joint...
-            const ElectricMotorActuatorInfoPtr& pActuatorInfo = pjoint->_info._infoElectricMotor;
-            if( !!pActuatorInfo ) {
-                dReal fFriction = 0; // torque due to friction
-                dReal fRotorAccelerationTorque = 0; // torque due to accelerating motor rotor (and gear)
-                if( jointdofindex < (int)vDOFVelocities.size() ) {
-                    const dReal dofvelocity = vDOFVelocities.at(jointdofindex);
-                    if( dofvelocity > g_fEpsilonLinear ) {
-                        fFriction += pActuatorInfo->coloumb_friction;
-                    }
-                    else if( dofvelocity < -g_fEpsilonLinear ) {
-                        fFriction -= pActuatorInfo->coloumb_friction;
-                    }
-                    fFriction += dofvelocity * pActuatorInfo->viscous_friction;
-
-                    if (pActuatorInfo->rotor_inertia > 0.0) {
-                        // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
-                        const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
-                        fRotorAccelerationTorque += vDOFAccelerations.at(jointdofindex) * fInertiaOnLoadSide;
-                    }
-                }
-
-                doftorques.at(jointdofindex) += fFriction + fRotorAccelerationTorque;
-            }
+        const bool bIsActive = jointdofindex >= 0;
+        const bool bIsMimic0 = pjoint->IsMimic(iaxis);
+        if(!bIsActive && !bIsMimic0) {
+            // joint should be static
+            OPENRAVE_ASSERT_FORMAT(pjoint->IsStatic(), "joint %s is expected to be static", pjoint->GetName(), ORE_Assert);
+            continue;
         }
-        else if( pjoint->IsMimic(iaxis) ) { // mimic
-            // transfer the torque of passive joint to its dependent joints
-            dReal faxistorque = (jointtype == JointHinge) ? 
-                pjoint->GetAxis(iaxis).dot3(vjointtorque + vcomtoanchor.cross(vcomforce)) : 
-                pjoint->GetAxis(iaxis).dot3(vcomforce) / (2.0 * PI)
-            ;
 
-            const ElectricMotorActuatorInfoPtr& pActuatorInfo = pjoint->_info._infoElectricMotor;
-            if( bHasVelocities && !!pActuatorInfo ) {
-                // TODO how to process this correctly? what is velocity of this joint? pjoint->GetVelocity(iaxis)?
-                // dz/dt = \sum_x (∂z/∂x * dx/dt)
-                dReal fFriction = 0; // torque due to friction
-                dReal fRotorAccelerationTorque = 0; // torque due to accelerating motor rotor (and gear)
+        const Vector vcomtoanchor = pchildlink->GetGlobalCOM() - pjoint->GetAnchor();
+        dReal faxistorque = (jointtype == JointHinge) ? 
+            pjoint->GetAxis(iaxis).dot3(vjointtorque + vcomtoanchor.cross(vcomforce)) : 
+            // TGN: have to figure out from Antoine's experiment data what's better to put here
+            pjoint->GetAxis(iaxis).dot3(vcomforce) / (2.0 * PI)
+        ;
+
+        const ElectricMotorActuatorInfoPtr& pActuatorInfo = pjoint->_info._infoElectricMotor;
+        if( !!pActuatorInfo ) {
+            int iPassiveJoint = -1;
+            if(bIsMimic0) {
                 std::vector<JointPtr>::const_iterator itjoint = std::find(vPassiveJoints.cbegin(), vPassiveJoints.cend(), pjoint);
                 OPENRAVE_ASSERT_FORMAT(itjoint != vPassiveJoints.cend(),
                     "Joint \"%s\" is not in vPassiveJoints", pjoint->GetName(), ORE_InvalidArguments
                 );
-                const int iPassiveJoint = std::distance(vPassiveJoints.begin(), itjoint);
-                const dReal dofvelocity = vPassiveJointVelocities.at(iPassiveJoint).at(iaxis);
-                if( dofvelocity > g_fEpsilonLinear ) {
-                    fFriction += pActuatorInfo->coloumb_friction;
-                }
-                else if( dofvelocity < -g_fEpsilonLinear ) {
-                    fFriction -= pActuatorInfo->coloumb_friction;
-                }
-                fFriction += dofvelocity * pActuatorInfo->viscous_friction;
-
-                
-                if (bHasAccelerations && pActuatorInfo->rotor_inertia > 0.0) {
-                    // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
-                    const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
-                    fRotorAccelerationTorque += vPassiveJointAccelerations.at(iPassiveJoint).at(iaxis) * fInertiaOnLoadSide;
-                }
-                
-                faxistorque += fFriction + fRotorAccelerationTorque;
+                iPassiveJoint = std::distance(vPassiveJoints.begin(), itjoint);
             }
 
+            // torque due to friction (friction unknown to us; get them from experiments)
+            if(bHasVelocities) {
+                const dReal dofvelocity = bIsActive ? vDOFVelocities.at(jointdofindex) : vPassiveJointVelocities.at(iPassiveJoint).at(iaxis);
+                if( dofvelocity > g_fEpsilonLinear ) {
+                    faxistorque += pActuatorInfo->coloumb_friction;
+                }
+                else if( dofvelocity < -g_fEpsilonLinear ) {
+                    faxistorque -= pActuatorInfo->coloumb_friction;
+                }
+                faxistorque += dofvelocity * pActuatorInfo->viscous_friction;
+            }
+
+            // torque due to accelerating motor rotor (and gear) (from robot manufacturer)
+            if (bHasAccelerations) {
+                if(pActuatorInfo->rotor_inertia > 0.0) {
+                    // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
+                    const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
+                    if(bIsActive) {
+                        faxistorque += vDOFAccelerations.at(jointdofindex) * fInertiaOnLoadSide;
+                    }
+                    else { // mimic
+                        faxistorque += vPassiveJointAccelerations.at(iPassiveJoint).at(iaxis) * fInertiaOnLoadSide;
+                    }
+                }
+            }
+        }
+
+        if(bIsActive) {
+            vDOFTorques.at(jointdofindex) += faxistorque;
+        }
+        else { // mimic
             // extract first-order partial derivatives results from the cached mPartialderivativepairValue
             pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
             for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
-                doftorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
+                vDOFTorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
             }
         }
-        else {
-            // joint should be static
-            OPENRAVE_ASSERT_FORMAT(pjoint->IsStatic(), "joint %s is expected to be static", pjoint->GetName(), ORE_Assert);
-        }
-    }
+    } // std::vector<JointPtr>::const_reverse_iterator crit
 }
 
 void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFTorqueComponents, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
@@ -3544,21 +3524,22 @@ void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, s
     }
 }
 
-void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::vector<std::pair<Vector,Vector> >& vLinkVelocities, bool usebaselinkvelocity) const
+void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& vDOFVelocities, std::vector<std::pair<Vector,Vector> >& vLinkVelocities, bool usebaselinkvelocity) const
 {
-    // (1) compute links' linear velocities and angular velocities
+    /* (1) Get link velocities from physics engine */
     GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(), vLinkVelocities);
+    const int nlinks = _veclinks.size();
     const int bodydof = this->GetDOF();
-    if( _veclinks.size() <= 1 ) {
-        dofvelocities.resize(bodydof);
-        if( !usebaselinkvelocity && _veclinks.size() == 1 ) {
+    if( nlinks <= 1 ) {
+        vDOFVelocities.resize(bodydof);
+        if( !usebaselinkvelocity && nlinks == 1 ) {
             vLinkVelocities[0].first = Vector();
             vLinkVelocities[0].second = Vector();
         }
         return;
     }
     if( !usebaselinkvelocity ) {
-        const Vector vbasepos = _veclinks.at(0)->_info._t.trans;
+        const Vector& vbasepos = _veclinks.at(0)->_info._t.trans;
         // v_B = v_A + angularvel x (B-A)
         for(size_t i = 1; i < vLinkVelocities.size(); ++i) {
             const Vector voffset = _veclinks.at(i)->_info._t.trans - vbasepos;
@@ -3569,18 +3550,16 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
         vLinkVelocities[0].second = Vector();
     }
 
-    // (2) use links' velocities to compute DOF velocities dj_i/dt
-    dofvelocities.clear();
-    if( (int)dofvelocities.capacity() < bodydof ) {
-        dofvelocities.reserve(bodydof);
+    /* (2) Compute DOF velocities from link velocities */
+    vDOFVelocities.clear();
+    if( (int)vDOFVelocities.capacity() < bodydof ) {
+        vDOFVelocities.reserve(bodydof);
     }
-
-    const bool bAppend = true; // not documented
     for(const JointPtr& pjoint : _vDOFOrderedJoints) {
-        const LinkPtr& parentlink = pjoint->_attachedbodies[0];
-        const int parentindex = (!!parentlink) ? parentlink->GetIndex() : 0;
-        const int childindex = pjoint->_attachedbodies[1]->GetIndex();
-        pjoint->_GetVelocities(/* output */dofvelocities, /* input */bAppend, vLinkVelocities.at(parentindex), vLinkVelocities.at(childindex));
+        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
+        const int parentindex = (!pparentlink) ? 0 : pparentlink->GetIndex();
+        const int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
+        pjoint->_GetVelocities(/*out*/ vDOFVelocities, /*in*/true, vLinkVelocities.at(parentindex), vLinkVelocities.at(childindex));
     }
 }
 
@@ -3676,7 +3655,7 @@ void KinBody::_ComputeLinkAccelerations(
     std::vector<std::vector<dReal> >& vPassiveJointVelocities,
     std::vector<std::vector<dReal> >& vPassiveJointAccelerations,
     std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
-    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue,
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue,
     std::vector<std::pair<Vector, Vector> >& vLinkAccelerations,
     AccelerationMapConstPtr pexternalaccelerations
 ) const {
@@ -3702,15 +3681,14 @@ void KinBody::_ComputeLinkAccelerations(
         );
     }
 
-    /* ========== (2) Compute DOF accelerations for passive joints ========== */
-    // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
+    /* ========== (2) Compute passive joints accelerations ========== */
     this->ComputePassiveJointVelocitiesAccelerations(
         /* input */vDOFVelocities, vDOFAccelerations,
         /* output */vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue
     );
 
     /* ========== (3) Compute link accelerations ========== */
-    // set accelerations of all links as if they were the base link
+    // Set link accelerations as if they were the base link
     for(int ilink = 0; ilink < nlinks; ++ilink) {
         const std::pair<Vector, Vector>& linkvels = vLinkVelocities.at(ilink);
         std::pair<Vector, Vector>& linkaccels = vLinkAccelerations.at(ilink);
@@ -3732,7 +3710,7 @@ void KinBody::_ComputeLinkAccelerations(
     std::vector<uint8_t> vlinkscomputed(nlinks, 0);
     vlinkscomputed[0] = 1;
 
-    // compute the link accelerations going through topological order
+    /* ========== (4) Compute link accelerations through topological order ========== */
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
         const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
         // do the test after mimic computation!?
@@ -3782,6 +3760,9 @@ void KinBody::_ComputeLinkAccelerations(
         // dw = wparent.diff(t)
 
         const JointType jointtype = pjoint->GetType();
+        if(jointtype != JointRevolute && jointtype != JointPrismatic) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("joint type 0x%x not supported for getting link acceleration"), jointtype, ORE_Assert);
+        }
         if( jointtype == JointRevolute ) {
             /*
             
@@ -3829,7 +3810,7 @@ void KinBody::_ComputeLinkAccelerations(
                 childaccelerations.second += alphajoint;
             }
         }
-        else if( jointtype == JointPrismatic ) {
+        else {
             /*
             
             Differentiating
@@ -3867,9 +3848,6 @@ void KinBody::_ComputeLinkAccelerations(
             }
             // alpha_child = alpha_parent
             childaccelerations.second = parentaccelerations.second;
-        }
-        else {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("joint type 0x%x not supported for getting link acceleration"), jointtype, ORE_Assert);
         }
         vlinkscomputed[childindex] = 1;
     }
@@ -4726,7 +4704,7 @@ void KinBody::_ComputeInternalInformation()
         }
         _ResetInternalCollisionCache();
     }
-    //_ResolveInfoIds(); // do not resolve since that could change the IDs and change some other hashes
+
     _nHierarchyComputed = 2;
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
@@ -5609,195 +5587,8 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     }
 }
 
-void KinBody::_ResolveInfoIds()
-{
-    char sTempIndexConversion[9]; // temp memory space for converting indices to hex strings, enough space to convert uint32_t
-    uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
-
-    // go through all link infos and make sure _id is unique
-    static const char pLinkIdPrefix[] = "link";
-    static const char pGeometryIdPrefix[] = "geom";
-    int nLinkId = 0;
-    const int numlinks = (int)_veclinks.size();
-    for(int ilink = 0; ilink < numlinks; ++ilink) {
-        KinBody::LinkInfo& linkinfo = _veclinks[ilink]->_info;
-        bool bGenerateNewId = linkinfo._id.empty();
-        if( !bGenerateNewId ) {
-            for(int itestlink = 0; itestlink < ilink; ++itestlink) {
-                if( _veclinks[itestlink]->_info._id == linkinfo._id ) {
-                    bGenerateNewId = true;
-                    break;
-                }
-            }
-        }
-
-        if( bGenerateNewId ) {
-            while(1) {
-                nTempIndexConversion = ConvertUIntToHex(nLinkId, sTempIndexConversion);
-                bool bHasSame = false;
-                for(int itestlink = 0; itestlink < numlinks; ++itestlink) {
-                    const std::string& testid = _veclinks[itestlink]->_info._id;
-                    if( testid.size() == sizeof(pLinkIdPrefix)-1+nTempIndexConversion ) {
-                        if( strncmp(testid.c_str() + (sizeof(pLinkIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
-                            // matches
-                            bHasSame = true;
-                            break;
-                        }
-                    }
-                }
-
-                if( bHasSame ) {
-                    nLinkId++;
-                    continue;
-                }
-
-                break;
-            }
-
-            linkinfo._id = pLinkIdPrefix;
-            linkinfo._id += sTempIndexConversion;
-            nLinkId++;
-        }
-
-        // geometries
-        {
-            int nGeometryId = 0;
-            const std::vector<Link::GeometryPtr>& vgeometries = _veclinks[ilink]->GetGeometries();
-            const int numgeometries = (int)vgeometries.size();
-            for(int igeometry = 0; igeometry < numgeometries; ++igeometry) {
-                KinBody::GeometryInfo& geometryinfo = vgeometries[igeometry]->_info;
-                bool bGenerateNewId = geometryinfo._id.empty();
-                if( !bGenerateNewId ) {
-                    for(int itestgeometry = 0; itestgeometry < igeometry; ++itestgeometry) {
-                        if( vgeometries[itestgeometry]->_info._id == geometryinfo._id ) {
-                            bGenerateNewId = true;
-                            break;
-                        }
-                    }
-                }
-
-                if( bGenerateNewId ) {
-                    while(1) {
-                        nTempIndexConversion = ConvertUIntToHex(nGeometryId, sTempIndexConversion);
-                        bool bHasSame = false;
-                        for(int itestgeometry = 0; itestgeometry < numgeometries; ++itestgeometry) {
-                            const std::string& testid = vgeometries[itestgeometry]->_info._id;
-                            if( testid.size() == sizeof(pGeometryIdPrefix)-1+nTempIndexConversion ) {
-                                if( strncmp(testid.c_str() + (sizeof(pGeometryIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
-                                    // matches
-                                    bHasSame = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if( bHasSame ) {
-                            nGeometryId++;
-                            continue;
-                        }
-
-                        break;
-                    }
-
-                    geometryinfo._id = pGeometryIdPrefix;
-                    geometryinfo._id += sTempIndexConversion;
-                    nGeometryId++;
-                }
-            }
-        }
-    }
-
-    static const char pJointIdPrefix[] = "joint";
-    int nJointId = 0;
-    const int numjoints = (int)_vecjoints.size();
-    for(int ijoint = 0; ijoint < numjoints; ++ijoint) {
-        KinBody::JointInfo& jointinfo = _vecjoints[ijoint]->_info;
-        bool bGenerateNewId = jointinfo._id.empty();
-        if( !bGenerateNewId ) {
-            for(int itestjoint = 0; itestjoint < ijoint; ++itestjoint) {
-                if( _vecjoints[itestjoint]->_info._id == jointinfo._id ) {
-                    bGenerateNewId = true;
-                    break;
-                }
-            }
-        }
-
-        if( bGenerateNewId ) {
-            while(1) {
-                nTempIndexConversion = ConvertUIntToHex(nJointId, sTempIndexConversion);
-                bool bHasSame = false;
-                for(int itestjoint = 0; itestjoint < numjoints; ++itestjoint) {
-                    const std::string& testid = _vecjoints[itestjoint]->_info._id;
-                    if( testid.size() == sizeof(pJointIdPrefix)-1+nTempIndexConversion ) {
-                        if( strncmp(testid.c_str() + (sizeof(pJointIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
-                            // matches
-                            bHasSame = true;
-                            break;
-                        }
-                    }
-                }
-
-                if( bHasSame ) {
-                    nJointId++;
-                    continue;
-                }
-
-                break;
-            }
-
-            jointinfo._id = pJointIdPrefix;
-            jointinfo._id += sTempIndexConversion;
-            nJointId++;
-        }
-    }
-
-    const int numPassiveJoints = (int)_vPassiveJoints.size();
-    for(int ijoint = 0; ijoint < numPassiveJoints; ++ijoint) {
-        KinBody::JointInfo& jointinfo = _vPassiveJoints[ijoint]->_info;
-        bool bGenerateNewId = jointinfo._id.empty();
-        if( !bGenerateNewId ) {
-            for(int itestjoint = 0; itestjoint < ijoint; ++itestjoint) {
-                if( _vPassiveJoints[itestjoint]->_info._id == jointinfo._id ) {
-                    bGenerateNewId = true;
-                    break;
-                }
-            }
-        }
-
-        if( bGenerateNewId ) {
-            while(1) {
-                nTempIndexConversion = ConvertUIntToHex(nJointId, sTempIndexConversion);
-                bool bHasSame = false;
-                for(int itestjoint = 0; itestjoint < numPassiveJoints; ++itestjoint) {
-                    const std::string& testid = _vPassiveJoints[itestjoint]->_info._id;
-                    if( testid.size() == sizeof(pJointIdPrefix)-1+nTempIndexConversion ) {
-                        if( strncmp(testid.c_str() + (sizeof(pJointIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
-                            // matches
-                            bHasSame = true;
-                            break;
-                        }
-                    }
-                }
-
-                if( bHasSame ) {
-                    nJointId++;
-                    continue;
-                }
-
-                break;
-            }
-
-            jointinfo._id = pJointIdPrefix;
-            jointinfo._id += sTempIndexConversion;
-            nJointId++;
-        }
-    }
-}
-
 void KinBody::ExtractInfo(KinBodyInfo& info)
 {
-    //_ResolveInfoIds(); // do not resolve since that could change the IDs and change some other hashes
-
     info._id = _id;
     info._uri = __struri;
     info._name = _name;
@@ -5935,130 +5726,33 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
-    // links
-    FOREACHC(itLinkInfo, info._vLinkInfos) {
-        // find existing link in body
-        std::vector<KinBody::LinkPtr>::iterator itExistingLink = _veclinks.end();
-        FOREACH(itLink, _veclinks) {
-            if ((*itLink)->_info._id == (*itLinkInfo)->_id) {
-                itExistingLink = itLink;
-                break;
-            }
+    // build vectors of links and joints that we will deal with
+    std::vector<KinBody::LinkPtr> vLinks; vLinks.reserve(_veclinks.size());
+    std::vector<KinBody::JointPtr> vJoints; vJoints.reserve(_vecjoints.size() + _vPassiveJoints.size());
+    for (size_t iLink = 0; iLink < _veclinks.size(); ++iLink) {
+        if (!isConnectedLink[iLink]) {
+            vLinks.push_back(_veclinks[iLink]);
         }
-
-        KinBody::LinkInfoPtr pLinkInfo = *itLinkInfo;
-        if (itExistingLink != _veclinks.end()) {
-            // update existing link
-            KinBody::LinkPtr pLink = *itExistingLink;
-            UpdateFromInfoResult updateFromLinkInfoResult = pLink->UpdateFromInfo(*pLinkInfo);
-            if (updateFromLinkInfoResult == UFIR_NoChange) {
-                continue;
-            }
-            RAVELOG_VERBOSE_FORMAT("body %s link %s needed update: %d", _id%pLinkInfo->_id%updateFromLinkInfoResult);
-            if (updateFromLinkInfoResult == UFIR_Success) {
-                updateFromInfoResult = UFIR_Success;
-                continue;
-            }
-            // link update failed.
-            return updateFromLinkInfoResult;
+    }
+    for(size_t iJoint = 0; iJoint < _vecjoints.size(); iJoint++) {
+        if (!isConnectedJoint[iJoint]) {
+            vJoints.push_back(_vecjoints[iJoint]);
         }
-
-        // new links is added
-        RAVELOG_VERBOSE_FORMAT("body %s new link %s added", _id%pLinkInfo->_id);
-        return UFIR_RequireReinitialize;
+    }
+    for(size_t iPassiveJoint = 0; iPassiveJoint < _vPassiveJoints.size(); iPassiveJoint++) {
+        if (!isConnectedPassiveJoint[iPassiveJoint]) {
+            vJoints.push_back(_vPassiveJoints[iPassiveJoint]);
+        }
     }
 
-    // delete links
-    for(size_t iLink = 0; iLink < _veclinks.size(); ++iLink) {
-        if (isConnectedLink[iLink]) {
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itLinkInfo, info._vLinkInfos) {
-            if (_veclinks[iLink]->_info._id == (*itLinkInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing link %s removed", _id%_veclinks[iLink]->_info._id);
-            return UFIR_RequireReinitialize;
-        }
+    // links
+    if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
+        return updateFromInfoResult;
     }
 
     // joints
-    FOREACHC(itJointInfo, info._vJointInfos) {
-        // find exsiting joint in body
-        std::vector<KinBody::JointPtr>::iterator itExistingJoint = _vecjoints.end();
-        FOREACH(itJoint, _vecjoints) {
-            if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
-                itExistingJoint = itJoint;
-                break;
-            }
-        }
-
-        if (itExistingJoint == _vecjoints.end()) {
-            FOREACH(itJoint, _vPassiveJoints) {
-                if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
-                    itExistingJoint = itJoint;
-                    break;
-                }
-            }
-        }
-
-        KinBody::JointInfoPtr pJointInfo = *itJointInfo;
-        if (itExistingJoint != _vecjoints.end() || itExistingJoint != _vPassiveJoints.end()) {
-            // update current joint
-            KinBody::JointPtr pJoint = *itExistingJoint;
-            UpdateFromInfoResult updateFromJointInfoResult = pJoint->UpdateFromInfo(*pJointInfo);
-            if (updateFromJointInfoResult == UFIR_NoChange) {
-                continue;
-            }
-            RAVELOG_VERBOSE_FORMAT("body %s joint %s needed update: %d", _id%pJointInfo->_id%updateFromJointInfoResult);
-            if (updateFromJointInfoResult == UFIR_Success) {
-                updateFromInfoResult = UFIR_Success;
-                continue;
-            }
-            // joint update failed;
-            return updateFromJointInfoResult;
-        }
-        // new joints is added or deleted
-        RAVELOG_VERBOSE_FORMAT("body %s new joint %s added", _id%pJointInfo->_id);
-        return UFIR_RequireReinitialize;
-    }
-
-    // delete joints
-    for(size_t iJoint = 0; iJoint < _vecjoints.size(); iJoint++) {
-        if (isConnectedJoint[iJoint]) {
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itJointInfo, info._vJointInfos) {
-            if (_vecjoints[iJoint]->_info._id == (*itJointInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing joint %s removed", _id%_vecjoints[iJoint]->_info._id);
-            return UFIR_RequireReinitialize;
-        }
-    }
-    for(size_t iJoint = 0; iJoint < _vPassiveJoints.size(); iJoint++) {
-        if (isConnectedPassiveJoint[iJoint]) {
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itJointInfo, info._vJointInfos) {
-            if (_vPassiveJoints[iJoint]->_info._id == (*itJointInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing passive joint %s removed", _id%_vPassiveJoints[iJoint]->_info._id);
-            return UFIR_RequireReinitialize;
-        }
+    if (!UpdateChildrenFromInfo(info._vJointInfos, vJoints, updateFromInfoResult)) {
+        return updateFromInfoResult;
     }
 
     // name

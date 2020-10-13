@@ -280,9 +280,6 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
 
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
-    if( _id.empty() ) {
-        _id = _name;
-    }
 
     orjson::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
     orjson::LoadJsonValueByKey(value, "anchors", _vanchor);
@@ -1278,12 +1275,12 @@ void KinBody::Joint::_ComputeInternalStaticInformation()
     }
 }
 
-KinBody::LinkPtr KinBody::Joint::GetHierarchyParentLink() const
+const KinBody::LinkPtr& KinBody::Joint::GetHierarchyParentLink() const
 {
     return _attachedbodies[0];
 }
 
-KinBody::LinkPtr KinBody::Joint::GetHierarchyChildLink() const
+const KinBody::LinkPtr& KinBody::Joint::GetHierarchyChildLink() const
 {
     return _attachedbodies[1];
 }

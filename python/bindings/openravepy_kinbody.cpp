@@ -1634,9 +1634,19 @@ object PyJoint::GetName() {
 bool PyJoint::IsMimic(int iaxis) {
     return _pjoint->IsMimic(iaxis);
 }
+
 std::string PyJoint::GetMimicEquation(int iaxis, int itype, const std::string& format) {
     return _pjoint->GetMimicEquation(iaxis,itype,format);
 }
+
+py::list PyJoint::GetMimicEquations(int iaxis, const std::string& format) {
+    py::list l;
+    l.append(_pjoint->GetMimicEquation(iaxis, 0, format));
+    l.append(_pjoint->GetMimicEquation(iaxis, 1, format));
+    l.append(_pjoint->GetMimicEquation(iaxis, 2, format));
+    return l;
+}
+
 object PyJoint::GetMimicDOFIndices(int iaxis) {
     std::vector<int> vmimicdofs;
     _pjoint->GetMimicDOFIndices(vmimicdofs,iaxis);
@@ -4297,6 +4307,7 @@ public:
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(IsMimic_overloads, IsMimic, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquation, 0, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquations_overloads, GetMimicEquations, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicDOFIndices_overloads, GetMimicDOFIndices, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetChain_overloads, GetChain, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetConfigurationSpecification_overloads, GetConfigurationSpecification, 0, 1)
@@ -5528,9 +5539,15 @@ void init_openravepy_kinbody()
                                 "type"_a = 0,
                                 "format"_a = "",
                                 DOXY_FN(KinBody::Joint,GetMimicEquation)
-                                )
+                            )
+                           .def("GetMimicEquations", &PyJoint::GetMimicEquations,
+                                "axis"_a = 0,
+                                "format"_a = "",
+                                DOXY_FN(KinBody::Joint,GetMimicEquations)
+                            )
 #else
                            .def("GetMimicEquation",&PyJoint::GetMimicEquation,GetMimicEquation_overloads(PY_ARGS("axis","type","format") DOXY_FN(KinBody::Joint,GetMimicEquation)))
+                           .def("GetMimicEquations",&PyJoint::GetMimicEquations,GetMimicEquations_overloads(PY_ARGS("axis","format") DOXY_FN(KinBody::Joint,GetMimicEquations)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                            .def("GetMimicDOFIndices", &PyJoint::GetMimicDOFIndices,
