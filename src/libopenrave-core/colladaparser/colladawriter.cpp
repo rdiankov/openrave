@@ -2966,7 +2966,7 @@ private:
 
         // for the rest, find next available sid
         int numericSid = 0;
-        char tempSid[sizeof("link")+9] = "link"; // temp memory space for converting indices to hex strings, enough space to convert "link" + uint32_t
+        char tempSid[strlen("link")+9] = "link"; // temp memory space for converting indices to hex strings, enough space to convert "link" + uint32_t
         FOREACHC(itLink, vLinks) {
             if (mapLinkSids.find(*itLink) != mapLinkSids.end()) {
                 // skip link whose sid is already assigned
@@ -2974,7 +2974,7 @@ private:
             }
             while (true) {
                 numericSid++;
-                _ConvertUIntToHex(numericSid, tempSid+sizeof("link"));
+                _ConvertUIntToHex(numericSid, tempSid+strlen("link"));
                 bool bDuplicate = false;
                 FOREACHC(itId, mapLinkSids) {
                     if (itId->second == tempSid) {
@@ -3074,7 +3074,7 @@ private:
 
         // for the rest, find next available sid
         int numericSid = 0;
-        char tempSid[sizeof("joint")+9] = "joint"; // temp memory space for converting indices to hex strings, enough space to convert "joint" + uint32_t
+        char tempSid[strlen("joint")+9] = "joint"; // temp memory space for converting indices to hex strings, enough space to convert "joint" + uint32_t
         FOREACHC(itJoint, vJoints) {
             if (mapJointSids.find(*itJoint) != mapJointSids.end()) {
                 // skip joint whose sid is already assigned
@@ -3082,7 +3082,7 @@ private:
             }
             while (true) {
                 numericSid++;
-                _ConvertUIntToHex(numericSid, tempSid+sizeof("joint"));
+                _ConvertUIntToHex(numericSid, tempSid+strlen("joint"));
                 bool bDuplicate = false;
                 FOREACHC(itId, mapJointSids) {
                     if (itId->second == tempSid) {
