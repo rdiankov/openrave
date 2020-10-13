@@ -3287,12 +3287,16 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFTorques, const std:
         }
 
         if(bIsActive) {
+            RAVELOG_DEBUG_FORMAT("Joint %s of index %d adds by %.4e units of torque/force", pjoint->GetName() % jointdofindex % faxistorque);
             vDOFTorques.at(jointdofindex) += faxistorque;
         }
         else { // mimic
             // extract first-order partial derivatives results from the cached mPartialderivativepairValue
             pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
             for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
+                RAVELOG_DEBUG_FORMAT("Mimic joint %s contributes to active DOF index %d by %.4e units of torque/force: %.4e weighted by partial derivative %.4e",
+                    pjoint->GetName() % dofindexDerivativePair.first % (dofindexDerivativePair.second*faxistorque) % faxistorque % dofindexDerivativePair.second
+                );
                 vDOFTorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
             }
         }
@@ -3542,7 +3546,7 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& vDOFVelocities, std:
         const Vector& vbasepos = _veclinks.at(0)->_info._t.trans;
         // v_B = v_A + angularvel x (B-A)
         for(size_t i = 1; i < vLinkVelocities.size(); ++i) {
-            Vector voffset = _veclinks.at(i)->_info._t.trans - vbasepos;
+            const Vector voffset = _veclinks.at(i)->_info._t.trans - vbasepos;
             vLinkVelocities[i].first -= vLinkVelocities[0].first + vLinkVelocities[0].second.cross(voffset);
             vLinkVelocities[i].second -= vLinkVelocities[0].second;
         }
