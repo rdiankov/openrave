@@ -3287,12 +3287,16 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFTorques, const std:
         }
 
         if(bIsActive) {
+            RAVELOG_DEBUG_FORMAT("Joint %s of index %d adds by %.4e units of torque/force", pjoint->GetName() % jointdofindex % faxistorque);
             vDOFTorques.at(jointdofindex) += faxistorque;
         }
         else { // mimic
             // extract first-order partial derivatives results from the cached mPartialderivativepairValue
             pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
             for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
+                RAVELOG_DEBUG_FORMAT("Mimic joint %s contributes to active DOF index %d by %.4e units of torque/force: %.4e weighted by partial derivative %.4e",
+                    pjoint->GetName() % dofindexDerivativePair.first % (dofindexDerivativePair.second*faxistorque) % faxistorque % dofindexDerivativePair.second
+                );
                 vDOFTorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
             }
         }
