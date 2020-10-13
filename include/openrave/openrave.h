@@ -354,7 +354,8 @@ public:
     }
 
     virtual bool operator==(const Readable& other) {
-        return false;
+        // by default, compare pointer value
+        return this == &other;
     }
 
     virtual bool operator!=(const Readable& other) {
@@ -2355,29 +2356,6 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
 
 OPENRAVE_API std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam);
 OPENRAVE_API std::istream& operator>>(std::istream& I, IkParameterization& ikparam);
-
-
-/// \brief converts the value into output and writes a null terminator
-///
-/// \return length of string (ie strlen(output))
-inline uint32_t ConvertUIntToHex(uint32_t value, char* output)
-{
-    uint32_t length = 1; // in case value is 0, still requires one character '0'
-    if( value > 0 ) {
-        length = 8-(__builtin_clz(value)/4);
-    }
-    for(uint32_t index = 0; index < length; ++index) {
-        uint32_t nibble = (value>>(4*(length-1-index)))&0xf;
-        if( nibble < 10 ) {
-            output[index] = '0'+nibble;
-        }
-        else {
-            output[index] = 'A'+(nibble-10);
-        }
-    }
-    output[length] = 0; // null terminator
-    return length;
-}
 
 /// \brief User data for trimesh geometries. Vertices are defined in counter-clockwise order for outward pointing faces.
 class OPENRAVE_API TriMesh
