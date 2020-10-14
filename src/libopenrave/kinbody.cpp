@@ -1327,7 +1327,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         }
 
         // do the test after mimic computation!
-        const LinkPtr pchildlink = pjoint->GetHierarchyChildLink();
+        const LinkPtr& pchildlink = pjoint->GetHierarchyChildLink();
         const int childindex = pchildlink->GetIndex();
         if( vlinkscomputed[childindex] ) {
             continue;
@@ -1366,7 +1366,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         }
 
         // compute for global coordinate system
-        const LinkPtr pparentlink = pjoint->GetHierarchyParentLink();
+        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
         const int parentindex = (!pparentlink) ? 0 : pparentlink->GetIndex();
         const Transform tparent = (!!pparentlink) ? pparentlink->GetTransform() : _veclinks.at(0)->GetTransform();
         const std::pair<Vector, Vector>& parentvelocities = vLinkVelocities.at(parentindex);
@@ -3216,8 +3216,8 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFTorques, const std:
             throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), jointtype, ORE_Assert);
         }
 
-        const LinkPtr pparentlink = pjoint->GetHierarchyParentLink();
-        const LinkPtr pchildlink = pjoint->GetHierarchyChildLink();
+        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
+        const LinkPtr& pchildlink = pjoint->GetHierarchyChildLink();
         const int childindex = pchildlink->GetIndex();
         //         F_CoM = m_child * a_child + F_child
         //      F_parent =      F_parent_external + F_CoM
@@ -3444,12 +3444,14 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
     ) {
         const JointPtr& pjoint = *crit;
         const KinBody::JointType jointtype = pjoint->GetType();
+        const LinkPtr& pchildlink = pjoint->GetHierarchyChildLink();
         const int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
         Vector vchildcomtoparentcom;
         int parentindex = -1;
-        if( !!pjoint->GetHierarchyParentLink() ) {
-            vchildcomtoparentcom = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetHierarchyParentLink()->GetGlobalCOM();
-            parentindex = pjoint->GetHierarchyParentLink()->GetIndex();
+        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
+        if( !!pparentlink ) {
+            vchildcomtoparentcom = pchildlink->GetGlobalCOM() - pparentlink->GetGlobalCOM();
+            parentindex = pparentlink->GetIndex();
         }
 
         const int iaxis = 0;
@@ -3458,8 +3460,8 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
             pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
         }
 
-        dReal mass = pjoint->GetHierarchyChildLink()->GetMass();
-        Vector vcomtoanchor = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetAnchor();
+        const dReal mass = pchildlink->GetMass();
+        const Vector vcomtoanchor = pchildlink->GetGlobalCOM() - pjoint->GetAnchor();
         for(size_t j = 0; j < 3; ++j) {
             if( vLinkForceTorques[j].size() == 0 ) {
                 continue;
@@ -3718,7 +3720,7 @@ void KinBody::_ComputeLinkAccelerations(
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
         const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
         // do the test after mimic computation!?
-        const LinkPtr pchildlink = pjoint->GetHierarchyChildLink();
+        const LinkPtr& pchildlink = pjoint->GetHierarchyChildLink();
         const int childindex = pchildlink->GetIndex();
         if( vlinkscomputed[childindex] ) {
             continue;
@@ -3736,7 +3738,7 @@ void KinBody::_ComputeLinkAccelerations(
         const std::pair<Vector, Vector>& childvelocities = vLinkVelocities.at(childindex);
         std::pair<Vector, Vector>& childaccelerations = vLinkAccelerations.at(childindex);
 
-        const LinkPtr pparentlink = pjoint->GetHierarchyParentLink();
+        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
         const int parentindex = (!pparentlink) ? 0 : pparentlink->GetIndex();
         const std::pair<Vector, Vector>& parentvelocities = vLinkVelocities.at(parentindex);
         const std::pair<Vector, Vector>& parentaccelerations = vLinkAccelerations.at(parentindex);
