@@ -3742,7 +3742,7 @@ void KinBody::_ComputeLinkAccelerations(
         }
     }
 
-    Transform tdelta;
+    Transform tJoint;
     Vector vlocalaxis;
     std::vector<uint8_t> vlinkscomputed(nlinks, 0);
     vlinkscomputed[0] = 1;
@@ -3765,7 +3765,7 @@ void KinBody::_ComputeLinkAccelerations(
         dReal const*const  pdofaccelerations = !bHasAccelerations ? NULL :
             (dofindex >= 0) ? &vDOFAccelerations.at(dofindex) : vPassiveJointAccelerations.at(jointindex - nActiveJoints).data();;
 
-        const Transform& tchild = pchildlink->GetTransform();
+        const Transform& tChild = pchildlink->GetTransform();
         const std::pair<Vector, Vector>& childvelocities = vLinkVelocities.at(childindex);
         std::pair<Vector, Vector>& childaccelerations = vLinkAccelerations.at(childindex);
 
@@ -3773,9 +3773,9 @@ void KinBody::_ComputeLinkAccelerations(
         const int parentindex = (!pparentlink) ? 0 : pparentlink->GetIndex();
         const std::pair<Vector, Vector>& parentvelocities = vLinkVelocities.at(parentindex);
         const std::pair<Vector, Vector>& parentaccelerations = vLinkAccelerations.at(parentindex);
-        const Vector xyzdelta = tchild.trans - _veclinks.at(parentindex)->_info._t.trans;
+        const Vector xyzdelta = tChild.trans - pparentlink->GetTransform().trans;
         if( bHasVelocities || bHasAccelerations ) {
-            tdelta = _veclinks.at(parentindex)->GetTransform() * pjoint->GetInternalHierarchyLeftTransform();
+            tJoint = pparentlink->GetTransform() * pjoint->GetInternalHierarchyLeftTransform();
             vlocalaxis = pjoint->GetInternalHierarchyAxis(0);
         }
 
@@ -3830,12 +3830,12 @@ void KinBody::_ComputeLinkAccelerations(
             childaccelerations.second = parentaccelerations.second;
 
             // accelerations attributing to joint velocity, acceleration
-            const Vector jointdir = tdelta.rotate(vlocalaxis);
+            const Vector jointdir = tJoint.rotate(vlocalaxis);
             if( bHasVelocities ) {
                 const Vector wjoint = jointdir * (*pdofvelocities);
                 //     a_child += w_joint x (w_joint x (p_child - p_joint)) + 2 * w_parent x (w_joint x (p_child - p_joint))
                 // alpha_child += w_parent x w_joint
-                const Vector vJointToChild = tchild.trans - tdelta.trans;
+                const Vector vJointToChild = tChild.trans - tJoint.trans;
                 childaccelerations.first += wjoint.cross(wjoint.cross(vJointToChild)) + 2.0 * parentvelocities.second.cross(wjoint.cross(vJointToChild));
                 childaccelerations.second += parentvelocities.second.cross(wjoint);
             }
@@ -3843,7 +3843,7 @@ void KinBody::_ComputeLinkAccelerations(
                 //     a_child += alpha_joint x (p_child - p_joint)
                 // alpha_child += alpha_joint
                 const Vector alphajoint = jointdir * (*pdofaccelerations);
-                childaccelerations.first += alphajoint.cross(tchild.trans - tdelta.trans);
+                childaccelerations.first += alphajoint.cross(tChild.trans - tJoint.trans);
                 childaccelerations.second += alphajoint;
             }
         }
@@ -3872,12 +3872,13 @@ void KinBody::_ComputeLinkAccelerations(
 
             */
 
-            const Vector jointdir = tdelta.rotate(vlocalaxis);
+            const Vector jointdir = tJoint.rotate(vlocalaxis);
             // a_child = a_parent + alpha_parent x (p_child - p_parent) + w_parent x (w_parent x (p_child - p_parent))
             childaccelerations.first = parentaccelerations.first + parentaccelerations.second.cross(xyzdelta) + parentvelocities.second.cross(parentvelocities.second.cross(xyzdelta));
             if( bHasVelocities ) {
-                // a_child += 2 * (alpha_parent x v_child)
-                childaccelerations.first += 2.0 * parentvelocities.second.cross(childvelocities.first);
+                const Vector vjoint = jointdir * (*pdofvelocities);
+                // a_child += 2 * (w_parent x v_joint)
+                childaccelerations.first += 2.0 * parentvelocities.second.cross(vjoint);
             }
             if( bHasAccelerations ) {
                 // a_child += a_joint
