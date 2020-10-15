@@ -3742,8 +3742,8 @@ void KinBody::_ComputeLinkAccelerations(
         }
     }
 
-    Transform tJoint;
-    Vector vlocalaxis;
+    Transform tJoint; // joint frame's transform
+    Vector vJointAxis; // joint axis in world frame
     std::vector<uint8_t> vlinkscomputed(nlinks, 0);
     vlinkscomputed[0] = 1;
 
@@ -3765,36 +3765,27 @@ void KinBody::_ComputeLinkAccelerations(
         dReal const*const  pdofaccelerations = !bHasAccelerations ? NULL :
             (dofindex >= 0) ? &vDOFAccelerations.at(dofindex) : vPassiveJointAccelerations.at(jointindex - nActiveJoints).data();;
 
-        const Transform& tChild = pchildlink->GetTransform();
-        const std::pair<Vector, Vector>& childvelocities = vLinkVelocities.at(childindex);
-        std::pair<Vector, Vector>& childaccelerations = vLinkAccelerations.at(childindex);
+        // child
+        const Vector& vChildLinearVelocity = vLinkVelocities.at(childindex).first;
+        const Vector& vChildAngularVelocity = vLinkVelocities.at(childindex).second;
+        Vector& vChildLinearAcceleration = vLinkAccelerations.at(childindex).first;
+        Vector& vChildAngularAcceleration = vLinkAccelerations.at(childindex).second;
 
+        // parent
         const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
         const int parentindex = (!pparentlink) ? 0 : pparentlink->GetIndex();
-        const std::pair<Vector, Vector>& parentvelocities = vLinkVelocities.at(parentindex);
-        const std::pair<Vector, Vector>& parentaccelerations = vLinkAccelerations.at(parentindex);
-        const Vector xyzdelta = tChild.trans - pparentlink->GetTransform().trans;
+        const Vector& vParentLinearVelocity = vLinkVelocities.at(parentindex).first;
+        const Vector& vParentAngularVelocity = vLinkVelocities.at(parentindex).second;
+        const Vector& vParentLinearAcceleration = vLinkAccelerations.at(parentindex).first;
+        const Vector& vParentAngularAcceleration = vLinkAccelerations.at(parentindex).second;
+
+        // parent --> joint --> child
+        const Transform& tChild = pchildlink->GetTransform();
+        const Vector vParentToChild = tChild.trans - pparentlink->GetTransform().trans;
         if( bHasVelocities || bHasAccelerations ) {
             tJoint = pparentlink->GetTransform() * pjoint->GetInternalHierarchyLeftTransform();
-            vlocalaxis = pjoint->GetInternalHierarchyAxis(0);
+            vJointAxis = tJoint.rotate(pjoint->GetInternalHierarchyAxis(0));
         }
-
-        // check out: http://en.wikipedia.org/wiki/Rotating_reference_frame
-        // compute for global coordinate system
-        // code for symbolic computation (python sympy)
-        // t=Symbol('t'); q=Function('q')(t); dq=diff(q,t); axis=Matrix(3,1,symbols('ax,ay,az')); delta=Matrix(3,1,[Function('dx')(t), Function('dy')(t), Function('dz')(t)]); vparent=Matrix(3,1,[Function('vparentx')(t),Function('vparenty')(t),Function('vparentz')(t)]); wparent=Matrix(3,1,[Function('wparentx')(t),Function('wparenty')(t),Function('wparentz')(t)]); Mparent=Matrix(3,4,[Function('m%d%d'%(i,j))(t) for i in range(3) for j in range(4)]); c = Matrix(3,1,symbols('cx,cy,cz'))
-        // hinge joints:
-        // p = Mparent[0:3,3] + Mparent[0:3,0:3]*(Left[0:3,3] + Left[0:3,0:3]*Rot[0:3,0:3]*Right[0:3,3])
-        // v = vparent + wparent.cross(p-Mparent[0:3,3]) + Mparent[0:3,0:3] * Left[0:3,0:3] * dq * axis.cross(Rot[0:3,0:3]*Right)
-        // wparent.cross(v) = wparent.cross(vparent) + wparent.cross(wparent.cross(p-Mparent[0:3,3])) + wparent.cross(p-Mparent[0:3,3])
-        // dv = vparent.diff(t) + wparent.diff(t).cross(p-Mparent[0:3,3]).transpose() + wparent.cross(v-vparent) + wparent.cross(v-vparent-wparent.cross(wparent.cross(p-Mparent[0:3,3]))) + Mparent[0:3,0:3] * Left[0:3,0:3] * (ddq * axis.cross(Rot[0:3,0:3]*Right) + dq * axis.cross(dq*axis.cross(Rot[0:3,0:3]*Right)))
-        // w = wparent + Mparent[0:3,0:3]*Left[0:3,0:3]*axis*dq
-        // dw = wparent.diff(t) + wparent.cross(Mparent[0:3,0:3]*Left[0:3,0:3]*axis*dq).transpose() + Mparent[0:3,0:3]*Left[0:3,0:3]*axis*ddq
-        // slider:
-        // v = vparent + wparent.cross(p-Mparent[0:3,3]) + Mparent[0:3,0:3]*Left[0:3,0:3]*dq*axis
-        // dv = vparent.diff(t) + wparent.diff(t).cross(p-Mparent[0:3,3]).transpose() + wparent.cross(v-vparent) + wparent.cross(Mparent[0:3,0:3]*Left[0:3,0:3]*dq*axis) + Mparent[0:3,0:3]*Left[0:3,0:3]*ddq*axis
-        // w = wparent
-        // dw = wparent.diff(t)
 
         const JointType jointtype = pjoint->GetType();
         if(jointtype != JointRevolute && jointtype != JointPrismatic) {
@@ -3826,25 +3817,24 @@ void KinBody::_ComputeLinkAccelerations(
             */
 
             // accelerations attributing to parent's velocity, acceleration
-            childaccelerations.first  = parentaccelerations.first + parentaccelerations.second.cross(xyzdelta) + parentvelocities.second.cross(parentvelocities.second.cross(xyzdelta));
-            childaccelerations.second = parentaccelerations.second;
+            vChildLinearAcceleration  = vParentLinearAcceleration + vParentAngularAcceleration.cross(vParentToChild) + vParentAngularVelocity.cross(vParentAngularVelocity.cross(vParentToChild));
+            vChildAngularAcceleration = vParentAngularAcceleration;
 
             // accelerations attributing to joint velocity, acceleration
-            const Vector jointdir = tJoint.rotate(vlocalaxis);
             if( bHasVelocities ) {
-                const Vector wjoint = jointdir * (*pdofvelocities);
+                const Vector vJointAngularVelocity = vJointAxis * (*pdofvelocities);
                 //     a_child += w_joint x (w_joint x (p_child - p_joint)) + 2 * w_parent x (w_joint x (p_child - p_joint))
                 // alpha_child += w_parent x w_joint
                 const Vector vJointToChild = tChild.trans - tJoint.trans;
-                childaccelerations.first += wjoint.cross(wjoint.cross(vJointToChild)) + 2.0 * parentvelocities.second.cross(wjoint.cross(vJointToChild));
-                childaccelerations.second += parentvelocities.second.cross(wjoint);
+                vChildLinearAcceleration += vJointAngularVelocity.cross(vJointAngularVelocity.cross(vJointToChild)) + 2.0 * vParentAngularVelocity.cross(vJointAngularVelocity.cross(vJointToChild));
+                vChildAngularAcceleration += vParentAngularVelocity.cross(vJointAngularVelocity);
             }
             if( bHasAccelerations ) {
                 //     a_child += alpha_joint x (p_child - p_joint)
                 // alpha_child += alpha_joint
-                const Vector alphajoint = jointdir * (*pdofaccelerations);
-                childaccelerations.first += alphajoint.cross(tChild.trans - tJoint.trans);
-                childaccelerations.second += alphajoint;
+                const Vector alphajoint = vJointAxis * (*pdofaccelerations);
+                vChildLinearAcceleration += alphajoint.cross(tChild.trans - tJoint.trans);
+                vChildAngularAcceleration += alphajoint;
             }
         }
         else {
@@ -3872,20 +3862,19 @@ void KinBody::_ComputeLinkAccelerations(
 
             */
 
-            const Vector jointdir = tJoint.rotate(vlocalaxis);
             // a_child = a_parent + alpha_parent x (p_child - p_parent) + w_parent x (w_parent x (p_child - p_parent))
-            childaccelerations.first = parentaccelerations.first + parentaccelerations.second.cross(xyzdelta) + parentvelocities.second.cross(parentvelocities.second.cross(xyzdelta));
+            vChildLinearAcceleration = vParentLinearAcceleration + vParentAngularAcceleration.cross(vParentToChild) + vParentAngularVelocity.cross(vParentAngularVelocity.cross(vParentToChild));
             if( bHasVelocities ) {
-                const Vector vjoint = jointdir * (*pdofvelocities);
+                const Vector vJointLinearVelocity = vJointAxis * (*pdofvelocities);
                 // a_child += 2 * (w_parent x v_joint)
-                childaccelerations.first += 2.0 * parentvelocities.second.cross(vjoint);
+                vChildLinearAcceleration += 2.0 * vParentAngularVelocity.cross(vJointLinearVelocity);
             }
             if( bHasAccelerations ) {
                 // a_child += a_joint
-                childaccelerations.first += jointdir * (*pdofaccelerations);
+                vChildLinearAcceleration += vJointAxis * (*pdofaccelerations);
             }
             // alpha_child = alpha_parent
-            childaccelerations.second = parentaccelerations.second;
+            vChildAngularAcceleration = vParentAngularAcceleration;
         }
         vlinkscomputed[childindex] = 1;
     }
