@@ -3182,7 +3182,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFForceTorques, const
     for(size_t i = 0; i < vLinkVelocities.size(); ++i) {
         // collect
         const LinkPtr& plink = _veclinks.at(i);
-        const Vector CoM = plink->GetGlobalCOM() - plink->_info._t.trans; // B-A
+        const Vector CoM = plink->GetGlobalCOM() - plink->GetTransform().trans; // B-A
         const Vector& angularvel = vLinkVelocities.at(i).second; // w
         const Vector& linearaccel = vLinkAccelerations.at(i).first; // a
         const Vector& angularaccel = vLinkAccelerations.at(i).second; // alpha
@@ -3387,9 +3387,9 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
             // remove the base link velocity frame
             // v_B = v_A + angularvel x (B-A)
             vLinkVelocities[2].resize(nlinks);
-            Vector vbasepos = _veclinks.at(0)->_info._t.trans;
+            Vector vbasepos = _veclinks.at(0)->GetTransform().trans;
             for(size_t i = 1; i < vLinkVelocities[0].size(); ++i) {
-                Vector voffset = _veclinks.at(i)->_info._t.trans - vbasepos;
+                Vector voffset = _veclinks.at(i)->GetTransform().trans - vbasepos;
                 vLinkVelocities[2][i].first = vbaselinear + vbaseangular.cross(voffset);
                 vLinkVelocities[2][i].second = vbaseangular;
             }
@@ -3576,10 +3576,10 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& vDOFVelocities, std:
         return;
     }
     if( !usebaselinkvelocity ) {
-        const Vector& vbasepos = _veclinks.at(0)->_info._t.trans;
+        const Vector& vbasepos = _veclinks.at(0)->GetTransform().trans;
         // v_B = v_A + angularvel x (B-A)
         for(size_t i = 1; i < vLinkVelocities.size(); ++i) {
-            const Vector voffset = _veclinks.at(i)->_info._t.trans - vbasepos;
+            const Vector voffset = _veclinks.at(i)->GetTransform().trans - vbasepos;
             vLinkVelocities[i].first -= vLinkVelocities[0].first + vLinkVelocities[0].second.cross(voffset);
             vLinkVelocities[i].second -= vLinkVelocities[0].second;
         }
