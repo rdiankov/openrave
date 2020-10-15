@@ -3200,6 +3200,8 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFForceTorques, const
     std::fill(vDOFForceTorques.begin(), vDOFForceTorques.end(), 0);
     const int iaxis = 0; // can only handle axis 0
     const std::vector<JointPtr>& vPassiveJoints = this->GetPassiveJoints();
+    const int nPassiveJoints = vPassiveJoints.size();
+    std::vector<dReal> vPassiveJointsForceTorques(nPassiveJoints, 0);
 
     /* ========================================== (4) =======================================================
      - Compute for each link the force and torque exterted by its child link
@@ -3238,9 +3240,9 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFForceTorques, const
             vLinkForceTorques.at(parentindex).second += vChildTorque + vParentCoMToChildCoM.cross(vChildForce);
         }
 
-        /* ==================================== (4b) ===================================
-         - Compute for each active/mimic joint the force and torque its child link exert to it
-        ============================================================================= */
+        /* ==================================== (4b) ==========================================
+         - Compute for each active/mimic joint the force and torque its child link exerts to it
+        ==================================================================================== */
         const int jointdofindex = pjoint->GetDOFIndex();
         const bool bIsActive = jointdofindex >= 0;
         const bool bIsMimic0 = pjoint->IsMimic(iaxis);
@@ -3248,6 +3250,14 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFForceTorques, const
             // joint should be static
             OPENRAVE_ASSERT_FORMAT(pjoint->IsStatic(), "joint %s is expected to be static", pjoint->GetName(), ORE_Assert);
             continue;
+        }
+        int iPassiveJoint = -1;        
+        if(bIsMimic0) {
+            std::vector<JointPtr>::const_iterator itjoint = std::find(vPassiveJoints.cbegin(), vPassiveJoints.cend(), pjoint);
+            OPENRAVE_ASSERT_FORMAT(itjoint != vPassiveJoints.cend(),
+                "Joint \"%s\" is not in vPassiveJoints", pjoint->GetName(), ORE_InvalidArguments
+            );
+            iPassiveJoint = std::distance(vPassiveJoints.begin(), itjoint);
         }
 
         const Vector vJointAnchorToChildCoM = vChildCoM - pjoint->GetAnchor();
@@ -3261,19 +3271,23 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFForceTorques, const
 
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-        ss << "jointtype = " << jointtype << ", joint axis = " << pjoint->GetAxis(iaxis) << ", parentlink = " << ((pparentlink)?pparentlink->GetName():"NULL") << ", pchildlink = " << pchildlink->GetName() << ", vChildTorque = " << vChildTorque << ", vJointAnchorToChildCoM = " << vJointAnchorToChildCoM << ", vChildForce =  " << vChildForce << ", fDofAxisForceTorque = " << fDofAxisForceTorque;
+        {
+            rapidjson::Document doc;
+            doc.SetObject();
+            auto& alloc = doc.GetAllocator();
+            orjson::SetJsonValueByKey(doc, "jointtype", (jointtype == JointHinge) ? "R" : "P", alloc);
+            orjson::SetJsonValueByKey(doc, "jointaxis", pjoint->GetAxis(iaxis), alloc);
+            orjson::SetJsonValueByKey(doc, "parentlink", ((pparentlink) ? pparentlink->GetName() : "None"), alloc);
+            orjson::SetJsonValueByKey(doc, "childlink", pchildlink->GetName(), alloc);
+            orjson::SetJsonValueByKey(doc, "vChildTorque", vChildTorque, alloc);
+            orjson::SetJsonValueByKey(doc, "vJointAnchorToChildCoM", vJointAnchorToChildCoM, alloc);
+            orjson::SetJsonValueByKey(doc, "vChildForce", vChildForce, alloc);
+            orjson::SetJsonValueByKey(doc, "fDofAxisForceTorque", fDofAxisForceTorque, alloc);
+            ss << orjson::DumpJson(doc);
+        }
 
         const ElectricMotorActuatorInfoPtr& pActuatorInfo = pjoint->_info._infoElectricMotor;
         if( !!pActuatorInfo ) {
-            int iPassiveJoint = -1;
-            if(bIsMimic0) {
-                std::vector<JointPtr>::const_iterator itjoint = std::find(vPassiveJoints.cbegin(), vPassiveJoints.cend(), pjoint);
-                OPENRAVE_ASSERT_FORMAT(itjoint != vPassiveJoints.cend(),
-                    "Joint \"%s\" is not in vPassiveJoints", pjoint->GetName(), ORE_InvalidArguments
-                );
-                iPassiveJoint = std::distance(vPassiveJoints.begin(), itjoint);
-            }
-
             // torque due to friction (friction unknown to us; get them from experiments)
             if(bHasVelocities) {
                 const dReal dofvelocity = bIsActive ? vDOFVelocities.at(jointdofindex) : vPassiveJointVelocities.at(iPassiveJoint).at(iaxis);
@@ -3302,14 +3316,15 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFForceTorques, const
         }
 
         if(bIsActive) {
-            RAVELOG_DEBUG_FORMAT("Joint %s of index %d adds by %.4e units of torque/force", pjoint->GetName() % jointdofindex % fDofAxisForceTorque);
+            RAVELOG_DEBUG_FORMAT("Joint %s of index %d adds by %.4e units of torque/force\n\n%s\n\n", pjoint->GetName() % jointdofindex % fDofAxisForceTorque % ss.str());
             vDOFForceTorques.at(jointdofindex) += fDofAxisForceTorque;
         }
         else { // mimic
+            vPassiveJointsForceTorques.at(iPassiveJoint) = fDofAxisForceTorque;
             // extract first-order partial derivatives results from the cached mPartialderivativepairValue
             pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
             for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
-                RAVELOG_DEBUG_FORMAT("Mimic joint %s contributes to active DOF index %d by %.4e units of torque/force: %.4e weighted by partial derivative %.4e\n%s",
+                RAVELOG_DEBUG_FORMAT("Mimic joint %s contributes to active DOF index %d by %.4e units of torque/force: %.4e weighted by partial derivative %.4e\n%s\n\n",
                     pjoint->GetName() % dofindexDerivativePair.first % (dofindexDerivativePair.second*fDofAxisForceTorque) % fDofAxisForceTorque % dofindexDerivativePair.second % ss.str()
                 );
                 vDOFForceTorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * fDofAxisForceTorque;
@@ -3329,7 +3344,14 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFForceTorques, const
             orjson::SetJsonValueByKey(d, "force", vLinkForceTorques[ilink].first, alloc);
             orjson::SetJsonValueByKey(d, "torque", vLinkForceTorques[ilink].second, alloc);
             doc.PushBack(d, alloc);
-        };
+        }
+        {
+            rapidjson::Document d;
+            d.SetObject();
+            orjson::SetJsonValueByKey(d, "vDOFForceTorques", vDOFForceTorques, alloc);
+            orjson::SetJsonValueByKey(d, "vPassiveJointsForceTorques", vPassiveJointsForceTorques, alloc);
+            doc.PushBack(d, alloc);
+        }
         RAVELOG_DEBUG_FORMAT("\n%s\n", orjson::DumpJson(doc));
     }
 }
@@ -3766,15 +3788,15 @@ void KinBody::_ComputeLinkAccelerations(
             (dofindex >= 0) ? &vDOFAccelerations.at(dofindex) : vPassiveJointAccelerations.at(jointindex - nActiveJoints).data();;
 
         // child
-        const Vector& vChildLinearVelocity = vLinkVelocities.at(childindex).first;
-        const Vector& vChildAngularVelocity = vLinkVelocities.at(childindex).second;
+        // const Vector& vChildLinearVelocity = vLinkVelocities.at(childindex).first;
+        // const Vector& vChildAngularVelocity = vLinkVelocities.at(childindex).second;
         Vector& vChildLinearAcceleration = vLinkAccelerations.at(childindex).first;
         Vector& vChildAngularAcceleration = vLinkAccelerations.at(childindex).second;
 
         // parent
         const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
         const int parentindex = (!pparentlink) ? 0 : pparentlink->GetIndex();
-        const Vector& vParentLinearVelocity = vLinkVelocities.at(parentindex).first;
+        // const Vector& vParentLinearVelocity = vLinkVelocities.at(parentindex).first;
         const Vector& vParentAngularVelocity = vLinkVelocities.at(parentindex).second;
         const Vector& vParentLinearAcceleration = vLinkAccelerations.at(parentindex).first;
         const Vector& vParentAngularAcceleration = vLinkAccelerations.at(parentindex).second;
