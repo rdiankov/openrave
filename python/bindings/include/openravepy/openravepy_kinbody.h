@@ -321,6 +321,13 @@ public:
 
     py::object ExtractInfo() const;
 
+    py::object ComputeMimicJointFirstOrderPartialDerivatives();
+    py::object ComputeMimicJointSecondOrderPartialDerivatives();
+    py::tuple ComputePassiveJointVelocitiesAccelerations(
+        py::object pyDOFVelocities,
+        py::object pyDOFAccelerations
+    );
+
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);
     virtual std::string __repr__();
     virtual std::string __str__();

@@ -1249,141 +1249,135 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
 {
     CHECK_INTERNAL_COMPUTATION;
     OPENRAVE_ASSERT_OP_FORMAT((int)vDOFVelocities.size(), >=, GetDOF(), "env=%d, not enough values %d!=%d", GetEnv()->GetId()%vDOFVelocities.size()%GetDOF(),ORE_InvalidArguments);
-    std::vector<std::pair<Vector,Vector> > velocities(_veclinks.size());
-    velocities.at(0).first = linearvel;
-    velocities.at(0).second = angularvel;
 
-    vector<dReal> vlower,vupper,vtempvalues, veval;
-    if( checklimits != CLA_Nothing ) {
-        GetDOFVelocityLimits(vlower,vupper);
-    }
+    const int nlinks = _veclinks.size();
+    const int nActiveJoints = _vecjoints.size();
+    const int nPassiveJoints = _vPassiveJoints.size();
 
-    // have to compute the velocities ahead of time since they are dependent on the link transformations
-    std::vector< std::vector<dReal> > vPassiveJointVelocities(_vPassiveJoints.size());
+    std::vector<std::pair<Vector, Vector> > vLinkVelocities(nlinks); // v for linear velocity, w for angular velocity
+    vLinkVelocities.at(0).first = linearvel; // base link
+    vLinkVelocities.at(0).second = angularvel;
+
+    // have to compute the vLinkVelocities ahead of time since they are dependent on the link transformations
+    std::vector< std::vector<dReal> > vPassiveJointVelocities(nPassiveJoints);
     for(size_t i = 0; i < vPassiveJointVelocities.size(); ++i) {
-        if( !_vPassiveJoints[i]->IsMimic() ) {
-            _vPassiveJoints[i]->GetVelocities(vPassiveJointVelocities[i]);
+        const JointPtr& pjoint = _vPassiveJoints[i];
+        if( !pjoint->IsMimic() ) {
+            pjoint->GetVelocities(vPassiveJointVelocities[i]);
         }
         else {
-            vPassiveJointVelocities[i].resize(_vPassiveJoints[i]->GetDOF(),0);
+            vPassiveJointVelocities[i].resize(pjoint->GetDOF(), 0);
         }
     }
 
-    std::vector<uint8_t> vlinkscomputed(_veclinks.size(),0);
+    std::vector<uint8_t> vlinkscomputed(nlinks, 0);
     vlinkscomputed[0] = 1;
-    boost::array<dReal,3> dummyvalues; // dummy values for a joint
+    boost::array<dReal, 3> dummyvalues; // dummy values for a joint
+    std::vector<dReal> vlower, vupper, vDependedJointValues, veval;
+    const bool bCheckJointLimits = checklimits != CLA_Nothing;
+    if( bCheckJointLimits ) {
+        this->GetDOFVelocityLimits(vlower, vupper);
+    }
 
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
-        JointPtr pjoint = _vTopologicallySortedJointsAll[ijoint];
-        int jointindex = _vTopologicallySortedJointIndicesAll[ijoint];
-        int dofindex = pjoint->GetDOFIndex();
-        const dReal* pvalues=dofindex >= 0 ? &vDOFVelocities.at(dofindex) : NULL;
-        if( pjoint->IsMimic() ) {
-            for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                if( pjoint->IsMimic(i) ) {
-                    vtempvalues.resize(0);
-                    const std::vector<Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[i]->_vdofformat;
-                    FOREACHC(itdof,vdofformat) {
-                        JointPtr pj = itdof->jointindex < (int)_vecjoints.size() ? _vecjoints[itdof->jointindex] : _vPassiveJoints.at(itdof->jointindex-_vecjoints.size());
-                        vtempvalues.push_back(pj->GetValue(itdof->axis));
+        const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
+        const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint]; // active joint has jointindex < nActiveJoints; mimic joint has jointindex >= nActiveJoints
+        const int dofindex = pjoint->GetDOFIndex(); // active joint has dofindex >= 0; mimic joint has dofindex == -1
+        const bool bIsMimic = pjoint->IsMimic(-1); // true if whichever axis is mimic
+        if( bIsMimic ) {
+            for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                if( pjoint->IsMimic(iaxis) ) {
+                    const std::vector<Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[iaxis]->_vdofformat;
+                    const int ndofformat = vdofformat.size();
+                    vDependedJointValues.resize(ndofformat, 0);
+                    for(int idofformat = 0; idofformat < ndofformat; ++idofformat) {
+                        const Mimic::DOFFormat& dofformat = vdofformat[idofformat];
+                        const int jointindexlocal = dofformat.jointindex;
+                        const JointPtr& pjointlocal = (jointindexlocal < nActiveJoints) ? _vecjoints[jointindexlocal] : _vPassiveJoints.at(jointindexlocal - nActiveJoints);
+                        vDependedJointValues[idofformat] = pjointlocal->GetValue(dofformat.axis);
                     }
-                    dummyvalues[i] = 0;
-                    int err = pjoint->_Eval(i,1,vtempvalues,veval);
+                    dummyvalues[iaxis] = 0;
+                    int err = pjoint->_Eval(iaxis, 1, vDependedJointValues, veval);
                     if( err ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, failed to evaluate joint %s, fparser error %d")%GetEnv()->GetId()%pjoint->GetName()%err));
-                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            err = pjoint->_Eval(i,1,vtempvalues,veval);
-                        }
+                        RAVELOG_WARN_FORMAT("env=%d, failed to evaluate joint %s, fparser error %d; treat its joint velocity as 0",
+                            GetEnv()->GetId() % pjoint->GetName() % err
+                        );
                     }
                     else {
-                        for(size_t ipartial = 0; ipartial < vdofformat.size(); ++ipartial) {
-                            dReal partialvelocity;
-                            if( vdofformat[ipartial].dofindex >= 0 ) {
-                                partialvelocity = vDOFVelocities.at(vdofformat[ipartial].dofindex);
-                            }
-                            else {
-                                partialvelocity = vPassiveJointVelocities.at(vdofformat[ipartial].jointindex-_vecjoints.size()).at(vdofformat[ipartial].axis);
-                            }
-                            if( ipartial < veval.size() ) {
-                                dummyvalues[i] += veval.at(ipartial) * partialvelocity;
-                            }
-                            else {
-                                RAVELOG_DEBUG_FORMAT("env=%d, cannot evaluate partial velocity for mimic joint %s, perhaps equations don't exist", GetEnv()->GetId()%pjoint->GetName());
-                            }
+                        // veval.size() == pjoint->_vmimic.at(axis)->_velfns.size(); c.f KinBody::Joint::_Eval with timederiv=1
+                        for(int idofformat = 0; idofformat < ndofformat; ++idofformat) {
+                            const Mimic::DOFFormat& dofformat = vdofformat[idofformat];
+                            const dReal partialvelocity = (dofformat.dofindex >= 0) ? vDOFVelocities.at(dofformat.dofindex)
+                                : vPassiveJointVelocities.at(dofformat.jointindex - nActiveJoints).at(dofformat.axis);
+                            dummyvalues[iaxis] += veval.at(idofformat) * partialvelocity;
                         }
                     }
-
-                    // if joint is passive, update the stored joint values! This is necessary because joint value might be referenced in the future.
-                    if( dofindex < 0 ) {
-                        vPassiveJointVelocities.at(jointindex-(int)_vecjoints.size()).at(i) = dummyvalues[i];
-                    }
+                    vPassiveJointVelocities.at(jointindex - nActiveJoints).at(iaxis) = dummyvalues[iaxis];
                 }
                 else if( dofindex >= 0 ) {
-                    dummyvalues[i] = vDOFVelocities.at(dofindex+i); // is this correct? what is a joint has a mimic and non-mimic axis?
+                    RAVELOG_WARN_FORMAT("Joint \"%s\" is mimic, but has a non-mimic axis %d. Is this possible, or the robot model is wrong? jointindex=%d, dofindex=%d, iaxis=%d",
+                        pjoint->GetName() % iaxis % jointindex % dofindex % iaxis
+                    );
+                    dummyvalues[iaxis] = vDOFVelocities.at(dofindex + iaxis); // is this correct? what is a joint has a mimic and non-mimic axis?
                 }
                 else {
-                    // preserve passive joint values
-                    dummyvalues[i] = vPassiveJointVelocities.at(jointindex-(int)_vecjoints.size()).at(i);
+                    dummyvalues[iaxis] = vPassiveJointVelocities.at(jointindex - nActiveJoints).at(iaxis); // preserve passive joint values
                 }
             }
-            pvalues = &dummyvalues[0];
-        }
-        // do the test after mimic computation!
-        if( vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] ) {
-            continue;
-        }
-        if( !pvalues ) {
-            // has to be a passive joint
-            pvalues = &vPassiveJointVelocities.at(jointindex-(int)_vecjoints.size()).at(0);
         }
 
-        if( checklimits != CLA_Nothing && dofindex >= 0 ) {
-            for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                if( pvalues[i] < vlower.at(dofindex+i)-g_fEpsilonJointLimit ) {
+        // do the test after mimic computation!
+        const LinkPtr& pchildlink = pjoint->GetHierarchyChildLink();
+        const int childindex = pchildlink->GetIndex();
+        if( vlinkscomputed[childindex] ) {
+            continue;
+        }
+
+        dReal const* pvalues = (dofindex >= 0) ? /* active */ &vDOFVelocities.at(dofindex) : 
+            bIsMimic ? /* mimic */dummyvalues.data() : /* static */vPassiveJointVelocities.at(jointindex - nActiveJoints).data();
+
+        if( bCheckJointLimits && dofindex >= 0 ) {
+            // clamping active joint values
+            for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                const int dofaxisindex = dofindex + iaxis;
+                if( pvalues[iaxis] < vlower.at(dofaxisindex) - g_fEpsilonJointLimit ) {
                     if( checklimits == CLA_CheckLimits ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e<%.15e")%GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i)));
+                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e<%.15e")%GetEnv()->GetId()%(dofaxisindex)%pvalues[iaxis]%vlower.at(dofaxisindex)));
                     }
                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e<%.15e"), GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i), ORE_InvalidArguments);
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e<%.15e"), GetEnv()->GetId()%(dofaxisindex)%pvalues[iaxis]%vlower.at(dofaxisindex), ORE_InvalidArguments);
                     }
-                    dummyvalues[i] = vlower[dofindex+i];
+                    dummyvalues[iaxis] = vlower[dofaxisindex];
                 }
-                else if( pvalues[i] > vupper.at(dofindex+i)+g_fEpsilonJointLimit ) {
+                else if( pvalues[iaxis] > vupper.at(dofaxisindex)+g_fEpsilonJointLimit ) {
                     if( checklimits == CLA_CheckLimits ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e>%.15e")%GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i)));
+                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e>%.15e")%GetEnv()->GetId()%(dofaxisindex)%pvalues[iaxis]%vupper.at(dofaxisindex)));
                     }
                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e>%.15e"), GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i), ORE_InvalidArguments);
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e>%.15e"), GetEnv()->GetId()%(dofaxisindex)%pvalues[iaxis]%vupper.at(dofaxisindex), ORE_InvalidArguments);
                     }
-                    dummyvalues[i] = vupper[dofindex+i];
+                    dummyvalues[iaxis] = vupper[dofaxisindex];
                 }
                 else {
-                    dummyvalues[i] = pvalues[i];
+                    dummyvalues[iaxis] = pvalues[iaxis];
                 }
             }
-            pvalues = &dummyvalues[0];
+            pvalues = dummyvalues.data();
         }
 
         // compute for global coordinate system
-        Vector vparent, wparent;
-        Transform tparent;
-        if( !pjoint->GetHierarchyParentLink() ) {
-            tparent = _veclinks.at(0)->GetTransform();
-            vparent = velocities.at(0).first;
-            wparent = velocities.at(0).second;
-        }
-        else {
-            tparent = pjoint->GetHierarchyParentLink()->GetTransform();
-            vparent = velocities[pjoint->GetHierarchyParentLink()->GetIndex()].first;
-            wparent = velocities[pjoint->GetHierarchyParentLink()->GetIndex()].second;
-        }
-
-        int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
-        Transform tchild = pjoint->GetHierarchyChildLink()->GetTransform();
-        Vector xyzdelta = tchild.trans - tparent.trans;
-        Transform tdelta = tparent * pjoint->GetInternalHierarchyLeftTransform();
-//        if( pjoint->GetType() & JointSpecialBit ) {
-//            switch(pjoint->GetType()) {
+        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
+        const int parentindex = (!pparentlink) ? 0 : pparentlink->GetIndex();
+        const Transform tparent = (!!pparentlink) ? pparentlink->GetTransform() : _veclinks.at(0)->GetTransform();
+        const std::pair<Vector, Vector>& parentvelocities = vLinkVelocities.at(parentindex);
+        const Vector& vparent = parentvelocities.first;
+        const Vector& wparent = parentvelocities.second;
+        const Transform tchild = pchildlink->GetTransform();
+        const Vector xyzdelta = tchild.trans - tparent.trans;
+        const Transform tdelta = tparent * pjoint->GetInternalHierarchyLeftTransform();
+        const JointType jointtype = pjoint->GetType();
+//        if( jointtype & JointSpecialBit ) {
+//            switch(jointtype) {
 //            case JointHinge2: {
 //                Transform tfirst;
 //                tfirst.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pjoint->GetValue(0));
@@ -1394,49 +1388,60 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
 //                w.x = pvalues[0]; w.y = pvalues[1]; w.z = pvalues[2];
 //                break;
 //            default:
-//                RAVELOG_WARN(str(boost::format("env=%d, forward kinematic type %d not supported")%GetEnv()->GetId()%pjoint->GetType()));
+//                RAVELOG_WARN(str(boost::format("env=%d, forward kinematic type %d not supported")%GetEnv()->GetId()%jointtype));
 //                break;
 //            }
 //        }
 //        else {
-        if( pjoint->GetType() == JointRevolute ) {
-            Vector gw = tdelta.rotate(pvalues[0]*pjoint->GetInternalHierarchyAxis(0));
-            velocities.at(childindex) = make_pair(vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans), wparent + gw);
+        if( jointtype == JointRevolute ) {
+            const Vector wjoint = tdelta.rotate(pvalues[0] * pjoint->GetInternalHierarchyAxis(0));
+            std::pair<Vector, Vector>& childvelocities = vLinkVelocities.at(childindex);
+            // v_child = v_parent + w_parent x (p_child - p_parent) + w_joint x (p_child - p_joint)
+            // w_child = w_parent + w_joint
+            childvelocities.first = vparent + wparent.cross(xyzdelta) + wjoint.cross(tchild.trans - tdelta.trans);
+            childvelocities.second = wparent + wjoint;
         }
-        else if( pjoint->GetType() == JointPrismatic ) {
-            velocities.at(childindex) = make_pair(vparent + wparent.cross(xyzdelta) + tdelta.rotate(pvalues[0]*pjoint->GetInternalHierarchyAxis(0)), wparent);
+        else if( jointtype == JointPrismatic ) {
+            const Vector vjoint = tdelta.rotate(pvalues[0] * pjoint->GetInternalHierarchyAxis(0));
+            std::pair<Vector, Vector>& childvelocities = vLinkVelocities.at(childindex);
+            // v_child = v_parent + w_parent x (p_child - p_parent) + v_joint
+            // w_child = w_parent
+            childvelocities.first = vparent + wparent.cross(xyzdelta) + vjoint;
+            childvelocities.second = wparent;
         }
-        else if( pjoint->GetType() == JointTrajectory ) {
+        else if( jointtype == JointTrajectory ) {
             Transform tlocalvelocity, tlocal;
+            JointInfo& jointinfo = pjoint->_info;
             if( pjoint->IsMimic(0) ) {
-                // vtempvalues should already be init from previous _Eval call
-                int err = pjoint->_Eval(0,0,vtempvalues,veval);
+                // vDependedJointValues should already be init from previous _Eval call
+                int err = pjoint->_Eval(0, 0, vDependedJointValues, veval);
                 if( err != 0 ) {
                     RAVELOG_WARN(str(boost::format("env=%d, error with evaluation of joint %s")%GetEnv()->GetId()%pjoint->GetName()));
                 }
                 dReal fvalue = veval[0];
                 if( pjoint->IsCircular(0) ) {
-                    fvalue = utils::NormalizeCircularAngle(fvalue,pjoint->_vcircularlowerlimit.at(0), pjoint->_vcircularupperlimit.at(0));
+                    fvalue = utils::NormalizeCircularAngle(fvalue, pjoint->_vcircularlowerlimit.at(0), pjoint->_vcircularupperlimit.at(0));
                 }
-                pjoint->_info._trajfollow->Sample(vtempvalues,fvalue);
+                jointinfo._trajfollow->Sample(vDependedJointValues, fvalue);
             }
             else {
                 // calling GetValue() could be extremely slow
-                pjoint->_info._trajfollow->Sample(vtempvalues,pjoint->GetValue(0));
+                jointinfo._trajfollow->Sample(vDependedJointValues, pjoint->GetValue(0));
             }
-            pjoint->_info._trajfollow->GetConfigurationSpecification().ExtractTransform(tlocal, vtempvalues.begin(), KinBodyConstPtr(),0);
-            pjoint->_info._trajfollow->GetConfigurationSpecification().ExtractTransform(tlocalvelocity, vtempvalues.begin(), KinBodyConstPtr(),1);
+            const ConfigurationSpecification& conf = jointinfo._trajfollow->GetConfigurationSpecification();
+            conf.ExtractTransform(tlocal, vDependedJointValues.begin(), KinBodyConstPtr(),0);
+            conf.ExtractTransform(tlocalvelocity, vDependedJointValues.begin(), KinBodyConstPtr(),1);
             Vector gw = tdelta.rotate(quatMultiply(tlocalvelocity.rot, quatInverse(tlocal.rot))*2*pvalues[0]); // qvel = [0,axisangle] * qrot * 0.5 * vel
             gw = Vector(gw.y,gw.z,gw.w);
             Vector gv = tdelta.rotate(tlocalvelocity.trans*pvalues[0]);
-            velocities.at(childindex) = make_pair(vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans) + gv, wparent + gw);
+            vLinkVelocities.at(childindex) = {vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans) + gv, wparent + gw};
         }
-        else if( pjoint->GetType() == JointSpherical ) {
+        else if( jointtype == JointSpherical ) {
             Vector gw = tdelta.rotate(Vector(pvalues[0],pvalues[1],pvalues[2]));
-            velocities.at(childindex) = make_pair(vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans), wparent + gw);
+            vLinkVelocities.at(childindex) = {vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans), wparent + gw};
         }
         else {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, joint 0x%x not supported for querying velocities"),GetEnv()->GetId()%pjoint->GetType(),ORE_Assert);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, joint 0x%x not supported for querying velocities"), GetEnv()->GetId() % jointtype, ORE_Assert);
 //                //todo
 //                Transform tjoint;
 //                for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
@@ -1457,7 +1462,8 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
 
         vlinkscomputed[childindex] = 1;
     }
-    SetLinkVelocities(velocities);
+
+    this->SetLinkVelocities(vLinkVelocities);
 }
 
 void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, uint32_t checklimits, const std::vector<int>& dofindices)
@@ -2239,6 +2245,43 @@ KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
     return JointPtr();
 }
 
+void KinBody::ComputeMimicJointFirstOrderPartialDerivatives(
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue
+) const {
+    mPartialderivativepairValue.clear();
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
+    for(const JointPtr& pjoint : _vPassiveJoints) {
+        const int ndof = pjoint->GetDOF();
+        for(int iaxis = 0; iaxis < ndof; ++iaxis) {
+            if( pjoint->IsMimic(iaxis) ) {
+                pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
+            }
+        }
+    }
+}
+
+void KinBody::ComputeMimicJointSecondOrderPartialDerivatives(
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue,
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
+    const bool bRecomputeFirstOrderPartial
+) const {
+    mSecondorderpartialderivativepairValue.clear();
+    if(bRecomputeFirstOrderPartial) {
+        this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue);
+    }
+
+    const std::vector<std::array<int, 2>> vIndexPairs = CollectSecondOrderPartialDerivativesActiveIndexPairs(mPartialderivativepairValue);
+    std::vector<std::pair<std::array<int, 2>, dReal> > vDofindex2ndDerivativePairs;
+    for(const JointPtr& pjoint : _vPassiveJoints) {
+        const int ndof = pjoint->GetDOF();
+        for(int idof = 0; idof < ndof; ++idof) {
+            if( pjoint->IsMimic(idof) ) {
+                pjoint->_ComputePartialAccelerations(idof, mPartialderivativepairValue, vIndexPairs, vDofindex2ndDerivativePairs, mSecondorderpartialderivativepairValue);
+            }
+        }
+    }
+}
+
 void KinBody::ComputeJacobianTranslation(const int linkindex,
                                          const Vector& position,
                                          std::vector<dReal>& vjacobian,
@@ -2257,8 +2300,8 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     }
     std::fill(vjacobian.begin(), vjacobian.end(), 0.0);
 
-    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, total derivative) pairs
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, partial derivative) pairs
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
 
     Vector vColumn; ///< cache for a column of the linear velocity Jacobian
     const int offset = linkindex * nlinks;
@@ -2313,10 +2356,10 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - nActiveJoints);
             const int ndof = pjoint->GetDOF();
-            for(int idof = 0; idof < ndof; ++idof) {
-                if( pjoint->IsMimic(idof) ) {
-                    const bool bPrismatic = pjoint->IsPrismatic(idof);
-                    const bool bRevolute = pjoint->IsRevolute(idof);
+            for(int iaxis = 0; iaxis < ndof; ++iaxis) {
+                if( pjoint->IsMimic(iaxis) ) {
+                    const bool bPrismatic = pjoint->IsPrismatic(iaxis);
+                    const bool bRevolute = pjoint->IsRevolute(iaxis);
                     if( !bPrismatic && !bRevolute ) {
                         RAVELOG_WARN("ComputeJacobianTranslation only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                         continue;
@@ -2324,15 +2367,15 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
 
                     // if this joint were active, then this is its column in the linear velocity Jacobian
                     if(bPrismatic) {
-                        vColumn = pjoint->GetAxis(idof);
+                        vColumn = pjoint->GetAxis(iaxis);
                     }
                     else {
-                        vColumn =  pjoint->GetAxis(idof).cross(position - pjoint->GetAnchor());
+                        vColumn =  pjoint->GetAxis(iaxis).cross(position - pjoint->GetAnchor());
                     }
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    // vDofindexDerivativePairs is a vector of (dof index, total derivative) pairs
-                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
+                    // vDofindexDerivativePairs is a vector of (dof index, partial derivative) pairs
+                    pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                         int index = -1;
@@ -2356,7 +2399,6 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                 }
             }
         }
-
     }
 }
 
@@ -2402,8 +2444,8 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
     }
     std::fill(vjacobian.begin(), vjacobian.end(), 0.0);
 
-    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, total derivative) pairs
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, partial derivative) pairs
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
 
     Vector vColumn; ///< cache for a column of the quaternion velocity Jacobian
     const int offset = linkindex * nlinks;
@@ -2419,20 +2461,20 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
             const int dofindex = pjoint->GetDOFIndex();
             const int ndof = pjoint->GetDOF();
             const int8_t affect = DoesAffect(pjoint->GetJointIndex(), linkindex);
-            for(int idof = 0; idof < ndof; ++idof) {
+            for(int iaxis = 0; iaxis < ndof; ++iaxis) {
                 if( !affect ) {
                     RAVELOG_WARN(str(boost::format("link %s should be affected by joint %s")% _veclinks.at(linkindex)->GetName() % pjoint->GetName()));
                     continue;
                 }
-                if( pjoint->IsPrismatic(idof) ) {
+                if( pjoint->IsPrismatic(iaxis) ) {
                     continue;
                 }
-                else if (!pjoint->IsRevolute(idof)) {
+                else if (!pjoint->IsRevolute(iaxis)) {
                     RAVELOG_WARN("CalculateRotationJacobian only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                     continue;
                 }
-                vColumn = pjoint->GetAxis(idof); ///< joint axis of a revolute joint
-                const size_t index = dofindex + idof;
+                vColumn = pjoint->GetAxis(iaxis); ///< joint axis of a revolute joint
+                const size_t index = dofindex + iaxis;
                 vjacobian[index                ] += 0.5 * (-quat.y * vColumn.x - quat.z * vColumn.y - quat.w * vColumn.z);
                 vjacobian[index + dofstride    ] += 0.5 * ( quat.x * vColumn.x - quat.z * vColumn.z + quat.w * vColumn.y);
                 vjacobian[index + dofstride * 2] += 0.5 * ( quat.x * vColumn.y + quat.y * vColumn.z - quat.w * vColumn.x);
@@ -2443,33 +2485,33 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - nActiveJoints);
             const int ndof = pjoint->GetDOF();
-            for(int idof = 0; idof < ndof; ++idof) {
-                if( pjoint->IsMimic(idof) ) {
-                    if( pjoint->IsPrismatic(idof) ) {
+            for(int iaxis = 0; iaxis < ndof; ++iaxis) {
+                if( pjoint->IsMimic(iaxis) ) {
+                    if( pjoint->IsPrismatic(iaxis) ) {
                         continue;
                     }
-                    else if (!pjoint->IsRevolute(idof)) {
+                    else if (!pjoint->IsRevolute(iaxis)) {
                         RAVELOG_WARN("CalculateRotationJacobian only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                         continue;
                     }
 
                     // if this revolute joint were active, then this is its column in the quaternion velocity Jacobian
-                    vColumn = pjoint->GetAxis(idof);
+                    vColumn = pjoint->GetAxis(iaxis);
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    // vDofindexDerivativePairs is a vector of (dof index, total derivative) pairs
-                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
+                    // vDofindexDerivativePairs is a vector of (dof index, partial derivative) pairs
+                    pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                         const int dofindex = dofindexDerivativePair.first;
-                        if(dofindex + idof >= dofstride) {
-                            RAVELOG_WARN_FORMAT("dofindex + idof = %d + %d >= %d = dofstride",
-                                                dofindex % idof % dofstride
+                        if(dofindex + iaxis >= dofstride) {
+                            RAVELOG_WARN_FORMAT("dofindex + iaxis = %d + %d >= %d = dofstride",
+                                                dofindex % iaxis % dofstride
                                                 );
                             continue;
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(dofindex, >=, 0, "dofindex should be >= 0; now %d", dofindex, ORE_InvalidArguments);
-                        const size_t index = dofindex + idof;
+                        const size_t index = dofindex + iaxis;
                         const dReal partialderiv = dofindexDerivativePair.second;
                         vjacobian[index                ] += 0.5 * partialderiv * (-quat.y * vColumn.x - quat.z * vColumn.y - quat.w * vColumn.z);
                         vjacobian[index + dofstride    ] += 0.5 * partialderiv * ( quat.x * vColumn.x - quat.z * vColumn.z + quat.w * vColumn.y);
@@ -2518,8 +2560,8 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
     }
     std::fill(vjacobian.begin(), vjacobian.end(), 0.0);
 
-    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, total derivative) pairs
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, partial derivative) pairs
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue; ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
 
     Vector vColumn; ///< cache for a column of the angular velocity Jacobian
     const int offset = linkindex * nlinks;
@@ -2569,22 +2611,22 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - nActiveJoints);
             const int ndof = pjoint->GetDOF();
-            for(int idof = 0; idof < ndof; ++idof) {
-                if( pjoint->IsMimic(idof) ) {
-                    if(pjoint->IsPrismatic(idof)) {
+            for(int iaxis = 0; iaxis < ndof; ++iaxis) {
+                if( pjoint->IsMimic(iaxis) ) {
+                    if(pjoint->IsPrismatic(iaxis)) {
                         continue; // prismatic joint does not affect orientation of manip
                     }
-                    else if( !pjoint->IsRevolute(idof) ) {
+                    else if( !pjoint->IsRevolute(iaxis) ) {
                         RAVELOG_WARN("ComputeJacobianAxisAngle only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                         continue;
                     }
 
                     // if this revolute joint were active, then this is its column in the angular velocity Jacobian
-                    vColumn = pjoint->GetAxis(idof);
+                    vColumn = pjoint->GetAxis(iaxis);
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    // vDofindexDerivativePairs is a vector of (dof index, total derivative) pairs
-                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
+                    // vDofindexDerivativePairs is a vector of (dof index, partial derivative) pairs
+                    pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
 
                     for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                         int index = -1;
@@ -2701,11 +2743,11 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
         else {
             // add in the contributions from the passive joint
             JointPtr pjoint = _vPassiveJoints.at(jointindex-_vecjoints.size());
-            for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
-                if( pjoint->IsMimic(idof) ) {
+            for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                if( pjoint->IsMimic(iaxis) ) {
                     bool bhas = dofindices.size() == 0;
                     if( !bhas ) {
-                        FOREACHC(itmimicdof, pjoint->_vmimic[idof]->_vmimicdofs) {
+                        FOREACHC(itmimicdof, pjoint->_vmimic[iaxis]->_vmimicdofs) {
                             if( find(dofindices.begin(),dofindices.end(),itmimicdof->dofindex) != dofindices.end() ) {
                                 bhas = true;
                                 break;
@@ -2714,12 +2756,12 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
                     }
                     if( bhas ) {
                         Vector vaxis;
-                        if( pjoint->IsRevolute(idof) ) {
-                            vaxes.push_back(pjoint->GetAxis(idof));
-                            vjacobian.push_back(pjoint->GetAxis(idof).cross(position-pjoint->GetAnchor()));
+                        if( pjoint->IsRevolute(iaxis) ) {
+                            vaxes.push_back(pjoint->GetAxis(iaxis));
+                            vjacobian.push_back(pjoint->GetAxis(iaxis).cross(position-pjoint->GetAnchor()));
                         }
-                        else if( pjoint->IsPrismatic(idof) ) {
-                            vjacobian.push_back(pjoint->GetAxis(idof));
+                        else if( pjoint->IsPrismatic(iaxis) ) {
+                            vjacobian.push_back(pjoint->GetAxis(iaxis));
                             vaxes.push_back(Vector());
                         }
                         else {
@@ -2729,7 +2771,7 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
                         }
                         PartialInfo& partialinfo = mappartialsinserted[vinsertedindices.size()];
                         partialinfo.first.resize(vinsertedindices.size());
-                        pjoint->_ComputePartialVelocities(partialinfo.second, idof, mapcachedpartials);
+                        pjoint->_ComputePartialVelocities(iaxis, partialinfo.second, mapcachedpartials);
                         vinsertedindices.push_back(-1);
                     }
                 }
@@ -2919,11 +2961,11 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
         else {
             // add in the contributions from the passive joint
             JointPtr pjoint = _vPassiveJoints.at(jointindex-_vecjoints.size());
-            for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
-                if( pjoint->IsMimic(idof) ) {
+            for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                if( pjoint->IsMimic(iaxis) ) {
                     bool bhas = dofindices.size() == 0;
                     if( !bhas ) {
-                        FOREACHC(itmimicdof, pjoint->_vmimic[idof]->_vmimicdofs) {
+                        FOREACHC(itmimicdof, pjoint->_vmimic[iaxis]->_vmimicdofs) {
                             if( find(dofindices.begin(),dofindices.end(),itmimicdof->dofindex) != dofindices.end() ) {
                                 bhas = true;
                                 break;
@@ -2932,10 +2974,10 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
                     }
                     if( bhas ) {
                         Vector vaxis;
-                        if( pjoint->IsRevolute(idof) ) {
-                            vaxes.push_back(pjoint->GetAxis(idof));
+                        if( pjoint->IsRevolute(iaxis) ) {
+                            vaxes.push_back(pjoint->GetAxis(iaxis));
                         }
-                        else if( pjoint->IsPrismatic(idof) ) {
+                        else if( pjoint->IsPrismatic(iaxis) ) {
                             vaxes.push_back(Vector());
                         }
                         else {
@@ -2944,7 +2986,7 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
                         }
                         PartialInfo& partialinfo = mappartialsinserted[vinsertedindices.size()];
                         partialinfo.first.resize(vinsertedindices.size());
-                        pjoint->_ComputePartialVelocities(partialinfo.second, idof, mapcachedpartials);
+                        pjoint->_ComputePartialVelocities(iaxis, partialinfo.second, mapcachedpartials);
                         vinsertedindices.push_back(-1);
                     }
                 }
@@ -3065,187 +3107,309 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
     }
 }
 
-void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
+void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFForceTorques, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    doftorques.resize(GetDOF());
-    if( _vecjoints.size() == 0 ) {
+    vDOFForceTorques.resize(this->GetDOF());
+    if( _vecjoints.empty() ) {
         return;
     }
 
-    Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
+    const Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
     std::vector<dReal> vDOFVelocities;
-    std::vector<pair<Vector, Vector> > vLinkVelocities, vLinkAccelerations; // linear, angular
-    _ComputeDOFLinkVelocities(vDOFVelocities, vLinkVelocities);
-    // check if all velocities are 0, if yes, then can simplify some computations since only have contributions from dofacell and external forces
-    bool bHasVelocity = false;
-    FOREACH(it,vDOFVelocities) {
-        if( RaveFabs(*it) > g_fEpsilonLinear ) {
-            bHasVelocity = true;
-            break;
-        }
-    }
-    if( !bHasVelocity ) {
-        vDOFVelocities.resize(0);
-    }
-    AccelerationMap externalaccelerations;
-    externalaccelerations[0] = make_pair(-vgravity, Vector());
-    AccelerationMapPtr pexternalaccelerations(&externalaccelerations, utils::null_deleter());
-    _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkVelocities, vLinkAccelerations, pexternalaccelerations);
+    std::vector<std::pair<Vector, Vector> > vLinkVelocities; // linear, angular velocities
+    std::vector<std::pair<Vector, Vector> > vLinkAccelerations; // linear, angular accelerations
+    const bool bUseBaseLinkVelocity = true;
 
-    // all valuess are in the global coordinate system
-    // Given the velocity/acceleration of the object is on point A, to change to B do:
-    // v_B = v_A + angularvel x (B-A)
-    // a_B = a_A + angularaccel x (B-A) + angularvel x (angularvel x (B-A))
+    /* ========================================== (1) ===============================================
+     - Load link velocities from physics engine; compute DOF velocities based on link velocities
+    ============================================================================================== */
+    _ComputeDOFLinkVelocities(vDOFVelocities, vLinkVelocities, bUseBaseLinkVelocity);
+    // check if all velocities are 0, if yes, then can simplify some computations since only have contributions from dofacell and external forces
+    const bool bHasVelocities = vDOFVelocities.end() != std::find_if(vDOFVelocities.begin(), vDOFVelocities.end(),
+        [](dReal dofvelocity) {
+            return RaveFabs(dofvelocity) > g_fEpsilonLinear;
+        }
+    );
+    if( !bHasVelocities ) {
+        vDOFVelocities.clear();
+    }
+    // TGN: should we do something similar to vDOFAccelerations?
+    const bool bHasAccelerations = !vDOFAccelerations.empty();
+
+    AccelerationMap externalaccelerations; // std::map<int, std::pair<Vector, Vector>>
+    externalaccelerations[0] = {-vgravity, Vector()}; // link 0 --> ({0, 0, g}, {0, 0, 0})
+    AccelerationMapPtr pexternalaccelerations(&externalaccelerations, utils::null_deleter());
+
+    /* ========================================== (2) ===============================================
+     - From active DOF accelerations, compute link accelerations and passive joint accelerations.
+     - Collect all mimic first-, second-order partial derivatives 
+    ============================================================================================== */
+    std::vector<std::vector<dReal> > vPassiveJointVelocities;
+    std::vector<std::vector<dReal> > vPassiveJointAccelerations;
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue;
+    _ComputeLinkAccelerations(/* input */ vDOFVelocities, vDOFAccelerations, vLinkVelocities,
+        /* output */vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue,
+        vLinkAccelerations, pexternalaccelerations
+    );
+
+    // all values are in the global coordinate system
+    /*
+
+    Given the velocity/acceleration of the object at point A, to change the object from A to B, we differentiate
+
+    p_B = p_A + R_A^W * (B^A - A^A)
+    
+    to get
+    
+    v_B = v_A + w_A x (R_A^W * (B^A - A^A)) = v_A + w_A x (B - A)
+    
+    and differentiate one more time to get
+    
+    a_B = a_A + alpha_A x (R_A^W * (B^A - A^A)) + w_A x (w_A x (R_A^W * (B^A - A^A)))
+        = a_A + alpha_A x (B - A) + w_A x (w_A x (B - A))
+
+    */
+
+    /* ========================================== (3) ===============================================
+     - Compute for each link its linear acceleration and resultant torque at its center of mass (CoM) 
+    ============================================================================================== */
     // forward recursion
-    std::vector<Vector> vLinkCOMLinearAccelerations(_veclinks.size()), vLinkCOMMomentOfInertia(_veclinks.size());
+    const int nlinks = _veclinks.size();
+    std::vector<Vector> vLinkCoMLinearAccelerations(nlinks);
+    std::vector<Vector> vLinkCoMResultantTorques(nlinks);
     for(size_t i = 0; i < vLinkVelocities.size(); ++i) {
-        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->_info._t.trans;
-        Vector vangularaccel = vLinkAccelerations.at(i).second;
-        Vector vangularvelocity = vLinkVelocities.at(i).second;
-        vLinkCOMLinearAccelerations[i] = vLinkAccelerations.at(i).first + vangularaccel.cross(vglobalcomfromlink) + vangularvelocity.cross(vangularvelocity.cross(vglobalcomfromlink));
-        TransformMatrix tm = _veclinks.at(i)->GetGlobalInertia();
-        vLinkCOMMomentOfInertia[i] = tm.rotate(vangularaccel) + vangularvelocity.cross(tm.rotate(vangularvelocity));
+        // collect
+        const LinkPtr& plink = _veclinks.at(i);
+        const Vector CoM = plink->GetGlobalCOM() - plink->GetTransform().trans; // B-A
+        const Vector& angularvel = vLinkVelocities.at(i).second; // w
+        const Vector& linearaccel = vLinkAccelerations.at(i).first; // a
+        const Vector& angularaccel = vLinkAccelerations.at(i).second; // alpha
+        const TransformMatrix inertiatensor = plink->GetGlobalInertia(); // I
+        vLinkCoMLinearAccelerations[i] = linearaccel + angularaccel.cross(CoM) + angularvel.cross(angularvel.cross(CoM)); // a + alpha x (B - A) + w x (w x (B - A))
+        // compute torque: https://en.wikipedia.org/wiki/Moment_of_inertia#Resultant_torque
+        vLinkCoMResultantTorques[i] = inertiatensor.rotate(angularaccel) + angularvel.cross(inertiatensor.rotate(angularvel)); // tau = I * alpha + v x (I * v)
     }
 
     // backward recursion
-    std::vector< std::pair<Vector, Vector> > vLinkForceTorques(_veclinks.size());
-    FOREACHC(it,mapExternalForceTorque) {
-        vLinkForceTorques.at(it->first) = it->second;
+    std::vector< std::pair<Vector, Vector> > vLinkForceTorques(nlinks);
+    for(const std::pair<const int, std::pair<Vector, Vector> >& pLinkindexForceTorque: mapExternalForceTorque) {
+        vLinkForceTorques.at(pLinkindexForceTorque.first) = pLinkindexForceTorque.second;
     }
-    std::fill(doftorques.begin(),doftorques.end(),0);
+    std::fill(vDOFForceTorques.begin(), vDOFForceTorques.end(), 0);
+    const int iaxis = 0; // can only handle axis 0
+    const std::vector<JointPtr>& vPassiveJoints = this->GetPassiveJoints();
+    const int nPassiveJoints = vPassiveJoints.size();
+    std::vector<dReal> vPassiveJointsForceTorques(nPassiveJoints, 0);
 
-    std::vector<std::pair<int,dReal> > vDofindexDerivativePairs;
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mapcachedpartials;
-
+    /* ========================================== (4) =======================================================
+     - Compute for each link the force and torque exterted by its child link
+     - Compute the torque of each motor (i.e. each active joint DOF), considering mimic joints' contributions
+    ====================================================================================================== */
+    // extract results from the previously computed mPartialderivativepairValue,
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
     // go backwards
-    for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
-        JointPtr pjoint = _vTopologicallySortedJointsAll.at(_vTopologicallySortedJointsAll.size()-1-ijoint);
-        int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
-        Vector vcomforce = vLinkCOMLinearAccelerations[childindex]*pjoint->GetHierarchyChildLink()->GetMass() + vLinkForceTorques.at(childindex).first;
-        Vector vjointtorque = vLinkForceTorques.at(childindex).second + vLinkCOMMomentOfInertia.at(childindex);
-
-        if( !!pjoint->GetHierarchyParentLink() ) {
-            Vector vchildcomtoparentcom = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetHierarchyParentLink()->GetGlobalCOM();
-            int parentindex = pjoint->GetHierarchyParentLink()->GetIndex();
-            vLinkForceTorques.at(parentindex).first += vcomforce;
-            vLinkForceTorques.at(parentindex).second += vjointtorque + vchildcomtoparentcom.cross(vcomforce);
+    for(std::vector<JointPtr>::const_reverse_iterator crit = _vTopologicallySortedJointsAll.rbegin();
+        crit != _vTopologicallySortedJointsAll.rend();
+        ++crit
+    ) {
+        /* ================================ (4a) ============================================
+         - Compute for each (parent) link the force and torque its children links exert to it
+        ================================================================================== */
+        const JointPtr& pjoint = *crit;
+        const KinBody::JointType jointtype = pjoint->GetType();
+        if( jointtype != JointHinge && jointtype != JointSlider ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), jointtype, ORE_Assert);
         }
 
-        Vector vcomtoanchor = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetAnchor();
-        if( pjoint->GetDOFIndex() >= 0 ) {
-            if( pjoint->GetType() == JointHinge ) {
-                doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
-            }
-            else if( pjoint->GetType() == JointSlider ) {
-                doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
-            }
-            else {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
+        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
+        const LinkPtr& pchildlink = pjoint->GetHierarchyChildLink();
+        const int childindex = pchildlink->GetIndex();
+        //         F_CoM =      m_child * a_child + F_child
+        //      F_parent =      F_parent_external + F_CoM
+        // Torque_parent = Torque_parent_external + Torque_child + ResultantTorque_child + (CoM_child - CoM_parent) x F_CoM
+        const Vector vChildForce = pchildlink->GetMass() * vLinkCoMLinearAccelerations[childindex] + vLinkForceTorques.at(childindex).first;
+        const Vector vChildTorque = vLinkForceTorques.at(childindex).second + vLinkCoMResultantTorques.at(childindex);
+
+        const Vector vChildCoM = pchildlink->GetGlobalCOM();
+        if( !!pparentlink ) {
+            const Vector vParentCoMToChildCoM = vChildCoM - pparentlink->GetGlobalCOM();
+            const int parentindex = pparentlink->GetIndex();
+            vLinkForceTorques.at(parentindex).first += vChildForce;
+            vLinkForceTorques.at(parentindex).second += vChildTorque + vParentCoMToChildCoM.cross(vChildForce);
+        }
+
+        /* ==================================== (4b) ==========================================
+         - Compute for each active/mimic joint the force and torque its child link exerts to it
+        ==================================================================================== */
+        const int jointdofindex = pjoint->GetDOFIndex();
+        const bool bIsActive = jointdofindex >= 0;
+        const bool bIsMimic0 = pjoint->IsMimic(iaxis);
+        if(!bIsActive && !bIsMimic0) {
+            // joint should be static
+            OPENRAVE_ASSERT_FORMAT(pjoint->IsStatic(), "joint %s is expected to be static", pjoint->GetName(), ORE_Assert);
+            continue;
+        }
+        int iPassiveJoint = -1;        
+        if(bIsMimic0) {
+            std::vector<JointPtr>::const_iterator itjoint = std::find(vPassiveJoints.cbegin(), vPassiveJoints.cend(), pjoint);
+            OPENRAVE_ASSERT_FORMAT(itjoint != vPassiveJoints.cend(),
+                "Joint \"%s\" is not in vPassiveJoints", pjoint->GetName(), ORE_InvalidArguments
+            );
+            iPassiveJoint = std::distance(vPassiveJoints.begin(), itjoint);
+        }
+
+        const Vector vJointAnchorToChildCoM = vChildCoM - pjoint->GetAnchor();
+        dReal fDofAxisForceTorque = pjoint->GetAxis(iaxis).dot3(
+            (jointtype == JointHinge)
+            // child link applies a torque on revolute joint
+            ? (vChildTorque + vJointAnchorToChildCoM.cross(vChildForce))
+            // child link applies a force on prismatic joint
+            : vChildForce
+        );
+
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        {
+            rapidjson::Document doc;
+            doc.SetObject();
+            auto& alloc = doc.GetAllocator();
+            orjson::SetJsonValueByKey(doc, "jointtype", (jointtype == JointHinge) ? "R" : "P", alloc);
+            orjson::SetJsonValueByKey(doc, "jointaxis", pjoint->GetAxis(iaxis), alloc);
+            orjson::SetJsonValueByKey(doc, "parentlink", ((pparentlink) ? pparentlink->GetName() : "None"), alloc);
+            orjson::SetJsonValueByKey(doc, "childlink", pchildlink->GetName(), alloc);
+            orjson::SetJsonValueByKey(doc, "vChildTorque", vChildTorque, alloc);
+            orjson::SetJsonValueByKey(doc, "vJointAnchorToChildCoM", vJointAnchorToChildCoM, alloc);
+            orjson::SetJsonValueByKey(doc, "vChildForce", vChildForce, alloc);
+            orjson::SetJsonValueByKey(doc, "fDofAxisForceTorque", fDofAxisForceTorque, alloc);
+            ss << orjson::DumpJson(doc);
+        }
+
+        const ElectricMotorActuatorInfoPtr& pActuatorInfo = pjoint->_info._infoElectricMotor;
+        if( !!pActuatorInfo ) {
+            // torque due to friction (friction unknown to us; get them from experiments)
+            if(bHasVelocities) {
+                const dReal dofvelocity = bIsActive ? vDOFVelocities.at(jointdofindex) : vPassiveJointVelocities.at(iPassiveJoint).at(iaxis);
+                if( dofvelocity > g_fEpsilonLinear ) {
+                    fDofAxisForceTorque += pActuatorInfo->coloumb_friction;
+                }
+                else if( dofvelocity < -g_fEpsilonLinear ) {
+                    fDofAxisForceTorque -= pActuatorInfo->coloumb_friction;
+                }
+                fDofAxisForceTorque += dofvelocity * pActuatorInfo->viscous_friction;
             }
 
-            dReal fFriction = 0; // torque due to friction
-            dReal fRotorAccelerationTorque = 0; // torque due to accelerating motor rotor (and gear)
-            // see if any friction needs to be added. Only add if the velocity is non-zero since with zero velocity do not know the exact torque on the joint...
-            if( !!pjoint->_info._infoElectricMotor ) {
-                const ElectricMotorActuatorInfoPtr pActuatorInfo = pjoint->_info._infoElectricMotor;
-                if( pjoint->GetDOFIndex() < (int)vDOFVelocities.size() ) {
-                    if( vDOFVelocities.at(pjoint->GetDOFIndex()) > g_fEpsilonLinear ) {
-                        fFriction += pActuatorInfo->coloumb_friction;
+            // torque due to accelerating motor rotor (and gear) (from robot manufacturer)
+            if (bHasAccelerations) {
+                if(pActuatorInfo->rotor_inertia > 0.0) {
+                    // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
+                    const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
+                    if(bIsActive) {
+                        fDofAxisForceTorque += vDOFAccelerations.at(jointdofindex) * fInertiaOnLoadSide;
                     }
-                    else if( vDOFVelocities.at(pjoint->GetDOFIndex()) < -g_fEpsilonLinear ) {
-                        fFriction -= pActuatorInfo->coloumb_friction;
-                    }
-                    fFriction += vDOFVelocities.at(pjoint->GetDOFIndex())*pActuatorInfo->viscous_friction;
-
-                    if (pActuatorInfo->rotor_inertia > 0.0) {
-                        // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
-                        const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
-                        fRotorAccelerationTorque += vDOFAccelerations.at(pjoint->GetDOFIndex()) * fInertiaOnLoadSide;
+                    else { // mimic
+                        fDofAxisForceTorque += vPassiveJointAccelerations.at(iPassiveJoint).at(iaxis) * fInertiaOnLoadSide;
                     }
                 }
-
-                doftorques.at(pjoint->GetDOFIndex()) += fFriction + fRotorAccelerationTorque;
             }
         }
-        else if( pjoint->IsMimic(0) ) {
-            // passive joint, so have to transfer the torque to its dependent joints.
-            // TODO if there's more than one dependent joint, how do we split?
-            dReal faxistorque;
-            if( pjoint->GetType() == JointHinge ) {
-                faxistorque = pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
-            }
-            else if( pjoint->GetType() == JointSlider ) {
-                faxistorque = pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
-            }
-            else {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
-            }
 
-            if( !!pjoint->_info._infoElectricMotor ) {
-                // TODO how to process this correctly? what is velocity of this joint? pjoint->GetVelocity(0)?
-            }
-
-            pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, 0, mapcachedpartials);
+        if(bIsActive) {
+            RAVELOG_DEBUG_FORMAT("Joint %s of index %d adds by %.4e units of torque/force\n\n%s\n\n", pjoint->GetName() % jointdofindex % fDofAxisForceTorque % ss.str());
+            vDOFForceTorques.at(jointdofindex) += fDofAxisForceTorque;
+        }
+        else { // mimic
+            vPassiveJointsForceTorques.at(iPassiveJoint) = fDofAxisForceTorque;
+            // extract first-order partial derivatives results from the cached mPartialderivativepairValue
+            pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
             for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
-                doftorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * faxistorque;
+                RAVELOG_DEBUG_FORMAT("Mimic joint %s contributes to active DOF index %d by %.4e units of torque/force: %.4e weighted by partial derivative %.4e\n%s\n\n",
+                    pjoint->GetName() % dofindexDerivativePair.first % (dofindexDerivativePair.second*fDofAxisForceTorque) % fDofAxisForceTorque % dofindexDerivativePair.second % ss.str()
+                );
+                vDOFForceTorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * fDofAxisForceTorque;
             }
         }
-        else {
-            // joint should be static
-            OPENRAVE_ASSERT_FORMAT(pjoint->IsStatic(), "joint %s (%d) is expected to be static", pjoint->GetName()%ijoint, ORE_Assert);
+    } // std::vector<JointPtr>::const_reverse_iterator crit
+
+    {
+        rapidjson::Document doc;
+        doc.SetArray();
+        auto& alloc = doc.GetAllocator();
+        for(int ilink = 0; ilink < nlinks; ++ilink) {
+            const LinkPtr& plink = _veclinks.at(ilink);
+            rapidjson::Document d;
+            d.SetObject();
+            orjson::SetJsonValueByKey(d, "linkname", plink->GetName(), alloc);
+            orjson::SetJsonValueByKey(d, "force", vLinkForceTorques[ilink].first, alloc);
+            orjson::SetJsonValueByKey(d, "torque", vLinkForceTorques[ilink].second, alloc);
+            doc.PushBack(d, alloc);
         }
+        {
+            rapidjson::Document d;
+            d.SetObject();
+            orjson::SetJsonValueByKey(d, "vDOFForceTorques", vDOFForceTorques, alloc);
+            orjson::SetJsonValueByKey(d, "vPassiveJointsForceTorques", vPassiveJointsForceTorques, alloc);
+            doc.PushBack(d, alloc);
+        }
+        RAVELOG_DEBUG_FORMAT("\n%s\n", orjson::DumpJson(doc));
     }
 }
 
-void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFTorqueComponents, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
+void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFForceTorqueComponents, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    FOREACH(itdoftorques,vDOFTorqueComponents) {
-        itdoftorques->resize(GetDOF());
+    for(std::vector<dReal>& vDOFForceTorques : vDOFForceTorqueComponents) {
+        vDOFForceTorques.resize(this->GetDOF());
     }
-    if( _vecjoints.size() == 0 ) {
+    const size_t nlinks = _veclinks.size();
+    if( nlinks == 0 ) {
         return;
     }
 
-    Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
+    const Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
     std::vector<dReal> vDOFVelocities;
-    boost::array< std::vector<pair<Vector, Vector> >, 3> vLinkVelocities; // [0] = all zeros, [1] = dof velocities only, [2] = only velocities due to base link
-    boost::array< std::vector<pair<Vector, Vector> >, 3> vLinkAccelerations; // [0] = dofaccel only, [1] = dofvel only, [2] - gravity + external only (dofaccel=0, dofvel=0)
-    boost::array<int,3> linkaccelsimilar = {{-1,-1,-1}}; // used for tracking which vLinkAccelerations indices are similar to each other (to avoid computation)
+    boost::array< std::vector<std::pair<Vector, Vector> >, 3> vLinkVelocities; // [0] = all zeros, [1] = dof velocities only, [2] = only velocities due to base link
+    boost::array< std::vector<std::pair<Vector, Vector> >, 3> vLinkAccelerations; // [0] = dofaccel only, [1] = dofvel only, [2] - gravity + external only (dofaccel=0, dofvel=0)
+    boost::array<int, 3> linkaccelsimilar = {{-1,-1,-1}}; // used for tracking which vLinkAccelerations indices are similar to each other (to avoid computation)
 
-    vLinkVelocities[0].resize(_veclinks.size());
+    vLinkVelocities[0].resize(nlinks);
     _ComputeDOFLinkVelocities(vDOFVelocities, vLinkVelocities[1], false);
     // check if all velocities are 0, if yes, then can simplify some computations since only have contributions from dofacell and external forces
-    bool bHasVelocity = false;
-    FOREACH(it,vDOFVelocities) {
-        if( RaveFabs(*it) > g_fEpsilonLinear ) {
-            bHasVelocity = true;
-            break;
+    const bool bHasVelocities = vDOFVelocities.end() != std::find_if(vDOFVelocities.begin(), vDOFVelocities.end(),
+        [](dReal dofvelocity) {
+            return RaveFabs(dofvelocity) > g_fEpsilonLinear;
         }
+    );
+    if( !bHasVelocities ) {
+        vDOFVelocities.clear();
     }
-    if( !bHasVelocity ) {
-        vDOFVelocities.resize(0);
-    }
+    const bool bHasAccelerations = !vDOFAccelerations.empty();
 
-    AccelerationMap externalaccelerations;
-    externalaccelerations[0] = make_pair(-vgravity, Vector());
+    AccelerationMap externalaccelerations; // std::map<int, std::pair<Vector, Vector>>
+    externalaccelerations[0] = {-vgravity, Vector()};
     AccelerationMapPtr pexternalaccelerations(&externalaccelerations, utils::null_deleter());
 
     // all valuess are in the global coordinate system
     // try to compute as little as possible by checking what is non-zero
     Vector vbaselinear, vbaseangular;
-    _veclinks.at(0)->GetVelocity(vbaselinear,vbaseangular);
-    bool bHasGravity = vgravity.lengthsqr3() > g_fEpsilonLinear*g_fEpsilonLinear;
-    bool bHasBaseLinkAccel = vbaseangular.lengthsqr3() > g_fEpsilonLinear*g_fEpsilonLinear;
+    _veclinks.at(0)->GetVelocity(vbaselinear, vbaseangular);
+    const static dReal fEpsilonLinear2 = g_fEpsilonLinear * g_fEpsilonLinear;
+    const bool bHasGravity = vgravity.lengthsqr3() > fEpsilonLinear2;
+    const bool bHasBaseLinkAccel = vbaseangular.lengthsqr3() > fEpsilonLinear2;
+
+    std::vector<std::vector<dReal> > vPassiveJointVelocities;
+    std::vector<std::vector<dReal> > vPassiveJointAccelerations;
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue;
     if( bHasBaseLinkAccel || bHasGravity ) {
         if( bHasBaseLinkAccel ) {
             // remove the base link velocity frame
             // v_B = v_A + angularvel x (B-A)
-            vLinkVelocities[2].resize(_veclinks.size());
-            Vector vbasepos = _veclinks.at(0)->_info._t.trans;
-            for(size_t i = 1; i < vLinkVelocities[0].size(); ++i) {
-                Vector voffset = _veclinks.at(i)->_info._t.trans - vbasepos;
+            vLinkVelocities[2].resize(nlinks);
+            Vector vbasepos = _veclinks.at(0)->GetTransform().trans;
+            for(size_t i = 1; i < nlinks; ++i) {
+                Vector voffset = _veclinks.at(i)->GetTransform().trans - vbasepos;
                 vLinkVelocities[2][i].first = vbaselinear + vbaseangular.cross(voffset);
                 vLinkVelocities[2][i].second = vbaseangular;
             }
@@ -3253,147 +3417,157 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
         else {
             vLinkVelocities[2] = vLinkVelocities[0];
         }
-        _ComputeLinkAccelerations(std::vector<dReal>(), std::vector<dReal>(), vLinkVelocities[2], vLinkAccelerations[2], pexternalaccelerations);
-        if( bHasVelocity ) {
-            _ComputeLinkAccelerations(vDOFVelocities, std::vector<dReal>(), vLinkVelocities[1], vLinkAccelerations[1]);
-            if( vDOFAccelerations.size() > 0 ) {
-                _ComputeLinkAccelerations(std::vector<dReal>(), vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0]);
+        _ComputeLinkAccelerations({}, {}, vLinkVelocities[2], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[2], pexternalaccelerations);
+        if( bHasVelocities ) {
+            _ComputeLinkAccelerations(vDOFVelocities, {}, vLinkVelocities[1], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[1]);
+            if( bHasAccelerations ) {
+                _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[0]);
             }
             else {
                 linkaccelsimilar[0] = 1;
             }
         }
         else {
-            if( vDOFAccelerations.size() > 0 ) {
-                _ComputeLinkAccelerations(std::vector<dReal>(), vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0]);
+            if( bHasAccelerations ) {
+                _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[0]);
             }
         }
     }
     else {
         // no external forces
         vLinkVelocities[2] = vLinkVelocities[0];
-        if( bHasVelocity ) {
-            _ComputeLinkAccelerations(vDOFVelocities, std::vector<dReal>(), vLinkVelocities[1], vLinkAccelerations[1]);
-            if( vDOFAccelerations.size() > 0 ) {
-                _ComputeLinkAccelerations(std::vector<dReal>(), vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0]);
+        if( bHasVelocities ) {
+            _ComputeLinkAccelerations(vDOFVelocities, {}, vLinkVelocities[1], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[1]);
+            if( bHasAccelerations ) {
+                _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[0]);
             }
             else {
                 linkaccelsimilar[0] = 1;
             }
         }
         else {
-            if( vDOFAccelerations.size() > 0 ) {
-                _ComputeLinkAccelerations(std::vector<dReal>(), vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0]);
+            if( bHasAccelerations ) {
+                _ComputeLinkAccelerations({}, vDOFAccelerations, vLinkVelocities[0], vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue, vLinkAccelerations[0]);
             }
         }
     }
 
-    boost::array< std::vector<Vector>, 3> vLinkCOMLinearAccelerations, vLinkCOMMomentOfInertia;
+    boost::array< std::vector<Vector>, 3> vLinkCoMLinearAccelerations;
+    boost::array< std::vector<Vector>, 3> vLinkCoMResultantTorques;
     boost::array< std::vector< std::pair<Vector, Vector> >, 3> vLinkForceTorques;
     for(size_t j = 0; j < 3; ++j) {
-        if( vLinkAccelerations[j].size() > 0 ) {
-            vLinkCOMLinearAccelerations[j].resize(_veclinks.size());
-            vLinkCOMMomentOfInertia[j].resize(_veclinks.size());
-            vLinkForceTorques[j].resize(_veclinks.size());
+        if( !vLinkAccelerations[j].empty() ) {
+            vLinkCoMLinearAccelerations[j].resize(nlinks);
+            vLinkCoMResultantTorques[j].resize(nlinks);
+            vLinkForceTorques[j].resize(nlinks);
         }
     }
 
-    for(size_t i = 0; i < _veclinks.size(); ++i) {
-        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->_info._t.trans;
-        TransformMatrix tm = _veclinks.at(i)->GetGlobalInertia();
+    for(size_t i = 0; i < nlinks; ++i) {
+        const Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->GetTransform().trans;
+        const TransformMatrix tm = _veclinks.at(i)->GetGlobalInertia();
         for(size_t j = 0; j < 3; ++j) {
-            if( vLinkAccelerations[j].size() > 0 ) {
+            if( !vLinkAccelerations[j].empty() ) {
                 Vector vangularaccel = vLinkAccelerations[j].at(i).second;
                 Vector vangularvelocity = vLinkVelocities[j].at(i).second;
-                vLinkCOMLinearAccelerations[j][i] = vLinkAccelerations[j].at(i).first + vangularaccel.cross(vglobalcomfromlink) + vangularvelocity.cross(vangularvelocity.cross(vglobalcomfromlink));
-                vLinkCOMMomentOfInertia[j][i] = tm.rotate(vangularaccel) + vangularvelocity.cross(tm.rotate(vangularvelocity));
+                vLinkCoMLinearAccelerations[j][i] = vLinkAccelerations[j].at(i).first + vangularaccel.cross(vglobalcomfromlink) + vangularvelocity.cross(vangularvelocity.cross(vglobalcomfromlink));
+                vLinkCoMResultantTorques[j][i] = tm.rotate(vangularaccel) + vangularvelocity.cross(tm.rotate(vangularvelocity));
             }
         }
     }
 
-    FOREACH(itdoftorques,vDOFTorqueComponents) {
-        std::fill(itdoftorques->begin(),itdoftorques->end(),0);
+    for(std::vector<dReal>& vDOFForceTorques : vDOFForceTorqueComponents) {
+        std::fill(vDOFForceTorques.begin(), vDOFForceTorques.end(), 0);
     }
 
     // backward recursion
-    vLinkForceTorques[2].resize(_veclinks.size());
-    FOREACHC(it,mapExternalForceTorque) {
-        vLinkForceTorques[2].at(it->first) = it->second;
+    vLinkForceTorques[2].resize(nlinks);
+    for(const std::pair<const int, std::pair<Vector, Vector> >& pLinkindexForceTorque: mapExternalForceTorque) {
+        vLinkForceTorques[2].at(pLinkindexForceTorque.first) = pLinkindexForceTorque.second;
     }
 
-    std::vector<std::pair<int,dReal> > vpartials;
-    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mapcachedpartials;
-
+    const int iaxis = 0; // can only handle axis 0
+    const std::vector<JointPtr>& vPassiveJoints = this->GetPassiveJoints();
+    const int nPassiveJoints = vPassiveJoints.size();
+    std::vector<dReal> vPassiveJointsForceTorques(nPassiveJoints, 0);
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs;
     // go backwards
-    for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
-        JointPtr pjoint = _vTopologicallySortedJointsAll.at(_vTopologicallySortedJointsAll.size()-1-ijoint);
-        int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
-        Vector vchildcomtoparentcom;
+    for(std::vector<JointPtr>::const_reverse_iterator crit = _vTopologicallySortedJointsAll.rbegin();
+        crit != _vTopologicallySortedJointsAll.rend();
+        ++crit
+    ) {
+        const JointPtr& pjoint = *crit;
+        const KinBody::JointType jointtype = pjoint->GetType();
+        if( jointtype != JointHinge && jointtype != JointSlider ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), jointtype, ORE_Assert);
+        }
+
+        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
+        const LinkPtr& pchildlink = pjoint->GetHierarchyChildLink();
+        const int childindex = pchildlink->GetIndex();
+
+        Vector vParentCoMToChildCoM;
+        const Vector vChildCoM = pchildlink->GetGlobalCOM();
         int parentindex = -1;
-        if( !!pjoint->GetHierarchyParentLink() ) {
-            vchildcomtoparentcom = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetHierarchyParentLink()->GetGlobalCOM();
-            parentindex = pjoint->GetHierarchyParentLink()->GetIndex();
+        if( !!pparentlink ) {
+            vParentCoMToChildCoM = vChildCoM - pparentlink->GetGlobalCOM();
+            parentindex = pparentlink->GetIndex();
         }
 
-        bool bIsMimic = pjoint->GetDOFIndex() < 0 && pjoint->IsMimic(0);
-        if( bIsMimic ) {
-            pjoint->_ComputePartialVelocities(vpartials, 0, mapcachedpartials);
+        const int jointdofindex = pjoint->GetDOFIndex();
+        const bool bIsActive = jointdofindex >= 0;
+        const bool bIsMimic0 = pjoint->IsMimic(iaxis);
+        if(!bIsActive && !bIsMimic0) {
+            // joint should be static
+            OPENRAVE_ASSERT_FORMAT(pjoint->IsStatic(), "joint %s is expected to be static", pjoint->GetName(), ORE_Assert);
+            continue;
+        }
+        int iPassiveJoint = -1;        
+        if(bIsMimic0) {
+            std::vector<JointPtr>::const_iterator itjoint = std::find(vPassiveJoints.cbegin(), vPassiveJoints.cend(), pjoint);
+            OPENRAVE_ASSERT_FORMAT(itjoint != vPassiveJoints.cend(),
+                "Joint \"%s\" is not in vPassiveJoints", pjoint->GetName(), ORE_InvalidArguments
+            );
+            iPassiveJoint = std::distance(vPassiveJoints.begin(), itjoint);
         }
 
-        dReal mass = pjoint->GetHierarchyChildLink()->GetMass();
-        Vector vcomtoanchor = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetAnchor();
+        const Vector vJointAnchorToChildCoM = vChildCoM - pjoint->GetAnchor();
+        
         for(size_t j = 0; j < 3; ++j) {
-            if( vLinkForceTorques[j].size() == 0 ) {
+            if( vLinkForceTorques[j].empty() ) {
                 continue;
             }
-            Vector vcomforce = vLinkForceTorques[j].at(childindex).first;
-            Vector vjointtorque = vLinkForceTorques[j].at(childindex).second;
-            if( vLinkCOMLinearAccelerations[j].size() > 0 ) {
-                vcomforce += vLinkCOMLinearAccelerations[j][childindex]*mass;
-                vjointtorque += vLinkCOMMomentOfInertia[j].at(childindex);
+            Vector vChildForce = vLinkForceTorques[j].at(childindex).first;
+            Vector vChildTorque = vLinkForceTorques[j].at(childindex).second;
+            if( !vLinkCoMLinearAccelerations[j].empty() ) {
+                vChildForce += vLinkCoMLinearAccelerations[j][childindex] * pchildlink->GetMass();
+                vChildTorque += vLinkCoMResultantTorques[j].at(childindex);
             }
 
             if( parentindex >= 0 ) {
-                vLinkForceTorques[j].at(parentindex).first += vcomforce;
-                vLinkForceTorques[j].at(parentindex).second += vjointtorque + vchildcomtoparentcom.cross(vcomforce);
+                vLinkForceTorques[j].at(parentindex).first += vChildForce;
+                vLinkForceTorques[j].at(parentindex).second += vChildTorque + vParentCoMToChildCoM.cross(vChildForce);
             }
 
-            if( pjoint->GetDOFIndex() >= 0 ) {
-                if( pjoint->GetType() == JointHinge ) {
-                    vDOFTorqueComponents[j].at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
-                }
-                else if( pjoint->GetType() == JointSlider ) {
-                    vDOFTorqueComponents[j].at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
-                }
-                else {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
-                }
-            }
-            else if( bIsMimic ) {
-                // passive joint, so have to transfer the torque to its dependent joints.
-                // TODO if there's more than one dependent joint, how do we split?
-                dReal faxistorque;
-                if( pjoint->GetType() == JointHinge ) {
-                    faxistorque = pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
-                }
-                else if( pjoint->GetType() == JointSlider ) {
-                    faxistorque = pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
-                }
-                else {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
-                }
+            const dReal fDofAxisForceTorque = pjoint->GetAxis(iaxis).dot3(
+                (jointtype == JointHinge)
+                // child link applies a torque on revolute joint
+                ? (vChildTorque + vJointAnchorToChildCoM.cross(vChildForce))
+                // child link applies a force on prismatic joint
+                : vChildForce
+            );
 
-                FOREACH(itpartial,vpartials) {
-                    int dofindex = itpartial->first;
-                    vDOFTorqueComponents[j].at(dofindex) += itpartial->second*faxistorque;
+            if( bIsActive ) {
+                vDOFForceTorqueComponents[j].at(jointdofindex) += fDofAxisForceTorque;
+            }
+            else { // mimic
+                pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
+                for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
+                    vDOFForceTorqueComponents[j].at(dofindexDerivativePair.first) += dofindexDerivativePair.second * fDofAxisForceTorque;
                 }
             }
-            else {
-                // joint should be static
-                BOOST_ASSERT(pjoint->IsStatic());
-            }
-        }
-    }
+        } // for(size_t j = 0; j < 3; ++j)
+    }  // std::vector<JointPtr>::const_reverse_iterator crit
 }
 
 void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, std::vector<std::pair<Vector,Vector> >&vLinkAccelerations, AccelerationMapConstPtr externalaccelerations) const
@@ -3405,270 +3579,329 @@ void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, s
     else {
         std::vector<dReal> vDOFVelocities;
         std::vector<pair<Vector, Vector> > vLinkVelocities;
+        std::vector<std::vector<dReal> > vPassiveJointVelocities;
+        std::vector<std::vector<dReal> > vPassiveJointAccelerations;
+        std::map< std::pair<Mimic::DOFFormat, int>, dReal > mPartialderivativepairValue;
+        std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue;
         _ComputeDOFLinkVelocities(vDOFVelocities,vLinkVelocities);
-        _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkVelocities, vLinkAccelerations, externalaccelerations);
+        _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkVelocities, vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue,vLinkAccelerations, externalaccelerations);
     }
 }
 
-void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::vector<std::pair<Vector,Vector> >& vLinkVelocities, bool usebaselinkvelocity) const
+void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& vDOFVelocities, std::vector<std::pair<Vector,Vector> >& vLinkVelocities, bool usebaselinkvelocity) const
 {
-    GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(),vLinkVelocities);
-    if( _veclinks.size() <= 1 ) {
-        dofvelocities.resize(GetDOF());
-        if( !usebaselinkvelocity && _veclinks.size() > 0 ) {
+    /* (1) Get link velocities from physics engine */
+    GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(), vLinkVelocities);
+    const int nlinks = _veclinks.size();
+    const int bodydof = this->GetDOF();
+    if( nlinks <= 1 ) {
+        vDOFVelocities.resize(bodydof);
+        if( !usebaselinkvelocity && nlinks == 1 ) {
             vLinkVelocities[0].first = Vector();
             vLinkVelocities[0].second = Vector();
         }
         return;
     }
     if( !usebaselinkvelocity ) {
-        Vector vbasepos = _veclinks.at(0)->_info._t.trans;
+        const Vector& vbasepos = _veclinks.at(0)->GetTransform().trans;
         // v_B = v_A + angularvel x (B-A)
         for(size_t i = 1; i < vLinkVelocities.size(); ++i) {
-            Vector voffset = _veclinks.at(i)->_info._t.trans - vbasepos;
+            const Vector voffset = _veclinks.at(i)->GetTransform().trans - vbasepos;
             vLinkVelocities[i].first -= vLinkVelocities[0].first + vLinkVelocities[0].second.cross(voffset);
             vLinkVelocities[i].second -= vLinkVelocities[0].second;
         }
         vLinkVelocities[0].first = Vector();
         vLinkVelocities[0].second = Vector();
     }
-    dofvelocities.resize(0);
-    if( (int)dofvelocities.capacity() < GetDOF() ) {
-        dofvelocities.reserve(GetDOF());
+
+    /* (2) Compute DOF velocities from link velocities */
+    vDOFVelocities.clear();
+    if( (int)vDOFVelocities.capacity() < bodydof ) {
+        vDOFVelocities.reserve(bodydof);
     }
-    FOREACHC(it, _vDOFOrderedJoints) {
-        int parentindex = 0;
-        if( !!(*it)->_attachedbodies[0] ) {
-            parentindex = (*it)->_attachedbodies[0]->GetIndex();
-        }
-        int childindex = (*it)->_attachedbodies[1]->GetIndex();
-        (*it)->_GetVelocities(dofvelocities,true,vLinkVelocities.at(parentindex),vLinkVelocities.at(childindex));
+    for(const JointPtr& pjoint : _vDOFOrderedJoints) {
+        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
+        const int parentindex = (!pparentlink) ? 0 : pparentlink->GetIndex();
+        const int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
+        pjoint->_GetVelocities(/*out*/ vDOFVelocities, /*in*/true, vLinkVelocities.at(parentindex), vLinkVelocities.at(childindex));
     }
 }
 
-void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities, const std::vector<dReal>& vDOFAccelerations, const std::vector< std::pair<Vector, Vector> >& vLinkVelocities, std::vector<std::pair<Vector,Vector> >& vLinkAccelerations, AccelerationMapConstPtr pexternalaccelerations) const
-{
-    vLinkAccelerations.resize(_veclinks.size());
-    if( _veclinks.size() == 0 ) {
+void KinBody::ComputePassiveJointVelocitiesAccelerations(
+    const std::vector<dReal>& vDOFVelocities,
+    const std::vector<dReal>& vDOFAccelerations,
+    std::vector< std::vector<dReal> >& vPassiveJointVelocities,
+    std::vector< std::vector<dReal> >& vPassiveJointAccelerations,
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal > mSecondorderpartialderivativepairValue
+) const {
+    const bool bHasVelocities = !vDOFVelocities.empty();
+    const bool bHasAccelerations = !vDOFAccelerations.empty();
+    if(!bHasVelocities && !bHasAccelerations) {
+        return;
+    }
+    
+    const int nActiveJoints = _vecjoints.size();
+    const int nPassiveJoints = _vPassiveJoints.size();
+    vPassiveJointVelocities.resize(nPassiveJoints);
+    vPassiveJointAccelerations.resize(nPassiveJoints);
+    for(int i = 0; i < nPassiveJoints; ++i) {
+        const JointPtr& pjoint = _vPassiveJoints[i];
+        const int jointdof = pjoint->GetDOF();
+        if( bHasAccelerations ) {
+            vPassiveJointAccelerations[i].resize(jointdof, 0);
+        }
+        if( bHasVelocities ) {
+            if( pjoint->IsMimic() ) {
+                vPassiveJointVelocities[i].resize(jointdof, 0); // mimic joints
+            }
+            else {
+                pjoint->GetVelocities(vPassiveJointVelocities[i]); // static joints
+            }
+        }
+    }
+    this->ComputeMimicJointFirstOrderPartialDerivatives(mPartialderivativepairValue); ///< map a joint pair (z, x) to the partial derivative ∂z/∂x
+
+    if(bHasVelocities) {
+        // compute all dof velocities in topological order, collect results from mPartialderivativepairValue
+        for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mPartialderivativepairValue) {
+            const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
+            const int jointindex = thisdofformat.jointindex; // index of z
+            const int dependedDofIndex = keyvalue.first.second; // index of x
+            const dReal totalPartialDerivative = keyvalue.second; // ∂z/dx where x=x(t) is time-dependent
+            vPassiveJointVelocities.at(jointindex - nActiveJoints).at(thisdofformat.axis) += vDOFVelocities.at(dependedDofIndex) * totalPartialDerivative; // dz/dt = \sum_{z depends on x} ∂z/∂x * dx/dt
+        }
+    }
+    const bool bRecomputeFirstOrderPartial = false; // already computed above
+    this->ComputeMimicJointSecondOrderPartialDerivatives(mSecondorderpartialderivativepairValue, mPartialderivativepairValue, bRecomputeFirstOrderPartial); ///< map a joint pair (z, (xl, xk)) to the partial derivative ∂^2 z/∂xk ∂xl
+
+    // compute all dof accelerations in topological order; collect results from mSecondorderpartialderivativepairValue
+    std::set<std::pair<Mimic::DOFFormat, int>> sPartialPairs;
+    for(const std::pair<const std::pair<Mimic::DOFFormat, std::array<int, 2>>, dReal>& keyvalue : mSecondorderpartialderivativepairValue) {
+        const Mimic::DOFFormat& thisdofformat = keyvalue.first.first;
+        const int jointindex = thisdofformat.jointindex; // index of z
+        const std::array<int, 2>& indexpair = keyvalue.first.second;
+        const int kactive = indexpair[0]; // index of xk
+        const int lactive = indexpair[1]; // index of xl
+        const dReal d2zdxkdxl = keyvalue.second; // ∂^2 z/∂xk ∂xl
+        dReal& d2zdt2 = vPassiveJointAccelerations.at(jointindex - nActiveJoints).at(thisdofformat.axis);
+
+        if(bHasVelocities) {
+            const dReal dxkdt = vDOFVelocities.at(kactive); // dxk/dt
+            const dReal dxldt = vDOFVelocities.at(lactive); // dxl/dt
+            d2zdt2 += d2zdxkdxl * dxkdt * dxldt; // d^2 z/dt^2 += (∂^2 z/∂xk ∂xl) * (dxk/dt) * (dxl/dt)
+        }
+
+        const std::pair<Mimic::DOFFormat, int> key = {thisdofformat, kactive}; // ∂z/∂xk
+        if(!sPartialPairs.count(key)) {
+            sPartialPairs.insert(key);
+            const dReal dzdx = mPartialderivativepairValue.at(key);
+            if(bHasAccelerations) {
+                const dReal d2xdt2 = vDOFAccelerations.at(kactive);
+                d2zdt2 += dzdx * d2xdt2; // d^2 z/dt^2 += (∂z/∂xk) * (d^2 xk/dt^2)
+            }
+        }
+        /*
+            d^2 z                               [  ∂^2 z     ( dxk )   ( dxl ) ]                          [ ∂z      d^2 xk ]
+            -----  = \sum_{z depends on xk, xl} [ -------- x (-----) x (-----) ] + \sum_{z depends on xk} [----- x ------- ]
+            d t^2                               [ ∂xk ∂xl    ( dt  )   ( dt  ) ]                          [ ∂xk     d t^2  ]
+
+            where dx/dt comes from vDOFVelocities    if bHasVelocities, while
+            d^2 x/ dt^2 comes from vDOFAccelerations if bHasAccelerations.
+        */
+    }
+}
+
+void KinBody::_ComputeLinkAccelerations(
+    const std::vector<dReal>& vDOFVelocities,
+    const std::vector<dReal>& vDOFAccelerations,
+    const std::vector< std::pair<Vector, Vector> >& vLinkVelocities,
+    std::vector<std::vector<dReal> >& vPassiveJointVelocities,
+    std::vector<std::vector<dReal> >& vPassiveJointAccelerations,
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mPartialderivativepairValue,
+    std::map< std::pair<Mimic::DOFFormat, std::array<int, 2> >, dReal >& mSecondorderpartialderivativepairValue,
+    std::vector<std::pair<Vector, Vector> >& vLinkAccelerations,
+    AccelerationMapConstPtr pexternalaccelerations
+) const {
+    const int nlinks = _veclinks.size();
+    vLinkAccelerations.resize(nlinks);
+    if( nlinks == 0 ) {
         return;
     }
 
-    vector<dReal> vtempvalues, veval;
-    boost::array<dReal,3> dummyvelocities = {{0,0,0}}, dummyaccelerations={{0,0,0}}; // dummy values for a joint
+    /* ========== (1) Check whether input is valid ========== */
+    const int nActiveJoints = _vecjoints.size();
+    const bool bHasVelocities = !vDOFVelocities.empty();
+    const bool bHasAccelerations = !vDOFAccelerations.empty();
 
-    // set accelerations of all links as if they were the base link
-    for(size_t ilink = 0; ilink < vLinkAccelerations.size(); ++ilink) {
-        vLinkAccelerations.at(ilink).first += vLinkVelocities.at(ilink).second.cross(vLinkVelocities.at(ilink).first);
-        vLinkAccelerations.at(ilink).second = Vector();
+    if(bHasVelocities) {
+        OPENRAVE_ASSERT_OP_FORMAT((int)vDOFVelocities.size(), ==, nActiveJoints,
+            "vDOFVelocities should have the same number as that of the active joints %d", nActiveJoints, ORE_InvalidArguments
+        );
+    }
+    if(bHasAccelerations) {
+        OPENRAVE_ASSERT_OP_FORMAT((int)vDOFAccelerations.size(), ==, nActiveJoints,
+            "vDOFAccelerations should have the same number as that of the active joints %d", nActiveJoints, ORE_InvalidArguments
+        );
+    }
+
+    /* ========== (2) Compute passive joints accelerations ========== */
+    this->ComputePassiveJointVelocitiesAccelerations(
+        /* input */vDOFVelocities, vDOFAccelerations,
+        /* output */vPassiveJointVelocities, vPassiveJointAccelerations, mPartialderivativepairValue, mSecondorderpartialderivativepairValue
+    );
+
+    /* ========== (3) Compute link accelerations ========== */
+    // Set link accelerations as if they were the base link
+    for(int ilink = 0; ilink < nlinks; ++ilink) {
+        const std::pair<Vector, Vector>& linkvels = vLinkVelocities.at(ilink);
+        std::pair<Vector, Vector>& linkaccels = vLinkAccelerations.at(ilink);
+        linkaccels.first += linkvels.second.cross(linkvels.first);
+        linkaccels.second = Vector();
     }
 
     if( !!pexternalaccelerations ) {
-        FOREACHC(itaccel, *pexternalaccelerations) {
-            vLinkAccelerations.at(itaccel->first).first += itaccel->second.first;
-            vLinkAccelerations.at(itaccel->first).second += itaccel->second.second;
+        for(const std::pair<const int, std::pair<Vector, Vector> >& keyvalue : *pexternalaccelerations) {
+            const int linkindex = keyvalue.first;
+            const std::pair<Vector, Vector>& paccels = keyvalue.second;
+            vLinkAccelerations.at(linkindex).first += paccels.first;
+            vLinkAccelerations.at(linkindex).second += paccels.second;
         }
     }
 
-    // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
-    std::vector< std::vector<dReal> > vPassiveJointVelocities(_vPassiveJoints.size()), vPassiveJointAccelerations(_vPassiveJoints.size());
-    for(size_t i = 0; i <_vPassiveJoints.size(); ++i) {
-        if( vDOFAccelerations.size() > 0 ) {
-            vPassiveJointAccelerations[i].resize(_vPassiveJoints[i]->GetDOF(),0);
-        }
-        if( vDOFVelocities.size() > 0 ) {
-            if( !_vPassiveJoints[i]->IsMimic() ) {
-                _vPassiveJoints[i]->GetVelocities(vPassiveJointVelocities[i]);
-            }
-            else {
-                vPassiveJointVelocities[i].resize(_vPassiveJoints[i]->GetDOF(),0);
-            }
-        }
-    }
-
-    Transform tdelta;
-    Vector vlocalaxis;
-    std::vector<uint8_t> vlinkscomputed(_veclinks.size(),0);
+    Transform tJoint; // joint frame's transform
+    Vector vJointAxis; // joint axis in world frame
+    std::vector<uint8_t> vlinkscomputed(nlinks, 0);
     vlinkscomputed[0] = 1;
 
-    // compute the link accelerations going through topological order
+    /* ========== (4) Compute link accelerations through topological order ========== */
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
-        JointPtr pjoint = _vTopologicallySortedJointsAll[ijoint];
-        int jointindex = _vTopologicallySortedJointIndicesAll[ijoint];
-        int dofindex = pjoint->GetDOFIndex();
-
-        // have to compute the partial accelerations for each mimic dof
-        const dReal* pdofaccelerations=NULL, *pdofvelocities=NULL;
-        if( dofindex >= 0 ) {
-            if( vDOFAccelerations.size() ) {
-                pdofaccelerations = &vDOFAccelerations.at(dofindex);
-            }
-            if( vDOFVelocities.size() > 0 ) {
-                pdofvelocities=&vDOFVelocities.at(dofindex);
-            }
-        }
-        if( pjoint->IsMimic() && (vDOFAccelerations.size() > 0 || vDOFVelocities.size() > 0) ) {
-            // compute both partial velocity and acceleration information
-            for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                if( pjoint->IsMimic(i) ) {
-                    vtempvalues.resize(0);
-                    const std::vector<Mimic::DOFFormat>& vdofformat = pjoint->_vmimic[i]->_vdofformat;
-                    FOREACHC(itdof,vdofformat) {
-                        JointPtr pj = itdof->jointindex < (int)_vecjoints.size() ? _vecjoints[itdof->jointindex] : _vPassiveJoints.at(itdof->jointindex-_vecjoints.size());
-                        vtempvalues.push_back(pj->GetValue(itdof->axis));
-                    }
-                    dummyvelocities[i] = 0;
-                    dummyaccelerations[i] = 0;
-
-                    // velocity
-                    if( vDOFVelocities.size() > 0 ) {
-                        int err = pjoint->_Eval(i,1,vtempvalues,veval);
-                        if( err ) {
-                            RAVELOG_WARN_FORMAT("failed to evaluate joint %s, fparser error %d", pjoint->GetName()%err);
-                        }
-                        else {
-                            for(size_t ipartial = 0; ipartial < vdofformat.size(); ++ipartial) {
-                                dReal partialvelocity;
-                                if( vdofformat[ipartial].dofindex >= 0 ) {
-                                    partialvelocity = vDOFVelocities.at(vdofformat[ipartial].dofindex);
-                                }
-                                else {
-                                    partialvelocity = vPassiveJointVelocities.at(vdofformat[ipartial].jointindex-_vecjoints.size()).at(vdofformat[ipartial].axis);
-                                }
-                                if( ipartial < veval.size() ) {
-                                    dummyvelocities[i] += veval.at(ipartial) * partialvelocity;
-                                }
-                                else {
-                                    RAVELOG_DEBUG_FORMAT("cannot evaluate partial velocity for mimic joint %s, perhaps equations don't exist", pjoint->GetName());
-                                }
-                            }
-                        }
-                        // if joint is passive, update the stored joint values! This is necessary because joint value might be referenced in the future.
-                        if( dofindex < 0 ) {
-                            vPassiveJointVelocities.at(jointindex-(int)_vecjoints.size()).at(i) = dummyvelocities[i];
-                        }
-                    }
-
-                    // acceleration
-                    if( vDOFAccelerations.size() > 0 ) {
-                        int err = pjoint->_Eval(i,2,vtempvalues,veval);
-                        if( err ) {
-                            RAVELOG_WARN(str(boost::format("failed to evaluate joint %s, fparser error %d")%pjoint->GetName()%err));
-                        }
-                        else {
-                            for(size_t ipartial = 0; ipartial < vdofformat.size(); ++ipartial) {
-                                dReal partialacceleration;
-                                if( vdofformat[ipartial].dofindex >= 0 ) {
-                                    partialacceleration = vDOFAccelerations.at(vdofformat[ipartial].dofindex);
-                                }
-                                else {
-                                    partialacceleration = vPassiveJointAccelerations.at(vdofformat[ipartial].jointindex-_vecjoints.size()).at(vdofformat[ipartial].axis);
-                                }
-                                if( ipartial < veval.size() ) {
-                                    dummyaccelerations[i] += veval.at(ipartial) * partialacceleration;
-                                }
-                                else {
-                                    RAVELOG_DEBUG_FORMAT("cannot evaluate partial acceleration for mimic joint %s, perhaps equations don't exist", pjoint->GetName());
-                                }
-                            }
-                        }
-                        // if joint is passive, update the stored joint values! This is necessary because joint value might be referenced in the future.
-                        if( dofindex < 0 ) {
-                            vPassiveJointAccelerations.at(jointindex-(int)_vecjoints.size()).at(i) = dummyaccelerations[i];
-                        }
-                    }
-                }
-                else if( dofindex >= 0 ) {
-                    // is this correct? what is a joint has a mimic and non-mimic axis?
-                    dummyvelocities[i] = vDOFVelocities.at(dofindex+i);
-                    dummyaccelerations[i] = vDOFAccelerations.at(dofindex+i);
-                }
-                else {
-                    // preserve passive joint values
-                    dummyvelocities[i] = vPassiveJointVelocities.at(jointindex-(int)_vecjoints.size()).at(i);
-                    dummyaccelerations[i] = vPassiveJointAccelerations.at(jointindex-(int)_vecjoints.size()).at(i);
-                }
-            }
-            pdofvelocities = &dummyvelocities[0];
-            pdofaccelerations = &dummyaccelerations[0];
-        }
-
+        const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
         // do the test after mimic computation!?
-        if( vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] ) {
+        const LinkPtr& pchildlink = pjoint->GetHierarchyChildLink();
+        const int childindex = pchildlink->GetIndex();
+        if( vlinkscomputed[childindex] ) {
             continue;
         }
 
-        if( vDOFVelocities.size() > 0 && !pdofvelocities ) {
-            // has to be a passive joint
-            pdofvelocities = &vPassiveJointVelocities.at(jointindex-(int)_vecjoints.size()).at(0);
-        }
-        if( vDOFAccelerations.size() > 0 && !pdofaccelerations ) {
-            // has to be a passive joint
-            pdofaccelerations = &vPassiveJointAccelerations.at(jointindex-(int)_vecjoints.size()).at(0);
+        const int jointindex = _vTopologicallySortedJointIndicesAll[ijoint]; ///< for all joints, >= 0
+        const int dofindex = pjoint->GetDOFIndex(); ///< -1 for passive joints; >=0 for active CallOnDestruction
+
+        dReal const*const pdofvelocities = !bHasVelocities ? NULL : 
+            (dofindex >= 0) ? &vDOFVelocities.at(dofindex) : vPassiveJointVelocities.at(jointindex - nActiveJoints).data();
+        dReal const*const  pdofaccelerations = !bHasAccelerations ? NULL :
+            (dofindex >= 0) ? &vDOFAccelerations.at(dofindex) : vPassiveJointAccelerations.at(jointindex - nActiveJoints).data();;
+
+        // child
+        // const Vector& vChildLinearVelocity = vLinkVelocities.at(childindex).first;
+        // const Vector& vChildAngularVelocity = vLinkVelocities.at(childindex).second;
+        Vector& vChildLinearAcceleration = vLinkAccelerations.at(childindex).first;
+        Vector& vChildAngularAcceleration = vLinkAccelerations.at(childindex).second;
+
+        // parent
+        const LinkPtr& pparentlink = pjoint->GetHierarchyParentLink();
+        const int parentindex = (!pparentlink) ? 0 : pparentlink->GetIndex();
+        // const Vector& vParentLinearVelocity = vLinkVelocities.at(parentindex).first;
+        const Vector& vParentAngularVelocity = vLinkVelocities.at(parentindex).second;
+        const Vector& vParentLinearAcceleration = vLinkAccelerations.at(parentindex).first;
+        const Vector& vParentAngularAcceleration = vLinkAccelerations.at(parentindex).second;
+
+        // parent --> joint --> child
+        const Transform& tChild = pchildlink->GetTransform();
+        const Vector vParentToChild = tChild.trans - pparentlink->GetTransform().trans;
+        if( bHasVelocities || bHasAccelerations ) {
+            tJoint = pparentlink->GetTransform() * pjoint->GetInternalHierarchyLeftTransform();
+            vJointAxis = tJoint.rotate(pjoint->GetInternalHierarchyAxis(0));
         }
 
-        int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
-        const Transform& tchild = pjoint->GetHierarchyChildLink()->GetTransform();
-        const pair<Vector, Vector>& vChildVelocities = vLinkVelocities.at(childindex);
-        pair<Vector, Vector>& vChildAccelerations = vLinkAccelerations.at(childindex);
-
-        int parentindex = 0;
-        if( !!pjoint->GetHierarchyParentLink() ) {
-            parentindex = pjoint->GetHierarchyParentLink()->GetIndex();
+        const JointType jointtype = pjoint->GetType();
+        if(jointtype != JointRevolute && jointtype != JointPrismatic) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("joint type 0x%x not supported for getting link acceleration"), jointtype, ORE_Assert);
         }
+        if( jointtype == JointRevolute ) {
+            /*
+            
+            Differentiating
+                v_child =    v_parent
+                          +  w_parent x (p_child - p_parent)
+                          +  w_joint x (p_child - p_joint)
+            
+            yields
 
-        const pair<Vector, Vector>& vParentVelocities = vLinkVelocities.at(parentindex);
-        const pair<Vector, Vector>& vParentAccelerations = vLinkAccelerations.at(parentindex);
-        Vector xyzdelta = tchild.trans - _veclinks.at(parentindex)->_info._t.trans;
-        if( !!pdofaccelerations || !!pdofvelocities ) {
-            tdelta = _veclinks.at(parentindex)->_info._t * pjoint->GetInternalHierarchyLeftTransform();
-            vlocalaxis = pjoint->GetInternalHierarchyAxis(0);
-        }
+                a_child =    a_parent
+                          +  alpha_parent x (p_child - p_parent) + w_parent x (w_parent x (p_child - p_parent))
+                          +  w_joint  x (w_joint  x (p_child - p_joint)) + (...)
+                          +  alpha_joint  x (p_child - p_joint)
 
-        // check out: http://en.wikipedia.org/wiki/Rotating_reference_frame
-        // compute for global coordinate system
-        // code for symbolic computation (python sympy)
-        // t=Symbol('t'); q=Function('q')(t); dq=diff(q,t); axis=Matrix(3,1,symbols('ax,ay,az')); delta=Matrix(3,1,[Function('dx')(t), Function('dy')(t), Function('dz')(t)]); vparent=Matrix(3,1,[Function('vparentx')(t),Function('vparenty')(t),Function('vparentz')(t)]); wparent=Matrix(3,1,[Function('wparentx')(t),Function('wparenty')(t),Function('wparentz')(t)]); Mparent=Matrix(3,4,[Function('m%d%d'%(i,j))(t) for i in range(3) for j in range(4)]); c = Matrix(3,1,symbols('cx,cy,cz'))
-        // hinge joints:
-        // p = Mparent[0:3,3] + Mparent[0:3,0:3]*(Left[0:3,3] + Left[0:3,0:3]*Rot[0:3,0:3]*Right[0:3,3])
-        // v = vparent + wparent.cross(p-Mparent[0:3,3]) + Mparent[0:3,0:3] * Left[0:3,0:3] * dq * axis.cross(Rot[0:3,0:3]*Right)
-        // wparent.cross(v) = wparent.cross(vparent) + wparent.cross(wparent.cross(p-Mparent[0:3,3])) + wparent.cross(p-Mparent[0:3,3])
-        // dv = vparent.diff(t) + wparent.diff(t).cross(p-Mparent[0:3,3]).transpose() + wparent.cross(v-vparent) + wparent.cross(v-vparent-wparent.cross(wparent.cross(p-Mparent[0:3,3]))) + Mparent[0:3,0:3] * Left[0:3,0:3] * (ddq * axis.cross(Rot[0:3,0:3]*Right) + dq * axis.cross(dq*axis.cross(Rot[0:3,0:3]*Right)))
-        // w = wparent + Mparent[0:3,0:3]*Left[0:3,0:3]*axis*dq
-        // dw = wparent.diff(t) + wparent.cross(Mparent[0:3,0:3]*Left[0:3,0:3]*axis*dq).transpose() + Mparent[0:3,0:3]*Left[0:3,0:3]*axis*ddq
-        // slider:
-        // v = vparent + wparent.cross(p-Mparent[0:3,3]) + Mparent[0:3,0:3]*Left[0:3,0:3]*dq*axis
-        // dv = vparent.diff(t) + wparent.diff(t).cross(p-Mparent[0:3,3]).transpose() + wparent.cross(v-vparent) + wparent.cross(Mparent[0:3,0:3]*Left[0:3,0:3]*dq*axis) + Mparent[0:3,0:3]*Left[0:3,0:3]*ddq*axis
-        // w = wparent
-        // dw = wparent.diff(t)
-        if( pjoint->GetType() == JointRevolute ) {
-            vChildAccelerations.first = vParentAccelerations.first + vParentAccelerations.second.cross(xyzdelta) + vParentVelocities.second.cross((vChildVelocities.first-vParentVelocities.first)*2-vParentVelocities.second.cross(xyzdelta));
-            vChildAccelerations.second = vParentAccelerations.second;
-            if( !!pdofvelocities ) {
-                Vector gw = tdelta.rotate(vlocalaxis*pdofvelocities[0]);
-                vChildAccelerations.first += gw.cross(gw.cross(tchild.trans-tdelta.trans));
-                vChildAccelerations.second += vParentVelocities.second.cross(gw);
+            Differentiating
+
+                w_child = w_parent     + w_joint
+
+            yields
+
+            alpha_child = alpha_parent + alpha_joint
+
+            */
+
+            // accelerations attributing to parent's velocity, acceleration
+            vChildLinearAcceleration  = vParentLinearAcceleration + vParentAngularAcceleration.cross(vParentToChild) + vParentAngularVelocity.cross(vParentAngularVelocity.cross(vParentToChild));
+            vChildAngularAcceleration = vParentAngularAcceleration;
+
+            // accelerations attributing to joint velocity, acceleration
+            if( bHasVelocities ) {
+                const Vector vJointAngularVelocity = vJointAxis * (*pdofvelocities);
+                //     a_child += w_joint x (w_joint x (p_child - p_joint)) + 2 * w_parent x (w_joint x (p_child - p_joint))
+                // alpha_child += w_parent x w_joint
+                const Vector vJointToChild = tChild.trans - tJoint.trans;
+                vChildLinearAcceleration += vJointAngularVelocity.cross(vJointAngularVelocity.cross(vJointToChild)) + 2.0 * vParentAngularVelocity.cross(vJointAngularVelocity.cross(vJointToChild));
+                vChildAngularAcceleration += vParentAngularVelocity.cross(vJointAngularVelocity);
             }
-            if( !!pdofaccelerations ) {
-                Vector gdw = tdelta.rotate(vlocalaxis*pdofaccelerations[0]);
-                vChildAccelerations.first += gdw.cross(tchild.trans-tdelta.trans);
-                vChildAccelerations.second += gdw;
+            if( bHasAccelerations ) {
+                //     a_child += alpha_joint x (p_child - p_joint)
+                // alpha_child += alpha_joint
+                const Vector alphajoint = vJointAxis * (*pdofaccelerations);
+                vChildLinearAcceleration += alphajoint.cross(tChild.trans - tJoint.trans);
+                vChildAngularAcceleration += alphajoint;
             }
-        }
-        else if( pjoint->GetType() == JointPrismatic ) {
-            Vector w = tdelta.rotate(vlocalaxis);
-            vChildAccelerations.first = vParentAccelerations.first + vParentAccelerations.second.cross(xyzdelta);
-            Vector angularveloctiycontrib = vChildVelocities.first-vParentVelocities.first;
-            if( !!pdofvelocities ) {
-                angularveloctiycontrib += w*pdofvelocities[0];
-            }
-            vChildAccelerations.first += vParentVelocities.second.cross(angularveloctiycontrib);
-            if( !!pdofaccelerations ) {
-                vChildAccelerations.first += w*pdofaccelerations[0];
-            }
-            vChildAccelerations.second = vParentAccelerations.second;
         }
         else {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("joint type 0x%x not supported for getting link acceleration"),pjoint->GetType(),ORE_Assert);
+            /*
+            
+            Differentiating
+                v_child =    v_parent
+                          +  w_parent x (p_child - p_parent)
+                          +  v_joint
+            
+            yields
+
+                a_child =    a_parent
+                          +  alpha_parent x (p_child - p_parent) + w_parent x (w_parent x (p_child - p_parent))
+                          +  (...)
+                          +  a_joint
+
+            Differentiating
+
+                w_child = w_parent
+
+            yields
+
+            alpha_child = alpha_parent
+
+            */
+
+            // a_child = a_parent + alpha_parent x (p_child - p_parent) + w_parent x (w_parent x (p_child - p_parent))
+            vChildLinearAcceleration = vParentLinearAcceleration + vParentAngularAcceleration.cross(vParentToChild) + vParentAngularVelocity.cross(vParentAngularVelocity.cross(vParentToChild));
+            if( bHasVelocities ) {
+                const Vector vJointLinearVelocity = vJointAxis * (*pdofvelocities);
+                // a_child += 2 * (w_parent x v_joint)
+                vChildLinearAcceleration += 2.0 * vParentAngularVelocity.cross(vJointLinearVelocity);
+            }
+            if( bHasAccelerations ) {
+                // a_child += a_joint
+                vChildLinearAcceleration += vJointAxis * (*pdofaccelerations);
+            }
+            // alpha_child = alpha_parent
+            vChildAngularAcceleration = vParentAngularAcceleration;
         }
         vlinkscomputed[childindex] = 1;
     }
@@ -3840,8 +4073,8 @@ void KinBody::_ComputeInternalInformation()
             for(const std::pair<const Mimic::DOFFormat, MimicPtr>& keyvalue : mapmimic) {
                 const Mimic::DOFFormat& thisdofformat = keyvalue.first;
                 const MimicPtr& pmimic = keyvalue.second;
-                std::vector<Mimic::DOFHierarchy>& vmimicdofs = pmimic->_vmimicdofs; ///< to collect information of active joints on which pmimic depends on
-                const std::vector<Mimic::DOFFormat>& vdofformat = pmimic->_vdofformat; ///<  collected information of all joints on which pmimic depends on
+                std::vector<Mimic::DOFHierarchy>& vmimicdofs = pmimic->_vmimicdofs; ///< to collect information of active joints on which pmimic depends
+                const std::vector<Mimic::DOFFormat>& vdofformat = pmimic->_vdofformat; ///<  collected information of all joints on which pmimic depends
 
                 const JointPtr pjoint = thisdofformat.GetJoint(*this); ///< pjoint depends on all [dofformat.GetJoint(*this) for dofformat in vdofformat]
                 const int ndofformat = vdofformat.size();
@@ -3863,7 +4096,7 @@ void KinBody::_ComputeInternalInformation()
                         }
 
                         // TGN: Since Mimic::_vmimicdofs only contains active joints (c.f. KinBody::Joint::SetMimicEquations),
-                        // when computing partial/total derivatives by chain rule, we shall use Mimic::_vdofformat
+                        // when computing partial derivatives by chain rule, we shall use Mimic::_vdofformat
                         Mimic::DOFHierarchy h;
                         h.dofformatindex = idofformat; ///< index in vdofformat
                         h.dofindex = mimicdofDepended.dofindex; // >= 0, dofindex of active joint

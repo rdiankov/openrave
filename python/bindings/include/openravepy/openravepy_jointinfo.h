@@ -378,6 +378,7 @@ public:
     object GetName();
     bool IsMimic(int iaxis=-1);
     string GetMimicEquation(int iaxis=0, int itype=0, const std::string& format="");
+    py::list GetMimicEquations(int iaxis=0, const std::string& format="");
     object GetMimicDOFIndices(int iaxis=0);
     void SetMimicEquations(int iaxis, const std::string& poseq, const std::string& veleq, const std::string& acceleq);
 
