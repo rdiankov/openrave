@@ -230,9 +230,11 @@ inline void SerializeRound(std::ostream& o, const RaveTransform<T>& t)
 template <class T>
 inline void SerializeRound(std::ostream& o, const RaveTransformMatrix<T>& t)
 {
+    // Since the thrid column of the rotation matrix can be uniquely
+    // determined given the first two, serializing only the first two
+    // columns is sufficient for the purpose of hash computation.
     o << SerializationValue(t.m[0]) << " " << SerializationValue(t.m[4]) << " " << SerializationValue(t.m[8]) << " "
-      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " "
-      << SerializationValue(t.m[2]) << " " << SerializationValue(t.m[6]) << " " << SerializationValue(t.m[10]) << " ";
+      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " ";
     SerializeRound(o,t.trans);
 }
 
