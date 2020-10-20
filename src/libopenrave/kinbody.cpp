@@ -3271,6 +3271,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFForceTorques, const
 
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        if(IS_DEBUGLEVEL(Level_Verbose))
         {
             rapidjson::Document doc;
             doc.SetObject();
@@ -3316,7 +3317,9 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFForceTorques, const
         }
 
         if(bIsActive) {
-            RAVELOG_DEBUG_FORMAT("Joint %s of index %d adds by %.4e units of torque/force\n\n%s\n\n", pjoint->GetName() % jointdofindex % fDofAxisForceTorque % ss.str());
+            if(IS_DEBUGLEVEL(Level_Verbose)) {
+                RAVELOG_DEBUG_FORMAT("Joint %s of index %d adds by %.4e units of torque/force\n\n%s\n\n", pjoint->GetName() % jointdofindex % fDofAxisForceTorque % ss.str());
+            }
             vDOFForceTorques.at(jointdofindex) += fDofAxisForceTorque;
         }
         else { // mimic
@@ -3324,14 +3327,17 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFForceTorques, const
             // extract first-order partial derivatives results from the cached mPartialderivativepairValue
             pjoint->_ComputePartialVelocities(iaxis, vDofindexDerivativePairs, mPartialderivativepairValue);
             for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
-                RAVELOG_DEBUG_FORMAT("Mimic joint %s contributes to active DOF index %d by %.4e units of torque/force: %.4e weighted by partial derivative %.4e\n%s\n\n",
-                    pjoint->GetName() % dofindexDerivativePair.first % (dofindexDerivativePair.second*fDofAxisForceTorque) % fDofAxisForceTorque % dofindexDerivativePair.second % ss.str()
-                );
+                if(IS_DEBUGLEVEL(Level_Verbose)) {
+                    RAVELOG_DEBUG_FORMAT("Mimic joint %s contributes to active DOF index %d by %.4e units of torque/force: %.4e weighted by partial derivative %.4e\n%s\n\n",
+                        pjoint->GetName() % dofindexDerivativePair.first % (dofindexDerivativePair.second*fDofAxisForceTorque) % fDofAxisForceTorque % dofindexDerivativePair.second % ss.str()
+                    );
+                }
                 vDOFForceTorques.at(dofindexDerivativePair.first) += dofindexDerivativePair.second * fDofAxisForceTorque;
             }
         }
     } // std::vector<JointPtr>::const_reverse_iterator crit
 
+    if(IS_DEBUGLEVEL(Level_Verbose))
     {
         rapidjson::Document doc;
         doc.SetArray();
