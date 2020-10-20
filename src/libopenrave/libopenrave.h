@@ -203,7 +203,15 @@ inline void SerializeRound(std::ostream& o, double f)
 template <class T>
 inline void SerializeRound(std::ostream& o, const RaveVector<T>& v)
 {
-    o << SerializationValue(v.x) << " " << SerializationValue(v.y) << " " << SerializationValue(v.z) << " " << SerializationValue(v.w) << " ";
+    // This function is used only for serializing quaternions. Need to
+    // take into account the face that v and -v represent the same
+    // rotation. Convert v to a rotation matrix instead to get a
+    // unique representation. Then since the thrid column can be uniquely
+    // determined given the first two, serializing only the first two
+    // columns is sufficient for the purpose of hash computation.
+    RaveTransformMatrix<T> t = matrixFromQuat(v);
+    o << SerializationValue(t.m[0]) << " " << SerializationValue(t.m[4]) << " " << SerializationValue(t.m[8]) << " "
+      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " ";
 }
 
 template <class T>
