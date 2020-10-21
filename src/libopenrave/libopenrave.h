@@ -201,7 +201,7 @@ inline void SerializeRound(std::ostream& o, double f)
 }
 
 template <class T>
-inline void SerializeRound4(std::ostream& o, const RaveVector<T>& v)
+inline void SerializeRoundQuaternion(std::ostream& o, const RaveVector<T>& v)
 {
     // This function is used only for serializing quaternions. Need to
     // take into account the fact that v and -v represent the same
@@ -223,7 +223,7 @@ inline void SerializeRound3(std::ostream& o, const RaveVector<T>& v)
 template <class T>
 inline void SerializeRound(std::ostream& o, const RaveTransform<T>& t)
 {
-    SerializeRound4(o,t.rot);
+    SerializeRoundQuaternion(o,t.rot);
     SerializeRound3(o,t.trans);
 }
 
