@@ -204,7 +204,7 @@ template <class T>
 inline void SerializeRound4(std::ostream& o, const RaveVector<T>& v)
 {
     // This function is used only for serializing quaternions. Need to
-    // take into account the face that v and -v represent the same
+    // take into account the fact that v and -v represent the same
     // rotation. Convert v to a rotation matrix instead to get a
     // unique representation. Then since the thrid column can be uniquely
     // determined given the first two, serializing only the first two
