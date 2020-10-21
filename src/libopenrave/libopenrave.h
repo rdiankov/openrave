@@ -489,18 +489,25 @@ inline const char *strcasestr(const char *s, const char *find)
 #endif
 
 
-///* \brief Update current info from json value. Create a new one if there is no id matched.
+/// \brief Update current info from json value. Create a new one if there is no id matched.
 template<typename T>
-void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string& id, std::vector<boost::shared_ptr<T> >& vInfos, dReal fUnitScale, int options)
+void UpdateOrCreateInfo(const rapidjson::Value& value, std::vector<boost::shared_ptr<T> >& vInfos, dReal fUnitScale, int options)
 {
+    std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(value, "id");
+    bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
     typename std::vector<boost::shared_ptr<T> >::iterator itExistingInfo = vInfos.end();
-    FOREACH(itInfo, vInfos) {
-        if ((*itInfo)->_id == id) {
-            itExistingInfo = itInfo;
-            break;
+    if (!id.empty()) {
+        // only try to find old info if id is not empty
+        FOREACH(itInfo, vInfos) {
+            if ((*itInfo)->_id == id) {
+                itExistingInfo = itInfo;
+                break;
+            }
         }
     }
-    bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
+    // here we allow items with empty id to be created because
+    // when we load things from json, some id could be missing on file
+    // and for the partial update case, the id should be non-empty
     if (itExistingInfo != vInfos.end()) {
         if (isDeleted) {
             vInfos.erase(itExistingInfo);
@@ -517,6 +524,101 @@ void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string& id, st
     pNewInfo->DeserializeJSON(value, fUnitScale, options);
     pNewInfo->_id = id;
     vInfos.push_back(pNewInfo);
+}
+
+/// \brief Recursively call UpdateFromInfo on children. If children need to be added or removed, require re-init. Returns false if update fails and caller should not continue with other parts of the update.
+template<typename InfoPtrType, typename PtrType>
+bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<PtrType>& vPointers, UpdateFromInfoResult& result)
+{
+    int index = 0;
+    for (typename std::vector<InfoPtrType>::const_iterator itInfo = vInfos.begin(); itInfo != vInfos.end(); ++itInfo, ++index) {
+        const InfoPtrType pInfo = *itInfo;
+        PtrType pMatchExistingPointer;
+
+        {
+            typename std::vector<PtrType>::iterator itExistingSameId = vPointers.end();
+            typename std::vector<PtrType>::iterator itExistingSameName = vPointers.end();
+            typename std::vector<PtrType>::iterator itExistingSameIdName = vPointers.end();
+            typename std::vector<PtrType>::iterator itExistingNoIdName = vPointers.end();
+
+            // search only in the unprocessed part of vPointers
+            if( (int)vPointers.size() > index ) {
+                for (typename std::vector<PtrType>::iterator itPointer = vPointers.begin() + index; itPointer != vPointers.end(); ++itPointer) {
+                    // special case: no id or name, find next existing one that has no id or name
+                    if (pInfo->GetId().empty() && pInfo->GetName().empty()) {
+                        if ((*itPointer)->GetId().empty() && (*itPointer)->GetName().empty()) {
+                            itExistingNoIdName = itPointer;
+                            break;
+                        }
+                        continue;
+                    }
+
+                    bool bIdMatch = !(*itPointer)->GetId().empty() && (*itPointer)->GetId() == pInfo->GetId();
+                    bool bNameMatch = !(*itPointer)->GetName().empty() && (*itPointer)->GetName() == pInfo->GetName();
+                    if( bIdMatch && bNameMatch ) {
+                        itExistingSameIdName = itPointer;
+                        itExistingSameId = itPointer;
+                        itExistingSameName = itPointer;
+                        break;
+                    }
+                    if( bIdMatch && itExistingSameId == vPointers.end() ) {
+                        itExistingSameId = itPointer;
+                    }
+                    if( bNameMatch && itExistingSameName == vPointers.end() ) {
+                        itExistingSameName = itPointer;
+                    }
+                }
+            }
+            typename std::vector<PtrType>::iterator itExisting = itExistingSameIdName;
+            if( itExisting == vPointers.end() ) {
+                itExisting = itExistingSameId;
+            }
+            if( itExisting == vPointers.end() ) {
+                itExisting = itExistingSameName;
+            }
+            if( itExisting == vPointers.end() ) {
+                itExisting = itExistingNoIdName;
+            }
+            if( itExisting != vPointers.end() ) {
+                pMatchExistingPointer = *itExisting;
+                if (index != itExisting-vPointers.begin()) {
+                    // re-arrange vPointers according to the order of infos
+                    PtrType pTemp = vPointers[index];
+                    vPointers[index] = pMatchExistingPointer;
+                    *itExisting = pTemp;
+                }
+            }
+        }
+        if (!pMatchExistingPointer) {
+            // new element, requires re-init
+            result = UFIR_RequireReinitialize;
+            return false;
+        }
+
+        UpdateFromInfoResult updateFromInfoResult = pMatchExistingPointer->UpdateFromInfo(*pInfo);
+        if (updateFromInfoResult == UFIR_NoChange) {
+            // no change
+            continue;
+        }
+
+        if (updateFromInfoResult == UFIR_Success) {
+            // something changd
+            result = UFIR_Success;
+            continue;
+        }
+
+        // update failed
+        result = updateFromInfoResult;
+        return false;
+    }
+
+    if (vPointers.size() > vInfos.size()) {
+        // have to delete extra, require re-init
+        result = UFIR_RequireReinitialize;
+        return false;
+    }
+
+    return true;
 }
 
 template<typename T>
