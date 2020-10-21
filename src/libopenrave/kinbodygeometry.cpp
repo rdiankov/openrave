@@ -209,7 +209,7 @@ void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(TriMesh& tri, float 
     dReal bigDotRadius = parameters.bigDotDiameterDistanceRatio * std::min(dotDx, dotDy) / 2;
     dReal selectedRadius = dotRadius;
     dReal dotLength = 0.01f * boardEx[2];
-    dReal dotZOffset = boardEx[2] + (dotLength)/2;
+    dReal dotZOffset = dotLength/2;
     int numverts = (int)(fTessellation*48.0f) + 3;
 
     if (nDotsX >= 3 && nDotsY >= 3) {
@@ -506,7 +506,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     case GT_CalibrationBoard: {
         // create board mesh
         Vector boardEx = GetBoxExtents();
-        AppendBoxTriangulation(Vector(0, 0, 0), boardEx, _meshcollision);
+        AppendBoxTriangulation(Vector(0, 0, -boardEx[2]), boardEx, _meshcollision);
         break;
     }
     default:

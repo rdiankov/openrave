@@ -474,6 +474,7 @@ void KinBodyItem::Load()
                     // Make board
                     Vector v;
                     osg::ref_ptr<osg::Box> board = new osg::Box();
+                    board->setCenter(osg::Vec3f(0, 0, -orgeom->GetBoxExtents().z));
                     board->setHalfLengths(osg::Vec3f(orgeom->GetBoxExtents().x,orgeom->GetBoxExtents().y,orgeom->GetBoxExtents().z));
 
                     // Make dot mesh
