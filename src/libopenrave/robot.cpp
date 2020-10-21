@@ -2319,6 +2319,9 @@ void RobotBase::_PostprocessChangedParameters(uint32_t parameters)
             (*itmanip)->__hashkinematicsstructure.resize(0);
         }
     }
+    if( parameters & (Prop_LinkGeometry|Prop_RobotManipulatorTool|Prop_Sensors|Prop_SensorPlacement) ) {
+        __hashrobotstructure.resize(0);
+    }
     KinBody::_PostprocessChangedParameters(parameters);
 }
 
