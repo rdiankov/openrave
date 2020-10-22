@@ -2009,8 +2009,9 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         sVars << resultVars[ivar];
     }
 
+    if(!veleq.empty())
     {
-        const int itype = 1; // working on velocity mimic equations
+        // working on velocity mimic equations
         std::vector<OpenRAVEFunctionParserRealPtr> vfns(nVars);
         /*
             extract from `eq` the partial derivative formulas ∂z/∂yi for joint z=f(y1,y2,...,yn) defined in `poseq`.
@@ -2025,7 +2026,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             where yi's are joints on which z depends, and ci are common subexpressions in formulas ∂f/∂yi.
 
          */
-        utils::SearchAndReplace(eq, pmimic->_equations[itype], jointnamepairs);
+        utils::SearchAndReplace(eq, veleq, jointnamepairs);
         size_t index = eq.find('|');
         const std::string sCommonSubexpressions = (index != std::string::npos) ? eq.substr(0, index) : ""; ///< common subexpressions
 
@@ -2071,15 +2072,15 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
                 // print a message instead of throwing an exception since it might be common for only position equations to be specified
                 RAVELOG_WARN(str(boost::format("SetMimicEquations: missing variable %s from partial derivatives of joint %s!")%mapinvnames[resultVars[j]]%_info._name));
                 vfns[j] = CreateJointFunctionParser();
-                vfns[j]->Parse("0","");
+                vfns[j]->Parse("0", "");
             }
         }
 
         pmimic->_velfns.swap(vfns);
     }
 
+    if(!acceleq.empty())
     {
-        const int itype = 2;
         // working on acceleration mimic equations
         std::vector<OpenRAVEFunctionParserRealPtr> vfns(nVars * nVars); // it's ok to make it n*n instead of n*(n+1)/2
 
@@ -2101,7 +2102,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
 
             We initialize ∂^2 f/∂y2∂y1 as ∂^2 f/∂y1∂y2, and overwrite them later if a different formula is also supplied.
          */
-        utils::SearchAndReplace(eq, pmimic->_equations[itype], jointnamepairs);
+        utils::SearchAndReplace(eq, acceleq, jointnamepairs);
         
         // takes form "|yi|yj formula ∂^2f/∂yi∂yj"
         size_t firstvert = eq.find('|'); // the "|" before yi
