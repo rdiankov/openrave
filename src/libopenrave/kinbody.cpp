@@ -3306,12 +3306,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& vDOFForceTorques, const
                 if(pActuatorInfo->rotor_inertia > 0.0) {
                     // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
                     const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
-                    if(bIsActive) {
-                        fDofAxisForceTorque += vDOFAccelerations.at(jointdofindex) * fInertiaOnLoadSide;
-                    }
-                    else { // mimic
-                        fDofAxisForceTorque += vPassiveJointAccelerations.at(iPassiveJoint).at(iaxis) * fInertiaOnLoadSide;
-                    }
+                    fDofAxisForceTorque += fInertiaOnLoadSide * (bIsActive ? vDOFAccelerations.at(jointdofindex) : vPassiveJointAccelerations.at(iPassiveJoint).at(iaxis));
                 }
             }
         }
