@@ -2483,7 +2483,6 @@ void KinBody::Joint::_ComputePartialAccelerations(
                     RAVELOG_WARN_FORMAT("for index pair (%d,%d) among nvars=%d, pmimic->_accelfns[%d] does not exist either; treat the second-order partial derivative as 0",
                         ivar % jvar % nvars % indexji
                     );
-                    continue;
                 }
             }
 
