@@ -339,6 +339,11 @@ public:
          */
         virtual IkParameterization GetIkParameterization(const IkParameterization& seedikp, bool inworld=true) const;
 
+        /** \brief convert ikparameter into one with low constraints using manip posture.
+            \param sourceikp ikparam to convert
+            \param iktype the type of parameterization to request
+            \param inworld if true will return the parameterization in the world coordinate system, otherwise in the base link (\ref GetBase()) coordinate system
+         */
         virtual IkParameterization ConvertIkParameterization(const IkParameterization &sourceikp, IkParameterizationType iktype, bool inworld=true) const;
         virtual IkParameterization ConvertIkParameterization(const IkParameterization &sourceikp, const IkParameterization &seedikp, bool inworld=true) const;
 

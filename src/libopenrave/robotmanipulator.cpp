@@ -549,11 +549,17 @@ IkParameterization RobotBase::Manipulator::ConvertIkParameterization(const IkPar
     ikparam.Set(v.begin(), iktype);
     if(iktype == IKP_Lookat3D) {
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: Lookat3D type setting goal a distance of 1 from the origin.\n");
-        Transform t = GetTransform();
-        if( !inworld ) {
-            t = GetBase()->GetTransform().inverse()*t;
+        Transform t = sourceikp.GetTransform6D();
+        Vector vdir = t.rotate(_info._vdirection);
+        if(std::abs(vdir.dot(vdir)) > 1e-12){
+            if(std::abs(vdir.x) > 1e-12) {
+                t.trans.x += 1/vdir.x;
+            } else if(std::abs(vdir.y) > 1e-12) {
+                t.trans.y += 1/vdir.y;
+            } else if(std::abs(vdir.z) > 1e-12) {
+                t.trans.z += 1/vdir.z;
+            }
         }
-        t.trans.x += 1;
         ikparam.SetLookat3D(t.trans);
     } else if(iktype == IKP_TranslationLocalGlobal6D) {
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: TranslationLocalGlobal6D type setting local translation to (0,0,0).\n");
