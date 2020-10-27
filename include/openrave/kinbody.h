@@ -1719,6 +1719,9 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
+        void serialize(std::ostream& o) const; ///< used only for hash computation
+        std::string GetGrabbedInfoHash() const;
+
         std::string _id; ///< unique id of the grabbed info
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
@@ -2744,7 +2747,7 @@ private:
         \param[in] setBodyLinksToIgnore Additional body link names that collision checker ignore
         when checking collisions between the grabbed body and the body.
         \return true if successful and body is grabbed.
-    */
+     */
     virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames);
 
     /** \brief Grab a body with the specified link.
