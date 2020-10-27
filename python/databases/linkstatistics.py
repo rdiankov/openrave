@@ -236,8 +236,8 @@ class LinkStatisticsModel(DatabaseGenerator):
             for childjoint in childjoints:
                 if childjoint.GetJointIndex() in jointspheres:
                     childpos, childradius = jointspheres[childjoint.GetJointIndex()]
-                    minpos = numpy.minimum(minpos, childpos - sphereradius*ones([1,1,1]))
-                    maxpos = numpy.maximum(maxpos, childpos + sphereradius*ones([1,1,1]))
+                    minpos = numpy.minimum(minpos, childpos - childradius*ones([1,1,1]))
+                    maxpos = numpy.maximum(maxpos, childpos + childradius*ones([1,1,1]))
             
             newspherepos = 0.5*(minpos + maxpos)
             newsphereradius = linalg.norm(newspherepos - spherepos) + sphereradius
