@@ -551,12 +551,12 @@ IkParameterization RobotBase::Manipulator::ConvertIkParameterization(const IkPar
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: Lookat3D type setting goal a distance of 1 from the origin.\n");
         Transform t = sourceikp.GetTransform6D();
         Vector vdir = t.rotate(_info._vdirection);
-        if(std::abs(vdir.dot(vdir)) > 1e-12){
-            if(std::abs(vdir.x) > 1e-12) {
+        if(std::abs(vdir.dot(vdir)) > g_fEpsilon){
+            if(std::abs(vdir.x) > g_fEpsilon) {
                 t.trans.x += 1/vdir.x;
-            } else if(std::abs(vdir.y) > 1e-12) {
+            } else if(std::abs(vdir.y) > g_fEpsilon) {
                 t.trans.y += 1/vdir.y;
-            } else if(std::abs(vdir.z) > 1e-12) {
+            } else if(std::abs(vdir.z) > g_fEpsilon) {
                 t.trans.z += 1/vdir.z;
             }
         }
