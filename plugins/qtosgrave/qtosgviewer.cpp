@@ -2106,7 +2106,9 @@ void QtOSGViewer::_UpdateEnvironment()
 
         // have to update model after messages since it can lock the environment
         UpdateFromModel();
-        _UpdateViewport();
+        if (_posgWidget->isVisible()) {
+            _UpdateViewport();
+        }
     }
 }
 

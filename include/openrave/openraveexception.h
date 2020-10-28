@@ -38,6 +38,7 @@ enum OpenRAVEErrorCode {
     ORE_NotInitialized=9, ///< when object is used without it getting fully initialized
     ORE_InvalidState=10, ///< the state of the object is not consistent with its parameters, or cannot be used. This is usually due to a programming error where a vector is not the correct length, etc.
     ORE_Timeout=11, ///< process timed out
+    ORE_InvalidURI=12, ///< uri in input scene file is invalid, causing scene loading failures
 };
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.

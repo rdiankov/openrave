@@ -280,9 +280,6 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
 
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
-    if( _id.empty() ) {
-        _id = _name;
-    }
 
     orjson::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
     orjson::LoadJsonValueByKey(value, "anchors", _vanchor);
@@ -2013,8 +2010,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     }
 
     for(int itype = 1; itype < 3; ++itype) {
-        if(itype == 2 && pmimic->_equations[itype].empty()) {
-            // ignore empty mimic_accel
+        if(itype != 0 && pmimic->_equations[itype].empty()) {
             continue;
         }
 
@@ -2186,7 +2182,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
                 }
             }
         }
-        else {
+        else if (!dependedjoint->IsStatic()) {
             // depended joint is active
             std::pair<Mimic::DOFFormat, int> key = {thisdofformat, jointindex};
             ///< dz/dx += ∂z/∂x, as z may depend on others who depend on x
