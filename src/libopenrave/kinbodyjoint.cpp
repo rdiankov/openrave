@@ -2010,8 +2010,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     }
 
     for(int itype = 1; itype < 3; ++itype) {
-        if(itype == 2 && pmimic->_equations[itype].empty()) {
-            // ignore empty mimic_accel
+        if(itype != 0 && pmimic->_equations[itype].empty()) {
             continue;
         }
 
