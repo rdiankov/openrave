@@ -326,7 +326,13 @@ public:
             }
             return SensorGeometry::operator==(other);
         }
+
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override;
+        bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
+        bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
     };
+    typedef boost::shared_ptr<Force6DGeomData> Force6DGeomDataPtr;
+    typedef boost::shared_ptr<Force6DGeomData const> Force6DGeomDataConstPtr;
     class OPENRAVE_API IMUGeomData : public SensorGeometry
     {
 public:

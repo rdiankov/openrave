@@ -765,6 +765,9 @@ public:
                     }
                 }
             }
+            else if( (*itsensor)->Supports(SensorBase::ST_Force6D) ) {
+                SensorBase::Force6DGeomDataConstPtr pforcegeom = boost::static_pointer_cast<SensorBase::Force6DGeomData const>((*itsensor)->GetSensorGeometry(SensorBase::ST_Force6D));
+            }
         }
 
         RAVELOG_VERBOSE("collada read time %fs\n",(utils::GetNanoPerformanceTime()-starttime)*1e-9);

@@ -2606,6 +2606,23 @@ bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, 
     return true;
 }
 
+bool SensorBase::Force6DGeomData::SerializeXML(BaseXMLWriterPtr writer, int options) const
+{
+    SensorGeometry::SerializeXML(writer, options);
+    return true;
+}
+
+bool SensorBase::Force6DGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
+    return true;
+}
+
+bool SensorBase::Force6DGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
+    return true;
+}
 
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
