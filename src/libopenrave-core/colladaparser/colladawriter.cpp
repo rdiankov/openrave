@@ -2046,6 +2046,51 @@ private:
                 }
                 break;
             }
+            case GT_CalibrationBoard: {
+                daeElementRef pcalibrationboard = ptec->add("calibration_board");
+                ss << geom->GetBoxExtents().x << " " << geom->GetBoxExtents().y << " " << geom->GetBoxExtents().z;
+                pcalibrationboard->add("half_extents")->setCharData(ss.str());
+
+                daeElementRef pparams = pcalibrationboard->add("parameters");
+                std::vector<KinBody::GeometryInfo::CalibrationBoardParameters> vParamsInfo = geom->GetInfo()._calibrationBoardParameters;
+                if (vParamsInfo.size() == 0) {
+                    vParamsInfo.push_back(KinBody::GeometryInfo::CalibrationBoardParameters());
+                }
+                const KinBody::GeometryInfo::CalibrationBoardParameters& paramsInfo = vParamsInfo[0];
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.numDotsX;
+                pparams->add("num_dots_x")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.numDotsX;
+                pparams->add("num_dots_y")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotsDistanceX;
+                pparams->add("dots_distance_x")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotsDistanceY;
+                pparams->add("dots_distance_y")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotColor.x << " " << paramsInfo.dotColor.y << " " << paramsInfo.dotColor.z << " " << paramsInfo.dotColor.w;
+                pparams->add("dot_color")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.patternName;
+                pparams->add("pattern_name")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotDiameterDistanceRatio;
+                pparams->add("dot_diameter_distance_ratio")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.bigDotDiameterDistanceRatio;
+                pparams->add("big_dot_diameter_distance_ratio")->setCharData(ss.str());
+                break;
+            }
             case GT_Sphere:
                 ptec->add("sphere")->add("radius")->setCharData(ss.str());
                 break;

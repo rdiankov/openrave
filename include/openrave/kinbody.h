@@ -44,6 +44,7 @@ enum GeometryType {
     GT_TriMesh = 4,
     GT_Container=5, ///< a container shaped geometry that has inner and outer extents. container opens on +Z. The origin is at the bottom of the base.
     GT_Cage=6, ///< a container shaped geometry with removable side walls. The side walls can be on any of the four sides. The origin is at the bottom of the base. The inner volume of the cage is measured from the base to the highest wall.
+    GT_CalibrationBoard=7, ///< a box shaped geometry with grid of cylindrical dots of two sizes. The dots are always on the +z side of the box and are oriented towards z-axis.
 };
 
 enum DynamicsConstraintsType {
@@ -203,7 +204,8 @@ public:
                    && _vCollisionScale == other._vCollisionScale
                    && _fTransparency == other._fTransparency
                    && _bVisible == other._bVisible
-                   && _bModifiable == other._bModifiable;
+                   && _bModifiable == other._bModifiable
+                   && _calibrationBoardParameters == other._calibrationBoardParameters;
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
@@ -336,6 +338,39 @@ public:
         float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
+
+        struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
+            CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
+            } ///< constructor
+            int numDotsX; ///< number of dots in x direction, minimum 3
+            int numDotsY; ///< number of dots in y direction, minimum 3
+            dReal dotsDistanceX; ///< distance between center of dots in x direction
+            dReal dotsDistanceY; ///< distance between center of dots in y direction
+            RaveVector<float> dotColor; ///< color of dot mesh, which can differ from the color of the board mesh
+            std::string patternName; ///< string that determines pattern of big and normal dots
+                                     /// currently, the only supported type is "threeBigDotsDotGrid"
+                                     /// any unsupported pattern will generate a full grid of normal dots
+            dReal dotDiameterDistanceRatio; ///< dot diameter divided by minimum of dot distances x and y
+            dReal bigDotDiameterDistanceRatio; ///< big dot diameter divided by minimum of dot distances x and y
+            int Compare(const CalibrationBoardParameters& other, dReal fEpsilon) const;
+            bool operator==(const CalibrationBoardParameters& other) const {
+                return numDotsX == other.numDotsX
+                       && numDotsY == other.numDotsY
+                       && dotsDistanceX == other.dotsDistanceX
+                       && dotsDistanceY == other.dotsDistanceY
+                       && dotColor == other.dotColor
+                       && patternName == other.patternName
+                       && dotDiameterDistanceRatio == other.dotDiameterDistanceRatio
+                       && bigDotDiameterDistanceRatio == other.bigDotDiameterDistanceRatio;
+            }
+            bool operator!=(const CalibrationBoardParameters& other) const {
+                return !operator==(other);
+            }
+        };
+        std::vector<CalibrationBoardParameters> _calibrationBoardParameters;
+
+        /// \brief Generates the calibration board's dot grid mesh based on calibration board settings
+        void GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation=1) const;
 
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
@@ -583,6 +618,68 @@ public:
 
             /// \brief sets the name of the geometry
             virtual void SetName(const std::string& name);
+
+            /// \brief generates the dot mesh of a calibration board
+            inline void GetCalibrationBoardDotMesh(TriMesh& tri) {
+                _info.GenerateCalibrationBoardDotMesh(tri);
+            }
+            /// \brief returns the color of the calibration board's dot mesh
+            inline RaveVector<float> GetCalibrationBoardDotColor() const {
+                if (_info._calibrationBoardParameters.size() != 0) {
+                    return _info._calibrationBoardParameters[0].dotColor;
+                }
+                return Vector(0, 0, 0);
+            }
+            /// \brief returns x dimension (in dots) of the calibration board dot grid
+            inline int GetCalibrationBoardNumDotsX() const {
+                if (_info._calibrationBoardParameters.size() != 0) {
+                    return _info._calibrationBoardParameters[0].numDotsX;
+                }
+                return 0;
+            }
+            /// \brief returns y dimension (in dots) of the calibration board dot grid
+            inline int GetCalibrationBoardNumDotsY() const {
+                if (_info._calibrationBoardParameters.size() != 0) {
+                    return _info._calibrationBoardParameters[0].numDotsY;
+                }
+                return 0;
+            }
+            /// \brief returns x dot distance of the calibration board dot grid
+            inline dReal GetCalibrationBoardDotsDistanceX() const {
+                if (_info._calibrationBoardParameters.size() != 0) {
+                    return _info._calibrationBoardParameters[0].dotsDistanceX;
+                }
+                return 0;
+            }
+            /// \brief returns y dot distance of the calibration board dot grid
+            inline dReal GetCalibrationBoardDotsDistanceY() const {
+                if (_info._calibrationBoardParameters.size() != 0) {
+                    return _info._calibrationBoardParameters[0].dotsDistanceY;
+                }
+                return 0;
+            }
+
+            /// \brief returns pattern name of the calibration board dot grid
+            inline std::string GetCalibrationBoardPatternName() const {
+                if (_info._calibrationBoardParameters.size() != 0) {
+                    return _info._calibrationBoardParameters[0].patternName;
+                }
+                return std::string();
+            }
+            /// \brief returns x dot distance of the calibration board dot grid
+            inline dReal GetCalibrationBoardDotDiameterDistanceRatio() const {
+                if (_info._calibrationBoardParameters.size() != 0) {
+                    return _info._calibrationBoardParameters[0].dotDiameterDistanceRatio;
+                }
+                return 0;
+            }
+            /// \brief returns x dot distance of the calibration board dot grid
+            inline dReal GetCalibrationBoardBigDotDiameterDistanceRatio() const {
+                if (_info._calibrationBoardParameters.size() != 0) {
+                    return _info._calibrationBoardParameters[0].bigDotDiameterDistanceRatio;
+                }
+                return 0;
+            }
 
 protected:
             boost::weak_ptr<Link> _parent;
@@ -2552,7 +2649,7 @@ private:
      */
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
 
-    /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision.
+    /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
 
        \param[in] ilinkindex the index of the link to check
        \param[in] tlinktrans The transform of the link to check
@@ -2560,21 +2657,38 @@ private:
      */
     virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
 
-    /** \brief checks collision of a robot link with the surrounding environment using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision.
+    /** \brief checks collision of a robot link with the surrounding environment using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
 
         \param[in] ilinkindex the index of the link to check
         \param[out] report [optional] collision report
      */
     virtual bool CheckLinkCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
 
-    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
+    /** \brief checks collision of a robot link with a specified body using a new transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
+
+       \param[in] ilinkindex the index of the link to check
+       \param[in] tlinktrans The transform of the link to check
+       \param[in] pbody the body to check
+       \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks collision of a robot link with a specified body using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[in] pbody the body to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision. Rigidly attached links to the specified link are not checked for self-collision.
 
         \param[in] ilinkindex the index of the link to check
         \param[out] report [optional] collision report
      */
     virtual bool CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
 
-    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
+    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision. Rigidly attached links to the specified link are not checked for self-collision.
 
         \param[in] ilinkindex the index of the link to check
         \param[in] tlinktrans The transform of the link to check
@@ -2744,7 +2858,7 @@ private:
         \param[in] setBodyLinksToIgnore Additional body link names that collision checker ignore
         when checking collisions between the grabbed body and the body.
         \return true if successful and body is grabbed.
-    */
+     */
     virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames);
 
     /** \brief Grab a body with the specified link.

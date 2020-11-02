@@ -913,6 +913,18 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report
 
 bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report) const
 {
+    KinBodyConstPtr pdummynull;
+    return _CheckEndEffectorCollision(tEE, pdummynull, report);
+}
+
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report) const
+{
+    OPENRAVE_ASSERT_FORMAT(!!pbody, "the body is not specified for collision checking with manipulator %s:%s",RobotBasePtr(__probot)->GetName()%GetName(),ORE_InvalidArguments);
+    return _CheckEndEffectorCollision(tEE, pbody, report);
+}
+
+bool RobotBase::Manipulator::_CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report) const
+{
     RobotBasePtr probot(__probot);
     Transform toldEE = GetTransform();
     Transform tdelta = tEE*toldEE.inverse();
@@ -932,11 +944,16 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
     bool bincollision = false;
 
     FOREACHC(itlink,vattachedlinks) {
-        if( probot->CheckLinkCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
-            }
-            bincollision = true;
+        if( !!pbody ) {
+            // check with the specified body
+            bincollision |= probot->CheckLinkCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),pbody,report);
+        }
+        else {
+            // check with the environment
+            bincollision |= probot->CheckLinkCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),report);
+        }
+        if( bincollision && !bAllLinkCollisions) { // if checking all collisions, have to continue
+            return true;
         }
     }
     FOREACHC(itlink, probot->GetLinks()) {
@@ -960,11 +977,16 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
         for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 bIsAffected = true;
-                if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        return true;
-                    }
-                    bincollision = true;
+                if( !!pbody ) {
+                    // check with the specified body
+                    bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),pbody,report);
+                }
+                else {
+                    // check with the environment
+                    bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report);
+                }
+                if( bincollision && !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
                 }
                 break;
             }
@@ -972,11 +994,16 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
 
         if( !bIsAffected ) {
             // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
-            if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    return true;
-                }
-                bincollision = true;
+            if( !!pbody ) {
+                // check with the specified body
+                bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),pbody,report);
+            }
+            else {
+                // check with the environment
+                bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report);
+            }
+            if( bincollision && !bAllLinkCollisions) { // if checking all collisions, have to continue
+                return true;
             }
         }
     }
@@ -1227,8 +1254,20 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
 
 bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report, int numredundantsamples) const
 {
+    KinBodyConstPtr pdummynull; // pass null to check with the environment
+    return _CheckEndEffectorCollision(ikparam, pdummynull, report, numredundantsamples);
+}
+
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const
+{
+    OPENRAVE_ASSERT_FORMAT(!!pbody, "the body is not specified for collision checking with manipulator %s:%s",RobotBasePtr(__probot)->GetName()%GetName(),ORE_InvalidArguments);
+    return _CheckEndEffectorCollision(ikparam, pbody, report, numredundantsamples);
+}
+
+bool RobotBase::Manipulator::_CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const
+{
     if( ikparam.GetType() == IKP_Transform6D ) {
-        return CheckEndEffectorCollision(ikparam.GetTransform6D(),report);
+        return _CheckEndEffectorCollision(ikparam.GetTransform6D(),pbody,report);
     }
     RobotBasePtr probot = GetRobot();
     if( numredundantsamples > 0 ) {
@@ -1239,7 +1278,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
             Vector qdelta = quatFromAxisAngle(_info._vdirection, 2*M_PI/dReal(numredundantsamples));
             bool bNotInCollision = false;
             for(int i = 0; i < numredundantsamples; ++i) {
-                if( !CheckEndEffectorCollision(tStartEE,report) ) {
+                if( !_CheckEndEffectorCollision(tStartEE,pbody,report) ) {
                     // doesn't collide, but will need to verify that there actually exists an IK solution there...
                     // if we accidentally return here even there's no IK solution, then later processes could waste a lot of time looking for it.
                     bNotInCollision = true;
@@ -1295,37 +1334,6 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
         }
         return true;
     }
-
-//    // only care about the end effector position, so disable all time consuming options. still leave the custom options in case the user wants to call some custom stuff?
-//    // is it necessary to call with IKFO_IgnoreJointLimits knowing that the robot will never reach those solutions?
-//    std::vector< std::vector<dReal> > vsolutions;
-//    if( !pIkSolver->SolveAll(localgoal, IKFO_IgnoreSelfCollisions,vsolutions) ) {
-//        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find ik solution for type 0x%x"),ikparam.GetType(),ORE_InvalidArguments);
-//    }
-//    RobotStateSaver saver(probot);
-//    probot->SetActiveDOFs(GetArmIndices());
-//    // have to check all solutions since the 6D transform can change even though the ik parameterization doesn't
-//    std::list<Transform> listprevtransforms;
-//    FOREACH(itsolution,vsolutions) {
-//        probot->SetActiveDOFValues(*itsolution,false);
-//        Transform t = GetTransform();
-//        // check if previous transforms exist
-//        bool bhassimilar = false;
-//        FOREACH(ittrans,listprevtransforms) {
-//            if( TransformDistanceFast(t,*ittrans) < g_fEpsilonLinear*10 ) {
-//                bhassimilar = true;
-//                break;
-//            }
-//        }
-//        if( !bhassimilar ) {
-//            if( !CheckEndEffectorCollision(GetTransform(),report) ) {
-//                return false;
-//            }
-//            listprevtransforms.push_back(t);
-//        }
-//    }
-//
-//    return true;
 }
 
 bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterization& ikparam, CollisionReportPtr report, int numredundantsamples, bool bIgnoreManipulatorLinks) const

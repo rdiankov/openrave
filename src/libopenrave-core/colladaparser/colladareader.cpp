@@ -2462,6 +2462,11 @@ public:
             case GT_TriMesh:
                 itgeominfo->_meshcollision.ApplyTransform(TransformMatrix(tmnodegeom * toriginal).inverse() * TransformMatrix(toriginal));
                 break;
+            case GT_CalibrationBoard:
+                itgeominfo->_vGeomData *= vscale;
+                itgeominfo->_calibrationBoardParameters[0].dotsDistanceX *= vscale.x;
+                itgeominfo->_calibrationBoardParameters[0].dotsDistanceY *= vscale.y;
+                break;
             default:
                 RAVELOG_WARN(str(boost::format("unknown geometry type: 0x%x")%itgeominfo->_type));
             }
@@ -3139,6 +3144,89 @@ public:
                                     geominfo._vGeomData4 = vextents;
                                     geominfo._t = tlocalgeom;
                                     bfoundgeom = true;
+                                }
+                            }
+                        }
+                        else if( name == "calibration_board" ) {
+                            geominfo._calibrationBoardParameters.clear();
+                            // get locations of required attributes
+                            daeElementRef pparams = children[i]->getChild("parameters");
+                            if (!!pparams) {
+                                daeElementRef pnum_dots_x = pparams->getChild("num_dots_x");
+                                daeElementRef pnum_dots_y = pparams->getChild("num_dots_y");
+                                daeElementRef pdots_distance_x = pparams->getChild("dots_distance_x");
+                                daeElementRef pdots_distance_y = pparams->getChild("dots_distance_y");
+                                daeElementRef pdot_color = pparams->getChild("dot_color");
+                                daeElementRef ppattern_name = pparams->getChild("pattern_name");
+                                daeElementRef pdot_diameter_distance_ratio = pparams->getChild("dot_diameter_distance_ratio");
+                                daeElementRef pbig_dot_diameter_distance_ratio = pparams->getChild("big_dot_diameter_distance_ratio");
+                                daeElementRef phalf_extents = children[i]->getChild("half_extents");
+
+                                if (!!pnum_dots_x
+                                    && !!pnum_dots_y
+                                    && !!pdots_distance_x
+                                    && !!pdots_distance_y
+                                    && !!pdot_color
+                                    && !!ppattern_name
+                                    && !!pdot_diameter_distance_ratio
+                                    && !!pbig_dot_diameter_distance_ratio
+                                    && !!phalf_extents) {
+                                    // set up each stringstream to get each calibration board attribute
+                                    stringstream ss(pnum_dots_x->getCharData());
+                                    stringstream ss2(pnum_dots_y->getCharData());
+                                    int numDotsX, numDotsY;
+                                    ss >> numDotsX;
+                                    ss2 >> numDotsY;
+
+                                    stringstream ss3(pdots_distance_x->getCharData());
+                                    stringstream ss4(pdots_distance_y->getCharData());
+                                    dReal dotsDistanceX, dotsDistanceY;
+                                    ss3 >> dotsDistanceX;
+                                    ss4 >> dotsDistanceY;
+
+                                    stringstream ss5(pdot_color->getCharData());
+                                    Vector dotColor;
+                                    ss5 >> dotColor.x >> dotColor.y >> dotColor.z >> dotColor.w;
+
+                                    stringstream ss6(ppattern_name->getCharData());
+                                    std::string pattern;
+                                    ss6 >> pattern;
+
+                                    stringstream ss7(pdot_diameter_distance_ratio->getCharData());
+                                    stringstream ss8(pbig_dot_diameter_distance_ratio->getCharData());
+                                    dReal dotDiameterDistanceRatio, bigDotDiameterDistanceRatio;
+                                    ss7 >> dotDiameterDistanceRatio;
+                                    ss8 >> bigDotDiameterDistanceRatio;
+
+                                    stringstream ss9(phalf_extents->getCharData());
+                                    Vector vextents;
+                                    ss9 >> vextents.x >> vextents.y >> vextents.z;
+
+                                    if ((ss.eof() || !!ss)
+                                        && (ss2.eof() || !!ss2)
+                                        && (ss3.eof() || !!ss3)
+                                        && (ss4.eof() || !!ss4)
+                                        && (ss5.eof() || !!ss5)
+                                        && (ss6.eof() || !!ss6)
+                                        && (ss7.eof() || !!ss7)
+                                        && (ss8.eof() || !!ss8)
+                                        && (ss9.eof() || !!ss9)) {
+                                        // if every attribute required for calibration board is found,
+                                        // put all attributes into geometry info
+                                        geominfo._type = GT_CalibrationBoard;
+                                        geominfo._vGeomData = vextents;
+                                        geominfo._calibrationBoardParameters.push_back(KinBody::GeometryInfo::CalibrationBoardParameters());
+                                        geominfo._calibrationBoardParameters[0].numDotsX = numDotsX;
+                                        geominfo._calibrationBoardParameters[0].numDotsY = numDotsY;
+                                        geominfo._calibrationBoardParameters[0].dotsDistanceX = dotsDistanceX;
+                                        geominfo._calibrationBoardParameters[0].dotsDistanceY = dotsDistanceY;
+                                        geominfo._calibrationBoardParameters[0].dotColor = dotColor;
+                                        geominfo._calibrationBoardParameters[0].patternName = pattern;
+                                        geominfo._calibrationBoardParameters[0].dotDiameterDistanceRatio = dotDiameterDistanceRatio;
+                                        geominfo._calibrationBoardParameters[0].bigDotDiameterDistanceRatio = bigDotDiameterDistanceRatio;
+                                        geominfo._t = tlocalgeom;
+                                        bfoundgeom = true;
+                                    }
                                 }
                             }
                         }
