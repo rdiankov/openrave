@@ -105,6 +105,8 @@ public:
     virtual void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
 
     std::string hardware_id;
+    int polarity;
+    object correction_matrix;
 
 private:
     void _Update(OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const> pgeom);

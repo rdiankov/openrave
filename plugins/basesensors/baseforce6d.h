@@ -35,7 +35,7 @@ protected:
                 }
                 return PE_Ignore;
             }
-            static boost::array<string, 2> tags = { { "sensor", "hardware_id"}};
+            static boost::array<string, 4> tags = { { "sensor", "polarity", "correction_matrix", "hardware_id"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
@@ -53,6 +53,14 @@ protected:
             }
             else if( name == "sensor" ) {
                 return true;
+            }
+            else if( name == "polarity" ) {
+                ss >> _psensor->_pgeom->polarity;
+            }
+            else if( name == "correction_matrix" ) {
+                for (size_t i = 0; i < _psensor->_pgeom->correction_matrix.size(); ++i) {
+                    ss >> _psensor->_pgeom->correction_matrix[i];
+                }
             }
             else if( name == "hardware_id" ) {
                 ss >> _psensor->_pgeom->hardware_id;

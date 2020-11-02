@@ -196,9 +196,17 @@ SensorBase::SensorGeometryPtr PyJointEncoderGeomData::GetGeometry() {
     return geom;
 }
 
-PyForce6DGeomData::PyForce6DGeomData() {
+PyForce6DGeomData::PyForce6DGeomData() : polarity(1) {
+    const boost::array<dReal,36> correctionMatrix({{1,0,0, 0,0,0,
+                    0,1,0, 0,0,0,
+                    0,0,1, 0,0,0,
+                    0,0,0, 1,0,0,
+                    0,0,0, 0,1,0,
+                    0,0,0, 0,0,1}});
+    correction_matrix = toPyArray<dReal, 36>(correctionMatrix);
 }
 PyForce6DGeomData::PyForce6DGeomData(OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const> pgeom)
+    : PyForce6DGeomData()
 {
     _Update(pgeom);
 }
@@ -224,10 +232,17 @@ void PyForce6DGeomData::DeserializeJSON(object obj, dReal fUnitScale) {
 void PyForce6DGeomData::_Update(OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const> pgeom)
 {
     hardware_id = pgeom->hardware_id;
+    polarity = pgeom->polarity;
+    correction_matrix = toPyArray<dReal, 36>(pgeom->correction_matrix);
 }
 SensorBase::SensorGeometryPtr PyForce6DGeomData::GetGeometry() {
     OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData> geom(new SensorBase::Force6DGeomData());
     geom->hardware_id = hardware_id;
+    geom->polarity = polarity;
+    const size_t num = len(correction_matrix);
+    for (size_t i = 0; i < num; ++i) {
+        geom->correction_matrix[i] = py::extract<dReal>(correction_matrix[i]);
+    }
     return geom;
 }
 
@@ -1029,6 +1044,8 @@ void init_openravepy_sensor()
     class_<PyForce6DGeomData, OPENRAVE_SHARED_PTR<PyForce6DGeomData>, bases<PySensorGeometry> >("Force6DGeomData", DOXY_CLASS(SensorBase::Force6DGeomData))
 #endif
     .def_readwrite("hardware_id",&PyForce6DGeomData::hardware_id)
+    .def_readwrite("polarity",&PyForce6DGeomData::polarity)
+    .def_readwrite("correction_matrix",&PyForce6DGeomData::correction_matrix)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("SerializeJSON", &PyForce6DGeomData::SerializeJSON,
         "unitScale"_a = 1.0,
