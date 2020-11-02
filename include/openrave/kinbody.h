@@ -340,7 +340,8 @@ public:
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
 
         struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
-            CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {} ///< constructor
+            CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
+            } ///< constructor
             int numDotsX; ///< number of dots in x direction, minimum 3
             int numDotsY; ///< number of dots in y direction, minimum 3
             dReal dotsDistanceX; ///< distance between center of dots in x direction
@@ -369,7 +370,7 @@ public:
         std::vector<CalibrationBoardParameters> _calibrationBoardParameters;
 
         /// \brief Generates the calibration board's dot grid mesh based on calibration board settings
-        void GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation=1);
+        void GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation=1) const;
 
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
@@ -623,56 +624,57 @@ public:
                 _info.GenerateCalibrationBoardDotMesh(tri);
             }
             /// \brief returns the color of the calibration board's dot mesh
-            inline const RaveVector<float>& GetCalibrationBoardDotColor() const {
+            inline RaveVector<float> GetCalibrationBoardDotColor() const {
                 if (_info._calibrationBoardParameters.size() != 0) {
                     return _info._calibrationBoardParameters[0].dotColor;
                 }
                 return Vector(0, 0, 0);
             }
-            /// \brief returns x dimension (in dots) of the calibration board dot grid 
-            inline const int& GetCalibrationBoardNumDotsX() const {
+            /// \brief returns x dimension (in dots) of the calibration board dot grid
+            inline int GetCalibrationBoardNumDotsX() const {
                 if (_info._calibrationBoardParameters.size() != 0) {
                     return _info._calibrationBoardParameters[0].numDotsX;
                 }
                 return 0;
             }
-            /// \brief returns y dimension (in dots) of the calibration board dot grid 
-            inline const int& GetCalibrationBoardNumDotsY() const {
+            /// \brief returns y dimension (in dots) of the calibration board dot grid
+            inline int GetCalibrationBoardNumDotsY() const {
                 if (_info._calibrationBoardParameters.size() != 0) {
                     return _info._calibrationBoardParameters[0].numDotsY;
                 }
                 return 0;
             }
-            /// \brief returns x dot distance of the calibration board dot grid 
-            inline const dReal& GetCalibrationBoardDotsDistanceX() const {
+            /// \brief returns x dot distance of the calibration board dot grid
+            inline dReal GetCalibrationBoardDotsDistanceX() const {
                 if (_info._calibrationBoardParameters.size() != 0) {
                     return _info._calibrationBoardParameters[0].dotsDistanceX;
                 }
                 return 0;
             }
-            /// \brief returns y dot distance of the calibration board dot grid 
-            inline const dReal& GetCalibrationBoardDotsDistanceY() const {
+            /// \brief returns y dot distance of the calibration board dot grid
+            inline dReal GetCalibrationBoardDotsDistanceY() const {
                 if (_info._calibrationBoardParameters.size() != 0) {
                     return _info._calibrationBoardParameters[0].dotsDistanceY;
                 }
                 return 0;
             }
-            /// \brief returns pattern name of the calibration board dot grid 
-            inline const std::string& GetCalibrationBoardPatternName() const {
+
+            /// \brief returns pattern name of the calibration board dot grid
+            inline std::string GetCalibrationBoardPatternName() const {
                 if (_info._calibrationBoardParameters.size() != 0) {
                     return _info._calibrationBoardParameters[0].patternName;
                 }
-                return "";
+                return std::string();
             }
-            /// \brief returns x dot distance of the calibration board dot grid 
-            inline const dReal& GetCalibrationBoardDotDiameterDistanceRatio() const {
+            /// \brief returns x dot distance of the calibration board dot grid
+            inline dReal GetCalibrationBoardDotDiameterDistanceRatio() const {
                 if (_info._calibrationBoardParameters.size() != 0) {
                     return _info._calibrationBoardParameters[0].dotDiameterDistanceRatio;
                 }
                 return 0;
             }
-            /// \brief returns x dot distance of the calibration board dot grid 
-            inline const dReal& GetCalibrationBoardBigDotDiameterDistanceRatio() const {
+            /// \brief returns x dot distance of the calibration board dot grid
+            inline dReal GetCalibrationBoardBigDotDiameterDistanceRatio() const {
                 if (_info._calibrationBoardParameters.size() != 0) {
                     return _info._calibrationBoardParameters[0].bigDotDiameterDistanceRatio;
                 }
@@ -2856,7 +2858,7 @@ private:
         \param[in] setBodyLinksToIgnore Additional body link names that collision checker ignore
         when checking collisions between the grabbed body and the body.
         \return true if successful and body is grabbed.
-    */
+     */
     virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames);
 
     /** \brief Grab a body with the specified link.

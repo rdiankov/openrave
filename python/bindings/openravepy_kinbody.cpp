@@ -290,8 +290,8 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _bVisible = info._bVisible;
     _bModifiable = info._bModifiable;
     py::dict calibrationBoardParameters;
-    if (info._type == GT_CalibrationBoard) {  
-        KinBody::GeometryInfo::CalibrationBoardParameters parameters = info._calibrationBoardParameters.size() > 0 ? info._calibrationBoardParameters[0] : KinBody::GeometryInfo::CalibrationBoardParameters();
+    if (info._type == GT_CalibrationBoard && info._calibrationBoardParameters.size() > 0 ) {
+        const KinBody::GeometryInfo::CalibrationBoardParameters& parameters = info._calibrationBoardParameters[0];
         calibrationBoardParameters["numDotsX"] = parameters.numDotsX;
         calibrationBoardParameters["numDotsY"] = parameters.numDotsY;
         calibrationBoardParameters["dotsDistanceX"] = parameters.dotsDistanceX;
@@ -300,8 +300,8 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
         calibrationBoardParameters["patternName"] = ConvertStringToUnicode(parameters.patternName);
         calibrationBoardParameters["dotDiameterDistanceRatio"] = parameters.dotDiameterDistanceRatio;
         calibrationBoardParameters["bigDotDiameterDistanceRatio"] = parameters.bigDotDiameterDistanceRatio;
-        _calibrationBoardParameters = calibrationBoardParameters;
     }
+    _calibrationBoardParameters = calibrationBoardParameters;
 }
 
 object PyGeometryInfo::ComputeInnerEmptyVolume()
@@ -378,15 +378,31 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     info._bVisible = _bVisible;
     info._bModifiable = _bModifiable;
     if (info._type == GT_CalibrationBoard) {
-        info._calibrationBoardParameters.push_back(KinBody::GeometryInfo::CalibrationBoardParameters());
-        info._calibrationBoardParameters[0].numDotsX = py::extract<int>(_calibrationBoardParameters["numDotsX"]);
-        info._calibrationBoardParameters[0].numDotsY = py::extract<int>(_calibrationBoardParameters["numDotsY"]);
-        info._calibrationBoardParameters[0].dotsDistanceX = py::extract<float>(_calibrationBoardParameters["dotsDistanceX"]);
-        info._calibrationBoardParameters[0].dotsDistanceY = py::extract<float>(_calibrationBoardParameters["dotsDistanceY"]);
-        info._calibrationBoardParameters[0].dotColor = ExtractVector34<dReal>(_calibrationBoardParameters["dotColor"],0);
-        info._calibrationBoardParameters[0].patternName = py::extract<std::string>(_calibrationBoardParameters["patternName"]);
-        info._calibrationBoardParameters[0].dotDiameterDistanceRatio = py::extract<float>(_calibrationBoardParameters["dotDiameterDistanceRatio"]);
-        info._calibrationBoardParameters[0].bigDotDiameterDistanceRatio = py::extract<float>(_calibrationBoardParameters["bigDotDiameterDistanceRatio"]);
+        info._calibrationBoardParameters.resize(1);
+        if( _calibrationBoardParameters.has_key("numDotsX") ) {
+            info._calibrationBoardParameters[0].numDotsX = py::extract<int>(_calibrationBoardParameters["numDotsX"]);
+        }
+        if( _calibrationBoardParameters.has_key("numDotsY") ) {
+            info._calibrationBoardParameters[0].numDotsY = py::extract<int>(_calibrationBoardParameters["numDotsY"]);
+        }
+        if( _calibrationBoardParameters.has_key("dotsDistanceX") ) {
+            info._calibrationBoardParameters[0].dotsDistanceX = py::extract<float>(_calibrationBoardParameters["dotsDistanceX"]);
+        }
+        if( _calibrationBoardParameters.has_key("dotsDistanceY") ) {
+            info._calibrationBoardParameters[0].dotsDistanceY = py::extract<float>(_calibrationBoardParameters["dotsDistanceY"]);
+        }
+        if( _calibrationBoardParameters.has_key("dotColor") ) {
+            info._calibrationBoardParameters[0].dotColor = ExtractVector34<dReal>(_calibrationBoardParameters["dotColor"],0);
+        }
+        if( _calibrationBoardParameters.has_key("patternName") ) {
+            info._calibrationBoardParameters[0].patternName = py::extract<std::string>(_calibrationBoardParameters["patternName"]);
+        }
+        if( _calibrationBoardParameters.has_key("dotDiameterDistanceRatio") ) {
+            info._calibrationBoardParameters[0].dotDiameterDistanceRatio = py::extract<float>(_calibrationBoardParameters["dotDiameterDistanceRatio"]);
+        }
+        if( _calibrationBoardParameters.has_key("bigDotDiameterDistanceRatio") ) {
+            info._calibrationBoardParameters[0].bigDotDiameterDistanceRatio = py::extract<float>(_calibrationBoardParameters["bigDotDiameterDistanceRatio"]);
+        }
     }
     return pinfo;
 }
@@ -4030,7 +4046,7 @@ public:
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)py::extract<int>(state[5]);
-        
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         bool bIsState6Str = IS_PYTHONOBJECT_STRING(state[6]);
 #else

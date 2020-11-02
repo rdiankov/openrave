@@ -187,19 +187,22 @@ void AppendCylinderTriangulation(const Vector& pos, const dReal& rad, const dRea
     }
 }
 
-void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation) {
+void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation) const
+{
+    // reset dots mesh
+    tri.indices.clear();
+    tri.vertices.clear();
     if (_type != GT_CalibrationBoard) {
         RAVELOG_WARN_FORMAT("Cannot generate calibration board dot grid for geometry of type %d.", _type);
         return;
     }
-    Vector boardEx = _vGeomData;
     if (_calibrationBoardParameters.size() == 0) {
-        _calibrationBoardParameters.push_back(CalibrationBoardParameters());
+        RAVELOG_WARN("Cannot generate calibration board dot grid since _calibrationBoardParameters are empty.\n");
+        return;
     }
-    CalibrationBoardParameters parameters = _calibrationBoardParameters[0];
-    // reset dots mesh
-    tri.indices.clear();
-    tri.vertices.clear();
+    Vector boardEx = _vGeomData;
+    const CalibrationBoardParameters& parameters = _calibrationBoardParameters[0];
+
     // create mesh for dot grid
     dReal nDotsX = parameters.numDotsX;
     dReal nDotsY = parameters.numDotsY;
@@ -222,17 +225,18 @@ void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(TriMesh& tri, float 
                     dReal cColPos = std::ceil(colPos);
                     // use big dot radius if dot pos coords is at (0, 0), (0, 1), or (1, 0) when ceiling'd
                     // otherwise, use normal dot radius
-                    if ((cRowPos == 0 && (cColPos == 0 || cColPos == 1))
-                        || (cRowPos == 1 && cColPos == 0)) {
+                    if ((cRowPos == 0 && (cColPos == 0 || cColPos == 1)) || (cRowPos == 1 && cColPos == 0)) {
                         selectedRadius = bigDotRadius;
-                    } else {
+                    }
+                    else {
                         selectedRadius = dotRadius;
                     }
                 }
                 AppendCylinderTriangulation(dotPos, selectedRadius, dotLength, numverts, tri);
             }
         }
-    } else {
+    }
+    else {
         RAVELOG_WARN_FORMAT("Cannot generate calibration board dot grid of size %sx%s - minimum size is 3 x 3.", parameters.numDotsX%parameters.numDotsY);
     }
 }
@@ -258,10 +262,10 @@ int KinBody::GeometryInfo::CalibrationBoardParameters::Compare(const Calibration
     if (numDotsY != other.numDotsY) {
         return 2;
     }
-    if (dotsDistanceX - other.dotsDistanceX > fEpsilon) {
+    if ( RaveFabs(dotsDistanceX - other.dotsDistanceX) > fEpsilon) {
         return 3;
     }
-    if (dotsDistanceY - other.dotsDistanceY > fEpsilon) {
+    if ( RaveFabs(dotsDistanceY - other.dotsDistanceY) > fEpsilon) {
         return 4;
     }
     if (!IsZeroWithEpsilon3(dotColor - other.dotColor, fEpsilon)) {
@@ -270,10 +274,10 @@ int KinBody::GeometryInfo::CalibrationBoardParameters::Compare(const Calibration
     if (patternName != other.patternName) {
         return 6;
     }
-    if (dotDiameterDistanceRatio - other.dotDiameterDistanceRatio > fEpsilon) {
+    if (RaveFabs(dotDiameterDistanceRatio - other.dotDiameterDistanceRatio) > fEpsilon) {
         return 7;
     }
-    if (bigDotDiameterDistanceRatio - other.bigDotDiameterDistanceRatio > fEpsilon) {
+    if (RaveFabs(bigDotDiameterDistanceRatio - other.bigDotDiameterDistanceRatio) > fEpsilon) {
         return 8;
     }
     return 0;
@@ -674,7 +678,7 @@ inline void LoadJsonValue(const rapidjson::Value& rValue, KinBody::GeometryInfo:
             int sideWallType = (int)KinBody::GeometryInfo::SideWallType::SWT_NX;
             orjson::LoadJsonValueByKey(rValue, "type", sideWallType);
             if (!(sideWallType >= KinBody::GeometryInfo::SideWallType::SWT_First
-                && sideWallType <= KinBody::GeometryInfo::SideWallType::SWT_Last)) {
+                  && sideWallType <= KinBody::GeometryInfo::SideWallType::SWT_Last)) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized sidewall type enum range %d for loading from json"), sideWallType, ORE_InvalidArguments);
             }
             sideWall.type = (KinBody::GeometryInfo::SideWallType)sideWallType;
@@ -709,7 +713,7 @@ inline void LoadJsonValue(const rapidjson::Value& rValue, KinBody::GeometryInfo:
     }
     const char *calibrationBoardParamNames[] = {
         "numDotsX", "numDotsY", "dotsDistanceX",
-        "dotsDistanceY", "dotColor", "patternName", 
+        "dotsDistanceY", "dotColor", "patternName",
         "dotDiameterDistanceRatio", "bigDotDiameterDistanceRatio"
     };
     for (int idx = 0; idx < 8; idx++) {
@@ -975,7 +979,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vGeomData) {
                 _vGeomData = vGeomDataTemp;
-                _meshcollision.Clear();            
+                _meshcollision.Clear();
             }
         }
         break;
@@ -1105,7 +1109,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vGeomData) {
                 _vGeomData = vGeomDataTemp;
-                _meshcollision.Clear();            
+                _meshcollision.Clear();
             }
         }
         if (_calibrationBoardParameters.size() == 0) {
