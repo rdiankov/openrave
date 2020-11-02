@@ -252,6 +252,13 @@ public:
         /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
+
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
         ///< for sphere it is radius
@@ -396,6 +403,13 @@ public:
         /// \brief converts the unit scale of the link properties and geometries
         void ConvertUnitScale(dReal fUnitScale);
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
+
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
@@ -522,6 +536,9 @@ public:
             }
             inline const RaveVector<float>& GetAmbientColor() const {
                 return _info._vAmbientColor;
+            }
+            inline const std::string& GetId() const {
+                return _info._id;
             }
             inline const std::string& GetName() const {
                 return _info._name;
@@ -686,6 +703,9 @@ protected:
         typedef boost::shared_ptr<Geometry const> GeometryConstPtr;
         typedef Geometry GEOMPROPERTIES RAVE_DEPRECATED;
 
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
         inline const std::string& GetName() const {
             return _info._name;
         }
@@ -1003,6 +1023,7 @@ private:
 #endif
 #endif
         friend class ColladaReader;
+        friend class ColladaWriter;
         friend class KinBody;
         friend class RobotBase;
     };
@@ -1158,6 +1179,13 @@ public:
 
         int GetDOF() const;
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
+
         JointType _type = JointNone; /// The joint type
 
         std::string _id;   // joint unique id
@@ -1242,6 +1270,9 @@ public:
         Joint(KinBodyPtr parent, KinBody::JointType type = KinBody::JointNone);
         virtual ~Joint();
 
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
         /// \brief The unique name of the joint
         inline const std::string& GetName() const {
             return _info._name;
@@ -2616,7 +2647,7 @@ private:
      */
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
 
-    /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision.
+    /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
 
        \param[in] ilinkindex the index of the link to check
        \param[in] tlinktrans The transform of the link to check
@@ -2624,21 +2655,38 @@ private:
      */
     virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
 
-    /** \brief checks collision of a robot link with the surrounding environment using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision.
+    /** \brief checks collision of a robot link with the surrounding environment using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
 
         \param[in] ilinkindex the index of the link to check
         \param[out] report [optional] collision report
      */
     virtual bool CheckLinkCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
 
-    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
+    /** \brief checks collision of a robot link with a specified body using a new transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
+
+       \param[in] ilinkindex the index of the link to check
+       \param[in] tlinktrans The transform of the link to check
+       \param[in] pbody the body to check
+       \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks collision of a robot link with a specified body using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[in] pbody the body to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision. Rigidly attached links to the specified link are not checked for self-collision.
 
         \param[in] ilinkindex the index of the link to check
         \param[out] report [optional] collision report
      */
     virtual bool CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
 
-    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
+    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision. Rigidly attached links to the specified link are not checked for self-collision.
 
         \param[in] ilinkindex the index of the link to check
         \param[in] tlinktrans The transform of the link to check
@@ -2985,9 +3033,6 @@ protected:
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized
     virtual void _InitAndAddJoint(JointPtr pjoint);
-
-    /// \brief goes through all the link/joint ids and makes sure they are unique
-    virtual void _ResolveInfoIds();
 
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints

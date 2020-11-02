@@ -1370,16 +1370,15 @@ bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<fl
     return false;
 }
 
-void QtOSGViewer::_SetCameraTransform()
+void QtOSGViewer::_SetCameraTransform(const RaveTransform<float>& transform)
 {
-    _posgWidget->GetDefaultCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
+    _posgWidget->GetDefaultCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(transform));
 }
 
 void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
 {
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
-    _Tcamera = trans*trot;
-
+    _SetCameraTransform(trans*trot);
     _SetCameraDistanceToFocus(focalDistance);
 }
 
@@ -1433,7 +1432,6 @@ bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& 
 void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
 {
     _posgWidget->SetCameraDistanceToFocus(focalDistance);
-    _SetCameraTransform();
 }
 
 RaveTransform<float> QtOSGViewer::GetCameraTransform() const
@@ -1441,7 +1439,7 @@ RaveTransform<float> QtOSGViewer::GetCameraTransform() const
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
     // have to flip Z axis
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
-    return _Tcamera*trot;
+    return GetRaveTransformFromMatrix(_posgWidget->GetCurrentCameraManipulator()->getMatrix()) * trot;
 }
 
 float QtOSGViewer::GetCameraDistanceToFocus() const
@@ -2108,7 +2106,9 @@ void QtOSGViewer::_UpdateEnvironment()
 
         // have to update model after messages since it can lock the environment
         UpdateFromModel();
-        _UpdateViewport();
+        if (_posgWidget->isVisible()) {
+            _UpdateViewport();
+        }
     }
 }
 
