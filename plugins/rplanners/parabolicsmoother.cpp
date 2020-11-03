@@ -2579,7 +2579,7 @@ protected:
                 }
                 dReal diff = dummyEndTime - endTime;
                 vVisitedDiscretization.clear(); // have to clear so that can recreate the visited nodes
-#ifdef SMOOTHER_PROGRESS_DEBUG
+#ifdef SMOOTHER1_PROGRESS_DEBUG
                 RAVELOG_DEBUG_FORMAT("env=%d: shortcut iter=%d/%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numIters%numslowdowns%dummyEndTime%endTime%diff);
 #endif
 
