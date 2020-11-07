@@ -197,7 +197,7 @@ void RobotBase::AttachedSensor::_ComputeInternalInformation()
         throw OPENRAVE_EXCEPTION_FORMAT(_("Attached sensor name \"%s\" is not valid"), GetName(), ORE_Failed);
     }
 
-    RobotBasePtr probot(__probot);
+    RobotBasePtr probot(_probot);
     pattachedlink = probot->GetLink(_info._linkname);
 }
 
