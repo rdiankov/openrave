@@ -425,7 +425,7 @@ public:
             report->Reset(_options);
         }
 
-        if( !plink1->IsEnabled() || !plink2->IsEnabled() ) {
+        if( !_IsForceCheckCollision() && (!plink1->IsEnabled() || !plink2->IsEnabled()) ) {
             return false;
         }
 
@@ -476,7 +476,7 @@ public:
             report->Reset(_options);
         }
 
-        if( !plink->IsEnabled() ) {
+        if( !_IsForceCheckCollision() && !plink->IsEnabled() ) {
             return false;
         }
 
@@ -529,7 +529,7 @@ public:
             report->Reset(_options);
         }
 
-        if( !plink->IsEnabled() || find(vlinkexcluded.begin(), vlinkexcluded.end(), plink) != vlinkexcluded.end() ) {
+        if( !_IsForceCheckCollision() && ( !plink->IsEnabled() || find(vlinkexcluded.begin(), vlinkexcluded.end(), plink) != vlinkexcluded.end() ) ) {
             return false;
         }
 
@@ -939,7 +939,7 @@ private:
         LinkConstPtr& plink2 = o2info.second;
 
         if( !!plink1 ) {
-            if( !plink1->IsEnabled() ) {
+            if( !_IsForceCheckCollision() && !plink1->IsEnabled() ) {
                 return false;
             }
             if( IsIn<KinBodyConstPtr>(plink1->GetParent(), pcb->_vbodyexcluded) || IsIn<LinkConstPtr>(plink1, pcb->_vlinkexcluded) ) {
@@ -948,7 +948,7 @@ private:
         }
 
         if( !!plink2 ) {
-            if( !plink2->IsEnabled() ) {
+            if( !_IsForceCheckCollision() && !plink2->IsEnabled() ) {
                 return false;
             }
             if( IsIn<KinBodyConstPtr>(plink2->GetParent(), pcb->_vbodyexcluded) || IsIn<LinkConstPtr>(plink2, pcb->_vlinkexcluded) ) {
@@ -1320,7 +1320,7 @@ private:
     void _PrintCollisionManagerInstanceBL(const KinBody& body, FCLCollisionManagerInstance& manager, const KinBody::Link& link)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s with link %s:%s (enabled=%d) ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName()%link.GetParent()->GetName()%link.GetName()%link.IsEnabled());
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s with link %s:%s (enabled=%d), options=%d ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName()%link.GetParent()->GetName()%link.GetName()%link.IsEnabled()%_options);
             _bParentlessCollisionObject = false;
         }
     }
@@ -1336,7 +1336,7 @@ private:
     void _PrintCollisionManagerInstance(const KinBody& body1, FCLCollisionManagerInstance& manager1, const KinBody& body2, FCLCollisionManagerInstance& manager2)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, self=%d, body1 %s (enabled=%d) body2 %s (enabled=%d) ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body1.GetName()%body1.IsEnabled()%body2.GetName()%body2.IsEnabled());
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, body1 %s (enabled=%d) body2 %s (enabled=%d), options=%d ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body1.GetName()%body1.IsEnabled()%body2.GetName()%body2.IsEnabled()%_options);
             _bParentlessCollisionObject = false;
         }
     }
@@ -1344,13 +1344,16 @@ private:
     void _PrintCollisionManagerInstanceLE(const KinBody::Link& link, FCLCollisionManagerInstance& envManager)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, self=%d, link %s:%s (enabled=%d) ", GetEnv()->GetId()%_bIsSelfCollisionChecker%link.GetParent()->GetName()%link.GetName()%link.IsEnabled());
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, link %s:%s (enabled=%d), options=%d", GetEnv()->GetId()%_bIsSelfCollisionChecker%link.GetParent()->GetName()%link.GetName()%link.IsEnabled()%_options);
             _bParentlessCollisionObject = false;
         }
     }
 
     inline bool _IsEnabled(const KinBody& body)
     {
+        if ( _IsForceCheckCollision() ) { // if CO_ForceCheckCollision is set, link is considered as Enabled.
+            return true;
+        }
         if( body.IsEnabled() ) {
             return true;
         }
@@ -1364,6 +1367,13 @@ private:
         }
 
         return false;
+    }
+
+    /// \brief check CO_ForceCheckCollision flag.
+    /// \return if true, CO_ForceCheckCollision flag is set
+    inline bool _IsForceCheckCollision () const
+    {
+        return ( ( _options & OpenRAVE::CO_ForceCheckCollision ) == OpenRAVE::CO_ForceCheckCollision );
     }
     
     int _options;
