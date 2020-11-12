@@ -2585,7 +2585,7 @@ bool SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjso
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
     orjson::SetJsonValueByKey(value, "sensorReference", sensor_reference, allocator);
     orjson::SetJsonValueByKey(value, "targetRegion", target_region, allocator);
-    orjson::SetJsonValueByKey(value, "intrinstics", intrinsics, allocator);
+    orjson::SetJsonValueByKey(value, "intrinsics", intrinsics, allocator);
     orjson::SetJsonValueByKey(value, "width", width, allocator);
     orjson::SetJsonValueByKey(value, "height", height, allocator);
     orjson::SetJsonValueByKey(value, "measurementTime", measurement_time, allocator);
@@ -2598,7 +2598,7 @@ bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, 
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
     orjson::LoadJsonValueByKey(value, "sensorReference", sensor_reference);
     orjson::LoadJsonValueByKey(value, "targetRegion", target_region);
-    orjson::LoadJsonValueByKey(value, "intrinstics", intrinsics);
+    orjson::LoadJsonValueByKey(value, "intrinsics", intrinsics);
     orjson::LoadJsonValueByKey(value, "width", width);
     orjson::LoadJsonValueByKey(value, "height", height);
     orjson::LoadJsonValueByKey(value, "measurementTime", measurement_time);
