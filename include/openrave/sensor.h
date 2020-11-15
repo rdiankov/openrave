@@ -339,7 +339,7 @@ public:
         bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
 
         int polarity; ///< sensor's polarity. set +1 if load is attached to the side of sensor which sensor's spec explains. set -1 if load is attached to the opposite side.
-        boost::array<dReal,36> correction_matrix; ///< correction matrix. force -> torque order.
+        boost::array<dReal,36> correction_matrix; ///< correction matrix. force -> torque order. this matrix will be used to cancel crosstalk by multiplying to measured force/torque. f_without_crosstalk = correction_matrix * f_measured.
     };
     typedef boost::shared_ptr<Force6DGeomData> Force6DGeomDataPtr;
     typedef boost::shared_ptr<Force6DGeomData const> Force6DGeomDataConstPtr;
