@@ -73,6 +73,7 @@ public:
     void SolveBraking(Real amax);
     /// Solves for the ramp given max the exact time trying to use miminimum accel
     bool SolveFixedTime(Real amax,Real vmax,Real endTime);
+    bool SolveFixedTime2(Real amax, Real vmax, Real T); // simpler, neater
     /// solves for the ramp given fixed switch times and end time
     bool SolveFixedSwitchTime(Real amax,Real vmax);
     /// solves for the ramp given fixed tswitch1 and (ttotal-tswitch2). ttotal and tswitch2 will be solved for.
@@ -105,6 +106,7 @@ public:
     bool IsValid() const;
 
     void ToString(std::string& s) const;
+    std::string to_string() const;
     
     /// Input
     Real x0,dx0;
