@@ -852,25 +852,19 @@ bool ParabolicRamp1D::SolveFixedTime2(dReal amax, dReal vmax, dReal T) {
         return false;// The given T is too short for any movement to be made.
     }
 
-    const dReal s = x1 - x0;
-    const dReal dv = dx1 - dx0;
-    const dReal maxdv = amax * T;
+    const dReal s = x1 - x0, dv = dx1 - dx0, maxdv = amax * T;
     BOOST_ASSERT(maxdv >= 0);
     if(RaveFabs(dv) >= maxdv + EpsilonV) { return false; }
     if(RaveFabs(dv) >= maxdv) {
         // constant max acceleration; check s=(v0+v1)*T/2
         const dReal expecteddx = (dx0 + dx1) * T/2;
-        if(!FuzzyEquals(s, expecteddx, EpsilonX)) {
-            return false;
-        }
+        if(!FuzzyEquals(s, expecteddx, EpsilonX)) { return false; }
         // strict order of assignment here
         tswitch1 = tswitch2 = ttotal = T;
         a1 = (dv >= 0) ? amax : -amax;
         v = dx1;
         a2 = 0;
-        if (this->IsValid()) {
-            return true;
-        }
+        if (this->IsValid()) { return true; }
         RAVELOG_VERBOSE_FORMAT("Full accel/deccel case not valid: %s", this->to_string());
         return false;
     }
@@ -878,9 +872,7 @@ bool ParabolicRamp1D::SolveFixedTime2(dReal amax, dReal vmax, dReal T) {
     const dReal lb = 2*s + (-dx1-vmax) * T;
     const dReal ub = 2*s + (-dx1+vmax) * T;
     if(RaveFabs(dv) <= EpsilonV) {
-        if(ub <= -EpsilonX || lb >= EpsilonX) {
-            return false;
-        }
+        if(ub <= -EpsilonX || lb >= EpsilonX) { return false; }
         tswitch1 = tswitch2 = T/2; // no linear
         ttotal = T;
         v = 2*s/T - dx0; // need v before a1
@@ -895,9 +887,7 @@ bool ParabolicRamp1D::SolveFixedTime2(dReal amax, dReal vmax, dReal T) {
     const dReal sumv = dx0 + dx1;
     if(RaveFabs(sumv*T - 2*s) <= EpsilonX) { // constant accel
         dReal a = dv/T;
-        if(RaveFabs(a) >= amax + EpsilonA ) {
-            return false;
-        }
+        if(RaveFabs(a) >= amax + EpsilonA ) { return false; }
         a = (a > 0) ? amax : -amax;
         tswitch1 = tswitch2 = ttotal = T; // no linear
         a1 = a;
@@ -911,8 +901,7 @@ bool ParabolicRamp1D::SolveFixedTime2(dReal amax, dReal vmax, dReal T) {
     std::array<dReal, 2> t0s;
     int nt0s = mathextra::solvequad(C, D, E, t0s[0], t0s[1]);
     for(dReal t0 : t0s) {
-        if(!nt0s) { break; }
-        nt0s--;
+        if(!nt0s--) { break; }
         if(t0 <= -EpsilonT || t0 >= T+EpsilonT) { continue; }
         if(t0 < 0) {
             t0 = 0; // already safe
@@ -924,9 +913,7 @@ bool ParabolicRamp1D::SolveFixedTime2(dReal amax, dReal vmax, dReal T) {
         }
         a1 = A/t0 + B;
         a2 = A/(t0-T) + B;
-        if(std::max(RaveFabs(a1), RaveFabs(a2)) >= amax + EpsilonA ) {
-            return false; // only one t0 solution in [0,T]; can't have solution if amax is violated
-        }
+        if(std::max(RaveFabs(a1), RaveFabs(a2)) >= amax + EpsilonA ) { return false; } // only one t0 solution in [0,T]; can't have solution if amax is violated
         if(RaveFabs(a1) > amax) { a1 = (a1 > 0) ? amax : -amax; }
         if(RaveFabs(a2) > amax) { a2 = (a2 > 0) ? amax : -amax; }
 
@@ -944,24 +931,18 @@ bool ParabolicRamp1D::SolveFixedTime2(dReal amax, dReal vmax, dReal T) {
     // try PLP
     for(dReal v_ : {vmax, -vmax}) {
         dReal a = (-dx0*dx0-dx1*dx1+2*v_*(sumv-v_))/(2*(s-v_*T));
-        if(RaveFabs(a) >= amax + EpsilonA) {
-            continue;
-        }
+        if(RaveFabs(a) >= amax + EpsilonA) { continue; }
         if(RaveFabs(a) > amax) { a = (a>0) ? amax : -amax; }
         tswitch1 = (v_ - dx0) / a; // v = v0 + a * t0
         tswitch2 = T - (v_ - dx1) / a; // v1 = v + (-a) * (T - t1)
-        if(tswitch1 > tswitch2 || tswitch1 <= -EpsilonT || tswitch2 >= T + EpsilonT) {
-            continue;
-        }
+        if(tswitch1 > tswitch2 || tswitch1 <= -EpsilonT || tswitch2 >= T + EpsilonT) { continue; }
         if(tswitch1 < 0) { tswitch1 = 0; }
         if(tswitch2 > T) { tswitch2 = T; }
         ttotal = T;
         a1 = a;
         a2 = -a;
         v = v_;
-        if (this->IsValid()) {
-            return true;
-        }
+        if (this->IsValid()) { return true; }
         RAVELOG_VERBOSE_FORMAT("PLP case not valid: %s", this->to_string());
     }
     return false;
