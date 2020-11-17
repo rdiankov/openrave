@@ -886,9 +886,11 @@ bool ParabolicRamp1D::SolveFixedTime2(dReal amax, dReal vmax, dReal T) {
 
     const dReal sumv = dx0 + dx1;
     if(RaveFabs(sumv*T - 2*s) <= EpsilonX) { // constant accel
-        dReal a = dv/T;
-        if(RaveFabs(a) >= amax + EpsilonA ) { return false; }
-        a = (a > 0) ? amax : -amax;
+        dReal a = dv/T, absa = RaveFabs(a);
+        if(absa >= amax + EpsilonA ) { return false; }
+        if(absa > amax) {
+            a = (a > 0) ? amax : -amax;
+        }
         tswitch1 = tswitch2 = ttotal = T; // no linear
         a1 = a;
         v = dx1;
