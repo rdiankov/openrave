@@ -677,7 +677,7 @@ public:
 
 private:
         /// \brief compute internal information from user-set info
-        //virtual void _ComputeInternalInformation();
+        virtual void _ComputeInternalInformation();
 
         AttachedSensorInfo _info; ///< user specified data
 

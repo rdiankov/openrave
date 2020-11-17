@@ -2302,29 +2302,30 @@ protected:
                             _totalTimeCheckPathAllConstraints_SegmentFeasible2 = 0;
 #endif
 
-                            if (retcheck.retcode == 0) {
-                                // The final segment is now good.
-                                RAVELOG_VERBOSE_FORMAT("env=%d, the final SolveMinTime generated feasible segment, inserting it to outramps", GetEnv()->GetId());
-                                outramps.pop_back();
-                                outramps.insert(outramps.end(), outramps2.begin(), outramps2.end());
-                                // continue to inserting outramps to accumoutramps.
-                            }
-                            else if (retcheck.retcode == CFO_CheckTimeBasedConstraints) {
+                            if (retcheck.retcode == CFO_CheckTimeBasedConstraints) {
                                 nNumTimeBasedConstraintsFailed++;
                                 RAVELOG_WARN_FORMAT("env=%d, the final SolveMinTime generated infeasible segment, retcode = 0x%x", GetEnv()->GetId()%retcheck.retcode);
                                 // Stop trying for now since from experience slowing down the ramp further in this case will not result in a more optimal path. Change retcheck.retcode so that it goes to the next sample iteration instead of trying to slow down.
                                 retcheck.retcode = CFO_FinalValuesNotReached;
                                 break;
                             }
-                            else if (retcheck.bDifferentVelocity) {
-                                // Give up and continue to the next iteration.
-                                RAVELOG_VERBOSE_FORMAT("env=%d, after Check2, intermediate2 does not end at the desired velocity", GetEnv()->GetId());
-                                retcheck.retcode = CFO_FinalValuesNotReached;
+                            else if (retcheck.retcode != 0) {
+                                // The re-interpolated final segment failed from other constraints. Stop trying and just continue to the next iteration.
                                 break;
                             }
                             else {
-                                // The re-interpolated final segment failed from other constraints. Stop trying and just continue to the next iteration.
-                                break;
+                                if (retcheck.bDifferentVelocity) {
+                                    // Give up and continue to the next iteration.
+                                    RAVELOG_VERBOSE_FORMAT("env=%d, after Check2, intermediate2 does not end at the desired velocity", GetEnv()->GetId());
+                                    retcheck.retcode = CFO_FinalValuesNotReached;
+                                    break;
+                                }
+
+                                // The final segment is now good.
+                                RAVELOG_VERBOSE_FORMAT("env=%d, the final SolveMinTime generated feasible segment, inserting it to outramps", GetEnv()->GetId());
+                                outramps.pop_back();
+                                outramps.insert(outramps.end(), outramps2.begin(), outramps2.end());
+                                // continue to inserting outramps to accumoutramps.
                             }
                         }
                         else {
@@ -2579,7 +2580,7 @@ protected:
                 }
                 dReal diff = dummyEndTime - endTime;
                 vVisitedDiscretization.clear(); // have to clear so that can recreate the visited nodes
-#ifdef SMOOTHER_PROGRESS_DEBUG
+#ifdef SMOOTHER1_PROGRESS_DEBUG
                 RAVELOG_DEBUG_FORMAT("env=%d: shortcut iter=%d/%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numIters%numslowdowns%dummyEndTime%endTime%diff);
 #endif
 
