@@ -947,7 +947,7 @@ bool ParabolicRamp1D::SolveFixedTime2(dReal amax, dReal vmax, dReal T)
 
         dReal m = -dv * t0;  // (v0-v1)*t0
         if (m >= ub + EpsilonX || m <= lb - EpsilonX) {
-            break;  // it's ok vmax is violated, because we can try PLP
+            break;  // it's ok vmax is violated, because we can try a1!=a2 or PLP
         }
         if (m > ub) {
             m = ub;
@@ -959,6 +959,37 @@ bool ParabolicRamp1D::SolveFixedTime2(dReal amax, dReal vmax, dReal T)
         v = dx0 + tswitch1 * a1;
         if (this->IsValid()) {
             return true;
+        }
+    }
+
+    // try a1!=a2
+    t0s = {-(2 * s - (dx1 + vmax) * T) / dv, -(2 * s - (dx1 - vmax) * T) / dv};
+    dReal a = Inf;
+    for (dReal t0 : t0s) {
+        if (t0 <= EpsilonT || t0 >= T - EpsilonT) {
+            continue;  // we only handle two parabolic ramps in a1!=a2 case
+        }
+        a1 = A / t0 + B;
+        a2 = A / (t0 - T) + B;
+        const dReal absa1 = RaveFabs(a1), absa2 = RaveFabs(a2);
+        if (std::max(absa1, absa2) >= amax + EpsilonA) {
+            continue;
+        }
+        if (absa1 > amax) {
+            a1 = (a1 > 0) ? amax : -amax;
+        }
+        if (absa2 > amax) {
+            a2 = (a2 > 0) ? amax : -amax;
+        }
+        const dReal amaxt0 = std::max(absa1, absa2);
+        if (a > amaxt0) {
+            tswitch1 = tswitch2 = t0;
+            ttotal = T;
+            v = dx0 + tswitch1 * a1;
+            if (this->IsValid()) {
+                return true;
+            }
+            a = amaxt0;
         }
     }
 
