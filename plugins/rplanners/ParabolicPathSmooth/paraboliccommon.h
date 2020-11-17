@@ -16,6 +16,7 @@ typedef std::vector<Real> Vector;
 
 //tolerance for time
 const static Real EpsilonT = 1e-8;
+const static Real TenthEpsilonT = 0.1 * EpsilonT;
 //tolerance for position
 const static Real EpsilonX = 1e-8;
 //tolerance for velocity

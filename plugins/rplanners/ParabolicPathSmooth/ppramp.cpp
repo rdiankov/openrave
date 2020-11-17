@@ -378,53 +378,41 @@ int PPRamp::CalcTotalTimes(Real a,Real& t1,Real& t2) const
     }
 }
 
-int PPRamp::CalcSwitchTimes(Real a,Real& t1,Real& t2) const
+using OpenRAVE::dReal;
+
+int PPRamp::CalcSwitchTimes(dReal a, dReal& t1, dReal& t2) const
 {
-    int res;
-    if(Abs(a) > 1.0) {
-        //this may be prone to numerical errors
-        Real b = 2.0*dx0; //2.0*(dx0-dx1);
-        Real c = (Sqr(dx0)-Sqr(dx1))*0.5/a+x0-x1;
-        res=SolveQuadratic(a,b,c,t1,t2);
+    dReal s = x1 - x0;
+    dReal disc = a*s + (dx0*dx0 + dx1*dx1)/2;
+    if(disc <= -EpsilonX) { return 0; }
+    if(disc < 0) { disc = 0; }
+    dReal sqrtdisc = sqrt(disc);
+
+    dReal ts[2] = {(sqrtdisc - dx0)/a, (-sqrtdisc - dx0)/a};
+    bool boolroots[2] = {false, false};
+
+    if(ts[0] > -TenthEpsilonT) {
+        if(ts[0] < 0) { ts[0] = 0; }
+        boolroots[0] = true;
     }
-    else {
-        Real b = 2.0*a*dx0; //2.0*(dx0-dx1);
-        Real c = (Sqr(dx0)-Sqr(dx1))*0.5+(x0-x1)*a;
-        res=SolveQuadratic(a*a,b,c,t1,t2);
+
+    if(ts[1] > -TenthEpsilonT) {
+        if(ts[1] < 0) { ts[1] = 0; }
+        boolroots[1] = true;
     }
-    if(res == 0) {
-        return res;
-    }
-    else if(res == 2) {
-        if(t1 < 0 && t1 > -EpsilonT*0.1) {
-            t1=0;
-        }
-        if(t2 < 0 && t2 > -EpsilonT*0.1) {
-            t2=0;
-        }
-        if(t1 < 0 || t1*Abs(a) < (dx1-dx0)*Sign(a)) {
-            if(t2 < 0 || t2*Abs(a) < (dx1-dx0)*Sign(a)) {
-                return 0;
-            }
-            t1 = t2;
-            return 1;
-        }
-        else if(t2 < 0 || t2*Abs(a) < (dx1-dx0)*Sign(a)) {
-            return 1;
+
+    if(boolroots[0]) {
+        if(boolroots[1]) {
+            t1 = ts[0]; t2 = ts[1]; return 2;
         }
         else {
-            return 2; //both are ok
+            t1 = ts[0]; return 1;
         }
     }
-    else {
-        if(t1 < 0 && t1 > -EpsilonT) {
-            t1=0;
-        }
-        if(t1 < 0) {
-            return 0;
-        }
-        return 1;
+    else if(boolroots[1]) {
+        t1 = ts[1]; return 1;
     }
+    return 0;
 }
 
 Real PPRamp::CalcSwitchTime(Real a) const
