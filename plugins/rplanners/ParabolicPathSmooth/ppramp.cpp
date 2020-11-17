@@ -383,34 +383,44 @@ using OpenRAVE::dReal;
 int PPRamp::CalcSwitchTimes(dReal a, dReal& t1, dReal& t2) const
 {
     dReal s = x1 - x0;
-    dReal disc = a*s + (dx0*dx0 + dx1*dx1)/2;
-    if(disc <= -EpsilonX) { return 0; }
-    if(disc < 0) { disc = 0; }
+    dReal disc = a * s + (dx0 * dx0 + dx1 * dx1) / 2;
+    if (disc <= -EpsilonX) {
+        return 0;
+    }
+    if (disc < 0) {
+        disc = 0;
+    }
     dReal sqrtdisc = sqrt(disc);
 
-    dReal ts[2] = {(sqrtdisc - dx0)/a, (-sqrtdisc - dx0)/a};
+    dReal ts[2] = {(sqrtdisc - dx0) / a, (-sqrtdisc - dx0) / a};
     bool boolroots[2] = {false, false};
 
-    if(ts[0] > -TenthEpsilonT) {
-        if(ts[0] < 0) { ts[0] = 0; }
+    if (ts[0] > -TenthEpsilonT) {
+        if (ts[0] < 0) {
+            ts[0] = 0;
+        }
         boolroots[0] = true;
     }
 
-    if(ts[1] > -TenthEpsilonT) {
-        if(ts[1] < 0) { ts[1] = 0; }
+    if (ts[1] > -TenthEpsilonT) {
+        if (ts[1] < 0) {
+            ts[1] = 0;
+        }
         boolroots[1] = true;
     }
 
-    if(boolroots[0]) {
-        if(boolroots[1]) {
-            t1 = ts[0]; t2 = ts[1]; return 2;
+    if (boolroots[0]) {
+        if (boolroots[1]) {
+            t1 = ts[0];
+            t2 = ts[1];
+            return 2;
+        } else {
+            t1 = ts[0];
+            return 1;
         }
-        else {
-            t1 = ts[0]; return 1;
-        }
-    }
-    else if(boolroots[1]) {
-        t1 = ts[1]; return 1;
+    } else if (boolroots[1]) {
+        t1 = ts[1];
+        return 1;
     }
     return 0;
 }

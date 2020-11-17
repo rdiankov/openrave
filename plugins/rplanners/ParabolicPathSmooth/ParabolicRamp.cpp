@@ -834,7 +834,8 @@ std::string ParabolicRamp1D::to_string() const {
 }
 
 // Gary
-bool ParabolicRamp1D::SolveFixedTime2(dReal amax, dReal vmax, dReal T) {
+bool ParabolicRamp1D::SolveFixedTime2(dReal amax, dReal vmax, dReal T)
+{
     using namespace OpenRAVE;
     if (T < -EpsilonT) {
         RAVELOG_VERBOSE_FORMAT("endtime T=%.4d is negative", T);
@@ -846,105 +847,148 @@ bool ParabolicRamp1D::SolveFixedTime2(dReal amax, dReal vmax, dReal T) {
             // This is actually a stationary trajectory
             tswitch1 = tswitch2 = ttotal = a1 = a2 = 0;
             v = dx0;
-            if (this->IsValid()) { return true; }
+            if (this->IsValid()) {
+                return true;
+            }
         }
         RAVELOG_VERBOSE_FORMAT("Stationary traj not valid: vmax=%.15e, amax=%.15e, T=%.15e; %s", vmax % amax % T % this->to_string());
-        return false;// The given T is too short for any movement to be made.
+        return false;  // The given T is too short for any movement to be made.
     }
 
     const dReal s = x1 - x0, dv = dx1 - dx0, maxdv = amax * T;
     BOOST_ASSERT(maxdv >= 0);
-    if(RaveFabs(dv) >= maxdv + EpsilonV) { return false; }
-    if(RaveFabs(dv) >= maxdv) {
+    if (RaveFabs(dv) >= maxdv + EpsilonV) {
+        return false;
+    }
+    if (RaveFabs(dv) >= maxdv) {
         // constant max acceleration; check s=(v0+v1)*T/2
-        const dReal expecteddx = (dx0 + dx1) * T/2;
-        if(!FuzzyEquals(s, expecteddx, EpsilonX)) { return false; }
+        const dReal expecteddx = (dx0 + dx1) * T / 2;
+        if (!FuzzyEquals(s, expecteddx, EpsilonX)) {
+            return false;
+        }
         // strict order of assignment here
         tswitch1 = tswitch2 = ttotal = T;
         a1 = (dv >= 0) ? amax : -amax;
         v = dx1;
         a2 = 0;
-        if (this->IsValid()) { return true; }
+        if (this->IsValid()) {
+            return true;
+        }
         RAVELOG_VERBOSE_FORMAT("Full accel/deccel case not valid: %s", this->to_string());
         return false;
     }
 
-    const dReal lb = 2*s + (-dx1-vmax) * T;
-    const dReal ub = 2*s + (-dx1+vmax) * T;
-    if(RaveFabs(dv) <= EpsilonV) {
-        if(ub <= -EpsilonX || lb >= EpsilonX) { return false; }
-        tswitch1 = tswitch2 = T/2; // no linear
+    const dReal lb = 2 * s + (-dx1 - vmax) * T;
+    const dReal ub = 2 * s + (-dx1 + vmax) * T;
+    if (RaveFabs(dv) <= EpsilonV) {
+        if (ub <= -EpsilonX || lb >= EpsilonX) {
+            return false;
+        }
+        tswitch1 = tswitch2 = T / 2;  // no linear
         ttotal = T;
-        v = 2*s/T - dx0; // need v before a1
-        a1 = (v-dx0)/tswitch1;
-        a2 = -a1; // (dx1-v)/(T-tswitch2)
-        if(RaveFabs(a1) >= amax + EpsilonA) { return false; }
-        if (this->IsValid()) { return true; }
+        v = 2 * s / T - dx0;  // need v before a1
+        a1 = (v - dx0) / tswitch1;
+        a2 = -a1;  // (dx1-v)/(T-tswitch2)
+        if (RaveFabs(a1) >= amax + EpsilonA) {
+            return false;
+        }
+        if (this->IsValid()) {
+            return true;
+        }
         RAVELOG_VERBOSE_FORMAT("Equal dx0=dx1 case not valid: %s", this->to_string());
         return false;
     }
 
     const dReal sumv = dx0 + dx1;
-    if(RaveFabs(sumv*T - 2*s) <= EpsilonX) { // constant accel
-        dReal a = dv/T, absa = RaveFabs(a);
-        if(absa >= amax + EpsilonA ) { return false; }
-        if(absa > amax) {
+    if (RaveFabs(sumv * T - 2 * s) <= EpsilonX) {  // constant accel
+        dReal a = dv / T, absa = RaveFabs(a);
+        if (absa >= amax + EpsilonA) {
+            return false;
+        }
+        if (absa > amax) {
             a = (a > 0) ? amax : -amax;
         }
-        tswitch1 = tswitch2 = ttotal = T; // no linear
+        tswitch1 = tswitch2 = ttotal = T;  // no linear
         a1 = a;
         v = dx1;
         a2 = 0;
         return this->IsValid();
     }
 
-    const dReal A = 2 * s / T - sumv, B = dv / T; // a0 = A/t0 + B, a1 = A/(t0-T) + B
+    const dReal A = 2 * s / T - sumv, B = dv / T;  // a0 = A/t0 + B, a1 = A/(t0-T) + B
     const dReal C = 2 * dv, D = 4 * (s - dx1 * T), E = (sumv * T - 2 * s) * T;
     std::array<dReal, 2> t0s;
     int nt0s = mathextra::solvequad(C, D, E, t0s[0], t0s[1]);
-    for(dReal t0 : t0s) {
-        if(!nt0s--) { break; }
-        if(t0 <= -EpsilonT || t0 >= T+EpsilonT) { continue; }
-        if(t0 < 0) {
-            t0 = 0; // already safe
-            RAVELOG_WARN_FORMAT("Unlikely t0=0, %s", this->to_string());
+    for (dReal t0 : t0s) {
+        if (!nt0s--) {
+            break;
         }
-        else if(t0 > T) {
+        if (t0 <= -EpsilonT || t0 >= T + EpsilonT) {
+            continue;
+        }
+        if (t0 < 0) {
+            t0 = 0;  // already safe
+            RAVELOG_WARN_FORMAT("Unlikely t0=0, %s", this->to_string());
+        } else if (t0 > T) {
             t0 = T;
             RAVELOG_WARN_FORMAT("Unlikely t0=T=%.4e, %s", T % this->to_string());
         }
-        a1 = A/t0 + B;
-        a2 = A/(t0-T) + B;
-        if(std::max(RaveFabs(a1), RaveFabs(a2)) >= amax + EpsilonA ) { return false; } // only one t0 solution in [0,T]; can't have solution if amax is violated
-        if(RaveFabs(a1) > amax) { a1 = (a1 > 0) ? amax : -amax; }
-        if(RaveFabs(a2) > amax) { a2 = (a2 > 0) ? amax : -amax; }
-
-        dReal m = -dv * t0; // (v0-v1)*t0
-        if(m >= ub + EpsilonX || m <= lb - EpsilonX) {
-            break; // it's ok vmax is violated, because we can try PLP
+        a1 = A / t0 + B;
+        a2 = A / (t0 - T) + B;
+        if (std::max(RaveFabs(a1), RaveFabs(a2)) >= amax + EpsilonA) {
+            return false;
+        }  // only one t0 solution in [0,T]; can't have solution if amax is violated
+        if (RaveFabs(a1) > amax) {
+            a1 = (a1 > 0) ? amax : -amax;
         }
-        if(m > ub) { m = ub; } else if( m < lb ) { m = lb; }
+        if (RaveFabs(a2) > amax) {
+            a2 = (a2 > 0) ? amax : -amax;
+        }
+
+        dReal m = -dv * t0;  // (v0-v1)*t0
+        if (m >= ub + EpsilonX || m <= lb - EpsilonX) {
+            break;  // it's ok vmax is violated, because we can try PLP
+        }
+        if (m > ub) {
+            m = ub;
+        } else if (m < lb) {
+            m = lb;
+        }
         tswitch1 = tswitch2 = t0;
         ttotal = T;
         v = dx0 + tswitch1 * a1;
-        if (this->IsValid()) { return true; }
+        if (this->IsValid()) {
+            return true;
+        }
     }
 
     // try PLP
-    for(dReal v_ : {vmax, -vmax}) {
-        dReal a = (-dx0*dx0-dx1*dx1+2*v_*(sumv-v_))/(2*(s-v_*T));
-        if(RaveFabs(a) >= amax + EpsilonA) { continue; }
-        if(RaveFabs(a) > amax) { a = (a>0) ? amax : -amax; }
-        tswitch1 = (v_ - dx0) / a; // v = v0 + a * t0
-        tswitch2 = T - (v_ - dx1) / a; // v1 = v + (-a) * (T - t1)
-        if(tswitch1 > tswitch2 || tswitch1 <= -EpsilonT || tswitch2 >= T + EpsilonT) { continue; }
-        if(tswitch1 < 0) { tswitch1 = 0; }
-        if(tswitch2 > T) { tswitch2 = T; }
+    for (dReal v_ : {vmax, -vmax}) {
+        dReal a = (-dx0 * dx0 - dx1 * dx1 + 2 * v_ * (sumv - v_)) / (2 * (s - v_ * T));
+        if (RaveFabs(a) >= amax + EpsilonA) {
+            continue;
+        }
+        if (RaveFabs(a) > amax) {
+            a = (a > 0) ? amax : -amax;
+        }
+        tswitch1 = (v_ - dx0) / a;      // v = v0 + a * t0
+        tswitch2 = T - (v_ - dx1) / a;  // v1 = v + (-a) * (T - t1)
+        if (tswitch1 > tswitch2 || tswitch1 <= -EpsilonT || tswitch2 >= T + EpsilonT) {
+            continue;
+        }
+        if (tswitch1 < 0) {
+            tswitch1 = 0;
+        }
+        if (tswitch2 > T) {
+            tswitch2 = T;
+        }
         ttotal = T;
         a1 = a;
         a2 = -a;
         v = v_;
-        if (this->IsValid()) { return true; }
+        if (this->IsValid()) {
+            return true;
+        }
         RAVELOG_VERBOSE_FORMAT("PLP case not valid: %s", this->to_string());
     }
     return false;
