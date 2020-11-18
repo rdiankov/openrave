@@ -176,8 +176,6 @@ bool SolveMinTimeBounded(Real x0,Real v0,Real x1,Real v1, Real amax,Real vmax,Re
 /// velocity and x bounds.  Returns true if successful.
 bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime,Real amax, Real vmax, Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps); ////////Puttichai
 
-bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime, Real amax, Real vmax,Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps);
-
 /// Vector version of above.
 /// Returns the time of the minimum time trajectory, or -1 on failure
 /// \param multidofinterp if true, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible
