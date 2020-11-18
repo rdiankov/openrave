@@ -378,21 +378,19 @@ int PPRamp::CalcTotalTimes(Real a,Real& t1,Real& t2) const
     }
 }
 
-using OpenRAVE::dReal;
-
-int PPRamp::CalcSwitchTimes(dReal a, dReal& t1, dReal& t2) const
+int PPRamp::CalcSwitchTimes(Real a, Real& t1, Real& t2) const
 {
-    dReal s = x1 - x0;
-    dReal disc = a * s + (dx0 * dx0 + dx1 * dx1) / 2;
+    Real s = x1 - x0;
+    Real disc = a * s + (dx0 * dx0 + dx1 * dx1) / 2;
     if (disc <= -EpsilonX) {
         return 0;
     }
     if (disc < 0) {
         disc = 0;
     }
-    dReal sqrtdisc = sqrt(disc);
+    Real sqrtdisc = sqrt(disc);
 
-    dReal ts[2] = {(sqrtdisc - dx0) / a, (-sqrtdisc - dx0) / a};
+    Real ts[2] = {(sqrtdisc - dx0) / a, (-sqrtdisc - dx0) / a};
     bool boolroots[2] = {false, false};
 
     if (ts[0] > -TenthEpsilonT) {
