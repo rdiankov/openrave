@@ -24,6 +24,7 @@
 
 // #define SMOOTHER1_TIMING_DEBUG
 // #define SMOOTHER1_PROGRESS_DEBUG
+#define SMOOTHER1_ENABLE_LAZYCOLLISIONCHECKING 1
 
 namespace rplanners {
 
@@ -54,6 +55,8 @@ public:
             for(size_t i = 0; i < tol.size(); ++i) {
                 OPENRAVE_ASSERT_OP(tol[i], >, 0);
             }
+
+            const bool bExpectModifiedConfigurations = !!parameters && parameters->fCosManipAngleThresh > -1+g_fEpsilonLinear;
 
             _ExtractSwitchTimes(rampnd, vswitchtimes, true);
             ParabolicRamp::CheckReturn ret0 = feas->ConfigFeasible2(rampnd.x0, rampnd.dx0, options);
@@ -91,6 +94,16 @@ public:
             dq0 = rampnd.dx0;
             q1.resize(q0.size());
             dq1.resize(dq0.size());
+
+            // Gary tries Puttichai's method: do lazy collision checking by postponing collision checking until absolutely necessary
+            const bool doLazyCollisionChecking = SMOOTHER1_ENABLE_LAZYCOLLISIONCHECKING;
+            const bool doCheckEnvCollisionsLater = doLazyCollisionChecking ? (options & CFO_CheckEnvCollisions) == CFO_CheckEnvCollisions : false;
+            const bool doCheckSelfCollisionsLater = doLazyCollisionChecking ? (options & CFO_CheckSelfCollisions) == CFO_CheckSelfCollisions : false;
+            if( doLazyCollisionChecking ) {
+                options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+                options |= CFO_FillCheckedConfiguration; // always do this if we use lazy collision checking
+            }
+
             for(size_t iswitch = 1; iswitch < vswitchtimes.size(); ++iswitch) {
                 rampnd.Evaluate(vswitchtimes.at(iswitch),q1);
                 dReal elapsedtime = vswitchtimes.at(iswitch)-vswitchtimes.at(iswitch-1);
@@ -130,7 +143,7 @@ public:
                 }
 
                 // have to recompute a new, q1 can violate tool constraints, but most important thing is that the added ramps do not.
-                ParabolicRamp::CheckReturn retseg = feas->SegmentFeasible2(q0,q1, dq0, dq1, elapsedtime, options, segmentoutramps);
+                ParabolicRamp::CheckReturn retseg = feas->SegmentFeasible2(q0,q1, dq0, dq1, elapsedtime, options, segmentoutramps, _vcacheintermediateconfigurations);
                 if( retseg.retcode != 0 ) {
                     return retseg;
                 }
@@ -156,6 +169,101 @@ public:
                 }
             }
 
+            // Collision checking here!
+            if( doCheckEnvCollisionsLater || doCheckSelfCollisionsLater ) {
+                if( doCheckEnvCollisionsLater && doCheckSelfCollisionsLater ) {
+                    options = CFO_CheckEnvCollisions | CFO_CheckSelfCollisions;
+                }
+                else if( doCheckEnvCollisionsLater ) {
+                    options = CFO_CheckEnvCollisions;
+                }
+                else {
+                    options = CFO_CheckSelfCollisions;
+                }
+
+                // Instead of checking configurations sequentially from left to right, we give
+                // higher priority to some configurations. Suppose outramps.size() is N.
+                // First, check the ramp index: 0, 4N/8, 2N/8, 6N/8, N/8, 5N/8, 3N/8, 7N/8. Then we
+                // check the remaining ramps in the usual order.
+
+                // TODO: maybe arranging _vsearchsegments totally randomly might have better average performance.
+                if( bExpectModifiedConfigurations ) {
+                    // In this case, all intermediate configurations are already kept in outramps.
+                    _vsearchsegments.resize(outramps.size());
+                }
+                else {
+                    size_t nconfigs = _vcacheintermediateconfigurations.size()/tol.size();
+                    BOOST_ASSERT(nconfigs > 0);
+                    _vsearchsegments.resize(nconfigs);
+                }
+
+                std::iota(_vsearchsegments.begin(), _vsearchsegments.end(), 0);
+
+                for(size_t j = 0; j < 1; ++j) {
+                    size_t index, index2 = 0;
+
+                    index = _vsearchsegments.size() * 4/8;
+                    std::swap(_vsearchsegments[index2], _vsearchsegments[index]); index2++;
+
+                    index = _vsearchsegments.size() * 2/8;
+                    if( index <= index2 ) {
+                        break;
+                    }
+                    std::swap(_vsearchsegments[index2], _vsearchsegments[index]); index2++;
+
+                    index = _vsearchsegments.size() * 6/8;
+                    if( index <= index2 ) {
+                        break;
+                    }
+                    std::swap(_vsearchsegments[index2], _vsearchsegments[index]); index2++;
+
+                    index = _vsearchsegments.size() * 1/8;
+                    if( index <= index2 ) {
+                        break;
+                    }
+                    std::swap(_vsearchsegments[index2], _vsearchsegments[index]); index2++;
+
+                    index = _vsearchsegments.size() * 5/8;
+                    if( index <= index2 ) {
+                        break;
+                    }
+                    std::swap(_vsearchsegments[index2], _vsearchsegments[index]); index2++;
+
+                    index = _vsearchsegments.size() * 3/8;
+                    if( index <= index2 ) {
+                        break;
+                    }
+                    std::swap(_vsearchsegments[index2], _vsearchsegments[index]); index2++;
+
+                    index = _vsearchsegments.size() * 7/8;
+                    if( index <= index2 ) {
+                        break;
+                    }
+                    std::swap(_vsearchsegments[index2], _vsearchsegments[index]); index2++;
+                }
+
+                if( bExpectModifiedConfigurations ) {
+                    for( size_t j = 0; j < _vsearchsegments.size(); ++j ) {
+                        q0 = outramps[_vsearchsegments[j]].x1;
+                        ParabolicRamp::CheckReturn ret = feas->ConfigFeasible2(q0, {}, options);
+                        if( ret.retcode != 0 ) {
+                            return ret;
+                        }
+                    }
+                }
+                else {
+                    std::vector<dReal>::const_iterator itconfig;
+                    for( size_t j = 0; j < _vsearchsegments.size(); ++j ) {
+                        itconfig = _vcacheintermediateconfigurations.begin() + _vsearchsegments[j]*tol.size();
+                        q0.assign(itconfig, itconfig + tol.size());
+                        ParabolicRamp::CheckReturn ret = feas->ConfigFeasible2(q0, {}, options);
+                        if( ret.retcode != 0 ) {
+                            return ret;
+                        }
+                    }
+                }
+            }
+
             // have to make sure that the last ramp's ending velocity is equal to db
             //bool bDifferentPosition = false;
             bool bDifferentVelocity = false;
@@ -175,6 +283,7 @@ public:
             return finalret;
         }
 
+        ConstraintTrajectoryTimingParametersPtr parameters = nullptr;
 private:
         int _envid;
 
@@ -182,6 +291,7 @@ private:
         std::vector<dReal> q0, q1, dq0, dq1;
         std::vector<uint8_t> _vsearchsegments; ///< 1 if searched
         std::vector<ParabolicRamp::ParabolicRampND> segmentoutramps;
+        std::vector<dReal> _vcacheintermediateconfigurations; ///< for keeping intermediate configurations that are checked in CheckPathAllConstraints
     };
 
 public:
@@ -204,6 +314,7 @@ public:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
+        _feasibilitychecker.parameters = _parameters;
         return _InitPlan();
     }
 
@@ -905,7 +1016,7 @@ public:
     }
 
     /// \brief checks a parabolic ramp and outputs smaller set of ramps. Because of manipulator constraints, the outramps's ending values might not be equal to b/db!
-    virtual ParabolicRamp::CheckReturn SegmentFeasible2(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options, std::vector<ParabolicRamp::ParabolicRampND>& outramps)
+    virtual ParabolicRamp::CheckReturn SegmentFeasible2(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options, std::vector<ParabolicRamp::ParabolicRampND>& outramps, std::vector<dReal>& vIntermediateConfigurations)
     {
         outramps.resize(0);
         if( timeelapsed <= ParabolicRamp::EpsilonT ) {
@@ -1044,6 +1155,12 @@ public:
 
                 // }
             }
+        }
+        else if( _constraintreturn->_configurationtimes.size() > 0 ) {
+            // No manip tool direction constraint but CFO_FillCheckedConfiguration is enabled. We do
+            // this because we want to keep the intermediate configurations for collision checking
+            // at a later stage.
+            vIntermediateConfigurations.insert(vIntermediateConfigurations.end(), _constraintreturn->_configurations.begin(), _constraintreturn->_configurations.end());
         }
 
         if( outramps.size() == 0 ) {
@@ -1229,6 +1346,8 @@ protected:
         int itry = 0;
         int iMaxRetries = 1000;      // stop if having been trying this many times
         ParabolicRamp::CheckReturn retseg(0);
+        std::vector<dReal> temp;
+
         for(; itry < iMaxRetries; ++itry) {
             bool res=ramp.SolveMinTimeLinear(accellimits, vellimits);
             if( !res ) {
@@ -1254,7 +1373,7 @@ protected:
             for(iswitch = 0; iswitch < vswitchtimes.size(); ++iswitch) {
                 ramp.Evaluate(vswitchtimes.at(iswitch), x1);
                 ramp.Derivative(vswitchtimes.at(iswitch), dx1);
-                retseg = SegmentFeasible2(x0, x1, dx0, dx1, vswitchtimes.at(iswitch) - fprevtime, options, outramps);
+                retseg = SegmentFeasible2(x0, x1, dx0, dx1, vswitchtimes.at(iswitch) - fprevtime, options, outramps, temp);
                 // if( retseg.retcode == CFO_StateSettingError ) {
                 //     // there's a bug with the checker function. given that this ramp has been validated to be ok and we're just checking time based constraints, can pass it
                 //     std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);

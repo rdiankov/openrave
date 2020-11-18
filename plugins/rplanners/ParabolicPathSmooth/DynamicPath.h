@@ -65,7 +65,7 @@ public:
     }
 
     /// \brief extra feasibility checks has different output ramps (in case there are constraints that have to be applied)
-    virtual CheckReturn SegmentFeasible2(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2, Real timeelapsed, int options, std::vector<ParabolicRampND>& outramps) {
+    virtual CheckReturn SegmentFeasible2(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2, Real timeelapsed, int options, std::vector<ParabolicRampND>& outramps, std::vector<Real>& vIntermediateConfigurations) {
         BOOST_ASSERT(0);
         return 0;
     }
