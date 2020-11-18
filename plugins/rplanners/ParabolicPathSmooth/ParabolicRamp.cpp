@@ -2393,6 +2393,8 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
         ramps[0] = ramp;
         return true;
     }
+    // up to here the same as SolveMaxAccel
+
     PARABOLIC_RAMP_PLOG("SolveMinAccel passed but x bounds violated: xmin=%.15e; bmin=%.15e; xmax=%.15e; bmax=%.15e", xmin, bmin, xmax, bmax);
     PARABOLIC_RAMP_PLOG("x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; newDuration=%.15e; vm=%.15e; am=%.15e", x0, x1, v0, v1, endTime, vmax, amax);
 
@@ -3036,7 +3038,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
 }
 
 ////////Puttichai
-bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
+bool SolveMinAccelBoundedND(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
                           Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
                           vector<vector<ParabolicRamp1D> >& ramps)
 {
@@ -3072,7 +3074,7 @@ bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,con
 
 
 ////////Puttichai
-bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
+bool SolveAccelBoundedND(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
                        Real endTime,const Vector& amax, const Vector& vmax,const Vector& xmin,const Vector& xmax,
                        vector<vector<ParabolicRamp1D> >& ramps, int multidofinterp, int numDilationTries)
 {
@@ -3151,7 +3153,7 @@ bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const 
                         maxNewEndTime = newEndTime * 1.05;
                     }
                     endTime = maxNewEndTime;
-                    result = SolveAccelBounded(x0, v0, x1, v1, endTime, amax, vmax, xmin, xmax, ramps, multidofinterp, numDilationTries - 1);
+                    result = SolveAccelBoundedND(x0, v0, x1, v1, endTime, amax, vmax, xmin, xmax, ramps, multidofinterp, numDilationTries - 1);
                     return result;
                 }
                 else {

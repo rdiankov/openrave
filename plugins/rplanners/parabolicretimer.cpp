@@ -253,12 +253,12 @@ protected:
                 RAVELOG_WARN_FORMAT("env=%d, delta time is really ill-conditioned: %e", GetEnv()->GetId()%deltatime);
             }
 
-            bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
+            bool success = ParabolicRamp::SolveAccelBoundedND(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
             if( !success ) {
 #ifdef _DEBUG
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     // for debugging
-                    success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
+                    success = ParabolicRamp::SolveAccelBoundedND(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
                 }
 #endif
                 // PARABOLICWARN("SOLVEACCELBOUNDED in _WRITEJOINTVALUES FAILED");
@@ -723,11 +723,11 @@ protected:
                 vupper[i] = 1000+RaveFabs(_v1pos[i]);
             }
 
-            bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
+            bool success = ParabolicRamp::SolveAccelBoundedND(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
             if( !success ) {
 #ifdef _DEBUG
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                    success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
+                    success = ParabolicRamp::SolveAccelBoundedND(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
                 }
 #endif
                 return false;
