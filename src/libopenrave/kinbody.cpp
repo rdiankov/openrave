@@ -2125,6 +2125,10 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         vlinkscomputed[childlink->GetIndex()] = 1;
     }
 
+    this->ProcessAfterSetDOFValues();
+}
+
+void KinBody::ProcessAfterSetDOFValues() {
     _UpdateGrabbedBodies();
     _PostprocessChangedParameters(Prop_LinkTransforms);
 }
