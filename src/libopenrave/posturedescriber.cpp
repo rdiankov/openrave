@@ -79,16 +79,16 @@ std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain)
             armindices.push_back(dofindex);
         }
     }
-    ss << armindices.size() << " ";
-    const std::set<int> indexset(begin(armindices), end(armindices));
+    const std::set<int> indexset(armindices.begin(), armindices.end());
 
     // due to backward compatibility issues, we have to compute the end effector transform first
     Transform tcur;
     for(const RobotBase::JointPtr& joint : joints) {
         tcur = tcur * joint->GetInternalHierarchyLeftTransform() * joint->GetInternalHierarchyRightTransform();
     }
-    // treat it like 6D transform IK by not inlucding the local tool transform!
+    // treat it like 6D transform IK by not including the local tool transform!
     SerializeRound(ss, tcur);
+    ss << armindices.size() << " ";
     tcur = Transform();
     int index = 0;
     for(const RobotBase::JointPtr& joint : joints) {

@@ -164,7 +164,6 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
 {
     _info = info;
     _probot = probot;
-    pattachedlink = probot->GetLink(_info._linkname);
     if( !!probot ) {
         _psensor = RaveCreateSensor(probot->GetEnv(), _info._sensorname);
         if( !!_psensor ) {
@@ -190,6 +189,16 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
 
 RobotBase::AttachedSensor::~AttachedSensor()
 {
+}
+
+void RobotBase::AttachedSensor::_ComputeInternalInformation()
+{
+    if( !utils::IsValidName(_info._name) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Attached sensor name \"%s\" is not valid"), GetName(), ORE_Failed);
+    }
+
+    RobotBasePtr probot(_probot);
+    pattachedlink = probot->GetLink(_info._linkname);
 }
 
 SensorBase::SensorDataPtr RobotBase::AttachedSensor::GetData() const
@@ -2077,9 +2086,7 @@ RobotBase::AttachedSensorPtr RobotBase::AddAttachedSensor(const RobotBase::Attac
         }
     }
     AttachedSensorPtr newattachedsensor(new AttachedSensor(shared_robot(),attachedsensorinfo));
-//    if( _nHierarchyComputed ) {
-//        newattachedsensor->_ComputeInternalInformation();
-//    }
+    newattachedsensor->_ComputeInternalInformation();
     if( iremoveindex >= 0 ) {
         // replace the old one
         _vecAttachedSensors[iremoveindex] = newattachedsensor;
@@ -2266,7 +2273,7 @@ void RobotBase::_ComputeInternalInformation()
         else if( !utils::IsValidName((*itsensor)->GetName()) ) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("sensor name \"%s\" is not valid"), (*itsensor)->GetName(), ORE_Failed);
         }
-        //(*itsensor)->_ComputeInternalInformation();
+        (*itsensor)->_ComputeInternalInformation();
         sensorindex++;
     }
 
@@ -2318,6 +2325,9 @@ void RobotBase::_PostprocessChangedParameters(uint32_t parameters)
             (*itmanip)->__hashstructure.resize(0);
             (*itmanip)->__hashkinematicsstructure.resize(0);
         }
+    }
+    if( parameters & (Prop_LinkGeometry|Prop_RobotManipulatorTool|Prop_Sensors|Prop_SensorPlacement) ) {
+        __hashrobotstructure.resize(0);
     }
     KinBody::_PostprocessChangedParameters(parameters);
 }

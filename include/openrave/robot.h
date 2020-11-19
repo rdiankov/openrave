@@ -373,11 +373,20 @@ public:
 
         /** \brief Checks collision with only the gripper and the rest of the environment given a new end-effector transform. Ignores disabled links.
 
-            \param tEE the end effector transform
+            \param[in] tEE the end effector transform
             \param[out] report [optional] collision report
             \return true if a collision occurred
          */
         virtual bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
+
+        /** \brief Checks collision with only the gripper and a specified body given a new end-effector transform. Ignores disabled links.
+
+            \param[in] tEE the end effector transform
+            \param[in] pbody the body to be checked
+            \param[out] report [optional] collision report
+            \return true if a collision occurred
+         */
+        virtual bool CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /** \brief Checks self-collision with only the gripper with the rest of the robot. Ignores disabled links.
 
@@ -399,13 +408,25 @@ public:
         /** \brief Checks environment collisions with only the gripper given an IK parameterization of the gripper.
 
             Some IkParameterizations can fully determine the gripper 6DOF location. If the type is Transform6D or the manipulator arm DOF <= IkParameterization DOF, then this would be possible. In the latter case, an ik solver is required to support the ik parameterization.
-            \param ikparam the ik parameterization determining the gripper transform
+            \param[in] ikparam the ik parameterization determining the gripper transform
             \param[inout] report [optional] collision report
             \param[in] numredundantsamples If > 0, will check collision using the full redundant degree of freedom of the IkParameterization. For example, if ikparam is IKP_TranslationDirection5D, then there's 1 degree of freedom around the axis. The manipulator will have numredundantsamples samples around this degree of freedom, and check each one. If == 0, then will use the manipulator's IK solver to get the end effector transforms to sample.
             \return true if a collision occurred
             /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
          */
         virtual bool CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report = CollisionReportPtr(), int numredundantsamples=0) const;
+
+        /** \brief Checks collisions between the gripper given an IK parameterization of the gripper and a specified body
+
+            Some IkParameterizations can fully determine the gripper 6DOF location. If the type is Transform6D or the manipulator arm DOF <= IkParameterization DOF, then this would be possible. In the latter case, an ik solver is required to support the ik parameterization.
+            \param[in] ikparam the ik parameterization determining the gripper transform
+            \param[in] pbody the body to be checked
+            \param[inout] report [optional] collision report
+            \param[in] numredundantsamples If > 0, will check collision using the full redundant degree of freedom of the IkParameterization. For example, if ikparam is IKP_TranslationDirection5D, then there's 1 degree of freedom around the axis. The manipulator will have numredundantsamples samples around this degree of freedom, and check each one. If == 0, then will use the manipulator's IK solver to get the end effector transforms to sample.
+            \return true if a collision occurred
+            /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
+         */
+        virtual bool CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr(), int numredundantsamples=0) const;
 
         /** \brief Checks self-collisions with only the gripper given an IK parameterization of the gripper.
 
@@ -489,6 +510,10 @@ public:
 protected:
         /// \brief compute internal information from user-set info
         virtual void _ComputeInternalInformation();
+        /// \brief check end-effector collision with the given end-effector transform and with the specified body. if pbody is null, check with the environment.
+        virtual bool _CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report) const;
+        /// \brief check end-effector collision with the given ikparam and the specified body. if pbody is null, check with the environment.
+        virtual bool _CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const;
 
         ManipulatorInfo _info; ///< user-set information
 private:
@@ -652,7 +677,7 @@ public:
 
 private:
         /// \brief compute internal information from user-set info
-        //virtual void _ComputeInternalInformation();
+        virtual void _ComputeInternalInformation();
 
         AttachedSensorInfo _info; ///< user specified data
 

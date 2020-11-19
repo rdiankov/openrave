@@ -201,9 +201,17 @@ inline void SerializeRound(std::ostream& o, double f)
 }
 
 template <class T>
-inline void SerializeRound(std::ostream& o, const RaveVector<T>& v)
+inline void SerializeRoundQuaternion(std::ostream& o, const RaveVector<T>& v)
 {
-    o << SerializationValue(v.x) << " " << SerializationValue(v.y) << " " << SerializationValue(v.z) << " " << SerializationValue(v.w) << " ";
+    // This function is used only for serializing quaternions. Need to
+    // take into account the fact that v and -v represent the same
+    // rotation. Convert v to a rotation matrix instead to get a
+    // unique representation. Then since the thrid column can be uniquely
+    // determined given the first two, serializing only the first two
+    // columns is sufficient for the purpose of hash computation.
+    RaveTransformMatrix<T> t = matrixFromQuat(v);
+    o << SerializationValue(t.m[0]) << " " << SerializationValue(t.m[4]) << " " << SerializationValue(t.m[8]) << " "
+      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " ";
 }
 
 template <class T>
@@ -215,27 +223,18 @@ inline void SerializeRound3(std::ostream& o, const RaveVector<T>& v)
 template <class T>
 inline void SerializeRound(std::ostream& o, const RaveTransform<T>& t)
 {
-    // because we're serializing a quaternion, have to fix what side of the hypershpere it is on
-    Vector v = t.rot;
-    for(int i = 0; i < 4; ++i) {
-        if( v[i] < g_fEpsilon ) {
-            v = -v;
-            break;
-        }
-        else if( v[i] > g_fEpsilon ) {
-            break;
-        }
-    }
-    SerializeRound(o,v);
-    SerializeRound(o,t.trans);
+    SerializeRoundQuaternion(o,t.rot);
+    SerializeRound3(o,t.trans);
 }
 
 template <class T>
 inline void SerializeRound(std::ostream& o, const RaveTransformMatrix<T>& t)
 {
+    // Since the thrid column of the rotation matrix can be uniquely
+    // determined given the first two, serializing only the first two
+    // columns is sufficient for the purpose of hash computation.
     o << SerializationValue(t.m[0]) << " " << SerializationValue(t.m[4]) << " " << SerializationValue(t.m[8]) << " "
-      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " "
-      << SerializationValue(t.m[2]) << " " << SerializationValue(t.m[6]) << " " << SerializationValue(t.m[10]) << " ";
+      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " ";
     SerializeRound(o,t.trans);
 }
 
