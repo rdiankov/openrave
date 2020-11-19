@@ -2157,6 +2157,12 @@ const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJoints() cons
     return _vTopologicallySortedJoints;
 }
 
+const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJointsAll() const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    return _vTopologicallySortedJointsAll;
+}
+
 const std::vector< std::vector< std::pair<KinBody::LinkPtr, KinBody::JointPtr> > >& KinBody::GetClosedLoops() const
 {
     CHECK_INTERNAL_COMPUTATION;

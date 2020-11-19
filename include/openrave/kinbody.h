@@ -2297,6 +2297,12 @@ private:
     /// All the joints affecting a particular joint's transformation will always come before the joint in the list.
     virtual const std::vector<JointPtr>& GetDependencyOrderedJoints() const;
 
+    /// \brief Returns all active and passive joints in hierarchical order starting at the base link.
+    ///
+    /// In the case of closed loops, the joints are returned in the order closest to the root.
+    /// All the joints affecting a particular joint's transformation will always come before the joint in the list.
+    virtual const std::vector<JointPtr>& GetDependencyOrderedJointsAll() const;
+
     /** \brief Return the set of unique closed loops of the kinematics hierarchy.
 
         Each loop is a set of link indices and joint indices. For example, a loop of link indices:
