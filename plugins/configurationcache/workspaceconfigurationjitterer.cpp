@@ -59,7 +59,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         RegisterCommand("SetResetIterationsOnSample",boost::bind(&WorkspaceConfigurationJitterer::SetResetIterationsOnSampleCommand, this, _1, _2),
                         "sets the _bResetIterationsOnSample: whether or not to reset _nNumIterations every time Sample is called.");
         RegisterCommand("SetNullSpaceSamplingProb",boost::bind(&WorkspaceConfigurationJitterer::SetNullSpaceSamplingProbCommand, this, _1, _2),
-                        "TODO: write description");
+                        "sets the probability to add perturbations from the nullspace of the Jacobian.");
 
 #ifndef OPENRAVE_HAS_LAPACK
         throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot use WorkspaceConfigurationJitterer since lapack is not supported"), ORE_CommandNotSupported);
@@ -385,12 +385,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _neighstatefn = neighstatefn;
     }
 
-    /// TODO: comment on the meaning of returned values
-
     /// \brief Jitters the current configuration and sets a new configuration on the environment. The jittered
     ///        configuration will also be checked with small perturbations to make sure that it is not too close to
     ///        boundaries of collision constraints and tool direction constraints.
     ///
+    /// \return  0 if jittering fails.
+    ///          1 if a jittered configuration is produced successfully.
+    ///         -1 if the original configuration does not need jittering.
     int Sample(std::vector<dReal>& vnewdof, IntervalType interval=IT_Closed)
     {
         RobotBase::RobotStateSaver robotsaver(_probot, KinBody::Save_LinkTransformation|KinBody::Save_ActiveDOF);
@@ -550,7 +551,6 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
                 dReal fNullSpaceMultiplier = 2*linkdistthresh;
                 if( fNullSpaceMultiplier <= 0 ) {
-                    // TODO: see what to assign to fNullSpaceMultiplier
                     fNullSpaceMultiplier = jitter;
                 }
 
