@@ -2840,6 +2840,8 @@ private:
         return _nUpdateStampId;
     }
 
+    virtual void IncrementUpdateStamp(const int inc=1) { _nUpdateStampId += inc; } 
+
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /// \brief Register a callback with the interface.
