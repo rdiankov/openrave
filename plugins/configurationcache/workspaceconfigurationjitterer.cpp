@@ -809,7 +809,7 @@ protected:
         size_t workspacedim = 3;
         ublas::vector<double> S(workspacedim);
         ublas::matrix<double, ublas::column_major> U(workspacedim, workspacedim), V(numdof, numdof);
-        boost::numeric::ublas::vector<double> P(workspacedim);
+        ublas::vector<double> P(workspacedim), P2(workspacedim), P3(numdof);
 
         // J * dofvelocities = P
         // compute single value decomposition: Jacobian = U*diag(S)*transpose(V)
@@ -855,8 +855,8 @@ protected:
 
                     // diag(S) * transpose(V) * dofvelocities = transpose(U) * P = P2
                     // transpose(V) * dofvelocities = diag(1/S) * P2 = P3
-                    ublas::vector<double> P2 = ublas::prod(ublas::trans(U), P);
-                    ublas::vector<double> P3(numdof);
+                    P2 = ublas::prod(ublas::trans(U), P);
+                    // Compute P3
                     for( size_t idof = 0; idof < numdof; ++idof ) {
                         if( idof < S.size() ) {
                             if( RaveFabs(S(idof)) < zerothresh ) {
