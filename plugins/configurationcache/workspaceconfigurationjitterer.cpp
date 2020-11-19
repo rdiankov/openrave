@@ -834,19 +834,18 @@ protected:
         _vBasisBiasDirections[1] = ExtractAxisFromQuat(tmanip.rot, 1);
         _vBasisBiasDirections[2] = ExtractAxisFromQuat(tmanip.rot, 2);
 
-        // Will clean this up later. For now, this is only meant as a proof of concept.
+        // Each of x, y, and z has 3 possible perturbations: 0, -1, 1. Excluding the all-zeros perturbation gives 26 cases.
         _vvbiasdofdirections.resize(26);
         _vvbiasnullspace.resize(26);
 
         for( int ix = 0; ix < 3; ++ix ) {
             for( int iy = 0; iy < 3; ++iy ) {
                 for( int iz = 0; iz < 3; ++iz ) {
-                    int idirection = (9*ix + 3*iy + iz) - 1;
-                    if( idirection < 0 ) {
+                    if( ix == 0 && iy == 0 && iz == 0 ) {
                         continue;
                     }
+                    int idirection = (9*ix + 3*iy + iz) - 1;
 
-                    // P(i) = _vbiasdirection[i]; // TODO: compute vBiasDirection given the set of bases and idirection
                     Vector vCurDirection = _mults[ix]*_vBasisBiasDirections[0] + _mults[iy]*_vBasisBiasDirections[1] + _mults[iz]*_vBasisBiasDirections[2];
                     vCurDirection /= RaveSqrt(vCurDirection.lengthsqr3());
                     P(0) = vCurDirection.x;
