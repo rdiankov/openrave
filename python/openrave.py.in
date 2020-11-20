@@ -72,6 +72,7 @@ if __name__ == "__main__":
                       help='if true will drop into the ipython interpreter rather than spin')
     parser.add_option('--pythoncmd','-p',action='store',type='string',dest='pythoncmd',default=None,
                       help='Execute a python command after all loading is done and before the drop to interpreter check. The variables available to use are: "env","robots","robot". It is possible to quit the program after the command is executed by adding a "sys.exit(0)" at the end of the command.')
+    parser.add_option('--executefile', '-e', action='store', type=str, dest='executefile', default='', help='executes scripts in a file')
     parser.add_option('--openravescheme', action='store',type='string',dest='openravescheme',default=None,
                       help='Specify openravescheme for external reference.')
     parser.add_option('--listinterfaces', action="store",type='string',dest='listinterfaces',default=None,
@@ -233,6 +234,10 @@ if __name__ == "__main__":
                                         robot = testrobot
                             bodies=env.GetBodies()
                             body=None if len(bodies) == 0 else bodies[0]
+
+                        if len(options.executefile) > 0:
+                            execfile(options.executefile, locals(), globals())
+                            
                         if api_version == '0.10':
                             ipshell = IPython.Shell.IPShellEmbed(argv='',banner = 'OpenRAVE %s dropping into IPython, variables: env, robot, body'%openravepy.__version__,exit_msg = 'Leaving Interpreter and closing program.')
                             ipshell(local_ns=locals())
