@@ -1365,6 +1365,7 @@ void init_openravepy_global()
     .value(RaveGetInterfaceName(PT_Trajectory).c_str(),PT_Trajectory)
     .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
     .value(RaveGetInterfaceName(PT_SpaceSampler).c_str(),PT_SpaceSampler)
+    .value(RaveGetInterfaceName(PT_PostureDescriber).c_str(),PT_PostureDescriber)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     enum_<CloningOptions>(m, "CloningOptions", py::arithmetic() DOXY_ENUM(CloningOptions))
