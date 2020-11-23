@@ -1151,6 +1151,7 @@ public:
                     case GT_Sphere:
                         mass = MASS::GetSphericalMassD((*itgeom)->GetSphereRadius(), Vector(),_fMassDensity);
                         break;
+                    case GT_CalibrationBoard:
                     case GT_Box:
                         mass = MASS::GetBoxMassD((*itgeom)->GetBoxExtents(), Vector(), _fMassDensity);
                         break;
@@ -1179,6 +1180,7 @@ public:
                     case GT_Sphere:
                         mass = MASS::GetSphericalMassD((*itgeom)->GetSphereRadius(), Vector(),1000);
                         break;
+                    case GT_CalibrationBoard:
                     case GT_Box:
                         mass = MASS::GetBoxMassD((*itgeom)->GetBoxExtents(), Vector(), 1000);
                         break;
