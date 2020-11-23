@@ -839,10 +839,15 @@ protected:
         /// Because this can affect the kinematics, it requires the body's internal structures to be recomputed
         virtual void SetStatic(bool bStatic);
 
-        /// \brief Sets the transform of the link regardless of kinematics
+        /// \brief Sets the transform of the link regardless of kinematics, and updates parent kinbody's stamp id
         ///
         /// \param[in] t the new transformation
         virtual void SetTransform(const Transform& transform);
+
+        /// \brief Sets the transform of the link regardless of kinematics without updating parent kinbody's stamp id
+        ///
+        /// \param[in] t the new transformation
+        virtual void SetTransformWithoutUpdateStampId(const Transform& transform);
 
         /// adds an external force at pos (absolute coords)
         /// \param[in] force the direction and magnitude of the force

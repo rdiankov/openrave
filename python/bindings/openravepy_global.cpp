@@ -1420,6 +1420,8 @@ void init_openravepy_global()
 // #endif
     ;
 
+    def("GetNanoTime", utils::GetNanoTime, "get nano time");
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_< OPENRAVE_SHARED_PTR< void > >(m, "VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
 #else
