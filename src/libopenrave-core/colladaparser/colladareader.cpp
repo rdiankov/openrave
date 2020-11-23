@@ -1057,12 +1057,14 @@ public:
                 if( pinterface_type->type == "kinbody" ) {
                     pbody = RaveCreateKinBody(_penv,pinterface_type->name);
                     if (!pbody) {
+                        RAVELOG_WARN_FORMAT("failed to create kinbody of interface type %s for instance articulated system %s, fallback to default interface type", pinterface_type->name%getSid(ias));
                         pbody = RaveCreateKinBody(_penv, "");
                     }
                 }
                 else if( pinterface_type->type.size() == 0 || pinterface_type->type == "robot" ) {
                     pbody = RaveCreateRobot(_penv,pinterface_type->name);
                     if (!pbody) {
+                        RAVELOG_WARN_FORMAT("failed to create robot of interface type %s for instance articulated system %s, fallback to default interface type", pinterface_type->name%getSid(ias));
                         pbody = RaveCreateRobot(_penv, "");
                     }
                 }
@@ -1403,12 +1405,14 @@ public:
                 if( pinterface_type->type.size() == 0 || pinterface_type->type == "kinbody" ) {
                     pkinbody = RaveCreateKinBody(_penv,pinterface_type->name);
                     if (!pkinbody) {
+                        RAVELOG_WARN_FORMAT("failed to create kinbody of interface type %s for instance kinematics model %s, fallback to default interface type", pinterface_type->name%getSid(ikm));
                         pkinbody = RaveCreateKinBody(_penv, "");
                     }
                 }
                 else if( pinterface_type->type == "robot" ) {
                     pkinbody = RaveCreateRobot(_penv,pinterface_type->name);
                     if (!pkinbody) {
+                        RAVELOG_WARN_FORMAT("failed to create robot of interface type %s for instance kinematics model %s, fallback to default interface type", pinterface_type->name%getSid(ikm));
                         pkinbody = RaveCreateRobot(_penv, "");
                     }
                 }
