@@ -2119,6 +2119,10 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         vlinkscomputed[childlink->GetIndex()] = 1;
     }
 
+    this->ProcessAfterSetDOFValues();
+}
+
+void KinBody::ProcessAfterSetDOFValues() {
     _UpdateGrabbedBodies();
     _PostprocessChangedParameters(Prop_LinkTransforms);
 }
@@ -2149,6 +2153,12 @@ const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJoints() cons
 {
     CHECK_INTERNAL_COMPUTATION;
     return _vTopologicallySortedJoints;
+}
+
+const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJointsAll() const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    return _vTopologicallySortedJointsAll;
 }
 
 const std::vector< std::vector< std::pair<KinBody::LinkPtr, KinBody::JointPtr> > >& KinBody::GetClosedLoops() const

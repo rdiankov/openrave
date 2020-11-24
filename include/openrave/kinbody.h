@@ -844,6 +844,11 @@ protected:
         /// \param[in] t the new transformation
         virtual void SetTransform(const Transform& transform);
 
+        /// \brief Sets the transform of the link regardless of kinematics without updating parent kinbody's stamp id
+        ///
+        /// \param[in] t the new transformation
+        virtual void SetTransformWithoutUpdateStampId(const Transform& transform);
+
         /// adds an external force at pos (absolute coords)
         /// \param[in] force the direction and magnitude of the force
         /// \param[in] pos in the world where the force is getting applied
@@ -2276,6 +2281,12 @@ private:
     /// All the joints affecting a particular joint's transformation will always come before the joint in the list.
     virtual const std::vector<JointPtr>& GetDependencyOrderedJoints() const;
 
+    /// \brief Returns all active and passive joints in hierarchical order starting at the base link.
+    ///
+    /// In the case of closed loops, the joints are returned in the order closest to the root.
+    /// All the joints affecting a particular joint's transformation will always come before the joint in the list.
+    virtual const std::vector<JointPtr>& GetDependencyOrderedJointsAll() const;
+
     /** \brief Return the set of unique closed loops of the kinematics hierarchy.
 
         Each loop is a set of link indices and joint indices. For example, a loop of link indices:
@@ -2478,6 +2489,9 @@ private:
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
+
+    /// \brief executes _UpdateGrabbedBodies() and _PostprocessChangedParameters(Prop_LinkTransforms)
+    virtual void ProcessAfterSetDOFValues();
 
     virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = true) {
         SetDOFValues(values,static_cast<uint32_t>(checklimits));
@@ -2775,6 +2789,9 @@ private:
     virtual int GetUpdateStamp() const {
         return _nUpdateStampId;
     }
+
+    /// \brief Increments the unique id that indicates the number of transformation state changes of any link. Used to check if robot state has changed.
+    virtual void IncrementUpdateStamp(const int inc=1) { _nUpdateStampId += inc; } 
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
