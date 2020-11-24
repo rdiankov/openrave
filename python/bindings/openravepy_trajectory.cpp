@@ -142,13 +142,13 @@ object PyTrajectoryBase::SampleFromPrevious(object odata, dReal time, OPENRAVE_S
     return this->SampleFromPrevious(odata, time, pyspec);
 }
 
-object PyTrajectoryBase::SamplePoints2D(object otimes) const
+inline object _SamplePoints(const TrajectoryBasePtr ptrajectory,
+                            const std::vector<dReal>& vtimes)
 {
     std::vector<dReal> values;
-    std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
-    _ptrajectory->SamplePoints(values,vtimes);
+    ptrajectory->SamplePoints(values,vtimes);
 
-    const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+    const int numdof = ptrajectory->GetConfigurationSpecification().GetDOF();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pypos = toPyArray(values);
     pypos.resize({(int) values.size()/numdof, numdof});
@@ -162,6 +162,27 @@ object PyTrajectoryBase::SamplePoints2D(object otimes) const
     return py::to_array_astype<dReal>(pypos);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
+
+object PyTrajectoryBase::SamplePoints2D(object otimes) const
+{
+    return _SamplePoints(_ptrajectory, ExtractArray<dReal>(otimes));
+}
+
+object PyTrajectoryBase::SampleEvenPoints2D(double deltatime,
+                                            bool ensureLastPoint) const
+{
+    const double duration = _ptrajectory->GetDuration();
+    int numPoints = int(duration / deltatime) + 1;
+    std::vector<dReal> vtimes(numPoints, deltatime);
+    for (int i = 0; i < numPoints; ++i) {
+        vtimes[i] *= i;
+    }
+    if (ensureLastPoint && vtimes.back() < duration) {
+        vtimes.push_back(duration);
+    }
+    return _SamplePoints(_ptrajectory, vtimes);
+}
+
 
 object PyTrajectoryBase::SamplePoints2D(object otimes, PyConfigurationSpecificationPtr pyspec) const
 {
@@ -183,6 +204,11 @@ object PyTrajectoryBase::SamplePoints2D(object otimes, PyConfigurationSpecificat
     }
     return py::to_array_astype<dReal>(pypos);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
+}
+
+object PyTrajectoryBase::SampleEvenPoints2D(double deltatime, PyConfigurationSpecificationPtr pyspec) const
+{
+
 }
 
 object PyTrajectoryBase::SamplePoints2D(object otimes, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
@@ -483,6 +509,7 @@ void init_openravepy_trajectory()
     object (PyTrajectoryBase::*SamplePoints2D1)(object) const = &PyTrajectoryBase::SamplePoints2D;
     object (PyTrajectoryBase::*SamplePoints2D2)(object, PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::SamplePoints2D;
     object (PyTrajectoryBase::*SamplePoints2D3)(object, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>) const = &PyTrajectoryBase::SamplePoints2D;
+    object (PyTrajectoryBase::*SampleEvenPoints2D1)(double, bool) const = &PyTrajectoryBase::SampleEvenPoints2D;
     object (PyTrajectoryBase::*GetWaypoints1)(size_t,size_t) const = &PyTrajectoryBase::GetWaypoints;
     object (PyTrajectoryBase::*GetWaypoints2)(size_t,size_t,PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::GetWaypoints;
     object (PyTrajectoryBase::*GetWaypoints3)(size_t, size_t, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>) const = &PyTrajectoryBase::GetWaypoints;
@@ -520,6 +547,7 @@ void init_openravepy_trajectory()
     .def("SamplePoints2D",SamplePoints2D1, PY_ARGS("times") DOXY_FN(TrajectoryBase,SamplePoints2D "std::vector; std::vector"))
     .def("SamplePoints2D",SamplePoints2D2, PY_ARGS("times","spec") DOXY_FN(TrajectoryBase,SamplePoints2D "std::vector; std::vector; const ConfigurationSpecification"))
     .def("SamplePoints2D",SamplePoints2D3, PY_ARGS("times","group") DOXY_FN(TrajectoryBase,SamplePoints2D "std::vector; std::vector; const ConfigurationSpecification::Group"))
+    .def("SampleEvenPoints2D",SampleEvenPoints2D1, PY_ARGS("deltatime", "ensurelastpoint") DOXY_FN(TrajectoryBase,SampleEvenPoints2D "std::vector; std::vector"))
     .def("GetConfigurationSpecification",&PyTrajectoryBase::GetConfigurationSpecification,DOXY_FN(TrajectoryBase,GetConfigurationSpecification))
     .def("GetNumWaypoints",&PyTrajectoryBase::GetNumWaypoints,DOXY_FN(TrajectoryBase,GetNumWaypoints))
     .def("GetWaypoints",GetWaypoints1, PY_ARGS("startindex","endindex") DOXY_FN(TrajectoryBase, GetWaypoints "size_t; size_t; std::vector"))
