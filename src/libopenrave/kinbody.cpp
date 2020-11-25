@@ -1890,6 +1890,25 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         pJointValues = &_vTempJoints[0];
     }
 
+    if(!_pCalculator && !_bTriedSetupCalculator) {
+        _pCalculator = RaveCreateModule(GetEnv(), "robotbasiccalculators");
+        if(!_pCalculator) {
+            RAVELOG_WARN_FORMAT("Cannot create calculator for %s", GetName());
+        }
+        else {
+            rapidjson::Document rDocumentInput, rDocumentOutput; // need cache
+            orjson::SetJsonValueByKey(rDocumentInput, "bodyname", GetName(), rDocumentInput.GetAllocator());
+            _pCalculator->SendJSONCommand("GenerateLibrary", rDocumentInput, rDocumentOutput);
+        }
+        _bTriedSetupCalculator = true;
+    }
+    if(!!_pCalculator) {
+        rapidjson::Document rDocumentInput, rDocumentOutput; // need cache
+        orjson::SetJsonValueByKey(rDocumentInput, "jointvalues", _vTempJoints, rDocumentInput.GetAllocator());
+        _pCalculator->SendJSONCommand("SetLinkTransforms", rDocumentInput, rDocumentOutput);
+        return;
+    }
+
     // have to compute the angles ahead of time since they are dependent on the link
     const int nActiveJoints = _vecjoints.size();
     const int nPassiveJoints = _vPassiveJoints.size();
