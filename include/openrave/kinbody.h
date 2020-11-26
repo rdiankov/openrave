@@ -2984,6 +2984,13 @@ private:
     /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromKinBodyInfo(const KinBodyInfo& info);
 
+    virtual void SetSetLinkTransformsFn(boost::function<bool(const std::vector<double>&)> pSetLinkTransformsFn) {
+        _pSetLinkTransformsFn = pSetLinkTransformsFn;
+    }
+    virtual void SetGetDOFLastSetValuesFn(boost::function<void(std::vector<double>&)> pGetDOFLastSetValuesFn) {
+        _pGetDOFLastSetValuesFn = pGetDOFLastSetValuesFn;
+    }
+
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
@@ -3085,6 +3092,8 @@ protected:
 
     // TGN's hack
     ModuleBasePtr _pCalculator; ///< kinbody basic calculators
+    boost::function<bool(const std::vector<double>&)> _pSetLinkTransformsFn;
+    boost::function<void(std::vector<double>&)> _pGetDOFLastSetValuesFn;
     bool _bTriedSetupCalculator = false;
 
     int _environmentid; ///< \see GetEnvironmentId
