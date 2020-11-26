@@ -3083,6 +3083,10 @@ protected:
     ConfigurationSpecification _spec;
     CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions
 
+    // TGN's hack
+    ModuleBasePtr _pCalculator; ///< kinbody basic calculators
+    bool _bTriedSetupCalculator = false;
+
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     uint32_t _nParametersChanged; ///< set of parameters that changed and need callbacks
