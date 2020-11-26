@@ -1889,6 +1889,9 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         }
         pJointValues = &_vTempJoints[0];
     }
+    else {
+        _vTempJoints = vJointValues;
+    }
 
     if(!_pCalculator && !_bTriedSetupCalculator) {
         _pCalculator = RaveCreateModule(GetEnv(), "robotbasiccalculators");
@@ -1898,14 +1901,19 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         else {
             rapidjson::Document rDocumentInput, rDocumentOutput; // need cache
             orjson::SetJsonValueByKey(rDocumentInput, "bodyname", GetName(), rDocumentInput.GetAllocator());
+            orjson::SetJsonValueByKey(rDocumentInput, "force", false, rDocumentInput.GetAllocator());
             _pCalculator->SendJSONCommand("GenerateLibrary", rDocumentInput, rDocumentOutput);
         }
         _bTriedSetupCalculator = true;
     }
-    if(!!_pCalculator) {
-        rapidjson::Document rDocumentInput, rDocumentOutput; // need cache
-        orjson::SetJsonValueByKey(rDocumentInput, "jointvalues", _vTempJoints, rDocumentInput.GetAllocator());
-        _pCalculator->SendJSONCommand("SetLinkTransforms", rDocumentInput, rDocumentOutput);
+
+    if(!!_pCalculator && !!_pSetLinkTransformsFn) {
+        _pSetLinkTransformsFn(_vTempJoints);
+        _pGetDOFLastSetValuesFn(_vTempJoints);
+        for(size_t ijoint = 0; ijoint < _vecjoints.size(); ++ijoint) {
+            KinBody::Joint& joint = *_vecjoints[ijoint];
+            joint._doflastsetvalues[0] = _vTempJoints[ijoint];
+        }
         return;
     }
 
@@ -2076,6 +2084,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
 
         Transform tjoint;
         if( jointtype & JointSpecialBit ) {
+            RAVELOG_DEBUG_FORMAT("Joint %s's jointtype = %d has special bit", GetName() % jointtype);
             switch(jointtype) {
             case JointHinge2: {
                 Transform tfirst;
