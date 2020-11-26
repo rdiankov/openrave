@@ -1059,11 +1059,19 @@ public:
             if( !!pinterface_type ) {
                 if( pinterface_type->type == "kinbody" ) {
                     pbody = RaveCreateKinBody(_penv,pinterface_type->name);
+                    if (!pbody) {
+                        RAVELOG_WARN_FORMAT("failed to create kinbody of interface type %s for instance articulated system %s, fallback to default interface type", pinterface_type->name%getSid(ias));
+                        pbody = RaveCreateKinBody(_penv, "");
+                    }
                 }
                 else if( pinterface_type->type.size() == 0 || pinterface_type->type == "robot" ) {
                     pbody = RaveCreateRobot(_penv,pinterface_type->name);
+                    if (!pbody) {
+                        RAVELOG_WARN_FORMAT("failed to create robot of interface type %s for instance articulated system %s, fallback to default interface type", pinterface_type->name%getSid(ias));
+                        pbody = RaveCreateRobot(_penv, "");
+                    }
                 }
-                else {
+                if (!pbody) {
                     RAVELOG_WARN("invalid interface_type\n");
                     return false;
                 }
@@ -1399,11 +1407,19 @@ public:
             if( !!pinterface_type ) {
                 if( pinterface_type->type.size() == 0 || pinterface_type->type == "kinbody" ) {
                     pkinbody = RaveCreateKinBody(_penv,pinterface_type->name);
+                    if (!pkinbody) {
+                        RAVELOG_WARN_FORMAT("failed to create kinbody of interface type %s for instance kinematics model %s, fallback to default interface type", pinterface_type->name%getSid(ikm));
+                        pkinbody = RaveCreateKinBody(_penv, "");
+                    }
                 }
                 else if( pinterface_type->type == "robot" ) {
                     pkinbody = RaveCreateRobot(_penv,pinterface_type->name);
+                    if (!pkinbody) {
+                        RAVELOG_WARN_FORMAT("failed to create robot of interface type %s for instance kinematics model %s, fallback to default interface type", pinterface_type->name%getSid(ikm));
+                        pkinbody = RaveCreateRobot(_penv, "");
+                    }
                 }
-                else {
+                if (!pkinbody) {
                     RAVELOG_WARN("invalid interface_type\n");
                     return false;
                 }
@@ -3543,7 +3559,8 @@ public:
                     if( !!pframe_origin ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
                         if( !!pdomlink ) {
-                            pattachedsensor->pattachedlink = probot->GetLink(_ExtractLinkName(pdomlink));
+                            pattachedsensor->_info._linkname = _ExtractLinkName(pdomlink);
+                            pattachedsensor->pattachedlink = probot->GetLink(pattachedsensor->_info._linkname);
                         }
                         if( !pattachedsensor->pattachedlink.lock() ) {
                             RAVELOG_WARN(str(boost::format("failed to find manipulator %s frame origin %s\n")%name%pframe_origin->getAttribute("link")));
