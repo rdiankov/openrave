@@ -1,0 +1,1 @@
+#define OPENRAVE_COMMIT_HASH "@OpenRAVE_Commit_Hash@"
