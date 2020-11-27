@@ -2984,12 +2984,15 @@ private:
     /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromKinBodyInfo(const KinBodyInfo& info);
 
-    virtual void SetSetLinkTransformsFn(boost::function<bool(const std::vector<double>&)> pSetLinkTransformsFn) {
-        _pSetLinkTransformsFn = pSetLinkTransformsFn;
-    }
-    virtual void SetGetDOFLastSetValuesFn(boost::function<void(std::vector<double>&)> pGetDOFLastSetValuesFn) {
-        _pGetDOFLastSetValuesFn = pGetDOFLastSetValuesFn;
-    }
+    virtual void SetSetLinkTransformsFn(
+        const std::string& hash,
+        boost::function<bool(const std::vector<double>&)> pSetLinkTransformsFn
+    );
+
+    virtual void SetGetDOFLastSetValuesFn(
+        const std::string& hash,
+        boost::function<void(std::vector<double>&)> pGetDOFLastSetValuesFn
+    );
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
@@ -3090,12 +3093,20 @@ protected:
     ConfigurationSpecification _spec;
     CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions
 
-    // TGN's hack
-    ModuleBasePtr _pCalculator; ///< kinbody basic calculators
-    boost::function<bool(const std::vector<double>&)> _pSetLinkTransformsFn;
-    boost::function<void(std::vector<double>&)> _pGetDOFLastSetValuesFn;
-    bool _bTriedSetupCalculator = false;
+    bool _SetupForwardKinematicsStruct();
 
+public:
+    struct ForwardKinematicsStruct {
+        ForwardKinematicsStruct();
+        // TGN's hack
+        ModuleBasePtr pCalculatorModule = nullptr; ///< kinbody basic calculators
+        boost::function<bool(const std::vector<double>&)> pSetLinkTransformsFn;
+        boost::function<void(std::vector<double>&)> pGetDOFLastSetValuesFn;
+        bool bInitialized = false;
+    };
+
+protected:
+    std::map<std::string, ForwardKinematicsStruct> _mHash2ForwardKinematicsStruct;
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     uint32_t _nParametersChanged; ///< set of parameters that changed and need callbacks

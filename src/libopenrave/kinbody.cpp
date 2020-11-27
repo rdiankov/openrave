@@ -1887,27 +1887,18 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         _vTempJoints = vJointValues;
     }
 
-    if(!_pCalculator && !_bTriedSetupCalculator) {
-        _pCalculator = RaveCreateModule(GetEnv(), "robotbasiccalculators");
-        if(!_pCalculator) {
-            RAVELOG_WARN_FORMAT("Cannot create calculator for %s", GetName());
+    const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
+    if(!_mHash2ForwardKinematicsStruct.count(sKinematicsGeometry)) {
+        _mHash2ForwardKinematicsStruct.emplace(sKinematicsGeometry, ForwardKinematicsStruct());
+        if(!_SetupForwardKinematicsStruct()) {
+            RAVELOG_WARN_FORMAT("Cannot successfully initialize forward kinematics structure for kinbody %s with kinematics geometry hash %s", GetName() % sKinematicsGeometry);
         }
-        else {
-            rapidjson::Document rDocumentInput, rDocumentOutput; // need cache
-            orjson::SetJsonValueByKey(rDocumentInput, "bodyname", GetName(), rDocumentInput.GetAllocator());
-            orjson::SetJsonValueByKey(rDocumentInput, "force", false, rDocumentInput.GetAllocator());
-            _pCalculator->SendJSONCommand("GenerateLibrary", rDocumentInput, rDocumentOutput);
-        }
-        _bTriedSetupCalculator = true;
     }
 
-    if(!!_pCalculator && !!_pSetLinkTransformsFn) {
-        _pSetLinkTransformsFn(_vTempJoints);
-        _pGetDOFLastSetValuesFn(_vTempJoints);
-        for(size_t ijoint = 0; ijoint < _vecjoints.size(); ++ijoint) {
-            KinBody::Joint& joint = *_vecjoints[ijoint];
-            joint._doflastsetvalues[0] = _vTempJoints[ijoint];
-        }
+    ForwardKinematicsStruct& fkstruct = _mHash2ForwardKinematicsStruct.at(sKinematicsGeometry);
+    if(fkstruct.bInitialized) {
+        fkstruct.pSetLinkTransformsFn(_vTempJoints);
+        fkstruct.pGetDOFLastSetValuesFn(_vTempJoints);
         return;
     }
 
@@ -5697,4 +5688,49 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     return updateFromInfoResult;
 }
 
+KinBody::ForwardKinematicsStruct::ForwardKinematicsStruct () {
+}
+
+bool KinBody::_SetupForwardKinematicsStruct() {
+    const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
+    ForwardKinematicsStruct& fkstruct = _mHash2ForwardKinematicsStruct.at(sKinematicsGeometry);
+
+    fkstruct.pCalculatorModule = RaveCreateModule(GetEnv(), "robotbasiccalculators");
+    const ModuleBasePtr& pmodule = fkstruct.pCalculatorModule;
+    if(!pmodule) {
+        RAVELOG_WARN_FORMAT("Cannot create calculator for %s with kinematics geometry hash %s", GetName() % sKinematicsGeometry);
+        return false;
+    }
+
+    rapidjson::Document rDocumentInput, rDocumentOutput; // need cache
+    orjson::SetJsonValueByKey(rDocumentInput, "bodyname", GetName(), rDocumentInput.GetAllocator());
+    orjson::SetJsonValueByKey(rDocumentInput, "force", false, rDocumentInput.GetAllocator());
+    pmodule->SendJSONCommand("GenerateLibrary", rDocumentInput, rDocumentOutput);
+    fkstruct.bInitialized = !!fkstruct.pSetLinkTransformsFn && !!fkstruct.pGetDOFLastSetValuesFn;
+    return fkstruct.bInitialized;
+}
+
+void KinBody::SetSetLinkTransformsFn(
+    const std::string& hash,
+    boost::function<bool(const std::vector<double>&)> pSetLinkTransformsFn
+) {
+    const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
+    BOOST_ASSERT(hash==sKinematicsGeometry);
+    if(!_mHash2ForwardKinematicsStruct.count(hash)) {
+        BOOST_ASSERT(0); // to-do: add warn
+    }
+    _mHash2ForwardKinematicsStruct.at(hash).pSetLinkTransformsFn = pSetLinkTransformsFn;
+}
+
+void KinBody::SetGetDOFLastSetValuesFn(
+    const std::string& hash,
+    boost::function<void(std::vector<double>&)> pGetDOFLastSetValuesFn
+) {
+    const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
+    BOOST_ASSERT(hash==sKinematicsGeometry);
+    if(!_mHash2ForwardKinematicsStruct.count(hash)) {
+        BOOST_ASSERT(0); // to-do: add warn
+    }
+    _mHash2ForwardKinematicsStruct.at(hash).pGetDOFLastSetValuesFn = pGetDOFLastSetValuesFn;
+}
 } // end namespace OpenRAVE
