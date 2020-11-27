@@ -2443,6 +2443,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
     std::pair<Mimic::DOFFormat, std::array<int, 2> > d2zdxkxl {thisdofformat, {-1,-1}}; // ∂^2  z/∂xk ∂xl
     std::pair<Mimic::DOFFormat, std::array<int, 2> > d2ydxkxl; // ∂^2 yi/∂xk ∂xl
 
+    const size_t naccelfns = pmimic->_accelfns.size(); // when user did not provide mimic_accel, we had not allocated pmimic->_accelfns so it has size 0, and we set fvel=0 below
     for(int ivar = 0; ivar < nvars; ++ivar) {
         const Mimic::DOFFormat& dofformati = vdofformats[ivar]; ///< information about the ivar-th depended joint
         const JointConstPtr dependedjointi = dofformati.GetJoint(*parent); ///< a joint yi on which this joint directly depends on
@@ -2456,22 +2457,30 @@ void KinBody::Joint::_ComputePartialAccelerations(
             const JointConstPtr dependedjointj = dofformatj.GetJoint(*parent); ///< a joint on which this joint depends on
             const int jointindexj = dofformatj.jointindex; ///< index of this depended joint yj
             const int indexij = ivar * nvars + jvar; // (i, j)
-            const OpenRAVEFunctionParserRealPtr& accelfn = pmimic->_accelfns.at(indexij); ///< function that evaluates the partial derivative ∂^2 f/∂yi∂yj
+            
             dReal faccel = 0.0;
-            if(!!accelfn) {
-                faccel = accelfn->Eval(vDependedJointValues.data()); ///< ∂^2 f/∂yi∂yj
+            OpenRAVEFunctionParserRealPtr accelfn;
+            if(indexij < naccelfns) {
+                accelfn = pmimic->_accelfns.at(indexij); ///< function that evaluates the partial derivative ∂^2 f/∂yi∂yj
+                if(!!accelfn) {
+                    faccel = accelfn->Eval(vDependedJointValues.data()); ///< ∂^2 f/∂yi∂yj
+                }
             }
-            else {
-                RAVELOG_WARN_FORMAT("for index pair (%d,%d) among nvars=%d, pmimic->_accelfns(%d) is NULL; try (%d,%d)",
+
+            if(!accelfn) {
+                RAVELOG_WARN_FORMAT("for index pair (%d,%d) among nvars=%d, pmimic->_accelfns[%d] does not exist; try (%d,%d)",
                     ivar % jvar % nvars % indexij % jvar % ivar
                 );
                 const int indexji = jvar * nvars + ivar; // (j, i)
-                const OpenRAVEFunctionParserRealPtr& accelfn = pmimic->_accelfns.at(indexji); ///< ∂^2 f/∂yi∂yj <-- ∂^2 f/∂yj∂yi
-                if(!!accelfn) {
-                    faccel = accelfn->Eval(vDependedJointValues.data());
+
+                if(indexji < naccelfns) {
+                    accelfn = pmimic->_accelfns.at(indexji); ///< ∂^2 f/∂yi∂yj <-- ∂^2 f/∂yj∂yi
+                    if(!!accelfn) {
+                        faccel = accelfn->Eval(vDependedJointValues.data());
+                    }
                 }
-                else {
-                    RAVELOG_WARN_FORMAT("for index pair (%d,%d) among nvars=%d, pmimic->_accelfns(%d) is also NULL; treat the second-order partial derivative as 0",
+                if(!accelfn) {
+                    RAVELOG_WARN_FORMAT("for index pair (%d,%d) among nvars=%d, pmimic->_accelfns[%d] does not exist either; treat the second-order partial derivative as 0",
                         ivar % jvar % nvars % indexji
                     );
                     continue;
@@ -2483,7 +2492,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
             for(const std::array<int, 2>& indexpair : vIndexPairs) {
                 const int kactive = indexpair[0];
                 const int lactive = indexpair[1];
-                RAVELOG_VERBOSE_FORMAT("WorkiVERBOSE (i=%d,k=%d), (j=%d,l=%d), that is, ∂^2(%s)/∂(%s)∂(%s) += ∂^2 f/∂(%s)∂(%s) * (∂(%s)/∂(%s) * ∂(%s)/∂(%s))",
+                RAVELOG_VERBOSE_FORMAT("Working on (i=%d,k=%d), (j=%d,l=%d), that is, ∂^2(%s)/∂(%s)∂(%s) += ∂^2 f/∂(%s)∂(%s) * (∂(%s)/∂(%s) * ∂(%s)/∂(%s))",
                     jointindexi % kactive % jointindexj % lactive
                     % this->GetName() % vActiveJoints.at(kactive)->GetName() % vActiveJoints.at(lactive)->GetName()
                     % dependedjointi->GetName() % dependedjointj->GetName()
