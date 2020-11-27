@@ -10,6 +10,19 @@ set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPEN
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
 
+execute_process(
+    COMMAND git rev-parse HEAD
+    OUTPUT_VARIABLE OpenRAVE_Commit_Hash
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+message(STATUS "OpenRAVE_Commit_Hash = ${OpenRAVE_Commit_Hash}")
+configure_file(
+	"${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/openrave_commit_hash.h.in"
+	"${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/openrave_commit_hash.h"
+    @ONLY
+)
+
 message(STATUS "Using cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" )
 # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0002
 cmake_policy(SET CMP0002 NEW)
