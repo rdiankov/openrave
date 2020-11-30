@@ -2100,10 +2100,6 @@ void QtOSGViewer::_UpdateEnvironment()
             listGUIFunctions.swap(_listGUIFunctions);
         }
 
-        if (listGUIFunctions.size() > 100) {
-            RAVELOG_WARN("gui insertion indices: %d %d %d", _mapGUIInsertionIndices[GUIThreadQueuePriority::HIGH], _mapGUIInsertionIndices[GUIThreadQueuePriority::MEDIUM], _mapGUIInsertionIndices[GUIThreadQueuePriority::LOW]);
-        }
-
         FOREACH(itmsg, listGUIFunctions) {
             try {
                 (*itmsg)->Call();
@@ -2147,8 +2143,8 @@ void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, GUIThreadQ
         return;
     }
     // GUI thread function queue size limit for essential functions
-    if (_mapGUIInsertionIndices[GUIThreadQueuePriority::HIGH] >= 10000) {
-        RAVELOG_WARN("GUI thread function of priority %d dropped due to function queue exceeding size of 10000", priority);
+    if (_mapGUIInsertionIndices[GUIThreadQueuePriority::HIGH] >= 100000) {
+        RAVELOG_WARN("GUI thread function of priority %d dropped due to function queue exceeding size of 100000", priority);
         return;
     }
     std::advance(it, _mapGUIInsertionIndices[priority]);
