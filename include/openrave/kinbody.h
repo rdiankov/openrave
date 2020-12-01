@@ -3167,8 +3167,6 @@ public:
     bool RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fkstruct, const bool bOverWrite=false);
 
 protected:
-    bool _SetupForwardKinematicsStruct(const std::string& sKinematicsGeometry, ForwardKinematicsStruct& fkstruct) const;
-
     std::map<std::string, ForwardKinematicsStruct> _mHash2ForwardKinematicsStruct;
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
