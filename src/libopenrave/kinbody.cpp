@@ -1890,7 +1890,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
     if(!_mHash2ForwardKinematicsStruct.count(sKinematicsGeometry)) {
         _mHash2ForwardKinematicsStruct.emplace(sKinematicsGeometry, ForwardKinematicsStruct());
-        if(!_SetupForwardKinematicsStruct()) {
+        if(!_SetupForwardKinematicsStruct(sKinematicsGeometry, _mHash2ForwardKinematicsStruct.at(sKinematicsGeometry))) {
             RAVELOG_WARN_FORMAT("Cannot successfully initialize forward kinematics structure for kinbody %s with kinematics geometry hash %s", GetName() % sKinematicsGeometry);
         }
     }
@@ -5691,12 +5691,39 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 KinBody::ForwardKinematicsStruct::ForwardKinematicsStruct () {
 }
 
-bool KinBody::_SetupForwardKinematicsStruct() {
+bool KinBody::RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fkstruct, const bool bOverWrite) {
     const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
-    ForwardKinematicsStruct& fkstruct = _mHash2ForwardKinematicsStruct.at(sKinematicsGeometry);
+    const bool bRegistered = _mHash2ForwardKinematicsStruct.count(sKinematicsGeometry);
+    if(bRegistered) {
+        RAVELOG_DEBUG_FORMAT("Already registered ForwardKinematicsStruct at body \"%s\" with hash \"%s\"",
+            this->GetName() % sKinematicsGeometry
+        );
+        if(!bOverWrite) {
+            return true; // do not overwrite, so return
+        }
+        RAVELOG_WARN_FORMAT("Requested to replace the registered ForwardKinematicsStruct by a new one at body \"%s\" with hash \"%s\"",
+            this->GetName() % sKinematicsGeometry
+        );
+    }
+    const bool bCheck = (
+        fkstruct.pCalculatorModule 
+        && !!fkstruct.pSetLinkTransformsFn 
+        && !!fkstruct.pGetDOFLastSetValuesFn 
+        && fkstruct.bInitialized
+    );
+    if(!bCheck) {
+        RAVELOG_ERROR_FORMAT("Does not pass check for ForwardKinematicsStruct at body \"%s\" with hash \"%s\"",
+            this->GetName() % sKinematicsGeometry
+        );
+    }
+    else {
+        _mHash2ForwardKinematicsStruct[sKinematicsGeometry] = fkstruct;
+    }
+    return bCheck;
+}
 
-    fkstruct.pCalculatorModule = RaveCreateModule(GetEnv(), "robotbasiccalculators");
-    const ModuleBasePtr& pmodule = fkstruct.pCalculatorModule;
+bool KinBody::_SetupForwardKinematicsStruct(const std::string& sKinematicsGeometry, ForwardKinematicsStruct& fkstruct) const {
+    const ModuleBasePtr pmodule = RaveCreateModule(GetEnv(), "robotbasiccalculators");
     if(!pmodule) {
         RAVELOG_WARN_FORMAT("Cannot create calculator for %s with kinematics geometry hash %s", GetName() % sKinematicsGeometry);
         return false;
@@ -5708,29 +5735,5 @@ bool KinBody::_SetupForwardKinematicsStruct() {
     pmodule->SendJSONCommand("GenerateLibrary", rDocumentInput, rDocumentOutput);
     fkstruct.bInitialized = !!fkstruct.pSetLinkTransformsFn && !!fkstruct.pGetDOFLastSetValuesFn;
     return fkstruct.bInitialized;
-}
-
-void KinBody::SetSetLinkTransformsFn(
-    const std::string& hash,
-    boost::function<bool(const std::vector<double>&)> pSetLinkTransformsFn
-) {
-    const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
-    BOOST_ASSERT(hash==sKinematicsGeometry);
-    if(!_mHash2ForwardKinematicsStruct.count(hash)) {
-        BOOST_ASSERT(0); // to-do: add warn
-    }
-    _mHash2ForwardKinematicsStruct.at(hash).pSetLinkTransformsFn = pSetLinkTransformsFn;
-}
-
-void KinBody::SetGetDOFLastSetValuesFn(
-    const std::string& hash,
-    boost::function<void(std::vector<double>&)> pGetDOFLastSetValuesFn
-) {
-    const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
-    BOOST_ASSERT(hash==sKinematicsGeometry);
-    if(!_mHash2ForwardKinematicsStruct.count(hash)) {
-        BOOST_ASSERT(0); // to-do: add warn
-    }
-    _mHash2ForwardKinematicsStruct.at(hash).pGetDOFLastSetValuesFn = pGetDOFLastSetValuesFn;
 }
 } // end namespace OpenRAVE
