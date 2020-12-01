@@ -1888,18 +1888,13 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     }
 
     const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
-    if(!_mHash2ForwardKinematicsStruct.count(sKinematicsGeometry)) {
-        _mHash2ForwardKinematicsStruct.emplace(sKinematicsGeometry, ForwardKinematicsStruct());
-        if(!_SetupForwardKinematicsStruct(sKinematicsGeometry, _mHash2ForwardKinematicsStruct.at(sKinematicsGeometry))) {
-            RAVELOG_WARN_FORMAT("Cannot successfully initialize forward kinematics structure for kinbody %s with kinematics geometry hash %s", GetName() % sKinematicsGeometry);
+    if(_mHash2ForwardKinematicsStruct.count(sKinematicsGeometry)) {
+        ForwardKinematicsStruct& fkstruct = _mHash2ForwardKinematicsStruct.at(sKinematicsGeometry);
+        if(fkstruct.bInitialized) {
+            fkstruct.pSetLinkTransformsFn(_vTempJoints);
+            fkstruct.pGetDOFLastSetValuesFn(_vTempJoints);
+            return;
         }
-    }
-
-    ForwardKinematicsStruct& fkstruct = _mHash2ForwardKinematicsStruct.at(sKinematicsGeometry);
-    if(fkstruct.bInitialized) {
-        fkstruct.pSetLinkTransformsFn(_vTempJoints);
-        fkstruct.pGetDOFLastSetValuesFn(_vTempJoints);
-        return;
     }
 
     // have to compute the angles ahead of time since they are dependent on the link
@@ -5720,20 +5715,5 @@ bool KinBody::RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fks
         _mHash2ForwardKinematicsStruct[sKinematicsGeometry] = fkstruct;
     }
     return bCheck;
-}
-
-bool KinBody::_SetupForwardKinematicsStruct(const std::string& sKinematicsGeometry, ForwardKinematicsStruct& fkstruct) const {
-    const ModuleBasePtr pmodule = RaveCreateModule(GetEnv(), "robotbasiccalculators");
-    if(!pmodule) {
-        RAVELOG_WARN_FORMAT("Cannot create calculator for %s with kinematics geometry hash %s", GetName() % sKinematicsGeometry);
-        return false;
-    }
-
-    rapidjson::Document rDocumentInput, rDocumentOutput; // need cache
-    orjson::SetJsonValueByKey(rDocumentInput, "bodyname", GetName(), rDocumentInput.GetAllocator());
-    orjson::SetJsonValueByKey(rDocumentInput, "force", false, rDocumentInput.GetAllocator());
-    pmodule->SendJSONCommand("GenerateLibrary", rDocumentInput, rDocumentOutput);
-    fkstruct.bInitialized = !!fkstruct.pSetLinkTransformsFn && !!fkstruct.pGetDOFLastSetValuesFn;
-    return fkstruct.bInitialized;
 }
 } // end namespace OpenRAVE
