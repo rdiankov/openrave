@@ -3087,7 +3087,7 @@ public:
     struct ForwardKinematicsStruct {
         ForwardKinematicsStruct();
         // TGN's hack
-        ModuleBasePtr pCalculatorModule = nullptr; ///< kinbody basic calculators
+        ModuleBaseConstPtr pCalculatorModule = nullptr; ///< kinbody basic calculators
         boost::function<bool(const std::vector<double>&)> pSetLinkTransformsFn;
         boost::function<void(std::vector<double>&)> pGetDOFLastSetValuesFn;
         bool bInitialized = false;
