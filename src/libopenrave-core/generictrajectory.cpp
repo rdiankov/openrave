@@ -440,6 +440,11 @@ public:
 
     virtual void SampleEvenPoints(std::vector<dReal>& data, double deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const override
     {
+        // avoid unnecessary computation if spec is same as this->_spec
+        if (spec == _spec) {
+            return SampleEvenPoints(data, deltatime, ensureLastPoint);
+        }
+        
         std::vector<dReal> dataInSourceSpec;
         SampleEvenPoints(dataInSourceSpec, deltatime, ensureLastPoint);
 
