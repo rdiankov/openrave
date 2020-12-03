@@ -284,59 +284,6 @@ public:
         _bChanged = true;
     }
 
-    virtual void SamplePoints(std::vector<dReal>& vdata, const std::vector<dReal>& times) const
-    {
-        BOOST_ASSERT(_bInit);
-        BOOST_ASSERT(_timeoffset>=0);
-        BOOST_ASSERT(time >= 0);
-        _ComputeInternal();
-        OPENRAVE_ASSERT_OP_FORMAT0((int)_vtrajdata.size(),>=,_spec.GetDOF(), "trajectory needs at least one point to sample from", ORE_InvalidArguments);
-        if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
-            _VerifySampling();
-        }
-
-        int dof = GetConfigurationSpecification().GetDOF();
-        std::vector<dReal> data(dof,0);
-        vdata.resize(dof*times.size());
-        std::vector<dReal>::iterator itdata = vdata.begin();
-        std::vector<dReal>::iterator it = _vaccumtime.begin();
-
-        for(size_t i = 0; i < times.size(); ++i, itdata += dof) {
-            dReal time = times[i];
-            if( time >= GetDuration() ) {
-                std::copy(_vtrajdata.end()-_spec.GetDOF(),_vtrajdata.end(),data.begin());
-            }
-            else {
-                it = std::lower_bound(it,_vaccumtime.end(),time);
-                if( it == _vaccumtime.begin() ) {
-                    std::copy(_vtrajdata.begin(),_vtrajdata.begin()+_spec.GetDOF(),data.begin());
-                    data.at(_timeoffset) = time;
-                }
-                else {
-                    size_t index = it-_vaccumtime.begin();
-                    dReal deltatime = time-_vaccumtime.at(index-1);
-                    dReal waypointdeltatime = _vtrajdata.at(_spec.GetDOF()*index + _timeoffset);
-                    // unfortunately due to floating-point error deltatime might not be in the range [0, waypointdeltatime], so double check!
-                    if( deltatime < 0 ) {
-                        // most likely small epsilon
-                        deltatime = 0;
-                    }
-                    else if( deltatime > waypointdeltatime ) {
-                        deltatime = waypointdeltatime;
-                    }
-                    for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
-                        if( !!_vgroupinterpolators[i] ) {
-                            _vgroupinterpolators[i](index-1,deltatime,data);
-                        }
-                    }
-                    // should return the sample time relative to the last endpoint so it is easier to re-insert in the trajectory
-                    data.at(_timeoffset) = deltatime;
-                }
-            }
-            std::copy(data.begin(), data.end(), itdata);
-        }
-    }
-
     void Sample(std::vector<dReal>& data, dReal time) const
     {
         BOOST_ASSERT(_bInit);
@@ -424,6 +371,70 @@ public:
                 }
                 ConfigurationSpecification::ConvertData(data.begin(),spec,vinternaldata.begin(),_spec,1,GetEnv());
             }
+        }
+    }
+
+    virtual void SampleEvenPoints2D(std::vector<dReal>& data, double deltatime, bool ensureLastPoint) const override
+    {
+        BOOST_ASSERT(_bInit);
+        BOOST_ASSERT(_timeoffset>=0);
+        BOOST_ASSERT(time >= 0);
+        _ComputeInternal();
+        OPENRAVE_ASSERT_OP_FORMAT0((int)_vtrajdata.size(),>=,_spec.GetDOF(), "trajectory needs at least one point to sample from", ORE_InvalidArguments);
+        if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+            _VerifySampling();
+        }
+
+        const double duration = GetDuration();
+        int numPoints = int(duration / deltatime) + 1;
+        if (ensureLastPoint && (numPoints - 1) * deltatime < duration) {
+            numPoints++;
+        }
+
+        int dof = GetConfigurationSpecification().GetDOF();
+        std::vector<dReal> dataPerTimestep(dof,0);
+        data.resize(dof*numPoints);
+
+        const std::vector<dReal>::const_iterator begin = _vaccumtime.begin();
+        std::vector<dReal>::const_iterator it = begin;
+
+        std::vector<dReal>::iterator itdata = data.begin();
+ 
+        for(int i = 0; i < numPoints; ++i, itdata += dof) {
+            double time = i * deltatime;
+            if( time >= GetDuration() ) {
+                std::copy(_vtrajdata.end() - _spec.GetDOF(), _vtrajdata.end(), dataPerTimestep.begin());
+            }
+            else {
+                // knowing time always increases, it is safe to search in [it, end] instead of [begin, end]
+                it = std::lower_bound(it, _vaccumtime.cend(), time);
+
+                if( it == begin ) {
+                    std::copy(_vtrajdata.begin(),_vtrajdata.begin()+_spec.GetDOF(),dataPerTimestep.begin());
+                    dataPerTimestep.at(_timeoffset) = time;
+                }
+                else {
+                    size_t index = it - begin;
+                    dReal deltatime = time - _vaccumtime.at(index-1);
+                    dReal waypointdeltatime = _vtrajdata.at(_spec.GetDOF()*index + _timeoffset);
+                    // unfortunately due to floating-point error deltatime might not be in the range [0, waypointdeltatime], so double check!
+                    if( deltatime < 0 ) {
+                        // most likely small epsilon
+                        deltatime = 0;
+                    }
+                    else if( deltatime > waypointdeltatime ) {
+                        deltatime = waypointdeltatime;
+                    }
+                    for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
+                        if( !!_vgroupinterpolators[i] ) {
+                            _vgroupinterpolators[i](index-1, deltatime, dataPerTimestep);
+                        }
+                    }
+                    // should return the sample time relative to the last endpoint so it is easier to re-insert in the trajectory
+                    dataPerTimestep.at(_timeoffset) = deltatime;
+                }
+            }
+            std::copy(dataPerTimestep.begin(), dataPerTimestep.end(), itdata);
         }
     }
 
