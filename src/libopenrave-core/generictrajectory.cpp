@@ -374,7 +374,7 @@ public:
         }
     }
 
-    virtual void SampleEvenPoints2D(std::vector<dReal>& data, double deltatime, bool ensureLastPoint) const override
+    virtual void SampleEvenPoints(std::vector<dReal>& data, double deltatime, bool ensureLastPoint) const override
     {
         BOOST_ASSERT(_bInit);
         BOOST_ASSERT(_timeoffset>=0);
@@ -436,6 +436,26 @@ public:
             }
             std::copy(dataPerTimestep.begin(), dataPerTimestep.end(), itdata);
         }
+    }
+
+    virtual void SampleEvenPoints(std::vector<dReal>& data, double deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const override
+    {
+        std::vector<dReal> dataInSourceSpec;
+        SampleEvenPoints(dataInSourceSpec, deltatime, ensureLastPoint);
+
+        int dofSourceSpec = _spec.GetDOF();
+        OPENRAVE_ASSERT_OP(dataInSourceSpec.size() % dofSourceSpec,==, 0);
+        int numPoints = dataInSourceSpec.size() / dofSourceSpec;
+        int dof = spec.GetDOF();
+        std::vector<dReal> dataPerTimestep(dof,0);
+        data.resize(dof*numPoints);
+        
+        ConfigurationSpecification::ConvertData(data.begin(),
+                                                spec,
+                                                dataInSourceSpec.begin(),
+                                                _spec,
+                                                numPoints,
+                                                GetEnv());
     }
 
     const ConfigurationSpecification& GetConfigurationSpecification() const
