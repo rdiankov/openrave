@@ -120,7 +120,7 @@ void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dR
     }
 }
 
-void TrajectoryBase::SampleEvenPoints2D(std::vector<dReal>& data, double deltatime, bool ensureLastPoint) const
+void TrajectoryBase::SampleEvenPoints(std::vector<dReal>& data, double deltatime, bool ensureLastPoint) const
 {
     const double duration = GetDuration();
     int numPoints = int(duration / deltatime) + 1;
@@ -134,7 +134,7 @@ void TrajectoryBase::SampleEvenPoints2D(std::vector<dReal>& data, double deltati
     return SamplePoints(data, vtimes);
 }
 
-void TrajectoryBase::SampleEvenPoints2D(std::vector<dReal>& data, double deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const
+void TrajectoryBase::SampleEvenPoints(std::vector<dReal>& data, double deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const
 {
     const double duration = GetDuration();
     int numPoints = int(duration / deltatime) + 1;

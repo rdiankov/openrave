@@ -54,7 +54,7 @@ public:
 
     object SampleEvenPoints2D(double deltatime, bool ensureLastPoint) const;
 
-    object SampleEvenPoints2D(double deltatime, PyConfigurationSpecificationPtr pyspec) const;
+    object SampleEvenPoints2D(double deltatime, bool ensureLastPoint, PyConfigurationSpecificationPtr pyspec) const;
 
     object GetConfigurationSpecification() const;
 
