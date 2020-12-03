@@ -120,6 +120,34 @@ void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dR
     }
 }
 
+void TrajectoryBase::SampleEvenPoints2D(std::vector<dReal>& data, double deltatime, bool ensureLastPoint) const
+{
+    const double duration = GetDuration();
+    int numPoints = int(duration / deltatime) + 1;
+    std::vector<dReal> vtimes(numPoints, deltatime);
+    for (int i = 0; i < numPoints; ++i) {
+        vtimes[i] *= i;
+    }
+    if (ensureLastPoint && vtimes.back() < duration) {
+        vtimes.push_back(duration);
+    }
+    return SamplePoints(data, vtimes);
+}
+
+void TrajectoryBase::SampleEvenPoints2D(std::vector<dReal>& data, double deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const
+{
+    const double duration = GetDuration();
+    int numPoints = int(duration / deltatime) + 1;
+    std::vector<dReal> vtimes(numPoints, deltatime);
+    for (int i = 0; i < numPoints; ++i) {
+        vtimes[i] *= i;
+    }
+    if (ensureLastPoint && vtimes.back() < duration) {
+        vtimes.push_back(duration);
+    }
+    return SamplePoints(data, vtimes, spec);
+}
+
 void TrajectoryBase::GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data, const ConfigurationSpecification& spec) const
 {
     RAVELOG_VERBOSE(str(boost::format("TrajectoryBase::GetWaypoints: calling slow implementation %s")%GetXMLId()));

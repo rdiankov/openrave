@@ -142,13 +142,13 @@ object PyTrajectoryBase::SampleFromPrevious(object odata, dReal time, OPENRAVE_S
     return this->SampleFromPrevious(odata, time, pyspec);
 }
 
-inline object _SamplePoints(const TrajectoryBasePtr ptrajectory,
-                            const std::vector<dReal>& vtimes)
+object PyTrajectoryBase::SamplePoints2D(object otimes) const
 {
     std::vector<dReal> values;
-    ptrajectory->SamplePoints(values,vtimes);
+    std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
+    _ptrajectory->SamplePoints(values,vtimes);
 
-    const int numdof = ptrajectory->GetConfigurationSpecification().GetDOF();
+    const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pypos = toPyArray(values);
     pypos.resize({(int) values.size()/numdof, numdof});
@@ -163,24 +163,25 @@ inline object _SamplePoints(const TrajectoryBasePtr ptrajectory,
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
-object PyTrajectoryBase::SamplePoints2D(object otimes) const
-{
-    return _SamplePoints(_ptrajectory, ExtractArray<dReal>(otimes));
-}
-
 object PyTrajectoryBase::SampleEvenPoints2D(double deltatime,
                                             bool ensureLastPoint) const
 {
-    const double duration = _ptrajectory->GetDuration();
-    int numPoints = int(duration / deltatime) + 1;
-    std::vector<dReal> vtimes(numPoints, deltatime);
-    for (int i = 0; i < numPoints; ++i) {
-        vtimes[i] *= i;
+    std::vector<dReal> values;
+    _ptrajectory->SampleEvenPoints2D(values, deltatime, ensureLastPoint);
+
+    const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pypos = toPyArray(values);
+    pypos.resize({(int) values.size()/numdof, numdof});
+    return pypos;
+#else // USE_PYBIND11_PYTHON_BINDINGS
+    npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
+    PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    if( !values.empty() ) {
+        memcpy(PyArray_DATA(pypos), values.data(), values.size()*sizeof(values[0]));
     }
-    if (ensureLastPoint && vtimes.back() < duration) {
-        vtimes.push_back(duration);
-    }
-    return _SamplePoints(_ptrajectory, vtimes);
+    return py::to_array_astype<dReal>(pypos);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 
