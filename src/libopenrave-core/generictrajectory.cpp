@@ -386,7 +386,7 @@ public:
         }
 
         const double duration = GetDuration();
-        int numPoints = int(duration / deltatime) + 1;
+        int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
         if (ensureLastPoint && (numPoints - 1) * deltatime < duration) {
             numPoints++;
         }
