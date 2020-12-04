@@ -1237,11 +1237,11 @@ protected:
                         // larger step cause more deviated solution (and gripper quaternion) at singularity
                         double step = 0.00000001;
                     
-                        const std::array<double, 3> eetransOrg(eetrans);
-                        std::array<double, 9> eerotOrg(eerot);
+                        const IkReal eetransOrg[3] = {eetrans[0], eetrans[1], eetrans[2]};
+                        const IkReal eerotOrg[9] = {eerot[0], eerot[1], eerot[2], eerot[3], eerot[4], eerot[5], eerot[6], eerot[7], eerot[8]};
                         ikfast::IkSolutionList<double> jitteredSolutions;
                         while (step < 0.0005) {
-                            MUJIN_LOG_WARN_FORMAT("Doing stepping thing with %d", step);
+                            RAVELOG_WARN_FORMAT("Doing stepping thing with %d", step);
                             // adding and subtracting to all 4 coords does not work sometimes
                             for (int xyzr = 1; xyzr < 17; ++xyzr) {
                                 if (xyzr & 1) {
@@ -1268,8 +1268,8 @@ protected:
                                 else {
                                     eerot[2] = eerotOrg[2] - step;
                                 }
-                                bret = _ikfunctions->_ComputeIk2(eetrans.data(), eerot.data(), vfree.empty() ? nullptr : vfree.data(), jitteredSolutions, &pmanip);
-                                MUJIN_LOG_VERBOSE_FORMAT("Tried slight jitter=%d, %d solutions in total; ret=%d", xyzr % jitteredSolutions.GetNumSolutions() % (int)bret);
+                                bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.empty() ? nullptr : vfree.data(), jitteredSolutions, &pmanip);
+                                RAVELOG_VERBOSE_FORMAT("Tried slight jitter=%d, %d solutions in total; ret=%d", xyzr % jitteredSolutions.GetNumSolutions() % (int)bret);
                                 if (bret) {
                                     solutions.AddSolutions(jitteredSolutions);
                                 }
@@ -1280,8 +1280,9 @@ protected:
                             }
                             step *= 10;
                         }
-#endif
                     }
+#endif
+                }
                 return bret;
             }
             case IKP_TranslationXAxisAngleZNorm4D: {
