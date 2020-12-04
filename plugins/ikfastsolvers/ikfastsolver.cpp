@@ -1233,35 +1233,55 @@ protected:
                 if( !bret || (vfree.empty() && solutions.GetNumSolutions() < 8) ) {
 #ifdef OPENRAVE_HAS_LAPACK
                     if( _fRefineWithJacobianInverseAllowedError > 0 ) {
-                        ikfast::IkSolutionList<IkReal> solutionsWithJitter;
-                        // since will be refining, can add a little error to see if IK gets recomputed
-                        eetrans[0] += 0.001;
-                        eetrans[1] += 0.001;
-                        eetrans[2] += 0.001;
-                        eerot[0] += 0.001;
-                        bool bretJitterPositive(false);
-                        bool bretJitterNegative(false);
-                        bretJitterPositive = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutionsWithJitter, &pmanip);
-                        if (bretJitterPositive) {
-                            solutions.AddSolutions(solutionsWithJitter);
-                            RAVELOG_VERBOSE_FORMAT("%d solutions are added from +jittered ikparam, now %d solutions in total", solutionsWithJitter.GetNumSolutions()%solutions.GetNumSolutions());
-                        }
-                        if( !bretJitterPositive || (vfree.empty() && solutionsWithJitter.GetNumSolutions() < 8) ) {
-                            eetrans[0] -= 0.002;
-                            eetrans[1] -= 0.002;
-                            eetrans[2] -= 0.002;
-                            eerot[0] -= 0.002;
-                            bretJitterNegative = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutionsWithJitter, &pmanip);
-                            if (bretJitterNegative) {
-                                solutions.AddSolutions(solutionsWithJitter);
-                                RAVELOG_VERBOSE_FORMAT("%d solutions are added from -jittered ikparam, now %d solutions in total", solutionsWithJitter.GetNumSolutions()%solutions.GetNumSolutions());
+                        // prefer to find solution with smaller step.
+                        // larger step cause more deviated solution (and gripper quaternion) at singularity
+                        double step = 0.00000001;
+                    
+                        const std::array<double, 3> eetransOrg(eetrans);
+                        std::array<double, 9> eerotOrg(eerot);
+                        ikfast::IkSolutionList<double> jitteredSolutions;
+                        while (step < 0.0005) {
+                            MUJIN_LOG_WARN_FORMAT("Doing stepping thing with %d", step);
+                            // adding and subtracting to all 4 coords does not work sometimes
+                            for (int xyzr = 1; xyzr < 17; ++xyzr) {
+                                if (xyzr & 1) {
+                                    eetrans[0] = eetransOrg[0] + step;
+                                }
+                                else {
+                                    eetrans[0] = eetransOrg[0] - step;
+                                }
+                                if (xyzr & 2) {
+                                    eetrans[1] = eetransOrg[1] + step;
+                                }
+                                else {
+                                    eetrans[1] = eetransOrg[1] - step;
+                                }
+                                if (xyzr & 4) {
+                                    eetrans[2] = eetransOrg[2] + step;
+                                }
+                                else {
+                                    eetrans[2] = eetransOrg[2] - step;
+                                }
+                                if (xyzr & 8) {
+                                    eerot[2] = eerotOrg[2] + step;
+                                }
+                                else {
+                                    eerot[2] = eerotOrg[2] - step;
+                                }
+                                bret = _ikfunctions->_ComputeIk2(eetrans.data(), eerot.data(), vfree.empty() ? nullptr : vfree.data(), jitteredSolutions, &pmanip);
+                                MUJIN_LOG_VERBOSE_FORMAT("Tried slight jitter=%d, %d solutions in total; ret=%d", xyzr % jitteredSolutions.GetNumSolutions() % (int)bret);
+                                if (bret) {
+                                    solutions.AddSolutions(jitteredSolutions);
+                                }
                             }
+                            if (solutions.GetNumSolutions() > 0) {
+                                bret = true;
+                                break;
+                            }
+                            step *= 10;
                         }
-                        RAVELOG_VERBOSE_FORMAT("ik failed, trying with slight jitter, ret=%d", (int)(bretJitterNegative || bretJitterPositive));
-                        bret |= bretJitterNegative || bretJitterPositive;
-                    }
 #endif
-                }
+                    }
                 return bret;
             }
             case IKP_TranslationXAxisAngleZNorm4D: {
