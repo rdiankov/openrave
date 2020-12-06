@@ -24,7 +24,8 @@ namespace openravepy {
 class PyStateRestoreContextBase
 {
 public:
-    PyStateRestoreContextBase() {}
+    PyStateRestoreContextBase() {
+    }
     virtual ~PyStateRestoreContextBase() {
     }
     virtual py::object __enter__() = 0;
@@ -86,81 +87,83 @@ public:
 
 class PyKinBody : public PyInterfaceBase
 {
- public:
-    class PyGrabbedInfo
-{
 public:
-    PyGrabbedInfo();
-    PyGrabbedInfo(const RobotBase::GrabbedInfo& info);
+    class PyGrabbedInfo
+    {
+public:
+        PyGrabbedInfo();
+        PyGrabbedInfo(const RobotBase::GrabbedInfo& info);
 
-    RobotBase::GrabbedInfoPtr GetGrabbedInfo() const;
+        RobotBase::GrabbedInfoPtr GetGrabbedInfo() const;
 
-    py::object SerializeJSON(dReal fUnitScale=1.0, py::object ooptions=py::none_());
+        py::object SerializeJSON(dReal fUnitScale=1.0, py::object ooptions=py::none_());
 
-    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
+        void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
 
-    std::string __str__();
-    py::object __unicode__();
+        std::string __str__();
+        py::object __unicode__();
 
 private:
-    void _Update(const RobotBase::GrabbedInfo& info);
+        void _Update(const RobotBase::GrabbedInfo& info);
 
 public:
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::string _id;
-    std::string _grabbedname;
-    std::string _robotlinkname;
+        std::string _id;
+        std::string _grabbedname;
+        std::string _robotlinkname;
 #else
-    py::object _id = py::none_();
-    py::object _grabbedname = py::none_();
-    py::object _robotlinkname = py::none_();
+        py::object _id = py::none_();
+        py::object _grabbedname = py::none_();
+        py::object _robotlinkname = py::none_();
 #endif
-    py::object _trelative = ReturnTransform(Transform());
+        py::object _trelative = ReturnTransform(Transform());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<int> _setRobotLinksToIgnore;
+        std::vector<std::string> _setIgnoreRobotLinkNames;
 #else
-    py::object _setRobotLinksToIgnore = py::none_();
+        py::object _setIgnoreRobotLinkNames = py::none_();
 #endif
-}; // class PyGrabbedInfo
-typedef OPENRAVE_SHARED_PTR<PyGrabbedInfo> PyGrabbedInfoPtr;
+    }; // class PyGrabbedInfo
+    typedef OPENRAVE_SHARED_PTR<PyGrabbedInfo> PyGrabbedInfoPtr;
 
 public:
     class PyKinBodyInfo
-{
+    {
 public:
-    PyKinBodyInfo();
-    PyKinBodyInfo(const KinBody::KinBodyInfo& info);
-    py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
-    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
-    KinBody::KinBodyInfoPtr GetKinBodyInfo() const;
+        PyKinBodyInfo();
+        PyKinBodyInfo(const KinBody::KinBodyInfo& info);
+        py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+        void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
+        KinBody::KinBodyInfoPtr GetKinBodyInfo() const;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<KinBody::LinkInfoPtr> _vLinkInfos;
-    std::vector<KinBody::JointInfoPtr> _vJointInfos;
-    std::vector<KinBody::GrabbedInfoPtr> _vGrabbedInfos;
-    std::string _uri;
-    std::string _id;
-    std::string _name;
-    std::string _referenceUri;
+        std::vector<KinBody::LinkInfoPtr> _vLinkInfos;
+        std::vector<KinBody::JointInfoPtr> _vJointInfos;
+        std::vector<KinBody::GrabbedInfoPtr> _vGrabbedInfos;
+        std::string _uri;
+        std::string _id;
+        std::string _name;
+        std::string _interfaceType;
+        std::string _referenceUri;
 #else
-    py::object _vLinkInfos = py::none_();
-    py::object _vJointInfos = py::none_();
-    py::object _vGrabbedInfos = py::none_();
-    py::object _uri = py::none_();
-    py::object _referenceUri = py::none_();
-    py::object _id = py::none_();
-    py::object _name = py::none_();
+        py::object _vLinkInfos = py::none_();
+        py::object _vJointInfos = py::none_();
+        py::object _vGrabbedInfos = py::none_();
+        py::object _uri = py::none_();
+        py::object _referenceUri = py::none_();
+        py::object _id = py::none_();
+        py::object _name = py::none_();
+        py::object _interfaceType = py::none_();
 #endif
-    py::object _transform = ReturnTransform(Transform());
-    bool _isRobot = false;
-    py::object _dofValues = py::none_();
-    py::object _readableInterfaces = py::none_();
-    virtual std::string __str__();
-    virtual py::object __unicode__();
+        py::object _transform = ReturnTransform(Transform());
+        bool _isRobot = false;
+        py::object _dofValues = py::none_();
+        py::object _readableInterfaces = py::none_();
+        virtual std::string __str__();
+        virtual py::object __unicode__();
 
 protected:
-    void _Update(const KinBody::KinBodyInfo& info);
-}; // class PyKinBodyInfo
+        void _Update(const KinBody::KinBodyInfo& info);
+    }; // class PyKinBodyInfo
 
 
 protected:

@@ -19,6 +19,7 @@
 #include <osgDB/ReadFile>
 #include <osg/FrontFace>
 #include <osg/CullFace>
+#include <osg/ComputeBoundsVisitor>
 #include <osg/CoordinateSystemNode>
 #include <osg/BlendFunc>
 #include <osgGA/NodeTrackerManipulator>
@@ -35,8 +36,9 @@ namespace qtosgrave {
 
 class OpenRAVETracker : public osgGA::NodeTrackerManipulator {
 public:
-    OpenRAVETracker()
+    OpenRAVETracker(QOSGViewerWidget* osgviewerwidget)
     {
+        _posgviewerwidget = osgviewerwidget;
         _currentTransitionAnimationTime = 0;
         _transitionAnimationPath = new osg::AnimationPath();
         _transitionAnimationPath->setLoopMode(osg::AnimationPath::NO_LOOPING);
@@ -65,6 +67,24 @@ public:
 
     // OSG overloaded methods
 public:
+    virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        switch( ea.getEventType() )
+        {
+        case osgGA::GUIEventAdapter::SCROLL:
+            if(_posgviewerwidget->IsInOrthoMode()) {
+                double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
+                _posgviewerwidget->Zoom(factor);
+                return true;
+            }
+            break;
+
+        default:
+            break;
+        }
+
+        return osgGA::NodeTrackerManipulator::handle(ea, us);
+    }
 
     virtual osg::Matrixd getMatrix() const
     {
@@ -104,15 +124,24 @@ public:
         _rotation = matrix.getRotate().inverse();
     }
 
+    bool performMovementRightMouseButton( const double eventTimeDelta, const double dx, const double dy )
+    {
+        if(_posgviewerwidget->IsInOrthoMode()) {
+            _posgviewerwidget->Zoom( dy < 0 ? 1.1 : 0.9 );
+            return true;
+        }
+        return osgGA::NodeTrackerManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
+    }
+
 private:
     void _CreateTransitionAnimationPath(osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
     {
         _transitionAnimationPath->clear();
 
         // create animation frames in world space
-        osg::Matrixd viewMatrix = osg::Matrixd::inverse(currentCamera->getViewMatrix());
+        osg::Matrixd cameraToWorld = osg::Matrixd::inverse(currentCamera->getViewMatrix());
 
-        osg::Vec3d cameraWorldPos(viewMatrix(3,0), viewMatrix(3,1), viewMatrix(3,2));
+        osg::Vec3d cameraWorldPos(cameraToWorld(3,0), cameraToWorld(3,1), cameraToWorld(3,2));
 
         // now calculate a pose that will look to the node using current position
         osg::Matrixd localToWorld;
@@ -127,8 +156,7 @@ private:
             return;
         }
 
-
-        osg::Quat cameraRotation = viewMatrix.getRotate();
+        osg::Quat cameraRotation = cameraToWorld.getRotate();
         _transitionAnimationPath->insert(0,osg::AnimationPath::ControlPoint(cameraWorldPos, cameraRotation));
 
         // last frame pose is looking at the node from a distance _distance
@@ -176,6 +204,7 @@ private:
 private:
     QTime _time; ///< tracks the time of the last _ComputeNextTransitionAnimationMatrix call, so that can compute the time passed from that last call.
     osg::Vec3d _offset; ///< the translation offset in the getTrackNode() coordinate system.
+    QOSGViewerWidget* _posgviewerwidget;
     double _transitionAnimationDuration; //< specifies how long the transition will take
     double _currentTransitionAnimationTime; ///< tracks the time since the transition was made. Incremeneted whenever computing _ComputeNextTransitionAnimationMatrix
     osg::ref_ptr<osg::AnimationPath> _transitionAnimationPath;
@@ -250,8 +279,28 @@ public:
     // make zooming faster
     bool performMovementRightMouseButton( const double eventTimeDelta, const double dx, const double dy )
     {
+        // adjust camera perspective if zoom changed while in ortho view
+        if (_posgviewerwidget->IsInOrthoMode()) {
+            _posgviewerwidget->Zoom( dy < 0 ? 1.1 : 0.9 );
+            return true;
+        }
         return osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
     }
+
+    // make rotation faster
+    bool performMovementLeftMouseButton( const double eventTimeDelta, const double dx, const double dy )
+    {
+        double rotationSensitivityMultiplier = 4.0; // dx / dy angle multiplier
+        if( getVerticalAxisFixed() )
+            rotateWithFixedVertical( rotationSensitivityMultiplier*dx, rotationSensitivityMultiplier*dy );
+        else {
+            rotateTrackball( _ga_t0->getXnormalized(), _ga_t0->getYnormalized(),
+                             _ga_t0->getXnormalized() - rotationSensitivityMultiplier*dx, _ga_t0->getYnormalized() - rotationSensitivityMultiplier*dy,
+                             getThrowScale( eventTimeDelta ) );
+        }
+        return true;
+    }
+
     void applyAnimationStep( const double currentProgress, const double prevProgress )
     {
         OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData* >( _animationData.get() );
@@ -278,17 +327,24 @@ public:
 
     virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
     {
-        if (osgGA::TrackballManipulator::handle(ea, us)) {
-            return true;
-        }
         switch( ea.getEventType() )
         {
         case osgGA::GUIEventAdapter::DOUBLECLICK:
             return handleMouseDoubleClick( ea, us );
 
+        case osgGA::GUIEventAdapter::SCROLL:
+            if(_posgviewerwidget->IsInOrthoMode()) {
+                double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
+                _posgviewerwidget->Zoom(factor);
+                return true;
+            }
+            break;
+
         default:
-            return false;
+            break;
         }
+
+        return osgGA::TrackballManipulator::handle(ea, us);
     }
 
     bool setCenterByMousePointerIntersection( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
@@ -573,6 +629,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     {
         _osgSkybox = new Skybox;
         _osgFigureRoot->addChild(_osgSkybox);
+        _osgSkybox->setNodeMask(0x0);// only enable when set texture map
         _osgFigureRoot->setNodeMask(~OSG_IS_PICKABLE_MASK);
     }
 
@@ -1057,11 +1114,13 @@ void QOSGViewerWidget::SetViewType(int isorthogonal)
     int height = _osgview->getCamera()->getViewport()->height();
     double aspect = static_cast<double>(width)/static_cast<double>(height);
     if( isorthogonal ) {
-        double distance = 0.5*_osgDefaultManipulator->getDistance();
-        _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, _zNear, _zNear * 10000.0);
+        double distance = GetCameraDistanceToFocus();
+        _currentOrthoFrustumSize = distance * 0.5;
+        _osgview->getCamera()->setProjectionMatrixAsOrtho(-_currentOrthoFrustumSize, _currentOrthoFrustumSize, -_currentOrthoFrustumSize/aspect, _currentOrthoFrustumSize/aspect, _zNear, _zNear * 10000.0);
     }
     else {
         _osgview->getCamera()->setProjectionMatrixAsPerspective(45.0f, aspect, _zNear, _zNear * 10000.0);
+        SetCameraDistanceToFocus(_currentOrthoFrustumSize*2);
     }
 }
 
@@ -1099,10 +1158,62 @@ void QOSGViewerWidget::_UpdateHUDAxisTransform(int width, int height)
     _osgWorldAxis->setMatrix(m);
 }
 
+void QOSGViewerWidget::_SetCameraViewOrthoProjectionPlaneSize(double size) 
+{
+    const int width = _osgview->getCamera()->getViewport()->width();
+    const int height = _osgview->getCamera()->getViewport()->height();
+    const double aspect = static_cast<double>(width)/static_cast<double>(height);
+    const double nearplane = GetCameraNearPlane();
+    _osgview->getCamera()->setProjectionMatrixAsOrtho(-size, size, -size/aspect, size/aspect, nearplane, 10000*nearplane);
+}
+
+void QOSGViewerWidget::_MoveCameraPointOfView(const osg::Vec3d& axis)
+{
+
+    osg::ComputeBoundsVisitor boundingBoxVisitor;
+    _osgSceneRoot->accept(boundingBoxVisitor);
+    osg::BoundingBox boundingBox = boundingBoxVisitor.getBoundingBox();
+
+    osg::Vec3d bboxDiagonal = osg::Vec3d(boundingBox.xMax(),boundingBox.yMax(), boundingBox.zMax()) - osg::Vec3d(boundingBox.xMin(),boundingBox.yMin(), boundingBox.zMin());
+
+    // use sceneSize as the diagonal of the boundingbox
+    double sceneSize = bboxDiagonal.length() * 0.75;
+
+    // if in perspective mode, then we can use fovy to calculate the distance we need to use in order to sceneSize to fit screen height
+    // (see SetViewType)
+    double fovy = 45.0 * M_PI / 180.0;
+    double cameraDistance = (sceneSize * 0.5) / tan(fovy*0.5);
+
+    if(IsInOrthoMode()) {
+        _SetCameraViewOrthoProjectionPlaneSize(sceneSize*0.5);
+    }
+    else {
+        SetCameraDistanceToFocus(cameraDistance);
+    }
+
+    osg::Vec3d worldUpVector;
+    _GetRAVEEnvironmentUpVector(worldUpVector);
+    double cosWorldUpAlignment = abs(axis * worldUpVector);
+
+    if((1-cosWorldUpAlignment) < 1e-3) {
+        // view direction is aligned with world up, use another up axis
+        worldUpVector = osg::Vec3d(0,1,0);
+        // try to find another vector that is not aligned with worldUp
+        if(1 - abs(worldUpVector*axis) < 1e-3) {
+            worldUpVector = osg::Vec3d(1,0,0);
+        }
+    }
+
+    osg::Matrixd newViewMatrix;
+    osg::Vec3d newCameraPos = boundingBox.center() + axis * cameraDistance;
+    newViewMatrix.makeLookAt(newCameraPos, newCameraPos - axis, worldUpVector);
+    GetCurrentCameraManipulator()->setByInverseMatrix(newViewMatrix);
+}
+
 void QOSGViewerWidget::_RotateCameraOverDirection(double angle, const osg::Vec3d& camSpaceRotationOverDirection, bool useCameraUpDirection)
 {
     osg::Matrixd cameraToWorld = osg::Matrixd::inverse(GetCamera()->getViewMatrix());
-    double cameraDistanceToFocus = GetCurrentManipulatorDistanceToFocus();
+    double cameraDistanceToFocus = GetCameraDistanceToFocus();
     osg::Quat cameraToWorldRotate = cameraToWorld.getRotate();
 
     osg::Vec3d upVector;
@@ -1153,9 +1264,29 @@ void QOSGViewerWidget::_PanCameraTowardsDirection(double delta, const osg::Vec3d
     GetCurrentCameraManipulator()->setByInverseMatrix(viewMatrix);
 }
 
+void QOSGViewerWidget::MoveCameraPointOfView(const std::string& axis)
+{
+    static const std::map<std::string, osg::Vec3d> axes = {
+        { "+x", osg::Vec3d(1,0,0) },
+        { "-x", osg::Vec3d(-1,0,0) },
+        { "+y", osg::Vec3d(0,1,0) },
+        { "-y", osg::Vec3d(0,-1,0) },
+        { "+z", osg::Vec3d(0,0,1) },
+        { "-z", osg::Vec3d(0,0,-1) }
+    };
+    std::map<std::string, osg::Vec3d>::const_iterator it = axes.find(axis);
+    if(it == axes.end()) {
+        // could not  find
+        RAVELOG_WARN(str(boost::format("invalid axis name to move camera to: %s\n")%axis));
+        return;
+    }
+
+    _MoveCameraPointOfView(it->second);
+}
+
 void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
 {
-    if(isPan) {
+    if(!IsInOrthoMode() && isPan) {
         // move focal point along with camera position by using camera space foward direction to pan
         _PanCameraTowardsDirection((panDelta / _metersinunit), osg::Vec3d(0,0,1));
         return;
@@ -1164,28 +1295,23 @@ void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
     Zoom(factor);
 }
 
-
+// see header, this function never changes focal point position
 void QOSGViewerWidget::Zoom(float factor)
 {
-    // Ortho
-    if ( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
-        const int width = _osgview->getCamera()->getViewport()->width();
-        const int height = _osgview->getCamera()->getViewport()->height();
-        const double aspect = static_cast<double>(width)/static_cast<double>(height);
-        const double nearplane = GetCameraNearPlane();
-        factor = std::min(std::max(factor, 0.01f), 100.0f);
-        const double distance = 0.5 * _osgDefaultManipulator->getDistance() / factor;
-
-        _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, nearplane, 10000*nearplane);
-    } else {
-        SetCurrentManipulatorDistanceToFocus(GetCurrentManipulatorDistanceToFocus() / factor);
+    if (IsInOrthoMode()) {
+        // if we increase _currentOrthoFrustumSize, we zoom out since a bigger frustum maps object to smaller part of screen
+        _currentOrthoFrustumSize = _currentOrthoFrustumSize / factor;
+        _SetCameraViewOrthoProjectionPlaneSize(_currentOrthoFrustumSize);
+        return;
     }
+    SetCameraDistanceToFocus(GetCameraDistanceToFocus() / factor);
 }
 
 
 void QOSGViewerWidget::SetTextureCubeMap(const std::string& posx, const std::string& negx, const std::string& posy,
                                          const std::string& negy, const std::string& posz, const std::string& negz)
 {
+    _osgSkybox->setNodeMask(~OSG_IS_PICKABLE_MASK);
     _osgSkybox->setTextureCubeMap(posx, negx, posy, negy, posz, negz);
 }
 
@@ -1202,7 +1328,7 @@ void QOSGViewerWidget::_SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_p
     _osgDefaultManipulator->setAllowThrow(false);
     view->setCameraManipulator( _osgDefaultManipulator.get() );
 
-    _osgTrackModeManipulator = new OpenRAVETracker();
+    _osgTrackModeManipulator = new OpenRAVETracker(this);
     _osgTrackModeManipulator->setWheelZoomFactor(0.2);
     _osgTrackModeManipulator->setAllowThrow(false);
     _osgTrackModeManipulator->setRotationMode(osgGA::NodeTrackerManipulator::TRACKBALL);
@@ -1442,6 +1568,11 @@ osg::Camera *QOSGViewerWidget::GetCamera()
     return _osgview->getCamera();
 }
 
+bool QOSGViewerWidget::IsInOrthoMode()
+{
+    return _osgview->getCamera()->getProjectionMatrix()(2,3) == 0;
+}
+
 osg::ref_ptr<osgGA::CameraManipulator> QOSGViewerWidget::GetCurrentCameraManipulator()
 {
     return _osgview->getCameraManipulator();
@@ -1452,35 +1583,46 @@ void QOSGViewerWidget::SetCurrentCameraManipulator(osgGA::CameraManipulator* man
     _osgview->setCameraManipulator(manipulator);
 }
 
-double QOSGViewerWidget::GetCurrentManipulatorDistanceToFocus()
+double QOSGViewerWidget::GetCameraDistanceToFocus()
 {
     osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());
     return currentManip->getDistance();
-
 }
 
-void QOSGViewerWidget::SetCurrentManipulatorDistanceToFocus(double distance)
+void QOSGViewerWidget::SetCameraDistanceToFocus(double distance)
 {
     if( distance <= 0 ) {
         return;
     }
+
+    if(IsInOrthoMode()) {
+        RAVELOG_WARN("performing hard SetCameraDistanceToFocus when in ortho mode, please use Zoom() to change zoom independently from the current view mode.");
+        return;
+    }
+
     osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());
     currentManip->setDistance(distance);
 }
 
 void QOSGViewerWidget::RestoreDefaultManipulator()
 {
-    if(_osgview->getCameraManipulator() == _osgDefaultManipulator.get()) {
+    if(IsUsingDefaultCameraManipulator()) {
         return;
     }
     // save current distance to focus so to apply to the default manipulator
-    double currentDistanceToFocus = GetCurrentManipulatorDistanceToFocus();
+    double currentDistanceToFocus = GetCameraDistanceToFocus();
     // copy matrix from trackManipulator to default one so change of manipulators occurs seamless
     // SetCurrentCameraManipulator must be called before setByMatrix in order to take effect
     SetCurrentCameraManipulator(_osgDefaultManipulator.get());
-    SetCurrentManipulatorDistanceToFocus(currentDistanceToFocus);
+    SetCameraDistanceToFocus(currentDistanceToFocus);
     _osgDefaultManipulator->setByMatrix(_osgTrackModeManipulator->getMatrix());
 }
+
+bool QOSGViewerWidget::IsUsingDefaultCameraManipulator()
+{
+    return _osgview->getCameraManipulator() == _osgDefaultManipulator.get();
+}
+
 
 osg::ref_ptr<osgGA::TrackballManipulator> QOSGViewerWidget::GetDefaultCameraManipulator() {
     return osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_osgDefaultManipulator);

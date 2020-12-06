@@ -203,7 +203,7 @@ class LinkStatisticsModel(DatabaseGenerator):
     def _GetJointSpheresFromGrabbed(self, grabbedinfo):
         for testgrabbedinfo, testjointspheres in self.grabbedjointspheres:
             if len(testgrabbedinfo) == len(grabbedinfo):
-                if all([(grabbedinfo[i]._grabbedname == testgrabbedinfo[i]._grabbedname and grabbedinfo[i]._robotlinkname == testgrabbedinfo[i]._robotlinkname and sum(abs(grabbedinfo[i]._trelative-testgrabbedinfo[i]._trelative)) <= 1e-7 and grabbedinfo[i]._setRobotLinksToIgnore == testgrabbedinfo[i]._setRobotLinksToIgnore) for i in range(len(grabbedinfo))]):
+                if all([(grabbedinfo[i]._grabbedname == testgrabbedinfo[i]._grabbedname and grabbedinfo[i]._robotlinkname == testgrabbedinfo[i]._robotlinkname and sum(abs(grabbedinfo[i]._trelative-testgrabbedinfo[i]._trelative)) <= 1e-7 and grabbedinfo[i]._setIgnoreRobotLinkNames == testgrabbedinfo[i]._setIgnoreRobotLinkNames) for i in range(len(grabbedinfo))]):
                     return testjointspheres
         
         log.debug('adding new linkstatistic for grabbed bodies: %r', [g._grabbedname for g in grabbedinfo])
@@ -236,8 +236,8 @@ class LinkStatisticsModel(DatabaseGenerator):
             for childjoint in childjoints:
                 if childjoint.GetJointIndex() in jointspheres:
                     childpos, childradius = jointspheres[childjoint.GetJointIndex()]
-                    minpos = numpy.minimum(minpos, childpos - sphereradius*ones([1,1,1]))
-                    maxpos = numpy.maximum(maxpos, childpos + sphereradius*ones([1,1,1]))
+                    minpos = numpy.minimum(minpos, childpos - childradius*ones([1,1,1]))
+                    maxpos = numpy.maximum(maxpos, childpos + childradius*ones([1,1,1]))
             
             newspherepos = 0.5*(minpos + maxpos)
             newsphereradius = linalg.norm(newspherepos - spherepos) + sphereradius

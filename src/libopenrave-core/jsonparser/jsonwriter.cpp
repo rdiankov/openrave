@@ -45,10 +45,11 @@ public:
     }
 
     virtual void Write(EnvironmentBasePtr penv) {
-        std::vector<KinBodyPtr> vbodies;
-        penv->GetBodies(vbodies);
-        std::list<KinBodyPtr> listbodies(vbodies.begin(), vbodies.end());
-        _Write(listbodies);
+        dReal fUnitScale = 1.0;
+        EnvironmentBase::EnvironmentBaseInfo info;
+        penv->ExtractInfo(info);
+        _rEnvironment.SetObject();
+        info.SerializeJSON(_rEnvironment, _allocator, fUnitScale, _serializeOptions);
     }
 
     virtual void Write(KinBodyPtr pbody) {
@@ -65,17 +66,13 @@ protected:
 
     virtual void _Write(const std::list<KinBodyPtr>& listbodies) {
         _rEnvironment.SetObject();
-        _mapBodyIds.clear();
         if (listbodies.size() > 0) {
             EnvironmentBaseConstPtr penv = listbodies.front()->GetEnv();
             OpenRAVE::orjson::SetJsonValueByKey(_rEnvironment, "unit", penv->GetUnit(), _allocator);
             dReal fUnitScale = 1.0;
-            
-            int globalId = 0;
+
             FOREACHC(itbody, listbodies) {
                 BOOST_ASSERT((*itbody)->GetEnv() == penv);
-                BOOST_ASSERT(_mapBodyIds.find((*itbody)->GetEnvironmentId()) == _mapBodyIds.end());
-                _mapBodyIds[(*itbody)->GetEnvironmentId()] = globalId++;
             }
 
             rapidjson::Value bodiesValue;
@@ -96,20 +93,12 @@ protected:
                         KinBody::KinBodyInfo info;
                         pBody->ExtractInfo(info);
                         info._referenceUri = _CanonicalizeURI(info._referenceUri);
-                        if (info._id.empty()) {
-                            // TODO: dedup
-                            info._id = str(boost::format("body%d")%_mapBodyIds[pBody->GetEnvironmentId()]);
-                        }
                         info.SerializeJSON(bodyValue, _allocator, fUnitScale);
                     } else {
                         RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
                         RobotBase::RobotBaseInfo info;
                         pRobot->ExtractInfo(info);
                         info._referenceUri = _CanonicalizeURI(info._referenceUri);
-                        if (info._id.empty()) {
-                            // TODO: dedup
-                            info._id = str(boost::format("body%d")%_mapBodyIds[pBody->GetEnvironmentId()]);
-                        }
                         FOREACH(itConnectedBodyInfo, info._vConnectedBodyInfos) {
                             (*itConnectedBodyInfo)->_uri = _CanonicalizeURI((*itConnectedBodyInfo)->_uri);
                         }
@@ -218,7 +207,6 @@ protected:
 
     std::string _vForceResolveOpenRAVEScheme; ///< if specified, writer will attempt to convert a local system URI (**file:/**) to a a relative path with respect to $OPENRAVE_DATA paths and use **customscheme** as the scheme
 
-    std::map<int, int> _mapBodyIds; ///< map from body environment id to unique json ids
     int _serializeOptions; ///< the serialization options
 
     rapidjson::Value& _rEnvironment;

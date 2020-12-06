@@ -191,11 +191,6 @@ public:
         bool SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
         bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
 
-        virtual SensorGeometry& operator=(const SensorGeometry& r) {
-            hardware_id = r.hardware_id;
-            return *this;
-        }
-
         bool operator==(const Readable& r) override {
             const SensorGeometry* pOther = dynamic_cast<const SensorGeometry*>(&r);
             if (!pOther) {
@@ -319,7 +314,12 @@ public:
     class OPENRAVE_API Force6DGeomData : public SensorGeometry
     {
 public:
-        Force6DGeomData() : SensorGeometry("Force6D") {
+        Force6DGeomData() : SensorGeometry("Force6D"), polarity(1), correction_matrix({{1,0,0, 0,0,0,
+                        0,1,0, 0,0,0,
+                        0,0,1, 0,0,0,
+                        0,0,0, 1,0,0,
+                        0,0,0, 0,1,0,
+                        0,0,0, 0,0,1}}) {
         }
         virtual SensorType GetType() const {
             return ST_Force6D;
@@ -329,9 +329,20 @@ public:
             if (!pOther) {
                 return false;
             }
-            return SensorGeometry::operator==(other);
+            return SensorGeometry::operator==(other)
+                   && polarity == pOther->polarity
+                   && correction_matrix == pOther->correction_matrix;
         }
+
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override;
+        bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
+        bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
+
+        int polarity; ///< sensor's polarity. set +1 if load is attached to the side of sensor which sensor's spec explains. set -1 if load is attached to the opposite side.
+        boost::array<dReal,36> correction_matrix; ///< correction matrix. force -> torque order. this matrix will be used to cancel crosstalk by multiplying to measured force/torque. f_without_crosstalk = correction_matrix * f_measured.
     };
+    typedef boost::shared_ptr<Force6DGeomData> Force6DGeomDataPtr;
+    typedef boost::shared_ptr<Force6DGeomData const> Force6DGeomDataConstPtr;
     class OPENRAVE_API IMUGeomData : public SensorGeometry
     {
 public:

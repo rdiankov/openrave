@@ -27,6 +27,11 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& value
     // for all SerializeJSON, we clear the output
     value.SetObject();
 
+    orjson::SetJsonValueByKey(value, "name", _name, allocator);
+    orjson::SetJsonValueByKey(value, "keywords", _keywords, allocator);
+    orjson::SetJsonValueByKey(value, "description", _description, allocator);
+    orjson::SetJsonValueByKey(value, "gravity", _gravity, allocator);
+
     if (_vBodyInfos.size() > 0) {
         rapidjson::Value rBodiesValue;
         rBodiesValue.SetArray();
@@ -49,42 +54,50 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
         orjson::LoadJsonValueByKey(value, "revision", _revision);
     }
 
+    if (value.HasMember("name")) {
+        orjson::LoadJsonValueByKey(value, "name", _name);
+    }
+
+    if (value.HasMember("keywords")) {
+        orjson::LoadJsonValueByKey(value, "keywords", _keywords);
+    }
+
+    if (value.HasMember("description")) {
+        orjson::LoadJsonValueByKey(value, "description", _description);
+    }
+
+    if (value.HasMember("gravity")) {
+        orjson::LoadJsonValueByKey(value, "gravity", _gravity);
+    }
+
     if (value.HasMember("bodies")) {
         _vBodyInfos.reserve(_vBodyInfos.size() + value["bodies"].Size());
-        size_t iBody = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["bodies"].Begin(); it != value["bodies"].End(); ++it, ++iBody) {
+        for (rapidjson::Value::ConstValueIterator it = value["bodies"].Begin(); it != value["bodies"].End(); ++it) {
             const rapidjson::Value& rKinBodyInfo = *it;
 
-            // first figure an id
             std::string id = orjson::GetStringJsonValueByKey(rKinBodyInfo, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(rKinBodyInfo, "name");
-                RAVELOG_DEBUG_FORMAT("used name as id for body: %s", id);
-            }
-            if (id.empty()) {
-                id = boost::str(boost::format("body%d")%iBody);
-                RAVELOG_DEBUG_FORMAT("assigned new id for body: %s", id);
-            }
+            bool isDeleted = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "__deleted__", false);
 
             // then find previous body
             bool isExistingRobot = false;
             std::vector<KinBody::KinBodyInfoPtr>::iterator itExistingBodyInfo = _vBodyInfos.end();
-            FOREACH(itBodyInfo, _vBodyInfos) {
-                if ((*itBodyInfo)->_id == id ) {
-                    itExistingBodyInfo = itBodyInfo;
-                    isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itBodyInfo);
-                    RAVELOG_DEBUG_FORMAT("found existing body: %s, isRobot = %d", id%isExistingRobot);
-                    break;
+            if (!id.empty()) {
+                // only try to find old info if id is not empty
+                FOREACH(itBodyInfo, _vBodyInfos) {
+                    if ((*itBodyInfo)->_id == id ) {
+                        itExistingBodyInfo = itBodyInfo;
+                        isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itBodyInfo);
+                        RAVELOG_VERBOSE_FORMAT("found existing body: %s, isRobot = %d", id%isExistingRobot);
+                        break;
+                    }
                 }
             }
-
-            bool isDeleted = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "__deleted__", false);
-            if (isDeleted) {
-                RAVELOG_DEBUG_FORMAT("deleted body: %s", id);
-            }
+            // here we allow body infos with empty id to be created because
+            // when we load things from json, some id could be missing on file
+            // and for the partial update case, the id should be non-empty
 
             bool isRobot = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "isRobot", isExistingRobot);
-            RAVELOG_DEBUG_FORMAT("body '%s', isRobot=%d", id%isRobot);
+            RAVELOG_VERBOSE_FORMAT("body '%s', isRobot=%d", id%isRobot);
             if (isRobot) {
                 if (itExistingBodyInfo == _vBodyInfos.end()) {
                     // in case no such id
@@ -98,6 +111,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                 }
                 // in case same id exists before
                 if (isDeleted) {
+                    RAVELOG_VERBOSE_FORMAT("deleted robot: %s", id);
                     _vBodyInfos.erase(itExistingBodyInfo);
                     continue;
                 }
@@ -109,7 +123,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                     pRobotBaseInfo.reset(new RobotBase::RobotBaseInfo());
                     *itExistingBodyInfo = pRobotBaseInfo;
                     *((KinBody::KinBodyInfo*)pRobotBaseInfo.get()) = *pKinBodyInfo;
-                    RAVELOG_DEBUG_FORMAT("replaced body as a robot: %s", id);
+                    RAVELOG_VERBOSE_FORMAT("replaced body as a robot: %s", id);
                 }
                 pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                 pRobotBaseInfo->_id = id;
@@ -128,6 +142,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                 }
                 // in case same id exists before
                 if (isDeleted) {
+                    RAVELOG_VERBOSE_FORMAT("deleted body: %s", id);
                     _vBodyInfos.erase(itExistingBodyInfo);
                     continue;
                 }
@@ -139,7 +154,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                     pKinBodyInfo.reset(new KinBody::KinBodyInfo());
                     *itExistingBodyInfo = pKinBodyInfo;
                     *pKinBodyInfo = *((KinBody::KinBodyInfo*)pRobotBaseInfo.get());
-                    RAVELOG_DEBUG_FORMAT("replaced robot as a body: %s", id);
+                    RAVELOG_VERBOSE_FORMAT("replaced robot as a body: %s", id);
                 }
                 pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                 pKinBodyInfo->_id = id;

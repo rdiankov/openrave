@@ -349,7 +349,8 @@ public:
     }
 
     virtual bool operator==(const Readable& other) {
-        return false;
+        // by default, compare pointer value
+        return this == &other;
     }
 
     virtual bool operator!=(const Readable& other) {
@@ -478,7 +479,7 @@ public:
 };
 typedef boost::shared_ptr<BaseJSONReader> BaseJSONReaderPtr;
 typedef boost::shared_ptr<BaseJSONReader const> BaseJSONReaderConstPtr;
-typedef boost::function<BaseJSONReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateJSONReaderFn;
+typedef boost::function<BaseJSONReaderPtr(ReadablePtr, const AttributesList&)> CreateJSONReaderFn;
 
 } // end namespace OpenRAVE
 
@@ -2118,6 +2119,7 @@ public:
     inline void Swap(IkParameterization& r) {
         std::swap(_transform, r._transform);
         std::swap(_type, r._type);
+        std::swap(_id, r._id);
         _mapCustomData.swap(r._mapCustomData);
     }
 
@@ -2126,13 +2128,24 @@ public:
     void DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale=1.0);
 
     virtual bool operator==(const IkParameterization& other) const {
-        return _type == other._type
+        return _id == other._id
+            && _type == other._type
             && _transform == other._transform
             && _mapCustomData == other._mapCustomData;
     }
 
     virtual bool operator!=(const IkParameterization& other) const {
         return !operator==(other);
+    }
+
+    /// \brief Gets the id for ikparam
+    const std::string& GetId() const {
+        return _id;
+    }
+
+    /// \brief Sets the id for ikparam, used by scene lodaer
+    void SetId(const std::string& id) {
+        _id = id;
     }
 
 protected:
@@ -2241,6 +2254,8 @@ protected:
 
     Transform _transform;
     IkParameterizationType _type;
+    std::string _id;
+
     std::map<std::string, std::vector<dReal> > _mapCustomData;
 
     friend IkParameterization operator* (const Transform &t, const IkParameterization &ikparam);
@@ -2351,11 +2366,21 @@ public:
     void Append(const TriMesh& mesh);
     void Append(const TriMesh& mesh, const Transform& trans);
 
+    /// clear vertices and indices vector
+    void Clear();
+
     AABB ComputeAABB() const;
     void serialize(std::ostream& o, int options=0) const;
 
     friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh &trimesh);
     friend OPENRAVE_API std::istream& operator>>(std::istream& I, TriMesh& trimesh);
+
+    bool operator==(const TriMesh& other) const {
+        return vertices == other.vertices && indices == other.indices;
+    }
+    bool operator!=(const TriMesh& other) const {
+        return !operator==(other);
+    }
 };
 
 OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh& trimesh);
@@ -2695,7 +2720,7 @@ OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::s
 /// \brief Returns the current registered json reader for the interface type/id
 ///
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
-OPENRAVE_API BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, InterfaceBasePtr pinterface, const AttributesList& atts);
+OPENRAVE_API BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, ReadablePtr pReadable, const AttributesList& atts);
 
 /** \brief Returns the absolute path of the filename on the local filesystem resolving relative paths from OpenRAVE paths.
 

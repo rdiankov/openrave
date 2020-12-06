@@ -289,6 +289,19 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _fTransparency = info._fTransparency;
     _bVisible = info._bVisible;
     _bModifiable = info._bModifiable;
+    py::dict calibrationBoardParameters;
+    if (info._type == GT_CalibrationBoard && info._calibrationBoardParameters.size() > 0 ) {
+        const KinBody::GeometryInfo::CalibrationBoardParameters& parameters = info._calibrationBoardParameters[0];
+        calibrationBoardParameters["numDotsX"] = parameters.numDotsX;
+        calibrationBoardParameters["numDotsY"] = parameters.numDotsY;
+        calibrationBoardParameters["dotsDistanceX"] = parameters.dotsDistanceX;
+        calibrationBoardParameters["dotsDistanceY"] = parameters.dotsDistanceY;
+        calibrationBoardParameters["dotColor"] = toPyVector3(parameters.dotColor);
+        calibrationBoardParameters["patternName"] = ConvertStringToUnicode(parameters.patternName);
+        calibrationBoardParameters["dotDiameterDistanceRatio"] = parameters.dotDiameterDistanceRatio;
+        calibrationBoardParameters["bigDotDiameterDistanceRatio"] = parameters.bigDotDiameterDistanceRatio;
+    }
+    _calibrationBoardParameters = calibrationBoardParameters;
 }
 
 object PyGeometryInfo::ComputeInnerEmptyVolume()
@@ -364,6 +377,33 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     info._fTransparency = _fTransparency;
     info._bVisible = _bVisible;
     info._bModifiable = _bModifiable;
+    if (info._type == GT_CalibrationBoard) {
+        info._calibrationBoardParameters.resize(1);
+        if( _calibrationBoardParameters.has_key("numDotsX") ) {
+            info._calibrationBoardParameters[0].numDotsX = py::extract<int>(_calibrationBoardParameters["numDotsX"]);
+        }
+        if( _calibrationBoardParameters.has_key("numDotsY") ) {
+            info._calibrationBoardParameters[0].numDotsY = py::extract<int>(_calibrationBoardParameters["numDotsY"]);
+        }
+        if( _calibrationBoardParameters.has_key("dotsDistanceX") ) {
+            info._calibrationBoardParameters[0].dotsDistanceX = py::extract<float>(_calibrationBoardParameters["dotsDistanceX"]);
+        }
+        if( _calibrationBoardParameters.has_key("dotsDistanceY") ) {
+            info._calibrationBoardParameters[0].dotsDistanceY = py::extract<float>(_calibrationBoardParameters["dotsDistanceY"]);
+        }
+        if( _calibrationBoardParameters.has_key("dotColor") ) {
+            info._calibrationBoardParameters[0].dotColor = ExtractVector34<dReal>(_calibrationBoardParameters["dotColor"],0);
+        }
+        if( _calibrationBoardParameters.has_key("patternName") ) {
+            info._calibrationBoardParameters[0].patternName = py::extract<std::string>(_calibrationBoardParameters["patternName"]);
+        }
+        if( _calibrationBoardParameters.has_key("dotDiameterDistanceRatio") ) {
+            info._calibrationBoardParameters[0].dotDiameterDistanceRatio = py::extract<float>(_calibrationBoardParameters["dotDiameterDistanceRatio"]);
+        }
+        if( _calibrationBoardParameters.has_key("bigDotDiameterDistanceRatio") ) {
+            info._calibrationBoardParameters[0].bigDotDiameterDistanceRatio = py::extract<float>(_calibrationBoardParameters["bigDotDiameterDistanceRatio"]);
+        }
+    }
     return pinfo;
 }
 
@@ -1041,6 +1081,8 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
                 for(size_t j = 0; j < 3; ++j) {
                     info._vmimic[i]->_equations.at(j) = py::extract<std::string>(omimic[j]);
                 }
+            } else {
+                info._vmimic[i].reset();
             }
         }
     }
@@ -1252,6 +1294,21 @@ object PyLink::PyGeometry::GetAmbientColor() const {
 }
 object PyLink::PyGeometry::GetInfo() {
     return py::to_object(PyGeometryInfoPtr(new PyGeometryInfo(_pgeometry->GetInfo())));
+}
+object PyLink::PyGeometry::GetCalibrationBoardNumDots() const {
+    return py::make_tuple(_pgeometry->GetCalibrationBoardNumDotsX(), _pgeometry->GetCalibrationBoardNumDotsY());
+}
+object PyLink::PyGeometry::GetCalibrationBoardDotsDistances() const {
+    return py::make_tuple(_pgeometry->GetCalibrationBoardDotsDistanceX(), _pgeometry->GetCalibrationBoardDotsDistanceY());
+}
+object PyLink::PyGeometry::GetCalibrationBoardDotColor() const {
+    return toPyVector3(_pgeometry->GetCalibrationBoardDotColor());
+}
+object PyLink::PyGeometry::GetCalibrationBoardPatternName() const {
+    return ConvertStringToUnicode(_pgeometry->GetCalibrationBoardPatternName());
+}
+object PyLink::PyGeometry::GetCalibrationBoardDotDiameterDistanceRatios() const {
+    return py::make_tuple(_pgeometry->GetCalibrationBoardDotDiameterDistanceRatio(), _pgeometry->GetCalibrationBoardBigDotDiameterDistanceRatio());
 }
 object PyLink::PyGeometry::ComputeInnerEmptyVolume() const
 {
@@ -2100,7 +2157,7 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
     pinfo->_grabbedname = _grabbedname;
     pinfo->_robotlinkname = _robotlinkname;
     pinfo->_trelative = ExtractTransform(_trelative);
-    pinfo->_setRobotLinksToIgnore = std::set<int>(begin(_setRobotLinksToIgnore), end(_setRobotLinksToIgnore));
+    pinfo->_setIgnoreRobotLinkNames = std::set<std::string>(begin(_setIgnoreRobotLinkNames), end(_setIgnoreRobotLinkNames));
 #else
     if( !IS_PYTHONOBJECT_NONE(_id) ) {
         pinfo->_id = py::extract<std::string>(_id);
@@ -2114,12 +2171,12 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
     if( !IS_PYTHONOBJECT_NONE(_trelative) ) {
         pinfo->_trelative = ExtractTransform(_trelative);
     }
-    pinfo->_setRobotLinksToIgnore.clear();
+    pinfo->_setIgnoreRobotLinkNames.clear();
 
-    if( !IS_PYTHONOBJECT_NONE(_setRobotLinksToIgnore) ) {
-        std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
+    if( !IS_PYTHONOBJECT_NONE(_setIgnoreRobotLinkNames) ) {
+        std::vector<std::string> v = ExtractArray<std::string>(_setIgnoreRobotLinkNames);
         FOREACHC(it,v) {
-            pinfo->_setRobotLinksToIgnore.insert(*it);
+            pinfo->_setIgnoreRobotLinkNames.insert(*it);
         }
     }
 #endif
@@ -2165,13 +2222,13 @@ void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
 #endif
     _trelative = ReturnTransform(info._trelative);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    _setRobotLinksToIgnore = std::vector<int>(begin(info._setRobotLinksToIgnore), end(info._setRobotLinksToIgnore));
+    _setIgnoreRobotLinkNames = std::vector<std::string>(begin(info._setIgnoreRobotLinkNames), end(info._setIgnoreRobotLinkNames));
 #else
     py::list setRobotLinksToIgnore;
-    FOREACHC(itindex, info._setRobotLinksToIgnore) {
+    FOREACHC(itindex, info._setIgnoreRobotLinkNames) {
         setRobotLinksToIgnore.append(*itindex);
     }
-    _setRobotLinksToIgnore = setRobotLinksToIgnore;
+    _setIgnoreRobotLinkNames = setRobotLinksToIgnore;
 #endif
 }
 
@@ -2258,6 +2315,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _id = info._id;
     _name = info._name;
     _uri = info._uri;
+    _interfaceType = info._interfaceType;
     _referenceUri = info._referenceUri;
     _vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(info._vLinkInfos), end(info._vLinkInfos));
     _vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(info._vJointInfos), end(info._vJointInfos));
@@ -2267,6 +2325,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _name = ConvertStringToUnicode(info._name);
     _uri = ConvertStringToUnicode(info._uri);
     _referenceUri = ConvertStringToUnicode(info._referenceUri);
+    _interfaceType = ConvertStringToUnicode(info._interfaceType);
     py::list vLinkInfos;
     FOREACHC(itLinkInfo, info._vLinkInfos) {
         PyLinkInfo info = PyLinkInfo(**itLinkInfo);
@@ -3970,7 +4029,8 @@ public:
             r._vCollisionScale,
             r._fTransparency,
             r._bVisible,
-            r._bModifiable
+            r._bModifiable,
+            r._calibrationBoardParameters
             );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
@@ -4013,6 +4073,9 @@ public:
             r._fTransparency = py::extract<float>(state[9]);
             r._bVisible = py::extract<bool>(state[10]);
             r._bModifiable = py::extract<bool>(state[11]);
+        }
+        if (r._type == GT_CalibrationBoard) {
+            r._calibrationBoardParameters = (py::dict) state[12];
         }
     }
 };
@@ -4219,7 +4282,7 @@ class GrabbedInfo_pickle_suite
 public:
     static py::tuple getstate(const PyKinBody::PyGrabbedInfo& r)
     {
-        return py::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setRobotLinksToIgnore);
+        return py::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setIgnoreRobotLinkNames);
     }
     static void setstate(PyKinBody::PyGrabbedInfo& r, py::tuple state) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -4231,9 +4294,9 @@ public:
 #endif
         r._trelative = state[2];
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        r._setRobotLinksToIgnore = extract<std::vector<int> >(state[3]);
+        r._setIgnoreRobotLinkNames = extract<std::vector<std::string> >(state[3]);
 #else
-        r._setRobotLinksToIgnore = state[3];
+        r._setIgnoreRobotLinkNames = state[3];
 #endif
     }
 };
@@ -4340,6 +4403,7 @@ void init_openravepy_kinbody()
                           .value("Trimesh",GT_TriMesh)
                           .value("Container",GT_Container)
                           .value("Cage",GT_Cage)
+                          .value("CalibrationBoard",GT_CalibrationBoard)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object sidewalltype = enum_<KinBody::GeometryInfo::SideWallType>(m, "SideWallType" DOXY_ENUM(KinBody::GeometryInfo::SideWallType))
@@ -4470,6 +4534,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
+                          .def_readwrite("_calibrationBoardParameters", &PyGeometryInfo::_calibrationBoardParameters)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -4742,7 +4807,7 @@ void init_openravepy_kinbody()
                          .def_readwrite("_grabbedname",&PyKinBody::PyGrabbedInfo::_grabbedname)
                          .def_readwrite("_robotlinkname",&PyKinBody::PyGrabbedInfo::_robotlinkname)
                          .def_readwrite("_trelative",&PyKinBody::PyGrabbedInfo::_trelative)
-                         .def_readwrite("_setRobotLinksToIgnore",&PyKinBody::PyGrabbedInfo::_setRobotLinksToIgnore)
+                         .def_readwrite("_setIgnoreRobotLinkNames",&PyKinBody::PyGrabbedInfo::_setIgnoreRobotLinkNames)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON,
                               "unitScale"_a = 1.0,
@@ -4795,6 +4860,7 @@ void init_openravepy_kinbody()
                          .def_readwrite("_vGrabbedInfos",&PyKinBody::PyKinBodyInfo::_vGrabbedInfos)
                          .def_readwrite("_id", &PyKinBody::PyKinBodyInfo::_id)
                          .def_readwrite("_name", &PyKinBody::PyKinBodyInfo::_name)
+                         .def_readwrite("_interfaceType", &PyKinBody::PyKinBodyInfo::_interfaceType)
                          .def_readwrite("_uri", &PyKinBody::PyKinBodyInfo::_uri)
                          .def_readwrite("_referenceUri", &PyKinBody::PyKinBodyInfo::_referenceUri)
                          .def_readwrite("_dofValues", &PyKinBody::PyKinBodyInfo::_dofValues)
@@ -5435,6 +5501,11 @@ void init_openravepy_kinbody()
                                   .def("GetTransparency",&PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
                                   .def("GetDiffuseColor",&PyLink::PyGeometry::GetDiffuseColor,DOXY_FN(KinBody::Link::Geometry,GetDiffuseColor))
                                   .def("GetAmbientColor",&PyLink::PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))
+                                  .def("GetCalibrationBoardNumDots",&PyLink::PyGeometry::GetCalibrationBoardNumDots, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardNumDots))
+                                  .def("GetCalibrationBoardDotsDistances",&PyLink::PyGeometry::GetCalibrationBoardDotsDistances, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotsDistances))
+                                  .def("GetCalibrationBoardDotColor",&PyLink::PyGeometry::GetCalibrationBoardDotColor, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotColor))
+                                  .def("GetCalibrationBoardPatternName",&PyLink::PyGeometry::GetCalibrationBoardPatternName, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardPatternName))
+                                  .def("GetCalibrationBoardDotDiameterDistanceRatios",&PyLink::PyGeometry::GetCalibrationBoardDotDiameterDistanceRatios, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotDiameterDistanceRatios))
                                   .def("ComputeInnerEmptyVolume",&PyLink::PyGeometry::ComputeInnerEmptyVolume,DOXY_FN(KinBody::Link::Geometry,ComputeInnerEmptyVolume))
                                   .def("GetInfo",&PyLink::PyGeometry::GetInfo,DOXY_FN(KinBody::Link::Geometry,GetInfo))
                                   .def("__eq__",&PyLink::PyGeometry::__eq__)

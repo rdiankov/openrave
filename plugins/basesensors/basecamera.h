@@ -169,8 +169,13 @@ protected:
     class BaseCameraJSONReader : public BaseJSONReader
     {
 public:
-        BaseCameraJSONReader() { 
-            _pgeom.reset(new CameraGeomData());
+        BaseCameraJSONReader(ReadablePtr pReadable) {
+            if (!!pReadable) {
+                _pgeom = boost::dynamic_pointer_cast<CameraGeomData>(pReadable);
+            }
+            else {
+                _pgeom.reset(new CameraGeomData());
+            }
         }
         virtual ~BaseCameraJSONReader() {}
         ReadablePtr GetReadable() override {
@@ -186,9 +191,9 @@ public:
         return BaseXMLReaderPtr(new BaseCameraXMLReader(boost::dynamic_pointer_cast<BaseCameraSensor>(ptr)));
     }
 
-    static BaseJSONReaderPtr CreateJSONReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseJSONReaderPtr CreateJSONReader(ReadablePtr pReadable, const AttributesList& atts)
     {
-        return BaseJSONReaderPtr(new BaseCameraJSONReader());
+        return BaseJSONReaderPtr(new BaseCameraJSONReader(pReadable));
     }
 
     BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
@@ -476,7 +481,7 @@ protected:
         if( !_bRenderGeometry ) {
             return;
         }
-        if( !_graphgeometry ) {
+        if( !_graphgeometry && _pgeom->KK.fx > 0 && _pgeom->KK.fy > 0 ) {
             // render a simple frustum outlining camera's dimension
             // the frustum is colored with vColor, the x and y axes are colored separetely
             Vector points[7];

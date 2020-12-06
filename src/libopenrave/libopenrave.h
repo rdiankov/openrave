@@ -201,9 +201,17 @@ inline void SerializeRound(std::ostream& o, double f)
 }
 
 template <class T>
-inline void SerializeRound(std::ostream& o, const RaveVector<T>& v)
+inline void SerializeRoundQuaternion(std::ostream& o, const RaveVector<T>& v)
 {
-    o << SerializationValue(v.x) << " " << SerializationValue(v.y) << " " << SerializationValue(v.z) << " " << SerializationValue(v.w) << " ";
+    // This function is used only for serializing quaternions. Need to
+    // take into account the fact that v and -v represent the same
+    // rotation. Convert v to a rotation matrix instead to get a
+    // unique representation. Then since the thrid column can be uniquely
+    // determined given the first two, serializing only the first two
+    // columns is sufficient for the purpose of hash computation.
+    RaveTransformMatrix<T> t = matrixFromQuat(v);
+    o << SerializationValue(t.m[0]) << " " << SerializationValue(t.m[4]) << " " << SerializationValue(t.m[8]) << " "
+      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " ";
 }
 
 template <class T>
@@ -215,27 +223,18 @@ inline void SerializeRound3(std::ostream& o, const RaveVector<T>& v)
 template <class T>
 inline void SerializeRound(std::ostream& o, const RaveTransform<T>& t)
 {
-    // because we're serializing a quaternion, have to fix what side of the hypershpere it is on
-    Vector v = t.rot;
-    for(int i = 0; i < 4; ++i) {
-        if( v[i] < g_fEpsilon ) {
-            v = -v;
-            break;
-        }
-        else if( v[i] > g_fEpsilon ) {
-            break;
-        }
-    }
-    SerializeRound(o,v);
-    SerializeRound(o,t.trans);
+    SerializeRoundQuaternion(o,t.rot);
+    SerializeRound3(o,t.trans);
 }
 
 template <class T>
 inline void SerializeRound(std::ostream& o, const RaveTransformMatrix<T>& t)
 {
+    // Since the thrid column of the rotation matrix can be uniquely
+    // determined given the first two, serializing only the first two
+    // columns is sufficient for the purpose of hash computation.
     o << SerializationValue(t.m[0]) << " " << SerializationValue(t.m[4]) << " " << SerializationValue(t.m[8]) << " "
-      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " "
-      << SerializationValue(t.m[2]) << " " << SerializationValue(t.m[6]) << " " << SerializationValue(t.m[10]) << " ";
+      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " ";
     SerializeRound(o,t.trans);
 }
 
@@ -488,40 +487,26 @@ inline const char *strcasestr(const char *s, const char *find)
 }
 #endif
 
-/// \brief converts the value into output and writes a null terminator
-///
-/// \return length of string (ie strlen(output))
-inline uint32_t ConvertUIntToHex(uint32_t value, char* output)
-{
-    uint32_t length = 1; // in case value is 0, still requires one character '0'
-    if( value > 0 ) {
-        length = 8-(__builtin_clz(value)/4);
-    }
-    for(uint32_t index = 0; index < length; ++index) {
-        uint32_t nibble = (value>>(4*(length-1-index)))&0xf;
-        if( nibble < 10 ) {
-            output[index] = '0'+nibble;
-        }
-        else {
-            output[index] = 'A'+(nibble-10);
-        }
-    }
-    output[length] = 0; // null terminator
-    return length;
-}
 
-///* \brief Update current info from json value. Create a new one if there is no id matched.
+/// \brief Update current info from json value. Create a new one if there is no id matched.
 template<typename T>
-void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string& id, std::vector<boost::shared_ptr<T> >& vInfos, dReal fUnitScale, int options)
+void UpdateOrCreateInfo(const rapidjson::Value& value, std::vector<boost::shared_ptr<T> >& vInfos, dReal fUnitScale, int options)
 {
+    std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(value, "id");
+    bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
     typename std::vector<boost::shared_ptr<T> >::iterator itExistingInfo = vInfos.end();
-    FOREACH(itInfo, vInfos) {
-        if ((*itInfo)->_id == id) {
-            itExistingInfo = itInfo;
-            break;
+    if (!id.empty()) {
+        // only try to find old info if id is not empty
+        FOREACH(itInfo, vInfos) {
+            if ((*itInfo)->_id == id) {
+                itExistingInfo = itInfo;
+                break;
+            }
         }
     }
-    bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
+    // here we allow items with empty id to be created because
+    // when we load things from json, some id could be missing on file
+    // and for the partial update case, the id should be non-empty
     if (itExistingInfo != vInfos.end()) {
         if (isDeleted) {
             vInfos.erase(itExistingInfo);
@@ -540,58 +525,137 @@ void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string& id, st
     vInfos.push_back(pNewInfo);
 }
 
-/// \brief helper function to compare two info(shared_ptr) vectors and copy the diff into vecDiffOut;
-template<typename T>
-void GetInfoVectorDiff(const std::vector<boost::shared_ptr<T> >& oldInfos, const std::vector<boost::shared_ptr<T> >& newInfos, std::vector<boost::shared_ptr<T> >& vecDiffOut) {
-    vecDiffOut.reserve(oldInfos.size() + newInfos.size());
-    std::vector<bool> existingNewInfo(newInfos.size(), false);
-    for(typename std::vector<boost::shared_ptr<T> >::const_iterator itOldInfo = oldInfos.begin(); itOldInfo != oldInfos.end(); itOldInfo++) {
-        bool oldInfoFound = false;
-        for(typename std::vector<boost::shared_ptr<T> >::const_iterator itNewInfo = newInfos.begin(); itNewInfo != newInfos.end(); itNewInfo++) {
-            if ((*itOldInfo)->_id == (*itNewInfo)->_id) {
-                if ((**itOldInfo) != (**itNewInfo)) {
-                    vecDiffOut.push_back(*itOldInfo);
+/// \brief Recursively call UpdateFromInfo on children. If children need to be added or removed, require re-init. Returns false if update fails and caller should not continue with other parts of the update.
+template<typename InfoPtrType, typename PtrType>
+bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<PtrType>& vPointers, UpdateFromInfoResult& result)
+{
+    int index = 0;
+    for (typename std::vector<InfoPtrType>::const_iterator itInfo = vInfos.begin(); itInfo != vInfos.end(); ++itInfo, ++index) {
+        const InfoPtrType pInfo = *itInfo;
+        PtrType pMatchExistingPointer;
+
+        {
+            typename std::vector<PtrType>::iterator itExistingSameId = vPointers.end();
+            typename std::vector<PtrType>::iterator itExistingSameName = vPointers.end();
+            typename std::vector<PtrType>::iterator itExistingSameIdName = vPointers.end();
+            typename std::vector<PtrType>::iterator itExistingNoIdName = vPointers.end();
+
+            // search only in the unprocessed part of vPointers
+            if( (int)vPointers.size() > index ) {
+                for (typename std::vector<PtrType>::iterator itPointer = vPointers.begin() + index; itPointer != vPointers.end(); ++itPointer) {
+                    // special case: no id or name, find next existing one that has no id or name
+                    if (pInfo->GetId().empty() && pInfo->GetName().empty()) {
+                        if ((*itPointer)->GetId().empty() && (*itPointer)->GetName().empty()) {
+                            itExistingNoIdName = itPointer;
+                            break;
+                        }
+                        continue;
+                    }
+
+                    bool bIdMatch = !(*itPointer)->GetId().empty() && (*itPointer)->GetId() == pInfo->GetId();
+                    bool bNameMatch = !(*itPointer)->GetName().empty() && (*itPointer)->GetName() == pInfo->GetName();
+                    if( bIdMatch && bNameMatch ) {
+                        itExistingSameIdName = itPointer;
+                        itExistingSameId = itPointer;
+                        itExistingSameName = itPointer;
+                        break;
+                    }
+                    if( bIdMatch && itExistingSameId == vPointers.end() ) {
+                        itExistingSameId = itPointer;
+                    }
+                    if( bNameMatch && itExistingSameName == vPointers.end() ) {
+                        itExistingSameName = itPointer;
+                    }
                 }
-                existingNewInfo[itNewInfo - newInfos.begin()] = true;
-                oldInfoFound = true;
-                break;
+            }
+            typename std::vector<PtrType>::iterator itExisting = itExistingSameIdName;
+            if( itExisting == vPointers.end() ) {
+                itExisting = itExistingSameId;
+            }
+            if( itExisting == vPointers.end() ) {
+                itExisting = itExistingSameName;
+            }
+            if( itExisting == vPointers.end() ) {
+                itExisting = itExistingNoIdName;
+            }
+            if( itExisting != vPointers.end() ) {
+                pMatchExistingPointer = *itExisting;
+                if (index != itExisting-vPointers.begin()) {
+                    // re-arrange vPointers according to the order of infos
+                    PtrType pTemp = vPointers[index];
+                    vPointers[index] = pMatchExistingPointer;
+                    *itExisting = pTemp;
+                }
             }
         }
-        if (!oldInfoFound) {
-            vecDiffOut.push_back(*itOldInfo);
+        if (!pMatchExistingPointer) {
+            // new element, requires re-init
+            result = UFIR_RequireReinitialize;
+            return false;
         }
-    }
 
-    for(size_t iFound = 0; iFound < existingNewInfo.size(); iFound++) {
-        if (!existingNewInfo[iFound]) {
-            vecDiffOut.push_back(newInfos[iFound]);
+        UpdateFromInfoResult updateFromInfoResult = pMatchExistingPointer->UpdateFromInfo(*pInfo);
+        if (updateFromInfoResult == UFIR_NoChange) {
+            // no change
+            continue;
         }
-    }
-}
 
-template<typename T>
-bool IsInfoVectorEqual(const std::vector<boost::shared_ptr<T> >& oldInfos, const std::vector<boost::shared_ptr<T> >& newInfos) {
-    if (oldInfos.size() != newInfos.size()) {
+        if (updateFromInfoResult == UFIR_Success) {
+            // something changd
+            result = UFIR_Success;
+            continue;
+        }
+
+        // update failed
+        result = updateFromInfoResult;
         return false;
     }
 
-    for (size_t iOld = 0; iOld < oldInfos.size(); iOld++) {
-        bool bFound = false;
-        for (size_t iNew = 0; iNew < newInfos.size(); iNew++) {
-            if (oldInfos[iOld]->_id == newInfos[iNew]->_id) {
-                bFound = true;
-                if ((*oldInfos[iOld]) != (*newInfos[iNew])) {
-                    return false;
-                }
-                break;
+    if (vPointers.size() > vInfos.size()) {
+        // have to delete extra, require re-init
+        result = UFIR_RequireReinitialize;
+        return false;
+    }
+
+    return true;
+}
+
+template<typename T>
+bool AreVectorsDeepEqual(const std::vector<boost::shared_ptr<T> >& vFirst, const std::vector<boost::shared_ptr<T> >& vSecond) {
+    if (vFirst.size() != vSecond.size()) {
+        return false;
+    }
+    for (size_t index = 0; index < vFirst.size(); index++) {
+        if (!vFirst[index] || !vSecond[index]) {
+            if (!!vFirst[index] || !!vSecond[index]) {
+                return false;
             }
-        }
-        if (!bFound) {
-            return false;
+        } else {
+            if ((*vFirst[index]) != (*vSecond[index])) {
+                return false;
+            }
         }
     }
     return true;
+}
 
+template<typename T, std::size_t N>
+bool AreArraysDeepEqual(const boost::array<boost::shared_ptr<T>, N>& vFirst, const boost::array<boost::shared_ptr<T>, N>& vSecond) {
+    if (vFirst.size() != vSecond.size()) {
+        return false;
+    }
+    for (size_t index = 0; index < vFirst.size(); index++) {
+        if (!vFirst[index] || !vSecond[index]) {
+            if (!!vFirst[index] || !!vSecond[index]) {
+                return false;
+            }
+        } else {
+            if ((*vFirst[index]) != (*vSecond[index])) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 } // end OpenRAVE namespace

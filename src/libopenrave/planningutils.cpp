@@ -536,7 +536,7 @@ public:
                             dReal fprevdist = _parameters->_distmetricfn(vprevconfig,vtemp);
                             dReal fcurdist = _parameters->_distmetricfn(vcurconfig,vtemp);
                             if( fprevdist > g_fEpsilonLinear ) {
-                                OPENRAVE_ASSERT_OP_FORMAT(fprevdist, >, fcurdist, "time %fs-%fs, neightstatefn returned a configuration closer to the previous configuration %f than the expected current %f, wrote trajectory to %s",*itprevtime%*itsampletime%fprevdist%fcurdist%DumpTrajectory(trajectory), ORE_InconsistentConstraints);
+                                OPENRAVE_ASSERT_OP_FORMAT(fprevdist, >, fcurdist, "time %fs-%fs, neighstatefn returned a configuration closer to the previous configuration %f than the expected current %f, wrote trajectory to %s",*itprevtime%*itsampletime%fprevdist%fcurdist%DumpTrajectory(trajectory), ORE_InconsistentConstraints);
                             }
                         }
                         itprevconfig=itcurconfig;
@@ -871,7 +871,8 @@ public:
     virtual ~PlannerStateSaver() {
         int ret = _setfn(_savedvalues, 0);
         if( ret != 0 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set state in PlannerStateSaver, return=%d"), ret, ORE_Assert); // throwing from destructor, is this okay?
+            // probably should not throw here
+            RAVELOG_WARN_FORMAT(_("failed to set state in PlannerStateSaver, return=%d"), ret);
         }
     }
 
@@ -2328,6 +2329,16 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     //         all-linear interpolation
     //     }
     // }
+    int neighstateoptions = NSO_OnlyHardConstraints;
+    if( options&CFO_FromPathSampling ) {
+        neighstateoptions = NSO_FromPathSampling;
+    }
+    else if( options&CFO_FromPathShortcutting ) {
+        neighstateoptions = NSO_FromPathShortcutting;
+    }
+    else if( options&CFO_FromTrajectorySmoother ) {
+        neighstateoptions = NSO_OnlyHardConstraints|NSO_FromTrajectorySmoother; // for now, trajectory smoother uses hard constraints
+    }
 
     // bHasRampDeviatedFromInterpolation indicates if all the checked configurations deviate from the expected interpolation connecting q0 and q1.
     //
@@ -2560,7 +2571,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
 
     if( maskinterpolation == IT_Default && (timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size()) ) {
-        // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
+        // just in case, have to set the current values to _vtempconfig since neighstatefn expects the state to be set.
         if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
             if( !!filterreturn ) {
                 filterreturn->_returncode = CFO_StateSettingError;
@@ -2836,7 +2847,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
             }
 
-            int neighstatus = params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints);
+            int neighstatus = params->_neighstatefn(_vtempconfig, dQ, neighstateoptions);
             if( neighstatus == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
@@ -2983,7 +2994,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( dist > 1e-7 ) {
                 RAVELOG_DEBUG_FORMAT("env=%d, ramp has deviated, so most likely q1 is not following constraints and there's a difference dist=%f", _listCheckBodies.front()->GetEnv()->GetId()%dist);
                 bCheckEnd = false; // to prevent adding the last point
-                
+
                 if( !!filterreturn ) {
                     if( options & CFO_FillCheckedConfiguration ) {
                         int nstateret = 0;
@@ -3020,7 +3031,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             *it *= fisteps;
         }
 
-        // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
+        // just in case, have to set the current values to _vtempconfig since neighstatefn expects the state to be set.
         if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
             if( !!filterreturn ) {
                 filterreturn->_returncode = CFO_StateSettingError;
@@ -3032,14 +3043,14 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         _vstepconfig.resize(dQ.size());
         _vtempconfig2 = _vtempconfig; // keep record of _vtempconfig before being modified in _neighstatefn
         if( start > 0 ) {
-            // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
+            // just in case, have to set the current values to _vtempconfig since neighstatefn expects the state to be set.
             if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
                 return CFO_StateSettingError;
             }
-            int neighstatus = params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints);
+            int neighstatus = params->_neighstatefn(_vtempconfig, dQ, neighstateoptions);
             if( neighstatus == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
@@ -3157,7 +3168,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 return CFO_StateSettingError;
             }
-            int neighstatus = params->_neighstatefn(_vtempconfig, _vprevtempconfig, NSO_OnlyHardConstraints);
+            int neighstatus = params->_neighstatefn(_vtempconfig, _vprevtempconfig, neighstateoptions);
             if( neighstatus == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
@@ -3628,7 +3639,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
             }
             else {
                 _pmanip->GetIkSolver()->GetFreeParameters(vfree);
-            } 
+            }
         }
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
             std::stringstream ss; ss << "free=[";

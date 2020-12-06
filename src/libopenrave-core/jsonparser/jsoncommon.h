@@ -73,7 +73,5 @@ void RaveWriteMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
 void RaveWriteMsgPackMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 
-void RemoveExpandedRapidJSON(rapidjson::Value& value, const rapidjson::Value& shadowValue, rapidjson::Document::AllocatorType& alloc);
-
 }
 #endif

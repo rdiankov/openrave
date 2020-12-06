@@ -50,6 +50,8 @@ public:
                 && _sIkSolverXMLId == other._sIkSolverXMLId
                 && _vGripperJointNames == other._vGripperJointNames
                 && _grippername == other._grippername
+                && _toolChangerConnectedBodyToolName == other._toolChangerConnectedBodyToolName
+                && _vRestrictGraspSetNames == other._vRestrictGraspSetNames
                 && _id == other._id;
         }
         bool operator!=(const ManipulatorInfo& other) const {
@@ -59,6 +61,13 @@ public:
         void Reset() override;
         void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
 
         std::string _id; ///< unique id for manipulator info
         std::string _name;
@@ -70,6 +79,7 @@ public:
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
         std::string _grippername; ///< associates the manipulator with a GripperInfo
         std::string _toolChangerConnectedBodyToolName; ///< When this parameter is non-empty, then this manipulator's end effector points to the mounting link of a tool changer system, then all the connected bodies that are mounted on this link become mutually exclusive in the sense that only one can be connected at a time. The value of the parameter targets a tool (manipulator) name inside those related connected bodies to select when the tool changing is complete.
+        std::vector<std::string> _vRestrictGraspSetNames; ///< When this parameter is non-empty, only grasp sets listed here are applicable for this manipulator.
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
@@ -82,6 +92,7 @@ public:
         GripperInfo(const GripperInfo& other) {
             *this = other;
         };
+        // need this because of _docGripperInfo
         GripperInfo& operator=(const GripperInfo& other);
         bool operator==(const GripperInfo& other) const {
             return _id == other._id
@@ -98,6 +109,14 @@ public:
         void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return name;
+        }
+
+        UpdateFromInfoResult UpdateFromInfo(const GripperInfo& info);
 
         std::string _id; /// < unique id
         std::string name; ///< unique name
@@ -151,7 +170,10 @@ public:
             return GetTransform();
         }
 
-        virtual const std::string& GetName() const {
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
+        inline const std::string& GetName() const {
             return _info._name;
         }
 
@@ -193,6 +215,10 @@ public:
 
         virtual const std::string& GetToolChangerConnectedBodyToolName() const {
             return _info._toolChangerConnectedBodyToolName;
+        }
+
+        virtual const std::vector<std::string>& GetRestrictGraspSetNames() const {
+            return _info._vRestrictGraspSetNames;
         }
 
         /// \brief Release all bodies grabbed by the end effector of this manipualtor
@@ -347,11 +373,20 @@ public:
 
         /** \brief Checks collision with only the gripper and the rest of the environment given a new end-effector transform. Ignores disabled links.
 
-            \param tEE the end effector transform
+            \param[in] tEE the end effector transform
             \param[out] report [optional] collision report
             \return true if a collision occurred
          */
         virtual bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
+
+        /** \brief Checks collision with only the gripper and a specified body given a new end-effector transform. Ignores disabled links.
+
+            \param[in] tEE the end effector transform
+            \param[in] pbody the body to be checked
+            \param[out] report [optional] collision report
+            \return true if a collision occurred
+         */
+        virtual bool CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /** \brief Checks self-collision with only the gripper with the rest of the robot. Ignores disabled links.
 
@@ -373,13 +408,25 @@ public:
         /** \brief Checks environment collisions with only the gripper given an IK parameterization of the gripper.
 
             Some IkParameterizations can fully determine the gripper 6DOF location. If the type is Transform6D or the manipulator arm DOF <= IkParameterization DOF, then this would be possible. In the latter case, an ik solver is required to support the ik parameterization.
-            \param ikparam the ik parameterization determining the gripper transform
+            \param[in] ikparam the ik parameterization determining the gripper transform
             \param[inout] report [optional] collision report
             \param[in] numredundantsamples If > 0, will check collision using the full redundant degree of freedom of the IkParameterization. For example, if ikparam is IKP_TranslationDirection5D, then there's 1 degree of freedom around the axis. The manipulator will have numredundantsamples samples around this degree of freedom, and check each one. If == 0, then will use the manipulator's IK solver to get the end effector transforms to sample.
             \return true if a collision occurred
             /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
          */
         virtual bool CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report = CollisionReportPtr(), int numredundantsamples=0) const;
+
+        /** \brief Checks collisions between the gripper given an IK parameterization of the gripper and a specified body
+
+            Some IkParameterizations can fully determine the gripper 6DOF location. If the type is Transform6D or the manipulator arm DOF <= IkParameterization DOF, then this would be possible. In the latter case, an ik solver is required to support the ik parameterization.
+            \param[in] ikparam the ik parameterization determining the gripper transform
+            \param[in] pbody the body to be checked
+            \param[inout] report [optional] collision report
+            \param[in] numredundantsamples If > 0, will check collision using the full redundant degree of freedom of the IkParameterization. For example, if ikparam is IKP_TranslationDirection5D, then there's 1 degree of freedom around the axis. The manipulator will have numredundantsamples samples around this degree of freedom, and check each one. If == 0, then will use the manipulator's IK solver to get the end effector transforms to sample.
+            \return true if a collision occurred
+            /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
+         */
+        virtual bool CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr(), int numredundantsamples=0) const;
 
         /** \brief Checks self-collisions with only the gripper given an IK parameterization of the gripper.
 
@@ -463,6 +510,10 @@ public:
 protected:
         /// \brief compute internal information from user-set info
         virtual void _ComputeInternalInformation();
+        /// \brief check end-effector collision with the given end-effector transform and with the specified body. if pbody is null, check with the environment.
+        virtual bool _CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report) const;
+        /// \brief check end-effector collision with the given ikparam and the specified body. if pbody is null, check with the environment.
+        virtual bool _CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const;
 
         ManipulatorInfo _info; ///< user-set information
 private:
@@ -502,6 +553,7 @@ public:
         AttachedSensorInfo(const AttachedSensorInfo& other) {
             *this = other;
         };
+        // need this because of _docSensorGeometry
         AttachedSensorInfo& operator=(const AttachedSensorInfo& other) {
             _id = other._id;
             _name = other._name;
@@ -530,6 +582,13 @@ public:
         void Reset() override;
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
 
         std::string _id;
         std::string _name;
@@ -574,7 +633,11 @@ public:
                 return RobotBasePtr(_probot);
             }
         }
-        virtual const std::string& GetName() const {
+
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
+        inline const std::string& GetName() const {
             return _info._name;
         }
 
@@ -614,7 +677,7 @@ public:
 
 private:
         /// \brief compute internal information from user-set info
-        //virtual void _ComputeInternalInformation();
+        virtual void _ComputeInternalInformation();
 
         AttachedSensorInfo _info; ///< user specified data
 
@@ -651,7 +714,6 @@ public:
         ConnectedBodyInfo(const ConnectedBodyInfo& other) {
             *this = other;
         };
-        ConnectedBodyInfo& operator=(const ConnectedBodyInfo& other);
         bool operator==(const ConnectedBodyInfo& other) const;
         bool operator!=(const ConnectedBodyInfo& other) const {
             return !operator==(other);
@@ -663,6 +725,13 @@ public:
 
         /// \brief Updates the infos depending on the robot at the identity and zero position.
         void InitInfoFromBody(RobotBase& robot);
+
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
 
         std::string _id; ///< unique id of the connected body
         std::string _name; ///< the name of the connected body info
@@ -754,6 +823,9 @@ public:
             }
         }
 
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
         inline const std::string& GetName() const {
             return _info._name;
         }
@@ -809,7 +881,6 @@ public:
         RobotBaseInfo(const RobotBaseInfo& other) : KinBodyInfo(other) {
             *this = other;
         };
-        RobotBaseInfo& operator=(const RobotBaseInfo& other);
         bool operator==(const RobotBaseInfo& other) const;
         bool operator!=(const RobotBaseInfo& other) const{
             return !operator==(other);
@@ -1279,9 +1350,6 @@ protected:
     virtual void _PostprocessChangedParameters(uint32_t parameters);
 
     virtual void _UpdateAttachedSensors();
-
-    /// \brief goes through all the link/joint ids and makes sure they are unique
-    void _ResolveInfoIds() override;
 
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
     ManipulatorPtr _pManipActive;
