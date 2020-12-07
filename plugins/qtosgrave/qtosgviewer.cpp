@@ -176,10 +176,11 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     RegisterCommand("PanCameraYDirection", boost::bind(&QtOSGViewer::_PanCameraYDirectionCommand, this, _1, _2),
     "Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.");
 
-    // Initialize insertion indices
-    _mapGUIInsertionIndices[GUIThreadQueuePriority::HIGH] = 0;
-    _mapGUIInsertionIndices[GUIThreadQueuePriority::MEDIUM] = 0;
-    _mapGUIInsertionIndices[GUIThreadQueuePriority::LOW] = 0;
+    // Establish size limits per priority
+    _mapGUIFunctionListLimits[GUIThreadQueuePriority::VERY_HIGH] = 100000;
+    _mapGUIFunctionListLimits[GUIThreadQueuePriority::HIGH] = 100000;
+    _mapGUIFunctionListLimits[GUIThreadQueuePriority::MEDIUM] = 1000;
+    _mapGUIFunctionListLimits[GUIThreadQueuePriority::LOW] = 1000;
 
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
@@ -198,18 +199,20 @@ QtOSGViewer::~QtOSGViewer()
         boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
         list<GUIThreadFunctionPtr>::iterator itmsg;
-        FORIT(itmsg, _listGUIFunctions) {
-            try {
-                (*itmsg)->Call();
+        FOREACH(itindex, _mapGUIFunctionLists) {
+            FORIT(itmsg, itindex->second) {
+                try {
+                    (*itmsg)->Call();
+                }
+                catch(const boost::bad_weak_ptr& ex) {
+                    // most likely viewer
+                }
+                catch(const std::exception& ex2) {
+                    RAVELOG_WARN_FORMAT("unexpected exception in gui function: %s", ex2.what());
+                }
             }
-            catch(const boost::bad_weak_ptr& ex) {
-                // most likely viewer
-            }
-            catch(const std::exception& ex2) {
-                RAVELOG_WARN_FORMAT("unexpected exception in gui function: %s", ex2.what());
-            }
+            itindex->second.clear();
         }
-        _listGUIFunctions.clear();
     }
 
     _condUpdateModels.notify_all();
@@ -1185,19 +1188,23 @@ void QtOSGViewer::_ProcessApplicationQuit()
     RAVELOG_VERBOSE("processing viewer application quit\n");
     // remove all messages in order to release the locks
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-    if( _listGUIFunctions.size() > 0 ) {
-        bool bnotify = false;
-        FOREACH(it,_listGUIFunctions) {
-            (*it)->SetFinished();
-            if( (*it)->IsBlocking() ) {
-                bnotify = true;
+
+    FOREACH(itindex, _mapGUIFunctionLists) {
+        list<GUIThreadFunctionPtr> listGUIFunctions = itindex->second;
+        if( listGUIFunctions.size() > 0 ) {
+            bool bnotify = false;
+            FOREACH(it,listGUIFunctions) {
+                (*it)->SetFinished();
+                if( (*it)->IsBlocking() ) {
+                    bnotify = true;
+                }
+            }
+            if( bnotify ) {
+                _notifyGUIFunctionComplete.notify_all();
             }
         }
-        if( bnotify ) {
-            _notifyGUIFunctionComplete.notify_all();
-        }
+        listGUIFunctions.clear();
     }
-    _listGUIFunctions.clear();
 
 }
 
@@ -2094,24 +2101,22 @@ void QtOSGViewer::_UpdateEnvironment()
 
     if( _bUpdateEnvironment ) {
         // process all messages
-        list<GUIThreadFunctionPtr> listGUIFunctions;
+        map<GUIThreadQueuePriority, list<GUIThreadFunctionPtr>> mapGUIFunctionLists;
         {
             boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-            listGUIFunctions.swap(_listGUIFunctions);
+            mapGUIFunctionLists.swap(_mapGUIFunctionLists);
         }
 
-        FOREACH(itmsg, listGUIFunctions) {
-            try {
-                (*itmsg)->Call();
+        FOREACH(itindex, mapGUIFunctionLists) {
+            list<GUIThreadFunctionPtr> listGUIFunctions = itindex->second;
+            FOREACH(itmsg, listGUIFunctions) {
+                try {
+                    (*itmsg)->Call();
+                }
+                catch(const std::exception& ex) {
+                    RAVELOG_WARN_FORMAT("gui thread function failed: %s", ex.what());
+                }
             }
-            catch(const std::exception& ex) {
-                RAVELOG_WARN_FORMAT("gui thread function failed: %s", ex.what());
-            }
-        }
-
-        // Reset insertion indices
-        FOREACH(itindex, _mapGUIInsertionIndices) {
-            _mapGUIInsertionIndices[itindex->first] = 0;
         }
 
         // have to update model after messages since it can lock the environment
@@ -2120,6 +2125,14 @@ void QtOSGViewer::_UpdateEnvironment()
             _UpdateViewport();
         }
     }
+}
+
+size_t QtOSGViewer::_GetQueueSizeForPriority(GUIThreadQueuePriority priority) {
+    size_t queueSize = 0;
+    for (uint8_t i = static_cast<uint8_t>(priority); i < 4; i++) {
+        queueSize += _mapGUIFunctionListLimits[static_cast<GUIThreadQueuePriority>(i)].size();
+    }
+    return queueSize;
 }
 
 void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, GUIThreadQueuePriority priority, bool block)
@@ -2131,27 +2144,17 @@ void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, GUIThreadQ
 
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
     GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
-    std::list<GUIThreadFunctionPtr>::iterator it = _listGUIFunctions.begin();
     // Block non-essential fucntions if viewer is not processing any messages
-    if (!_bUpdateEnvironment && priority > GUIThreadQueuePriority::HIGH) {
+    if (!_bUpdateEnvironment && priority < GUIThreadQueuePriority::HIGH) {
         RAVELOG_WARN("GUI thread function of priority %d dropped due to _bUpdateEnvironment being set to false", priority);
         return;
     }
-    // GUI thread function queue size limit for non-essential functions
-    if (_mapGUIInsertionIndices[priority] >= 1000 && priority > GUIThreadQueuePriority::HIGH) {
-        RAVELOG_WARN("GUI thread function of priority %d dropped due to function queue exceeding size of 1000", priority);
+    // GUI thread function queue size limit
+    if (_GetQueueSizeForPriority(priority) >= _mapGUIFunctionListLimits[priority]) {
+        RAVELOG_WARN("GUI thread function of priority %d dropped due to function queue for given priority exceeding size of %d", priority, _mapGUIFunctionListLimits[priority]);
         return;
     }
-    // GUI thread function queue size limit for essential functions
-    if (_mapGUIInsertionIndices[GUIThreadQueuePriority::HIGH] >= 100000) {
-        RAVELOG_WARN("GUI thread function of priority %d dropped due to function queue exceeding size of 100000", priority);
-        return;
-    }
-    std::advance(it, _mapGUIInsertionIndices[priority]);
-    _listGUIFunctions.insert(it, pfn);
-    for (uint8_t i = static_cast<uint8_t>(priority); i < 3; i++) {
-        _mapGUIInsertionIndices[static_cast<GUIThreadQueuePriority>(i)]++;
-    }
+    _mapGUIFunctionLists[priority].push_back(pfn)
     if( block ) {
         while(!pfn->IsFinished()) {
             _notifyGUIFunctionComplete.wait(_mutexGUIFunctions);
@@ -2169,22 +2172,22 @@ void QtOSGViewer::SetEnvironmentSync(bool bUpdate)
     if( !bUpdate ) {
         // remove all messages in order to release the locks
         boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-        if( _listGUIFunctions.size() > 0 ) {
-            bool bnotify = false;
-            FOREACH(it,_listGUIFunctions) {
-                (*it)->SetFinished();
-                if( (*it)->IsBlocking() ) {
-                    bnotify = true;
+        // Clear GUI function lists for all priorities
+        FOREACH(itindex, _mapGUIFunctionLists) {
+            list<GUIThreadFunctionPtr> listGUIFunctions = itindex->second;
+            if( listGUIFunctions.size() > 0 ) {
+                bool bnotify = false;
+                FOREACH(it,listGUIFunctions) {
+                    (*it)->SetFinished();
+                    if( (*it)->IsBlocking() ) {
+                        bnotify = true;
+                    }
+                }
+                if( bnotify ) {
+                    _notifyGUIFunctionComplete.notify_all();
                 }
             }
-            if( bnotify ) {
-                _notifyGUIFunctionComplete.notify_all();
-            }
-        }
-        _listGUIFunctions.clear();
-        // Reset insertion indices
-        FOREACH(itindex, _mapGUIInsertionIndices) {
-            _mapGUIInsertionIndices[itindex->first] = 0;
+            listGUIFunctions.clear();
         }
     }
 }

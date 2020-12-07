@@ -344,9 +344,10 @@ public:
 
     /// \brief priority values used to determine how important it is to process certain GUI thread functions over others
     enum GUIThreadQueuePriority : uint8_t {
-        HIGH = 0, ///< denotes an important GUI task that must be processed regardless of viewer state or queue size
+        VERY_HIGH = 3 //< denotes an critical GUI task that must be processed ASAP regardless of viewer state or queue size
+        HIGH = 2, ///< denotes an important GUI task that must be processed regardless of viewer state or queue size
         MEDIUM = 1, ///< denotes a GUI task that takes precedence over low-priority tasks but yields to important tasks
-        LOW = 2 ///< denotes a GUI task that presents negligibly adversely effects on the program should it fail to complete execution
+        LOW = 0 ///< denotes a GUI task that presents negligibly adversely effects on the program should it fail to complete execution
     };
 
     /// \brief posts a function to be executed in the GUI thread
@@ -402,8 +403,8 @@ public:
     bool _PanCameraYDirectionCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
-    std::map<GUIThreadQueuePriority, uint> _mapGUIInsertionIndices; ///< map between priority and index of next insertion for given priority level
-    list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
+    std::map<GUIThreadQueuePriority, list<GUIThreadFunctionPtr>> _mapGUIFunctionLists; ///< map between priority and sublist for given priority level. protected by _mutexGUIFunctions
+    std::map<GUIThreadQueuePriority, size_t> _mapGUIFunctionListLimits; ///< map between priority and sublist size limit for given priority level
     mutable list<Item*> _listRemoveItems; ///< raw points of items to be deleted in the viewer update thread, triggered from _DeleteItemCallback. proteced by _mutexItems
     boost::mutex _mutexItems; ///< protects _listRemoveItems
     mutable boost::mutex _mutexGUIFunctions;
