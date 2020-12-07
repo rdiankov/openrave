@@ -344,11 +344,14 @@ public:
 
     /// \brief priority values used to determine how important it is to process certain GUI thread functions over others
     enum GUIThreadQueuePriority : uint8_t {
-        VERY_HIGH = 3 //< denotes an critical GUI task that must be processed ASAP regardless of viewer state or queue size
+        VERY_HIGH = 3, //< denotes an critical GUI task that must be processed ASAP regardless of viewer state or queue size
         HIGH = 2, ///< denotes an important GUI task that must be processed regardless of viewer state or queue size
         MEDIUM = 1, ///< denotes a GUI task that takes precedence over low-priority tasks but yields to important tasks
         LOW = 0 ///< denotes a GUI task that presents negligibly adversely effects on the program should it fail to complete execution
     };
+
+    /// \brief gets "queue position", or sum of lengths of all queues of equal or higher priority than the input priority
+    size_t _GetQueueSizeForPriority(GUIThreadQueuePriority priority);
 
     /// \brief posts a function to be executed in the GUI thread
     ///

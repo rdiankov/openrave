@@ -1353,10 +1353,10 @@ void QtOSGViewer::quitmainloop()
 void QtOSGViewer::Show(int showtype)
 {
     if( showtype ) {
-        _PostToGUIThread(boost::bind(&QtOSGViewer::show, this), GUIThreadQueuePriority::HIGH);
+        _PostToGUIThread(boost::bind(&QtOSGViewer::show, this), GUIThreadQueuePriority::VERY_HIGH);
     }
     else {
-        _PostToGUIThread(boost::bind(&QtOSGViewer::hide, this), GUIThreadQueuePriority::HIGH);
+        _PostToGUIThread(boost::bind(&QtOSGViewer::hide, this), GUIThreadQueuePriority::VERY_HIGH);
     }
 //    // have to put this in the message queue
 //    if (showtype ) {
@@ -2130,7 +2130,7 @@ void QtOSGViewer::_UpdateEnvironment()
 size_t QtOSGViewer::_GetQueueSizeForPriority(GUIThreadQueuePriority priority) {
     size_t queueSize = 0;
     for (uint8_t i = static_cast<uint8_t>(priority); i < 4; i++) {
-        queueSize += _mapGUIFunctionListLimits[static_cast<GUIThreadQueuePriority>(i)].size();
+        queueSize += _mapGUIFunctionLists[static_cast<GUIThreadQueuePriority>(i)].size();
     }
     return queueSize;
 }
@@ -2154,7 +2154,7 @@ void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, GUIThreadQ
         RAVELOG_WARN("GUI thread function of priority %d dropped due to function queue for given priority exceeding size of %d", priority, _mapGUIFunctionListLimits[priority]);
         return;
     }
-    _mapGUIFunctionLists[priority].push_back(pfn)
+    _mapGUIFunctionLists[priority].push_back(pfn);
     if( block ) {
         while(!pfn->IsFinished()) {
             _notifyGUIFunctionComplete.wait(_mutexGUIFunctions);
