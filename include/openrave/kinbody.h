@@ -1127,8 +1127,8 @@ public:
 
         /// @name automatically set
         //@{
-        std::vector< DOFFormat > _vdofformat;         ///< the format of the values the equation takes order is important.
-        std::vector<DOFHierarchy> _vmimicdofs;         ///< all dof indices that the equations depends on. DOFHierarchy::dofindex can repeat
+        std::vector< DOFFormat > _vdofformat; ///< the format of the values the equation takes order is important. Contains dependencies on active and passive joints (c.f. KinBody::Joint::SetMimicEquations),
+        std::vector<DOFHierarchy> _vmimicdofs; ///< all dof indices that the equations depends on. DOFHierarchy::dofindex can repeat. Only contains dependencies on active joints (c.f. KinBody::Joint::SetMimicEquations),
         OpenRAVEFunctionParserRealPtr _posfn;
         std::vector<OpenRAVEFunctionParserRealPtr > _velfns, _accelfns;         ///< the velocity and acceleration partial derivatives with respect to each of the values in _vdofformat
         //@}
@@ -1339,6 +1339,7 @@ public:
         }
 
         int GetGeneralizedJointIndex() const;
+        std::vector<boost::shared_ptr<KinBody::Joint> > GetDependedJoints() const;
 
         /// \brief parent body that joint belongs to.
         ///

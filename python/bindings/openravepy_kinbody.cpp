@@ -1748,6 +1748,14 @@ int PyJoint::GetGeneralizedJointIndex() const {
     return _pjoint->GetGeneralizedJointIndex();
 }
 
+std::vector<PyJoint> PyJoint::GetDependedJoints() const {
+    std::vector<PyJoint> vpyjoints;
+    for(const KinBody::JointPtr& pjoint : _pjoint->GetDependedJoints()) {
+        vpyjoints.emplace_back(pjoint, _pyenv);
+    }
+    return vpyjoints;
+}
+
 PyKinBodyPtr PyJoint::GetParent() const {
     return PyKinBodyPtr(new PyKinBody(_pjoint->GetParent(),_pyenv));
 }
@@ -5702,6 +5710,7 @@ void init_openravepy_kinbody()
                            .def("GetDOFIndex", &PyJoint::GetDOFIndex, DOXY_FN(KinBody::Joint,GetDOFIndex))
                            .def("GetJointIndex", &PyJoint::GetJointIndex, DOXY_FN(KinBody::Joint,GetJointIndex))
                            .def("GetGeneralizedJointIndex", &PyJoint::GetGeneralizedJointIndex, DOXY_FN(KinBody::Joint,GetGeneralizedJointIndex))
+                           .def("GetDependedJoints", &PyJoint::GetDependedJoints, DOXY_FN(KinBody::Joint,GetDependedJoints))
                            .def("GetParent", &PyJoint::GetParent, DOXY_FN(KinBody::Joint,GetParent))
                            .def("GetFirstAttached", &PyJoint::GetFirstAttached, DOXY_FN(KinBody::Joint,GetFirstAttached))
                            .def("GetSecondAttached", &PyJoint::GetSecondAttached, DOXY_FN(KinBody::Joint,GetSecondAttached))

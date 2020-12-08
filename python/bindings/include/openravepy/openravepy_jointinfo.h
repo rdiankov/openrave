@@ -400,6 +400,7 @@ public:
     int GetDOFIndex() const;
     int GetJointIndex() const;
     int GetGeneralizedJointIndex() const;
+    std::vector<PyJoint> GetDependedJoints() const;
 
     PyKinBodyPtr GetParent() const;
 

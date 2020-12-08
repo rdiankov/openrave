@@ -1828,6 +1828,25 @@ int KinBody::Joint::GetGeneralizedJointIndex() const {
     return pparent ? pparent->GetGeneralizedJointIndex(this->GetName()) : -1;
 }
 
+std::vector<KinBody::JointPtr> KinBody::Joint::GetDependedJoints() const {
+    const KinBodyPtr pparent = _parent.lock();
+    std::vector<KinBody::JointPtr> pjoints;
+    if(!pparent) {
+        return pjoints;
+    }
+    for(const MimicPtr& pmimic : _vmimic) {
+        if(!pmimic) {
+            continue;
+        }
+        const std::vector<Mimic::DOFFormat>& vdofformat = pmimic->_vdofformat;
+        for(const Mimic::DOFFormat& dofformat : vdofformat) {
+            KinBody::JointPtr pjoint = dofformat.GetJoint(*pparent);
+            pjoints.push_back(pjoint);
+        }
+    }
+    return pjoints;
+}
+
 int KinBody::Joint::GetMimicJointIndex() const
 {
     for(int i = 0; i < GetDOF(); ++i) {
