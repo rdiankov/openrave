@@ -2277,7 +2277,7 @@ void KinBody::Joint::_ComputePartialVelocities(
         dReal fvel = 0;
         if(ivar < nvelfns) {
             const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
-            fvel = velfn->Eval(vDependedJointValues.empty() ? NULL : &vDependedJointValues[0]); ///< value of ∂z/∂x
+            fvel = velfn->Eval(vDependedJointValues.data()); ///< value of ∂z/∂x
         }
         else {
             RAVELOG_WARN_FORMAT("This mimic joint %s depends on joint %s, but the user did not provide the mimic velocity formula. Now treat the first-order partial derivative as 0", this->GetName() % dependedjoint->GetName());
