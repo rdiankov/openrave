@@ -2510,6 +2510,8 @@ private:
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
+
+    /// \brief executes _UpdateGrabbedBodies() and _PostprocessChangedParameters(Prop_LinkTransforms)
     virtual void ProcessAfterSetDOFValues();
 
     virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = true) {
@@ -2846,6 +2848,7 @@ private:
         return _nUpdateStampId;
     }
 
+    /// \brief Increments the unique id that indicates the number of transformation state changes of any link. Used to check if robot state has changed.
     virtual void IncrementUpdateStamp(const int inc=1) { _nUpdateStampId += inc; } 
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
