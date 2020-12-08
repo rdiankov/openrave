@@ -1823,6 +1823,11 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
     }
 }
 
+int KinBody::Joint::GetGeneralizedJointIndex() const {
+    const KinBodyPtr pparent = _parent.lock();
+    return pparent ? pparent->GetGeneralizedJointIndex(this->GetName()) : -1;
+}
+
 int KinBody::Joint::GetMimicJointIndex() const
 {
     for(int i = 0; i < GetDOF(); ++i) {

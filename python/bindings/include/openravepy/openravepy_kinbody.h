@@ -233,6 +233,7 @@ public:
     py::object GetChain(int linkindex1, int linkindex2,bool returnjoints = true) const;
     bool IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const;
     int GetJointIndex(const std::string& jointname) const;
+    int GetGeneralizedJointIndex(const std::string& jointname) const;
     py::object GetJoint(const std::string& jointname) const;
     py::object GetJointFromDOFIndex(int dofindex) const;
     py::object GetTransform() const;

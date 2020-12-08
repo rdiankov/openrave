@@ -399,6 +399,7 @@ public:
 
     int GetDOFIndex() const;
     int GetJointIndex() const;
+    int GetGeneralizedJointIndex() const;
 
     PyKinBodyPtr GetParent() const;
 

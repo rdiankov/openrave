@@ -1338,6 +1338,8 @@ public:
             return jointindex;
         }
 
+        int GetGeneralizedJointIndex() const;
+
         /// \brief parent body that joint belongs to.
         ///
         /// \param trylock if true then will try to get the parent pointer and return empty pointer if parent was already destroyed. Otherwise throws an exception if parent is already destroyed. By default this should be
@@ -2346,8 +2348,11 @@ private:
     /// \param[in] linkindex2 the link index where the search ends
     virtual bool IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const;
 
-    /// \brief Return the index of the joint with the given name, else -1.
+    /// \brief Return the index of an active joint with the given name, else -1.
     virtual int GetJointIndex(const std::string& name) const;
+
+    /// \brief Return the index of an active or passive joint with the given name, else -1.
+    virtual int GetGeneralizedJointIndex(const std::string& name) const;
 
     /// \brief Return a pointer to the joint with the given name. Search in the regular and passive joints.
     virtual JointPtr GetJoint(const std::string& name) const;

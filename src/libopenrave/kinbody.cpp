@@ -2254,6 +2254,24 @@ int KinBody::GetJointIndex(const std::string& jointname) const
     return -1;
 }
 
+int KinBody::GetGeneralizedJointIndex(const std::string& jointname) const
+{
+    int index = 0;
+    for(const JointPtr& pjoint : _vecjoints) {
+        if (pjoint->GetName() == jointname ) {
+            return index;
+        }
+        ++index;
+    }
+    for(const JointPtr& pjoint : _vPassiveJoints) {
+        if (pjoint->GetName() == jointname ) {
+            return index;
+        }
+        ++index;
+    }
+    return -1;
+}
+
 KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
 {
     FOREACHC(it,_vecjoints) {

@@ -1739,8 +1739,13 @@ dReal PyJoint::GetMaxInertia(int iaxis) const {
 int PyJoint::GetDOFIndex() const {
     return _pjoint->GetDOFIndex();
 }
+
 int PyJoint::GetJointIndex() const {
     return _pjoint->GetJointIndex();
+}
+
+int PyJoint::GetGeneralizedJointIndex() const {
+    return _pjoint->GetGeneralizedJointIndex();
 }
 
 PyKinBodyPtr PyJoint::GetParent() const {
@@ -3020,6 +3025,11 @@ bool PyKinBody::IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const
 int PyKinBody::GetJointIndex(const std::string& jointname) const
 {
     return _pbody->GetJointIndex(jointname);
+}
+
+int PyKinBody::GetGeneralizedJointIndex(const std::string& jointname) const
+{
+    return _pbody->GetGeneralizedJointIndex(jointname);
 }
 
 object PyKinBody::GetJoint(const std::string& jointname) const
@@ -5144,6 +5154,7 @@ void init_openravepy_kinbody()
 #endif
                          .def("IsDOFInChain",&PyKinBody::IsDOFInChain,PY_ARGS("linkindex1","linkindex2","dofindex") DOXY_FN(KinBody,IsDOFInChain))
                          .def("GetJointIndex",&PyKinBody::GetJointIndex,PY_ARGS("name") DOXY_FN(KinBody,GetJointIndex))
+                         .def("GetGeneralizedJointIndex",&PyKinBody::GetGeneralizedJointIndex,PY_ARGS("name") DOXY_FN(KinBody,GetGeneralizedJointIndex))
                          .def("GetJoint",&PyKinBody::GetJoint,PY_ARGS("name") DOXY_FN(KinBody,GetJoint))
                          .def("GetJointFromDOFIndex",&PyKinBody::GetJointFromDOFIndex,PY_ARGS("dofindex") DOXY_FN(KinBody,GetJointFromDOFIndex))
                          .def("GetTransform",&PyKinBody::GetTransform, DOXY_FN(KinBody,GetTransform))
@@ -5690,6 +5701,7 @@ void init_openravepy_kinbody()
 #endif
                            .def("GetDOFIndex", &PyJoint::GetDOFIndex, DOXY_FN(KinBody::Joint,GetDOFIndex))
                            .def("GetJointIndex", &PyJoint::GetJointIndex, DOXY_FN(KinBody::Joint,GetJointIndex))
+                           .def("GetGeneralizedJointIndex", &PyJoint::GetGeneralizedJointIndex, DOXY_FN(KinBody::Joint,GetGeneralizedJointIndex))
                            .def("GetParent", &PyJoint::GetParent, DOXY_FN(KinBody::Joint,GetParent))
                            .def("GetFirstAttached", &PyJoint::GetFirstAttached, DOXY_FN(KinBody::Joint,GetFirstAttached))
                            .def("GetSecondAttached", &PyJoint::GetSecondAttached, DOXY_FN(KinBody::Joint,GetSecondAttached))
