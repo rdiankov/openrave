@@ -1757,15 +1757,23 @@ PyLinkPtr PyJoint::GetSecondAttached() const {
 KinBody::JointType PyJoint::GetType() const {
     return _pjoint->GetType();
 }
+
+bool PyJoint::IsActive() const {
+    return _pjoint->IsActive();
+}
+
 bool PyJoint::IsCircular(int iaxis) const {
     return _pjoint->IsCircular(iaxis);
 }
+
 bool PyJoint::IsRevolute(int iaxis) const {
     return _pjoint->IsRevolute(iaxis);
 }
+
 bool PyJoint::IsPrismatic(int iaxis) const {
     return _pjoint->IsPrismatic(iaxis);
 }
+
 bool PyJoint::IsStatic() const {
     return _pjoint->IsStatic();
 }
@@ -5686,6 +5694,7 @@ void init_openravepy_kinbody()
                            .def("GetFirstAttached", &PyJoint::GetFirstAttached, DOXY_FN(KinBody::Joint,GetFirstAttached))
                            .def("GetSecondAttached", &PyJoint::GetSecondAttached, DOXY_FN(KinBody::Joint,GetSecondAttached))
                            .def("IsStatic",&PyJoint::IsStatic, DOXY_FN(KinBody::Joint,IsStatic))
+                           .def("IsActive",&PyJoint::IsActive, DOXY_FN(KinBody::Joint,IsActive))
                            .def("IsCircular",&PyJoint::IsCircular, DOXY_FN(KinBody::Joint,IsCircular))
                            .def("IsRevolute",&PyJoint::IsRevolute, DOXY_FN(KinBody::Joint,IsRevolute))
                            .def("IsPrismatic",&PyJoint::IsPrismatic, DOXY_FN(KinBody::Joint,IsPrismatic))

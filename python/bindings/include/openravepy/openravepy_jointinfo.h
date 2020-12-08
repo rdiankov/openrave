@@ -406,6 +406,7 @@ public:
     PyLinkPtr GetSecondAttached() const;
 
     KinBody::JointType GetType() const;
+    bool IsActive() const;
     bool IsCircular(int iaxis) const;
     bool IsRevolute(int iaxis) const;
     bool IsPrismatic(int iaxis) const;
