@@ -2766,12 +2766,11 @@ public:
             return true;
         }
         else if( xmlname == "link" ) {
-            string linkname;
-            _ss >> linkname;
-            _psensor->pattachedlink = _probot->GetLink(linkname);
+            _ss >> _psensor->_info._linkname;
+            _psensor->pattachedlink = _probot->GetLink(_psensor->_info._linkname);
 
             if( _psensor->pattachedlink.expired() ) {
-                RAVELOG_WARN("Failed to find attached sensor link %s\n", linkname.c_str());
+                RAVELOG_WARN("Failed to find attached sensor link %s\n", _psensor->_info._linkname.c_str());
                 GetXMLErrorCount()++;
             }
         }

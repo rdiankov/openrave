@@ -20,6 +20,7 @@ namespace configurationcache
 {
 CollisionCheckerBasePtr CreateCacheCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput);
 SpaceSamplerBasePtr CreateConfigurationJitterer(EnvironmentBasePtr penv, std::istream& sinput);
+SpaceSamplerBasePtr CreateWorkspaceConfigurationJitterer(EnvironmentBasePtr penv, std::istream& sinput);
 }
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
@@ -34,6 +35,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         if( interfacename == "configurationjitterer" ) {
             return configurationcache::CreateConfigurationJitterer(penv,sinput);
         }
+        if( interfacename == "workspaceconfigurationjitterer" ) {
+            return configurationcache::CreateWorkspaceConfigurationJitterer(penv,sinput);
+        }
         break;
     default:
         break;
@@ -45,6 +49,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[PT_CollisionChecker].push_back("CacheChecker");
     info.interfacenames[PT_SpaceSampler].push_back("ConfigurationJitterer");
+    info.interfacenames[PT_SpaceSampler].push_back("WorkspaceConfigurationJitterer");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
