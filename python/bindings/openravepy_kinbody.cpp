@@ -1694,12 +1694,8 @@ std::string PyJoint::GetMimicEquation(int iaxis, int itype, const std::string& f
     return _pjoint->GetMimicEquation(iaxis,itype,format);
 }
 
-py::list PyJoint::GetMimicEquations(int iaxis, const std::string& format) {
-    py::list l;
-    l.append(_pjoint->GetMimicEquation(iaxis, 0, format));
-    l.append(_pjoint->GetMimicEquation(iaxis, 1, format));
-    l.append(_pjoint->GetMimicEquation(iaxis, 2, format));
-    return l;
+std::vector<std::string> PyJoint::GetMimicEquations(int iaxis, const std::string& format) {
+    return _pjoint->GetMimicEquations(iaxis, format);
 }
 
 object PyJoint::GetMimicDOFIndices(int iaxis) {

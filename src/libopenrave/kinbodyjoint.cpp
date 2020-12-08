@@ -1926,6 +1926,14 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
     throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported math format %s"), format, ORE_InvalidArguments);
 }
 
+std::vector<std::string> KinBody::Joint::GetMimicEquations(int iaxis, const std::string& format) const {
+    return {{
+        this->GetMimicEquation(iaxis, 0, format),
+        this->GetMimicEquation(iaxis, 1, format),
+        this->GetMimicEquation(iaxis, 2, format)
+    }};
+}
+
 void KinBody::Joint::GetMimicDOFIndices(std::vector<int>& vmimicdofs, int iaxis) const
 {
     OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis), "joint %s axis %d is not mimic", GetName()%iaxis,ORE_InvalidArguments);

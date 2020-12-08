@@ -1338,7 +1338,10 @@ public:
             return jointindex;
         }
 
+        /// \brief Return the (non-negative) index of this joint, no matter it is active or passive
         int GetGeneralizedJointIndex() const;
+
+        /// \brief Return the joints on which this joint depends
         std::vector<boost::shared_ptr<KinBody::Joint> > GetDependedJoints() const;
 
         /// \brief parent body that joint belongs to.
@@ -1624,6 +1627,10 @@ public:
             Set 'format' to "mathml". The joint variables are specified with <csymbol>. If a targetted joint has more than one degree of freedom, then axis is suffixed with _\%d. If 'type' is 1 or 2, the partial derivatives are outputted as consecutive <math></math> tags in the same order as \ref Mimic::_vdofformat
          */
         virtual std::string GetMimicEquation(int axis=0, int type=0, const std::string& format="") const;
+
+        /** \brief If the joint is mimic, returns the mimic position, velocity, and accelration equations.
+        */
+        virtual std::vector<std::string> GetMimicEquations(int iaxis=0, const std::string& format="") const;
 
         /** \brief Returns the set of DOF indices that the computation of a joint axis depends on. Order is arbitrary.
 
