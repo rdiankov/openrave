@@ -894,7 +894,11 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         return updateFromInfoResult;
     }
 
-    // TODO: what about transform???
+    if (TransformDistanceFast(GetTransform(), info._t) > g_fEpsilonLinear) {
+        RAVELOG_VERBOSE_FORMAT("link %s transform changed", _info._id);
+        SetTransform(info._t);
+        updateFromInfoResult = UFIR_Success;
+    }
 
     // name
     if (GetName() != info._name) {
@@ -927,6 +931,13 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     if (_info._vinertiamoments != info._vinertiamoments) {
         SetPrincipalMomentsOfInertia(info._vinertiamoments);
         RAVELOG_VERBOSE_FORMAT("link %s inertia moments changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // mass frame
+    if (TransformDistanceFast(GetLocalMassFrame(), info._tMassFrame) > g_fEpsilonLinear) {
+        SetLocalMassFrame(info._tMassFrame);
+        RAVELOG_VERBOSE_FORMAT("link %s mass frame changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
@@ -966,6 +977,14 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
             SetStringParameters(itParam->first, itParam->second);
         }
         RAVELOG_VERBOSE_FORMAT("link %s string parameters changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+
+    // forced adjacent links
+    if (_info._vForcedAdjacentLinks != info._vForcedAdjacentLinks) {
+        _info._vForcedAdjacentLinks = info._vForcedAdjacentLinks;
+        RAVELOG_VERBOSE_FORMAT("link %s forced adjacent links changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
