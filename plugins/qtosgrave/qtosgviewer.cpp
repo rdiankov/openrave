@@ -2127,26 +2127,6 @@ void QtOSGViewer::_UpdateEnvironment()
     }
 }
 
-size_t QtOSGViewer::_GetViewerCommandNumber(ViewerCommandPriority priority) {
-    size_t queueSize = 0;
-    for (uint8_t i = static_cast<uint8_t>(priority); i < 4; i++) {
-        queueSize += _mapGUIFunctionLists[static_cast<ViewerCommandPriority>(i)].size();
-    }
-    return queueSize;
-}
-
-bool QtOSGViewer::_DropOldViewerCommandFromQueue(ViewerCommandPriority priority) {
-    uint8_t maximumPriority = static_cast<uint8_t>(priority);
-    for (uint8_t i = 0; i <= maximumPriority; i++) {
-        if(_mapGUIFunctionLists[static_cast<ViewerCommandPriority>(i)].size() > 0) {
-            _mapGUIFunctionLists[static_cast<ViewerCommandPriority>(i)].pop_front();
-            RAVELOG_WARN("Old GUI thread function of priority %d dropped due to function queue for input priority %d exceeding size of %d", i, priority, _mapGUIFunctionListLimits[static_cast<ViewerCommandPriority>(i)]);
-            return true;
-        }
-    }
-    return false;
-}
-
 void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, ViewerCommandPriority priority, bool block)
 {
     if( _nQuitMainLoop != -1 ) {
@@ -2162,8 +2142,15 @@ void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, ViewerComm
         return;
     }
     // GUI thread function queue size limit
-    if (_GetViewerCommandNumber(priority) >= _mapGUIFunctionListLimits[priority]) {
+    if (_mapGUIFunctionLists[priority].size() >= _mapGUIFunctionListLimits[priority]) {
         if (!_DropOldViewerCommandFromQueue(priority)) {
+            RAVELOG_WARN("New GUI thread function of priority %d dropped due to function queue for given priority exceeding size of %d", priority, _mapGUIFunctionListLimits[priority]);
+            return;
+        }
+        if(_mapGUIFunctionLists[priority].size() > 0) {
+            _mapGUIFunctionLists[priority].pop_front();
+            RAVELOG_WARN("Old GUI thread function of priority %d dropped due to function queue for given priority exceeding size of %d", priority, _mapGUIFunctionListLimits[static_cast<ViewerCommandPriority>(i)]);
+        } else {
             RAVELOG_WARN("New GUI thread function of priority %d dropped due to function queue for given priority exceeding size of %d", priority, _mapGUIFunctionListLimits[priority]);
             return;
         }

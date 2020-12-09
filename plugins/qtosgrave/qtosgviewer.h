@@ -350,12 +350,6 @@ public:
         LOW = 0 ///< denotes a GUI task that presents negligibly adversely effects on the program should it fail to complete execution
     };
 
-    /// \brief gets "queue number", or sum of lengths of all queues of equal or higher priority than the input priority
-    size_t _GetViewerCommandNumber(ViewerCommandPriority priority);
-
-    /// \brief finds then drops the oldest and lowest priority function if it is <= input priority, returning true if a match was found
-    bool _DropOldViewerCommandFromQueue(ViewerCommandPriority priority);
-
     /// \brief posts a function to be executed in the GUI thread
     ///
     /// \param fn the function to execute
