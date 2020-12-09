@@ -267,7 +267,7 @@ public:
         virtual ~PrivateGraphHandle() {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_CloseGraphHandle, viewer, _handle), GUIThreadQueuePriority::HIGH); // _handle is copied, so it will maintain the reference
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_CloseGraphHandle, viewer, _handle), ViewerCommandPriority::HIGH); // _handle is copied, so it will maintain the reference
             }
         }
 
@@ -275,7 +275,7 @@ public:
         {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphTransform, viewer, _handle, t), GUIThreadQueuePriority::HIGH); // _handle is copied, so it will maintain the reference
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphTransform, viewer, _handle, t), ViewerCommandPriority::HIGH); // _handle is copied, so it will maintain the reference
             }
         }
 
@@ -283,7 +283,7 @@ public:
         {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow), GUIThreadQueuePriority::HIGH); // _handle is copied, so it will maintain the reference
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow), ViewerCommandPriority::HIGH); // _handle is copied, so it will maintain the reference
             }
         }
 
@@ -343,21 +343,24 @@ public:
     virtual void _PanCameraYDirection(float dy);
 
     /// \brief priority values used to determine how important it is to process certain GUI thread functions over others
-    enum GUIThreadQueuePriority : uint8_t {
+    enum ViewerCommandPriority : uint8_t {
         VERY_HIGH = 3, //< denotes an critical GUI task that must be processed ASAP regardless of viewer state or queue size
         HIGH = 2, ///< denotes an important GUI task that must be processed regardless of viewer state or queue size
         MEDIUM = 1, ///< denotes a GUI task that takes precedence over low-priority tasks but yields to important tasks
         LOW = 0 ///< denotes a GUI task that presents negligibly adversely effects on the program should it fail to complete execution
     };
 
-    /// \brief gets "queue position", or sum of lengths of all queues of equal or higher priority than the input priority
-    size_t _GetQueueSizeForPriority(GUIThreadQueuePriority priority);
+    /// \brief gets "queue number", or sum of lengths of all queues of equal or higher priority than the input priority
+    size_t _GetViewerCommandNumber(ViewerCommandPriority priority);
+
+    /// \brief finds then drops the oldest and lowest priority function if it is <= input priority, returning true if a match was found
+    bool _DropOldViewerCommandFromQueue(ViewerCommandPriority priority);
 
     /// \brief posts a function to be executed in the GUI thread
     ///
     /// \param fn the function to execute
     /// \param block if true, will return once the function has been executed.
-    void _PostToGUIThread(const boost::function<void()>& fn, GUIThreadQueuePriority priority, bool block=false);
+    void _PostToGUIThread(const boost::function<void()>& fn, ViewerCommandPriority priority, bool block=false);
 
     /// \brief Actions that achieve buttons and menus
     void _CreateActions();
@@ -406,8 +409,8 @@ public:
     bool _PanCameraYDirectionCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
-    std::map<GUIThreadQueuePriority, list<GUIThreadFunctionPtr>> _mapGUIFunctionLists; ///< map between priority and sublist for given priority level. protected by _mutexGUIFunctions
-    std::map<GUIThreadQueuePriority, size_t> _mapGUIFunctionListLimits; ///< map between priority and sublist size limit for given priority level
+    std::map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> _mapGUIFunctionLists; ///< map between priority and sublist for given priority level. protected by _mutexGUIFunctions
+    std::map<ViewerCommandPriority, size_t> _mapGUIFunctionListLimits; ///< map between priority and sublist size limit for given priority level
     mutable list<Item*> _listRemoveItems; ///< raw points of items to be deleted in the viewer update thread, triggered from _DeleteItemCallback. proteced by _mutexItems
     boost::mutex _mutexItems; ///< protects _listRemoveItems
     mutable boost::mutex _mutexGUIFunctions;
