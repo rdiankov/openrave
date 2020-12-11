@@ -2145,7 +2145,7 @@ void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, ViewerComm
     if (_mapGUIFunctionLists[priority].size() >= _mapGUIFunctionListLimits[priority]) {
         if(_mapGUIFunctionLists[priority].size() > 0) {
             _mapGUIFunctionLists[priority].pop_front();
-            RAVELOG_WARN("Old GUI thread function of priority %d dropped due to function queue for given priority exceeding size of %d", priority, _mapGUIFunctionListLimits[static_cast<ViewerCommandPriority>(i)]);
+            RAVELOG_WARN("Old GUI thread function of priority %d dropped due to function queue for given priority exceeding size of %d", priority, _mapGUIFunctionListLimits[priority]);
         } else {
             RAVELOG_WARN("New GUI thread function of priority %d dropped due to function queue for given priority exceeding size of %d", priority, _mapGUIFunctionListLimits[priority]);
             return;
