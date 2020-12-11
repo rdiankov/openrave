@@ -415,23 +415,23 @@ public:
                 }
                 else {
                     size_t index = it - begin;
-                    dReal deltatime = time - _vaccumtime.at(index-1);
+                    dReal timeFromLowerWaypoint = time - _vaccumtime.at(index-1);
                     dReal waypointdeltatime = _vtrajdata.at(_spec.GetDOF()*index + _timeoffset);
-                    // unfortunately due to floating-point error deltatime might not be in the range [0, waypointdeltatime], so double check!
-                    if( deltatime < 0 ) {
+                    // unfortunately due to floating-point error timeFromLowerWaypoint might not be in the range [0, waypointdeltatime], so double check!
+                    if( timeFromLowerWaypoint < 0 ) {
                         // most likely small epsilon
-                        deltatime = 0;
+                        timeFromLowerWaypoint = 0;
                     }
-                    else if( deltatime > waypointdeltatime ) {
-                        deltatime = waypointdeltatime;
+                    else if( timeFromLowerWaypoint > waypointdeltatime ) {
+                        timeFromLowerWaypoint = waypointdeltatime;
                     }
                     for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
                         if( !!_vgroupinterpolators[i] ) {
-                            _vgroupinterpolators[i](index-1, deltatime, dataPerTimestep);
+                            _vgroupinterpolators[i](index-1, timeFromLowerWaypoint, dataPerTimestep);
                         }
                     }
                     // should return the sample time relative to the last endpoint so it is easier to re-insert in the trajectory
-                    dataPerTimestep.at(_timeoffset) = deltatime;
+                    dataPerTimestep.at(_timeoffset) = timeFromLowerWaypoint;
                 }
             }
             std::copy(dataPerTimestep.begin(), dataPerTimestep.end(), itdata);
