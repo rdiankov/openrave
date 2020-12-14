@@ -455,7 +455,6 @@ public:
         OPENRAVE_ASSERT_OP(dataInSourceSpec.size() % dofSourceSpec,==, 0);
         int numPoints = dataInSourceSpec.size() / dofSourceSpec;
         int dof = spec.GetDOF();
-        std::vector<dReal> dataPerTimestep(dof,0);
         data.resize(dof*numPoints);
         
         ConfigurationSpecification::ConvertData(data.begin(),
