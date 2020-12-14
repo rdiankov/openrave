@@ -377,7 +377,7 @@ public:
         }
     }
 
-    virtual void SampleEvenPoints(std::vector<dReal>& data, double deltatime, bool ensureLastPoint) const override
+    virtual void SamplePointsSameDeltaTime(std::vector<dReal>& data, double deltatime, bool ensureLastPoint) const override
     {
         BOOST_ASSERT(_bInit);
         BOOST_ASSERT(_timeoffset>=0);
@@ -441,15 +441,15 @@ public:
         }
     }
 
-    virtual void SampleEvenPoints(std::vector<dReal>& data, double deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const override
+    virtual void SamplePointsSameDeltaTime(std::vector<dReal>& data, double deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const override
     {
         // avoid unnecessary computation if spec is same as this->_spec
         if (spec == _spec) {
-            return SampleEvenPoints(data, deltatime, ensureLastPoint);
+            return SamplePointsSameDeltaTime(data, deltatime, ensureLastPoint);
         }
         
         std::vector<dReal> dataInSourceSpec;
-        SampleEvenPoints(dataInSourceSpec, deltatime, ensureLastPoint);
+        SamplePointsSameDeltaTime(dataInSourceSpec, deltatime, ensureLastPoint);
 
         int dofSourceSpec = _spec.GetDOF();
         OPENRAVE_ASSERT_OP(dataInSourceSpec.size() % dofSourceSpec,==, 0);
