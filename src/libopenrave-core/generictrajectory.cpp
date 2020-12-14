@@ -369,6 +369,9 @@ public:
                         _vgroupinterpolators[i](index-1,deltatime,vinternaldata);
                     }
                 }
+                // should return the sample time relative to the last endpoint so it is easier to re-insert in the trajectory
+                vinternaldata.at(_timeoffset) = deltatime;
+                
                 ConfigurationSpecification::ConvertData(data.begin(),spec,vinternaldata.begin(),_spec,1,GetEnv());
             }
         }
