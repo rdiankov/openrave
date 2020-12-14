@@ -103,7 +103,7 @@ public:
         \param deltatime[in] the delta time to sample
         \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
      */
-    virtual void SampleEvenPoints(std::vector<dReal>& data, double deltatime, bool ensureLastPoint) const;
+    virtual void SamplePointsSameDeltaTime(std::vector<dReal>& data, double deltatime, bool ensureLastPoint) const;
 
     /** \brief bulk samples the trajectory evenly given a delta time and a specific configuration specification.
 
@@ -113,7 +113,7 @@ public:
         \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
         \param spec[in] the specification format to return the data in
      */
-    virtual void SampleEvenPoints(std::vector<dReal>& data, double deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const;
+    virtual void SamplePointsSameDeltaTime(std::vector<dReal>& data, double deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const;
 
     virtual const ConfigurationSpecification& GetConfigurationSpecification() const = 0;
 
