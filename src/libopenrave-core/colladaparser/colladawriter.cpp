@@ -1122,20 +1122,48 @@ private:
 
         boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(pbody);
         kmodelid += "/";
-        FOREACHC(itjoint,pbody->GetJoints()) {
+
+        // note which links and joints are part of connected bodies
+        std::vector<uint8_t> vConnectedJoints; vConnectedJoints.resize(pbody->GetJoints().size(),0);
+        if( pbody->IsRobot() ) {
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+            FOREACH(itconnectedBody, probot->GetConnectedBodies()) {
+                RobotBase::ConnectedBody& connectedBody = **itconnectedBody;
+                if( (*itconnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
+                std::vector<KinBody::JointPtr> vResolvedJoints;
+                connectedBody.GetResolvedJoints(vResolvedJoints);
+                FOREACHC(itResolvedJoint, vResolvedJoints) {
+                    for(int ijointindex = 0; ijointindex < (int)pbody->GetJoints().size(); ++ijointindex) {
+                        if( pbody->GetJoints()[ijointindex] == *itResolvedJoint ) {
+                            vConnectedJoints[ijointindex] = 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        for(int ijoint = 0; ijoint < (int)vConnectedJoints.size(); ++ijoint) {
+            if (vConnectedJoints[ijoint]) {
+                // skip joints added by connected body
+                continue;
+            }
+            KinBody::JointConstPtr pjoint = pbody->GetJoints()[ijoint];
             domExtraRef pextra = daeSafeCast<domExtra>(articulated_system_motion->add(COLLADA_ELEMENT_EXTRA));
-            pextra->setName(str(boost::format("motor_%s")%_GetJointSid(*itjoint)).c_str());
+            pextra->setName(str(boost::format("motor_%s")%_GetJointSid(pjoint)).c_str());
             pextra->setType("attach_actuator");
             domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
             ptec->setProfile("OpenRAVE");
             daeElementRef bind_actuator = ptec->add("bind_actuator");
-            bind_actuator->setAttribute("joint",str(boost::format("%s%s")%kmodelid%_GetJointSid(*itjoint)).c_str());
+            bind_actuator->setAttribute("joint",str(boost::format("%s%s")%kmodelid%_GetJointSid(pjoint)).c_str());
 
-            if( !!(*itjoint)->GetInfo()._infoElectricMotor ) {
-                ElectricMotorActuatorInfoPtr infoElectricMotor = (*itjoint)->GetInfo()._infoElectricMotor;
+            if( !!pjoint->GetInfo()._infoElectricMotor ) {
+                ElectricMotorActuatorInfoPtr infoElectricMotor = pjoint->GetInfo()._infoElectricMotor;
                 daeElementRef instance_actuator = ptec->add("instance_actuator");
 
-                std::string stractuator = str(boost::format("body%d_actuator_%s")%_mapBodyIds[pbody->GetEnvironmentId()]%_GetJointSid(*itjoint));
+                std::string stractuator = str(boost::format("body%d_actuator_%s")%_mapBodyIds[pbody->GetEnvironmentId()]%_GetJointSid(pjoint));
                 std::string url = std::string("#") + stractuator;
                 instance_actuator->setAttribute("url",url.c_str());
 
@@ -2740,21 +2768,20 @@ private:
                 pignore->setAttribute("link1",vlinksidrefs.at(plink1->GetIndex()).c_str());
             }
         }
-        if( IsWrite("link_collision_state") ) {
-            std::vector<KinBody::LinkPtr> vConnectedLinks;
-            if( pbody->IsRobot() ) {
-                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
-                FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
-                    if( (*itConnectedBody)->IsActive() == 0 ) {
-                        // not active, so will not be mapped onto real robot
-                        continue;
-                    }
-                    std::vector<KinBody::LinkPtr> vResolvedLinks;
-                    (*itConnectedBody)->GetResolvedLinks(vResolvedLinks);
-                    vConnectedLinks.insert(vConnectedLinks.end(), vResolvedLinks.begin(), vResolvedLinks.end());
+        std::vector<KinBody::LinkPtr> vConnectedLinks;
+        if( pbody->IsRobot() ) {
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+            FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                if( (*itConnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
                 }
+                std::vector<KinBody::LinkPtr> vResolvedLinks;
+                (*itConnectedBody)->GetResolvedLinks(vResolvedLinks);
+                vConnectedLinks.insert(vConnectedLinks.end(), vResolvedLinks.begin(), vResolvedLinks.end());
             }
-
+        }
+        if( IsWrite("link_collision_state") ) {
             FOREACHC(itlink,pbody->GetLinks()) {
                 if (std::find(vConnectedLinks.begin(), vConnectedLinks.end(), *itlink) != vConnectedLinks.end()) {
                     // skip links that are part of the connected body
@@ -2767,6 +2794,10 @@ private:
         }
         if( IsForceWrite("bind_instance_geometry") ) {
             FOREACHC(itlink, pbody->GetLinks()) {
+                if (std::find(vConnectedLinks.begin(), vConnectedLinks.end(), *itlink) != vConnectedLinks.end()) {
+                    // skip links that are part of the connected body
+                    continue;
+                }
                 FOREACHC(itgeomgroup, (*itlink)->GetInfo()._mapExtraGeometries) {
                     int igeom = 0;
                     FOREACHC(itgeominfo, itgeomgroup->second) {
