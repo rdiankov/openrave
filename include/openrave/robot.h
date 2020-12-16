@@ -43,6 +43,7 @@ public:
         bool operator==(const ManipulatorInfo& other) const {
             return _name == other._name
                 && _sBaseLinkName == other._sBaseLinkName
+                && _sEndLinkName == other._sEndLinkName
                 && _sEffectorLinkName == other._sEffectorLinkName
                 && _tLocalTool == other._tLocalTool
                 && _vChuckingDirection == other._vChuckingDirection
@@ -71,7 +72,7 @@ public:
 
         std::string _id; ///< unique id for manipulator info
         std::string _name;
-        std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
+        std::string _sBaseLinkName, _sEndLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
         Transform _tLocalTool;
         std::vector<dReal> _vChuckingDirection; ///< the normal direction to move joints for the hand to grasp something
         Vector _vdirection = Vector(0,0,1);
@@ -202,6 +203,11 @@ public:
         /// \brief the base used for the iksolver
         virtual LinkPtr GetBase() const {
             return __pBase;
+        }
+
+        /// \brief optional, the end link (used to define the end of the iksolver kinematic chain when different from end effector)
+        virtual LinkPtr GetEndLink() const {
+            return __pEndLink;
         }
 
         /// \brief the end effector link (used to define workspace distance)
@@ -518,7 +524,7 @@ protected:
         ManipulatorInfo _info; ///< user-set information
 private:
         RobotBaseWeakPtr __probot;
-        LinkPtr __pBase, __pEffector; ///< contains weak links to robot
+        LinkPtr __pBase, __pEndLink, __pEffector; ///< contains weak links to robot
         std::vector<int> __vgripperdofindices, __varmdofindices;
         ConfigurationSpecification __armspec; ///< reflects __varmdofindices
         mutable IkSolverBasePtr __pIkSolver;

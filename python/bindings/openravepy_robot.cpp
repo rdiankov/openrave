@@ -729,6 +729,9 @@ object PyRobotBase::PyManipulator::GetIkSolver() {
 object PyRobotBase::PyManipulator::GetBase() {
     return toPyKinBodyLink(_pmanip->GetBase(),_pyenv);
 }
+object PyRobotBase::PyManipulator::GetEndLink() {
+    return toPyKinBodyLink(_pmanip->GetEndLink(),_pyenv);
+}
 object PyRobotBase::PyManipulator::GetEndEffector() {
     return toPyKinBodyLink(_pmanip->GetEndEffector(),_pyenv);
 }
@@ -2903,6 +2906,7 @@ void init_openravepy_robot()
         .def("GetIkParameterization",&PyRobotBase::PyManipulator::GetIkParameterization, GetIkParameterization_overloads(PY_ARGS("iktype","inworld") GetIkParameterization_doc.c_str()))
 #endif
         .def("GetBase",&PyRobotBase::PyManipulator::GetBase, DOXY_FN(RobotBase::Manipulator,GetBase))
+        .def("GetEndLink",&PyRobotBase::PyManipulator::GetEndLink, DOXY_FN(RobotBase::Manipulator,GetEndLink))
         .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, DOXY_FN(RobotBase::Manipulator,GetEndEffector))
         .def("ReleaseAllGrabbed",&PyRobotBase::PyManipulator::ReleaseAllGrabbed, DOXY_FN(RobotBase::Manipulator,ReleaseAllGrabbed))
         .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))

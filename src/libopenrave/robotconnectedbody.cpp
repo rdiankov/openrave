@@ -806,6 +806,11 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 pnewmanipulator->_info._sBaseLinkName = pArmBaseLink->_info._name;
             }
 
+            if( !pnewmanipulator->_info._sEndLinkName.empty() ) {
+                pnewmanipulator->_info._sEndLinkName = connectedBody._nameprefix + pnewmanipulator->_info._sEndLinkName;
+            }
+            
+            
             // search for the correct resolved _sEffectorLinkName
             bool bFoundEffectorLink = false;
             for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {

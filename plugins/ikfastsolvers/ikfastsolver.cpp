@@ -1311,7 +1311,12 @@ protected:
     {
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         ikfast::IkSolutionList<IkReal> solutions;
-        if( !_CallIk(param,vfree, pmanip->GetLocalToolTransform(), solutions) ) {
+        Transform tEndlinkToEE; tEndlinkToEE.identity();
+        if (!!pmanip->GetEndLink()) {
+            tEndlinkToEE = pmanip->GetEndLink()->GetTransform().inverse() * pmanip->GetEndEffector()->GetTransform();
+        }
+        
+        if( !_CallIk(param,vfree, tEndlinkToEE * pmanip->GetLocalToolTransform(), solutions) ) {
             return IKRA_RejectKinematics;
         }
 
@@ -1889,7 +1894,12 @@ protected:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         ikfast::IkSolutionList<IkReal> solutions;
-        if( _CallIk(param,vfree, pmanip->GetLocalToolTransform(), solutions) ) {
+        Transform tEndlinkToEE; tEndlinkToEE.identity();
+        if (!!pmanip->GetEndLink()){
+            tEndlinkToEE = pmanip->GetEndLink()->GetTransform().inverse() * pmanip->GetEndEffector()->GetTransform();
+        }
+
+        if( _CallIk(param,vfree, tEndlinkToEE * pmanip->GetLocalToolTransform(), solutions) ) {
             vector<IkReal> vsolfree;
             std::vector<IkReal> sol(pmanip->GetArmIndices().size());
             for(size_t isolution = 0; isolution < solutions.GetNumSolutions(); ++isolution) {
