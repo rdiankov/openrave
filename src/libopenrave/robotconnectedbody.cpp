@@ -806,8 +806,8 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 pnewmanipulator->_info._sBaseLinkName = pArmBaseLink->_info._name;
             }
 
-            if( !pnewmanipulator->_info._sEndLinkName.empty() ) {
-                pnewmanipulator->_info._sEndLinkName = connectedBody._nameprefix + pnewmanipulator->_info._sEndLinkName;
+            if( !pnewmanipulator->_info._sIkChainEndLinkName.empty() ) {
+                pnewmanipulator->_info._sIkChainEndLinkName = connectedBody._nameprefix + pnewmanipulator->_info._sIkChainEndLinkName;
             }
             
             
