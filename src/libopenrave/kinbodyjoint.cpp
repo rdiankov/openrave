@@ -2147,18 +2147,30 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
                 RAVELOG_WARN_FORMAT("Cannot continue for %s", this->GetName());
                 break;
             }
-            size_t startyj = secondvert + 1; // yj
-            size_t space = eq.find(' ', startyj); // the space ' ' between "|yi|yj" and formula
-            if( space == std::string::npos) {
-                RAVELOG_WARN_FORMAT("Cannot continue for %s", this->GetName());
-                break;
+
+            std::string varyi, varyj;
+            size_t space = eq.find(" ", firstvert);
+            if(space == std::string::npos || space > secondvert) {
+                // no space ' ' between yi and the second "|", that is "|yi|yj"
+                size_t startyj = secondvert + 1; // yj
+                space = eq.find(' ', startyj); // the space ' ' between "|yi|yj" and formula
+                if(space == std::string::npos) {
+                    RAVELOG_WARN_FORMAT("Cannot continue for %s", this->GetName());
+                    break;
+                }
+                firstvert = eq.find('|', startyj); // the next first "|"
+                varyi = eq.substr(startyi, secondvert-startyi); // "yi"
+                varyj = eq.substr(startyj, space-startyj); // "yj"
             }
-            firstvert = eq.find('|', startyj); // the next first "|"
-            const std::string varyi = eq.substr(startyi, secondvert-startyi); // "yi"
-            const std::string varyj = eq.substr(startyj, space-startyj); // "yj"
+            else {
+                // there is a space in "|yi ∂^2f/∂yi∂yi |yj ∂^2f/∂yj∂yj"
+                firstvert = secondvert; // the next first "|"
+                varyi = varyj = eq.substr(startyi, space-startyi); // "yi", "yj=yi"
+                RAVELOG_WARN_FORMAT("Using old format: \"|%s ∂^2f/∂(%s)∂(%s)\"", varyi % varyi % varyi);
+            }
             OPENRAVE_ASSERT_FORMAT(mapinvnames.count(varyi) && mapinvnames.count(varyj),
-                "mapinvnames should have both variables %s and %s",
-                varyi % varyj, ORE_InvalidArguments
+                "joint %s's mapinvnames should have both variables %s and %s; eq = %s",
+                GetName() % varyi % varyj % eq, ORE_InvalidArguments
             );
             const std::string& jointnamei = mapinvnames.at(varyi);
             const std::string& jointnamej = mapinvnames.at(varyj);
@@ -2475,7 +2487,7 @@ void KinBody::Joint::_ComputePartialAccelerations(
     std::pair<Mimic::DOFFormat, std::array<int, 2> > d2zdxkxl {thisdofformat, {-1,-1}}; // ∂^2  z/∂xk ∂xl
     std::pair<Mimic::DOFFormat, std::array<int, 2> > d2ydxkxl; // ∂^2 yi/∂xk ∂xl
 
-    const size_t naccelfns = pmimic->_accelfns.size(); // when user did not provide mimic_accel, we had not allocated pmimic->_accelfns so it has size 0, and we set fvel=0 below
+    const int naccelfns = pmimic->_accelfns.size(); // when user did not provide mimic_accel, we had not allocated pmimic->_accelfns so it has size 0, and we set fvel=0 below
     for(int ivar = 0; ivar < nvars; ++ivar) {
         const Mimic::DOFFormat& dofformati = vdofformats[ivar]; ///< information about the ivar-th depended joint
         const JointConstPtr dependedjointi = dofformati.GetJoint(*parent); ///< a joint yi on which this joint directly depends on
