@@ -887,7 +887,7 @@ public:
                     if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end()) {
                         (*itmanip)->_info._name = _prefix + (*itmanip)->_info._name;
                         (*itmanip)->_info._sBaseLinkName = _prefix + (*itmanip)->_info._sBaseLinkName;
-                        (*itmanip)->_info._sEndLinkName = _prefix + (*itmanip)->_info._sEndLinkName;
+                        (*itmanip)->_info._sIkChainEndLinkName = _prefix + (*itmanip)->_info._sIkChainEndLinkName;
                         (*itmanip)->_info._sEffectorLinkName = _prefix + (*itmanip)->_info._sEffectorLinkName;
                         FOREACH(itGripperJointName,(*itmanip)->_info._vGripperJointNames) {
                             *itGripperJointName = _prefix + *itGripperJointName;
@@ -3434,12 +3434,12 @@ public:
                     if( !!pframe_endlink ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_endlink->getAttribute("link"), as).resolve().elt);
                         if( !!pdomlink ) {
-                            manipinfo._sEndLinkName = _ExtractLinkName(pdomlink);
+                            manipinfo._sIkChainEndLinkName = _ExtractLinkName(pdomlink);
                         }
                         else {
                             KinBody::LinkPtr plink = _ResolveLinkBinding(bindings.listInstanceLinkBindings, pframe_endlink->getAttribute("link"), probot);
                             if( !!plink ) {
-                                manipinfo._sEndLinkName = plink->GetName();
+                                manipinfo._sIkChainEndLinkName = plink->GetName();
                             }
                         }
                     }

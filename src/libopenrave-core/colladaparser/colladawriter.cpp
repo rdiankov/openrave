@@ -2605,9 +2605,9 @@ private:
                 daeElementRef frame_origin = ptec->add("frame_origin");
                 frame_origin->setAttribute("link",vlinksidrefs.at((*itmanip)->GetBase()->GetIndex()).c_str());
             }
-            if( !!(*itmanip)->GetEndLink() ) {
+            if( !!(*itmanip)->GetIkChainEndLink() ) {
                 daeElementRef frame_endlink = ptec->add("frame_endlink");
-                frame_endlink->setAttribute("link",vlinksidrefs.at((*itmanip)->GetEndLink()->GetIndex()).c_str());
+                frame_endlink->setAttribute("link",vlinksidrefs.at((*itmanip)->GetIkChainEndLink()->GetIndex()).c_str());
             }
             daeElementRef frame_tip = ptec->add("frame_tip");
             if( !!(*itmanip)->GetEndEffector() ) {

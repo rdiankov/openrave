@@ -904,9 +904,9 @@ class InverseKinematicsModel(DatabaseGenerator):
             if self.iktype == IkParameterizationType.TranslationXAxisAngle4D or self.iktype == IkParameterizationType.TranslationYAxisAngle4D or self.iktype == IkParameterizationType.TranslationZAxisAngle4D or self.iktype == IkParameterizationType.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D or self.iktype == IkParameterizationType.TranslationXYOrientation3D:
                 solver.useleftmultiply = False
             baselink=self.manip.GetBase().GetIndex()
-            endLink = self.manip.GetEndLink()
-            if endLink is not None:
-                eelink = endLink.GetIndex()
+            ikChainEndLink = self.manip.GetIkChainEndLink()
+            if ikChainEndLink is not None:
+                eelink = ikChainEndLink.GetIndex()
             else:
                 eelink = self.manip.GetEndEffector().GetIndex()
             if ipython:
