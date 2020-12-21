@@ -841,8 +841,13 @@ protected:
 
         /// \brief Sets the transform of the link regardless of kinematics
         ///
-        /// \param[in] t the new transformation
+        /// \param[in] transform the new transform of link
         virtual void SetTransform(const Transform& transform);
+
+        /// \brief Sets the transform of the link regardless of kinematics without updating parent kinbody's stamp id
+        ///
+        /// \param[in] transform the new transformation
+        virtual void SetTransformWithoutUpdateStampId(const Transform& transform);
 
         /// adds an external force at pos (absolute coords)
         /// \param[in] force the direction and magnitude of the force
@@ -2276,6 +2281,12 @@ private:
     /// All the joints affecting a particular joint's transformation will always come before the joint in the list.
     virtual const std::vector<JointPtr>& GetDependencyOrderedJoints() const;
 
+    /// \brief Returns all active and passive joints in hierarchical order starting at the base link.
+    ///
+    /// In the case of closed loops, the joints are returned in the order closest to the root.
+    /// All the joints affecting a particular joint's transformation will always come before the joint in the list.
+    virtual const std::vector<JointPtr>& GetDependencyOrderedJointsAll() const;
+
     /** \brief Return the set of unique closed loops of the kinematics hierarchy.
 
         Each loop is a set of link indices and joint indices. For example, a loop of link indices:
@@ -2478,6 +2489,9 @@ private:
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
+
+    /// \brief executes _UpdateGrabbedBodies() and _PostprocessChangedParameters(Prop_LinkTransforms)
+    virtual void ProcessAfterSetDOFValues();
 
     virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = true) {
         SetDOFValues(values,static_cast<uint32_t>(checklimits));
@@ -2776,6 +2790,9 @@ private:
         return _nUpdateStampId;
     }
 
+    /// \brief Increments the unique id that indicates the number of transformation state changes of any link. Used to check if robot state has changed.
+    virtual void IncrementUpdateStamp(const int inc=1) { _nUpdateStampId += inc; } 
+
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /// \brief Register a callback with the interface.
@@ -3066,6 +3083,25 @@ protected:
     ConfigurationSpecification _spec;
     CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions
 
+public:
+    // Gary registers forward kinematics functions
+    struct ForwardKinematicsStruct {
+        ForwardKinematicsStruct();
+        ModuleBaseConstPtr pCalculatorModule = nullptr; ///< kinbody basic calculators module
+        boost::function<bool(const std::vector<double>&)> pSetLinkTransformsFn; ///< function that sets links' transforms
+        boost::function<void(std::vector<double>&)> pGetDOFLastSetValuesFn; ///< function that updates kinbody's dof values
+        bool bInitialized = false; ///< indicator of successful initialization
+    };
+
+    /// \brief Associate the kinbody's current kinematics geometry hash with a forward kinematics structure
+    /// \param[in] fkstruct a forward kinematics structure
+    /// \param[in] bOverWrite whether to replace a registered forward kinematics structure if it exists
+    ///
+    /// \return true if the forward kinematics structure to be registered has all the necessary facilitities we can use. 
+    bool RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fkstruct, const bool bOverWrite=false);
+
+protected:
+    std::map<std::string, ForwardKinematicsStruct> _mHash2ForwardKinematicsStruct; ///< maps a kinematics geometry hash to a forward kinematics structure
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     uint32_t _nParametersChanged; ///< set of parameters that changed and need callbacks

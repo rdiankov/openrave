@@ -1883,6 +1883,19 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         }
         pJointValues = &_vTempJoints[0];
     }
+    else {
+        _vTempJoints = vJointValues;
+    }
+
+    const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
+    if(_mHash2ForwardKinematicsStruct.count(sKinematicsGeometry)) {
+        ForwardKinematicsStruct& fkstruct = _mHash2ForwardKinematicsStruct.at(sKinematicsGeometry);
+        if(fkstruct.bInitialized) {
+            fkstruct.pSetLinkTransformsFn(_vTempJoints);
+            fkstruct.pGetDOFLastSetValuesFn(_vTempJoints);
+            return;
+        }
+    }
 
     // have to compute the angles ahead of time since they are dependent on the link
     const int nActiveJoints = _vecjoints.size();
@@ -2051,6 +2064,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
 
         Transform tjoint;
         if( jointtype & JointSpecialBit ) {
+            RAVELOG_DEBUG_FORMAT("Joint %s's jointtype = %d has special bit", GetName() % jointtype);
             switch(jointtype) {
             case JointHinge2: {
                 Transform tfirst;
@@ -2119,6 +2133,10 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         vlinkscomputed[childlink->GetIndex()] = 1;
     }
 
+    this->ProcessAfterSetDOFValues();
+}
+
+void KinBody::ProcessAfterSetDOFValues() {
     _UpdateGrabbedBodies();
     _PostprocessChangedParameters(Prop_LinkTransforms);
 }
@@ -2149,6 +2167,12 @@ const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJoints() cons
 {
     CHECK_INTERNAL_COMPUTATION;
     return _vTopologicallySortedJoints;
+}
+
+const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJointsAll() const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    return _vTopologicallySortedJointsAll;
 }
 
 const std::vector< std::vector< std::pair<KinBody::LinkPtr, KinBody::JointPtr> > >& KinBody::GetClosedLoops() const
@@ -5659,4 +5683,37 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     return updateFromInfoResult;
 }
 
+KinBody::ForwardKinematicsStruct::ForwardKinematicsStruct () {
+}
+
+bool KinBody::RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fkstruct, const bool bOverWrite) {
+    const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
+    const bool bRegistered = _mHash2ForwardKinematicsStruct.count(sKinematicsGeometry);
+    if(bRegistered) {
+        RAVELOG_DEBUG_FORMAT("Already registered ForwardKinematicsStruct at body \"%s\" with hash \"%s\"",
+            this->GetName() % sKinematicsGeometry
+        );
+        if(!bOverWrite) {
+            return true; // do not overwrite, so return
+        }
+        RAVELOG_WARN_FORMAT("Requested to replace the registered ForwardKinematicsStruct by a new one at body \"%s\" with hash \"%s\"",
+            this->GetName() % sKinematicsGeometry
+        );
+    }
+    const bool bCheck = (
+        fkstruct.pCalculatorModule 
+        && !!fkstruct.pSetLinkTransformsFn 
+        && !!fkstruct.pGetDOFLastSetValuesFn 
+        && fkstruct.bInitialized
+    );
+    if(!bCheck) {
+        RAVELOG_ERROR_FORMAT("Does not pass check for ForwardKinematicsStruct at body \"%s\" with hash \"%s\"",
+            this->GetName() % sKinematicsGeometry
+        );
+    }
+    else {
+        _mHash2ForwardKinematicsStruct[sKinematicsGeometry] = fkstruct;
+    }
+    return bCheck;
+}
 } // end namespace OpenRAVE
