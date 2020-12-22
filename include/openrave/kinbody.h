@@ -841,12 +841,12 @@ protected:
 
         /// \brief Sets the transform of the link regardless of kinematics, and updates parent kinbody's stamp id
         ///
-        /// \param[in] t the new transformation
+        /// \param[in] transform the new transform of link
         virtual void SetTransform(const Transform& transform);
 
         /// \brief Sets the transform of the link regardless of kinematics without updating parent kinbody's stamp id
         ///
-        /// \param[in] t the new transformation
+        /// \param[in] transform the new transformation
         virtual void SetTransformWithoutUpdateStampId(const Transform& transform);
 
         /// adds an external force at pos (absolute coords)
@@ -3171,19 +3171,24 @@ protected:
     CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions
 
 public:
+    // Gary registers forward kinematics functions
     struct ForwardKinematicsStruct {
         ForwardKinematicsStruct();
-        // TGN's hack
-        ModuleBaseConstPtr pCalculatorModule = nullptr; ///< kinbody basic calculators
-        boost::function<bool(const std::vector<double>&)> pSetLinkTransformsFn;
-        boost::function<void(std::vector<double>&)> pGetDOFLastSetValuesFn;
-        bool bInitialized = false;
+        ModuleBaseConstPtr pCalculatorModule = nullptr; ///< kinbody basic calculators module
+        boost::function<bool(const std::vector<double>&)> pSetLinkTransformsFn; ///< function that sets links' transforms
+        boost::function<void(std::vector<double>&)> pGetDOFLastSetValuesFn; ///< function that updates kinbody's dof values
+        bool bInitialized = false; ///< indicator of successful initialization
     };
 
+    /// \brief Associate the kinbody's current kinematics geometry hash with a forward kinematics structure
+    /// \param[in] fkstruct a forward kinematics structure
+    /// \param[in] bOverWrite whether to replace a registered forward kinematics structure if it exists
+    ///
+    /// \return true if the forward kinematics structure to be registered has all the necessary facilitities we can use. 
     bool RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fkstruct, const bool bOverWrite=false);
 
 protected:
-    std::map<std::string, ForwardKinematicsStruct> _mHash2ForwardKinematicsStruct;
+    std::map<std::string, ForwardKinematicsStruct> _mHash2ForwardKinematicsStruct; ///< maps a kinematics geometry hash to a forward kinematics structure
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     uint32_t _nParametersChanged; ///< set of parameters that changed and need callbacks
