@@ -887,7 +887,7 @@ public:
                                     _totalTimeCheckPathAllConstraints_SegmentFeasible2 = 0;
 #endif
 
-                                    if( newrampndret.retcode == 0 ) {
+                                    if( newrampndret.retcode == 0 && !newrampndret.bDifferentVelocity ) {
                                         // The new RampND passes the check. Need to re-populate tempRampNDVect with
                                         // RampNDs from rampndVectOut instead.
                                         tempRampNDVect.resize(0);
@@ -1253,10 +1253,12 @@ public:
             bool bAccelChanged = false;
             for (size_t idof = 0; idof < ndof; ++idof) {
                 if( _cacheRampNDSeg.GetAAt(idof) < -_parameters->_vConfigAccelerationLimit[idof] ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, accel changed: %.15e --> %.15e; diff=%.15e", _environmentid%idof%_cacheRampNDSeg.GetAAt(idof)%(-_parameters->_vConfigAccelerationLimit[idof])%(_cacheRampNDSeg.GetAAt(idof) + _parameters->_vConfigAccelerationLimit[idof]));
                     _cacheRampNDSeg.GetAAt(idof) = -_parameters->_vConfigAccelerationLimit[idof];
                     bAccelChanged = true;
                 }
                 else if( _cacheRampNDSeg.GetAAt(idof) > _parameters->_vConfigAccelerationLimit[idof] ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, accel changed: %.15e --> %.15e; diff=%.15e", _environmentid%idof%_cacheRampNDSeg.GetAAt(idof)%(_parameters->_vConfigAccelerationLimit[idof])%(_cacheRampNDSeg.GetAAt(idof) - _parameters->_vConfigAccelerationLimit[idof]));
                     _cacheRampNDSeg.GetAAt(idof) = _parameters->_vConfigAccelerationLimit[idof];
                     bAccelChanged = true;
                 }
