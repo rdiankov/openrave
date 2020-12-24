@@ -111,6 +111,7 @@ public:
     //@}
 
     virtual void Reset() OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual void SetRobotConnectedBodyEnabled(const std::string& itemname, const std::string& connectedBodyName, bool enable) OPENRAVE_DUMMY_IMPLEMENTATION;
     virtual void SetBkgndColor(const RaveVector<float>& color) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief callback function for item selection

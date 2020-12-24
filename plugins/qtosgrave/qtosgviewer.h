@@ -104,6 +104,8 @@ public:
 
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
+    /// \brief Set whether a robot's connected body is enabled or not
+    virtual void SetRobotConnectedBodyEnabled(const std::string& itemname, const std::string& connectedBodyName, bool enable);
 
     /// \brief notified when a body has been removed from the environment
     virtual void RemoveKinBody(KinBodyPtr pbody) {
@@ -331,6 +333,7 @@ public:
     virtual void _StopTrackLink();
     virtual bool _TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText="");
     virtual void _SetItemVisualization(std::string& itemname, std::string& visualizationmode);
+    virtual void _SetRobotConnectedBodyEnabled(std::string& itemname, std::string& connectedBodyName, bool enable);
     virtual void _SetProjectionMode(const std::string& projectionMode);
     virtual void _SetBkgndColor(const RaveVector<float>& color);
 
@@ -380,6 +383,7 @@ public:
     bool _SetFiguresInCamera(ostream& sout, istream& sinput);
     bool _ShowWorldAxesCommand(ostream& sout, istream& sinput);
     bool _SetItemVisualizationCommand(ostream& sout, istream& sinput);
+    bool _SetRobotConnectedBodyEnabledCommand(ostream& sout, istream& sinput);
     bool _SetNearPlaneCommand(ostream& sout, istream& sinput);
     bool _SetTextureCubeMap(ostream& out, istream& sinput);
     bool _TrackLinkCommand(ostream& sout, istream& sinput);

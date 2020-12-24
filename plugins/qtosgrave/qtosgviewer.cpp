@@ -144,6 +144,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
     RegisterCommand("SetItemVisualization",boost::bind(&QtOSGViewer::_SetItemVisualizationCommand, this, _1, _2),
                     "sets the visualization mode of a kinbody/render item in the viewer");
+    RegisterCommand("SetRobotConnectedBodyEnabled",boost::bind(&QtOSGViewer::_SetRobotConnectedBodyEnabledCommand, this, _1, _2),
+                    "Sets the enabled state of a robot's connected body in the viewer");
     RegisterCommand("ShowWorldAxes",boost::bind(&QtOSGViewer::_ShowWorldAxesCommand, this, _1, _2),
                     "Accepts 0/1 value that decides whether to render the cross hairs");
     RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
@@ -1072,6 +1074,40 @@ void QtOSGViewer::_SetItemVisualization(std::string& itemname, std::string& visu
     FOREACH(it, _mapbodies) {
         if( it->second->GetName() == itemname ) {
             it->second->SetVisualizationMode(visualizationmode);
+        }
+    }
+}
+
+void QtOSGViewer::SetRobotConnectedBodyEnabled(const std::string& itemname, const std::string& connectedBodyName, bool enable)
+{
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetRobotConnectedBodyEnabled, this, itemname, connectedBodyName, enable));
+}
+
+bool QtOSGViewer::_SetRobotConnectedBodyEnabledCommand(ostream& sout, istream& sinput)
+{
+    std::string itemname, connectedBodyName, enableMsg;
+    sinput >> itemname >> connectedBodyName >> enableMsg;
+
+    if (enableMsg == "true") {
+        _PostToGUIThread(boost::bind(&QtOSGViewer::_SetRobotConnectedBodyEnabled, this, itemname, connectedBodyName, true));
+    } else if (enableMsg == "false") {
+        _PostToGUIThread(boost::bind(&QtOSGViewer::_SetRobotConnectedBodyEnabled, this, itemname, connectedBodyName, false));
+    } else {
+        RAVELOG_WARN("received unexpected enabled argument \"%s\" for _SetRobotConnectedBodyEnabledCommand - dropping command\n", enableMsg);
+    }
+    return !!sinput;
+}
+
+void QtOSGViewer::_SetRobotConnectedBodyEnabled(std::string& itemname, std::string& connectedBodyName, bool enable)
+{
+    FOREACH(it, _mapbodies) {
+        if( it->second->GetName() == itemname && it->second->GetBody()->IsRobot() ) {
+            RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(it->second->GetBody());
+            FOREACHC(itConnectedBody, pRobot->GetConnectedBodies()) {
+                if ((*itConnectedBody)->GetName() == connectedBodyName) {
+                    (*itConnectedBody)->SetLinkVisible(enable);
+                }
+            }
         }
     }
 }

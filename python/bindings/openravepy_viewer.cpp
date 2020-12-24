@@ -258,6 +258,9 @@ public:
     std::string GetName() {
         return _pviewer->GetName();
     }
+    void SetRobotConnectedBodyEnabled(const std::string &robotname, const std::string &connectedbodyname, bool enable) {
+        _pviewer->SetRobotConnectedBodyEnabled(robotname, connectedbodyname, enable);
+    }
 
     object RegisterCallback(object properties, object fncallback)
     {
@@ -384,6 +387,7 @@ void init_openravepy_viewer()
                        .def("SetTitle",&PyViewerBase::SetName, PY_ARGS("title") DOXY_FN(ViewerBase,SetName))
                        .def("SetName",&PyViewerBase::SetName, PY_ARGS("title") DOXY_FN(ViewerBase,SetName))
                        .def("GetName",&PyViewerBase::GetName, DOXY_FN(ViewerBase,GetName))
+                       .def("SetRobotConnectedBodyEnabled",&PyViewerBase::SetRobotConnectedBodyEnabled, PY_ARGS("robotname", "connectedbodyname", "enable") DOXY_FN(ViewerBase,SetRobotConnectedBodyEnabled))
                        .def("RegisterCallback",&PyViewerBase::RegisterCallback, PY_ARGS("properties", "callback") DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
                        .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, PY_ARGS("callback") DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
                        .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(ViewerBase,EnvironmentSync))
