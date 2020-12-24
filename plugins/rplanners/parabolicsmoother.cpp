@@ -864,8 +864,8 @@ public:
             return PlannerStatus(description, PS_Failed);
         }
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
-        //====================================================================================================
-        if (IS_DEBUGLEVEL(Level_Debug)) {
+
+        if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
             RAVELOG_DEBUG_FORMAT("env=%d, start sampling the trajectory (verification purpose) after shortcutting", GetEnv()->GetId());
             // Actually _VerifySampling() gets called every time we sample a trajectory. The function
             // already checks _Validate* at every traj point. Therefore, in order to just verify, we
@@ -877,11 +877,11 @@ public:
                 RAVELOG_DEBUG_FORMAT("env=%d, sampling for verification successful", GetEnv()->GetId());
             }
             catch (const std::exception& ex) {
-                RAVELOG_WARN_FORMAT("sampling for verification failed: %s", ex.what());
+                RAVELOG_WARN_FORMAT("env=%d, sampling for verification failed: %s", GetEnv()->GetId()%ex.what());
                 _DumpTrajectory(ptraj, _dumplevel);
             }
         }
-        //====================================================================================================
+
 #ifdef SMOOTHER1_TIMING_DEBUG
         dReal tTotalShortcutTime = 0.000001f*(float)(_tShortcutEnd - _tShortcutStart);
         RAVELOG_INFO_FORMAT("env=%d, shortcutting time=%.15e; iter=%d; time/iter=%.15e", GetEnv()->GetId()%tTotalShortcutTime%_numShortcutIters%(tTotalShortcutTime/_numShortcutIters));
