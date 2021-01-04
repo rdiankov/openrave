@@ -52,9 +52,9 @@ public:
 
     object SamplePoints2D(object otimes, PyConfigurationSpecificationPtr pyspec) const;
 
-    object SamplePointsSameDeltaTime2D(double deltatime, bool ensureLastPoint) const;
+    object SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint) const;
 
-    object SamplePointsSameDeltaTime2D(double deltatime, bool ensureLastPoint, PyConfigurationSpecificationPtr pyspec) const;
+    object SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint, PyConfigurationSpecificationPtr pyspec) const;
 
     object GetConfigurationSpecification() const;
 

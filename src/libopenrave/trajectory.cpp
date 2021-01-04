@@ -120,9 +120,9 @@ void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dR
     }
 }
 
-void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, double deltatime, bool ensureLastPoint) const
+void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint) const
 {
-    const double duration = GetDuration();
+    const dReal duration = GetDuration();
     int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
     std::vector<dReal> vtimes(numPoints, deltatime);
     for (int i = 0; i < numPoints; ++i) {
@@ -134,9 +134,9 @@ void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, double 
     return SamplePoints(data, vtimes);
 }
 
-void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, double deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const
+void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const
 {
-    const double duration = GetDuration();
+    const dReal duration = GetDuration();
     int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
     std::vector<dReal> vtimes(numPoints, deltatime);
     for (int i = 0; i < numPoints; ++i) {
