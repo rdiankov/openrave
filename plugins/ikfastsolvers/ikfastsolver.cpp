@@ -1307,11 +1307,11 @@ protected:
     {
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         ikfast::IkSolutionList<IkReal> solutions;
-        Transform tIkChainEndlinkToEE; tIkChainEndlinkToEE.identity();
+        Transform tIkChainEndlinkToEE;
         if (!!pmanip->GetIkChainEndLink()) {
             tIkChainEndlinkToEE = pmanip->GetIkChainEndLink()->GetTransform().inverse() * pmanip->GetEndEffector()->GetTransform();
         }
-        
+
         if( !_CallIk(param,vfree, tIkChainEndlinkToEE * pmanip->GetLocalToolTransform(), solutions) ) {
             return IKRA_RejectKinematics;
         }
@@ -1870,8 +1870,8 @@ protected:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         ikfast::IkSolutionList<IkReal> solutions;
-        Transform tIkChainEndlinkToEE; tIkChainEndlinkToEE.identity();
-        if (!!pmanip->GetIkChainEndLink()){
+        Transform tIkChainEndlinkToEE;
+        if (!!pmanip->GetIkChainEndLink()) {
             tIkChainEndlinkToEE = pmanip->GetIkChainEndLink()->GetTransform().inverse() * pmanip->GetEndEffector()->GetTransform();
         }
 

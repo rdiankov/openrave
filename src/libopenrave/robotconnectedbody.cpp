@@ -808,20 +808,34 @@ void RobotBase::_ComputeConnectedBodiesInformation()
 
             if( !pnewmanipulator->_info._sIkChainEndLinkName.empty() ) {
                 pnewmanipulator->_info._sIkChainEndLinkName = connectedBody._nameprefix + pnewmanipulator->_info._sIkChainEndLinkName;
-            }
-            
-            
-            // search for the correct resolved _sEffectorLinkName
-            bool bFoundEffectorLink = false;
-            for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
-                if( pnewmanipulator->_info._sEffectorLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
-                    pnewmanipulator->_info._sEffectorLinkName = connectedBody._vResolvedLinkNames.at(ilink).first;
-                    bFoundEffectorLink = true;
+
+                // search for the correct resolved _sIkChainEndLinkName
+                bool bFoundIkChainEndLink = false;
+                for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
+                    if( pnewmanipulator->_info._sIkChainEndLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
+                        pnewmanipulator->_info._sIkChainEndLinkName = connectedBody._vResolvedLinkNames.at(ilink).first;
+                        bFoundIkChainEndLink = true;
+                    }
+                }
+
+                if( !bFoundIkChainEndLink ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find ikChainEndLink '%s' in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._sIkChainEndLinkName, ORE_InvalidArguments);
                 }
             }
 
-            if( !bFoundEffectorLink ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find linkname1 %s in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._sEffectorLinkName, ORE_InvalidArguments);
+            if( !pnewmanipulator->_info._sEffectorLinkName.empty() ) {
+                // search for the correct resolved _sEffectorLinkName
+                bool bFoundEffectorLink = false;
+                for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
+                    if( pnewmanipulator->_info._sEffectorLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
+                        pnewmanipulator->_info._sEffectorLinkName = connectedBody._vResolvedLinkNames.at(ilink).first;
+                        bFoundEffectorLink = true;
+                    }
+                }
+
+                if( !bFoundEffectorLink ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find endEffectorLink '%s' in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._sEffectorLinkName, ORE_InvalidArguments);
+                }
             }
 
             // search for the correct resolved joint name
@@ -860,7 +874,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 }
             }
 
-            // search for the correct resolved _linkname and _sEffectorLinkName
+            // search for the correct resolved _linkname
             bool bFoundLink = false;
             for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
                 if( pnewattachedSensor->_info._linkname == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
