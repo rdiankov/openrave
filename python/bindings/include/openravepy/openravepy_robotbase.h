@@ -91,6 +91,7 @@ public:
         bool SetIkSolver(PyIkSolverBasePtr iksolver);
         object GetIkSolver();
         object GetBase();
+        object GetIkChainEndLink();
         object GetEndEffector();
         void ReleaseAllGrabbed();
         object GetGraspTransform();

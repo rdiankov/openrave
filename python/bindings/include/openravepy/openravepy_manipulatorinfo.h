@@ -36,6 +36,7 @@ public:
     object _id = py::none_();
     object _name = py::none_();
     object _sBaseLinkName = py::none_();
+    object _sIkChainEndLinkName = py::none_();
     object _sEffectorLinkName = py::none_();
     object _tLocalTool = py::none_();
     object _vChuckingDirection = py::none_();
