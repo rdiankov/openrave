@@ -583,30 +583,32 @@ public:
                 if(!rampnd.constraintchecked ) {
                     //(irampindex > 0 && irampindex+1 < dynamicpath.ramps.size())
                     rampndtrimmed = rampnd;
-                    ParabolicRamp::ParabolicRampND remrampnd = rampnd; // the trimmed-out portion of rampnd
+                    ParabolicRamp::ParabolicRampND frontTrimRampND, backTrimRampND; // the trimmed-out portion of rampnd
                     bool bTrimmedFront = false;
                     bool bTrimmedBack = false;
                     bool bCheck = true;
                     if( irampindex == 0 ) {
-                        if( rampnd.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
+                        if( rampndtrimmed.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
                             // ramp is too short so ignore checking
                             bCheck = false;
                         }
                         else {
                             // don't check points close to the initial configuration because of jittering
                             rampndtrimmed.TrimFront(fTrimEdgesTime);
-                            remrampnd.TrimBack(remrampnd.endTime - fTrimEdgesTime);
+                            frontTrimRampND = rampnd; // original
+                            frontTrimRampND.TrimBack(frontTrimRampND.endTime - fTrimEdgesTime);
                             bTrimmedFront = true;
                         }
                     }
-                    else if( irampindex+1 == dynamicpath.ramps.size() ) {
-                        if( rampnd.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
+                    if( irampindex+1 == dynamicpath.ramps.size() ) {
+                        if( rampndtrimmed.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
                             // ramp is too short so ignore checking
                             bCheck = false;
                         }
                         else {
                             // don't check points close to the final configuration because of jittering
-                            remrampnd.TrimFront(remrampnd.endTime - fTrimEdgesTime);
+                            backTrimRampND = rampnd; // original
+                            backTrimRampND.TrimFront(backTrimRampND.endTime - fTrimEdgesTime);
                             rampndtrimmed.TrimBack(fTrimEdgesTime);
                             bTrimmedBack = true;
                         }
@@ -713,16 +715,16 @@ public:
                                         // Check if the resulting duration after Check2 is too large.
                                         dReal newEndTime = 0;
                                         if( bTrimmedFront ) {
-                                            temprampsnd.push_back(remrampnd);
-                                            newEndTime += remrampnd.endTime;
+                                            temprampsnd.push_back(frontTrimRampND);
+                                            newEndTime += frontTrimRampND.endTime;
                                         }
                                         FOREACHC(itcheckedrampnd, allCheckedRamps) {
                                             temprampsnd.push_back(*itcheckedrampnd);
                                             newEndTime += itcheckedrampnd->endTime;
                                         }
                                         if( bTrimmedBack ) {
-                                            temprampsnd.push_back(remrampnd);
-                                            newEndTime += remrampnd.endTime;
+                                            temprampsnd.push_back(backTrimRampND);
+                                            newEndTime += backTrimRampND.endTime;
                                         }
                                         // Verify again if the new duration is too large as the duration of the segment can change potentially significantly due to various validation and recomputation during the checking.
                                         if( newEndTime > 10*originalEndTime ) {
