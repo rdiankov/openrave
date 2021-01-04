@@ -887,6 +887,7 @@ public:
                     if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end()) {
                         (*itmanip)->_info._name = _prefix + (*itmanip)->_info._name;
                         (*itmanip)->_info._sBaseLinkName = _prefix + (*itmanip)->_info._sBaseLinkName;
+                        (*itmanip)->_info._sIkChainEndLinkName = _prefix + (*itmanip)->_info._sIkChainEndLinkName;
                         (*itmanip)->_info._sEffectorLinkName = _prefix + (*itmanip)->_info._sEffectorLinkName;
                         FOREACH(itGripperJointName,(*itmanip)->_info._vGripperJointNames) {
                             *itGripperJointName = _prefix + *itGripperJointName;
@@ -3428,6 +3429,20 @@ public:
                         manipinfo._toolChangerConnectedBodyToolName.clear();
                     }
 
+                    daeElementRef pframe_endlink = tec->getChild("frame_endlink");
+                    if( !!pframe_endlink ) {
+                        domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_endlink->getAttribute("link"), as).resolve().elt);
+                        if( !!pdomlink ) {
+                            manipinfo._sIkChainEndLinkName = _ExtractLinkName(pdomlink);
+                        }
+                        else {
+                            KinBody::LinkPtr plink = _ResolveLinkBinding(bindings.listInstanceLinkBindings, pframe_endlink->getAttribute("link"), probot);
+                            if( !!plink ) {
+                                manipinfo._sIkChainEndLinkName = plink->GetName();
+                            }
+                        }
+                    }
+
                     daeElementRef pframe_tip = tec->getChild("frame_tip");
                     if( !!pframe_tip ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_tip->getAttribute("link"), as).resolve().elt);
@@ -3508,7 +3523,7 @@ public:
                         else if( pmanipchild->getElementName() == string("restrict_graspset_name") ) {
                             manipinfo._vRestrictGraspSetNames.push_back(pmanipchild->getCharData());
                         }
-                        else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_tip") && pmanipchild->getElementName() != string("grippername") && pmanipchild->getElementName() != string("toolChangerConnectedBodyToolName") ) {
+                        else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_endlink") && pmanipchild->getElementName() != string("frame_tip") && pmanipchild->getElementName() != string("grippername") && pmanipchild->getElementName() != string("toolChangerConnectedBodyToolName") ) {
                             RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%manipinfo._name));
                         }
                     }
