@@ -449,6 +449,24 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     orjson::LoadJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames);
 }
 
+void KinBody::GrabbedInfo::serialize(std::ostream& o) const
+{
+    o << _grabbedname << " ";
+    o << _robotlinkname << " ";
+    SerializeRound(o, _trelative);
+    for( std::set<std::string>::const_iterator it = _setIgnoreRobotLinkNames.begin(); it != _setIgnoreRobotLinkNames.end(); ++it ) {
+        o << (*it) << " ";
+    }
+}
+
+std::string KinBody::GrabbedInfo::GetGrabbedInfoHash() const
+{
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+    serialize(ss);
+    return utils::GetMD5HashString(ss.str());
+}
+
 void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgrabbedinfo)
 {
     ReleaseAllGrabbed();

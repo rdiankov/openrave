@@ -2200,6 +2200,12 @@ void PyKinBody::PyGrabbedInfo::DeserializeJSON(py::object obj, dReal fUnitScale,
     _Update(info);
 }
 
+py::object PyKinBody::PyGrabbedInfo::GetGrabbedInfoHash() const
+{
+    KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
+    return ConvertStringToUnicode(pInfo->GetGrabbedInfoHash());
+}
+
 std::string PyKinBody::PyGrabbedInfo::__str__() {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     return boost::str(boost::format("<grabbedinfo:%s -> %s>")%_robotlinkname%_grabbedname);
@@ -4824,6 +4830,7 @@ void init_openravepy_kinbody()
                          .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON, PyGrabbedInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)))
                          .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON, PyGrabbedInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
+                         .def("GetGrabbedInfoHash", &PyKinBody::PyGrabbedInfo::GetGrabbedInfoHash)
                          .def("__str__",&PyKinBody::PyGrabbedInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyGrabbedInfo::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -5328,6 +5335,7 @@ void init_openravepy_kinbody()
         .value("JointMaxVelocityAndAcceleration",KinBody::Save_JointMaxVelocityAndAcceleration)
         .value("JointWeights", KinBody::Save_JointWeights)
         .value("JointLimits", KinBody::Save_JointLimits)
+        .value("JointResolutions", KinBody::Save_JointResolutions)
         .value("ActiveDOF",KinBody::Save_ActiveDOF)
         .value("ActiveManipulator",KinBody::Save_ActiveManipulator)
         .value("GrabbedBodies",KinBody::Save_GrabbedBodies)
