@@ -583,33 +583,39 @@ public:
                 if(!rampnd.constraintchecked ) {
                     //(irampindex > 0 && irampindex+1 < dynamicpath.ramps.size())
                     rampndtrimmed = rampnd;
-                    bool bTrimmed = false;
+                    ParabolicRamp::ParabolicRampND frontTrimRampND, backTrimRampND; // the trimmed-out portion of rampnd
+                    bool bTrimmedFront = false;
+                    bool bTrimmedBack = false;
                     bool bCheck = true;
                     if( irampindex == 0 ) {
-                        if( rampnd.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
+                        if( rampndtrimmed.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
                             // ramp is too short so ignore checking
                             bCheck = false;
                         }
                         else {
                             // don't check points close to the initial configuration because of jittering
                             rampndtrimmed.TrimFront(fTrimEdgesTime);
-                            bTrimmed = true;
+                            frontTrimRampND = rampnd; // original
+                            frontTrimRampND.TrimBack(frontTrimRampND.endTime - fTrimEdgesTime);
+                            bTrimmedFront = true;
                         }
                     }
-                    else if( irampindex+1 == dynamicpath.ramps.size() ) {
-                        if( rampnd.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
+                    if( irampindex+1 == dynamicpath.ramps.size() ) {
+                        if( rampndtrimmed.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
                             // ramp is too short so ignore checking
                             bCheck = false;
                         }
                         else {
                             // don't check points close to the final configuration because of jittering
+                            backTrimRampND = rampnd; // original
+                            backTrimRampND.TrimFront(backTrimRampND.endTime - fTrimEdgesTime);
                             rampndtrimmed.TrimBack(fTrimEdgesTime);
-                            bTrimmed = true;
+                            bTrimmedBack = true;
                         }
                     }
                     // part of original trajectory which might not have been processed with perturbations, so ignore perturbations
                     _bUsePerturbation = false;
-                    std::vector<ParabolicRamp::ParabolicRampND> outramps;
+                    std::vector<ParabolicRamp::ParabolicRampND> outramps; // for holding results of Check2 function
                     if( bCheck ) {
                         ParabolicRamp::CheckReturn checkret = _feasibilitychecker.Check2(rampndtrimmed, 0xffff|CFO_FromTrajectorySmoother, outramps);
 #ifdef SMOOTHER1_TIMING_DEBUG
@@ -626,17 +632,20 @@ public:
 
                         if( checkret.retcode != 0 ) { // probably don't need to check bDifferentVelocity
                             std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tempramps1d;
+                            std::vector<ParabolicRamp::ParabolicRampND> allCheckedRamps; // for holding all the constraints-checked ramps
                             // try to time scale, perhaps collision and dynamics will change
                             // go all the way up to 2.0 multiplier: 1.05*1.1*1.15*1.2*1.25 ~= 2
                             bool bSuccess = false;
                             dReal endTime = rampndtrimmed.endTime;
-                            dReal incr = 0.05*endTime;
+                            const dReal originalEndTime = endTime;
+                            const dReal incr = 0.05*originalEndTime;
                             // (Puttichai) now go up to 3.0 multiplier
                             // (Puttichai) try using an increment instead of a multiplier
                             size_t maxIncrement = 30;
                             for(size_t idilate = 0; idilate < maxIncrement; ++idilate ) {
                                 RAVELOG_VERBOSE_FORMAT("env=%d, ramp %d, idilate=%d/%d", GetEnv()->GetId()%irampindex%idilate%maxIncrement);
                                 tempramps1d.resize(0);
+                                allCheckedRamps.resize(0);
 #ifdef SMOOTHER1_TIMING_DEBUG
                                 _nCallsInterpolator += 1;
                                 _tStartInterpolator = utils::GetMicroTime();
@@ -650,7 +659,7 @@ public:
                                     temprampsnd.resize(0);
                                     CombineRamps(tempramps1d, temprampsnd);
 
-                                    if( temprampsnd[0].endTime > endTime*10 ) {
+                                    if( temprampsnd[0].endTime > originalEndTime*10 ) {
                                         RAVELOG_WARN_FORMAT("env=%d, new end time=%fs is really big compared to old %fs!", GetEnv()->GetId()%temprampsnd[0].endTime%endTime);
                                         break;
                                     }
@@ -680,26 +689,51 @@ public:
                                         _totalTimeCheckPathAllConstraints_SegmentFeasible2 = 0;
 #endif
 
-                                        if( newrampret.retcode != 0 ) { // probably don't need to check bDifferentVelocity
+                                        if( newrampret.retcode != 0 ) {
                                             RAVELOG_VERBOSE_FORMAT("env=%d, has bad ramp retcode=0x%x", GetEnv()->GetId()%newrampret.retcode);
-
                                             bHasBadRamp = true;
                                             break;
                                         }
+                                        else if( newrampret.bDifferentVelocity ) {
+                                            RAVELOG_VERBOSE_FORMAT("env=%d, resulting ramp has different final velocity", GetEnv()->GetId());
+                                            bHasBadRamp = true;
+                                            break;
+                                        }
+                                        else {
+                                            // Keep the checked rampsnd in allCheckedRamps
+                                            allCheckedRamps.reserve(allCheckedRamps.size() + outramps.size());
+                                            FOREACHC(itcheckedrampnd, outramps) {
+                                                allCheckedRamps.push_back(*itcheckedrampnd);
+                                            }
+                                        }
                                     }
                                     if( !bHasBadRamp ) {
-                                        if( bTrimmed ) {
-                                            // have to retime the original ramp without trimming
-                                            // keep in mind that new ramps might be slower than endTime
-                                            if( !ParabolicRamp::SolveAccelBounded(rampnd.x0, rampnd.dx0, rampnd.x1, rampnd.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp, rampndtrimmed.dx0.size()) ) {
-                                                break;
-                                            }
-                                            temprampsnd.resize(0);
-                                            CombineRamps(tempramps1d, temprampsnd);
-                                            endTime = temprampsnd[0].endTime;
+                                        // Now that everything passes, put the results in temprampsnd
+                                        temprampsnd.resize(0);
+                                        temprampsnd.reserve(allCheckedRamps.size() + 1);
+
+                                        // Check if the resulting duration after Check2 is too large.
+                                        dReal newEndTime = 0;
+                                        if( bTrimmedFront ) {
+                                            temprampsnd.push_back(frontTrimRampND);
+                                            newEndTime += frontTrimRampND.endTime;
                                         }
-                                        bSuccess = true;
-                                        break;
+                                        FOREACHC(itcheckedrampnd, allCheckedRamps) {
+                                            temprampsnd.push_back(*itcheckedrampnd);
+                                            newEndTime += itcheckedrampnd->endTime;
+                                        }
+                                        if( bTrimmedBack ) {
+                                            temprampsnd.push_back(backTrimRampND);
+                                            newEndTime += backTrimRampND.endTime;
+                                        }
+                                        // Verify again if the new duration is too large as the duration of the segment can change potentially significantly due to various validation and recomputation during the checking.
+                                        if( newEndTime > 10*originalEndTime ) {
+                                            // Continue to the next iteration (incrementing endTime and trying the interpolation + checking again).
+                                        }
+                                        else {
+                                            bSuccess = true;
+                                            break;
+                                        }
                                     }
                                 }
 #ifdef SMOOTHER1_TIMING_DEBUG
@@ -762,14 +796,14 @@ public:
                                 _DumpTrajectory(ptraj, _dumplevel);
                                 return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
                             }
-                        }
-                    }
+                        } // end if( checkret.retcode != 0 )
+                    } // end if( bCheck )
                     _bUsePerturbation = true; // re-enable
                     ++_progress._iteration;
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
                         return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
                     }
-                }
+                } // end if(!rampnd.constraintchecked )
 
                 FOREACH(itrampnd2, temprampsnd) {
                     fExpectedDuration += itrampnd2->endTime;
@@ -832,8 +866,8 @@ public:
             return PlannerStatus(description, PS_Failed);
         }
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
-        //====================================================================================================
-        if (IS_DEBUGLEVEL(Level_Debug)) {
+
+        if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
             RAVELOG_DEBUG_FORMAT("env=%d, start sampling the trajectory (verification purpose) after shortcutting", GetEnv()->GetId());
             // Actually _VerifySampling() gets called every time we sample a trajectory. The function
             // already checks _Validate* at every traj point. Therefore, in order to just verify, we
@@ -845,11 +879,11 @@ public:
                 RAVELOG_DEBUG_FORMAT("env=%d, sampling for verification successful", GetEnv()->GetId());
             }
             catch (const std::exception& ex) {
-                RAVELOG_WARN_FORMAT("sampling for verification failed: %s", ex.what());
+                RAVELOG_WARN_FORMAT("env=%d, sampling for verification failed: %s", GetEnv()->GetId()%ex.what());
                 _DumpTrajectory(ptraj, _dumplevel);
             }
         }
-        //====================================================================================================
+
 #ifdef SMOOTHER1_TIMING_DEBUG
         dReal tTotalShortcutTime = 0.000001f*(float)(_tShortcutEnd - _tShortcutStart);
         RAVELOG_INFO_FORMAT("env=%d, shortcutting time=%.15e; iter=%d; time/iter=%.15e", GetEnv()->GetId()%tTotalShortcutTime%_numShortcutIters%(tTotalShortcutTime/_numShortcutIters));
@@ -1049,6 +1083,38 @@ public:
         if( outramps.size() == 0 ) {
             ParabolicRamp::ParabolicRampND newramp;
             newramp.SetPosVelTime(a, da, b, db, timeelapsed);
+
+            bool bAccelChanged = false;
+            // due to epsilon inaccuracies, have to clamp the max accel depending on _vConfigAccelerationLimit
+            for(size_t idof = 0; idof < newramp.ramps.size(); ++idof) {
+                if( newramp.ramps[idof].a1 < -_parameters->_vConfigAccelerationLimit[idof] ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a1 changed: %.15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%newramp.ramps[idof].a1%(-_parameters->_vConfigAccelerationLimit[idof])%(newramp.ramps[idof].a1 + _parameters->_vConfigAccelerationLimit[idof]));
+                    newramp.ramps[idof].a1 = -_parameters->_vConfigAccelerationLimit[idof];
+                    bAccelChanged = true;
+                }
+                else if( newramp.ramps[idof].a1 > _parameters->_vConfigAccelerationLimit[idof] ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a1 changed: %.15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%newramp.ramps[idof].a1%(_parameters->_vConfigAccelerationLimit[idof])%(newramp.ramps[idof].a1 - _parameters->_vConfigAccelerationLimit[idof]));
+                    newramp.ramps[idof].a1 = _parameters->_vConfigAccelerationLimit[idof];
+                    bAccelChanged = true;
+                }
+                if( newramp.ramps[idof].a2 < -_parameters->_vConfigAccelerationLimit[idof] ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a2 changed: %.15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%newramp.ramps[idof].a2%(-_parameters->_vConfigAccelerationLimit[idof])%(newramp.ramps[idof].a2 + _parameters->_vConfigAccelerationLimit[idof]));
+                    newramp.ramps[idof].a2 = -_parameters->_vConfigAccelerationLimit[idof];
+                    bAccelChanged = true;
+                }
+                else if( newramp.ramps[idof].a2 > _parameters->_vConfigAccelerationLimit[idof] ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a2 changed: %.15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%newramp.ramps[idof].a2%(_parameters->_vConfigAccelerationLimit[idof])%(newramp.ramps[idof].a2 - _parameters->_vConfigAccelerationLimit[idof]));
+                    newramp.ramps[idof].a2 = _parameters->_vConfigAccelerationLimit[idof];
+                    bAccelChanged = true;
+                }
+            }
+            if( bAccelChanged ) {
+                if( !newramp.IsValid() ) {
+                    RAVELOG_WARN_FORMAT("env=%d, ramp becomes invalid after changing acceleration limits", GetEnv()->GetId());
+                    return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9);
+                }
+            }
+
             newramp.constraintchecked = 1;
             outramps.push_back(newramp);
         }

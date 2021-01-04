@@ -100,6 +100,8 @@ public:
 
         void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
 
+        py::object GetGrabbedInfoHash() const;
+
         std::string __str__();
         py::object __unicode__();
 
