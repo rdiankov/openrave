@@ -22,6 +22,7 @@ void RobotBase::ManipulatorInfo::Reset()
     _id.clear();
     _name.clear();
     _sBaseLinkName.clear();
+    _sIkChainEndLinkName.clear();
     _sEffectorLinkName.clear();
     _tLocalTool = Transform();
     _vChuckingDirection.clear();
@@ -41,6 +42,7 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
     orjson::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
     orjson::SetJsonValueByKey(value, "direction", _vdirection, allocator);
     orjson::SetJsonValueByKey(value, "baseLinkName", _sBaseLinkName, allocator);
+    orjson::SetJsonValueByKey(value, "ikChainEndLinkName", _sIkChainEndLinkName, allocator); //optional;
     orjson::SetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName, allocator);
     orjson::SetJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId, allocator);
     orjson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
@@ -57,6 +59,7 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
     orjson::LoadJsonValueByKey(value, "direction", _vdirection);
     orjson::LoadJsonValueByKey(value, "baseLinkName", _sBaseLinkName);
+    orjson::LoadJsonValueByKey(value, "ikChainEndLinkName", _sIkChainEndLinkName); //optional;
     orjson::LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
     orjson::LoadJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId);
     orjson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
@@ -86,6 +89,9 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, boost::shared_ptr<Robot
     if( !!r->GetBase() ) {
         __pBase = probot->GetLinks().at(r->GetBase()->GetIndex());
     }
+    if( !!r->GetIkChainEndLink() ) {
+        __pIkChainEndLink = probot->GetLinks().at(r->GetIkChainEndLink()->GetIndex());
+    }
     if( !!r->GetEndEffector() ) {
         __pEffector = probot->GetLinks().at(r->GetEndEffector()->GetIndex());
     }
@@ -114,6 +120,11 @@ UpdateFromInfoResult RobotBase::Manipulator::UpdateFromInfo(const RobotBase::Man
 
     if (_info._sBaseLinkName != info._sBaseLinkName) {
         RAVELOG_VERBOSE_FORMAT("manipulator %s base link name changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    if (_info._sIkChainEndLinkName != info._sIkChainEndLinkName) {
+        RAVELOG_VERBOSE_FORMAT("manipulator %s end link name changed", _info._id);
         return UFIR_RequireReinitialize;
     }
 
@@ -1727,6 +1738,7 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
     }
     RobotBasePtr probot(__probot);
     __pBase = probot->GetLink(_info._sBaseLinkName);
+    __pIkChainEndLink = probot->GetLink(_info._sIkChainEndLinkName);
     __pEffector = probot->GetLink(_info._sEffectorLinkName);
     __varmdofindices.resize(0);
     __vgripperdofindices.resize(0);
@@ -1741,7 +1753,11 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
     else {
         vector<JointPtr> vjoints;
         std::vector<int> vmimicdofs;
-        if( probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
+        if(!!__pIkChainEndLink) {
+            probot->GetChain(__pBase->GetIndex(),__pIkChainEndLink->GetIndex(), vjoints);
+        }
+            
+        if( vjoints.size() > 0 || probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
             FOREACH(it,vjoints) {
                 if( (*it)->IsStatic() ) {
                     // ignore

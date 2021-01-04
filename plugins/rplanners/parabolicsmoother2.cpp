@@ -777,8 +777,9 @@ public:
             _pdummytraj->Insert(_pdummytraj->GetNumWaypoints(), waypoints);
 
             RampOptimizer::RampND& rampndTrimmed = _cacheRampND; // another reference to _cacheRampND
-            RampOptimizer::RampND& remRampND = _cacheRemRampND;
-            remRampND.Initialize(_parameters->GetDOF());
+            RampOptimizer::RampND& frontTrimRampND = _cacheFrontTrimRampND, &backTrimRampND = _cacheBackTrimRampND;
+            frontTrimRampND.Initialize(_parameters->GetDOF());
+            backTrimRampND.Initialize(_parameters->GetDOF());
             std::vector<RampOptimizer::RampND>& tempRampNDVect = _cacheRampNDVect;
             dReal fTrimEdgesTime = parameters->_fStepLength*2; // we ignore collisions duration [0, fTrimEdgesTime] and [fTrimEdgesTime, duration]
             dReal fExpextedDuration = 0; // for consistency checking
@@ -815,18 +816,18 @@ public:
                             bCheck = false;
                         }
                         else {
-                            remRampND = rampndTrimmed;
-                            remRampND.Cut(fTrimEdgesTime, rampndTrimmed);
+                            frontTrimRampND = rampndTrimmed; // original
+                            frontTrimRampND.Cut(fTrimEdgesTime, rampndTrimmed);
                             bTrimmedFront = true;
                         }
                     }
-                    else if( irampnd + 1 == parabolicpath.GetRampNDVect().size() ) {
+                    if( irampnd + 1 == parabolicpath.GetRampNDVect().size() ) {
                         if( rampndTrimmed.GetDuration() <= fTrimEdgesTime + g_fEpsilonLinear ) {
                             // The final RampND is too short so ignore checking
                             bCheck = false;
                         }
                         else {
-                            rampndTrimmed.Cut(rampndTrimmed.GetDuration() - fTrimEdgesTime, remRampND);
+                            rampndTrimmed.Cut(rampndTrimmed.GetDuration() - fTrimEdgesTime, backTrimRampND);
                             bTrimmedBack = true;
                         }
                     }
@@ -887,7 +888,7 @@ public:
                                     _totalTimeCheckPathAllConstraints_SegmentFeasible2 = 0;
 #endif
 
-                                    if( newrampndret.retcode == 0 ) {
+                                    if( newrampndret.retcode == 0 && !newrampndret.bDifferentVelocity ) {
                                         // The new RampND passes the check. Need to re-populate tempRampNDVect with
                                         // RampNDs from rampndVectOut instead.
                                         tempRampNDVect.resize(0);
@@ -896,13 +897,13 @@ public:
                                         }
 
                                         if( bTrimmedFront ) {
-                                            tempRampNDVect.push_back(remRampND);
+                                            tempRampNDVect.push_back(frontTrimRampND);
                                         }
                                         FOREACHC(itrampndVectOut, rampndVectOut) {
                                             tempRampNDVect.push_back(*itrampndVectOut);
                                         }
                                         if( bTrimmedBack ) {
-                                            tempRampNDVect.push_back(remRampND);
+                                            tempRampNDVect.push_back(backTrimRampND);
                                         }
                                         bSuccess = true;
                                         break;
@@ -982,8 +983,8 @@ public:
         }
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time = %f s.", _environmentid%(0.001f*(float)(utils::GetMilliTime() - baseTime)));
 
-        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            RAVELOG_VERBOSE_FORMAT("env=%d, Start sampling trajectory after shortcutting (for verification)", _environmentid);
+        if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+            RAVELOG_DEBUG_FORMAT("env=%d, Start sampling trajectory after shortcutting (for verification)", _environmentid);
             try {
                 ptraj->Sample(x0Vect, 0); // reuse x0Vect
                 RAVELOG_DEBUG_FORMAT("env=%d, Sampling for verification successful", _environmentid);
@@ -1253,10 +1254,12 @@ public:
             bool bAccelChanged = false;
             for (size_t idof = 0; idof < ndof; ++idof) {
                 if( _cacheRampNDSeg.GetAAt(idof) < -_parameters->_vConfigAccelerationLimit[idof] ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, accel changed: %.15e --> %.15e; diff=%.15e", _environmentid%idof%_cacheRampNDSeg.GetAAt(idof)%(-_parameters->_vConfigAccelerationLimit[idof])%(_cacheRampNDSeg.GetAAt(idof) + _parameters->_vConfigAccelerationLimit[idof]));
                     _cacheRampNDSeg.GetAAt(idof) = -_parameters->_vConfigAccelerationLimit[idof];
                     bAccelChanged = true;
                 }
                 else if( _cacheRampNDSeg.GetAAt(idof) > _parameters->_vConfigAccelerationLimit[idof] ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, accel changed: %.15e --> %.15e; diff=%.15e", _environmentid%idof%_cacheRampNDSeg.GetAAt(idof)%(_parameters->_vConfigAccelerationLimit[idof])%(_cacheRampNDSeg.GetAAt(idof) - _parameters->_vConfigAccelerationLimit[idof]));
                     _cacheRampNDSeg.GetAAt(idof) = _parameters->_vConfigAccelerationLimit[idof];
                     bAccelChanged = true;
                 }
@@ -3439,7 +3442,7 @@ protected:
     std::vector<std::vector<dReal> > _cacheWaypointVect; ///< each element is a vector storing a waypoint
     std::vector<dReal> _cacheX0Vect, _cacheX1Vect, _cacheV0Vect, _cacheV1Vect, _cacheTVect; ///< used in PlanPath and _Shortcut
     std::vector<dReal> _cacheTempX0Vect, _cacheTempV0Vect; ///< used in _Shortcut
-    RampOptimizer::RampND _cacheRampND, _cacheRemRampND;
+    RampOptimizer::RampND _cacheRampND, _cacheFrontTrimRampND, _cacheBackTrimRampND;
     std::vector<RampOptimizer::RampND> _cacheRampNDVect; ///< use cases: 1. being passed to _ComputeRampWithZeroVelEndpoints when retrieving cubic waypoints from input traj
                                                          ///             2. in _SetMileStones: being passed to _ComputeRampWithZeroVelEndpoints
                                                          ///             3. handles the finalized set of RampNDs before writing to OpenRAVE trajectory

@@ -407,7 +407,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         """
         with self.env:
             values = []
-            eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
+            eetrans = self.manip.GetTransform()[0:3,3]
             armlength = 0
             orderedarmindices = [j for j in self.robot.GetDependencyOrderedJoints() if j.GetJointIndex() in self.manip.GetArmIndices()]
             for j in orderedarmindices[::-1]:
@@ -904,7 +904,11 @@ class InverseKinematicsModel(DatabaseGenerator):
             if self.iktype == IkParameterizationType.TranslationXAxisAngle4D or self.iktype == IkParameterizationType.TranslationYAxisAngle4D or self.iktype == IkParameterizationType.TranslationZAxisAngle4D or self.iktype == IkParameterizationType.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D or self.iktype == IkParameterizationType.TranslationXYOrientation3D:
                 solver.useleftmultiply = False
             baselink=self.manip.GetBase().GetIndex()
-            eelink=self.manip.GetEndEffector().GetIndex()
+            ikChainEndLink = self.manip.GetIkChainEndLink()
+            if ikChainEndLink is not None:
+                eelink = ikChainEndLink.GetIndex()
+            else:
+                eelink = self.manip.GetEndEffector().GetIndex()
             if ipython:
                 # requires ipython v0.11+
                 IPython = __import__('IPython')
