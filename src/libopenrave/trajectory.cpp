@@ -120,6 +120,34 @@ void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dR
     }
 }
 
+void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint) const
+{
+    const dReal duration = GetDuration();
+    int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
+    std::vector<dReal> vtimes(numPoints, deltatime);
+    for (int i = 0; i < numPoints; ++i) {
+        vtimes[i] *= i;
+    }
+    if (ensureLastPoint && vtimes.back() < duration) {
+        vtimes.push_back(duration);
+    }
+    return SamplePoints(data, vtimes);
+}
+
+void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const
+{
+    const dReal duration = GetDuration();
+    int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
+    std::vector<dReal> vtimes(numPoints, deltatime);
+    for (int i = 0; i < numPoints; ++i) {
+        vtimes[i] *= i;
+    }
+    if (ensureLastPoint && vtimes.back() < duration) {
+        vtimes.push_back(duration);
+    }
+    return SamplePoints(data, vtimes, spec);
+}
+
 void TrajectoryBase::GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data, const ConfigurationSpecification& spec) const
 {
     RAVELOG_VERBOSE(str(boost::format("TrajectoryBase::GetWaypoints: calling slow implementation %s")%GetXMLId()));
