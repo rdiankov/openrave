@@ -43,6 +43,9 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
     if( _options & Save_JointLimits ) {
         _pbody->GetDOFLimits(_vDOFLimits[0], _vDOFLimits[1]);
     }
+    if( _options & Save_JointResolutions ) {
+        _pbody->GetDOFResolutions(_vDOFResolutions);
+    }
     if( _options & Save_GrabbedBodies ) {
         _vGrabbedBodies = _pbody->_vGrabbedBodies;
     }
@@ -165,6 +168,9 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     if( _options & Save_JointWeights ) {
         pbody->SetDOFWeights(_vDOFWeights);
     }
+    if( _options & Save_JointResolutions ) {
+        pbody->SetDOFResolutions(_vDOFResolutions);
+    }
 }
 
 
@@ -195,6 +201,9 @@ KinBody::KinBodyStateSaverRef::KinBodyStateSaverRef(KinBody& body, int options) 
     }
     if( _options & Save_GrabbedBodies ) {
         _vGrabbedBodies = body._vGrabbedBodies;
+    }
+    if( _options & Save_JointResolutions ) {
+        body.GetDOFResolutions(_vDOFResolutions);
     }
 }
 
@@ -312,6 +321,9 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
     }
     if( _options & Save_JointWeights ) {
         body.SetDOFWeights(_vDOFWeights);
+    }
+    if( _options & Save_JointResolutions ) {
+        body.SetDOFResolutions(_vDOFResolutions);
     }
 }
 

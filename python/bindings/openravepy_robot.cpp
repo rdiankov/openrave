@@ -68,6 +68,7 @@ void PyManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info) {
     _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
+    _sIkChainEndLinkName = ConvertStringToUnicode(info._sIkChainEndLinkName);
     _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
     _tLocalTool = ReturnTransform(info._tLocalTool);
     _vChuckingDirection = toPyArray(info._vChuckingDirection);
@@ -98,6 +99,9 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
     }
     if( !IS_PYTHONOBJECT_NONE(_sBaseLinkName) ) {
         pinfo->_sBaseLinkName = py::extract<std::string>(_sBaseLinkName);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_sIkChainEndLinkName) ) {
+        pinfo->_sIkChainEndLinkName = py::extract<std::string>(_sIkChainEndLinkName);
     }
     if( !IS_PYTHONOBJECT_NONE(_sEffectorLinkName) ) {
         pinfo->_sEffectorLinkName = py::extract<std::string>(_sEffectorLinkName);
@@ -727,6 +731,9 @@ object PyRobotBase::PyManipulator::GetIkSolver() {
 
 object PyRobotBase::PyManipulator::GetBase() {
     return toPyKinBodyLink(_pmanip->GetBase(),_pyenv);
+}
+object PyRobotBase::PyManipulator::GetIkChainEndLink() {
+    return toPyKinBodyLink(_pmanip->GetIkChainEndLink(),_pyenv);
 }
 object PyRobotBase::PyManipulator::GetEndEffector() {
     return toPyKinBodyLink(_pmanip->GetEndEffector(),_pyenv);
@@ -2180,7 +2187,7 @@ class ManipulatorInfo_pickle_suite
 public:
     static py::tuple getstate(const PyManipulatorInfo& r)
     {
-        return py::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames, r._grippername, r._toolChangerConnectedBodyToolName, r._vRestrictGraspSetNames);
+        return py::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames, r._grippername, r._toolChangerConnectedBodyToolName, r._vRestrictGraspSetNames, r._sIkChainEndLinkName);
     }
     static void setstate(PyManipulatorInfo& r, py::tuple state) {
         r._name = state[0];
@@ -2208,6 +2215,12 @@ public:
         }
         else {
             r._vRestrictGraspSetNames = py::none_();
+        }
+        if( len(state) > 11 ) {
+            r._sIkChainEndLinkName = state[11];
+        }
+        else {
+            r._sIkChainEndLinkName = py::none_();
         }
     }
 };
@@ -2352,6 +2365,7 @@ void init_openravepy_robot()
                              .def_readwrite("_id",&PyManipulatorInfo::_id)
                              .def_readwrite("_name",&PyManipulatorInfo::_name)
                              .def_readwrite("_sBaseLinkName",&PyManipulatorInfo::_sBaseLinkName)
+                             .def_readwrite("_sIkChainEndLinkName",&PyManipulatorInfo::_sIkChainEndLinkName)
                              .def_readwrite("_sEffectorLinkName",&PyManipulatorInfo::_sEffectorLinkName)
                              .def_readwrite("_tLocalTool",&PyManipulatorInfo::_tLocalTool)
                              .def_readwrite("_vChuckingDirection",&PyManipulatorInfo::_vChuckingDirection)
@@ -2769,6 +2783,7 @@ void init_openravepy_robot()
         .def("GetIkParameterization",&PyRobotBase::PyManipulator::GetIkParameterization, GetIkParameterization_overloads(PY_ARGS("iktype","inworld") GetIkParameterization_doc.c_str()))
 #endif
         .def("GetBase",&PyRobotBase::PyManipulator::GetBase, DOXY_FN(RobotBase::Manipulator,GetBase))
+        .def("GetIkChainEndLink",&PyRobotBase::PyManipulator::GetIkChainEndLink, DOXY_FN(RobotBase::Manipulator,GetIkChainEndLink))
         .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, DOXY_FN(RobotBase::Manipulator,GetEndEffector))
         .def("ReleaseAllGrabbed",&PyRobotBase::PyManipulator::ReleaseAllGrabbed, DOXY_FN(RobotBase::Manipulator,ReleaseAllGrabbed))
         .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))
