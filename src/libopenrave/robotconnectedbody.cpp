@@ -807,8 +807,6 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
 
             if( !pnewmanipulator->_info._sIkChainEndLinkName.empty() ) {
-                pnewmanipulator->_info._sIkChainEndLinkName = connectedBody._nameprefix + pnewmanipulator->_info._sIkChainEndLinkName;
-
                 // search for the correct resolved _sIkChainEndLinkName
                 bool bFoundIkChainEndLink = false;
                 for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
