@@ -1187,10 +1187,12 @@ void QtOSGViewer::_ProcessApplicationQuit()
 {
     RAVELOG_VERBOSE("processing viewer application quit\n");
     // remove all messages in order to release the locks
-    boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-
     FOREACH(itpriority, _mapGUIFunctionLists) {
-        list<GUIThreadFunctionPtr> listGUIFunctions = itpriority->second;
+        list<GUIThreadFunctionPtr> listGUIFunctions;
+        {
+            boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+            listGUIFunctions.swap(itpriority->second);
+        }
         if( listGUIFunctions.size() > 0 ) {
             bool bnotify = false;
             FOREACH(it,listGUIFunctions) {
@@ -2164,10 +2166,13 @@ void QtOSGViewer::SetEnvironmentSync(bool bUpdate)
 
     if( !bUpdate ) {
         // remove all messages in order to release the locks
-        boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
         // Clear GUI function lists for all priorities
         FOREACH(itpriority, _mapGUIFunctionLists) {
-            list<GUIThreadFunctionPtr> listGUIFunctions = itpriority->second;
+            list<GUIThreadFunctionPtr> listGUIFunctions;
+            {
+                boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+                listGUIFunctions.swap(itpriority->second);
+            }
             if( listGUIFunctions.size() > 0 ) {
                 bool bnotify = false;
                 FOREACH(it,listGUIFunctions) {
