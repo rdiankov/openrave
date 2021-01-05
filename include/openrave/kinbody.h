@@ -3175,12 +3175,12 @@ protected:
     CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions
 
 public:
-    // Gary registers forward kinematics functions
+    ///< Forward kinematics functions to be registered
     struct ForwardKinematicsStruct {
         ForwardKinematicsStruct();
-        ModuleBaseConstPtr pCalculatorModule = nullptr; ///< kinbody basic calculators module
-        boost::function<bool(const std::vector<double>&)> pSetLinkTransformsFn; ///< function that sets links' transforms
-        boost::function<void(std::vector<double>&)> pGetDOFLastSetValuesFn; ///< function that updates kinbody's dof values
+        ModuleBaseConstPtr pCalculatorModule; ///< kinbody basic calculators module
+        boost::function<bool(const std::vector<dReal>&)> pSetLinkTransformsFn; ///< function that sets links' transforms
+        boost::function<void(std::vector<dReal>&)> pGetDOFLastSetValuesFn; ///< function that updates kinbody's dof values
         bool bInitialized = false; ///< indicator of successful initialization
     };
 

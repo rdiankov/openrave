@@ -1894,8 +1894,9 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     }
 
     const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
-    if(_mHash2ForwardKinematicsStruct.count(sKinematicsGeometry)) {
-        ForwardKinematicsStruct& fkstruct = _mHash2ForwardKinematicsStruct.at(sKinematicsGeometry);
+    const std::map<std::string, ForwardKinematicsStruct>::iterator it = _mHash2ForwardKinematicsStruct.find(sKinematicsGeometry);
+    if(it != _mHash2ForwardKinematicsStruct.end()) {
+        ForwardKinematicsStruct& fkstruct = it->second;
         if(fkstruct.bInitialized) {
             fkstruct.pSetLinkTransformsFn(_vTempJoints);
             fkstruct.pGetDOFLastSetValuesFn(_vTempJoints);
