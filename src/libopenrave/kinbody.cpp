@@ -1893,9 +1893,8 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         _vTempJoints = vJointValues;
     }
 
-    const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
-    if(_mHash2ForwardKinematicsStruct.count(sKinematicsGeometry)) {
-        ForwardKinematicsStruct& fkstruct = _mHash2ForwardKinematicsStruct.at(sKinematicsGeometry);
+    if(!!_pCurrentForwardKinematicsStruct) {
+        ForwardKinematicsStruct& fkstruct = *_pCurrentForwardKinematicsStruct;
         if(fkstruct.bInitialized) {
             fkstruct.pSetLinkTransformsFn(_vTempJoints);
             fkstruct.pGetDOFLastSetValuesFn(_vTempJoints);
@@ -4894,6 +4893,17 @@ void KinBody::_ComputeInternalInformation()
         index += 1;
     }
     _nParametersChanged = 0;
+
+    // associate the current kinbody with the correct forward kinematics structure
+    const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
+    const std::map<std::string, ForwardKinematicsStruct>::iterator it = _mHash2ForwardKinematicsStruct.find(sKinematicsGeometry);
+    if(it != _mHash2ForwardKinematicsStruct.end()) {
+        _pCurrentForwardKinematicsStruct.reset(&it->second, utils::null_deleter());
+    }
+    else {
+        _pCurrentForwardKinematicsStruct.reset();
+    }
+
     RAVELOG_VERBOSE_FORMAT("initialized %s in %fs", GetName()%(1e-6*(utils::GetMicroTime()-starttime)));
 }
 
