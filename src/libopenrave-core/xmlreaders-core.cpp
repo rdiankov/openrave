@@ -2516,6 +2516,13 @@ public:
             _probot->_vecManipulators.push_back(RobotBase::ManipulatorPtr(new RobotBase::Manipulator(_probot,_manipinfo)));
             return true;
         }
+        else if( xmlname == "ikchainend" ) {
+            _ss >> _manipinfo._sIkChainEndLinkName;
+            if( !!_probot && !_probot->GetLink(_manipinfo._sIkChainEndLinkName) ) {
+                RAVELOG_WARN(str(boost::format("Failed to find manipulator ikchainend %s")%_manipinfo._sIkChainEndLinkName));
+                GetXMLErrorCount()++;
+            }
+        }
         else if( xmlname == "effector" ) {
             _ss >> _manipinfo._sEffectorLinkName;
             if( !!_probot && !_probot->GetLink(_manipinfo._sEffectorLinkName) ) {
@@ -3055,6 +3062,7 @@ public:
                     if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end()) {
                         (*itmanip)->_info._name = _prefix + (*itmanip)->_info._name;
                         (*itmanip)->_info._sBaseLinkName = _prefix + (*itmanip)->_info._sBaseLinkName;
+                        (*itmanip)->_info._sIkChainEndLinkName = _prefix + (*itmanip)->_info._sIkChainEndLinkName;
                         (*itmanip)->_info._sEffectorLinkName = _prefix + (*itmanip)->_info._sEffectorLinkName;
                         FOREACH(itGripperJointName,(*itmanip)->_info._vGripperJointNames) {
                             *itGripperJointName = _prefix + *itGripperJointName;
