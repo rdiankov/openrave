@@ -3096,6 +3096,7 @@ public:
         boost::function<void(std::vector<dReal>&)> pGetDOFLastSetValuesFn; ///< function that updates kinbody's dof values
         bool bInitialized = false; ///< indicator of successful initialization
     };
+    using ForwardKinematicsStructPtr = boost::shared_ptr<ForwardKinematicsStruct>;
 
     /// \brief Associate the kinbody's current kinematics geometry hash with a forward kinematics structure
     /// \param[in] fkstruct a forward kinematics structure
@@ -3106,6 +3107,8 @@ public:
 
 protected:
     std::map<std::string, ForwardKinematicsStruct> _mHash2ForwardKinematicsStruct; ///< maps a kinematics geometry hash to a forward kinematics structure
+    ForwardKinematicsStructPtr _pCurrentForwardKinematicsStruct; ///< a pointer to ForwardKinematicsStruct that matches the kinematics geometry hash of the current kinbody (with the correct tool)
+
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     uint32_t _nParametersChanged; ///< set of parameters that changed and need callbacks
