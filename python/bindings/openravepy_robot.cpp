@@ -100,7 +100,7 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
     if( !IS_PYTHONOBJECT_NONE(_sBaseLinkName) ) {
         pinfo->_sBaseLinkName = py::extract<std::string>(_sBaseLinkName);
     }
-    if( !IS_PYTHONOBJECT_NONE(_sEffectorLinkName) ) {
+    if( !IS_PYTHONOBJECT_NONE(_sIkChainEndLinkName) ) {
         pinfo->_sIkChainEndLinkName = py::extract<std::string>(_sIkChainEndLinkName);
     }
     if( !IS_PYTHONOBJECT_NONE(_sEffectorLinkName) ) {
