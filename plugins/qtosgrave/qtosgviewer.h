@@ -283,7 +283,7 @@ public:
         {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow), ViewerCommandPriority::HIGH); // _handle is copied, so it will maintain the reference
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow), ViewerCommandPriority::VERY_HIGH); // _handle is copied, so it will maintain the reference
             }
         }
 
