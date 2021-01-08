@@ -239,6 +239,10 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         rapidjson::Value rReadableInterfaces;
         rReadableInterfaces.SetObject();
         for(std::map<std::string, ReadablePtr>::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
+            // skip serializing __collada__ since we won't need it in json
+            if (it->first == "__collada__") {
+                continue;
+            }
             rapidjson::Value rReadable;
             it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
             orjson::SetJsonValueByKey(rReadableInterfaces, it->first.c_str(), rReadable, allocator);
@@ -298,6 +302,10 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
         for (rapidjson::Value::ConstMemberIterator it = value["readableInterfaces"].MemberBegin(); it != value["readableInterfaces"].MemberEnd(); ++it) {
+            // skip over __collada__ since it will most likely fail to deserialize
+            if (it->name.GetString() == "__collada__") {
+                continue;
+            }
             _DeserializeReadableInterface(it->name.GetString(), it->value);
         }
     }
