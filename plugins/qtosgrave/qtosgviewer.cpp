@@ -196,7 +196,6 @@ QtOSGViewer::~QtOSGViewer()
     // _notifyGUIFunctionComplete
     SetEnvironmentSync(false);
     {
-        boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
         list<GUIThreadFunctionPtr>::iterator itmsg;
         FOREACH(itpriority, _mapGUIFunctionLists) {
@@ -1187,12 +1186,14 @@ void QtOSGViewer::_ProcessApplicationQuit()
 {
     RAVELOG_VERBOSE("processing viewer application quit\n");
     // remove all messages in order to release the locks
-    FOREACH(itpriority, _mapGUIFunctionLists) {
-        list<GUIThreadFunctionPtr> listGUIFunctions;
-        {
-            boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-            listGUIFunctions.swap(itpriority->second);
-        }
+    map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> mapGUIFunctionLists;
+    {
+        boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+        mapGUIFunctionLists.swap(_mapGUIFunctionLists);
+    }
+
+    FOREACH(itpriority, mapGUIFunctionLists) {
+        list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
         if( listGUIFunctions.size() > 0 ) {
             bool bnotify = false;
             FOREACH(it,listGUIFunctions) {
@@ -2110,7 +2111,7 @@ void QtOSGViewer::_UpdateEnvironment()
         }
 
         FOREACH(itpriority, mapGUIFunctionLists) {
-            list<GUIThreadFunctionPtr> listGUIFunctions = itpriority->second;
+            list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
             FOREACH(itmsg, listGUIFunctions) {
                 try {
                     (*itmsg)->Call();
@@ -2166,13 +2167,15 @@ void QtOSGViewer::SetEnvironmentSync(bool bUpdate)
 
     if( !bUpdate ) {
         // remove all messages in order to release the locks
+        map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> mapGUIFunctionLists;
+        {
+            boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+            mapGUIFunctionLists.swap(_mapGUIFunctionLists);
+        }
+
         // Clear GUI function lists for all priorities
-        FOREACH(itpriority, _mapGUIFunctionLists) {
-            list<GUIThreadFunctionPtr> listGUIFunctions;
-            {
-                boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-                listGUIFunctions.swap(itpriority->second);
-            }
+        FOREACH(itpriority, mapGUIFunctionLists) {
+            list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
             if( listGUIFunctions.size() > 0 ) {
                 bool bnotify = false;
                 FOREACH(it,listGUIFunctions) {
