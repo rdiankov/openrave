@@ -1708,6 +1708,8 @@ public:
         /// \brief update Joint according to new JointInfo, returns false if update cannot be performed and requires InitFromInfo
         virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::JointInfo& info);
 
+        virtual void SetDOFLastSetValue(dReal dofvalue, const int iaxis = 0);
+
 protected:
         JointInfo _info;
 
@@ -2795,7 +2797,7 @@ private:
     }
 
     /// \brief Increments the unique id that indicates the number of transformation state changes of any link. Used to check if robot state has changed.
-    virtual void IncrementUpdateStamp(const int inc=1) { _nUpdateStampId += inc; } 
+    virtual void IncrementUpdateStamp(const int inc=1) { _nUpdateStampId += inc; }
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 

@@ -1887,6 +1887,14 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         _vTempJoints = vJointValues;
     }
 
+    if(!_pCurrentForwardKinematicsStruct) {
+        const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
+        const std::map<std::string, ForwardKinematicsStruct>::iterator it = _mHash2ForwardKinematicsStruct.find(sKinematicsGeometry);
+        if(it != _mHash2ForwardKinematicsStruct.end()) {
+            _pCurrentForwardKinematicsStruct.reset(&it->second, utils::null_deleter());
+        }
+    }
+
     if(!!_pCurrentForwardKinematicsStruct) {
         ForwardKinematicsStruct& fkstruct = *_pCurrentForwardKinematicsStruct;
         if(fkstruct.bInitialized) {

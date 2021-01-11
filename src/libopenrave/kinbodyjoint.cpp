@@ -2586,6 +2586,10 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     return updateFromInfoResult;
 }
 
+void KinBody::Joint::SetDOFLastSetValue(dReal dofvalue, const int iaxis) {
+    _doflastsetvalues[iaxis] = dofvalue;
+}
+
 void KinBody::Joint::serialize(std::ostream& o, int options) const
 {
     if( options & SO_Kinematics ) {
