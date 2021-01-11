@@ -1795,7 +1795,11 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     OPENRAVE_ASSERT_OP_FORMAT((int)vJointValues.size(),>=,expecteddof, "env=%d, not enough values %d<%d", GetEnv()->GetId()%vJointValues.size()%GetDOF(),ORE_InvalidArguments);
 
     const dReal* pJointValues = &vJointValues[0];
-    if( checklimits != CLA_Nothing || dofindices.size() > 0 ) {
+    
+    if(checklimits == CLA_Nothing && dofindices.empty()) {
+        _vTempJoints = vJointValues;
+    }
+    else {
         _vTempJoints.resize(GetDOF());
         if( dofindices.size() > 0 ) {
             // user only set a certain number of indices, so have to fill the temporary array with the full set of values first
@@ -1883,9 +1887,6 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         }
         pJointValues = &_vTempJoints[0];
     }
-    else {
-        _vTempJoints = vJointValues;
-    }
 
     if(!_pCurrentForwardKinematicsStruct) {
         const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
@@ -1905,6 +1906,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     }
 
     // have to compute the angles ahead of time since they are dependent on the link
+    // RAVELOG_ERROR_FORMAT("TGN_DEBUG: In original SetDOFValues: envid=%d, kinbody=%s", GetEnv()->GetId() % GetName());
     const int nActiveJoints = _vecjoints.size();
     const int nPassiveJoints = _vPassiveJoints.size();
     std::vector< boost::array<dReal, 3> > vPassiveJointValues(nPassiveJoints);
