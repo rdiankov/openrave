@@ -339,6 +339,8 @@ public:
 
     int GetGroupNumGeometries(const std::string& geomname);
 
+    object GetCurrentGeometryGroupName();
+
     object GetRigidlyAttachedLinks() const;
 
     bool IsRigidlyAttached(OPENRAVE_SHARED_PTR<PyLink> plink);

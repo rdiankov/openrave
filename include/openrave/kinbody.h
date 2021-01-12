@@ -410,6 +410,9 @@ public:
         inline const std::string& GetName() const {
             return _name;
         }
+        inline const std::string& GetCurrentGeometryGroupName() const {
+            return _currentGeometryGroupName;
+        }
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -442,6 +445,9 @@ public:
         /// \true false if the link is disabled. disabled links do not participate in collision detection
         bool _bIsEnabled = true;
         bool __padding0, __padding1; // for 4-byte alignment
+
+        /// \brief the name of the geometry group currently set for this link
+        std::string _currentGeometryGroupName;
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
@@ -710,6 +716,9 @@ protected:
         }
         inline const std::string& GetName() const {
             return _info._name;
+        }
+        inline const std::string& GetCurrentGeometryGroupName() const {
+            return _info._currentGeometryGroupName;
         }
 
         /// \brief Indicates a static body that does not move with respect to the root link.

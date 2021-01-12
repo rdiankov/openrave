@@ -1574,6 +1574,11 @@ int PyLink::GetGroupNumGeometries(const std::string& geomname)
     return _plink->GetGroupNumGeometries(geomname);
 }
 
+object PyLink::GetCurrentGeometryGroupName()
+{
+    return ConvertStringToUnicode(_plink->GetCurrentGeometryGroupName());
+}
+
 object PyLink::GetRigidlyAttachedLinks() const {
     std::vector<KinBody::LinkPtr> vattachedlinks;
     _plink->GetRigidlyAttachedLinks(vattachedlinks);
@@ -5416,6 +5421,7 @@ void init_openravepy_kinbody()
                           .def("GetGeometriesFromGroup",&PyLink::GetGeometriesFromGroup, PY_ARGS("name") DOXY_FN(KinBody::Link,GetGeometriesFromGroup))
                           .def("SetGroupGeometries",&PyLink::SetGroupGeometries, PY_ARGS("name", "geometries") DOXY_FN(KinBody::Link,SetGroupGeometries))
                           .def("GetGroupNumGeometries",&PyLink::GetGroupNumGeometries, PY_ARGS("geometries") DOXY_FN(KinBody::Link,GetGroupNumGeometries))
+                          .def("GetCurrentGeometryGroupName",&PyLink::GetCurrentGeometryGroupName, DOXY_FN(KinBody::Link,GetCurrentGeometryGroupName))
                           .def("GetRigidlyAttachedLinks",&PyLink::GetRigidlyAttachedLinks, DOXY_FN(KinBody::Link,GetRigidlyAttachedLinks))
                           .def("IsRigidlyAttached",&PyLink::IsRigidlyAttached, DOXY_FN(KinBody::Link,IsRigidlyAttached))
                           .def("GetVelocity",&PyLink::GetVelocity,DOXY_FN(KinBody::Link,GetVelocity))

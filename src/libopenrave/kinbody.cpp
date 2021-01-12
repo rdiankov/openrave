@@ -573,6 +573,7 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
                 (*itlink)->_vGeometries[i]->InitCollisionMesh();
             }
         }
+        (*itlink)->_info._currentGeometryGroupName = std::string(geomname);
         (*itlink)->_Update(false);
     }
     // have to reset the adjacency cache
@@ -2256,8 +2257,8 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     const int nlinks = _veclinks.size();
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
-        this->GetName() % linkindex % nlinks, ORE_InvalidArguments
-    );
+                           this->GetName() % linkindex % nlinks, ORE_InvalidArguments
+                           );
     const size_t dofstride = dofindices.empty() ? this->GetDOF() : dofindices.size();
     vjacobian.resize(3 * dofstride);
     if( dofstride == 0 ) {
@@ -2273,7 +2274,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     for(int curlink = 0;
         _vAllPairsShortestPaths[offset + curlink].first >= 0;     // parent link is still available
         curlink = _vAllPairsShortestPaths[offset + curlink].first // get index of parent link
-    ) {
+        ) {
         const int jointindex = _vAllPairsShortestPaths[offset + curlink].second; ///< generalized joint index, which counts in [_vecjoints, _vPassiveJoints]
         if( jointindex < nActiveJoints ) {
             // active joint
@@ -4595,6 +4596,7 @@ void KinBody::_ComputeInternalInformation()
             }
             (*itlink)->_info._mapExtraGeometries.insert(make_pair(selfgroup, vgeoms));
         }
+        (*itlink)->_info._currentGeometryGroupName = selfgroup;
     }
 
     _bAreAllJoints1DOFAndNonCircular = true;

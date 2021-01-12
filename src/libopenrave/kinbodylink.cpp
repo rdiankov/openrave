@@ -618,7 +618,8 @@ void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& g
         vgeometryinfos[i].reset(new KinBody::GeometryInfo());
         *vgeometryinfos[i] = _vGeometries[i]->_info;
     }
-    SetGroupGeometries("self", vgeometryinfos);
+    _info._currentGeometryGroupName = "self";
+    SetGroupGeometries(_info._currentGeometryGroupName, vgeometryinfos);
     _Update();
 }
 
@@ -642,7 +643,8 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries,
         vgeometryinfos[i].reset(new KinBody::GeometryInfo());
         *vgeometryinfos[i] = _vGeometries[i]->_info;
     }
-    SetGroupGeometries("self", vgeometryinfos);
+    _info._currentGeometryGroupName = "self";
+    SetGroupGeometries(_info._currentGeometryGroupName, vgeometryinfos);
     _Update();
 }
 
@@ -667,6 +669,7 @@ void KinBody::Link::SetGeometriesFromGroup(const std::string& groupname)
             _vGeometries[i]->InitCollisionMesh();
         }
     }
+    _info._currentGeometryGroupName = std::string(groupname);
     _Update();
 }
 
