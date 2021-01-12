@@ -1908,7 +1908,6 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         ForwardKinematicsStruct& fkstruct = *_pCurrentForwardKinematicsStruct;
         if(fkstruct.bInitialized) {
             fkstruct.pSetLinkTransformsFn(_vTempJoints);
-            fkstruct.pGetDOFLastSetValuesFn(_vTempJoints);
             return;
         }
     }
@@ -5731,7 +5730,6 @@ bool KinBody::RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fks
     const bool bCheck = (
         fkstruct.pCalculatorModule 
         && !!fkstruct.pSetLinkTransformsFn 
-        && !!fkstruct.pGetDOFLastSetValuesFn 
         && fkstruct.bInitialized
     );
     if(!bCheck) {
