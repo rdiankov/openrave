@@ -189,7 +189,12 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
     if( !_interfaceType.empty() ) {
         orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
     }
-    orjson::SetJsonValueByKey(rKinBodyInfo, "transform", _transform, allocator);
+
+    {
+        Transform transform = _transform;
+        transform.trans *= fUnitScale;
+        orjson::SetJsonValueByKey(rKinBodyInfo, "transform", transform, allocator);
+    }
     orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
 
     if (_dofValues.size() > 0) {
