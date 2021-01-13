@@ -16,21 +16,60 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo()
+{
+    _gravity = Vector(0,0,-9.797930195020351);
+}
+
+EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo(const EnvironmentBaseInfo& other)
+{
+    *this = other;
+}
+
+bool EnvironmentBase::EnvironmentBaseInfo::operator==(const EnvironmentBaseInfo& other) const
+{
+    return _vBodyInfos == other._vBodyInfos
+        && _revision == other._revision
+        && _name == other._name
+        && _description == other._description
+        && _keywords == other._keywords
+        && _gravity == other._gravity
+        && _referenceUri == other._referenceUri;
+    // TODO: deep compare infos
+}
+
+bool EnvironmentBase::EnvironmentBaseInfo::operator!=(const EnvironmentBaseInfo& other) const
+{
+    return !operator==(other);
+}
+
 void EnvironmentBase::EnvironmentBaseInfo::Reset()
 {
+    _name.clear();
+    _description.clear();
+    _keywords.clear();
+    _gravity = Vector(0,0,-9.797930195020351);
+    _referenceUri.clear();
     _vBodyInfos.clear();
     _revision = 0;
 }
 
-void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     // for all SerializeJSON, we clear the output
-    value.SetObject();
+    rEnvInfo.SetObject();
 
-    orjson::SetJsonValueByKey(value, "name", _name, allocator);
-    orjson::SetJsonValueByKey(value, "keywords", _keywords, allocator);
-    orjson::SetJsonValueByKey(value, "description", _description, allocator);
-    orjson::SetJsonValueByKey(value, "gravity", _gravity, allocator);
+    if( !_name.empty() ) {
+        orjson::SetJsonValueByKey(rEnvInfo, "name", _name, allocator);
+    }
+    orjson::SetJsonValueByKey(rEnvInfo, "keywords", _keywords, allocator);
+    if( !_description.empty() ) {
+        orjson::SetJsonValueByKey(rEnvInfo, "description", _description, allocator);
+    }
+    orjson::SetJsonValueByKey(rEnvInfo, "gravity", _gravity, allocator);
+    if( !_referenceUri.empty() ) {
+        orjson::SetJsonValueByKey(rEnvInfo, "referenceUri", _referenceUri, allocator);
+    }
 
     if (_vBodyInfos.size() > 0) {
         rapidjson::Value rBodiesValue;
@@ -41,38 +80,42 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& value
             (*it)->SerializeJSON(bodyValue, allocator, fUnitScale, options);
             rBodiesValue.PushBack(bodyValue, allocator);
         }
-        value.AddMember("bodies", rBodiesValue, allocator);
+        rEnvInfo.AddMember("bodies", rBodiesValue, allocator);
     }
 }
 
-void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options)
 {
     // for DeserializeJSON, there are two possibilities: 1. full json passed in 2. diff json passed in
     // for example, do not clear _vBodyInfos.clear(), since we could be dealing with partial json
 
-    if (value.HasMember("revision")) {
-        orjson::LoadJsonValueByKey(value, "revision", _revision);
+    if (rEnvInfo.HasMember("revision")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "revision", _revision);
     }
 
-    if (value.HasMember("name")) {
-        orjson::LoadJsonValueByKey(value, "name", _name);
+    if (rEnvInfo.HasMember("name")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "name", _name);
     }
 
-    if (value.HasMember("keywords")) {
-        orjson::LoadJsonValueByKey(value, "keywords", _keywords);
+    if (rEnvInfo.HasMember("keywords")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "keywords", _keywords);
     }
 
-    if (value.HasMember("description")) {
-        orjson::LoadJsonValueByKey(value, "description", _description);
+    if (rEnvInfo.HasMember("description")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "description", _description);
+    }
+    if( rEnvInfo.HasMember("referenceUri") ) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "referenceUri", _referenceUri);
     }
 
-    if (value.HasMember("gravity")) {
-        orjson::LoadJsonValueByKey(value, "gravity", _gravity);
+    if (rEnvInfo.HasMember("gravity")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "gravity", _gravity);
     }
 
-    if (value.HasMember("bodies")) {
-        _vBodyInfos.reserve(_vBodyInfos.size() + value["bodies"].Size());
-        for (rapidjson::Value::ConstValueIterator it = value["bodies"].Begin(); it != value["bodies"].End(); ++it) {
+
+    if (rEnvInfo.HasMember("bodies")) {
+        _vBodyInfos.reserve(_vBodyInfos.size() + rEnvInfo["bodies"].Size());
+        for (rapidjson::Value::ConstValueIterator it = rEnvInfo["bodies"].Begin(); it != rEnvInfo["bodies"].End(); ++it) {
             const rapidjson::Value& rKinBodyInfo = *it;
 
             std::string id = orjson::GetStringJsonValueByKey(rKinBodyInfo, "id");

@@ -2788,7 +2788,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
         throw OPENRAVE_EXCEPTION_FORMAT0(_("Cannot decode non-object JSON value to IkParameterization"), ORE_InvalidArguments);
     }
     orjson::LoadJsonValueByKey(rIkParameterization, "id", _id);
-    
+
     if( rIkParameterization.HasMember("type") ) {
         const char* ptype =  rIkParameterization["type"].GetString();
         if( !!ptype ) {
@@ -2919,12 +2919,22 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     // TODO have to scale _mapCustomData by fUnitScale
 }
 
-StringReadable::StringReadable(const std::string& id, const std::string& data): Readable(id), _data(data)
+StringReadable::StringReadable(const std::string& id, const std::string& data) : Readable(id), _data(data)
 {
 }
 
 StringReadable::~StringReadable()
 {
+}
+
+void StringReadable::SetData(const std::string& newdata)
+{
+    _data = newdata;
+}
+
+const std::string& StringReadable::GetData() const
+{
+    return _data;
 }
 
 bool StringReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
@@ -2940,11 +2950,6 @@ bool StringReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
     }
     writer->SetCharData(_data);
     return true;
-}
-
-const std::string& StringReadable::GetData() const
-{
-    return _data;
 }
 
 bool StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const

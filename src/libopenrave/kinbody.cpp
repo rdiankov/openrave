@@ -171,8 +171,13 @@ void KinBody::KinBodyInfo::Reset()
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     rKinBodyInfo.SetObject();
-    orjson::SetJsonValueByKey(rKinBodyInfo, "id", _id, allocator);
-    orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
+
+    if( !_id.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "id", _id, allocator);
+    }
+    if( !_name.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
+    }
     if (!_referenceUri.empty()) {
         if( options & ISO_ReferenceUriHint ) {
             orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUriHint", _referenceUri, allocator);
@@ -181,7 +186,9 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
             orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUri", _referenceUri, allocator);
         }
     }
-    orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
+    if( !_interfaceType.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
+    }
     orjson::SetJsonValueByKey(rKinBodyInfo, "transform", _transform, allocator);
     orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
 
@@ -303,7 +310,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
         for (rapidjson::Value::ConstMemberIterator it = value["readableInterfaces"].MemberBegin(); it != value["readableInterfaces"].MemberEnd(); ++it) {
             // skip over __collada__ since it will most likely fail to deserialize
-            if (it->name.GetString() == "__collada__") {
+            if (strcmp(it->name.GetString(), "__collada__") == 0 ) {
                 continue;
             }
             _DeserializeReadableInterface(it->name.GetString(), it->value);
