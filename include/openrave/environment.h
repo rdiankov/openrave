@@ -712,8 +712,12 @@ public:
         bool operator!=(const EnvironmentBaseInfo& other) const;
 
         void Reset() override;
-        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
-        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+        void SerializeJSON(rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+
+        void DeserializeJSON(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options) override;
+        
+        /// \param vInputToBodyInfoMapping maps indices into rEnvInfo["bodies"] into indices of _vBodyInfos: rEnvInfo["bodies"][i] -> _vBodyInfos[vInputToBodyInfoMapping[i]]. This forces certain _vBodyInfos to get updated with specific input. Use -1 for no mapping
+        void DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping);
 
         std::string _name;   ///< environment name
         std::string _description;   ///< environment description

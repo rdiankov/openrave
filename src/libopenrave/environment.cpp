@@ -29,12 +29,12 @@ EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo(const EnvironmentBaseI
 bool EnvironmentBase::EnvironmentBaseInfo::operator==(const EnvironmentBaseInfo& other) const
 {
     return _vBodyInfos == other._vBodyInfos
-        && _revision == other._revision
-        && _name == other._name
-        && _description == other._description
-        && _keywords == other._keywords
-        && _gravity == other._gravity
-        && _referenceUri == other._referenceUri;
+           && _revision == other._revision
+           && _name == other._name
+           && _description == other._description
+           && _keywords == other._keywords
+           && _gravity == other._gravity
+           && _referenceUri == other._referenceUri;
     // TODO: deep compare infos
 }
 
@@ -86,6 +86,12 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
 
 void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options)
 {
+    std::vector<int> vInputToBodyInfoMapping;
+    DeserializeJSONWithMapping(rEnvInfo, fUnitScale, options, vInputToBodyInfoMapping);
+}
+
+void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping)
+{
     // for DeserializeJSON, there are two possibilities: 1. full json passed in 2. diff json passed in
     // for example, do not clear _vBodyInfos.clear(), since we could be dealing with partial json
 
@@ -115,8 +121,9 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
 
     if (rEnvInfo.HasMember("bodies")) {
         _vBodyInfos.reserve(_vBodyInfos.size() + rEnvInfo["bodies"].Size());
-        for (rapidjson::Value::ConstValueIterator it = rEnvInfo["bodies"].Begin(); it != rEnvInfo["bodies"].End(); ++it) {
-            const rapidjson::Value& rKinBodyInfo = *it;
+        const rapidjson::Value& rBodies = rEnvInfo["bodies"];
+        for(int iInputBodyIndex = 0; iInputBodyIndex < (int)rBodies.Size(); ++iInputBodyIndex) {
+            const rapidjson::Value& rKinBodyInfo = rBodies[iInputBodyIndex];
 
             std::string id = orjson::GetStringJsonValueByKey(rKinBodyInfo, "id");
             bool isDeleted = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "__deleted__", false);
@@ -124,17 +131,25 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
             // then find previous body
             bool isExistingRobot = false;
             std::vector<KinBody::KinBodyInfoPtr>::iterator itExistingBodyInfo = _vBodyInfos.end();
-            if (!id.empty()) {
+
+            if( iInputBodyIndex < (int)vInputToBodyInfoMapping.size() && vInputToBodyInfoMapping[iInputBodyIndex] >= 0 ) {
+                itExistingBodyInfo = _vBodyInfos.begin() + vInputToBodyInfoMapping[iInputBodyIndex];
+            }
+            else if (!id.empty()) {
                 // only try to find old info if id is not empty
                 FOREACH(itBodyInfo, _vBodyInfos) {
                     if ((*itBodyInfo)->_id == id ) {
                         itExistingBodyInfo = itBodyInfo;
-                        isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itBodyInfo);
-                        RAVELOG_VERBOSE_FORMAT("found existing body: %s, isRobot = %d", id%isExistingRobot);
                         break;
                     }
                 }
             }
+
+            if( itExistingBodyInfo != _vBodyInfos.end() ) {
+                isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itExistingBodyInfo);
+                RAVELOG_VERBOSE_FORMAT("found existing body with id='%s', isRobot = %d", id%isExistingRobot);
+            }
+
             // here we allow body infos with empty id to be created because
             // when we load things from json, some id could be missing on file
             // and for the partial update case, the id should be non-empty

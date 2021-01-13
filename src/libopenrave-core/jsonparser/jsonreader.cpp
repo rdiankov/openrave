@@ -175,7 +175,7 @@ public:
         _ProcessEnvInfoBodies(envInfo, rEnvInfo, alloc, mapProcessedConnectedBodyUris);
         std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
         _penv->UpdateFromInfo(envInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies);
-        
+
         return true;
     }
 
@@ -315,23 +315,38 @@ protected:
     void _ProcessEnvInfoBodies(EnvironmentBase::EnvironmentBaseInfo& envInfo, const rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& alloc, std::map<RobotBase::ConnectedBodyInfoPtr, std::string>& mapProcessedConnectedBodyUris)
     {
         dReal fUnitScale = _GetUnitScale(rEnvInfo);
+        std::vector<int> vInputToBodyInfoMapping;
         if (rEnvInfo.HasMember("bodies")) {
-            for (rapidjson::Value::ConstValueIterator it = rEnvInfo["bodies"].Begin(); it != rEnvInfo["bodies"].End(); it++) {
-                std::string bodyId = orjson::GetJsonValueByKey<std::string>(*it, "id", "");
-                std::string referenceUri = orjson::GetJsonValueByKey<std::string>(*it, "referenceUri", "");
+            const rapidjson::Value& rBodies = rEnvInfo["bodies"];
+            vInputToBodyInfoMapping.resize(rBodies.Size(),-1); // -1, no mapping by default
+            for(int iInputBodyIndex = 0; iInputBodyIndex < (int)rBodies.Size(); ++iInputBodyIndex) {
+                const rapidjson::Value& rBodyInfo = rBodies[iInputBodyIndex];
+                std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
+                std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
                 if (_IsExpandableReferenceUri(referenceUri)) {
                     std::set<std::string> circularReference;
-                    if (!_ExpandRapidJSON(envInfo, bodyId, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc)) {
+                    int insertIndex = _ExpandRapidJSON(envInfo, bodyId, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc);
+                    if( insertIndex < 0 ) {
                         RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s'", referenceUri);
                         if (_bMustResolveURI) {
                             throw OPENRAVE_EXCEPTION_FORMAT("failed to load referenced body from uri '%s'", referenceUri, ORE_InvalidURI);
                         }
                     }
+                    else {
+                        vInputToBodyInfoMapping.at(iInputBodyIndex) = insertIndex;
+                    }
+                }
+                else if( !referenceUri.empty() ) {
+                    if (_bMustResolveURI) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", bodyId%referenceUri, ORE_InvalidURI);
+                    }
+
+                    RAVELOG_WARN_FORMAT("env=%d, body '%s' has invalid referenceUri='%s'", _penv->GetId()%bodyId%referenceUri);
                 }
             }
         }
 
-        envInfo.DeserializeJSON(rEnvInfo, fUnitScale, _deserializeOptions);
+        envInfo.DeserializeJSONWithMapping(rEnvInfo, fUnitScale, _deserializeOptions, vInputToBodyInfoMapping);
         FOREACH(itBodyInfo, envInfo._vBodyInfos) {
             KinBody::KinBodyInfoPtr& pKinBodyInfo = *itBodyInfo;
             // ensure uri is set
@@ -345,11 +360,14 @@ protected:
         }
     }
 
+    /// \param originBodyId optional parameter to search into the current envInfo. If empty, then always create a new object
     /// \param rEnvInfo[in] used for resolving references pointing to the current environment
-    bool _ExpandRapidJSON(EnvironmentBase::EnvironmentBaseInfo& envInfo, const std::string& originBodyId, const rapidjson::Value& rEnvInfo, const std::string& referenceUri, std::set<std::string>& circularReference, dReal fUnitScale, rapidjson::Document::AllocatorType& alloc) {
+    ///
+    /// \return the index into envInfo._vBodyInfos where the entry was edited. If failed, then return -1
+    int _ExpandRapidJSON(EnvironmentBase::EnvironmentBaseInfo& envInfo, const std::string& originBodyId, const rapidjson::Value& rEnvInfo, const std::string& referenceUri, std::set<std::string>& circularReference, dReal fUnitScale, rapidjson::Document::AllocatorType& alloc) {
         if (circularReference.find(referenceUri) != circularReference.end()) {
             RAVELOG_ERROR_FORMAT("failed to load scene, circular reference to '%s' found on body %s", referenceUri%originBodyId);
-            return false;
+            return -1;
         }
         RAVELOG_DEBUG_FORMAT("adding '%s' for tracking circular reference, so far %d uris tracked", referenceUri%circularReference.size());
         circularReference.insert(referenceUri);
@@ -360,6 +378,8 @@ protected:
         // parse the uri
         std::string scheme, path, fragment;
         ParseURI(referenceUri, scheme, path, fragment);
+
+        int insertIndex = -1;
 
         // deal with uri that has just #originBodyId
         if(scheme.empty() && path.empty() && !fragment.empty()) {
@@ -377,13 +397,14 @@ protected:
             }
             if (!bFoundBody) {
                 RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body %s", referenceUri%originBodyId);
-                return false;
+                return -1;
             }
 
             std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rKinBodyInfo, "referenceUri", "");
             if (_IsExpandableReferenceUri(nextReferenceUri)) {
-                if (!_ExpandRapidJSON(envInfo, originBodyId, rEnvInfo, nextReferenceUri, circularReference, fUnitScale, alloc)) {
-                    return false;
+                insertIndex = _ExpandRapidJSON(envInfo, originBodyId, rEnvInfo, nextReferenceUri, circularReference, fUnitScale, alloc);
+                if( insertIndex < 0 ) {
+                    return insertIndex;
                 }
             }
         }
@@ -396,13 +417,13 @@ protected:
             std::string fullFilename = ResolveURI(scheme, path, GetOpenRAVESchemeAliases());
             if (fullFilename.empty()) {
                 RAVELOG_ERROR_FORMAT("env=%d, failed to resolve referenceUri '%s' in body %s", _penv->GetId()%referenceUri%originBodyId);
-                return false;
+                return -1;
             }
 
             boost::shared_ptr<const rapidjson::Document> referenceDoc = _GetDocumentFromFilename(fullFilename, alloc);
             if (!referenceDoc || !(*referenceDoc).HasMember("bodies")) {
                 RAVELOG_ERROR_FORMAT("referenced document cannot be loaded, or has no bodies: %s", fullFilename);
-                return false;
+                return -1;
             }
 
             bool bFoundBody = false;
@@ -416,47 +437,50 @@ protected:
             }
             if (!bFoundBody) {
                 RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body %s", referenceUri%originBodyId);
-                return false;
+                return -1;
             }
 
             std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rKinBodyInfo, "referenceUri", "");
             if (_IsExpandableReferenceUri(nextReferenceUri)) {
-                if (!_ExpandRapidJSON(envInfo, originBodyId, *referenceDoc, nextReferenceUri, circularReference, fUnitScale, alloc)) {
-                    return false;
+                insertIndex = _ExpandRapidJSON(envInfo, originBodyId, *referenceDoc, nextReferenceUri, circularReference, fUnitScale, alloc);
+                if( insertIndex < 0 ) {
+                    return insertIndex;
                 }
             }
         }
         else {
             RAVELOG_WARN_FORMAT("ignoring invalid referenceUri '%s' in body %s", referenceUri%originBodyId);
-            return false;
+            return -1;
         }
 
-        // search for originBodyId
-        bool bFoundMatch = false;
-        for(KinBody::KinBodyInfoPtr& pExistingBodyInfo : envInfo._vBodyInfos) {
-            if( pExistingBodyInfo->_id == originBodyId ) {
-                bool isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pExistingBodyInfo);
-                bool isNewRobot = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "isRobot", isExistingRobot);
+        // search for originBodyId if it isn't empty
+        if( insertIndex < 0 && !originBodyId.empty() ) {
+            for(int ibody = 0; ibody < (int)envInfo._vBodyInfos.size(); ++ibody) {
+                KinBody::KinBodyInfoPtr& pExistingBodyInfo = envInfo._vBodyInfos[ibody];
+                if( pExistingBodyInfo->_id == originBodyId ) {
+                    bool isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pExistingBodyInfo);
+                    bool isNewRobot = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "isRobot", isExistingRobot);
 
-                if( isExistingRobot && !isNewRobot ) {
-                    // new is not a robot, but previous was
-                    KinBody::KinBodyInfoPtr pNewKinBodyInfo(new KinBody::KinBodyInfo());
-                    *pNewKinBodyInfo= *((KinBody::KinBodyInfo*)pExistingBodyInfo.get());
-                    pExistingBodyInfo = pNewKinBodyInfo;
-                }
-                else if( !isExistingRobot && isNewRobot ) {
-                    RobotBase::RobotBaseInfoPtr pNewRobotInfo(new RobotBase::RobotBaseInfo());
-                    *((KinBody::KinBodyInfo*)pNewRobotInfo.get())  = *pExistingBodyInfo;
-                    pExistingBodyInfo = pNewRobotInfo;
-                }
+                    if( isExistingRobot && !isNewRobot ) {
+                        // new is not a robot, but previous was
+                        KinBody::KinBodyInfoPtr pNewKinBodyInfo(new KinBody::KinBodyInfo());
+                        *pNewKinBodyInfo= *((KinBody::KinBodyInfo*)pExistingBodyInfo.get());
+                        pExistingBodyInfo = pNewKinBodyInfo;
+                    }
+                    else if( !isExistingRobot && isNewRobot ) {
+                        RobotBase::RobotBaseInfoPtr pNewRobotInfo(new RobotBase::RobotBaseInfo());
+                        *((KinBody::KinBodyInfo*)pNewRobotInfo.get())  = *pExistingBodyInfo;
+                        pExistingBodyInfo = pNewRobotInfo;
+                    }
 
-                pExistingBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, _deserializeOptions);
-                bFoundMatch = true;
-                break;
+                    pExistingBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, _deserializeOptions);
+                    insertIndex = ibody;
+                    break;
+                }
             }
         }
 
-        if( bFoundMatch ) {
+        if( insertIndex >= 0 ) {
             RAVELOG_DEBUG_FORMAT("loaded referenced body from uri '%s' for body %s", referenceUri%originBodyId);
         }
         else {
@@ -470,10 +494,11 @@ protected:
             }
             pNewKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, _deserializeOptions);
             pNewKinBodyInfo->_id = originBodyId;
+            insertIndex = envInfo._vBodyInfos.size();
             envInfo._vBodyInfos.push_back(pNewKinBodyInfo);
             RAVELOG_DEBUG_FORMAT("env=%d, could not find existing body with id='%s', so inserting it", _penv->GetId()%originBodyId);
         }
-        return true;
+        return insertIndex;
     }
 
     inline dReal _GetUnitScale(const rapidjson::Value& doc)
@@ -619,21 +644,22 @@ protected:
             }
             std::set<std::string> circularReference;
             EnvironmentBase::EnvironmentBaseInfo envInfo;
-            if (!_ExpandRapidJSON(envInfo, "__connectedBody__", rEnvInfo, pConnected->_uri, circularReference, fUnitScale, alloc)) {
+            int insertIndex = _ExpandRapidJSON(envInfo, "__connectedBody__", rEnvInfo, pConnected->_uri, circularReference, fUnitScale, alloc);
+            if( insertIndex < 0 ) {
                 RAVELOG_ERROR_FORMAT("env=%d,failed to load connected body from uri '%s'", _penv->GetId()%pConnected->_uri);
                 if (_bMustResolveURI) {
                     throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri '%s'", pConnected->_uri, ORE_InvalidURI);
                 }
                 continue;
             }
-            if (envInfo._vBodyInfos.size() != 1) {
-                RAVELOG_ERROR_FORMAT("failed to load connected body from uri '%s', number of bodies loaded %d", pConnected->_uri%envInfo._vBodyInfos.size());
-                if (_bMustResolveURI) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri '%s', number of bodies loaded %d", pConnected->_uri%envInfo._vBodyInfos.size(), ORE_InvalidURI);
-                }
-                continue;
-            }
-            KinBody::KinBodyInfoPtr pKinBodyInfo = envInfo._vBodyInfos[0];
+//            if (envInfo._vBodyInfos.size() != 1) {
+//                RAVELOG_ERROR_FORMAT("failed to load connected body from uri '%s', number of bodies loaded %d", pConnected->_uri%envInfo._vBodyInfos.size());
+//                if (_bMustResolveURI) {
+//                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from uri '%s', number of bodies loaded %d", pConnected->_uri%envInfo._vBodyInfos.size(), ORE_InvalidURI);
+//                }
+//                continue;
+//            }
+            KinBody::KinBodyInfoPtr pKinBodyInfo = envInfo._vBodyInfos.at(insertIndex);
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
             if (!pRobotBaseInfo) {
                 RAVELOG_ERROR_FORMAT("failed to load connected body from uri '%s', referenced body not a robot", pConnected->_uri);
