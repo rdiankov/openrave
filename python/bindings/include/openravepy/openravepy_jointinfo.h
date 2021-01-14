@@ -302,6 +302,10 @@ public:
     object ComputeAABB() const;
     object ComputeAABBFromTransform(object otransform) const;
 
+    object ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const;
+    object ComputeAABBForGeometryGroup(const std::string& geomgroupname) const;
+    object ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, object otransform) const;
+
     object GetTransform() const;
     object GetTransformPose() const;
 
