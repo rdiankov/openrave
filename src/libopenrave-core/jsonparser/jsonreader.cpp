@@ -143,6 +143,10 @@ public:
     /// \brief Extrat all bodies and add them into environment
     bool ExtractAll(const rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& alloc)
     {
+        if( !rEnvInfo.IsObject() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("The environment data needs to be a valid dictionary. Currently it is '%s'", orjson::DumpJson(rEnvInfo), ORE_InvalidArguments);
+        }
+
         EnvironmentBase::EnvironmentBaseInfo envInfo;
         _penv->ExtractInfo(envInfo);
 
