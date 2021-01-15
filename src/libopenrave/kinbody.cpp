@@ -204,7 +204,10 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         FOREACHC(itDofValue, _dofValues) {
             rapidjson::Value dofValue;
             orjson::SetJsonValueByKey(dofValue, "jointName", itDofValue->first.first, allocator);
-            orjson::SetJsonValueByKey(dofValue, "jointAxis", itDofValue->first.second, allocator);
+            // don't save jointAxis unless not 0
+            if( itDofValue->first.second != 0 ) {
+                orjson::SetJsonValueByKey(dofValue, "jointAxis", itDofValue->first.second, allocator);
+            }
             orjson::SetJsonValueByKey(dofValue, "value", itDofValue->second, allocator);
             dofValues.PushBack(dofValue, allocator);
         }
@@ -344,7 +347,7 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
         _mReadableInterfaces[id] = pReadable;
         return;
     }
-    RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
+    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)

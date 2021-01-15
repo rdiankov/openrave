@@ -56,7 +56,12 @@ static bool _ReplaceFilenameSuffix(std::string& filename, const std::string& old
 static void OpenMsgPackDocument(const std::string& filename, rapidjson::Document& doc)
 {
     std::ifstream ifs(filename.c_str());
-    MsgPack::ParseMsgPack(doc, ifs);
+    try {
+        MsgPack::ParseMsgPack(doc, ifs);
+    }
+    catch(const std::exception& ex) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Failed to parse msgpack format for file '%s': %s", filename%ex.what(), ORE_Failed);
+    }
 }
 
 /// \brief open and cache a json document
@@ -142,6 +147,9 @@ public:
             else if (itatt->first == "mustresolveuri") {
                 _bMustResolveURI = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
+            else if (itatt->first == "mustresolveenvuri") {
+                _bMustResolveEnvironmentURI = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+            }
         }
         if (_vOpenRAVESchemeAliases.size() == 0) {
             _vOpenRAVESchemeAliases.push_back("openrave");
@@ -200,6 +208,13 @@ public:
             if( prReferenceEnvInfo->IsObject() ) {
                 _ProcessEnvInfoBodies(envInfo, *prReferenceEnvInfo, alloc, referenceUri, fullFilename, mapProcessedConnectedBodyUris);
             }
+        }
+        else if( !referenceUri.empty() ) {
+            if( _bMustResolveEnvironmentURI ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("Failed to load env referenceUri='%s' from file '%s'", referenceUri%_filename, ORE_InvalidURI);
+            }
+
+            RAVELOG_ERROR_FORMAT("Failed to load env referenceUri='%s' from file '%s'", referenceUri%_filename);
         }
 
         _ProcessEnvInfoBodies(envInfo, rEnvInfo, alloc, _uri, _filename, mapProcessedConnectedBodyUris);
@@ -471,6 +486,9 @@ protected:
             if (_IsExpandableReferenceUri(nextReferenceUri)) {
                 insertIndex = _ExpandRapidJSON(envInfo, originBodyId, rEnvInfo, nextReferenceUri, circularReference, fUnitScale, alloc, currentFilename);
                 // regardless of insertIndex, should fall through so can process rEnvInfo
+            }
+            else if( !nextReferenceUri.empty() ) {
+                RAVELOG_ERROR_FORMAT("nextReferenceUri='%s' is not a valid URI. Scope is '%s'", nextReferenceUri%currentFilename);
             }
         }
         // deal with uri with scheme:/path#fragment
@@ -770,7 +788,8 @@ protected:
     std::string _uri; ///< original uri used to open reader
     std::string _defaultSuffix; ///< defaultSuffix of the main document, either ".json" or ".msgpack"
     std::vector<std::string> _vOpenRAVESchemeAliases;
-    bool _bMustResolveURI = false; ///< if true, throw exception if uri does not resolve
+    bool _bMustResolveURI = false; ///< if true, throw exception if object uri does not resolve
+    bool _bMustResolveEnvironmentURI = false; ///< if true, throw exception if environment uri does not resolve
     bool _bIgnoreInvalidBodies = false; ///< if true, ignores any invalid bodies
 
     std::map<std::string, boost::shared_ptr<const rapidjson::Document> > _rapidJSONDocuments; ///< cache for opened rapidjson Documents
