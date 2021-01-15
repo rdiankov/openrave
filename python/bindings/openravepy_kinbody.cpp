@@ -3105,7 +3105,16 @@ void PyKinBody::SetDOFVelocities(object odofvelocities, object olinearvel, objec
 
 void PyKinBody::SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel)
 {
-    _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    try {
+#endif
+        _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    }
+    catch (const py::error_already_set& e) {
+        this->SetDOFVelocities(odofvelocities, py::extract<uint32_t>(olinearvel), oangularvel);
+    }
+#endif
 }
 
 void PyKinBody::SetDOFVelocities(object odofvelocities)
