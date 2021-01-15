@@ -1062,12 +1062,14 @@ void RobotBase::GetConnectedBodyActiveStates(std::vector<int8_t>& activestates) 
     }
 }
 
-void RobotBase::SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates)
+bool RobotBase::SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates)
 {
     OPENRAVE_ASSERT_OP(activestates.size(),==,_vecConnectedBodies.size());
+    bool bChanged = false;
     for(size_t iconnectedbody = 0; iconnectedbody < _vecConnectedBodies.size(); ++iconnectedbody) {
-        _vecConnectedBodies[iconnectedbody]->SetActive(activestates[iconnectedbody]);
+        bChanged |= _vecConnectedBodies[iconnectedbody]->SetActive(activestates[iconnectedbody]);
     }
+    return bChanged;
 }
 
 } // end namespace OpenRAVE
