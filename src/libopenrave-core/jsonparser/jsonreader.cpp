@@ -470,9 +470,7 @@ protected:
             std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rKinBodyInfo, "referenceUri", "");
             if (_IsExpandableReferenceUri(nextReferenceUri)) {
                 insertIndex = _ExpandRapidJSON(envInfo, originBodyId, rEnvInfo, nextReferenceUri, circularReference, fUnitScale, alloc, currentFilename);
-                if( insertIndex < 0 ) {
-                    return insertIndex;
-                }
+                // regardless of insertIndex, should fall through so can process rEnvInfo
             }
         }
         // deal with uri with scheme:/path#fragment
@@ -517,11 +515,14 @@ protected:
             }
 
             std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rKinBodyInfo, "referenceUri", "");
+
             if (_IsExpandableReferenceUri(nextReferenceUri)) {
+                RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', and now processing its referenceUri='%s'", _penv->GetId()%fullFilename%fragment%nextReferenceUri);
                 insertIndex = _ExpandRapidJSON(envInfo, originBodyId, *referenceDoc, nextReferenceUri, circularReference, fUnitScale, alloc, fullFilename);
-                if( insertIndex < 0 ) {
-                    return insertIndex;
-                }
+                // regardless of insertIndex, should fall through so can process rEnvInfo
+            }
+            else {
+                RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s'", _penv->GetId()%fullFilename%fragment);
             }
 
             if( insertIndex >= 0 ) {
@@ -731,7 +732,7 @@ protected:
             EnvironmentBase::EnvironmentBaseInfo envInfo;
             int insertIndex = _ExpandRapidJSON(envInfo, "__connectedBody__", rEnvInfo, pConnected->_uri, circularReference, fUnitScale, alloc, _filename);
             if( insertIndex < 0 ) {
-                RAVELOG_ERROR_FORMAT("env=%d,failed to load connected body from uri '%s'", _penv->GetId()%pConnected->_uri);
+                RAVELOG_ERROR_FORMAT("env=%d, failed to load connected body from uri '%s'", _penv->GetId()%pConnected->_uri);
                 if (_bMustResolveURI) {
                     throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from referenceUri='%s'", pConnected->_uri, ORE_InvalidURI);
                 }
@@ -747,7 +748,7 @@ protected:
             KinBody::KinBodyInfoPtr pKinBodyInfo = envInfo._vBodyInfos.at(insertIndex);
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
             if (!pRobotBaseInfo) {
-                RAVELOG_ERROR_FORMAT("failed to load connected body from uri '%s', referenced body not a robot", pConnected->_uri);
+                RAVELOG_ERROR_FORMAT("env=%d, failed to load connected body from uri '%s', referenced body not a robot", _penv->GetId()%pConnected->_uri);
                 if (_bMustResolveURI) {
                     throw OPENRAVE_EXCEPTION_FORMAT("failed to load connected body from referenceUri='%s', referenced body not a robot", pConnected->_uri, ORE_InvalidURI);
                 }
