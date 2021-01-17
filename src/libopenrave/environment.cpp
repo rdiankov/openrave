@@ -155,7 +155,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
             // and for the partial update case, the id should be non-empty
 
             bool isRobot = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "isRobot", isExistingRobot);
-            RAVELOG_VERBOSE_FORMAT("body '%s', isRobot=%d", id%isRobot);
+            RAVELOG_VERBOSE_FORMAT("body id='%s', isRobot=%d", id%isRobot);
             if (isRobot) {
                 if (itExistingBodyInfo == _vBodyInfos.end()) {
                     // in case no such id
@@ -169,7 +169,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                 }
                 // in case same id exists before
                 if (isDeleted) {
-                    RAVELOG_VERBOSE_FORMAT("deleted robot: %s", id);
+                    RAVELOG_VERBOSE_FORMAT("deleted robot id ='%s'", id);
                     _vBodyInfos.erase(itExistingBodyInfo);
                     continue;
                 }
@@ -181,7 +181,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                     pRobotBaseInfo.reset(new RobotBase::RobotBaseInfo());
                     *itExistingBodyInfo = pRobotBaseInfo;
                     *((KinBody::KinBodyInfo*)pRobotBaseInfo.get()) = *pKinBodyInfo;
-                    RAVELOG_VERBOSE_FORMAT("replaced body as a robot: %s", id);
+                    RAVELOG_VERBOSE_FORMAT("replaced body as a robot id='%s'", id);
                 }
                 pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                 pRobotBaseInfo->_id = id;
@@ -195,12 +195,13 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                         pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                         pKinBodyInfo->_id = id;
                         _vBodyInfos.push_back(pKinBodyInfo);
+                        RAVELOG_VERBOSE_FORMAT("created new body id='%s'", id);
                     }
                     continue;
                 }
                 // in case same id exists before
                 if (isDeleted) {
-                    RAVELOG_VERBOSE_FORMAT("deleted body: %s", id);
+                    RAVELOG_VERBOSE_FORMAT("deleted body id='%s'", id);
                     _vBodyInfos.erase(itExistingBodyInfo);
                     continue;
                 }
@@ -212,7 +213,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                     pKinBodyInfo.reset(new KinBody::KinBodyInfo());
                     *itExistingBodyInfo = pKinBodyInfo;
                     *pKinBodyInfo = *((KinBody::KinBodyInfo*)pRobotBaseInfo.get());
-                    RAVELOG_VERBOSE_FORMAT("replaced robot as a body: %s", id);
+                    RAVELOG_VERBOSE_FORMAT("replaced robot as a body id='%s'", id);
                 }
                 pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                 pKinBodyInfo->_id = id;

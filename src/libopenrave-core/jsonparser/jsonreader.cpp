@@ -255,6 +255,28 @@ public:
             }
         }
 
+        // clean up any invalid connected bodies
+        for(int iBody = 0; iBody < (int) envInfo._vBodyInfos.size(); ++iBody) {
+            RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(envInfo._vBodyInfos[iBody]);
+            if( !!pRobotBaseInfo ) {
+                std::vector<RobotBase::ConnectedBodyInfoPtr>::iterator it = pRobotBaseInfo->_vConnectedBodyInfos.begin();
+                while(it != pRobotBaseInfo->_vConnectedBodyInfos.end()) {
+                    RobotBase::ConnectedBodyInfoPtr& pconnected = *it;
+                    if( pconnected->_linkname.empty() ) {
+                        RAVELOG_WARN_FORMAT("env=%d erasing connected body id='%s' since it has empty linkname", _penv->GetId()%pconnected->_id);
+                        it = pRobotBaseInfo->_vConnectedBodyInfos.erase(it);
+                    }
+                    else if( pconnected->_name.empty() ) {
+                        RAVELOG_WARN_FORMAT("env=%d erasing connected body id='%s' since it has empty name", _penv->GetId()%pconnected->_id);
+                        it = pRobotBaseInfo->_vConnectedBodyInfos.erase(it);
+                    }
+                    else {
+                        ++it;
+                    }
+                }
+            }
+        }
+
         std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
         _penv->UpdateFromInfo(envInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies);
 
@@ -601,13 +623,15 @@ protected:
                 RAVELOG_DEBUG_FORMAT("env=%d, kinbody id='%s' has empty name, coming from file '%s', perhaps it will get overwritten later. Data is %s. Scope is '%s'", _penv->GetId()%originBodyId%currentFilename%orjson::DumpJson(rKinBodyInfo)%currentFilename);
             }
 
-            // try matching with names
-            for(int ibody = 0; ibody < (int)envInfo._vBodyInfos.size(); ++ibody) {
-                KinBody::KinBodyInfoPtr& pExistingBodyInfo = envInfo._vBodyInfos[ibody];
-                if( pExistingBodyInfo->_name == pNewKinBodyInfo->_name ) {
-                    envInfo._vBodyInfos[ibody] = pNewKinBodyInfo;
-                    insertIndex = ibody;
-                    break;
+            if( originBodyId.empty() ) {
+                // try matching with names
+                for(int ibody = 0; ibody < (int)envInfo._vBodyInfos.size(); ++ibody) {
+                    KinBody::KinBodyInfoPtr& pExistingBodyInfo = envInfo._vBodyInfos[ibody];
+                    if( pExistingBodyInfo->_name == pNewKinBodyInfo->_name ) {
+                        envInfo._vBodyInfos[ibody] = pNewKinBodyInfo;
+                        insertIndex = ibody;
+                        break;
+                    }
                 }
             }
 
