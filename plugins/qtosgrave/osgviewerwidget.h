@@ -161,7 +161,7 @@ public:
     void SetCurrentCameraManipulator(osgGA::CameraManipulator* manipulator);
     void SetCameraDistanceToFocus(double distance);
     double GetCameraDistanceToFocus();
-
+    void SetCameraCenter(osg::Vec3d);
     void RestoreDefaultManipulator();
     bool IsUsingDefaultCameraManipulator();
     osg::ref_ptr<osgGA::TrackballManipulator> GetDefaultCameraManipulator();
