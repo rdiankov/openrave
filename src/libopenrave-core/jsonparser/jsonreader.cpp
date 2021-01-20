@@ -237,18 +237,19 @@ public:
 
         // have to remove any duplicate names, prioritize ones that have higher index
         for(int iBody = 0; iBody+1 < (int) envInfo._vBodyInfos.size(); ++iBody) {
-            const std::string& bodyname = envInfo._vBodyInfos[iBody]->_name;
-
             bool bFoundLast = false;
             int iTest = envInfo._vBodyInfos.size()-1;
             while(iTest > iBody) {
+                const std::string& bodyname = envInfo._vBodyInfos[iBody]->_name;
                 if( envInfo._vBodyInfos[iTest]->_name == bodyname ) {
                     if( !bFoundLast ) {
                         envInfo._vBodyInfos[iBody] = envInfo._vBodyInfos[iTest];
+                        RAVELOG_WARN_FORMAT("env=%d, remove redundant entry %d and replace with %d with body name '%s'", _penv->GetId()%iBody%iTest%bodyname);
                         bFoundLast = true;
                     }
-
-                    RAVELOG_WARN_FORMAT("env=%d, remove redundant entry %d with body name '%s'", _penv->GetId()%iTest%bodyname);
+                    else {
+                        RAVELOG_WARN_FORMAT("env=%d, remove redundant entry %d with body name '%s'", _penv->GetId()%iTest%bodyname);
+                    }
                     envInfo._vBodyInfos.erase(envInfo._vBodyInfos.begin()+iTest);
                 }
                 --iTest;
