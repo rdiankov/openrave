@@ -589,7 +589,7 @@ public:
                 // create in this thread since viewer thread is already waiting on another viewer
                 pviewer = RaveCreateViewer(penv, strviewer);
                 if( !!pviewer ) {
-                    penv->AddViewer(pviewer);
+                    penv->Add(pviewer, IAM_AllowRenaming, std::string());
                     // TODO uncomment once Show posts to queue
                     if( bShowViewer ) {
                         pviewer->Show(1);
@@ -721,7 +721,7 @@ protected:
             }
 
             FOREACH(itaddviewer, listtempviewers) {
-                (*itaddviewer)->GetEnv()->AddViewer(*itaddviewer);
+                (*itaddviewer)->GetEnv()->Add(*itaddviewer, IAM_AllowRenaming, std::string());
             }
 
             ViewerBasePtr puseviewer;
@@ -969,7 +969,8 @@ EnvironmentBase::EnvironmentBaseInfoPtr PyEnvironmentBase::PyEnvironmentBaseInfo
     if (!_name.is_none()) {
         pInfo->_name = py::extract<std::string>(_name);
     }
-    for(size_t i=0; i < py::len(_keywords); i++){
+    size_t numkeywords = (size_t)py::len(_keywords);
+    for(size_t i=0; i < numkeywords; i++) {
         pInfo->_keywords.push_back(py::extract<std::string>(_keywords[i]));
     }
     if (!_description.is_none()) {
@@ -1735,35 +1736,49 @@ object PyEnvironmentBase::ReadTrimeshData(const std::string& data, const std::st
     return toPyTriMesh(*ptrimesh);
 }
 
-void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs) {
-    _penv->Add(pinterface->GetInterfaceBase(), bAnonymous, cmdargs);
+void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, py::object oAddMode, const std::string& cmdargs)
+{
+    InterfaceAddMode addMode = IAM_StrictNameChecking;
+    if( !IS_PYTHONOBJECT_NONE(oAddMode) ) {
+        if (PyBool_Check(oAddMode.ptr())) {
+            addMode = py::extract<bool>(oAddMode) ? IAM_AllowRenaming : IAM_StrictNameChecking;
+            RAVELOG_WARN("Trying to use 'anonymous' flag when adding object via Add");
+        }
+        else {
+            addMode = py::extract<InterfaceAddMode>(oAddMode);
+        }
+    }
+    _penv->Add(pinterface->GetInterfaceBase(), addMode, cmdargs);
 }
 
 void PyEnvironmentBase::AddKinBody(PyKinBodyPtr pbody) {
-    CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody));
+    CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody), IAM_StrictNameChecking, std::string());
 }
 void PyEnvironmentBase::AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) {
-    CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody),bAnonymous);
+    RAVELOG_WARN("Calling AddKinBody with bAnonymous, should switch to IAM_X signals");
+    CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody),bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking);
 }
 void PyEnvironmentBase::AddRobot(PyRobotBasePtr robot) {
     CHECK_POINTER(robot);
-    _penv->Add(openravepy::GetRobot(robot));
+    _penv->Add(openravepy::GetRobot(robot), IAM_StrictNameChecking);
 }
 void PyEnvironmentBase::AddRobot(PyRobotBasePtr robot, bool bAnonymous) {
+    RAVELOG_WARN("Calling AddRobot with bAnonymous, should switch to IAM_X signals");
     CHECK_POINTER(robot);
-    _penv->Add(openravepy::GetRobot(robot),bAnonymous);
+    _penv->Add(openravepy::GetRobot(robot), bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking);
 }
 void PyEnvironmentBase::AddSensor(PySensorBasePtr sensor) {
     CHECK_POINTER(sensor);
-    _penv->Add(openravepy::GetSensor(sensor));
+    _penv->Add(openravepy::GetSensor(sensor), IAM_StrictNameChecking);
 }
 void PyEnvironmentBase::AddSensor(PySensorBasePtr sensor, bool bAnonymous) {
+    RAVELOG_WARN("Calling AddSensor with bAnonymous, should switch to IAM_X signals");
     CHECK_POINTER(sensor);
-    _penv->Add(openravepy::GetSensor(sensor),bAnonymous);
+    _penv->Add(openravepy::GetSensor(sensor),bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking);
 }
 void PyEnvironmentBase::AddViewer(PyViewerBasePtr viewer) {
     CHECK_POINTER(viewer);
-    _penv->Add(openravepy::GetViewer(viewer));
+    _penv->Add(openravepy::GetViewer(viewer), IAM_AllowRenaming);
 }
 
 bool PyEnvironmentBase::RemoveKinBody(PyKinBodyPtr pbody) {
@@ -2976,14 +2991,14 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("ReadTrimeshData",readtrimeshdata1, PY_ARGS("data", "formathint") DOXY_FN(EnvironmentBase,ReadTrimeshData))
                      .def("ReadTrimeshData",readtrimeshdata2, PY_ARGS("data","formathint","atts") DOXY_FN(EnvironmentBase,ReadTrimeshData))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                     .def("Add", &PyEnvironmentBase::Add,
+            .def("Add", &PyEnvironmentBase::Add,
                           "interface"_a,
-                          "anonymous"_a = false,
+                          "addMode"_a = py::none_(),
                           "cmdargs"_a = "",
                           DOXY_FN(EnvironmentBase, Add)
                           )
 #else
-                     .def("Add", &PyEnvironmentBase::Add, Add_overloads(PY_ARGS("interface","anonymous","cmdargs") DOXY_FN(EnvironmentBase,Add)))
+            .def("Add", &PyEnvironmentBase::Add, Add_overloads(PY_ARGS("interface","addMode","cmdargs") DOXY_FN(EnvironmentBase,Add)))
 #endif
                      .def("AddKinBody",addkinbody1, PY_ARGS("body") DOXY_FN(EnvironmentBase,AddKinBody))
                      .def("AddKinBody",addkinbody2, PY_ARGS("body","anonymous") DOXY_FN(EnvironmentBase,AddKinBody))

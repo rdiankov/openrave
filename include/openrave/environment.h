@@ -26,6 +26,15 @@ namespace OpenRAVE {
 
 typedef boost::recursive_try_mutex EnvironmentMutex;
 
+/// \brief used when adding interfaces to the environment
+enum InterfaceAddMode
+{
+    IAM_AllowRenaming = 0, ///< rename the name and id. if true and there exists a body/robot with the same name, will make body's name and id unique
+    IAM_StrictNameChecking = 1, ///< name is strict, will throw exception if it conflicts. id is not strict
+    IAM_StrictIdChecking = 2, ///< id is strict, will throw exception if it conflicts. id is not strict
+    IAM_StrictNameIdChecking = 3, ///< name and id are both strict, will throw exception if it conflicts.
+};
+
 /** \brief Maintains a world state, which serves as the gateway to all functions offered through %OpenRAVE. See \ref arch_environment.
  */
 class OPENRAVE_API EnvironmentBase : public boost::enable_shared_from_this<EnvironmentBase>
@@ -392,28 +401,13 @@ public:
         Depending on the type of interface, the addition behaves differently. For bodies/robots, will add them to visual/geometric environment. For modules, will call their main() method and add them officially. For viewers, will attach a viewer to the environment and start sending it data.
         For interfaces that don't make sense to add, will throw an exception.
         \param[in] pinterface the pointer to an initialized interface
-        \param[in] bAnonymous if true and there exists a body/robot with the same name, will make body's name unique
+        \param[in] addMode One of IAM_X
         \param[in] cmdargs The command-line arguments for the module.
         \throw openrave_exception Throw if interface is invalid or already added
      */
-    virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="") = 0;
+    virtual void Add(InterfaceBasePtr pinterface, InterfaceAddMode addMode, const std::string& cmdargs=std::string()) = 0;
 
-    /// \deprecated (12/04/18)
-    virtual void AddKinBody(KinBodyPtr body, bool bAnonymous=false) RAVE_DEPRECATED {
-        RAVELOG_WARN("EnvironmentBase::AddKinBody deprecated, please use EnvironmentBase::Add\n");
-        Add(body,bAnonymous);
-    }
-    /// \deprecated (12/04/18)
-    virtual void AddRobot(RobotBasePtr robot, bool bAnonymous=false) RAVE_DEPRECATED {
-        RAVELOG_WARN("EnvironmentBase::AddRobot deprecated, please use EnvironmentBase::Add\n");
-        Add(robot,bAnonymous);
-    }
-
-    /// \deprecated (12/04/18)
-    virtual void AddSensor(SensorBasePtr sensor, bool bAnonymous=false) RAVE_DEPRECATED {
-        RAVELOG_WARN("EnvironmentBase::AddSensor deprecated, please use EnvironmentBase::Add\n");
-        Add(sensor,bAnonymous);
-    }
+    virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs=std::string()) RAVE_DEPRECATED;
 
     /// \brief bodycallback(body, action)
     ///
@@ -573,17 +567,6 @@ public:
     /// \deprecated (10/11/05)
     typedef OpenRAVE::GraphHandlePtr GraphHandlePtr RAVE_DEPRECATED;
 
-    /// \deprecated (12/04/18)
-    virtual void AddViewer(ViewerBasePtr pviewer) {
-        Add(pviewer);
-    }
-
-    /// \deprecated (11/06/13) see AddViewer
-    virtual bool AttachViewer(ViewerBasePtr pnewviewer) RAVE_DEPRECATED {
-        Add(pnewviewer);
-        return true;
-    }
-
     /// \brief Return a viewer with a particular name.
     ///
     /// When no name is specified, the first loaded viewer is returned.
@@ -715,7 +698,7 @@ public:
         void SerializeJSON(rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
 
         void DeserializeJSON(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options) override;
-        
+
         /// \param vInputToBodyInfoMapping maps indices into rEnvInfo["bodies"] into indices of _vBodyInfos: rEnvInfo["bodies"][i] -> _vBodyInfos[vInputToBodyInfoMapping[i]]. This forces certain _vBodyInfos to get updated with specific input. Use -1 for no mapping
         void DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping);
 

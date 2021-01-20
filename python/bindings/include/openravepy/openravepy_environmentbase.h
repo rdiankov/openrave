@@ -151,7 +151,7 @@ public:
     object ReadTrimeshData(const std::string& data, const std::string& formathint);
     object ReadTrimeshData(const std::string& data, const std::string& formathint, object odictatts);
 
-    void Add(PyInterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="");
+    void Add(PyInterfaceBasePtr pinterface, py::object addMode=py::none_(), const std::string& cmdargs="");
 
     void AddKinBody(PyKinBodyPtr pbody);
     void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous);

@@ -2144,6 +2144,9 @@ private:
     /// \brief Set the name of the body, notifies the environment and checks for uniqueness.
     virtual void SetName(const std::string& name);
 
+    /// \brief Set the id of the body, notifies the environment and checks for uniqueness.
+    virtual void SetId(const std::string& newid);
+
     /// \brief Unique name of the body.
     virtual const std::string& GetId() const {
         return _id;

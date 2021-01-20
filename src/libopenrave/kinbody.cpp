@@ -698,6 +698,15 @@ void KinBody::SetName(const std::string& newname)
     }
 }
 
+/// \brief Set the id of the body, notifies the environment and checks for uniqueness.
+void KinBody::SetId(const std::string& newid)
+{
+    OPENRAVE_ASSERT_OP(newid.size(), >, 0);
+    if( _id != newid ) {
+        _id = newid;
+    }
+}
+
 void KinBody::SetDOFTorques(const std::vector<dReal>& torques, bool bAdd)
 {
     OPENRAVE_ASSERT_OP_FORMAT((int)torques.size(), >=, GetDOF(), "not enough values %d<%d", torques.size()%GetDOF(),ORE_InvalidArguments);

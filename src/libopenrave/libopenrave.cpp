@@ -1965,6 +1965,10 @@ const char* RaveGetErrorCodeString(OpenRAVEErrorCode error)
     case ORE_NotInitialized: return "NotInitialized";
     case ORE_InvalidState: return "InvalidState";
     case ORE_Timeout: return "Timeout";
+    case ORE_InvalidURI: return "InvalidURI";
+    case ORE_BodyNameConflict: return "BodyNameConflict";
+    case ORE_SensorNameConflict: return "SensorNameConflict";
+    case ORE_BodyIdConflict: return "BodyIdConflict";
     }
     // should throw an exception?
     return "";
@@ -2499,6 +2503,11 @@ EnvironmentBase::~EnvironmentBase()
     RaveGlobal::instance()->UnregisterEnvironment(this);
 }
 
+void EnvironmentBase::Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs)
+{
+    RAVELOG_WARN("Cannot Add with bAnonymous anymore, should switch to the new InterfaceAddMode");
+    Add(pinterface, bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking, cmdargs);
+}
 
 bool SensorBase::SensorData::serialize(std::ostream& O) const
 {

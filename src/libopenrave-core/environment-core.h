@@ -511,7 +511,7 @@ public:
         else if( _IsXFile(filename) ) {
             RobotBasePtr robot;
             if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
-                _AddRobot(robot, true);
+                _AddRobot(robot, IAM_AllowRenaming);
                 UpdatePublishedBodies();
                 return true;
             }
@@ -519,7 +519,7 @@ public:
         else if( !_IsOpenRAVEFile(filename) && _IsRigidModelFile(filename) ) {
             KinBodyPtr pbody = ReadKinBodyURI(KinBodyPtr(),filename,atts);
             if( !!pbody ) {
-                _AddKinBody(pbody,true);
+                _AddKinBody(pbody,IAM_AllowRenaming);
                 UpdatePublishedBodies();
                 return true;
             }
@@ -806,38 +806,50 @@ public:
         }
     }
 
-    virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs)
+    virtual void Add(InterfaceBasePtr pinterface, InterfaceAddMode addMode, const std::string& cmdargs)
     {
         CHECK_INTERFACE(pinterface);
         switch(pinterface->GetInterfaceType()) {
-        case PT_Robot: _AddRobot(RaveInterfaceCast<RobotBase>(pinterface),bAnonymous); break;
-        case PT_KinBody: _AddKinBody(RaveInterfaceCast<KinBody>(pinterface),bAnonymous); break;
+        case PT_Robot: _AddRobot(RaveInterfaceCast<RobotBase>(pinterface),addMode); break;
+        case PT_KinBody: _AddKinBody(RaveInterfaceCast<KinBody>(pinterface),addMode); break;
         case PT_Module: {
             int ret = AddModule(RaveInterfaceCast<ModuleBase>(pinterface),cmdargs);
             OPENRAVE_ASSERT_OP_FORMAT(ret,==,0,"module %s failed with args: %s",pinterface->GetXMLId()%cmdargs,ORE_InvalidArguments);
             break;
         }
         case PT_Viewer: _AddViewer(RaveInterfaceCast<ViewerBase>(pinterface)); break;
-        case PT_Sensor: _AddSensor(RaveInterfaceCast<SensorBase>(pinterface),bAnonymous); break;
+        case PT_Sensor: _AddSensor(RaveInterfaceCast<SensorBase>(pinterface),addMode); break;
         default:
             throw OPENRAVE_EXCEPTION_FORMAT(_("Interface %d cannot be added to the environment"),pinterface->GetInterfaceType(),ORE_InvalidArguments);
         }
     }
 
-    virtual void _AddKinBody(KinBodyPtr pbody, bool bAnonymous)
+    virtual void _AddKinBody(KinBodyPtr pbody, InterfaceAddMode addMode)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
         if( !utils::IsValidName(pbody->GetName()) ) {
             throw openrave_exception(str(boost::format(_("kinbody name: \"%s\" is not valid"))%pbody->GetName()));
         }
-        if( !_CheckUniqueName(KinBodyConstPtr(pbody),!bAnonymous) ) {
+
+        if( !_CheckUniqueName(KinBodyConstPtr(pbody), !!(addMode & IAM_StrictNameChecking)) ) {
             // continue to add random numbers until a unique name is found
             string oldname=pbody->GetName(),newname;
             for(int i = 0;; ++i) {
                 newname = str(boost::format("%s%d")%oldname%i);
                 pbody->SetName(newname);
                 if( utils::IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(pbody), false) ) {
+                    break;
+                }
+            }
+        }
+        if( !_CheckUniqueId(KinBodyConstPtr(pbody), !!(addMode & IAM_StrictIdChecking)) ) {
+            // continue to add random numbers until a unique name is found
+            string oldname=pbody->GetId(),newname;
+            for(int i = 0;; ++i) {
+                newname = str(boost::format("%s%d")%oldname%i);
+                pbody->SetId(newname);
+                if( utils::IsValidName(newname) && _CheckUniqueId(KinBodyConstPtr(pbody), false) ) {
                     break;
                 }
             }
@@ -860,7 +872,7 @@ public:
         _CallBodyCallbacks(pbody, 1);
     }
 
-    virtual void _AddRobot(RobotBasePtr robot, bool bAnonymous)
+    virtual void _AddRobot(RobotBasePtr robot, InterfaceAddMode addMode)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(robot);
@@ -870,13 +882,25 @@ public:
         if( !utils::IsValidName(robot->GetName()) ) {
             throw openrave_exception(str(boost::format(_("kinbody name: \"%s\" is not valid"))%robot->GetName()));
         }
-        if( !_CheckUniqueName(KinBodyConstPtr(robot),!bAnonymous) ) {
+
+        if( !_CheckUniqueName(KinBodyConstPtr(robot), !!(addMode & IAM_StrictNameChecking)) ) {
             // continue to add random numbers until a unique name is found
             string oldname=robot->GetName(),newname;
             for(int i = 0;; ++i) {
                 newname = str(boost::format("%s%d")%oldname%i);
                 robot->SetName(newname);
                 if( utils::IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(robot),false) ) {
+                    break;
+                }
+            }
+        }
+        if( !_CheckUniqueId(KinBodyConstPtr(robot), !!(addMode & IAM_StrictIdChecking)) ) {
+            // continue to add random numbers until a unique name is found
+            string oldname=robot->GetId(),newname;
+            for(int i = 0;; ++i) {
+                newname = str(boost::format("%s%d")%oldname%i);
+                robot->SetId(newname);
+                if( utils::IsValidName(newname) && _CheckUniqueId(KinBodyConstPtr(robot),false) ) {
                     break;
                 }
             }
@@ -900,14 +924,15 @@ public:
         _CallBodyCallbacks(robot, 1);
     }
 
-    virtual void _AddSensor(SensorBasePtr psensor, bool bAnonymous)
+    virtual void _AddSensor(SensorBasePtr psensor, InterfaceAddMode addMode)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(psensor);
         if( !utils::IsValidName(psensor->GetName()) ) {
             throw openrave_exception(str(boost::format(_("sensor name: \"%s\" is not valid"))%psensor->GetName()));
         }
-        if( !_CheckUniqueName(SensorBaseConstPtr(psensor),!bAnonymous) ) {
+
+        if( !_CheckUniqueName(SensorBaseConstPtr(psensor), !!(addMode & IAM_StrictNameChecking)) ) {
             // continue to add random numbers until a unique name is found
             string oldname=psensor->GetName(),newname;
             for(int i = 0;; ++i) {
@@ -918,6 +943,7 @@ public:
                 }
             }
         }
+        // no id for sensor right now
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             _listSensors.push_back(psensor);
@@ -2605,7 +2631,7 @@ public:
                         }
                         pInitBody = pRobot;
                     }
-                    _AddRobot(pRobot, false); // internally locks _mutexInterfaces, name guarnateed to be unique
+                    _AddRobot(pRobot, IAM_StrictNameChecking); // internally locks _mutexInterfaces, name guarnateed to be unique
                 }
                 else {
                     if (updateFromInfoResult == UFIR_RequireRemoveFromEnvironment) {
@@ -2617,7 +2643,7 @@ public:
                         pMatchExistingBody->InitFromKinBodyInfo(*pKinBodyInfo);
                         pInitBody = pMatchExistingBody;
                     }
-                    _AddKinBody(pMatchExistingBody, false); // internally locks _mutexInterfaces, name guarnateed to be unique
+                    _AddKinBody(pMatchExistingBody, IAM_StrictNameChecking); // internally locks _mutexInterfaces, name guarnateed to be unique
                 }
             }
             else {
@@ -2637,7 +2663,7 @@ public:
                         pRobot->InitFromKinBodyInfo(*pKinBodyInfo);
                     }
                     pInitBody = pRobot;
-                    _AddRobot(pRobot, true);
+                    _AddRobot(pRobot, IAM_AllowRenaming);
                     pNewBody = RaveInterfaceCast<KinBody>(pRobot);
                 }
                 else {
@@ -2648,7 +2674,7 @@ public:
                     }
                     pNewBody->InitFromKinBodyInfo(*pKinBodyInfo);
                     pInitBody = pNewBody;
-                    _AddKinBody(pNewBody, true);
+                    _AddKinBody(pNewBody, IAM_AllowRenaming);
                 }
                 vBodies.insert(vBodies.begin()+bodyIndex, pNewBody);
                 vCreatedBodies.push_back(pNewBody);
@@ -3131,7 +3157,7 @@ protected:
                         pviewer = RaveCreateViewer(shared_from_this(),(*itviewer2)->GetXMLId());
                     }
                     pviewer->Clone(*itviewer2,options);
-                    AddViewer(pviewer);
+                    Add(pviewer, IAM_AllowRenaming, std::string());
                 }
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR_FORMAT("failed to clone viewer %s: %s", (*itviewer2)->GetName()%ex.what());
@@ -3160,19 +3186,33 @@ protected:
         FOREACHC(itbody,_vecbodies) {
             if(( *itbody != pbody) &&( (*itbody)->GetName() == pbody->GetName()) ) {
                 if( bDoThrow ) {
-                    throw openrave_exception(str(boost::format(_("env=%d, body %s does not have unique name"))%GetId()%pbody->GetName()));
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body %s does not have unique name"), GetId()%pbody->GetName(), ORE_BodyNameConflict);
                 }
                 return false;
             }
         }
         return true;
     }
+
+    virtual bool _CheckUniqueId(KinBodyConstPtr pbody, bool bDoThrow=false) const
+    {
+        FOREACHC(itbody,_vecbodies) {
+            if(( *itbody != pbody) &&( (*itbody)->GetId() == pbody->GetId()) ) {
+                if( bDoThrow ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body '%s' does not have unique id '%s'"), GetId()%pbody->GetName()%pbody->GetId(), ORE_BodyIdConflict);
+                }
+                return false;
+            }
+        }
+        return true;
+    }
+    
     virtual bool _CheckUniqueName(SensorBaseConstPtr psensor, bool bDoThrow=false) const
     {
         FOREACHC(itsensor,_listSensors) {
             if(( *itsensor != psensor) &&( (*itsensor)->GetName() == psensor->GetName()) ) {
                 if( bDoThrow ) {
-                    throw openrave_exception(str(boost::format(_("env=%d, sensor %s does not have unique name"))%GetId()%psensor->GetName()));
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, sensor %s does not have unique name"), GetId()%psensor->GetName(), ORE_SensorNameConflict);
                 }
                 return false;
             }
@@ -3184,7 +3224,7 @@ protected:
         FOREACHC(itviewer,_listViewers) {
             if(( *itviewer != pviewer) &&( (*itviewer)->GetName() == pviewer->GetName()) ) {
                 if( bDoThrow ) {
-                    throw openrave_exception(str(boost::format(_("env=%d, viewer '%s' does not have unique name"))%GetId()%pviewer->GetName()));
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, viewer '%s' does not have unique name"), GetId()%pviewer->GetName(), ORE_BodyNameConflict);
                 }
                 return false;
             }

@@ -1385,6 +1385,17 @@ void init_openravepy_global()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<InterfaceAddMode>(m, "InterfaceAddMode", py::arithmetic() DOXY_ENUM(InterfaceAddMode))
+#else
+    enum_<InterfaceAddMode>("InterfaceAddMode" DOXY_ENUM(InterfaceAddMode))
+#endif
+    .value("AllowRenaming",IAM_AllowRenaming)
+    .value("StrictNameChecking",IAM_StrictNameChecking)
+    .value("StrictIdChecking",IAM_StrictIdChecking)
+    .value("StrictNameIdChecking",IAM_StrictNameIdChecking)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
     enum_<PhysicsEngineOptions>(m, "PhysicsEngineOptions", py::arithmetic() DOXY_ENUM(PhysicsEngineOptions))
 #else
     enum_<PhysicsEngineOptions>("PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
