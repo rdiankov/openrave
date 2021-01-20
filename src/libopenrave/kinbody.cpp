@@ -186,6 +186,9 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
             orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUri", _referenceUri, allocator);
         }
     }
+
+    // perhaps should not save "uri" since that could affect how the body is loaded later
+    
     if( !_interfaceType.empty() ) {
         orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
     }
@@ -273,6 +276,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if( !(options & IDO_IgnoreReferenceUri) ) {
         orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+        orjson::LoadJsonValueByKey(value, "uri", _uri); // user specifies this in case they want to control how the uri is
     }
 
     orjson::LoadJsonValueByKey(value, "interfaceType", _interfaceType);

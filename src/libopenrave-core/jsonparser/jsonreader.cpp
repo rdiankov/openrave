@@ -452,10 +452,11 @@ protected:
         }
 
         envInfo.DeserializeJSONWithMapping(rEnvInfo, fUnitScale, _deserializeOptions, vInputToBodyInfoMapping);
+
         FOREACH(itBodyInfo, envInfo._vBodyInfos) {
             KinBody::KinBodyInfoPtr& pKinBodyInfo = *itBodyInfo;
             // ensure uri is set
-            if (pKinBodyInfo->_uri.empty() && !pKinBodyInfo->_id.empty()) {
+            if (pKinBodyInfo->_uri.empty() && !pKinBodyInfo->_id.empty() ) {
                 pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, currentUri, currentFilename);
             }
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
