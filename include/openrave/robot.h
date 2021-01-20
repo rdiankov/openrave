@@ -766,6 +766,7 @@ public:
         /// \brief have the connected body to be added to the robot kinematics. The active level has nothing to do with visibility or enabling of the links.
         ///
         /// Can only be called when robot is not added to the environment
+        /// \return true if changed
         virtual bool SetActive(int8_t active);
 
         /// \brief return true
@@ -989,7 +990,9 @@ private:
     virtual void GetConnectedBodyActiveStates(std::vector<int8_t>& activestates) const;
 
     /// \brief sets the active states for connected bodies
-    virtual void SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates);
+    ///
+    /// \return true if an active state changed
+    virtual bool SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates);
 
     virtual void SetName(const std::string& name);
 

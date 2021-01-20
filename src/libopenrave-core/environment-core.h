@@ -474,8 +474,9 @@ public:
             _ClearRapidJsonBuffer();
             return RaveParseMsgPackURI(shared_from_this(), uri, atts, *_prLoadEnvAlloc);
         }
-
-        RAVELOG_WARN("load failed on uri %s\n", uri.c_str());
+        else {
+            RAVELOG_WARN_FORMAT("load failed on uri '%s' since could not determine the file type", uri);
+        }
         return false;
     }
 

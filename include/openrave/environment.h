@@ -706,33 +706,26 @@ public:
     class OPENRAVE_API EnvironmentBaseInfo : public InfoBase
     {
 public:
-        EnvironmentBaseInfo() {}
-        EnvironmentBaseInfo(const EnvironmentBaseInfo& other) {
-            *this = other;
-        }
-        bool operator==(const EnvironmentBaseInfo& other) const {
-            return _vBodyInfos == other._vBodyInfos
-                && _revision == other._revision
-                && _name == other._name
-                && _description == other._description
-                && _keywords == other._keywords
-                && _gravity == other._gravity;
-            // TODO: deep compare infos
-        }
-        bool operator!=(const EnvironmentBaseInfo& other) const{
-            return !operator==(other);
-        }
+        EnvironmentBaseInfo();
+        EnvironmentBaseInfo(const EnvironmentBaseInfo& other);
+        bool operator==(const EnvironmentBaseInfo& other) const;
+        bool operator!=(const EnvironmentBaseInfo& other) const;
 
         void Reset() override;
-        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
-        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+        void SerializeJSON(rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
 
-        std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
-        int _revision = 0;  ///< environment revision number
+        void DeserializeJSON(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options) override;
+        
+        /// \param vInputToBodyInfoMapping maps indices into rEnvInfo["bodies"] into indices of _vBodyInfos: rEnvInfo["bodies"][i] -> _vBodyInfos[vInputToBodyInfoMapping[i]]. This forces certain _vBodyInfos to get updated with specific input. Use -1 for no mapping
+        void DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping);
+
         std::string _name;   ///< environment name
         std::string _description;   ///< environment description
         std::vector<std::string> _keywords;  ///< some string values for describinging the environment
         Vector _gravity = Vector(0,0,-9.797930195020351);  ///< gravity and gravity direction of the environment
+        std::string _referenceUri; ///< optional, if the environment was opened by referencing another environment file, then this is the URI for that file.
+        std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
+        int _revision = 0;  ///< environment revision number
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;

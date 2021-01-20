@@ -2158,6 +2158,11 @@ private:
     /// \brief Set the name of the body, notifies the environment and checks for uniqueness.
     virtual void SetName(const std::string& name);
 
+    /// \brief Unique name of the body.
+    virtual const std::string& GetId() const {
+        return _id;
+    }
+
     /// Methods for accessing basic information about joints
     /// @name Basic Information
     //@{
