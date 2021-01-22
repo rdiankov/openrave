@@ -128,6 +128,7 @@ public:
     bool Load(const std::string &filename);
     bool Load(const std::string &filename, object odictatts);
     bool LoadURI(const std::string &filename, object odictatts=py::none_());
+    bool LoadJSON(py::object oEnvInfo, object odictatts=py::none_());
     bool LoadData(const std::string &data);
     bool LoadData(const std::string &data, object odictatts);
 

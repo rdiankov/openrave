@@ -1595,10 +1595,19 @@ bool PyEnvironmentBase::Load(const std::string &filename, object odictatts) {
     openravepy::PythonThreadSaver threadsaver;
     return _penv->Load(filename, dictatts);
 }
-bool PyEnvironmentBase::LoadURI(const std::string &filename, object odictatts) {
+bool PyEnvironmentBase::LoadURI(const std::string &filename, object odictatts)
+{
     AttributesList dictatts = toAttributesList(odictatts);
     openravepy::PythonThreadSaver threadsaver;
     return _penv->LoadURI(filename, dictatts);
+}
+bool PyEnvironmentBase::LoadJSON(py::object oEnvInfo, object odictatts)
+{
+    AttributesList dictatts = toAttributesList(odictatts);
+    rapidjson::Document rEnvInfo;
+    toRapidJSONValue(oEnvInfo, rEnvInfo, rEnvInfo.GetAllocator());
+    openravepy::PythonThreadSaver threadsaver;
+    return _penv->LoadJSON(rEnvInfo , dictatts);
 }
 bool PyEnvironmentBase::LoadData(const std::string &data) {
     openravepy::PythonThreadSaver threadsaver;
@@ -2566,6 +2575,7 @@ PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadURI_overloads, LoadURI, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadJSON_overloads, LoadJSON, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StopSimulation_overloads, StopSimulation, 0, 1)
@@ -2940,6 +2950,15 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #else
                      .def("LoadURI",&PyEnvironmentBase::LoadURI,LoadURI_overloads(PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,LoadURI)))
 #endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                     .def("LoadJSON", &PyEnvironmentBase::LoadJSON,
+                          "envInfo"_a,
+                          "atts"_a = py::none_(),
+                          DOXY_FN(EnvironmentBase, LoadJSON)
+                          )
+#else
+                     .def("LoadJSON",&PyEnvironmentBase::LoadJSON,LoadJSON_overloads(PY_ARGS("envInfo","atts") DOXY_FN(EnvironmentBase,LoadJSON)))
+#endif
                      .def("Load",load1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,Load))
                      .def("Load",load2, PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,Load))
                      .def("LoadData",loaddata1, PY_ARGS("data") DOXY_FN(EnvironmentBase,LoadData))
@@ -2991,14 +3010,14 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("ReadTrimeshData",readtrimeshdata1, PY_ARGS("data", "formathint") DOXY_FN(EnvironmentBase,ReadTrimeshData))
                      .def("ReadTrimeshData",readtrimeshdata2, PY_ARGS("data","formathint","atts") DOXY_FN(EnvironmentBase,ReadTrimeshData))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            .def("Add", &PyEnvironmentBase::Add,
+                     .def("Add", &PyEnvironmentBase::Add,
                           "interface"_a,
                           "addMode"_a = py::none_(),
                           "cmdargs"_a = "",
                           DOXY_FN(EnvironmentBase, Add)
                           )
 #else
-            .def("Add", &PyEnvironmentBase::Add, Add_overloads(PY_ARGS("interface","addMode","cmdargs") DOXY_FN(EnvironmentBase,Add)))
+                     .def("Add", &PyEnvironmentBase::Add, Add_overloads(PY_ARGS("interface","addMode","cmdargs") DOXY_FN(EnvironmentBase,Add)))
 #endif
                      .def("AddKinBody",addkinbody1, PY_ARGS("body") DOXY_FN(EnvironmentBase,AddKinBody))
                      .def("AddKinBody",addkinbody2, PY_ARGS("body","anonymous") DOXY_FN(EnvironmentBase,AddKinBody))
