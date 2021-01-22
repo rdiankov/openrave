@@ -287,7 +287,7 @@ public:
     bool ExtractFirst(const rapidjson::Value& doc, KinBodyPtr& ppbody, rapidjson::Document::AllocatorType& alloc)
     {
         // extract the first articulated system found.
-        dReal fUnitScale = _GetUnitScale(doc);
+        dReal fUnitScale = _GetUnitScale(doc, 1.0);
         if (doc.HasMember("bodies") && (doc)["bodies"].IsArray()) {
             std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
             for (rapidjson::Value::ConstValueIterator itr = (doc)["bodies"].Begin(); itr != (doc)["bodies"].End(); ++itr) {
@@ -300,7 +300,7 @@ public:
     bool ExtractFirst(const rapidjson::Value& doc, RobotBasePtr& pprobot, rapidjson::Document::AllocatorType& alloc)
     {
         // extract the first robot
-        dReal fUnitScale = _GetUnitScale(doc);
+        dReal fUnitScale = _GetUnitScale(doc, 1.0);
         if (doc.HasMember("bodies") && (doc)["bodies"].IsArray()) {
             std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
             for (rapidjson::Value::ConstValueIterator itr = (doc)["bodies"].Begin(); itr != (doc)["bodies"].End(); ++itr) {
@@ -321,7 +321,7 @@ public:
         // find the body by uri fragment
         if (doc.HasMember("bodies") && (doc)["bodies"].IsArray()) {
             std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
-            dReal fUnitScale = _GetUnitScale(doc);
+            dReal fUnitScale = _GetUnitScale(doc, 1.0);
             for (rapidjson::Value::ConstValueIterator itr = (doc)["bodies"].Begin(); itr != (doc)["bodies"].End(); ++itr) {
                 std::string bodyId;
                 orjson::LoadJsonValueByKey(*itr, "id", bodyId);
@@ -344,7 +344,7 @@ public:
         // find the body by uri fragment
         if (doc.HasMember("bodies") && (doc)["bodies"].IsArray()) {
             std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
-            dReal fUnitScale = _GetUnitScale(doc);
+            dReal fUnitScale = _GetUnitScale(doc, 1.0);
             for (rapidjson::Value::ConstValueIterator itr = (doc)["bodies"].Begin(); itr != (doc)["bodies"].End(); ++itr) {
                 std::string bodyId;
                 orjson::LoadJsonValueByKey(*itr, "id", bodyId);
@@ -419,7 +419,7 @@ protected:
 
     void _ProcessEnvInfoBodies(EnvironmentBase::EnvironmentBaseInfo& envInfo, const rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& alloc, const std::string& currentUri, const std::string& currentFilename, std::map<RobotBase::ConnectedBodyInfoPtr, std::string>& mapProcessedConnectedBodyUris)
     {
-        dReal fUnitScale = _GetUnitScale(rEnvInfo);
+        dReal fUnitScale = _GetUnitScale(rEnvInfo, 1.0);
         std::vector<int> vInputToBodyInfoMapping;
         if (rEnvInfo.HasMember("bodies")) {
             const rapidjson::Value& rBodies = rEnvInfo["bodies"];
@@ -478,8 +478,8 @@ protected:
         RAVELOG_DEBUG_FORMAT("env=%d, adding '%s' for tracking circular reference, so far %d uris tracked. Scope is '%s'", _penv->GetId()%referenceUri%circularReference.size()%currentFilename);
         circularReference.insert(referenceUri);
 
-
-        rapidjson::Value rKinBodyInfo; // holds the read data from referenceUri
+        dReal fRefUnitScale = fUnitScale;  // unit scale for rRefKinBodyInfo
+        rapidjson::Value rRefKinBodyInfo; // holds the read data from referenceUri
 
         // parse the uri
         std::string scheme, path, fragment;
@@ -495,7 +495,7 @@ protected:
                 for(rapidjson::Value::ConstValueIterator it = rEnvInfo["bodies"].Begin(); it != rEnvInfo["bodies"].End(); it++) {
                     std::string id = orjson::GetJsonValueByKey<std::string>(*it, "id", "");
                     if (id == fragment) {
-                        rKinBodyInfo.CopyFrom(*it, alloc);
+                        rRefKinBodyInfo.CopyFrom(*it, alloc);
                         bFoundBody = true;
                         break;
                     }
@@ -506,7 +506,7 @@ protected:
                 return -1;
             }
 
-            std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rKinBodyInfo, "referenceUri", "");
+            std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rRefKinBodyInfo, "referenceUri", "");
             if (_IsExpandableReferenceUri(nextReferenceUri)) {
                 insertIndex = _ExpandRapidJSON(envInfo, originBodyId, rEnvInfo, nextReferenceUri, circularReference, fUnitScale, alloc, currentFilename);
                 // regardless of insertIndex, should fall through so can process rEnvInfo
@@ -542,11 +542,13 @@ protected:
                 return -1;
             }
 
+            fRefUnitScale = _GetUnitScale(*referenceDoc, 1.0); // for now default has to be meters... fUnitScale);
+
             bool bFoundBody = false;
             for(rapidjson::Value::ConstValueIterator it = (*referenceDoc)["bodies"].Begin(); it != (*referenceDoc)["bodies"].End(); it++) {
                 std::string id = orjson::GetJsonValueByKey<std::string>(*it, "id", "");
                 if (id == fragment || fragment.empty()) {
-                    rKinBodyInfo.CopyFrom(*it, alloc);
+                    rRefKinBodyInfo.CopyFrom(*it, alloc);
                     bFoundBody = true;
                     break;
                 }
@@ -556,7 +558,7 @@ protected:
                 return -1;
             }
 
-            std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rKinBodyInfo, "referenceUri", "");
+            std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rRefKinBodyInfo, "referenceUri", "");
 
             if (_IsExpandableReferenceUri(nextReferenceUri)) {
                 RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', and now processing its referenceUri='%s'", _penv->GetId()%fullFilename%fragment%nextReferenceUri);
@@ -568,7 +570,7 @@ protected:
             }
 
             if( insertIndex >= 0 ) {
-                envInfo._vBodyInfos.at(insertIndex)->DeserializeJSON(rKinBodyInfo, fUnitScale, _deserializeOptions);
+                envInfo._vBodyInfos.at(insertIndex)->DeserializeJSON(rRefKinBodyInfo, fUnitScale, _deserializeOptions);
             }
         }
         else {
@@ -582,7 +584,7 @@ protected:
                 KinBody::KinBodyInfoPtr& pExistingBodyInfo = envInfo._vBodyInfos[ibody];
                 if( pExistingBodyInfo->_id == originBodyId ) {
                     bool isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pExistingBodyInfo);
-                    bool isNewRobot = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "isRobot", isExistingRobot);
+                    bool isNewRobot = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "isRobot", isExistingRobot);
 
                     if( isExistingRobot && !isNewRobot ) {
                         // new is not a robot, but previous was
@@ -596,7 +598,7 @@ protected:
                         pExistingBodyInfo = pNewRobotInfo;
                     }
 
-                    pExistingBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, _deserializeOptions);
+                    pExistingBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
                     insertIndex = ibody;
                     break;
                 }
@@ -608,21 +610,21 @@ protected:
         }
         else {
             KinBody::KinBodyInfoPtr pNewKinBodyInfo;
-            bool isNewRobot = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "isRobot", false);
+            bool isNewRobot = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "isRobot", false);
             if( isNewRobot ) {
                 pNewKinBodyInfo.reset(new RobotBase::RobotBaseInfo());
             }
             else {
                 pNewKinBodyInfo.reset(new KinBody::KinBodyInfo());
             }
-            pNewKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, _deserializeOptions);
+            pNewKinBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
 
             if( !originBodyId.empty() ) {
                 pNewKinBodyInfo->_id = originBodyId;
             }
 
             if( pNewKinBodyInfo->_name.empty() ) {
-                RAVELOG_DEBUG_FORMAT("env=%d, kinbody id='%s' has empty name, coming from file '%s', perhaps it will get overwritten later. Data is %s. Scope is '%s'", _penv->GetId()%originBodyId%currentFilename%orjson::DumpJson(rKinBodyInfo)%currentFilename);
+                RAVELOG_DEBUG_FORMAT("env=%d, kinbody id='%s' has empty name, coming from file '%s', perhaps it will get overwritten later. Data is %s. Scope is '%s'", _penv->GetId()%originBodyId%currentFilename%orjson::DumpJson(rRefKinBodyInfo)%currentFilename);
             }
 
             if( originBodyId.empty() ) {
@@ -647,26 +649,11 @@ protected:
         return insertIndex;
     }
 
-    inline dReal _GetUnitScale(const rapidjson::Value& doc)
+    inline dReal _GetUnitScale(const rapidjson::Value& doc, dReal defaultScale)
     {
-        std::pair<std::string, dReal> unit = {"meter", 1};
+        std::pair<std::string, dReal> unit = {"", defaultScale};
         orjson::LoadJsonValueByKey(doc, "unit", unit);
-
-        // TODO: for now we just set defautl to ["meter", 1]
-        if (unit.first.empty()) {
-            unit.first = "meter";
-            unit.second = 1;
-        }
-
-        if (unit.first == "mm") {
-            unit.second *= 0.001;
-        }
-        else if (unit.first == "cm") {
-            unit.second *= 0.01;
-        }
-
-        dReal scale = unit.second / _fGlobalScale;
-        return scale;
+        return unit.second / _fGlobalScale;
     }
 
     template<typename T>

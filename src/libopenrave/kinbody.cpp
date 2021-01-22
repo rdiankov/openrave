@@ -309,8 +309,8 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         for(rapidjson::Value::ConstValueIterator itr = value["dofValues"].Begin(); itr != value["dofValues"].End(); ++itr) {
             if (itr->IsObject() && itr->HasMember("jointName") && itr->HasMember("value")) {
                 std::string jointName;
-                int jointAxis = 0;
-                dReal dofValue;
+                int jointAxis = 0; // default
+                dReal dofValue=0;
                 orjson::LoadJsonValueByKey(*itr, "jointName", jointName);
                 orjson::LoadJsonValueByKey(*itr, "jointAxis", jointAxis);
                 orjson::LoadJsonValueByKey(*itr, "value", dofValue);
@@ -331,6 +331,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _transform);
+        _transform.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
     }
 }
 
@@ -5626,34 +5627,37 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
     }
 
-    // dof values
-    std::vector<dReal> dofValues;
-    GetDOFValues(dofValues);
-    bool bDOFChanged = false;
-    for(std::vector<std::pair<std::pair<std::string, int>, dReal> >::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
-        // find the joint in the active chain
-        JointPtr joint;
-        FOREACHC(itJoint,_vecjoints) {
-            if ((*itJoint)->GetName() == it->first.first) {
-                joint = *itJoint;
-                break;
+    // don't change the dof values here since body might not be added!
+    if( _nHierarchyComputed == 2 ) {
+        // dof values
+        std::vector<dReal> dofValues;
+        GetDOFValues(dofValues);
+        bool bDOFChanged = false;
+        for(std::vector<std::pair<std::pair<std::string, int>, dReal> >::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
+            // find the joint in the active chain
+            JointPtr joint;
+            FOREACHC(itJoint,_vecjoints) {
+                if ((*itJoint)->GetName() == it->first.first) {
+                    joint = *itJoint;
+                    break;
+                }
+            }
+            if (!joint) {
+                continue;
+            }
+            if (it->first.second >= joint->GetDOF()) {
+                continue;
+            }
+            if (dofValues[joint->GetDOFIndex()+it->first.second] != it->second) {
+                dofValues[joint->GetDOFIndex()+it->first.second] = it->second;
+                bDOFChanged = true;
             }
         }
-        if (!joint) {
-            continue;
+        if (bDOFChanged) {
+            SetDOFValues(dofValues);
+            updateFromInfoResult = UFIR_Success;
+            RAVELOG_VERBOSE_FORMAT("body %s updated due to dof values change", _id);
         }
-        if (it->first.second >= joint->GetDOF()) {
-            continue;
-        }
-        if (dofValues[joint->GetDOFIndex()+it->first.second] != it->second) {
-            dofValues[joint->GetDOFIndex()+it->first.second] = it->second;
-            bDOFChanged = true;
-        }
-    }
-    if (bDOFChanged) {
-        SetDOFValues(dofValues);
-        updateFromInfoResult = UFIR_Success;
-        RAVELOG_VERBOSE_FORMAT("body %s updated due to dof values change", _id);
     }
 
     FOREACH(it, info._mReadableInterfaces) {

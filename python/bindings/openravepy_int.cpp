@@ -1742,7 +1742,7 @@ void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, py::object oAddMode, 
     if( !IS_PYTHONOBJECT_NONE(oAddMode) ) {
         if (PyBool_Check(oAddMode.ptr())) {
             addMode = py::extract<bool>(oAddMode) ? IAM_AllowRenaming : IAM_StrictNameChecking;
-            RAVELOG_WARN("Trying to use 'anonymous' flag when adding object via Add");
+            RAVELOG_WARN_FORMAT("Trying to use 'anonymous' flag when adding object %s of type %d via Add", pinterface->GetXMLId()%(int)pinterface->GetInterfaceType());
         }
         else {
             addMode = py::extract<InterfaceAddMode>(oAddMode);

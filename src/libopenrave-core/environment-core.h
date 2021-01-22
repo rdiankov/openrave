@@ -36,6 +36,14 @@
         CHECK_INTERFACE(body); \
 }
 
+inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
+{
+    dReal e1 = (t1.rot-t2.rot).lengthsqr4();
+    dReal e2 = (t1.rot+t2.rot).lengthsqr4();
+    dReal e = e1 < e2 ? e1 : e2;
+    return RaveSqrt((t1.trans-t2.trans).lengthsqr3() + frotweight*e);
+}
+
 class Environment : public EnvironmentBase
 {
     class GraphHandleMulti : public GraphHandle
@@ -2629,8 +2637,9 @@ public:
                         else {
                             pRobot->InitFromKinBodyInfo(*pKinBodyInfo);
                         }
-                        pInitBody = pRobot;
                     }
+
+                    pInitBody = pRobot;
                     _AddRobot(pRobot, IAM_StrictNameChecking); // internally locks _mutexInterfaces, name guarnateed to be unique
                 }
                 else {
@@ -2641,8 +2650,9 @@ public:
                     if (updateFromInfoResult != UFIR_NoChange && updateFromInfoResult != UFIR_Success) {
                         // have to reinit
                         pMatchExistingBody->InitFromKinBodyInfo(*pKinBodyInfo);
-                        pInitBody = pMatchExistingBody;
                     }
+
+                    pInitBody = pMatchExistingBody;
                     _AddKinBody(pMatchExistingBody, IAM_StrictNameChecking); // internally locks _mutexInterfaces, name guarnateed to be unique
                 }
             }
@@ -2685,16 +2695,30 @@ public:
                 OPENRAVE_ASSERT_OP_FORMAT0(pInitBody->GetName(), ==, pKinBodyInfo->_name, "names should be matching", ORE_InvalidArguments);
 
                 // dof value
+                bool bChanged = false;
                 pInitBody->GetDOFValues(vDOFValues);
                 FOREACH(it, pKinBodyInfo->_dofValues) {
                     FOREACH(itJoint, pInitBody->_vecjoints) {
                         if ((*itJoint)->GetName() == it->first.first) {
-                            vDOFValues[(*itJoint)->GetDOFIndex()+it->first.second] = (*it).second;
+                            if( RaveFabs(vDOFValues[(*itJoint)->GetDOFIndex()+it->first.second] - (*it).second) > 1e-10 ) {
+                                vDOFValues[(*itJoint)->GetDOFIndex()+it->first.second] = (*it).second;
+                                bChanged = true;
+                            }
                             break;
                         }
                     }
                 }
-                pInitBody->SetDOFValues(vDOFValues, pKinBodyInfo->_transform, KinBody::CLA_Nothing);
+
+                if( !bChanged ) {
+                    dReal dist = TransformDistanceFast(pInitBody->GetTransform(), pKinBodyInfo->_transform);
+                    if( dist > 1e-7 ) {
+                        bChanged = true;
+                    }
+                }
+
+                if( bChanged ) {
+                    pInitBody->SetDOFValues(vDOFValues, pKinBodyInfo->_transform, KinBody::CLA_Nothing);
+                }
             }
         }
 
