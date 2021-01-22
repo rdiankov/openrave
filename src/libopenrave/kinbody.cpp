@@ -5546,8 +5546,14 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 {
     UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
-    if(info._id != _id) {
-        RAVELOG_WARN_FORMAT("body %s update info ids do not match %s != %s", GetName()%_id%info._id);
+    if(_id != info._id) {
+        if( _id.empty() ) {
+            RAVELOG_DEBUG_FORMAT("env=%d, body %s assigning empty id to '%s'", GetEnv()->GetId()%GetName()%info._id);
+        }
+        else {
+            RAVELOG_WARN_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'", GetEnv()->GetId()%GetName()%_id%info._id);
+        }
+        _id = info._id;
     }
 
     // need to avoid checking links and joints belonging to connected bodies
