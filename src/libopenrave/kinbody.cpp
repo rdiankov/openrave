@@ -703,10 +703,9 @@ void KinBody::SetName(const std::string& newname)
     }
 }
 
-/// \brief Set the id of the body, notifies the environment and checks for uniqueness.
 void KinBody::SetId(const std::string& newid)
 {
-    OPENRAVE_ASSERT_OP(newid.size(), >, 0);
+    // allow empty id to be set
     if( _id != newid ) {
         _id = newid;
     }
@@ -5551,7 +5550,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             RAVELOG_DEBUG_FORMAT("env=%d, body %s assigning empty id to '%s'", GetEnv()->GetId()%GetName()%info._id);
         }
         else {
-            RAVELOG_WARN_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'", GetEnv()->GetId()%GetName()%_id%info._id);
+            RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());
         }
         _id = info._id;
     }

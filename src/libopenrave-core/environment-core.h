@@ -847,6 +847,7 @@ public:
                 newname = str(boost::format("%s%d")%oldname%i);
                 pbody->SetName(newname);
                 if( utils::IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(pbody), false) ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, setting body name from %s -> %s due to conflict", GetId()%oldname%newname);
                     break;
                 }
             }
@@ -858,6 +859,9 @@ public:
                 newname = str(boost::format("%s%d")%oldname%i);
                 pbody->SetId(newname);
                 if( utils::IsValidName(newname) && _CheckUniqueId(KinBodyConstPtr(pbody), false) ) {
+                    if( !oldname.empty() ) {
+                        RAVELOG_DEBUG_FORMAT("env=%d, setting body id from %s -> %s due to conflict", GetId()%oldname%newname);
+                    }
                     break;
                 }
             }
@@ -898,6 +902,7 @@ public:
                 newname = str(boost::format("%s%d")%oldname%i);
                 robot->SetName(newname);
                 if( utils::IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(robot),false) ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, setting robot name from %s -> %s due to conflict", GetId()%oldname%newname);
                     break;
                 }
             }
@@ -909,6 +914,9 @@ public:
                 newname = str(boost::format("%s%d")%oldname%i);
                 robot->SetId(newname);
                 if( utils::IsValidName(newname) && _CheckUniqueId(KinBodyConstPtr(robot),false) ) {
+                    if( !oldname.empty() ) {
+                        RAVELOG_DEBUG_FORMAT("env=%d, setting robot id from %s -> %s due to conflict", GetId()%oldname%newname);
+                    }
                     break;
                 }
             }
