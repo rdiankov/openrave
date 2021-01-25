@@ -469,18 +469,18 @@ public:
         }
     }
 
-    virtual bool LoadURI(const std::string& uri, const AttributesList& atts)
+    bool LoadURI(const std::string& uri, const AttributesList& atts) override
     {
         if ( _IsColladaURI(uri) ) {
             return RaveParseColladaURI(shared_from_this(), uri, atts);
         }
         else if ( _IsJSONURI(uri) ) {
             _ClearRapidJsonBuffer();
-            return RaveParseJSONURI(shared_from_this(), uri, atts, *_prLoadEnvAlloc);
+            return RaveParseJSONURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
         else if ( _IsMsgPackURI(uri) ) {
             _ClearRapidJsonBuffer();
-            return RaveParseMsgPackURI(shared_from_this(), uri, atts, *_prLoadEnvAlloc);
+            return RaveParseMsgPackURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
         else {
             RAVELOG_WARN_FORMAT("load failed on uri '%s' since could not determine the file type", uri);
@@ -506,13 +506,13 @@ public:
         }
         else if( _IsJSONFile(filename) ) {
             _ClearRapidJsonBuffer();
-            if( RaveParseJSONFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc) ) {
+            if( RaveParseJSONFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
                 return true;
             }
         }
         else if( _IsMsgPackFile(filename) ) {
             _ClearRapidJsonBuffer();
-            if( RaveParseMsgPackFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc) ) {
+            if( RaveParseMsgPackFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
                 return true;
             }
         }
@@ -553,19 +553,19 @@ public:
         }
         if( _IsJSONData(data) ) {
             _ClearRapidJsonBuffer();
-            return RaveParseJSONData(shared_from_this(), data, atts, *_prLoadEnvAlloc);
+            return RaveParseJSONData(shared_from_this(), data, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
         if( _IsMsgPackData(data) ) {
             _ClearRapidJsonBuffer();
-            return RaveParseMsgPackData(shared_from_this(), data, atts, *_prLoadEnvAlloc);
+            return RaveParseMsgPackData(shared_from_this(), data, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
 
-    virtual bool LoadJSON(const rapidjson::Value& doc, const AttributesList& atts)
+    bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts) override
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return RaveParseJSON(shared_from_this(), doc, atts, *_prLoadEnvAlloc);
+        return RaveParseJSON(shared_from_this(), rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, atts, *_prLoadEnvAlloc);
     }
 
     virtual void Save(const std::string& filename, SelectionOptions options, const AttributesList& atts)
@@ -1057,7 +1057,7 @@ public:
         return pdata;
     }
 
-    virtual KinBodyPtr GetKinBody(const std::string& pname) const
+    KinBodyPtr GetKinBody(const std::string& pname) const override
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         FOREACHC(it, _vecbodies) {
@@ -1066,6 +1066,27 @@ public:
             }
         }
         return KinBodyPtr();
+    }
+
+    KinBodyPtr GetKinBodyById(const std::string& id) const override
+    {
+        if( id.empty() ) {
+            return KinBodyPtr();
+        }
+
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        for(const KinBodyPtr& pbody : _vecbodies) {
+            if(pbody->GetId()==id) {
+                return pbody;
+            }
+        }
+        return KinBodyPtr();
+    }
+
+    int GetNumBodies() const override
+    {
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        return (int)_vecbodies.size();
     }
 
     virtual RobotBasePtr GetRobot(const std::string& pname) const
@@ -2485,7 +2506,7 @@ public:
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
-    virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies)
+    void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, UpdateFromInfoMode updateMode) override
     {
         RAVELOG_VERBOSE_FORMAT("=== UpdateFromInfo start, env=%d ===", GetId());
 
@@ -2496,17 +2517,19 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::vector<dReal> vDOFValues;
 
-        // copy basic info into EnvironmentBase
-        _revision = info._revision;
-        _name = info._name;
-        _keywords = info._keywords;
-        _description = info._description;
+        if( updateMode != UFIM_OnlySpecifiedBodiesExact ) {
+            // copy basic info into EnvironmentBase
+            _revision = info._revision;
+            _name = info._name;
+            _keywords = info._keywords;
+            _description = info._description;
 
-        // set gravity
-        if (!!_pPhysicsEngine) {
-            Vector gravityDiff = _pPhysicsEngine->GetGravity() - info._gravity;
-            if (OpenRAVE::RaveFabs(gravityDiff.x) > 1e-7 || OpenRAVE::RaveFabs(gravityDiff.y) > 1e-7 || OpenRAVE::RaveFabs(gravityDiff.z) > 1e-7) {
-                _pPhysicsEngine->SetGravity(info._gravity);
+            // set gravity
+            if (!!_pPhysicsEngine) {
+                Vector gravityDiff = _pPhysicsEngine->GetGravity() - info._gravity;
+                if (OpenRAVE::RaveFabs(gravityDiff.x) > 1e-7 || OpenRAVE::RaveFabs(gravityDiff.y) > 1e-7 || OpenRAVE::RaveFabs(gravityDiff.z) > 1e-7) {
+                    _pPhysicsEngine->SetGravity(info._gravity);
+                }
             }
         }
 
@@ -2516,36 +2539,64 @@ public:
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             vBodies = _vecbodies;
         }
+        std::vector<int> vUsedBodyIndices; // used indices of vBodies
 
         // internally manipulates _vecbodies using _AddKinBody/_AddRobot/_RemoveKinBodyFromIterator
-        for(int bodyIndex = 0; bodyIndex < (int)info._vBodyInfos.size(); ++bodyIndex) {
-            const KinBody::KinBodyInfoConstPtr& pKinBodyInfo = info._vBodyInfos[bodyIndex];
+        for(int inputBodyIndex = 0; inputBodyIndex < (int)info._vBodyInfos.size(); ++inputBodyIndex) {
+            const KinBody::KinBodyInfoConstPtr& pKinBodyInfo = info._vBodyInfos[inputBodyIndex];
             const KinBody::KinBodyInfo& kinBodyInfo = *pKinBodyInfo;
             RAVELOG_VERBOSE_FORMAT("==== body: env = %d, id = %s, name = %s ===", GetId()%pKinBodyInfo->_id%pKinBodyInfo->_name);
             RobotBase::RobotBaseInfoConstPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<const RobotBase::RobotBaseInfo>(pKinBodyInfo);
             KinBodyPtr pMatchExistingBody; // matches to pKinBodyInfo
+            int bodyIndex = -1; // index to vBodies to use. -1 if not used
             {
                 // find existing body in the env
                 std::vector<KinBodyPtr>::iterator itExistingSameId = vBodies.end();
                 std::vector<KinBodyPtr>::iterator itExistingSameName = vBodies.end();
                 std::vector<KinBodyPtr>::iterator itExistingSameIdName = vBodies.end();
 
-                // search only in the unprocessed part of vBodies
-                if( (int)vBodies.size() > bodyIndex ) {
-                    for (std::vector<KinBodyPtr>::iterator itBody = vBodies.begin() + bodyIndex; itBody != vBodies.end(); ++itBody) {
-                        bool bIdMatch = !(*itBody)->_id.empty() && (*itBody)->_id == kinBodyInfo._id;
-                        bool bNameMatch = !(*itBody)->_name.empty() && (*itBody)->_name == kinBodyInfo._name;
+                if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
+                    // can be any of the bodies, but have to make sure not to overlap
+                    //bodyIndex = inputBodyIndex;
+                    // search only in the unprocessed part of vBodies
+                    for(int ibody = 0; ibody < (int)vBodies.size(); ++ibody) {
+                        if( find(vUsedBodyIndices.begin(), vUsedBodyIndices.end(), ibody) != vUsedBodyIndices.end() ) {
+                            continue;
+                        }
+                        const KinBodyPtr& pbody = vBodies[ibody];
+                        bool bIdMatch = !pbody->_id.empty() && pbody->_id == kinBodyInfo._id;
+                        bool bNameMatch = !pbody->_name.empty() && pbody->_name == kinBodyInfo._name;
                         if( bIdMatch && bNameMatch ) {
-                            itExistingSameIdName = itBody;
-                            itExistingSameId = itBody;
-                            itExistingSameName = itBody;
+                            itExistingSameIdName = itExistingSameId = itExistingSameName = vBodies.begin() + ibody;
                             break;
                         }
                         if( bIdMatch && itExistingSameId == vBodies.end() ) {
-                            itExistingSameId = itBody;
+                            itExistingSameId = vBodies.begin() + ibody;
                         }
                         if( bNameMatch && itExistingSameName == vBodies.end() ) {
-                            itExistingSameName = itBody;
+                            itExistingSameName = vBodies.begin() + ibody;
+                        }
+                    }
+                }
+                else {
+                    bodyIndex = inputBodyIndex;
+                    // search only in the unprocessed part of vBodies
+                    if( (int)vBodies.size() > inputBodyIndex ) {
+                        for (std::vector<KinBodyPtr>::iterator itBody = vBodies.begin() + inputBodyIndex; itBody != vBodies.end(); ++itBody) {
+                            bool bIdMatch = !(*itBody)->_id.empty() && (*itBody)->_id == kinBodyInfo._id;
+                            bool bNameMatch = !(*itBody)->_name.empty() && (*itBody)->_name == kinBodyInfo._name;
+                            if( bIdMatch && bNameMatch ) {
+                                itExistingSameIdName = itBody;
+                                itExistingSameId = itBody;
+                                itExistingSameName = itBody;
+                                break;
+                            }
+                            if( bIdMatch && itExistingSameId == vBodies.end() ) {
+                                itExistingSameId = itBody;
+                            }
+                            if( bNameMatch && itExistingSameName == vBodies.end() ) {
+                                itExistingSameName = itBody;
+                            }
                         }
                     }
                 }
@@ -2582,11 +2633,16 @@ public:
                         (*itExistingSameName)->_name.clear();
                     }
                     pMatchExistingBody = *itExisting;
-                    if (bodyIndex != itExisting-vBodies.begin()) {
+                    int nMatchingIndex = itExisting-vBodies.begin();
+                    if ( bodyIndex >= 0 && bodyIndex != nMatchingIndex) {
                         // re-arrange vBodies according to the order of infos
-                        KinBodyPtr pTempBody = vBodies[bodyIndex];
-                        vBodies[bodyIndex] = pMatchExistingBody;
+                        KinBodyPtr pTempBody = vBodies.at(bodyIndex);
+                        vBodies.at(bodyIndex) = pMatchExistingBody;
                         *itExisting = pTempBody;
+                    }
+
+                    if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
+                        vUsedBodyIndices.push_back(nMatchingIndex);
                     }
                 }
             }
@@ -2694,7 +2750,19 @@ public:
                     pInitBody = pNewBody;
                     _AddKinBody(pNewBody, IAM_AllowRenaming);
                 }
-                vBodies.insert(vBodies.begin()+bodyIndex, pNewBody);
+
+                if( bodyIndex >= 0 ) {
+                    if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
+                        vUsedBodyIndices.push_back(bodyIndex);
+                    }
+                    vBodies.insert(vBodies.begin()+bodyIndex, pNewBody);
+                }
+                else {
+                    if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
+                        vUsedBodyIndices.push_back(vBodies.size());
+                    }
+                    vBodies.push_back(pNewBody);
+                }
                 vCreatedBodies.push_back(pNewBody);
             }
 
@@ -2730,20 +2798,22 @@ public:
             }
         }
 
-        // remove extra bodies at the end of vBodies
-        if( vBodies.size() > info._vBodyInfos.size() ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            for (std::vector<KinBodyPtr>::iterator itBody = vBodies.begin() + info._vBodyInfos.size(); itBody != vBodies.end();) {
-                KinBodyPtr pBody = *itBody;
-                RAVELOG_VERBOSE_FORMAT("remove extra body env=%d, id=%s, name=%s", GetId()%pBody->_id%pBody->_name);
+        if( updateMode != UFIM_OnlySpecifiedBodiesExact ) {
+            // remove extra bodies at the end of vBodies
+            if( vBodies.size() > info._vBodyInfos.size() ) {
+                boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                for (std::vector<KinBodyPtr>::iterator itBody = vBodies.begin() + info._vBodyInfos.size(); itBody != vBodies.end(); ) {
+                    KinBodyPtr pBody = *itBody;
+                    RAVELOG_VERBOSE_FORMAT("remove extra body env=%d, id=%s, name=%s", GetId()%pBody->_id%pBody->_name);
 
-                vector<KinBodyPtr>::iterator itBodyToRemove = std::find(_vecbodies.begin(), _vecbodies.end(), pBody);
-                if( itBodyToRemove != _vecbodies.end() ) {
-                    _RemoveKinBodyFromIterator(itBodyToRemove); // assumes _mutexInterfaces locked
+                    vector<KinBodyPtr>::iterator itBodyToRemove = std::find(_vecbodies.begin(), _vecbodies.end(), pBody);
+                    if( itBodyToRemove != _vecbodies.end() ) {
+                        _RemoveKinBodyFromIterator(itBodyToRemove); // assumes _mutexInterfaces locked
+                    }
+
+                    vRemovedBodies.push_back(pBody);
+                    itBody = vBodies.erase(itBody);
                 }
-
-                vRemovedBodies.push_back(pBody);
-                itBody = vBodies.erase(itBody);
             }
         }
 
@@ -3238,7 +3308,7 @@ protected:
         }
         return true;
     }
-    
+
     virtual bool _CheckUniqueName(SensorBaseConstPtr psensor, bool bDoThrow=false) const
     {
         FOREACHC(itsensor,_listSensors) {

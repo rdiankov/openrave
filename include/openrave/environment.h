@@ -25,6 +25,7 @@
 namespace OpenRAVE {
 
 typedef boost::recursive_try_mutex EnvironmentMutex;
+typedef EnvironmentMutex::scoped_lock EnvironmentLock;
 
 /// \brief used when adding interfaces to the environment
 enum InterfaceAddMode
@@ -227,18 +228,21 @@ public:
 
     /** \brief Loads a scene from a URI and adds all objects in the environment. <b>[multi-thread safe]</b>
 
-        Currently only collada files are supported. Options are passed through to
-        \code
-        DAE::getIOPlugin()->setOption(key,value).
-        \endcode
+        \param uri the URI of the file to load. Scheme can be 'file:' or 'openrave:' or 'X:' if openravescheme is overwritten by atts
+        \param atts a string set of attributes to pass to each loader. For example: 'openravescheme' can be overwritten.
      */
-    virtual bool LoadURI(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual bool LoadURI(const std::string& uri, const AttributesList& atts = AttributesList()) = 0;
 
     /// \brief Loads a scene from in-memory data and adds all objects in the environment. <b>[multi-thread safe]</b>
     virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
     /// \brief loads a scene from rapidjson document
-    virtual bool LoadJSON(const rapidjson::Value& doc, const AttributesList& atts = AttributesList()) = 0;
+    ///
+    /// \param updateMode specifies how to update the current environment from rEnvInfo
+    /// \param vCreatedBodies the bodies created in this operation
+    /// \param vModifiedBodies the bodies modified in this operation
+    /// \param vRemovedBodies the bodies removed from the environment in this operation
+    virtual bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts = AttributesList()) = 0;
 
     virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) {
         return LoadData(data,atts);
@@ -440,8 +444,17 @@ public:
     virtual bool RemoveKinBodyByName(const std::string& name) = 0;
 
     /// \brief Query a body from its name. <b>[multi-thread safe]</b>
+    ///
     /// \return first KinBody (including robots) that matches with name
     virtual KinBodyPtr GetKinBody(const std::string& name) const =0;
+
+    /// \brief Query a body from its id. <b>[multi-thread safe]</b>
+    ///
+    /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentId!
+    virtual KinBodyPtr GetKinBodyById(const std::string& id) const =0;
+
+    /// \brief Return the number of bodies currently in the environment. <b>[multi-thread safe]</b>
+    virtual int GetNumBodies() const = 0;
 
     /// \brief Query a sensor from its name. <b>[multi-thread safe]</b>
     /// \return first sensor that matches with name, note that sensors attached to robots have the robot name as a prefix.
@@ -706,6 +719,7 @@ public:
         std::string _description;   ///< environment description
         std::vector<std::string> _keywords;  ///< some string values for describinging the environment
         Vector _gravity = Vector(0,0,-9.797930195020351);  ///< gravity and gravity direction of the environment
+        std::string _uri; ///< optional, the URI this environment comes from
         std::string _referenceUri; ///< optional, if the environment was opened by referencing another environment file, then this is the URI for that file.
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
         int _revision = 0;  ///< environment revision number
@@ -737,7 +751,12 @@ public:
     virtual void ExtractInfo(EnvironmentBaseInfo& info) = 0;
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo
-    virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies) = 0;
+    ///
+    /// \param vCreatedBodies the bodies created in this operation
+    /// \param vModifiedBodies the bodies modified in this operation
+    /// \param vRemovedBodies the bodies removed from the environment in this operation
+    /// \param updateMode one if UFIM_X
+    virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, UpdateFromInfoMode updateMode) = 0;
 
     int _revision = 0;  ///< environment current revision
     std::string _name;   ///< environment name

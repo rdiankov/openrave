@@ -1346,6 +1346,16 @@ void init_openravepy_global()
     .value("InverseKinematics",SO_InverseKinematics)
     .value("JointLimits",SO_JointLimits)
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<UpdateFromInfoMode>(m, "UpdateFromInfoMode", py::arithmetic() DOXY_ENUM(UpdateFromInfoMode))
+#else
+    enum_<UpdateFromInfoMode>("UpdateFromInfoMode" DOXY_ENUM(UpdateFromInfoMode))
+#endif
+    .value("Exact",UFIM_Exact)
+    .value("OnlySpecifiedBodiesExact", UFIM_OnlySpecifiedBodiesExact)
+    ;
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     enum_<InterfaceType>(m, "InterfaceType", py::arithmetic() DOXY_ENUM(InterfaceType))
 #else
@@ -1619,15 +1629,15 @@ void init_openravepy_global()
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("SerializeJSON", &PyReadable::SerializeJSON,
-        "unitScale"_a = 1.0,
-        "options"_a = py::none_(),
-        DOXY_FN(Readable, SerializeJSON)
-    )
+         "unitScale"_a = 1.0,
+         "options"_a = py::none_(),
+         DOXY_FN(Readable, SerializeJSON)
+         )
     .def("DeserializeJSON", &PyReadable::DeserializeJSON,
-        "obj"_a,
-        "unitScale"_a = 1.0,
-        DOXY_FN(Readable, DeserializeJSON)
-    )
+         "obj"_a,
+         "unitScale"_a = 1.0,
+         DOXY_FN(Readable, DeserializeJSON)
+         )
 #else
     .def("SerializeJSON", &PyReadable::SerializeJSON, SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(Readable, SerializeJSON)))
     .def("DeserializeJSON", &PyReadable::DeserializeJSON, DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(Readable, DeserializeJSON)))
@@ -1814,11 +1824,11 @@ void init_openravepy_global()
         scope_ scope_stringreaders = class_<PyStringReaderStaticClass>("stringreaders")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                            .def_static("CreateStringReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+                                     .def_static("CreateStringReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
 #else
-                            // https://wiki.python.org/moin/boost.python/HowTo
-                            .def("CreateStringReadable", pyCreateStringReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
-                            .staticmethod("CreateStringReadable")
+                                     // https://wiki.python.org/moin/boost.python/HowTo
+                                     .def("CreateStringReadable", pyCreateStringReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+                                     .staticmethod("CreateStringReadable")
 #endif
         ;
     }
@@ -1830,11 +1840,11 @@ void init_openravepy_global()
         scope_ RAVE_DEPRECATED scope_xmlreaders = class_<xmlreaders::PyXMLReaderStaticClass>("xmlreaders")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                  .def_static("CreateStringXMLReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
+                                                  .def_static("CreateStringXMLReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
 #else
-                                  // https://wiki.python.org/moin/boost.python/HowTo
-                                  .def("CreateStringXMLReadable",xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
-                                  .staticmethod("CreateStringXMLReadable")
+                                                  // https://wiki.python.org/moin/boost.python/HowTo
+                                                  .def("CreateStringXMLReadable",xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
+                                                  .staticmethod("CreateStringXMLReadable")
 #endif
         ;
     }

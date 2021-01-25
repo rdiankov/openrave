@@ -1601,14 +1601,47 @@ bool PyEnvironmentBase::LoadURI(const std::string &filename, object odictatts)
     openravepy::PythonThreadSaver threadsaver;
     return _penv->LoadURI(filename, dictatts);
 }
-bool PyEnvironmentBase::LoadJSON(py::object oEnvInfo, object odictatts)
+bool PyEnvironmentBase::LoadJSON(py::object oEnvInfo, UpdateFromInfoMode updateMode, object odictatts)
 {
     AttributesList dictatts = toAttributesList(odictatts);
     rapidjson::Document rEnvInfo;
     toRapidJSONValue(oEnvInfo, rEnvInfo, rEnvInfo.GetAllocator());
-    openravepy::PythonThreadSaver threadsaver;
-    return _penv->LoadJSON(rEnvInfo , dictatts);
+    std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
+    bool bSuccess = false;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        bSuccess = _penv->LoadJSON(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, dictatts);
+    }
+
+    if( !bSuccess ) {
+        return py::make_tuple(py::none_(), py::none_(), py::none_());
+    }
+
+    py::list createdBodies, modifiedBodies, removedBodies;
+    FOREACHC(itbody, vCreatedBodies) {
+        if ((*itbody)->IsRobot()) {
+            createdBodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        } else {
+            createdBodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    FOREACHC(itbody, vModifiedBodies) {
+        if ((*itbody)->IsRobot()) {
+            modifiedBodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        } else {
+            modifiedBodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    FOREACHC(itbody, vRemovedBodies) {
+        if ((*itbody)->IsRobot()) {
+            removedBodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        } else {
+            removedBodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    return py::make_tuple(createdBodies, modifiedBodies, removedBodies);
 }
+
 bool PyEnvironmentBase::LoadData(const std::string &data) {
     openravepy::PythonThreadSaver threadsaver;
     return _penv->LoadData(data);
@@ -2411,10 +2444,11 @@ object PyEnvironmentBase::ExtractInfo() const {
     return py::to_object(boost::shared_ptr<PyEnvironmentBase::PyEnvironmentBaseInfo>(new PyEnvironmentBase::PyEnvironmentBaseInfo(info)));
 }
 
-object PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info) {
+object PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info, UpdateFromInfoMode updateMode)
+{
     EnvironmentBase::EnvironmentBaseInfoPtr pInfo = info->GetEnvironmentBaseInfo();
     std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
-    _penv->UpdateFromInfo(*pInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies);
+    _penv->UpdateFromInfo(*pInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies, updateMode);
 
     py::list createdBodies, modifiedBodies, removedBodies;
     FOREACHC(itbody, vCreatedBodies) {
@@ -2575,7 +2609,7 @@ PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadURI_overloads, LoadURI, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadJSON_overloads, LoadJSON, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadJSON_overloads, LoadJSON, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StopSimulation_overloads, StopSimulation, 0, 1)
@@ -2953,11 +2987,12 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                      .def("LoadJSON", &PyEnvironmentBase::LoadJSON,
                           "envInfo"_a,
+                          "updateMode"_a,
                           "atts"_a = py::none_(),
                           DOXY_FN(EnvironmentBase, LoadJSON)
                           )
 #else
-                     .def("LoadJSON",&PyEnvironmentBase::LoadJSON,LoadJSON_overloads(PY_ARGS("envInfo","atts") DOXY_FN(EnvironmentBase,LoadJSON)))
+                     .def("LoadJSON",&PyEnvironmentBase::LoadJSON,LoadJSON_overloads(PY_ARGS("envInfo","updateMode", "atts") DOXY_FN(EnvironmentBase,LoadJSON)))
 #endif
                      .def("Load",load1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,Load))
                      .def("Load",load2, PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,Load))
@@ -3193,7 +3228,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("SetUnit",&PyEnvironmentBase::SetUnit, PY_ARGS("unitname","unitmult") DOXY_FN(EnvironmentBase,SetUnit))
                      .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
                      .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
-                     .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info") DOXY_FN(EnvironmentBase,UpdateFromInfo))
+                     .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info", "updateMode") DOXY_FN(EnvironmentBase,UpdateFromInfo))
                      .def("__enter__",&PyEnvironmentBase::__enter__)
                      .def("__exit__",&PyEnvironmentBase::__exit__)
                      .def("__eq__",&PyEnvironmentBase::__eq__)

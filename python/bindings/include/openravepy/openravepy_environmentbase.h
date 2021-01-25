@@ -128,7 +128,7 @@ public:
     bool Load(const std::string &filename);
     bool Load(const std::string &filename, object odictatts);
     bool LoadURI(const std::string &filename, object odictatts=py::none_());
-    bool LoadJSON(py::object oEnvInfo, object odictatts=py::none_());
+    bool LoadJSON(py::object oEnvInfo, UpdateFromInfoMode updateMode, object odictatts=py::none_());
     bool LoadData(const std::string &data);
     bool LoadData(const std::string &data, object odictatts);
 
@@ -277,7 +277,7 @@ public:
     object GetUnit() const;
 
     object ExtractInfo() const;
-    object UpdateFromInfo(PyEnvironmentBaseInfoPtr info);
+    object UpdateFromInfo(PyEnvironmentBaseInfoPtr info, UpdateFromInfoMode updateMode);
 
     int _revision = 0;
     py::list _keywords;
