@@ -5711,6 +5711,11 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 }
 
 KinBody::ForwardKinematicsStruct::ForwardKinematicsStruct () {
+    pSetSingleLinkTransformFn = KinBody::ForwardKinematicsStruct::_SetSingleLinkTransform;
+}
+
+void KinBody::ForwardKinematicsStruct::_SetSingleLinkTransform(Link& link, const Transform& t) {
+    link._info._t = t;
 }
 
 bool KinBody::RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fkstruct, const bool bOverWrite) {

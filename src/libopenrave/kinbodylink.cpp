@@ -561,13 +561,8 @@ void KinBody::Link::SetStatic(bool bStatic)
 
 void KinBody::Link::SetTransform(const Transform& t)
 {
-    this->SetTransformWithoutUpdateStampId(t);
-    GetParent()->_nUpdateStampId++;
-}
-
-void KinBody::Link::SetTransformWithoutUpdateStampId(const Transform& t)
-{
     _info._t = t;
+    GetParent()->_nUpdateStampId++;
 }
 
 void KinBody::Link::SetForce(const Vector& force, const Vector& pos, bool bAdd)

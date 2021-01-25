@@ -844,11 +844,6 @@ protected:
         /// \param[in] transform the new transform of link
         virtual void SetTransform(const Transform& transform);
 
-        /// \brief Sets the transform of the link regardless of kinematics without updating parent kinbody's stamp id
-        ///
-        /// \param[in] transform the new transformation
-        virtual void SetTransformWithoutUpdateStampId(const Transform& transform);
-
         /// adds an external force at pos (absolute coords)
         /// \param[in] force the direction and magnitude of the force
         /// \param[in] pos in the world where the force is getting applied
@@ -3095,6 +3090,9 @@ public:
         ForwardKinematicsStruct();
         ModuleBaseConstPtr pCalculatorModule; ///< kinbody basic calculators module
         boost::function<bool(const std::vector<dReal>&)> pSetLinkTransformsFn; ///< function that sets links' transforms
+        void(*pSetSingleLinkTransformFn)(KinBody::Link&, const Transform&);
+    private:
+        void _SetSingleLinkTransform(KinBody::Link&, const Transform&);
     };
     using ForwardKinematicsStructPtr = boost::shared_ptr<ForwardKinematicsStruct>;
 
