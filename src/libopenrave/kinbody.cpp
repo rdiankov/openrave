@@ -1906,7 +1906,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
 
     if(!!_pCurrentForwardKinematicsStruct) {
         ForwardKinematicsStruct& fkstruct = *_pCurrentForwardKinematicsStruct;
-        if(fkstruct.bInitialized) {
+        if(!!fkstruct.pSetLinkTransformsFn) {
             fkstruct.pSetLinkTransformsFn(_vTempJoints);
             return;
         }
@@ -5728,9 +5728,8 @@ bool KinBody::RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fks
         );
     }
     const bool bCheck = (
-        fkstruct.pCalculatorModule 
-        && !!fkstruct.pSetLinkTransformsFn 
-        && fkstruct.bInitialized
+        !!fkstruct.pCalculatorModule 
+        && !!fkstruct.pSetLinkTransformsFn
     );
     if(!bCheck) {
         RAVELOG_ERROR_FORMAT("Does not pass check for ForwardKinematicsStruct at body \"%s\" with hash \"%s\"",

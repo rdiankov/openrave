@@ -3095,8 +3095,6 @@ public:
         ForwardKinematicsStruct();
         ModuleBaseConstPtr pCalculatorModule; ///< kinbody basic calculators module
         boost::function<bool(const std::vector<dReal>&)> pSetLinkTransformsFn; ///< function that sets links' transforms
-        boost::function<void(std::vector<dReal>&)> pGetDOFLastSetValuesFn; ///< function that updates kinbody's dof values
-        bool bInitialized = false; ///< indicator of successful initialization
     };
     using ForwardKinematicsStructPtr = boost::shared_ptr<ForwardKinematicsStruct>;
 
