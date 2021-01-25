@@ -1703,6 +1703,7 @@ public:
         /// \brief update Joint according to new JointInfo, returns false if update cannot be performed and requires InitFromInfo
         virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::JointInfo& info);
 
+        /// \brief update the cached _doflastsetvalues
         virtual void SetDOFLastSetValue(dReal dofvalue, const int iaxis = 0);
 
 protected:
