@@ -3090,9 +3090,10 @@ public:
         ForwardKinematicsStruct();
         ModuleBaseConstPtr pCalculatorModule; ///< kinbody basic calculators module
         boost::function<bool(const std::vector<dReal>&)> pSetLinkTransformsFn; ///< function that sets links' transforms
-        void(*pSetSingleLinkTransformFn)(KinBody::Link&, const Transform&);
+        void(*pSetSingleLinkTransformFn)(KinBody::Link&, const Transform&); ///< function that sets a link's transform without updating stamp id
     private:
-        void _SetSingleLinkTransform(KinBody::Link&, const Transform&);
+        /// \brief helper function that sets a link's transform without updating stamp id 
+        static void _SetSingleLinkTransform(KinBody::Link&, const Transform&);
     };
     using ForwardKinematicsStructPtr = boost::shared_ptr<ForwardKinematicsStruct>;
 
