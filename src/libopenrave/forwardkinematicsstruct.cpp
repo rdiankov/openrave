@@ -27,6 +27,22 @@ void KinBody::ForwardKinematicsStruct::_SetSingleLinkTransform(Link& link, const
     link._info._t = t;
 }
 
+bool KinBody::_DeriveCurrentForwardKinematicsStruct(bool bOverWrite) {
+    if(bOverWrite) {
+        _pCurrentForwardKinematicsStruct.reset();
+    }
+    if(!!_pCurrentForwardKinematicsStruct) {
+        return true;
+    }
+    const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
+    const std::map<std::string, ForwardKinematicsStruct>::iterator it = _mHash2ForwardKinematicsStruct.find(sKinematicsGeometry);
+    if(it != _mHash2ForwardKinematicsStruct.end()) {
+        _pCurrentForwardKinematicsStruct.reset(&it->second, utils::null_deleter());
+        return true;
+    }
+    return false;
+}
+
 bool KinBody::RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fkstruct, const bool bOverWrite) {
     const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
     const bool bRegistered = _mHash2ForwardKinematicsStruct.count(sKinematicsGeometry);

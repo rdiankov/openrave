@@ -3108,6 +3108,10 @@ public:
 protected:
     std::map<std::string, ForwardKinematicsStruct> _mHash2ForwardKinematicsStruct; ///< maps a kinematics geometry hash to a forward kinematics structure
     ForwardKinematicsStructPtr _pCurrentForwardKinematicsStruct; ///< a pointer to ForwardKinematicsStruct that matches the kinematics geometry hash of the current kinbody (with the correct tool)
+    /// \param[in] bOverWrite whether to reset _pCurrentForwardKinematicsStruct to nullptr and then re-derive
+    ///
+    /// \return true if _pCurrentForwardKinematicsStruct is not nullptr
+    bool _DeriveCurrentForwardKinematicsStruct(bool bOverWrite);
 
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
