@@ -1913,7 +1913,6 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     }
 
     // have to compute the angles ahead of time since they are dependent on the link
-    // RAVELOG_ERROR_FORMAT("TGN_DEBUG: In original SetDOFValues: envid=%d, kinbody=%s", GetEnv()->GetId() % GetName());
     const int nActiveJoints = _vecjoints.size();
     const int nPassiveJoints = _vPassiveJoints.size();
     std::vector< boost::array<dReal, 3> > vPassiveJointValues(nPassiveJoints);
@@ -5710,40 +5709,4 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     return updateFromInfoResult;
 }
 
-KinBody::ForwardKinematicsStruct::ForwardKinematicsStruct () {
-    pSetSingleLinkTransformFn = KinBody::ForwardKinematicsStruct::_SetSingleLinkTransform;
-}
-
-void KinBody::ForwardKinematicsStruct::_SetSingleLinkTransform(Link& link, const Transform& t) {
-    link._info._t = t;
-}
-
-bool KinBody::RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fkstruct, const bool bOverWrite) {
-    const std::string& sKinematicsGeometry = this->GetKinematicsGeometryHash();
-    const bool bRegistered = _mHash2ForwardKinematicsStruct.count(sKinematicsGeometry);
-    if(bRegistered) {
-        RAVELOG_DEBUG_FORMAT("Already registered ForwardKinematicsStruct at body \"%s\" with hash \"%s\"",
-            this->GetName() % sKinematicsGeometry
-        );
-        if(!bOverWrite) {
-            return true; // do not overwrite, so return
-        }
-        RAVELOG_WARN_FORMAT("Requested to replace the registered ForwardKinematicsStruct by a new one at body \"%s\" with hash \"%s\"",
-            this->GetName() % sKinematicsGeometry
-        );
-    }
-    const bool bCheck = (
-        !!fkstruct.pCalculatorModule 
-        && !!fkstruct.pSetLinkTransformsFn
-    );
-    if(!bCheck) {
-        RAVELOG_ERROR_FORMAT("Does not pass check for ForwardKinematicsStruct at body \"%s\" with hash \"%s\"",
-            this->GetName() % sKinematicsGeometry
-        );
-    }
-    else {
-        _mHash2ForwardKinematicsStruct[sKinematicsGeometry] = fkstruct;
-    }
-    return bCheck;
-}
 } // end namespace OpenRAVE
