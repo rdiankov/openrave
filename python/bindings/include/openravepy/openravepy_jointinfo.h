@@ -71,6 +71,7 @@ public:
     float _fTransparency = 0.0;
     bool _bVisible = true;
     bool _bModifiable = true;
+    py::dict _calibrationBoardParameters;
 };
 
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
@@ -251,7 +252,7 @@ public:
         object GetTransform();
         object GetTransformPose();
         dReal GetSphereRadius() const;
-        dReal GetCylinderRadius() const ;
+        dReal GetCylinderRadius() const;
         dReal GetCylinderHeight() const;
         object GetBoxExtents() const;
         object GetContainerOuterExtents() const;
@@ -264,6 +265,11 @@ public:
         float GetTransparency() const;
         object GetDiffuseColor() const;
         object GetAmbientColor() const;
+        object GetCalibrationBoardNumDots() const;
+        object GetCalibrationBoardDotsDistances() const;
+        object GetCalibrationBoardDotColor() const;
+        object GetCalibrationBoardPatternName() const;
+        object GetCalibrationBoardDotDiameterDistanceRatios() const;
         object GetInfo();
         object ComputeInnerEmptyVolume() const;
         bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);

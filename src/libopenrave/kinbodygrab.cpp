@@ -345,7 +345,6 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo)
         // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
         if( !!pgrabbedbody ) {
             KinBody::GrabbedInfoPtr poutputinfo(new GrabbedInfo());
-            poutputinfo->_id = "grabbed_" + pgrabbedbody->_id + "_" + pgrabbed->_plinkrobot->GetName();
             poutputinfo->_grabbedname = pgrabbedbody->GetName();
             poutputinfo->_robotlinkname = pgrabbed->_plinkrobot->GetName();
             poutputinfo->_trelative = pgrabbed->_troot;
@@ -374,7 +373,6 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const
         // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
         if( !!pgrabbedbody ) {
             KinBody::GrabbedInfo& outputinfo = vgrabbedinfo[igrabbed];
-            outputinfo._id = "grabbed_" + pgrabbedbody->_id + "_" + pgrabbed->_plinkrobot->GetName();
             outputinfo._grabbedname = pgrabbedbody->GetName();
             outputinfo._robotlinkname = pgrabbed->_plinkrobot->GetName();
             outputinfo._trelative = pgrabbed->_troot;
@@ -430,13 +428,17 @@ void KinBody::GrabbedInfo::Reset()
 
 void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    if( !_id.empty() ) {
+        orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    }
     orjson::SetJsonValueByKey(value, "grabbedName", _grabbedname, allocator);
     orjson::SetJsonValueByKey(value, "robotLinkName", _robotlinkname, allocator);
     Transform transform = _trelative;
     transform.trans *= fUnitScale;
     orjson::SetJsonValueByKey(value, "transform", transform, allocator);
-    orjson::SetJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames, allocator);
+    if( !_setIgnoreRobotLinkNames.empty() ) {
+        orjson::SetJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames, allocator);
+    }
 }
 
 void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -449,6 +451,24 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _trelative.trans *= fUnitScale;
     }
     orjson::LoadJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames);
+}
+
+void KinBody::GrabbedInfo::serialize(std::ostream& o) const
+{
+    o << _grabbedname << " ";
+    o << _robotlinkname << " ";
+    SerializeRound(o, _trelative);
+    for( std::set<std::string>::const_iterator it = _setIgnoreRobotLinkNames.begin(); it != _setIgnoreRobotLinkNames.end(); ++it ) {
+        o << (*it) << " ";
+    }
+}
+
+std::string KinBody::GrabbedInfo::GetGrabbedInfoHash() const
+{
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+    serialize(ss);
+    return utils::GetMD5HashString(ss.str());
 }
 
 void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgrabbedinfo)

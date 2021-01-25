@@ -836,7 +836,7 @@ protected:
             }
         }
 
-        RAVELOG_INFO_FORMAT("could not find file %s", filename);
+        RAVELOG_VERBOSE_FORMAT("could not find file %s", filename);
         return std::string();
 #endif
     }
@@ -2585,7 +2585,7 @@ bool SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjso
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
     orjson::SetJsonValueByKey(value, "sensorReference", sensor_reference, allocator);
     orjson::SetJsonValueByKey(value, "targetRegion", target_region, allocator);
-    orjson::SetJsonValueByKey(value, "intrinstics", intrinsics, allocator);
+    orjson::SetJsonValueByKey(value, "intrinsics", intrinsics, allocator);
     orjson::SetJsonValueByKey(value, "width", width, allocator);
     orjson::SetJsonValueByKey(value, "height", height, allocator);
     orjson::SetJsonValueByKey(value, "measurementTime", measurement_time, allocator);
@@ -2598,7 +2598,7 @@ bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, 
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
     orjson::LoadJsonValueByKey(value, "sensorReference", sensor_reference);
     orjson::LoadJsonValueByKey(value, "targetRegion", target_region);
-    orjson::LoadJsonValueByKey(value, "intrinstics", intrinsics);
+    orjson::LoadJsonValueByKey(value, "intrinsics", intrinsics);
     orjson::LoadJsonValueByKey(value, "width", width);
     orjson::LoadJsonValueByKey(value, "height", height);
     orjson::LoadJsonValueByKey(value, "measurementTime", measurement_time);
@@ -2606,6 +2606,35 @@ bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, 
     return true;
 }
 
+bool SensorBase::Force6DGeomData::SerializeXML(BaseXMLWriterPtr writer, int options) const
+{
+    SensorGeometry::SerializeXML(writer, options);
+    AttributesList atts;
+    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    writer->AddChild("polarity",atts)->SetCharData(boost::lexical_cast<std::string>(polarity));
+    ss.str("");
+    for (size_t i = 0; i < correction_matrix.size(); ++i) {
+        ss << correction_matrix[i] << " ";
+    }
+    writer->AddChild("correction_matrix",atts)->SetCharData(ss.str());
+    return true;
+}
+
+bool SensorBase::Force6DGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
+    orjson::SetJsonValueByKey(value, "polarity", polarity, allocator);
+    orjson::SetJsonValueByKey(value, "correction_matrix", correction_matrix, allocator, correction_matrix.size());
+    return true;
+}
+
+bool SensorBase::Force6DGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
+    orjson::LoadJsonValueByKey(value, "polarity", polarity);
+    orjson::LoadJsonValueByKey(value, "correction_matrix", correction_matrix);
+    return true;
+}
 
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
@@ -2759,7 +2788,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
         throw OPENRAVE_EXCEPTION_FORMAT0(_("Cannot decode non-object JSON value to IkParameterization"), ORE_InvalidArguments);
     }
     orjson::LoadJsonValueByKey(rIkParameterization, "id", _id);
-    
+
     if( rIkParameterization.HasMember("type") ) {
         const char* ptype =  rIkParameterization["type"].GetString();
         if( !!ptype ) {
@@ -2890,12 +2919,22 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     // TODO have to scale _mapCustomData by fUnitScale
 }
 
-StringReadable::StringReadable(const std::string& id, const std::string& data): Readable(id), _data(data)
+StringReadable::StringReadable(const std::string& id, const std::string& data) : Readable(id), _data(data)
 {
 }
 
 StringReadable::~StringReadable()
 {
+}
+
+void StringReadable::SetData(const std::string& newdata)
+{
+    _data = newdata;
+}
+
+const std::string& StringReadable::GetData() const
+{
+    return _data;
 }
 
 bool StringReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
@@ -2911,11 +2950,6 @@ bool StringReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
     }
     writer->SetCharData(_data);
     return true;
-}
-
-const std::string& StringReadable::GetData() const
-{
-    return _data;
 }
 
 bool StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const

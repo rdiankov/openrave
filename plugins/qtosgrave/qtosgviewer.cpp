@@ -162,7 +162,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
                     "sets the viewer projection mode, perspective or orthogonal");
     RegisterCommand("MoveCameraPointOfView", boost::bind(&QtOSGViewer::_MoveCameraPointOfViewCommand, this, _1, _2),
-                    "Change ghe camera point of view to be aligned to one of the main world axes, centered at scene bounding box.");
+                    "Change the camera point of view to be aligned to one of the main world axes, centered at scene bounding box.");
     RegisterCommand("MoveCameraZoom", boost::bind(&QtOSGViewer::_MoveCameraZoomCommand, this, _1, _2),
                     "Set the zooming factor of the view");
     RegisterCommand("RotateCameraXDirection", boost::bind(&QtOSGViewer::_RotateCameraXDirectionCommand, this, _1, _2),
@@ -176,6 +176,12 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     "Pans the camera in the direction of the screen x vector, parallel to screen plane. The argument dx is in normalized coordinates 0 < dx < 1, where 1 means canvas width.");
     RegisterCommand("PanCameraYDirection", boost::bind(&QtOSGViewer::_PanCameraYDirectionCommand, this, _1, _2),
     "Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.");
+
+    // Establish size limits per priority
+    _mapGUIFunctionListLimits[ViewerCommandPriority::VERY_HIGH] = 100000;
+    _mapGUIFunctionListLimits[ViewerCommandPriority::HIGH] = 100000;
+    _mapGUIFunctionListLimits[ViewerCommandPriority::MEDIUM] = 1000;
+    _mapGUIFunctionListLimits[ViewerCommandPriority::LOW] = 1000;
 
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
@@ -199,21 +205,22 @@ QtOSGViewer::~QtOSGViewer()
     // _notifyGUIFunctionComplete
     SetEnvironmentSync(false);
     {
-        boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
         list<GUIThreadFunctionPtr>::iterator itmsg;
-        FORIT(itmsg, _listGUIFunctions) {
-            try {
-                (*itmsg)->Call();
+        FOREACH(itpriority, _mapGUIFunctionLists) {
+            FORIT(itmsg, itpriority->second) {
+                try {
+                    (*itmsg)->Call();
+                }
+                catch(const boost::bad_weak_ptr& ex) {
+                    // most likely viewer
+                }
+                catch(const std::exception& ex2) {
+                    RAVELOG_WARN_FORMAT("unexpected exception in gui function: %s", ex2.what());
+                }
             }
-            catch(const boost::bad_weak_ptr& ex) {
-                // most likely viewer
-            }
-            catch(const std::exception& ex2) {
-                RAVELOG_WARN_FORMAT("unexpected exception in gui function: %s", ex2.what());
-            }
+            itpriority->second.clear();
         }
-        _listGUIFunctions.clear();
     }
 
     _condUpdateModels.notify_all();
@@ -305,7 +312,7 @@ bool QtOSGViewer::_HandleOSGKeyDown(int key)
 //            //RAVELOG_INFO_FORMAT("checked id %d", _pointerTypeGroup->checkedId());
 //            //if( !!_pointerTypeGroup->checkedButton() ) {
 //                //_pointerTypeGroup->checkedButton()->setChecked(false);
-//                _PostToGUIThread(boost::bind(&QAbstractButton::setChecked, _pointerTypeGroup->checkedButton(), false));
+//                _PostToGUIThread(boost::bind(&QAbstractButton::setChecked, _pointerTypeGroup->checkedButton(), false), ViewerCommandPriority::LOW);
 //            }
 //            else {
 //                // check one?
@@ -1072,7 +1079,7 @@ bool QtOSGViewer::_SetItemVisualizationCommand(ostream& sout, istream& sinput)
     std::string itemname, visualizationmode;
     sinput >> itemname >> visualizationmode;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetItemVisualization, this, itemname, visualizationmode));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetItemVisualization, this, itemname, visualizationmode), ViewerCommandPriority::MEDIUM);
     return !!sinput;
 }
 
@@ -1188,20 +1195,28 @@ void QtOSGViewer::_ProcessApplicationQuit()
 {
     RAVELOG_VERBOSE("processing viewer application quit\n");
     // remove all messages in order to release the locks
-    boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-    if( _listGUIFunctions.size() > 0 ) {
-        bool bnotify = false;
-        FOREACH(it,_listGUIFunctions) {
-            (*it)->SetFinished();
-            if( (*it)->IsBlocking() ) {
-                bnotify = true;
+    map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> mapGUIFunctionLists;
+    {
+        boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+        mapGUIFunctionLists.swap(_mapGUIFunctionLists);
+    }
+
+    FOREACH(itpriority, mapGUIFunctionLists) {
+        list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
+        if( listGUIFunctions.size() > 0 ) {
+            bool bnotify = false;
+            FOREACH(it,listGUIFunctions) {
+                (*it)->SetFinished();
+                if( (*it)->IsBlocking() ) {
+                    bnotify = true;
+                }
+            }
+            if( bnotify ) {
+                _notifyGUIFunctionComplete.notify_all();
             }
         }
-        if( bnotify ) {
-            _notifyGUIFunctionComplete.notify_all();
-        }
+        listGUIFunctions.clear();
     }
-    _listGUIFunctions.clear();
 
 }
 
@@ -1231,7 +1246,7 @@ bool QtOSGViewer::_SetProjectionModeCommand(ostream& sout, istream& sinput)
 {
     std::string projectionMode = "";
     sinput >> projectionMode;
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetProjectionMode, this, projectionMode));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetProjectionMode, this, projectionMode), ViewerCommandPriority::MEDIUM);
     return true;
 }
 
@@ -1240,7 +1255,7 @@ bool QtOSGViewer::_MoveCameraPointOfViewCommand(ostream& sout, istream& sinput)
     std::string axis = "";
     sinput >> axis;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraPointOfView, this, axis));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraPointOfView, this, axis), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1256,7 +1271,7 @@ bool QtOSGViewer::_MoveCameraZoomCommand(ostream& sout, istream& sinput)
     if(isPan) {
         sinput >> panDelta;
     }
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, (bool)isPan, panDelta));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, (bool)isPan, panDelta), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1265,7 +1280,7 @@ bool QtOSGViewer::_RotateCameraXDirectionCommand(ostream& sout, istream& sinput)
     float thetaX = 0.0f;
     sinput >> thetaX;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraXDirection, this, thetaX));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraXDirection, this, thetaX), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1274,7 +1289,7 @@ bool QtOSGViewer::_RotateCameraYDirectionCommand(ostream& sout, istream& sinput)
     float thetaY = 0.0f;
     sinput >> thetaY;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraYDirection, this, thetaY));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraYDirection, this, thetaY), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1283,7 +1298,7 @@ bool QtOSGViewer::_PanCameraXDirectionCommand(ostream& sout, istream& sinput)
     float dx = 0.0f;
     sinput >> dx;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraXDirection, this, dx));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraXDirection, this, dx), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1292,7 +1307,7 @@ bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
     float dy = 0.0f;
     sinput >> dy;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraYDirection, this, dy));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraYDirection, this, dy), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1350,10 +1365,10 @@ void QtOSGViewer::quitmainloop()
 void QtOSGViewer::Show(int showtype)
 {
     if( showtype ) {
-        _PostToGUIThread(boost::bind(&QtOSGViewer::show, this));
+        _PostToGUIThread(boost::bind(&QtOSGViewer::show, this), ViewerCommandPriority::VERY_HIGH);
     }
     else {
-        _PostToGUIThread(boost::bind(&QtOSGViewer::hide, this));
+        _PostToGUIThread(boost::bind(&QtOSGViewer::hide, this), ViewerCommandPriority::VERY_HIGH);
     }
 //    // have to put this in the message queue
 //    if (showtype ) {
@@ -1393,7 +1408,7 @@ void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
 
 void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistance)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance), ViewerCommandPriority::LOW);
 }
 
 void QtOSGViewer::_StopTrackLink()
@@ -1513,7 +1528,7 @@ GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int strid
     }
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize),color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize),color.w<1), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1534,7 +1549,7 @@ GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int strid
         }
     }
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, osg::ref_ptr<osg::Point>(new osg::Point(fPointSize)), bhasalpha)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, osg::ref_ptr<osg::Point>(new osg::Point(fPointSize)), bhasalpha), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1549,7 +1564,7 @@ GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, i
     }
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
@@ -1564,7 +1579,7 @@ GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, i
         (*vcolors)[i] = osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f);
     }
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1578,7 +1593,7 @@ GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, in
     }
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
@@ -1593,7 +1608,7 @@ GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, in
         (*vcolors)[i] = osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f);
     }
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1647,7 +1662,7 @@ void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, c
 GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vpos, vextents, false)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vpos, vextents, false), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr();
 }
 
@@ -1729,7 +1744,7 @@ void QtOSGViewer::_DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tp
 GraphHandlePtr QtOSGViewer::drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawPlane, this, handle, tplane, vextents, vtexture)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawPlane, this, handle, tplane, vextents, vtexture), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1794,7 +1809,7 @@ GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const 
     osg::ref_ptr<osg::Vec4Array> osgcolors = new osg::Vec4Array(1);
     (*osgcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, color.w<1), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1829,7 +1844,7 @@ GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const 
     }
 
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, bhasalpha)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, bhasalpha), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1845,7 +1860,7 @@ void QtOSGViewer::Reset()
 
 void QtOSGViewer::SetBkgndColor(const RaveVector<float>& color)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetBkgndColor, this, color));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetBkgndColor, this, color), ViewerCommandPriority::MEDIUM);
 }
 
 void QtOSGViewer::_SetBkgndColor(const RaveVector<float>& color)
@@ -1864,11 +1879,11 @@ void QtOSGViewer::StopPlaybackTimer()
 
 void QtOSGViewer::SetSize(int w, int h)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::resize, this, w, h));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::resize, this, w, h), ViewerCommandPriority::HIGH);
 }
 void QtOSGViewer::Move(int x, int y)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y), ViewerCommandPriority::HIGH);
 }
 
 void QtOSGViewer::_RotateCameraXDirection(float thetaX)
@@ -1903,7 +1918,7 @@ void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)
 
 void QtOSGViewer::SetName(const string& name)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name), ViewerCommandPriority::LOW);
 }
 
 void QtOSGViewer::_SetName(const string& name)
@@ -2118,28 +2133,33 @@ void QtOSGViewer::_UpdateEnvironment()
 
     if( _bUpdateEnvironment ) {
         // process all messages
-        list<GUIThreadFunctionPtr> listGUIFunctions;
+        map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> mapGUIFunctionLists;
         {
             boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-            listGUIFunctions.swap(_listGUIFunctions);
+            mapGUIFunctionLists.swap(_mapGUIFunctionLists);
         }
 
-        FOREACH(itmsg, listGUIFunctions) {
-            try {
-                (*itmsg)->Call();
-            }
-            catch(const std::exception& ex) {
-                RAVELOG_WARN_FORMAT("gui thread function failed: %s", ex.what());
+        FOREACH(itpriority, mapGUIFunctionLists) {
+            list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
+            FOREACH(itmsg, listGUIFunctions) {
+                try {
+                    (*itmsg)->Call();
+                }
+                catch(const std::exception& ex) {
+                    RAVELOG_WARN_FORMAT("gui thread function failed: %s", ex.what());
+                }
             }
         }
 
         // have to update model after messages since it can lock the environment
         UpdateFromModel();
-        _UpdateViewport();
+        if (_posgWidget->isVisible()) {
+            _UpdateViewport();
+        }
     }
 }
 
-void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block)
+void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, ViewerCommandPriority priority, bool block)
 {
     if( _nQuitMainLoop != -1 ) {
         // viewer quit, so anything posted won't get processed
@@ -2147,13 +2167,19 @@ void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block
     }
 
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-    if( _listGUIFunctions.size() > 1000 ) {
-        // can happen if system is especially slow
-        //RAVELOG_WARN_FORMAT("too many gui post commands, ignoring %d", _listGUIFunctions.size());
+    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
+    // Block non-essential fucntions if viewer is not processing any messages
+    if (!_bUpdateEnvironment && priority < ViewerCommandPriority::HIGH) {
+        RAVELOG_WARN("New GUI thread function of priority %d dropped due to _bUpdateEnvironment being set to false", priority);
         return;
     }
-    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
-    _listGUIFunctions.push_back(pfn);
+    // GUI thread function queue size limit
+    if (_mapGUIFunctionLists[priority].size() >= _mapGUIFunctionListLimits[priority]) {
+        // Possibly undefined behavior if _mapGUIFunctionListLimits[priority] is ever set to be 0, but that currently never happens
+        _mapGUIFunctionLists[priority].pop_front();
+        RAVELOG_WARN("Old GUI thread function of priority %d dropped due to function queue for given priority exceeding size of %d", priority, _mapGUIFunctionListLimits[priority]);
+    }
+    _mapGUIFunctionLists[priority].push_back(pfn);
     if( block ) {
         while(!pfn->IsFinished()) {
             _notifyGUIFunctionComplete.wait(_mutexGUIFunctions);
@@ -2170,20 +2196,29 @@ void QtOSGViewer::SetEnvironmentSync(bool bUpdate)
 
     if( !bUpdate ) {
         // remove all messages in order to release the locks
-        boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-        if( _listGUIFunctions.size() > 0 ) {
-            bool bnotify = false;
-            FOREACH(it,_listGUIFunctions) {
-                (*it)->SetFinished();
-                if( (*it)->IsBlocking() ) {
-                    bnotify = true;
+        map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> mapGUIFunctionLists;
+        {
+            boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+            mapGUIFunctionLists.swap(_mapGUIFunctionLists);
+        }
+
+        // Clear GUI function lists for all priorities
+        FOREACH(itpriority, mapGUIFunctionLists) {
+            list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
+            if( listGUIFunctions.size() > 0 ) {
+                bool bnotify = false;
+                FOREACH(it,listGUIFunctions) {
+                    (*it)->SetFinished();
+                    if( (*it)->IsBlocking() ) {
+                        bnotify = true;
+                    }
+                }
+                if( bnotify ) {
+                    _notifyGUIFunctionComplete.notify_all();
                 }
             }
-            if( bnotify ) {
-                _notifyGUIFunctionComplete.notify_all();
-            }
+            listGUIFunctions.clear();
         }
-        _listGUIFunctions.clear();
     }
 }
 
