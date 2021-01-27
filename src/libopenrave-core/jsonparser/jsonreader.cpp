@@ -257,8 +257,8 @@ public:
                 const std::string& bodyname = envInfo._vBodyInfos[iBody]->_name;
                 if( envInfo._vBodyInfos[iTest]->_name == bodyname ) {
                     if( !bFoundLast ) {
-                        envInfo._vBodyInfos[iBody] = envInfo._vBodyInfos[iTest];
                         RAVELOG_WARN_FORMAT("env=%d, remove redundant entry %d and replace with %d with body name '%s'", _penv->GetId()%iBody%iTest%bodyname);
+                        envInfo._vBodyInfos[iBody] = envInfo._vBodyInfos[iTest];
                         bFoundLast = true;
                     }
                     else {
