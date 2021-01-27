@@ -549,6 +549,8 @@ protected:
                 }
             }
 
+            uint64_t beforeOpenStampUS = utils::GetMonotonicTime();
+
             boost::shared_ptr<const rapidjson::Document> referenceDoc = _GetDocumentFromFilename(fullFilename, alloc);
             if (!referenceDoc || !(*referenceDoc).HasMember("bodies")) {
                 RAVELOG_ERROR_FORMAT("referenced document cannot be loaded, or has no bodies: %s", fullFilename);
@@ -574,12 +576,12 @@ protected:
             std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rRefKinBodyInfo, "referenceUri", "");
 
             if (_IsExpandableReferenceUri(nextReferenceUri)) {
-                RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', and now processing its referenceUri='%s'", _penv->GetId()%fullFilename%fragment%nextReferenceUri);
+                RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', and now processing its referenceUri='%s, took %u[us]'", _penv->GetId()%fullFilename%fragment%nextReferenceUri%(utils::GetMonotonicTime()-beforeOpenStampUS));
                 insertIndex = _ExpandRapidJSON(envInfo, originBodyId, *referenceDoc, nextReferenceUri, circularReference, fUnitScale, alloc, fullFilename);
                 // regardless of insertIndex, should fall through so can process rEnvInfo
             }
             else {
-                RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s'", _penv->GetId()%fullFilename%fragment);
+                RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', took %u[us]", _penv->GetId()%fullFilename%fragment%(utils::GetMonotonicTime()-beforeOpenStampUS));
             }
 
             if( insertIndex >= 0 ) {
