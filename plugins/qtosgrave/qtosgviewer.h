@@ -328,6 +328,7 @@ public:
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraTransform(const RaveTransform<float>& transform);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
+    virtual void _SetCameraCenter(osg::Vec3 center);
     virtual void _StopTrackLink();
     virtual bool _TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText="");
     virtual void _SetItemVisualization(std::string& itemname, std::string& visualizationmode);
