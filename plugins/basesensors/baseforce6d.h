@@ -130,6 +130,7 @@ public:
 
     virtual int Configure(ConfigureCommand command, bool blocking) override
     {
+        return 1;
     }
 
     virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry) override

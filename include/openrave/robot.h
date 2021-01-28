@@ -43,6 +43,7 @@ public:
         bool operator==(const ManipulatorInfo& other) const {
             return _name == other._name
                 && _sBaseLinkName == other._sBaseLinkName
+                && _sIkChainEndLinkName == other._sIkChainEndLinkName
                 && _sEffectorLinkName == other._sEffectorLinkName
                 && _tLocalTool == other._tLocalTool
                 && _vChuckingDirection == other._vChuckingDirection
@@ -71,7 +72,7 @@ public:
 
         std::string _id; ///< unique id for manipulator info
         std::string _name;
-        std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
+        std::string _sBaseLinkName, _sIkChainEndLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
         Transform _tLocalTool;
         std::vector<dReal> _vChuckingDirection; ///< the normal direction to move joints for the hand to grasp something
         Vector _vdirection = Vector(0,0,1);
@@ -202,6 +203,11 @@ public:
         /// \brief the base used for the iksolver
         virtual LinkPtr GetBase() const {
             return __pBase;
+        }
+
+        /// \brief optional, the end link (used to define the end of the iksolver kinematic chain when different from end effector)
+        virtual LinkPtr GetIkChainEndLink() const {
+            return __pIkChainEndLink;
         }
 
         /// \brief the end effector link (used to define workspace distance)
@@ -518,7 +524,7 @@ protected:
         ManipulatorInfo _info; ///< user-set information
 private:
         RobotBaseWeakPtr __probot;
-        LinkPtr __pBase, __pEffector; ///< contains weak links to robot
+        LinkPtr __pBase, __pIkChainEndLink, __pEffector; ///< contains weak links to robot
         std::vector<int> __vgripperdofindices, __varmdofindices;
         ConfigurationSpecification __armspec; ///< reflects __varmdofindices
         mutable IkSolverBasePtr __pIkSolver;
@@ -760,6 +766,7 @@ public:
         /// \brief have the connected body to be added to the robot kinematics. The active level has nothing to do with visibility or enabling of the links.
         ///
         /// Can only be called when robot is not added to the environment
+        /// \return true if changed
         virtual bool SetActive(int8_t active);
 
         /// \brief return true
@@ -983,7 +990,9 @@ private:
     virtual void GetConnectedBodyActiveStates(std::vector<int8_t>& activestates) const;
 
     /// \brief sets the active states for connected bodies
-    virtual void SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates);
+    ///
+    /// \return true if an active state changed
+    virtual bool SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates);
 
     virtual void SetName(const std::string& name);
 

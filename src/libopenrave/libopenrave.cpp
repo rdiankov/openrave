@@ -595,43 +595,18 @@ public:
         _nDebugLevel = level;
     }
 
-    int GetDebugLevel()
-    {
-        int level = _nDebugLevel;
-        if (_logger != NULL) {
-            if (_logger->isEnabledFor(log4cxx::Level::getTrace())) {
-                level = Level_Verbose;
-            }
-            else if (_logger->isEnabledFor(log4cxx::Level::getDebug())) {
-                level = Level_Debug;
-            }
-            else if (_logger->isEnabledFor(log4cxx::Level::getInfo())) {
-                level = Level_Info;
-            }
-            else if (_logger->isEnabledFor(log4cxx::Level::getWarn())) {
-                level = Level_Warn;
-            }
-            else if (_logger->isEnabledFor(log4cxx::Level::getError())) {
-                level = Level_Error;
-            }
-            else {
-                level = Level_Fatal;
-            }
-        }
-        return level | (_nDebugLevel & ~Level_OutputMask);
-    }
-
 #else
     void SetDebugLevel(int level)
     {
         _nDebugLevel = level;
     }
 
+#endif
+
     int GetDebugLevel()
     {
         return _nDebugLevel;
     }
-#endif
 
     class XMLReaderFunctionData : public UserData
     {
@@ -836,7 +811,7 @@ protected:
             }
         }
 
-        RAVELOG_INFO_FORMAT("could not find file %s", filename);
+        RAVELOG_VERBOSE_FORMAT("could not find file %s", filename);
         return std::string();
 #endif
     }
@@ -2788,7 +2763,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
         throw OPENRAVE_EXCEPTION_FORMAT0(_("Cannot decode non-object JSON value to IkParameterization"), ORE_InvalidArguments);
     }
     orjson::LoadJsonValueByKey(rIkParameterization, "id", _id);
-    
+
     if( rIkParameterization.HasMember("type") ) {
         const char* ptype =  rIkParameterization["type"].GetString();
         if( !!ptype ) {
@@ -2919,12 +2894,22 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     // TODO have to scale _mapCustomData by fUnitScale
 }
 
-StringReadable::StringReadable(const std::string& id, const std::string& data): Readable(id), _data(data)
+StringReadable::StringReadable(const std::string& id, const std::string& data) : Readable(id), _data(data)
 {
 }
 
 StringReadable::~StringReadable()
 {
+}
+
+void StringReadable::SetData(const std::string& newdata)
+{
+    _data = newdata;
+}
+
+const std::string& StringReadable::GetData() const
+{
+    return _data;
 }
 
 bool StringReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
@@ -2940,11 +2925,6 @@ bool StringReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
     }
     writer->SetCharData(_data);
     return true;
-}
-
-const std::string& StringReadable::GetData() const
-{
-    return _data;
 }
 
 bool StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const

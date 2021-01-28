@@ -1816,6 +1816,9 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
+        void serialize(std::ostream& o) const; ///< used only for hash computation
+        std::string GetGrabbedInfoHash() const;
+
         std::string _id; ///< unique id of the grabbed info
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
@@ -1918,6 +1921,7 @@ private:
         Save_JointMaxVelocityAndAcceleration = 0x00000008, ///< save the max joint velocities and accelerations for the controller DOF
         Save_JointWeights                    = 0x00000010, ///< saves the dof weights
         Save_JointLimits                     = 0x00000020, ///< saves the dof limits
+        Save_JointResolutions                = 0x00000040, ///< saves the dof resolutions
         Save_ActiveDOF                       = 0x00010000, ///< [robot only], saves and restores the current active degrees of freedom
         Save_ActiveManipulator               = 0x00020000, ///< [robot only], saves the active manipulator
         Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
@@ -1999,7 +2003,7 @@ protected:
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
-        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2];
+        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
         std::vector<UserDataPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
 private:
@@ -2045,7 +2049,7 @@ protected:
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
-        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2];
+        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
         std::vector<UserDataPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
         bool _bReleased; ///< if true, then body should not be restored
@@ -2139,6 +2143,11 @@ private:
 
     /// \brief Set the name of the body, notifies the environment and checks for uniqueness.
     virtual void SetName(const std::string& name);
+
+    /// \brief Unique name of the body.
+    virtual const std::string& GetId() const {
+        return _id;
+    }
 
     /// Methods for accessing basic information about joints
     /// @name Basic Information
