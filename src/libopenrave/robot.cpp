@@ -2301,7 +2301,7 @@ void RobotBase::_ComputeInternalInformation()
         RAVELOG_WARN(str(boost::format("Robot %s span is greater than 30 meaning that it is most likely defined in a unit other than meters. It is highly encouraged to define all OpenRAVE robots in meters since many metrics, database models, and solvers have been specifically optimized for this unit\n")%GetName()));
     }
 
-    if( !GetController() || GetController()->GetControlDOFIndices().size() != GetDOF() ) {
+    if( !GetController() || (int)GetController()->GetControlDOFIndices().size() != GetDOF() ) {
         RAVELOG_VERBOSE(str(boost::format("no default controller set on robot %s\n")%GetName()));
         std::vector<int> dofindices;
         for(int i = 0; i < GetDOF(); ++i) {
