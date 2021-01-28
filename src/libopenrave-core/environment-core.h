@@ -3296,10 +3296,18 @@ protected:
         return true;
     }
 
+    /// \brief do not allow empty ids
     virtual bool _CheckUniqueId(KinBodyConstPtr pbody, bool bDoThrow=false) const
     {
+        const std::string& inputBodyId = pbody->GetId();
+        if( inputBodyId.empty() ) {
+            if( bDoThrow ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body '%s' does not have a valid id '%s'"), GetId()%pbody->GetName()%inputBodyId, ORE_BodyIdConflict);
+            }
+            return false;
+        }
         FOREACHC(itbody,_vecbodies) {
-            if(( *itbody != pbody) &&( (*itbody)->GetId() == pbody->GetId()) ) {
+            if(( *itbody != pbody) &&( (*itbody)->GetId() == inputBodyId) ) {
                 if( bDoThrow ) {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body '%s' does not have unique id '%s'"), GetId()%pbody->GetName()%pbody->GetId(), ORE_BodyIdConflict);
                 }
