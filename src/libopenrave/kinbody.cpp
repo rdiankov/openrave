@@ -4846,7 +4846,7 @@ int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
 int8_t KinBody::DoesDOFAffectLink(int dofindex, int linkindex ) const
 {
     CHECK_INTERNAL_COMPUTATION0;
-    OPENRAVE_ASSERT_FORMAT(dofindex >= 0 && dofindex < GetDOF(), "body %s dofindex %d invalid (num dofs %d)", GetName()%GetDOF(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(dofindex >= 0 && dofindex < GetDOF(), "body %s dofindex %d invalid (num dofs %d)", GetName()%dofindex%GetDOF(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s linkindex %d invalid (num links %d)", GetName()%linkindex%_veclinks.size(), ORE_InvalidArguments);
     int jointindex = _vDOFIndices.at(dofindex);
     return _vJointsAffectingLinks.at(jointindex*_veclinks.size()+linkindex);
