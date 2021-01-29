@@ -275,6 +275,7 @@ public:
     void SetUnit(std::string unitname, dReal unitmult);
 
     object GetUnit() const;
+    int GetId() const;
 
     object ExtractInfo() const;
     object UpdateFromInfo(PyEnvironmentBaseInfoPtr info, UpdateFromInfoMode updateMode);

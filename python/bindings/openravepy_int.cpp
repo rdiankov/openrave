@@ -1784,7 +1784,9 @@ void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, py::object oAddMode, 
     if( !IS_PYTHONOBJECT_NONE(oAddMode) ) {
         if (PyBool_Check(oAddMode.ptr())) {
             addMode = py::extract<bool>(oAddMode) ? IAM_AllowRenaming : IAM_StrictNameChecking;
-            RAVELOG_WARN_FORMAT("Trying to use 'anonymous' flag when adding object %s of type %d via Add", pinterface->GetXMLId()%(int)pinterface->GetInterfaceType());
+            if( pinterface->GetInterfaceType() != PT_Module ) {
+                RAVELOG_WARN_FORMAT("Trying to use 'anonymous' flag when adding object %s of type %d via Add", pinterface->GetXMLId()%(int)pinterface->GetInterfaceType());
+            }
         }
         else {
             addMode = py::extract<InterfaceAddMode>(oAddMode);
@@ -2432,6 +2434,11 @@ void PyEnvironmentBase::SetUnit(std::string unitname, dReal unitmult){
 object PyEnvironmentBase::GetUnit() const {
     std::pair<std::string, dReal> unit = _penv->GetUnit();
     return py::make_tuple(unit.first, unit.second);
+}
+
+int PyEnvironmentBase::GetId() const
+{
+    return _penv->GetId();
 }
 
 int PyEnvironmentBase::GetRevision() const {
@@ -3225,6 +3232,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("SetUserData",setuserdata2, PY_ARGS("data") DOXY_FN(InterfaceBase,SetUserData))
                      .def("GetUserData",&PyEnvironmentBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
                      .def("GetUnit",&PyEnvironmentBase::GetUnit, DOXY_FN(EnvironmentBase,GetUnit))
+                     .def("GetId",&PyEnvironmentBase::GetId, DOXY_FN(EnvironmentBase,GetId))
                      .def("SetUnit",&PyEnvironmentBase::SetUnit, PY_ARGS("unitname","unitmult") DOXY_FN(EnvironmentBase,SetUnit))
                      .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
                      .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
