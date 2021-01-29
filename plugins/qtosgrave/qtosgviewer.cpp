@@ -1393,7 +1393,12 @@ void QtOSGViewer::_SetCameraTransform(const RaveTransform<float>& transform)
 void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
 {
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
+    RaveTransform<float> tcenter;
+    tcenter.trans.z = focalDistance;
+    tcenter = trans * tcenter;
     _SetCameraTransform(trans*trot);
+    osg::Vec3 center = osg::Vec3(tcenter.trans.x, tcenter.trans.y, tcenter.trans.z);
+    _SetCameraCenter(center);
     _SetCameraDistanceToFocus(focalDistance);
 }
 
@@ -1442,6 +1447,11 @@ bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& 
         _cameraMoveModeButton->setEnabled(false);
     }
     return true;
+}
+
+void QtOSGViewer::_SetCameraCenter(osg::Vec3 center)
+{
+    _posgWidget->SetCameraCenter(center);
 }
 
 void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
