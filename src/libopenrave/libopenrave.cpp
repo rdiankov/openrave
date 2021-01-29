@@ -2224,7 +2224,11 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
             bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
             KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
             if( !pothergrabbedbody ) {
-                RAVELOG_WARN_FORMAT("grabbed body on %s has already been released. ignoring.", pbody->GetName());
+                RAVELOG_WARN_FORMAT("env=%d, grabbed body on %s has already been released. ignoring.", penv->GetId()%pbody->GetName());
+                continue;
+            }
+            if( pothergrabbedbody->GetLinks().empty() ) {
+                RAVELOG_WARN_FORMAT("env=%d, grabbed body on %s has no links, perhaps not initialized.", penv->GetId()%pbody->GetName());
                 continue;
             }
             if( bsamelink ) {
