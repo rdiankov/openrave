@@ -1583,6 +1583,12 @@ void QOSGViewerWidget::SetCurrentCameraManipulator(osgGA::CameraManipulator* man
     _osgview->setCameraManipulator(manipulator);
 }
 
+void QOSGViewerWidget::SetCameraCenter(osg::Vec3d center)
+{
+    osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());
+    currentManip->setCenter(center);
+}
+
 double QOSGViewerWidget::GetCameraDistanceToFocus()
 {
     osgGA::OrbitManipulator* currentManip = dynamic_cast<osgGA::OrbitManipulator*>(GetCurrentCameraManipulator().get());

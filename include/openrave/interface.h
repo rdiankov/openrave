@@ -26,6 +26,13 @@
 
 namespace OpenRAVE {
 
+/// \brief options to pass into UpdateFromInfo that control what gets updated
+enum UpdateFromInfoMode
+{
+    UFIM_Exact = 0, ///< kinbody is initialized exactly as the Info is. If Info is not specifying certain components, then those will be removed from the existing interface
+    UFIM_OnlySpecifiedBodiesExact = 1, ///< when updating the environment with bodies, will only update the bodies that are specified in the info structure and not touch the other bodies or other environment info. Bodies will be udpated with Exact
+};
+
 /// serialization options for interfaces
 enum SerializationOptions
 {

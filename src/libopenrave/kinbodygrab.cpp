@@ -428,13 +428,17 @@ void KinBody::GrabbedInfo::Reset()
 
 void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    if( !_id.empty() ) {
+        orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    }
     orjson::SetJsonValueByKey(value, "grabbedName", _grabbedname, allocator);
     orjson::SetJsonValueByKey(value, "robotLinkName", _robotlinkname, allocator);
     Transform transform = _trelative;
     transform.trans *= fUnitScale;
     orjson::SetJsonValueByKey(value, "transform", transform, allocator);
-    orjson::SetJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames, allocator);
+    if( !_setIgnoreRobotLinkNames.empty() ) {
+        orjson::SetJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames, allocator);
+    }
 }
 
 void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -476,9 +480,15 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgra
         FOREACHC(itgrabbedinfo, vgrabbedinfo) {
             GrabbedInfoConstPtr pgrabbedinfo = *itgrabbedinfo;
             KinBodyPtr pbody = GetEnv()->GetKinBody(pgrabbedinfo->_grabbedname);
-            OPENRAVE_ASSERT_FORMAT(!!pbody, "body %s invalid grab body '%s'",GetName()%pgrabbedinfo->_grabbedname, ORE_InvalidArguments);
+            OPENRAVE_ASSERT_FORMAT(!!pbody, "env=%d, when grabbing with body '%s' invalid grab body '%s'",GetEnv()->GetId()%GetName()%pgrabbedinfo->_grabbedname, ORE_InvalidArguments);
             KinBody::LinkPtr pBodyLinkToGrabWith = GetLink(pgrabbedinfo->_robotlinkname);
-            OPENRAVE_ASSERT_FORMAT(!!pBodyLinkToGrabWith, "body %s invalid grab link '%s'",GetName()%pgrabbedinfo->_robotlinkname, ORE_InvalidArguments);
+            if( !pBodyLinkToGrabWith ) {
+                std::stringstream ss;
+                for(const LinkPtr& plink : _veclinks) {
+                    ss << plink->GetName() << ",";
+                }
+                throw OPENRAVE_EXCEPTION_FORMAT("env=%d, when grabbing with body '%s' invalid grab link '%s'. Available links are [%s]",GetEnv()->GetId()%GetName()%pgrabbedinfo->_robotlinkname%ss.str(), ORE_InvalidArguments);
+            }
             OPENRAVE_ASSERT_FORMAT(pbody.get() != this, "body %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
             if( IsGrabbing(*pbody) ) {
                 RAVELOG_VERBOSE(str(boost::format("Body %s: body %s already grabbed\n")%GetName()%pbody->GetName()));

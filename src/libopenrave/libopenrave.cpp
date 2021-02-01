@@ -595,43 +595,18 @@ public:
         _nDebugLevel = level;
     }
 
-    int GetDebugLevel()
-    {
-        int level = _nDebugLevel;
-        if (_logger != NULL) {
-            if (_logger->isEnabledFor(log4cxx::Level::getTrace())) {
-                level = Level_Verbose;
-            }
-            else if (_logger->isEnabledFor(log4cxx::Level::getDebug())) {
-                level = Level_Debug;
-            }
-            else if (_logger->isEnabledFor(log4cxx::Level::getInfo())) {
-                level = Level_Info;
-            }
-            else if (_logger->isEnabledFor(log4cxx::Level::getWarn())) {
-                level = Level_Warn;
-            }
-            else if (_logger->isEnabledFor(log4cxx::Level::getError())) {
-                level = Level_Error;
-            }
-            else {
-                level = Level_Fatal;
-            }
-        }
-        return level | (_nDebugLevel & ~Level_OutputMask);
-    }
-
 #else
     void SetDebugLevel(int level)
     {
         _nDebugLevel = level;
     }
 
+#endif
+
     int GetDebugLevel()
     {
         return _nDebugLevel;
     }
-#endif
 
     class XMLReaderFunctionData : public UserData
     {
@@ -836,7 +811,7 @@ protected:
             }
         }
 
-        RAVELOG_INFO_FORMAT("could not find file %s", filename);
+        RAVELOG_VERBOSE_FORMAT("could not find file %s", filename);
         return std::string();
 #endif
     }
@@ -1965,6 +1940,10 @@ const char* RaveGetErrorCodeString(OpenRAVEErrorCode error)
     case ORE_NotInitialized: return "NotInitialized";
     case ORE_InvalidState: return "InvalidState";
     case ORE_Timeout: return "Timeout";
+    case ORE_InvalidURI: return "InvalidURI";
+    case ORE_BodyNameConflict: return "BodyNameConflict";
+    case ORE_SensorNameConflict: return "SensorNameConflict";
+    case ORE_BodyIdConflict: return "BodyIdConflict";
     }
     // should throw an exception?
     return "";
@@ -2245,7 +2224,11 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
             bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
             KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
             if( !pothergrabbedbody ) {
-                RAVELOG_WARN_FORMAT("grabbed body on %s has already been released. ignoring.", pbody->GetName());
+                RAVELOG_WARN_FORMAT("env=%d, grabbed body on %s has already been released. ignoring.", penv->GetId()%pbody->GetName());
+                continue;
+            }
+            if( pothergrabbedbody->GetLinks().empty() ) {
+                RAVELOG_WARN_FORMAT("env=%d, grabbed body on %s has no links, perhaps not initialized.", penv->GetId()%pbody->GetName());
                 continue;
             }
             if( bsamelink ) {
@@ -2499,6 +2482,11 @@ EnvironmentBase::~EnvironmentBase()
     RaveGlobal::instance()->UnregisterEnvironment(this);
 }
 
+void EnvironmentBase::Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs)
+{
+    RAVELOG_WARN("Cannot Add with bAnonymous anymore, should switch to the new InterfaceAddMode");
+    Add(pinterface, bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking, cmdargs);
+}
 
 bool SensorBase::SensorData::serialize(std::ostream& O) const
 {
@@ -2788,7 +2776,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
         throw OPENRAVE_EXCEPTION_FORMAT0(_("Cannot decode non-object JSON value to IkParameterization"), ORE_InvalidArguments);
     }
     orjson::LoadJsonValueByKey(rIkParameterization, "id", _id);
-    
+
     if( rIkParameterization.HasMember("type") ) {
         const char* ptype =  rIkParameterization["type"].GetString();
         if( !!ptype ) {
@@ -2919,12 +2907,22 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     // TODO have to scale _mapCustomData by fUnitScale
 }
 
-StringReadable::StringReadable(const std::string& id, const std::string& data): Readable(id), _data(data)
+StringReadable::StringReadable(const std::string& id, const std::string& data) : Readable(id), _data(data)
 {
 }
 
 StringReadable::~StringReadable()
 {
+}
+
+void StringReadable::SetData(const std::string& newdata)
+{
+    _data = newdata;
+}
+
+const std::string& StringReadable::GetData() const
+{
+    return _data;
 }
 
 bool StringReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
@@ -2940,11 +2938,6 @@ bool StringReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
     }
     writer->SetCharData(_data);
     return true;
-}
-
-const std::string& StringReadable::GetData() const
-{
-    return _data;
 }
 
 bool StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const

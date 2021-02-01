@@ -2560,6 +2560,14 @@ object PyKinBody::GetName() const
 {
     return ConvertStringToUnicode(_pbody->GetName());
 }
+void PyKinBody::SetId(const std::string& bodyid)
+{
+    _pbody->SetId(bodyid);
+}
+std::string PyKinBody::GetId() const
+{
+    return _pbody->GetId();
+}
 int PyKinBody::GetDOF() const
 {
     return _pbody->GetDOF();
@@ -5021,6 +5029,8 @@ void init_openravepy_kinbody()
                          .def("SetLinkGroupGeometries", &PyKinBody::SetLinkGroupGeometries, PY_ARGS("name", "linkgeometries") DOXY_FN(KinBody, SetLinkGroupGeometries))
                          .def("SetName", &PyKinBody::SetName,PY_ARGS("name") DOXY_FN(KinBody,SetName))
                          .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
+                         .def("SetId", &PyKinBody::SetId,PY_ARGS("id") DOXY_FN(KinBody,SetId))
+                         .def("GetId",&PyKinBody::GetId,DOXY_FN(KinBody,GetId))
                          .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(KinBody,GetDOF))
                          .def("GetDOFValues",getdofvalues1,DOXY_FN(KinBody,GetDOFValues))
                          .def("GetDOFValues",getdofvalues2,PY_ARGS("indices") DOXY_FN(KinBody,GetDOFValues))

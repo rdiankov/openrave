@@ -327,7 +327,7 @@ void MainOpenRAVEThread()
             if( s_bSetWindowPosition ) {
                 pviewer->Move(s_WindowPosX,s_WindowPosY);
             }
-            penv->AddViewer(pviewer);
+            penv->Add(pviewer, IAM_AllowRenaming, std::string());
         }
     }
 
