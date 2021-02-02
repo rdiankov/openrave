@@ -195,6 +195,8 @@ public:
     void SetLinkGroupGeometries(const std::string& geomname, py::object olinkgeometryinfos);
     void SetName(const std::string& name);
     py::object GetName() const;
+    void SetId(const std::string& bodyid);
+    std::string GetId() const;
     int GetDOF() const;
     py::object GetDOFValues() const;
     py::object GetDOFValues(py::object oindices) const;

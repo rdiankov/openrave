@@ -1940,6 +1940,10 @@ const char* RaveGetErrorCodeString(OpenRAVEErrorCode error)
     case ORE_NotInitialized: return "NotInitialized";
     case ORE_InvalidState: return "InvalidState";
     case ORE_Timeout: return "Timeout";
+    case ORE_InvalidURI: return "InvalidURI";
+    case ORE_BodyNameConflict: return "BodyNameConflict";
+    case ORE_SensorNameConflict: return "SensorNameConflict";
+    case ORE_BodyIdConflict: return "BodyIdConflict";
     }
     // should throw an exception?
     return "";
@@ -2220,7 +2224,11 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
             bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
             KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
             if( !pothergrabbedbody ) {
-                RAVELOG_WARN_FORMAT("grabbed body on %s has already been released. ignoring.", pbody->GetName());
+                RAVELOG_WARN_FORMAT("env=%d, grabbed body on %s has already been released. ignoring.", penv->GetId()%pbody->GetName());
+                continue;
+            }
+            if( pothergrabbedbody->GetLinks().empty() ) {
+                RAVELOG_WARN_FORMAT("env=%d, grabbed body on %s has no links, perhaps not initialized.", penv->GetId()%pbody->GetName());
                 continue;
             }
             if( bsamelink ) {
@@ -2474,6 +2482,11 @@ EnvironmentBase::~EnvironmentBase()
     RaveGlobal::instance()->UnregisterEnvironment(this);
 }
 
+void EnvironmentBase::Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs)
+{
+    RAVELOG_WARN("Cannot Add with bAnonymous anymore, should switch to the new InterfaceAddMode");
+    Add(pinterface, bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking, cmdargs);
+}
 
 bool SensorBase::SensorData::serialize(std::ostream& O) const
 {

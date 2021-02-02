@@ -3355,7 +3355,7 @@ public:
                     boost::shared_ptr<RobotXMLReader> robotreader = boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader);
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Robot);
                     RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_pinterface);
-                    _penv->Add(probot);
+                    _penv->Add(probot, IAM_StrictNameChecking);
                     if( !!robotreader->GetJointValues() ) {
                         if( (int)robotreader->GetJointValues()->size() != probot->GetDOF() ) {
                             RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, robot=%s")%robotreader->GetJointValues()->size()%probot->GetDOF()%probot->GetName()));
@@ -3369,7 +3369,7 @@ public:
                     KinBodyXMLReaderPtr kinbodyreader = boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader);
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_KinBody);
                     KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_pinterface);
-                    _penv->Add(pbody);
+                    _penv->Add(pbody, IAM_StrictNameChecking);
                     if( !!kinbodyreader->GetJointValues() ) {
                         if( (int)kinbodyreader->GetJointValues()->size() != pbody->GetDOF() ) {
                             RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, body=%s")%kinbodyreader->GetJointValues()->size()%pbody->GetDOF()%pbody->GetName()));
@@ -3381,7 +3381,7 @@ public:
                 }
                 else if( !!boost::dynamic_pointer_cast<SensorXMLReader>(_pcurreader) ) {
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Sensor);
-                    _penv->Add(RaveInterfaceCast<SensorBase>(_pinterface));
+                    _penv->Add(RaveInterfaceCast<SensorBase>(_pinterface), IAM_StrictNameChecking);
                 }
                 else if( !!boost::dynamic_pointer_cast< DummyInterfaceXMLReader<PT_PhysicsEngine> >(_pcurreader) ) {
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_PhysicsEngine);
@@ -3574,7 +3574,7 @@ public:
                             boost::shared_ptr<RobotXMLReader> robotreader = boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader);
                             BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Robot);
                             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_pinterface);
-                            _penv->Add(probot);
+                            _penv->Add(probot, IAM_StrictNameChecking);
                             if( !!robotreader->GetJointValues() ) {
                                 if( (int)robotreader->GetJointValues()->size() != probot->GetDOF() ) {
                                     RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, robot=%s")%robotreader->GetJointValues()->size()%probot->GetDOF()%probot->GetName()));
@@ -3588,7 +3588,7 @@ public:
                             KinBodyXMLReaderPtr kinbodyreader = boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader);
                             BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_KinBody);
                             KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_pinterface);
-                            _penv->Add(pbody);
+                            _penv->Add(pbody, IAM_StrictNameChecking);
                             if( !!kinbodyreader->GetJointValues() ) {
                                 if( (int)kinbodyreader->GetJointValues()->size() != pbody->GetDOF() ) {
                                     RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, body=%s")%kinbodyreader->GetJointValues()->size()%pbody->GetDOF()%pbody->GetName()));
@@ -3609,7 +3609,7 @@ public:
                             }
                         }
                         else {
-                            _penv->Add(_pinterface);
+                            _penv->Add(_pinterface, IAM_StrictNameChecking);
                         }
                     }
                     return true;

@@ -589,7 +589,7 @@ public:
                 // create in this thread since viewer thread is already waiting on another viewer
                 pviewer = RaveCreateViewer(penv, strviewer);
                 if( !!pviewer ) {
-                    penv->AddViewer(pviewer);
+                    penv->Add(pviewer, IAM_AllowRenaming, std::string());
                     // TODO uncomment once Show posts to queue
                     if( bShowViewer ) {
                         pviewer->Show(1);
@@ -721,7 +721,7 @@ protected:
             }
 
             FOREACH(itaddviewer, listtempviewers) {
-                (*itaddviewer)->GetEnv()->AddViewer(*itaddviewer);
+                (*itaddviewer)->GetEnv()->Add(*itaddviewer, IAM_AllowRenaming, std::string());
             }
 
             ViewerBasePtr puseviewer;
@@ -969,7 +969,8 @@ EnvironmentBase::EnvironmentBaseInfoPtr PyEnvironmentBase::PyEnvironmentBaseInfo
     if (!_name.is_none()) {
         pInfo->_name = py::extract<std::string>(_name);
     }
-    for(size_t i=0; i < py::len(_keywords); i++){
+    size_t numkeywords = (size_t)py::len(_keywords);
+    for(size_t i=0; i < numkeywords; i++) {
         pInfo->_keywords.push_back(py::extract<std::string>(_keywords[i]));
     }
     if (!_description.is_none()) {
@@ -1594,11 +1595,53 @@ bool PyEnvironmentBase::Load(const std::string &filename, object odictatts) {
     openravepy::PythonThreadSaver threadsaver;
     return _penv->Load(filename, dictatts);
 }
-bool PyEnvironmentBase::LoadURI(const std::string &filename, object odictatts) {
+bool PyEnvironmentBase::LoadURI(const std::string &filename, object odictatts)
+{
     AttributesList dictatts = toAttributesList(odictatts);
     openravepy::PythonThreadSaver threadsaver;
     return _penv->LoadURI(filename, dictatts);
 }
+py::object PyEnvironmentBase::LoadJSON(py::object oEnvInfo, UpdateFromInfoMode updateMode, object odictatts)
+{
+    AttributesList dictatts = toAttributesList(odictatts);
+    rapidjson::Document rEnvInfo;
+    toRapidJSONValue(oEnvInfo, rEnvInfo, rEnvInfo.GetAllocator());
+    std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
+    bool bSuccess = false;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        bSuccess = _penv->LoadJSON(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, dictatts);
+    }
+
+    if( !bSuccess ) {
+        return py::make_tuple(py::none_(), py::none_(), py::none_());
+    }
+
+    py::list createdBodies, modifiedBodies, removedBodies;
+    FOREACHC(itbody, vCreatedBodies) {
+        if ((*itbody)->IsRobot()) {
+            createdBodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        } else {
+            createdBodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    FOREACHC(itbody, vModifiedBodies) {
+        if ((*itbody)->IsRobot()) {
+            modifiedBodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        } else {
+            modifiedBodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    FOREACHC(itbody, vRemovedBodies) {
+        if ((*itbody)->IsRobot()) {
+            removedBodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+        } else {
+            removedBodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+        }
+    }
+    return py::make_tuple(createdBodies, modifiedBodies, removedBodies);
+}
+
 bool PyEnvironmentBase::LoadData(const std::string &data) {
     openravepy::PythonThreadSaver threadsaver;
     return _penv->LoadData(data);
@@ -1735,35 +1778,51 @@ object PyEnvironmentBase::ReadTrimeshData(const std::string& data, const std::st
     return toPyTriMesh(*ptrimesh);
 }
 
-void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs) {
-    _penv->Add(pinterface->GetInterfaceBase(), bAnonymous, cmdargs);
+void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, py::object oAddMode, const std::string& cmdargs)
+{
+    InterfaceAddMode addMode = IAM_StrictNameChecking;
+    if( !IS_PYTHONOBJECT_NONE(oAddMode) ) {
+        if (PyBool_Check(oAddMode.ptr())) {
+            addMode = py::extract<bool>(oAddMode) ? IAM_AllowRenaming : IAM_StrictNameChecking;
+            if( pinterface->GetInterfaceType() != PT_Module ) {
+                RAVELOG_WARN_FORMAT("Trying to use 'anonymous' flag when adding object %s of type %d via Add", pinterface->GetXMLId()%(int)pinterface->GetInterfaceType());
+            }
+        }
+        else {
+            addMode = py::extract<InterfaceAddMode>(oAddMode);
+        }
+    }
+    _penv->Add(pinterface->GetInterfaceBase(), addMode, cmdargs);
 }
 
 void PyEnvironmentBase::AddKinBody(PyKinBodyPtr pbody) {
-    CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody));
+    CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody), IAM_StrictNameChecking, std::string());
 }
 void PyEnvironmentBase::AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) {
-    CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody),bAnonymous);
+    RAVELOG_WARN("Calling AddKinBody with bAnonymous, should switch to IAM_X signals");
+    CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody),bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking);
 }
 void PyEnvironmentBase::AddRobot(PyRobotBasePtr robot) {
     CHECK_POINTER(robot);
-    _penv->Add(openravepy::GetRobot(robot));
+    _penv->Add(openravepy::GetRobot(robot), IAM_StrictNameChecking);
 }
 void PyEnvironmentBase::AddRobot(PyRobotBasePtr robot, bool bAnonymous) {
+    RAVELOG_WARN("Calling AddRobot with bAnonymous, should switch to IAM_X signals");
     CHECK_POINTER(robot);
-    _penv->Add(openravepy::GetRobot(robot),bAnonymous);
+    _penv->Add(openravepy::GetRobot(robot), bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking);
 }
 void PyEnvironmentBase::AddSensor(PySensorBasePtr sensor) {
     CHECK_POINTER(sensor);
-    _penv->Add(openravepy::GetSensor(sensor));
+    _penv->Add(openravepy::GetSensor(sensor), IAM_StrictNameChecking);
 }
 void PyEnvironmentBase::AddSensor(PySensorBasePtr sensor, bool bAnonymous) {
+    RAVELOG_WARN("Calling AddSensor with bAnonymous, should switch to IAM_X signals");
     CHECK_POINTER(sensor);
-    _penv->Add(openravepy::GetSensor(sensor),bAnonymous);
+    _penv->Add(openravepy::GetSensor(sensor),bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking);
 }
 void PyEnvironmentBase::AddViewer(PyViewerBasePtr viewer) {
     CHECK_POINTER(viewer);
-    _penv->Add(openravepy::GetViewer(viewer));
+    _penv->Add(openravepy::GetViewer(viewer), IAM_AllowRenaming);
 }
 
 bool PyEnvironmentBase::RemoveKinBody(PyKinBodyPtr pbody) {
@@ -2377,6 +2436,11 @@ object PyEnvironmentBase::GetUnit() const {
     return py::make_tuple(unit.first, unit.second);
 }
 
+int PyEnvironmentBase::GetId() const
+{
+    return _penv->GetId();
+}
+
 int PyEnvironmentBase::GetRevision() const {
     return _penv->GetRevision();
 }
@@ -2387,10 +2451,11 @@ object PyEnvironmentBase::ExtractInfo() const {
     return py::to_object(boost::shared_ptr<PyEnvironmentBase::PyEnvironmentBaseInfo>(new PyEnvironmentBase::PyEnvironmentBaseInfo(info)));
 }
 
-object PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info) {
+object PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info, UpdateFromInfoMode updateMode)
+{
     EnvironmentBase::EnvironmentBaseInfoPtr pInfo = info->GetEnvironmentBaseInfo();
     std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
-    _penv->UpdateFromInfo(*pInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies);
+    _penv->UpdateFromInfo(*pInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies, updateMode);
 
     py::list createdBodies, modifiedBodies, removedBodies;
     FOREACHC(itbody, vCreatedBodies) {
@@ -2551,6 +2616,7 @@ PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadURI_overloads, LoadURI, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadJSON_overloads, LoadJSON, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StopSimulation_overloads, StopSimulation, 0, 1)
@@ -2925,6 +2991,16 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #else
                      .def("LoadURI",&PyEnvironmentBase::LoadURI,LoadURI_overloads(PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,LoadURI)))
 #endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                     .def("LoadJSON", &PyEnvironmentBase::LoadJSON,
+                          "envInfo"_a,
+                          "updateMode"_a,
+                          "atts"_a = py::none_(),
+                          DOXY_FN(EnvironmentBase, LoadJSON)
+                          )
+#else
+                     .def("LoadJSON",&PyEnvironmentBase::LoadJSON,LoadJSON_overloads(PY_ARGS("envInfo","updateMode", "atts") DOXY_FN(EnvironmentBase,LoadJSON)))
+#endif
                      .def("Load",load1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,Load))
                      .def("Load",load2, PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,Load))
                      .def("LoadData",loaddata1, PY_ARGS("data") DOXY_FN(EnvironmentBase,LoadData))
@@ -2978,12 +3054,12 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                      .def("Add", &PyEnvironmentBase::Add,
                           "interface"_a,
-                          "anonymous"_a = false,
+                          "addMode"_a = py::none_(),
                           "cmdargs"_a = "",
                           DOXY_FN(EnvironmentBase, Add)
                           )
 #else
-                     .def("Add", &PyEnvironmentBase::Add, Add_overloads(PY_ARGS("interface","anonymous","cmdargs") DOXY_FN(EnvironmentBase,Add)))
+                     .def("Add", &PyEnvironmentBase::Add, Add_overloads(PY_ARGS("interface","addMode","cmdargs") DOXY_FN(EnvironmentBase,Add)))
 #endif
                      .def("AddKinBody",addkinbody1, PY_ARGS("body") DOXY_FN(EnvironmentBase,AddKinBody))
                      .def("AddKinBody",addkinbody2, PY_ARGS("body","anonymous") DOXY_FN(EnvironmentBase,AddKinBody))
@@ -3156,10 +3232,11 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("SetUserData",setuserdata2, PY_ARGS("data") DOXY_FN(InterfaceBase,SetUserData))
                      .def("GetUserData",&PyEnvironmentBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
                      .def("GetUnit",&PyEnvironmentBase::GetUnit, DOXY_FN(EnvironmentBase,GetUnit))
+                     .def("GetId",&PyEnvironmentBase::GetId, DOXY_FN(EnvironmentBase,GetId))
                      .def("SetUnit",&PyEnvironmentBase::SetUnit, PY_ARGS("unitname","unitmult") DOXY_FN(EnvironmentBase,SetUnit))
                      .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
                      .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
-                     .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info") DOXY_FN(EnvironmentBase,UpdateFromInfo))
+                     .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info", "updateMode") DOXY_FN(EnvironmentBase,UpdateFromInfo))
                      .def("__enter__",&PyEnvironmentBase::__enter__)
                      .def("__exit__",&PyEnvironmentBase::__exit__)
                      .def("__eq__",&PyEnvironmentBase::__eq__)
