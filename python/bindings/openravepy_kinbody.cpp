@@ -1756,6 +1756,9 @@ bool PyJoint::IsRevolute(int iaxis) const {
 bool PyJoint::IsPrismatic(int iaxis) const {
     return _pjoint->IsPrismatic(iaxis);
 }
+bool PyJoint::IsActive() const {
+    return _pjoint->IsActive();
+}
 bool PyJoint::IsStatic() const {
     return _pjoint->IsStatic();
 }
@@ -5640,6 +5643,7 @@ void init_openravepy_kinbody()
                            .def("GetParent", &PyJoint::GetParent, DOXY_FN(KinBody::Joint,GetParent))
                            .def("GetFirstAttached", &PyJoint::GetFirstAttached, DOXY_FN(KinBody::Joint,GetFirstAttached))
                            .def("GetSecondAttached", &PyJoint::GetSecondAttached, DOXY_FN(KinBody::Joint,GetSecondAttached))
+                           .def("IsActive",&PyJoint::IsActive, DOXY_FN(KinBody::Joint,IsActive))
                            .def("IsStatic",&PyJoint::IsStatic, DOXY_FN(KinBody::Joint,IsStatic))
                            .def("IsCircular",&PyJoint::IsCircular, DOXY_FN(KinBody::Joint,IsCircular))
                            .def("IsRevolute",&PyJoint::IsRevolute, DOXY_FN(KinBody::Joint,IsRevolute))
