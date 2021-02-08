@@ -1507,6 +1507,9 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
         break;
     }
+    case IKP_None:
+        // no data, that is OK
+        break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
     }
@@ -1614,6 +1617,9 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IKP_TranslationYAxisAngleXNorm4DVelocity:
     case IKP_TranslationZAxisAngleYNorm4DVelocity:
         I >> ikparam._transform.rot.x >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z;
+        break;
+    case IKP_None:
+        // no data, that is OK
         break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
@@ -2790,7 +2796,10 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
                 }
             }
             if (!foundType) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization %s"), ptype, ORE_InvalidArguments);
+                if( strlen(ptype) > 0 ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization %s"), ptype, ORE_InvalidArguments);
+                }
+                // no type so just pass through
             }
         }
     }
