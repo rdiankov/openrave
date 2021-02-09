@@ -3834,8 +3834,8 @@ object PyKinBody::ExtractInfo() const {
 }
 
 
-ModuleBasePtr PyKinBody::GetBasicCalculator(const std::string& sKinematicsGeometry) {
-    return _pbody->GetBasicCalculator(sKinematicsGeometry);
+PyInterfaceBasePtr PyKinBody::GetBasicCalculator(const std::string& sKinematicsGeometry) {
+    return toPyModule(_pbody->GetBasicCalculator(sKinematicsGeometry), _pyenv);
 }
 
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
