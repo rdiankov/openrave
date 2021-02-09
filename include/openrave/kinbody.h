@@ -3089,7 +3089,7 @@ public:
     ///< Forward kinematics functions to be registered
     struct ForwardKinematicsStruct {
         ForwardKinematicsStruct();
-        ModuleBaseConstPtr pCalculatorModule; ///< kinbody basic calculators module
+        ModuleBasePtr pCalculatorModule; ///< kinbody basic calculators module
         boost::function<bool(const std::vector<dReal>&)> pSetLinkTransformsFn; ///< function that sets links' transforms
         void(*pSetSingleLinkTransformFn)(KinBody::Link&, const Transform&); ///< function that sets a link's transform without updating stamp id
     private:
@@ -3104,6 +3104,12 @@ public:
     ///
     /// \return true if the forward kinematics structure to be registered has all the necessary facilitities we can use. 
     bool RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fkstruct, const bool bOverWrite=false);
+
+    /// \brief Obtain the kinbody's basic calculator
+    /// \param[in] sKinematicsGeometry kinematics geometry hash
+    ///
+    /// \return module pointer
+    ModuleBasePtr GetBasicCalculator(const std::string& sKinematicsGeometry);
 
 protected:
     std::map<std::string, ForwardKinematicsStruct> _mHash2ForwardKinematicsStruct; ///< maps a kinematics geometry hash to a forward kinematics structure

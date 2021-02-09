@@ -324,6 +324,7 @@ public:
 
     py::object ExtractInfo() const;
 
+    ModuleBasePtr GetBasicCalculator(const std::string& sKinematicsGeometry);
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);
     virtual std::string __repr__();
     virtual std::string __str__();

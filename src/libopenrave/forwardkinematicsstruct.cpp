@@ -72,4 +72,9 @@ bool KinBody::RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fks
     return bCheck;
 }
 
+ModuleBasePtr KinBody::GetBasicCalculator(const std::string& sKinematicsGeometry) {
+    std::map<std::string, ForwardKinematicsStruct>::iterator it = _mHash2ForwardKinematicsStruct.find(sKinematicsGeometry);
+    return (it != end(_mHash2ForwardKinematicsStruct)) ? (it->second.pCalculatorModule) : nullptr;
+}
+
 } // end namespace OpenRAVE
