@@ -4,7 +4,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 67)
+set (OPENRAVE_VERSION_MINOR 69)
 set (OPENRAVE_VERSION_PATCH 0)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
@@ -525,7 +525,7 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
     int a = 0;
     int*pa = &a;
     asm(\".intel_syntax\\\\n\"
-       \"mov %%rax, %0\\\\n\"
+      \"mov %%rax, %0\\\\n\"
     \"mov %%eax, [%%rax]\\\\n\"
     \".att_syntax\\\\n\"
     : : \"r\"(pa) : \"%rax\");

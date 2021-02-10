@@ -28,7 +28,8 @@ class OpenRAVEFunctionParserReal;
 typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
 
 /// \brief Result of UpdateFromInfo() call
-enum UpdateFromInfoResult {
+enum UpdateFromInfoResult
+{
     UFIR_NoChange = 0, ///< Nothing changed
     UFIR_Success = 1, ///< Updated successfully
     UFIR_RequireRemoveFromEnvironment = 2, ///< Failed to update, require the kinbody to be removed from environment before update can succeed
@@ -1948,10 +1949,10 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
-        std::string _id;
-        std::string _uri; ///< uri for this body
-        std::string _name;
-        std::string _referenceUri;  ///< referenced body info uri
+        std::string _id; ///< unique id of the body used to identify it when changing it.
+        std::string _name; ///< name of the body
+        std::string _uri; ///< uri this body comes from
+        std::string _referenceUri;  ///< referenced body info uri this body should be loaded from before the Info data is applied
         std::string _interfaceType; ///< the interface type
 
         Transform _transform; ///< transform of the base link
@@ -2143,6 +2144,9 @@ private:
 
     /// \brief Set the name of the body, notifies the environment and checks for uniqueness.
     virtual void SetName(const std::string& name);
+
+    /// \brief Set the id of the body, notifies the environment and checks for uniqueness.
+    virtual void SetId(const std::string& newid);
 
     /// \brief Unique name of the body.
     virtual const std::string& GetId() const {

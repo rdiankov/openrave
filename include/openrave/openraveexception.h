@@ -39,6 +39,9 @@ enum OpenRAVEErrorCode {
     ORE_InvalidState=10, ///< the state of the object is not consistent with its parameters, or cannot be used. This is usually due to a programming error where a vector is not the correct length, etc.
     ORE_Timeout=11, ///< process timed out
     ORE_InvalidURI=12, ///< uri in input scene file is invalid, causing scene loading failures
+    ORE_BodyNameConflict=13, ///< body with same name is trying to be added to the environment
+    ORE_SensorNameConflict=14, ///< sensor with same name is trying to be added to the environment
+    ORE_BodyIdConflict=15, ///< body with same id is trying to be added to the environment
 };
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.

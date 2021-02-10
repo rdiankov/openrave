@@ -886,7 +886,7 @@ protected:
             return false;
         }
         robot->SetName(robotname);
-        GetEnv()->Add(robot);
+        GetEnv()->Add(robot, IAM_StrictNameChecking);
         os << robot->GetEnvironmentId();
         return true;
     }
@@ -931,7 +931,7 @@ protected:
 
     bool worEnvCreateModule(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
     {
-        GetEnv()->Add(boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->first, true, boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->second);
+        GetEnv()->Add(boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->first, IAM_AllowRenaming, boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->second);
         return true;
     }
 
@@ -973,7 +973,7 @@ protected:
         }
         body->SetName(bodyname);
 
-        GetEnv()->Add(body);
+        GetEnv()->Add(body, IAM_StrictNameChecking);
         os << body->GetEnvironmentId();
         return true;
     }

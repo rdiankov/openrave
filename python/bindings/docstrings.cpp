@@ -203,6 +203,7 @@ m["en function KinBody::Joint GetJointIndex"] = "\n\nint  **GetJointIndex**\\()\
 m["en function KinBody::Joint GetParent"] = "\n\nKinBodyPtr  **GetParent**\\()\n    \n            ";
 m["en function KinBody::Joint GetFirstAttached"] = "\n\nLinkPtr  **GetFirstAttached**\\()\n    \n            ";
 m["en function KinBody::Joint GetSecondAttached"] = "\n\nLinkPtr  **GetSecondAttached**\\()\n    \n            ";
+m["en function KinBody::Joint IsActive"] = "\n\nbool  **IsActive**\\()\n    \n    Return true if joint is active\n    \n            ";
 m["en function KinBody::Joint IsStatic"] = "\n\nbool  **IsStatic**\\()\n    \n    Return true if joint can be treated as a static binding (ie all limits are 0)\n    \n            ";
 m["en function KinBody::Joint IsCircular"] = "\n\nbool  **IsCircular**\\(int iaxis)\n    \n    Return true if joint axis has an identification at some of its lower and upper limits.\n    \n    An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also at its lower limit. The most common identification on revolute joints at -pi and pi. 'circularity' means the joint does not stop at limits. Although currently not developed, it could be possible to support identification for joints that are not revolute.         ";
 m["en function KinBody::Joint IsRevolute"] = "\n\nbool  **IsRevolute**\\(int iaxis)\n    \n    returns true if the axis describes a rotation around an axis.\n    \n    *Parameters*\n     ``iaxis`` - \n      the axis of the joint to return the results for \n            ";

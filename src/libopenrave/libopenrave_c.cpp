@@ -192,7 +192,7 @@ int ORCEnvironmentGetRobots(void* env, void** robots)
 
 void ORCEnvironmentAdd(void* env, void* pinterface)
 {
-    GetEnvironment(env)->Add(GetInterface(pinterface));
+    GetEnvironment(env)->Add(GetInterface(pinterface), IAM_StrictNameChecking);
 }
 
 int ORCEnvironmentAddModule(void* env, void* module, const char* args)
@@ -235,7 +235,7 @@ void CViewerThread(EnvironmentBasePtr penv, const string &strviewer, int bShowVi
         boost::mutex::scoped_lock lock(s_mutexViewer);
         pviewer = RaveCreateViewer(penv, strviewer);
         if( !!pviewer ) {
-            penv->AddViewer(pviewer);
+            penv->Add(pviewer, IAM_AllowRenaming);
         }
         s_conditionViewer.notify_one();
     }

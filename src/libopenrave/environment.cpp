@@ -34,6 +34,7 @@ bool EnvironmentBase::EnvironmentBaseInfo::operator==(const EnvironmentBaseInfo&
            && _description == other._description
            && _keywords == other._keywords
            && _gravity == other._gravity
+           && _uri == other._uri
            && _referenceUri == other._referenceUri;
     // TODO: deep compare infos
 }
@@ -49,6 +50,7 @@ void EnvironmentBase::EnvironmentBaseInfo::Reset()
     _description.clear();
     _keywords.clear();
     _gravity = Vector(0,0,-9.797930195020351);
+    _uri.clear();
     _referenceUri.clear();
     _vBodyInfos.clear();
     _revision = 0;
@@ -69,6 +71,9 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
     orjson::SetJsonValueByKey(rEnvInfo, "gravity", _gravity, allocator);
     if( !_referenceUri.empty() ) {
         orjson::SetJsonValueByKey(rEnvInfo, "referenceUri", _referenceUri, allocator);
+    }
+    if( !_uri.empty() ) {
+        orjson::SetJsonValueByKey(rEnvInfo, "uri", _uri, allocator);
     }
 
     if (_vBodyInfos.size() > 0) {
@@ -92,6 +97,10 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
 
 void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping)
 {
+    if( !rEnvInfo.IsObject() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Passed in JSON '%s' is not a valid EnvironmentInfo object", orjson::DumpJson(rEnvInfo), ORE_InvalidArguments);
+    }
+
     // for DeserializeJSON, there are two possibilities: 1. full json passed in 2. diff json passed in
     // for example, do not clear _vBodyInfos.clear(), since we could be dealing with partial json
 
@@ -112,6 +121,9 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
     }
     if( rEnvInfo.HasMember("referenceUri") ) {
         orjson::LoadJsonValueByKey(rEnvInfo, "referenceUri", _referenceUri);
+    }
+    if( rEnvInfo.HasMember("uri") ) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "uri", _uri);
     }
 
     if (rEnvInfo.HasMember("gravity")) {

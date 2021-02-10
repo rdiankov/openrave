@@ -1623,8 +1623,12 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
     if( options & (SO_Kinematics|SO_InverseKinematics) ) {
         RobotBasePtr probot(__probot);
         Transform tcur;
-        std::vector<JointPtr> vjoints;
-        if( probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
+        vector<JointPtr> vjoints;
+        if(!!__pIkChainEndLink) {
+            probot->GetChain(__pBase->GetIndex(),__pIkChainEndLink->GetIndex(), vjoints);
+        }
+        
+        if( vjoints.size() > 0 || probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
             // due to back compat issues, have to compute the end effector transform first
             FOREACH(itjoint, vjoints) {
                 tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform() * (*itjoint)->GetInternalHierarchyRightTransform();
