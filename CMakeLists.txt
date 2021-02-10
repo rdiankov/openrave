@@ -525,7 +525,7 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
     int a = 0;
     int*pa = &a;
     asm(\".intel_syntax\\\\n\"
-  \"mov %%rax, %0\\\\n\"
+       \"mov %%rax, %0\\\\n\"
     \"mov %%eax, [%%rax]\\\\n\"
     \".att_syntax\\\\n\"
     : : \"r\"(pa) : \"%rax\");
