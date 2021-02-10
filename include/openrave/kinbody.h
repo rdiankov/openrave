@@ -3091,6 +3091,13 @@ public:
         ForwardKinematicsStruct();
         ModuleBasePtr pCalculatorModule; ///< kinbody basic calculators module
         boost::function<bool(const std::vector<dReal>&)> pSetLinkTransformsFn; ///< function that sets links' transforms
+        boost::function<void(const std::vector<dReal>&, const Vector&, const Vector&, uint32_t)> pSetLinkVelocitiesFn; ///< function that sets links' velocities
+        boost::function<void(
+            const std::vector<dReal>&,
+            const std::vector<dReal>&,
+            const std::vector< std::pair<Vector, Vector> >&,
+            std::vector<std::pair<Vector, Vector> >&
+        )> pSetLinkAccelerationsFn; ///< function that computes links' accelerations
         void(*pSetSingleLinkTransformFn)(KinBody::Link&, const Transform&); ///< function that sets a link's transform without updating stamp id
     private:
         /// \brief helper function that sets a link's transform without updating stamp id 

@@ -60,6 +60,8 @@ bool KinBody::RegisterForwardKinematicsStruct(const ForwardKinematicsStruct& fks
     const bool bCheck = (
         !!fkstruct.pCalculatorModule 
         && !!fkstruct.pSetLinkTransformsFn
+        // && !!fkstruct.pSetLinkVelocitiesFn
+        // && !!fkstruct.pSetLinkAccelerationsFn
     );
     if(!bCheck) {
         RAVELOG_ERROR_FORMAT("Does not pass check for ForwardKinematicsStruct at body \"%s\" with hash \"%s\"",
