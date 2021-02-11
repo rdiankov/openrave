@@ -242,7 +242,11 @@ public:
                     continue;
                 }
                 else {
-                    throw OPENRAVE_EXCEPTION_FORMAT("Has body with no name in file '%s', so cannot load the scene.", _filename, ORE_InvalidArguments);
+                    int options = 0;
+                    dReal fUnitScale = 1;
+                    rapidjson::Document rTempKinBodyInfo;
+                    pKinBodyInfo->SerializeJSON(rTempKinBodyInfo, rTempKinBodyInfo.GetAllocator(), fUnitScale, options);
+                    throw OPENRAVE_EXCEPTION_FORMAT("Has body with no name in file '%s', so cannot load the scene: %s", _filename%orjson::DumpJson(rTempKinBodyInfo), ORE_InvalidArguments);
                 }
             }
 

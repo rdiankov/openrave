@@ -414,6 +414,7 @@ public:
     bool IsCircular(int iaxis) const;
     bool IsRevolute(int iaxis) const;
     bool IsPrismatic(int iaxis) const;
+    bool IsActive() const;
     bool IsStatic() const;
 
     int GetDOF() const;

@@ -1811,7 +1811,12 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
             if( pjoint->GetDOFIndex() >= 0 ) {
                 for(int i = 0; i < pjoint->GetDOF(); ++i) {
                     if( find(__varmdofindices.begin(), __varmdofindices.end(), pjoint->GetDOFIndex()+i) != __varmdofindices.end() ) {
-                        RAVELOG_ERROR(str(boost::format("manipulator %s gripper dof %d is also part of arm dof! excluding from gripper...")%GetName()%(pjoint->GetDOFIndex()+i)));
+
+                        std::stringstream ss;
+                        FOREACH(itindex, __varmdofindices) {
+                            ss << *itindex << ", ";
+                        }
+                        RAVELOG_ERROR_FORMAT("manipulator %s has gripper joint %s (dofIndex=%d) is also part of arm dofindices [%s]! Perhaps the manipulator's end effector '%s' is not set correctly. So excluding from gripper...", GetName()%pjoint->GetName()%(pjoint->GetDOFIndex()+i)%ss.str()%_info._sEffectorLinkName);
                     }
                     else {
                         __vgripperdofindices.push_back(pjoint->GetDOFIndex()+i);
@@ -1820,7 +1825,7 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
                         }
                         else {
                             vChuckingDirection.push_back(0);
-                            RAVELOG_WARN(str(boost::format("manipulator %s chucking direction not correct length, might get bad chucking/release grasping")%GetName()));
+                            RAVELOG_WARN_FORMAT("manipulator %s chucking direction not correct length, might get bad chucking/release grasping", GetName());
                         }
                     }
                 }
