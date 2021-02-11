@@ -90,8 +90,12 @@ object pyGetReverseTrajectory(PyTrajectoryBasePtr pytraj)
     return py::to_object(openravepy::toPyTrajectory(OpenRAVE::planningutils::GetReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
 }
 
-void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal samplingstep)
+void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal samplingstep, bool releasegil=true)
 {
+    openravepy::PythonThreadSaverPtr statesaver;
+    if( releasegil ) {
+        statesaver.reset(new openravepy::PythonThreadSaver());
+    }
     OpenRAVE::planningutils::VerifyTrajectory(openravepy::GetPlannerParametersConst(pyparameters), openravepy::GetTrajectory(pytraj),samplingstep);
 }
 
@@ -474,6 +478,7 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeTrajectory_overloads, planningutils::pyRet
 BOOST_PYTHON_FUNCTION_OVERLOADS(ExtendActiveDOFWaypoint_overloads, planningutils::pyExtendActiveDOFWaypoint, 5, 8)
 BOOST_PYTHON_FUNCTION_OVERLOADS(InsertActiveDOFWaypointWithRetiming_overloads, planningutils::pyInsertActiveDOFWaypointWithRetiming, 5, 9)
 BOOST_PYTHON_FUNCTION_OVERLOADS(InsertWaypointWithSmoothing_overloads, planningutils::pyInsertWaypointWithSmoothing, 4, 7)
+BOOST_PYTHON_FUNCTION_OVERLOADS(VerifyTrajectory_overloads, planningutils::pyVerifyTrajectory, 3, 4)
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Check_overloads, Check, 5, 8)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
@@ -538,9 +543,13 @@ void InitPlanningUtils()
                                .staticmethod("ReverseTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                               .def_static("VerifyTrajectory",planningutils::pyVerifyTrajectory, PY_ARGS("parameters","trajectory","samplingstep") DOXY_FN1(VerifyTrajectory))
+                               .def_static("VerifyTrajectory",planningutils::pyVerifyTrajectory,
+                                           "parameters"_a,
+                                           "trajectory"_a,
+                                           "samplingstep"_a,
+                                           "releasegil"_a=true, DOXY_FN1(VerifyTrajectory))
 #else
-                               .def("VerifyTrajectory",planningutils::pyVerifyTrajectory, PY_ARGS("parameters","trajectory","samplingstep") DOXY_FN1(VerifyTrajectory))
+                               .def("VerifyTrajectory",planningutils::pyVerifyTrajectory, PY_ARGS("parameters","trajectory","samplingstep", "releasegil") DOXY_FN1(VerifyTrajectory))
                                .staticmethod("VerifyTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
