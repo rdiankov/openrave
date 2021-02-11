@@ -395,6 +395,11 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapikparameterization[IKP_TranslationYAxisAngleXNorm4D] = "TranslationYAxisAngleXNorm4D";
         _mapikparameterization[IKP_TranslationZAxisAngleYNorm4D] = "TranslationZAxisAngleYNorm4D";
         BOOST_ASSERT(_mapikparameterization.size()==IKP_NumberOfParameterizations);
+
+        // add IKP_None for serialization later.
+        // do this after _mapikparameterization.size()==IKP_NumberOfParameterizations check, IKP_None is not counted in IKP_NumberOfParameterizations 
+        _mapikparameterization[IKP_None] = "None";
+
         FOREACH(it,_mapikparameterization) {
             std::string name = it->second;
             std::transform(name.begin(), name.end(), name.begin(), ::tolower);
