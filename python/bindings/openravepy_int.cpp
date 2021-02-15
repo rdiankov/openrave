@@ -1706,44 +1706,108 @@ object PyEnvironmentBase::WriteToMemory(const std::string &filetype, const int o
 
 object PyEnvironmentBase::ReadRobotURI(const string &filename)
 {
-    return py::to_object(openravepy::toPyRobot(_penv->ReadRobotURI(filename),shared_from_this()));
+    RobotBasePtr probot;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        probot = _penv->ReadRobotURI(filename);
+    }
+    return py::to_object(openravepy::toPyRobot(probot,shared_from_this()));
 }
+
 object PyEnvironmentBase::ReadRobotURI(const string &filename, object odictatts)
 {
-    return py::to_object(openravepy::toPyRobot(_penv->ReadRobotURI(RobotBasePtr(), filename,toAttributesList(odictatts)),shared_from_this()));
+    AttributesList dictatts = toAttributesList(odictatts);
+    RobotBasePtr probot;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        probot = _penv->ReadRobotURI(RobotBasePtr(), filename, dictatts);
+    }
+    return py::to_object(openravepy::toPyRobot(probot,shared_from_this()));
 }
+
 object PyEnvironmentBase::ReadRobotData(const string &data)
 {
-    return py::to_object(openravepy::toPyRobot(_penv->ReadRobotData(RobotBasePtr(), data, AttributesList()), shared_from_this()));
+    RobotBasePtr probot;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        probot = _penv->ReadRobotData(RobotBasePtr(), data, AttributesList());
+    }
+    return py::to_object(openravepy::toPyRobot(probot, shared_from_this()));
 }
+
 object PyEnvironmentBase::ReadRobotData(const string &data, object odictatts)
 {
-    return py::to_object(openravepy::toPyRobot(_penv->ReadRobotData(RobotBasePtr(), data, toAttributesList(odictatts)),shared_from_this()));
+    AttributesList dictatts = toAttributesList(odictatts);
+    RobotBasePtr probot;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        probot = _penv->ReadRobotData(RobotBasePtr(), data, dictatts);
+    }
+    return py::to_object(openravepy::toPyRobot(probot,shared_from_this()));
 }
+
 object PyEnvironmentBase::ReadKinBodyURI(const string &filename)
 {
-    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(filename), shared_from_this()));
+    KinBodyPtr pbody;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pbody = _penv->ReadKinBodyURI(filename);
+    }
+    return py::to_object(openravepy::toPyKinBody(pbody, shared_from_this()));
 }
+
 object PyEnvironmentBase::ReadKinBodyURI(const string &filename, object odictatts)
 {
-    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(KinBodyPtr(), filename, toAttributesList(odictatts)),shared_from_this()));
+    AttributesList dictatts = toAttributesList(odictatts);
+    KinBodyPtr pbody;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pbody = _penv->ReadKinBodyURI(filename);
+    }
+    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(KinBodyPtr(), filename, dictatts),shared_from_this()));
 }
 object PyEnvironmentBase::ReadKinBodyData(const string &data)
 {
-    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyData(KinBodyPtr(), data, AttributesList()),shared_from_this()));
+    KinBodyPtr pbody;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pbody = _penv->ReadKinBodyData(KinBodyPtr(), data, AttributesList());
+    }
+    return py::to_object(openravepy::toPyKinBody(pbody,shared_from_this()));
 }
+
 object PyEnvironmentBase::ReadKinBodyData(const string &data, object odictatts)
 {
-    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyData(KinBodyPtr(), data, toAttributesList(odictatts)),shared_from_this()));
+    AttributesList dictatts = toAttributesList(odictatts);
+    KinBodyPtr pbody;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pbody = _penv->ReadKinBodyData(KinBodyPtr(), data, dictatts);
+    }
+    return py::to_object(openravepy::toPyKinBody(pbody,shared_from_this()));
 }
+
 PyInterfaceBasePtr PyEnvironmentBase::ReadInterfaceURI(const std::string& filename)
 {
-    return _toPyInterface(_penv->ReadInterfaceURI(filename));
+    InterfaceBasePtr pinterface;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pinterface = _penv->ReadInterfaceURI(filename);
+    }
+    return _toPyInterface(pinterface);
 }
+
 PyInterfaceBasePtr PyEnvironmentBase::ReadInterfaceURI(const std::string& filename, object odictatts)
 {
-    return _toPyInterface(_penv->ReadInterfaceURI(filename, toAttributesList(odictatts)));
+    AttributesList dictatts = toAttributesList(odictatts);
+    InterfaceBasePtr pinterface;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pinterface = _penv->ReadInterfaceURI(filename, toAttributesList(odictatts));
+    }
+    return _toPyInterface(pinterface);
 }
+
 object PyEnvironmentBase::ReadTrimeshURI(const std::string& filename)
 {
     OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshURI(OPENRAVE_SHARED_PTR<TriMesh>(),filename);
