@@ -23,6 +23,8 @@
 
 namespace OpenRAVE {
 
+constexpr dReal M_TWO_PI = 2 * M_PI;
+
 int KinBody::JointInfo::GetDOF() const
 {
     if(_type & KinBody::JointSpecialBit) {
@@ -888,20 +890,40 @@ dReal KinBody::Joint::GetValue(int iaxis) const
     }
     else {
         if( _info._type == KinBody::JointPrismatic ) {
-            const Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
-            return _info._voffsets[0]+(tjoint.trans.x*_vaxes[0].x+tjoint.trans.y*_vaxes[0].y+tjoint.trans.z*_vaxes[0].z);
+            const Transform tFirstAttachedInv = _attachedbodies[0]->GetTransform().inverse();
+            const Transform& tSecondAttached = _attachedbodies[1]->GetTransform();
+
+            /* the original:
+            const Transform tjoint = _tinvLeft * tFirstAttachedInv * tSecondAttached * _tinvRight;
+            const Vector& trans = tjoint.trans;
+            */
+            const Vector trans = _tinvLeft * (tFirstAttachedInv * (tSecondAttached * _tinvRight.trans));
+            return _info._voffsets[0] + trans.x * _vaxes[0].x + trans.y * _vaxes[0].y + trans.z * _vaxes[0].z;
         }
         else if( _info._type == KinBody::JointRevolute ) {
-            const Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
-            f = 2.0f*RaveAtan2(tjoint.rot.y*_vaxes[0].x+tjoint.rot.z*_vaxes[0].y+tjoint.rot.w*_vaxes[0].z, tjoint.rot.x);
+            const Transform& tFirstAttached = _attachedbodies[0]->GetTransform();
+            const Transform& tSecondAttached = _attachedbodies[1]->GetTransform();
+            const Vector rot =
+            quatMultiply(
+                quatMultiply(
+                    quatMultiply(
+                        _tinvLeft.rot, quatInverse(tFirstAttached.rot)
+                    ), tSecondAttached.rot
+                ), _tinvRight.rot
+            );
+            /* the original:
+            const Transform tjoint = _tinvLeft * tFirstAttached.inverse() * tSecondAttached * _tinvRight;
+            const Vector& rot = tjoint.rot;
+            */
+            f = 2.0f * RaveAtan2(rot.y * _vaxes[0].x + rot.z * _vaxes[0].y + rot.w * _vaxes[0].z, rot.x);
             // expect values to be within -PI to PI range
-            if( f < -PI ) {
-                f += 2*PI;
+            if( f < -M_PI ) {
+                f += M_TWO_PI;
             }
-            else if( f > PI ) {
-                f -= 2*PI;
+            else if( f > M_PI ) {
+                f -= M_TWO_PI;
             }
-            return GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]);
+            return GetClosestValueAlongCircle(_info._voffsets[0] + f, _doflastsetvalues[0]);
         }
 
         Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
