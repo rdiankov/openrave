@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+#include <boost/algorithm/string.hpp>
 
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
@@ -634,7 +635,24 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
             UpdateOrCreateInfo(*it, _vAttachedSensorInfos, fUnitScale, options);
         }
     }
-
+    // sensorReference composes of (robotName+":"+sensorName)
+    // When robotName changes, sensorReference should be updated
+    if (value.HasMember("name")) {
+        const std::string& robotBaseName = orjson::GetJsonValueByKey<std::string>(value, "name");
+        for (RobotBase::AttachedSensorInfoPtr& attachedSensorInfo : _vAttachedSensorInfos) {
+            if (attachedSensorInfo->_docSensorGeometry.IsObject() &&
+                attachedSensorInfo->_docSensorGeometry.HasMember("sensorReference")) {
+                const std::string& sensorReference = attachedSensorInfo->_docSensorGeometry["sensorReference"].GetString();
+                std::vector<std::string> elems;
+                boost::split(elems, sensorReference, boost::is_any_of(":"));
+                if (elems.size() == 2 && robotBaseName != elems[0]) {
+                    const std::string& newSensorReference = robotBaseName + ":" + elems[1];
+                    RAVELOG_DEBUG_FORMAT("update sensorReference %s->%s", sensorReference%newSensorReference);
+                    orjson::SetJsonValueByKey(attachedSensorInfo->_docSensorGeometry, "sensorReference", newSensorReference);
+                }
+            }
+        }
+    }
     if (value.HasMember("connectedBodies")) {
         _vConnectedBodyInfos.reserve(value["connectedBodies"].Size() + _vConnectedBodyInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["connectedBodies"].Begin(); it != value["connectedBodies"].End(); ++it) {
