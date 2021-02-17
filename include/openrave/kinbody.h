@@ -1345,10 +1345,10 @@ public:
             }
         }
 
-        inline LinkPtr GetFirstAttached() const {
+        inline const LinkPtr& GetFirstAttached() const {
             return _attachedbodies[0];
         }
-        inline LinkPtr GetSecondAttached() const {
+        inline const LinkPtr& GetSecondAttached() const {
             return _attachedbodies[1];
         }
 
@@ -2336,7 +2336,7 @@ private:
     /// \brief Returns the joint that covers the degree of freedom index.
     ///
     /// Note that the mapping of joint structures is not the same as the values in GetJointValues since each joint can have more than one degree of freedom.
-    virtual JointPtr GetJointFromDOFIndex(int dofindex) const;
+    virtual const JointPtr& GetJointFromDOFIndex(int dofindex) const;
     //@}
 
     /// \brief Computes the configuration difference values1-values2 and stores it in values1.

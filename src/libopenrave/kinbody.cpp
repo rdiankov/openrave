@@ -735,7 +735,7 @@ void KinBody::GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofind
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
+            const JointPtr& pjoint = GetJointFromDOFIndex(dofindices[i]);
             v[i] = pjoint->GetValue(dofindices[i]-pjoint->GetDOFIndex());
         }
     }
@@ -1573,7 +1573,7 @@ uint64_t KinBody::GetLinkEnableStatesMask() const
     return linkstate;
 }
 
-KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
+const KinBody::JointPtr& KinBody::GetJointFromDOFIndex(int dofindex) const
 {
     return _vecjoints.at(_vDOFIndices.at(dofindex));
 }
