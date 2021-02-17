@@ -130,7 +130,6 @@ void PyCameraGeomData::_Update(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData co
     hardware_id = pgeom->hardware_id;
     width = pgeom->width;
     height = pgeom->height;
-    sensor_reference = pgeom->sensor_reference;
     target_region = pgeom->target_region;
     measurement_time = pgeom->measurement_time;
     gain = pgeom->gain;
@@ -142,7 +141,6 @@ SensorBase::SensorGeometryPtr PyCameraGeomData::GetGeometry() {
     geom->width = width;
     geom->height = height;
     geom->intrinsics = intrinsics.GetCameraIntrinsics();
-    geom->sensor_reference = sensor_reference;
     geom->target_region = target_region;
     geom->measurement_time = measurement_time;
     geom->gain = gain;
@@ -989,7 +987,6 @@ void init_openravepy_sensor()
     .def_readwrite("hardware_id",&PyCameraGeomData::hardware_id)
     .def_readwrite("width",&PyCameraGeomData::width)
     .def_readwrite("height",&PyCameraGeomData::height)
-    .def_readwrite("sensor_reference",&PyCameraGeomData::sensor_reference)
     .def_readwrite("target_region",&PyCameraGeomData::target_region)
     .def_readwrite("measurement_time",&PyCameraGeomData::measurement_time)
     .def_readwrite("gain",&PyCameraGeomData::gain)

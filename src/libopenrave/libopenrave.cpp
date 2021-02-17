@@ -2566,11 +2566,6 @@ bool SensorBase::CameraGeomData::SerializeXML(BaseXMLWriterPtr writer, int optio
     writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(measurement_time));
     writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(gain));
     //writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
-    if( sensor_reference.size() > 0 ) {
-        atts.emplace_back("url",  sensor_reference);
-        writer->AddChild("sensor_reference",atts);
-        atts.clear();
-    }
     if( target_region.size() > 0 ) {
         atts.emplace_back("url",  target_region);
         writer->AddChild("target_region",atts);
@@ -2582,7 +2577,6 @@ bool SensorBase::CameraGeomData::SerializeXML(BaseXMLWriterPtr writer, int optio
 bool SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
-    orjson::SetJsonValueByKey(value, "sensorReference", sensor_reference, allocator);
     orjson::SetJsonValueByKey(value, "targetRegion", target_region, allocator);
     orjson::SetJsonValueByKey(value, "intrinsics", intrinsics, allocator);
     orjson::SetJsonValueByKey(value, "width", width, allocator);
@@ -2595,7 +2589,6 @@ bool SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjso
 bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
-    orjson::LoadJsonValueByKey(value, "sensorReference", sensor_reference);
     orjson::LoadJsonValueByKey(value, "targetRegion", target_region);
     orjson::LoadJsonValueByKey(value, "intrinsics", intrinsics);
     orjson::LoadJsonValueByKey(value, "width", width);
