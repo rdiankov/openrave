@@ -791,8 +791,8 @@ dReal KinBody::Joint::GetValue(int iaxis) const
         return _info._vlowerlimit.at(iaxis);
     }
     dReal f;
-    Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
     if( _info._type & KinBody::JointSpecialBit ) {
+        const Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
         switch(_info._type) {
         case KinBody::JointHinge2: {
             Vector axis1cur = tjoint.rotate(_vaxes[0]), axis2cur = tjoint.rotate(_vaxes[1]);
@@ -888,9 +888,11 @@ dReal KinBody::Joint::GetValue(int iaxis) const
     }
     else {
         if( _info._type == KinBody::JointPrismatic ) {
+            const Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
             return _info._voffsets[0]+(tjoint.trans.x*_vaxes[0].x+tjoint.trans.y*_vaxes[0].y+tjoint.trans.z*_vaxes[0].z);
         }
         else if( _info._type == KinBody::JointRevolute ) {
+            const Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
             f = 2.0f*RaveAtan2(tjoint.rot.y*_vaxes[0].x+tjoint.rot.z*_vaxes[0].y+tjoint.rot.w*_vaxes[0].z, tjoint.rot.x);
             // expect values to be within -PI to PI range
             if( f < -PI ) {
@@ -902,6 +904,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             return GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]);
         }
 
+        Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
         // chain of revolute and prismatic joints
         for(int i = 0; i < GetDOF(); ++i) {
             Vector vaxis = _vaxes.at(i);
