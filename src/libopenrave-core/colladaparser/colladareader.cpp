@@ -5751,11 +5751,11 @@ private:
         // getChild could be optimized since asset tag is supposed to appear as the first element
         domExtraRef pextra = daeSafeCast<domExtra> (pelt->getChild("extra"));
         if( !!pextra && !!pextra->getAsset() && !!pextra->getAsset()->getUnit() ) {
-            return pextra->getAsset()->getUnit()->getMeter()/_penv->GetUnit().second;
+            return pextra->getAsset()->getUnit()->getMeter()/_penv->GetUnit().second * startscale;
         }
         domAssetRef passet = daeSafeCast<domAsset>(pelt->getChild("asset"));
         if (!!passet && !!passet->getUnit()) {
-            return passet->getUnit()->getMeter() / _penv->GetUnit().second;
+            return passet->getUnit()->getMeter() / _penv->GetUnit().second * startscale;
         }
         if( !!pelt->getParent() ) {
             return _GetUnitScale(pelt->getParent(),startscale);
