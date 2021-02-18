@@ -2635,6 +2635,13 @@ private:
                 frame_origin->setAttribute("link",vlinksidrefs.at((*itattachedsensor)->GetAttachingLink()->GetIndex()).c_str());
                 _WriteTransformation(frame_origin,(*itattachedsensor)->GetRelativeTransform());
 
+                // write referenceAttachedSensorName to <reference_attach_sensor name="other_attached_sensor">
+                std::string referenceAttachedSensorName = (*itattachedsensor)->GetInfo()._referenceAttachedSensorName;
+                if( referenceAttachedSensorName.size() > 0 ) {
+                    daeElementRef reference_attach_sensor = ptec->add("reference_attach_sensor");
+                    reference_attach_sensor->setAttribute("name", referenceAttachedSensorName.c_str());
+                }
+
                 SensorBasePtr popenravesensor = (*itattachedsensor)->GetSensor();
                 if( !!popenravesensor ) {
                     string strsensor = mapAttachedSensorIDs[*itattachedsensor];
@@ -2661,21 +2668,6 @@ private:
                                 else {
                                     RAVELOG_INFO_FORMAT("resetting target_region %s since not present in environment anymore", camgeom.target_region);
                                     camgeom.target_region = "";
-                                }
-                            }
-                            // restore sensor_reference in dae, from referenceAttachedSensorName
-                            camgeom.sensor_reference.clear();
-                            std::string referenceAttachedSensorName = (*itattachedsensor)->GetInfo()._referenceAttachedSensorName;
-                            if( referenceAttachedSensorName.size() > 0 ) {
-                                // have to convert to equivalent collada url
-                                FOREACH(itattid, mapAttachedSensorIDs) {
-                                    if( itattid->first->GetName() == referenceAttachedSensorName ) {
-                                        camgeom.sensor_reference = std::string("#") + itattid->second;
-                                        break;
-                                    }
-                                }
-                                if ( camgeom.sensor_reference.size() == 0 ) {
-                                    RAVELOG_INFO_FORMAT("cannot find referenceAttachedSensorName %s since not present in robot anymore", referenceAttachedSensorName);
                                 }
                             }
                             camgeom.SerializeXML(extrawriter,0);

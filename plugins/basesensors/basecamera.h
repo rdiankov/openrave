@@ -35,24 +35,14 @@ public:
                 }
                 return PE_Ignore;
             }
-            static boost::array<string, 18> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "sensor_reference", "target_region", "gain", "hardware_id"}};
+            static boost::array<string, 18> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "target_region", "gain", "hardware_id"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
-            if( name == std::string("sensor_reference") ) {
+            if( name == std::string("target_region") ) {
                 // read the URL attribute
                 FOREACHC(itatt, atts) {
                     if( itatt->first == "url" ) {
-                        // here the url is really the name of the sensor, because colladareader maps the url to name
-                        _psensor->_pgeom->sensor_reference = itatt->second;
-                    }
-                }
-            }
-            else if( name == std::string("target_region") ) {
-                // read the URL attribute
-                FOREACHC(itatt, atts) {
-                    if( itatt->first == "url" ) {
-                        // here the url is really the name of the body, because colladareader maps the url to name
                         _psensor->_pgeom->target_region = itatt->second;
                     }
                 }
@@ -98,9 +88,6 @@ public:
             }
             else if( name == "height" ) {
                 ss >> _psensor->_pgeom->height;
-            }
-            else if( name == "sensor_reference" ) {
-                // nothing to do here
             }
             else if( name == "measurement_time" ) {
                 ss >> _psensor->_pgeom->measurement_time;
