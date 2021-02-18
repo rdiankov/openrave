@@ -730,7 +730,7 @@ private:
     /// \brief adds a body to the manager, returns true if something was added
     ///
     /// should not add anything to mapCachedBodies! append to _tmpbuffer
-    bool _AddBody(KinBodyConstPtr pbody, FCLSpace::KinBodyInfoPtr pinfo, std::vector<CollisionObjectPtr>& vcolobjs, std::vector<uint8_t>& linkEnableStates, bool bTrackActiveDOF)
+    bool _AddBody(const KinBodyConstPtr& pbody, const FCLSpace::KinBodyInfoPtr& pinfo, std::vector<CollisionObjectPtr>& vcolobjs, std::vector<uint8_t>& linkEnableStates, bool bTrackActiveDOF)
     {
         vcolobjs.resize(0); // reset so that existing collision objects can go away
         vcolobjs.resize(pbody->GetLinks().size(), CollisionObjectPtr());
