@@ -219,6 +219,7 @@ public:
                 }
                 return false;
             }
+            RAVELOG_VERBOSE_FORMAT("resolved fullFilename=%s", fullFilename);
 
             if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
                 _ExtractSpecifiedBodies(envInfo, *prReferenceEnvInfo);
@@ -382,13 +383,18 @@ public:
         _uri = uri;
     }
 
-    void SetFilename(const std::string& filename) {
+    void SetFilename(const std::string& filename)
+    {
         _filename = filename;
 
         // need to convert absolute filename back to openrave:/filename
         std::string newFilename;
         if (RaveInvertFileLookup(newFilename, filename)) {
             _uri = _vOpenRAVESchemeAliases[0] + ":/" + newFilename;
+            RAVELOG_VERBOSE_FORMAT("Set filename to '%s' and uri to '%s'", filename%_uri);
+        }
+        else {
+            RAVELOG_VERBOSE_FORMAT("Set filename to '%s'", filename);
         }
     }
 

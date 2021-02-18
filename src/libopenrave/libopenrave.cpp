@@ -397,7 +397,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         BOOST_ASSERT(_mapikparameterization.size()==IKP_NumberOfParameterizations);
 
         // add IKP_None for serialization later.
-        // do this after _mapikparameterization.size()==IKP_NumberOfParameterizations check, IKP_None is not counted in IKP_NumberOfParameterizations 
+        // do this after _mapikparameterization.size()==IKP_NumberOfParameterizations check, IKP_None is not counted in IKP_NumberOfParameterizations
         _mapikparameterization[IKP_None] = "None";
 
         FOREACH(it,_mapikparameterization) {
@@ -443,8 +443,9 @@ public:
             RAVELOG_WARN("failed to set to C locale: %s\n",e.what());
         }
 
-        _pdatabase.reset(new RaveDatabase());
-        if( !_pdatabase->Init(bLoadAllPlugins) ) {
+        // since initialization depends on _pdatabase, have pdatabase be local until it is complete
+        boost::shared_ptr<RaveDatabase> pdatabase(new RaveDatabase());
+        if( !pdatabase->Init(bLoadAllPlugins) ) {
             RAVELOG_FATAL("failed to create the openrave plugin database\n");
         }
 
@@ -484,6 +485,7 @@ public:
         }
 
         _UpdateDataDirs();
+        _pdatabase = pdatabase; // finally initialize!
         return 0;
     }
 
@@ -887,6 +889,10 @@ protected:
         return std::string();
     }
 
+    boost::mutex& GetInitializationMutex() {
+        return _mutexInitialization;
+    }
+
 protected:
     static void _create()
     {
@@ -1066,6 +1072,7 @@ private:
     // state that is initialized/destroyed
     boost::shared_ptr<RaveDatabase> _pdatabase;
     int _nDebugLevel;
+    boost::mutex _mutexInitialization; ///< external mutex for initialization only
     boost::mutex _mutexinternal;
     std::map<InterfaceType, XMLREADERSMAP > _mapxmlreaders;
     std::map<InterfaceType, JSONREADERSMAP > _mapjsonreaders;
@@ -1154,6 +1161,7 @@ std::string RaveFindDatabaseFile(const std::string& filename, bool bRead)
 
 int RaveInitialize(bool bLoadAllPlugins, int level)
 {
+    boost::mutex::scoped_lock lock(RaveGlobal::instance()->GetInitializationMutex());
     return RaveGlobal::instance()->Initialize(bLoadAllPlugins,level);
 }
 
@@ -1166,8 +1174,17 @@ UserDataPtr RaveGlobalState()
 {
     // only return valid pointer if initialized!
     boost::shared_ptr<RaveGlobal> state = RaveGlobal::_state;
-    if( !!state && state->_IsInitialized() ) {
-        return state;
+    if( !!state ) {
+        if( state->_IsInitialized() ) {
+            return state;
+        }
+        else {
+            // make sure another thread is not initializing the state!
+            boost::mutex::scoped_lock lock(state->GetInitializationMutex());
+            if( state->_IsInitialized() ) {
+                return state;
+            }
+        }
     }
     return UserDataPtr();
 }
