@@ -3369,7 +3369,7 @@ protected:
         _mapBodies.erase(pbody->_environmentid);
 
         _environmentIndexRecyclePool.push_back(pbody->_environmentid); // for recycle later
-        RAVELOG_INFO_FORMAT("env=%d, added body id=%d taken from %s for recycle", GetId()%pbody->GetName()%pbody->_environmentid);
+        RAVELOG_INFO_FORMAT("env=%d, removed body id=%d from %s, recycle later", GetId()%pbody->GetName()%pbody->_environmentid);
 
         pbody->_environmentid = 0;
         pbody->_DeinitializeInternalInformation();
