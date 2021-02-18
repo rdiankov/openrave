@@ -3624,9 +3624,16 @@ public:
             pattachedsensor->UpdateInfo(); // need to update the _info struct with the latest values
 
             // migrate _sensor_reference_name to _referenceAttachedSensorName
-            SensorBase::CameraGeomDataConstPtr pCameraGeomData = boost::dynamic_pointer_cast<SensorBase::CameraGeomData const>(pattachedsensor->_psensor->GetSensorGeometry(SensorBase::ST_Camera));
-            if( !!pCameraGeomData && pCameraGeomData->sensor_reference.find(':') != std::string::npos ) {
-                pattachedsensor->_info._referenceAttachedSensorName = pCameraGeomData->sensor_reference.substr(pCameraGeomData->sensor_reference.find(':')+1);
+            SensorBase::SensorGeometryPtr pSensorGeometry = boost::const_pointer_cast<SensorBase::SensorGeometry>(pattachedsensor->_psensor->GetSensorGeometry(SensorBase::ST_Camera));
+            if ( !!pSensorGeometry ) {
+                SensorBase::CameraGeomDataPtr pCameraGeomData = boost::dynamic_pointer_cast<SensorBase::CameraGeomData>(pSensorGeometry);
+                if( !!pCameraGeomData ) {
+                    if ( pCameraGeomData->sensor_reference.find(':') != std::string::npos ) {
+                        // take only the attached sensor name part of sensor_reference
+                        pattachedsensor->_info._referenceAttachedSensorName = pCameraGeomData->sensor_reference.substr(pCameraGeomData->sensor_reference.find(':')+1);
+                    }
+                    pCameraGeomData->sensor_reference.clear(); // clear the old value
+                }
             }
         }
     }

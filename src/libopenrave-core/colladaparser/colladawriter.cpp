@@ -2663,13 +2663,19 @@ private:
                                     camgeom.target_region = "";
                                 }
                             }
-                            if( camgeom.sensor_reference.size() > 0 ) {
+                            // restore sensor_reference in dae, from referenceAttachedSensorName
+                            camgeom.sensor_reference.clear();
+                            std::string referenceAttachedSensorName = (*itattachedsensor)->GetInfo()._referenceAttachedSensorName;
+                            if( referenceAttachedSensorName.size() > 0 ) {
                                 // have to convert to equivalent collada url
                                 FOREACH(itattid, mapAttachedSensorIDs) {
-                                    if( camgeom.sensor_reference == itattid->first->GetSensor()->GetName() ) {
+                                    if( itattid->first->GetName() == referenceAttachedSensorName ) {
                                         camgeom.sensor_reference = std::string("#") + itattid->second;
                                         break;
                                     }
+                                }
+                                if ( camgeom.sensor_reference.size() == 0 ) {
+                                    RAVELOG_INFO_FORMAT("cannot find referenceAttachedSensorName %s since not present in robot anymore", referenceAttachedSensorName);
                                 }
                             }
                             camgeom.SerializeXML(extrawriter,0);
