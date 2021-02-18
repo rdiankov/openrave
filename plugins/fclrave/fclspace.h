@@ -167,7 +167,9 @@ public:
     typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
     FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
-        : _penv(penv), _userdatakey(userdatakey), _bIsSelfCollisionChecker(true)
+        : _penv(penv), _userdatakey(userdatakey),
+          _currentpinfo(1, KinBodyInfoPtr()), // initialize with one null pointer, this is a place holder for null pointer so that we can return by reference. env id 0 means invalid so it's consistent with the definition as well
+          _bIsSelfCollisionChecker(true)
     {
 
         // After many test, OBB seems to be the only real option (followed by kIOS which is needed for distance checking)
@@ -183,7 +185,7 @@ public:
     {
         RAVELOG_VERBOSE_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)", _penv->GetId()%_userdatakey);
         FOREACH(itbody, _setInitializedBodies) {
-            KinBodyInfoPtr pinfo = GetInfo(**itbody);
+            KinBodyInfoPtr& pinfo = GetInfo(**itbody);
             if( !!pinfo ) {
                 pinfo->Reset();
             }
@@ -297,9 +299,15 @@ public:
         pinfo->_bodyAttachedCallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyAttached, boost::bind(&FCLSpace::_ResetAttachedBodyCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
         pinfo->_bodyremovedcallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyRemoved, boost::bind(&FCLSpace::RemoveUserData, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::bind(&OpenRAVE::utils::sptr_from<const KinBody>, boost::weak_ptr<const KinBody>(pbody))));
 
-        BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
+        const int envId = pbody->GetEnvironmentId();
+        BOOST_ASSERT(envId != 0);
         if( bSetToCurrentPInfo ) {
-            _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
+            if (_currentpinfo.size() < envId + 1) {
+                // have a upper bound on size?
+                RAVELOG_INFO_FORMAT("increase size from %d to %d", _currentpinfo.size()%(envId + 1));
+                _currentpinfo.resize(envId + 1, KinBodyInfoPtr());
+            }
+            _currentpinfo.at(envId) = pinfo;
         }
         //_cachedpinfo[pbody->GetEnvironmentId()] what to do with the cache?
         _setInitializedBodies.insert(pbody);
@@ -345,7 +353,7 @@ public:
         }
 
         // Save the already existing KinBodyInfoPtr for the old geometry group
-        KinBodyInfoPtr poldinfo = GetInfo(*pbody);
+        KinBodyInfoPtr& poldinfo = GetInfo(*pbody);
         if( poldinfo->_geometrygroup == groupname ) {
             return true;
         }
@@ -355,7 +363,7 @@ public:
 
         BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
 
-        KinBodyInfoPtr pinfo = _cachedpinfo[pbody->GetEnvironmentId()][groupname];
+        KinBodyInfoPtr& pinfo = _cachedpinfo[pbody->GetEnvironmentId()][groupname];
         if(!pinfo) {
             RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
             pinfo.reset(new KinBodyInfo);
@@ -365,7 +373,13 @@ public:
         else {
             RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%pbody->GetName()%pbody->GetEnvironmentId());
             // Set the current info to use the KinBodyInfoPtr associated to groupname
-            _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
+            const int envId = pbody->GetEnvironmentId();
+            if (_currentpinfo.size() < envId + 1) {
+                // have a upper bound on size?
+                RAVELOG_INFO_FORMAT("increase size from %d to %d", _currentpinfo.size()%(envId + 1));
+                _currentpinfo.resize(envId + 1, KinBodyInfoPtr());
+            }
+            _currentpinfo.at(envId) = pinfo;
 
             // Revoke the information inside the cache so that a potentially outdated object does not survive
             _cachedpinfo[(pbody)->GetEnvironmentId()].erase(groupname);
@@ -376,7 +390,7 @@ public:
 
     const std::string& GetBodyGeometryGroup(const KinBody &body) const {
         static const std::string empty;
-        KinBodyInfoPtr pinfo = GetInfo(body);
+        const KinBodyInfoPtr& pinfo = GetInfo(body);
         if( !!pinfo ) {
             return pinfo->_geometrygroup;
         } else {
@@ -423,7 +437,7 @@ public:
         // reinitialize all the KinBodyInfo
 
         FOREACH(itbody, _setInitializedBodies) {
-            KinBodyInfoPtr pinfo = GetInfo(**itbody);
+            KinBodyInfoPtr& pinfo = GetInfo(**itbody);
             pinfo->nGeometryUpdateStamp++;
             InitKinBody(*itbody, pinfo);
         }
@@ -445,7 +459,7 @@ public:
 
     void Synchronize(const KinBody &body)
     {
-        KinBodyInfoPtr pinfo = GetInfo(body);
+        KinBodyInfoPtr& pinfo = GetInfo(body);
         if( !pinfo ) {
             return;
         }
@@ -467,19 +481,32 @@ public:
         }
     }
 
-    KinBodyInfoPtr GetInfo(const KinBody &body) const
+    inline KinBodyInfoPtr& GetInfo(const KinBody &body)
     {
         int envId = body.GetEnvironmentId();
         if ( envId == 0 ) {
             RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id 0", body.GetEnv()->GetId()%body.GetName());
-            return KinBodyInfoPtr();
         }
 
-        std::map< int, KinBodyInfoPtr >::const_iterator it = _currentpinfo.find(envId);
-        if( it == _currentpinfo.end() ) {
-            return KinBodyInfoPtr();
+        if (envId < _currentpinfo.size()) {
+            return _currentpinfo.at(envId);
         }
-        return it->second;
+
+        return _currentpinfo.at(0);
+    }
+
+    inline const KinBodyInfoPtr& GetInfo(const KinBody &body) const
+    {
+        int envId = body.GetEnvironmentId();
+        if ( envId == 0 ) {
+            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id 0", body.GetEnv()->GetId()%body.GetName());
+        }
+
+        if (envId < _currentpinfo.size()) {
+            return _currentpinfo.at(envId);
+        }
+        
+        return _currentpinfo.at(0);
     }
 
 
@@ -487,14 +514,33 @@ public:
         if( !!pbody ) {
             RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d (userdatakey %s) : %s") % _penv->GetId() % _userdatakey % pbody->GetName()));
             _setInitializedBodies.erase(pbody);
-            KinBodyInfoPtr pinfo = GetInfo(*pbody);
+            KinBodyInfoPtr& pinfo = GetInfo(*pbody);
             if( !!pinfo ) {
                 pinfo->Reset();
             }
-            BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
 
-            _currentpinfo.erase(pbody->GetEnvironmentId());
-            _cachedpinfo.erase(pbody->GetEnvironmentId());
+            const int envId = pbody->GetEnvironmentId();
+            BOOST_ASSERT(envId != 0);
+
+            if (envId == _currentpinfo.size() - 1) {
+                // chance to shrink vector, shrink all trailing null pointers.
+                // batch delete for speed, rather than pop one by one 
+                int numErase = 1; // last element is already decided to be erased
+                for (; numErase < _currentpinfo.size() - 1; ++numErase) {
+                    if (!!_currentpinfo[_currentpinfo.size() - 1 - numErase]) {
+                        break;
+                    }
+                }
+                // erase trailing null pointers
+                _currentpinfo.erase(_currentpinfo.end() - numErase, _currentpinfo.end());
+                RAVELOG_INFO_FORMAT("erased envId=%d, and popped %d , size is %d", envId%numErase%_currentpinfo.size());
+            }
+            else {
+                // invalidate
+                _currentpinfo.at(envId) = KinBodyInfoPtr();
+                RAVELOG_INFO_FORMAT("erased %d but didn't pop back, size is %d", envId%_currentpinfo.size());
+            }
+            _cachedpinfo.erase(envId);
         }
     }
 
@@ -508,7 +554,7 @@ public:
     }
 
     inline CollisionObjectPtr GetLinkBV(const KinBody &body, int index) {
-        KinBodyInfoPtr pinfo = GetInfo(body);
+        KinBodyInfoPtr& pinfo = GetInfo(body);
         if( !!pinfo ) {
             return GetLinkBV(*pinfo, index);
         } else {
@@ -699,7 +745,7 @@ private:
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        KinBodyInfoPtr pcurrentinfo = _currentpinfo[pbody->GetEnvironmentId()];
+        const KinBodyInfoPtr& pcurrentinfo = _currentpinfo.at(pbody->GetEnvironmentId());
 
         if( !!pinfo && pinfo == pcurrentinfo ) {//pinfo->_geometrygroup.size() == 0 ) {
             // pinfo is current set to the current one, so should InitKinBody into _currentpinfo
@@ -717,7 +763,7 @@ private:
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
 
-        //KinBodyInfoPtr pcurrentinfo = _currentpinfo[pbody->GetEnvironmentId()];
+        //KinBodyInfoPtr pcurrentinfo = _currentpinfo.at(pbody->GetEnvironmentId());
 
         if( !!pinfo ) {// && pinfo->_geometrygroup.size() > 0 ) {
             //RAVELOG_VERBOSE_FORMAT("env=%d, resetting geometry groups for kinbody %s, nGeometryUpdateStamp=%d (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
@@ -765,7 +811,7 @@ private:
 
     std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
     std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data
-    std::map< int, KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. The key being environment id makes it easier to compare objects without getting a handle to their pointers. Whenever a KinBodyInfoPtr goes into this map, it is removed from _cachedpinfo
+    std::vector<KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. The index being environment id makes it easier to compare objects without getting a handle to their pointers. Whenever a KinBodyInfoPtr goes into this map, it is removed from _cachedpinfo. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
 
     bool _bIsSelfCollisionChecker; // Currently not used
 };

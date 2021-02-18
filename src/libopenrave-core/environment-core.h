@@ -126,7 +126,6 @@ public:
         RAVELOG_DEBUG_FORMAT("setting openrave home directory to %s", _homedirectory);
 
         _nBodiesModifiedStamp = 0;
-        _nEnvironmentIndex = 1;
 
         _fDeltaSimTime = 0.01f;
         _nCurSimTime = 0;
@@ -160,7 +159,6 @@ public:
         }
 
         _nBodiesModifiedStamp = 0;
-        _nEnvironmentIndex = 1;
 
         _fDeltaSimTime = 0.01f;
         _nCurSimTime = 0;
@@ -365,6 +363,7 @@ public:
             _nBodiesModifiedStamp++;
 
             _mapBodies.clear();
+            _environmentIndexRecyclePool.clear();
 
             FOREACH(itsensor,_listSensors) {
                 (*itsensor)->Configure(SensorBase::CC_PowerOff);
@@ -2930,7 +2929,7 @@ protected:
         _fDeltaSimTime = r->_fDeltaSimTime;
         _nCurSimTime = 0;
         _nSimStartTime = utils::GetMicroTime();
-        _nEnvironmentIndex = r->_nEnvironmentIndex;
+        _environmentIndexRecyclePool = r->_environmentIndexRecyclePool;
         _bRealTime = r->_bRealTime;
 
         _bInit = true;
@@ -3345,16 +3344,33 @@ protected:
     virtual void SetEnvironmentId(KinBodyPtr pbody)
     {
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
-        int id = _nEnvironmentIndex++;
+        const bool bRecycleId = !_environmentIndexRecyclePool.empty();
+        int id = 0;
+        if (bRecycleId) {
+            id = _environmentIndexRecyclePool.back();
+            RAVELOG_DEBUG_FORMAT("env=%d, recycled body id=%d for %s", GetId()%id%pbody->GetName());
+        }
+        else {
+            id = _mapBodies.size() + 1; // no kin body should have an environment id higher than _mapBodies.size() when _environmentIndexRecyclePool is empty.
+            RAVELOG_DEBUG_FORMAT("env=%d, assigned new body id=%d for %s", GetId()%id%pbody->GetName());
+        }
         BOOST_ASSERT( _mapBodies.find(id) == _mapBodies.end() );
         pbody->_environmentid=id;
         _mapBodies[id] = pbody;
+
+        if (bRecycleId) {
+            _environmentIndexRecyclePool.pop_back();
+        }
     }
 
     virtual void RemoveEnvironmentId(KinBodyPtr pbody)
     {
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         _mapBodies.erase(pbody->_environmentid);
+
+        _environmentIndexRecyclePool.push_back(pbody->_environmentid); // for recycle later
+        RAVELOG_DEBUG_FORMAT("env=%d, added body id=%d taken from %s for recycle", GetId()%pbody->GetName()%pbody->_environmentid);
+
         pbody->_environmentid = 0;
         pbody->_DeinitializeInternalInformation();
     }
@@ -3656,8 +3672,8 @@ protected:
     CollisionCheckerBasePtr _pCurrentChecker;
     PhysicsEngineBasePtr _pPhysicsEngine;
 
-    int _nEnvironmentIndex;                   ///< next network index
     std::map<int, KinBodyWeakPtr> _mapBodies;     ///< a map of all the bodies in the environment. Controlled through the KinBody constructor and destructors
+    std::vector<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. 
 
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation
 
