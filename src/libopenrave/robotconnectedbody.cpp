@@ -872,6 +872,12 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 }
             }
 
+            // since we will be prefixing all the attached sensor from the connected body
+            // also need to fix referenceAttachedSensorName
+            if ( pnewattachedSensor->_info._referenceAttachedSensorName.size() > 0 ) {
+                pnewattachedSensor->_info._referenceAttachedSensorName = connectedBody._nameprefix + pnewattachedSensor->_info._referenceAttachedSensorName;
+            }
+
             // search for the correct resolved _linkname
             bool bFoundLink = false;
             for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
