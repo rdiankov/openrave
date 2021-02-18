@@ -3348,11 +3348,11 @@ protected:
         int id = 0;
         if (bRecycleId) {
             id = _environmentIndexRecyclePool.back();
-            RAVELOG_DEBUG_FORMAT("env=%d, recycled body id=%d for %s", GetId()%id%pbody->GetName());
+            RAVELOG_INFO_FORMAT("env=%d, recycled body id=%d for %s", GetId()%id%pbody->GetName());
         }
         else {
             id = _mapBodies.size() + 1; // no kin body should have an environment id higher than _mapBodies.size() when _environmentIndexRecyclePool is empty.
-            RAVELOG_DEBUG_FORMAT("env=%d, assigned new body id=%d for %s", GetId()%id%pbody->GetName());
+            RAVELOG_INFO_FORMAT("env=%d, assigned new body id=%d for %s", GetId()%id%pbody->GetName());
         }
         BOOST_ASSERT( _mapBodies.find(id) == _mapBodies.end() );
         pbody->_environmentid=id;
@@ -3369,7 +3369,7 @@ protected:
         _mapBodies.erase(pbody->_environmentid);
 
         _environmentIndexRecyclePool.push_back(pbody->_environmentid); // for recycle later
-        RAVELOG_DEBUG_FORMAT("env=%d, added body id=%d taken from %s for recycle", GetId()%pbody->GetName()%pbody->_environmentid);
+        RAVELOG_INFO_FORMAT("env=%d, added body id=%d taken from %s for recycle", GetId()%pbody->GetName()%pbody->_environmentid);
 
         pbody->_environmentid = 0;
         pbody->_DeinitializeInternalInformation();
