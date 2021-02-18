@@ -190,7 +190,7 @@ public:
                 pinfo->Reset();
             }
         }
-        _currentpinfo.clear();
+        _currentpinfo.erase(_currentpinfo.begin() + 1, _currentpinfo.end());
         _cachedpinfo.clear();
         _setInitializedBodies.clear();
     }
