@@ -266,6 +266,7 @@ public:
         _bExtractConnectedBodies = bExtractConnectedBodies;
         _bMustResolveURI = false;
         _fGlobalScale = 1.0/penv->GetUnit().second;
+        _fGeomScale = 1.0;
         _bBackCompatValuesInRadians = false;
         if( sizeof(daeFloat) == 4 ) {
             RAVELOG_WARN("collada-dom compiled with 32-bit floating-point, so there might be precision errors\n");
@@ -445,9 +446,8 @@ public:
         FOREACHC(itatt,atts) {
             if( itatt->first == "scalegeometry" ) {
                 stringstream ss(itatt->second);
-                Vector v(1,1,1);
-                ss >> v.x;
-                _fGlobalScale *= v.x;
+                // take the first argument given from scalegeometry to set as the overall geometry scale
+                ss >> _fGeomScale;
             }
         }
 
@@ -5751,16 +5751,16 @@ private:
         // getChild could be optimized since asset tag is supposed to appear as the first element
         domExtraRef pextra = daeSafeCast<domExtra> (pelt->getChild("extra"));
         if( !!pextra && !!pextra->getAsset() && !!pextra->getAsset()->getUnit() ) {
-            return pextra->getAsset()->getUnit()->getMeter()/_penv->GetUnit().second;
+            return pextra->getAsset()->getUnit()->getMeter()/_penv->GetUnit().second * _fGeomScale;
         }
         domAssetRef passet = daeSafeCast<domAsset>(pelt->getChild("asset"));
         if (!!passet && !!passet->getUnit()) {
-            return passet->getUnit()->getMeter() / _penv->GetUnit().second;
+            return passet->getUnit()->getMeter() / _penv->GetUnit().second * _fGeomScale;
         }
         if( !!pelt->getParent() ) {
             return _GetUnitScale(pelt->getParent(),startscale);
         }
-        return startscale;
+        return startscale * _fGeomScale;
     }
 
     /// \brief do the inverse resolve file:/... -> openrave:/...
@@ -5840,6 +5840,7 @@ private:
     domCOLLADA* _dom;
     EnvironmentBasePtr _penv;
     dReal _fGlobalScale;
+    dReal _fGeomScale;
     std::map<KinBody::JointPtr, std::vector<dReal> > _mapJointUnits;
     std::map<std::string,KinBody::JointPtr> _mapJointSids;
     string _prefix;
