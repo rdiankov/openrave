@@ -43,12 +43,8 @@ public:
                 // read the URL attribute
                 FOREACHC(itatt, atts) {
                     if( itatt->first == "url" ) {
+                        // here the url is really the name of the sensor, because colladareader maps the url to name
                         _psensor->_pgeom->sensor_reference = itatt->second;
-//                        size_t startindex = 0;
-//                        if( itatt->second.size() > 0 && itatt->second[0] == '#' ) {
-//                            startindex = 1;
-//                        }
-//                        _psensor->_pgeom->sensor_reference = itatt->second.substr(startindex);
                     }
                 }
             }
@@ -56,12 +52,8 @@ public:
                 // read the URL attribute
                 FOREACHC(itatt, atts) {
                     if( itatt->first == "url" ) {
+                        // here the url is really the name of the body, because colladareader maps the url to name
                         _psensor->_pgeom->target_region = itatt->second;
-//                        size_t startindex = 0;
-//                        if( itatt->second.size() > 0 && itatt->second[0] == '#' ) {
-//                            startindex = 1;
-//                        }
-//                        _psensor->_pgeom->target_region = itatt->second.substr(startindex);
                     }
                 }
             }
@@ -397,7 +389,6 @@ public:
     {
         SensorBase::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseCameraSensor const> r = boost::dynamic_pointer_cast<BaseCameraSensor const>(preference);
-        // r->_pgeom->sensor_reference should already be correct
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
         _trans = r->_trans;
@@ -417,27 +408,6 @@ public:
         ss << _vColor.x << " " << _vColor.y << " " << _vColor.z;
         writer->AddChild("color",atts)->SetCharData(ss.str());
         writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
-    }
-
-    virtual void SetName(const std::string& newname)
-    {
-        boost::shared_ptr<CameraGeomData> pgeom = _pgeom;
-        if( !!pgeom && pgeom->sensor_reference.size() > 0 ) {
-            // HACK for collada: check if pgeom->sensor_reference is in robotname:sensorname and that matches with the current sensor name's robot. If it does, then most likely robot is changing its name and sensor_reference is part of the same changing robot, so have to update sensor_reference! The only way to resolve this issue is to introduce unique IDs in openrave, slated for openrave JSON format.
-            if( newname.find(':') != std::string::npos && _name.find(':') != std::string::npos && pgeom->sensor_reference.find(':') != std::string::npos) {
-                std::string oldrobotname = _name.substr(0, _name.find(':'));
-                std::string newrobotname = newname.substr(0, newname.find(':'));
-                std::string oldreferencerobotname = pgeom->sensor_reference.substr(0, pgeom->sensor_reference.find(':'));
-                
-                if( oldrobotname == oldreferencerobotname ) {
-                    std::string newreference = newrobotname + ":" + pgeom->sensor_reference.substr(pgeom->sensor_reference.find(':')+1);
-                    RAVELOG_DEBUG_FORMAT("old reference name %s matches with old sensor %s, so changing name to %s", oldrobotname%pgeom->sensor_reference%newreference);
-                    pgeom->sensor_reference = newreference;
-                }
-            }
-        }
-
-        SensorBase::SetName(newname);
     }
 
 protected:
