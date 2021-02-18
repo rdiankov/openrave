@@ -155,9 +155,7 @@ public:
             }
             else if (itatt->first == "scalegeometry") {
                 stringstream ss(itatt->second);
-                float scalegeometry = 1.0;
-                ss >> scalegeometry;
-                _fGlobalScale *= scalegeometry;
+                ss >> _fGeomScale;
             }
         }
         if (_vOpenRAVESchemeAliases.size() == 0) {
@@ -677,7 +675,7 @@ protected:
     {
         std::pair<std::string, dReal> unit = {"", defaultScale};
         orjson::LoadJsonValueByKey(doc, "unit", unit);
-        return unit.second * _fGlobalScale;
+        return unit.second / _fGlobalScale * _fGeomScale;
     }
 
     template<typename T>
@@ -912,6 +910,7 @@ protected:
     }
 
     dReal _fGlobalScale = 1.0;
+    dReal _fGeomScale = 1.0;
     EnvironmentBasePtr _penv;
     int _deserializeOptions = 0; ///< options used for deserializing
     std::string _filename; ///< original filename used to open reader
