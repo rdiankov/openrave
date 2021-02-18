@@ -35,11 +35,24 @@ public:
                 }
                 return PE_Ignore;
             }
-            static boost::array<string, 18> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "target_region", "gain", "hardware_id"}};
+            static boost::array<string, 18> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "sensor_reference", "target_region", "gain", "hardware_id"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
-            if( name == std::string("target_region") ) {
+            if( name == std::string("sensor_reference") ) {
+                // read the URL attribute
+                FOREACHC(itatt, atts) {
+                    if( itatt->first == "url" ) {
+                        _psensor->_pgeom->sensor_reference = itatt->second;
+//                        size_t startindex = 0;
+//                        if( itatt->second.size() > 0 && itatt->second[0] == '#' ) {
+//                            startindex = 1;
+//                        }
+//                        _psensor->_pgeom->sensor_reference = itatt->second.substr(startindex);
+                    }
+                }
+            }
+            else if( name == std::string("target_region") ) {
                 // read the URL attribute
                 FOREACHC(itatt, atts) {
                     if( itatt->first == "url" ) {
@@ -93,6 +106,9 @@ public:
             }
             else if( name == "height" ) {
                 ss >> _psensor->_pgeom->height;
+            }
+            else if( name == "sensor_reference" ) {
+                // nothing to do here
             }
             else if( name == "measurement_time" ) {
                 ss >> _psensor->_pgeom->measurement_time;
@@ -263,8 +279,6 @@ public:
         _fTimeToImage = 0;
         _graphgeometry.reset();
         _dataviewer.reset();
-        
-        boost::shared_ptr<CameraGeomData> pgeom = _pgeom;
     }
 
     virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry)
@@ -383,6 +397,7 @@ public:
     {
         SensorBase::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseCameraSensor const> r = boost::dynamic_pointer_cast<BaseCameraSensor const>(preference);
+        // r->_pgeom->sensor_reference should already be correct
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
         _trans = r->_trans;

@@ -2566,6 +2566,11 @@ bool SensorBase::CameraGeomData::SerializeXML(BaseXMLWriterPtr writer, int optio
     writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(measurement_time));
     writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(gain));
     //writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
+    if( sensor_reference.size() > 0 ) {
+        atts.emplace_back("url",  sensor_reference);
+        writer->AddChild("sensor_reference",atts);
+        atts.clear();
+    }
     if( target_region.size() > 0 ) {
         atts.emplace_back("url",  target_region);
         writer->AddChild("target_region",atts);

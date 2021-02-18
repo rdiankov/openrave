@@ -2663,6 +2663,15 @@ private:
                                     camgeom.target_region = "";
                                 }
                             }
+                            if( camgeom.sensor_reference.size() > 0 ) {
+                                // have to convert to equivalent collada url
+                                FOREACH(itattid, mapAttachedSensorIDs) {
+                                    if( camgeom.sensor_reference == itattid->first->GetSensor()->GetName() ) {
+                                        camgeom.sensor_reference = std::string("#") + itattid->second;
+                                        break;
+                                    }
+                                }
+                            }
                             camgeom.SerializeXML(extrawriter,0);
                             bSerialize = false;
                         }

@@ -3622,6 +3622,12 @@ public:
                 }
             }
             pattachedsensor->UpdateInfo(); // need to update the _info struct with the latest values
+
+            // migrate _sensor_reference_name to _referenceAttachedSensorName
+            SensorBase::CameraGeomDataConstPtr pCameraGeomData = boost::dynamic_pointer_cast<SensorBase::CameraGeomData const>(pattachedsensor->_psensor->GetSensorGeometry(SensorBase::ST_Camera));
+            if( !!pCameraGeomData && pCameraGeomData->sensor_reference.find(':') != std::string::npos ) {
+                pattachedsensor->_info._referenceAttachedSensorName = pCameraGeomData->sensor_reference.substr(pCameraGeomData->sensor_reference.find(':')+1);
+            }
         }
     }
 

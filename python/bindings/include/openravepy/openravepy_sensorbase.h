@@ -54,6 +54,7 @@ public:
     PyCameraIntrinsics intrinsics;
     int width = 0;
     int height = 0;
+    std::string sensor_reference;
     std::string target_region;
     dReal measurement_time = 1.0;
     dReal gain = 1.0;
