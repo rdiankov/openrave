@@ -319,7 +319,7 @@ public:
         if( bSetToCurrentPInfo ) {
             if (_currentpinfo.size() < envId + 1) {
                 // have a upper bound on size?
-                RAVELOG_INFO_FORMAT("increase size from %d to %d", _currentpinfo.size()%(envId + 1));
+                //RAVELOG_INFO_FORMAT("increase size from %d to %d", _currentpinfo.size()%(envId + 1));
                 _currentpinfo.resize(envId + 1, KinBodyInfoPtr());
             }
             _currentpinfo.at(envId) = pinfo;
@@ -391,7 +391,7 @@ public:
             const int envId = pbody->GetEnvironmentId();
             if (_currentpinfo.size() < envId + 1) {
                 // have a upper bound on size?
-                RAVELOG_INFO_FORMAT("increase size from %d to %d", _currentpinfo.size()%(envId + 1));
+                //RAVELOG_INFO_FORMAT("increase size from %d to %d", _currentpinfo.size()%(envId + 1));
                 _currentpinfo.resize(envId + 1, KinBodyInfoPtr());
             }
             _currentpinfo.at(envId) = pinfo;
@@ -548,12 +548,12 @@ public:
                 }
                 // erase trailing null pointers
                 _currentpinfo.erase(_currentpinfo.end() - numErase, _currentpinfo.end());
-                RAVELOG_INFO_FORMAT("erased envId=%d, and popped %d , size is %d", envId%numErase%_currentpinfo.size());
+                //RAVELOG_INFO_FORMAT("erased envId=%d, and popped %d , size is %d", envId%numErase%_currentpinfo.size());
             }
             else {
                 // invalidate
                 _currentpinfo.at(envId) = KinBodyInfoPtr();
-                RAVELOG_INFO_FORMAT("erased %d but didn't pop back, size is %d", envId%_currentpinfo.size());
+                //RAVELOG_INFO_FORMAT("erased %d but didn't pop back, size is %d", envId%_currentpinfo.size());
             }
             _cachedpinfo.erase(envId);
         }
