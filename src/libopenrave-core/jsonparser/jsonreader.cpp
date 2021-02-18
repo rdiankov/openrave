@@ -139,9 +139,6 @@ public:
 
     JSONReader(const AttributesList& atts, EnvironmentBasePtr penv, const std::string& defaultSuffix) : _penv(penv), _defaultSuffix(defaultSuffix)
     {
-        // set global scale when initalize jsonreader.
-        _fGlobalScale = 1.0 / _penv->GetUnit().second;
-        _deserializeOptions = 0;
         FOREACHC(itatt, atts) {
             if (itatt->first == "openravescheme") {
                 std::stringstream ss(itatt->second);
@@ -155,12 +152,17 @@ public:
             }
             else if (itatt->first == "scalegeometry") {
                 stringstream ss(itatt->second);
+                // take the first argument given from scalegeometry to set as the overall geometry scale
                 ss >> _fGeomScale;
             }
         }
         if (_vOpenRAVESchemeAliases.size() == 0) {
             _vOpenRAVESchemeAliases.push_back("openrave");
         }
+
+        // set global scale when initalize jsonreader.
+        _fGlobalScale = 1.0 / _penv->GetUnit().second;
+        _deserializeOptions = 0;
     }
 
     virtual ~JSONReader()
@@ -675,7 +677,7 @@ protected:
     {
         std::pair<std::string, dReal> unit = {"", defaultScale};
         orjson::LoadJsonValueByKey(doc, "unit", unit);
-        return unit.second / _fGlobalScale * _fGeomScale;
+        return unit.second * _fGlobalScale * _fGeomScale;
     }
 
     template<typename T>
