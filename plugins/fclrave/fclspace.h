@@ -478,7 +478,8 @@ public:
         if( !pinfo ) {
             return;
         }
-        BOOST_ASSERT( pinfo->GetBody().get() == &body);
+        // expensive, comment out for now
+        //BOOST_ASSERT( pinfo->_pbody.lock().get() == &body);
         _Synchronize(*pinfo, body);
     }
 
