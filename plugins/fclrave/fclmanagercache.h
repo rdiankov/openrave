@@ -739,18 +739,20 @@ private:
         linkEnableStates.resize(body.GetLinks().size()); ///< links that are currently inside the manager
         std::fill(linkEnableStates.begin(), linkEnableStates.end(), 0);
         FOREACH(itlink, body.GetLinks()) {
-            if( (*itlink)->IsEnabled() && (!bTrackActiveDOF || _vTrackingActiveLinks.at((*itlink)->GetIndex())) ) {
-                //pinfo->vlinks.at((*itlink)->GetIndex()).listRegisteredManagers.push_back(shared_from_this());
-                CollisionObjectPtr pcol = _fclspace.GetLinkBV(*pinfo, (*itlink)->GetIndex());
+            const KinBody::Link& link = **itlink;
+            const int linkIndex = link.GetIndex();
+            if( link.IsEnabled() && (!bTrackActiveDOF || _vTrackingActiveLinks.at(linkIndex)) ) {
+                //pinfo->vlinks.at(linkIndex).listRegisteredManagers.push_back(shared_from_this());
+                CollisionObjectPtr pcol = _fclspace.GetLinkBV(*pinfo, linkIndex);
                 if( !!pcol ) {
                     if( find(_tmpbuffer.begin(), _tmpbuffer.end(), pcol.get()) == _tmpbuffer.end() ) {
                         _tmpbuffer.push_back(pcol.get());
                     }
                     else {
-                        RAVELOG_WARN_FORMAT("env=%d body %s link %s is added multiple times", body.GetEnv()->GetId()%body.GetName()%(*itlink)->GetName());
+                        RAVELOG_WARN_FORMAT("env=%d body %s link %s is added multiple times", body.GetEnv()->GetId()%body.GetName()%link.GetName());
                     }
-                    vcolobjs[(*itlink)->GetIndex()] = pcol;
-                    linkEnableStates.at((*itlink)->GetIndex()) = 1;
+                    vcolobjs[linkIndex] = pcol;
+                    linkEnableStates.at(linkIndex) = 1;
                     bsetUpdateStamp = true;
                 }
             }
