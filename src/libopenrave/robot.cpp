@@ -98,6 +98,7 @@ void RobotBase::AttachedSensorInfo::Reset()
     _linkname.clear();
     _trelative = Transform();
     _sensorname.clear();
+    _referenceAttachedSensorName.clear();
     _docSensorGeometry = rapidjson::Document();
 }
 
@@ -109,6 +110,7 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     orjson::SetJsonValueByKey(value, "linkName", _linkname, allocator);
     orjson::SetJsonValueByKey(value, "transform", _trelative, allocator);
     orjson::SetJsonValueByKey(value, "type", _sensorname, allocator);
+    orjson::SetJsonValueByKey(value, "referenceAttachedSensorName", _referenceAttachedSensorName, allocator);
 
     if (_docSensorGeometry.IsObject() && _docSensorGeometry.MemberCount() > 0) {
         rapidjson::Value sensorGeometry;
@@ -124,6 +126,7 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
     orjson::LoadJsonValueByKey(value, "linkName", _linkname);
     orjson::LoadJsonValueByKey(value, "transform", _trelative);
     orjson::LoadJsonValueByKey(value, "type", _sensorname);
+    orjson::LoadJsonValueByKey(value, "referenceAttachedSensorName", _referenceAttachedSensorName);
 
     if (value.HasMember("sensorGeometry")) {
         if (!_docSensorGeometry.IsObject()) {
@@ -238,6 +241,7 @@ void RobotBase::AttachedSensor::ExtractInfo(AttachedSensorInfo& info) const
     info._id = _info._id;
     info._name = _info._name;
     info._trelative = _info._trelative;
+    info._referenceAttachedSensorName = _info._referenceAttachedSensorName;
     info._sensorname.clear();
     info._linkname.clear();
 
@@ -278,6 +282,12 @@ UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::
     }
     else if (!info._linkname.empty()) {
         RAVELOG_VERBOSE_FORMAT("attached sensor %s link name changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // referenceAttachedSensorName
+    if (_info._referenceAttachedSensorName != info._referenceAttachedSensorName) {
+        RAVELOG_VERBOSE_FORMAT("attached sensor %s referenceAttachedSensorName changed", _info._id);
         return UFIR_RequireReinitialize;
     }
 
