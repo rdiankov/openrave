@@ -1264,7 +1264,15 @@ Transform KinBody::GetTransform() const
 
 bool KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
 {
-    if( _veclinks.size() > 0 ) {
+    if (_veclinks.size() == 0) {
+        return false;
+    }
+
+    bool bSuccess = false;
+    if( _veclinks.size() == 1 ) {
+        bSuccess = GetEnv()->GetPhysicsEngine()->SetLinkVelocity(_veclinks[0], linearvel, angularvel);
+    }
+    else {
         std::vector<std::pair<Vector,Vector> > velocities(_veclinks.size());
         velocities.at(0).first = linearvel;
         velocities.at(0).second = angularvel;
@@ -1274,11 +1282,11 @@ bool KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
             velocities[i].second = angularvel;
         }
 
-        bool bSuccess = GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
-        _UpdateGrabbedBodies();
-        return bSuccess;
+        bSuccess = GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
     }
-    return false;
+    
+    _UpdateGrabbedBodies();
+    return bSuccess;
 }
 
 void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel, const Vector& angularvel, uint32_t checklimits)
