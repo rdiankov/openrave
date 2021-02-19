@@ -1101,6 +1101,7 @@ private:
 #endif
 
     friend void RaveInitializeFromState(UserDataPtr);
+    friend int RaveInitialize(bool bLoadAllPlugins, int level);
     friend UserDataPtr RaveGlobalState();
 };
 
@@ -1161,8 +1162,15 @@ std::string RaveFindDatabaseFile(const std::string& filename, bool bRead)
 
 int RaveInitialize(bool bLoadAllPlugins, int level)
 {
-    boost::mutex::scoped_lock lock(RaveGlobal::instance()->GetInitializationMutex());
-    return RaveGlobal::instance()->Initialize(bLoadAllPlugins,level);
+    boost::shared_ptr<RaveGlobal>& state = RaveGlobal::instance();
+    boost::mutex::scoped_lock lock(state->GetInitializationMutex());
+    if( state->_IsInitialized() ) {
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE already initialized, so not initializing again", boost::this_thread::get_id());
+        return 0;
+    }
+    else {
+        return state->Initialize(bLoadAllPlugins,level);
+    }
 }
 
 void RaveInitializeFromState(UserDataPtr globalstate)
@@ -1173,7 +1181,7 @@ void RaveInitializeFromState(UserDataPtr globalstate)
 UserDataPtr RaveGlobalState()
 {
     // only return valid pointer if initialized!
-    boost::shared_ptr<RaveGlobal> state = RaveGlobal::_state;
+    boost::shared_ptr<RaveGlobal>& state = RaveGlobal::instance();
     if( !!state ) {
         if( state->_IsInitialized() ) {
             return state;
@@ -2499,8 +2507,10 @@ void DummyXMLReader::characters(const std::string& ch)
 EnvironmentBase::EnvironmentBase()
 {
     if( !RaveGlobalState() ) {
-        RAVELOG_WARN("OpenRAVE global state not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.\n");
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state is not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.", boost::this_thread::get_id());
+        uint64_t starttime = utils::GetMicroTime();
         RaveInitialize(true);
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state finished initializing in %u[us].", boost::this_thread::get_id()%(utils::GetMicroTime()-starttime));
     }
     __nUniqueId = RaveGlobal::instance()->RegisterEnvironment(this);
 }
