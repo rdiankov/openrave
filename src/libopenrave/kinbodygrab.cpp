@@ -541,6 +541,7 @@ void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::
 void KinBody::_UpdateGrabbedBodies()
 {
     vector<UserDataPtr>::iterator itgrabbed = _vGrabbedBodies.begin();
+    std::pair<Vector, Vector> velocity;
     while(itgrabbed != _vGrabbedBodies.end() ) {
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
         KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
@@ -548,7 +549,7 @@ void KinBody::_UpdateGrabbedBodies()
             Transform t = pgrabbed->_plinkrobot->GetTransform();
             pbody->SetTransform(t * pgrabbed->_troot);
             // set the correct velocity
-            std::pair<Vector, Vector> velocity = pgrabbed->_plinkrobot->GetVelocity();
+            pgrabbed->_plinkrobot->GetVelocity(velocity.first, velocity.second);
             velocity.first += velocity.second.cross(t.rotate(pgrabbed->_troot.trans));
             pbody->SetVelocity(velocity.first, velocity.second);
             ++itgrabbed;
