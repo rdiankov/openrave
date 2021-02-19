@@ -31,7 +31,7 @@ public:
         std::vector< std::pair<Vector, Vector> > linkvelocities;
     };
 
-    boost::shared_ptr<PhysicsData> _GetData(KinBodyConstPtr pbody) {
+    inline boost::shared_ptr<PhysicsData> _GetData(const KinBodyConstPtr& pbody) {
         boost::shared_ptr<PhysicsData> pdata = boost::dynamic_pointer_cast<PhysicsData>(pbody->GetUserData("_genericphysics_"));
         if( !pdata ) {
             // isn't initialized for some reason, this can happen during environment cloning
@@ -79,28 +79,45 @@ public:
     virtual void RemoveKinBody(KinBodyPtr pbody) {
         if( !!pbody ) {
             pbody->RemoveUserData("_genericphysics_");
+
+            int id = pbody->GetEnvironmentId();
+            if (id < _data.size()) {
+                _data[id] = boost::shared_ptr<PhysicsData>();
+            }
         }
     }
 
+    inline const boost::shared_ptr<PhysicsData>& _EnsureData(const KinBodyConstPtr& pbody)
+    {
+        int id = pbody->GetEnvironmentId();
+        if (id >= _data.size()) {
+            _data.resize(id + 1, boost::shared_ptr<PhysicsData>());
+        }
+        if (!_data[id]) {
+            _data[id] = _GetData(pbody);
+        }
+        return _data[id];
+    }
+
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel) {
-        std::pair<Vector, Vector> vel = _GetData(plink->GetParent())->linkvelocities.at(plink->GetIndex());
+        std::pair<Vector, Vector> vel = _EnsureData(plink->GetParent())->linkvelocities.at(plink->GetIndex());
         linearvel = vel.first;
         angularvel = vel.second;
         return true;
     }
     bool GetLinkVelocities(KinBodyConstPtr body, std::vector<std::pair<Vector,Vector> >& velocities) {
-        velocities = _GetData(body)->linkvelocities;
+        velocities = _EnsureData(body)->linkvelocities;
         return true;
     }
 
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
     {
-        _GetData(plink->GetParent())->linkvelocities.at(plink->GetIndex()) = make_pair(linearvel,angularvel);
+        _EnsureData(plink->GetParent())->linkvelocities.at(plink->GetIndex()) = make_pair(linearvel,angularvel);
         return true;
     }
     bool SetLinkVelocities(KinBodyPtr body, const std::vector<std::pair<Vector,Vector> >& velocities)
     {
-        _GetData(body)->linkvelocities = velocities;
+        _EnsureData(body)->linkvelocities = velocities;
         return true;
     }
 
@@ -139,6 +156,7 @@ public:
 
 private:
     Vector _vgravity;
+    std::vector<boost::shared_ptr<PhysicsData> > _data;
 };
 
 PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
