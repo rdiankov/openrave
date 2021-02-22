@@ -623,6 +623,7 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     pInfo->_transform = ExtractTransform(_transform);
     pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
     pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
+    pInfo->_uninitializedFields = _uninitializedFields;
     return pInfo;
 }
 
