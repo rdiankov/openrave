@@ -546,6 +546,7 @@ void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<
         FOREACH(itInfo, vInfos) {
             if ((*itInfo)->GetName() == name) {
                 itExistingInfo = itInfo;
+                id = (*itInfo)->_id;
                 break;
             }
         }
