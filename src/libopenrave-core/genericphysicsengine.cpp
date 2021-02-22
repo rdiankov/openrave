@@ -113,7 +113,7 @@ public:
     {
         int bodyid = pbody->GetEnvironmentId();
         if (bodyid >= _pysicsDataCache.size()) {
-            RAVELOG_INFO_FORMAT("extend _pysicsDataCache of size %d to %d from bodyid=%d(name=%s)", (_pysicsDataCache.size())%(bodyid + 1)%bodyid%(pbody->GetName()));
+            RAVELOG_VERBOSE_FORMAT("extend _pysicsDataCache of size %d to %d from bodyid=%d(name=%s)", (_pysicsDataCache.size())%(bodyid + 1)%bodyid%(pbody->GetName()));
             _pysicsDataCache.resize(bodyid + 1, boost::shared_ptr<PhysicsData>());
         }
         if (!_pysicsDataCache.at(bodyid)) {
