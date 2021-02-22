@@ -83,7 +83,7 @@ public:
 
             const int bodyid = pbody->GetEnvironmentId();
             if (bodyid < _pysicsDataCache.size()) {
-                RAVELOG_WARN_FORMAT("invalidate bodyid=%d(name=%s) in _pysicsDataCache of size %d", bodyid%(pbody->GetName())%(_pysicsDataCache.size()));
+                RAVELOG_VERBOSE_FORMAT("invalidate bodyid=%d(name=%s) in _pysicsDataCache of size %d", bodyid%(pbody->GetName())%(_pysicsDataCache.size()));
                 if (bodyid == _pysicsDataCache.size() - 1) {
                     // last element is removed, chance to shrink vector and free some memory
                     int numItemsToErase = 1;
@@ -94,7 +94,7 @@ public:
                     }
                     const size_t prevSize = _pysicsDataCache.size();
                     _pysicsDataCache.resize(_pysicsDataCache.size() - numItemsToErase);
-                    RAVELOG_WARN_FORMAT("resized _pysicsDataCache from %d to %d", prevSize%(_pysicsDataCache.size()));
+                    RAVELOG_VERBOSE_FORMAT("resized _pysicsDataCache from %d to %d", prevSize%(_pysicsDataCache.size()));
                 }
                 else if (!!_pysicsDataCache.at(bodyid)) {
                     _pysicsDataCache.at(bodyid) = boost::shared_ptr<PhysicsData>();
