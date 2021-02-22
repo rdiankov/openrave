@@ -255,7 +255,6 @@ public:
             intrinsics = r.intrinsics;
             width = r.width;
             height = r.height;
-            sensor_reference = r.sensor_reference;
             target_region = r.target_region;
             measurement_time = r.measurement_time;
             gain = r.gain;
@@ -271,7 +270,6 @@ public:
                    && intrinsics == pOther->intrinsics
                    && width == pOther->width
                    && height == pOther->height
-                   && sensor_reference == pOther->sensor_reference
                    && target_region == pOther->target_region
                    && measurement_time == pOther->measurement_time
                    && gain == pOther->gain;
@@ -281,7 +279,6 @@ public:
         bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
         bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
 
-        std::string sensor_reference; ///< name of sensor that whose data is referenced. This sensor transforms the data in a particular way.
         std::string target_region; ///< name of the kinbody that describes the region of interest for the camera.
         CameraIntrinsics intrinsics;         ///< intrinsic matrix
         int width, height;         ///< width and height of image

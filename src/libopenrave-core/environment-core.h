@@ -123,7 +123,7 @@ public:
     Environment() : EnvironmentBase()
     {
         _homedirectory = RaveGetHomeDirectory();
-        RAVELOG_DEBUG_FORMAT("setting openrave home directory to %s", _homedirectory);
+        RAVELOG_DEBUG_FORMAT("env=%d, setting openrave home directory to %s", GetId()%_homedirectory);
 
         _nBodiesModifiedStamp = 0;
         _nEnvironmentIndex = 1;
