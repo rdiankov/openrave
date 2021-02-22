@@ -150,6 +150,11 @@ public:
             else if (itatt->first == "mustresolveenvuri") {
                 _bMustResolveEnvironmentURI = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
+            else if (itatt->first == "scalegeometry") {
+                stringstream ss(itatt->second);
+                // take the first argument given from scalegeometry to set as the overall geometry scale
+                ss >> _fGeomScale;
+            }
         }
         if (_vOpenRAVESchemeAliases.size() == 0) {
             _vOpenRAVESchemeAliases.push_back("openrave");
@@ -214,6 +219,7 @@ public:
                 }
                 return false;
             }
+            RAVELOG_VERBOSE_FORMAT("resolved fullFilename=%s", fullFilename);
 
             if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
                 _ExtractSpecifiedBodies(envInfo, *prReferenceEnvInfo);
@@ -377,13 +383,18 @@ public:
         _uri = uri;
     }
 
-    void SetFilename(const std::string& filename) {
+    void SetFilename(const std::string& filename)
+    {
         _filename = filename;
 
         // need to convert absolute filename back to openrave:/filename
         std::string newFilename;
         if (RaveInvertFileLookup(newFilename, filename)) {
             _uri = _vOpenRAVESchemeAliases[0] + ":/" + newFilename;
+            RAVELOG_VERBOSE_FORMAT("Set filename to '%s' and uri to '%s'", filename%_uri);
+        }
+        else {
+            RAVELOG_VERBOSE_FORMAT("Set filename to '%s'", filename);
         }
     }
 
@@ -672,7 +683,7 @@ protected:
     {
         std::pair<std::string, dReal> unit = {"", defaultScale};
         orjson::LoadJsonValueByKey(doc, "unit", unit);
-        return unit.second / _fGlobalScale;
+        return unit.second * _fGlobalScale * _fGeomScale;
     }
 
     template<typename T>
@@ -907,6 +918,7 @@ protected:
     }
 
     dReal _fGlobalScale = 1.0;
+    dReal _fGeomScale = 1.0;
     EnvironmentBasePtr _penv;
     int _deserializeOptions = 0; ///< options used for deserializing
     std::string _filename; ///< original filename used to open reader

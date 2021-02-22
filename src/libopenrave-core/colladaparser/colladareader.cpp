@@ -266,6 +266,7 @@ public:
         _bExtractConnectedBodies = bExtractConnectedBodies;
         _bMustResolveURI = false;
         _fGlobalScale = 1.0/penv->GetUnit().second;
+        _fGeomScale = 1.0;
         _bBackCompatValuesInRadians = false;
         if( sizeof(daeFloat) == 4 ) {
             RAVELOG_WARN("collada-dom compiled with 32-bit floating-point, so there might be precision errors\n");
@@ -445,9 +446,8 @@ public:
         FOREACHC(itatt,atts) {
             if( itatt->first == "scalegeometry" ) {
                 stringstream ss(itatt->second);
-                Vector v(1,1,1);
-                ss >> v.x;
-                _fGlobalScale *= v.x;
+                // take the first argument given from scalegeometry to set as the overall geometry scale
+                ss >> _fGeomScale;
             }
         }
 
@@ -3590,9 +3590,13 @@ public:
                         if( !!pattachedsensor->_psensor ) {
                             pattachedsensor->_psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%name));
                             std::string instance_url = instance_sensor->getAttribute("url");
-                            mapSensorURLsToNames[instance_url] = pattachedsensor->_psensor->GetName();
+                            mapSensorURLsToNames[instance_url] = pattachedsensor->_info._name;
                         }
                         listSensorsToExtract.emplace_back(pattachedsensor, result.second);
+                    }
+                    daeElementRef preference_attach_sensor = tec->getChild("reference_attach_sensor");
+                    if( !!preference_attach_sensor ) {
+                        pattachedsensor->_info._referenceAttachedSensorName = preference_attach_sensor->getAttribute("name");
                     }
                     pattachedsensor->_info._id = str(boost::format("attachedSensor%d")%probot->_vecAttachedSensors.size());
                     probot->_vecAttachedSensors.push_back(pattachedsensor);
@@ -3616,12 +3620,32 @@ public:
                 continue;
             }
 
-            if( _ProcessXMLReader(pcurreader,itextract->second, mapSensorURLsToNames) ) {
+            if( _ProcessXMLReader(pcurreader,itextract->second) ) {
                 if( !!pcurreader->GetReadable() ) {
                     pattachedsensor->_psensor->SetReadableInterface(pattachedsensor->_psensor->GetXMLId(),pcurreader->GetReadable());
                 }
             }
             pattachedsensor->UpdateInfo(); // need to update the _info struct with the latest values
+
+            // migrate <sensor_reference> to _referenceAttachedSensorName
+            if( pattachedsensor->_info._referenceAttachedSensorName.size() == 0) {
+                daeTArray<daeElementRef> children;
+                itextract->second->getChildren(children);                
+                for (size_t i = 0; i < children.getCount(); i++) {
+                    std::string xmltag = utils::ConvertToLowerCase(children[i]->getElementName());
+                    if (xmltag == "sensor_reference") {
+                        std::string url = children[i]->getAttribute("url");
+                        std::map<std::string, std::string>::const_iterator itname = mapSensorURLsToNames.find(url);
+                        if( itname != mapSensorURLsToNames.end() ) {
+                            RAVELOG_WARN_FORMAT("found deprecated sensor_reference tag, migrating url \"%s\" to referenceAttachedSensorName \"%s\"", url%itname->second);
+                            pattachedsensor->_info._referenceAttachedSensorName = itname->second;
+                        } else {
+                            RAVELOG_WARN_FORMAT("found deprecated sensor_reference tag, but url \"%s\" is invalid", url);
+                        }
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -5751,16 +5775,16 @@ private:
         // getChild could be optimized since asset tag is supposed to appear as the first element
         domExtraRef pextra = daeSafeCast<domExtra> (pelt->getChild("extra"));
         if( !!pextra && !!pextra->getAsset() && !!pextra->getAsset()->getUnit() ) {
-            return pextra->getAsset()->getUnit()->getMeter()/_penv->GetUnit().second;
+            return pextra->getAsset()->getUnit()->getMeter()/_penv->GetUnit().second * _fGeomScale;
         }
         domAssetRef passet = daeSafeCast<domAsset>(pelt->getChild("asset"));
         if (!!passet && !!passet->getUnit()) {
-            return passet->getUnit()->getMeter() / _penv->GetUnit().second;
+            return passet->getUnit()->getMeter() / _penv->GetUnit().second * _fGeomScale;
         }
         if( !!pelt->getParent() ) {
             return _GetUnitScale(pelt->getParent(),startscale);
         }
-        return startscale;
+        return startscale * _fGeomScale;
     }
 
     /// \brief do the inverse resolve file:/... -> openrave:/...
@@ -5840,6 +5864,7 @@ private:
     domCOLLADA* _dom;
     EnvironmentBasePtr _penv;
     dReal _fGlobalScale;
+    dReal _fGeomScale;
     std::map<KinBody::JointPtr, std::vector<dReal> > _mapJointUnits;
     std::map<std::string,KinBody::JointPtr> _mapJointSids;
     string _prefix;

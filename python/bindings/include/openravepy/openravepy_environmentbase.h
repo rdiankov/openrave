@@ -136,6 +136,8 @@ public:
 
     object WriteToMemory(const std::string &filetype, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_());
 
+    /// will be unlocking GIL since doing FS or memory-intensive operations 
+    //@{
     object ReadRobotURI(const std::string &filename);
     object ReadRobotURI(const std::string &filename, object odictatts);
     object ReadRobotData(const std::string &data);
@@ -146,6 +148,8 @@ public:
     object ReadKinBodyData(const std::string &data, object odictatts);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, object odictatts);
+    //@}
+
     object ReadTrimeshURI(const std::string& filename);
     object ReadTrimeshURI(const std::string& filename, object odictatts);
 
