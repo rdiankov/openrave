@@ -76,27 +76,50 @@ public:
         pbody->SetUserData("_genericphysics_", UserDataPtr(new PhysicsData(pbody)));
         return true;
     }
+
     virtual void RemoveKinBody(KinBodyPtr pbody) {
         if( !!pbody ) {
             pbody->RemoveUserData("_genericphysics_");
 
-            int id = pbody->GetEnvironmentId();
-            if (id < _data.size()) {
-                _data[id] = boost::shared_ptr<PhysicsData>();
+            const int bodyid = pbody->GetEnvironmentId();
+            if (bodyid < _pysicsDataCache.size()) {
+                RAVELOG_WARN_FORMAT("invalidate bodyid=%d(name=%s) in _pysicsDataCache of size %d", bodyid%(pbody->GetName())%(_pysicsDataCache.size()));
+                if (bodyid == _pysicsDataCache.size() - 1) {
+                    // last element is removed, chance to shrink vector and free some memory
+                    int numItemsToErase = 1;
+                    for (; numItemsToErase < _pysicsDataCache.size(); ++numItemsToErase) {
+                        if (!!_pysicsDataCache.at(_pysicsDataCache.size() - 1 - numItemsToErase)) {
+                            break;
+                        }
+                    }
+                    const size_t prevSize = _pysicsDataCache.size();
+                    _pysicsDataCache.resize(_pysicsDataCache.size() - numItemsToErase);
+                    RAVELOG_WARN_FORMAT("resized _pysicsDataCache from %d to %d", prevSize%(_pysicsDataCache.size()));
+                }
+                else if (!!_pysicsDataCache.at(bodyid)) {
+                    _pysicsDataCache.at(bodyid) = boost::shared_ptr<PhysicsData>();
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("bodyid=%d(name=%s) is already invalidated (either never initialized or invalidated already)", bodyid%(pbody->GetName()));
+                }
+            }
+            else {
+                RAVELOG_WARN_FORMAT("env=%d, bodyid=%d(name=%s) is not in _pysicsDataCache of size %d. Unless physics engine was never used in this environment, this should not happen.", (GetEnv()->GetId())%bodyid%(pbody->GetName())%(_pysicsDataCache.size()));
             }
         }
     }
 
     inline const boost::shared_ptr<PhysicsData>& _EnsureData(const KinBodyConstPtr& pbody)
     {
-        int id = pbody->GetEnvironmentId();
-        if (id >= _data.size()) {
-            _data.resize(id + 1, boost::shared_ptr<PhysicsData>());
+        int bodyid = pbody->GetEnvironmentId();
+        if (bodyid >= _pysicsDataCache.size()) {
+            RAVELOG_INFO_FORMAT("extend _pysicsDataCache of size %d to %d from bodyid=%d(name=%s)", (_pysicsDataCache.size())%(bodyid + 1)%bodyid%(pbody->GetName()));
+            _pysicsDataCache.resize(bodyid + 1, boost::shared_ptr<PhysicsData>());
         }
-        if (!_data[id]) {
-            _data[id] = _GetData(pbody);
+        if (!_pysicsDataCache.at(bodyid)) {
+            _pysicsDataCache.at(bodyid) = _GetData(pbody);
         }
-        return _data[id];
+        return _pysicsDataCache.at(bodyid);
     }
 
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel) {
@@ -156,7 +179,7 @@ public:
 
 private:
     Vector _vgravity;
-    std::vector<boost::shared_ptr<PhysicsData> > _data;
+    std::vector<boost::shared_ptr<PhysicsData> > _pysicsDataCache; // cache of physics data to avoid slow call to dynamic_pointer_cast and GetUserData("_genericphysics_"). It is assumed that environment id of kin body does not grow to infinity over time.
 };
 
 PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
