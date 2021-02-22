@@ -5465,10 +5465,11 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     info._vGrabbedInfos.resize(0);
     GetGrabbedInfo(info._vGrabbedInfos);
 
-    KinBody::KinBodyStateSaver saver(shared_kinbody());
+    // in order for link transform comparision to make sense
+    KinBody::KinBodyStateSaver saver(shared_kinbody(), Save_LinkTransformation);
+    SetTransform(Transform());
     vector<dReal> vZeros(GetDOF(), 0);
     SetDOFValues(vZeros, KinBody::CLA_Nothing);
-    SetTransform(Transform());
 
     // need to avoid extracting info for links and joints belonging to connected bodies
     std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
@@ -5608,9 +5609,17 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
-    // links
-    if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
-        return updateFromInfoResult;
+    {
+        // in order for link transform comparision to make sense
+        KinBody::KinBodyStateSaver saver(shared_kinbody(), Save_LinkTransformation);
+        SetTransform(Transform());
+        vector<dReal> vZeros(GetDOF(), 0);
+        SetDOFValues(vZeros, KinBody::CLA_Nothing);
+
+        // links
+        if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
+            return updateFromInfoResult;
+        }
     }
 
     // joints
@@ -5653,9 +5662,11 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             if (it->first.second >= joint->GetDOF()) {
                 continue;
             }
-            if (dofValues[joint->GetDOFIndex()+it->first.second] != it->second) {
-                dofValues[joint->GetDOFIndex()+it->first.second] = it->second;
+            int dofIndex = joint->GetDOFIndex()+it->first.second;
+            if (RaveFabs(dofValues[dofIndex] - it->second) > g_fEpsilonLinear) {
+                dofValues[dofIndex] = it->second;
                 bDOFChanged = true;
+                RAVELOG_VERBOSE_FORMAT("body %s dof %d value changed", _id%dofIndex);
             }
         }
         if (bDOFChanged) {

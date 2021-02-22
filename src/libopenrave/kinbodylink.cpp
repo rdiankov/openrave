@@ -897,12 +897,7 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     // transform
     if (TransformDistanceFast(GetTransform(), info._t) > g_fEpsilonLinear) {
         RAVELOG_VERBOSE_FORMAT("link %s transform changed", _info._id);
-        if (GetParent()->GetDOF() > 0) {
-            // need to reinitialize if parent has DOF or else updated link transform can be overwritten by SetDOFValues
-            return UFIR_RequireReinitialize;
-        }
-        SetTransform(info._t);
-        updateFromInfoResult = UFIR_Success;
+        return UFIR_RequireReinitialize;
     }
 
     // name
