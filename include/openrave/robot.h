@@ -153,7 +153,7 @@ public:
         virtual void UpdateInfo();
 
         /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-        virtual void ExtractInfo(RobotBase::ManipulatorInfo& info) const;
+        virtual void ExtractInfo(RobotBase::ManipulatorInfo& info, ExtractInfoMode extractMode) const;
 
         /// \brief update Manipulator according to new ManipulatorInfo, returns false if update cannot be performed and requires InitFromInfo
         virtual UpdateFromInfoResult UpdateFromInfo(const RobotBase::ManipulatorInfo& info);
@@ -679,7 +679,7 @@ public:
         }
 
         /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-        virtual void ExtractInfo(RobotBase::AttachedSensorInfo& info) const;
+        virtual void ExtractInfo(RobotBase::AttachedSensorInfo& info, ExtractInfoMode extractMode) const;
 
         /// \brief update AttachedSensor according to new AttachedSensorInfo, returns false if update cannot be performed and requires InitFromInfo
         virtual UpdateFromInfoResult UpdateFromInfo(const RobotBase::AttachedSensorInfo& info);
@@ -851,7 +851,7 @@ public:
         }
 
         /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-        virtual void ExtractInfo(RobotBase::ConnectedBodyInfo& info) const;
+        virtual void ExtractInfo(RobotBase::ConnectedBodyInfo& info, ExtractInfoMode extractMode) const;
 
         /// \brief update ConnectedBody according to new ConnectedBodyInfo, returns false if update cannot be performed and requires InitFromInfo
         virtual UpdateFromInfoResult UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info);
@@ -1338,7 +1338,7 @@ private:
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-    virtual void ExtractInfo(RobotBaseInfo& info);
+    virtual void ExtractInfo(RobotBaseInfo& info, ExtractInfoMode extractMode);
 
     /// \brief update RobotBase according to new RobotBaseInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromRobotInfo(const RobotBaseInfo& info);

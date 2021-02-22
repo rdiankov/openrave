@@ -836,9 +836,12 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
 {
     orjson::SetJsonValueByKey(rGeometryInfo, "id", _id, allocator);
     orjson::SetJsonValueByKey(rGeometryInfo, "name", _name, allocator);
-    Transform tscaled = _t;
-    tscaled.trans *= fUnitScale;
-    orjson::SetJsonValueByKey(rGeometryInfo, "transform", tscaled, allocator);
+
+    if ( (__missingFields & KinBody::GeometryInfo::GIF_Transform) == 0 ) {
+        Transform tscaled = _t;
+        tscaled.trans *= fUnitScale;
+        orjson::SetJsonValueByKey(rGeometryInfo, "transform", tscaled, allocator);
+    }
 
     orjson::SetJsonValueByKey(rGeometryInfo, "type", _GetGeometryTypeString(_type), allocator);
 
@@ -885,19 +888,21 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
 
     case GT_TriMesh: {
         // has to be scaled correctly
-        rapidjson::Value rTriMesh;
-        rTriMesh.SetObject();
-        rapidjson::Value rVertices;
-        rVertices.SetArray();
-        rVertices.Reserve(_meshcollision.vertices.size()*3, allocator);
-        for(size_t ivertex = 0; ivertex < _meshcollision.vertices.size(); ++ivertex) {
-            rVertices.PushBack(_meshcollision.vertices[ivertex][0]*fUnitScale, allocator);
-            rVertices.PushBack(_meshcollision.vertices[ivertex][1]*fUnitScale, allocator);
-            rVertices.PushBack(_meshcollision.vertices[ivertex][2]*fUnitScale, allocator);
+        if ( (__missingFields & KinBody::GeometryInfo::GIF_Mesh) == 0 ) {
+            rapidjson::Value rTriMesh;
+            rTriMesh.SetObject();
+            rapidjson::Value rVertices;
+            rVertices.SetArray();
+            rVertices.Reserve(_meshcollision.vertices.size()*3, allocator);
+            for(size_t ivertex = 0; ivertex < _meshcollision.vertices.size(); ++ivertex) {
+                rVertices.PushBack(_meshcollision.vertices[ivertex][0]*fUnitScale, allocator);
+                rVertices.PushBack(_meshcollision.vertices[ivertex][1]*fUnitScale, allocator);
+                rVertices.PushBack(_meshcollision.vertices[ivertex][2]*fUnitScale, allocator);
+            }
+            rTriMesh.AddMember("vertices", rVertices, allocator);
+            orjson::SetJsonValueByKey(rTriMesh, "indices", _meshcollision.indices, allocator);
+            rGeometryInfo.AddMember(rapidjson::Document::StringRefType("mesh"), rTriMesh, allocator);
         }
-        rTriMesh.AddMember("vertices", rVertices, allocator);
-        orjson::SetJsonValueByKey(rTriMesh, "indices", _meshcollision.indices, allocator);
-        rGeometryInfo.AddMember(rapidjson::Document::StringRefType("mesh"), rTriMesh, allocator);
         break;
     }
     case GT_CalibrationBoard: {
@@ -935,6 +940,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _t);
         _t.trans *= fUnitScale;
+        __missingFields &= ~KinBody::GeometryInfo::GIF_Transform;
     }
 
     if (value.HasMember("type")) {
@@ -1101,6 +1107,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             FOREACH(itvertex, _meshcollision.vertices) {
                 *itvertex *= fUnitScale;
             }
+            __missingFields &= ~KinBody::GeometryInfo::GIF_Mesh;
         }
         break;
     case GT_CalibrationBoard:
@@ -1546,9 +1553,13 @@ void KinBody::Link::Geometry::UpdateInfo()
 {
 }
 
-void KinBody::Link::Geometry::ExtractInfo(KinBody::GeometryInfo& info) const
+void KinBody::Link::Geometry::ExtractInfo(KinBody::GeometryInfo& info, ExtractInfoMode extractMode) const
 {
     info = _info;
+    if (extractMode == EIM_Partial) {
+        info.__missingFields |= KinBody::GeometryInfo::GIF_Transform;
+        info.__missingFields |= KinBody::GeometryInfo::GIF_Mesh;
+    }
 }
 
 UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::GeometryInfo& info)
@@ -1567,7 +1578,7 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
         return UFIR_RequireReinitialize;
     }
 
-    if (!GetTransform().Compare(info._t)) {
+    if( (info.__missingFields & KinBody::GeometryInfo::GIF_Transform) == 0 && !GetTransform().Compare(info._t) ) {
         RAVELOG_VERBOSE_FORMAT("geometry %s transform changed", _info._id);
         return UFIR_RequireReinitialize;
     }
@@ -1603,7 +1614,7 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
         }
     }
     else if (GetType() == GT_TriMesh) {
-        if (info._meshcollision.vertices != _info._meshcollision.vertices || info._meshcollision.indices != _info._meshcollision.indices) {
+        if( (info.__missingFields & KinBody::GeometryInfo::GIF_Mesh) == 0 && info._meshcollision != _info._meshcollision ) {
             RAVELOG_VERBOSE_FORMAT("geometry %s trimesh changed", _info._id);
             return UFIR_RequireReinitialize;
         }

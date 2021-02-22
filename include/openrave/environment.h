@@ -748,14 +748,15 @@ public:
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-    virtual void ExtractInfo(EnvironmentBaseInfo& info) = 0;
+    /// \param updateMode one of XIM_X
+    virtual void ExtractInfo(EnvironmentBaseInfo& info, ExtractInfoMode extractMode) = 0;
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo
     ///
     /// \param vCreatedBodies the bodies created in this operation
     /// \param vModifiedBodies the bodies modified in this operation
     /// \param vRemovedBodies the bodies removed from the environment in this operation
-    /// \param updateMode one if UFIM_X
+    /// \param updateMode one of UFIM_X
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, UpdateFromInfoMode updateMode) = 0;
 
     int _revision = 0;  ///< environment current revision

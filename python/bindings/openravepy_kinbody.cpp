@@ -3847,9 +3847,9 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
     return CreateStateSaver(options);
 }
 
-object PyKinBody::ExtractInfo() const {
+object PyKinBody::ExtractInfo(ExtractInfoMode extractMode) const {
     KinBody::KinBodyInfo info;
-    _pbody->ExtractInfo(info);
+    _pbody->ExtractInfo(info, extractMode);
     return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
 }
 
@@ -5336,7 +5336,7 @@ void init_openravepy_kinbody()
 #else
                          .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
 #endif
-                         .def("ExtractInfo", &PyKinBody::ExtractInfo, DOXY_FN(KinBody, ExtractInfo))
+                         .def("ExtractInfo", &PyKinBody::ExtractInfo, PY_ARGS("extractMode") DOXY_FN(KinBody, ExtractInfo))
                          .def("__enter__",&PyKinBody::__enter__)
                          .def("__exit__",&PyKinBody::__exit__)
                          .def("__repr__",&PyKinBody::__repr__)

@@ -373,6 +373,12 @@ public:
         /// \brief Generates the calibration board's dot grid mesh based on calibration board settings
         void GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation=1) const;
 
+        enum GeometryInfoField {
+            GIF_Transform = (1 << 0), // _t field
+            GIF_Mesh = (1 << 1), // _meshcollision field
+        };
+        int __missingFields = 0; ///< a bitmap of GeometryInfoField, indicating which fields are not filled and should not be used
+
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
@@ -443,6 +449,11 @@ public:
         /// \true false if the link is disabled. disabled links do not participate in collision detection
         bool _bIsEnabled = true;
         bool __padding0, __padding1; // for 4-byte alignment
+
+        enum LinkInfoField {
+            LIF_Transform = (1 << 0), // _t field
+        };
+        int __missingFields = 0; ///< a bitmap of LinkInfoField, indicating which fields are not filled and should not be used
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
@@ -563,7 +574,7 @@ public:
             virtual void UpdateInfo();
 
             /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-            virtual void ExtractInfo(KinBody::GeometryInfo& info) const;
+            virtual void ExtractInfo(KinBody::GeometryInfo& info, ExtractInfoMode extractMode) const;
 
             /// \brief update Geometry according to new GeometryInfo, returns false if update cannot be performed and requires InitFromInfo
             virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::GeometryInfo& info);
@@ -986,7 +997,7 @@ protected:
         }
 
         /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-        virtual void ExtractInfo(KinBody::LinkInfo& info) const;
+        virtual void ExtractInfo(KinBody::LinkInfo& info, ExtractInfoMode extractMode) const;
 
         /// \brief update Link according to new LinkInfo, returns false if update cannot be performed and requires InitFromInfo
         virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::LinkInfo& info);
@@ -1699,7 +1710,7 @@ public:
         }
 
         /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-        virtual void ExtractInfo(KinBody::JointInfo& info) const;
+        virtual void ExtractInfo(KinBody::JointInfo& info, ExtractInfoMode extractMode) const;
 
         /// \brief update Joint according to new JointInfo, returns false if update cannot be performed and requires InitFromInfo
         virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::JointInfo& info);
@@ -1965,6 +1976,13 @@ public:
         std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 
         bool _isRobot = false; ///< true if should create a RobotBasePtr
+
+        enum KinBodyInfoField {
+            KBIF_Transform = (1 << 0), // _transform field
+            KBIF_DOFValues = (1 << 1), // _dofValues field
+        };
+        int __missingFields = 0; ///< a bitmap of KinBodyInfoField, indicating which fields are not filled and should not be used
+
 protected:
         virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value);
 
@@ -2975,7 +2993,7 @@ private:
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-    virtual void ExtractInfo(KinBodyInfo& info);
+    virtual void ExtractInfo(KinBodyInfo& info, ExtractInfoMode extractMode);
 
     /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromKinBodyInfo(const KinBodyInfo& info);

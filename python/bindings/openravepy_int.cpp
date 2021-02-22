@@ -2509,9 +2509,9 @@ int PyEnvironmentBase::GetRevision() const {
     return _penv->GetRevision();
 }
 
-object PyEnvironmentBase::ExtractInfo() const {
+object PyEnvironmentBase::ExtractInfo(ExtractInfoMode extractMode) const {
     EnvironmentBase::EnvironmentBaseInfo info;
-    _penv->ExtractInfo(info);
+    _penv->ExtractInfo(info, extractMode);
     return py::to_object(boost::shared_ptr<PyEnvironmentBase::PyEnvironmentBaseInfo>(new PyEnvironmentBase::PyEnvironmentBaseInfo(info)));
 }
 
@@ -3299,7 +3299,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetId",&PyEnvironmentBase::GetId, DOXY_FN(EnvironmentBase,GetId))
                      .def("SetUnit",&PyEnvironmentBase::SetUnit, PY_ARGS("unitname","unitmult") DOXY_FN(EnvironmentBase,SetUnit))
                      .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
-                     .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
+                     .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, PY_ARGS("extractMode") DOXY_FN(EnvironmentBase,ExtractInfo))
                      .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info", "updateMode") DOXY_FN(EnvironmentBase,UpdateFromInfo))
                      .def("__enter__",&PyEnvironmentBase::__enter__)
                      .def("__exit__",&PyEnvironmentBase::__exit__)

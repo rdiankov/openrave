@@ -136,7 +136,9 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     tmpTransform.trans *= fUnitScale;
     tmpMassTransform.trans *= fUnitScale;
 
-    orjson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
+    if( (__missingFields & KinBody::LinkInfo::LIF_Transform) == 0 ) {
+        orjson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
+    }
     orjson::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
     orjson::SetJsonValueByKey(value, "mass", _mass, allocator);
     orjson::SetJsonValueByKey(value, "inertiaMoments", _vinertiamoments*fUnitScale*fUnitScale, allocator);
@@ -225,6 +227,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _t);
         _t.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
+        __missingFields &= ~KinBody::LinkInfo::LIF_Transform;
     }
     if (value.HasMember("massTransform")) {
         orjson::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
@@ -873,13 +876,17 @@ void KinBody::Link::UpdateInfo()
     }
 }
 
-void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
+void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info, ExtractInfoMode extractMode) const
 {
     info = _info;
+    info.__missingFields = 0;
+    if (extractMode == EIM_Partial) {
+        info.__missingFields |= KinBody::LinkInfo::LIF_Transform;
+    }
     info._vgeometryinfos.resize(_vGeometries.size());
     for (size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
         info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
-        _vGeometries[i]->ExtractInfo(*info._vgeometryinfos[i]);
+        _vGeometries[i]->ExtractInfo(*info._vgeometryinfos[i], extractMode);
     }
 }
 
@@ -895,9 +902,11 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     }
 
     // transform
-    if (TransformDistanceFast(GetTransform(), info._t) > g_fEpsilonLinear) {
-        RAVELOG_VERBOSE_FORMAT("link %s transform changed", _info._id);
-        return UFIR_RequireReinitialize;
+    if( (info.__missingFields & KinBody::LinkInfo::LIF_Transform) == 0 ) {
+        if (TransformDistanceFast(GetTransform(), info._t) > g_fEpsilonLinear) {
+            RAVELOG_VERBOSE_FORMAT("link %s transform changed", _info._id);
+            return UFIR_RequireReinitialize;
+        }
     }
 
     // name

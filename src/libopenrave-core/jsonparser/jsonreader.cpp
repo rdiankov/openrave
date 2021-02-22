@@ -190,7 +190,7 @@ public:
         }
         else {
             // extract everything
-            _penv->ExtractInfo(envInfo);
+            _penv->ExtractInfo(envInfo, EIM_Partial);
         }
 
         std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
@@ -902,12 +902,12 @@ protected:
                             KinBody::KinBodyInfoPtr pKinBodyInfo;
                             if (pbody->IsRobot()) {
                                 RobotBase::RobotBaseInfoPtr pRobotInfo(new RobotBase::RobotBaseInfo());
-                                RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*pRobotInfo);
+                                RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*pRobotInfo, EIM_Partial);
                                 pKinBodyInfo = pRobotInfo;
                             }
                             else {
                                 pKinBodyInfo.reset(new KinBody::KinBodyInfo());
-                                pbody->ExtractInfo(*pKinBodyInfo);
+                                pbody->ExtractInfo(*pKinBodyInfo, EIM_Partial);
                             }
                             envInfo._vBodyInfos.push_back(pKinBodyInfo);
                         }

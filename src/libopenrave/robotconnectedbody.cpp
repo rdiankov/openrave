@@ -417,7 +417,7 @@ void RobotBase::ConnectedBody::GetResolvedGripperInfos(std::vector<RobotBase::Gr
     }
 }
 
-void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) const
+void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info, ExtractInfoMode extractMode) const
 {
     // TODO: extract info from connectedbody to make extra geometry working
     info = _info;

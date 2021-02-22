@@ -1613,9 +1613,9 @@ PyManipulatorPtr PyRobotBase::GetManipulator(const string& manipname)
     return PyManipulatorPtr();
 }
 
-object PyRobotBase::ExtractInfo() const {
+object PyRobotBase::ExtractInfo(ExtractInfoMode extractMode) const {
     RobotBase::RobotBaseInfo info;
-    _probot->ExtractInfo(info);
+    _probot->ExtractInfo(info, extractMode);
     return py::to_object(boost::shared_ptr<PyRobotBase::PyRobotBaseInfo>(new PyRobotBase::PyRobotBaseInfo(info)));
 }
 
@@ -2540,7 +2540,7 @@ void init_openravepy_robot()
 #else
                        .def("InitFromRobotInfo",&PyRobotBase::InitFromRobotInfo, DOXY_FN(RobotBase, InitFromRobotInfo))
 #endif
-                       .def("ExtractInfo", &PyRobotBase::ExtractInfo, DOXY_FN(RobotBase, ExtractInfo))
+                       .def("ExtractInfo", &PyRobotBase::ExtractInfo, PY_ARGS("extractMode") DOXY_FN(RobotBase, ExtractInfo))
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def("AddAttachedSensor",&PyRobotBase::AddAttachedSensor,

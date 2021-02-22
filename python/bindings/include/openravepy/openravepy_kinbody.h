@@ -166,6 +166,7 @@ public:
 protected:
         void _Update(const KinBody::KinBodyInfo& info);
     }; // class PyKinBodyInfo
+    typedef OPENRAVE_SHARED_PTR<PyKinBodyInfo> PyKinBodyInfoPtr;
 
 
 protected:
@@ -324,7 +325,7 @@ public:
     std::string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
 
-    py::object ExtractInfo() const;
+    py::object ExtractInfo(ExtractInfoMode extractMode) const;
 
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);
     virtual std::string __repr__();

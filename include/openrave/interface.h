@@ -33,6 +33,13 @@ enum UpdateFromInfoMode
     UFIM_OnlySpecifiedBodiesExact = 1, ///< when updating the environment with bodies, will only update the bodies that are specified in the info structure and not touch the other bodies or other environment info. Bodies will be udpated with Exact
 };
 
+/// \brief options to pass into ExtractInfoMode that control what gets extracted
+enum ExtractInfoMode
+{
+    EIM_Complete = 0, ///< all fields will be extracted, useful for serializing to JSON for saving
+    EIM_Partial = 1, ///< when extracting, return partial info, missing fields will be interprected as not changed, to be used with UpdateFromInfo later
+};
+
 /// serialization options for interfaces
 enum SerializationOptions
 {

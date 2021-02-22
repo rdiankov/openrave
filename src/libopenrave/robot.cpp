@@ -236,7 +236,7 @@ void RobotBase::AttachedSensor::UpdateInfo(SensorBase::SensorType type)
     }
 }
 
-void RobotBase::AttachedSensor::ExtractInfo(AttachedSensorInfo& info) const
+void RobotBase::AttachedSensor::ExtractInfo(AttachedSensorInfo& info, ExtractInfoMode extractMode) const
 {
     info._id = _info._id;
     info._name = _info._name;
@@ -2472,9 +2472,9 @@ const std::string& RobotBase::GetRobotStructureHash() const
     return __hashrobotstructure;
 }
 
-void RobotBase::ExtractInfo(RobotBaseInfo& info)
+void RobotBase::ExtractInfo(RobotBaseInfo& info, ExtractInfoMode extractMode)
 {
-    KinBody::ExtractInfo(info);
+    KinBody::ExtractInfo(info, extractMode);
     info._isRobot = true;
     // need to avoid extracting info from connectedbodies
     std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);
@@ -2512,7 +2512,7 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
         }
         RobotBase::ManipulatorInfoPtr pManip(new RobotBase::ManipulatorInfo());
         info._vManipulatorInfos.push_back(pManip);
-        _vecManipulators[iManipulator]->ExtractInfo(*(info._vManipulatorInfos.back()));
+        _vecManipulators[iManipulator]->ExtractInfo(*(info._vManipulatorInfos.back()), extractMode);
     }
 
     info._vAttachedSensorInfos.reserve(_vecAttachedSensors.size());
@@ -2522,13 +2522,13 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
         }
         RobotBase::AttachedSensorInfoPtr pAttachedSensor(new RobotBase::AttachedSensorInfo());
         info._vAttachedSensorInfos.push_back(pAttachedSensor);
-        _vecAttachedSensors[iAttachedSensor]->ExtractInfo(*(info._vAttachedSensorInfos.back()));
+        _vecAttachedSensors[iAttachedSensor]->ExtractInfo(*(info._vAttachedSensorInfos.back()), extractMode);
     }
 
     info._vConnectedBodyInfos.resize(_vecConnectedBodies.size());
     for(size_t iConnectedBody = 0; iConnectedBody < _vecConnectedBodies.size(); ++iConnectedBody) {
         info._vConnectedBodyInfos[iConnectedBody].reset(new RobotBase::ConnectedBodyInfo());
-        _vecConnectedBodies[iConnectedBody]->ExtractInfo(*info._vConnectedBodyInfos[iConnectedBody]);
+        _vecConnectedBodies[iConnectedBody]->ExtractInfo(*info._vConnectedBodyInfos[iConnectedBody], extractMode);
     }
 
     info._vGripperInfos.reserve(_vecGripperInfos.size());

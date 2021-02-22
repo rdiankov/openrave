@@ -47,7 +47,7 @@ public:
     virtual void Write(EnvironmentBasePtr penv) {
         dReal fUnitScale = 1.0;
         EnvironmentBase::EnvironmentBaseInfo info;
-        penv->ExtractInfo(info);
+        penv->ExtractInfo(info, EIM_Complete);
         _rEnvironment.SetObject();
         info.SerializeJSON(_rEnvironment, _allocator, fUnitScale, _serializeOptions);
     }
@@ -91,13 +91,13 @@ protected:
 
                     if (!pBody->IsRobot()) {
                         KinBody::KinBodyInfo info;
-                        pBody->ExtractInfo(info);
+                        pBody->ExtractInfo(info, EIM_Complete);
                         info._referenceUri = _CanonicalizeURI(info._referenceUri);
                         info.SerializeJSON(bodyValue, _allocator, fUnitScale);
                     } else {
                         RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
                         RobotBase::RobotBaseInfo info;
-                        pRobot->ExtractInfo(info);
+                        pRobot->ExtractInfo(info, EIM_Complete);
                         info._referenceUri = _CanonicalizeURI(info._referenceUri);
                         FOREACH(itConnectedBodyInfo, info._vConnectedBodyInfos) {
                             (*itConnectedBodyInfo)->_uri = _CanonicalizeURI((*itConnectedBodyInfo)->_uri);
