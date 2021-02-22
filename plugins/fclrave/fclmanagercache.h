@@ -218,8 +218,10 @@ public:
     {
         _tmpSortedBuffer.resize(0);
         std::vector<CollisionObjectPtr> vcolobjs;
-        FOREACH(itbody, vbodies) {
-            const KinBody& body = **itbody;
+        // FOREACH(itbody, vbodies) {
+        //     const KinBody& body = **itbody;
+        for (const KinBodyConstPtr& pbody : vbodies) {
+            const KinBody& body = *pbody;
             int bodyid = body.GetEnvironmentId();
             if( _setExcludeBodyIds.count(bodyid) == 0 ) {
                 std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(bodyid);
@@ -228,7 +230,7 @@ public:
                     _linkEnableStates.resize(body.GetLinks().size()); ///< links that are currently inside the manager
                     std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
                     if( _AddBody(body, pinfo, vcolobjs, _linkEnableStates, false) ) { // new collision objects are already added to _tmpSortedBuffer
-                        mapCachedBodies[bodyid] = KinBodyCache(*itbody, pinfo);
+                        mapCachedBodies[bodyid] = KinBodyCache(pbody, pinfo);
                         mapCachedBodies[bodyid].vcolobjs.swap(vcolobjs);
                         mapCachedBodies[bodyid].linkEnableStates = _linkEnableStates;
                     }
@@ -739,8 +741,10 @@ private:
         vcolobjs.resize(body.GetLinks().size(), CollisionObjectPtr());
         bool bsetUpdateStamp = false;
         body.GetLinkEnableStates(linkEnableStates);
-        FOREACH(itlink, body.GetLinks()) {
-            const KinBody::Link& link = **itlink;
+        for (const auto& plink : body.GetLinks()) {
+            const KinBody::Link& link = *plink;
+            //FOREACH(itlink, body.GetLinks()) {
+            //const KinBody::Link& link = **itlink;
             const int linkIndex = link.GetIndex();
             if( linkEnableStates[linkIndex] && (!bTrackActiveDOF || _vTrackingActiveLinks.at(linkIndex)) ) {
                 //pinfo->vlinks.at(linkIndex).listRegisteredManagers.push_back(shared_from_this());
