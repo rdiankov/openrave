@@ -160,6 +160,7 @@ public:
         bool _isRobot = false;
         py::object _dofValues = py::none_();
         py::object _readableInterfaces = py::none_();
+        int _uninitializedFields = 0;
         virtual std::string __str__();
         virtual py::object __unicode__();
 

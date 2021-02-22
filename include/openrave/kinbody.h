@@ -377,7 +377,7 @@ public:
             GIF_Transform = (1 << 0), // _t field
             GIF_Mesh = (1 << 1), // _meshcollision field
         };
-        int __missingFields = 0; ///< a bitmap of GeometryInfoField, indicating which fields are not filled and should not be used
+        int _uninitializedFields = 0; ///< a bitmap of GeometryInfoField, indicating which fields are not filled and should not be used
 
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
@@ -453,7 +453,7 @@ public:
         enum LinkInfoField {
             LIF_Transform = (1 << 0), // _t field
         };
-        int __missingFields = 0; ///< a bitmap of LinkInfoField, indicating which fields are not filled and should not be used
+        int _uninitializedFields = 0; ///< a bitmap of LinkInfoField, indicating which fields are not filled and should not be used
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
@@ -1981,7 +1981,7 @@ public:
             KBIF_Transform = (1 << 0), // _transform field
             KBIF_DOFValues = (1 << 1), // _dofValues field
         };
-        int __missingFields = 0; ///< a bitmap of KinBodyInfoField, indicating which fields are not filled and should not be used
+        int _uninitializedFields = 0; ///< a bitmap of KinBodyInfoField, indicating which fields are not filled and should not be used
 
 protected:
         virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value);

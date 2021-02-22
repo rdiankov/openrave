@@ -302,6 +302,7 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
         calibrationBoardParameters["bigDotDiameterDistanceRatio"] = parameters.bigDotDiameterDistanceRatio;
     }
     _calibrationBoardParameters = calibrationBoardParameters;
+    _uninitializedFields = info._uninitializedFields;
 }
 
 object PyGeometryInfo::ComputeInnerEmptyVolume()
@@ -404,6 +405,7 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
             info._calibrationBoardParameters[0].bigDotDiameterDistanceRatio = py::extract<float>(_calibrationBoardParameters["bigDotDiameterDistanceRatio"]);
         }
     }
+    info._uninitializedFields = _uninitializedFields;
     return pinfo;
 }
 
@@ -443,6 +445,7 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     _vForcedAdjacentLinks = vForcedAdjacentLinks;
     _bStatic = info._bStatic;
     _bIsEnabled = info._bIsEnabled;
+    _uninitializedFields = info._uninitializedFields;
 
 }
 
@@ -555,6 +558,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     info._vForcedAdjacentLinks = ExtractArray<std::string>(_vForcedAdjacentLinks);
     info._bStatic = _bStatic;
     info._bIsEnabled = _bIsEnabled;
+    info._uninitializedFields = _uninitializedFields;
     return pinfo;
 }
 
@@ -2299,6 +2303,7 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
 
     pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
+    pInfo->_uninitializedFields = _uninitializedFields;
     return pInfo;
 }
 
@@ -2360,6 +2365,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _isRobot = info._isRobot;
     _dofValues = ReturnDOFValues(info._dofValues);
     _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
+    _uninitializedFields = info._uninitializedFields;
 }
 
 std::string PyKinBody::PyKinBodyInfo::__str__() {
@@ -4056,7 +4062,8 @@ public:
             r._fTransparency,
             r._bVisible,
             r._bModifiable,
-            r._calibrationBoardParameters
+            r._calibrationBoardParameters,
+            r._uninitializedFields
             );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
@@ -4103,6 +4110,7 @@ public:
         if (r._type == GT_CalibrationBoard) {
             r._calibrationBoardParameters = (py::dict) state[12];
         }
+        r._uninitializedFields = py::extract<int>(state[13]);
     }
 };
 
@@ -4114,7 +4122,7 @@ class LinkInfo_pickle_suite
 public:
     static py::tuple getstate(const PyLinkInfo& r)
     {
-        return py::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._mapStringParameters, r._mapExtraGeometries);
+        return py::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._mapStringParameters, r._mapExtraGeometries, r._uninitializedFields);
     }
     static void setstate(PyLinkInfo& r, py::tuple state) {
         int num = len(state);
@@ -4149,6 +4157,11 @@ public:
         }
         else {
             r._mapExtraGeometries.clear();
+        }
+        if( num > 13 ) {
+            r._uninitializedFields = py::extract<int>(state[13]);
+        } else {
+            r._uninitializedFields = 0;
         }
     }
 };
@@ -4561,6 +4574,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
                           .def_readwrite("_calibrationBoardParameters", &PyGeometryInfo::_calibrationBoardParameters)
+                          .def_readwrite("_uninitializedFields", &PyGeometryInfo::_uninitializedFields)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -4630,6 +4644,7 @@ void init_openravepy_kinbody()
                       .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
                       .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
                       .def_readwrite("_bVisible",&PyLinkInfo::_bVisible)
+                      .def_readwrite("_uninitializedFields",&PyLinkInfo::_uninitializedFields)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                       .def("SerializeJSON", &PyLinkInfo::SerializeJSON,
                            "unitScale"_a = 1.0,
@@ -4894,6 +4909,7 @@ void init_openravepy_kinbody()
                          .def_readwrite("_readableInterfaces", &PyKinBody::PyKinBodyInfo::_readableInterfaces)
                          .def_readwrite("_transform", &PyKinBody::PyKinBodyInfo::_transform)
                          .def_readwrite("_isRobot", &PyKinBody::PyKinBodyInfo::_isRobot)
+                         .def_readwrite("_uninitializedFields", &PyKinBody::PyKinBodyInfo::_uninitializedFields)
                          .def("__str__",&PyKinBody::PyKinBodyInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyKinBodyInfo::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

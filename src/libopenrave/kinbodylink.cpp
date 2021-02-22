@@ -136,7 +136,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     tmpTransform.trans *= fUnitScale;
     tmpMassTransform.trans *= fUnitScale;
 
-    if( (__missingFields & KinBody::LinkInfo::LIF_Transform) == 0 ) {
+    if( (_uninitializedFields & KinBody::LinkInfo::LIF_Transform) == 0 ) {
         orjson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
     }
     orjson::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
@@ -227,7 +227,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _t);
         _t.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
-        __missingFields &= ~KinBody::LinkInfo::LIF_Transform;
+        _uninitializedFields &= ~KinBody::LinkInfo::LIF_Transform;
     }
     if (value.HasMember("massTransform")) {
         orjson::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
@@ -879,9 +879,9 @@ void KinBody::Link::UpdateInfo()
 void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info, ExtractInfoMode extractMode) const
 {
     info = _info;
-    info.__missingFields = 0;
+    info._uninitializedFields = 0;
     if (extractMode == EIM_Partial) {
-        info.__missingFields |= KinBody::LinkInfo::LIF_Transform;
+        info._uninitializedFields |= KinBody::LinkInfo::LIF_Transform;
     }
     info._vgeometryinfos.resize(_vGeometries.size());
     for (size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
@@ -902,7 +902,7 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     }
 
     // transform
-    if( (info.__missingFields & KinBody::LinkInfo::LIF_Transform) == 0 ) {
+    if( (info._uninitializedFields & KinBody::LinkInfo::LIF_Transform) == 0 ) {
         if (TransformDistanceFast(GetTransform(), info._t) > g_fEpsilonLinear) {
             RAVELOG_VERBOSE_FORMAT("link %s transform changed", _info._id);
             return UFIR_RequireReinitialize;

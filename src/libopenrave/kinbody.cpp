@@ -193,14 +193,14 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
     }
 
-    if( (__missingFields & KinBodyInfo::KBIF_Transform) == 0 ) {
+    if( (_uninitializedFields & KinBodyInfo::KBIF_Transform) == 0 ) {
         Transform transform = _transform;
         transform.trans *= fUnitScale;
         orjson::SetJsonValueByKey(rKinBodyInfo, "transform", transform, allocator);
     }
     orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
 
-    if( (__missingFields & KinBodyInfo::KBIF_DOFValues) == 0 && _dofValues.size() > 0 ) {
+    if( (_uninitializedFields & KinBodyInfo::KBIF_DOFValues) == 0 && _dofValues.size() > 0 ) {
         rapidjson::Value dofValues;
         dofValues.SetArray();
         dofValues.Reserve(_dofValues.size(), allocator);
@@ -317,7 +317,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 _dofValues.emplace_back(std::make_pair(jointName, jointAxis), dofValue);
             }
         }
-        __missingFields &= ~KinBodyInfo::KBIF_DOFValues;
+        _uninitializedFields &= ~KinBodyInfo::KBIF_DOFValues;
     }
 
     if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
@@ -333,7 +333,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _transform);
         _transform.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
-        __missingFields &= ~KinBodyInfo::KBIF_Transform;
+        _uninitializedFields &= ~KinBodyInfo::KBIF_Transform;
     }
 }
 
@@ -5448,15 +5448,15 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
 
 void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoMode extractMode)
 {
-    info.__missingFields = 0;
+    info._uninitializedFields = 0;
     info._id = _id;
     info._uri = __struri;
     info._name = _name;
     info._referenceUri = _referenceUri;
     info._interfaceType = GetXMLId();
 
+    info._dofValues.resize(0);
     if (extractMode != EIM_Partial) {
-        info._dofValues.resize(0);
         std::vector<dReal> vDOFValues;
         GetDOFValues(vDOFValues);
         for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
@@ -5466,24 +5466,24 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoMode extractMode)
         }
     } else {
         // remember the fields not extracted
-        info.__missingFields |= KinBodyInfo::KBIF_DOFValues;
+        info._uninitializedFields |= KinBodyInfo::KBIF_DOFValues;
     }
 
     info._vGrabbedInfos.resize(0);
     GetGrabbedInfo(info._vGrabbedInfos);
 
-    KinBody::KinBodyStateSaver saver(shared_kinbody(), Save_LinkTransformation);
-    if (extractMode != EIM_Partial) {
-        info._transform = GetTransform();
+    info._transform = GetTransform();
 
+    KinBody::KinBodyStateSaverPtr stateSaver;
+    if (extractMode != EIM_Partial) {
         // in order for link transform comparision to make sense
+        stateSaver.reset(new KinBody::KinBodyStateSaver(shared_kinbody(), Save_LinkTransformation));
         SetTransform(Transform());
         vector<dReal> vZeros(GetDOF(), 0);
         SetDOFValues(vZeros, KinBody::CLA_Nothing);
     } else {
         // remember the fields not extracted
-        info.__missingFields |= KinBodyInfo::KBIF_Transform;
-        saver.Release(); // no need to restore
+        info._uninitializedFields |= KinBodyInfo::KBIF_Transform;
     }
 
     // need to avoid extracting info for links and joints belonging to connected bodies
@@ -5626,10 +5626,11 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 
     {
         // in order for link transform comparision to make sense
-        KinBody::KinBodyStateSaver saver(shared_kinbody(), Save_LinkTransformation);
+        KinBody::KinBodyStateSaverPtr stateSaver;
         FOREACHC(itLinkInfo, info._vLinkInfos) {
             // if any link has its transform field set, we need to set zero configuration before comparison
-            if( ((*itLinkInfo)->__missingFields & KinBody::LinkInfo::LIF_Transform) == 0 ) {
+            if( ((*itLinkInfo)->_uninitializedFields & KinBody::LinkInfo::LIF_Transform) == 0 ) {
+                stateSaver.reset(new KinBody::KinBodyStateSaver(shared_kinbody(), Save_LinkTransformation));
                 SetTransform(Transform());
                 vector<dReal> vZeros(GetDOF(), 0);
                 SetDOFValues(vZeros, KinBody::CLA_Nothing);
@@ -5656,14 +5657,14 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // transform
-    if( (info.__missingFields & KinBodyInfo::KBIF_Transform) == 0 && !GetTransform().Compare(info._transform) ) {
+    if( (info._uninitializedFields & KinBodyInfo::KBIF_Transform) == 0 && !GetTransform().Compare(info._transform) ) {
         SetTransform(info._transform);
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
     }
 
     // don't change the dof values here since body might not be added!
-    if( (info.__missingFields & KinBodyInfo::KBIF_DOFValues) == 0 && _nHierarchyComputed == 2 ) {
+    if( (info._uninitializedFields & KinBodyInfo::KBIF_DOFValues) == 0 && _nHierarchyComputed == 2 ) {
         // dof values
         std::vector<dReal> dofValues;
         GetDOFValues(dofValues);

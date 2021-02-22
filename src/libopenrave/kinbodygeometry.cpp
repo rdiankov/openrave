@@ -837,7 +837,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
     orjson::SetJsonValueByKey(rGeometryInfo, "id", _id, allocator);
     orjson::SetJsonValueByKey(rGeometryInfo, "name", _name, allocator);
 
-    if ( (__missingFields & KinBody::GeometryInfo::GIF_Transform) == 0 ) {
+    if ( (_uninitializedFields & KinBody::GeometryInfo::GIF_Transform) == 0 ) {
         Transform tscaled = _t;
         tscaled.trans *= fUnitScale;
         orjson::SetJsonValueByKey(rGeometryInfo, "transform", tscaled, allocator);
@@ -888,7 +888,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
 
     case GT_TriMesh: {
         // has to be scaled correctly
-        if ( (__missingFields & KinBody::GeometryInfo::GIF_Mesh) == 0 ) {
+        if ( (_uninitializedFields & KinBody::GeometryInfo::GIF_Mesh) == 0 ) {
             rapidjson::Value rTriMesh;
             rTriMesh.SetObject();
             rapidjson::Value rVertices;
@@ -940,7 +940,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _t);
         _t.trans *= fUnitScale;
-        __missingFields &= ~KinBody::GeometryInfo::GIF_Transform;
+        _uninitializedFields &= ~KinBody::GeometryInfo::GIF_Transform;
     }
 
     if (value.HasMember("type")) {
@@ -1107,7 +1107,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             FOREACH(itvertex, _meshcollision.vertices) {
                 *itvertex *= fUnitScale;
             }
-            __missingFields &= ~KinBody::GeometryInfo::GIF_Mesh;
+            _uninitializedFields &= ~KinBody::GeometryInfo::GIF_Mesh;
         }
         break;
     case GT_CalibrationBoard:
@@ -1557,8 +1557,8 @@ void KinBody::Link::Geometry::ExtractInfo(KinBody::GeometryInfo& info, ExtractIn
 {
     info = _info;
     if (extractMode == EIM_Partial) {
-        info.__missingFields |= KinBody::GeometryInfo::GIF_Transform;
-        info.__missingFields |= KinBody::GeometryInfo::GIF_Mesh;
+        info._uninitializedFields |= KinBody::GeometryInfo::GIF_Transform;
+        info._uninitializedFields |= KinBody::GeometryInfo::GIF_Mesh;
     }
 }
 
@@ -1578,7 +1578,7 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
         return UFIR_RequireReinitialize;
     }
 
-    if( (info.__missingFields & KinBody::GeometryInfo::GIF_Transform) == 0 && !GetTransform().Compare(info._t) ) {
+    if( (info._uninitializedFields & KinBody::GeometryInfo::GIF_Transform) == 0 && !GetTransform().Compare(info._t) ) {
         RAVELOG_VERBOSE_FORMAT("geometry %s transform changed", _info._id);
         return UFIR_RequireReinitialize;
     }
@@ -1614,7 +1614,7 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
         }
     }
     else if (GetType() == GT_TriMesh) {
-        if( (info.__missingFields & KinBody::GeometryInfo::GIF_Mesh) == 0 && info._meshcollision != _info._meshcollision ) {
+        if( (info._uninitializedFields & KinBody::GeometryInfo::GIF_Mesh) == 0 && info._meshcollision != _info._meshcollision ) {
             RAVELOG_VERBOSE_FORMAT("geometry %s trimesh changed", _info._id);
             return UFIR_RequireReinitialize;
         }
