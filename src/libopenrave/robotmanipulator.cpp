@@ -108,7 +108,7 @@ void RobotBase::Manipulator::UpdateInfo()
     RAVELOG_WARN("Manipulator UpdateInfo is not implemented");
 }
 
-void RobotBase::Manipulator::ExtractInfo(RobotBase::ManipulatorInfo& info, ExtractInfoMode extractMode) const
+void RobotBase::Manipulator::ExtractInfo(RobotBase::ManipulatorInfo& info) const
 {
     // TODO
     info = _info;

@@ -193,14 +193,14 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
     }
 
-    if( (_uninitializedFields & KinBodyInfo::KBIF_Transform) == 0 ) {
+    {
         Transform transform = _transform;
         transform.trans *= fUnitScale;
         orjson::SetJsonValueByKey(rKinBodyInfo, "transform", transform, allocator);
     }
     orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
 
-    if( (_uninitializedFields & KinBodyInfo::KBIF_DOFValues) == 0 && _dofValues.size() > 0 ) {
+    {
         rapidjson::Value dofValues;
         dofValues.SetArray();
         dofValues.Reserve(_dofValues.size(), allocator);
@@ -317,7 +317,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 _dofValues.emplace_back(std::make_pair(jointName, jointAxis), dofValue);
             }
         }
-        _uninitializedFields &= ~KinBodyInfo::KBIF_DOFValues;
+        _modifiedFields |= KinBodyInfo::KBIF_DOFValues;
     }
 
     if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
@@ -333,7 +333,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _transform);
         _transform.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
-        _uninitializedFields &= ~KinBodyInfo::KBIF_Transform;
+        _modifiedFields |= KinBodyInfo::KBIF_Transform;
     }
 }
 
@@ -5446,9 +5446,9 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     }
 }
 
-void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoMode extractMode)
+void KinBody::ExtractInfo(KinBodyInfo& info)
 {
-    info._uninitializedFields = 0;
+    info._modifiedFields = 0;
     info._id = _id;
     info._uri = __struri;
     info._name = _name;
@@ -5456,17 +5456,12 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoMode extractMode)
     info._interfaceType = GetXMLId();
 
     info._dofValues.resize(0);
-    if (extractMode != EIM_Partial) {
-        std::vector<dReal> vDOFValues;
-        GetDOFValues(vDOFValues);
-        for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
-            JointPtr pJoint = GetJointFromDOFIndex(idof);
-            int jointAxis = idof - pJoint->GetDOFIndex();
-            info._dofValues.emplace_back(std::make_pair(pJoint->GetName(), jointAxis), vDOFValues[idof]);
-        }
-    } else {
-        // remember the fields not extracted
-        info._uninitializedFields |= KinBodyInfo::KBIF_DOFValues;
+    std::vector<dReal> vDOFValues;
+    GetDOFValues(vDOFValues);
+    for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
+        JointPtr pJoint = GetJointFromDOFIndex(idof);
+        int jointAxis = idof - pJoint->GetDOFIndex();
+        info._dofValues.emplace_back(std::make_pair(pJoint->GetName(), jointAxis), vDOFValues[idof]);
     }
 
     info._vGrabbedInfos.resize(0);
@@ -5474,17 +5469,11 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoMode extractMode)
 
     info._transform = GetTransform();
 
-    KinBody::KinBodyStateSaverPtr stateSaver;
-    if (extractMode != EIM_Partial) {
-        // in order for link transform comparision to make sense
-        stateSaver.reset(new KinBody::KinBodyStateSaver(shared_kinbody(), Save_LinkTransformation));
-        SetTransform(Transform());
-        vector<dReal> vZeros(GetDOF(), 0);
-        SetDOFValues(vZeros, KinBody::CLA_Nothing);
-    } else {
-        // remember the fields not extracted
-        info._uninitializedFields |= KinBodyInfo::KBIF_Transform;
-    }
+    // in order for link transform comparision to make sense
+    KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation);
+    SetTransform(Transform());
+    vector<dReal> vZeros(GetDOF(), 0);
+    SetDOFValues(vZeros, KinBody::CLA_Nothing);
 
     // need to avoid extracting info for links and joints belonging to connected bodies
     std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
@@ -5527,7 +5516,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoMode extractMode)
         }
         KinBody::LinkInfoPtr pLinkInfo(new KinBody::LinkInfo());
         info._vLinkInfos.push_back(pLinkInfo);
-        _veclinks[iLink]->ExtractInfo(*(info._vLinkInfos.back()), extractMode);
+        _veclinks[iLink]->ExtractInfo(*(info._vLinkInfos.back()));
     }
 
     info._vJointInfos.reserve(_vecjoints.size() + _vPassiveJoints.size());
@@ -5537,7 +5526,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoMode extractMode)
         }
         KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo());
         info._vJointInfos.push_back(pJointInfo);
-        _vecjoints[iJoint]->ExtractInfo(*(info._vJointInfos.back()), extractMode);
+        _vecjoints[iJoint]->ExtractInfo(*(info._vJointInfos.back()));
     }
 
     for(size_t iJoint = 0; iJoint < _vPassiveJoints.size(); iJoint++) {
@@ -5546,7 +5535,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoMode extractMode)
         }
         KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo());
         info._vJointInfos.push_back(pJointInfo);
-        _vPassiveJoints[iJoint]->ExtractInfo(*(info._vJointInfos.back()), extractMode);
+        _vPassiveJoints[iJoint]->ExtractInfo(*(info._vJointInfos.back()));
     }
 
 
@@ -5629,7 +5618,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         KinBody::KinBodyStateSaverPtr stateSaver;
         FOREACHC(itLinkInfo, info._vLinkInfos) {
             // if any link has its transform field set, we need to set zero configuration before comparison
-            if( ((*itLinkInfo)->_uninitializedFields & KinBody::LinkInfo::LIF_Transform) == 0 ) {
+            if( ((*itLinkInfo)->_modifiedFields & KinBody::LinkInfo::LIF_Transform) != 0 ) {
                 stateSaver.reset(new KinBody::KinBodyStateSaver(shared_kinbody(), Save_LinkTransformation));
                 SetTransform(Transform());
                 vector<dReal> vZeros(GetDOF(), 0);
@@ -5657,14 +5646,14 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // transform
-    if( (info._uninitializedFields & KinBodyInfo::KBIF_Transform) == 0 && !GetTransform().Compare(info._transform) ) {
+    if( (info._modifiedFields & KinBodyInfo::KBIF_Transform) != 0 && !GetTransform().Compare(info._transform) ) {
         SetTransform(info._transform);
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
     }
 
     // don't change the dof values here since body might not be added!
-    if( (info._uninitializedFields & KinBodyInfo::KBIF_DOFValues) == 0 && _nHierarchyComputed == 2 ) {
+    if( (info._modifiedFields & KinBodyInfo::KBIF_DOFValues) != 0 && _nHierarchyComputed == 2 ) {
         // dof values
         std::vector<dReal> dofValues;
         GetDOFValues(dofValues);

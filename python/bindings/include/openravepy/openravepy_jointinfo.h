@@ -72,8 +72,6 @@ public:
     bool _bVisible = true;
     bool _bModifiable = true;
     py::dict _calibrationBoardParameters;
-
-    int _uninitializedFields = 0;
 };
 
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
@@ -103,7 +101,6 @@ public:
     bool _bStatic = false;
     bool _bIsEnabled = true;
     bool _bVisible = true;
-    int _uninitializedFields = 0;
 
 private:
     void _Update(const KinBody::LinkInfo& info);

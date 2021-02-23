@@ -748,8 +748,7 @@ public:
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-    /// \param updateMode one of XIM_X
-    virtual void ExtractInfo(EnvironmentBaseInfo& info, ExtractInfoMode extractMode) = 0;
+    virtual void ExtractInfo(EnvironmentBaseInfo& info) = 0;
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo
     ///

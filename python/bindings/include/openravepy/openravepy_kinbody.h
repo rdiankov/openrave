@@ -160,7 +160,6 @@ public:
         bool _isRobot = false;
         py::object _dofValues = py::none_();
         py::object _readableInterfaces = py::none_();
-        int _uninitializedFields = 0;
         virtual std::string __str__();
         virtual py::object __unicode__();
 
@@ -326,7 +325,7 @@ public:
     std::string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
 
-    py::object ExtractInfo(ExtractInfoMode extractMode) const;
+    py::object ExtractInfo() const;
 
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);
     virtual std::string __repr__();

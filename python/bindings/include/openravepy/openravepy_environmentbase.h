@@ -281,7 +281,7 @@ public:
     object GetUnit() const;
     int GetId() const;
 
-    object ExtractInfo(ExtractInfoMode extractMode) const;
+    object ExtractInfo() const;
     object UpdateFromInfo(PyEnvironmentBaseInfoPtr info, UpdateFromInfoMode updateMode);
 
     int _revision = 0;

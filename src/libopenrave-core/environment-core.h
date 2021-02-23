@@ -2479,7 +2479,7 @@ public:
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-    virtual void ExtractInfo(EnvironmentBaseInfo& info, ExtractInfoMode extractMode) override
+    virtual void ExtractInfo(EnvironmentBaseInfo& info) override
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::vector<KinBodyPtr> vBodies;
@@ -2491,10 +2491,10 @@ public:
         for(size_t i = 0; i < info._vBodyInfos.size(); ++i) {
             if (vBodies[i]->IsRobot()) {
                 info._vBodyInfos[i].reset(new RobotBase::RobotBaseInfo());
-                RaveInterfaceCast<RobotBase>(vBodies[i])->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(info._vBodyInfos[i])), extractMode);
+                RaveInterfaceCast<RobotBase>(vBodies[i])->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(info._vBodyInfos[i])));
             } else {
                 info._vBodyInfos[i].reset(new KinBody::KinBodyInfo());
-                vBodies[i]->ExtractInfo(*info._vBodyInfos[i], extractMode);
+                vBodies[i]->ExtractInfo(*info._vBodyInfos[i]);
             }
         }
         info._name = _name;

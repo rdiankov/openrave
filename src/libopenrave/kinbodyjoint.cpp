@@ -2308,7 +2308,7 @@ void KinBody::Joint::UpdateInfo()
     GetValues(_info._vcurrentvalues);
 }
 
-void KinBody::Joint::ExtractInfo(KinBody::JointInfo& info, ExtractInfoMode extractMode) const
+void KinBody::Joint::ExtractInfo(KinBody::JointInfo& info) const
 {
     info = _info;
     info._vcurrentvalues.resize(0);

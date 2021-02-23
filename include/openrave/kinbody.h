@@ -377,7 +377,7 @@ public:
             GIF_Transform = (1 << 0), // _t field
             GIF_Mesh = (1 << 1), // _meshcollision field
         };
-        int _uninitializedFields = 0; ///< a bitmap of GeometryInfoField, indicating which fields are not filled and should not be used
+        int _modifiedFields = 0; ///< a bitmap of GeometryInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo
 
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
@@ -453,7 +453,7 @@ public:
         enum LinkInfoField {
             LIF_Transform = (1 << 0), // _t field
         };
-        int _uninitializedFields = 0; ///< a bitmap of LinkInfoField, indicating which fields are not filled and should not be used
+        int _modifiedFields = 0; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
@@ -574,7 +574,7 @@ public:
             virtual void UpdateInfo();
 
             /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-            virtual void ExtractInfo(KinBody::GeometryInfo& info, ExtractInfoMode extractMode) const;
+            virtual void ExtractInfo(KinBody::GeometryInfo& info) const;
 
             /// \brief update Geometry according to new GeometryInfo, returns false if update cannot be performed and requires InitFromInfo
             virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::GeometryInfo& info);
@@ -997,7 +997,7 @@ protected:
         }
 
         /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-        virtual void ExtractInfo(KinBody::LinkInfo& info, ExtractInfoMode extractMode) const;
+        virtual void ExtractInfo(KinBody::LinkInfo& info) const;
 
         /// \brief update Link according to new LinkInfo, returns false if update cannot be performed and requires InitFromInfo
         virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::LinkInfo& info);
@@ -1710,7 +1710,7 @@ public:
         }
 
         /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-        virtual void ExtractInfo(KinBody::JointInfo& info, ExtractInfoMode extractMode) const;
+        virtual void ExtractInfo(KinBody::JointInfo& info) const;
 
         /// \brief update Joint according to new JointInfo, returns false if update cannot be performed and requires InitFromInfo
         virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::JointInfo& info);
@@ -1981,7 +1981,7 @@ public:
             KBIF_Transform = (1 << 0), // _transform field
             KBIF_DOFValues = (1 << 1), // _dofValues field
         };
-        int _uninitializedFields = 0; ///< a bitmap of KinBodyInfoField, indicating which fields are not filled and should not be used
+        int _modifiedFields = 0; ///< a bitmap of KinBodyInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo
 
 protected:
         virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value);
@@ -2993,7 +2993,7 @@ private:
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-    virtual void ExtractInfo(KinBodyInfo& info, ExtractInfoMode extractMode);
+    virtual void ExtractInfo(KinBodyInfo& info);
 
     /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromKinBodyInfo(const KinBodyInfo& info);
