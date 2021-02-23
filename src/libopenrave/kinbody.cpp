@@ -200,7 +200,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
     }
     orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
 
-    {
+    if (_dofValues.size() > 0) {
         rapidjson::Value dofValues;
         dofValues.SetArray();
         dofValues.Reserve(_dofValues.size(), allocator);
