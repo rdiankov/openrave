@@ -1358,15 +1358,6 @@ void init_openravepy_global()
 
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<ExtractInfoMode>(m, "ExtractInfoMode", py::arithmetic() DOXY_ENUM(ExtractInfoMode))
-#else
-    enum_<ExtractInfoMode>("ExtractInfoMode" DOXY_ENUM(ExtractInfoMode))
-#endif
-    .value("Complete", EIM_Complete)
-    .value("Partial", EIM_Partial)
-    ;
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
     enum_<InterfaceType>(m, "InterfaceType", py::arithmetic() DOXY_ENUM(InterfaceType))
 #else
     enum_<InterfaceType>("InterfaceType" DOXY_ENUM(InterfaceType))
