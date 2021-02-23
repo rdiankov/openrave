@@ -742,7 +742,8 @@ private:
         for (const KinBody::LinkPtr& plink : body.GetLinks()) {
             const KinBody::Link& link = *plink;
             const int linkIndex = link.GetIndex();
-            if( linkEnableStates[linkIndex] && (!bTrackActiveDOF || _vTrackingActiveLinks.at(linkIndex)) ) {
+            linkEnableStates[linkIndex] &= (!bTrackActiveDOF || _vTrackingActiveLinks.at(linkIndex));
+            if( linkEnableStates[linkIndex]) {
                 //pinfo->vlinks.at(linkIndex).listRegisteredManagers.push_back(shared_from_this());
                 
                 CollisionObjectPtr pcol = _fclspace.GetLinkBV(*pinfo, linkIndex);
