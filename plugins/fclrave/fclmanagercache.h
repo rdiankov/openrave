@@ -158,7 +158,7 @@ public:
                     if( !!pcol ) {
                         CollisionGroup::const_iterator it = std::lower_bound(_tmpSortedBuffer.begin(), _tmpSortedBuffer.end(), pcol.get());
                         // keep _tmpSortedBuffer sorted so that we can efficiently search
-                        if (it == _tmpSortedBuffer.end() || *it == pcol.get()) {
+                        if (it == _tmpSortedBuffer.end() || *it != pcol.get()) {
                             _tmpSortedBuffer.insert(it, pcol.get());
                         }
                         else {
@@ -218,8 +218,6 @@ public:
     {
         _tmpSortedBuffer.resize(0);
         std::vector<CollisionObjectPtr> vcolobjs;
-        // FOREACH(itbody, vbodies) {
-        //     const KinBody& body = **itbody;
         for (const KinBodyConstPtr& pbody : vbodies) {
             const KinBody& body = *pbody;
             int bodyid = body.GetEnvironmentId();
@@ -741,10 +739,8 @@ private:
         vcolobjs.resize(body.GetLinks().size(), CollisionObjectPtr());
         bool bsetUpdateStamp = false;
         body.GetLinkEnableStates(linkEnableStates);
-        for (const auto& plink : body.GetLinks()) {
+        for (const KinBody::LinkPtr& plink : body.GetLinks()) {
             const KinBody::Link& link = *plink;
-            //FOREACH(itlink, body.GetLinks()) {
-            //const KinBody::Link& link = **itlink;
             const int linkIndex = link.GetIndex();
             if( linkEnableStates[linkIndex] && (!bTrackActiveDOF || _vTrackingActiveLinks.at(linkIndex)) ) {
                 //pinfo->vlinks.at(linkIndex).listRegisteredManagers.push_back(shared_from_this());
@@ -753,7 +749,7 @@ private:
                 if( !!pcol ) {
                     CollisionGroup::const_iterator it = std::lower_bound(_tmpSortedBuffer.begin(), _tmpSortedBuffer.end(), pcol.get());
                     // keep _tmpSortedBuffer sorted so that we can efficiently search
-                    if (it == _tmpSortedBuffer.end() || *it == pcol.get()) {
+                    if (it == _tmpSortedBuffer.end() || *it != pcol.get()) {
                         _tmpSortedBuffer.insert(it, pcol.get());
                     }
                     else {

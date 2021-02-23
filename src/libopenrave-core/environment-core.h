@@ -3348,6 +3348,7 @@ protected:
         int id = 0;
         if (bRecycleId) {
             id = _environmentIndexRecyclePool.back();
+            _environmentIndexRecyclePool.pop_back();
             //RAVELOG_INFO_FORMAT("env=%d, recycled body id=%d for %s", GetId()%id%pbody->GetName());
         }
         else {
@@ -3357,10 +3358,6 @@ protected:
         BOOST_ASSERT( _mapBodies.find(id) == _mapBodies.end() );
         pbody->_environmentid=id;
         _mapBodies[id] = pbody;
-
-        if (bRecycleId) {
-            _environmentIndexRecyclePool.pop_back();
-        }
     }
 
     virtual void RemoveEnvironmentId(KinBodyPtr pbody)
