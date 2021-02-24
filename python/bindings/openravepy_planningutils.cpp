@@ -207,7 +207,8 @@ public:
     {
         PlannerBase::PlannerParametersConstPtr parameters = openravepy::GetPlannerParametersConst(oparameters);
         std::list<KinBodyPtr> listCheckBodies;
-        for(size_t i = 0; i < len(olistCheckBodies); ++i) {
+        size_t numCheckBodies = len(olistCheckBodies);
+        for(size_t i = 0; i < numCheckBodies; ++i) {
             KinBodyPtr pbody = openravepy::GetKinBody(olistCheckBodies[i]);
             BOOST_ASSERT(!!pbody);
             _pyenv = GetPyEnvFromPyKinBody(olistCheckBodies[i]);

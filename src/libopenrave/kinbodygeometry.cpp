@@ -396,6 +396,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     }
 
     // is clear() better since it releases the memory?
+    _modifiedFields |= GIF_Mesh;
     _meshcollision.indices.resize(0);
     _meshcollision.vertices.resize(0);
 
@@ -734,6 +735,7 @@ inline void LoadJsonValue(const rapidjson::Value& rValue, KinBody::GeometryInfo:
 void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
 {
     _t.trans *= fUnitScale;
+    _modifiedFields |= GIF_Transform;
 
     switch(_type) {
     case GT_Box:
@@ -769,6 +771,7 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
         FOREACH(itvertex, _meshcollision.vertices) {
             *itvertex *= fUnitScale;
         }
+        _modifiedFields |= GIF_Mesh;
         break;
 
     case GT_CalibrationBoard:
@@ -807,6 +810,7 @@ void KinBody::GeometryInfo::Reset()
     _bVisible = true;
     _bModifiable = true;
     _calibrationBoardParameters.clear();
+    _modifiedFields = 0xffffffff;
 }
 
 inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
@@ -1386,6 +1390,7 @@ void KinBody::Geometry::SetCollisionMesh(const TriMesh& mesh)
     OPENRAVE_ASSERT_FORMAT0(_info._bModifiable, "geometry cannot be modified", ORE_Failed);
     LinkPtr parent(_parent);
     _info._meshcollision = mesh;
+    // _info._modifiedFields; change??
     parent->_Update();
 }
 

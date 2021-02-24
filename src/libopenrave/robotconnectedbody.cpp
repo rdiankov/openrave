@@ -707,7 +707,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
             plink->_info = *connectedBodyInfo._vLinkInfos[ilink]; // shallow copy
             plink->_info._name = connectedBody._nameprefix + plink->_info._name;
-            plink->_info._t = tBaseLinkInWorld * plink->_info._t;
+            plink->_info.SetTransform(tBaseLinkInWorld * plink->_info.GetTransform());
             _InitAndAddLink(plink);
             connectedBody._vResolvedLinkNames[ilink].first = plink->_info._name;
         }

@@ -263,8 +263,6 @@ public:
             return _name;
         }
 
-        Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
-
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
@@ -382,13 +380,31 @@ public:
             GIF_Mesh = (1 << 1), // _meshcollision field
         };
 
+        inline const Transform& GetTransform() const {
+            return _t;
+        }
+        inline void SetTransform(const Transform& t) {
+            _t = t;
+            _modifiedFields |= GIF_Transform;
+        }
+
         inline bool IsModifiedField(GeometryInfoField field) const {
             return !!(_modifiedFields & field);
         }
 private:
+        Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
+
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of GeometryInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
-        friend class Geometry; ///< for changing _modifiedFields
+        /// \brief adds modified fields
+        inline void AddModifiedField(GeometryInfoField field) {
+            _modifiedFields |= field;
+        }
+
+        friend class Geometry;
+        friend class Link;
+        friend class KinBody;
+        friend class RobotBase;
     };
 
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
@@ -678,8 +694,7 @@ public:
         std::string _id;
         /// \brief unique link name
         std::string _name;
-        /// the current transformation of the link with respect to the body coordinate system
-        Transform _t;
+
         /// the frame for inertia and center of mass of the link in the link's coordinate system
         Transform _tMassFrame;
         /// mass of link
@@ -706,13 +721,29 @@ public:
             LIF_Transform = (1 << 0), // _t field
         };
 
+        inline const Transform& GetTransform() const {
+            return _t;
+        }
+        inline void SetTransform(const Transform& t) {
+            _t = t;
+            _modifiedFields |= LIF_Transform;
+        }
+
         inline bool IsModifiedField(LinkInfoField field) const {
             return !!(_modifiedFields & field);
         }
+        /// \brief adds modified fields
+        inline void AddModifiedField(LinkInfoField field) {
+            _modifiedFields |= field;
+        }
 private:
+        Transform _t; ///< the current transformation of the link with respect to the body coordinate system
+
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
-        friend class Link; ///< for changing _modifiedFields
+        friend class Link;
+        friend class KinBody;
+        friend class RobtBase;
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
@@ -2005,6 +2036,11 @@ public:
         inline bool IsModifiedField(KinBodyInfoField field) const {
             return !!(_modifiedFields & field);
         }
+        /// \brief adds modified fields
+        inline void AddModifiedField(KinBodyInfoField field) {
+            _modifiedFields |= field;
+        }
+
 private:
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of KinBodyInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
