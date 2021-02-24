@@ -190,19 +190,6 @@ public:
                 pinfo->Reset();
             }
         }
-        if (_currentpinfo.size() > 10000) {
-            int numValid = 0;
-            int maxValidEnvId = 0;
-            for (int envId = 0; envId < _currentpinfo.size(); ++envId) {
-                if (!!_currentpinfo[envId]) {
-                    if (envId > maxValidEnvId) {
-                        maxValidEnvId = envId;
-                    }
-                    ++numValid;
-                }
-            }
-            RAVELOG_WARN_FORMAT("env=%d: _currentpinfo has %d elements (%d non-null kinbody infos, max non-null env id is %d), maybe environment id is not being recycled or _currentpinfo is leaking?", _penv->GetId()%numValid%maxValidEnvId);
-        }
         // even after DestroyEnvironment is called, users of this class still try to access _currentpinfo
         // in that case, null pointer should be returned, instead of range error from _currentpinfo.at(0). for that purpose, keep the first element here.
         _currentpinfo.erase(_currentpinfo.begin() + 1, _currentpinfo.end());
