@@ -100,11 +100,11 @@ public:
                     _pysicsDataCache.at(bodyid) = boost::shared_ptr<PhysicsData>();
                 }
                 else {
-                    RAVELOG_WARN_FORMAT("bodyid=%d(name=%s) is already invalidated (either never initialized or invalidated already)", bodyid%(pbody->GetName()));
+                    RAVELOG_VERBOSE_FORMAT("bodyid=%d(name=%s) is already invalidated (either never initialized or invalidated already)", bodyid%(pbody->GetName()));
                 }
             }
             else {
-                RAVELOG_WARN_FORMAT("env=%d, bodyid=%d(name=%s) is not in _pysicsDataCache of size %d. Unless physics engine was never used in this environment, this should not happen.", (GetEnv()->GetId())%bodyid%(pbody->GetName())%(_pysicsDataCache.size()));
+                RAVELOG_VERBOSE_FORMAT("env=%d, bodyid=%d(name=%s) is not in _pysicsDataCache of size %d. Unless physics engine was never used in this environment, this should not happen.", (GetEnv()->GetId())%bodyid%(pbody->GetName())%(_pysicsDataCache.size()));
             }
         }
     }
@@ -179,7 +179,7 @@ public:
 
 private:
     Vector _vgravity;
-    std::vector<boost::shared_ptr<PhysicsData> > _pysicsDataCache; // cache of physics data to avoid slow call to dynamic_pointer_cast and GetUserData("_genericphysics_"). It is assumed that environment id of kin body does not grow to infinity over time.
+    std::vector<boost::shared_ptr<PhysicsData> > _pysicsDataCache; // cache of physics data to avoid slow call to dynamic_pointer_cast and GetUserData("_genericphysics_"). Index of the vector is the environment id (id of the body in the env, not __nUniqueId of env) of the kinbody who holds  at that index. It is assumed that environment id of kin body does not grow to infinity over time.
 };
 
 PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
