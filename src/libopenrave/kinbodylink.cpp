@@ -308,7 +308,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     if (value.HasMember("geometries")) {
         _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["geometries"].Begin(); it != value["geometries"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vgeometryinfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vgeometryinfos, "name", fUnitScale, options);
         }
     }
 
@@ -323,7 +323,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     //         size_t iGeometry = 0;
     //         for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
     //             std::string id = orjson::GetStringJsonValueByKey(*im, "id");
-    //             UpdateOrCreateInfo(*im, id, vgeometries, fUnitScale);
+    //             UpdateOrCreateInfoWithNameCheck(*im, id, vgeometries, "name", fUnitScale);
     //         }
     //     }
     // }

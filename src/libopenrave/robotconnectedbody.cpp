@@ -170,35 +170,35 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     if(value.HasMember("links") && value["links"].IsArray()) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vLinkInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options);
         }
     }
 
     if(value.HasMember("joints") && value["joints"].IsArray()) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vJointInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options);
         }
     }
 
     if(value.HasMember("tools") && value["tools"].IsArray()) {
         _vManipulatorInfos.reserve(value["tools"].Size() + _vManipulatorInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vManipulatorInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vManipulatorInfos, "name", fUnitScale, options);
         }
     }
 
     if(value.HasMember("attachedSensors") && value["attachedSensors"].IsArray()) {
         _vAttachedSensorInfos.reserve(value["attachedSensors"].Size() + _vAttachedSensorInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vAttachedSensorInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vAttachedSensorInfos, "name", fUnitScale, options);
         }
     }
 
     if(value.HasMember("gripperInfos") && value["gripperInfos"].IsArray()) {
         _vGripperInfos.reserve(value["gripperInfos"].Size() + _vGripperInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vGripperInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vGripperInfos, "name", fUnitScale, options);
         }
     }
 
