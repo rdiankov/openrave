@@ -2205,6 +2205,18 @@ public:
         }
         return handles;
     }
+    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition)
+    {
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawlabel(label, worldPosition));
+        }
+        return handles;
+    }
     virtual OpenRAVE::GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
@@ -2478,7 +2490,7 @@ public:
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-    virtual void ExtractInfo(EnvironmentBaseInfo& info)
+    virtual void ExtractInfo(EnvironmentBaseInfo& info) override
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::vector<KinBodyPtr> vBodies;
