@@ -897,7 +897,7 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     }
 
     // transform
-    if( (info._modifiedFields & KinBody::LinkInfo::LIF_Transform) != 0 ) {
+    if( info.IsModifiedField(KinBody::LinkInfo::LIF_Transform) ) {
         if (TransformDistanceFast(GetTransform(), info._t) > g_fEpsilonLinear) {
             RAVELOG_VERBOSE_FORMAT("link %s transform changed", _info._id);
             return UFIR_RequireReinitialize;
