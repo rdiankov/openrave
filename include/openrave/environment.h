@@ -755,7 +755,7 @@ public:
     /// \param vCreatedBodies the bodies created in this operation
     /// \param vModifiedBodies the bodies modified in this operation
     /// \param vRemovedBodies the bodies removed from the environment in this operation
-    /// \param updateMode one if UFIM_X
+    /// \param updateMode one of UFIM_X
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, UpdateFromInfoMode updateMode) = 0;
 
     int _revision = 0;  ///< environment current revision

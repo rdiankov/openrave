@@ -304,7 +304,7 @@ UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::
     }
 
     // _trelative
-    if (!GetRelativeTransform().Compare(info._trelative)) {
+    if (GetRelativeTransform().CompareTransform(info._trelative, g_fEpsilon)) {
         SetRelativeTransform(info._trelative);
         RAVELOG_VERBOSE_FORMAT("attached sensor %s relative transform changed", _info._id);
         updateFromInfoResult = UFIR_Success;

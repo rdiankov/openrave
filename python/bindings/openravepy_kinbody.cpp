@@ -265,7 +265,7 @@ PyGeometryInfo::PyGeometryInfo(const KinBody::GeometryInfo& info) {
 }
 
 void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
-    _t = ReturnTransform(info._t);
+    _t = ReturnTransform(info.GetTransform());
     _vGeomData = toPyVector4(info._vGeomData);
     _vGeomData2 = toPyVector4(info._vGeomData2);
     _vGeomData3 = toPyVector4(info._vGeomData3);
@@ -340,7 +340,7 @@ void PyGeometryInfo::DeserializeJSON(object obj, dReal fUnitScale, object option
 KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
     KinBody::GeometryInfo& info = *pinfo;
-    info._t = ExtractTransform(_t);
+    info.SetTransform(ExtractTransform(_t));
     info._vGeomData = ExtractVector<dReal>(_vGeomData);
     info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
     info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
@@ -420,7 +420,7 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     }
     _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
-    _t = ReturnTransform(info._t);
+    _t = ReturnTransform(info.GetTransform());
     _tMassFrame = ReturnTransform(info._tMassFrame);
     _mass = info._mass;
     _vinertiamoments = toPyVector3(info._vinertiamoments);
@@ -443,7 +443,6 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     _vForcedAdjacentLinks = vForcedAdjacentLinks;
     _bStatic = info._bStatic;
     _bIsEnabled = info._bIsEnabled;
-
 }
 
 py::object PyLinkInfo::SerializeJSON(dReal fUnitScale, object options)
@@ -477,7 +476,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
         info._name = py::extract<std::string>(_name);
     }
-    info._t = ExtractTransform(_t);
+    info.SetTransform(ExtractTransform(_t));
     info._tMassFrame = ExtractTransform(_tMassFrame);
     info._mass = _mass;
     info._vinertiamoments = ExtractVector3(_vinertiamoments);

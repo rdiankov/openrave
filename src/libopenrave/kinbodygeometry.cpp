@@ -396,6 +396,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     }
 
     // is clear() better since it releases the memory?
+    _modifiedFields |= GIF_Mesh;
     _meshcollision.indices.resize(0);
     _meshcollision.vertices.resize(0);
 
@@ -734,6 +735,7 @@ inline void LoadJsonValue(const rapidjson::Value& rValue, KinBody::GeometryInfo:
 void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
 {
     _t.trans *= fUnitScale;
+    _modifiedFields |= GIF_Transform;
 
     switch(_type) {
     case GT_Box:
@@ -769,6 +771,7 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
         FOREACH(itvertex, _meshcollision.vertices) {
             *itvertex *= fUnitScale;
         }
+        _modifiedFields |= GIF_Mesh;
         break;
 
     case GT_CalibrationBoard:
@@ -807,6 +810,7 @@ void KinBody::GeometryInfo::Reset()
     _bVisible = true;
     _bModifiable = true;
     _calibrationBoardParameters.clear();
+    _modifiedFields = 0xffffffff;
 }
 
 inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
@@ -836,9 +840,12 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
 {
     orjson::SetJsonValueByKey(rGeometryInfo, "id", _id, allocator);
     orjson::SetJsonValueByKey(rGeometryInfo, "name", _name, allocator);
-    Transform tscaled = _t;
-    tscaled.trans *= fUnitScale;
-    orjson::SetJsonValueByKey(rGeometryInfo, "transform", tscaled, allocator);
+
+    {
+        Transform tscaled = _t;
+        tscaled.trans *= fUnitScale;
+        orjson::SetJsonValueByKey(rGeometryInfo, "transform", tscaled, allocator);
+    }
 
     orjson::SetJsonValueByKey(rGeometryInfo, "type", _GetGeometryTypeString(_type), allocator);
 
@@ -933,8 +940,13 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     orjson::LoadJsonValueByKey(value, "name", _name);
 
     if (value.HasMember("transform")) {
-        orjson::LoadJsonValueByKey(value, "transform", _t);
-        _t.trans *= fUnitScale;
+        Transform tnew;
+        orjson::LoadJsonValueByKey(value, "transform", tnew);
+        tnew.trans *= fUnitScale;
+        if( _t.CompareTransform(tnew, g_fEpsilon) ) {
+            _modifiedFields |= KinBody::GeometryInfo::GIF_Transform;
+        }
+        _t = tnew; // should always set in case of error less than epsilon
     }
 
     if (value.HasMember("type")) {
@@ -1101,6 +1113,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             FOREACH(itvertex, _meshcollision.vertices) {
                 *itvertex *= fUnitScale;
             }
+            _modifiedFields |= KinBody::GeometryInfo::GIF_Mesh; // hard to check if mesh changed, need to do manual rapidjson operations for that
         }
         break;
     case GT_CalibrationBoard:
@@ -1326,26 +1339,26 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
 }
 
 
-KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
+KinBody::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
 {
 }
 
-bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
+bool KinBody::Geometry::InitCollisionMesh(float fTessellation)
 {
     return _info.InitCollisionMesh(fTessellation);
 }
 
-bool KinBody::Link::Geometry::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
+bool KinBody::Geometry::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
 {
     return _info.ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents);
 }
 
-AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
+AABB KinBody::Geometry::ComputeAABB(const Transform& t) const
 {
     return _info.ComputeAABB(t);
 }
 
-void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
+void KinBody::Geometry::serialize(std::ostream& o, int options) const
 {
     SerializeRound(o,_info._t);
     o << _info._type << " ";
@@ -1372,15 +1385,16 @@ void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
     }
 }
 
-void KinBody::Link::Geometry::SetCollisionMesh(const TriMesh& mesh)
+void KinBody::Geometry::SetCollisionMesh(const TriMesh& mesh)
 {
     OPENRAVE_ASSERT_FORMAT0(_info._bModifiable, "geometry cannot be modified", ORE_Failed);
     LinkPtr parent(_parent);
     _info._meshcollision = mesh;
+    // _info._modifiedFields; change??
     parent->_Update();
 }
 
-bool KinBody::Link::Geometry::SetVisible(bool visible)
+bool KinBody::Geometry::SetVisible(bool visible)
 {
     if( _info._bVisible != visible ) {
         _info._bVisible = visible;
@@ -1391,21 +1405,21 @@ bool KinBody::Link::Geometry::SetVisible(bool visible)
     return false;
 }
 
-void KinBody::Link::Geometry::SetTransparency(float f)
+void KinBody::Geometry::SetTransparency(float f)
 {
     LinkPtr parent(_parent);
     _info._fTransparency = f;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
 }
 
-void KinBody::Link::Geometry::SetDiffuseColor(const RaveVector<float>& color)
+void KinBody::Geometry::SetDiffuseColor(const RaveVector<float>& color)
 {
     LinkPtr parent(_parent);
     _info._vDiffuseColor = color;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
 }
 
-void KinBody::Link::Geometry::SetAmbientColor(const RaveVector<float>& color)
+void KinBody::Geometry::SetAmbientColor(const RaveVector<float>& color)
 {
     LinkPtr parent(_parent);
     _info._vAmbientColor = color;
@@ -1445,7 +1459,7 @@ void KinBody::Link::Geometry::SetAmbientColor(const RaveVector<float>& color)
 //    return ( (tmin < t1) && (tmax > t0) );
 //}
 
-bool KinBody::Link::Geometry::ValidateContactNormal(const Vector& _position, Vector& _normal) const
+bool KinBody::Geometry::ValidateContactNormal(const Vector& _position, Vector& _normal) const
 {
     Transform tinv = _info._t.inverse();
     Vector position = tinv*_position;
@@ -1519,21 +1533,21 @@ bool KinBody::Link::Geometry::ValidateContactNormal(const Vector& _position, Vec
     return false;
 }
 
-void KinBody::Link::Geometry::SetRenderFilename(const std::string& renderfilename)
+void KinBody::Geometry::SetRenderFilename(const std::string& renderfilename)
 {
     LinkPtr parent(_parent);
     _info._filenamerender = renderfilename;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
 }
 
-void KinBody::Link::Geometry::SetName(const std::string& name)
+void KinBody::Geometry::SetName(const std::string& name)
 {
     LinkPtr parent(_parent);
     _info._name = name;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
 }
 
-uint8_t KinBody::Link::Geometry::GetSideWallExists() const
+uint8_t KinBody::Geometry::GetSideWallExists() const
 {
     uint8_t mask = 0;
     for (size_t i = 0; i < _info._vSideWalls.size(); ++i) {
@@ -1542,16 +1556,17 @@ uint8_t KinBody::Link::Geometry::GetSideWallExists() const
     return mask;
 }
 
-void KinBody::Link::Geometry::UpdateInfo()
+void KinBody::Geometry::UpdateInfo()
 {
 }
 
-void KinBody::Link::Geometry::ExtractInfo(KinBody::GeometryInfo& info) const
+void KinBody::Geometry::ExtractInfo(KinBody::GeometryInfo& info) const
 {
     info = _info;
+    info._modifiedFields = 0;
 }
 
-UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::GeometryInfo& info)
+UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
     UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
@@ -1567,7 +1582,7 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
         return UFIR_RequireReinitialize;
     }
 
-    if (!GetTransform().Compare(info._t)) {
+    if( info.IsModifiedField(KinBody::GeometryInfo::GIF_Transform) && GetTransform().CompareTransform(info._t, g_fEpsilon) ) {
         RAVELOG_VERBOSE_FORMAT("geometry %s transform changed", _info._id);
         return UFIR_RequireReinitialize;
     }
@@ -1603,7 +1618,7 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
         }
     }
     else if (GetType() == GT_TriMesh) {
-        if (info._meshcollision.vertices != _info._meshcollision.vertices || info._meshcollision.indices != _info._meshcollision.indices) {
+        if( info.IsModifiedField(KinBody::GeometryInfo::GIF_Mesh) && info._meshcollision != _info._meshcollision ) {
             RAVELOG_VERBOSE_FORMAT("geometry %s trimesh changed", _info._id);
             return UFIR_RequireReinitialize;
         }
