@@ -1356,6 +1356,7 @@ void init_openravepy_global()
     .value("OnlySpecifiedBodiesExact", UFIM_OnlySpecifiedBodiesExact)
     ;
 
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     enum_<InterfaceType>(m, "InterfaceType", py::arithmetic() DOXY_ENUM(InterfaceType))
 #else

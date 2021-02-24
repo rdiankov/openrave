@@ -166,6 +166,7 @@ public:
 protected:
         void _Update(const KinBody::KinBodyInfo& info);
     }; // class PyKinBodyInfo
+    typedef OPENRAVE_SHARED_PTR<PyKinBodyInfo> PyKinBodyInfoPtr;
 
 
 protected:

@@ -430,7 +430,7 @@ bool CreateTriMeshFromFile(EnvironmentBasePtr penv, const std::string& filename,
                     trimesh.vertices.clear();
                     trimesh.indices.clear();
                     FOREACH(itgeom, listGeometries) {
-                        trimesh.Append(itgeom->_meshcollision, itgeom->_t);
+                        trimesh.Append(itgeom->_meshcollision, itgeom->GetTransform());
                     }
                     return true;
                 }
@@ -958,7 +958,7 @@ public:
                     // directly apply transform to all geomteries
                     Transform tnew = _plink->GetTransform();
                     FOREACH(itgeom, _plink->_vGeometries) {
-                        (*itgeom)->_info._t = tnew * (*itgeom)->_info._t;
+                        (*itgeom)->_info.SetTransform(tnew * (*itgeom)->_info.GetTransform());
                     }
                     _plink->_collision.ApplyTransform(tnew);
                     _plink->SetTransform(tOrigTrans);
@@ -976,7 +976,7 @@ public:
                         return false;
                     }
 
-                    TransformMatrix tm(info->_t); tm.trans = Vector();
+                    TransformMatrix tm(info->GetTransform()); tm.trans = Vector();
                     TransformMatrix tminv = tm.inverse();
                     tm.m[0] *= _vScaleGeometry.x; tm.m[1] *= _vScaleGeometry.x; tm.m[2] *= _vScaleGeometry.x;
                     tm.m[4] *= _vScaleGeometry.y; tm.m[5] *= _vScaleGeometry.y; tm.m[6] *= _vScaleGeometry.y;
@@ -995,11 +995,11 @@ public:
                             info->_filenamecollision = _fnGetModelsDir(info->_filenamecollision);
                         }
                     }
-                    std::list<KinBody::GeometryInfo> listGeometries;
+                    std::list<KinBody::GeometryInfo> listGeometryInfos;
                     if( info->_type == GT_TriMesh ) {
                         bool bSuccess = false;
                         if( info->_filenamecollision.size() > 0 ) {
-                            if( !CreateGeometries(_pparent->GetEnv(),info->_filenamecollision, info->_vCollisionScale, listGeometries) ) {
+                            if( !CreateGeometries(_pparent->GetEnv(),info->_filenamecollision, info->_vCollisionScale, listGeometryInfos) ) {
                                 RAVELOG_WARN(str(boost::format("failed to find %s\n")%info->_filenamecollision));
                             }
                             else {
@@ -1008,7 +1008,7 @@ public:
                         }
                         if( info->_filenamerender.size() > 0 ) {
                             if( !bSuccess ) {
-                                if( !CreateGeometries(_pparent->GetEnv(), info->_filenamerender, info->_vRenderScale, listGeometries) ) {
+                                if( !CreateGeometries(_pparent->GetEnv(), info->_filenamerender, info->_vRenderScale, listGeometryInfos) ) {
                                     RAVELOG_WARN(str(boost::format("failed to find %s\n")%info->_filenamerender));
                                 }
                                 else {
@@ -1016,16 +1016,15 @@ public:
                                 }
                             }
                         }
-                        if( listGeometries.size() > 0 ) {
+                        if( listGeometryInfos.size() > 0 ) {
                             // append all the geometries to the link. make sure the render filename is specified in only one geometry.
                             string extension;
                             if( info->_filenamerender.find_last_of('.') != string::npos ) {
                                 extension = info->_filenamerender.substr(info->_filenamerender.find_last_of('.')+1);
                             }
-                            FOREACH(itnewgeom,listGeometries) {
+                            FOREACH(itnewgeom,listGeometryInfos) {
                                 itnewgeom->_bVisible = info->_bVisible;
                                 itnewgeom->_bModifiable = info->_bModifiable;
-                                itnewgeom->_t = info->_t;
                                 itnewgeom->_fTransparency = info->_fTransparency;
                                 itnewgeom->_filenamerender = string("__norenderif__:")+extension;
                                 FOREACH(it,itnewgeom->_meshcollision.vertices) {
@@ -1040,15 +1039,18 @@ public:
                                 if( geomreader->IsOverwriteTransparency() ) {
                                     itnewgeom->_fTransparency = info->_fTransparency;
                                 }
-                                itnewgeom->_t.trans *= _vScaleGeometry;
-                                _plink->_collision.Append(itnewgeom->_meshcollision, itnewgeom->_t);
+
+                                Transform t = info->GetTransform();
+                                t.trans *= _vScaleGeometry;
+                                itnewgeom->SetTransform(t);
+                                _plink->_collision.Append(itnewgeom->_meshcollision, itnewgeom->GetTransform());
                             }
-                            listGeometries.front()._vRenderScale = info->_vRenderScale*geomspacescale;
-                            listGeometries.front()._filenamerender = info->_filenamerender;
-                            listGeometries.front()._vCollisionScale = info->_vCollisionScale*geomspacescale;
-                            listGeometries.front()._filenamecollision = info->_filenamecollision;
-                            listGeometries.front()._bVisible = info->_bVisible;
-                            FOREACH(itinfo, listGeometries) {
+                            listGeometryInfos.front()._vRenderScale = info->_vRenderScale*geomspacescale;
+                            listGeometryInfos.front()._filenamerender = info->_filenamerender;
+                            listGeometryInfos.front()._vCollisionScale = info->_vCollisionScale*geomspacescale;
+                            listGeometryInfos.front()._filenamecollision = info->_filenamecollision;
+                            listGeometryInfos.front()._bVisible = info->_bVisible;
+                            FOREACH(itinfo, listGeometryInfos) {
                                 _plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(_plink,*itinfo)));
                             }
                         }
@@ -1057,8 +1059,10 @@ public:
                             FOREACH(it,info->_meshcollision.vertices) {
                                 *it = tmres * *it;
                             }
-                            info->_t.trans *= _vScaleGeometry;
-                            _plink->_collision.Append(info->_meshcollision, info->_t);
+                            Transform t = info->GetTransform();
+                            t.trans  *= _vScaleGeometry;
+                            info->SetTransform(t);
+                            _plink->_collision.Append(info->_meshcollision, info->GetTransform());
                             _plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(_plink,*info)));
                         }
                     }
@@ -1069,7 +1073,10 @@ public:
                             // rotate on x axis by pi/2
                             Transform trot;
                             trot.rot = quatFromAxisAngle(Vector(1, 0, 0), PI/2);
-                            info->_t.rot = (info->_t*trot).rot;
+
+                            Transform t = info->GetTransform();
+                            t.rot = (t*trot).rot;
+                            info->SetTransform(t);
                         }
 
                         // call before attaching the geom
@@ -1078,9 +1085,12 @@ public:
                         FOREACH(it,info->_meshcollision.vertices) {
                             *it = tmres * *it;
                         }
-                        info->_t.trans *= _vScaleGeometry;
+
+                        Transform t = info->GetTransform();
+                        t.trans *= _vScaleGeometry;
+                        info->SetTransform(t);
                         info->_vGeomData *= geomspacescale;
-                        _plink->_collision.Append(geom->GetCollisionMesh(), info->_t);
+                        _plink->_collision.Append(geom->GetCollisionMesh(), info->GetTransform());
                         _plink->_vGeometries.push_back(geom);
                     }
                 }
@@ -1249,24 +1259,32 @@ public:
         if( xmlname == "translation" ) {
             Vector v;
             _ss >> v.x >> v.y >> v.z;
-            _plink->_info._t.trans += v*_vScaleGeometry;
+            Transform t = _plink->_info.GetTransform();
+            t.trans += v*_vScaleGeometry;
+            _plink->_info.SetTransform(t);
         }
         else if( xmlname == "rotationmat" ) {
             TransformMatrix tnew;
             _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-            _plink->_info._t.rot = (Transform(tnew)*_plink->_info._t).rot;
+            Transform t = _plink->_info.GetTransform();
+            t.rot = (Transform(tnew)*t).rot;
+            _plink->_info.SetTransform(t);
         }
         else if( xmlname == "rotationaxis" ) {
             Vector vaxis; dReal fangle=0;
             _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
             Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
-            _plink->_info._t.rot = (tnew*_plink->_info._t).rot;
+            Transform t = _plink->_info.GetTransform();
+            t.rot = (tnew*t).rot;
+            _plink->_info.SetTransform(t);
         }
         else if( xmlname == "quat" ) {
             Transform tnew;
             _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
             tnew.rot.normalize4();
-            _plink->_info._t.rot = (tnew*_plink->_info._t).rot;
+            Transform t = _plink->_info.GetTransform();
+            t.rot = (tnew*t).rot;
+            _plink->_info.SetTransform(t);
         }
         else if( xmlname == "offsetfrom" ) {
             // figure out which body
@@ -1328,9 +1346,9 @@ private:
     Vector _vMassExtents;                   ///< used only if mass is a box
 };
 
-bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector &vscale, std::list<KinBody::GeometryInfo>& listGeometries)
+bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector &vscale, std::list<KinBody::GeometryInfo>& listGeometryInfos)
 {
-    return LinkXMLReader::CreateGeometries(penv,filename,vscale,listGeometries);
+    return LinkXMLReader::CreateGeometries(penv,filename,vscale,listGeometryInfos);
 }
 
 // Joint Reader

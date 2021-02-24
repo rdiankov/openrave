@@ -161,7 +161,7 @@ UpdateFromInfoResult RobotBase::Manipulator::UpdateFromInfo(const RobotBase::Man
         updateFromInfoResult = UFIR_Success;
     }
 
-    if (!GetLocalToolTransform().Compare(info._tLocalTool)) {
+    if (GetLocalToolTransform().CompareTransform(info._tLocalTool, g_fEpsilon)) {
         SetLocalToolTransform(info._tLocalTool);
         RAVELOG_VERBOSE_FORMAT("manipulator %s local tool transform changed", _info._id);
         updateFromInfoResult = UFIR_Success;

@@ -293,14 +293,14 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vLinkInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options);
         }
     }
 
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vJointInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options);
         }
     }
 
@@ -317,6 +317,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 _dofValues.emplace_back(std::make_pair(jointName, jointAxis), dofValue);
             }
         }
+        _modifiedFields |= KinBodyInfo::KBIF_DOFValues;
     }
 
     if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
@@ -332,6 +333,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _transform);
         _transform.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
+        _modifiedFields |= KinBodyInfo::KBIF_Transform;
     }
 }
 
@@ -5454,6 +5456,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
 
 void KinBody::ExtractInfo(KinBodyInfo& info)
 {
+    info._modifiedFields = 0;
     info._id = _id;
     info._uri = __struri;
     info._name = _name;
@@ -5469,14 +5472,16 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
         info._dofValues.emplace_back(std::make_pair(pJoint->GetName(), jointAxis), vDOFValues[idof]);
     }
 
-    info._transform = GetTransform();
     info._vGrabbedInfos.resize(0);
     GetGrabbedInfo(info._vGrabbedInfos);
 
-    KinBody::KinBodyStateSaver saver(shared_kinbody());
+    info._transform = GetTransform();
+
+    // in order for link transform comparision to make sense
+    KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation);
+    SetTransform(Transform());
     vector<dReal> vZeros(GetDOF(), 0);
     SetDOFValues(vZeros, KinBody::CLA_Nothing);
-    SetTransform(Transform());
 
     // need to avoid extracting info for links and joints belonging to connected bodies
     std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
@@ -5616,9 +5621,25 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
-    // links
-    if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
-        return updateFromInfoResult;
+    {
+        // in order for link transform comparision to make sense, have to change the kinbody to the identify.
+        // First check if any of the link infos have modified transforms
+        KinBody::KinBodyStateSaverPtr stateSaver;
+        FOREACHC(itLinkInfo, info._vLinkInfos) {
+            // if any link has its transform field set, we need to set zero configuration before comparison
+            if( (*itLinkInfo)->IsModifiedField(KinBody::LinkInfo::LIF_Transform) ) {
+                stateSaver.reset(new KinBody::KinBodyStateSaver(shared_kinbody(), Save_LinkTransformation));
+                SetTransform(Transform());
+                vector<dReal> vZeros(GetDOF(), 0);
+                SetDOFValues(vZeros, KinBody::CLA_Nothing);
+                break;
+            }
+        }
+
+        // links
+        if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
+            return updateFromInfoResult;
+        }
     }
 
     // joints
@@ -5634,14 +5655,14 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // transform
-    if (!GetTransform().Compare(info._transform)) {
+    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) && GetTransform().CompareTransform(info._transform, g_fEpsilon) ) {
         SetTransform(info._transform);
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
     }
 
     // don't change the dof values here since body might not be added!
-    if( _nHierarchyComputed == 2 ) {
+    if( info.IsModifiedField(KinBodyInfo::KBIF_DOFValues) && _nHierarchyComputed == 2 ) {
         // dof values
         std::vector<dReal> dofValues;
         GetDOFValues(dofValues);
@@ -5661,9 +5682,11 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             if (it->first.second >= joint->GetDOF()) {
                 continue;
             }
-            if (dofValues[joint->GetDOFIndex()+it->first.second] != it->second) {
-                dofValues[joint->GetDOFIndex()+it->first.second] = it->second;
+            int dofIndex = joint->GetDOFIndex()+it->first.second;
+            if (RaveFabs(dofValues.at(dofIndex) - it->second) > g_fEpsilon) {
+                dofValues[dofIndex] = it->second;
                 bDOFChanged = true;
+                //RAVELOG_VERBOSE_FORMAT("body %s dof %d value changed", _id%dofIndex);
             }
         }
         if (bDOFChanged) {
