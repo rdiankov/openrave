@@ -5614,11 +5614,12 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     {
-        // in order for link transform comparision to make sense
+        // in order for link transform comparision to make sense, have to change the kinbody to the identify.
+        // First check if any of the link infos have modified transforms
         KinBody::KinBodyStateSaverPtr stateSaver;
         FOREACHC(itLinkInfo, info._vLinkInfos) {
             // if any link has its transform field set, we need to set zero configuration before comparison
-            if( ((*itLinkInfo)->_modifiedFields & KinBody::LinkInfo::LIF_Transform) != 0 ) {
+            if( (*itLinkInfo)->IsModifiedField(KinBody::LinkInfo::LIF_Transform) ) {
                 stateSaver.reset(new KinBody::KinBodyStateSaver(shared_kinbody(), Save_LinkTransformation));
                 SetTransform(Transform());
                 vector<dReal> vZeros(GetDOF(), 0);
@@ -5646,14 +5647,14 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // transform
-    if( (info._modifiedFields & KinBodyInfo::KBIF_Transform) != 0 && !GetTransform().Compare(info._transform) ) {
+    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) && GetTransform().CompareTransform(info._transform, g_fEpsilon) ) {
         SetTransform(info._transform);
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
     }
 
     // don't change the dof values here since body might not be added!
-    if( (info._modifiedFields & KinBodyInfo::KBIF_DOFValues) != 0 && _nHierarchyComputed == 2 ) {
+    if( info.IsModifiedField(KinBodyInfo::KBIF_DOFValues) && _nHierarchyComputed == 2 ) {
         // dof values
         std::vector<dReal> dofValues;
         GetDOFValues(dofValues);
@@ -5674,10 +5675,10 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
                 continue;
             }
             int dofIndex = joint->GetDOFIndex()+it->first.second;
-            if (RaveFabs(dofValues[dofIndex] - it->second) > g_fEpsilonLinear) {
+            if (RaveFabs(dofValues.at(dofIndex) - it->second) > g_fEpsilon) {
                 dofValues[dofIndex] = it->second;
                 bDOFChanged = true;
-                RAVELOG_VERBOSE_FORMAT("body %s dof %d value changed", _id%dofIndex);
+                //RAVELOG_VERBOSE_FORMAT("body %s dof %d value changed", _id%dofIndex);
             }
         }
         if (bDOFChanged) {

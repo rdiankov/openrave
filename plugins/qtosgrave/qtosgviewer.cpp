@@ -1418,7 +1418,7 @@ void QtOSGViewer::_StopTrackLink()
 
 bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText)
 {
-    if(!!_ptrackinglink && _ptrackinglink == link && _currentTrackLinkRelTransform.Compare(linkRelativeTranslation)) {
+    if(!!_ptrackinglink && _ptrackinglink == link && !_currentTrackLinkRelTransform.CompareTransform(linkRelativeTranslation, 1e-7)) {
         // already tracking the requested link, nothing to be done
         return true;
     }

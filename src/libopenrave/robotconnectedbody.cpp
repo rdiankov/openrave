@@ -441,7 +441,7 @@ UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::C
     }
 
     // _trelative
-    if (!GetRelativeTransform().Compare(info._trelative)) {
+    if (GetRelativeTransform().CompareTransform(info._trelative, g_fEpsilon)) {
         RAVELOG_VERBOSE_FORMAT("connected body %s relative transform changed", _info._id);
         return UFIR_RequireReinitialize;
     }

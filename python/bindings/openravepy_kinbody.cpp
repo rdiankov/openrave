@@ -404,7 +404,6 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
             info._calibrationBoardParameters[0].bigDotDiameterDistanceRatio = py::extract<float>(_calibrationBoardParameters["bigDotDiameterDistanceRatio"]);
         }
     }
-    info._modifiedFields = -1; // assume all fields are modified
     return pinfo;
 }
 
@@ -555,7 +554,6 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     info._vForcedAdjacentLinks = ExtractArray<std::string>(_vForcedAdjacentLinks);
     info._bStatic = _bStatic;
     info._bIsEnabled = _bIsEnabled;
-    info._modifiedFields = -1; // assume all fields are modified
     return pinfo;
 }
 
@@ -2300,7 +2298,6 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
 
     pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
-    pInfo->_modifiedFields = -1; // assume all fields are modified
     return pInfo;
 }
 
