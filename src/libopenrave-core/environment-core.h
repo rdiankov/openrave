@@ -362,7 +362,7 @@ public:
             _vPublishedBodies.clear();
             _nBodiesModifiedStamp++;
 
-            _mapBodies.clear();
+            _vecWeakBodies.clear();
             _environmentIndexRecyclePool.clear();
 
             FOREACH(itsensor,_listSensors) {
@@ -2270,9 +2270,8 @@ public:
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         boost::mutex::scoped_lock locknetwork(_mutexEnvironmentIds);
-        map<int, KinBodyWeakPtr>::iterator it = _mapBodies.find(id);
-        if( it != _mapBodies.end() ) {
-            return KinBodyPtr(it->second);
+        if (id < _vecWeakBodies.size()) {
+            return KinBodyPtr(_vecWeakBodies.at(id));
         }
         return KinBodyPtr();
     }
@@ -3031,13 +3030,13 @@ protected:
                 _vPublishedBodies.clear();
             }
             // a little tricky due to a deadlocking situation
-            std::map<int, KinBodyWeakPtr> mapBodies;
+            std::vector<KinBodyWeakPtr> weakBodies;
             {
                 boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
-                mapBodies = _mapBodies;
-                _mapBodies.clear();
+                weakBodies = _vecWeakBodies;
+                _vecWeakBodies.clear();
             }
-            mapBodies.clear();
+            weakBodies.clear();
         }
 
         list<ViewerBasePtr> listViewers = _listViewers;
@@ -3106,7 +3105,7 @@ protected:
             std::vector<RobotBasePtr> vecrobots;
             std::vector<KinBodyPtr> vecbodies;
             std::vector<std::pair<Vector,Vector> > linkvelocities;
-            _mapBodies.clear();
+            _vecWeakBodies.clear();
             if( bCheckSharedResources ) {
                 // delete any bodies/robots from mapBodies that are not in r->_vecrobots and r->_vecbodies
                 vecrobots.swap(_vecrobots);
@@ -3135,18 +3134,24 @@ protected:
                         //pnewrobot->ReleaseAllGrabbed(); // will re-grab later?
                         listToCopyState.push_back(*itrobot);
                     }
-                    pnewrobot->_environmentid = (*itrobot)->GetEnvironmentId();
-                    BOOST_ASSERT( _mapBodies.find(pnewrobot->GetEnvironmentId()) == _mapBodies.end() );
+                    const int bodyId = (*itrobot)->GetEnvironmentId();
+                    pnewrobot->_environmentid = bodyId;
+                    BOOST_ASSERT( _vecWeakBodies.size() < bodyId + 1 || !_vecWeakBodies.at(bodyId).lock());
                     _vecbodies.push_back(pnewrobot);
                     _vecrobots.push_back(pnewrobot);
-                    _mapBodies[pnewrobot->GetEnvironmentId()] = pnewrobot;
+                    if (_vecWeakBodies.size() < bodyId + 1) {
+                        _vecWeakBodies.resize(bodyId + 1, KinBodyWeakPtr());
+                    }
+                    _vecWeakBodies[bodyId] = pnewrobot;
                 }
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR_FORMAT("failed to clone robot %s: %s", (*itrobot)->GetName()%ex.what());
                 }
             }
-            FOREACHC(itbody, r->_vecbodies) {
-                if( _mapBodies.find((*itbody)->GetEnvironmentId()) != _mapBodies.end() ) {
+            for (const KinBodyPtr& pbody : r->_vecbodies) {
+                const KinBody& body = *pbody;
+                const int bodyId = body.GetEnvironmentId();
+                if( bodyId < _vecWeakBodies.size() && !!_vecWeakBodies.at(bodyId).lock() ) {
                     continue;
                 }
                 try {
@@ -3157,7 +3162,7 @@ protected:
                                 RAVELOG_WARN_FORMAT("env=%d, a body in vecbodies is not initialized", GetId());
                             }
                             else {
-                                if( (*itbody2)->GetName() == (*itbody)->GetName() && (*itbody2)->GetKinematicsGeometryHash() == (*itbody)->GetKinematicsGeometryHash() ) {
+                                if( (*itbody2)->GetName() == body.GetName() && (*itbody2)->GetKinematicsGeometryHash() == body.GetKinematicsGeometryHash() ) {
                                     pnewbody = *itbody2;
                                     break;
                                 }
@@ -3166,34 +3171,40 @@ protected:
                     }
                     if( !pnewbody ) {
                         pnewbody.reset(new KinBody(PT_KinBody,shared_from_this()));
-                        pnewbody->_name = (*itbody)->_name; // at least copy the names
-                        listToClone.push_back(*itbody);
+                        pnewbody->_name = body._name; // at least copy the names
+                        listToClone.push_back(pbody);
                     }
                     else {
-                        listToCopyState.push_back(*itbody);
+                        listToCopyState.push_back(pbody);
                     }
-                    pnewbody->_environmentid = (*itbody)->GetEnvironmentId();
+                    pnewbody->_environmentid = bodyId;
                     _vecbodies.push_back(pnewbody);
-                    _mapBodies[pnewbody->GetEnvironmentId()] = pnewbody;
+
+                    if (_vecWeakBodies.size() < bodyId + 1) {
+                        _vecWeakBodies.resize(bodyId + 1, KinBodyWeakPtr());
+                    }
+                    _vecWeakBodies[bodyId] = pnewbody;
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("env=%d, failed to clone body %s: %s", GetId()%(*itbody)->GetName()%ex.what());
+                    RAVELOG_ERROR_FORMAT("env=%d, failed to clone body %s: %s", GetId()%body.GetName()%ex.what());
                 }
             }
 
             // copy state before cloning
             if( listToCopyState.size() > 0 ) {
-                FOREACH(itbody,listToCopyState) {
-                    KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
+                for (const KinBodyPtr& pbody : listToCopyState) {
+                    const KinBody& body = *pbody;
+                    const int bodyId = body.GetEnvironmentId();
+                    KinBodyPtr pnewbody = _vecWeakBodies[bodyId].lock();
                     if( bCollisionCheckerChanged ) {
                         GetCollisionChecker()->InitKinBody(pnewbody);
                     }
                     if( bPhysicsEngineChanged ) {
                         GetPhysicsEngine()->InitKinBody(pnewbody);
                     }
-                    pnewbody->__hashkinematics = (*itbody)->__hashkinematics;
+                    pnewbody->__hashkinematics = body.__hashkinematics;
                     if( pnewbody->IsRobot() ) {
-                        RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
+                        RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
                         RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
                         // don't clone grabbed bodies!
                         RobotBase::RobotStateSaver saver(poldrobot, 0xffffffff&~KinBody::Save_GrabbedBodies);
@@ -3201,57 +3212,66 @@ protected:
                         pnewrobot->__hashrobotstructure = poldrobot->__hashrobotstructure;
                     }
                     else {
-                        KinBody::KinBodyStateSaver saver(*itbody, 0xffffffff&~KinBody::Save_GrabbedBodies);
+                        KinBody::KinBodyStateSaver saver(pbody, 0xffffffff&~KinBody::Save_GrabbedBodies);
                         saver.Restore(pnewbody);
                     }
                 }
             }
 
             // now clone
-            FOREACHC(itbody, listToClone) {
+            for (const KinBodyPtr& pbody : listToClone) {
+                const KinBody& body = *pbody;
+                const int bodyId = body.GetEnvironmentId();
                 try {
-                    KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
+                    KinBodyPtr pnewbody = _vecWeakBodies[bodyId].lock();
                     if( !!pnewbody ) {
-                        pnewbody->Clone(*itbody,options);
+                        pnewbody->Clone(pbody,options);
                     }
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("failed to clone body %s: %s", (*itbody)->GetName()%ex.what());
+                    RAVELOG_ERROR_FORMAT("failed to clone body %s: %s", body.GetName()%ex.what());
                 }
             }
-            FOREACH(itbody,listToClone) {
-                KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
+
+            for (const KinBodyPtr& pbody : listToClone) {
+                const KinBody& body = *pbody;
+                const int bodyId = body.GetEnvironmentId();
+                KinBodyPtr pnewbody = _vecWeakBodies[bodyId].lock();
                 pnewbody->_ComputeInternalInformation();
                 GetCollisionChecker()->InitKinBody(pnewbody);
                 GetPhysicsEngine()->InitKinBody(pnewbody);
-                pnewbody->__hashkinematics = (*itbody)->__hashkinematics; /// _ComputeInternalInformation resets the hashes
+                pnewbody->__hashkinematics = body.__hashkinematics; /// _ComputeInternalInformation resets the hashes
                 if( pnewbody->IsRobot() ) {
-                    RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
+                    RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
                     RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
                     pnewrobot->__hashrobotstructure = poldrobot->__hashrobotstructure;
                 }
             }
             // update the state after every body is initialized!
-            FOREACH(itbody,listToClone) {
-                KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
-                if( (*itbody)->IsRobot() ) {
-                    RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
-                    RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_mapBodies[(*itbody)->GetEnvironmentId()].lock());
+            for (const KinBodyPtr& pbody : listToClone) {
+                const KinBody& body = *pbody;
+                const int bodyId = body.GetEnvironmentId();
+                KinBodyPtr pnewbody = _vecWeakBodies[bodyId].lock();
+                if( body.IsRobot() ) {
+                    RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
+                    RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_vecWeakBodies[bodyId].lock());
                     // need to also update active dof/active manip since it is erased by _ComputeInternalInformation
                     RobotBase::RobotStateSaver saver(poldrobot, KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities|KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator);
                     saver.Restore(pnewrobot);
                 }
                 else {
-                    KinBody::KinBodyStateSaver saver(*itbody, KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities); // all the others should have been saved?
+                    KinBody::KinBodyStateSaver saver(pbody, KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities); // all the others should have been saved?
                     saver.Restore(pnewbody);
                 }
             }
             if( listToCopyState.size() > 0 ) {
                 // check for re-grabs after cloning is done
-                FOREACH(itbody,listToCopyState) {
-                    if( (*itbody)->IsRobot() ) {
-                        RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
-                        RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_mapBodies[(*itbody)->GetEnvironmentId()].lock());
+                for (const KinBodyPtr& pbody : listToCopyState) {
+                    const KinBody& body = *pbody;
+                    if( body.IsRobot() ) {
+                        const int bodyId = body.GetEnvironmentId();
+                        RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
+                        RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_vecWeakBodies[bodyId].lock());
                         RobotBase::RobotStateSaver saver(poldrobot, KinBody::Save_GrabbedBodies);
                         saver.Restore(pnewrobot);
                     }
@@ -3420,25 +3440,42 @@ protected:
     {
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         const bool bRecycleId = !_environmentIndexRecyclePool.empty();
-        int id = 0;
+        int bodyId = 0;
         if (bRecycleId) {
-            id = _environmentIndexRecyclePool.back();
+            bodyId = _environmentIndexRecyclePool.back();
             _environmentIndexRecyclePool.pop_back();
-            //RAVELOG_INFO_FORMAT("env=%d, recycled body id=%d for %s", GetId()%id%pbody->GetName());
+            //RAVELOG_INFO_FORMAT("env=%d, recycled body bodyId=%d for %s", GetId()%bodyId%pbody->GetName());
         }
         else {
-            id = _mapBodies.size() + 1; // no kin body should have an environment id higher than _mapBodies.size() when _environmentIndexRecyclePool is empty.
-            //RAVELOG_INFO_FORMAT("env=%d, assigned new body id=%d for %s", GetId()%id%pbody->GetName());
+            bodyId = _vecWeakBodies.size() + 1; // no kin body should have an environment bodyId higher than _vecWeakBodies.size() when _environmentIndexRecyclePool is empty.
+            //RAVELOG_INFO_FORMAT("env=%d, assigned new body bodyId=%d for %s", GetId()%bodyId%pbody->GetName());
         }
-        BOOST_ASSERT( _mapBodies.find(id) == _mapBodies.end() );
-        pbody->_environmentid=id;
-        _mapBodies[id] = pbody;
+        BOOST_ASSERT( _vecWeakBodies.size() < bodyId + 1 || !_vecWeakBodies.at(bodyId).lock());
+        pbody->_environmentid=bodyId;
+
+        if (_vecWeakBodies.size() < bodyId + 1) {
+            _vecWeakBodies.resize(bodyId + 1, KinBodyWeakPtr());
+        }
+        _vecWeakBodies[bodyId] = pbody;
     }
 
     virtual void RemoveEnvironmentId(KinBodyPtr pbody)
     {
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
-        _mapBodies.erase(pbody->_environmentid);
+
+        const int bodyId = pbody->_environmentid;
+        if (bodyId == _vecWeakBodies.size() - 1) {
+            int numErase = 1; // last element is already decided to be erased
+            for (; numErase < _vecWeakBodies.size() - 1; ++numErase) {
+                if (!!_vecWeakBodies[_vecWeakBodies.size() - 1 - numErase].lock()) {
+                    break;
+                }
+            }
+            _vecWeakBodies.erase(_vecWeakBodies.end() - numErase, _vecWeakBodies.end());
+        }
+        else {
+            _vecWeakBodies.at(pbody->_environmentid) = KinBodyWeakPtr();
+        }
 
         _environmentIndexRecyclePool.push_back(pbody->_environmentid); // for recycle later
         //RAVELOG_INFO_FORMAT("env=%d, removed body id=%d from %s, recycle later", GetId()%pbody->GetName()%pbody->_environmentid);
@@ -3744,14 +3781,14 @@ protected:
     CollisionCheckerBasePtr _pCurrentChecker;
     PhysicsEngineBasePtr _pPhysicsEngine;
 
-    std::map<int, KinBodyWeakPtr> _mapBodies;     ///< a map of all the bodies in the environment. Controlled through the KinBody constructor and destructors
+    std::vector<KinBodyWeakPtr> _vecWeakBodies;     ///< a vector of all the bodies in the environment. Controlled through the KinBody constructor and destructors
     std::vector<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. 
 
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation
 
     mutable EnvironmentMutex _mutexEnvironment;          ///< protects internal data from multithreading issues
     mutable boost::mutex _mutexEnvironmentIds;      ///< protects _vecbodies/_vecrobots from multithreading issues
-    mutable boost::timed_mutex _mutexInterfaces;     ///< lock when managing interfaces like _listOwnedInterfaces, _listModules, _mapBodies
+    mutable boost::timed_mutex _mutexInterfaces;     ///< lock when managing interfaces like _listOwnedInterfaces, _listModules, _vecWeakBodies
     mutable boost::mutex _mutexInit;     ///< lock for destroying the environment
 
     vector<KinBody::BodyState> _vPublishedBodies;
