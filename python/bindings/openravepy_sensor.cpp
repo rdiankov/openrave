@@ -130,7 +130,6 @@ void PyCameraGeomData::_Update(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData co
     hardware_id = pgeom->hardware_id;
     width = pgeom->width;
     height = pgeom->height;
-    sensor_reference = pgeom->sensor_reference;
     target_region = pgeom->target_region;
     measurement_time = pgeom->measurement_time;
     gain = pgeom->gain;
@@ -142,7 +141,6 @@ SensorBase::SensorGeometryPtr PyCameraGeomData::GetGeometry() {
     geom->width = width;
     geom->height = height;
     geom->intrinsics = intrinsics.GetCameraIntrinsics();
-    geom->sensor_reference = sensor_reference;
     geom->target_region = target_region;
     geom->measurement_time = measurement_time;
     geom->gain = gain;
@@ -196,18 +194,53 @@ SensorBase::SensorGeometryPtr PyJointEncoderGeomData::GetGeometry() {
     return geom;
 }
 
-PyForce6DGeomData::PyForce6DGeomData() {
+PyForce6DGeomData::PyForce6DGeomData() : polarity(1) {
+    const boost::array<dReal,36> correctionMatrix({{1,0,0, 0,0,0,
+                    0,1,0, 0,0,0,
+                    0,0,1, 0,0,0,
+                    0,0,0, 1,0,0,
+                    0,0,0, 0,1,0,
+                    0,0,0, 0,0,1}});
+    correction_matrix = toPyArray<dReal, 36>(correctionMatrix);
 }
 PyForce6DGeomData::PyForce6DGeomData(OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const> pgeom)
+    : PyForce6DGeomData()
 {
+    _Update(pgeom);
 }
 PyForce6DGeomData::~PyForce6DGeomData() {
 }
 SensorBase::SensorType PyForce6DGeomData::GetType() {
     return SensorBase::ST_Force6D;
 }
+object PyForce6DGeomData::SerializeJSON(dReal fUnitScale, object options) {
+    rapidjson::Document doc;
+    SensorBase::SensorGeometryPtr pgeom = GetGeometry();
+    pgeom->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
+    return toPyObject(doc);
+}
+
+void PyForce6DGeomData::DeserializeJSON(object obj, dReal fUnitScale) {
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    SensorBase::Force6DGeomDataPtr pgeom(new SensorBase::Force6DGeomData());
+    pgeom->DeserializeJSON(doc, fUnitScale);
+    _Update(pgeom);
+}
+void PyForce6DGeomData::_Update(OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const> pgeom)
+{
+    hardware_id = pgeom->hardware_id;
+    polarity = pgeom->polarity;
+    correction_matrix = toPyArray<dReal, 36>(pgeom->correction_matrix);
+}
 SensorBase::SensorGeometryPtr PyForce6DGeomData::GetGeometry() {
     OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData> geom(new SensorBase::Force6DGeomData());
+    geom->hardware_id = hardware_id;
+    geom->polarity = polarity;
+    const size_t num = len(correction_matrix);
+    for (size_t i = 0; i < num; ++i) {
+        geom->correction_matrix[i] = py::extract<dReal>(correction_matrix[i]);
+    }
     return geom;
 }
 
@@ -679,9 +712,11 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Configure_overloads, Configure, 1, 2)
 // SerializeJSON
 // BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PySensorGeometry_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyCameraGeomData_SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyForce6DGeomData_SerializeJSON_overloads, SerializeJSON, 0, 2)
 // DeserializeJSON
 // BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PySensorGeometry_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyCameraGeomData_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyForce6DGeomData_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -952,7 +987,6 @@ void init_openravepy_sensor()
     .def_readwrite("hardware_id",&PyCameraGeomData::hardware_id)
     .def_readwrite("width",&PyCameraGeomData::width)
     .def_readwrite("height",&PyCameraGeomData::height)
-    .def_readwrite("sensor_reference",&PyCameraGeomData::sensor_reference)
     .def_readwrite("target_region",&PyCameraGeomData::target_region)
     .def_readwrite("measurement_time",&PyCameraGeomData::measurement_time)
     .def_readwrite("gain",&PyCameraGeomData::gain)
@@ -1005,6 +1039,24 @@ void init_openravepy_sensor()
     .def(init<OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const>>(), "pgeom"_a)
 #else
     class_<PyForce6DGeomData, OPENRAVE_SHARED_PTR<PyForce6DGeomData>, bases<PySensorGeometry> >("Force6DGeomData", DOXY_CLASS(SensorBase::Force6DGeomData))
+#endif
+    .def_readwrite("hardware_id",&PyForce6DGeomData::hardware_id)
+    .def_readwrite("polarity",&PyForce6DGeomData::polarity)
+    .def_readwrite("correction_matrix",&PyForce6DGeomData::correction_matrix)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("SerializeJSON", &PyForce6DGeomData::SerializeJSON,
+        "unitScale"_a = 1.0,
+        "options"_a = py::none_(),
+        DOXY_FN(SensorBase::Force6DGeomData, SerializeJSON)
+    )
+    .def("DeserializeJSON", &PyForce6DGeomData::DeserializeJSON,
+        "obj"_a,
+        "unitScale"_a = 1.0,
+        DOXY_FN(SensorBase::Force6DGeomData, DeserializeJSON)
+    )
+#else
+    .def("SerializeJSON", &PyForce6DGeomData::SerializeJSON, PyForce6DGeomData_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(SensorBase::Force6DGeomData, SerializeJSON)))
+    .def("DeserializeJSON", &PyForce6DGeomData::DeserializeJSON, PyForce6DGeomData_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(SensorBase::Force6DGeomData, DeserializeJSON)))
 #endif
     ;
 

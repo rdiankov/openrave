@@ -40,13 +40,15 @@ public:
     void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
     EnvironmentBase::EnvironmentBaseInfoPtr GetEnvironmentBaseInfo() const;
     int _revision = 0;
-    py::list _keywords;
+
     object _gravity = toPyVector3(Vector(0,0,-9.797930195020351));
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::vector<std::string> _keywords;
     std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos;
     std::string _name;
     std::string _description;
 #else
+    py::list _keywords;
     py::object _vBodyInfos = py::none_();
     py::object _name = py::none_();
     py::object _description = py::none_();
@@ -126,6 +128,7 @@ public:
     bool Load(const std::string &filename);
     bool Load(const std::string &filename, object odictatts);
     bool LoadURI(const std::string &filename, object odictatts=py::none_());
+    py::object LoadJSON(py::object oEnvInfo, UpdateFromInfoMode updateMode, object odictatts=py::none_());
     bool LoadData(const std::string &data);
     bool LoadData(const std::string &data, object odictatts);
 
@@ -133,6 +136,8 @@ public:
 
     object WriteToMemory(const std::string &filetype, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_());
 
+    /// will be unlocking GIL since doing FS or memory-intensive operations 
+    //@{
     object ReadRobotURI(const std::string &filename);
     object ReadRobotURI(const std::string &filename, object odictatts);
     object ReadRobotData(const std::string &data);
@@ -143,13 +148,15 @@ public:
     object ReadKinBodyData(const std::string &data, object odictatts);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, object odictatts);
+    //@}
+
     object ReadTrimeshURI(const std::string& filename);
     object ReadTrimeshURI(const std::string& filename, object odictatts);
 
     object ReadTrimeshData(const std::string& data, const std::string& formathint);
     object ReadTrimeshData(const std::string& data, const std::string& formathint, object odictatts);
 
-    void Add(PyInterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="");
+    void Add(PyInterfaceBasePtr pinterface, py::object addMode=py::none_(), const std::string& cmdargs="");
 
     void AddKinBody(PyKinBodyPtr pbody);
     void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous);
@@ -274,9 +281,10 @@ public:
     void SetUnit(std::string unitname, dReal unitmult);
 
     object GetUnit() const;
+    int GetId() const;
 
     object ExtractInfo() const;
-    object UpdateFromInfo(PyEnvironmentBaseInfoPtr info);
+    object UpdateFromInfo(PyEnvironmentBaseInfoPtr info, UpdateFromInfoMode updateMode);
 
     int _revision = 0;
     py::list _keywords;

@@ -255,7 +255,6 @@ public:
             intrinsics = r.intrinsics;
             width = r.width;
             height = r.height;
-            sensor_reference = r.sensor_reference;
             target_region = r.target_region;
             measurement_time = r.measurement_time;
             gain = r.gain;
@@ -271,7 +270,6 @@ public:
                    && intrinsics == pOther->intrinsics
                    && width == pOther->width
                    && height == pOther->height
-                   && sensor_reference == pOther->sensor_reference
                    && target_region == pOther->target_region
                    && measurement_time == pOther->measurement_time
                    && gain == pOther->gain;
@@ -281,7 +279,6 @@ public:
         bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
         bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
 
-        std::string sensor_reference; ///< name of sensor that whose data is referenced. This sensor transforms the data in a particular way.
         std::string target_region; ///< name of the kinbody that describes the region of interest for the camera.
         CameraIntrinsics intrinsics;         ///< intrinsic matrix
         int width, height;         ///< width and height of image
@@ -314,7 +311,12 @@ public:
     class OPENRAVE_API Force6DGeomData : public SensorGeometry
     {
 public:
-        Force6DGeomData() : SensorGeometry("Force6D") {
+        Force6DGeomData() : SensorGeometry("Force6D"), polarity(1), correction_matrix({{1,0,0, 0,0,0,
+                        0,1,0, 0,0,0,
+                        0,0,1, 0,0,0,
+                        0,0,0, 1,0,0,
+                        0,0,0, 0,1,0,
+                        0,0,0, 0,0,1}}) {
         }
         virtual SensorType GetType() const {
             return ST_Force6D;
@@ -324,9 +326,20 @@ public:
             if (!pOther) {
                 return false;
             }
-            return SensorGeometry::operator==(other);
+            return SensorGeometry::operator==(other)
+                   && polarity == pOther->polarity
+                   && correction_matrix == pOther->correction_matrix;
         }
+
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override;
+        bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
+        bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
+
+        int polarity; ///< sensor's polarity. set +1 if load is attached to the side of sensor which sensor's spec explains. set -1 if load is attached to the opposite side.
+        boost::array<dReal,36> correction_matrix; ///< correction matrix. force -> torque order. this matrix will be used to cancel crosstalk by multiplying to measured force/torque. f_without_crosstalk = correction_matrix * f_measured.
     };
+    typedef boost::shared_ptr<Force6DGeomData> Force6DGeomDataPtr;
+    typedef boost::shared_ptr<Force6DGeomData const> Force6DGeomDataConstPtr;
     class OPENRAVE_API IMUGeomData : public SensorGeometry
     {
 public:

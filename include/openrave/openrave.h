@@ -321,8 +321,10 @@ enum CloningOptions {
 class OPENRAVE_API Readable : public UserData
 {
 public:
-    Readable() {}
-    virtual ~Readable() {}
+    Readable() {
+    }
+    virtual ~Readable() {
+    }
 
     Readable(const std::string& xmlid) : __xmlid(xmlid) {
     }
@@ -349,7 +351,8 @@ public:
     }
 
     virtual bool operator==(const Readable& other) {
-        return false;
+        // by default, compare pointer value
+        return this == &other;
     }
 
     virtual bool operator!=(const Readable& other) {
@@ -459,8 +462,10 @@ class OPENRAVE_API BaseJSONReader : public boost::enable_shared_from_this<BaseJS
 {
 public:
 
-    BaseJSONReader() {}
-    virtual ~BaseJSONReader() {}
+    BaseJSONReader() {
+    }
+    virtual ~BaseJSONReader() {
+    }
 
     /// a readable interface that stores the information processsed for the current tag
     /// This pointer is used to the InterfaceBase class registered readers
@@ -598,11 +603,18 @@ enum IkParameterizationType {
     IKP_CustomDataBit = 0x00010000, ///< bit is set if the ikparameterization contains custom data, this is only used when serializing the ik parameterizations
 };
 
-class OPENRAVE_API StringReadable: public Readable
+class OPENRAVE_API StringReadable : public Readable
 {
 public:
     StringReadable(const std::string& id, const std::string& data);
     virtual ~StringReadable();
+
+    /// \brief sets new string data
+    void SetData(const std::string& newdata);
+
+    /// \brief gets a reference to the saved data;
+    const std::string& GetData() const;
+
     bool SerializeXML(BaseXMLWriterPtr wirter, int options=0) const override;
     bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
     bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
@@ -614,8 +626,6 @@ public:
 
         return _data == pOther->_data;
     }
-
-    const std::string& GetData() const;
 
 private:
     std::string _data;
@@ -2128,9 +2138,9 @@ public:
 
     virtual bool operator==(const IkParameterization& other) const {
         return _id == other._id
-            && _type == other._type
-            && _transform == other._transform
-            && _mapCustomData == other._mapCustomData;
+               && _type == other._type
+               && _transform == other._transform
+               && _mapCustomData == other._mapCustomData;
     }
 
     virtual bool operator!=(const IkParameterization& other) const {
@@ -2350,29 +2360,6 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
 
 OPENRAVE_API std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam);
 OPENRAVE_API std::istream& operator>>(std::istream& I, IkParameterization& ikparam);
-
-
-/// \brief converts the value into output and writes a null terminator
-///
-/// \return length of string (ie strlen(output))
-inline uint32_t ConvertUIntToHex(uint32_t value, char* output)
-{
-    uint32_t length = 1; // in case value is 0, still requires one character '0'
-    if( value > 0 ) {
-        length = 8-(__builtin_clz(value)/4);
-    }
-    for(uint32_t index = 0; index < length; ++index) {
-        uint32_t nibble = (value>>(4*(length-1-index)))&0xf;
-        if( nibble < 10 ) {
-            output[index] = '0'+nibble;
-        }
-        else {
-            output[index] = 'A'+(nibble-10);
-        }
-    }
-    output[length] = 0; // null terminator
-    return length;
-}
 
 /// \brief User data for trimesh geometries. Vertices are defined in counter-clockwise order for outward pointing faces.
 class OPENRAVE_API TriMesh

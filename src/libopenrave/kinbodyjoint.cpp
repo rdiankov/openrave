@@ -280,9 +280,6 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
 
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
-    if( _id.empty() ) {
-        _id = _name;
-    }
 
     orjson::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
     orjson::LoadJsonValueByKey(value, "anchors", _vanchor);
@@ -2013,8 +2010,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     }
 
     for(int itype = 1; itype < 3; ++itype) {
-        if(itype == 2 && pmimic->_equations[itype].empty()) {
-            // ignore empty mimic_accel
+        if(itype != 0 && pmimic->_equations[itype].empty()) {
             continue;
         }
 
@@ -2157,12 +2153,19 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > localmap;
     const size_t nvars = vdofformats.size(); ///< number of joints on which this joint depends on
     std::vector<std::pair<int, dReal> > vLocalIndexPartialPairs;
+    const size_t nvelfns = pmimic->_velfns.size(); // when user did not provide mimic_vel, we had not allocated pmimic->_velfns so it has size 0, and we set fvel=0 below
     for(size_t ivar = 0; ivar < nvars; ++ivar) {
         const Mimic::DOFFormat& dofformat = vdofformats[ivar]; ///< information about the ivar-th depended joint
         const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< a joint on which this joint depends on
         const int jointindex = dofformat.jointindex; ///< index of this depended joint
-        const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
-        const dReal fvel = velfn->Eval(vDependedJointValues.empty() ? NULL : &vDependedJointValues[0]); ///< value of ∂z/∂x
+        dReal fvel = 0;
+        if(ivar < nvelfns) {
+            const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
+            fvel = velfn->Eval(vDependedJointValues.empty() ? NULL : &vDependedJointValues[0]); ///< value of ∂z/∂x
+        }
+        else {
+            RAVELOG_WARN_FORMAT("This mimic joint %s depends on joint %s, but the user did not provide the mimic velocity formula. Now treat the first-order partial derivative as 0", this->GetName() % dependedjoint->GetName());
+        }
 
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
             RAVELOG_VERBOSE_FORMAT("∂(J%d)/∂(J%d) = ∂(%s)/∂(%s) = %.8e", thisdofformat.jointindex % jointindex % this->GetName() % dependedjoint->GetName() % fvel);
@@ -2186,7 +2189,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
                 }
             }
         }
-        else {
+        else if (!dependedjoint->IsStatic()) {
             // depended joint is active
             std::pair<Mimic::DOFFormat, int> key = {thisdofformat, jointindex};
             ///< dz/dx += ∂z/∂x, as z may depend on others who depend on x

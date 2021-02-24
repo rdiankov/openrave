@@ -28,7 +28,8 @@ class OpenRAVEFunctionParserReal;
 typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
 
 /// \brief Result of UpdateFromInfo() call
-enum UpdateFromInfoResult {
+enum UpdateFromInfoResult
+{
     UFIR_NoChange = 0, ///< Nothing changed
     UFIR_Success = 1, ///< Updated successfully
     UFIR_RequireRemoveFromEnvironment = 2, ///< Failed to update, require the kinbody to be removed from environment before update can succeed
@@ -44,6 +45,7 @@ enum GeometryType {
     GT_TriMesh = 4,
     GT_Container=5, ///< a container shaped geometry that has inner and outer extents. container opens on +Z. The origin is at the bottom of the base.
     GT_Cage=6, ///< a container shaped geometry with removable side walls. The side walls can be on any of the four sides. The origin is at the bottom of the base. The inner volume of the cage is measured from the base to the highest wall.
+    GT_CalibrationBoard=7, ///< a box shaped geometry with grid of cylindrical dots of two sizes. The dots are always on the +z side of the box and are oriented towards z-axis.
 };
 
 enum DynamicsConstraintsType {
@@ -173,6 +175,9 @@ public:
         CLA_CheckLimitsThrow = 3, ///< check the limits and throws if something went wrong
     };
 
+    class OPENRAVE_API Link; // forward decl
+    class OPENRAVE_API Geometry; // forward decl
+
     /// \brief Describes the properties of a geometric primitive.
     ///
     /// Contains everything associated with a geometry's appearance and shape
@@ -203,7 +208,8 @@ public:
                    && _vCollisionScale == other._vCollisionScale
                    && _fTransparency == other._fTransparency
                    && _bVisible == other._bVisible
-                   && _bModifiable == other._bModifiable;
+                   && _bModifiable == other._bModifiable
+                   && _calibrationBoardParameters == other._calibrationBoardParameters;
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
@@ -250,7 +256,12 @@ public:
         /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
 
-        Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
 
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
@@ -330,9 +341,314 @@ public:
         bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
 
+        struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
+            CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
+            } ///< constructor
+            int numDotsX; ///< number of dots in x direction, minimum 3
+            int numDotsY; ///< number of dots in y direction, minimum 3
+            dReal dotsDistanceX; ///< distance between center of dots in x direction
+            dReal dotsDistanceY; ///< distance between center of dots in y direction
+            RaveVector<float> dotColor; ///< color of dot mesh, which can differ from the color of the board mesh
+            std::string patternName; ///< string that determines pattern of big and normal dots
+                                     /// currently, the only supported type is "threeBigDotsDotGrid"
+                                     /// any unsupported pattern will generate a full grid of normal dots
+            dReal dotDiameterDistanceRatio; ///< dot diameter divided by minimum of dot distances x and y
+            dReal bigDotDiameterDistanceRatio; ///< big dot diameter divided by minimum of dot distances x and y
+            int Compare(const CalibrationBoardParameters& other, dReal fEpsilon) const;
+            bool operator==(const CalibrationBoardParameters& other) const {
+                return numDotsX == other.numDotsX
+                       && numDotsY == other.numDotsY
+                       && dotsDistanceX == other.dotsDistanceX
+                       && dotsDistanceY == other.dotsDistanceY
+                       && dotColor == other.dotColor
+                       && patternName == other.patternName
+                       && dotDiameterDistanceRatio == other.dotDiameterDistanceRatio
+                       && bigDotDiameterDistanceRatio == other.bigDotDiameterDistanceRatio;
+            }
+            bool operator!=(const CalibrationBoardParameters& other) const {
+                return !operator==(other);
+            }
+        };
+        std::vector<CalibrationBoardParameters> _calibrationBoardParameters;
+
+        /// \brief Generates the calibration board's dot grid mesh based on calibration board settings
+        void GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation=1) const;
+
+        enum GeometryInfoField : uint32_t
+        {
+            GIF_Transform = (1 << 0), // _t field
+            GIF_Mesh = (1 << 1), // _meshcollision field
+        };
+
+        inline const Transform& GetTransform() const {
+            return _t;
+        }
+        inline void SetTransform(const Transform& t) {
+            _t = t;
+            _modifiedFields |= GIF_Transform;
+        }
+
+        inline bool IsModifiedField(GeometryInfoField field) const {
+            return !!(_modifiedFields & field);
+        }
+private:
+        Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
+
+        uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of GeometryInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
+
+        /// \brief adds modified fields
+        inline void AddModifiedField(GeometryInfoField field) {
+            _modifiedFields |= field;
+        }
+
+        friend class Geometry;
+        friend class Link;
+        friend class KinBody;
+        friend class RobotBase;
     };
+
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
+
+    /// \brief geometry object holding a link parent and wrapping access to a protected geometry info
+    class OPENRAVE_API Geometry
+    {
+public:
+        /// \deprecated (12/07/16)
+        static const GeometryType GeomNone RAVE_DEPRECATED = OpenRAVE::GT_None;
+        static const GeometryType GeomBox RAVE_DEPRECATED = OpenRAVE::GT_Box;
+        static const GeometryType GeomSphere RAVE_DEPRECATED = OpenRAVE::GT_Sphere;
+        static const GeometryType GeomCylinder RAVE_DEPRECATED = OpenRAVE::GT_Cylinder;
+        static const GeometryType GeomTrimesh RAVE_DEPRECATED = OpenRAVE::GT_TriMesh;
+
+        Geometry(boost::shared_ptr<Link> parent, const KinBody::GeometryInfo& info);
+        virtual ~Geometry() {
+        }
+
+        /// \brief get local geometry transform
+        inline const Transform& GetTransform() const {
+            return _info._t;
+        }
+        inline GeometryType GetType() const {
+            return _info._type;
+        }
+
+        inline const Vector& GetRenderScale() const {
+            return _info._vRenderScale;
+        }
+
+        inline const std::string& GetRenderFilename() const {
+            return _info._filenamerender;
+        }
+        inline float GetTransparency() const {
+            return _info._fTransparency;
+        }
+        /// \deprecated (12/1/12)
+        inline bool IsDraw() const RAVE_DEPRECATED {
+            return _info._bVisible;
+        }
+        inline bool IsVisible() const {
+            return _info._bVisible;
+        }
+        inline bool IsModifiable() const {
+            return _info._bModifiable;
+        }
+
+        inline dReal GetSphereRadius() const {
+            return _info._vGeomData.x;
+        }
+        inline dReal GetCylinderRadius() const {
+            return _info._vGeomData.x;
+        }
+        inline dReal GetCylinderHeight() const {
+            return _info._vGeomData.y;
+        }
+        inline const Vector& GetBoxExtents() const {
+            return _info._vGeomData;
+        }
+        inline const Vector& GetContainerOuterExtents() const {
+            return _info._vGeomData;
+        }
+        inline const Vector& GetContainerInnerExtents() const {
+            return _info._vGeomData2;
+        }
+        inline const Vector& GetContainerBottomCross() const {
+            return _info._vGeomData3;
+        }
+        inline const Vector& GetContainerBottom() const {
+            return _info._vGeomData4;
+        }
+        inline const RaveVector<float>& GetDiffuseColor() const {
+            return _info._vDiffuseColor;
+        }
+        inline const RaveVector<float>& GetAmbientColor() const {
+            return _info._vAmbientColor;
+        }
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
+        inline const std::string& GetName() const {
+            return _info._name;
+        }
+
+        /// \brief returns the local collision mesh
+        inline const TriMesh& GetCollisionMesh() const {
+            return _info._meshcollision;
+        }
+
+        inline const KinBody::GeometryInfo& GetInfo() const {
+            return _info;
+        }
+
+        inline const KinBody::GeometryInfo& UpdateAndGetInfo() {
+            UpdateInfo();
+            return _info;
+        }
+
+        virtual void UpdateInfo();
+
+        /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+        virtual void ExtractInfo(KinBody::GeometryInfo& info) const;
+
+        /// \brief update Geometry according to new GeometryInfo, returns false if update cannot be performed and requires InitFromInfo
+        virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::GeometryInfo& info);
+
+        /// cage
+        //@{
+        inline const Vector& GetCageBaseExtents() const {
+            return _info._vGeomData;
+        }
+
+        /// \brief compute the inner empty volume in the parent link coordinate system
+        ///
+        /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
+        virtual bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
+        //@}
+
+        virtual bool InitCollisionMesh(float fTessellation=1);
+
+        /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
+        virtual AABB ComputeAABB(const Transform& trans) const;
+
+        virtual uint8_t GetSideWallExists() const;
+
+        virtual void serialize(std::ostream& o, int options) const;
+
+        /// \brief sets a new collision mesh and notifies every registered callback about it
+        virtual void SetCollisionMesh(const TriMesh& mesh);
+        /// \brief sets visible flag. if changed, notifies every registered callback about it.
+        ///
+        /// \return true if changed
+        virtual bool SetVisible(bool visible);
+
+        /// \deprecated (12/1/12)
+        inline void SetDraw(bool bDraw) RAVE_DEPRECATED {
+            SetVisible(bDraw);
+        }
+        /// \brief set transparency level (0 is opaque)
+        virtual void SetTransparency(float f);
+        /// \brief override diffuse color of geometry material
+        virtual void SetDiffuseColor(const RaveVector<float>& color);
+        /// \brief override ambient color of geometry material
+        virtual void SetAmbientColor(const RaveVector<float>& color);
+
+        /// \brief validates the contact normal on the surface of the geometry and makes sure the normal faces "outside" of the shape.
+        ///
+        /// \param position the position of the contact point specified in the link's coordinate system
+        /// \param normal the unit normal of the contact point specified in the link's coordinate system
+        /// \return true if the normal is changed to face outside of the shape
+        virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
+
+        /// \brief sets a new render filename for the geometry. This does not change the collision
+        virtual void SetRenderFilename(const std::string& renderfilename);
+
+        /// \brief sets the name of the geometry
+        virtual void SetName(const std::string& name);
+
+        /// \brief generates the dot mesh of a calibration board
+        inline void GetCalibrationBoardDotMesh(TriMesh& tri) {
+            _info.GenerateCalibrationBoardDotMesh(tri);
+        }
+        /// \brief returns the color of the calibration board's dot mesh
+        inline RaveVector<float> GetCalibrationBoardDotColor() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].dotColor;
+            }
+            return Vector(0, 0, 0);
+        }
+        /// \brief returns x dimension (in dots) of the calibration board dot grid
+        inline int GetCalibrationBoardNumDotsX() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].numDotsX;
+            }
+            return 0;
+        }
+        /// \brief returns y dimension (in dots) of the calibration board dot grid
+        inline int GetCalibrationBoardNumDotsY() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].numDotsY;
+            }
+            return 0;
+        }
+        /// \brief returns x dot distance of the calibration board dot grid
+        inline dReal GetCalibrationBoardDotsDistanceX() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].dotsDistanceX;
+            }
+            return 0;
+        }
+        /// \brief returns y dot distance of the calibration board dot grid
+        inline dReal GetCalibrationBoardDotsDistanceY() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].dotsDistanceY;
+            }
+            return 0;
+        }
+
+        /// \brief returns pattern name of the calibration board dot grid
+        inline std::string GetCalibrationBoardPatternName() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].patternName;
+            }
+            return std::string();
+        }
+        /// \brief returns x dot distance of the calibration board dot grid
+        inline dReal GetCalibrationBoardDotDiameterDistanceRatio() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].dotDiameterDistanceRatio;
+            }
+            return 0;
+        }
+        /// \brief returns x dot distance of the calibration board dot grid
+        inline dReal GetCalibrationBoardBigDotDiameterDistanceRatio() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].bigDotDiameterDistanceRatio;
+            }
+            return 0;
+        }
+
+protected:
+        boost::weak_ptr<Link> _parent;
+        KinBody::GeometryInfo _info; ///< geometry info
+#ifdef RAVE_PRIVATE
+#ifdef _MSC_VER
+        friend class OpenRAVEXMLParser::LinkXMLReader;
+        friend class OpenRAVEXMLParser::KinBodyXMLReader;
+        friend class XFileReader;
+#else
+        friend class ::OpenRAVEXMLParser::LinkXMLReader;
+        friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
+        friend class ::XFileReader;
+#endif
+#endif
+        friend class ColladaReader;
+        friend class RobotBase;
+        friend class KinBody;
+        friend class KinBody::Link;
+    };
+
+    typedef boost::shared_ptr<Geometry> GeometryPtr;
+    typedef boost::shared_ptr<Geometry const> GeometryConstPtr;
 
     /// \brief Describes the properties of a link used to initialize it
     class OPENRAVE_API LinkInfo : public InfoBase
@@ -362,6 +678,13 @@ public:
         /// \brief converts the unit scale of the link properties and geometries
         void ConvertUnitScale(dReal fUnitScale);
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
+
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
@@ -371,8 +694,7 @@ public:
         std::string _id;
         /// \brief unique link name
         std::string _name;
-        /// the current transformation of the link with respect to the body coordinate system
-        Transform _t;
+
         /// the frame for inertia and center of mass of the link in the link's coordinate system
         Transform _tMassFrame;
         /// mass of link
@@ -393,6 +715,35 @@ public:
         /// \true false if the link is disabled. disabled links do not participate in collision detection
         bool _bIsEnabled = true;
         bool __padding0, __padding1; // for 4-byte alignment
+
+        enum LinkInfoField : uint32_t
+        {
+            LIF_Transform = (1 << 0), // _t field
+        };
+
+        inline const Transform& GetTransform() const {
+            return _t;
+        }
+        inline void SetTransform(const Transform& t) {
+            _t = t;
+            _modifiedFields |= LIF_Transform;
+        }
+
+        inline bool IsModifiedField(LinkInfoField field) const {
+            return !!(_modifiedFields & field);
+        }
+        /// \brief adds modified fields
+        inline void AddModifiedField(LinkInfoField field) {
+            _modifiedFields |= field;
+        }
+private:
+        Transform _t; ///< the current transformation of the link with respect to the body coordinate system
+
+        uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
+
+        friend class Link;
+        friend class KinBody;
+        friend class RobtBase;
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
@@ -406,6 +757,9 @@ public:
 
         /// \deprecated (12/10/18)
         typedef KinBody::GeometryInfo GeometryInfo RAVE_DEPRECATED;
+        typedef KinBody::Geometry Geometry;
+        typedef KinBody::GeometryPtr GeometryPtr;
+        typedef KinBody::GeometryConstPtr GeometryConstPtr;
         typedef boost::shared_ptr<KinBody::GeometryInfo> GeometryInfoPtr RAVE_DEPRECATED;
         typedef TriMesh TRIMESH RAVE_DEPRECATED;
         typedef GeometryType GeomType RAVE_DEPRECATED;
@@ -415,182 +769,9 @@ public:
         static const GeometryType GeomCylinder RAVE_DEPRECATED = OpenRAVE::GT_Cylinder;
         static const GeometryType GeomTrimesh RAVE_DEPRECATED = OpenRAVE::GT_TriMesh;
 
-        /// \brief geometry object holding a link parent and wrapping access to a protected geometry info
-        class OPENRAVE_API Geometry
-        {
-public:
-            /// \deprecated (12/07/16)
-            static const GeometryType GeomNone RAVE_DEPRECATED = OpenRAVE::GT_None;
-            static const GeometryType GeomBox RAVE_DEPRECATED = OpenRAVE::GT_Box;
-            static const GeometryType GeomSphere RAVE_DEPRECATED = OpenRAVE::GT_Sphere;
-            static const GeometryType GeomCylinder RAVE_DEPRECATED = OpenRAVE::GT_Cylinder;
-            static const GeometryType GeomTrimesh RAVE_DEPRECATED = OpenRAVE::GT_TriMesh;
-
-            Geometry(boost::shared_ptr<Link> parent, const KinBody::GeometryInfo& info);
-            virtual ~Geometry() {
-            }
-
-            /// \brief get local geometry transform
-            inline const Transform& GetTransform() const {
-                return _info._t;
-            }
-            inline GeometryType GetType() const {
-                return _info._type;
-            }
-
-            inline const Vector& GetRenderScale() const {
-                return _info._vRenderScale;
-            }
-
-            inline const std::string& GetRenderFilename() const {
-                return _info._filenamerender;
-            }
-            inline float GetTransparency() const {
-                return _info._fTransparency;
-            }
-            /// \deprecated (12/1/12)
-            inline bool IsDraw() const RAVE_DEPRECATED {
-                return _info._bVisible;
-            }
-            inline bool IsVisible() const {
-                return _info._bVisible;
-            }
-            inline bool IsModifiable() const {
-                return _info._bModifiable;
-            }
-
-            inline dReal GetSphereRadius() const {
-                return _info._vGeomData.x;
-            }
-            inline dReal GetCylinderRadius() const {
-                return _info._vGeomData.x;
-            }
-            inline dReal GetCylinderHeight() const {
-                return _info._vGeomData.y;
-            }
-            inline const Vector& GetBoxExtents() const {
-                return _info._vGeomData;
-            }
-            inline const Vector& GetContainerOuterExtents() const {
-                return _info._vGeomData;
-            }
-            inline const Vector& GetContainerInnerExtents() const {
-                return _info._vGeomData2;
-            }
-            inline const Vector& GetContainerBottomCross() const {
-                return _info._vGeomData3;
-            }
-            inline const Vector& GetContainerBottom() const {
-                return _info._vGeomData4;
-            }
-            inline const RaveVector<float>& GetDiffuseColor() const {
-                return _info._vDiffuseColor;
-            }
-            inline const RaveVector<float>& GetAmbientColor() const {
-                return _info._vAmbientColor;
-            }
-            inline const std::string& GetName() const {
-                return _info._name;
-            }
-
-            /// \brief returns the local collision mesh
-            inline const TriMesh& GetCollisionMesh() const {
-                return _info._meshcollision;
-            }
-
-            inline const KinBody::GeometryInfo& GetInfo() const {
-                return _info;
-            }
-
-            inline const KinBody::GeometryInfo& UpdateAndGetInfo() {
-                UpdateInfo();
-                return _info;
-            }
-
-            virtual void UpdateInfo();
-
-            /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-            virtual void ExtractInfo(KinBody::GeometryInfo& info) const;
-
-            /// \brief update Geometry according to new GeometryInfo, returns false if update cannot be performed and requires InitFromInfo
-            virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::GeometryInfo& info);
-
-            /// cage
-            //@{
-            inline const Vector& GetCageBaseExtents() const {
-                return _info._vGeomData;
-            }
-
-            /// \brief compute the inner empty volume in the parent link coordinate system
-            ///
-            /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
-            virtual bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
-            //@}
-
-            virtual bool InitCollisionMesh(float fTessellation=1);
-
-            /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
-            virtual AABB ComputeAABB(const Transform& trans) const;
-
-            virtual uint8_t GetSideWallExists() const;
-
-            virtual void serialize(std::ostream& o, int options) const;
-
-            /// \brief sets a new collision mesh and notifies every registered callback about it
-            virtual void SetCollisionMesh(const TriMesh& mesh);
-            /// \brief sets visible flag. if changed, notifies every registered callback about it.
-            ///
-            /// \return true if changed
-            virtual bool SetVisible(bool visible);
-
-            /// \deprecated (12/1/12)
-            inline void SetDraw(bool bDraw) RAVE_DEPRECATED {
-                SetVisible(bDraw);
-            }
-            /// \brief set transparency level (0 is opaque)
-            virtual void SetTransparency(float f);
-            /// \brief override diffuse color of geometry material
-            virtual void SetDiffuseColor(const RaveVector<float>& color);
-            /// \brief override ambient color of geometry material
-            virtual void SetAmbientColor(const RaveVector<float>& color);
-
-            /// \brief validates the contact normal on the surface of the geometry and makes sure the normal faces "outside" of the shape.
-            ///
-            /// \param position the position of the contact point specified in the link's coordinate system
-            /// \param normal the unit normal of the contact point specified in the link's coordinate system
-            /// \return true if the normal is changed to face outside of the shape
-            virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
-
-            /// \brief sets a new render filename for the geometry. This does not change the collision
-            virtual void SetRenderFilename(const std::string& renderfilename);
-
-            /// \brief sets the name of the geometry
-            virtual void SetName(const std::string& name);
-
-protected:
-            boost::weak_ptr<Link> _parent;
-            KinBody::GeometryInfo _info; ///< geometry info
-#ifdef RAVE_PRIVATE
-#ifdef _MSC_VER
-            friend class OpenRAVEXMLParser::LinkXMLReader;
-            friend class OpenRAVEXMLParser::KinBodyXMLReader;
-            friend class XFileReader;
-#else
-            friend class ::OpenRAVEXMLParser::LinkXMLReader;
-            friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
-            friend class ::XFileReader;
-#endif
-#endif
-            friend class ColladaReader;
-            friend class RobotBase;
-            friend class KinBody;
-            friend class KinBody::Link;
-        };
-
-        typedef boost::shared_ptr<Geometry> GeometryPtr;
-        typedef boost::shared_ptr<Geometry const> GeometryConstPtr;
-        typedef Geometry GEOMPROPERTIES RAVE_DEPRECATED;
-
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
         inline const std::string& GetName() const {
             return _info._name;
         }
@@ -908,6 +1089,7 @@ private:
 #endif
 #endif
         friend class ColladaReader;
+        friend class ColladaWriter;
         friend class KinBody;
         friend class RobotBase;
     };
@@ -1063,6 +1245,13 @@ public:
 
         int GetDOF() const;
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return _name;
+        }
+
         JointType _type = JointNone; /// The joint type
 
         std::string _id;   // joint unique id
@@ -1147,6 +1336,9 @@ public:
         Joint(KinBodyPtr parent, KinBody::JointType type = KinBody::JointNone);
         virtual ~Joint();
 
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
         /// \brief The unique name of the joint
         inline const std::string& GetName() const {
             return _info._name;
@@ -1688,6 +1880,9 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
+        void serialize(std::ostream& o) const; ///< used only for hash computation
+        std::string GetGrabbedInfoHash() const;
+
         std::string _id; ///< unique id of the grabbed info
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
@@ -1790,6 +1985,7 @@ private:
         Save_JointMaxVelocityAndAcceleration = 0x00000008, ///< save the max joint velocities and accelerations for the controller DOF
         Save_JointWeights                    = 0x00000010, ///< saves the dof weights
         Save_JointLimits                     = 0x00000020, ///< saves the dof limits
+        Save_JointResolutions                = 0x00000040, ///< saves the dof resolutions
         Save_ActiveDOF                       = 0x00010000, ///< [robot only], saves and restores the current active degrees of freedom
         Save_ActiveManipulator               = 0x00020000, ///< [robot only], saves the active manipulator
         Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
@@ -1816,10 +2012,10 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
-        std::string _id;
-        std::string _uri; ///< uri for this body
-        std::string _name;
-        std::string _referenceUri;  ///< referenced body info uri
+        std::string _id; ///< unique id of the body used to identify it when changing it.
+        std::string _name; ///< name of the body
+        std::string _uri; ///< uri this body comes from
+        std::string _referenceUri;  ///< referenced body info uri this body should be loaded from before the Info data is applied
         std::string _interfaceType; ///< the interface type
 
         Transform _transform; ///< transform of the base link
@@ -1832,8 +2028,26 @@ public:
         std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 
         bool _isRobot = false; ///< true if should create a RobotBasePtr
+
+        enum KinBodyInfoField {
+            KBIF_Transform = (1 << 0), // _transform field
+            KBIF_DOFValues = (1 << 1), // _dofValues field
+        };
+        inline bool IsModifiedField(KinBodyInfoField field) const {
+            return !!(_modifiedFields & field);
+        }
+        /// \brief adds modified fields
+        inline void AddModifiedField(KinBodyInfoField field) {
+            _modifiedFields |= field;
+        }
+
+private:
+        uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of KinBodyInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
+
 protected:
         virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value);
+
+        friend class KinBody; ///< for changing _modifiedFields
 
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
@@ -1871,7 +2085,7 @@ protected:
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
-        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2];
+        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
         std::vector<UserDataPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
 private:
@@ -1917,7 +2131,7 @@ protected:
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
-        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2];
+        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
         std::vector<UserDataPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
         bool _bReleased; ///< if true, then body should not be restored
@@ -2011,6 +2225,14 @@ private:
 
     /// \brief Set the name of the body, notifies the environment and checks for uniqueness.
     virtual void SetName(const std::string& name);
+
+    /// \brief Set the id of the body, notifies the environment and checks for uniqueness.
+    virtual void SetId(const std::string& newid);
+
+    /// \brief Unique name of the body.
+    virtual const std::string& GetId() const {
+        return _id;
+    }
 
     /// Methods for accessing basic information about joints
     /// @name Basic Information
@@ -2521,7 +2743,7 @@ private:
      */
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
 
-    /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision.
+    /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
 
        \param[in] ilinkindex the index of the link to check
        \param[in] tlinktrans The transform of the link to check
@@ -2529,21 +2751,38 @@ private:
      */
     virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
 
-    /** \brief checks collision of a robot link with the surrounding environment using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision.
+    /** \brief checks collision of a robot link with the surrounding environment using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
 
         \param[in] ilinkindex the index of the link to check
         \param[out] report [optional] collision report
      */
     virtual bool CheckLinkCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
 
-    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
+    /** \brief checks collision of a robot link with a specified body using a new transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
+
+       \param[in] ilinkindex the index of the link to check
+       \param[in] tlinktrans The transform of the link to check
+       \param[in] pbody the body to check
+       \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks collision of a robot link with a specified body using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[in] pbody the body to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision. Rigidly attached links to the specified link are not checked for self-collision.
 
         \param[in] ilinkindex the index of the link to check
         \param[out] report [optional] collision report
      */
     virtual bool CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
 
-    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
+    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision. Rigidly attached links to the specified link are not checked for self-collision.
 
         \param[in] ilinkindex the index of the link to check
         \param[in] tlinktrans The transform of the link to check
@@ -2713,7 +2952,7 @@ private:
         \param[in] setBodyLinksToIgnore Additional body link names that collision checker ignore
         when checking collisions between the grabbed body and the body.
         \return true if successful and body is grabbed.
-    */
+     */
     virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames);
 
     /** \brief Grab a body with the specified link.
@@ -2890,9 +3129,6 @@ protected:
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized
     virtual void _InitAndAddJoint(JointPtr pjoint);
-
-    /// \brief goes through all the link/joint ids and makes sure they are unique
-    virtual void _ResolveInfoIds();
 
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints

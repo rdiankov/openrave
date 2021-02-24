@@ -171,8 +171,13 @@ void KinBody::KinBodyInfo::Reset()
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     rKinBodyInfo.SetObject();
-    orjson::SetJsonValueByKey(rKinBodyInfo, "id", _id, allocator);
-    orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
+
+    if( !_id.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "id", _id, allocator);
+    }
+    if( !_name.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
+    }
     if (!_referenceUri.empty()) {
         if( options & ISO_ReferenceUriHint ) {
             orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUriHint", _referenceUri, allocator);
@@ -181,8 +186,18 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
             orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUri", _referenceUri, allocator);
         }
     }
-    orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
-    orjson::SetJsonValueByKey(rKinBodyInfo, "transform", _transform, allocator);
+
+    // perhaps should not save "uri" since that could affect how the body is loaded later
+    
+    if( !_interfaceType.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
+    }
+
+    {
+        Transform transform = _transform;
+        transform.trans *= fUnitScale;
+        orjson::SetJsonValueByKey(rKinBodyInfo, "transform", transform, allocator);
+    }
     orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
 
     if (_dofValues.size() > 0) {
@@ -192,7 +207,10 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         FOREACHC(itDofValue, _dofValues) {
             rapidjson::Value dofValue;
             orjson::SetJsonValueByKey(dofValue, "jointName", itDofValue->first.first, allocator);
-            orjson::SetJsonValueByKey(dofValue, "jointAxis", itDofValue->first.second, allocator);
+            // don't save jointAxis unless not 0
+            if( itDofValue->first.second != 0 ) {
+                orjson::SetJsonValueByKey(dofValue, "jointAxis", itDofValue->first.second, allocator);
+            }
             orjson::SetJsonValueByKey(dofValue, "value", itDofValue->second, allocator);
             dofValues.PushBack(dofValue, allocator);
         }
@@ -239,6 +257,10 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         rapidjson::Value rReadableInterfaces;
         rReadableInterfaces.SetObject();
         for(std::map<std::string, ReadablePtr>::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
+            // skip serializing __collada__ since we won't need it in json
+            if (it->first == "__collada__") {
+                continue;
+            }
             rapidjson::Value rReadable;
             it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
             orjson::SetJsonValueByKey(rReadableInterfaces, it->first.c_str(), rReadable, allocator);
@@ -251,12 +273,10 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 {
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
-    if( _id.empty() ) {
-        _id = _name;
-    }
 
     if( !(options & IDO_IgnoreReferenceUri) ) {
         orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+        orjson::LoadJsonValueByKey(value, "uri", _uri); // user specifies this in case they want to control how the uri is
     }
 
     orjson::LoadJsonValueByKey(value, "interfaceType", _interfaceType);
@@ -266,36 +286,21 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
         size_t iGrabbed = 0;
         for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
-            const rapidjson::Value& grabbedValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(grabbedValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(grabbedValue, "grabbedName");
-            }
-            UpdateOrCreateInfo(grabbedValue, id, _vGrabbedInfos, fUnitScale, options);
+            UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
         }
     }
 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
-            const rapidjson::Value& linkValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(linkValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(linkValue, "name");
-            }
-            UpdateOrCreateInfo(linkValue, id, _vLinkInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options);
         }
     }
 
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
-            const rapidjson::Value& jointValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(jointValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(jointValue, "name");
-            }
-            UpdateOrCreateInfo(jointValue, id, _vJointInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options);
         }
     }
 
@@ -304,24 +309,31 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         for(rapidjson::Value::ConstValueIterator itr = value["dofValues"].Begin(); itr != value["dofValues"].End(); ++itr) {
             if (itr->IsObject() && itr->HasMember("jointName") && itr->HasMember("value")) {
                 std::string jointName;
-                int jointAxis = 0;
-                dReal dofValue;
+                int jointAxis = 0; // default
+                dReal dofValue=0;
                 orjson::LoadJsonValueByKey(*itr, "jointName", jointName);
                 orjson::LoadJsonValueByKey(*itr, "jointAxis", jointAxis);
                 orjson::LoadJsonValueByKey(*itr, "value", dofValue);
                 _dofValues.emplace_back(std::make_pair(jointName, jointAxis), dofValue);
             }
         }
+        _modifiedFields |= KinBodyInfo::KBIF_DOFValues;
     }
 
     if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
         for (rapidjson::Value::ConstMemberIterator it = value["readableInterfaces"].MemberBegin(); it != value["readableInterfaces"].MemberEnd(); ++it) {
+            // skip over __collada__ since it will most likely fail to deserialize
+            if (strcmp(it->name.GetString(), "__collada__") == 0 ) {
+                continue;
+            }
             _DeserializeReadableInterface(it->name.GetString(), it->value);
         }
     }
 
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _transform);
+        _transform.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
+        _modifiedFields |= KinBodyInfo::KBIF_Transform;
     }
 }
 
@@ -342,7 +354,7 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
         _mReadableInterfaces[id] = pReadable;
         return;
     }
-    RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
+    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
@@ -690,6 +702,14 @@ void KinBody::SetName(const std::string& newname)
         }
         _name = newname;
         _PostprocessChangedParameters(Prop_Name);
+    }
+}
+
+void KinBody::SetId(const std::string& newid)
+{
+    // allow empty id to be set
+    if( _id != newid ) {
+        _id = newid;
     }
 }
 
@@ -4543,7 +4563,7 @@ void KinBody::_ComputeInternalInformation()
         }
         _ResetInternalCollisionCache();
     }
-    _ResolveInfoIds();
+
     _nHierarchyComputed = 2;
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
@@ -4828,7 +4848,7 @@ int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
 int8_t KinBody::DoesDOFAffectLink(int dofindex, int linkindex ) const
 {
     CHECK_INTERNAL_COMPUTATION0;
-    OPENRAVE_ASSERT_FORMAT(dofindex >= 0 && dofindex < GetDOF(), "body %s dofindex %d invalid (num dofs %d)", GetName()%GetDOF(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(dofindex >= 0 && dofindex < GetDOF(), "body %s dofindex %d invalid (num dofs %d)", GetName()%dofindex%GetDOF(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s linkindex %d invalid (num links %d)", GetName()%linkindex%_veclinks.size(), ORE_InvalidArguments);
     int jointindex = _vDOFIndices.at(dofindex);
     return _vJointsAffectingLinks.at(jointindex*_veclinks.size()+linkindex);
@@ -5426,195 +5446,9 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     }
 }
 
-void KinBody::_ResolveInfoIds()
-{
-    char sTempIndexConversion[9]; // temp memory space for converting indices to hex strings, enough space to convert uint32_t
-    uint32_t nTempIndexConversion = 0; // length of sTempIndexConversion
-
-    // go through all link infos and make sure _id is unique
-    static const char pLinkIdPrefix[] = "link";
-    static const char pGeometryIdPrefix[] = "geom";
-    int nLinkId = 0;
-    const int numlinks = (int)_veclinks.size();
-    for(int ilink = 0; ilink < numlinks; ++ilink) {
-        KinBody::LinkInfo& linkinfo = _veclinks[ilink]->_info;
-        bool bGenerateNewId = linkinfo._id.empty();
-        if( !bGenerateNewId ) {
-            for(int itestlink = 0; itestlink < ilink; ++itestlink) {
-                if( _veclinks[itestlink]->_info._id == linkinfo._id ) {
-                    bGenerateNewId = true;
-                    break;
-                }
-            }
-        }
-
-        if( bGenerateNewId ) {
-            while(1) {
-                nTempIndexConversion = ConvertUIntToHex(nLinkId, sTempIndexConversion);
-                bool bHasSame = false;
-                for(int itestlink = 0; itestlink < numlinks; ++itestlink) {
-                    const std::string& testid = _veclinks[itestlink]->_info._id;
-                    if( testid.size() == sizeof(pLinkIdPrefix)-1+nTempIndexConversion ) {
-                        if( strncmp(testid.c_str() + (sizeof(pLinkIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
-                            // matches
-                            bHasSame = true;
-                            break;
-                        }
-                    }
-                }
-
-                if( bHasSame ) {
-                    nLinkId++;
-                    continue;
-                }
-
-                break;
-            }
-
-            linkinfo._id = pLinkIdPrefix;
-            linkinfo._id += sTempIndexConversion;
-            nLinkId++;
-        }
-
-        // geometries
-        {
-            int nGeometryId = 0;
-            const std::vector<Link::GeometryPtr>& vgeometries = _veclinks[ilink]->GetGeometries();
-            const int numgeometries = (int)vgeometries.size();
-            for(int igeometry = 0; igeometry < numgeometries; ++igeometry) {
-                KinBody::GeometryInfo& geometryinfo = vgeometries[igeometry]->_info;
-                bool bGenerateNewId = geometryinfo._id.empty();
-                if( !bGenerateNewId ) {
-                    for(int itestgeometry = 0; itestgeometry < igeometry; ++itestgeometry) {
-                        if( vgeometries[itestgeometry]->_info._id == geometryinfo._id ) {
-                            bGenerateNewId = true;
-                            break;
-                        }
-                    }
-                }
-
-                if( bGenerateNewId ) {
-                    while(1) {
-                        nTempIndexConversion = ConvertUIntToHex(nGeometryId, sTempIndexConversion);
-                        bool bHasSame = false;
-                        for(int itestgeometry = 0; itestgeometry < numgeometries; ++itestgeometry) {
-                            const std::string& testid = vgeometries[itestgeometry]->_info._id;
-                            if( testid.size() == sizeof(pGeometryIdPrefix)-1+nTempIndexConversion ) {
-                                if( strncmp(testid.c_str() + (sizeof(pGeometryIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
-                                    // matches
-                                    bHasSame = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if( bHasSame ) {
-                            nGeometryId++;
-                            continue;
-                        }
-
-                        break;
-                    }
-
-                    geometryinfo._id = pGeometryIdPrefix;
-                    geometryinfo._id += sTempIndexConversion;
-                    nGeometryId++;
-                }
-            }
-        }
-    }
-
-    static const char pJointIdPrefix[] = "joint";
-    int nJointId = 0;
-    const int numjoints = (int)_vecjoints.size();
-    for(int ijoint = 0; ijoint < numjoints; ++ijoint) {
-        KinBody::JointInfo& jointinfo = _vecjoints[ijoint]->_info;
-        bool bGenerateNewId = jointinfo._id.empty();
-        if( !bGenerateNewId ) {
-            for(int itestjoint = 0; itestjoint < ijoint; ++itestjoint) {
-                if( _vecjoints[itestjoint]->_info._id == jointinfo._id ) {
-                    bGenerateNewId = true;
-                    break;
-                }
-            }
-        }
-
-        if( bGenerateNewId ) {
-            while(1) {
-                nTempIndexConversion = ConvertUIntToHex(nJointId, sTempIndexConversion);
-                bool bHasSame = false;
-                for(int itestjoint = 0; itestjoint < numjoints; ++itestjoint) {
-                    const std::string& testid = _vecjoints[itestjoint]->_info._id;
-                    if( testid.size() == sizeof(pJointIdPrefix)-1+nTempIndexConversion ) {
-                        if( strncmp(testid.c_str() + (sizeof(pJointIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
-                            // matches
-                            bHasSame = true;
-                            break;
-                        }
-                    }
-                }
-
-                if( bHasSame ) {
-                    nJointId++;
-                    continue;
-                }
-
-                break;
-            }
-
-            jointinfo._id = pJointIdPrefix;
-            jointinfo._id += sTempIndexConversion;
-            nJointId++;
-        }
-    }
-
-    const int numPassiveJoints = (int)_vPassiveJoints.size();
-    for(int ijoint = 0; ijoint < numPassiveJoints; ++ijoint) {
-        KinBody::JointInfo& jointinfo = _vPassiveJoints[ijoint]->_info;
-        bool bGenerateNewId = jointinfo._id.empty();
-        if( !bGenerateNewId ) {
-            for(int itestjoint = 0; itestjoint < ijoint; ++itestjoint) {
-                if( _vPassiveJoints[itestjoint]->_info._id == jointinfo._id ) {
-                    bGenerateNewId = true;
-                    break;
-                }
-            }
-        }
-
-        if( bGenerateNewId ) {
-            while(1) {
-                nTempIndexConversion = ConvertUIntToHex(nJointId, sTempIndexConversion);
-                bool bHasSame = false;
-                for(int itestjoint = 0; itestjoint < numPassiveJoints; ++itestjoint) {
-                    const std::string& testid = _vPassiveJoints[itestjoint]->_info._id;
-                    if( testid.size() == sizeof(pJointIdPrefix)-1+nTempIndexConversion ) {
-                        if( strncmp(testid.c_str() + (sizeof(pJointIdPrefix)-1), sTempIndexConversion, nTempIndexConversion) == 0 ) {
-                            // matches
-                            bHasSame = true;
-                            break;
-                        }
-                    }
-                }
-
-                if( bHasSame ) {
-                    nJointId++;
-                    continue;
-                }
-
-                break;
-            }
-
-            jointinfo._id = pJointIdPrefix;
-            jointinfo._id += sTempIndexConversion;
-            nJointId++;
-        }
-    }
-}
-
 void KinBody::ExtractInfo(KinBodyInfo& info)
 {
-    _ResolveInfoIds();
-
+    info._modifiedFields = 0;
     info._id = _id;
     info._uri = __struri;
     info._name = _name;
@@ -5630,14 +5464,16 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
         info._dofValues.emplace_back(std::make_pair(pJoint->GetName(), jointAxis), vDOFValues[idof]);
     }
 
-    info._transform = GetTransform();
     info._vGrabbedInfos.resize(0);
     GetGrabbedInfo(info._vGrabbedInfos);
 
-    KinBody::KinBodyStateSaver saver(shared_kinbody());
+    info._transform = GetTransform();
+
+    // in order for link transform comparision to make sense
+    KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation);
+    SetTransform(Transform());
     vector<dReal> vZeros(GetDOF(), 0);
     SetDOFValues(vZeros, KinBody::CLA_Nothing);
-    SetTransform(Transform());
 
     // need to avoid extracting info for links and joints belonging to connected bodies
     std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
@@ -5714,8 +5550,14 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 {
     UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
-    if(info._id != _id) {
-        RAVELOG_WARN_FORMAT("body %s update info ids do not match %s != %s", GetName()%_id%info._id);
+    if(_id != info._id) {
+        if( _id.empty() ) {
+            RAVELOG_DEBUG_FORMAT("env=%d, body %s assigning empty id to '%s'", GetEnv()->GetId()%GetName()%info._id);
+        }
+        else {
+            RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());
+        }
+        _id = info._id;
     }
 
     // need to avoid checking links and joints belonging to connected bodies
@@ -5752,130 +5594,49 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
-    // links
-    FOREACHC(itLinkInfo, info._vLinkInfos) {
-        // find existing link in body
-        std::vector<KinBody::LinkPtr>::iterator itExistingLink = _veclinks.end();
-        FOREACH(itLink, _veclinks) {
-            if ((*itLink)->_info._id == (*itLinkInfo)->_id) {
-                itExistingLink = itLink;
-                break;
-            }
+    // build vectors of links and joints that we will deal with
+    std::vector<KinBody::LinkPtr> vLinks; vLinks.reserve(_veclinks.size());
+    std::vector<KinBody::JointPtr> vJoints; vJoints.reserve(_vecjoints.size() + _vPassiveJoints.size());
+    for (size_t iLink = 0; iLink < _veclinks.size(); ++iLink) {
+        if (!isConnectedLink[iLink]) {
+            vLinks.push_back(_veclinks[iLink]);
         }
-
-        KinBody::LinkInfoPtr pLinkInfo = *itLinkInfo;
-        if (itExistingLink != _veclinks.end()) {
-            // update existing link
-            KinBody::LinkPtr pLink = *itExistingLink;
-            UpdateFromInfoResult updateFromLinkInfoResult = pLink->UpdateFromInfo(*pLinkInfo);
-            if (updateFromLinkInfoResult == UFIR_NoChange) {
-                continue;
-            }
-            RAVELOG_VERBOSE_FORMAT("body %s link %s needed update: %d", _id%pLinkInfo->_id%updateFromLinkInfoResult);
-            if (updateFromLinkInfoResult == UFIR_Success) {
-                updateFromInfoResult = UFIR_Success;
-                continue;
-            }
-            // link update failed.
-            return updateFromLinkInfoResult;
+    }
+    for(size_t iJoint = 0; iJoint < _vecjoints.size(); iJoint++) {
+        if (!isConnectedJoint[iJoint]) {
+            vJoints.push_back(_vecjoints[iJoint]);
         }
-
-        // new links is added
-        RAVELOG_VERBOSE_FORMAT("body %s new link %s added", _id%pLinkInfo->_id);
-        return UFIR_RequireReinitialize;
+    }
+    for(size_t iPassiveJoint = 0; iPassiveJoint < _vPassiveJoints.size(); iPassiveJoint++) {
+        if (!isConnectedPassiveJoint[iPassiveJoint]) {
+            vJoints.push_back(_vPassiveJoints[iPassiveJoint]);
+        }
     }
 
-    // delete links
-    for(size_t iLink = 0; iLink < _veclinks.size(); ++iLink) {
-        if (isConnectedLink[iLink]) {
-            continue;
-        }
-        bool stillExists = false;
+    {
+        // in order for link transform comparision to make sense, have to change the kinbody to the identify.
+        // First check if any of the link infos have modified transforms
+        KinBody::KinBodyStateSaverPtr stateSaver;
         FOREACHC(itLinkInfo, info._vLinkInfos) {
-            if (_veclinks[iLink]->_info._id == (*itLinkInfo)->_id) {
-                stillExists = true;
+            // if any link has its transform field set, we need to set zero configuration before comparison
+            if( (*itLinkInfo)->IsModifiedField(KinBody::LinkInfo::LIF_Transform) ) {
+                stateSaver.reset(new KinBody::KinBodyStateSaver(shared_kinbody(), Save_LinkTransformation));
+                SetTransform(Transform());
+                vector<dReal> vZeros(GetDOF(), 0);
+                SetDOFValues(vZeros, KinBody::CLA_Nothing);
                 break;
             }
         }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing link %s removed", _id%_veclinks[iLink]->_info._id);
-            return UFIR_RequireReinitialize;
+
+        // links
+        if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
+            return updateFromInfoResult;
         }
     }
 
     // joints
-    FOREACHC(itJointInfo, info._vJointInfos) {
-        // find exsiting joint in body
-        std::vector<KinBody::JointPtr>::iterator itExistingJoint = _vecjoints.end();
-        FOREACH(itJoint, _vecjoints) {
-            if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
-                itExistingJoint = itJoint;
-                break;
-            }
-        }
-
-        if (itExistingJoint == _vecjoints.end()) {
-            FOREACH(itJoint, _vPassiveJoints) {
-                if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
-                    itExistingJoint = itJoint;
-                    break;
-                }
-            }
-        }
-
-        KinBody::JointInfoPtr pJointInfo = *itJointInfo;
-        if (itExistingJoint != _vecjoints.end() || itExistingJoint != _vPassiveJoints.end()) {
-            // update current joint
-            KinBody::JointPtr pJoint = *itExistingJoint;
-            UpdateFromInfoResult updateFromJointInfoResult = pJoint->UpdateFromInfo(*pJointInfo);
-            if (updateFromJointInfoResult == UFIR_NoChange) {
-                continue;
-            }
-            RAVELOG_VERBOSE_FORMAT("body %s joint %s needed update: %d", _id%pJointInfo->_id%updateFromJointInfoResult);
-            if (updateFromJointInfoResult == UFIR_Success) {
-                updateFromInfoResult = UFIR_Success;
-                continue;
-            }
-            // joint update failed;
-            return updateFromJointInfoResult;
-        }
-        // new joints is added or deleted
-        RAVELOG_VERBOSE_FORMAT("body %s new joint %s added", _id%pJointInfo->_id);
-        return UFIR_RequireReinitialize;
-    }
-
-    // delete joints
-    for(size_t iJoint = 0; iJoint < _vecjoints.size(); iJoint++) {
-        if (isConnectedJoint[iJoint]) {
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itJointInfo, info._vJointInfos) {
-            if (_vecjoints[iJoint]->_info._id == (*itJointInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing joint %s removed", _id%_vecjoints[iJoint]->_info._id);
-            return UFIR_RequireReinitialize;
-        }
-    }
-    for(size_t iJoint = 0; iJoint < _vPassiveJoints.size(); iJoint++) {
-        if (isConnectedPassiveJoint[iJoint]) {
-            continue;
-        }
-        bool stillExists = false;
-        FOREACHC(itJointInfo, info._vJointInfos) {
-            if (_vPassiveJoints[iJoint]->_info._id == (*itJointInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            RAVELOG_VERBOSE_FORMAT("body %s existing passive joint %s removed", _id%_vPassiveJoints[iJoint]->_info._id);
-            return UFIR_RequireReinitialize;
-        }
+    if (!UpdateChildrenFromInfo(info._vJointInfos, vJoints, updateFromInfoResult)) {
+        return updateFromInfoResult;
     }
 
     // name
@@ -5886,40 +5647,45 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // transform
-    if (!GetTransform().Compare(info._transform)) {
+    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) && GetTransform().CompareTransform(info._transform, g_fEpsilon) ) {
         SetTransform(info._transform);
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
     }
 
-    // dof values
-    std::vector<dReal> dofValues;
-    GetDOFValues(dofValues);
-    bool bDOFChanged = false;
-    for(std::vector<std::pair<std::pair<std::string, int>, dReal> >::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
-        // find the joint in the active chain
-        JointPtr joint;
-        FOREACHC(itJoint,_vecjoints) {
-            if ((*itJoint)->GetName() == it->first.first) {
-                joint = *itJoint;
-                break;
+    // don't change the dof values here since body might not be added!
+    if( info.IsModifiedField(KinBodyInfo::KBIF_DOFValues) && _nHierarchyComputed == 2 ) {
+        // dof values
+        std::vector<dReal> dofValues;
+        GetDOFValues(dofValues);
+        bool bDOFChanged = false;
+        for(std::vector<std::pair<std::pair<std::string, int>, dReal> >::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
+            // find the joint in the active chain
+            JointPtr joint;
+            FOREACHC(itJoint,_vecjoints) {
+                if ((*itJoint)->GetName() == it->first.first) {
+                    joint = *itJoint;
+                    break;
+                }
+            }
+            if (!joint) {
+                continue;
+            }
+            if (it->first.second >= joint->GetDOF()) {
+                continue;
+            }
+            int dofIndex = joint->GetDOFIndex()+it->first.second;
+            if (RaveFabs(dofValues.at(dofIndex) - it->second) > g_fEpsilon) {
+                dofValues[dofIndex] = it->second;
+                bDOFChanged = true;
+                //RAVELOG_VERBOSE_FORMAT("body %s dof %d value changed", _id%dofIndex);
             }
         }
-        if (!joint) {
-            continue;
+        if (bDOFChanged) {
+            SetDOFValues(dofValues);
+            updateFromInfoResult = UFIR_Success;
+            RAVELOG_VERBOSE_FORMAT("body %s updated due to dof values change", _id);
         }
-        if (it->first.second >= joint->GetDOF()) {
-            continue;
-        }
-        if (dofValues[joint->GetDOFIndex()+it->first.second] != it->second) {
-            dofValues[joint->GetDOFIndex()+it->first.second] = it->second;
-            bDOFChanged = true;
-        }
-    }
-    if (bDOFChanged) {
-        SetDOFValues(dofValues);
-        updateFromInfoResult = UFIR_Success;
-        RAVELOG_VERBOSE_FORMAT("body %s updated due to dof values change", _id);
     }
 
     FOREACH(it, info._mReadableInterfaces) {
