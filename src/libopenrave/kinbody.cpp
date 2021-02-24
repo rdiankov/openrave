@@ -4677,8 +4677,11 @@ bool KinBody::IsAttached(const KinBody &body) const
     if(this == &body ) {
         return true;
     }
-    std::set<KinBodyConstPtr> dummy;
-    return _IsAttached(body, dummy);
+    else if (_listAttachedBodies.empty()) {
+        return false;
+    }
+    std::vector<bool> visited(GetEnv()->GetNumBodies(), false);
+    return _IsAttached(body.GetEnvironmentId(), visited);
 }
 
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
@@ -4738,6 +4741,31 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
 bool KinBody::HasAttached() const
 {
     return _listAttachedBodies.size() > 0;
+}
+
+bool KinBody::_IsAttached(int otherBodyid, std::vector<bool>& visited) const
+{
+    for (const KinBodyWeakPtr& pbody : _listAttachedBodies) {
+        KinBodyConstPtr pattached = pbody.lock();
+        if (!pattached) {
+            continue;
+        }
+        const KinBody& attached = *pattached;
+        if (otherBodyid == attached._environmentid) {
+            return true;
+        }
+        else if (visited.at(attached._environmentid)) {
+            // already checked
+            continue;
+        }
+        visited.at(attached._environmentid) = true;
+        // if attached._listAttachedBodies has only one element, that element is same as attached as attachement relationship is by-directional, so not worth checking
+        if (attached._listAttachedBodies.size() > 1 && attached._IsAttached(otherBodyid, visited)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool KinBody::_IsAttached(const KinBody &body, std::set<KinBodyConstPtr>&setChecked) const
