@@ -5,18 +5,6 @@
 #include "plugindefs.h"
 #include "fclspace.h"
 
-namespace
-{
-    /// \brief ensures vector size is at least index + 1, if input vector size is greater than index, it is left untouched
-    template <typename T>
-    inline void EnsureVectorSize(std::vector<T>& vec, size_t index)
-    {
-        if (vec.size() < index + 1) {
-            vec.resize(index + 1);
-        }
-    }
-}
-
 namespace fclrave {
 
 //static bool CheckForObj(fcl::DynamicAABBTreeCollisionManager::DynamicAABBNode* root, fcl::CollisionObject* pobj)
@@ -308,7 +296,7 @@ public:
                     }
                 }
                 cache.vcolobjs.resize(0);
-                vecCachedBodies[bodyid].Destroy();
+                cache.Destroy();
                 return true;
             }
         }

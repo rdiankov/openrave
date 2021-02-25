@@ -57,6 +57,32 @@ CollisionGeometryPtr ConvertMeshToFCL(std::vector<fcl::Vec3f> const &points,std:
     return model;
 }
 
+
+/// \brief ensures vector size is at least index + 1, if input vector size is greater than index, it is left untouched
+template <typename T>
+inline void EnsureVectorSize(std::vector<T>& vec, size_t index)
+{
+    if (vec.size() < index + 1) {
+        vec.resize(index + 1);
+    }
+}
+
+/// \brief shrinks vector size by removing trailing null entries. element of vector has to be a boost shared pointer for null checking.
+template <typename T>
+inline void RemoveTrailingNull(std::vector<boost::shared_ptr<T> >& vec,
+                               bool keepFirstElement = true,
+                               bool forceRemoveLastElement = true)
+{
+     int numErase = forceRemoveLastElement; // last element is already decided to be erased if forceRemoveLastElement
+     const int numMaximumElementsToRemove = vec.size() - (int) keepFirstElement;
+     for (; numErase < numMaximumElementsToRemove; ++numErase) {
+         if (!!vec[vec.size() - 1 - numErase]) {
+             break;
+         }
+     }
+     vec.erase(vec.end() - numErase, vec.end());
+}
+
 /// \brief fcl spaces manages the individual collision objects and sets up callbacks to track their changes.
 ///
 /// It does not know or manage the broadphase manager
@@ -304,11 +330,7 @@ public:
         const int envId = pbody->GetEnvironmentId();
         BOOST_ASSERT(envId != 0);
         if( bSetToCurrentPInfo ) {
-            if (_currentpinfo.size() < envId + 1) {
-                // have a upper bound on size?
-                //RAVELOG_INFO_FORMAT("increase size from %d to %d", _currentpinfo.size()%(envId + 1));
-                _currentpinfo.resize(envId + 1, KinBodyInfoPtr());
-            }
+            EnsureVectorSize(_currentpinfo, envId);
             _currentpinfo.at(envId) = pinfo;
         }
         //_cachedpinfo[pbody->GetEnvironmentId()] what to do with the cache?
@@ -376,11 +398,7 @@ public:
             RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%pbody->GetName()%pbody->GetEnvironmentId());
             // Set the current info to use the KinBodyInfoPtr associated to groupname
             const int envId = pbody->GetEnvironmentId();
-            if (_currentpinfo.size() < envId + 1) {
-                // have a upper bound on size?
-                //RAVELOG_INFO_FORMAT("increase size from %d to %d", _currentpinfo.size()%(envId + 1));
-                _currentpinfo.resize(envId + 1, KinBodyInfoPtr());
-            }
+            EnsureVectorSize(_currentpinfo, envId);
             _currentpinfo.at(envId) = pinfo;
 
             // Revoke the information inside the cache so that a potentially outdated object does not survive
@@ -487,11 +505,11 @@ public:
     inline KinBodyInfoPtr& GetInfo(const KinBody &body)
     {
         int envId = body.GetEnvironmentId();
-        if ( envId == 0 ) {
-            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id 0", body.GetEnv()->GetId()%body.GetName());
+        if ( envId <= 0 ) {
+            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id %d", body.GetEnv()->GetId()%body.GetName()%envId);
         }
 
-        if (envId < _currentpinfo.size()) {
+        if (envId < (int) _currentpinfo.size()) {
             return _currentpinfo.at(envId);
         }
 
@@ -501,14 +519,14 @@ public:
     inline const KinBodyInfoPtr& GetInfo(const KinBody &body) const
     {
         int envId = body.GetEnvironmentId();
-        if ( envId == 0 ) {
-            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id 0", body.GetEnv()->GetId()%body.GetName());
+        if ( envId <= 0 ) {
+            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id %d", body.GetEnv()->GetId()%body.GetName()%envId);
         }
 
-        if (envId < _currentpinfo.size()) {
+        if (envId < (int) _currentpinfo.size()) {
             return _currentpinfo.at(envId);
         }
-        
+
         return _currentpinfo.at(0);
     }
 
