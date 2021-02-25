@@ -185,9 +185,12 @@ public:
             // regardless if the linkmask, have to always add to cache in order to track!
             if( 1 ) {//bsetUpdateStamp ) {
                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s (%d) linkmask=0x%x, _tmpSortedBuffer.size()=%d", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%pbody->GetEnvironmentId()%_GetLinkMask(_linkEnableStates)%_tmpSortedBuffer.size());
-                vecCachedBodies[(*itbody)->GetEnvironmentId()] = KinBodyCache(*itbody, pinfo);
-                vecCachedBodies[(*itbody)->GetEnvironmentId()].linkEnableStates = _linkEnableStates;
-                vecCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
+                const int bodyId = (*itbody)->GetEnvironmentId();
+                EnsureVectorSize(vecCachedBodies, bodyId);
+                KinBodyCache& cache = vecCachedBodies[bodyId];
+                cache = KinBodyCache(*itbody, pinfo);
+                cache.linkEnableStates = _linkEnableStates;
+                cache.vcolobjs.swap(vcolobjs);
             }
             else {
 //                if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
@@ -238,8 +241,6 @@ public:
                 if( !bIsValid) {
                     EnsureVectorSize(vecCachedBodies, bodyid);
                     FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(body);
-                    _linkEnableStates.resize(body.GetLinks().size()); ///< links that are currently inside the manager
-                    std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
                     if( _AddBody(body, pinfo, vcolobjs, _linkEnableStates, false) ) { // new collision objects are already added to _tmpSortedBuffer
                         KinBodyCache& cache = vecCachedBodies[bodyid];
                         cache = KinBodyCache(pbody, pinfo);
@@ -297,6 +298,9 @@ public:
                 }
                 cache.vcolobjs.resize(0);
                 cache.Destroy();
+
+                _RemoveTrailingInvalidCachedBodies();
+
                 return true;
             }
         }
@@ -333,7 +337,7 @@ public:
                 isValid = cache.IsValid();
                 if (isValid) {
                     FCLSpace::KinBodyInfoPtr pinfo = cache.pwinfo.lock();
-                    FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(*ptrackingbody); // necessary in case pinfos were swapped!
+                    FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(trackingbody); // necessary in case pinfos were swapped!
                     if( cache.nActiveDOFUpdateStamp != pnewinfo->nActiveDOFUpdateStamp ) {
                         if( trackingbody.IsRobot() ) {
                             RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(ptrackingbody);
@@ -728,6 +732,9 @@ public:
                 ++bodyId;
             }
         }
+
+        _RemoveTrailingInvalidCachedBodies();
+
         if( _tmpSortedBuffer.size() > 0 ) {
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
             SaveCollisionObjectDebugInfos();
@@ -817,6 +824,25 @@ private:
         }
     }
 
+    inline void _RemoveTrailingInvalidCachedBodies()
+    {
+        if (vecCachedBodies.empty()) {
+            return;
+        }
+        
+        int numErase = 0;
+        const int numMaximumElementsToRemove = vecCachedBodies.size() - 1; // keep the first element
+        for (; numErase < numMaximumElementsToRemove; ++numErase) {
+            if (vecCachedBodies[vecCachedBodies.size() - 1 - numErase].IsValid()) {
+                break;
+            }
+        }
+
+        if (numErase > 0) {
+            vecCachedBodies.erase(vecCachedBodies.end() - numErase, vecCachedBodies.end());
+        }
+    }
+    
 //    void CheckCount()
 //    {
 //        // count how many entries
