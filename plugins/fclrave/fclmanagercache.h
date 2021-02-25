@@ -703,8 +703,6 @@ public:
                 }
                 
                 FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(attached);
-                _linkEnableStates.resize(attached.GetLinks().size()); ///< links that are currently inside the manager
-                std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
                 vcolobjs.resize(0);
                 if( _AddBody(attached, pinfo, vcolobjs, _linkEnableStates, _bTrackActiveDOF&&(pattached == ptrackingbody)) ) {
                     bcallsetup = true;
