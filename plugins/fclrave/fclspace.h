@@ -372,37 +372,43 @@ public:
 
 
     bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
-        if (!HasNamedGeometry(*pbody, groupname)) {
+        const KinBody& body = *pbody;
+
+        if (!HasNamedGeometry(body, groupname)) {
             return false;
         }
 
         // Save the already existing KinBodyInfoPtr for the old geometry group
-        KinBodyInfoPtr& poldinfo = GetInfo(*pbody);
+        KinBodyInfoPtr& poldinfo = GetInfo(body);
         if( poldinfo->_geometrygroup == groupname ) {
             return true;
         }
 
         poldinfo->nGeometryUpdateStamp += 1;
-        _cachedpinfo[(pbody)->GetEnvironmentId()][poldinfo->_geometrygroup] = poldinfo;
 
-        BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
+        const int bodyId = body.GetEnvironmentId();
+        EnsureVectorSize(_cachedpinfo, bodyId);
+        std::map< std::string, KinBodyInfoPtr >& cache = _cachedpinfo[bodyId];
+        cache[poldinfo->_geometrygroup] = poldinfo;
 
-        KinBodyInfoPtr& pinfo = _cachedpinfo[pbody->GetEnvironmentId()][groupname];
+        BOOST_ASSERT(bodyId != 0);
+
+        KinBodyInfoPtr& pinfo = cache[groupname];
         if(!pinfo) {
-            RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
+            RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%body.GetName()%bodyId%_penv->GetId());
             pinfo.reset(new KinBodyInfo);
             pinfo->_geometrygroup = groupname;
             InitKinBody(pbody, pinfo);
         }
         else {
-            RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%pbody->GetName()%pbody->GetEnvironmentId());
+            RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%body.GetName()%bodyId);
             // Set the current info to use the KinBodyInfoPtr associated to groupname
-            const int envId = pbody->GetEnvironmentId();
+            const int envId = bodyId;
             EnsureVectorSize(_currentpinfo, envId);
             _currentpinfo.at(envId) = pinfo;
 
             // Revoke the information inside the cache so that a potentially outdated object does not survive
-            _cachedpinfo[(pbody)->GetEnvironmentId()].erase(groupname);
+            cache.erase(groupname);
         }
 
         return true;
@@ -561,7 +567,7 @@ public:
                 _currentpinfo.at(envId) = KinBodyInfoPtr();
                 //RAVELOG_INFO_FORMAT("erased %d but didn't pop back, size is %d", envId%_currentpinfo.size());
             }
-            _cachedpinfo.erase(envId);
+            _cachedpinfo.at(envId).clear();
         }
     }
 
@@ -831,7 +837,7 @@ private:
     MeshFactory _meshFactory;
 
     std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
-    std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data
+    std::vector<std::map< std::string, KinBodyInfoPtr> > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
     std::vector<KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. Index of the vector is the environment id (id of the body in the env, not __nUniqueId of env) of the kinbody at that index. The index being environment id makes it easier to compare objects without getting a handle to their pointers. Whenever a KinBodyInfoPtr goes into this map, it is removed from _cachedpinfo. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
 
     bool _bIsSelfCollisionChecker; // Currently not used
