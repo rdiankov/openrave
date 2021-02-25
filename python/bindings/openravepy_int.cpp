@@ -2588,12 +2588,12 @@ py::list PyEnvironmentBase::GetKeywords() const
     return pykeywords;
 }
 
-void SetUInt64Parameter(const std::string& parameterName, uint64_t value)
+void PyEnvironmentBase::SetUInt64Parameter(const std::string& parameterName, uint64_t value)
 {
     _penv->SetUInt64Parameter(parameterName, value);
 }
 
-bool RemoveUInt64Parameter(const std::string& parameterName)
+bool PyEnvironmentBase::RemoveUInt64Parameter(const std::string& parameterName)
 {
     return _penv->RemoveUInt64Parameter(parameterName);
 }
