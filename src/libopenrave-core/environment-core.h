@@ -3447,7 +3447,7 @@ protected:
             //RAVELOG_INFO_FORMAT("env=%d, recycled body bodyId=%d for %s", GetId()%bodyId%pbody->GetName());
         }
         else {
-            bodyId = _vecWeakBodies.size() + 1; // no kin body should have an environment bodyId higher than _vecWeakBodies.size() when _environmentIndexRecyclePool is empty.
+            bodyId = _vecWeakBodies.empty() ? 1 : _vecWeakBodies.size(); // no kin body should have an environment bodyId higher than _vecWeakBodies.size() - 1 when _environmentIndexRecyclePool is empty.
             //RAVELOG_INFO_FORMAT("env=%d, assigned new body bodyId=%d for %s", GetId()%bodyId%pbody->GetName());
         }
         BOOST_ASSERT( _vecWeakBodies.size() < bodyId + 1 || !_vecWeakBodies.at(bodyId).lock());
