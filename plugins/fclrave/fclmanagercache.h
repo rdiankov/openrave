@@ -5,6 +5,18 @@
 #include "plugindefs.h"
 #include "fclspace.h"
 
+namespace
+{
+    /// \brief ensures vector size is at least index + 1, if input vector size is greater than index, it is left untouched
+    template <typename T>
+    inline void EnsureVectorSize(std::vector<T>& vec, size_t index)
+    {
+        if (vec.size() < index + 1) {
+            vec.resize(index + 1);
+        }
+    }
+}
+
 namespace fclrave {
 
 //static bool CheckForObj(fcl::DynamicAABBTreeCollisionManager::DynamicAABBNode* root, fcl::CollisionObject* pobj)
@@ -234,18 +246,17 @@ public:
             const KinBody& body = *pbody;
             int bodyid = body.GetEnvironmentId();
             if( _setExcludeBodyIds.count(bodyid) == 0 ) {
-                bool bfound = vecCachedBodies.size() > bodyid && vecCachedBodies.at(bodyid).IsValid();
-                if( !bfound) {
-                    if (vecCachedBodies.size() < bodyid + 1) {
-                        vecCachedBodies.resize(bodyid + 1, KinBodyCache());
-                    }
+                bool bIsValid = vecCachedBodies.size() > bodyid && vecCachedBodies.at(bodyid).IsValid();
+                if( !bIsValid) {
+                    EnsureVectorSize(vecCachedBodies, bodyid);
                     FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(body);
                     _linkEnableStates.resize(body.GetLinks().size()); ///< links that are currently inside the manager
                     std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
                     if( _AddBody(body, pinfo, vcolobjs, _linkEnableStates, false) ) { // new collision objects are already added to _tmpSortedBuffer
-                        vecCachedBodies[bodyid] = KinBodyCache(pbody, pinfo);
-                        vecCachedBodies[bodyid].vcolobjs.swap(vcolobjs);
-                        vecCachedBodies[bodyid].linkEnableStates = _linkEnableStates;
+                        KinBodyCache& cache = vecCachedBodies[bodyid];
+                        cache = KinBodyCache(pbody, pinfo);
+                        cache.vcolobjs.swap(vcolobjs);
+                        cache.linkEnableStates = _linkEnableStates;
                     }
                 }
             }
@@ -289,8 +300,8 @@ public:
 
         const int bodyid = body.GetEnvironmentId();
         if( vecCachedBodies.size() > bodyid) {
-            KinBodyCache cache = vecCachedBodies.at(bodyid);
-            if (cache.isValid) {
+            KinBodyCache& cache = vecCachedBodies.at(bodyid);
+            if (cache.IsValid()) {
                 for (CollisionObjectPtr& col : cache.vcolobjs) {
                     if( !!col.get() ) {
                         pmanager->unregisterObject(col.get());
@@ -683,10 +694,9 @@ public:
             for (const KinBodyConstPtr& pattached : attachedBodies) {
                 const KinBody& attached = *pattached;
                 const int attachedBodyId = attached.GetEnvironmentId();
-                bool bExists = attachedBodyId < vecCachedBodies.size();
-                if (!bExists) {
-                    vecCachedBodies.resize(attachedBodyId + 1);
-                }
+
+                EnsureVectorSize(vecCachedBodies, attachedBodyId);
+
                 KinBodyCache& cache = vecCachedBodies.at(attachedBodyId);
                 if (cache.IsValid()) {
                     continue;
@@ -717,6 +727,7 @@ public:
                 }
                 KinBodyConstPtr pbody = cache.pwbody.lock();
                 // could be the case that the same pointer was re-added to the environment so have to check the environment id
+                // make sure we don't need to make this asusmption of body id change when bodies are removed and re-added
                 if( !pbody || attachedBodies.count(pbody) == 0 || pbody->GetEnvironmentId() != bodyId ) {
                     RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%bodyId);
                     // not in attached bodies so should remove
