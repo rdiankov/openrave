@@ -233,6 +233,7 @@ public:
     {
         _tmpSortedBuffer.resize(0);
         std::vector<CollisionObjectPtr> vcolobjs;
+        EnsureVectorSize(vecCachedBodies, vbodies.size() + 1);
         for (const KinBodyConstPtr& pbody : vbodies) {
             const KinBody& body = *pbody;
             int bodyid = body.GetEnvironmentId();
