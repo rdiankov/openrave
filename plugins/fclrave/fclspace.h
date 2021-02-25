@@ -69,7 +69,7 @@ inline void EnsureVectorSize(std::vector<T>& vec, size_t index)
 
 /// \brief shrinks vector size by removing trailing null entries. element of vector has to be a boost shared pointer for null checking.
 template <typename T>
-ninline void RemoveTrailingNull(std::vector<boost::shared_ptr<T> >& vec,
+inline void RemoveTrailingNull(std::vector<boost::shared_ptr<T> >& vec,
                                bool keepFirstElement = true,
                                bool forceRemoveLastElement = true)
 {
