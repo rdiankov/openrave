@@ -1608,8 +1608,8 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
     else if (GetType() == GT_Sphere) {
         if (GetSphereRadius() != info._vGeomData.x) {
             RAVELOG_VERBOSE_FORMAT("geometry %s sphere changed", _info._id);
+            return UFIR_RequireReinitialize;
         }
-        return UFIR_RequireReinitialize;
     }
     else if (GetType() == GT_Cylinder) {
         if (GetCylinderRadius() != info._vGeomData.x || GetCylinderHeight() != info._vGeomData.y) {
