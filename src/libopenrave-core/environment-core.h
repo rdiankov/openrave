@@ -1088,6 +1088,17 @@ public:
         return (int)_vecbodies.size();
     }
 
+    int GetMaxEnvironmentBodyIndex() const override
+    {
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+
+        // bodies are sorted by index, so last body should have the largest
+        const int lastBodyEnvironmentBodyIndex = _vecbodies.back()->GetEnvironmentBodyIndex();
+        BOOST_ASSERT(lastBodyEnvironmentBodyIndex > 0 && lastBodyEnvironmentBodyIndex == (_vecbodies.size() - 1));
+        
+        return (int)_vecbodies.back()->GetEnvironmentBodyIndex();
+    }
+
     virtual RobotBasePtr GetRobot(const std::string& pname) const
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);

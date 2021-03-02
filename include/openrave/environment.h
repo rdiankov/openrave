@@ -453,9 +453,14 @@ public:
     /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentId!
     virtual KinBodyPtr GetKinBodyById(const std::string& id) const =0;
 
+    /// \brief Query the largest environment body index in this environment. <b>[multi-thread safe]</b>
+    ///
+    /// \return largetst environment body index among the bodies in this environment
+    virtual int GetMaxEnvironmentBodyIndex() const = 0;
+
     /// \brief Return the number of bodies currently in the environment. <b>[multi-thread safe]</b>
     virtual int GetNumBodies() const = 0;
-
+    
     /// \brief Query a sensor from its name. <b>[multi-thread safe]</b>
     /// \return first sensor that matches with name, note that sensors attached to robots have the robot name as a prefix.
     virtual SensorBasePtr GetSensor(const std::string& name) const =0;

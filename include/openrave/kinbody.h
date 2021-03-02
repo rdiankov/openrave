@@ -2818,7 +2818,12 @@ private:
     ///
     /// If object is not added to the environment, this will return 0. So checking if GetEnvironmentId() is 0 is a good way to check if object is present in the environment.
     /// This id will not be copied when cloning in order to respect another environment's ids.
-    virtual int GetEnvironmentId() const;
+    virtual int GetEnvironmentBodyIndex() const;
+
+    /// \brief return a unique id of the body used in the environment.
+    ///
+    /// deprecated, GetEnvironmentBodyIndex should be used
+    virtual int GetEnvironmentId() const RAVE_DEPRECATED;
 
     /** \brief Returns a nonzero value if the joint index effects the link transformation.
 

@@ -4677,9 +4677,9 @@ bool KinBody::IsAttached(const KinBody &body) const
     if(this == &body ) {
         return true;
     }
-    else if (_listAttachedBodies.empty()) {
-        return false;
-    }
+    // else if (_listAttachedBodies.empty()) {
+    //     return false;
+    // }
     std::vector<bool> visited(GetEnv()->GetNumBodies(), false);
     return _IsAttached(body.GetEnvironmentId(), visited);
 }
@@ -4687,6 +4687,7 @@ bool KinBody::IsAttached(const KinBody &body) const
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+    std::vector<bool> visited(GetEnv()->GetNumBodies(), false);
     FOREACHC(itbody,_listAttachedBodies) {
         KinBodyPtr pattached = itbody->lock();
         if( !!pattached && setAttached.insert(pattached).second ) {
@@ -4869,6 +4870,11 @@ bool KinBody::IsVisible() const
 }
 
 int KinBody::GetEnvironmentId() const
+{
+    return _environmentid;
+}
+
+int KinBody::GetEnvironmentBodyIndex() const
 {
     return _environmentid;
 }

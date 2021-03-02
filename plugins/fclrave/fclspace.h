@@ -63,7 +63,11 @@ template <typename T>
 inline void EnsureVectorSize(std::vector<T>& vec, size_t index)
 {
     if (vec.size() < index + 1) {
+        RAVELOG_WARN_FORMAT("resizing 0x%x from %d to %d", &vec%(vec.size())%(index + 1));
         vec.resize(index + 1);
+        if (vec.size() > 1000) {
+
+        }
     }
 }
 

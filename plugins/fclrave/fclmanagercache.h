@@ -150,6 +150,10 @@ public:
         }
         std::vector<CollisionObjectPtr> vcolobjs;
         vecCachedBodies.clear();
+
+        int maxBodyId = pbody->GetEnv()->GetMaxEnvironmentBodyIndex();
+        EnsureVectorSize(vecCachedBodies, maxBodyId+1);
+
         FOREACH(itbody, attachedBodies) {
             FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(**itbody);
             if( !pinfo ) {
@@ -186,8 +190,8 @@ public:
             if( 1 ) {//bsetUpdateStamp ) {
                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s (%d) linkmask=0x%x, _tmpSortedBuffer.size()=%d", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%pbody->GetEnvironmentId()%_GetLinkMask(_linkEnableStates)%_tmpSortedBuffer.size());
                 const int bodyId = (*itbody)->GetEnvironmentId();
-                EnsureVectorSize(vecCachedBodies, bodyId);
-                KinBodyCache& cache = vecCachedBodies[bodyId];
+                //EnsureVectorSize(vecCachedBodies, bodyId);
+                KinBodyCache& cache = vecCachedBodies.at(bodyId);
                 cache = KinBodyCache(*itbody, pinfo);
                 cache.linkEnableStates = _linkEnableStates;
                 cache.vcolobjs.swap(vcolobjs);
@@ -232,18 +236,22 @@ public:
     void EnsureBodies(const std::set<KinBodyConstPtr>& vbodies)
     {
         _tmpSortedBuffer.resize(0);
+        if (vbodies.empty()) {
+            return;
+        }
+        const KinBodyConstPtr plastBody = 
         std::vector<CollisionObjectPtr> vcolobjs;
-        EnsureVectorSize(vecCachedBodies, vbodies.size() + 1);
+        EnsureVectorSize(vecCachedBodies, vbodies.at(0)->GetEnv()->GetMaxEnvironmentBodyIndex());
         for (const KinBodyConstPtr& pbody : vbodies) {
             const KinBody& body = *pbody;
             int bodyid = body.GetEnvironmentId();
             if( _setExcludeBodyIds.count(bodyid) == 0 ) {
                 bool bIsValid = vecCachedBodies.size() > bodyid && vecCachedBodies.at(bodyid).IsValid();
                 if( !bIsValid) {
-                    EnsureVectorSize(vecCachedBodies, bodyid);
+                    //EnsureVectorSize(vecCachedBodies, bodyid);
                     FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(body);
                     if( _AddBody(body, pinfo, vcolobjs, _linkEnableStates, false) ) { // new collision objects are already added to _tmpSortedBuffer
-                        KinBodyCache& cache = vecCachedBodies[bodyid];
+                        KinBodyCache& cache = vecCachedBodies.at(bodyid);
                         cache = KinBodyCache(pbody, pinfo);
                         cache.vcolobjs.swap(vcolobjs);
                         cache.linkEnableStates = _linkEnableStates;
@@ -300,7 +308,7 @@ public:
                 cache.vcolobjs.resize(0);
                 cache.Destroy();
 
-                _RemoveTrailingInvalidCachedBodies();
+                //_RemoveTrailingInvalidCachedBodies();
 
                 return true;
             }
@@ -421,6 +429,9 @@ public:
                 std::string ssinfo;
                 int bodyIdCached = 0;
                 for (const KinBodyCache& cache : vecCachedBodies) {
+                    if( !cache.IsValid() ) {
+                        continue;
+                    }
                     KinBodyConstPtr pbody = cache.pwbody.lock(); ///< weak pointer to body
                     if( !!pbody ) {
                         ssinfo += str(boost::format("(id=%d, linkmask=0x%x, numcols=%d, name=%s), ")%bodyIdCached%_GetLinkMask(cache.linkEnableStates)%cache.vcolobjs.size()%pbody->GetName());
@@ -688,7 +699,7 @@ public:
                 const KinBody& attached = *pattached;
                 const int attachedBodyId = attached.GetEnvironmentId();
 
-                EnsureVectorSize(vecCachedBodies, attachedBodyId);
+                EnsureVectorSize(vecCachedBodies, attachedBodyId+1);
 
                 KinBodyCache& cache = vecCachedBodies.at(attachedBodyId);
                 if (cache.IsValid()) {
@@ -734,7 +745,7 @@ public:
             }
         }
 
-        _RemoveTrailingInvalidCachedBodies();
+        //_RemoveTrailingInvalidCachedBodies();
 
         if( _tmpSortedBuffer.size() > 0 ) {
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
@@ -765,6 +776,10 @@ public:
             std::stringstream ss;
             ss << "bodies=[";
             for (KinBodyCache& cache : vecCachedBodies) {
+                if (!cache.IsValid()) {
+                    continue;
+                }
+
                 KinBodyConstPtr pbody = cache.pwbody.lock();
                 if( !!pbody ) {
                     ss << pbody->GetName() << ", ";
