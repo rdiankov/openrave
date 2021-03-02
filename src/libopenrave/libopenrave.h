@@ -22,6 +22,7 @@
 #define RAVE_LIBOPENRAVE_H
 
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
+#include <openrave/logging.h>
 #include <openrave/utils.h>
 
 //#include <boost/math/special_functions/round.hpp>
@@ -638,6 +639,7 @@ bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<
         }
         if (!pMatchExistingPointer) {
             // new element, requires re-init
+            RAVELOG_VERBOSE("could not find existing pointer which matches");
             result = UFIR_RequireReinitialize;
             return false;
         }
@@ -661,6 +663,7 @@ bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<
 
     if (vPointers.size() > vInfos.size()) {
         // have to delete extra, require re-init
+        RAVELOG_VERBOSE("current data has more elements than new data");
         result = UFIR_RequireReinitialize;
         return false;
     }
