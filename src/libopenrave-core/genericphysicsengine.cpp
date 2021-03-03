@@ -81,7 +81,7 @@ public:
         if( !!pbody ) {
             pbody->RemoveUserData("_genericphysics_");
 
-            const int bodyid = pbody->GetEnvironmentId();
+            const int bodyid = pbody->GetEnvironmentBodyIndex();
             if (bodyid < _pysicsDataCache.size()) {
                 RAVELOG_VERBOSE_FORMAT("invalidate bodyid=%d(name=%s) in _pysicsDataCache of size %d", bodyid%(pbody->GetName())%(_pysicsDataCache.size()));
                 if (bodyid == _pysicsDataCache.size() - 1) {
@@ -111,7 +111,7 @@ public:
 
     inline const boost::shared_ptr<PhysicsData>& _EnsureData(const KinBodyConstPtr& pbody)
     {
-        int bodyid = pbody->GetEnvironmentId();
+        int bodyid = pbody->GetEnvironmentBodyIndex();
         if (bodyid >= _pysicsDataCache.size()) {
             RAVELOG_INFO_FORMAT("extend _pysicsDataCache of size %d to %d from bodyid=%d(name=%s)", (_pysicsDataCache.size())%(bodyid + 1)%bodyid%(pbody->GetName()));
             _pysicsDataCache.resize(bodyid + 1, boost::shared_ptr<PhysicsData>());

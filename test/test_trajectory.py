@@ -102,8 +102,8 @@ class TestTrajectory(EnvironmentSetup):
         traj1grab = RaveCreateTrajectory(env,'')
         traj1grab.Init(newspec)
         data=traj1.GetWaypoints(0,traj1.GetNumWaypoints(),newspec)
-        data[graboffset] = body1.GetEnvironmentId()
-        data[-newspec.GetDOF()+graboffset] = -body1.GetEnvironmentId() # release in the end
+        data[graboffset] = body1.GetEnvironmentBodyIndex()
+        data[-newspec.GetDOF()+graboffset] = -body1.GetEnvironmentBodyIndex() # release in the end
         traj1grab.Insert(0,data)
 
         # run the trajectory
@@ -134,8 +134,8 @@ class TestTrajectory(EnvironmentSetup):
             traj2grab = RaveCreateTrajectory(env,'')
             traj2grab.Init(newspec)
             data=traj2.GetWaypoints(0,traj2.GetNumWaypoints(),newspec)
-            data[graboffset] = body2.GetEnvironmentId()
-            data[-newspec.GetDOF()+graboffset] = -body2.GetEnvironmentId()
+            data[graboffset] = body2.GetEnvironmentBodyIndex()
+            data[-newspec.GetDOF()+graboffset] = -body2.GetEnvironmentBodyIndex()
             traj2grab.Insert(0,data)
             
             # reset back to the original scene
@@ -173,7 +173,7 @@ class TestTrajectory(EnvironmentSetup):
             spec.AddGroup('deltatime',1,'linear')
             traj=RaveCreateTrajectory(self.env,'')
             traj.Init(spec)
-            traj.Insert(0,[body1.GetEnvironmentId(),0])
+            traj.Insert(0,[body1.GetEnvironmentBodyIndex(),0])
 
         robot.GetController().SetPath(traj)
         assert(robot.WaitForController(0.1))

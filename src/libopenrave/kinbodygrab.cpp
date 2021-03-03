@@ -199,7 +199,7 @@ void KinBody::Release(KinBody &body)
             bool bpointermatch = pgrabbedbody.get() == &body;
             bool bnamematch = pgrabbedbody->GetName() == body.GetName();
             if( bpointermatch != bnamematch ) {
-                RAVELOG_WARN_FORMAT("env=%d, body %s has grabbed body %s (%d), but it does not match with %s (%d) ", GetEnv()->GetId()%GetName()%pgrabbedbody->GetName()%pgrabbedbody->GetEnvironmentId()%body.GetName()%body.GetEnvironmentId());
+                RAVELOG_WARN_FORMAT("env=%d, body %s has grabbed body %s (%d), but it does not match with %s (%d) ", GetEnv()->GetId()%GetName()%pgrabbedbody->GetName()%pgrabbedbody->GetEnvironmentBodyIndex()%body.GetName()%body.GetEnvironmentBodyIndex());
             }
             if( bpointermatch ) {
                 _vGrabbedBodies.erase(itgrabbed);
@@ -220,7 +220,7 @@ void KinBody::Release(KinBody &body)
             }
         }
 
-        RAVELOG_DEBUG_FORMAT("env=%d, body %s is not grabbing body %s (%d), but grabbing bodies [%s]", GetEnv()->GetId()%GetName()%body.GetName()%body.GetEnvironmentId()%ss.str());
+        RAVELOG_DEBUG_FORMAT("env=%d, body %s is not grabbing body %s (%d), but grabbing bodies [%s]", GetEnv()->GetId()%GetName()%body.GetName()%body.GetEnvironmentBodyIndex()%ss.str());
     }
 }
 
@@ -313,7 +313,7 @@ void KinBody::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
     FOREACHC(itgrabbed, _vGrabbedBodies) {
         GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
         KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
-        if( !!pbody && pbody->GetEnvironmentId() ) {
+        if( !!pbody && pbody->GetEnvironmentBodyIndex() ) {
             vbodies.push_back(pbody);
         }
     }
@@ -328,7 +328,7 @@ KinBodyPtr KinBody::GetGrabbedBody(int iGrabbed) const
 {
     GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(_vGrabbedBodies.at(iGrabbed));
     KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
-    if( !!pbody && pbody->GetEnvironmentId() ) {
+    if( !!pbody && pbody->GetEnvironmentBodyIndex() ) {
         return pbody;
     }
 

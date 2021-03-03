@@ -415,7 +415,7 @@ void KinBody::Destroy()
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -452,7 +452,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const
 
 bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -494,7 +494,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
 
 bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -523,7 +523,7 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible,
 
 bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -554,7 +554,7 @@ bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometr
 
 bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP(geometries.size(),>,0);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
@@ -616,7 +616,7 @@ void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vec
 
 bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     _veclinks.reserve(linkinfos.size());
     FOREACHC(itlinkinfo, linkinfos) {
@@ -637,7 +637,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
 
 void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP(linkinfos.size(),>,0);
     Destroy();
     _veclinks.reserve(linkinfos.size());
@@ -4681,7 +4681,7 @@ bool KinBody::IsAttached(const KinBody &body) const
     //     return false;
     // }
     std::vector<bool> visited(GetEnv()->GetNumBodies(), false);
-    return _IsAttached(body.GetEnvironmentId(), visited);
+    return _IsAttached(body.GetEnvironmentBodyIndex(), visited);
 }
 
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
@@ -5124,7 +5124,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         FOREACHC(itatt, r->_listAttachedBodies) {
             KinBodyConstPtr pattref = itatt->lock();
             if( !!pattref ) {
-                _listAttachedBodies.push_back(GetEnv()->GetBodyFromEnvironmentId(pattref->GetEnvironmentId()));
+                _listAttachedBodies.push_back(GetEnv()->GetBodyFromEnvironmentId(pattref->GetEnvironmentBodyIndex()));
             }
         }
     }
@@ -5152,7 +5152,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         KinBodyPtr pbodyref = pgrabbedref->_pgrabbedbody.lock();
         KinBodyPtr pgrabbedbody;
         if( !!pbodyref ) {
-            //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentId());
+            //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentBodyIndex());
             pgrabbedbody = GetEnv()->GetKinBody(pbodyref->GetName());
             if( !pgrabbedbody ) {
                 if( cloningoptions & Clone_PassOnMissingBodyReferences ) {
@@ -5180,7 +5180,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         _selfcollisionchecker = RaveCreateCollisionChecker(GetEnv(), r->_selfcollisionchecker->GetXMLId());
         _selfcollisionchecker->SetCollisionOptions(r->_selfcollisionchecker->GetCollisionOptions());
         _selfcollisionchecker->SetGeometryGroup(r->_selfcollisionchecker->GetGeometryGroup());
-        if( GetEnvironmentId() != 0 ) {
+        if( GetEnvironmentBodyIndex() != 0 ) {
             // This body has been added to the environment already so can call InitKinBody.
             _selfcollisionchecker->InitKinBody(shared_kinbody());
         }

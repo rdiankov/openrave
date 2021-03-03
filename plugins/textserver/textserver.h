@@ -887,7 +887,7 @@ protected:
         }
         robot->SetName(robotname);
         GetEnv()->Add(robot, IAM_StrictNameChecking);
-        os << robot->GetEnvironmentId();
+        os << robot->GetEnvironmentBodyIndex();
         return true;
     }
 
@@ -974,7 +974,7 @@ protected:
         body->SetName(bodyname);
 
         GetEnv()->Add(body, IAM_StrictNameChecking);
-        os << body->GetEnvironmentId();
+        os << body->GetEnvironmentBodyIndex();
         return true;
     }
 
@@ -995,7 +995,7 @@ protected:
             os << "0";
         }
         else {
-            os << pbody->GetEnvironmentId();
+            os << pbody->GetEnvironmentBodyIndex();
         }
         return true;
     }
@@ -1010,7 +1010,7 @@ protected:
 
         os << vrobots.size() << " ";
         FOREACHC(it, vrobots) {
-            os << (*it)->GetEnvironmentId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetURI() << "\n ";
+            os << (*it)->GetEnvironmentBodyIndex() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetURI() << "\n ";
         }
         return true;
     }
@@ -1024,7 +1024,7 @@ protected:
         GetEnv()->GetBodies(vbodies);
         os << vbodies.size() << " ";
         FOREACHC(it, vbodies) {
-            os << (*it)->GetEnvironmentId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetURI() << "\n ";
+            os << (*it)->GetEnvironmentBodyIndex() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetURI() << "\n ";
         }
 
         return true;
@@ -2081,10 +2081,10 @@ protected:
         }
         int bodyindex = 0;
         if( !!preport->plink1 &&( preport->plink1->GetParent() != pbody) ) {
-            bodyindex = preport->plink1->GetParent()->GetEnvironmentId();
+            bodyindex = preport->plink1->GetParent()->GetEnvironmentBodyIndex();
         }
         if( !!preport->plink2 &&( preport->plink2->GetParent() != pbody) ) {
-            bodyindex = preport->plink2->GetParent()->GetEnvironmentId();
+            bodyindex = preport->plink2->GetParent()->GetEnvironmentBodyIndex();
         }
         os << bodyindex << " ";
 
@@ -2187,7 +2187,7 @@ protected:
 
         TriMesh trimesh;
         FOREACH(itbody, vbodies) {
-            if( (find(vobjids.begin(),vobjids.end(),(*itbody)->GetEnvironmentId()) == vobjids.end()) ^ !inclusive ) {
+            if( (find(vobjids.begin(),vobjids.end(),(*itbody)->GetEnvironmentBodyIndex()) == vobjids.end()) ^ !inclusive ) {
                 continue;
             }
             GetEnv()->Triangulate(trimesh, **itbody);

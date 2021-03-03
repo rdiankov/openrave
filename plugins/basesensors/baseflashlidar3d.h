@@ -247,7 +247,7 @@ public:
                             // store the colliding bodies
                             KinBody::LinkConstPtr plink = !!_report->plink1 ? _report->plink1 : _report->plink2;
                             if( !!plink ) {
-                                _databodyids[index] = plink->GetParent()->GetEnvironmentId();
+                                _databodyids[index] = plink->GetParent()->GetEnvironmentBodyIndex();
                             }
                         }
                         else {

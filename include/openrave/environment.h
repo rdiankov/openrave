@@ -450,7 +450,7 @@ public:
 
     /// \brief Query a body from its id. <b>[multi-thread safe]</b>
     ///
-    /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentId!
+    /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentBodyIndex!
     virtual KinBodyPtr GetKinBodyById(const std::string& id) const =0;
 
     /// \brief Query the largest environment body index in this environment. <b>[multi-thread safe]</b>

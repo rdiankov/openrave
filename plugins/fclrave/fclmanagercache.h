@@ -188,8 +188,8 @@ public:
 
             // regardless if the linkmask, have to always add to cache in order to track!
             if( 1 ) {//bsetUpdateStamp ) {
-                //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s (%d) linkmask=0x%x, _tmpSortedBuffer.size()=%d", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%pbody->GetEnvironmentId()%_GetLinkMask(_linkEnableStates)%_tmpSortedBuffer.size());
-                const int bodyId = (*itbody)->GetEnvironmentId();
+                //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s (%d) linkmask=0x%x, _tmpSortedBuffer.size()=%d", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%pbody->GetEnvironmentBodyIndex()%_GetLinkMask(_linkEnableStates)%_tmpSortedBuffer.size());
+                const int bodyId = (*itbody)->GetEnvironmentBodyIndex();
                 //EnsureVectorSize(vecCachedBodies, bodyId);
                 KinBodyCache& cache = vecCachedBodies.at(bodyId);
                 cache = KinBodyCache(*itbody, pinfo);
@@ -227,7 +227,7 @@ public:
         pmanager->clear();
         vecCachedBodies.clear();
         FOREACH(itbody, excludedbodies) {
-            _setExcludeBodyIds.insert((*itbody)->GetEnvironmentId());
+            _setExcludeBodyIds.insert((*itbody)->GetEnvironmentBodyIndex());
         }
         pmanager->setup();
     }
@@ -239,12 +239,12 @@ public:
         if (vbodies.empty()) {
             return;
         }
-        const KinBodyConstPtr plastBody = 
+        const KinBodyConstPtr plastBody = *vbodies.rbegin();
         std::vector<CollisionObjectPtr> vcolobjs;
-        EnsureVectorSize(vecCachedBodies, vbodies.at(0)->GetEnv()->GetMaxEnvironmentBodyIndex());
+        EnsureVectorSize(vecCachedBodies, plastBody->GetEnv()->GetMaxEnvironmentBodyIndex());
         for (const KinBodyConstPtr& pbody : vbodies) {
             const KinBody& body = *pbody;
-            int bodyid = body.GetEnvironmentId();
+            int bodyid = body.GetEnvironmentBodyIndex();
             if( _setExcludeBodyIds.count(bodyid) == 0 ) {
                 bool bIsValid = vecCachedBodies.size() > bodyid && vecCachedBodies.at(bodyid).IsValid();
                 if( !bIsValid) {
@@ -271,15 +271,15 @@ public:
 //    void EnsureBody(KinBodyConstPtr pbody)
 //    {
 //        _tmpSortedBuffer.resize(0);
-//        std::map<int, KinBodyCache>::iterator it = vecCachedBodies.find(pbody->GetEnvironmentId());
+//        std::map<int, KinBodyCache>::iterator it = vecCachedBodies.find(pbody->GetEnvironmentBodyIndex());
 //        if( it == vecCachedBodies.end() ) {
 //            std::vector<CollisionObjectPtr> vcolobjs;
 //            FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(pbody);
 //            uint64_t linkmask=0;
 //            if( _AddBody(pbody, pinfo, vcolobjs, linkmask, false) ) { // new collision objects are already added to _tmpSortedBuffer
-//                vecCachedBodies[(pbody)->GetEnvironmentId()] = KinBodyCache(pbody, pinfo);
-//                vecCachedBodies[(pbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
-//                vecCachedBodies[(pbody)->GetEnvironmentId()].linkmask = linkmask;
+//                vecCachedBodies[(pbody)->GetEnvironmentBodyIndex()] = KinBodyCache(pbody, pinfo);
+//                vecCachedBodies[(pbody)->GetEnvironmentBodyIndex()].vcolobjs.swap(vcolobjs);
+//                vecCachedBodies[(pbody)->GetEnvironmentBodyIndex()].linkmask = linkmask;
 //            }
 //        }
 //        if( _tmpSortedBuffer.size() > 0 ) {
@@ -296,7 +296,7 @@ public:
     {
         RAVELOG_VERBOSE_FORMAT("%u removing body %s", _lastSyncTimeStamp% body.GetName());
 
-        const int bodyid = body.GetEnvironmentId();
+        const int bodyid = body.GetEnvironmentBodyIndex();
         if( vecCachedBodies.size() > bodyid) {
             KinBodyCache& cache = vecCachedBodies.at(bodyid);
             if (cache.IsValid()) {
@@ -338,7 +338,7 @@ public:
         KinBodyConstPtr ptrackingbody = _ptrackingbody.lock();
         if( !!ptrackingbody && _bTrackActiveDOF ) {
             const KinBody& trackingbody = *ptrackingbody;
-            const int bodyId = trackingbody.GetEnvironmentId();
+            const int bodyId = trackingbody.GetEnvironmentBodyIndex();
             bool bFound = bodyId < vecCachedBodies.size();
             bool isValid = false;
             if (bFound) {
@@ -454,7 +454,7 @@ public:
             KinBodyConstPtr pbody = cache.pwbody.lock();
             FCLSpace::KinBodyInfoPtr pinfo = cache.pwinfo.lock();
 
-            if( !pbody || pbody->GetEnvironmentId() == 0 ) {
+            if( !pbody || pbody->GetEnvironmentBodyIndex() == 0 ) {
                 // should happen when parts are removed
                 RAVELOG_VERBOSE_FORMAT("%u manager contains invalid body %s, removing for now (env %d)", _lastSyncTimeStamp%(!pbody ? std::string() : pbody->GetName())%(!pbody ? -1 : pbody->GetEnv()->GetId()));
                 FOREACH(itcolobj, cache.vcolobjs) {
@@ -511,7 +511,7 @@ public:
                 }
 
                 //uint64_t changed = cache.linkmask ^ newlinkmask;
-                //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed link %d != %d, linkmask=0x%x", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentId()%pinfo->nLinkUpdateStamp%cache.nLinkUpdateStamp%_GetLinkMask(newLinkEnableStates));
+                //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed link %d != %d, linkmask=0x%x", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentBodyIndex()%pinfo->nLinkUpdateStamp%cache.nLinkUpdateStamp%_GetLinkMask(newLinkEnableStates));
                 for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
                     uint8_t changed = cache.linkEnableStates.at(ilink) != newLinkEnableStates.at(ilink);
                     if( changed ) {
@@ -563,7 +563,7 @@ public:
             if( pinfo->nGeometryUpdateStamp != cache.nGeometryUpdateStamp ) {
 
                 if( cache.geometrygroup.size() == 0 || cache.geometrygroup != pinfo->_geometrygroup ) {
-                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed geometry %d != %d, linkmask=0x%x", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentId()%pinfo->nGeometryUpdateStamp%cache.nGeometryUpdateStamp%_GetLinkMask(cache.linkEnableStates));
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed geometry %d != %d, linkmask=0x%x", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentBodyIndex()%pinfo->nGeometryUpdateStamp%cache.nGeometryUpdateStamp%_GetLinkMask(cache.linkEnableStates));
                     // vcolobjs most likely changed
                     for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
                         if( cache.linkEnableStates.at(ilink) ) {
@@ -609,14 +609,14 @@ public:
                     cache.geometrygroup = pinfo->_geometrygroup;
                 }
                 else {
-                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x, lastsync=%u body %s (%d) for cache changed geometry but no update %d != %d, geometrygroup=%s", body.GetEnv()->GetId()%this%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentId()%pinfo->nGeometryUpdateStamp%cache.nGeometryUpdateStamp%cache.geometrygroup);
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x, lastsync=%u body %s (%d) for cache changed geometry but no update %d != %d, geometrygroup=%s", body.GetEnv()->GetId()%this%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentBodyIndex()%pinfo->nGeometryUpdateStamp%cache.nGeometryUpdateStamp%cache.geometrygroup);
                 }
                 cache.nGeometryUpdateStamp = pinfo->nGeometryUpdateStamp;
             }
             if( pinfo->nLastStamp != cache.nLastStamp ) {
                 if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
                     //Transform tpose = body.GetTransform();
-                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u body %s (%for cache changed transform %d != %d, num=%d, mask=0x%x, trans=(%.3f, %.3f, %.3f)", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentId()%pinfo->nLastStamp%cache.nLastStamp%pinfo->vlinks.size()%_GetLinkMask(cache.linkEnableStates)%tpose.trans.x%tpose.trans.y%tpose.trans.z);
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u body %s (%for cache changed transform %d != %d, num=%d, mask=0x%x, trans=(%.3f, %.3f, %.3f)", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentBodyIndex()%pinfo->nLastStamp%cache.nLastStamp%pinfo->vlinks.size()%_GetLinkMask(cache.linkEnableStates)%tpose.trans.x%tpose.trans.y%tpose.trans.z);
                 }
                 // transform changed
                 for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
@@ -693,11 +693,11 @@ public:
             std::set<KinBodyConstPtr> attachedBodies;
             ptrackingbody->GetAttached(attachedBodies);
             std::vector<CollisionObjectPtr> vcolobjs;
-            //RAVELOG_VERBOSE_FORMAT("env=%d, %x %u setting %d attached bodies for body %s (%d)", ptrackingbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%attachedBodies.size()%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentId());
+            //RAVELOG_VERBOSE_FORMAT("env=%d, %x %u setting %d attached bodies for body %s (%d)", ptrackingbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%attachedBodies.size()%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentBodyIndex());
             // add any new bodies
             for (const KinBodyConstPtr& pattached : attachedBodies) {
                 const KinBody& attached = *pattached;
-                const int attachedBodyId = attached.GetEnvironmentId();
+                const int attachedBodyId = attached.GetEnvironmentBodyIndex();
 
                 EnsureVectorSize(vecCachedBodies, attachedBodyId+1);
 
@@ -730,7 +730,7 @@ public:
                 KinBodyConstPtr pbody = cache.pwbody.lock();
                 // could be the case that the same pointer was re-added to the environment so have to check the environment id
                 // make sure we don't need to make this asusmption of body id change when bodies are removed and re-added
-                if( !pbody || attachedBodies.count(pbody) == 0 || pbody->GetEnvironmentId() != bodyId ) {
+                if( !pbody || attachedBodies.count(pbody) == 0 || pbody->GetEnvironmentBodyIndex() != bodyId ) {
                     RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%bodyId);
                     // not in attached bodies so should remove
                     FOREACH(itcol, cache.vcolobjs) {
@@ -888,7 +888,7 @@ private:
 
     FCLSpace& _fclspace; ///< reference for speed
     BroadPhaseCollisionManagerPtr pmanager;
-    std::vector<KinBodyCache> vecCachedBodies; ///< vector of KinBodyCache(weak body, updatestamp)) where index is KinBody::GetEnvironmentId. Index 0 has invalid entry because valid env id starts from 1.
+    std::vector<KinBodyCache> vecCachedBodies; ///< vector of KinBodyCache(weak body, updatestamp)) where index is KinBody::GetEnvironmentBodyIndex. Index 0 has invalid entry because valid env id starts from 1.
     uint32_t _lastSyncTimeStamp; ///< timestamp when last synchronized
 
     std::set<int> _setExcludeBodyIds; ///< any bodies that should not be considered inside the manager, used with environment mode

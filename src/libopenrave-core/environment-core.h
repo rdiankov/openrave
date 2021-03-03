@@ -1309,7 +1309,7 @@ public:
         }
 
         FOREACH(it, vecbodies) {
-            if( (*it)->GetEnvironmentId() ) {     // have to check if valid
+            if( (*it)->GetEnvironmentBodyIndex() ) {     // have to check if valid
                 (*it)->SimulationStep(fTimeStep);
             }
         }
@@ -2469,7 +2469,7 @@ public:
             state.strname =pbody->GetName();
             state.uri = pbody->GetURI();
             state.updatestamp = pbody->GetUpdateStamp();
-            state.environmentid = pbody->GetEnvironmentId();
+            state.environmentid = pbody->GetEnvironmentBodyIndex();
             if( pbody->IsRobot() ) {
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
                 if( !!probot ) {
@@ -3145,7 +3145,7 @@ protected:
                         //pnewrobot->ReleaseAllGrabbed(); // will re-grab later?
                         listToCopyState.push_back(*itrobot);
                     }
-                    const int bodyId = (*itrobot)->GetEnvironmentId();
+                    const int bodyId = (*itrobot)->GetEnvironmentBodyIndex();
                     pnewrobot->_environmentid = bodyId;
                     BOOST_ASSERT( _vecWeakBodies.size() < bodyId + 1 || !_vecWeakBodies.at(bodyId).lock());
                     _vecbodies.push_back(pnewrobot);
@@ -3161,7 +3161,7 @@ protected:
             }
             for (const KinBodyPtr& pbody : r->_vecbodies) {
                 const KinBody& body = *pbody;
-                const int bodyId = body.GetEnvironmentId();
+                const int bodyId = body.GetEnvironmentBodyIndex();
                 if( bodyId < _vecWeakBodies.size() && !!_vecWeakBodies.at(bodyId).lock() ) {
                     continue;
                 }
@@ -3205,7 +3205,7 @@ protected:
             if( listToCopyState.size() > 0 ) {
                 for (const KinBodyPtr& pbody : listToCopyState) {
                     const KinBody& body = *pbody;
-                    const int bodyId = body.GetEnvironmentId();
+                    const int bodyId = body.GetEnvironmentBodyIndex();
                     KinBodyPtr pnewbody = _vecWeakBodies[bodyId].lock();
                     if( bCollisionCheckerChanged ) {
                         GetCollisionChecker()->InitKinBody(pnewbody);
@@ -3232,7 +3232,7 @@ protected:
             // now clone
             for (const KinBodyPtr& pbody : listToClone) {
                 const KinBody& body = *pbody;
-                const int bodyId = body.GetEnvironmentId();
+                const int bodyId = body.GetEnvironmentBodyIndex();
                 try {
                     KinBodyPtr pnewbody = _vecWeakBodies[bodyId].lock();
                     if( !!pnewbody ) {
@@ -3246,7 +3246,7 @@ protected:
 
             for (const KinBodyPtr& pbody : listToClone) {
                 const KinBody& body = *pbody;
-                const int bodyId = body.GetEnvironmentId();
+                const int bodyId = body.GetEnvironmentBodyIndex();
                 KinBodyPtr pnewbody = _vecWeakBodies[bodyId].lock();
                 pnewbody->_ComputeInternalInformation();
                 GetCollisionChecker()->InitKinBody(pnewbody);
@@ -3261,7 +3261,7 @@ protected:
             // update the state after every body is initialized!
             for (const KinBodyPtr& pbody : listToClone) {
                 const KinBody& body = *pbody;
-                const int bodyId = body.GetEnvironmentId();
+                const int bodyId = body.GetEnvironmentBodyIndex();
                 KinBodyPtr pnewbody = _vecWeakBodies[bodyId].lock();
                 if( body.IsRobot() ) {
                     RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
@@ -3280,7 +3280,7 @@ protected:
                 for (const KinBodyPtr& pbody : listToCopyState) {
                     const KinBody& body = *pbody;
                     if( body.IsRobot() ) {
-                        const int bodyId = body.GetEnvironmentId();
+                        const int bodyId = body.GetEnvironmentBodyIndex();
                         RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
                         RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_vecWeakBodies[bodyId].lock());
                         RobotBase::RobotStateSaver saver(poldrobot, KinBody::Save_GrabbedBodies);

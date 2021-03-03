@@ -493,7 +493,7 @@ public:
         std::set<KinBodyConstPtr> attachedBodies;
         pbody->GetAttached(attachedBodies);
         FOREACH(itbody, attachedBodies) {
-            if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
+            if( (*itbody)->GetEnvironmentBodyIndex() ) { // for now GetAttached can hold bodies that are not initialized
                 _fclspace->SynchronizeWithAttached(**itbody);
             }
         }
@@ -1269,7 +1269,7 @@ private:
         _bParentlessCollisionObject = false;
         std::set<int> setExcludeBodyIds; ///< any
         FOREACH(itbody, excludedbodies) {
-            setExcludeBodyIds.insert((*itbody)->GetEnvironmentId());
+            setExcludeBodyIds.insert((*itbody)->GetEnvironmentBodyIndex());
         }
 
         // check the cache and cleanup any unused environments
