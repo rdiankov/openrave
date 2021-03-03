@@ -553,25 +553,13 @@ public:
             const int envId = pbody->GetEnvironmentBodyIndex();
             BOOST_ASSERT(envId != 0);
 
-            if (envId == _currentpinfo.size() - 1) {
-                // chance to shrink vector, shrink all trailing null pointers.
-                // batch delete for speed, rather than pop one by one 
-                int numErase = 1; // last element is already decided to be erased
-                for (; numErase < _currentpinfo.size() - 1; ++numErase) {
-                    if (!!_currentpinfo[_currentpinfo.size() - 1 - numErase]) {
-                        break;
-                    }
-                }
-                // erase trailing null pointers
-                _currentpinfo.erase(_currentpinfo.end() - numErase, _currentpinfo.end());
-                //RAVELOG_INFO_FORMAT("erased envId=%d, and popped %d , size is %d", envId%numErase%_currentpinfo.size());
-            }
-            else {
-                // invalidate
-                _currentpinfo.at(envId) = KinBodyInfoPtr();
+            if (envId < (int) _currentpinfo.size()) {
+                _currentpinfo.at(envId).reset();
                 //RAVELOG_INFO_FORMAT("erased %d but didn't pop back, size is %d", envId%_currentpinfo.size());
             }
-            _cachedpinfo.at(envId).clear();
+            if (envId < (int) _cachedpinfo.size()) {
+                _cachedpinfo.at(envId).clear();
+            }
         }
     }
 
