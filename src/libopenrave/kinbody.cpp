@@ -4677,17 +4677,17 @@ bool KinBody::IsAttached(const KinBody &body) const
     if(this == &body ) {
         return true;
     }
-    // else if (_listAttachedBodies.empty()) {
-    //     return false;
-    // }
-    std::vector<bool> visited(GetEnv()->GetNumBodies(), false);
+    else if (_listAttachedBodies.empty()) {
+        return false;
+    }
+    std::vector<bool> visited(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, false);
     return _IsAttached(body.GetEnvironmentBodyIndex(), visited);
 }
 
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
-    std::vector<bool> visited(GetEnv()->GetNumBodies(), false);
+    std::vector<bool> visited(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, false);
     FOREACHC(itbody,_listAttachedBodies) {
         KinBodyPtr pattached = itbody->lock();
         if( !!pattached && setAttached.insert(pattached).second ) {
