@@ -3455,8 +3455,9 @@ protected:
         const bool bRecycleId = !_environmentIndexRecyclePool.empty();
         int bodyId = 0;
         if (bRecycleId) {
-            bodyId = _environmentIndexRecyclePool.back();
-            _environmentIndexRecyclePool.pop_back();
+            std::set<int>::iterator smallestIt = _environmentIndexRecyclePool.begin();
+            bodyId = *smallestIt;
+            _environmentIndexRecyclePool.erase(smallestIt);
             //RAVELOG_INFO_FORMAT("env=%d, recycled body bodyId=%d for %s", GetId()%bodyId%pbody->GetName());
         }
         else {
@@ -3490,7 +3491,7 @@ protected:
             _vecWeakBodies.at(pbody->_environmentid) = KinBodyWeakPtr();
         }
 
-        _environmentIndexRecyclePool.push_back(pbody->_environmentid); // for recycle later
+        _environmentIndexRecyclePool.insert(pbody->_environmentid); // for recycle later
         //RAVELOG_INFO_FORMAT("env=%d, removed body id=%d from %s, recycle later", GetId()%pbody->GetName()%pbody->_environmentid);
 
         pbody->_environmentid = 0;
@@ -3795,7 +3796,7 @@ protected:
     PhysicsEngineBasePtr _pPhysicsEngine;
 
     std::vector<KinBodyWeakPtr> _vecWeakBodies;     ///< a vector of all the bodies in the environment. Controlled through the KinBody constructor and destructors
-    std::vector<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. 
+    std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. 
 
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation
 
