@@ -174,6 +174,8 @@ public:
 
     object GetBodyFromEnvironmentId(int id);
 
+    int GetMaxEnvironmentBodyIndex();
+
     int AddModule(PyModuleBasePtr prob, const std::string &args);
     bool RemoveProblem(PyModuleBasePtr prob);
     bool Remove(PyInterfaceBasePtr obj);

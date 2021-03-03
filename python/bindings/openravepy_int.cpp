@@ -1926,6 +1926,11 @@ object PyEnvironmentBase::GetBodyFromEnvironmentId(int id)
     return py::to_object(openravepy::toPyKinBody(_penv->GetBodyFromEnvironmentId(id),shared_from_this()));
 }
 
+int PyEnvironmentBase::GetMaxEnvironmentBodyIndex()
+{
+    return _penv->GetMaxEnvironmentBodyIndex();
+}
+
 int PyEnvironmentBase::AddModule(PyModuleBasePtr prob, const string &PY_ARGS) {
     CHECK_POINTER(prob);
     return _penv->AddModule(openravepy::GetModule(prob),PY_ARGS);
@@ -3197,6 +3202,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetRobot",&PyEnvironmentBase::GetRobot, PY_ARGS("name") DOXY_FN(EnvironmentBase,GetRobot))
                      .def("GetSensor",&PyEnvironmentBase::GetSensor, PY_ARGS("name") DOXY_FN(EnvironmentBase,GetSensor))
                      .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId, DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentId))
+                     .def("GetMaxEnvironmentBodyIndex",&PyEnvironmentBase::GetMaxEnvironmentBodyIndex, DOXY_FN(EnvironmentBase,GetMaxEnvironmentBodyIndex))
                      .def("AddModule",&PyEnvironmentBase::AddModule,PY_ARGS("module","args") DOXY_FN(EnvironmentBase,AddModule))
                      .def("LoadProblem",&PyEnvironmentBase::AddModule,PY_ARGS("module","args") DOXY_FN(EnvironmentBase,AddModule))
                      .def("RemoveProblem",&PyEnvironmentBase::RemoveProblem, PY_ARGS("prob") DOXY_FN(EnvironmentBase,RemoveProblem))
