@@ -73,10 +73,10 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
         }
 
         ~KinBodyCache() {
-            Destroy();
+            Invalidate();
         }
 
-        inline void Destroy()
+        inline void Invalidate()
         {
             if( vcolobjs.size() > 0 ) { // should never happen
                 KinBodyConstPtr pbody = pwbody.lock();
@@ -306,7 +306,7 @@ public:
                     }
                 }
                 cache.vcolobjs.resize(0);
-                cache.Destroy();
+                cache.Invalidate();
 
                 //_RemoveTrailingInvalidCachedBodies();
 
@@ -441,7 +441,7 @@ public:
                     }
                     ++bodyIdCached;
                 }
-                RAVELOG_WARN_FORMAT("%x tracking body not in current cached bodies (tracking body %s (id=%d)) (env %d). Current cache is: %s", this%trackingbody.GetName()%bodyId%trackingbody.GetEnv()->GetId()%ssinfo);
+                RAVELOG_WARN_FORMAT("%x tracking body not in current cached bodies (found=%d, valid=%d) (tracking body %s (id=%d)) (env %d). Current cache is: %s", this%bFound%isValid%trackingbody.GetName()%bodyId%trackingbody.GetEnv()->GetId()%ssinfo);
             }
         }
 
@@ -463,7 +463,7 @@ public:
                     }
                 }
                 cache.vcolobjs.resize(0);
-                cache.Destroy();
+                cache.Invalidate();
                 continue;
             }
 
@@ -724,6 +724,7 @@ public:
             
             int bodyId = 0;
             for (KinBodyCache& cache : vecCachedBodies) {
+                ++bodyId;
                 if (!cache.IsValid()) {
                     continue;
                 }
@@ -739,9 +740,8 @@ public:
                         }
                     }
                     cache.vcolobjs.resize(0);
-                    cache.Destroy();
+                    cache.Invalidate();
                 }
-                ++bodyId;
             }
         }
 
