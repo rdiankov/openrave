@@ -830,7 +830,7 @@ public:
         /// \brief tLink the world transform to put this link in when computing the AABB
         virtual AABB ComputeAABBFromTransform(const Transform& tLink) const;
 
-        /// \brief Compute the aabb of all the geometries from the given groupname
+        /// \brief Compute the aabb of all the geometries from the given groupname. If the given geomgroupname does not exist in this link, will throw an exception.
         virtual AABB ComputeAABBForGeometryGroup(const std::string& geomgroupname) const;
         virtual AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const;
         virtual AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tLink) const;
@@ -2554,7 +2554,7 @@ private:
     /// Internally equivalent to ComputeAABBFromTransform(Transform(), ...)
     virtual AABB ComputeLocalAABB(bool bEnabledOnlyLinks=false) const;
 
-    /// \brief Return the axis-aligned bounding box of the specified geometries of the kinbody in the world coordinate system.
+    /// \brief Return the axis-aligned bounding box of the specified geometries of the kinbody in the world coordinate system. If any of the links does not have the geometry group geomgroupname, will throw an exception.
     virtual AABB ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
     virtual AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
     virtual AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tBody, bool bEnabledOnlyLinks=false) const;
