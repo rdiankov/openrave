@@ -44,6 +44,11 @@ inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dRe
     return RaveSqrt((t1.trans-t2.trans).lengthsqr3() + frotweight*e);
 }
 
+inline bool cmpEnvBodyIndex(const KinBodyPtr& pbody, int envBodyIndex)
+{
+    return pbody->GetEnvironmentBodyIndex() < envBodyIndex;
+}
+
 class Environment : public EnvironmentBase
 {
     class GraphHandleMulti : public GraphHandle
@@ -867,8 +872,14 @@ public:
         }
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            _vecbodies.push_back(pbody);
             SetEnvironmentId(pbody);
+            
+            const int newBodyIndex = pbody->GetEnvironmentBodyIndex();
+            {
+                const std::vector<KinBodyPtr>::const_iterator it = std::lower_bound(_vecbodies.begin(), _vecbodies.end(), newBodyIndex, cmpEnvBodyIndex);
+                BOOST_ASSERT(it == _vecbodies.end() || (**it).GetEnvironmentBodyIndex() != newBodyIndex); // check uniqueness
+                _vecbodies.insert(it, pbody);
+            }
             _nBodiesModifiedStamp++;
         }
         pbody->_ComputeInternalInformation();
@@ -922,9 +933,20 @@ public:
         }
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            _vecbodies.push_back(robot);
-            _vecrobots.push_back(robot);
             SetEnvironmentId(robot);
+            
+            const int newBodyIndex = robot->GetEnvironmentBodyIndex();
+            {
+                const std::vector<KinBodyPtr>::const_iterator it = std::lower_bound(_vecbodies.begin(), _vecbodies.end(), newBodyIndex, cmpEnvBodyIndex);
+                BOOST_ASSERT(it == _vecbodies.end() || (**it).GetEnvironmentBodyIndex() != newBodyIndex); // check uniqueness
+                _vecbodies.insert(it, robot);
+            }
+            {
+                const std::vector<RobotBasePtr>::const_iterator it = std::lower_bound(_vecrobots.begin(), _vecrobots.end(), newBodyIndex, cmpEnvBodyIndex);
+                BOOST_ASSERT(it == _vecrobots.end() || (**it).GetEnvironmentBodyIndex() != newBodyIndex); // check uniqueness
+                _vecrobots.push_back(robot);
+            }
+            
             _nBodiesModifiedStamp++;
         }
         robot->_ComputeInternalInformation(); // have to do this after _vecrobots is added since SensorBase::SetName can call EnvironmentBase::GetSensor to initialize itself
@@ -3780,8 +3802,8 @@ protected:
         _prLoadEnvAlloc->Clear();
     }
 
-    std::vector<RobotBasePtr> _vecrobots;      ///< robots (possibly controlled). protected by _mutexInterfaces
-    std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots). protected by _mutexInterfaces
+    std::vector<RobotBasePtr> _vecrobots;      ///< robots (possibly controlled) sorted by env body index ascending order. protected by _mutexInterfaces
+    std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots) sorted by env body index ascending order. protected by _mutexInterfaces
 
     list< std::pair<ModuleBasePtr, std::string> > _listModules;     ///< modules loaded in the environment and the strings they were intialized with. Initialization strings are used for cloning.
     list<SensorBasePtr> _listSensors;     ///< sensors loaded in the environment
