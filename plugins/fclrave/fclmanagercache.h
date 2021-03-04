@@ -241,14 +241,13 @@ public:
         }
         const KinBodyConstPtr plastBody = *vbodies.rbegin();
         std::vector<CollisionObjectPtr> vcolobjs;
-        EnsureVectorSize(vecCachedBodies, plastBody->GetEnv()->GetMaxEnvironmentBodyIndex());
+        EnsureVectorSize(vecCachedBodies, plastBody->GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
         for (const KinBodyConstPtr& pbody : vbodies) {
             const KinBody& body = *pbody;
             int bodyid = body.GetEnvironmentBodyIndex();
             if( _setExcludeBodyIds.count(bodyid) == 0 ) {
                 bool bIsValid = vecCachedBodies.size() > bodyid && vecCachedBodies.at(bodyid).IsValid();
                 if( !bIsValid) {
-                    //EnsureVectorSize(vecCachedBodies, bodyid);
                     FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(body);
                     if( _AddBody(body, pinfo, vcolobjs, _linkEnableStates, false) ) { // new collision objects are already added to _tmpSortedBuffer
                         KinBodyCache& cache = vecCachedBodies.at(bodyid);
@@ -338,94 +337,92 @@ public:
         KinBodyConstPtr ptrackingbody = _ptrackingbody.lock();
         if( !!ptrackingbody && _bTrackActiveDOF ) {
             const KinBody& trackingbody = *ptrackingbody;
+            EnsureVectorSize(vecCachedBodies, trackingbody.GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+
             const int bodyId = trackingbody.GetEnvironmentBodyIndex();
-            bool bFound = bodyId < vecCachedBodies.size();
-            bool isValid = false;
-            if (bFound) {
-                KinBodyCache& cache = vecCachedBodies.at(bodyId);
-                isValid = cache.IsValid();
-                if (isValid) {
-                    FCLSpace::KinBodyInfoPtr pinfo = cache.pwinfo.lock();
-                    FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(trackingbody); // necessary in case pinfos were swapped!
-                    if( cache.nActiveDOFUpdateStamp != pnewinfo->nActiveDOFUpdateStamp ) {
-                        if( trackingbody.IsRobot() ) {
-                            RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(ptrackingbody);
-                            if( !!probot ) {
-                                if( pinfo != pnewinfo ) {
-                                    // going to recreate everything in below step anyway, so no need to update collision objects
-                                    _UpdateActiveLinks(probot);
-                                }
-                                else {
-                                    // check for any tracking link changes
-                                    _vTrackingActiveLinks.resize(probot->GetLinks().size(), 0);
-                                    // the active links might have changed
-                                    _linkEnableStates.resize(probot->GetLinks().size()); ///< links that are currently inside the manager
-                                    std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
-                                    for(size_t ilink = 0; ilink < probot->GetLinks().size(); ++ilink) {
-                                        int isLinkActive = 0;
-                                        FOREACH(itindex, probot->GetActiveDOFIndices()) {
-                                            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), ilink) ) {
-                                                isLinkActive = 1;
-                                                break;
-                                            }
-                                        }
-
-                                        bool bIsActiveLinkEnabled = probot->GetLinks()[ilink]->IsEnabled() && isLinkActive;
-
-                                        if( bIsActiveLinkEnabled ) {
-                                            _linkEnableStates.at(ilink) = 1;
-                                        }
-                                        if( _vTrackingActiveLinks[ilink] != isLinkActive ) {
-                                            _vTrackingActiveLinks[ilink] = isLinkActive;
-                                            CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(*pnewinfo, probot->GetLinks()[ilink]->GetIndex());
-                                            if( bIsActiveLinkEnabled && !!pcolobj ) {
-#ifdef FCLRAVE_USE_REPLACEOBJECT
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                                                SaveCollisionObjectDebugInfos(pcolobj.get());
-#endif
-                                                if( !!cache.vcolobjs.at(ilink) ) {
-                                                    pmanager->replaceObject(cache.vcolobjs.at(ilink).get(), pcolobj.get(), false);
-                                                }
-                                                else {
-                                                    pmanager->registerObject(pcolobj.get());
-                                                }
-#else
-                                                // no replace
-                                                if( !!cache.vcolobjs.at(ilink) ) {
-                                                    pmanager->unregisterObject(cache.vcolobjs.at(ilink).get());
-                                                }
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                                                SaveCollisionObjectDebugInfos(pcolobj.get());
-#endif
-                                                pmanager->registerObject(pcolobj.get());
-#endif
-                                                bcallsetup = true;
-                                            }
-                                            else {
-                                                if( !!cache.vcolobjs.at(ilink) ) {
-                                                    pmanager->unregisterObject(cache.vcolobjs.at(ilink).get());
-                                                }
-                                            }
-                                            cache.vcolobjs.at(ilink) = pcolobj;
-                                        }
-                                        else {
-                                            if( !bIsActiveLinkEnabled && !!cache.vcolobjs.at(ilink) ) {
-                                                //RAVELOG_VERBOSE_FORMAT("env=%d %x resetting cached colobj %s %d", probot->GetEnv()->GetId()%this%probot->GetName()%ilink);
-                                                pmanager->unregisterObject(cache.vcolobjs.at(ilink).get());
-                                                cache.vcolobjs.at(ilink).reset();
-                                            }
+            KinBodyCache& cache = vecCachedBodies.at(bodyId);
+            bool isValid = cache.IsValid();
+            if (isValid) {
+                FCLSpace::KinBodyInfoPtr pinfo = cache.pwinfo.lock();
+                FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(trackingbody); // necessary in case pinfos were swapped!
+                if( cache.nActiveDOFUpdateStamp != pnewinfo->nActiveDOFUpdateStamp ) {
+                    if( trackingbody.IsRobot() ) {
+                        RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(ptrackingbody);
+                        if( !!probot ) {
+                            if( pinfo != pnewinfo ) {
+                                // going to recreate everything in below step anyway, so no need to update collision objects
+                                _UpdateActiveLinks(probot);
+                            }
+                            else {
+                                // check for any tracking link changes
+                                _vTrackingActiveLinks.resize(probot->GetLinks().size(), 0);
+                                // the active links might have changed
+                                _linkEnableStates.resize(probot->GetLinks().size()); ///< links that are currently inside the manager
+                                std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
+                                for(size_t ilink = 0; ilink < probot->GetLinks().size(); ++ilink) {
+                                    int isLinkActive = 0;
+                                    FOREACH(itindex, probot->GetActiveDOFIndices()) {
+                                        if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), ilink) ) {
+                                            isLinkActive = 1;
+                                            break;
                                         }
                                     }
 
-                                    cache.nActiveDOFUpdateStamp = pnewinfo->nActiveDOFUpdateStamp;
-                                    cache.linkEnableStates = _linkEnableStates;
+                                    bool bIsActiveLinkEnabled = probot->GetLinks()[ilink]->IsEnabled() && isLinkActive;
+
+                                    if( bIsActiveLinkEnabled ) {
+                                        _linkEnableStates.at(ilink) = 1;
+                                    }
+                                    if( _vTrackingActiveLinks[ilink] != isLinkActive ) {
+                                        _vTrackingActiveLinks[ilink] = isLinkActive;
+                                        CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(*pnewinfo, probot->GetLinks()[ilink]->GetIndex());
+                                        if( bIsActiveLinkEnabled && !!pcolobj ) {
+#ifdef FCLRAVE_USE_REPLACEOBJECT
+#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+                                            SaveCollisionObjectDebugInfos(pcolobj.get());
+#endif
+                                            if( !!cache.vcolobjs.at(ilink) ) {
+                                                pmanager->replaceObject(cache.vcolobjs.at(ilink).get(), pcolobj.get(), false);
+                                            }
+                                            else {
+                                                pmanager->registerObject(pcolobj.get());
+                                            }
+#else
+                                            // no replace
+                                            if( !!cache.vcolobjs.at(ilink) ) {
+                                                pmanager->unregisterObject(cache.vcolobjs.at(ilink).get());
+                                            }
+#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+                                            SaveCollisionObjectDebugInfos(pcolobj.get());
+#endif
+                                            pmanager->registerObject(pcolobj.get());
+#endif
+                                            bcallsetup = true;
+                                        }
+                                        else {
+                                            if( !!cache.vcolobjs.at(ilink) ) {
+                                                pmanager->unregisterObject(cache.vcolobjs.at(ilink).get());
+                                            }
+                                        }
+                                        cache.vcolobjs.at(ilink) = pcolobj;
+                                    }
+                                    else {
+                                        if( !bIsActiveLinkEnabled && !!cache.vcolobjs.at(ilink) ) {
+                                            //RAVELOG_VERBOSE_FORMAT("env=%d %x resetting cached colobj %s %d", probot->GetEnv()->GetId()%this%probot->GetName()%ilink);
+                                            pmanager->unregisterObject(cache.vcolobjs.at(ilink).get());
+                                            cache.vcolobjs.at(ilink).reset();
+                                        }
+                                    }
                                 }
+
+                                cache.nActiveDOFUpdateStamp = pnewinfo->nActiveDOFUpdateStamp;
+                                cache.linkEnableStates = _linkEnableStates;
                             }
                         }
                     }
                 }
             }
-            if (!isValid) {
+            else {
                 std::string ssinfo;
                 int bodyIdCached = 0;
                 for (const KinBodyCache& cache : vecCachedBodies) {
@@ -441,7 +438,7 @@ public:
                     }
                     ++bodyIdCached;
                 }
-                RAVELOG_WARN_FORMAT("%x tracking body not in current cached bodies (found=%d, valid=%d) (tracking body %s (id=%d)) (env %d). Current cache is: %s", this%bFound%isValid%trackingbody.GetName()%bodyId%trackingbody.GetEnv()->GetId()%ssinfo);
+                RAVELOG_WARN_FORMAT("%x tracking body not in current cached bodies (valid=%d) (tracking body %s (id=%d)) (env %d). Current cache is: %s", this%isValid%trackingbody.GetName()%bodyId%trackingbody.GetEnv()->GetId()%ssinfo);
             }
         }
 
@@ -698,8 +695,6 @@ public:
             for (const KinBodyConstPtr& pattached : attachedBodies) {
                 const KinBody& attached = *pattached;
                 const int attachedBodyId = attached.GetEnvironmentBodyIndex();
-
-                EnsureVectorSize(vecCachedBodies, attachedBodyId+1);
 
                 KinBodyCache& cache = vecCachedBodies.at(attachedBodyId);
                 if (cache.IsValid()) {

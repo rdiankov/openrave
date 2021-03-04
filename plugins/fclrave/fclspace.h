@@ -58,16 +58,13 @@ CollisionGeometryPtr ConvertMeshToFCL(std::vector<fcl::Vec3f> const &points,std:
 }
 
 
-/// \brief ensures vector size is at least index + 1, if input vector size is greater than index, it is left untouched
+/// \brief ensures vector size is at least size
 template <typename T>
-inline void EnsureVectorSize(std::vector<T>& vec, size_t index)
+inline void EnsureVectorSize(std::vector<T>& vec, size_t size)
 {
-    if (vec.size() < index + 1) {
+    if (vec.size() < size) {
         //RAVELOG_WARN_FORMAT("resizing 0x%x from %d to %d", &vec%(vec.size())%(index + 1));
-        vec.resize(index + 1);
-        if (vec.size() > 1000) {
-
-        }
+        vec.resize(size);
     }
 }
 
@@ -334,7 +331,8 @@ public:
         const int envId = pbody->GetEnvironmentBodyIndex();
         BOOST_ASSERT(envId != 0);
         if( bSetToCurrentPInfo ) {
-            EnsureVectorSize(_currentpinfo, envId);
+            const int maxEnvId = _penv->GetMaxEnvironmentBodyIndex();
+            EnsureVectorSize(_currentpinfo, maxEnvId + 1);
             _currentpinfo.at(envId) = pinfo;
         }
         //_cachedpinfo[pbody->GetEnvironmentBodyIndex()] what to do with the cache?
