@@ -39,6 +39,23 @@ public:
             return false;
         }
 
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const XMLData* pOther = dynamic_cast<const XMLData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return *this == *pOther;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<XMLData> pNew(new XMLData());
+            *pNew = *this;
+            return pNew;
+        }
+
         list<COLLISIONPAIR> listmaps;
     };
 

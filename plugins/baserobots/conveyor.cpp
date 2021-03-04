@@ -61,6 +61,23 @@ public:
         bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override {
             return false;
         }
+
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const ConveyorInfo* pOther = dynamic_cast<const ConveyorInfo*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return *this == *pOther;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<ConveyorInfo> pNew(new ConveyorInfo());
+            *pNew = *this;
+            return pNew;
+        }
         
         boost::shared_ptr<KinBody::Mimic> _mimic; // always has to mimic
         KinBody::LinkPtr _linkParent; ///< base link attached

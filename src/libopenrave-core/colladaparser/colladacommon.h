@@ -96,6 +96,23 @@ public:
         return false;
     }
 
+    bool operator==(const Readable& other) const override {
+        if (GetXMLId() != other.GetXMLId()) {
+            return false;
+        }
+        const ColladaXMLReadable* pOther = dynamic_cast<const ColladaXMLReadable*>(&other);
+        if (!pOther) {
+            return false;
+        }
+        return *this == *pOther;
+    }
+
+    ReadablePtr CloneSelf() const override {
+        boost::shared_ptr<ColladaXMLReadable> pNew(new ColladaXMLReadable());
+        *pNew = *this;
+        return pNew;
+    }
+
     std::list< std::pair<std::string, bool> > _articulated_systemURIs; ///< pairs of (urls, isexternal) of the articulated_system, ordered in the same way as they are read. The first is the top-most level
     std::vector<ModelBinding> _bindingModelURIs;
     std::vector<AxisBinding> _bindingAxesSIDs; ///< same order as the body DOF
