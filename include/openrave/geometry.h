@@ -781,7 +781,7 @@ public:
     }
 
     template<typename U>
-    bool operator==(const RaveCameraIntrinsics<U>& r) {
+    bool operator==(const RaveCameraIntrinsics<U>& r) const {
         return distortion_model == r.distortion_model
             && distortion_coeffs == r.distortion_coeffs
             && focal_length == r.focal_length
