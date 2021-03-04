@@ -30,8 +30,18 @@ public:
             boost::array<dReal,N> fmin, fmax, fidelta;
             boost::array<string,N> jointnames;
             boost::array<int,N> jointindices;
+
+            bool operator==(const COLLISIONMAP<N>& other) const {
+                return vfreespace == other.vfreespace && 
+                    fmin == other.fmin && 
+                    fmax == other.fmax && 
+                    fidelta == other.fidelta && 
+                    jointnames == other.jointnames && 
+                    jointindices == other.jointindices;
+            };
         };
         typedef COLLISIONMAP<2> COLLISIONPAIR;
+
         XMLData() : Readable("collisionmap") {
         }
 
@@ -47,7 +57,7 @@ public:
             if (!pOther) {
                 return false;
             }
-            return *this == *pOther;
+            return listmaps == pOther->listmaps;
         }
 
         ReadablePtr CloneSelf() const override {

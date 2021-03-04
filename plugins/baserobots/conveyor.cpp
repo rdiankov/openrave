@@ -70,7 +70,14 @@ public:
             if (!pOther) {
                 return false;
             }
-            return *this == *pOther;
+            return _mimic == pOther->_mimic &&
+                _linkParent == pOther->_linkParent &&
+                _trajfollow == pOther->_trajfollow &&
+                _fLinkDensity == pOther->_fLinkDensity &&
+                _listGeometries == pOther->_listGeometries &&
+                _namebase == pOther->_namebase &&
+                _bIsCircular == pOther->_bIsCircular &&
+                _bCreated == pOther->_bCreated;
         }
 
         ReadablePtr CloneSelf() const override {
