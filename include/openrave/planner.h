@@ -180,7 +180,7 @@ private:
         if (!pOther) {
             return false;
         }
-        return *pOther == *this;
+        return this == pOther; // pointer compare, becase we cannot compare boost::function in this
     }
 
     virtual ReadablePtr CloneSelf() const override {
