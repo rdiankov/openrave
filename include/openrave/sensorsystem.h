@@ -89,6 +89,30 @@ public:
             *this = *pdata;
         }
 
+        /// \return true if this readable is equivalent to other readable
+        virtual bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const XMLData* pOther = dynamic_cast<const XMLData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return sid == pOther->sid &&
+                id == pOther->id &&
+                strOffsetLink == pOther->strOffsetLink &&
+                transOffset == pOther->transOffset &&
+                transPreOffset == pOther->transPreOffset;
+        }
+
+        /// \return return a cloned copy of this readable
+        virtual ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<XMLData> pNew(new XMLData(GetXMLId()));
+            *pNew = *this;
+            return pNew;
+        }
+
+
         std::string sid;         ///< global id for the system id
         int id;
         std::string strOffsetLink;         ///< the link where the markers are attached (if any)

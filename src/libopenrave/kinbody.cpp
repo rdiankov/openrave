@@ -151,7 +151,7 @@ bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
            && AreVectorsDeepEqual(_vLinkInfos, other._vLinkInfos)
            && AreVectorsDeepEqual(_vJointInfos, other._vJointInfos)
            && AreVectorsDeepEqual(_vGrabbedInfos, other._vGrabbedInfos)
-           && _mReadableInterfaces == other._mReadableInterfaces; // TODO
+           && _mReadableInterfaces == other._mReadableInterfaces;
 }
 
 void KinBody::KinBodyInfo::Reset()
@@ -5660,9 +5660,10 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 
 
     FOREACHC(it, GetReadableInterfaces()) {
-        ReadablePtr pReadable = boost::dynamic_pointer_cast<Readable>(it->second);
-        if (!!pReadable) {
-            info._mReadableInterfaces[it->first] = pReadable;
+        if (!!it->second) {
+            // make a copy of the readable interface
+            // caller may modify and call UpdateFromInfo with modified readable interfaces
+            info._mReadableInterfaces[it->first] = it->second->CloneSelf();
         }
     }
 }
@@ -5678,6 +5679,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());
         }
         _id = info._id;
+        updateFromInfoResult = UFIR_Success;
     }
 
     // need to avoid checking links and joints belonging to connected bodies

@@ -243,6 +243,7 @@ class SpaceSamplerBase;
 class IkParameterization;
 class ConfigurationSpecification;
 class IkReturn;
+class Readable;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
 typedef boost::shared_ptr<CollisionReport const> CollisionReportConstPtr;
@@ -291,7 +292,9 @@ typedef boost::weak_ptr<SpaceSamplerBase> SpaceSamplerBaseWeakPtr;
 typedef boost::shared_ptr<EnvironmentBase> EnvironmentBasePtr;
 typedef boost::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
 typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
-
+typedef boost::shared_ptr<Readable> ReadablePtr;
+typedef boost::shared_ptr<Readable const> ReadableConstPtr;
+typedef boost::weak_ptr<Readable> ReadableWeakPtr;
 typedef boost::shared_ptr<IkReturn> IkReturnPtr;
 typedef boost::shared_ptr<IkReturn const> IkReturnConstPtr;
 typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
@@ -336,9 +339,7 @@ public:
     /// \brief serializes the interface
     ///
     /// \return true if serialized
-    virtual bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const = 0;//{
-//        return false;
-//    }
+    virtual bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const = 0;
 
     /// \return true if serialized
     virtual bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const {
@@ -350,21 +351,20 @@ public:
         return false;
     }
 
-    virtual bool operator==(const Readable& other) {
-        // by default, compare pointer value
-        return this == &other;
-    }
+    /// \return true if this readable is equivalent to other readable
+    virtual bool operator==(const Readable& other) const = 0;
 
-    virtual bool operator!=(const Readable& other) {
+    /// \return true if this readable is not equivalent to other readable
+    virtual bool operator!=(const Readable& other) const {
         return !operator==(other);
     }
+
+    /// \return return a cloned copy of this readable
+    virtual ReadablePtr CloneSelf() const = 0;
 
 private:
     std::string __xmlid;
 };
-
-typedef boost::shared_ptr<Readable> ReadablePtr;
-typedef boost::shared_ptr<Readable const> ReadableConstPtr;
 
 /// \brief a list of key-value pairs. It is possible for keys to repeat.
 typedef std::list<std::pair<std::string,std::string> > AttributesList;
@@ -618,13 +618,19 @@ public:
     bool SerializeXML(BaseXMLWriterPtr wirter, int options=0) const override;
     bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
     bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
-    bool operator==(const Readable& other) override {
+    bool operator==(const Readable& other) const override {
+        if (GetXMLId() != other.GetXMLId()) {
+            return false;
+        }
         const StringReadable* pOther = dynamic_cast<const StringReadable*>(&other);
         if (!pOther) {
             return false;
         }
-
         return _data == pOther->_data;
+    }
+
+    ReadablePtr CloneSelf() const override {
+        return ReadablePtr(new StringReadable(GetXMLId(), _data));
     }
 
 private:

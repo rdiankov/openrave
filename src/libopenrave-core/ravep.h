@@ -271,6 +271,19 @@ public:
     bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override {
         return false;
     }
+    bool operator==(const Readable& other) const override {
+        if (GetXMLId() != other.GetXMLId()) {
+            return false;
+        }
+        const InterfaceXMLReadable* pOther = dynamic_cast<const InterfaceXMLReadable*>(&other);
+        if (!pOther) {
+            return false;
+        }
+        return _pinterface == pOther->_pinterface;
+    }
+    ReadablePtr CloneSelf() const override {
+        return ReadablePtr(new InterfaceXMLReadable(_pinterface));
+    }
 
     InterfaceBasePtr _pinterface;
 };
