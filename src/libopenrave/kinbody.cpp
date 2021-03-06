@@ -188,7 +188,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
     }
 
     // perhaps should not save "uri" since that could affect how the body is loaded later
-    
+
     if( !_interfaceType.empty() ) {
         orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
     }
@@ -286,7 +286,66 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
         size_t iGrabbed = 0;
         for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
-            UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
+            //UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
+            const rapidjson::Value& rGrabbed = *it;
+            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "id");
+            bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(rGrabbed, "__deleted__", false);
+            std::vector<GrabbedInfoPtr>::iterator itMatchingId = _vGrabbedInfos.end();
+            std::vector<GrabbedInfoPtr>::iterator itMatchingName = _vGrabbedInfos.end();
+            if (!id.empty()) {
+                // only try to find old info if id is not empty
+                FOREACH(itInfo, _vGrabbedInfos) {
+                    if ((*itInfo)->_id == id) {
+                        itMatchingId = itInfo;
+                        break;
+                    }
+                }
+            }
+
+            std::string grabbedName = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "grabbedName");
+            // only try to find old info if id is not empty
+            FOREACH(itInfo, _vGrabbedInfos) {
+                if ((*itInfo)->_grabbedname == grabbedName) {
+                    itMatchingName = itInfo;
+                    if( id.empty() ) {
+                        id = (*itInfo)->_id;
+                    }
+                    break;
+                }
+            }
+
+            // here we allow items with empty id to be created because
+            // when we load things from json, some id could be missing on file
+            // and for the partial update case, the id should be non-empty
+            if (itMatchingId != _vGrabbedInfos.end()) {
+                if (isDeleted) {
+                    _vGrabbedInfos.erase(itMatchingId);
+                    continue;
+                }
+                (*itMatchingId)->DeserializeJSON(rGrabbed, fUnitScale, options);
+
+                if( itMatchingId != itMatchingName && itMatchingName != _vGrabbedInfos.end() ) {
+                    // there is another entry with matching name, so remove it
+                    _vGrabbedInfos.erase(itMatchingName);
+                }
+                continue;
+            }
+
+            if (isDeleted) {
+                // ignore
+                continue;
+            }
+        
+            if( itMatchingName != _vGrabbedInfos.end() ) {
+                (*itMatchingName)->DeserializeJSON(rGrabbed, fUnitScale, options);
+                (*itMatchingName)->_id = id;
+                continue;
+            }
+
+            GrabbedInfoPtr pNewInfo(new GrabbedInfo());
+            pNewInfo->DeserializeJSON(rGrabbed, fUnitScale, options);
+            pNewInfo->_id = id;
+            _vGrabbedInfos.push_back(pNewInfo);
         }
     }
 
@@ -2286,8 +2345,8 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     const int nlinks = _veclinks.size();
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
-        this->GetName() % linkindex % nlinks, ORE_InvalidArguments
-    );
+                           this->GetName() % linkindex % nlinks, ORE_InvalidArguments
+                           );
     const size_t dofstride = dofindices.empty() ? this->GetDOF() : dofindices.size();
     vjacobian.resize(3 * dofstride);
     if( dofstride == 0 ) {
@@ -2303,7 +2362,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     for(int curlink = 0;
         _vAllPairsShortestPaths[offset + curlink].first >= 0;     // parent link is still available
         curlink = _vAllPairsShortestPaths[offset + curlink].first // get index of parent link
-    ) {
+        ) {
         const int jointindex = _vAllPairsShortestPaths[offset + curlink].second; ///< generalized joint index, which counts in [_vecjoints, _vPassiveJoints]
         if( jointindex < nActiveJoints ) {
             // active joint
