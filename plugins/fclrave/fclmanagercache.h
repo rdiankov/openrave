@@ -746,7 +746,7 @@ public:
 
             // remove bodies not attached anymore
             
-            int bodyId = 0;
+            int bodyId = -1;
             for (KinBodyCache& cache : vecCachedBodies) {
                 ++bodyId;
                 if (!cache.IsValid()) {
