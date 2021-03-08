@@ -864,7 +864,7 @@ public:
                 pbody->SetId(newname);
                 if( utils::IsValidName(newname) && _CheckUniqueId(KinBodyConstPtr(pbody), false) ) {
                     if( !oldname.empty() ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, setting body id from %s -> %s due to conflict", GetId()%oldname%newname);
+                        RAVELOG_DEBUG_FORMAT("env=%d, setting body id from %s -> %s due to conflict (name is '%s')", GetId()%oldname%newname%pbody->GetName());
                     }
                     break;
                 }
