@@ -58,9 +58,18 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
     ///< cache data of body that is managed
     struct KinBodyCache
     {
-        KinBodyCache() : nLastStamp(0), nLinkUpdateStamp(0), nGeometryUpdateStamp(0), nAttachedBodiesUpdateStamp(0), nActiveDOFUpdateStamp(0) {
+        KinBodyCache()
+            : nLastStamp(0), nLinkUpdateStamp(0), nGeometryUpdateStamp(0), nAttachedBodiesUpdateStamp(0), nActiveDOFUpdateStamp(0)
+        {
         }
-        KinBodyCache(const KinBodyConstPtr& pbody, const FCLSpace::KinBodyInfoPtr& pinfo) {
+
+        KinBodyCache(const KinBodyConstPtr& pbody, const FCLSpace::KinBodyInfoPtr& pinfo)
+        {
+            Set(pbody, pinfo);
+        }
+
+        void Set(const KinBodyConstPtr& pbody, const FCLSpace::KinBodyInfoPtr& pinfo)
+        {
             pwbody = pbody;
             pwinfo = pinfo;
             nLastStamp = pinfo->nLastStamp;
@@ -73,11 +82,16 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
         }
 
         ~KinBodyCache() {
+            RAVELOG_INFO_FORMAT("destructing 0x%x.", this);
             Invalidate();
         }
 
         inline void Invalidate()
         {
+            if (!IsValid()) {
+                RAVELOG_INFO_FORMAT("0x%x is previously invalidated, or was never valid.", this);
+                return;
+            }
             if( vcolobjs.size() > 0 ) { // should never happen
                 KinBodyConstPtr pbody = pwbody.lock();
                 std::string name;
@@ -85,6 +99,18 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
                     name = pbody->GetName();
                 }
                 RAVELOG_WARN_FORMAT("there are %d fcl collision objects left for body %s", vcolobjs.size()%name);
+            }
+            {
+                std::string name;
+                int envId = 0;
+                {
+                    KinBodyConstPtr pbody = pwbody.lock();
+                    if( !!pbody ) {
+                        name = pbody->GetName();
+                        envId = pbody->GetEnv()->GetId();
+                    }
+                }
+                RAVELOG_INFO_FORMAT("invalidating body=%s in env=%d at 0x%x.", name%envId%this);
             }
             pwbody.reset();
         }
@@ -192,7 +218,7 @@ public:
                 const int bodyId = (*itbody)->GetEnvironmentBodyIndex();
                 //EnsureVectorSize(vecCachedBodies, bodyId);
                 KinBodyCache& cache = vecCachedBodies.at(bodyId);
-                cache = KinBodyCache(*itbody, pinfo);
+                cache.Set(*itbody, pinfo);
                 cache.linkEnableStates = _linkEnableStates;
                 cache.vcolobjs.swap(vcolobjs);
             }
@@ -239,19 +265,22 @@ public:
         if (vbodies.empty()) {
             return;
         }
-        const KinBodyConstPtr plastBody = *vbodies.rbegin();
+        bool ensuredVecCachedBodies = false;
         std::vector<CollisionObjectPtr> vcolobjs;
-        EnsureVectorSize(vecCachedBodies, plastBody->GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
         for (const KinBodyConstPtr& pbody : vbodies) {
             const KinBody& body = *pbody;
+            if (!ensuredVecCachedBodies) {
+                EnsureVectorSize(vecCachedBodies, body.GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+                ensuredVecCachedBodies = true;
+            }
             int bodyid = body.GetEnvironmentBodyIndex();
             if( _setExcludeBodyIds.count(bodyid) == 0 ) {
-                bool bIsValid = vecCachedBodies.size() > bodyid && vecCachedBodies.at(bodyid).IsValid();
+                bool bIsValid = vecCachedBodies.at(bodyid).IsValid();
                 if( !bIsValid) {
                     FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(body);
                     if( _AddBody(body, pinfo, vcolobjs, _linkEnableStates, false) ) { // new collision objects are already added to _tmpSortedBuffer
                         KinBodyCache& cache = vecCachedBodies.at(bodyid);
-                        cache = KinBodyCache(pbody, pinfo);
+                        cache.Set(pbody, pinfo);
                         cache.vcolobjs.swap(vcolobjs);
                         cache.linkEnableStates = _linkEnableStates;
                     }
@@ -707,7 +736,7 @@ public:
                     bcallsetup = true;
                 }
                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u adding body %s (%d)", cache.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%cache.GetName()%attachedBodyId);
-                cache = KinBodyCache(pattached, pinfo);
+                cache.Set(pattached, pinfo);
                 cache.vcolobjs.swap(vcolobjs);
                 cache.linkEnableStates = _linkEnableStates;
                 //                    else {
