@@ -175,8 +175,9 @@ public:
             cache.vcolobjs.resize(0);
         }
         std::vector<CollisionObjectPtr> vcolobjs;
-        vecCachedBodies.clear();
-
+        for (KinBodyCache& bodyCache : vecCachedBodies) {
+            bodyCache.Invalidate();
+        }
         int maxBodyId = pbody->GetEnv()->GetMaxEnvironmentBodyIndex();
         EnsureVectorSize(vecCachedBodies, maxBodyId+1);
 
@@ -251,7 +252,9 @@ public:
         _ptrackingbody.reset();
         _setExcludeBodyIds.clear();
         pmanager->clear();
-        vecCachedBodies.clear();
+        for (KinBodyCache& bodyCache : vecCachedBodies) {
+            bodyCache.Invalidate();
+        }
         FOREACH(itbody, excludedbodies) {
             _setExcludeBodyIds.insert((*itbody)->GetEnvironmentBodyIndex());
         }
@@ -371,7 +374,25 @@ public:
             const int bodyId = trackingbody.GetEnvironmentBodyIndex();
             KinBodyCache& cache = vecCachedBodies.at(bodyId);
             bool isValid = cache.IsValid();
-            if (isValid) {
+            if (!isValid) {
+                std::string ssinfo;
+                int bodyIdCached = -1;
+                for (const KinBodyCache& cache : vecCachedBodies) {
+                    ++bodyIdCached;
+                    if( !cache.IsValid() ) {
+                        continue;
+                    }
+                    KinBodyConstPtr pbody = cache.pwbody.lock(); ///< weak pointer to body
+                    if( !!pbody ) {
+                        ssinfo += str(boost::format("(id=%d, linkmask=0x%x, numcols=%d, name=%s), ")%bodyIdCached%_GetLinkMask(cache.linkEnableStates)%cache.vcolobjs.size()%pbody->GetName());
+                    }
+                    else {
+                        ssinfo += str(boost::format("id=%d, linkmask=0x%x, numcols=%d")%bodyIdCached%_GetLinkMask(cache.linkEnableStates)%cache.vcolobjs.size());
+                    }
+                }
+                RAVELOG_WARN_FORMAT("%x tracking body not in current cached bodies (valid=%d) (tracking body %s (id=%d)) (env %d). Current cache is: %s", this%isValid%trackingbody.GetName()%bodyId%trackingbody.GetEnv()->GetId()%ssinfo);
+            }
+            else {
                 FCLSpace::KinBodyInfoPtr pinfo = cache.pwinfo.lock();
                 FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(trackingbody); // necessary in case pinfos were swapped!
                 if( cache.nActiveDOFUpdateStamp != pnewinfo->nActiveDOFUpdateStamp ) {
@@ -450,24 +471,6 @@ public:
                         }
                     }
                 }
-            }
-            else {
-                std::string ssinfo;
-                int bodyIdCached = 0;
-                for (const KinBodyCache& cache : vecCachedBodies) {
-                    if( !cache.IsValid() ) {
-                        continue;
-                    }
-                    KinBodyConstPtr pbody = cache.pwbody.lock(); ///< weak pointer to body
-                    if( !!pbody ) {
-                        ssinfo += str(boost::format("(id=%d, linkmask=0x%x, numcols=%d, name=%s), ")%bodyIdCached%_GetLinkMask(cache.linkEnableStates)%cache.vcolobjs.size()%pbody->GetName());
-                    }
-                    else {
-                        ssinfo += str(boost::format("id=%d, linkmask=0x%x, numcols=%d")%bodyIdCached%_GetLinkMask(cache.linkEnableStates)%cache.vcolobjs.size());
-                    }
-                    ++bodyIdCached;
-                }
-                RAVELOG_WARN_FORMAT("%x tracking body not in current cached bodies (valid=%d) (tracking body %s (id=%d)) (env %d). Current cache is: %s", this%isValid%trackingbody.GetName()%bodyId%trackingbody.GetEnv()->GetId()%ssinfo);
             }
         }
 
