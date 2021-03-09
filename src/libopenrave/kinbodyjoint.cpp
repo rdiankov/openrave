@@ -2116,6 +2116,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         thisdofformat.jointindex = nActiveJoints + (std::find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
 
+    bool bCached = false;
     for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mTotalderivativepairValue) {
         if( keyvalue.first.first == thisdofformat ) {
             if( IS_DEBUGLEVEL(Level_Verbose) ) {

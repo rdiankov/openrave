@@ -427,6 +427,9 @@ protected:
     SpaceSamplerBasePtr CreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name) {
         return RaveInterfaceCast<SpaceSamplerBase>(Create(penv, PT_SpaceSampler, name));
     }
+    PostureDescriberBasePtr CreatePostureDescriber(EnvironmentBasePtr penv, const std::string& name) {
+        return RaveInterfaceCast<PostureDescriberBase>(Create(penv, PT_PostureDescriber, name));
+    }
 
     virtual bool Init(bool bLoadAllPlugins)
     {

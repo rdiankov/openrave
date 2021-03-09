@@ -19,6 +19,7 @@
 #include <openravepy/openravepy_kinbody.h>
 #include <openravepy/openravepy_environmentbase.h>
 #include <openravepy/openravepy_configurationspecification.h>
+#include <openravepy/openravepy_posturedescriber.h>
 #include <openrave/xmlreaders.h>
 #include <openrave/utils.h>
 
@@ -995,6 +996,7 @@ PyInterfaceBasePtr pyRaveClone(PyInterfaceBasePtr pyreference, int cloningoption
     case PT_Trajectory: return toPyTrajectory(RaveInterfaceCast<TrajectoryBase>(pclone), pyenv);
     case PT_Viewer: return toPyViewer(RaveInterfaceCast<ViewerBase>(pclone), pyenv);
     case PT_SpaceSampler: return toPySpaceSampler(RaveInterfaceCast<SpaceSamplerBase>(pclone), pyenv);
+    case PT_PostureDescriber: return toPyPostureDescriberBase(RaveInterfaceCast<PostureDescriberBase>(pclone), pyenv);
     }
     throw openrave_exception(_("invalid interface type"),ORE_InvalidArguments);
 }

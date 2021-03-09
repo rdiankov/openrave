@@ -1253,6 +1253,69 @@ private:
     /// \brief \ref KinBody::SetNonCollidingConfiguration, also regrabs all bodies
     virtual void SetNonCollidingConfiguration();
 
+    using LinkPair = std::array<LinkPtr, 2>; ///< a (base link, end-effector link) pair. We henceforth write baselink and eelink for brevity.
+
+    /// \brief Registers a posture describer for a kinematics chain from baselink to eelink
+    /// \param [in] kinematicsChain    a kinematics chain prescribed by a baselink-eelink pair
+    /// \param [in] pDescriber         a robot posture describer
+    /// \return true if either (1) pDescriber is not null and supports the kinematics chain, or (2) pDescriber is null and we successfully register the describer for the kinematics chain.
+    virtual bool SetPostureDescriber(const LinkPair& kinematicsChain, PostureDescriberBasePtr pDescriber);
+
+    /// \brief Registers a robot posture describer for a kinematics chain from the manipulator's baselink to its eelink.
+    /// \param [in] pmanip        manipulator that prescribes a kinematics chain from its baselink to its eelink
+    /// \param [in] pDescriber    pointer to a robot posture describer
+    /// \return true if either (1) pDescriber is not null and supports the kinematics chain of pmanip, or (2) pDescriber is null and we successfully register the describer for pmanip.
+    virtual bool SetPostureDescriber(ManipulatorConstPtr pmanip, PostureDescriberBasePtr pDescriber);
+
+    /// \brief Gets robot posture describer for a kinematics chain from baselink to eelink
+    /// \param [in] kinematicsChain    a kinematics chain prescribed by a baselink-eelink pair
+    /// \return a non-null pointer to a robot posture describer if this describer was previously registered; otherwise a null pointer
+    virtual PostureDescriberBasePtr GetPostureDescriber(const LinkPair& kinematicsChain);
+
+    /// \brief Gets robot posture describer for a kinematics chain from the manipulator's baselink to its eelink.
+    /// \param [in]  pmanip    manipulator that prescribes a kinematics chain from its baselink to its eelink
+    /// \return a non-null pointer to a robot posture describer if this describer was previously registered; otherwise a null pointer
+    virtual PostureDescriberBasePtr GetPostureDescriber(ManipulatorConstPtr pmanip);
+
+    /// \brief Unregisters the robot posture describer for a kinematics chain from baselink to eelink
+    /// \param [in] kinematicsChain    a kinematics chain prescribed by a baselink-eelink pair
+    /// \return true if the unregistering is successful
+    virtual bool UnregisterPostureDescriber(const LinkPair& kinematicsChain);
+
+    /// \brief Unregisters the robot posture describer for a kinematics chain from the manipulator's baselink to its eelink.
+    /// \param [in]  pmanip    manipulator that prescribes a kinematics chain from its baselink to its eelink
+    /// \return true if the unregistering is successful
+    virtual bool UnregisterPostureDescriber(const ManipulatorConstPtr pmanip);
+
+    using PostureStateInt = uint32_t; ///< each posture state is an unsigned 32-bit integer, The number of "features" we use to describe a kinematics chain is the number of the lowest bits we use in a posture state integer. The closer a feature is closer to the robot's base, the more significant (higher) its corresponding bit is. For example, to describe the kinematics chain of a general 6R (six-revolute-joint) robot, we use three features: shoulder, elbow, and wrist. Hence we use the last 3 bits, where the most significant bit is for the shoulder, while the least for the wrist.
+
+    /// \brief Computes posture states to describe the posture of a kinematics chain at the current or specified dof values.
+    /// Computes posture state integers for describing the posture of links between baselink and eelink.
+    /// \param [out] posturevalues     a vector of robot posture state (unsigned) integers at the current of specified dof values
+    /// \param [in]  kinematicsChain   a kinematics chain prescribed by a baselink-eelink pair
+    /// \param [in]  dofvalues         dof values, if empty, mean the current ones; otherwise its size should be either (1) the number of dofs in the essential kinematics chain (where the first, last joints are revolute), or (2) the size of the specified dof indices
+    /// \param [in]  dofindices        dof indices, if empty, mean the arm indices of the essential kinematics chain; otherwise it should have the same size as the specified dof values
+    /// \return true if the registered posture describer successfully computes a vector of posture state values for describing the posture of the kinematics chain.
+    virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturevalues,
+                                      const LinkPair& kinematicsChain,
+                                      const std::vector<double>& dofvalues = {},
+                                      const std::vector<int>& dofindices = {},
+                                      const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing) const;
+
+    /// \brief Computes posture states to describe the posture of a kinematics chain (prescribed by the manipulator) at the current or specified dof values.
+    /// Computes posture state integers for describing the posture of links between the manipulator's baselink and its eelink.
+    /// If the manipulator is not specified, then we use the active manipulator.
+    /// \param [out] posturevalues     a vector of robot posture state (unsigned) integers at the current of specified dof values
+    /// \param [in]  pmanip            manipulator that prescribes a kinematics chain from its baselink to its eelink
+    /// \param [in]  dofvalues         dof values, if empty, mean the current ones; otherwise its size should be either (1) the number of dofs in the essential kinematics chain (where the first, last joints are revolute), or (2) the size of the specified dof indices
+    /// \param [in]  dofindices        dof indices, if empty, mean the arm indices of the essential kinematics chain; otherwise it should have the same size as the specified dof values
+    /// \return true if the registered posture describer successfully computes a vector of posture state values for describing the posture of the kinematics chain.
+    virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturevalues,
+                                      ManipulatorConstPtr pmanip,
+                                      const std::vector<double>& dofvalues = {},
+                                      const std::vector<int>& dofindices = {},
+                                      const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing) const;
+
     //@}
 
     /** A grabbed body becomes part of the robot and its relative pose with respect to a robot's
@@ -1363,6 +1426,11 @@ protected:
 
     virtual void _UpdateAttachedSensors();
 
+    /// \brief Ensures we have always mapped a manipulator to its "essential kinematics chain"---starting with a baselink-eelink pair, we exclude any static joints in between,
+    /// and also the first and last few prismatic joints. So the first and last joints in the essential kinematics chain are always revolute.
+    /// \param [in] pmanip    manipulator that, if not mapped yet, will be mapped to its essential kinematics chain
+    virtual void _EnsureEssentialKinematicsChainRegisteredOnManipulator(ManipulatorConstPtr pmanip);
+
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
     ManipulatorPtr _pManipActive;
 
@@ -1384,6 +1452,10 @@ protected:
     dReal _fQuatLimitMaxAngle, _fQuatMaxAngleVelocity, _fQuatAngleResolution, _fQuatAngleWeight;
 
     ConfigurationSpecification _activespec;
+
+    // posture describer
+    std::map<LinkPair, PostureDescriberBasePtr> _mPostureDescribers; ///< maps a baselink-eelink pair to a posture describer that is capable of describing the kinematics chain; several manipulators can be attached to the same end-effector with different local tool transforms & directions, while they share the same baselink-eelink pair and the 6D IK hash, so we only need one describer for all these manipulators.
+    std::map<ManipulatorConstPtr, LinkPair> _mEssentialLinkPairs; ///< maps a manipulator to its essential link pair, formed by its baselink-eelink pair, but excluding any static joints and the first, last few prismatic joints
 
 private:
     virtual const char* GetHash() const {

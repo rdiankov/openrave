@@ -61,7 +61,7 @@ typedef OPENRAVE_SHARED_PTR<PyRobotBaseInfo> PyRobotBaseInfoPtr;
 protected:
     RobotBasePtr _probot;
 public:
-    RobotBasePtr GetRobot();
+    RobotBasePtr GetRobot() const;
     class PyManipulator
     {
         RobotBase::ManipulatorPtr _pmanip;
@@ -83,12 +83,10 @@ public:
         void SetName(const std::string& s);
 
         object GetGripperName() const;
-
         object GetToolChangerConnectedBodyToolName() const;
 
+        PyRobotBasePtr GetRobot() const;
         object GetRestrictGraspSetNames() const;
-
-        PyRobotBasePtr GetRobot();
 
         bool SetIkSolver(PyIkSolverBasePtr iksolver);
         object GetIkSolver();
@@ -121,6 +119,27 @@ public:
 
         object GetFreeParameters() const;
 
+        /* ========== posture describer ========== */
+        /// \brief Generates a posture describer for this manipulator
+        /// \return the describer if we have successfully generated one at the manipulator; None (nullptr) otherwise
+        PyPostureDescriberBasePtr GeneratePostureDescriber(const bool load = false) const;
+
+        /// \brief Sets the posture describer for this manipulator
+        /// \return true if the describer is successfully set
+        bool SetPostureDescriber(PyPostureDescriberBasePtr pydescriber) const;
+
+        /// \brief Gets the posture describer for this manipulator
+        /// \return the describer if we have set one at the manipulator; None (nullptr) otherwise
+        PyPostureDescriberBasePtr GetPostureDescriber() const;
+
+        /// \brief Computes posture states at the input (current if empty) dof values using the describer set at the manipulator
+        /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
+        object ComputePostureStates(object pyjointvalues = py::none_(),
+                                    object pydofindices = py::none_(),
+                                    uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing
+                                    );
+
+private:
         bool _FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
         bool _FindIKSolution(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
         bool _FindIKSolution(const IkParameterization& ikparam, int filteroptions, IkReturn& ikreturn, bool releasegil) const;
@@ -131,6 +150,7 @@ public:
         bool _FindIKSolutions(const IkParameterization& ikparam, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil) const;
         bool _FindIKSolutions(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil) const;
 
+public:
         object FindIKSolution(object oparam, int filteroptions, bool ikreturn=false, bool releasegil=false) const;
 
         object FindIKSolution(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false) const;
@@ -180,6 +200,8 @@ public:
     };
     typedef OPENRAVE_SHARED_PTR<PyManipulator> PyManipulatorPtr;
     PyManipulatorPtr _GetManipulator(RobotBase::ManipulatorPtr pmanip);
+
+    std::vector<OpenRAVE::RobotBase::PostureStateInt> posturestates; // cache
 
     class PyAttachedSensor
     {
@@ -449,6 +471,26 @@ public:
     bool InitFromRobotInfo(const py::object pyRobotBaseInfo);
 
     py::object ExtractInfo() const;
+
+    /* ========== posture describer ========== */
+    /// \brief Generates a posture describer for this manipulator
+    /// \return the describer if we have successfully generated one at the manipulator; None (nullptr) otherwise
+    PyPostureDescriberBasePtr GeneratePostureDescriber(PyManipulatorPtr pymanip, const bool load = false) const;
+
+    /// \brief Sets the posture describer for this manipulator
+    /// \return true if the describer is successfully set
+    bool SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberBasePtr pydescriber) const;
+
+    /// \brief Gets the posture describer for this manipulator
+    /// \return the describer if we have set one at the manipulator; None (nullptr) otherwise
+    PyPostureDescriberBasePtr GetPostureDescriber(PyManipulatorPtr pymanip) const;
+
+    /// \brief Computes posture states at the input (current if empty) dof values using the describer set at the manipulator
+    /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
+    object ComputePostureStates(PyManipulatorPtr pymanip,
+                                object pyjointvalues = py::none_(),
+                                object pydofindices = py::none_(),
+                                uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing);
 
     virtual std::string __repr__();
     virtual std::string __str__();

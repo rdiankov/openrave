@@ -19,9 +19,13 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <openrave/posturedescriber.h>
+
 #ifdef OPENRAVE_HAS_LAPACK
 #include "jacobianinverse.h"
 #endif
+
+using PostureStateInt = OpenRAVE::RobotBase::PostureStateInt;
 
 template <typename IkReal>
 class IkFastSolver : public IkSolverBase
@@ -1456,14 +1460,34 @@ protected:
 
         int nSameStateRepeatCount = 0;
         _nSameStateRepeatCount = 0;
-        std::vector<unsigned int> vsolutionindices;
-        iksol.GetSolutionIndices(vsolutionindices);
 
-        RobotBase::ManipulatorPtr pmanip(_pmanip);
-        RobotBasePtr probot = pmanip->GetRobot();
+        std::vector<PostureStateInt> vsolutionindices;
+        std::string solutionIndicesNameLocal = solutionIndicesName;
+        const RobotBase::ManipulatorPtr pmanip(_pmanip);
+        const RobotBasePtr probot = pmanip->GetRobot();
+        const PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(pmanip);
+        if (pDescriber != nullptr) {
+            if(pDescriber->ComputePostureStates(vsolutionindices, vravesol, pmanip->GetArmIndices())) {
+                solutionIndicesNameLocal = pDescriber->GetMapDataKey();
+            }
+            else {
+                std::stringstream ss;
+                if(!vravesol.empty()) {
+                    ss << vravesol.at(0);
+                    for(size_t i = 1; i < vravesol.size(); ++i) {
+                        ss << ", " << vravesol.at(i);
+                    }
+                }
+                RAVELOG_ERROR_FORMAT("Cannot compute posture states for vravesol [%s] of size %d; use solutionIndicesNameLocal %s", 
+                                     ss.str() % vravesol.size() % solutionIndicesNameLocal);
+            }
+        }
+        else {
+            iksol.GetSolutionIndices(vsolutionindices);
+        }
 
         std::vector< std::pair<std::vector<dReal>, int> > vravesols;
-        list<IkReturnPtr> listlocalikreturns; // orderd with respect to vravesols
+        std::list<IkReturnPtr> listlocalikreturns; // orderd with respect to vravesols
 
         /// if have to check for closest solution, make sure this new solution is closer than best found so far
         //dReal d = dReal(1e30);
@@ -1523,7 +1547,7 @@ protected:
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
-                localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
+                localret->_mapdata[solutionIndicesNameLocal] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
 
                 bool bNeedCheckEndEffectorEnvCollision = stateCheck.NeedCheckEndEffectorEnvCollision();
                 if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) ) {
@@ -1562,7 +1586,7 @@ protected:
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
-                localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
+                localret->_mapdata[solutionIndicesNameLocal] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
                 localret->_vsolution.swap(itravesol->first);
                 listlocalikreturns.push_back(localret);
             }
@@ -1790,8 +1814,8 @@ protected:
             FOREACH(ittestreturn, listtestikreturns) {//itravesol, vravesols) {
                 IkReturnPtr localret = *ittestreturn;
                 _vsolutionindices.resize(0);
-                FOREACH(it, localret->_mapdata["solutionindices"]) {
-                    _vsolutionindices.push_back((unsigned int)(*it+0.5)); // round
+                FOREACH(it, localret->_mapdata[solutionIndicesNameLocal]) {
+                    _vsolutionindices.push_back((PostureStateInt)(*it+0.5)); // round
                 }
 
                 probot->SetActiveDOFValues(localret->_vsolution,false);
@@ -1924,13 +1948,22 @@ protected:
             vravesols.emplace_back(vravesol, 0);
         }
 
-        std::vector<unsigned int> vsolutionindices;
-        iksol.GetSolutionIndices(vsolutionindices);
-
-        // check for self collisions
-        RobotBase::ManipulatorPtr pmanip(_pmanip);
-        RobotBasePtr probot = pmanip->GetRobot();
-
+        std::vector<PostureStateInt> vsolutionindices;
+        std::string solutionIndicesNameLocal = solutionIndicesName;
+        const RobotBase::ManipulatorPtr pmanip(_pmanip);
+        const RobotBasePtr probot = pmanip->GetRobot();
+        const PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(pmanip);
+        if (pDescriber != nullptr) {
+            if(pDescriber->ComputePostureStates(vsolutionindices, vravesol, pmanip->GetArmIndices())) {
+                solutionIndicesNameLocal = pDescriber->GetMapDataKey();
+            }
+            else {
+                RAVELOG_WARN_FORMAT("Cannot compute posture states for vravesol of size %d; use solutionIndicesNameLocal %s", vravesol.size() % solutionIndicesNameLocal);
+            }
+        }
+        else {
+            iksol.GetSolutionIndices(vsolutionindices);
+        }
 //        if( IS_DEBUGLEVEL(Level_Verbose) ) {
 //            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
 //            ss << "ikfast solution (free=" << iksol.GetFree().size() << "); iksol=[";
@@ -1965,7 +1998,7 @@ protected:
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
-                localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
+                localret->_mapdata[solutionIndicesNameLocal] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
 
                 bool bNeedCheckEndEffectorEnvCollision = stateCheck.NeedCheckEndEffectorEnvCollision();
                 if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) ) {
@@ -2004,7 +2037,7 @@ protected:
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
-                localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
+                localret->_mapdata[solutionIndicesNameLocal] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
                 localret->_vsolution.swap(itravesol->first);
                 listlocalikreturns.emplace_back(localret,  paramnew);
             }
@@ -2156,8 +2189,8 @@ protected:
             while(ittestreturn != listlocalikreturns.end()) {
                 IkReturnPtr localret = ittestreturn->first;
                 _vsolutionindices.resize(0);
-                FOREACH(it, localret->_mapdata["solutionindices"]) {
-                    _vsolutionindices.push_back((unsigned int)(*it+0.5)); // round
+                FOREACH(it, localret->_mapdata[solutionIndicesNameLocal]) {
+                    _vsolutionindices.push_back((PostureStateInt)(*it+0.5)); // round
                 }
 
                 probot->SetActiveDOFValues(localret->_vsolution,false);
@@ -2460,13 +2493,18 @@ protected:
 
     //@{
     // cache for current Solve call. This has to be saved/restored if any user functions are called (like filters) since the filters themselves can potentially call into this ik solver.
-    std::vector<unsigned int> _vsolutionindices; ///< holds the indices of the current solution, this is not multi-thread safe
+    std::vector<PostureStateInt> _vsolutionindices; ///< holds the indices of the current solution, this is not multi-thread safe
     int _nSameStateRepeatCount;
     //@}
 
     bool _bEmptyTransform6D; ///< if true, then the iksolver has been built with identity of the manipulator transform. Only valid for Transform6D IKs.
 
+public:
+    static std::string solutionIndicesName; ///< name of solution indices
 };
+
+template <typename T>
+std::string IkFastSolver<T>::solutionIndicesName = "solutionindices";
 
 #ifdef OPENRAVE_IKFAST_FLOAT32
 IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const vector<dReal>& vfreeinc, dReal ikthreshold)

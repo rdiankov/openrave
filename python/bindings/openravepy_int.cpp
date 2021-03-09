@@ -28,6 +28,7 @@
 #include <openravepy/openravepy_module.h>
 #include <openravepy/openravepy_physicalenginebase.h>
 #include <openravepy/openravepy_environmentbase.h>
+#include <openravepy/openravepy_posturedescriber.h>
 
 #define OPENRAVE_EXCEPTION_CLASS_NAME "_OpenRAVEException"
 
@@ -902,19 +903,20 @@ PyInterfaceBasePtr PyEnvironmentBase::_toPyInterface(InterfaceBasePtr pinterface
         return PyInterfaceBasePtr();
     }
     switch(pinterface->GetInterfaceType()) {
-    case PT_Planner: return openravepy::toPyPlanner(OPENRAVE_STATIC_POINTER_CAST<PlannerBase>(pinterface),shared_from_this());
-    case PT_Robot: return openravepy::toPyRobot(OPENRAVE_STATIC_POINTER_CAST<RobotBase>(pinterface),shared_from_this());
-    case PT_SensorSystem: return openravepy::toPySensorSystem(OPENRAVE_STATIC_POINTER_CAST<SensorSystemBase>(pinterface),shared_from_this());
-    case PT_Controller: return openravepy::toPyController(OPENRAVE_STATIC_POINTER_CAST<ControllerBase>(pinterface),shared_from_this());
-    case PT_Module: return openravepy::toPyModule(OPENRAVE_STATIC_POINTER_CAST<ModuleBase>(pinterface),shared_from_this());
-    case PT_IkSolver: return openravepy::toPyIkSolver(OPENRAVE_STATIC_POINTER_CAST<IkSolverBase>(pinterface),shared_from_this());
-    case PT_KinBody: return openravepy::toPyKinBody(OPENRAVE_STATIC_POINTER_CAST<KinBody>(pinterface),shared_from_this());
-    case PT_PhysicsEngine: return openravepy::toPyPhysicsEngine(OPENRAVE_STATIC_POINTER_CAST<PhysicsEngineBase>(pinterface),shared_from_this());
-    case PT_Sensor: return openravepy::toPySensor(OPENRAVE_STATIC_POINTER_CAST<SensorBase>(pinterface),shared_from_this());
-    case PT_CollisionChecker: return openravepy::toPyCollisionChecker(OPENRAVE_STATIC_POINTER_CAST<CollisionCheckerBase>(pinterface),shared_from_this());
-    case PT_Trajectory: return openravepy::toPyTrajectory(OPENRAVE_STATIC_POINTER_CAST<TrajectoryBase>(pinterface),shared_from_this());
-    case PT_Viewer: return openravepy::toPyViewer(OPENRAVE_STATIC_POINTER_CAST<ViewerBase>(pinterface),shared_from_this());
-    case PT_SpaceSampler: return openravepy::toPySpaceSampler(OPENRAVE_STATIC_POINTER_CAST<SpaceSamplerBase>(pinterface),shared_from_this());
+    case PT_Planner:          return openravepy::toPyPlanner             (OPENRAVE_STATIC_POINTER_CAST<PlannerBase         >(pinterface), shared_from_this());
+    case PT_Robot:            return openravepy::toPyRobot               (OPENRAVE_STATIC_POINTER_CAST<RobotBase           >(pinterface), shared_from_this());
+    case PT_SensorSystem:     return openravepy::toPySensorSystem        (OPENRAVE_STATIC_POINTER_CAST<SensorSystemBase    >(pinterface), shared_from_this());
+    case PT_Controller:       return openravepy::toPyController          (OPENRAVE_STATIC_POINTER_CAST<ControllerBase      >(pinterface), shared_from_this());
+    case PT_Module:           return openravepy::toPyModule              (OPENRAVE_STATIC_POINTER_CAST<ModuleBase          >(pinterface), shared_from_this());
+    case PT_IkSolver:         return openravepy::toPyIkSolver            (OPENRAVE_STATIC_POINTER_CAST<IkSolverBase        >(pinterface), shared_from_this());
+    case PT_KinBody:          return openravepy::toPyKinBody             (OPENRAVE_STATIC_POINTER_CAST<KinBody             >(pinterface), shared_from_this());
+    case PT_PhysicsEngine:    return openravepy::toPyPhysicsEngine       (OPENRAVE_STATIC_POINTER_CAST<PhysicsEngineBase   >(pinterface), shared_from_this());
+    case PT_Sensor:           return openravepy::toPySensor              (OPENRAVE_STATIC_POINTER_CAST<SensorBase          >(pinterface), shared_from_this());
+    case PT_CollisionChecker: return openravepy::toPyCollisionChecker    (OPENRAVE_STATIC_POINTER_CAST<CollisionCheckerBase>(pinterface), shared_from_this());
+    case PT_Trajectory:       return openravepy::toPyTrajectory          (OPENRAVE_STATIC_POINTER_CAST<TrajectoryBase      >(pinterface), shared_from_this());
+    case PT_Viewer:           return openravepy::toPyViewer              (OPENRAVE_STATIC_POINTER_CAST<ViewerBase          >(pinterface), shared_from_this());
+    case PT_SpaceSampler:     return openravepy::toPySpaceSampler        (OPENRAVE_STATIC_POINTER_CAST<SpaceSamplerBase    >(pinterface), shared_from_this());
+    case PT_PostureDescriber: return openravepy::toPyPostureDescriberBase(OPENRAVE_STATIC_POINTER_CAST<PostureDescriberBase>(pinterface), shared_from_this());
     }
     return PyInterfaceBasePtr();
 }
@@ -3448,6 +3450,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
     openravepy::init_openravepy_sensorsystem(m);
     openravepy::init_openravepy_spacesampler(m);
     openravepy::init_openravepy_viewer(m);
+    openravepy::init_openravepy_posturedescriber(m);
 #else
     openravepy::init_openravepy_global();
     openravepy::InitPlanningUtils();
@@ -3466,6 +3469,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
     openravepy::init_openravepy_sensorsystem();
     openravepy::init_openravepy_spacesampler();
     openravepy::init_openravepy_viewer();
+    openravepy::init_openravepy_posturedescriber();
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
