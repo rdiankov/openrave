@@ -26,6 +26,7 @@
 #endif
 
 #include <pcrecpp.h>
+#include <iterator>
 
 #define CHECK_INTERFACE(pinterface) { \
         if( (pinterface)->GetEnv() != shared_from_this() ) \
@@ -878,6 +879,7 @@ public:
             {
                 const std::vector<KinBodyPtr>::const_iterator it = std::lower_bound(_vecbodies.begin(), _vecbodies.end(), newBodyIndex, cmpEnvBodyIndex);
                 BOOST_ASSERT(it == _vecbodies.end() || (**it).GetEnvironmentBodyIndex() != newBodyIndex); // check uniqueness
+                RAVELOG_INFO_FORMAT("env=%dinsert body %s at %d (body index=%d)", GetId()%pbody->GetName()%(std::distance(_vecbodies.cbegin(), it))%newBodyIndex);
                 _vecbodies.insert(it, pbody);
             }
             _nBodiesModifiedStamp++;
@@ -939,6 +941,7 @@ public:
             {
                 const std::vector<KinBodyPtr>::const_iterator it = std::lower_bound(_vecbodies.begin(), _vecbodies.end(), newBodyIndex, cmpEnvBodyIndex);
                 BOOST_ASSERT(it == _vecbodies.end() || (**it).GetEnvironmentBodyIndex() != newBodyIndex); // check uniqueness
+                RAVELOG_INFO_FORMAT("env=%dinsert body %s at %d (body index=%d)", GetId()%robot->GetName()%(std::distance(_vecbodies.cbegin(), it))%newBodyIndex);
                 _vecbodies.insert(it, robot);
             }
             {
@@ -3172,8 +3175,16 @@ protected:
                     const int bodyId = (*itrobot)->GetEnvironmentBodyIndex();
                     pnewrobot->_environmentid = bodyId;
                     BOOST_ASSERT( _vecWeakBodies.size() < bodyId + 1 || !_vecWeakBodies.at(bodyId).lock());
-                    _vecbodies.push_back(pnewrobot);
-                    _vecrobots.push_back(pnewrobot);
+
+                    {
+                        const std::vector<KinBodyPtr>::const_iterator it = std::lower_bound(_vecbodies.begin(), _vecbodies.end(), bodyId, cmpEnvBodyIndex);
+                        _vecbodies.insert(it, pnewrobot);
+                    }
+                    {
+                        const std::vector<RobotBasePtr>::const_iterator it = std::lower_bound(_vecrobots.begin(), _vecrobots.end(), bodyId, cmpEnvBodyIndex);
+                        _vecrobots.insert(it, pnewrobot);
+                    }
+
                     if (_vecWeakBodies.size() < bodyId + 1) {
                         _vecWeakBodies.resize(bodyId + 1, KinBodyWeakPtr());
                     }
@@ -3213,7 +3224,10 @@ protected:
                         listToCopyState.push_back(pbody);
                     }
                     pnewbody->_environmentid = bodyId;
-                    _vecbodies.push_back(pnewbody);
+                    {
+                        const std::vector<KinBodyPtr>::const_iterator it = std::lower_bound(_vecbodies.begin(), _vecbodies.end(), bodyId, cmpEnvBodyIndex);
+                        _vecbodies.insert(it, pnewbody);
+                    }
 
                     if (_vecWeakBodies.size() < bodyId + 1) {
                         _vecWeakBodies.resize(bodyId + 1, KinBodyWeakPtr());
