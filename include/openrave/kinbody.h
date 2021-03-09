@@ -3110,7 +3110,11 @@ protected:
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool _IsAttached(const KinBody &body, std::set<KinBodyConstPtr>& setChecked) const;
 
+    /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool _IsAttached(int otherBodyId, std::vector<bool>& visited) const;
+    
+    /// \brief finds all attached bodies who should be considered as one during collision (ie one is grabbing the other)
+    virtual bool _IsAttached(std::vector<bool>& attached) const;
     
     /// \brief adds an attached body
     virtual void _AttachBody(KinBodyPtr body);

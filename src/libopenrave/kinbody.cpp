@@ -4743,14 +4743,26 @@ bool KinBody::IsAttached(const KinBody &body) const
     return _IsAttached(body.GetEnvironmentBodyIndex(), visited);
 }
 
+
+inline bool cmpEnvBodyIndex(const KinBodyPtr& pbody, int envBodyIndex)
+{
+    return pbody->GetEnvironmentBodyIndex() < envBodyIndex;
+}
+
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
-    std::vector<bool> visited(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, false);
-    FOREACHC(itbody,_listAttachedBodies) {
-        KinBodyPtr pattached = itbody->lock();
-        if( !!pattached && setAttached.insert(pattached).second ) {
-            pattached->GetAttached(setAttached);
+
+    std::vector<bool> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, false);
+    if (_IsAttached(vecAttached)) {
+        std::vector<KinBodyPtr> bodies;
+        GetEnv()->GetBodies(bodies);
+        std::vector<KinBodyPtr>::const_iterator it = bodies.begin();
+        for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
+            if (vecAttached[bodyIndex]) {
+                it = std::lower_bound(it, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
+                setAttached.insert(*it);
+            }
         }
     }
 }
@@ -4826,6 +4838,31 @@ bool KinBody::_IsAttached(int otherBodyid, std::vector<bool>& visited) const
     }
 
     return false;
+}
+
+
+bool KinBody::_IsAttached(std::vector<bool>& vecAttached) const
+{
+    bool foundAny = false;
+    for (const KinBodyWeakPtr& pbody : _listAttachedBodies) {
+        KinBodyConstPtr pattachedBody = pbody.lock();
+        if (!pattachedBody) {
+            continue;
+        }
+        const KinBody& attachedBody = *pattachedBody;
+        const int bodyIndex = attachedBody.GetEnvironmentBodyIndex();
+        if (vecAttached.at(bodyIndex)) {
+            // already checked
+            continue;
+        }
+        vecAttached.at(bodyIndex) = true;
+        foundAny = true;
+        // if attached._listAttachedBodies has only one element, that element is same as attached as attachement relationship is by-directional, so not worth checking
+        if (attachedBody._listAttachedBodies.size() > 1) {
+            attachedBody._IsAttached(vecAttached);
+        }
+    }
+    return foundAny;
 }
 
 bool KinBody::_IsAttached(const KinBody &body, std::set<KinBodyConstPtr>&setChecked) const
