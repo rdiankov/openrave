@@ -764,17 +764,20 @@ private:
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        const KinBodyInfoPtr& pcurrentinfo = _currentpinfo.at(pbody->GetEnvironmentBodyIndex());
+        const int bodyIndex = pbody->GetEnvironmentBodyIndex();
+        if (bodyIndex < _currentpinfo.size()) {
+            const KinBodyInfoPtr& pcurrentinfo = _currentpinfo.at(bodyIndex);
 
-        if( !!pinfo && pinfo == pcurrentinfo ) {//pinfo->_geometrygroup.size() == 0 ) {
-            // pinfo is current set to the current one, so should InitKinBody into _currentpinfo
-            //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
-            pinfo->nGeometryUpdateStamp++;
-            KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
-            InitKinBody(pbody, pinfo, false);
-            remover.ResetRemove(); // succeeded
+            if( !!pinfo && pinfo == pcurrentinfo ) {//pinfo->_geometrygroup.size() == 0 ) {
+                // pinfo is current set to the current one, so should InitKinBody into _currentpinfo
+                //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
+                pinfo->nGeometryUpdateStamp++;
+                KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
+                InitKinBody(pbody, pinfo, false);
+                remover.ResetRemove(); // succeeded
+            }
+            //_cachedpinfo[pbody->GetEnvironmentBodyIndex()].erase(std::string());
         }
-        //_cachedpinfo[pbody->GetEnvironmentBodyIndex()].erase(std::string());
     }
 
     void _ResetGeometryGroupsCallback(boost::weak_ptr<KinBodyInfo> _pinfo)

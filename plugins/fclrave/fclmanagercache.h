@@ -726,8 +726,9 @@ public:
             // add any new bodies
             for (const KinBodyConstPtr& pattached : attachedBodies) {
                 const KinBody& attached = *pattached;
+                EnsureVectorSize(vecCachedBodies, attached.GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
                 const int attachedBodyId = attached.GetEnvironmentBodyIndex();
-
+                
                 KinBodyCache& cache = vecCachedBodies.at(attachedBodyId);
                 if (cache.IsValid()) {
                     continue;

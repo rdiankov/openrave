@@ -1116,13 +1116,13 @@ public:
     int GetMaxEnvironmentBodyIndex() const override
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        if (_vecbodies.empty()) {
+        if (_vecWeakBodies.empty()) {
             return 0;
         }
         // bodies are sorted by index, so last body should have the largest
-        const int lastBodyEnvironmentBodyIndex = _vecbodies.back()->GetEnvironmentBodyIndex();
+        const int lastBodyEnvironmentBodyIndex = _vecWeakBodies.back().lock()->GetEnvironmentBodyIndex();
         BOOST_ASSERT(lastBodyEnvironmentBodyIndex > 0);
-        
+        RAVELOG_INFO_FORMAT("env=%d -> %d (%d)", GetId()%lastBodyEnvironmentBodyIndex%_vecWeakBodies.size());
         return lastBodyEnvironmentBodyIndex;
     }
 
@@ -3494,13 +3494,20 @@ protected:
             std::set<int>::iterator smallestIt = _environmentIndexRecyclePool.begin();
             bodyId = *smallestIt;
             _environmentIndexRecyclePool.erase(smallestIt);
+            RAVELOG_INFO_FORMAT("env=%d, recycled body bodyId=%d for %s. %d remaining", GetId()%bodyId%pbody->GetName()%_environmentIndexRecyclePool.size());
             //RAVELOG_INFO_FORMAT("env=%d, recycled body bodyId=%d for %s", GetId()%bodyId%pbody->GetName());
         }
         else {
-            bodyId = _vecWeakBodies.empty() ? 1 : _vecWeakBodies.size(); // no kin body should have an environment bodyId higher than _vecWeakBodies.size() - 1 when _environmentIndexRecyclePool is empty.
-            //RAVELOG_INFO_FORMAT("env=%d, assigned new body bodyId=%d for %s", GetId()%bodyId%pbody->GetName());
+            bodyId = 1;
+            for (const KinBodyWeakPtr& pweakbody : _vecWeakBodies) {
+                if (!pweakbody.expired()) {
+                    bodyId++;
+                }
+            }
+            // cannot use _vecbodies here, at this point, _vecbodies may not be updated
+            RAVELOG_INFO_FORMAT("env=%d, assigned new body bodyId=%d for %s", GetId()%bodyId%pbody->GetName());
         }
-        BOOST_ASSERT( _vecWeakBodies.size() < bodyId + 1 || !_vecWeakBodies.at(bodyId).lock());
+        //BOOST_ASSERT( _vecWeakBodies.size() < bodyId + 1 || !_vecWeakBodies.at(bodyId).lock());
         pbody->_environmentid=bodyId;
 
         if (_vecWeakBodies.size() < bodyId + 1) {
@@ -3524,11 +3531,11 @@ protected:
             _vecWeakBodies.erase(_vecWeakBodies.end() - numErase, _vecWeakBodies.end());
         }
         else {
-            _vecWeakBodies.at(pbody->_environmentid) = KinBodyWeakPtr();
+            _vecWeakBodies.at(bodyId).reset();
         }
 
-        _environmentIndexRecyclePool.insert(pbody->_environmentid); // for recycle later
-        //RAVELOG_INFO_FORMAT("env=%d, removed body id=%d from %s, recycle later", GetId()%pbody->GetName()%pbody->_environmentid);
+        _environmentIndexRecyclePool.insert(bodyId); // for recycle later
+        RAVELOG_INFO_FORMAT("env=%d, removed body id=%d from %s, recycle later", GetId()%pbody->GetName()%pbody->_environmentid);
 
         pbody->_environmentid = 0;
         pbody->_DeinitializeInternalInformation();
