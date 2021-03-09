@@ -4753,15 +4753,15 @@ void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
 
-    std::vector<bool> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, false);
+    std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
     if (_IsAttached(vecAttached)) {
         std::vector<KinBodyPtr> bodies;
         GetEnv()->GetBodies(bodies);
-        std::vector<KinBodyPtr>::const_iterator it = bodies.begin();
+        std::vector<KinBodyPtr>::const_iterator itBodies = bodies.begin();
         for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
             if (vecAttached[bodyIndex]) {
-                it = std::lower_bound(it, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
-                setAttached.insert(*it);
+                itBodies = std::lower_bound(itBodies, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
+                setAttached.insert(setAttached.end(), *itBodies); // slow
             }
         }
     }
@@ -4770,42 +4770,105 @@ void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 {
     setAttached.insert(shared_kinbody_const());
-    FOREACHC(itbody,_listAttachedBodies) {
-        KinBodyConstPtr pattached = itbody->lock();
-        if( !!pattached && setAttached.insert(pattached).second ) {
-            pattached->GetAttached(setAttached);
+
+    std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
+    if (_IsAttached(vecAttached)) {
+        std::vector<KinBodyPtr> bodies;
+        GetEnv()->GetBodies(bodies);
+        std::vector<KinBodyPtr>::const_iterator itBodies = bodies.begin();
+        for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
+            if (vecAttached[bodyIndex] == 1) {
+                itBodies = std::lower_bound(itBodies, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
+                setAttached.insert(setAttached.end(), *itBodies); // slow
+            }
         }
     }
 }
 
 void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 {
-    if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
-        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
+            vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+        }
+        return;
     }
-    FOREACHC(itbody,_listAttachedBodies) {
-        KinBodyPtr pattached = itbody->lock();
-        if( !!pattached ) {
-            if( find(vAttached.begin(), vAttached.end(), pattached) == vAttached.end() ) {
-                vAttached.push_back(pattached);
-                pattached->GetAttached(vAttached);
-            }
+
+    std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
+
+    // by spec "including this body.", include this body
+    // vAttached is not sorted, so cannot do binary search
+    if( find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
+        vecAttached.at(this->GetEnvironmentBodyIndex()) = 1;
+    }
+
+    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
+    for (const KinBodyPtr& pbody : vAttached) {
+        vecAttached.at(pbody->GetEnvironmentBodyIndex()) = -1;
+    }
+
+    {
+        const int numAttached = _IsAttached(vecAttached);
+
+        if (numAttached == 0) {
+            return;
+        }
+        vAttached.reserve(vAttached.size() + numAttached);
+    }
+    std::vector<KinBodyPtr> bodies;
+    GetEnv()->GetBodies(bodies);
+    std::vector<KinBodyPtr>::const_iterator itBodies = bodies.begin();
+    for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
+        // 0 means not attached, -1 means it was already in original vAttached so skip
+        if (vecAttached[bodyIndex] == 1) {
+            itBodies = std::lower_bound(itBodies, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
+            BOOST_ASSERT(itBodies != bodies.cend() && (**itBodies).GetEnvironmentBodyIndex() == bodyIndex);
+            vAttached.push_back(*itBodies);
         }
     }
 }
 
 void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
 {
-    if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
-        vAttached.push_back(shared_kinbody_const());
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
+            vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+        }
+        return;
     }
-    FOREACHC(itbody,_listAttachedBodies) {
-        KinBodyConstPtr pattached = itbody->lock();
-        if( !!pattached ) {
-            if( find(vAttached.begin(), vAttached.end(), pattached) == vAttached.end() ) {
-                vAttached.push_back(pattached);
-                pattached->GetAttached(vAttached);
-            }
+
+    std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
+
+    // by spec "including this body.", include this body
+    // vAttached is not sorted, so cannot do binary search
+    if( find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
+        vecAttached.at(this->GetEnvironmentBodyIndex()) = 1;
+    }
+
+    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
+    for (const KinBodyConstPtr& pbody : vAttached) {
+        vecAttached.at(pbody->GetEnvironmentBodyIndex()) = -1;
+    }
+
+    {
+        const int numAttached = _IsAttached(vecAttached);
+
+        if (numAttached == 0) {
+            return;
+        }
+        vAttached.reserve(vAttached.size() + numAttached);
+    }
+    std::vector<KinBodyPtr> bodies;
+    GetEnv()->GetBodies(bodies);
+    std::vector<KinBodyPtr>::const_iterator itBodies = bodies.begin();
+    for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
+        // 0 means not attached, -1 means it was already in original vAttached so skip
+        if (vecAttached[bodyIndex] == 1) {
+            itBodies = std::lower_bound(itBodies, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
+            BOOST_ASSERT(itBodies != bodies.cend() && (**itBodies).GetEnvironmentBodyIndex() == bodyIndex);
+            vAttached.push_back(*itBodies);
         }
     }
 }
@@ -4841,9 +4904,9 @@ bool KinBody::_IsAttached(int otherBodyid, std::vector<bool>& visited) const
 }
 
 
-bool KinBody::_IsAttached(std::vector<bool>& vecAttached) const
+int KinBody::_IsAttached(std::vector<int>& vecAttached) const
 {
-    bool foundAny = false;
+    int numFound = 0;
     for (const KinBodyWeakPtr& pbody : _listAttachedBodies) {
         KinBodyConstPtr pattachedBody = pbody.lock();
         if (!pattachedBody) {
@@ -4851,18 +4914,18 @@ bool KinBody::_IsAttached(std::vector<bool>& vecAttached) const
         }
         const KinBody& attachedBody = *pattachedBody;
         const int bodyIndex = attachedBody.GetEnvironmentBodyIndex();
-        if (vecAttached.at(bodyIndex)) {
-            // already checked
+        if (vecAttached.at(bodyIndex) != 0) {
+            // already checked, so skip
             continue;
         }
-        vecAttached.at(bodyIndex) = true;
-        foundAny = true;
+        vecAttached.at(bodyIndex) = 1;
+        numFound++;
         // if attached._listAttachedBodies has only one element, that element is same as attached as attachement relationship is by-directional, so not worth checking
         if (attachedBody._listAttachedBodies.size() > 1) {
-            attachedBody._IsAttached(vecAttached);
+            numFound += attachedBody._IsAttached(vecAttached);
         }
     }
-    return foundAny;
+    return numFound;
 }
 
 bool KinBody::_IsAttached(const KinBody &body, std::set<KinBodyConstPtr>&setChecked) const

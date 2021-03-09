@@ -3635,10 +3635,11 @@ bool PyKinBody::IsAttached(PyKinBodyPtr pattachbody)
 object PyKinBody::GetAttached() const
 {
     py::list attached;
-    std::set<KinBodyPtr> vattached;
+    std::vector<KinBodyPtr> vattached;
     _pbody->GetAttached(vattached);
-    FOREACHC(it,vattached)
-    attached.append(PyKinBodyPtr(new PyKinBody(*it,_pyenv)));
+    FOREACHC(it,vattached) {
+        attached.append(PyKinBodyPtr(new PyKinBody(*it,_pyenv)));
+    }
     return attached;
 }
 

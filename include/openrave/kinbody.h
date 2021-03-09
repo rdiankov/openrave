@@ -3114,7 +3114,9 @@ protected:
     virtual bool _IsAttached(int otherBodyId, std::vector<bool>& visited) const;
     
     /// \brief finds all attached bodies who should be considered as one during collision (ie one is grabbing the other)
-    virtual bool _IsAttached(std::vector<bool>& attached) const;
+    ///
+    /// \return number of elements attached
+    virtual int _IsAttached(std::vector<int>& attached) const;
     
     /// \brief adds an attached body
     virtual void _AttachBody(KinBodyPtr body);
