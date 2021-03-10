@@ -842,7 +842,12 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
         if( !utils::IsValidName(pbody->GetName()) ) {
-            throw openrave_exception(str(boost::format(_("kinbody name: \"%s\" is not valid"))%pbody->GetName()));
+            if( addMode & IAM_StrictNameChecking ) {
+                throw openrave_exception(str(boost::format(_("Body name: \"%s\" is not valid"))%pbody->GetName()));
+            }
+            else {
+                pbody->SetName(utils::ConvertToOpenRAVEName(pbody->GetName()));
+            }
         }
 
         if( !_CheckUniqueName(KinBodyConstPtr(pbody), !!(addMode & IAM_StrictNameChecking)) ) {
@@ -904,7 +909,12 @@ public:
             throw openrave_exception(str(boost::format(_("kinbody \"%s\" is not a robot"))%robot->GetName()));
         }
         if( !utils::IsValidName(robot->GetName()) ) {
-            throw openrave_exception(str(boost::format(_("kinbody name: \"%s\" is not valid"))%robot->GetName()));
+            if( addMode & IAM_StrictNameChecking ) {
+                throw openrave_exception(str(boost::format(_("Robot name: \"%s\" is not valid"))%robot->GetName()));
+            }
+            else {
+                robot->SetName(utils::ConvertToOpenRAVEName(robot->GetName()));
+            }
         }
 
         if( !_CheckUniqueName(KinBodyConstPtr(robot), !!(addMode & IAM_StrictNameChecking)) ) {
@@ -913,7 +923,7 @@ public:
             for(int i = 0;; ++i) {
                 newname = str(boost::format("%s%d")%oldname%i);
                 robot->SetName(newname);
-                if( utils::IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(robot),false) ) {
+                if( _CheckUniqueName(KinBodyConstPtr(robot),false) ) {
                     RAVELOG_DEBUG_FORMAT("env=%d, setting robot name from %s -> %s due to conflict", GetId()%oldname%newname);
                     break;
                 }
@@ -925,7 +935,7 @@ public:
             for(int i = 0;; ++i) {
                 newname = str(boost::format("%s%d")%oldname%i);
                 robot->SetId(newname);
-                if( utils::IsValidName(newname) && _CheckUniqueId(KinBodyConstPtr(robot),false) ) {
+                if( _CheckUniqueId(KinBodyConstPtr(robot),false) ) {
                     if( !oldname.empty() ) {
                         RAVELOG_DEBUG_FORMAT("env=%d, setting robot id from %s -> %s due to conflict", GetId()%oldname%newname);
                     }
@@ -969,7 +979,12 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(psensor);
         if( !utils::IsValidName(psensor->GetName()) ) {
-            throw openrave_exception(str(boost::format(_("sensor name: \"%s\" is not valid"))%psensor->GetName()));
+            if( addMode & IAM_StrictNameChecking ) {
+                throw openrave_exception(str(boost::format(_("Sensor name: \"%s\" is not valid"))%psensor->GetName()));
+            }
+            else {
+                psensor->SetName(utils::ConvertToOpenRAVEName(psensor->GetName()));
+            }
         }
 
         if( !_CheckUniqueName(SensorBaseConstPtr(psensor), !!(addMode & IAM_StrictNameChecking)) ) {
