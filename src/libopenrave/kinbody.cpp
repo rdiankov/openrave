@@ -4787,11 +4787,11 @@ void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 
 void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 {
+    if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
+        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+    }
     // early exist, probably this is the case most of the time
     if (_listAttachedBodies.empty()) {
-        if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
-            vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
-        }
         return;
     }
 
@@ -4831,11 +4831,11 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 
 void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
 {
+    if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
+        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+    }
     // early exist, probably this is the case most of the time
     if (_listAttachedBodies.empty()) {
-        if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
-            vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
-        }
         return;
     }
 
