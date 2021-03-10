@@ -112,7 +112,16 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
                 }
                 RAVELOG_INFO_FORMAT("invalidating body=%s in env=%d at 0x%x.", name%envId%this);
             }
+
             pwbody.reset();
+            pwinfo.reset();
+            nLastStamp = 0;
+            nLinkUpdateStamp = 0;
+            nGeometryUpdateStamp = 0;
+            geometrygroup.clear();
+            nAttachedBodiesUpdateStamp = 0;
+            nActiveDOFUpdateStamp = 0;
+            linkEnableStates.clear();
         }
 
         inline bool IsValid() const
