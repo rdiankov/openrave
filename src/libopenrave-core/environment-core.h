@@ -2308,7 +2308,7 @@ public:
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         boost::mutex::scoped_lock locknetwork(_mutexEnvironmentIds);
-        if (id < _vecWeakBodies.size()) {
+        if (id > 0 && id < _vecWeakBodies.size()) {
             return KinBodyPtr(_vecWeakBodies.at(id));
         }
         return KinBodyPtr();
