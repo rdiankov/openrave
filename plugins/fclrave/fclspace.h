@@ -389,7 +389,7 @@ public:
         poldinfo->nGeometryUpdateStamp += 1;
 
         const int maxBodyIndex = pbody->GetEnv()->GetMaxEnvironmentBodyIndex();
-        EnsureVectorSize(_cachedpinfo, maxBodyIndex);
+        EnsureVectorSize(_cachedpinfo, maxBodyIndex + 1);
             
         const int bodyId = body.GetEnvironmentBodyIndex();
         std::map< std::string, KinBodyInfoPtr >& cache = _cachedpinfo[bodyId];
@@ -408,7 +408,7 @@ public:
             RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%body.GetName()%bodyId);
             // Set the current info to use the KinBodyInfoPtr associated to groupname
             const int envId = bodyId;
-            EnsureVectorSize(_currentpinfo, maxBodyIndex);
+            EnsureVectorSize(_currentpinfo, maxBodyIndex + 1);
             _currentpinfo.at(envId) = pinfo;
 
             // Revoke the information inside the cache so that a potentially outdated object does not survive
