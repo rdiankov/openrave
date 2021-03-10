@@ -82,39 +82,22 @@ public:
             pbody->RemoveUserData("_genericphysics_");
 
             const int bodyid = pbody->GetEnvironmentBodyIndex();
-            if (bodyid < _pysicsDataCache.size()) {
-                RAVELOG_VERBOSE_FORMAT("invalidate bodyid=%d(name=%s) in _pysicsDataCache of size %d", bodyid%(pbody->GetName())%(_pysicsDataCache.size()));
-                if (bodyid == _pysicsDataCache.size() - 1) {
-                    // last element is removed, chance to shrink vector and free some memory
-                    int numItemsToErase = 1;
-                    for (; numItemsToErase < _pysicsDataCache.size(); ++numItemsToErase) {
-                        if (!!_pysicsDataCache.at(_pysicsDataCache.size() - 1 - numItemsToErase)) {
-                            break;
-                        }
-                    }
-                    const size_t prevSize = _pysicsDataCache.size();
-                    _pysicsDataCache.resize(_pysicsDataCache.size() - numItemsToErase);
-                    RAVELOG_VERBOSE_FORMAT("resized _pysicsDataCache from %d to %d", prevSize%(_pysicsDataCache.size()));
-                }
-                else if (!!_pysicsDataCache.at(bodyid)) {
-                    _pysicsDataCache.at(bodyid) = boost::shared_ptr<PhysicsData>();
-                }
-                else {
-                    RAVELOG_VERBOSE_FORMAT("bodyid=%d(name=%s) is already invalidated (either never initialized or invalidated already)", bodyid%(pbody->GetName()));
-                }
+            if (!!_pysicsDataCache.at(bodyid)) {
+                _pysicsDataCache.at(bodyid).reset();
             }
             else {
-                RAVELOG_VERBOSE_FORMAT("env=%d, bodyid=%d(name=%s) is not in _pysicsDataCache of size %d. Unless physics engine was never used in this environment, this should not happen.", (GetEnv()->GetId())%bodyid%(pbody->GetName())%(_pysicsDataCache.size()));
+                RAVELOG_VERBOSE_FORMAT("bodyid=%d(name=%s) is already invalidated (either never initialized or invalidated already)", bodyid%(pbody->GetName()));
             }
         }
     }
 
     inline const boost::shared_ptr<PhysicsData>& _EnsureData(const KinBodyConstPtr& pbody)
     {
-        int bodyid = pbody->GetEnvironmentBodyIndex();
+        const int bodyid = pbody->GetEnvironmentBodyIndex();
         if (bodyid >= _pysicsDataCache.size()) {
-            RAVELOG_INFO_FORMAT("extend _pysicsDataCache of size %d to %d from bodyid=%d(name=%s)", (_pysicsDataCache.size())%(bodyid + 1)%bodyid%(pbody->GetName()));
-            _pysicsDataCache.resize(bodyid + 1, boost::shared_ptr<PhysicsData>());
+            const int maxBodyIndex = GetEnv()->GetMaxEnvironmentBodyIndex();
+            RAVELOG_INFO_FORMAT("extend _pysicsDataCache of size %d to %d from bodyid=%d (name=%s)", (_pysicsDataCache.size())%(maxBodyIndex + 1)%bodyid%(pbody->GetName()));
+            _pysicsDataCache.resize(maxBodyIndex + 1, boost::shared_ptr<PhysicsData>());
         }
         if (!_pysicsDataCache.at(bodyid)) {
             _pysicsDataCache.at(bodyid) = _GetData(pbody);
