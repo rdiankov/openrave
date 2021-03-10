@@ -160,7 +160,9 @@ public:
         for (KinBodyCache& cache : vecCachedBodies) {
             cache.vcolobjs.clear();
         }
-        RAVELOG_DEBUG_FORMAT("0x%x: vecCachedBodies size=%d", this%vecCachedBodies.size());
+        if (vecCachedBodies.size() > 10000) { // don't know good threshold
+            RAVELOG_WARN_FORMAT("0x%x: vecCachedBodies size=%d, and is probably too large. This should not grow more than maximum number of bodies simultaneously present in env. Maybe there is a bug.", this%vecCachedBodies.size());
+        }
         vecCachedBodies.clear();
     }
 
