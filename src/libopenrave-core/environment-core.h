@@ -244,7 +244,7 @@ public:
         // destruction order is *very* important, don't touch it without consultation
         _bInit = false;
 
-        RAVELOG_VERBOSE_FORMAT("env=%d destructor", GetId());
+        RAVELOG_VERBOSE_FORMAT("env=%d destructor, _vecWeakBodies.size():%d, _vecbodies.size():%d", GetId()%_vecWeakBodies.size()%_vecbodies.size());
         _StopSimulationThread();
 
         // destroy the modules (their destructors could attempt to lock environment, so have to do it before global lock)

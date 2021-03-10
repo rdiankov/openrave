@@ -175,6 +175,7 @@ public:
         for (KinBodyCache& cache : vecCachedBodies) {
             cache.vcolobjs.clear();
         }
+        RAVELOG_DEBUG_FORMAT("0x%x: vecCachedBodies size=%d", vecCachedBodies.size());
         vecCachedBodies.clear();
     }
 
