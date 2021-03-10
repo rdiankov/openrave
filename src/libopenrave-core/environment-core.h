@@ -26,7 +26,6 @@
 #endif
 
 #include <pcrecpp.h>
-#include <iterator>
 
 #define CHECK_INTERFACE(pinterface) { \
         if( (pinterface)->GetEnv() != shared_from_this() ) \
@@ -950,7 +949,7 @@ public:
             {
                 const std::vector<KinBodyPtr>::const_iterator it = std::lower_bound(_vecbodies.begin(), _vecbodies.end(), newBodyIndex, cmpEnvBodyIndex);
                 BOOST_ASSERT(it == _vecbodies.end() || (**it).GetEnvironmentBodyIndex() != newBodyIndex); // check uniqueness
-                RAVELOG_INFO_FORMAT("env=%dinsert body %s at %d (body index=%d)", GetId()%robot->GetName()%(std::distance(_vecbodies.cbegin(), it))%newBodyIndex);
+                //RAVELOG_INFO_FORMAT("env=%dinsert body %s at %d (body index=%d)", GetId()%robot->GetName()%(std::distance(_vecbodies.cbegin(), it))%newBodyIndex);
                 _vecbodies.insert(it, robot);
             }
             {
@@ -3846,7 +3845,7 @@ protected:
     CollisionCheckerBasePtr _pCurrentChecker;
     PhysicsEngineBasePtr _pPhysicsEngine;
 
-    std::vector<KinBodyWeakPtr> _vecWeakBodies;     ///< a vector of all the bodies in the environment. Controlled through the KinBody constructor and destructors
+    std::vector<KinBodyWeakPtr> _vecWeakBodies;     ///< a vector of all the bodies in the environment. index of element is the environment body id of the stored kin body (so index 0 is null pointer). Note that some element can be expired, meaning that weak pointer may be pointing to nullpointer. Controlled through the KinBody constructor and destructors
     std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. 
 
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation
