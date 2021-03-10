@@ -3543,7 +3543,7 @@ protected:
         }
 
         _environmentIndexRecyclePool.insert(bodyId); // for recycle later
-        RAVELOG_VERBOSE_FORMAT("env=%d, removed body id=%d from body name=%s, recycle later", GetId()%pbody->GetName()%pbody->_environmentid);
+        RAVELOG_VERBOSE_FORMAT("env=%d, removed body name=%s (body index=%d), recycle body index later", GetId()%pbody->GetName()%pbody->_environmentid);
 
         pbody->_environmentid = 0;
         pbody->_DeinitializeInternalInformation();
