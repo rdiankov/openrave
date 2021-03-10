@@ -82,7 +82,7 @@ public:
             pbody->RemoveUserData("_genericphysics_");
 
             const int bodyid = pbody->GetEnvironmentBodyIndex();
-            if (!!_pysicsDataCache.at(bodyid)) {
+            if (bodyid < _pysicsDataCache.size() && !!_pysicsDataCache.at(bodyid)) {
                 _pysicsDataCache.at(bodyid).reset();
             }
             else {
