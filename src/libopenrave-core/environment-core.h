@@ -884,7 +884,6 @@ public:
             {
                 const std::vector<KinBodyPtr>::const_iterator it = std::lower_bound(_vecbodies.begin(), _vecbodies.end(), newBodyIndex, cmpEnvBodyIndex);
                 BOOST_ASSERT(it == _vecbodies.end() || (**it).GetEnvironmentBodyIndex() != newBodyIndex); // check uniqueness
-                RAVELOG_INFO_FORMAT("env=%dinsert body %s at %d (body index=%d)", GetId()%pbody->GetName()%(std::distance(_vecbodies.cbegin(), it))%newBodyIndex);
                 _vecbodies.insert(it, pbody);
             }
             _nBodiesModifiedStamp++;
@@ -3509,18 +3508,12 @@ protected:
             std::set<int>::iterator smallestIt = _environmentIndexRecyclePool.begin();
             bodyId = *smallestIt;
             _environmentIndexRecyclePool.erase(smallestIt);
-            RAVELOG_INFO_FORMAT("env=%d, recycled body bodyId=%d for %s. %d remaining", GetId()%bodyId%pbody->GetName()%_environmentIndexRecyclePool.size());
-            //RAVELOG_INFO_FORMAT("env=%d, recycled body bodyId=%d for %s", GetId()%bodyId%pbody->GetName());
+            //RAVELOG_INFO_FORMAT("env=%d, recycled body bodyId=%d for %s. %d remaining", GetId()%bodyId%pbody->GetName()%_environmentIndexRecyclePool.size());
         }
         else {
-            bodyId = 1;
-            for (const KinBodyWeakPtr& pweakbody : _vecWeakBodies) {
-                if (!pweakbody.expired()) {
-                    bodyId++;
-                }
-            }
+            bodyId = _vecWeakBodies.empty() ? 1 : _vecWeakBodies.size(); // skip 0
             // cannot use _vecbodies here, at this point, _vecbodies may not be updated
-            RAVELOG_INFO_FORMAT("env=%d, assigned new body bodyId=%d for %s", GetId()%bodyId%pbody->GetName());
+            RAVELOG_DEBUG_FORMAT("env=%d, assigned new body bodyId=%d for %s, this should not happen unless total number of bodies in env keeps increasing", GetId()%bodyId%pbody->GetName());
         }
         //BOOST_ASSERT( _vecWeakBodies.size() < bodyId + 1 || !_vecWeakBodies.at(bodyId).lock());
         pbody->_environmentid=bodyId;
@@ -3550,7 +3543,7 @@ protected:
         }
 
         _environmentIndexRecyclePool.insert(bodyId); // for recycle later
-        RAVELOG_INFO_FORMAT("env=%d, removed body id=%d from %s, recycle later", GetId()%pbody->GetName()%pbody->_environmentid);
+        RAVELOG_VERBOSE_FORMAT("env=%d, removed body id=%d from body name=%s, recycle later", GetId()%pbody->GetName()%pbody->_environmentid);
 
         pbody->_environmentid = 0;
         pbody->_DeinitializeInternalInformation();

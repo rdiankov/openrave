@@ -88,12 +88,11 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
                     ss << "0x" << hex << obj << ", ";
                 }
                 ss << "), but leaving untouched.";
-                RAVELOG_INFO_FORMAT("%s", ss.str());
+                RAVELOG_WARN_FORMAT("%s", ss.str());
             }
         }
 
         ~KinBodyCache() {
-            RAVELOG_INFO_FORMAT("destructing 0x%x.", this);
             Invalidate();
         }
 
@@ -111,18 +110,6 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
                 }
                 RAVELOG_WARN_FORMAT("there are %d fcl collision objects left for body %s", vcolobjs.size()%name);
             }
-            {
-                std::string name;
-                int envId = 0;
-                {
-                    KinBodyConstPtr pbody = pwbody.lock();
-                    if( !!pbody ) {
-                        name = pbody->GetName();
-                        envId = pbody->GetEnv()->GetId();
-                    }
-                }
-                RAVELOG_INFO_FORMAT("invalidating body=%s in env=%d at 0x%x.", name%envId%this);
-            }
 
             pwbody.reset();
             pwinfo.reset();
@@ -135,9 +122,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             // vcolobjs is left as is without clearing on purpose
             // clearing should happen together with manager unregisterObject
             //vcolobjs.clear();
-            if (!vcolobjs.empty()) {
 
-            }
             geometrygroup.clear();
         }
 
@@ -207,7 +192,6 @@ public:
         for (KinBodyCache& bodyCache : vecCachedBodies) {
             bodyCache.Invalidate();
         }
-        vecCachedBodies.clear();
         int maxBodyId = pbody->GetEnv()->GetMaxEnvironmentBodyIndex();
         EnsureVectorSize(vecCachedBodies, maxBodyId+1);
 
@@ -285,7 +269,6 @@ public:
         for (KinBodyCache& bodyCache : vecCachedBodies) {
             bodyCache.Invalidate();
         }
-        vecCachedBodies.clear();
         
         FOREACH(itbody, excludedbodies) {
             _setExcludeBodyIds.insert((*itbody)->GetEnvironmentBodyIndex());
