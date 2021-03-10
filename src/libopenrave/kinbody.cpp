@@ -4787,9 +4787,12 @@ void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 
 void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 {
+    // by spec "including this body.", include this body
+    // vAttached is not sorted, so cannot do binary search
     if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
         vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     }
+
     // early exist, probably this is the case most of the time
     if (_listAttachedBodies.empty()) {
         return;
@@ -4797,14 +4800,8 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 
     std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
 
-    // by spec "including this body.", include this body
-    // vAttached is not sorted, so cannot do binary search
-    if( find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
-        vecAttached.at(this->GetEnvironmentBodyIndex()) = 1;
-    }
-
     // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
-    for (const KinBodyPtr& pbody : vAttached) {
+    for (const KinBodyConstPtr& pbody : vAttached) {
         vecAttached.at(pbody->GetEnvironmentBodyIndex()) = -1;
     }
 
@@ -4831,21 +4828,18 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 
 void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
 {
+    // by spec "including this body.", include this body
+    // vAttached is not sorted, so cannot do binary search
     if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
         vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     }
+
     // early exist, probably this is the case most of the time
     if (_listAttachedBodies.empty()) {
         return;
     }
 
     std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
-
-    // by spec "including this body.", include this body
-    // vAttached is not sorted, so cannot do binary search
-    if( find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
-        vecAttached.at(this->GetEnvironmentBodyIndex()) = 1;
-    }
 
     // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
     for (const KinBodyConstPtr& pbody : vAttached) {
