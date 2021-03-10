@@ -392,7 +392,7 @@ public:
         EnsureVectorSize(_cachedpinfo, maxBodyIndex + 1);
             
         const int bodyId = body.GetEnvironmentBodyIndex();
-        std::map< std::string, KinBodyInfoPtr >& cache = _cachedpinfo[bodyId];
+        std::map< std::string, KinBodyInfoPtr >& cache = _cachedpinfo.at(bodyId);
         cache[poldinfo->_geometrygroup] = poldinfo;
 
         BOOST_ASSERT(bodyId != 0);
@@ -765,7 +765,7 @@ private:
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
         const int bodyIndex = pbody->GetEnvironmentBodyIndex();
-        if (bodyIndex < _currentpinfo.size()) {
+        if (0 < bodyIndex && bodyIndex < _currentpinfo.size()) {
             const KinBodyInfoPtr& pcurrentinfo = _currentpinfo.at(bodyIndex);
 
             if( !!pinfo && pinfo == pcurrentinfo ) {//pinfo->_geometrygroup.size() == 0 ) {

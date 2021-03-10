@@ -79,6 +79,17 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             nAttachedBodiesUpdateStamp = pinfo->nAttachedBodiesUpdateStamp;
             nActiveDOFUpdateStamp = pinfo->nActiveDOFUpdateStamp;
             pbody->GetLinkEnableStates(linkEnableStates);
+
+            if (!vcolobjs.empty()) {
+                std::stringstream ss;
+                ss << "FCLCollisionManagerInstance 0x" << hex << this;
+                ss << " has " << vcolobjs.size() << " collion objects (";
+                for (const CollisionObjectPtr& obj : vcolobjs) {
+                    ss << "0x" << hex << obj << ", ";
+                }
+                ss << "), but leaving untouched.";
+                RAVELOG_INFO_FORMAT("%s", ss.str());
+            }
         }
 
         ~KinBodyCache() {
@@ -89,7 +100,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
         inline void Invalidate()
         {
             if (!IsValid()) {
-                RAVELOG_INFO_FORMAT("0x%x is previously invalidated, or was never valid.", this);
+                //RAVELOG_INFO_FORMAT("0x%x is previously invalidated, or was never valid.", this);
                 return;
             }
             if( vcolobjs.size() > 0 ) { // should never happen
@@ -118,12 +129,20 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             nLastStamp = 0;
             nLinkUpdateStamp = 0;
             nGeometryUpdateStamp = 0;
-            geometrygroup.clear();
             nAttachedBodiesUpdateStamp = 0;
             nActiveDOFUpdateStamp = 0;
             linkEnableStates.clear();
+            // vcolobjs is left as is without clearing on purpose
+            // clearing should happen together with manager unregisterObject
+            //vcolobjs.clear();
+            if (!vcolobjs.empty()) {
+
+            }
+            geometrygroup.clear();
         }
 
+        /// checks if weak pointer is expired (either reset or KinBody that it was pointing to is destructed
+        // note, this doesn't check if KinBody has non-zero env body index, so it's not the same check as (pwbody.lock() && pwbody.lock()->GetEnvironmentBodyIndex())
         inline bool IsValid() const
         {
             return !pwbody.expired(); // expired is slightly faster than lock
@@ -187,6 +206,7 @@ public:
         for (KinBodyCache& bodyCache : vecCachedBodies) {
             bodyCache.Invalidate();
         }
+        vecCachedBodies.clear();
         int maxBodyId = pbody->GetEnv()->GetMaxEnvironmentBodyIndex();
         EnsureVectorSize(vecCachedBodies, maxBodyId+1);
 
@@ -264,6 +284,8 @@ public:
         for (KinBodyCache& bodyCache : vecCachedBodies) {
             bodyCache.Invalidate();
         }
+        vecCachedBodies.clear();
+        
         FOREACH(itbody, excludedbodies) {
             _setExcludeBodyIds.insert((*itbody)->GetEnvironmentBodyIndex());
         }
@@ -485,13 +507,7 @@ public:
 
 
         for (KinBodyCache& cache : vecCachedBodies) {
-            if (!cache.IsValid()) {
-                continue;
-            }
-            
             KinBodyConstPtr pbody = cache.pwbody.lock();
-            FCLSpace::KinBodyInfoPtr pinfo = cache.pwinfo.lock();
-
             if( !pbody || pbody->GetEnvironmentBodyIndex() == 0 ) {
                 // should happen when parts are removed
                 RAVELOG_VERBOSE_FORMAT("%u manager contains invalid body %s, removing for now (env %d)", _lastSyncTimeStamp%(!pbody ? std::string() : pbody->GetName())%(!pbody ? -1 : pbody->GetEnv()->GetId()));
@@ -505,6 +521,7 @@ public:
                 continue;
             }
 
+            FCLSpace::KinBodyInfoPtr pinfo = cache.pwinfo.lock();
             const KinBody& body = *pbody;
             FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(body); // necessary in case pinfos were swapped!
             if( pinfo != pnewinfo ) {
@@ -733,9 +750,13 @@ public:
             std::vector<CollisionObjectPtr> vcolobjs;
             //RAVELOG_VERBOSE_FORMAT("env=%d, %x %u setting %d attached bodies for body %s (%d)", ptrackingbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%attachedBodies.size()%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentBodyIndex());
             // add any new bodies
+            bool vectorSizeIsEnsured = false;
             for (const KinBodyConstPtr& pattached : attachedBodies) {
                 const KinBody& attached = *pattached;
-                EnsureVectorSize(vecCachedBodies, attached.GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+                if (!vectorSizeIsEnsured) {
+                    EnsureVectorSize(vecCachedBodies, attached.GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+                    vectorSizeIsEnsured = true;
+                }
                 const int attachedBodyId = attached.GetEnvironmentBodyIndex();
                 
                 KinBodyCache& cache = vecCachedBodies.at(attachedBodyId);
@@ -762,9 +783,6 @@ public:
             int bodyId = -1;
             for (KinBodyCache& cache : vecCachedBodies) {
                 ++bodyId;
-                if (!cache.IsValid()) {
-                    continue;
-                }
                 KinBodyConstPtr pbody = cache.pwbody.lock();
                 // could be the case that the same pointer was re-added to the environment so have to check the environment id
                 // make sure we don't need to make this asusmption of body id change when bodies are removed and re-added
@@ -813,10 +831,6 @@ public:
             std::stringstream ss;
             ss << "bodies=[";
             for (KinBodyCache& cache : vecCachedBodies) {
-                if (!cache.IsValid()) {
-                    continue;
-                }
-
                 KinBodyConstPtr pbody = cache.pwbody.lock();
                 if( !!pbody ) {
                     ss << pbody->GetName() << ", ";
