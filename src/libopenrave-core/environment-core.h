@@ -1137,7 +1137,7 @@ public:
         // bodies are sorted by index, so last body should have the largest
         const int lastBodyEnvironmentBodyIndex = _vecWeakBodies.back().lock()->GetEnvironmentBodyIndex();
         BOOST_ASSERT(lastBodyEnvironmentBodyIndex > 0);
-        RAVELOG_INFO_FORMAT("env=%d -> %d (%d)", GetId()%lastBodyEnvironmentBodyIndex%_vecWeakBodies.size());
+        //RAVELOG_INFO_FORMAT("env=%d -> %d (%d)", GetId()%lastBodyEnvironmentBodyIndex%_vecWeakBodies.size());
         return lastBodyEnvironmentBodyIndex;
     }
 
