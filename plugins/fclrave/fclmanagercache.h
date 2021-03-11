@@ -83,7 +83,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             if (!vcolobjs.empty()) {
                 std::stringstream ss;
                 ss << "FCLCollisionManagerInstance 0x" << hex << this;
-                ss << " has " << vcolobjs.size() << " collion objects (";
+                ss << " has " << dec << vcolobjs.size() << " collion objects (";
                 for (const CollisionObjectPtr& obj : vcolobjs) {
                     ss << "0x" << hex << obj << ", ";
                 }
