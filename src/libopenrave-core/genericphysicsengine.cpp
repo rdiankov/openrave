@@ -97,7 +97,7 @@ public:
         // so just resize to bodyIndex + 1 for now
         const int bodyIndex = pbody->GetEnvironmentBodyIndex();
         if (bodyIndex >= _pysicsDataCache.size()) {
-            RAVELOG_INFO_FORMAT("extend _pysicsDataCache of size %d to %d from bodyIndex=%d (name=%s)", (_pysicsDataCache.size())%(bodyIndex + 1)%bodyIndex%(pbody->GetName()));
+            //RAVELOG_INFO_FORMAT("extend _pysicsDataCache of size %d to %d from bodyIndex=%d (name=%s)", (_pysicsDataCache.size())%(bodyIndex + 1)%bodyIndex%(pbody->GetName()));
             _pysicsDataCache.resize(bodyIndex + 1, boost::shared_ptr<PhysicsData>());
         }
         if (!_pysicsDataCache.at(bodyIndex)) {
