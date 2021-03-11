@@ -877,25 +877,6 @@ private:
         }
     }
 
-    inline void _RemoveTrailingInvalidCachedBodies()
-    {
-        if (vecCachedBodies.empty()) {
-            return;
-        }
-        
-        int numErase = 0;
-        const int numMaximumElementsToRemove = vecCachedBodies.size() - 1; // keep the first element
-        for (; numErase < numMaximumElementsToRemove; ++numErase) {
-            if (vecCachedBodies[vecCachedBodies.size() - 1 - numErase].IsValid()) {
-                break;
-            }
-        }
-
-        if (numErase > 0) {
-            vecCachedBodies.erase(vecCachedBodies.end() - numErase, vecCachedBodies.end());
-        }
-    }
-    
 //    void CheckCount()
 //    {
 //        // count how many entries

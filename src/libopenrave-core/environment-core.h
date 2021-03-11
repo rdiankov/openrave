@@ -1129,13 +1129,13 @@ public:
     int GetMaxEnvironmentBodyIndex() const override
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        if (_vecWeakBodies.empty()) {
+        if (_vecbodies.empty()) {
             return 0;
         }
-        // bodies are sorted by index, so last body should have the largest
-        const int lastBodyEnvironmentBodyIndex = _vecWeakBodies.back().lock()->GetEnvironmentBodyIndex();
+        // bodies are sorted by environment body index, so last body should have the largest
+        const int lastBodyEnvironmentBodyIndex = _vecbodies.back()->GetEnvironmentBodyIndex();
         BOOST_ASSERT(lastBodyEnvironmentBodyIndex > 0);
-        //RAVELOG_INFO_FORMAT("env=%d -> %d (%d)", GetId()%lastBodyEnvironmentBodyIndex%_vecWeakBodies.size());
+        //RAVELOG_INFO_FORMAT("env=%d -> %d (%d)", GetId()%lastBodyEnvironmentBodyIndex%_vecbodies.size());
         return lastBodyEnvironmentBodyIndex;
     }
 
@@ -3845,7 +3845,7 @@ protected:
     CollisionCheckerBasePtr _pCurrentChecker;
     PhysicsEngineBasePtr _pPhysicsEngine;
 
-    std::vector<KinBodyWeakPtr> _vecWeakBodies;     ///< a vector of all the bodies in the environment. index of element is the environment body id of the stored kin body (so index 0 is null pointer). Note that some element can be expired, meaning that weak pointer may be pointing to nullpointer. Controlled through the KinBody constructor and destructors
+    std::vector<KinBodyWeakPtr> _vecWeakBodies;     ///< a vector of all the bodies in the environment. index of element is the environment body id of the stored kin body (so index 0 is null pointer). Note that some element can be expired, meaning that weak pointer may be pointing to nullpointer. Also, size of _vecWeakBodies may be greater than size of _vecbodies. Controlled through the KinBody constructor and destructors
     std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. 
 
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation

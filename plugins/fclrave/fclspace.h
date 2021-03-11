@@ -523,7 +523,7 @@ public:
             return _currentpinfo.at(envId);
         }
 
-        return _currentpinfo.at(0);
+        return _currentpinfo.at(0); // invalid
     }
 
     inline const KinBodyInfoPtr& GetInfo(const KinBody &body) const
