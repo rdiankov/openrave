@@ -57,6 +57,33 @@ CollisionGeometryPtr ConvertMeshToFCL(std::vector<fcl::Vec3f> const &points,std:
     return model;
 }
 
+
+/// \brief ensures vector size is at least size
+template <typename T>
+inline void EnsureVectorSize(std::vector<T>& vec, size_t size)
+{
+    if (vec.size() < size) {
+        //RAVELOG_WARN_FORMAT("resizing 0x%x from %d to %d", &vec%(vec.size())%(index + 1));
+        vec.resize(size);
+    }
+}
+
+/// \brief shrinks vector size by removing trailing null entries. element of vector has to be a boost shared pointer for null checking.
+template <typename T>
+inline void RemoveTrailingNull(std::vector<boost::shared_ptr<T> >& vec,
+                               bool keepFirstElement = true,
+                               bool forceRemoveLastElement = true)
+{
+    int numErase = forceRemoveLastElement; // last element is already decided to be erased if forceRemoveLastElement
+    const int numMaximumElementsToRemove = vec.size() - (int) keepFirstElement;
+    for (; numErase < numMaximumElementsToRemove; ++numErase) {
+        if (!!vec[vec.size() - 1 - numErase]) {
+            break;
+        }
+    }
+    vec.erase(vec.end() - numErase, vec.end());
+ }
+
 /// \brief fcl spaces manages the individual collision objects and sets up callbacks to track their changes.
 ///
 /// It does not know or manage the broadphase manager
@@ -204,7 +231,7 @@ public:
             pinfo->_geometrygroup = _geometrygroup;
         }
 
-        RAVELOG_VERBOSE_FORMAT("env=%d, self=%d, init body %s (%d)", pbody->GetEnv()->GetId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentId());
+        RAVELOG_VERBOSE_FORMAT("env=%d, self=%d, init body %s (%d)", pbody->GetEnv()->GetId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentBodyIndex());
         pinfo->Reset();
         pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
         // make sure that synchronization do occur !
@@ -301,17 +328,14 @@ public:
         pinfo->_bodyAttachedCallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyAttached, boost::bind(&FCLSpace::_ResetAttachedBodyCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
         pinfo->_bodyremovedcallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyRemoved, boost::bind(&FCLSpace::RemoveUserData, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::bind(&OpenRAVE::utils::sptr_from<const KinBody>, boost::weak_ptr<const KinBody>(pbody))));
 
-        const int envId = pbody->GetEnvironmentId();
+        const int envId = pbody->GetEnvironmentBodyIndex();
         BOOST_ASSERT(envId != 0);
         if( bSetToCurrentPInfo ) {
-            if (_currentpinfo.size() < envId + 1) {
-                // have a upper bound on size?
-                //RAVELOG_INFO_FORMAT("increase size from %d to %d", _currentpinfo.size()%(envId + 1));
-                _currentpinfo.resize(envId + 1, KinBodyInfoPtr());
-            }
+            const int maxEnvId = _penv->GetMaxEnvironmentBodyIndex();
+            EnsureVectorSize(_currentpinfo, maxEnvId + 1);
             _currentpinfo.at(envId) = pinfo;
         }
-        //_cachedpinfo[pbody->GetEnvironmentId()] what to do with the cache?
+        //_cachedpinfo[pbody->GetEnvironmentBodyIndex()] what to do with the cache?
         _setInitializedBodies.insert(pbody);
 
         //Do I really need to synchronize anything at that point ?
@@ -350,41 +374,45 @@ public:
 
 
     bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
-        if (!HasNamedGeometry(*pbody, groupname)) {
+        const KinBody& body = *pbody;
+
+        if (!HasNamedGeometry(body, groupname)) {
             return false;
         }
 
         // Save the already existing KinBodyInfoPtr for the old geometry group
-        KinBodyInfoPtr& poldinfo = GetInfo(*pbody);
+        KinBodyInfoPtr& poldinfo = GetInfo(body);
         if( poldinfo->_geometrygroup == groupname ) {
             return true;
         }
 
         poldinfo->nGeometryUpdateStamp += 1;
-        _cachedpinfo[(pbody)->GetEnvironmentId()][poldinfo->_geometrygroup] = poldinfo;
 
-        BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
+        const int maxBodyIndex = pbody->GetEnv()->GetMaxEnvironmentBodyIndex();
+        EnsureVectorSize(_cachedpinfo, maxBodyIndex + 1);
+            
+        const int bodyId = body.GetEnvironmentBodyIndex();
+        std::map< std::string, KinBodyInfoPtr >& cache = _cachedpinfo.at(bodyId);
+        cache[poldinfo->_geometrygroup] = poldinfo;
 
-        KinBodyInfoPtr& pinfo = _cachedpinfo[pbody->GetEnvironmentId()][groupname];
+        BOOST_ASSERT(bodyId != 0);
+
+        KinBodyInfoPtr& pinfo = cache[groupname];
         if(!pinfo) {
-            RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
+            RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%body.GetName()%bodyId%_penv->GetId());
             pinfo.reset(new KinBodyInfo);
             pinfo->_geometrygroup = groupname;
             InitKinBody(pbody, pinfo);
         }
         else {
-            RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%pbody->GetName()%pbody->GetEnvironmentId());
+            RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%body.GetName()%bodyId);
             // Set the current info to use the KinBodyInfoPtr associated to groupname
-            const int envId = pbody->GetEnvironmentId();
-            if (_currentpinfo.size() < envId + 1) {
-                // have a upper bound on size?
-                //RAVELOG_INFO_FORMAT("increase size from %d to %d", _currentpinfo.size()%(envId + 1));
-                _currentpinfo.resize(envId + 1, KinBodyInfoPtr());
-            }
+            const int envId = bodyId;
+            EnsureVectorSize(_currentpinfo, maxBodyIndex + 1);
             _currentpinfo.at(envId) = pinfo;
 
             // Revoke the information inside the cache so that a potentially outdated object does not survive
-            _cachedpinfo[(pbody)->GetEnvironmentId()].erase(groupname);
+            cache.erase(groupname);
         }
 
         return true;
@@ -486,29 +514,29 @@ public:
 
     inline KinBodyInfoPtr& GetInfo(const KinBody &body)
     {
-        int envId = body.GetEnvironmentId();
-        if ( envId == 0 ) {
-            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id 0", body.GetEnv()->GetId()%body.GetName());
+        int envId = body.GetEnvironmentBodyIndex();
+        if ( envId <= 0 ) {
+            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id %d", body.GetEnv()->GetId()%body.GetName()%envId);
         }
 
-        if (envId < _currentpinfo.size()) {
+        if (envId < (int) _currentpinfo.size()) {
             return _currentpinfo.at(envId);
         }
 
-        return _currentpinfo.at(0);
+        return _currentpinfo.at(0); // invalid
     }
 
     inline const KinBodyInfoPtr& GetInfo(const KinBody &body) const
     {
-        int envId = body.GetEnvironmentId();
-        if ( envId == 0 ) {
-            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id 0", body.GetEnv()->GetId()%body.GetName());
+        int envId = body.GetEnvironmentBodyIndex();
+        if ( envId <= 0 ) {
+            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id %d", body.GetEnv()->GetId()%body.GetName()%envId);
         }
 
-        if (envId < _currentpinfo.size()) {
+        if (envId < (int) _currentpinfo.size()) {
             return _currentpinfo.at(envId);
         }
-        
+
         return _currentpinfo.at(0);
     }
 
@@ -522,28 +550,16 @@ public:
                 pinfo->Reset();
             }
 
-            const int envId = pbody->GetEnvironmentId();
+            const int envId = pbody->GetEnvironmentBodyIndex();
             BOOST_ASSERT(envId != 0);
 
-            if (envId == _currentpinfo.size() - 1) {
-                // chance to shrink vector, shrink all trailing null pointers.
-                // batch delete for speed, rather than pop one by one 
-                int numErase = 1; // last element is already decided to be erased
-                for (; numErase < _currentpinfo.size() - 1; ++numErase) {
-                    if (!!_currentpinfo[_currentpinfo.size() - 1 - numErase]) {
-                        break;
-                    }
-                }
-                // erase trailing null pointers
-                _currentpinfo.erase(_currentpinfo.end() - numErase, _currentpinfo.end());
-                //RAVELOG_INFO_FORMAT("erased envId=%d, and popped %d , size is %d", envId%numErase%_currentpinfo.size());
-            }
-            else {
-                // invalidate
-                _currentpinfo.at(envId) = KinBodyInfoPtr();
+            if (envId < (int) _currentpinfo.size()) {
+                _currentpinfo.at(envId).reset();
                 //RAVELOG_INFO_FORMAT("erased %d but didn't pop back, size is %d", envId%_currentpinfo.size());
             }
-            _cachedpinfo.erase(envId);
+            if (envId < (int) _cachedpinfo.size()) {
+                _cachedpinfo.at(envId).clear();
+            }
         }
     }
 
@@ -748,17 +764,20 @@ private:
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        const KinBodyInfoPtr& pcurrentinfo = _currentpinfo.at(pbody->GetEnvironmentId());
+        const int bodyIndex = pbody->GetEnvironmentBodyIndex();
+        if (0 < bodyIndex && bodyIndex < _currentpinfo.size()) {
+            const KinBodyInfoPtr& pcurrentinfo = _currentpinfo.at(bodyIndex);
 
-        if( !!pinfo && pinfo == pcurrentinfo ) {//pinfo->_geometrygroup.size() == 0 ) {
-            // pinfo is current set to the current one, so should InitKinBody into _currentpinfo
-            //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
-            pinfo->nGeometryUpdateStamp++;
-            KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
-            InitKinBody(pbody, pinfo, false);
-            remover.ResetRemove(); // succeeded
+            if( !!pinfo && pinfo == pcurrentinfo ) {//pinfo->_geometrygroup.size() == 0 ) {
+                // pinfo is current set to the current one, so should InitKinBody into _currentpinfo
+                //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
+                pinfo->nGeometryUpdateStamp++;
+                KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
+                InitKinBody(pbody, pinfo, false);
+                remover.ResetRemove(); // succeeded
+            }
+            //_cachedpinfo[pbody->GetEnvironmentBodyIndex()].erase(std::string());
         }
-        //_cachedpinfo[pbody->GetEnvironmentId()].erase(std::string());
     }
 
     void _ResetGeometryGroupsCallback(boost::weak_ptr<KinBodyInfo> _pinfo)
@@ -766,7 +785,7 @@ private:
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
 
-        //KinBodyInfoPtr pcurrentinfo = _currentpinfo.at(pbody->GetEnvironmentId());
+        //KinBodyInfoPtr pcurrentinfo = _currentpinfo.at(pbody->GetEnvironmentBodyIndex());
 
         if( !!pinfo ) {// && pinfo->_geometrygroup.size() > 0 ) {
             //RAVELOG_VERBOSE_FORMAT("env=%d, resetting geometry groups for kinbody %s, nGeometryUpdateStamp=%d (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
@@ -775,10 +794,10 @@ private:
             InitKinBody(pbody, pinfo, false);
             remover.ResetRemove(); // succeeded
         }
-//        KinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentId()][std::string()];
-//        _cachedpinfo.erase(pbody->GetEnvironmentId());
+//        KinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentBodyIndex()][std::string()];
+//        _cachedpinfo.erase(pbody->GetEnvironmentBodyIndex());
 //        if( !!pinfoCurrentGeometry ) {
-//            _cachedpinfo[pbody->GetEnvironmentId()][std::string()] = pinfoCurrentGeometry;
+//            _cachedpinfo[pbody->GetEnvironmentBodyIndex()][std::string()] = pinfoCurrentGeometry;
 //        }
     }
 
@@ -813,7 +832,7 @@ private:
     MeshFactory _meshFactory;
 
     std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
-    std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data
+    std::vector<std::map< std::string, KinBodyInfoPtr> > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
     std::vector<KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. Index of the vector is the environment id (id of the body in the env, not __nUniqueId of env) of the kinbody at that index. The index being environment id makes it easier to compare objects without getting a handle to their pointers. Whenever a KinBodyInfoPtr goes into this map, it is removed from _cachedpinfo. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
 
     bool _bIsSelfCollisionChecker; // Currently not used

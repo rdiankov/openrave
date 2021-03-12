@@ -151,7 +151,7 @@ bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
            && AreVectorsDeepEqual(_vLinkInfos, other._vLinkInfos)
            && AreVectorsDeepEqual(_vJointInfos, other._vJointInfos)
            && AreVectorsDeepEqual(_vGrabbedInfos, other._vGrabbedInfos)
-           && _mReadableInterfaces == other._mReadableInterfaces; // TODO
+           && _mReadableInterfaces == other._mReadableInterfaces;
 }
 
 void KinBody::KinBodyInfo::Reset()
@@ -188,7 +188,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
     }
 
     // perhaps should not save "uri" since that could affect how the body is loaded later
-    
+
     if( !_interfaceType.empty() ) {
         orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
     }
@@ -286,7 +286,66 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
         size_t iGrabbed = 0;
         for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
-            UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
+            //UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
+            const rapidjson::Value& rGrabbed = *it;
+            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "id");
+            bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(rGrabbed, "__deleted__", false);
+            std::vector<GrabbedInfoPtr>::iterator itMatchingId = _vGrabbedInfos.end();
+            std::vector<GrabbedInfoPtr>::iterator itMatchingName = _vGrabbedInfos.end();
+            if (!id.empty()) {
+                // only try to find old info if id is not empty
+                FOREACH(itInfo, _vGrabbedInfos) {
+                    if ((*itInfo)->_id == id) {
+                        itMatchingId = itInfo;
+                        break;
+                    }
+                }
+            }
+
+            std::string grabbedName = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "grabbedName");
+            // only try to find old info if id is not empty
+            FOREACH(itInfo, _vGrabbedInfos) {
+                if ((*itInfo)->_grabbedname == grabbedName) {
+                    itMatchingName = itInfo;
+                    if( id.empty() ) {
+                        id = (*itInfo)->_id;
+                    }
+                    break;
+                }
+            }
+
+            // here we allow items with empty id to be created because
+            // when we load things from json, some id could be missing on file
+            // and for the partial update case, the id should be non-empty
+            if (itMatchingId != _vGrabbedInfos.end()) {
+                if (isDeleted) {
+                    _vGrabbedInfos.erase(itMatchingId);
+                    continue;
+                }
+                (*itMatchingId)->DeserializeJSON(rGrabbed, fUnitScale, options);
+
+                if( itMatchingId != itMatchingName && itMatchingName != _vGrabbedInfos.end() ) {
+                    // there is another entry with matching name, so remove it
+                    _vGrabbedInfos.erase(itMatchingName);
+                }
+                continue;
+            }
+
+            if (isDeleted) {
+                // ignore
+                continue;
+            }
+        
+            if( itMatchingName != _vGrabbedInfos.end() ) {
+                (*itMatchingName)->DeserializeJSON(rGrabbed, fUnitScale, options);
+                (*itMatchingName)->_id = id;
+                continue;
+            }
+
+            GrabbedInfoPtr pNewInfo(new GrabbedInfo());
+            pNewInfo->DeserializeJSON(rGrabbed, fUnitScale, options);
+            pNewInfo->_id = id;
+            _vGrabbedInfos.push_back(pNewInfo);
         }
     }
 
@@ -415,7 +474,7 @@ void KinBody::Destroy()
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -452,7 +511,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const
 
 bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -494,7 +553,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
 
 bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -523,7 +582,7 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible,
 
 bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -554,7 +613,7 @@ bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometr
 
 bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP(geometries.size(),>,0);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
@@ -616,7 +675,7 @@ void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vec
 
 bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     _veclinks.reserve(linkinfos.size());
     FOREACHC(itlinkinfo, linkinfos) {
@@ -637,7 +696,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
 
 void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP(linkinfos.size(),>,0);
     Destroy();
     _veclinks.reserve(linkinfos.size());
@@ -2294,8 +2353,8 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     const int nlinks = _veclinks.size();
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
-        this->GetName() % linkindex % nlinks, ORE_InvalidArguments
-    );
+                           this->GetName() % linkindex % nlinks, ORE_InvalidArguments
+                           );
     const size_t dofstride = dofindices.empty() ? this->GetDOF() : dofindices.size();
     vjacobian.resize(3 * dofstride);
     if( dofstride == 0 ) {
@@ -2311,7 +2370,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     for(int curlink = 0;
         _vAllPairsShortestPaths[offset + curlink].first >= 0;     // parent link is still available
         curlink = _vAllPairsShortestPaths[offset + curlink].first // get index of parent link
-    ) {
+        ) {
         const int jointindex = _vAllPairsShortestPaths[offset + curlink].second; ///< generalized joint index, which counts in [_vecjoints, _vPassiveJoints]
         if( jointindex < nActiveJoints ) {
             // active joint
@@ -4677,17 +4736,33 @@ bool KinBody::IsAttached(const KinBody &body) const
     if(this == &body ) {
         return true;
     }
-    std::set<KinBodyConstPtr> dummy;
-    return _IsAttached(body, dummy);
+    else if (_listAttachedBodies.empty()) {
+        return false;
+    }
+    std::vector<bool> visited(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, false);
+    return _IsAttached(body.GetEnvironmentBodyIndex(), visited);
+}
+
+
+inline bool cmpEnvBodyIndex(const KinBodyPtr& pbody, int envBodyIndex)
+{
+    return pbody->GetEnvironmentBodyIndex() < envBodyIndex;
 }
 
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
-    FOREACHC(itbody,_listAttachedBodies) {
-        KinBodyPtr pattached = itbody->lock();
-        if( !!pattached && setAttached.insert(pattached).second ) {
-            pattached->GetAttached(setAttached);
+
+    std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
+    if (_IsAttached(vecAttached)) {
+        std::vector<KinBodyPtr> bodies;
+        GetEnv()->GetBodies(bodies);
+        std::vector<KinBodyPtr>::const_iterator itBodies = bodies.begin();
+        for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
+            if (vecAttached[bodyIndex]) {
+                itBodies = std::lower_bound(itBodies, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
+                setAttached.insert(setAttached.end(), *itBodies); // slow
+            }
         }
     }
 }
@@ -4695,42 +4770,99 @@ void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 {
     setAttached.insert(shared_kinbody_const());
-    FOREACHC(itbody,_listAttachedBodies) {
-        KinBodyConstPtr pattached = itbody->lock();
-        if( !!pattached && setAttached.insert(pattached).second ) {
-            pattached->GetAttached(setAttached);
+
+    std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
+    if (_IsAttached(vecAttached)) {
+        std::vector<KinBodyPtr> bodies;
+        GetEnv()->GetBodies(bodies);
+        std::vector<KinBodyPtr>::const_iterator itBodies = bodies.begin();
+        for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
+            if (vecAttached[bodyIndex] == 1) {
+                itBodies = std::lower_bound(itBodies, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
+                setAttached.insert(setAttached.end(), *itBodies); // slow
+            }
         }
     }
 }
 
 void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 {
+    // by spec "including this body.", include this body
+    // vAttached is not sorted, so cannot do binary search
     if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
         vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     }
-    FOREACHC(itbody,_listAttachedBodies) {
-        KinBodyPtr pattached = itbody->lock();
-        if( !!pattached ) {
-            if( find(vAttached.begin(), vAttached.end(), pattached) == vAttached.end() ) {
-                vAttached.push_back(pattached);
-                pattached->GetAttached(vAttached);
-            }
+
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        return;
+    }
+
+    std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
+
+    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
+    for (const KinBodyConstPtr& pbody : vAttached) {
+        vecAttached.at(pbody->GetEnvironmentBodyIndex()) = -1;
+    }
+
+    {
+        const int numAttached = _IsAttached(vecAttached);
+
+        if (numAttached == 0) {
+            return;
+        }
+        vAttached.reserve(vAttached.size() + numAttached);
+    }
+    std::vector<KinBodyPtr> bodies;
+    GetEnv()->GetBodies(bodies);
+    std::vector<KinBodyPtr>::const_iterator itBodies = bodies.begin();
+    for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
+        // 0 means not attached, -1 means it was already in original vAttached so skip
+        if (vecAttached[bodyIndex] == 1) {
+            itBodies = std::lower_bound(itBodies, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
+            BOOST_ASSERT(itBodies != bodies.cend() && (**itBodies).GetEnvironmentBodyIndex() == bodyIndex);
+            vAttached.push_back(*itBodies);
         }
     }
 }
 
 void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
 {
+    // by spec "including this body.", include this body
+    // vAttached is not sorted, so cannot do binary search
     if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
-        vAttached.push_back(shared_kinbody_const());
+        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     }
-    FOREACHC(itbody,_listAttachedBodies) {
-        KinBodyConstPtr pattached = itbody->lock();
-        if( !!pattached ) {
-            if( find(vAttached.begin(), vAttached.end(), pattached) == vAttached.end() ) {
-                vAttached.push_back(pattached);
-                pattached->GetAttached(vAttached);
-            }
+
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        return;
+    }
+
+    std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
+
+    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
+    for (const KinBodyConstPtr& pbody : vAttached) {
+        vecAttached.at(pbody->GetEnvironmentBodyIndex()) = -1;
+    }
+
+    {
+        const int numAttached = _IsAttached(vecAttached);
+
+        if (numAttached == 0) {
+            return;
+        }
+        vAttached.reserve(vAttached.size() + numAttached);
+    }
+    std::vector<KinBodyPtr> bodies;
+    GetEnv()->GetBodies(bodies);
+    std::vector<KinBodyPtr>::const_iterator itBodies = bodies.begin();
+    for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
+        // 0 means not attached, -1 means it was already in original vAttached so skip
+        if (vecAttached[bodyIndex] == 1) {
+            itBodies = std::lower_bound(itBodies, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
+            BOOST_ASSERT(itBodies != bodies.cend() && (**itBodies).GetEnvironmentBodyIndex() == bodyIndex);
+            vAttached.push_back(*itBodies);
         }
     }
 }
@@ -4738,6 +4870,56 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
 bool KinBody::HasAttached() const
 {
     return _listAttachedBodies.size() > 0;
+}
+
+bool KinBody::_IsAttached(int otherBodyid, std::vector<bool>& visited) const
+{
+    for (const KinBodyWeakPtr& pbody : _listAttachedBodies) {
+        KinBodyConstPtr pattached = pbody.lock();
+        if (!pattached) {
+            continue;
+        }
+        const KinBody& attached = *pattached;
+        if (otherBodyid == attached._environmentid) {
+            return true;
+        }
+        else if (visited.at(attached._environmentid)) {
+            // already checked
+            continue;
+        }
+        visited.at(attached._environmentid) = true;
+        // if attached._listAttachedBodies has only one element, that element is same as attached as attachement relationship is by-directional, so not worth checking
+        if (attached._listAttachedBodies.size() > 1 && attached._IsAttached(otherBodyid, visited)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+int KinBody::_IsAttached(std::vector<int>& vecAttached) const
+{
+    int numFound = 0;
+    for (const KinBodyWeakPtr& pbody : _listAttachedBodies) {
+        KinBodyConstPtr pattachedBody = pbody.lock();
+        if (!pattachedBody) {
+            continue;
+        }
+        const KinBody& attachedBody = *pattachedBody;
+        const int bodyIndex = attachedBody.GetEnvironmentBodyIndex();
+        if (vecAttached.at(bodyIndex) != 0) {
+            // already checked, so skip
+            continue;
+        }
+        vecAttached.at(bodyIndex) = 1;
+        numFound++;
+        // if attached._listAttachedBodies has only one element, that element is same as attached as attachement relationship is by-directional, so not worth checking
+        if (attachedBody._listAttachedBodies.size() > 1) {
+            numFound += attachedBody._IsAttached(vecAttached);
+        }
+    }
+    return numFound;
 }
 
 bool KinBody::_IsAttached(const KinBody &body, std::set<KinBodyConstPtr>&setChecked) const
@@ -4841,6 +5023,11 @@ bool KinBody::IsVisible() const
 }
 
 int KinBody::GetEnvironmentId() const
+{
+    return _environmentid;
+}
+
+int KinBody::GetEnvironmentBodyIndex() const
 {
     return _environmentid;
 }
@@ -5090,7 +5277,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         FOREACHC(itatt, r->_listAttachedBodies) {
             KinBodyConstPtr pattref = itatt->lock();
             if( !!pattref ) {
-                _listAttachedBodies.push_back(GetEnv()->GetBodyFromEnvironmentId(pattref->GetEnvironmentId()));
+                _listAttachedBodies.push_back(GetEnv()->GetBodyFromEnvironmentId(pattref->GetEnvironmentBodyIndex()));
             }
         }
     }
@@ -5118,7 +5305,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         KinBodyPtr pbodyref = pgrabbedref->_pgrabbedbody.lock();
         KinBodyPtr pgrabbedbody;
         if( !!pbodyref ) {
-            //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentId());
+            //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentBodyIndex());
             pgrabbedbody = GetEnv()->GetKinBody(pbodyref->GetName());
             if( !pgrabbedbody ) {
                 if( cloningoptions & Clone_PassOnMissingBodyReferences ) {
@@ -5146,7 +5333,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         _selfcollisionchecker = RaveCreateCollisionChecker(GetEnv(), r->_selfcollisionchecker->GetXMLId());
         _selfcollisionchecker->SetCollisionOptions(r->_selfcollisionchecker->GetCollisionOptions());
         _selfcollisionchecker->SetGeometryGroup(r->_selfcollisionchecker->GetGeometryGroup());
-        if( GetEnvironmentId() != 0 ) {
+        if( GetEnvironmentBodyIndex() != 0 ) {
             // This body has been added to the environment already so can call InitKinBody.
             _selfcollisionchecker->InitKinBody(shared_kinbody());
         }
@@ -5548,9 +5735,10 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 
 
     FOREACHC(it, GetReadableInterfaces()) {
-        ReadablePtr pReadable = boost::dynamic_pointer_cast<Readable>(it->second);
-        if (!!pReadable) {
-            info._mReadableInterfaces[it->first] = pReadable;
+        if (!!it->second) {
+            // make a copy of the readable interface
+            // caller may modify and call UpdateFromInfo with modified readable interfaces
+            info._mReadableInterfaces[it->first] = it->second->CloneSelf();
         }
     }
 }
@@ -5566,6 +5754,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());
         }
         _id = info._id;
+        updateFromInfoResult = UFIR_Success;
     }
 
     // need to avoid checking links and joints belonging to connected bodies

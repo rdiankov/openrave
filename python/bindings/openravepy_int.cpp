@@ -1926,6 +1926,11 @@ object PyEnvironmentBase::GetBodyFromEnvironmentId(int id)
     return py::to_object(openravepy::toPyKinBody(_penv->GetBodyFromEnvironmentId(id),shared_from_this()));
 }
 
+int PyEnvironmentBase::GetMaxEnvironmentBodyIndex()
+{
+    return _penv->GetMaxEnvironmentBodyIndex();
+}
+
 int PyEnvironmentBase::AddModule(PyModuleBasePtr prob, const string &PY_ARGS) {
     CHECK_POINTER(prob);
     return _penv->AddModule(openravepy::GetModule(prob),PY_ARGS);
@@ -2510,10 +2515,6 @@ int PyEnvironmentBase::GetId() const
     return _penv->GetId();
 }
 
-int PyEnvironmentBase::GetRevision() const {
-    return _penv->GetRevision();
-}
-
 object PyEnvironmentBase::ExtractInfo() const {
     EnvironmentBase::EnvironmentBaseInfo info;
     _penv->ExtractInfo(info);
@@ -2549,6 +2550,62 @@ object PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info, UpdateFr
         }
     }
     return py::make_tuple(createdBodies, modifiedBodies, removedBodies);
+}
+
+int PyEnvironmentBase::GetRevision() const
+{
+    return _penv->GetRevision();
+}
+
+void PyEnvironmentBase::SetName(const std::string& sceneName)
+{
+    _penv->SetName(sceneName);
+}
+
+py::object PyEnvironmentBase::GetName() const
+{
+    return ConvertStringToUnicode(_penv->GetName());
+}
+
+void PyEnvironmentBase::SetDescription(const std::string& sceneDescription)
+{
+    _penv->SetDescription(sceneDescription);
+}
+
+py::object PyEnvironmentBase::GetDescription() const
+{
+    return ConvertStringToUnicode(_penv->GetDescription());
+}
+
+void PyEnvironmentBase::SetKeywords(const std::vector<std::string>& sceneKeywords)
+{
+    _penv->SetKeywords(sceneKeywords);
+}
+
+py::list PyEnvironmentBase::GetKeywords() const
+{
+    py::list pykeywords;
+    std::vector<std::string> keywords;
+    _penv->GetKeywords();
+    for(const std::string& keyword : keywords) {
+        pykeywords.append(ConvertStringToUnicode(keyword));
+    }
+    return pykeywords;
+}
+
+void PyEnvironmentBase::SetUInt64Parameter(const std::string& parameterName, uint64_t value)
+{
+    _penv->SetUInt64Parameter(parameterName, value);
+}
+
+bool PyEnvironmentBase::RemoveUInt64Parameter(const std::string& parameterName)
+{
+    return _penv->RemoveUInt64Parameter(parameterName);
+}
+
+uint64_t PyEnvironmentBase::GetUInt64Parameter(const std::string& parameterName, uint64_t defaultValue) const
+{
+    return _penv->GetUInt64Parameter(parameterName, defaultValue);
 }
 
 bool PyEnvironmentBase::__eq__(PyEnvironmentBasePtr p) {
@@ -3145,6 +3202,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetRobot",&PyEnvironmentBase::GetRobot, PY_ARGS("name") DOXY_FN(EnvironmentBase,GetRobot))
                      .def("GetSensor",&PyEnvironmentBase::GetSensor, PY_ARGS("name") DOXY_FN(EnvironmentBase,GetSensor))
                      .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId, DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentId))
+                     .def("GetMaxEnvironmentBodyIndex",&PyEnvironmentBase::GetMaxEnvironmentBodyIndex, DOXY_FN(EnvironmentBase,GetMaxEnvironmentBodyIndex))
                      .def("AddModule",&PyEnvironmentBase::AddModule,PY_ARGS("module","args") DOXY_FN(EnvironmentBase,AddModule))
                      .def("LoadProblem",&PyEnvironmentBase::AddModule,PY_ARGS("module","args") DOXY_FN(EnvironmentBase,AddModule))
                      .def("RemoveProblem",&PyEnvironmentBase::RemoveProblem, PY_ARGS("prob") DOXY_FN(EnvironmentBase,RemoveProblem))
@@ -3251,7 +3309,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                           )
 #else
                      .def("drawlabel",&PyEnvironmentBase::drawlabel,drawlabel_overloads(PY_ARGS("label","worldPosition") DOXY_FN(EnvironmentBase,drawlabel)))
-#endif                
+#endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                      .def("drawbox", &PyEnvironmentBase::drawbox,
                           "pos"_a,
@@ -3316,6 +3374,15 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
                      .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
                      .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info", "updateMode") DOXY_FN(EnvironmentBase,UpdateFromInfo))
+                     .def("SetName", &PyEnvironmentBase::SetName, PY_ARGS("sceneName") DOXY_FN(EnvironmentBase,SetName))
+                     .def("GetName", &PyEnvironmentBase::GetName, DOXY_FN(EnvironmentBase,GetName))
+                     .def("SetDescription", &PyEnvironmentBase::SetDescription, PY_ARGS("sceneDescription") DOXY_FN(EnvironmentBase,SetDescription))
+                     .def("GetDescription", &PyEnvironmentBase::GetDescription, DOXY_FN(EnvironmentBase,GetDescription))
+                     .def("SetKeywords", &PyEnvironmentBase::SetKeywords, PY_ARGS("sceneKeywords") DOXY_FN(EnvironmentBase,SetKeywords))
+                     .def("GetKeywords", &PyEnvironmentBase::GetKeywords, DOXY_FN(EnvironmentBase,GetKeywords))
+                     .def("SetUInt64Parameter", &PyEnvironmentBase::SetUInt64Parameter, PY_ARGS("parameterName", "value") DOXY_FN(EnvironmentBase,SetUInt64Parameter))
+                     .def("RemoveUInt64Parameter", &PyEnvironmentBase::RemoveUInt64Parameter, PY_ARGS("parameterName") DOXY_FN(EnvironmentBase,RemoveUInt64Parameter))
+                     .def("GetUInt64Parameter", &PyEnvironmentBase::GetUInt64Parameter, PY_ARGS("parameterName", "defaultValue") DOXY_FN(EnvironmentBase,GetUInt64Parameter))
                      .def("__enter__",&PyEnvironmentBase::__enter__)
                      .def("__exit__",&PyEnvironmentBase::__exit__)
                      .def("__eq__",&PyEnvironmentBase::__eq__)

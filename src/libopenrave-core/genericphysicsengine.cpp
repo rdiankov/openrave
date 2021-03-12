@@ -81,45 +81,29 @@ public:
         if( !!pbody ) {
             pbody->RemoveUserData("_genericphysics_");
 
-            const int bodyid = pbody->GetEnvironmentId();
-            if (bodyid < _pysicsDataCache.size()) {
-                RAVELOG_VERBOSE_FORMAT("invalidate bodyid=%d(name=%s) in _pysicsDataCache of size %d", bodyid%(pbody->GetName())%(_pysicsDataCache.size()));
-                if (bodyid == _pysicsDataCache.size() - 1) {
-                    // last element is removed, chance to shrink vector and free some memory
-                    int numItemsToErase = 1;
-                    for (; numItemsToErase < _pysicsDataCache.size(); ++numItemsToErase) {
-                        if (!!_pysicsDataCache.at(_pysicsDataCache.size() - 1 - numItemsToErase)) {
-                            break;
-                        }
-                    }
-                    const size_t prevSize = _pysicsDataCache.size();
-                    _pysicsDataCache.resize(_pysicsDataCache.size() - numItemsToErase);
-                    RAVELOG_VERBOSE_FORMAT("resized _pysicsDataCache from %d to %d", prevSize%(_pysicsDataCache.size()));
-                }
-                else if (!!_pysicsDataCache.at(bodyid)) {
-                    _pysicsDataCache.at(bodyid) = boost::shared_ptr<PhysicsData>();
-                }
-                else {
-                    RAVELOG_VERBOSE_FORMAT("bodyid=%d(name=%s) is already invalidated (either never initialized or invalidated already)", bodyid%(pbody->GetName()));
-                }
+            const int bodyid = pbody->GetEnvironmentBodyIndex();
+            if (bodyid < _pysicsDataCache.size() && !!_pysicsDataCache.at(bodyid)) {
+                _pysicsDataCache.at(bodyid).reset();
             }
             else {
-                RAVELOG_VERBOSE_FORMAT("env=%d, bodyid=%d(name=%s) is not in _pysicsDataCache of size %d. Unless physics engine was never used in this environment, this should not happen.", (GetEnv()->GetId())%bodyid%(pbody->GetName())%(_pysicsDataCache.size()));
+                RAVELOG_VERBOSE_FORMAT("bodyid=%d(name=%s) is already invalidated (either never initialized or invalidated already)", bodyid%(pbody->GetName()));
             }
         }
     }
 
     inline const boost::shared_ptr<PhysicsData>& _EnsureData(const KinBodyConstPtr& pbody)
     {
-        int bodyid = pbody->GetEnvironmentId();
-        if (bodyid >= _pysicsDataCache.size()) {
-            RAVELOG_INFO_FORMAT("extend _pysicsDataCache of size %d to %d from bodyid=%d(name=%s)", (_pysicsDataCache.size())%(bodyid + 1)%bodyid%(pbody->GetName()));
-            _pysicsDataCache.resize(bodyid + 1, boost::shared_ptr<PhysicsData>());
+        // cannot access GetEnv()->GetMaxEnvironmentBodyIndex() because this function can be called while _mutexInterfaces is already locked, and _mutexInterfaces is not recursive mutex
+        // so just resize to bodyIndex + 1 for now
+        const int bodyIndex = pbody->GetEnvironmentBodyIndex();
+        if (bodyIndex >= _pysicsDataCache.size()) {
+            //RAVELOG_INFO_FORMAT("extend _pysicsDataCache of size %d to %d from bodyIndex=%d (name=%s)", (_pysicsDataCache.size())%(bodyIndex + 1)%bodyIndex%(pbody->GetName()));
+            _pysicsDataCache.resize(bodyIndex + 1, boost::shared_ptr<PhysicsData>());
         }
-        if (!_pysicsDataCache.at(bodyid)) {
-            _pysicsDataCache.at(bodyid) = _GetData(pbody);
+        if (!_pysicsDataCache.at(bodyIndex)) {
+            _pysicsDataCache.at(bodyIndex) = _GetData(pbody);
         }
-        return _pysicsDataCache.at(bodyid);
+        return _pysicsDataCache.at(bodyIndex);
     }
 
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel) {

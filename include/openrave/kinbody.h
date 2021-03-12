@@ -1925,7 +1925,7 @@ public:
         std::vector<dReal> jointvalues; ///< \see KinBody::GetDOFValues
         std::string uri; ///< \see KinBody::GetURI
         int updatestamp; ///< \see KinBody::GetUpdateStamp
-        int environmentid; ///< \see KinBody::GetEnvironmentId
+        int environmentid; ///< \see KinBody::GetEnvironmentBodyIndex
         std::string activeManipulatorName; ///< the currently active manpiulator set for the body
         Transform activeManipulatorTransform; ///< the active manipulator's transform
         std::vector<GrabbedInfo> vGrabbedInfos; ///< list of grabbed bodies
@@ -2816,9 +2816,14 @@ private:
 
     /// \brief return a unique id of the body used in the environment.
     ///
-    /// If object is not added to the environment, this will return 0. So checking if GetEnvironmentId() is 0 is a good way to check if object is present in the environment.
+    /// If object is not added to the environment, this will return 0. So checking if GetEnvironmentBodyIndex() is 0 is a good way to check if object is present in the environment.
     /// This id will not be copied when cloning in order to respect another environment's ids.
-    virtual int GetEnvironmentId() const;
+    virtual int GetEnvironmentBodyIndex() const;
+
+    /// \brief return a unique id of the body used in the environment.
+    ///
+    /// deprecated, GetEnvironmentBodyIndex should be used
+    virtual int GetEnvironmentId() const RAVE_DEPRECATED;
 
     /** \brief Returns a nonzero value if the joint index effects the link transformation.
 
@@ -3105,6 +3110,14 @@ protected:
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool _IsAttached(const KinBody &body, std::set<KinBodyConstPtr>& setChecked) const;
 
+    /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
+    virtual bool _IsAttached(int otherBodyId, std::vector<bool>& visited) const;
+    
+    /// \brief finds all attached bodies who should be considered as one during collision (ie one is grabbing the other)
+    ///
+    /// \return number of elements attached
+    virtual int _IsAttached(std::vector<int>& attached) const;
+    
     /// \brief adds an attached body
     virtual void _AttachBody(KinBodyPtr body);
 
@@ -3160,7 +3173,7 @@ protected:
     ConfigurationSpecification _spec;
     CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions
 
-    int _environmentid; ///< \see GetEnvironmentId
+    int _environmentid; ///< \see GetEnvironmentBodyIndex
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     uint32_t _nParametersChanged; ///< set of parameters that changed and need callbacks
     ManageDataPtr _pManageData;

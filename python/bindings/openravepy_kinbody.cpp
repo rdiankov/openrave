@@ -3635,10 +3635,11 @@ bool PyKinBody::IsAttached(PyKinBodyPtr pattachbody)
 object PyKinBody::GetAttached() const
 {
     py::list attached;
-    std::set<KinBodyPtr> vattached;
+    std::vector<KinBodyPtr> vattached;
     _pbody->GetAttached(vattached);
-    FOREACHC(it,vattached)
-    attached.append(PyKinBodyPtr(new PyKinBody(*it,_pyenv)));
+    FOREACHC(it,vattached) {
+        attached.append(PyKinBodyPtr(new PyKinBody(*it,_pyenv)));
+    }
     return attached;
 }
 
@@ -3766,6 +3767,11 @@ bool PyKinBody::IsRobot() const
 {
     return _pbody->IsRobot();
 }
+int PyKinBody::GetEnvironmentBodyIndex() const
+{
+    return _pbody->GetEnvironmentBodyIndex();
+}
+
 int PyKinBody::GetEnvironmentId() const
 {
     return _pbody->GetEnvironmentId();
@@ -5315,6 +5321,7 @@ void init_openravepy_kinbody()
                          .def("GetConfigurationValues",&PyKinBody::GetConfigurationValues, DOXY_FN(KinBody,GetConfigurationValues))
                          .def("IsRobot",&PyKinBody::IsRobot, DOXY_FN(KinBody,IsRobot))
                          .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId, DOXY_FN(KinBody,GetEnvironmentId))
+                         .def("GetEnvironmentBodyIndex",&PyKinBody::GetEnvironmentBodyIndex, DOXY_FN(KinBody,GetEnvironmentBodyIndex))
                          .def("DoesAffect",&PyKinBody::DoesAffect,PY_ARGS("jointindex","linkindex") DOXY_FN(KinBody,DoesAffect))
                          .def("DoesDOFAffectLink",&PyKinBody::DoesDOFAffectLink,PY_ARGS("dofindex","linkindex") DOXY_FN(KinBody,DoesDOFAffectLink))
                          .def("GetURI",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))

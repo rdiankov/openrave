@@ -450,12 +450,17 @@ public:
 
     /// \brief Query a body from its id. <b>[multi-thread safe]</b>
     ///
-    /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentId!
+    /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentBodyIndex!
     virtual KinBodyPtr GetKinBodyById(const std::string& id) const =0;
+
+    /// \brief Query the largest environment body index in this environment. <b>[multi-thread safe]</b>
+    ///
+    /// \return largetst environment body index among the bodies in this environment
+    virtual int GetMaxEnvironmentBodyIndex() const = 0;
 
     /// \brief Return the number of bodies currently in the environment. <b>[multi-thread safe]</b>
     virtual int GetNumBodies() const = 0;
-
+    
     /// \brief Query a sensor from its name. <b>[multi-thread safe]</b>
     /// \return first sensor that matches with name, note that sensors attached to robots have the robot name as a prefix.
     virtual SensorBasePtr GetSensor(const std::string& name) const =0;
@@ -704,6 +709,23 @@ public:
         return __nUniqueId;
     }
 
+    /// \brief sets a named parameter to be tracked by the environment
+    ///
+    /// internally locks the environment mutex
+    virtual void SetUInt64Parameter(const std::string& parameterName, uint64_t value) = 0;
+
+    /// \brief removes a named parameter tracked by the environment
+    ///
+    /// internally locks the environment mutex
+    /// \return true if parameter was in the environment and now is removed
+    virtual bool RemoveUInt64Parameter(const std::string& parameterName) = 0;
+
+    /// \brief retries the named parameter to be tracked by the environment.
+    ///
+    /// internally locks the environment mutex
+    /// if parameter is not present, will return defaultValue
+    virtual uint64_t GetUInt64Parameter(const std::string& parameterName, uint64_t defaultValue) const = 0;
+
     /// \brief info structure used to initialize environment
     class OPENRAVE_API EnvironmentBaseInfo : public InfoBase
     {
@@ -728,30 +750,32 @@ public:
         std::string _uri; ///< optional, the URI this environment comes from
         std::string _referenceUri; ///< optional, if the environment was opened by referencing another environment file, then this is the URI for that file.
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
+        std::map<std::string, uint64_t> _uInt64Parameters; ///< user parameters associated with the environment
         int _revision = 0;  ///< environment revision number
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;
 
     /// \brief returns environment revision number
-    inline int GetRevision() const {
-        return _revision;
-    }
+    virtual int GetRevision() const = 0;
+
+    /// \brief sets the scene name
+    virtual void SetName(const std::string& sceneName) = 0;
 
     /// \brief returns the scene name
-    inline const std::string& GetName() const {
-        return _name;
-    }
+    virtual std::string GetName() const = 0;
+
+    /// \brief sets the scene description
+    virtual void SetDescription(const std::string& sceneDescription) = 0;
 
     /// \brief returns the scene description
-    inline const std::string& GetDescription() const {
-        return _description;
-    }
+    virtual std::string GetDescription() const = 0;
+
+    /// \brief sets the scene keywords
+    virtual void SetKeywords(const std::vector<std::string>& sceneKeywords) = 0;
 
     /// \brief returns the scene keywords
-    inline const std::vector<std::string>& GetKeywords() const {
-        return _keywords;
-    }
+    virtual std::vector<std::string> GetKeywords() const = 0;
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
     virtual void ExtractInfo(EnvironmentBaseInfo& info) = 0;

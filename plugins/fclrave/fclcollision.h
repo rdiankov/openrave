@@ -493,7 +493,7 @@ public:
         std::set<KinBodyConstPtr> attachedBodies;
         pbody->GetAttached(attachedBodies);
         FOREACH(itbody, attachedBodies) {
-            if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
+            if( (*itbody)->GetEnvironmentBodyIndex() ) { // for now GetAttached can hold bodies that are not initialized
                 _fclspace->SynchronizeWithAttached(**itbody);
             }
         }
@@ -1165,7 +1165,7 @@ private:
             //RAVELOG_VERBOSE_FORMAT("env=%d, link %s:%s with %s:%s", GetEnv()->GetId()%plink1->GetParent()->GetName()%plink1->GetName()%plink2->GetParent()->GetName()%plink2->GetName());
             FOREACH(itgeompair1, pLINK1->vgeoms) {
                 FOREACH(itgeompair2, pLINK2->vgeoms) {
--                   CheckNarrowPhaseGeomDistance(itgeompair1->second.get(), itgeompair2->second.get(), pcb, dist);
+                    CheckNarrowPhaseGeomDistance(itgeompair1->second.get(), itgeompair2->second.get(), pcb, dist);
                 }
             }
         }
@@ -1269,7 +1269,7 @@ private:
         _bParentlessCollisionObject = false;
         std::set<int> setExcludeBodyIds; ///< any
         FOREACH(itbody, excludedbodies) {
-            setExcludeBodyIds.insert((*itbody)->GetEnvironmentId());
+            setExcludeBodyIds.insert((*itbody)->GetEnvironmentBodyIndex());
         }
 
         // check the cache and cleanup any unused environments
