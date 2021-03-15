@@ -3111,13 +3111,16 @@ protected:
     virtual bool _IsAttached(const KinBody &body, std::set<KinBodyConstPtr>& setChecked) const;
 
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
-    virtual bool _IsAttached(int otherBodyId, std::vector<bool>& visited) const;
-    
+    ///
+    /// \param visited is a vector indexed by each body's EnvironmentBodyIndex to show whether it was visited or not in the computation. If 0, then not initialized, if 1, then visited and attached, if -1, then visited and not attached
+    virtual bool _IsAttached(int otherBodyId, std::vector<int8_t>& vAttachedVisited) const;
+
     /// \brief finds all attached bodies who should be considered as one during collision (ie one is grabbing the other)
     ///
+    /// \param vAttachedVisited indexed by environmentBodyIndex
     /// \return number of elements attached
-    virtual int _IsAttached(std::vector<int>& attached) const;
-    
+    virtual int _GetNumAttached(std::vector<int8_t>& vAttachedVisited) const;
+
     /// \brief adds an attached body
     virtual void _AttachBody(KinBodyPtr body);
 
@@ -3144,6 +3147,7 @@ protected:
     virtual void _InitAndAddJoint(JointPtr pjoint);
 
     std::string _name; ///< name of body
+    
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
     std::vector<JointPtr> _vTopologicallySortedJoints; ///< \see GetDependencyOrderedJoints
     std::vector<JointPtr> _vTopologicallySortedJointsAll; ///< Similar to _vDependencyOrderedJoints except includes _vecjoints and _vPassiveJoints
@@ -3170,10 +3174,12 @@ protected:
     mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].
     std::vector<Transform> _vInitialLinkTransformations; ///< the initial transformations of each link specifying at least one pose where the robot is collision free
 
+    mutable std::vector<int8_t> _vAttachedVisitedCache; ///< cache
+
     ConfigurationSpecification _spec;
     CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions
 
-    int _environmentid; ///< \see GetEnvironmentBodyIndex
+    int _environmentBodyIndex; ///< \see GetEnvironmentBodyIndex
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     uint32_t _nParametersChanged; ///< set of parameters that changed and need callbacks
     ManageDataPtr _pManageData;

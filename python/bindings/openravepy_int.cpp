@@ -1923,7 +1923,13 @@ object PyEnvironmentBase::GetSensor(const string &name)
 
 object PyEnvironmentBase::GetBodyFromEnvironmentId(int id)
 {
-    return py::to_object(openravepy::toPyKinBody(_penv->GetBodyFromEnvironmentId(id),shared_from_this()));
+    RAVELOG_WARN_FORMAT("env=%d, got call of GetBodyFromEnvironmentId(%d), but should be using GetBodyFromEnvironmentBodyIndex(%d)", _penv->GetId()%id%id);
+    return py::to_object(openravepy::toPyKinBody(_penv->GetBodyFromEnvironmentBodyIndex(id),shared_from_this()));
+}
+
+object PyEnvironmentBase::GetBodyFromEnvironmentBodyIndex(int bodyIndex)
+{
+    return py::to_object(openravepy::toPyKinBody(_penv->GetBodyFromEnvironmentBodyIndex(bodyIndex),shared_from_this()));
 }
 
 int PyEnvironmentBase::GetMaxEnvironmentBodyIndex()
@@ -2107,11 +2113,17 @@ bool PyEnvironmentBase::Lock(float timeout)
 {
     uint64_t nTimeoutMicroseconds = timeout*1000000;
     uint64_t basetime = OpenRAVE::utils::GetMicroTime();
+    if( nTimeoutMicroseconds == 0 ) {
+        if( TryLock() ) {
+            return true;
+        }
+    }
+
     while(OpenRAVE::utils::GetMicroTime()-basetime<nTimeoutMicroseconds ) {
         if( TryLock() ) {
             return true;
         }
-        boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+        boost::this_thread::sleep(boost::posix_time::microseconds(10));
     }
     return false;
 }
@@ -3202,6 +3214,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetRobot",&PyEnvironmentBase::GetRobot, PY_ARGS("name") DOXY_FN(EnvironmentBase,GetRobot))
                      .def("GetSensor",&PyEnvironmentBase::GetSensor, PY_ARGS("name") DOXY_FN(EnvironmentBase,GetSensor))
                      .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId, DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentId))
+                     .def("GetBodyFromEnvironmentBodyIndex",&PyEnvironmentBase::GetBodyFromEnvironmentBodyIndex, PY_ARGS("bodyIndex") DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentBodyIndex))
                      .def("GetMaxEnvironmentBodyIndex",&PyEnvironmentBase::GetMaxEnvironmentBodyIndex, DOXY_FN(EnvironmentBase,GetMaxEnvironmentBodyIndex))
                      .def("AddModule",&PyEnvironmentBase::AddModule,PY_ARGS("module","args") DOXY_FN(EnvironmentBase,AddModule))
                      .def("LoadProblem",&PyEnvironmentBase::AddModule,PY_ARGS("module","args") DOXY_FN(EnvironmentBase,AddModule))

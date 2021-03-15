@@ -757,7 +757,7 @@ bool KinBodyItem::UpdateFromModel()
         }
 
         // make sure the body is still present!
-        if( _pbody->GetEnv()->GetBodyFromEnvironmentId(_environmentid) == _pbody ) {
+        if( _pbody->GetEnv()->GetBodyFromEnvironmentBodyIndex(_environmentid) == _pbody ) {
             _pbody->GetLinkTransformations(_vtrans, _vjointvalues);
             _pbody->GetDOFValues(vjointvalues);
         }

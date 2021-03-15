@@ -236,9 +236,9 @@ protected:
                 }
             }
             else if( name == "target" ) {
-                int id = 0;
-                _ss >> id;
-                _ptarget = _penv->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0;
+                _ss >> bodyIndex;
+                _ptarget = _penv->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( name == "numgradsamples" ) {
                 _ss >> _nGradientSamples;
@@ -383,9 +383,9 @@ protected:
                 _ss >> fstandoff;
             }
             else if( name == "targetbody") {
-                int id = 0;
-                _ss >> id;
-                targetbody = _penv->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0;
+                _ss >> bodyIndex;
+                targetbody = _penv->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( name == "ftargetroll") {
                 _ss >> ftargetroll;

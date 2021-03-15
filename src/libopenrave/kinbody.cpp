@@ -421,7 +421,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
     _nHierarchyComputed = 0;
     _nParametersChanged = 0;
     _bMakeJoinedLinksAdjacent = true;
-    _environmentid = 0;
+    _environmentBodyIndex = 0;
     _nNonAdjacentLinkCache = 0x80000000;
     _nUpdateStampId = 0;
     _bAreAllJoints1DOFAndNonCircular = false;
@@ -4739,8 +4739,10 @@ bool KinBody::IsAttached(const KinBody &body) const
     else if (_listAttachedBodies.empty()) {
         return false;
     }
-    std::vector<bool> visited(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, false);
-    return _IsAttached(body.GetEnvironmentBodyIndex(), visited);
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+    return _IsAttached(body.GetEnvironmentBodyIndex(), vAttachedVisited);
 }
 
 
@@ -4753,15 +4755,18 @@ void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
 
-    std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
-    if (_IsAttached(vecAttached)) {
-        std::vector<KinBodyPtr> bodies;
-        GetEnv()->GetBodies(bodies);
-        std::vector<KinBodyPtr>::const_iterator itBodies = bodies.begin();
-        for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
-            if (vecAttached[bodyIndex]) {
-                itBodies = std::lower_bound(itBodies, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
-                setAttached.insert(setAttached.end(), *itBodies); // slow
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+    int numAttached = _GetNumAttached(vAttachedVisited);
+    if( numAttached ) {
+        EnvironmentBase& env = *GetEnv();
+        for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
+            if (vAttachedVisited[bodyIndex] == 1 ) {
+                KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
+                if( !!pbody ) {
+                    setAttached.insert(setAttached.end(), pbody);
+                }
             }
         }
     }
@@ -4771,15 +4776,17 @@ void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 {
     setAttached.insert(shared_kinbody_const());
 
-    std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
-    if (_IsAttached(vecAttached)) {
-        std::vector<KinBodyPtr> bodies;
-        GetEnv()->GetBodies(bodies);
-        std::vector<KinBodyPtr>::const_iterator itBodies = bodies.begin();
-        for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
-            if (vecAttached[bodyIndex] == 1) {
-                itBodies = std::lower_bound(itBodies, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
-                setAttached.insert(setAttached.end(), *itBodies); // slow
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    int numAttached = _GetNumAttached(vAttachedVisited);
+    if( numAttached ) {
+        EnvironmentBase& env = *GetEnv();
+        for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
+            if (vAttachedVisited[bodyIndex] == 1) {
+                KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
+                if( !!pbody ) {
+                    setAttached.insert(setAttached.end(), pbody);
+                }
             }
         }
     }
@@ -4798,30 +4805,31 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
         return;
     }
 
-    std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
     // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
     for (const KinBodyConstPtr& pbody : vAttached) {
-        vecAttached.at(pbody->GetEnvironmentBodyIndex()) = -1;
+        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
     }
 
     {
-        const int numAttached = _IsAttached(vecAttached);
-
+        const int numAttached = _GetNumAttached(vAttachedVisited);
         if (numAttached == 0) {
             return;
         }
         vAttached.reserve(vAttached.size() + numAttached);
     }
-    std::vector<KinBodyPtr> bodies;
-    GetEnv()->GetBodies(bodies);
-    std::vector<KinBodyPtr>::const_iterator itBodies = bodies.begin();
-    for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
+
+    EnvironmentBase& env = *GetEnv();
+    for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
         // 0 means not attached, -1 means it was already in original vAttached so skip
-        if (vecAttached[bodyIndex] == 1) {
-            itBodies = std::lower_bound(itBodies, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
-            BOOST_ASSERT(itBodies != bodies.cend() && (**itBodies).GetEnvironmentBodyIndex() == bodyIndex);
-            vAttached.push_back(*itBodies);
+        if (vAttachedVisited[bodyIndex] == 1) {
+            KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
+            if( !!pbody ) {
+                vAttached.push_back(pbody);
+            }
         }
     }
 }
@@ -4839,30 +4847,31 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
         return;
     }
 
-    std::vector<int> vecAttached(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
     // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
     for (const KinBodyConstPtr& pbody : vAttached) {
-        vecAttached.at(pbody->GetEnvironmentBodyIndex()) = -1;
+        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
     }
 
     {
-        const int numAttached = _IsAttached(vecAttached);
-
+        const int numAttached = _GetNumAttached(vAttachedVisited);
         if (numAttached == 0) {
             return;
         }
         vAttached.reserve(vAttached.size() + numAttached);
     }
-    std::vector<KinBodyPtr> bodies;
-    GetEnv()->GetBodies(bodies);
-    std::vector<KinBodyPtr>::const_iterator itBodies = bodies.begin();
-    for (size_t bodyIndex = 1; bodyIndex < vecAttached.size(); ++bodyIndex) {
+
+    EnvironmentBase& env = *GetEnv();
+    for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
         // 0 means not attached, -1 means it was already in original vAttached so skip
-        if (vecAttached[bodyIndex] == 1) {
-            itBodies = std::lower_bound(itBodies, bodies.cend(), bodyIndex, cmpEnvBodyIndex);
-            BOOST_ASSERT(itBodies != bodies.cend() && (**itBodies).GetEnvironmentBodyIndex() == bodyIndex);
-            vAttached.push_back(*itBodies);
+        if (vAttachedVisited[bodyIndex] == 1) {
+            KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
+            if( !!pbody ) {
+                vAttached.push_back(pbody);
+            }
         }
     }
 }
@@ -4872,7 +4881,7 @@ bool KinBody::HasAttached() const
     return _listAttachedBodies.size() > 0;
 }
 
-bool KinBody::_IsAttached(int otherBodyid, std::vector<bool>& visited) const
+bool KinBody::_IsAttached(int otherBodyid, std::vector<int8_t>& vAttachedVisited) const
 {
     for (const KinBodyWeakPtr& pbody : _listAttachedBodies) {
         KinBodyConstPtr pattached = pbody.lock();
@@ -4880,16 +4889,20 @@ bool KinBody::_IsAttached(int otherBodyid, std::vector<bool>& visited) const
             continue;
         }
         const KinBody& attached = *pattached;
-        if (otherBodyid == attached._environmentid) {
+        if (otherBodyid == attached._environmentBodyIndex) {
+            vAttachedVisited.at(attached._environmentBodyIndex) = 1; // attached, and visited
             return true;
         }
-        else if (visited.at(attached._environmentid)) {
+        else if (vAttachedVisited.at(attached._environmentBodyIndex) != 0) {
             // already checked
-            continue;
+            return vAttachedVisited.at(attached._environmentBodyIndex) > 0;
         }
-        visited.at(attached._environmentid) = true;
+        else {
+            vAttachedVisited.at(attached._environmentBodyIndex) = -1; // not attached, but visitied
+        }
+        
         // if attached._listAttachedBodies has only one element, that element is same as attached as attachement relationship is by-directional, so not worth checking
-        if (attached._listAttachedBodies.size() > 1 && attached._IsAttached(otherBodyid, visited)) {
+        if (attached._listAttachedBodies.size() > 1 && attached._IsAttached(otherBodyid, vAttachedVisited)) {
             return true;
         }
     }
@@ -4898,7 +4911,7 @@ bool KinBody::_IsAttached(int otherBodyid, std::vector<bool>& visited) const
 }
 
 
-int KinBody::_IsAttached(std::vector<int>& vecAttached) const
+int KinBody::_GetNumAttached(std::vector<int8_t>& vAttachedVisited) const
 {
     int numFound = 0;
     for (const KinBodyWeakPtr& pbody : _listAttachedBodies) {
@@ -4908,15 +4921,15 @@ int KinBody::_IsAttached(std::vector<int>& vecAttached) const
         }
         const KinBody& attachedBody = *pattachedBody;
         const int bodyIndex = attachedBody.GetEnvironmentBodyIndex();
-        if (vecAttached.at(bodyIndex) != 0) {
+        if (vAttachedVisited.at(bodyIndex) != 0) {
             // already checked, so skip
             continue;
         }
-        vecAttached.at(bodyIndex) = 1;
+        vAttachedVisited.at(bodyIndex) = 1;
         numFound++;
         // if attached._listAttachedBodies has only one element, that element is same as attached as attachement relationship is by-directional, so not worth checking
         if (attachedBody._listAttachedBodies.size() > 1) {
-            numFound += attachedBody._IsAttached(vecAttached);
+            numFound += attachedBody._GetNumAttached(vAttachedVisited);
         }
     }
     return numFound;
@@ -5024,12 +5037,12 @@ bool KinBody::IsVisible() const
 
 int KinBody::GetEnvironmentId() const
 {
-    return _environmentid;
+    return _environmentBodyIndex;
 }
 
 int KinBody::GetEnvironmentBodyIndex() const
 {
-    return _environmentid;
+    return _environmentBodyIndex;
 }
 
 int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
@@ -5277,7 +5290,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         FOREACHC(itatt, r->_listAttachedBodies) {
             KinBodyConstPtr pattref = itatt->lock();
             if( !!pattref ) {
-                _listAttachedBodies.push_back(GetEnv()->GetBodyFromEnvironmentId(pattref->GetEnvironmentBodyIndex()));
+                _listAttachedBodies.push_back(GetEnv()->GetBodyFromEnvironmentBodyIndex(pattref->GetEnvironmentBodyIndex()));
             }
         }
     }
@@ -5305,7 +5318,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         KinBodyPtr pbodyref = pgrabbedref->_pgrabbedbody.lock();
         KinBodyPtr pgrabbedbody;
         if( !!pbodyref ) {
-            //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentBodyIndex());
+            //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodyref->GetEnvironmentBodyIndex());
             pgrabbedbody = GetEnv()->GetKinBody(pbodyref->GetName());
             if( !pgrabbedbody ) {
                 if( cloningoptions & Clone_PassOnMissingBodyReferences ) {
