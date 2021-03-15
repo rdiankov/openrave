@@ -119,6 +119,12 @@ public:
     /// \brief Set a new readable interface and return the previously set interface if it exists. <b>[multi-thread safe]</b>
     virtual ReadablePtr SetReadableInterface(const std::string& id, ReadablePtr readable);
 
+    /// \brief sets a set of readable interfaces all at once. The pointers are copied
+    ///
+    /// \param mapReadables the readable interfaces to ste
+    /// \param bClearAllExisting if true, then clears the existing readables, if false, just updates the readables that are specified in mapReadables
+    virtual void SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting);
+
     /// \brief clears the readable interfaces
     virtual void ClearReadableInterfaces();
     virtual void ClearReadableInterface(const std::string& id);
