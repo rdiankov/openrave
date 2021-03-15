@@ -678,7 +678,7 @@ protected:
         if( !is ) {
             return KinBodyPtr();
         }
-        return GetEnv()->GetBodyFromEnvironmentId(index);
+        return GetEnv()->GetBodyFromEnvironmentBodyIndex(index);
     }
 
     RobotBasePtr orMacroGetRobot(istream& is)
@@ -688,7 +688,7 @@ protected:
         if( !is ) {
             return RobotBasePtr();
         }
-        KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(index);
+        KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(index);
         if( !pbody || !pbody->IsRobot() ) {
             return RobotBasePtr();
         }
@@ -2047,7 +2047,7 @@ protected:
                 return false;
             }
             if( bodyid ) {
-                KinBodyPtr pignore = GetEnv()->GetBodyFromEnvironmentId(bodyid);
+                KinBodyPtr pignore = GetEnv()->GetBodyFromEnvironmentBodyIndex(bodyid);
                 if( !pignore ) {
                     RAVELOG_WARN("failed to find body %d",bodyid);
                 }

@@ -430,7 +430,7 @@ bool KinBodyItem::UpdateFromModel()
             Load();
         }
         // make sure the body is still present!
-        if( _pchain->GetEnv()->GetBodyFromEnvironmentId(networkid) == _pchain ) {
+        if( _pchain->GetEnv()->GetBodyFromEnvironmentBodyIndex(networkid) == _pchain ) {
             _pchain->GetLinkTransformations(_vtrans,_vdofbranches);
             _pchain->GetDOFValues(vjointvalues);
         }

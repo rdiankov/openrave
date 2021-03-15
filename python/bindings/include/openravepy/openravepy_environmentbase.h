@@ -173,6 +173,7 @@ public:
     object GetSensor(const std::string &name);
 
     object GetBodyFromEnvironmentId(int id);
+    object GetBodyFromEnvironmentBodyIndex(int id);
 
     int GetMaxEnvironmentBodyIndex();
 

@@ -101,7 +101,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                 }
                 else {
                     // pgrabbed points to a different environment, so have to re-initialize
-                    KinBodyPtr pnewbody = pbody->GetEnv()->GetBodyFromEnvironmentId(pbodygrab->GetEnvironmentBodyIndex());
+                    KinBodyPtr pnewbody = pbody->GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodygrab->GetEnvironmentBodyIndex());
                     if( !!pnewbody ) {
                         if( pbodygrab->GetKinematicsGeometryHash() != pnewbody->GetKinematicsGeometryHash() ) {
                             RAVELOG_WARN_FORMAT("env=%d, body %s is not similar across environments", pbody->GetEnv()->GetId()%pbodygrab->GetName());
@@ -260,7 +260,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                 }
                 else {
                     // pgrabbed points to a different environment, so have to re-initialize
-                    KinBodyPtr pnewbody = body.GetEnv()->GetBodyFromEnvironmentId(pbodygrab->GetEnvironmentBodyIndex());
+                    KinBodyPtr pnewbody = body.GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodygrab->GetEnvironmentBodyIndex());
                     if( pbodygrab->GetKinematicsGeometryHash() != pnewbody->GetKinematicsGeometryHash() ) {
                         RAVELOG_WARN(str(boost::format("body %s is not similar across environments")%pbodygrab->GetName()));
                     }
