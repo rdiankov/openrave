@@ -4894,8 +4894,8 @@ bool KinBody::_IsAttached(int otherBodyid, std::vector<int8_t>& vAttachedVisited
             return true;
         }
         else if (vAttachedVisited.at(attached._environmentBodyIndex) != 0) {
-            // already checked
-            return vAttachedVisited.at(attached._environmentBodyIndex) > 0;
+            // already checked, but need to continue to check other entries in _listAttachedBodies
+            continue;
         }
         else {
             vAttachedVisited.at(attached._environmentBodyIndex) = -1; // not attached, but visitied
