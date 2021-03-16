@@ -4968,6 +4968,7 @@ private:
                                 continue;
                             }
                             pbody->_vForcedAdjacentLinks.emplace_back(plink0->GetName(), plink1->GetName());
+                            plink0->_info._vForcedAdjacentLinks.push_back(plink1->GetName()); // needs to set this as well because json serialization uses this.
                         }
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 
