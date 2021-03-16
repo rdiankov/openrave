@@ -285,6 +285,17 @@ ReadablePtr InterfaceBase::SetReadableInterface(const std::string& id, ReadableP
     return pprev;
 }
 
+void InterfaceBase::SetReadableInterfaces(const InterfaceBase::READERSMAP& mapReadables, bool bClearAllExisting)
+{
+    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    if( bClearAllExisting ) {
+        __mapReadableInterfaces = mapReadables;
+    }
+    else {
+        __mapReadableInterfaces.insert(mapReadables.begin(), mapReadables.end());
+    }
+}
+
 void InterfaceBase::ClearReadableInterfaces()
 {
     boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
