@@ -1082,16 +1082,15 @@ public:
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             vector<KinBodyPtr>::iterator it = _vecbodies.end();
-            FOREACHC(itbody, _vecbodies) {
-                if( (*itbody)->GetName() == name ) {
-                    it = itbody;
+            for (const KinBodyPtr& pExistingBody : _vecbodies) {
+                if (!!pExistingBody && pExistingBody->GetName() == name ) {
+                    pbody = pExistingBody;
                     break;
                 }
             }
-            if( it == _vecbodies.end() ) {
+            if( !pbody ) {
                 return false;
             }
-            pbody = *it;
             _InvalidateKinBodyFromEnvBodyIndex(pbody->GetEnvironmentBodyIndex());
         }
         // pbody is valid so run any callbacks and exit
@@ -1110,9 +1109,9 @@ public:
     KinBodyPtr GetKinBody(const std::string& pname) const override
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        FOREACHC(it, _vecbodies) {
-            if((*it)->GetName()==pname) {
-                return *it;
+        for (const KinBodyPtr& pbody : _vecbodies) {
+            if (!!pbody && pbody->GetName()==pname) {
+                return pbody;
             }
         }
         return KinBodyPtr();
@@ -1126,7 +1125,7 @@ public:
 
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         for(const KinBodyPtr& pbody : _vecbodies) {
-            if(pbody->GetId()==id) {
+            if (!!pbody && pbody->GetId()==id) {
                 return pbody;
             }
         }
@@ -1141,7 +1140,9 @@ public:
 
     inline int _GetNumBodies() const
     {
-        return max(0, (int)_vecbodies.size() - (int) _environmentIndexRecyclePool.size() - 1); // -1 because first element of _vecbodies doesn't count
+        // this returns number of valid (non nullptr) bodies, not the same as _vecbodies.size()
+        const int numBodies = max(0, (int)_vecbodies.size() - (int) _environmentIndexRecyclePool.size() - 1); // -1 because first element of _vecbodies doesn't count
+        return numBodies;
     }
 
     int GetMaxEnvironmentBodyIndex() const override
@@ -2604,19 +2605,23 @@ public:
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             vBodies = _vecbodies;
         }
-        info._vBodyInfos.resize(_GetNumBodies());
-        for(size_t i = 0; i < info._vBodyInfos.size(); ++i) {
-            if (!vBodies[i]) {
+        const int numBodies = _GetNumBodies();
+        info._vBodyInfos.resize(numBodies);
+        int validBodyItr = 0;
+        for(KinBodyPtr& pbody : vBodies) {
+            if (!pbody) {
                 continue;
-            }                
-            if (vBodies[i]->IsRobot()) {
-                info._vBodyInfos[i].reset(new RobotBase::RobotBaseInfo());
-                RaveInterfaceCast<RobotBase>(vBodies[i])->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(info._vBodyInfos[i])));
-            } else {
-                info._vBodyInfos[i].reset(new KinBody::KinBodyInfo());
-                vBodies[i]->ExtractInfo(*info._vBodyInfos[i]);
             }
+            if (pbody->IsRobot()) {
+                info._vBodyInfos[validBodyItr].reset(new RobotBase::RobotBaseInfo());
+                RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(info._vBodyInfos[validBodyItr])));
+            } else {
+                info._vBodyInfos[validBodyItr].reset(new KinBody::KinBodyInfo());
+                pbody->ExtractInfo(*info._vBodyInfos[validBodyItr]);
+            }
+            ++validBodyItr;
         }
+        BOOST_ASSERT(i == numBodies);
         info._name = _name;
         info._keywords = _keywords;
         info._description = _description;
@@ -3910,7 +3915,7 @@ protected:
     }
 
     std::vector<RobotBasePtr> _vecrobots;      ///< robots (possibly controlled) sorted by env body index ascending order. protected by _mutexInterfaces
-    std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots) sorted by env body index ascending order. Note that some element can be expired, meaning that weak pointer may be pointing to nullpointer, and size of _vecbodies should be kept unchanged when body is removed from env. protected by _mutexInterfaces
+    std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots) sorted by env body index ascending order. Note that some element can be nullptr, and size of _vecbodies should be kept unchanged when body is removed from env. protected by _mutexInterfaces
 
     list< std::pair<ModuleBasePtr, std::string> > _listModules;     ///< modules loaded in the environment and the strings they were intialized with. Initialization strings are used for cloning.
     list<SensorBasePtr> _listSensors;     ///< sensors loaded in the environment

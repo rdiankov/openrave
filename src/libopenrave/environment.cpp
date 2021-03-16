@@ -80,9 +80,12 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
         rapidjson::Value rBodiesValue;
         rBodiesValue.SetArray();
         rBodiesValue.Reserve(_vBodyInfos.size(), allocator);
-        FOREACHC(it, _vBodyInfos) {
+        for (const KinBody::KinBodyInfoPtr& pinfo : _vBodyInfos) {
+            if (!pinfo) {
+                continue;
+            }
             rapidjson::Value bodyValue;
-            (*it)->SerializeJSON(bodyValue, allocator, fUnitScale, options);
+            pinfo->SerializeJSON(bodyValue, allocator, fUnitScale, options);
             rBodiesValue.PushBack(bodyValue, allocator);
         }
         rEnvInfo.AddMember("bodies", rBodiesValue, allocator);

@@ -1007,13 +1007,16 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
     _description = info._description;
 #else
     py::list vBodyInfos;
-    FOREACHC(itBodyInfo, info._vBodyInfos) {
-        RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itBodyInfo);
+    for (const KinBody::KinBodyInfoPtr& pinfo : info._vBodyInfos) {
+        if (!pinfo) {
+            continue;
+        }
+        RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pinfo);
         if (!!pRobotBaseInfo) {
             PyRobotBase::PyRobotBaseInfo info = PyRobotBase::PyRobotBaseInfo(*pRobotBaseInfo);
             vBodyInfos.append(info);
         } else {
-            PyKinBody::PyKinBodyInfo info = PyKinBody::PyKinBodyInfo(**itBodyInfo);
+            PyKinBody::PyKinBodyInfo info = PyKinBody::PyKinBodyInfo(*pinfo);
             vBodyInfos.append(info);
         }
     }
