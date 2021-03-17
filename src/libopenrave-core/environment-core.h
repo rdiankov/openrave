@@ -2617,7 +2617,7 @@ public:
 
         std::vector<dReal> vdoflastsetvalues;
         for(const KinBodyPtr& pbody : _vecbodies) {
-            if (!pbody || pbody->GetEnvironmentBodyIndex() > 0) {
+            if (!pbody || pbody->GetEnvironmentBodyIndex() == 0) {
                 continue;
             }
             if( pbody->_nHierarchyComputed != 2 ) {
