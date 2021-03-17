@@ -2617,7 +2617,7 @@ public:
 
         std::vector<dReal> vdoflastsetvalues;
         for(const KinBodyPtr& pbody : _vecbodies) {
-            if (!pbody) {
+            if (!pbody || pbody->GetEnvironmentBodyIndex() > 0) {
                 continue;
             }
             if( pbody->_nHierarchyComputed != 2 ) {
@@ -2625,7 +2625,7 @@ public:
                 continue;
             }
 
-            KinBody::BodyState& state = _vPublishedBodies[iwritten];
+            KinBody::BodyState& state = _vPublishedBodies.at(iwritten);
             state.Reset();
             state.pbody = pbody;
             pbody->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
