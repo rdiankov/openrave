@@ -3304,28 +3304,29 @@ protected:
             }
             // first initialize the pointers
             list<KinBodyPtr> listToClone, listToCopyState;
-            FOREACHC(itrobot, r->_vecrobots) {
+            for (const KinBodyPtr& robotInOtherEnv : r->_vecrobots) {
                 try {
                     RobotBasePtr pnewrobot;
                     if( bCheckSharedResources ) {
-                        FOREACH(itrobot2,vecrobots) {
-                            if( (*itrobot2)->GetName() == (*itrobot)->GetName() && (*itrobot2)->GetKinematicsGeometryHash() == (*itrobot)->GetKinematicsGeometryHash() ) {
-                                pnewrobot = *itrobot2;
+                        for (const KinBodyPtr& robotInThisEnv : vecrobots) {
+                            if( robotInThisEnv->GetName() == robotInOtherEnv->GetName() &&
+                                robotInThisEnv->GetKinematicsGeometryHash() == robotInOtherEnv->GetKinematicsGeometryHash() ) {
+                                pnewrobot = RaveInterfaceCast<RobotBase>(robotInThisEnv);
                                 break;
                             }
                         }
                     }
                     if( !pnewrobot ) {
-                        pnewrobot = RaveCreateRobot(shared_from_this(), (*itrobot)->GetXMLId());
-                        pnewrobot->_name = (*itrobot)->_name; // at least copy the names
-                        listToClone.push_back(*itrobot);
+                        pnewrobot = RaveCreateRobot(shared_from_this(), robotInOtherEnv->GetXMLId());
+                        pnewrobot->_name = robotInOtherEnv->_name; // at least copy the names
+                        listToClone.push_back(robotInOtherEnv);
                     }
                     else {
                         //TODO
                         //pnewrobot->ReleaseAllGrabbed(); // will re-grab later?
-                        listToCopyState.push_back(*itrobot);
+                        listToCopyState.push_back(robotInOtherEnv);
                     }
-                    const int bodyId = (*itrobot)->GetEnvironmentBodyIndex();
+                    const int bodyId = robotInOtherEnv->GetEnvironmentBodyIndex();
                     pnewrobot->_environmentBodyIndex = bodyId;
                     BOOST_ASSERT( (int)_vecWeakBodies.size() < bodyId + 1 || !_vecWeakBodies.at(bodyId).lock());
 
@@ -3348,7 +3349,7 @@ protected:
                     _vecWeakBodies[bodyId] = pnewrobot;
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("failed to clone robot %s: %s", (*itrobot)->GetName()%ex.what());
+                    RAVELOG_ERROR_FORMAT("failed to clone robot %s: %s", robotInOtherEnv->GetName()%ex.what());
                 }
             }
             for (const KinBodyPtr& pbody : r->_vecbodies) {
