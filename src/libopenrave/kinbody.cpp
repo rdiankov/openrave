@@ -5768,7 +5768,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         else {
             RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());
         }
-        _id = info._id;
+        SetId(info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
