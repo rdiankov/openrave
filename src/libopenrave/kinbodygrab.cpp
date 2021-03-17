@@ -555,7 +555,7 @@ void KinBody::_UpdateGrabbedBodies()
             ++itgrabbed;
         }
         else {
-            RAVELOG_DEBUG(str(boost::format("erasing invaliding grabbed body from %s")%GetName()));
+            RAVELOG_DEBUG_FORMAT("env=%d, erasing invaliding grabbed body from %s", GetEnv()->GetId()%GetName());
             itgrabbed = _vGrabbedBodies.erase(itgrabbed);
         }
     }

@@ -335,7 +335,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 // ignore
                 continue;
             }
-        
+
             if( itMatchingName != _vGrabbedInfos.end() ) {
                 (*itMatchingName)->DeserializeJSON(rGrabbed, fUnitScale, options);
                 (*itMatchingName)->_id = id;
@@ -826,8 +826,8 @@ void KinBody::GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofind
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetValue(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetValue(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -846,8 +846,8 @@ void KinBody::GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& do
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetVelocity(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetVelocity(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -871,8 +871,8 @@ void KinBody::GetDOFLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& 
         vLowerLimit.resize(dofindices.size());
         vUpperLimit.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            std::pair<dReal, dReal> res = pjoint->GetLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            std::pair<dReal, dReal> res = joint.GetLimit(dofindices[i]-joint.GetDOFIndex());
             vLowerLimit[i] = res.first;
             vUpperLimit[i] = res.second;
         }
@@ -898,8 +898,8 @@ void KinBody::GetDOFVelocityLimits(std::vector<dReal>& vlower, std::vector<dReal
         vlower.resize(dofindices.size());
         vupper.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            std::pair<dReal, dReal> res = pjoint->GetVelocityLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            std::pair<dReal, dReal> res = joint.GetVelocityLimit(dofindices[i]-joint.GetDOFIndex());
             vlower[i] = res.first;
             vupper[i] = res.second;
         }
@@ -920,8 +920,8 @@ void KinBody::GetDOFVelocityLimits(std::vector<dReal>& v, const std::vector<int>
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetMaxVel(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetMaxVel(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -940,8 +940,8 @@ void KinBody::GetDOFAccelerationLimits(std::vector<dReal>& v, const std::vector<
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetAccelerationLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetAccelerationLimit(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -960,8 +960,8 @@ void KinBody::GetDOFJerkLimits(std::vector<dReal>& v, const std::vector<int>& do
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetJerkLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetJerkLimit(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -980,8 +980,8 @@ void KinBody::GetDOFHardVelocityLimits(std::vector<dReal>& v, const std::vector<
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetHardVelocityLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetHardVelocityLimit(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -1000,8 +1000,8 @@ void KinBody::GetDOFHardAccelerationLimits(std::vector<dReal>& v, const std::vec
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetHardAccelerationLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetHardAccelerationLimit(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -1020,8 +1020,8 @@ void KinBody::GetDOFHardJerkLimits(std::vector<dReal>& v, const std::vector<int>
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetHardJerkLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetHardJerkLimit(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -1061,8 +1061,8 @@ void KinBody::GetDOFResolutions(std::vector<dReal>& v, const std::vector<int>& d
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetResolution(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetResolution(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -1081,8 +1081,8 @@ void KinBody::GetDOFWeights(std::vector<dReal>& v, const std::vector<int>& dofin
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetWeight(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetWeight(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -1103,8 +1103,8 @@ void KinBody::SetDOFWeights(const std::vector<dReal>& v, const std::vector<int>&
     else {
         OPENRAVE_ASSERT_OP(v.size(),==,dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            pjoint->_info._vweights.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
+            Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            joint._info._vweights.at(dofindices[i]-joint.GetDOFIndex()) = v[i];
         }
     }
     _PostprocessChangedParameters(Prop_JointProperties);
@@ -1126,8 +1126,8 @@ void KinBody::SetDOFResolutions(const std::vector<dReal>& v, const std::vector<i
     else {
         OPENRAVE_ASSERT_OP(v.size(),==,dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            pjoint->_info._vresolution.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
+            Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            joint._info._vresolution.at(dofindices[i]-joint.GetDOFIndex()) = v[i];
         }
     }
     _PostprocessChangedParameters(Prop_JointProperties);
@@ -1168,19 +1168,19 @@ void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dR
         OPENRAVE_ASSERT_OP(lower.size(),==,dofindices.size());
         OPENRAVE_ASSERT_OP(upper.size(),==,dofindices.size());
         for(size_t index = 0; index < dofindices.size(); ++index) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[index]);
-            int iaxis = dofindices[index]-pjoint->GetDOFIndex();
-            if( pjoint->_info._vlowerlimit.at(iaxis) != lower[index] || pjoint->_info._vupperlimit.at(iaxis) != upper[index] ) {
+            Joint& joint = _GetJointFromDOFIndex(dofindices[index]);
+            int iaxis = dofindices[index]-joint.GetDOFIndex();
+            if( joint._info._vlowerlimit.at(iaxis) != lower[index] || joint._info._vupperlimit.at(iaxis) != upper[index] ) {
                 bChanged = true;
-                pjoint->_info._vlowerlimit.at(iaxis) = lower[index];
-                pjoint->_info._vupperlimit.at(iaxis) = upper[index];
-                if( pjoint->IsRevolute(iaxis) && !pjoint->IsCircular(iaxis) ) {
+                joint._info._vlowerlimit.at(iaxis) = lower[index];
+                joint._info._vupperlimit.at(iaxis) = upper[index];
+                if( joint.IsRevolute(iaxis) && !joint.IsCircular(iaxis) ) {
                     // TODO, necessary to set wrap?
-                    if( pjoint->_info._vlowerlimit.at(iaxis) < -PI || pjoint->_info._vupperlimit.at(iaxis) > PI) {
-                        pjoint->SetWrapOffset(0.5f * (pjoint->_info._vlowerlimit.at(iaxis) + pjoint->_info._vupperlimit.at(iaxis)),iaxis);
+                    if( joint._info._vlowerlimit.at(iaxis) < -PI || joint._info._vupperlimit.at(iaxis) > PI) {
+                        joint.SetWrapOffset(0.5f * (joint._info._vlowerlimit.at(iaxis) + joint._info._vupperlimit.at(iaxis)),iaxis);
                     }
                     else {
-                        pjoint->SetWrapOffset(0,iaxis);
+                        joint.SetWrapOffset(0,iaxis);
                     }
                 }
             }
@@ -1293,10 +1293,10 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
     else {
         OPENRAVE_ASSERT_OP(q1.size(), ==, dofindices.size() );
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            if( pjoint->IsCircular(dofindices[i]-pjoint->GetDOFIndex()) ) {
-                int iaxis = dofindices[i]-pjoint->GetDOFIndex();
-                q1[i] = utils::NormalizeCircularAngle(q1[i]-q2[i], pjoint->_vcircularlowerlimit.at(iaxis), pjoint->_vcircularupperlimit.at(iaxis));
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            if( joint.IsCircular(dofindices[i]-joint.GetDOFIndex()) ) {
+                int iaxis = dofindices[i]-joint.GetDOFIndex();
+                q1[i] = utils::NormalizeCircularAngle(q1[i]-q2[i], joint._vcircularlowerlimit.at(iaxis), joint._vcircularupperlimit.at(iaxis));
             }
             else {
                 q1[i] -= q2[i];
@@ -1336,18 +1336,19 @@ bool KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
         bSuccess = GetEnv()->GetPhysicsEngine()->SetLinkVelocity(_veclinks[0], linearvel, angularvel);
     }
     else {
-        std::vector<std::pair<Vector,Vector> > velocities(_veclinks.size());
+        std::vector<std::pair<Vector,Vector> >& velocities = _vVelocitiesCache;
+        velocities.resize(_veclinks.size());
         velocities.at(0).first = linearvel;
         velocities.at(0).second = angularvel;
         Vector vlinktrans = _veclinks.at(0)->GetTransform().trans;
-        for(size_t i = 1; i < _veclinks.size(); ++i) {
-            velocities[i].first = linearvel + angularvel.cross(_veclinks[i]->GetTransform().trans-vlinktrans);
-            velocities[i].second = angularvel;
+        for(size_t ilink = 1; ilink < _veclinks.size(); ++ilink) {
+            velocities[ilink].first = linearvel + angularvel.cross(_veclinks[ilink]->GetTransform().trans-vlinktrans);
+            velocities[ilink].second = angularvel;
         }
 
         bSuccess = GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
     }
-    
+
     _UpdateGrabbedBodies();
     return bSuccess;
 }
@@ -1356,7 +1357,8 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
 {
     CHECK_INTERNAL_COMPUTATION;
     OPENRAVE_ASSERT_OP_FORMAT((int)vDOFVelocities.size(), >=, GetDOF(), "env=%d, not enough values %d!=%d", GetEnv()->GetId()%vDOFVelocities.size()%GetDOF(),ORE_InvalidArguments);
-    std::vector<std::pair<Vector,Vector> > velocities(_veclinks.size());
+    std::vector<std::pair<Vector,Vector> >& velocities = _vVelocitiesCache;
+    velocities.resize(_veclinks.size());
     velocities.at(0).first = linearvel;
     velocities.at(0).second = angularvel;
 
@@ -1366,17 +1368,17 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
     }
 
     // have to compute the velocities ahead of time since they are dependent on the link transformations
-    std::vector< std::vector<dReal> > vPassiveJointVelocities(_vPassiveJoints.size());
-    for(size_t i = 0; i < vPassiveJointVelocities.size(); ++i) {
-        if( !_vPassiveJoints[i]->IsMimic() ) {
-            _vPassiveJoints[i]->GetVelocities(vPassiveJointVelocities[i]);
-        }
-        else {
-            vPassiveJointVelocities[i].resize(_vPassiveJoints[i]->GetDOF(),0);
+    std::vector< boost::array<dReal, 3> >& vPassiveJointVelocities = _vPassiveJointValuesCache;
+    vPassiveJointVelocities.resize(_vPassiveJoints.size());
+    for(size_t ijoint = 0; ijoint < vPassiveJointVelocities.size(); ++ijoint) {
+        if( !_vPassiveJoints[ijoint]->IsMimic() ) {
+            _vPassiveJoints[ijoint]->GetVelocities(vPassiveJointVelocities[ijoint]);
         }
     }
 
-    std::vector<uint8_t> vlinkscomputed(_veclinks.size(),0);
+    std::vector<uint8_t>& vlinkscomputed = _vLinksVisitedCache;
+    vlinkscomputed.resize(_veclinks.size());
+    std::fill(vlinkscomputed.begin(), vlinkscomputed.end(), 0);
     vlinkscomputed[0] = 1;
     boost::array<dReal,3> dummyvalues; // dummy values for a joint
 
@@ -1598,10 +1600,8 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, uint32_
             vfulldof[i] = vDOFVelocities.at(static_cast<size_t>(it-dofindices.begin()));
         }
         else {
-            JointPtr pjoint = GetJointFromDOFIndex(i);
-            if( !!pjoint ) {
-                vfulldof[i] = _vecjoints.at(_vDOFIndices.at(i))->GetVelocity(i-_vDOFIndices.at(i));
-            }
+            const Joint& joint = _GetJointFromDOFIndex(i);
+            vfulldof[i] = joint.GetVelocity(i-_vDOFIndices.at(i));
         }
     }
     return SetDOFVelocities(vfulldof,linearvel,angularvel,checklimits);
@@ -1994,7 +1994,8 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     // have to compute the angles ahead of time since they are dependent on the link
     const int nActiveJoints = _vecjoints.size();
     const int nPassiveJoints = _vPassiveJoints.size();
-    std::vector< boost::array<dReal, 3> > vPassiveJointValues(nPassiveJoints);
+    std::vector< boost::array<dReal, 3> >& vPassiveJointValues = _vPassiveJointValuesCache;
+    vPassiveJointValues.resize(nPassiveJoints);
     for(int i = 0; i < nPassiveJoints; ++i) {
         const KinBody::JointPtr& pjoint = _vPassiveJoints[i];
         const KinBody::Joint& joint = *pjoint;
@@ -3539,17 +3540,15 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
         vLinkVelocities[0].first = Vector();
         vLinkVelocities[0].second = Vector();
     }
-    dofvelocities.resize(0);
-    if( (int)dofvelocities.capacity() < GetDOF() ) {
-        dofvelocities.reserve(GetDOF());
-    }
+    dofvelocities.resize(GetDOF(),0);
     FOREACHC(it, _vDOFOrderedJoints) {
+        const Joint& joint = **it;
         int parentindex = 0;
-        if( !!(*it)->_attachedbodies[0] ) {
-            parentindex = (*it)->_attachedbodies[0]->GetIndex();
+        if( !!joint._attachedbodies[0] ) {
+            parentindex = joint._attachedbodies[0]->GetIndex();
         }
-        int childindex = (*it)->_attachedbodies[1]->GetIndex();
-        (*it)->_GetVelocities(dofvelocities,true,vLinkVelocities.at(parentindex),vLinkVelocities.at(childindex));
+        int childindex = joint._attachedbodies[1]->GetIndex();
+        joint._GetVelocities(&dofvelocities[joint.GetDOFIndex()],vLinkVelocities.at(parentindex),vLinkVelocities.at(childindex));
     }
 }
 
@@ -3577,17 +3576,24 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
     }
 
     // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
-    std::vector< std::vector<dReal> > vPassiveJointVelocities(_vPassiveJoints.size()), vPassiveJointAccelerations(_vPassiveJoints.size());
+    std::vector< boost::array<dReal,3> >& vPassiveJointVelocities = _vPassiveJointValuesCache;
+    std::vector< boost::array<dReal,3> >& vPassiveJointAccelerations = _vPassiveJointAccelerationsCache;
+    vPassiveJointVelocities.resize(_vPassiveJoints.size());
+    vPassiveJointAccelerations.resize(_vPassiveJoints.size());
     for(size_t i = 0; i <_vPassiveJoints.size(); ++i) {
         if( vDOFAccelerations.size() > 0 ) {
-            vPassiveJointAccelerations[i].resize(_vPassiveJoints[i]->GetDOF(),0);
+            vPassiveJointAccelerations[i][0] = 0;
+            vPassiveJointAccelerations[i][1] = 0;
+            vPassiveJointAccelerations[i][2] = 0;
         }
         if( vDOFVelocities.size() > 0 ) {
             if( !_vPassiveJoints[i]->IsMimic() ) {
                 _vPassiveJoints[i]->GetVelocities(vPassiveJointVelocities[i]);
             }
             else {
-                vPassiveJointVelocities[i].resize(_vPassiveJoints[i]->GetDOF(),0);
+                vPassiveJointVelocities[i][0] = 0;
+                vPassiveJointVelocities[i][1] = 0;
+                vPassiveJointVelocities[i][2] = 0;
             }
         }
     }
@@ -4420,8 +4426,8 @@ void KinBody::_ComputeInternalInformation()
                         for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
                             if( pjoint->IsMimic(idof) ) {
                                 FOREACHC(itmimicdof,pjoint->_vmimic[idof]->_vmimicdofs) {
-                                    JointPtr pjoint2 = GetJointFromDOFIndex(itmimicdof->dofindex);
-                                    _vJointsAffectingLinks[pjoint2->GetJointIndex()*_veclinks.size()+i] = pjoint2->GetHierarchyParentLink()->GetIndex() == i ? -1 : 1;
+                                    const Joint& joint2 = _GetJointFromDOFIndex(itmimicdof->dofindex);
+                                    _vJointsAffectingLinks[joint2.GetJointIndex()*_veclinks.size()+i] = joint2.GetHierarchyParentLink()->GetIndex() == i ? -1 : 1;
                                 }
                             }
                         }
@@ -4747,12 +4753,6 @@ bool KinBody::IsAttached(const KinBody &body) const
     return _IsAttached(body.GetEnvironmentBodyIndex(), vAttachedVisited);
 }
 
-
-inline bool cmpEnvBodyIndex(const KinBodyPtr& pbody, int envBodyIndex)
-{
-    return pbody->GetEnvironmentBodyIndex() < envBodyIndex;
-}
-
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
@@ -4902,7 +4902,7 @@ bool KinBody::_IsAttached(int otherBodyid, std::vector<int8_t>& vAttachedVisited
         else {
             vAttachedVisited.at(attached._environmentBodyIndex) = -1; // not attached, but visitied
         }
-        
+
         // if attached._listAttachedBodies has only one element, that element is same as attached as attachement relationship is by-directional, so not worth checking
         if (attached._listAttachedBodies.size() > 1 && attached._IsAttached(otherBodyid, vAttachedVisited)) {
             return true;
@@ -5669,9 +5669,9 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     std::vector<dReal> vDOFValues;
     GetDOFValues(vDOFValues);
     for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
-        JointPtr pJoint = GetJointFromDOFIndex(idof);
-        int jointAxis = idof - pJoint->GetDOFIndex();
-        info._dofValues.emplace_back(std::make_pair(pJoint->GetName(), jointAxis), vDOFValues[idof]);
+        const Joint& joint = _GetJointFromDOFIndex(idof);
+        int jointAxis = idof - joint.GetDOFIndex();
+        info._dofValues.emplace_back(std::make_pair(joint.GetName(), jointAxis), vDOFValues[idof]);
     }
 
     info._vGrabbedInfos.resize(0);
