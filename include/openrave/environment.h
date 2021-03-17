@@ -731,6 +731,18 @@ public:
     /// if parameter is not present, will return defaultValue
     virtual uint64_t GetUInt64Parameter(const std::string& parameterName, uint64_t defaultValue) const = 0;
 
+    /// \brief notifys name of kin body is changed.
+    ///
+    /// \param oldName name before change
+    /// \param newName name after change
+    virtual void NotifyKinBodyNameChanged(const std::string& oldName, const std::string& newName) = 0;
+
+    /// \brief retries the named parameter to be tracked by the environment.
+    ///
+    /// \param oldId id before change
+    /// \param newId id after change
+    virtual void NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) = 0;
+
     /// \brief info structure used to initialize environment
     class OPENRAVE_API EnvironmentBaseInfo : public InfoBase
     {

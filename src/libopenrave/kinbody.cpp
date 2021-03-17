@@ -759,6 +759,7 @@ void KinBody::SetName(const std::string& newname)
             ss.get(buf,0);
             itgroup->name = str(boost::format("%s %s %s")%grouptype%newname%buf.str());
         }
+        GetEnv()->NotifyKinBodyNameChanged(_name, newname);
         _name = newname;
         _PostprocessChangedParameters(Prop_Name);
     }
@@ -768,6 +769,7 @@ void KinBody::SetId(const std::string& newid)
 {
     // allow empty id to be set
     if( _id != newid ) {
+        GetEnv()->NotifyKinBodyIdChanged(_id, newid);
         _id = newid;
     }
 }
