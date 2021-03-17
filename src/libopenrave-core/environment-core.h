@@ -46,11 +46,6 @@ inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dRe
     return RaveSqrt((t1.trans-t2.trans).lengthsqr3() + frotweight*e);
 }
 
-inline bool cmpFirst(const std::pair<std::string, int>& value, const std::string& str)
-{
-    return value.first < str;
-}
-
 /// \brief ensures vector size is at least size
 template <typename T>
 inline void EnsureVectorSize(std::vector<T>& vec, size_t size)
@@ -1043,7 +1038,7 @@ public:
             const int bodyIndex = pbody->GetEnvironmentBodyIndex();
             {
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-                if ( bodyIndex <= 0 || bodyIndex > _vecbodies.size() - 1 || !_vecbodies.at(bodyIndex)) {
+                if ( bodyIndex <= 0 || bodyIndex > ((int) _vecbodies.size()) - 1 || !_vecbodies.at(bodyIndex)) {
                     return false;
                 }
                 _InvalidateKinBodyFromEnvBodyIndex(bodyIndex);
@@ -1126,7 +1121,6 @@ public:
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if (!_vecbodies.empty()) {
             const int envBodyIndex = _FindBodyIndexByName(pname);
-            BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < _vecbodies.size());
             const KinBodyPtr& pbody = _vecbodies.at(envBodyIndex);
             if (!!pbody) {
                 return pbody;
@@ -1181,7 +1175,7 @@ public:
             const int lastBodyEnvironmentBodyIndex = _vecbodies.back()->GetEnvironmentBodyIndex();
             // bodies are sorted by environment body index, so last body should have the largest
             BOOST_ASSERT(lastBodyEnvironmentBodyIndex > 0);
-            BOOST_ASSERT(lastBodyEnvironmentBodyIndex == _vecbodies.size() - 1);
+            BOOST_ASSERT(lastBodyEnvironmentBodyIndex == ((int)_vecbodies.size()) - 1);
             return lastBodyEnvironmentBodyIndex;
         }
 
@@ -1200,7 +1194,6 @@ public:
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         const int envBodyIndex = _FindBodyIndexByName(pname);
-        BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < _vecbodies.size());
         const KinBodyPtr& pbody = _vecbodies.at(envBodyIndex);
         if (!!pbody && pbody->IsRobot()) {
             return RaveInterfaceCast<RobotBase>(pbody);
@@ -1216,6 +1209,7 @@ public:
         return RobotBasePtr();
     }
 
+    /// assumes _mutexInterfaces is locked
     inline int _FindBodyIndexByName(const std::string& name) const
     {
         if (name.empty()) {
@@ -1227,7 +1221,7 @@ public:
             return 0;
         }
         const int envBodyIndex = it->second;
-        BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < _vecbodies.size());
+        BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size());
         return envBodyIndex;
     }
     
@@ -2451,7 +2445,7 @@ public:
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         boost::mutex::scoped_lock locknetwork(_mutexEnvironmentIds);
-        if (bodyIndex > 0 && bodyIndex < _vecbodies.size()) {
+        if (0 < bodyIndex && bodyIndex < (int) _vecbodies.size()) {
             return _vecbodies.at(bodyIndex);
         }
         return KinBodyPtr();
@@ -3122,6 +3116,7 @@ public:
 
     void NotifyKinBodyNameChanged(const std::string& oldName, const std::string& newName) override
     {
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(oldName);
         if (it == _mapBodyNameIndex.end()) {
             return;
@@ -3133,6 +3128,7 @@ public:
 
     void NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) override
     {
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         const std::unordered_map<std::string, int>::const_iterator it = _mapBodyIdIndex.find(oldId);
         if (it == _mapBodyIdIndex.end()) {
             return;
@@ -3326,10 +3322,9 @@ protected:
 
         if( options & Clone_Bodies ) {
             boost::timed_mutex::scoped_lock lock(r->_mutexInterfaces);
-            std::vector<RobotBasePtr> vecrobots;
             std::vector<std::pair<Vector,Vector> > linkvelocities;
+            std::vector<KinBodyPtr> vecbodies;
             if( bCheckSharedResources ) {
-                std::vector<KinBodyPtr> vecbodies;
                 std::unordered_map<std::string, int> mapBodyNameIndex, mapBodyIdIndex;
 
                 // delete any bodies/robots from mapBodies that are not in r->_vecbodies
@@ -3349,7 +3344,7 @@ protected:
                 try {
                     RobotBasePtr pnewrobot;
                     if( bCheckSharedResources ) {
-                        for (const KinBodyPtr& probotInThisEnv : vecrobots) {
+                        for (const KinBodyPtr& probotInThisEnv : vecbodies) {
                             if( !!probotInThisEnv &&
                                 probotInThisEnv->IsRobot() &&
                                 probotInThisEnv->GetName() == robotInOtherEnv.GetName() &&
@@ -3370,8 +3365,9 @@ protected:
                         listToCopyState.push_back(probotInOtherEnv);
                     }
                     const int bodyId = robotInOtherEnv.GetEnvironmentBodyIndex();
-                    pnewrobot->_environmentBodyIndex = bodyId;
+                    BOOST_ASSERT( 0 < bodyId);
                     BOOST_ASSERT( (int)_vecbodies.size() < bodyId + 1 || !_vecbodies.at(bodyId));
+                    pnewrobot->_environmentBodyIndex = bodyId;
 
                     {
                         EnsureVectorSize(_vecbodies, bodyId + 1);
@@ -3392,7 +3388,7 @@ protected:
                 }
             }
             for (const KinBodyPtr& pbody : r->_vecbodies) {
-                if (!pbody || pbody->IsRobot()) { // robot is already handled in previous loop, so skip
+                if (!pbody || pbody->IsRobot()) { // here, handle non-robot kinbody. robot is already handled in previous loop, so skip
                     continue;
                 }
                 const KinBody& body = *pbody;
@@ -3404,7 +3400,7 @@ protected:
                         const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
                         if (it != _mapBodyNameIndex.end()) {
                             const int envBodyIndex = it->second;
-                            BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < _vecbodies.size());
+                            BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size());
                             const KinBodyPtr& pNewBodyCandidate = _vecbodies.at(envBodyIndex);
                             if( !pNewBodyCandidate ) {
                                 RAVELOG_WARN_FORMAT("env=%d, a body (name=%s, body index=%d) in vecbodies is not initialized", GetId()%name%envBodyIndex);
@@ -3426,12 +3422,7 @@ protected:
 
                     {
                         EnsureVectorSize(_vecbodies, bodyId + 1);
-                        if (pnewbody->IsRobot()) {
-                            _vecbodies.at(bodyId) = RaveInterfaceCast<RobotBase>(pnewbody);
-                        }
-                        else {
-                            _vecbodies.at(bodyId) = pnewbody;
-                        }
+                        _vecbodies.at(bodyId) = pnewbody;
                     }
                     {
                         const std::string& name = pnewbody->GetName();
@@ -3441,7 +3432,6 @@ protected:
                         const std::string& id = pnewbody->GetId();
                         _mapBodyIdIndex[id] = bodyId;
                     }
-
                 }
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR_FORMAT("env=%d, failed to clone body %s: %s", GetId()%body.GetName()%ex.what());
@@ -3732,7 +3722,7 @@ protected:
             return;
         }
         const int bodyId = pbody->_environmentBodyIndex;
-        if (0 < bodyId && bodyId < _vecbodies.size()) {
+        if (0 < bodyId && bodyId < (int) _vecbodies.size()) {
             _vecbodies.at(bodyId).reset();
             _environmentIndexRecyclePool.insert(bodyId); // for recycle later
             RAVELOG_VERBOSE_FORMAT("env=%d, removed body name=%s (body index=%d), recycle body index later", GetId()%pbody->GetName()%pbody->_environmentBodyIndex);
@@ -4028,8 +4018,8 @@ protected:
     }
 
     std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots) sorted by env body index ascending order. Note that some element can be nullptr, and size of _vecbodies should be kept unchanged when body is removed from env. protected by _mutexInterfaces
-    std::unordered_map<std::string, int> _mapBodyNameIndex; /// maps body name to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name.
-    std::unordered_map<std::string, int> _mapBodyIdIndex; /// maps body id to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name.
+    std::unordered_map<std::string, int> _mapBodyNameIndex; /// maps body name to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
+    std::unordered_map<std::string, int> _mapBodyIdIndex; /// maps body id to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
 
     list< std::pair<ModuleBasePtr, std::string> > _listModules;     ///< modules loaded in the environment and the strings they were intialized with. Initialization strings are used for cloning.
     list<SensorBasePtr> _listSensors;     ///< sensors loaded in the environment
