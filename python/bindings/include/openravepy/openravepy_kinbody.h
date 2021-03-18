@@ -257,6 +257,9 @@ public:
     py::object ComputeAABB(bool bEnabledOnlyLinks=false);
     py::object ComputeAABBFromTransform(py::object otransform, bool bEnabledOnlyLinks=false);
     py::object ComputeLocalAABB(bool bEnabledOnlyLinks=false);
+    py::object ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false);
+    py::object ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, py::object otransform, bool bEnabledOnlyLinks=false);
+    py::object ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false);
     py::object GetCenterOfMass() const;
     void Enable(bool bEnable);
     bool IsEnabled() const;
