@@ -254,7 +254,10 @@ public:
         // destruction order is *very* important, don't touch it without consultation
         _bInit = false;
 
-        RAVELOG_VERBOSE_FORMAT("env=%d destructor, _vecbodies.size():%d, _vecbodies.size():%d", GetId()%_vecbodies.size()%_vecbodies.size());
+        RAVELOG_VERBOSE_FORMAT("env=%d destructor, _vecbodies.size():%d", GetId()%_vecbodies.size());
+        if (_vecbodies.size() > 10000 || _mapBodyNameIndex.size() > 10000 || _mapBodyIdIndex.size() > 10000) { // don't know good threshold
+            RAVELOG_WARN_FORMAT("env=%d, _vecbodies.size():%d, _mapBodyNameIndex.size():%d, _mapBodyIdIndex.size():%d seems large, maybe there is memory leak", GetId()%_vecbodies.size()%_mapBodyNameIndex.size());
+        }
         _StopSimulationThread();
 
         // destroy the modules (their destructors could attempt to lock environment, so have to do it before global lock)
@@ -1245,7 +1248,7 @@ public:
         }
         const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
         if (it == _mapBodyNameIndex.end()) {
-            RAVELOG_WARN_FORMAT("env %d, name %s is not found", GetId()%name);
+            //RAVELOG_WARN_FORMAT("env %d, name %s is not found", GetId()%name);
             return 0;
         }
         const int envBodyIndex = it->second;
