@@ -759,7 +759,13 @@ void KinBody::SetName(const std::string& newname)
             ss.get(buf,0);
             itgroup->name = str(boost::format("%s %s %s")%grouptype%newname%buf.str());
         }
-        GetEnv()->NotifyKinBodyNameChanged(_name, newname);
+        if (GetEnvironmentBodyIndex() > 0) {
+            // need to update some cache stored in env, but only if this body is added to env.
+            // otherwise, we may modify the cache for origbody unexpectedly in the following scenario
+            // 1. clonebody = origbody.Clone()
+            // 2. clonebody.SetName('cloned') // this shouldn't cause cache in env to be modified for origbody
+            GetEnv()->NotifyKinBodyNameChanged(_name, newname);
+        }
         _name = newname;
         _PostprocessChangedParameters(Prop_Name);
     }
@@ -769,7 +775,9 @@ void KinBody::SetId(const std::string& newid)
 {
     // allow empty id to be set
     if( _id != newid ) {
-        GetEnv()->NotifyKinBodyIdChanged(_id, newid);
+        if (GetEnvironmentBodyIndex() > 0) {
+            GetEnv()->NotifyKinBodyIdChanged(_id, newid);
+        }
         _id = newid;
     }
 }
