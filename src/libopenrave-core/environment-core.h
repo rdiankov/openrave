@@ -1036,13 +1036,13 @@ public:
         case PT_KinBody:
         case PT_Robot: {
             KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-            const int bodyIndex = pbody->GetEnvironmentBodyIndex();
+            const int envBodyIndex = pbody->GetEnvironmentBodyIndex();
             {
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-                if ( bodyIndex <= 0 || bodyIndex > ((int) _vecbodies.size()) - 1 || !_vecbodies.at(bodyIndex)) {
+                if ( envBodyIndex <= 0 || envBodyIndex > ((int) _vecbodies.size()) - 1 || !_vecbodies.at(envBodyIndex)) {
                     return false;
                 }
-                _InvalidateKinBodyFromEnvBodyIndex(bodyIndex);
+                _InvalidateKinBodyFromEnvBodyIndex(envBodyIndex);
             }
             // pbody is valid so run any callbacks and exit
             _CallBodyCallbacks(pbody, 0);
@@ -3368,22 +3368,22 @@ protected:
                         //pnewrobot->ReleaseAllGrabbed(); // will re-grab later?
                         listToCopyState.push_back(probotInOtherEnv);
                     }
-                    const int bodyId = robotInOtherEnv.GetEnvironmentBodyIndex();
-                    BOOST_ASSERT( 0 < bodyId);
-                    BOOST_ASSERT( (int)_vecbodies.size() < bodyId + 1 || !_vecbodies.at(bodyId));
-                    pnewrobot->_environmentBodyIndex = bodyId;
+                    const int envBodyIndex = robotInOtherEnv.GetEnvironmentBodyIndex();
+                    BOOST_ASSERT( 0 < envBodyIndex);
+                    BOOST_ASSERT( (int)_vecbodies.size() < envBodyIndex + 1 || !_vecbodies.at(envBodyIndex));
+                    pnewrobot->_environmentBodyIndex = envBodyIndex;
 
                     {
-                        EnsureVectorSize(_vecbodies, bodyId + 1);
-                        _vecbodies.at(bodyId) = pnewrobot;
+                        EnsureVectorSize(_vecbodies, envBodyIndex + 1);
+                        _vecbodies.at(envBodyIndex) = pnewrobot;
                     }
                     {
                         const std::string& name = pnewrobot->GetName();
-                        _mapBodyNameIndex[name] = bodyId;
+                        _mapBodyNameIndex[name] = envBodyIndex;
                     }
                     {
                         const std::string& id = pnewrobot->GetId();
-                        _mapBodyIdIndex[id] = bodyId;
+                        _mapBodyIdIndex[id] = envBodyIndex;
                     }
 
                 }
@@ -3396,7 +3396,7 @@ protected:
                     continue;
                 }
                 const KinBody& body = *pbody;
-                const int bodyId = body.GetEnvironmentBodyIndex();
+                const int envBodyIndex = body.GetEnvironmentBodyIndex();
                 try {
                     KinBodyPtr pnewbody;
                     if( bCheckSharedResources ) {
@@ -3407,7 +3407,7 @@ protected:
                             BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size());
                             const KinBodyPtr& pNewBodyCandidate = _vecbodies.at(envBodyIndex);
                             if( !pNewBodyCandidate ) {
-                                RAVELOG_WARN_FORMAT("env=%d, a body (name=%s, body index=%d) in vecbodies is not initialized", GetId()%name%envBodyIndex);
+                                RAVELOG_WARN_FORMAT("env=%d, a body (name=%s, envBodyIndex=%d) in vecbodies is not initialized", GetId()%name%envBodyIndex);
                             }
                             else if (pNewBodyCandidate->GetKinematicsGeometryHash() == body.GetKinematicsGeometryHash() ) {
                                 pnewbody = pNewBodyCandidate;
@@ -3422,19 +3422,19 @@ protected:
                     else {
                         listToCopyState.push_back(pbody);
                     }
-                    pnewbody->_environmentBodyIndex = bodyId;
+                    pnewbody->_environmentBodyIndex = envBodyIndex;
 
                     {
-                        EnsureVectorSize(_vecbodies, bodyId + 1);
-                        _vecbodies.at(bodyId) = pnewbody;
+                        EnsureVectorSize(_vecbodies, envBodyIndex + 1);
+                        _vecbodies.at(envBodyIndex) = pnewbody;
                     }
                     {
                         const std::string& name = pnewbody->GetName();
-                        _mapBodyNameIndex[name] = bodyId;
+                        _mapBodyNameIndex[name] = envBodyIndex;
                     }
                     {
                         const std::string& id = pnewbody->GetId();
-                        _mapBodyIdIndex[id] = bodyId;
+                        _mapBodyIdIndex[id] = envBodyIndex;
                     }
                 }
                 catch(const std::exception &ex) {
@@ -3446,8 +3446,8 @@ protected:
             if( listToCopyState.size() > 0 ) {
                 for (const KinBodyPtr& pbody : listToCopyState) {
                     const KinBody& body = *pbody;
-                    const int bodyId = body.GetEnvironmentBodyIndex();
-                    KinBodyPtr pnewbody = _vecbodies.at(bodyId);
+                    const int envBodyIndex = body.GetEnvironmentBodyIndex();
+                    KinBodyPtr pnewbody = _vecbodies.at(envBodyIndex);
                     if( bCollisionCheckerChanged ) {
                         GetCollisionChecker()->InitKinBody(pnewbody);
                     }
@@ -3473,9 +3473,9 @@ protected:
             // now clone
             for (const KinBodyPtr& pbody : listToClone) {
                 const KinBody& body = *pbody;
-                const int bodyId = body.GetEnvironmentBodyIndex();
+                const int envBodyIndex = body.GetEnvironmentBodyIndex();
                 try {
-                    KinBodyPtr pnewbody = _vecbodies.at(bodyId);
+                    KinBodyPtr pnewbody = _vecbodies.at(envBodyIndex);
                     if( !!pnewbody ) {
                         pnewbody->Clone(pbody,options);
                     }
@@ -3487,8 +3487,8 @@ protected:
 
             for (const KinBodyPtr& pbody : listToClone) {
                 const KinBody& body = *pbody;
-                const int bodyId = body.GetEnvironmentBodyIndex();
-                KinBodyPtr pnewbody = _vecbodies.at(bodyId);
+                const int envBodyIndex = body.GetEnvironmentBodyIndex();
+                KinBodyPtr pnewbody = _vecbodies.at(envBodyIndex);
                 pnewbody->_ComputeInternalInformation();
                 GetCollisionChecker()->InitKinBody(pnewbody);
                 GetPhysicsEngine()->InitKinBody(pnewbody);
@@ -3502,8 +3502,8 @@ protected:
             // update the state after every body is initialized!
             for (const KinBodyPtr& pbody : listToClone) {
                 const KinBody& body = *pbody;
-                const int bodyId = body.GetEnvironmentBodyIndex();
-                KinBodyPtr pnewbody = _vecbodies.at(bodyId);
+                const int envBodyIndex = body.GetEnvironmentBodyIndex();
+                KinBodyPtr pnewbody = _vecbodies.at(envBodyIndex);
                 if( body.IsRobot() ) {
                     RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
                     RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
@@ -3521,9 +3521,9 @@ protected:
                 for (const KinBodyPtr& pbody : listToCopyState) {
                     const KinBody& body = *pbody;
                     if( body.IsRobot() ) {
-                        const int bodyId = body.GetEnvironmentBodyIndex();
+                        const int envBodyIndex = body.GetEnvironmentBodyIndex();
                         RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
-                        RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_vecbodies.at(bodyId));
+                        RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_vecbodies.at(envBodyIndex));
                         RobotBase::RobotStateSaver saver(poldrobot, KinBody::Save_GrabbedBodies);
                         saver.Restore(pnewrobot);
                     }
@@ -3702,19 +3702,19 @@ protected:
     {
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         const bool bRecycleId = !_environmentIndexRecyclePool.empty();
-        int bodyId = 0;
+        int envBodyIndex = 0;
         if (bRecycleId) {
             std::set<int>::iterator smallestIt = _environmentIndexRecyclePool.begin();
-            bodyId = *smallestIt;
+            envBodyIndex = *smallestIt;
             _environmentIndexRecyclePool.erase(smallestIt);
-            RAVELOG_DEBUG_FORMAT("env=%d, recycled body bodyId=%d for %s. %d remaining in pool", GetId()%bodyId%pbody->GetName()%_environmentIndexRecyclePool.size());
+            RAVELOG_DEBUG_FORMAT("env=%d, recycled body envBodyIndex=%d for %s. %d remaining in pool", GetId()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
         }
         else {
-            bodyId = _vecbodies.empty() ? 1 : _vecbodies.size(); // skip 0
-            RAVELOG_DEBUG_FORMAT("env=%d, assigned new body bodyId=%d for \"%s\", this should not happen unless total number of bodies in env keeps increasing", GetId()%bodyId%pbody->GetName());
+            envBodyIndex = _vecbodies.empty() ? 1 : _vecbodies.size(); // skip 0
+            RAVELOG_DEBUG_FORMAT("env=%d, assigned new body envBodyIndex=%d for \"%s\", this should not happen unless total number of bodies in env keeps increasing", GetId()%envBodyIndex%pbody->GetName());
         }
-        pbody->_environmentBodyIndex = bodyId;
-        return bodyId;
+        pbody->_environmentBodyIndex = envBodyIndex;
+        return envBodyIndex;
     }
 
     virtual void UnassignEnvironmentBodyIndex(KinBodyPtr pbody)
@@ -3724,13 +3724,13 @@ protected:
             RAVELOG_WARN_FORMAT("env=%d, body is nullptr", GetId());
             return;
         }
-        const int bodyId = pbody->_environmentBodyIndex;
-        if (0 < bodyId && bodyId < (int) _vecbodies.size()) {
-            _environmentIndexRecyclePool.insert(bodyId); // for recycle later
-            RAVELOG_DEBUG_FORMAT("env=%d, removed body name=\"%s\" (body index=%d), recycle body index later", GetId()%pbody->GetName()%pbody->_environmentBodyIndex);
+        const int envBodyIndex = pbody->_environmentBodyIndex;
+        if (0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()) {
+            _environmentIndexRecyclePool.insert(envBodyIndex); // for recycle later
+            RAVELOG_DEBUG_FORMAT("env=%d, removed body name=\"%s\" (environmentBodyIndex=%d), recycle body index later", GetId()%pbody->GetName()%pbody->_environmentBodyIndex);
         }
         else {
-            RAVELOG_WARN_FORMAT("env=%d, removed body name=\"%s\" (body index=%d, _vecbodies size=%d) is not valid. ", GetId()%pbody->GetName()%pbody->_environmentBodyIndex%_vecbodies.size());
+            RAVELOG_WARN_FORMAT("env=%d, removed body name=\"%s\" (environmentBodyIndex=%d, _vecbodies size=%d) is not valid. ", GetId()%pbody->GetName()%pbody->_environmentBodyIndex%_vecbodies.size());
         }
 
         pbody->_environmentBodyIndex = 0;
