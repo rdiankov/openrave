@@ -349,9 +349,6 @@ public:
         if( !!_pCurrentChecker ) {
             _pCurrentChecker->DestroyEnvironment();
         }
-
-        _mapBodyNameIndex.clear();
-        _mapBodyIdIndex.clear();
         
         std::vector<KinBodyPtr> vcallbackbodies;
         {
@@ -373,6 +370,10 @@ public:
                 }
             }
             _vecbodies.clear();
+
+            _mapBodyNameIndex.clear();
+            _mapBodyIdIndex.clear();
+
             _vPublishedBodies.clear();
             _nBodiesModifiedStamp++;
 
