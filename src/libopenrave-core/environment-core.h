@@ -3635,18 +3635,26 @@ protected:
     /// assuming _mutexInterfaces is locked
     virtual bool _CheckUniqueName(KinBodyConstPtr pbody, bool bDoThrow=false) const
     {
-        for (const KinBodyPtr& pExistingBody : _vecbodies) {
-            if (!pExistingBody) {
-                continue;
-            }
-            if(( pExistingBody != pbody) &&( pExistingBody->GetName() == pbody->GetName()) ) {
-                if( bDoThrow ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body %s does not have unique name"), GetId()%pbody->GetName(), ORE_BodyNameConflict);
-                }
-                return false;
-            }
+        const std::string& name = pbody->GetName();
+        const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
+        if (it == _mapBodyNameIndex.end()) {
+            return true;
         }
-        return true;
+        
+        const int envBodyIndex = it->second;
+        BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()); // if _mapBodyNameIndex contained invalid env body indexBody, it's a bug that _mapBodyNameIndex and _vecbodies are not in sync
+        
+        const KinBodyPtr& pExistingBody = _vecbodies.at(envBodyIndex);
+        BOOST_ASSERT(!!pExistingBody); // if _mapBodyNameIndex contained env body index of null KinBody, it's a bug that _mapBodyNameIndex and _vecbodies are not in sync
+
+        if (pExistingBody == pbody) {
+            return true; // found itself, this case is considered as ok (name is unique)
+        }
+
+        if( bDoThrow ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body (id=\"%s\", envBodyIndex=%d) has same name \"%s\" as existing body (id=\"%s\", envBodyIndex=%d)"), GetId()%pbody->GetId()%pbody->GetEnvironmentBodyIndex()%name%pExistingBody->GetId()%pExistingBody->GetEnvironmentBodyIndex(), ORE_BodyNameConflict);
+        }
+        return false;
     }
 
     /// \brief do not allow empty ids
@@ -3659,18 +3667,26 @@ protected:
             }
             return false;
         }
-        for (const KinBodyPtr& pExistingBody : _vecbodies) {
-            if (!pExistingBody) {
-                continue;
-            }
-            if(( pExistingBody != pbody) &&( pExistingBody->GetId() == inputBodyId) ) {
-                if( bDoThrow ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body '%s' does not have unique id '%s'"), GetId()%pbody->GetName()%pbody->GetId(), ORE_BodyIdConflict);
-                }
-                return false;
-            }
+        
+        const std::unordered_map<std::string, int>::const_iterator it = _mapBodyIdIndex.find(inputBodyId);
+        if (it == _mapBodyIdIndex.end()) {
+            return true;
         }
-        return true;
+        
+        const int envBodyIndex = it->second;
+        BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()); // if _mapBodyIdIndex contained invalid env body indexBody, it's a bug that _mapBodyIdIndex and _vecbodies are not in sync
+        
+        const KinBodyPtr& pExistingBody = _vecbodies.at(envBodyIndex);
+        BOOST_ASSERT(!!pExistingBody); // if _mapBodyIdIndex contained env body index of null KinBody, it's a bug that _mapBodyIdIndex and _vecbodies are not in sync
+
+        if (pExistingBody == pbody) {
+            return true; // found itself, this case is considered as ok (id is unique)
+        }
+
+        if( bDoThrow ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body (name=\"%s\", envBodyIndex=%d) has same id \"%s\" as existing body (name=\"%s\", envBodyIndex=%d)"), GetId()%pbody->GetId()%pbody->GetEnvironmentBodyIndex()%inputBodyId%pExistingBody->GetName()%pExistingBody->GetEnvironmentBodyIndex(), ORE_BodyIdConflict);
+        }
+        return false;
     }
 
     virtual bool _CheckUniqueName(SensorBaseConstPtr psensor, bool bDoThrow=false) const
