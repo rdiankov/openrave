@@ -140,6 +140,9 @@ public:
 
         _nBodiesModifiedStamp = 0;
 
+        _assignedBodySensorNameSuffix = 0;
+        _assignedBodyIdSuffix = 0;
+
         _fDeltaSimTime = 0.01f;
         _nCurSimTime = 0;
         _nSimStartTime = utils::GetMicroTime();
@@ -866,25 +869,31 @@ public:
 
         if( !_CheckUniqueName(KinBodyConstPtr(pbody), !!(addMode & IAM_StrictNameChecking)) ) {
             // continue to add random numbers until a unique name is found
-            string oldname=pbody->GetName(),newname;
-            for(int i = 0;; ++i) {
-                newname = str(boost::format("%s%d")%oldname%i);
-                pbody->SetName(newname);
-                if( utils::IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(pbody), false) ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, setting body name from %s -> %s due to conflict", GetId()%oldname%newname);
+            const string& oldName = pbody->GetName();
+            string newName;
+            while (true) {
+                newName = str(boost::format("%s%d")%oldName%_assignedBodySensorNameSuffix++);
+                pbody->SetName(newName);
+                // most likely unique, but have to double check
+                if( utils::IsValidName(newName) && _CheckUniqueName(KinBodyConstPtr(pbody),false) ) {
+                    if( !oldName.empty() ) {
+                        RAVELOG_DEBUG_FORMAT("env=%d, setting body name from %s -> %s due to conflict", GetId()%oldName%newName);
+                    }
                     break;
                 }
             }
         }
         if( !_CheckUniqueId(KinBodyConstPtr(pbody), !!(addMode & IAM_StrictIdChecking)) ) {
-            // continue to add random numbers until a unique name is found
-            string oldname=pbody->GetId(),newname;
-            for(int i = 0;; ++i) {
-                newname = str(boost::format("%s%d")%oldname%i);
-                pbody->SetId(newname);
-                if( utils::IsValidName(newname) && _CheckUniqueId(KinBodyConstPtr(pbody), false) ) {
-                    if( !oldname.empty() ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, setting body id from %s -> %s due to conflict (name is '%s')", GetId()%oldname%newname%pbody->GetName());
+            // continue to add random numbers until a unique id is found
+            const string& oldId = pbody->GetId();
+            string newId;
+            while (true) {
+                newId = str(boost::format("%s%d")%oldId%_assignedBodyIdSuffix++);
+                pbody->SetId(newId);
+                // most likely unique, but have to double check
+                if( utils::IsValidName(newId) && _CheckUniqueId(KinBodyConstPtr(pbody),false) ) {
+                    if( !oldId.empty() ) {
+                        RAVELOG_DEBUG_FORMAT("env=%d, setting body id from %s -> %s due to conflict", GetId()%oldId%newId);
                     }
                     break;
                 }
@@ -939,25 +948,31 @@ public:
 
         if( !_CheckUniqueName(KinBodyConstPtr(robot), !!(addMode & IAM_StrictNameChecking)) ) {
             // continue to add random numbers until a unique name is found
-            string oldname=robot->GetName(),newname;
-            for(int i = 0;; ++i) {
-                newname = str(boost::format("%s%d")%oldname%i);
-                robot->SetName(newname);
-                if( _CheckUniqueName(KinBodyConstPtr(robot),false) ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, setting robot name from %s -> %s due to conflict", GetId()%oldname%newname);
+            const string& oldName = robot->GetName();
+            string newName;
+            while (true) {
+                newName = str(boost::format("%s%d")%oldName%_assignedBodySensorNameSuffix++);
+                robot->SetName(newName);
+                // most likely unique, but have to double check
+                if( utils::IsValidName(newName) && _CheckUniqueName(KinBodyConstPtr(robot),false) ) {
+                    if( !oldName.empty() ) {
+                        RAVELOG_DEBUG_FORMAT("env=%d, setting body name from %s -> %s due to conflict", GetId()%oldName%newName);
+                    }
                     break;
                 }
             }
         }
         if( !_CheckUniqueId(KinBodyConstPtr(robot), !!(addMode & IAM_StrictIdChecking)) ) {
-            // continue to add random numbers until a unique name is found
-            string oldname=robot->GetId(),newname;
-            for(int i = 0;; ++i) {
-                newname = str(boost::format("%s%d")%oldname%i);
-                robot->SetId(newname);
-                if( _CheckUniqueId(KinBodyConstPtr(robot),false) ) {
-                    if( !oldname.empty() ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, setting robot id from %s -> %s due to conflict", GetId()%oldname%newname);
+            // continue to add random numbers until a unique id is found
+            const string& oldId = robot->GetId();
+            string newId;
+            while (true) {
+                newId = str(boost::format("%s%d")%oldId%_assignedBodyIdSuffix++);
+                robot->SetId(newId);
+                // most likely unique, but have to double check
+                if( utils::IsValidName(newId) && _CheckUniqueId(KinBodyConstPtr(robot),false) ) {
+                    if( !oldId.empty() ) {
+                        RAVELOG_DEBUG_FORMAT("env=%d, setting robot id from %s -> %s due to conflict", GetId()%oldId%newId);
                     }
                     break;
                 }
@@ -1011,11 +1026,16 @@ public:
 
         if( !_CheckUniqueName(SensorBaseConstPtr(psensor), !!(addMode & IAM_StrictNameChecking)) ) {
             // continue to add random numbers until a unique name is found
-            string oldname=psensor->GetName(),newname;
-            for(int i = 0;; ++i) {
-                newname = str(boost::format("%s%d")%oldname%i);
-                psensor->SetName(newname);
-                if( utils::IsValidName(newname) && _CheckUniqueName(SensorBaseConstPtr(psensor),false) ) {
+            const string& oldName = psensor->GetName();
+            string newName;
+            while (true) {
+                newName = str(boost::format("%s%d")%oldName%_assignedBodySensorNameSuffix++);
+                psensor->SetName(newName);
+                // most likely unique, but have to double check
+                if( utils::IsValidName(newName) && _CheckUniqueName(SensorBaseConstPtr(psensor),false) ) {
+                    if( !oldName.empty() ) {
+                        RAVELOG_DEBUG_FORMAT("env=%d, setting body name from %s -> %s due to conflict", GetId()%oldName%newName);
+                    }
                     break;
                 }
             }
@@ -4039,6 +4059,11 @@ protected:
     std::unordered_map<std::string, int> _mapBodyNameIndex; /// maps body name to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
     std::unordered_map<std::string, int> _mapBodyIdIndex; /// maps body id to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
 
+    std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. 
+
+    int _assignedBodySensorNameSuffix; // cache of suffix used to make body (robot) and sensor name unique in env
+    int _assignedBodyIdSuffix; // cache of suffix used to make body id unique in env
+
     list< std::pair<ModuleBasePtr, std::string> > _listModules;     ///< modules loaded in the environment and the strings they were intialized with. Initialization strings are used for cloning.
     list<SensorBasePtr> _listSensors;     ///< sensors loaded in the environment
     list<ViewerBasePtr> _listViewers;     ///< viewers loaded in the environment
@@ -4050,8 +4075,6 @@ protected:
 
     CollisionCheckerBasePtr _pCurrentChecker;
     PhysicsEngineBasePtr _pPhysicsEngine;
-
-    std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. 
 
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation
 
