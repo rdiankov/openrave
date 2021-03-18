@@ -536,6 +536,73 @@ AABB KinBody::Link::ComputeAABBFromTransform(const Transform& tLink) const
     return AABB(tLink.trans,Vector(0,0,0));
 }
 
+AABB KinBody::Link::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const
+{
+    return ComputeAABBForGeometryGroupFromTransform(geomgroupname, Transform());
+}
+
+AABB KinBody::Link::ComputeAABBForGeometryGroup(const std::string& geomgroupname) const
+{
+    return ComputeAABBForGeometryGroupFromTransform(geomgroupname, _info._t);
+}
+
+AABB KinBody::Link::ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tLink) const
+{
+    const std::vector<KinBody::GeometryInfoPtr>& vgeoms = GetGeometriesFromGroup(geomgroupname);
+    if( vgeoms.size() == 1 ) {
+        return vgeoms.front()->ComputeAABB(tLink);
+    }
+    else if( vgeoms.size() > 1 ) {
+        Vector vmin, vmax;
+        bool binitialized = false;
+        AABB ab;
+        FOREACHC(itgeom, vgeoms) {
+            ab = (*itgeom)->ComputeAABB(tLink);
+            if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
+                continue;
+            }
+            Vector vnmin = ab.pos - ab.extents;
+            Vector vnmax = ab.pos + ab.extents;
+            if( !binitialized ) {
+                vmin = vnmin;
+                vmax = vnmax;
+                binitialized = true;
+            }
+            else {
+                if( vmin.x > vnmin.x ) {
+                    vmin.x = vnmin.x;
+                }
+                if( vmin.y > vnmin.y ) {
+                    vmin.y = vnmin.y;
+                }
+                if( vmin.z > vnmin.z ) {
+                    vmin.z = vnmin.z;
+                }
+                if( vmax.x < vnmax.x ) {
+                    vmax.x = vnmax.x;
+                }
+                if( vmax.y < vnmax.y ) {
+                    vmax.y = vnmax.y;
+                }
+                if( vmax.z < vnmax.z ) {
+                    vmax.z = vnmax.z;
+                }
+            }
+        } // end FOREACHC
+        if( !binitialized ) {
+            ab.pos = tLink.trans;
+            ab.extents = Vector(0,0,0);
+        }
+        else {
+            ab.pos = (dReal)0.5 * (vmin + vmax);
+            ab.extents = vmax - ab.pos;
+        }
+        return ab;
+    }
+    // have to at least return the correct position
+    return AABB(tLink.trans, Vector(0, 0, 0));
+}
+
 void KinBody::Link::serialize(std::ostream& o, int options) const
 {
     o << _index << " ";
