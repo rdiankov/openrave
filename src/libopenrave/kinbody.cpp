@@ -5891,18 +5891,23 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // delete readableInterface
+    std::vector<std::string> readableInterfaceKeys;
+    readableInterfaceKeys.reserve(GetReadableInterfaces().size());
     FOREACH(itExisting, GetReadableInterfaces()) {
+        readableInterfaceKeys.push_back(itExisting->first);
+    }
+    FOREACH(itExistingKey, readableInterfaceKeys) {
         bool bFound = false;
         FOREACHC(it, info._mReadableInterfaces) {
-            if (itExisting->first == it->first) {
+            if (*itExistingKey == it->first) {
                 bFound = true;
                 break;
             }
         }
         if (!bFound) {
-            ClearReadableInterface(itExisting->first);
+            ClearReadableInterface(*itExistingKey);
             updateFromInfoResult = UFIR_Success;
-            RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s removed", _id%itExisting->first);
+            RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s removed", _id%(*itExistingKey));
         }
     }
     return updateFromInfoResult;
