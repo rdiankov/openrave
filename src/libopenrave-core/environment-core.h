@@ -869,7 +869,7 @@ public:
 
         if( !_CheckUniqueName(KinBodyConstPtr(pbody), !!(addMode & IAM_StrictNameChecking)) ) {
             // continue to add random numbers until a unique name is found
-            const string& oldName = pbody->GetName();
+            const string oldName = pbody->GetName();
             string newName;
             while (true) {
                 newName = str(boost::format("%s%d")%oldName%_assignedBodySensorNameSuffix++);
@@ -881,11 +881,12 @@ public:
                     }
                     break;
                 }
+                RAVELOG_INFO_FORMAT("env=%d, tried renaming body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%oldName%newName);
             }
         }
         if( !_CheckUniqueId(KinBodyConstPtr(pbody), !!(addMode & IAM_StrictIdChecking)) ) {
             // continue to add random numbers until a unique id is found
-            const string& oldId = pbody->GetId();
+            const string oldId = pbody->GetId();
             string newId;
             while (true) {
                 newId = str(boost::format("%s%d")%oldId%_assignedBodyIdSuffix++);
@@ -897,6 +898,7 @@ public:
                     }
                     break;
                 }
+                RAVELOG_INFO_FORMAT("env=%d, tried changed id for body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%oldId%newId);
             }
         }
         {
@@ -948,7 +950,7 @@ public:
 
         if( !_CheckUniqueName(KinBodyConstPtr(robot), !!(addMode & IAM_StrictNameChecking)) ) {
             // continue to add random numbers until a unique name is found
-            const string& oldName = robot->GetName();
+            const string oldName = robot->GetName();
             string newName;
             while (true) {
                 newName = str(boost::format("%s%d")%oldName%_assignedBodySensorNameSuffix++);
@@ -960,11 +962,12 @@ public:
                     }
                     break;
                 }
+                RAVELOG_INFO_FORMAT("env=%d, tried renaming body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%oldName%newName);
             }
         }
         if( !_CheckUniqueId(KinBodyConstPtr(robot), !!(addMode & IAM_StrictIdChecking)) ) {
             // continue to add random numbers until a unique id is found
-            const string& oldId = robot->GetId();
+            const string oldId = robot->GetId();
             string newId;
             while (true) {
                 newId = str(boost::format("%s%d")%oldId%_assignedBodyIdSuffix++);
@@ -1026,7 +1029,7 @@ public:
 
         if( !_CheckUniqueName(SensorBaseConstPtr(psensor), !!(addMode & IAM_StrictNameChecking)) ) {
             // continue to add random numbers until a unique name is found
-            const string& oldName = psensor->GetName();
+            const string oldName = psensor->GetName();
             string newName;
             while (true) {
                 newName = str(boost::format("%s%d")%oldName%_assignedBodySensorNameSuffix++);
@@ -1038,6 +1041,7 @@ public:
                     }
                     break;
                 }
+                RAVELOG_INFO_FORMAT("env=%d, tried renaming body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%oldName%newName);
             }
         }
         // no id for sensor right now
