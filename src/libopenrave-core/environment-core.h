@@ -892,9 +892,7 @@ public:
         }
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            SetEnvironmentId(pbody);
-            
-            const int newBodyIndex = pbody->GetEnvironmentBodyIndex();
+            const int newBodyIndex = AssignEnvironmentBodyIndex(pbody);
             {
                 EnsureVectorSize(_vecbodies, newBodyIndex+1);
                 _vecbodies.at(newBodyIndex) = pbody;
@@ -902,10 +900,12 @@ public:
             {
                 const std::string& name = pbody->GetName();
                 _mapBodyNameIndex[name] = newBodyIndex;
+                //RAVELOG_DEBUG_FORMAT("env=%d: name=%s -> bodyIndex=%d, _mapBodyNameIndex has %d elements", GetId()%name%newBodyIndex%_mapBodyNameIndex.size());
             }
             {
                 const std::string& id = pbody->GetId();
                 _mapBodyIdIndex[id] = newBodyIndex;
+                //RAVELOG_DEBUG_FORMAT("env=%d: id=%s -> bodyIndex=%d, _mapBodyIdIndex has %d elements", GetId()%id%newBodyIndex%_mapBodyIdIndex.size());
             }
             _nBodiesModifiedStamp++;
         }
@@ -965,9 +965,7 @@ public:
         }
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            SetEnvironmentId(robot);
-            
-            const int newBodyIndex = robot->GetEnvironmentBodyIndex();
+            const int newBodyIndex = AssignEnvironmentBodyIndex(robot);
             {
                 EnsureVectorSize(_vecbodies, newBodyIndex+1);
                 _vecbodies.at(newBodyIndex) = robot;
@@ -975,10 +973,12 @@ public:
             {
                 const std::string& name = robot->GetName();
                 _mapBodyNameIndex[name] = newBodyIndex;
+                //RAVELOG_DEBUG_FORMAT("env=%d: name=%s -> bodyIndex=%d, _mapBodyNameIndex has %d elements", GetId()%name%newBodyIndex%_mapBodyNameIndex.size());
             }
             {
                 const std::string& id = robot->GetId();
                 _mapBodyIdIndex[id] = newBodyIndex;
+                //RAVELOG_DEBUG_FORMAT("env=%d: id=%s -> bodyIndex=%d, _mapBodyIdIndex has %d elements", GetId()%id%newBodyIndex%_mapBodyIdIndex.size());
             }
             
 
@@ -1119,6 +1119,10 @@ public:
 
     KinBodyPtr GetKinBody(const std::string& pname) const override
     {
+        if (pname.empty()) {
+            //RAVELOG_VERBOSE_FORMAT("env=%d, empty name is used to find body. Maybe caller has to be fixed.", GetId());
+            return KinBodyPtr();
+        }
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if (!_vecbodies.empty()) {
             const int envBodyIndex = _FindBodyIndexByName(pname);
@@ -1126,8 +1130,7 @@ public:
             if (!!pbody) {
                 return pbody;
             }
-
-            RAVELOG_WARN_FORMAT("env=%d, name %s (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%pname%envBodyIndex);
+            RAVELOG_VERBOSE_FORMAT("env=%d, name %s (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%pname%envBodyIndex);
         }
         return KinBodyPtr();
     }
@@ -3125,6 +3128,7 @@ public:
         const int envBodyIndex = it->second;
         _mapBodyNameIndex.erase(it);
         _mapBodyNameIndex[newName] = envBodyIndex;
+        RAVELOG_VERBOSE_FORMAT("env=%d, body \"%s\" is renamed to \"%s\"", GetId()%oldName%newName);
     }
 
     void NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) override
@@ -3137,6 +3141,7 @@ public:
         const int envBodyIndex = it->second;
         _mapBodyIdIndex.erase(it);
         _mapBodyIdIndex[newId] = envBodyIndex;
+        RAVELOG_VERBOSE_FORMAT("env=%d, body id changed from \"%s\" to \"%s\"", GetId()%oldId%newId);
     }
 
 protected:
@@ -3171,15 +3176,13 @@ protected:
 
         // invalidate cache
         if (_mapBodyNameIndex.erase(name) == 0) {
-            RAVELOG_WARN_FORMAT("env=%d, pbody of name %s not found in _mapBodyNameIndex!", GetId()%name);
+            RAVELOG_WARN_FORMAT("env=%d, pbody of name %s not found in _mapBodyNameIndex of size %d, this should not happen!", GetId()%name%_mapBodyNameIndex.size());
         }
-        {
-            const std::string& id = pbody->GetId();
-            if (_mapBodyIdIndex.erase(id) == 0) {
-                RAVELOG_WARN_FORMAT("env=%d, pbody of id %s not found in _mapBodyIdIndex!", GetId()%id);
-            }
+        const std::string& id = pbody->GetId();
+        if (_mapBodyIdIndex.erase(id) == 0) {
+            RAVELOG_WARN_FORMAT("env=%d, pbody of id %s not found in _mapBodyIdIndex of size %d, this should not happen!", GetId()%id%_mapBodyIdIndex.size());
         }
-        RemoveEnvironmentId(pbody);
+        UnassignEnvironmentBodyIndex(pbody);
         pbody.reset();
 
         _nBodiesModifiedStamp++;
@@ -3695,7 +3698,7 @@ protected:
         return true;
     }
 
-    virtual void SetEnvironmentId(KinBodyPtr pbody)
+    virtual int AssignEnvironmentBodyIndex(KinBodyPtr pbody)
     {
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         const bool bRecycleId = !_environmentIndexRecyclePool.empty();
@@ -3704,18 +3707,17 @@ protected:
             std::set<int>::iterator smallestIt = _environmentIndexRecyclePool.begin();
             bodyId = *smallestIt;
             _environmentIndexRecyclePool.erase(smallestIt);
-            //RAVELOG_INFO_FORMAT("env=%d, recycled body bodyId=%d for %s. %d remaining", GetId()%bodyId%pbody->GetName()%_environmentIndexRecyclePool.size());
+            RAVELOG_DEBUG_FORMAT("env=%d, recycled body bodyId=%d for %s. %d remaining in pool", GetId()%bodyId%pbody->GetName()%_environmentIndexRecyclePool.size());
         }
         else {
             bodyId = _vecbodies.empty() ? 1 : _vecbodies.size(); // skip 0
-            // cannot use _vecbodies here, at this point, _vecbodies may not be updated
-            RAVELOG_DEBUG_FORMAT("env=%d, assigned new body bodyId=%d for %s, this should not happen unless total number of bodies in env keeps increasing", GetId()%bodyId%pbody->GetName());
+            RAVELOG_DEBUG_FORMAT("env=%d, assigned new body bodyId=%d for \"%s\", this should not happen unless total number of bodies in env keeps increasing", GetId()%bodyId%pbody->GetName());
         }
-        //BOOST_ASSERT( _vecbodies.size() < bodyId + 1 || !_vecbodies.at(bodyId).lock());
-        pbody->_environmentBodyIndex=bodyId;
+        pbody->_environmentBodyIndex = bodyId;
+        return bodyId;
     }
 
-    virtual void RemoveEnvironmentId(KinBodyPtr pbody)
+    virtual void UnassignEnvironmentBodyIndex(KinBodyPtr pbody)
     {
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         if (!pbody) {
@@ -3724,12 +3726,11 @@ protected:
         }
         const int bodyId = pbody->_environmentBodyIndex;
         if (0 < bodyId && bodyId < (int) _vecbodies.size()) {
-            _vecbodies.at(bodyId).reset();
             _environmentIndexRecyclePool.insert(bodyId); // for recycle later
-            RAVELOG_VERBOSE_FORMAT("env=%d, removed body name=%s (body index=%d), recycle body index later", GetId()%pbody->GetName()%pbody->_environmentBodyIndex);
+            RAVELOG_DEBUG_FORMAT("env=%d, removed body name=\"%s\" (body index=%d), recycle body index later", GetId()%pbody->GetName()%pbody->_environmentBodyIndex);
         }
         else {
-            RAVELOG_WARN_FORMAT("env=%d, removed body name=%s (body index=%d, _vecbodies size=%d) is not valid. ", GetId()%pbody->GetName()%pbody->_environmentBodyIndex%_vecbodies.size());
+            RAVELOG_WARN_FORMAT("env=%d, removed body name=\"%s\" (body index=%d, _vecbodies size=%d) is not valid. ", GetId()%pbody->GetName()%pbody->_environmentBodyIndex%_vecbodies.size());
         }
 
         pbody->_environmentBodyIndex = 0;
