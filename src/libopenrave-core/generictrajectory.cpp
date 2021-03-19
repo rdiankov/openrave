@@ -562,10 +562,9 @@ public:
                 WriteBinaryString(O, itReadableInterface->first);  // readable interface id
 
                 // try to serialize to json first
-                ReadablePtr pReadable = itReadableInterface->second;
-                if (!!pReadable) {
+                if (!!itReadableInterface->second) {
                     rapidjson::Value rReadable;
-                    if( pReadable->SerializeJSON(rReadable, document.GetAllocator(), fUnitScale, zerooptions) ) {
+                    if( itReadableInterface->second->SerializeJSON(rReadable, document.GetAllocator(), fUnitScale, zerooptions) ) {
                         WriteBinaryString(O, rReadable.GetString());
                         continue;
                     }
@@ -575,7 +574,7 @@ public:
                         xmlreaders::StreamXMLWriterPtr writer;
 
                         // try to serialize to HierarchicalXML
-                        xmlreaders::HierarchicalXMLReadablePtr pHierarchical = OPENRAVE_DYNAMIC_POINTER_CAST<xmlreaders::HierarchicalXMLReadable>(pReadable);
+                        xmlreaders::HierarchicalXMLReadablePtr pHierarchical = OPENRAVE_DYNAMIC_POINTER_CAST<xmlreaders::HierarchicalXMLReadable>(itReadableInterface->second);
                         if( !!pHierarchical ) {
                             writer.reset(new xmlreaders::StreamXMLWriter("root")); // need to parse with xml, so need a root
                             pHierarchical->SerializeXML(writer, options);
@@ -587,7 +586,7 @@ public:
                         }
                         else {
                             writer.reset(new xmlreaders::StreamXMLWriter(std::string()));
-                            if( pReadable->SerializeXML(writer, zerooptions) ) {
+                            if( itReadableInterface->second->SerializeXML(writer, zerooptions) ) {
                                 ss.clear();
                                 ss.str(std::string());
                                 writer->Serialize(ss);
