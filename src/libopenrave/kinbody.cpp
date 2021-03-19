@@ -759,6 +759,13 @@ void KinBody::SetName(const std::string& newname)
             ss.get(buf,0);
             itgroup->name = str(boost::format("%s %s %s")%grouptype%newname%buf.str());
         }
+        if (GetEnvironmentBodyIndex() > 0) {
+            // need to update some cache stored in env, but only if this body is added to env.
+            // otherwise, we may modify the cache for origbody unexpectedly in the following scenario
+            // 1. clonebody = origbody.Clone()
+            // 2. clonebody.SetName('cloned') // this shouldn't cause cache in env to be modified for origbody
+            GetEnv()->NotifyKinBodyNameChanged(_name, newname);
+        }
         _name = newname;
         _PostprocessChangedParameters(Prop_Name);
     }
@@ -768,6 +775,9 @@ void KinBody::SetId(const std::string& newid)
 {
     // allow empty id to be set
     if( _id != newid ) {
+        if (GetEnvironmentBodyIndex() > 0) {
+            GetEnv()->NotifyKinBodyIdChanged(_id, newid);
+        }
         _id = newid;
     }
 }
@@ -1793,6 +1803,126 @@ AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnly
 AABB KinBody::ComputeLocalAABB(bool bEnabledOnlyLinks) const
 {
     return ComputeAABBFromTransform(Transform(), bEnabledOnlyLinks);
+}
+
+AABB KinBody::ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks) const
+{
+    Vector vmin, vmax;
+    bool binitialized=false;
+    AABB ab;
+    FOREACHC(itlink,_veclinks) {
+        if( bEnabledOnlyLinks && !(*itlink)->IsEnabled() ) {
+            continue;
+        }
+        ab = (*itlink)->ComputeAABBForGeometryGroup(geomgroupname);
+        if((ab.extents.x == 0)&&(ab.extents.y == 0)&&(ab.extents.z == 0)) {
+            continue;
+        }
+        Vector vnmin = ab.pos - ab.extents;
+        Vector vnmax = ab.pos + ab.extents;
+        if( !binitialized ) {
+            vmin = vnmin;
+            vmax = vnmax;
+            binitialized = true;
+        }
+        else {
+            if( vmin.x > vnmin.x ) {
+                vmin.x = vnmin.x;
+            }
+            if( vmin.y > vnmin.y ) {
+                vmin.y = vnmin.y;
+            }
+            if( vmin.z > vnmin.z ) {
+                vmin.z = vnmin.z;
+            }
+            if( vmax.x < vnmax.x ) {
+                vmax.x = vnmax.x;
+            }
+            if( vmax.y < vnmax.y ) {
+                vmax.y = vnmax.y;
+            }
+            if( vmax.z < vnmax.z ) {
+                vmax.z = vnmax.z;
+            }
+        }
+    }
+    if( !binitialized ) {
+        ab.pos = GetTransform().trans;
+        ab.extents = Vector(0,0,0);
+    }
+    else {
+        ab.pos = (dReal)0.5 * (vmin + vmax);
+        ab.extents = vmax - ab.pos;
+    }
+    return ab;
+}
+
+AABB KinBody::ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tBody, bool bEnabledOnlyLinks) const
+{
+    Vector vmin, vmax;
+    bool binitialized=false;
+    AABB ablocal;
+    Transform tConvertToNewFrame = tBody*GetTransform().inverse();
+    FOREACHC(itlink,_veclinks) {
+        if( bEnabledOnlyLinks && !(*itlink)->IsEnabled() ) {
+            continue;
+        }
+        ablocal = (*itlink)->ComputeLocalAABBForGeometryGroup(geomgroupname);
+        if( ablocal.extents.x == 0 && ablocal.extents.y == 0 && ablocal.extents.z == 0 ) {
+            continue;
+        }
+
+        Transform tlink = tConvertToNewFrame*(*itlink)->GetTransform();
+        TransformMatrix mlink(tlink);
+        Vector projectedExtents(RaveFabs(mlink.m[0]*ablocal.extents[0]) + RaveFabs(mlink.m[1]*ablocal.extents[1]) + RaveFabs(mlink.m[2]*ablocal.extents[2]),
+                                RaveFabs(mlink.m[4]*ablocal.extents[0]) + RaveFabs(mlink.m[5]*ablocal.extents[1]) + RaveFabs(mlink.m[6]*ablocal.extents[2]),
+                                RaveFabs(mlink.m[8]*ablocal.extents[0]) + RaveFabs(mlink.m[9]*ablocal.extents[1]) + RaveFabs(mlink.m[10]*ablocal.extents[2]));
+        Vector vWorldPos = tlink * ablocal.pos;
+
+        Vector vnmin = vWorldPos - projectedExtents;
+        Vector vnmax = vWorldPos + projectedExtents;
+        if( !binitialized ) {
+            vmin = vnmin;
+            vmax = vnmax;
+            binitialized = true;
+        }
+        else {
+            if( vmin.x > vnmin.x ) {
+                vmin.x = vnmin.x;
+            }
+            if( vmin.y > vnmin.y ) {
+                vmin.y = vnmin.y;
+            }
+            if( vmin.z > vnmin.z ) {
+                vmin.z = vnmin.z;
+            }
+            if( vmax.x < vnmax.x ) {
+                vmax.x = vnmax.x;
+            }
+            if( vmax.y < vnmax.y ) {
+                vmax.y = vnmax.y;
+            }
+            if( vmax.z < vnmax.z ) {
+                vmax.z = vnmax.z;
+            }
+        }
+    }
+
+    AABB ab;
+    if( !binitialized ) {
+        ab.pos = GetTransform().trans;
+        ab.extents = Vector(0,0,0);
+    }
+    else {
+        ab.pos = (dReal)0.5 * (vmin + vmax);
+        ab.extents = vmax - ab.pos;
+    }
+    return ab;
+}
+
+AABB KinBody::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks) const
+{
+    return ComputeAABBForGeometryGroupFromTransform(geomgroupname, Transform(), bEnabledOnlyLinks);
 }
 
 Vector KinBody::GetCenterOfMass() const
@@ -5766,7 +5896,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         else {
             RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());
         }
-        _id = info._id;
+        SetId(info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
