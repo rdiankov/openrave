@@ -5891,25 +5891,27 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // delete readableInterface
-    std::vector<std::string> readableInterfaceKeys;
-    readableInterfaceKeys.reserve(GetReadableInterfaces().size());
-    FOREACH(itExisting, GetReadableInterfaces()) {
-        readableInterfaceKeys.push_back(itExisting->first);
-    }
-    FOREACH(itExistingKey, readableInterfaceKeys) {
-        bool bFound = false;
-        FOREACHC(it, info._mReadableInterfaces) {
-            if (*itExistingKey == it->first) {
-                bFound = true;
+    bool bChanged = true;
+    while(bChanged) {
+        bChanged = false;
+        FOREACH(itExisting, GetReadableInterfaces()) { // the loop here might look inefficient, but this is to avoid allocation. should be faster in most of the cases.
+            bool bFound = false;
+            FOREACHC(it, info._mReadableInterfaces) {
+                if (itExisting->first == it->first) {
+                    bFound = true;
+                    break;
+                }
+            }
+            if (!bFound) {
+                ClearReadableInterface(itExisting->first);
+                updateFromInfoResult = UFIR_Success;
+                RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s removed", _id%itExisting->first);
+                bChanged = true;
                 break;
             }
         }
-        if (!bFound) {
-            ClearReadableInterface(*itExistingKey);
-            updateFromInfoResult = UFIR_Success;
-            RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s removed", _id%(*itExistingKey));
-        }
     }
+    
     return updateFromInfoResult;
 }
 
