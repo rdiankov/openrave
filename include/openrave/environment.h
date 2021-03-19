@@ -529,7 +529,7 @@ public:
     virtual void UpdatePublishedBodies(uint64_t timeout=0) = 0;
 
     /// Get the corresponding body from its unique network id
-    virtual KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) = 0;
+    virtual KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) const = 0;
 
     /// Get the corresponding body from its unique network id
     inline KinBodyPtr GetBodyFromEnvironmentId(int bodyIndex) RAVE_DEPRECATED {

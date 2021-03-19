@@ -4883,16 +4883,37 @@ bool KinBody::IsAttached(const KinBody &body) const
 
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
-    setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+    const bool thisInInput = setAttached.find(boost::const_pointer_cast<KinBody>(shared_kinbody_const())) != setAttached.end();
+
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        // by spec "including this body.", include this body
+        // vAttached is not sorted, so cannot do binary search
+        if( !thisInInput ) {
+            setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+        }
+        return;
+    }
 
     std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
-    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    const EnvironmentBase& env = *GetEnv();
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+
+    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
+    for (const KinBodyConstPtr& pbody : setAttached) {
+        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
+    }
+    // by spec "including this body.", include this body
+    // vAttached is not sorted, so cannot do binary search
+    if( !thisInInput ) {
+        setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+    }
+
     int numAttached = _GetNumAttached(vAttachedVisited);
     if( numAttached ) {
-        EnvironmentBase& env = *GetEnv();
         for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
-            if (vAttachedVisited[bodyIndex] == 1 ) {
+            if (vAttachedVisited[bodyIndex] == 1) {
                 KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
                 if( !!pbody ) {
                     setAttached.insert(setAttached.end(), pbody);
@@ -4904,13 +4925,35 @@ void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 
 void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 {
-    setAttached.insert(shared_kinbody_const());
+    const bool thisInInput = setAttached.find(shared_kinbody_const()) != setAttached.end();
+
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        // by spec "including this body.", include this body
+        // vAttached is not sorted, so cannot do binary search
+        if( !thisInInput ) {
+            setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+        }
+        return;
+    }
 
     std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
-    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    const EnvironmentBase& env = *GetEnv();
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+
+    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
+    for (const KinBodyConstPtr& pbody : setAttached) {
+        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
+    }
+    // by spec "including this body.", include this body
+    // vAttached is not sorted, so cannot do binary search
+    if( !thisInInput ) {
+        setAttached.insert(shared_kinbody_const());
+    }
+
     int numAttached = _GetNumAttached(vAttachedVisited);
     if( numAttached ) {
-        EnvironmentBase& env = *GetEnv();
         for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
             if (vAttachedVisited[bodyIndex] == 1) {
                 KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
@@ -4924,24 +4967,31 @@ void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 
 void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 {
-    // by spec "including this body.", include this body
-    // vAttached is not sorted, so cannot do binary search
-    if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
-        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
-    }
+    const bool thisInInput = !vAttached.empty() && find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) != vAttached.end();
 
     // early exist, probably this is the case most of the time
     if (_listAttachedBodies.empty()) {
+        // by spec "including this body.", include this body
+        // vAttached is not sorted, so cannot do binary search
+        if( !thisInInput ) {
+            vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+        }
         return;
     }
 
     std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
-    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    const EnvironmentBase& env = *GetEnv();
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
     // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
     for (const KinBodyConstPtr& pbody : vAttached) {
         vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
+    }
+    // by spec "including this body.", include this body
+    // vAttached is not sorted, so cannot do binary search
+    if( !thisInInput ) {
+        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     }
 
     {
@@ -4952,7 +5002,6 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
         vAttached.reserve(vAttached.size() + numAttached);
     }
 
-    EnvironmentBase& env = *GetEnv();
     for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
         // 0 means not attached, -1 means it was already in original vAttached so skip
         if (vAttachedVisited[bodyIndex] == 1) {
@@ -4966,24 +5015,31 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 
 void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
 {
-    // by spec "including this body.", include this body
-    // vAttached is not sorted, so cannot do binary search
-    if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
-        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
-    }
+    const bool thisInInput = !vAttached.empty() && find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) != vAttached.end();
 
     // early exist, probably this is the case most of the time
     if (_listAttachedBodies.empty()) {
+        // by spec "including this body.", include this body
+        // vAttached is not sorted, so cannot do binary search
+        if( !thisInInput ) {
+            vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+        }
         return;
     }
 
     std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
-    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    const EnvironmentBase& env = *GetEnv();
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
     // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
     for (const KinBodyConstPtr& pbody : vAttached) {
         vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
+    }
+    // by spec "including this body.", include this body
+    // vAttached is not sorted, so cannot do binary search
+    if( !thisInInput ) {
+        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     }
 
     {
@@ -4994,7 +5050,6 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
         vAttached.reserve(vAttached.size() + numAttached);
     }
 
-    EnvironmentBase& env = *GetEnv();
     for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
         // 0 means not attached, -1 means it was already in original vAttached so skip
         if (vAttachedVisited[bodyIndex] == 1) {

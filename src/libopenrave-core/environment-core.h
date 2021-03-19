@@ -2507,7 +2507,7 @@ public:
         return handles;
     }
 
-    KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) override
+    KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) const override
     {
         std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if (0 < bodyIndex && bodyIndex < (int) _vecbodies.size()) {
