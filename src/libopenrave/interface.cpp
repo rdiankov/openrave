@@ -314,25 +314,10 @@ bool InterfaceBase::UpdateReadableInterfaces(const std::map<std::string, Readabl
     FOREACH(it, newReadableInterfaces) {
         READERSMAP::iterator itExisting = __mapReadableInterfaces.find(it->first);
         if( itExisting != __mapReadableInterfaces.end() ) {
-            ReadablePtr pExistingReadable = itExisting->second;
             if( !!it->second ) {
-                if( !!pExistingReadable ) {
-                    if ( (*(it->second)) != (*pExistingReadable)) {
-                        rapidjson::Document docReadable;
-                        dReal fUnitScale = 1.0;
-                        int options = 0;
-                        it->second->SerializeJSON(docReadable, docReadable.GetAllocator(), fUnitScale, options);
-                        pExistingReadable->DeserializeJSON(docReadable, fUnitScale);
-                        bChanged = true;
-                        RAVELOG_VERBOSE_FORMAT("readable interface %s changed", it->first);
-                    }
-                }
-                else {
-                    // null pointer was stored. shoud not come to here.
-                    __mapReadableInterfaces[it->first] = it->second;
-                    bChanged = true;
-                    RAVELOG_WARN_FORMAT("existing readable interface %s was null. overwriting", it->first);
-                }
+                itExisting->second = it->second; // should we make a clone?
+                bChanged = true;
+                RAVELOG_VERBOSE_FORMAT("readable interface %s changed", it->first);
             }
             else {
                 // remove when null is given
