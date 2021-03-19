@@ -20,13 +20,13 @@
 #include "ravep.h"
 #include "colladaparser/colladacommon.h"
 #include "jsonparser/jsoncommon.h"
-#include <openrave/utils.h>
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
 #endif
 
 #include <unordered_map>
+#include <mutex>
 #include <shared_mutex>
 
 #include <pcrecpp.h>
@@ -58,6 +58,39 @@ inline void EnsureVectorSize(std::vector<T>& vec, size_t size)
     }
 }
 
+
+
+class TimedUniqueLock : public std::unique_lock<std::timed_mutex> {
+public:
+    /**
+     * Try to lock a mutex for a given duration if the duration is a positive value. Otherwise it waits for the lock without a timeout.
+     */
+    TimedUniqueLock(std::timed_mutex& mutex, int64_t timeoutus)
+        : std::unique_lock<std::timed_mutex>(mutex, std::defer_lock) {
+        if( timeoutus >= 0 ) {
+            this->try_lock_for(std::chrono::microseconds(timeoutus));
+        }
+        else {
+            this->lock();
+        }
+    }
+};
+
+class TimedSharedLock : public std::shared_lock<std::shared_timed_mutex> {
+public:
+    /**
+     * Try to lock a mutex for a given duration if the duration is a positive value. Otherwise it waits for the lock without a timeout.
+     */
+    TimedSharedLock(std::shared_timed_mutex& mutex, int64_t timeoutus)
+        : std::shared_lock<std::shared_timed_mutex>(mutex, std::defer_lock) {
+        if( timeoutus >= 0 ) {
+            this->try_lock_for(std::chrono::microseconds(timeoutus));
+        }
+        else {
+            this->lock();
+        }
+    }
+};
 
 class Environment : public EnvironmentBase
 {
@@ -478,7 +511,7 @@ public:
             }
         }
         else {
-            utils::TimedSharedLock lock(_mutexInterfaces, timeout);
+            TimedSharedLock lock(_mutexInterfaces, timeout);
             if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
@@ -1511,7 +1544,7 @@ public:
             }
         }
         else {
-            utils::TimedSharedLock lock(_mutexInterfaces, timeout);
+            TimedSharedLock lock(_mutexInterfaces, timeout);
             if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
@@ -1538,7 +1571,7 @@ public:
             }
         }
         else {
-            utils::TimedSharedLock lock(_mutexInterfaces, timeout);
+            TimedSharedLock lock(_mutexInterfaces, timeout);
             if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
@@ -1559,7 +1592,7 @@ public:
             _GetSensors(vsensors);
         }
         else {
-            utils::TimedSharedLock lock(_mutexInterfaces, timeout);
+            TimedSharedLock lock(_mutexInterfaces, timeout);
             if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
@@ -2530,7 +2563,7 @@ public:
             vbodies = _vPublishedBodies;
         }
         else {
-            utils::TimedSharedLock lock(_mutexInterfaces, timeout);
+            TimedSharedLock lock(_mutexInterfaces, timeout);
             if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
@@ -2550,7 +2583,7 @@ public:
             }
         }
         else {
-            utils::TimedSharedLock lock(_mutexInterfaces, timeout);
+            TimedSharedLock lock(_mutexInterfaces, timeout);
             if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
@@ -2577,7 +2610,7 @@ public:
             }
         }
         else {
-            utils::TimedSharedLock lock(_mutexInterfaces, timeout);
+            TimedSharedLock lock(_mutexInterfaces, timeout);
             if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
@@ -2607,7 +2640,7 @@ public:
             }
         }
         else {
-            utils::TimedSharedLock lock(_mutexInterfaces, timeout);
+            TimedSharedLock lock(_mutexInterfaces, timeout);
             if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
@@ -2632,7 +2665,7 @@ public:
             _UpdatePublishedBodies();
         }
         else {
-            utils::TimedSharedLock lock(_mutexInterfaces, timeout);
+            TimedSharedLock lock(_mutexInterfaces, timeout);
             if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
