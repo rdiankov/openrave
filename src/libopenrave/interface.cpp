@@ -307,4 +307,72 @@ void InterfaceBase::ClearReadableInterface(const std::string& id) {
     __mapReadableInterfaces.erase(id);
 }
 
+bool InterfaceBase::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) {
+    boost::unique_lock<boost::shared_mutex> lock(_mutexInterface);
+    bool bChanged = false;
+    bool bNewAllFound = true;
+    FOREACH(it, newReadableInterfaces) {
+        READERSMAP::iterator itExisting = __mapReadableInterfaces.find(it->first);
+        if( itExisting != __mapReadableInterfaces.end() ) {
+            ReadablePtr pExistingReadable = itExisting->second;
+            if( !!it->second ) {
+                if( !!pExistingReadable ) {
+                    if ( (*(it->second)) != (*pExistingReadable)) {
+                        rapidjson::Document docReadable;
+                        dReal fUnitScale = 1.0;
+                        int options = 0;
+                        it->second->SerializeJSON(docReadable, docReadable.GetAllocator(), fUnitScale, options);
+                        pExistingReadable->DeserializeJSON(docReadable, fUnitScale);
+                        bChanged = true;
+                        RAVELOG_VERBOSE_FORMAT("readable interface %s changed", it->first);
+                    }
+                }
+                else {
+                    // null pointer was stored. shoud not come to here.
+                    __mapReadableInterfaces[it->first] = it->second;
+                    bChanged = true;
+                    RAVELOG_WARN_FORMAT("existing readable interface %s was null. overwriting", it->first);
+                }
+            }
+            else {
+                // remove when null is given
+                __mapReadableInterfaces.erase(itExisting);
+                bChanged = true;
+                bNewAllFound = false;
+                RAVELOG_VERBOSE_FORMAT("readable interface %s removed", it->first);
+            }
+        }
+        else {
+            if( !!it->second ) {
+                __mapReadableInterfaces[it->first] = it->second;
+                bChanged = true;
+                RAVELOG_VERBOSE_FORMAT("readable interface %s added", it->first);
+            }
+            bNewAllFound = false;
+        }
+    }
+
+    if( !bNewAllFound || newReadableInterfaces.size() != __mapReadableInterfaces.size() ) {
+        // delete readableInterface
+        for (READERSMAP::iterator itExisting = __mapReadableInterfaces.begin(); itExisting != __mapReadableInterfaces.end();) {
+            bool bFound = false;
+            FOREACHC(it, newReadableInterfaces) {
+                if( itExisting->first == it->first ) {
+                    bFound = true;
+                    break;
+                }
+            }
+            if( !bFound ) {
+                RAVELOG_VERBOSE_FORMAT("removing readable interface %s", itExisting->first);
+                itExisting = __mapReadableInterfaces.erase(itExisting);
+                bChanged = true;
+            }
+            else {
+                ++itExisting;
+            }
+        }
+    }
+    return bChanged;
+}
+
 }
