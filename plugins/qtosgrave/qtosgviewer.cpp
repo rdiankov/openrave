@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "qtosgviewer.h"
+#include "osglodlabel.h"
 
 #include <boost/lexical_cast.hpp>
 #include <iostream>
@@ -186,6 +187,14 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
     _bExternalLoop = false;
+
+    // Read copy QT resource to temp location and later stream that into OSG to use when making labels
+    QFile fontFile(":/fonts/NotoSans-Regular.ttf");
+    fontFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered);
+    QByteArray ba = fontFile.readAll();
+    std::istringstream fontStream(ba.toStdString());
+    OSGLODLabel::SetFont(osgText::readFontStream(fontStream));
+    fontFile.close();
 }
 
 QtOSGViewer::~QtOSGViewer()
@@ -1393,7 +1402,12 @@ void QtOSGViewer::_SetCameraTransform(const RaveTransform<float>& transform)
 void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
 {
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
+    RaveTransform<float> tcenter;
+    tcenter.trans.z = focalDistance;
+    tcenter = trans * tcenter;
     _SetCameraTransform(trans*trot);
+    osg::Vec3 center = osg::Vec3(tcenter.trans.x, tcenter.trans.y, tcenter.trans.z);
+    _SetCameraCenter(center);
     _SetCameraDistanceToFocus(focalDistance);
 }
 
@@ -1413,7 +1427,7 @@ void QtOSGViewer::_StopTrackLink()
 
 bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText)
 {
-    if(!!_ptrackinglink && _ptrackinglink == link && _currentTrackLinkRelTransform.Compare(linkRelativeTranslation)) {
+    if(!!_ptrackinglink && _ptrackinglink == link && !_currentTrackLinkRelTransform.CompareTransform(linkRelativeTranslation, 1e-7)) {
         // already tracking the requested link, nothing to be done
         return true;
     }
@@ -1442,6 +1456,11 @@ bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& 
         _cameraMoveModeButton->setEnabled(false);
     }
     return true;
+}
+
+void QtOSGViewer::_SetCameraCenter(osg::Vec3 center)
+{
+    _posgWidget->SetCameraCenter(center);
 }
 
 void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
@@ -1607,6 +1626,26 @@ GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVec
 {
     RAVELOG_WARN("drawarrow not implemented\n");
     return GraphHandlePtr();
+}
+
+void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition)
+{
+    // Set up offset node for label
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    osg::Matrix offsetMatrix;
+    offsetMatrix.makeTranslate(osg::Vec3(worldPosition.x, worldPosition.y, worldPosition.z));
+    trans->setMatrix(offsetMatrix);
+    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label);
+    trans->addChild(labelTrans);
+    handle->addChild(trans);
+    _posgWidget->GetFigureRoot()->insertChild(0, handle);
+}
+
+GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector<float>& worldPosition)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawLabel, this, handle, label, worldPosition), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency)

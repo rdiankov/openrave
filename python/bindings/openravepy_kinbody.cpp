@@ -265,7 +265,7 @@ PyGeometryInfo::PyGeometryInfo(const KinBody::GeometryInfo& info) {
 }
 
 void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
-    _t = ReturnTransform(info._t);
+    _t = ReturnTransform(info.GetTransform());
     _vGeomData = toPyVector4(info._vGeomData);
     _vGeomData2 = toPyVector4(info._vGeomData2);
     _vGeomData3 = toPyVector4(info._vGeomData3);
@@ -340,7 +340,7 @@ void PyGeometryInfo::DeserializeJSON(object obj, dReal fUnitScale, object option
 KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
     KinBody::GeometryInfo& info = *pinfo;
-    info._t = ExtractTransform(_t);
+    info.SetTransform(ExtractTransform(_t));
     info._vGeomData = ExtractVector<dReal>(_vGeomData);
     info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
     info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
@@ -420,7 +420,7 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     }
     _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
-    _t = ReturnTransform(info._t);
+    _t = ReturnTransform(info.GetTransform());
     _tMassFrame = ReturnTransform(info._tMassFrame);
     _mass = info._mass;
     _vinertiamoments = toPyVector3(info._vinertiamoments);
@@ -443,7 +443,6 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     _vForcedAdjacentLinks = vForcedAdjacentLinks;
     _bStatic = info._bStatic;
     _bIsEnabled = info._bIsEnabled;
-
 }
 
 py::object PyLinkInfo::SerializeJSON(dReal fUnitScale, object options)
@@ -477,7 +476,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
         info._name = py::extract<std::string>(_name);
     }
-    info._t = ExtractTransform(_t);
+    info.SetTransform(ExtractTransform(_t));
     info._tMassFrame = ExtractTransform(_tMassFrame);
     info._mass = _mass;
     info._vinertiamoments = ExtractVector3(_vinertiamoments);
@@ -1402,6 +1401,18 @@ object PyLink::ComputeAABBFromTransform(object otransform) const {
     return toPyAABB(_plink->ComputeAABBFromTransform(ExtractTransform(otransform)));
 }
 
+object PyLink::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const {
+    return toPyAABB(_plink->ComputeLocalAABBForGeometryGroup(geomgroupname));
+}
+
+object PyLink::ComputeAABBForGeometryGroup(const std::string& geomgroupname) const {
+    return toPyAABB(_plink->ComputeAABBForGeometryGroup(geomgroupname));
+}
+
+object PyLink::ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, object otransform) const {
+    return toPyAABB(_plink->ComputeAABBForGeometryGroupFromTransform(geomgroupname, ExtractTransform(otransform)));
+}
+
 object PyLink::GetTransform() const {
     return ReturnTransform(_plink->GetTransform());
 }
@@ -1755,6 +1766,9 @@ bool PyJoint::IsRevolute(int iaxis) const {
 }
 bool PyJoint::IsPrismatic(int iaxis) const {
     return _pjoint->IsPrismatic(iaxis);
+}
+bool PyJoint::IsActive() const {
+    return _pjoint->IsActive();
 }
 bool PyJoint::IsStatic() const {
     return _pjoint->IsStatic();
@@ -2560,6 +2574,14 @@ object PyKinBody::GetName() const
 {
     return ConvertStringToUnicode(_pbody->GetName());
 }
+void PyKinBody::SetId(const std::string& bodyid)
+{
+    _pbody->SetId(bodyid);
+}
+std::string PyKinBody::GetId() const
+{
+    return _pbody->GetId();
+}
 int PyKinBody::GetDOF() const
 {
     return _pbody->GetDOF();
@@ -3105,7 +3127,16 @@ void PyKinBody::SetDOFVelocities(object odofvelocities, object olinearvel, objec
 
 void PyKinBody::SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel)
 {
-    _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    try {
+#endif
+        _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    }
+    catch (const py::error_already_set& e) {
+        this->SetDOFVelocities(odofvelocities, py::extract<uint32_t>(olinearvel), oangularvel);
+    }
+#endif
 }
 
 void PyKinBody::SetDOFVelocities(object odofvelocities)
@@ -3233,6 +3264,21 @@ object PyKinBody::ComputeAABBFromTransform(object otransform, bool bEnabledOnlyL
 object PyKinBody::ComputeLocalAABB(bool bEnabledOnlyLinks)
 {
     return toPyAABB(_pbody->ComputeLocalAABB(bEnabledOnlyLinks));
+}
+
+object PyKinBody::ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks)
+{
+    return toPyAABB(_pbody->ComputeAABBForGeometryGroup(geomgroupname, bEnabledOnlyLinks));
+}
+
+object PyKinBody::ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, object otransform, bool bEnabledOnlyLinks)
+{
+    return toPyAABB(_pbody->ComputeAABBForGeometryGroupFromTransform(geomgroupname, ExtractTransform(otransform), bEnabledOnlyLinks));
+}
+
+object PyKinBody::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks)
+{
+    return toPyAABB(_pbody->ComputeLocalAABBForGeometryGroup(geomgroupname, bEnabledOnlyLinks));
 }
 
 object PyKinBody::GetCenterOfMass() const
@@ -4371,6 +4417,9 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyKinBodyInfo_DeserializeJSON_overloads, 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABB_overloads, ComputeAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBFromTransform_overloads, ComputeAABBFromTransform, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABB_overloads, ComputeLocalAABB, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBForGeometryGroup_overloads, ComputeAABBForGeometryGroup, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBForGeometryGroupFromTransform_overloads, ComputeAABBForGeometryGroupFromTransform, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABBForGeometryGroup_overloads, ComputeLocalAABBForGeometryGroup, 1, 2)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -5016,6 +5065,8 @@ void init_openravepy_kinbody()
                          .def("SetLinkGroupGeometries", &PyKinBody::SetLinkGroupGeometries, PY_ARGS("name", "linkgeometries") DOXY_FN(KinBody, SetLinkGroupGeometries))
                          .def("SetName", &PyKinBody::SetName,PY_ARGS("name") DOXY_FN(KinBody,SetName))
                          .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
+                         .def("SetId", &PyKinBody::SetId,PY_ARGS("id") DOXY_FN(KinBody,SetId))
+                         .def("GetId",&PyKinBody::GetId,DOXY_FN(KinBody,GetId))
                          .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(KinBody,GetDOF))
                          .def("GetDOFValues",getdofvalues1,DOXY_FN(KinBody,GetDOFValues))
                          .def("GetDOFValues",getdofvalues2,PY_ARGS("indices") DOXY_FN(KinBody,GetDOFValues))
@@ -5158,6 +5209,34 @@ void init_openravepy_kinbody()
                               )
 #else
                          .def("ComputeLocalAABB",&PyKinBody::ComputeLocalAABB, ComputeLocalAABB_overloads(PY_ARGS("enabledOnlyLinks") DOXY_FN(KinBody,ComputeLocalAABB)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("ComputeAABBForGeometryGroup", &PyKinBody::ComputeAABBForGeometryGroup,
+                              "geomgroupname"_a,
+                              "enabledOnlyLinks"_a = false,
+                              DOXY_FN(KinBody, ComputeAABBForGeometryGroup)
+                              )
+#else
+                         .def("ComputeAABBForGeometryGroup",&PyKinBody::ComputeAABBForGeometryGroup, ComputeAABBForGeometryGroup_overloads(PY_ARGS("geomgroupname", "enabledOnlyLinks") DOXY_FN(KinBody,ComputeAABBForGeometryGroup_overloads)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("ComputeAABBForGeometryGroupFromTransform", &PyKinBody::ComputeAABBForGeometryGroupFromTransform,
+                              "geomgroupname"_a,
+                              "transform"_a,
+                              "enabledOnlyLinks"_a = false,
+                              DOXY_FN(KinBody, ComputeAABBForGeometryGroupFromTransform)
+                              )
+#else
+                         .def("ComputeAABBForGeometryGroupFromTransform",&PyKinBody::ComputeAABBForGeometryGroupFromTransform, ComputeAABBForGeometryGroupFromTransform_overloads(PY_ARGS("geomgroupname", "transform", "enabledOnlyLinks") DOXY_FN(KinBody,ComputeAABBForGeometryGroupFromTransform_overloads)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("ComputeLocalAABBForGeometryGroup", &PyKinBody::ComputeLocalAABBForGeometryGroup,
+                              "geomgroupname"_a,
+                              "enabledOnlyLinks"_a = false,
+                              DOXY_FN(KinBody, ComputeLocalAABBForGeometryGroup)
+                              )
+#else
+                         .def("ComputeLocalAABBForGeometryGroup",&PyKinBody::ComputeLocalAABBForGeometryGroup, ComputeLocalAABBForGeometryGroup_overloads(PY_ARGS("geomgroupname", "enabledOnlyLinks") DOXY_FN(KinBody,ComputeLocalAABBForGeometryGroup_overloads)))
 #endif
                          .def("GetCenterOfMass", &PyKinBody::GetCenterOfMass, DOXY_FN(KinBody,GetCenterOfMass))
                          .def("Enable",&PyKinBody::Enable,PY_ARGS("enable") DOXY_FN(KinBody,Enable))
@@ -5395,6 +5474,9 @@ void init_openravepy_kinbody()
                           .def("ComputeAABB",&PyLink::ComputeAABB, DOXY_FN(KinBody::Link,ComputeAABB))
                           .def("ComputeAABBFromTransform",&PyLink::ComputeAABBFromTransform, PY_ARGS("transform") DOXY_FN(KinBody::Link,ComputeAABB))
                           .def("ComputeLocalAABB",&PyLink::ComputeLocalAABB, DOXY_FN(KinBody::Link,ComputeLocalAABB))
+                          .def("ComputeAABBForGeometryGroup",&PyLink::ComputeAABBForGeometryGroup, PY_ARGS("geomgroupname") DOXY_FN(KinBody::Link,ComputeAABBForGeometryGroup))
+                          .def("ComputeAABBForGeometryGroupFromTransform",&PyLink::ComputeAABBForGeometryGroupFromTransform, PY_ARGS("geomgroupname", "transform") DOXY_FN(KinBody::Link,ComputeAABBForGeometryGroupFromTransform))
+                          .def("ComputeLocalAABBForGeometryGroup",&PyLink::ComputeLocalAABBForGeometryGroup, PY_ARGS("geomgroupname") DOXY_FN(KinBody::Link,ComputeLocalAABBForGeometryGroup))
                           .def("GetTransform",&PyLink::GetTransform, DOXY_FN(KinBody::Link,GetTransform))
                           .def("GetTransformPose",&PyLink::GetTransformPose, DOXY_FN(KinBody::Link,GetTransform))
                           .def("GetCOMOffset",&PyLink::GetCOMOffset, DOXY_FN(KinBody::Link,GetCOMOffset))
@@ -5626,6 +5708,7 @@ void init_openravepy_kinbody()
                            .def("GetParent", &PyJoint::GetParent, DOXY_FN(KinBody::Joint,GetParent))
                            .def("GetFirstAttached", &PyJoint::GetFirstAttached, DOXY_FN(KinBody::Joint,GetFirstAttached))
                            .def("GetSecondAttached", &PyJoint::GetSecondAttached, DOXY_FN(KinBody::Joint,GetSecondAttached))
+                           .def("IsActive",&PyJoint::IsActive, DOXY_FN(KinBody::Joint,IsActive))
                            .def("IsStatic",&PyJoint::IsStatic, DOXY_FN(KinBody::Joint,IsStatic))
                            .def("IsCircular",&PyJoint::IsCircular, DOXY_FN(KinBody::Joint,IsCircular))
                            .def("IsRevolute",&PyJoint::IsRevolute, DOXY_FN(KinBody::Joint,IsRevolute))

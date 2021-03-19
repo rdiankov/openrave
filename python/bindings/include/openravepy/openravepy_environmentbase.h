@@ -32,34 +32,34 @@ class PyEnvironmentBase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyEnvironmentB
 
 public:
     class PyEnvironmentBaseInfo
-{
+    {
 public:
-    PyEnvironmentBaseInfo();
-    PyEnvironmentBaseInfo(const EnvironmentBase::EnvironmentBaseInfo& info);
-    py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
-    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
-    EnvironmentBase::EnvironmentBaseInfoPtr GetEnvironmentBaseInfo() const;
-    int _revision = 0;
+        PyEnvironmentBaseInfo();
+        PyEnvironmentBaseInfo(const EnvironmentBase::EnvironmentBaseInfo& info);
+        py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+        void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
+        EnvironmentBase::EnvironmentBaseInfoPtr GetEnvironmentBaseInfo() const;
+        int _revision = 0;
 
-    object _gravity = toPyVector3(Vector(0,0,-9.797930195020351));
+        object _gravity = toPyVector3(Vector(0,0,-9.797930195020351));
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<std::string> _keywords;
-    std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos;
-    std::string _name;
-    std::string _description;
+        std::vector<std::string> _keywords;
+        std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos;
+        std::string _name;
+        std::string _description;
 #else
-    py::list _keywords;
-    py::object _vBodyInfos = py::none_();
-    py::object _name = py::none_();
-    py::object _description = py::none_();
+        py::list _keywords;
+        py::object _vBodyInfos = py::none_();
+        py::object _name = py::none_();
+        py::object _description = py::none_();
 #endif
-    virtual std::string __str__();
-    virtual py::object __unicode__();
+        virtual std::string __str__();
+        virtual py::object __unicode__();
 
 protected:
-    void _Update(const EnvironmentBase::EnvironmentBaseInfo& info);
-}; // class PyEnvironmentBaseInfo
-typedef OPENRAVE_SHARED_PTR<PyEnvironmentBaseInfo> PyEnvironmentBaseInfoPtr;
+        void _Update(const EnvironmentBase::EnvironmentBaseInfo& info);
+    }; // class PyEnvironmentBaseInfo
+    typedef OPENRAVE_SHARED_PTR<PyEnvironmentBaseInfo> PyEnvironmentBaseInfoPtr;
 
 protected:
     EnvironmentBasePtr _penv;
@@ -80,8 +80,6 @@ public:
 
     void Reset();
     void Destroy();
-
-    int GetRevision() const;
 
     PyEnvironmentBasePtr CloneSelf(int options);
 
@@ -128,6 +126,7 @@ public:
     bool Load(const std::string &filename);
     bool Load(const std::string &filename, object odictatts);
     bool LoadURI(const std::string &filename, object odictatts=py::none_());
+    py::object LoadJSON(py::object oEnvInfo, UpdateFromInfoMode updateMode, object odictatts=py::none_());
     bool LoadData(const std::string &data);
     bool LoadData(const std::string &data, object odictatts);
 
@@ -135,6 +134,8 @@ public:
 
     object WriteToMemory(const std::string &filetype, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_());
 
+    /// will be unlocking GIL since doing FS or memory-intensive operations
+    //@{
     object ReadRobotURI(const std::string &filename);
     object ReadRobotURI(const std::string &filename, object odictatts);
     object ReadRobotData(const std::string &data);
@@ -145,13 +146,15 @@ public:
     object ReadKinBodyData(const std::string &data, object odictatts);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, object odictatts);
+    //@}
+
     object ReadTrimeshURI(const std::string& filename);
     object ReadTrimeshURI(const std::string& filename, object odictatts);
 
     object ReadTrimeshData(const std::string& data, const std::string& formathint);
     object ReadTrimeshData(const std::string& data, const std::string& formathint, object odictatts);
 
-    void Add(PyInterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="");
+    void Add(PyInterfaceBasePtr pinterface, py::object addMode=py::none_(), const std::string& cmdargs="");
 
     void AddKinBody(PyKinBodyPtr pbody);
     void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous);
@@ -235,6 +238,8 @@ public:
 
     object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=py::none_());
 
+    object drawlabel(const std::string &label, object worldPosition);
+
     object drawbox(object opos, object oextents, object ocolor=py::none_());
 
     object drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture);
@@ -274,9 +279,30 @@ public:
     void SetUnit(std::string unitname, dReal unitmult);
 
     object GetUnit() const;
+    int GetId() const;
 
     object ExtractInfo() const;
-    object UpdateFromInfo(PyEnvironmentBaseInfoPtr info);
+    object UpdateFromInfo(PyEnvironmentBaseInfoPtr info, UpdateFromInfoMode updateMode);
+
+    int GetRevision() const;
+
+    void SetName(const std::string& sceneName);
+
+    py::object GetName() const;
+
+    void SetDescription(const std::string& sceneDescription);
+
+    py::object GetDescription() const;
+
+    void SetKeywords(const std::vector<std::string>& sceneKeywords);
+
+    py::list GetKeywords() const;
+
+    void SetUInt64Parameter(const std::string& parameterName, uint64_t value);
+
+    bool RemoveUInt64Parameter(const std::string& parameterName);
+
+    uint64_t GetUInt64Parameter(const std::string& parameterName, uint64_t defaultValue) const;
 
     int _revision = 0;
     py::list _keywords;

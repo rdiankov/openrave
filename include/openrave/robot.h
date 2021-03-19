@@ -566,6 +566,7 @@ public:
             _linkname = other._linkname;
             _trelative = other._trelative;
             _sensorname = other._sensorname;
+            _referenceAttachedSensorName = other._referenceAttachedSensorName;
             rapidjson::Document docSensorGeometry;
             if (other._docSensorGeometry.IsObject()) {
                 docSensorGeometry.CopyFrom(other._docSensorGeometry, docSensorGeometry.GetAllocator());
@@ -579,6 +580,7 @@ public:
                 && _linkname == other._linkname
                 && _trelative == other._trelative
                 && _sensorname == other._sensorname
+                && _referenceAttachedSensorName == other._referenceAttachedSensorName
                 && _docSensorGeometry == other._docSensorGeometry;
         }
         bool operator!=(const AttachedSensorInfo& other) const {
@@ -601,6 +603,7 @@ public:
         std::string _linkname; ///< the robot link that the sensor is attached to
         Transform _trelative;         ///< relative transform of the sensor with respect to the attached link
         std::string _sensorname; ///< name of the sensor interface to create, in other words the sensor type
+        std::string _referenceAttachedSensorName; ///< name of another attached sensor in the same robot, that whose data is referenced. This sensor transforms the data in a particular way.
         rapidjson::Document _docSensorGeometry; ///< the sensor geometry to initialize the sensor with
     };
     typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
@@ -766,6 +769,7 @@ public:
         /// \brief have the connected body to be added to the robot kinematics. The active level has nothing to do with visibility or enabling of the links.
         ///
         /// Can only be called when robot is not added to the environment
+        /// \return true if changed
         virtual bool SetActive(int8_t active);
 
         /// \brief return true
@@ -989,7 +993,9 @@ private:
     virtual void GetConnectedBodyActiveStates(std::vector<int8_t>& activestates) const;
 
     /// \brief sets the active states for connected bodies
-    virtual void SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates);
+    ///
+    /// \return true if an active state changed
+    virtual bool SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates);
 
     virtual void SetName(const std::string& name);
 

@@ -233,7 +233,7 @@ public:
                     // We do not set the transformation here and leave it to _Synchronize
                     CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
                     pfclcoll->setUserData(linkinfo.get());
-                    linkinfo->vgeoms.push_back(TransformCollisionPair(pgeominfo->_t, pfclcoll));
+                    linkinfo->vgeoms.push_back(TransformCollisionPair(pgeominfo->GetTransform(), pfclcoll));
 
                     KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *pgeominfo);
                     if( itgeominfo == vgeometryinfos.begin() ) {
@@ -258,7 +258,7 @@ public:
                     CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
                     pfclcoll->setUserData(linkinfo.get());
 
-                    linkinfo->vgeoms.push_back(TransformCollisionPair(geominfo._t, pfclcoll));
+                    linkinfo->vgeoms.push_back(TransformCollisionPair(geominfo.GetTransform(), pfclcoll));
 
                     KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), geominfo);
                     if( itgeom == vgeometries.begin() ) {
@@ -554,7 +554,7 @@ private:
 
         std::vector<fcl::Vec3f> fcl_points(num_points);
         for (size_t ipoint = 0; ipoint < num_points; ++ipoint) {
-            Vector v = info._t*mesh.vertices[ipoint];
+            Vector v = info.GetTransform()*mesh.vertices[ipoint];
             fcl_points[ipoint] = fcl::Vec3f(v.x, v.y, v.z);
         }
 

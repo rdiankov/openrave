@@ -374,7 +374,8 @@ bool PyCollisionCheckerBase::CheckCollision(object o1, object bodyexcluded, obje
     KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
 
     std::vector<KinBodyConstPtr> vbodyexcluded;
-    for(size_t i = 0; i < len(bodyexcluded); ++i) {
+    size_t numBodyExcluded = len(bodyexcluded);
+    for(size_t i = 0; i < numBodyExcluded; ++i) {
         PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
         if( !!pbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
@@ -384,7 +385,8 @@ bool PyCollisionCheckerBase::CheckCollision(object o1, object bodyexcluded, obje
         }
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    for(size_t i = 0; i < len(linkexcluded); ++i) {
+    size_t numLinkExcluded = len(linkexcluded);
+    for(size_t i = 0; i < numLinkExcluded; ++i) {
         KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
@@ -473,7 +475,8 @@ bool PyCollisionCheckerBase::CheckCollision(PyKinBodyPtr pbody, object bodyexclu
 bool PyCollisionCheckerBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
-    for(size_t i = 0; i < len(bodyexcluded); ++i) {
+    size_t numBodyExcluded = len(bodyexcluded);
+    for(size_t i = 0; i < numBodyExcluded; ++i) {
         PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
         if( !!pbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pbody));

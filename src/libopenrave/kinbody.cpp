@@ -151,7 +151,7 @@ bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
            && AreVectorsDeepEqual(_vLinkInfos, other._vLinkInfos)
            && AreVectorsDeepEqual(_vJointInfos, other._vJointInfos)
            && AreVectorsDeepEqual(_vGrabbedInfos, other._vGrabbedInfos)
-           && _mReadableInterfaces == other._mReadableInterfaces; // TODO
+           && _mReadableInterfaces == other._mReadableInterfaces;
 }
 
 void KinBody::KinBodyInfo::Reset()
@@ -171,8 +171,13 @@ void KinBody::KinBodyInfo::Reset()
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     rKinBodyInfo.SetObject();
-    orjson::SetJsonValueByKey(rKinBodyInfo, "id", _id, allocator);
-    orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
+
+    if( !_id.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "id", _id, allocator);
+    }
+    if( !_name.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
+    }
     if (!_referenceUri.empty()) {
         if( options & ISO_ReferenceUriHint ) {
             orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUriHint", _referenceUri, allocator);
@@ -181,8 +186,18 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
             orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUri", _referenceUri, allocator);
         }
     }
-    orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
-    orjson::SetJsonValueByKey(rKinBodyInfo, "transform", _transform, allocator);
+
+    // perhaps should not save "uri" since that could affect how the body is loaded later
+
+    if( !_interfaceType.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
+    }
+
+    {
+        Transform transform = _transform;
+        transform.trans *= fUnitScale;
+        orjson::SetJsonValueByKey(rKinBodyInfo, "transform", transform, allocator);
+    }
     orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
 
     if (_dofValues.size() > 0) {
@@ -192,7 +207,10 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         FOREACHC(itDofValue, _dofValues) {
             rapidjson::Value dofValue;
             orjson::SetJsonValueByKey(dofValue, "jointName", itDofValue->first.first, allocator);
-            orjson::SetJsonValueByKey(dofValue, "jointAxis", itDofValue->first.second, allocator);
+            // don't save jointAxis unless not 0
+            if( itDofValue->first.second != 0 ) {
+                orjson::SetJsonValueByKey(dofValue, "jointAxis", itDofValue->first.second, allocator);
+            }
             orjson::SetJsonValueByKey(dofValue, "value", itDofValue->second, allocator);
             dofValues.PushBack(dofValue, allocator);
         }
@@ -258,6 +276,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if( !(options & IDO_IgnoreReferenceUri) ) {
         orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+        orjson::LoadJsonValueByKey(value, "uri", _uri); // user specifies this in case they want to control how the uri is
     }
 
     orjson::LoadJsonValueByKey(value, "interfaceType", _interfaceType);
@@ -267,21 +286,80 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
         size_t iGrabbed = 0;
         for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
-            UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
+            //UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
+            const rapidjson::Value& rGrabbed = *it;
+            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "id");
+            bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(rGrabbed, "__deleted__", false);
+            std::vector<GrabbedInfoPtr>::iterator itMatchingId = _vGrabbedInfos.end();
+            std::vector<GrabbedInfoPtr>::iterator itMatchingName = _vGrabbedInfos.end();
+            if (!id.empty()) {
+                // only try to find old info if id is not empty
+                FOREACH(itInfo, _vGrabbedInfos) {
+                    if ((*itInfo)->_id == id) {
+                        itMatchingId = itInfo;
+                        break;
+                    }
+                }
+            }
+
+            std::string grabbedName = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "grabbedName");
+            // only try to find old info if id is not empty
+            FOREACH(itInfo, _vGrabbedInfos) {
+                if ((*itInfo)->_grabbedname == grabbedName) {
+                    itMatchingName = itInfo;
+                    if( id.empty() ) {
+                        id = (*itInfo)->_id;
+                    }
+                    break;
+                }
+            }
+
+            // here we allow items with empty id to be created because
+            // when we load things from json, some id could be missing on file
+            // and for the partial update case, the id should be non-empty
+            if (itMatchingId != _vGrabbedInfos.end()) {
+                if (isDeleted) {
+                    _vGrabbedInfos.erase(itMatchingId);
+                    continue;
+                }
+                (*itMatchingId)->DeserializeJSON(rGrabbed, fUnitScale, options);
+
+                if( itMatchingId != itMatchingName && itMatchingName != _vGrabbedInfos.end() ) {
+                    // there is another entry with matching name, so remove it
+                    _vGrabbedInfos.erase(itMatchingName);
+                }
+                continue;
+            }
+
+            if (isDeleted) {
+                // ignore
+                continue;
+            }
+        
+            if( itMatchingName != _vGrabbedInfos.end() ) {
+                (*itMatchingName)->DeserializeJSON(rGrabbed, fUnitScale, options);
+                (*itMatchingName)->_id = id;
+                continue;
+            }
+
+            GrabbedInfoPtr pNewInfo(new GrabbedInfo());
+            pNewInfo->DeserializeJSON(rGrabbed, fUnitScale, options);
+            pNewInfo->_id = id;
+            _vGrabbedInfos.push_back(pNewInfo);
         }
     }
 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vLinkInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options);
         }
     }
 
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vJointInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options);
         }
     }
 
@@ -290,20 +368,21 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         for(rapidjson::Value::ConstValueIterator itr = value["dofValues"].Begin(); itr != value["dofValues"].End(); ++itr) {
             if (itr->IsObject() && itr->HasMember("jointName") && itr->HasMember("value")) {
                 std::string jointName;
-                int jointAxis = 0;
-                dReal dofValue;
+                int jointAxis = 0; // default
+                dReal dofValue=0;
                 orjson::LoadJsonValueByKey(*itr, "jointName", jointName);
                 orjson::LoadJsonValueByKey(*itr, "jointAxis", jointAxis);
                 orjson::LoadJsonValueByKey(*itr, "value", dofValue);
                 _dofValues.emplace_back(std::make_pair(jointName, jointAxis), dofValue);
             }
         }
+        _modifiedFields |= KinBodyInfo::KBIF_DOFValues;
     }
 
     if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
         for (rapidjson::Value::ConstMemberIterator it = value["readableInterfaces"].MemberBegin(); it != value["readableInterfaces"].MemberEnd(); ++it) {
             // skip over __collada__ since it will most likely fail to deserialize
-            if (it->name.GetString() == "__collada__") {
+            if (strcmp(it->name.GetString(), "__collada__") == 0 ) {
                 continue;
             }
             _DeserializeReadableInterface(it->name.GetString(), it->value);
@@ -312,6 +391,8 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _transform);
+        _transform.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
+        _modifiedFields |= KinBodyInfo::KBIF_Transform;
     }
 }
 
@@ -332,7 +413,7 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
         _mReadableInterfaces[id] = pReadable;
         return;
     }
-    RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
+    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
@@ -680,6 +761,14 @@ void KinBody::SetName(const std::string& newname)
         }
         _name = newname;
         _PostprocessChangedParameters(Prop_Name);
+    }
+}
+
+void KinBody::SetId(const std::string& newid)
+{
+    // allow empty id to be set
+    if( _id != newid ) {
+        _id = newid;
     }
 }
 
@@ -1698,6 +1787,126 @@ AABB KinBody::ComputeLocalAABB(bool bEnabledOnlyLinks) const
     return ComputeAABBFromTransform(Transform(), bEnabledOnlyLinks);
 }
 
+AABB KinBody::ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks) const
+{
+    Vector vmin, vmax;
+    bool binitialized=false;
+    AABB ab;
+    FOREACHC(itlink,_veclinks) {
+        if( bEnabledOnlyLinks && !(*itlink)->IsEnabled() ) {
+            continue;
+        }
+        ab = (*itlink)->ComputeAABBForGeometryGroup(geomgroupname);
+        if((ab.extents.x == 0)&&(ab.extents.y == 0)&&(ab.extents.z == 0)) {
+            continue;
+        }
+        Vector vnmin = ab.pos - ab.extents;
+        Vector vnmax = ab.pos + ab.extents;
+        if( !binitialized ) {
+            vmin = vnmin;
+            vmax = vnmax;
+            binitialized = true;
+        }
+        else {
+            if( vmin.x > vnmin.x ) {
+                vmin.x = vnmin.x;
+            }
+            if( vmin.y > vnmin.y ) {
+                vmin.y = vnmin.y;
+            }
+            if( vmin.z > vnmin.z ) {
+                vmin.z = vnmin.z;
+            }
+            if( vmax.x < vnmax.x ) {
+                vmax.x = vnmax.x;
+            }
+            if( vmax.y < vnmax.y ) {
+                vmax.y = vnmax.y;
+            }
+            if( vmax.z < vnmax.z ) {
+                vmax.z = vnmax.z;
+            }
+        }
+    }
+    if( !binitialized ) {
+        ab.pos = GetTransform().trans;
+        ab.extents = Vector(0,0,0);
+    }
+    else {
+        ab.pos = (dReal)0.5 * (vmin + vmax);
+        ab.extents = vmax - ab.pos;
+    }
+    return ab;
+}
+
+AABB KinBody::ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tBody, bool bEnabledOnlyLinks) const
+{
+    Vector vmin, vmax;
+    bool binitialized=false;
+    AABB ablocal;
+    Transform tConvertToNewFrame = tBody*GetTransform().inverse();
+    FOREACHC(itlink,_veclinks) {
+        if( bEnabledOnlyLinks && !(*itlink)->IsEnabled() ) {
+            continue;
+        }
+        ablocal = (*itlink)->ComputeLocalAABBForGeometryGroup(geomgroupname);
+        if( ablocal.extents.x == 0 && ablocal.extents.y == 0 && ablocal.extents.z == 0 ) {
+            continue;
+        }
+
+        Transform tlink = tConvertToNewFrame*(*itlink)->GetTransform();
+        TransformMatrix mlink(tlink);
+        Vector projectedExtents(RaveFabs(mlink.m[0]*ablocal.extents[0]) + RaveFabs(mlink.m[1]*ablocal.extents[1]) + RaveFabs(mlink.m[2]*ablocal.extents[2]),
+                                RaveFabs(mlink.m[4]*ablocal.extents[0]) + RaveFabs(mlink.m[5]*ablocal.extents[1]) + RaveFabs(mlink.m[6]*ablocal.extents[2]),
+                                RaveFabs(mlink.m[8]*ablocal.extents[0]) + RaveFabs(mlink.m[9]*ablocal.extents[1]) + RaveFabs(mlink.m[10]*ablocal.extents[2]));
+        Vector vWorldPos = tlink * ablocal.pos;
+
+        Vector vnmin = vWorldPos - projectedExtents;
+        Vector vnmax = vWorldPos + projectedExtents;
+        if( !binitialized ) {
+            vmin = vnmin;
+            vmax = vnmax;
+            binitialized = true;
+        }
+        else {
+            if( vmin.x > vnmin.x ) {
+                vmin.x = vnmin.x;
+            }
+            if( vmin.y > vnmin.y ) {
+                vmin.y = vnmin.y;
+            }
+            if( vmin.z > vnmin.z ) {
+                vmin.z = vnmin.z;
+            }
+            if( vmax.x < vnmax.x ) {
+                vmax.x = vnmax.x;
+            }
+            if( vmax.y < vnmax.y ) {
+                vmax.y = vnmax.y;
+            }
+            if( vmax.z < vnmax.z ) {
+                vmax.z = vnmax.z;
+            }
+        }
+    }
+
+    AABB ab;
+    if( !binitialized ) {
+        ab.pos = GetTransform().trans;
+        ab.extents = Vector(0,0,0);
+    }
+    else {
+        ab.pos = (dReal)0.5 * (vmin + vmax);
+        ab.extents = vmax - ab.pos;
+    }
+    return ab;
+}
+
+AABB KinBody::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks) const
+{
+    return ComputeAABBForGeometryGroupFromTransform(geomgroupname, Transform(), bEnabledOnlyLinks);
+}
+
 Vector KinBody::GetCenterOfMass() const
 {
     // find center of mass and set the outer transform to it
@@ -2279,8 +2488,8 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     const int nlinks = _veclinks.size();
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
-        this->GetName() % linkindex % nlinks, ORE_InvalidArguments
-    );
+                           this->GetName() % linkindex % nlinks, ORE_InvalidArguments
+                           );
     const size_t dofstride = dofindices.empty() ? this->GetDOF() : dofindices.size();
     vjacobian.resize(3 * dofstride);
     if( dofstride == 0 ) {
@@ -2296,7 +2505,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     for(int curlink = 0;
         _vAllPairsShortestPaths[offset + curlink].first >= 0;     // parent link is still available
         curlink = _vAllPairsShortestPaths[offset + curlink].first // get index of parent link
-    ) {
+        ) {
         const int jointindex = _vAllPairsShortestPaths[offset + curlink].second; ///< generalized joint index, which counts in [_vecjoints, _vPassiveJoints]
         if( jointindex < nActiveJoints ) {
             // active joint
@@ -4845,7 +5054,7 @@ int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
 int8_t KinBody::DoesDOFAffectLink(int dofindex, int linkindex ) const
 {
     CHECK_INTERNAL_COMPUTATION0;
-    OPENRAVE_ASSERT_FORMAT(dofindex >= 0 && dofindex < GetDOF(), "body %s dofindex %d invalid (num dofs %d)", GetName()%GetDOF(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(dofindex >= 0 && dofindex < GetDOF(), "body %s dofindex %d invalid (num dofs %d)", GetName()%dofindex%GetDOF(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s linkindex %d invalid (num links %d)", GetName()%linkindex%_veclinks.size(), ORE_InvalidArguments);
     int jointindex = _vDOFIndices.at(dofindex);
     return _vJointsAffectingLinks.at(jointindex*_veclinks.size()+linkindex);
@@ -5445,6 +5654,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
 
 void KinBody::ExtractInfo(KinBodyInfo& info)
 {
+    info._modifiedFields = 0;
     info._id = _id;
     info._uri = __struri;
     info._name = _name;
@@ -5460,14 +5670,16 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
         info._dofValues.emplace_back(std::make_pair(pJoint->GetName(), jointAxis), vDOFValues[idof]);
     }
 
-    info._transform = GetTransform();
     info._vGrabbedInfos.resize(0);
     GetGrabbedInfo(info._vGrabbedInfos);
 
-    KinBody::KinBodyStateSaver saver(shared_kinbody());
+    info._transform = GetTransform();
+
+    // in order for link transform comparision to make sense
+    KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation);
+    SetTransform(Transform());
     vector<dReal> vZeros(GetDOF(), 0);
     SetDOFValues(vZeros, KinBody::CLA_Nothing);
-    SetTransform(Transform());
 
     // need to avoid extracting info for links and joints belonging to connected bodies
     std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
@@ -5534,9 +5746,10 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 
 
     FOREACHC(it, GetReadableInterfaces()) {
-        ReadablePtr pReadable = boost::dynamic_pointer_cast<Readable>(it->second);
-        if (!!pReadable) {
-            info._mReadableInterfaces[it->first] = pReadable;
+        if (!!it->second) {
+            // make a copy of the readable interface
+            // caller may modify and call UpdateFromInfo with modified readable interfaces
+            info._mReadableInterfaces[it->first] = it->second->CloneSelf();
         }
     }
 }
@@ -5544,8 +5757,15 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 {
     UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
-    if(info._id != _id) {
-        RAVELOG_WARN_FORMAT("body %s update info ids do not match %s != %s", GetName()%_id%info._id);
+    if(_id != info._id) {
+        if( _id.empty() ) {
+            RAVELOG_DEBUG_FORMAT("env=%d, body %s assigning empty id to '%s'", GetEnv()->GetId()%GetName()%info._id);
+        }
+        else {
+            RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());
+        }
+        _id = info._id;
+        updateFromInfoResult = UFIR_Success;
     }
 
     // need to avoid checking links and joints belonging to connected bodies
@@ -5601,9 +5821,25 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
-    // links
-    if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
-        return updateFromInfoResult;
+    {
+        // in order for link transform comparision to make sense, have to change the kinbody to the identify.
+        // First check if any of the link infos have modified transforms
+        KinBody::KinBodyStateSaverPtr stateSaver;
+        FOREACHC(itLinkInfo, info._vLinkInfos) {
+            // if any link has its transform field set, we need to set zero configuration before comparison
+            if( (*itLinkInfo)->IsModifiedField(KinBody::LinkInfo::LIF_Transform) ) {
+                stateSaver.reset(new KinBody::KinBodyStateSaver(shared_kinbody(), Save_LinkTransformation));
+                SetTransform(Transform());
+                vector<dReal> vZeros(GetDOF(), 0);
+                SetDOFValues(vZeros, KinBody::CLA_Nothing);
+                break;
+            }
+        }
+
+        // links
+        if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
+            return updateFromInfoResult;
+        }
     }
 
     // joints
@@ -5619,40 +5855,45 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // transform
-    if (!GetTransform().Compare(info._transform)) {
+    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) && GetTransform().CompareTransform(info._transform, g_fEpsilon) ) {
         SetTransform(info._transform);
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
     }
 
-    // dof values
-    std::vector<dReal> dofValues;
-    GetDOFValues(dofValues);
-    bool bDOFChanged = false;
-    for(std::vector<std::pair<std::pair<std::string, int>, dReal> >::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
-        // find the joint in the active chain
-        JointPtr joint;
-        FOREACHC(itJoint,_vecjoints) {
-            if ((*itJoint)->GetName() == it->first.first) {
-                joint = *itJoint;
-                break;
+    // don't change the dof values here since body might not be added!
+    if( info.IsModifiedField(KinBodyInfo::KBIF_DOFValues) && _nHierarchyComputed == 2 ) {
+        // dof values
+        std::vector<dReal> dofValues;
+        GetDOFValues(dofValues);
+        bool bDOFChanged = false;
+        for(std::vector<std::pair<std::pair<std::string, int>, dReal> >::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
+            // find the joint in the active chain
+            JointPtr joint;
+            FOREACHC(itJoint,_vecjoints) {
+                if ((*itJoint)->GetName() == it->first.first) {
+                    joint = *itJoint;
+                    break;
+                }
+            }
+            if (!joint) {
+                continue;
+            }
+            if (it->first.second >= joint->GetDOF()) {
+                continue;
+            }
+            int dofIndex = joint->GetDOFIndex()+it->first.second;
+            if (RaveFabs(dofValues.at(dofIndex) - it->second) > g_fEpsilon) {
+                dofValues[dofIndex] = it->second;
+                bDOFChanged = true;
+                //RAVELOG_VERBOSE_FORMAT("body %s dof %d value changed", _id%dofIndex);
             }
         }
-        if (!joint) {
-            continue;
+        if (bDOFChanged) {
+            SetDOFValues(dofValues);
+            updateFromInfoResult = UFIR_Success;
+            RAVELOG_VERBOSE_FORMAT("body %s updated due to dof values change", _id);
         }
-        if (it->first.second >= joint->GetDOF()) {
-            continue;
-        }
-        if (dofValues[joint->GetDOFIndex()+it->first.second] != it->second) {
-            dofValues[joint->GetDOFIndex()+it->first.second] = it->second;
-            bDOFChanged = true;
-        }
-    }
-    if (bDOFChanged) {
-        SetDOFValues(dofValues);
-        updateFromInfoResult = UFIR_Success;
-        RAVELOG_VERBOSE_FORMAT("body %s updated due to dof values change", _id);
     }
 
     FOREACH(it, info._mReadableInterfaces) {

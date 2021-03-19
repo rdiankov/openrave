@@ -98,6 +98,7 @@ void RobotBase::AttachedSensorInfo::Reset()
     _linkname.clear();
     _trelative = Transform();
     _sensorname.clear();
+    _referenceAttachedSensorName.clear();
     _docSensorGeometry = rapidjson::Document();
 }
 
@@ -109,6 +110,7 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     orjson::SetJsonValueByKey(value, "linkName", _linkname, allocator);
     orjson::SetJsonValueByKey(value, "transform", _trelative, allocator);
     orjson::SetJsonValueByKey(value, "type", _sensorname, allocator);
+    orjson::SetJsonValueByKey(value, "referenceAttachedSensorName", _referenceAttachedSensorName, allocator);
 
     if (_docSensorGeometry.IsObject() && _docSensorGeometry.MemberCount() > 0) {
         rapidjson::Value sensorGeometry;
@@ -124,6 +126,7 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
     orjson::LoadJsonValueByKey(value, "linkName", _linkname);
     orjson::LoadJsonValueByKey(value, "transform", _trelative);
     orjson::LoadJsonValueByKey(value, "type", _sensorname);
+    orjson::LoadJsonValueByKey(value, "referenceAttachedSensorName", _referenceAttachedSensorName);
 
     if (value.HasMember("sensorGeometry")) {
         if (!_docSensorGeometry.IsObject()) {
@@ -238,6 +241,7 @@ void RobotBase::AttachedSensor::ExtractInfo(AttachedSensorInfo& info) const
     info._id = _info._id;
     info._name = _info._name;
     info._trelative = _info._trelative;
+    info._referenceAttachedSensorName = _info._referenceAttachedSensorName;
     info._sensorname.clear();
     info._linkname.clear();
 
@@ -281,6 +285,12 @@ UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::
         return UFIR_RequireReinitialize;
     }
 
+    // referenceAttachedSensorName
+    if (_info._referenceAttachedSensorName != info._referenceAttachedSensorName) {
+        RAVELOG_VERBOSE_FORMAT("attached sensor %s referenceAttachedSensorName changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
     // sensor name
     if (_info._sensorname != info._sensorname) {
         RAVELOG_VERBOSE_FORMAT("attached sensor %s sensor name changed", _info._id);
@@ -294,7 +304,7 @@ UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::
     }
 
     // _trelative
-    if (!GetRelativeTransform().Compare(info._trelative)) {
+    if (GetRelativeTransform().CompareTransform(info._trelative, g_fEpsilon)) {
         SetRelativeTransform(info._trelative);
         RAVELOG_VERBOSE_FORMAT("attached sensor %s relative transform changed", _info._id);
         updateFromInfoResult = UFIR_Success;
@@ -402,27 +412,40 @@ void RobotBase::RobotStateSaver::Release()
 }
 
 ///\brief removes the robot from the environment temporarily while in scope
-class EnvironmentRobotRemover
+class EnvironmentBodyRemover
 {
 public:
-
-    EnvironmentRobotRemover(RobotBasePtr pRobot) : _bRemoved(false), _pRobot(pRobot), _pEnv(pRobot->GetEnv()) {
-        _pEnv->Remove(_pRobot);
-        _bRemoved = true;
+    EnvironmentBodyRemover(OpenRAVE::KinBodyPtr pBody) : _pBody(pBody), _grabbedStateSaver(pBody, OpenRAVE::KinBody::Save_GrabbedBodies) {
+        if( _pBody->IsRobot() ) {
+            // If the manip comes from a connected body, the information of which manip is active is lost once the robot
+            // is removed from env. Need to save the active manip name so that we can set it back later when the robot
+            // is re-added to the env.
+            _pBodyRobot = OpenRAVE::RaveInterfaceCast<OpenRAVE::RobotBase>(_pBody);
+            if( !!_pBodyRobot->GetActiveManipulator() ) {
+                _activeManipName = _pBodyRobot->GetActiveManipulator()->GetName();
+            }
+        }
+        _pBody->GetEnv()->Remove(_pBody);
     }
 
-    ~EnvironmentRobotRemover() {
-        if (_bRemoved) {
-            _pEnv->Add(_pRobot, false);
-            _bRemoved = false;
+    ~EnvironmentBodyRemover() {
+        _pBody->GetEnv()->Add(_pBody, IAM_StrictNameChecking);
+        _grabbedStateSaver.Restore();
+        _grabbedStateSaver.Release();
+        if( !!_pBodyRobot && !_activeManipName.empty() ) {
+            OpenRAVE::RobotBase::ManipulatorPtr pmanip = _pBodyRobot->GetManipulator(_activeManipName);
+            // it might be ok with manipulator doesn't exist if ConnectedBody acitve state changes.
+            if( !!pmanip ) {
+                _pBodyRobot->SetActiveManipulator(pmanip);
+            }
         }
     }
 
 private:
-
-    bool _bRemoved;
-    RobotBasePtr _pRobot;
-    EnvironmentBasePtr _pEnv;
+    OpenRAVE::KinBodyPtr _pBody;
+    OpenRAVE::KinBody::KinBodyStateSaver _grabbedStateSaver;
+    OpenRAVE::RobotBasePtr _pBodyRobot;
+    std::string _activeManipName; ///< the name of the current active manipulator of pBody at the time of removal.
 };
 
 void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> probot)
@@ -446,7 +469,7 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
             }
 
             if( bchanged ) {
-                EnvironmentRobotRemover robotremover(probot);
+                EnvironmentBodyRemover robotremover(probot);
                 // need to restore active connected bodies
                 // but first check whether anything changed
                 probot->SetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
@@ -611,28 +634,28 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
     if (value.HasMember("tools")) {
         _vManipulatorInfos.reserve(value["tools"].Size() + _vManipulatorInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vManipulatorInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vManipulatorInfos, "name", fUnitScale, options);
         }
     }
 
     if (value.HasMember("attachedSensors")) {
         _vAttachedSensorInfos.reserve(value["attachedSensors"].Size() + _vAttachedSensorInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vAttachedSensorInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vAttachedSensorInfos, "name", fUnitScale, options);
         }
     }
 
     if (value.HasMember("connectedBodies")) {
         _vConnectedBodyInfos.reserve(value["connectedBodies"].Size() + _vConnectedBodyInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["connectedBodies"].Begin(); it != value["connectedBodies"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vConnectedBodyInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vConnectedBodyInfos, "name", fUnitScale, options);
         }
     }
 
     if (value.HasMember("gripperInfos")) {
         _vGripperInfos.reserve(value["gripperInfos"].Size() + _vGripperInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vGripperInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vGripperInfos, "name", fUnitScale, options);
         }
     }
 }
@@ -2288,7 +2311,7 @@ void RobotBase::_ComputeInternalInformation()
         RAVELOG_WARN(str(boost::format("Robot %s span is greater than 30 meaning that it is most likely defined in a unit other than meters. It is highly encouraged to define all OpenRAVE robots in meters since many metrics, database models, and solvers have been specifically optimized for this unit\n")%GetName()));
     }
 
-    if( !GetController() ) {
+    if( !GetController() || (int)GetController()->GetControlDOFIndices().size() != GetDOF() ) {
         RAVELOG_VERBOSE(str(boost::format("no default controller set on robot %s\n")%GetName()));
         std::vector<int> dofindices;
         for(int i = 0; i < GetDOF(); ++i) {

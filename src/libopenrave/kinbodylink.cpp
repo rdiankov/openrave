@@ -225,6 +225,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _t);
         _t.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
+        _modifiedFields |= KinBody::LinkInfo::LIF_Transform;
     }
     if (value.HasMember("massTransform")) {
         orjson::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
@@ -307,7 +308,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     if (value.HasMember("geometries")) {
         _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["geometries"].Begin(); it != value["geometries"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vgeometryinfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vgeometryinfos, "name", fUnitScale, options);
         }
     }
 
@@ -322,7 +323,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     //         size_t iGeometry = 0;
     //         for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
     //             std::string id = orjson::GetStringJsonValueByKey(*im, "id");
-    //             UpdateOrCreateInfo(*im, id, vgeometries, fUnitScale);
+    //             UpdateOrCreateInfoWithNameCheck(*im, id, vgeometries, "name", fUnitScale);
     //         }
     //     }
     // }
@@ -533,6 +534,73 @@ AABB KinBody::Link::ComputeAABBFromTransform(const Transform& tLink) const
     }
     // have to at least return the correct position!
     return AABB(tLink.trans,Vector(0,0,0));
+}
+
+AABB KinBody::Link::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const
+{
+    return ComputeAABBForGeometryGroupFromTransform(geomgroupname, Transform());
+}
+
+AABB KinBody::Link::ComputeAABBForGeometryGroup(const std::string& geomgroupname) const
+{
+    return ComputeAABBForGeometryGroupFromTransform(geomgroupname, _info._t);
+}
+
+AABB KinBody::Link::ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tLink) const
+{
+    const std::vector<KinBody::GeometryInfoPtr>& vgeoms = GetGeometriesFromGroup(geomgroupname);
+    if( vgeoms.size() == 1 ) {
+        return vgeoms.front()->ComputeAABB(tLink);
+    }
+    else if( vgeoms.size() > 1 ) {
+        Vector vmin, vmax;
+        bool binitialized = false;
+        AABB ab;
+        FOREACHC(itgeom, vgeoms) {
+            ab = (*itgeom)->ComputeAABB(tLink);
+            if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
+                continue;
+            }
+            Vector vnmin = ab.pos - ab.extents;
+            Vector vnmax = ab.pos + ab.extents;
+            if( !binitialized ) {
+                vmin = vnmin;
+                vmax = vnmax;
+                binitialized = true;
+            }
+            else {
+                if( vmin.x > vnmin.x ) {
+                    vmin.x = vnmin.x;
+                }
+                if( vmin.y > vnmin.y ) {
+                    vmin.y = vnmin.y;
+                }
+                if( vmin.z > vnmin.z ) {
+                    vmin.z = vnmin.z;
+                }
+                if( vmax.x < vnmax.x ) {
+                    vmax.x = vnmax.x;
+                }
+                if( vmax.y < vnmax.y ) {
+                    vmax.y = vnmax.y;
+                }
+                if( vmax.z < vnmax.z ) {
+                    vmax.z = vnmax.z;
+                }
+            }
+        } // end FOREACHC
+        if( !binitialized ) {
+            ab.pos = tLink.trans;
+            ab.extents = Vector(0,0,0);
+        }
+        else {
+            ab.pos = (dReal)0.5 * (vmin + vmax);
+            ab.extents = vmax - ab.pos;
+        }
+        return ab;
+    }
+    // have to at least return the correct position
+    return AABB(tLink.trans, Vector(0, 0, 0));
 }
 
 void KinBody::Link::serialize(std::ostream& o, int options) const
@@ -876,6 +944,7 @@ void KinBody::Link::UpdateInfo()
 void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
 {
     info = _info;
+    info._modifiedFields = 0;
     info._vgeometryinfos.resize(_vGeometries.size());
     for (size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
         info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
@@ -894,10 +963,12 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         return updateFromInfoResult;
     }
 
-    if (TransformDistanceFast(GetTransform(), info._t) > g_fEpsilonLinear) {
-        RAVELOG_VERBOSE_FORMAT("link %s transform changed", _info._id);
-        SetTransform(info._t);
-        updateFromInfoResult = UFIR_Success;
+    // transform
+    if( info.IsModifiedField(KinBody::LinkInfo::LIF_Transform) ) {
+        if (TransformDistanceFast(GetTransform(), info._t) > g_fEpsilonLinear) {
+            RAVELOG_VERBOSE_FORMAT("link %s transform changed", _info._id);
+            return UFIR_RequireReinitialize;
+        }
     }
 
     // name
