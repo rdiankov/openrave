@@ -42,10 +42,9 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
         xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
         FOREACHC(it, GetReadableInterfaces()) {
             // some readable are not xml readable and does not get serialized here
-            ReadablePtr pxmlreadable = it->second;
-            if( !!pxmlreadable ) {
+            if( !!it->second ) {
                 BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
-                pxmlreadable->SerializeXML(newwriter,options);
+                it->second->SerializeXML(newwriter,options);
             }
         }
         writer->Serialize(O);
