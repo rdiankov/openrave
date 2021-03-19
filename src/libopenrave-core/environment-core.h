@@ -359,7 +359,6 @@ public:
         std::vector<KinBodyPtr> vcallbackbodies;
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
 
             for (KinBodyPtr& pbody : _vecbodies) {
                 if (!pbody) {
@@ -906,7 +905,7 @@ public:
         }
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            const int newBodyIndex = AssignEnvironmentBodyIndex(pbody);
+            const int newBodyIndex = _AssignEnvironmentBodyIndex(pbody);
             {
                 EnsureVectorSize(_vecbodies, newBodyIndex+1);
                 _vecbodies.at(newBodyIndex) = pbody;
@@ -986,7 +985,7 @@ public:
         }
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            const int newBodyIndex = AssignEnvironmentBodyIndex(robot);
+            const int newBodyIndex = _AssignEnvironmentBodyIndex(robot);
             {
                 EnsureVectorSize(_vecbodies, newBodyIndex+1);
                 _vecbodies.at(newBodyIndex) = robot;
@@ -1188,6 +1187,7 @@ public:
         return _GetNumBodies();
     }
 
+    // assumes _mutexInterfaces is locked
     inline int _GetNumBodies() const
     {
         // this returns number of valid (non nullptr) bodies, not the same as _vecbodies.size()
@@ -2475,7 +2475,6 @@ public:
     KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) override
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        boost::mutex::scoped_lock locknetwork(_mutexEnvironmentIds);
         if (0 < bodyIndex && bodyIndex < (int) _vecbodies.size()) {
             return _vecbodies.at(bodyIndex);
         }
@@ -3209,7 +3208,7 @@ protected:
         if (_mapBodyIdIndex.erase(id) == 0) {
             RAVELOG_WARN_FORMAT("env=%d, pbody of id %s not found in _mapBodyIdIndex of size %d, this should not happen!", GetId()%id%_mapBodyIdIndex.size());
         }
-        UnassignEnvironmentBodyIndex(pbody);
+        _UnassignEnvironmentBodyIndex(pbody);
         pbody.reset();
 
         _nBodiesModifiedStamp++;
@@ -3255,7 +3254,6 @@ protected:
         _fDeltaSimTime = r->_fDeltaSimTime;
         _nCurSimTime = 0;
         _nSimStartTime = utils::GetMicroTime();
-        _environmentIndexRecyclePool = r->_environmentIndexRecyclePool;
         _bRealTime = r->_bRealTime;
 
         _name = r->_name;
@@ -3286,6 +3284,8 @@ protected:
                 _vecbodies.clear();
                 _mapBodyNameIndex.clear();
                 _mapBodyIdIndex.clear();
+                _environmentIndexRecyclePool.clear();
+
                 _vPublishedBodies.clear();
             }
         }
@@ -3313,7 +3313,6 @@ protected:
         }
 
         EnvironmentMutex::scoped_lock lock(GetMutex());
-        //boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds); // why is this here? if locked, then KinBody::_ComputeInternalInformation freezes on GetBodyFromEnvironmentId call
 
         bool bCollisionCheckerChanged = false;
         if( !!r->GetCollisionChecker() ) {
@@ -3353,6 +3352,8 @@ protected:
 
         if( options & Clone_Bodies ) {
             boost::timed_mutex::scoped_lock lock(r->_mutexInterfaces);
+            _environmentIndexRecyclePool = r->_environmentIndexRecyclePool;
+
             std::vector<std::pair<Vector,Vector> > linkvelocities;
             std::vector<KinBodyPtr> vecbodies;
             std::unordered_map<std::string, int> mapBodyNameIndex, mapBodyIdIndex;
@@ -3741,9 +3742,9 @@ protected:
         return true;
     }
 
-    virtual int AssignEnvironmentBodyIndex(KinBodyPtr pbody)
+    /// assumes _mutexInterfaces is locked
+    virtual int _AssignEnvironmentBodyIndex(KinBodyPtr pbody)
     {
-        boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         const bool bRecycleId = !_environmentIndexRecyclePool.empty();
         int envBodyIndex = 0;
         if (bRecycleId) {
@@ -3760,9 +3761,9 @@ protected:
         return envBodyIndex;
     }
 
-    virtual void UnassignEnvironmentBodyIndex(KinBodyPtr pbody)
+    /// assumes _mutexInterfaces is locked
+    virtual void _UnassignEnvironmentBodyIndex(KinBodyPtr pbody)
     {
-        boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         if (!pbody) {
             RAVELOG_WARN_FORMAT("env=%d, body is nullptr", GetId());
             return;
@@ -4066,9 +4067,9 @@ protected:
     std::unordered_map<std::string, int> _mapBodyNameIndex; /// maps body name to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
     std::unordered_map<std::string, int> _mapBodyIdIndex; /// maps body id to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
 
-    std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. 
+    std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. protected by _mutexInterfaces
 
-    int _assignedBodySensorNameSuffix; // cache of suffix used to make body (robot) and sensor name unique in env
+    int _assignedBodySensorNameSuffix; // cache of suffix used to make body (including robot) and sensor name unique in env
     int _assignedBodyIdSuffix; // cache of suffix used to make body id unique in env
 
     list< std::pair<ModuleBasePtr, std::string> > _listModules;     ///< modules loaded in the environment and the strings they were intialized with. Initialization strings are used for cloning.
@@ -4086,8 +4087,7 @@ protected:
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation
 
     mutable EnvironmentMutex _mutexEnvironment;          ///< protects internal data from multithreading issues
-    mutable boost::mutex _mutexEnvironmentIds;      ///< protects _vecbodies/_vecrobots from multithreading issues
-    mutable boost::timed_mutex _mutexInterfaces;     ///< lock when managing interfaces like _listOwnedInterfaces, _listModules
+    mutable boost::timed_mutex _mutexInterfaces;     ///< lock when managing interfaces like _listOwnedInterfaces, _listModules as well as _vecbodies and supporting data such as _mapBodyNameIndex, _mapBodyIdIndex and _environmentIndexRecyclePool
     mutable boost::mutex _mutexInit;     ///< lock for destroying the environment
 
     vector<KinBody::BodyState> _vPublishedBodies;
