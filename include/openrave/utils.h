@@ -28,6 +28,8 @@
 #include <string>
 #include <istream>
 #include <vector>
+#include <mutex>
+#include <shared_mutex>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
@@ -366,6 +368,40 @@ inline std::string ConvertToOpenRAVEName(const std::string& name)
     }
     return newname;
 }
+
+
+class TimedUniqueLock : public std::unique_lock<std::timed_mutex> {
+public:
+    /**
+     * Try to lock a mutex for a given duration if the duration is a positive value. Otherwise it waits for the lock without a timeout.
+     */
+    TimedUniqueLock(std::timed_mutex& mutex, int64_t timeoutus)
+        : std::unique_lock<std::timed_mutex>(mutex, std::defer_lock) {
+        if( timeoutus >= 0 ) {
+            this->try_lock_for(std::chrono::microseconds(timeoutus));
+        }
+        else {
+            this->lock();
+        }
+    }
+};
+
+class TimedSharedLock : public std::shared_lock<std::shared_timed_mutex> {
+public:
+    /**
+     * Try to lock a mutex for a given duration if the duration is a positive value. Otherwise it waits for the lock without a timeout.
+     */
+    TimedSharedLock(std::shared_timed_mutex& mutex, int64_t timeoutus)
+        : std::shared_lock<std::shared_timed_mutex>(mutex, std::defer_lock) {
+        if( timeoutus >= 0 ) {
+            this->try_lock_for(std::chrono::microseconds(timeoutus));
+        }
+        else {
+            this->lock();
+        }
+    }
+};
+    
 
 } // utils
 } // OpenRAVE
