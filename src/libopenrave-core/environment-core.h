@@ -3355,9 +3355,9 @@ protected:
             boost::timed_mutex::scoped_lock lock(r->_mutexInterfaces);
             std::vector<std::pair<Vector,Vector> > linkvelocities;
             std::vector<KinBodyPtr> vecbodies;
-            if( bCheckSharedResources ) {
-                std::unordered_map<std::string, int> mapBodyNameIndex, mapBodyIdIndex;
+            std::unordered_map<std::string, int> mapBodyNameIndex, mapBodyIdIndex;
 
+            if( bCheckSharedResources ) {
                 // delete any bodies/robots from mapBodies that are not in r->_vecbodies
                 vecbodies.swap(_vecbodies);
                 mapBodyNameIndex.swap(_mapBodyNameIndex);
@@ -3398,7 +3398,7 @@ protected:
                     const int envBodyIndex = robotInOtherEnv.GetEnvironmentBodyIndex();
                     BOOST_ASSERT( 0 < envBodyIndex);
                     BOOST_ASSERT( (int)_vecbodies.size() < envBodyIndex + 1 || !_vecbodies.at(envBodyIndex));
-                    pnewrobot->_environmentBodyIndex = envBodyIndex;
+                    pnewrobot->_environmentBodyIndex = envBodyIndex; // I guess it's ok to directly set env body index, because it was unique in the other env.
 
                     {
                         EnsureVectorSize(_vecbodies, envBodyIndex + 1);
@@ -3428,11 +3428,11 @@ protected:
                     KinBodyPtr pnewbody;
                     if( bCheckSharedResources ) {
                         const std::string& name = body.GetName();
-                        const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
-                        if (it != _mapBodyNameIndex.end()) {
+                        const std::unordered_map<std::string, int>::const_iterator it = mapBodyNameIndex.find(name);
+                        if (it != mapBodyNameIndex.end()) {
                             const int envBodyIndex = it->second;
-                            BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size());
-                            const KinBodyPtr& pNewBodyCandidate = _vecbodies.at(envBodyIndex);
+                            BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) vecbodies.size());
+                            const KinBodyPtr& pNewBodyCandidate = vecbodies.at(envBodyIndex);
                             if( !pNewBodyCandidate ) {
                                 RAVELOG_WARN_FORMAT("env=%d, a body (name=%s, envBodyIndex=%d) in vecbodies is not initialized", GetId()%name%envBodyIndex);
                             }
