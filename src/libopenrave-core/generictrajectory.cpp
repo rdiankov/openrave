@@ -562,7 +562,7 @@ public:
                 WriteBinaryString(O, itReadableInterface->first);  // readable interface id
 
                 // try to serialize to json first
-                ReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(itReadableInterface->second);
+                ReadablePtr pReadable = itReadableInterface->second;
                 if (!!pReadable) {
                     rapidjson::Value rReadable;
                     if( pReadable->SerializeJSON(rReadable, document.GetAllocator(), fUnitScale, zerooptions) ) {

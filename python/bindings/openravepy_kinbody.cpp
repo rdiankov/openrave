@@ -184,8 +184,7 @@ std::map<std::string, ReadablePtr> ExtractReadableInterfaces(object pyReadableIn
         size_t numkeys = len(keys);
         for(size_t iKey = 0; iKey < numkeys; iKey++) {
             std::string name = py::extract<std::string>(keys[iKey]);
-            ReadablePtr pReadable = ExtractReadable(pyReadableInterfacesDict[name]);
-            mReadableInterfaces[name] = boost::dynamic_pointer_cast<Readable>(pReadable);
+            mReadableInterfaces[name] = ExtractReadable(pyReadableInterfacesDict[name]);
             // Readable pValue = py::extract<Readable>(pyReadableInterfacesDict[name]);
             // mReadableInterfaces[name] = pValue;
         }

@@ -124,7 +124,7 @@ void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
     FOREACHC(it, __mapReadableInterfaces) {
         // sometimes interfaces might be disabled
         // some readable are not xml readable and does not get serialized here
-        ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(it->second);
+        ReadablePtr pxmlreadable = it->second;
         if( !!pxmlreadable ) {
             pxmlreadable->SerializeXML(writer,options);
         }
