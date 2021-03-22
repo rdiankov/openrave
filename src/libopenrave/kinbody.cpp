@@ -5046,11 +5046,10 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
             KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
             if( !!pbody ) {
                 vAttached.push_back(pbody);
-            }
-
-            if (--numAttached == 0) {
-                // already filled vAttached with contents of vAttachedVisited
-                return;
+                if (--numAttached == 0) {
+                    // already filled vAttached with contents of vAttachedVisited
+                    return;
+                }
             }
         }
     }
