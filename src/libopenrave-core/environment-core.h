@@ -2735,23 +2735,25 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::vector<KinBodyPtr> vBodies;
+        int numBodies = 0;
         {
             std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             vBodies = _vecbodies;
+            numBodies = _GetNumBodies();
         }
-        const int numBodies = _GetNumBodies();
         info._vBodyInfos.resize(numBodies);
         int validBodyItr = 0;
         for(KinBodyPtr& pbody : vBodies) {
             if (!pbody) {
                 continue;
             }
+            KinBody::KinBodyInfoPtr& pbodyFromInfo = info._vBodyInfos.at(validBodyItr);
             if (pbody->IsRobot()) {
-                info._vBodyInfos[validBodyItr].reset(new RobotBase::RobotBaseInfo());
-                RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(info._vBodyInfos[validBodyItr])));
+                pbodyFromInfo.reset(new RobotBase::RobotBaseInfo());
+                RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pbodyFromInfo)));
             } else {
-                info._vBodyInfos[validBodyItr].reset(new KinBody::KinBodyInfo());
-                pbody->ExtractInfo(*info._vBodyInfos[validBodyItr]);
+                pbodyFromInfo.reset(new KinBody::KinBodyInfo());
+                pbody->ExtractInfo(*pbodyFromInfo);
             }
             ++validBodyItr;
         }
@@ -2800,6 +2802,17 @@ public:
             std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             vBodies = _vecbodies;
         }
+        {
+            for (std::vector<KinBodyPtr>::iterator it = vBodies.begin();
+                 it != vBodies.end();) {
+                if (!*it) {
+                    it = vBodies.erase(it);
+                }
+                else {
+                    it++;
+                }
+            }
+        }            
         std::vector<int> vUsedBodyIndices; // used indices of vBodies
 
         // internally manipulates _vecbodies using _AddKinBody/_AddRobot/_RemoveKinBodyFromIterator
