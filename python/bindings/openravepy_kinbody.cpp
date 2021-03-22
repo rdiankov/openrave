@@ -377,6 +377,9 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     info._bVisible = _bVisible;
     info._bModifiable = _bModifiable;
     if (info._type == GT_CalibrationBoard) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+#define has_key contains
+#endif
         info._calibrationBoardParameters.resize(1);
         if( _calibrationBoardParameters.has_key("numDotsX") ) {
             info._calibrationBoardParameters[0].numDotsX = py::extract<int>(_calibrationBoardParameters["numDotsX"]);
@@ -402,6 +405,10 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
         if( _calibrationBoardParameters.has_key("bigDotDiameterDistanceRatio") ) {
             info._calibrationBoardParameters[0].bigDotDiameterDistanceRatio = py::extract<float>(_calibrationBoardParameters["bigDotDiameterDistanceRatio"]);
         }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+#undef has_key
+#endif
+
     }
     return pinfo;
 }
