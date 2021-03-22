@@ -3138,6 +3138,7 @@ protected:
 
     /// \brief finds all attached bodies who should be considered as one during collision (ie one is grabbing the other)
     ///
+    /// recursively visits all attached bodies, and sets vAttachedVisited for attached bodies to 1.
     /// \param vAttachedVisited indexed by environmentBodyIndex
     /// \return number of elements attached
     virtual int _GetNumAttached(std::vector<int8_t>& vAttachedVisited) const;

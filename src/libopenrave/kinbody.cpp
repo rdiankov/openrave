@@ -4869,12 +4869,14 @@ void KinBody::_DeinitializeInternalInformation()
 
 bool KinBody::IsAttached(const KinBody &body) const
 {
+    // handle obvious cases without doing expensive operations
     if(this == &body ) {
         return true;
     }
     else if (_listAttachedBodies.empty()) {
         return false;
     }
+
     std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
     vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
