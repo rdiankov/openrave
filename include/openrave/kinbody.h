@@ -3140,7 +3140,7 @@ protected:
     ///
     /// recursively visits all attached bodies, and sets vAttachedVisited for attached bodies to 1.
     /// \param vAttachedVisited indexed by environmentBodyIndex
-    /// \return number of elements attached
+    /// \return number of elements attached (excluding initially non-zero elements in vAttachedVisited)
     virtual int _GetNumAttached(std::vector<int8_t>& vAttachedVisited) const;
 
     /// \brief adds an attached body
