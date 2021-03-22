@@ -6078,42 +6078,11 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
-    FOREACH(it, info._mReadableInterfaces) {
-        ReadablePtr pReadable = boost::dynamic_pointer_cast<Readable>(GetReadableInterface(it->first));
-        if (!!pReadable) {
-            if ( (*(it->second)) != (*pReadable)) {
-                rapidjson::Document docReadable;
-                dReal fUnitScale = 1.0;
-                int options = 0;
-                it->second->SerializeJSON(docReadable, docReadable.GetAllocator(), fUnitScale, options);
-                pReadable->DeserializeJSON(docReadable, fUnitScale);
-                updateFromInfoResult = UFIR_Success;
-                RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s changed", _id%it->first);
-            }
-        }
-        else {
-            // TODO: create a new Readable?
-            SetReadableInterface(it->first, it->second);
-            updateFromInfoResult = UFIR_Success;
-            RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s added", _id%it->first);
-        }
+    if( UpdateReadableInterfaces(info._mReadableInterfaces) ) {
+        updateFromInfoResult = UFIR_Success;
+        RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface change", _id);
     }
-
-    // delete readableInterface
-    FOREACH(itExisting, GetReadableInterfaces()) {
-        bool bFound = false;
-        FOREACHC(it, info._mReadableInterfaces) {
-            if (itExisting->first == it->first) {
-                bFound = true;
-                break;
-            }
-        }
-        if (!bFound) {
-            ClearReadableInterface(itExisting->first);
-            updateFromInfoResult = UFIR_Success;
-            RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s removed", _id%itExisting->first);
-        }
-    }
+    
     return updateFromInfoResult;
 }
 

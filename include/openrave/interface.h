@@ -129,6 +129,9 @@ public:
     virtual void ClearReadableInterfaces();
     virtual void ClearReadableInterface(const std::string& id);
 
+    /// \brief updates the readable interfaces. returns true if there are any changes
+    virtual bool UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces);
+
     /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc. <b>[multi-thread safe]</b>
     virtual const std::string& GetDescription() const {
         return __description;
