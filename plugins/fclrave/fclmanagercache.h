@@ -356,8 +356,6 @@ public:
                 cache.vcolobjs.resize(0);
                 cache.Invalidate();
 
-                //_RemoveTrailingInvalidCachedBodies();
-
                 return true;
             }
         }
@@ -393,19 +391,18 @@ public:
             bool isValid = cache.IsValid();
             if (!isValid) {
                 std::string ssinfo;
-                int bodyIdCached = -1;
+                int bodyIdCached = 0;
                 for (const KinBodyCache& cache : vecCachedBodies) {
+                    if( cache.IsValid() ) {
+                        KinBodyConstPtr pbody = cache.pwbody.lock(); ///< weak pointer to body
+                        if( !!pbody ) {
+                            ssinfo += str(boost::format("(id=%d, linkmask=0x%x, numcols=%d, name=%s), ")%bodyIdCached%_GetLinkMask(cache.linkEnableStates)%cache.vcolobjs.size()%pbody->GetName());
+                        }
+                        else {
+                            ssinfo += str(boost::format("id=%d, linkmask=0x%x, numcols=%d")%bodyIdCached%_GetLinkMask(cache.linkEnableStates)%cache.vcolobjs.size());
+                        }
+                    }
                     ++bodyIdCached;
-                    if( !cache.IsValid() ) {
-                        continue;
-                    }
-                    KinBodyConstPtr pbody = cache.pwbody.lock(); ///< weak pointer to body
-                    if( !!pbody ) {
-                        ssinfo += str(boost::format("(id=%d, linkmask=0x%x, numcols=%d, name=%s), ")%bodyIdCached%_GetLinkMask(cache.linkEnableStates)%cache.vcolobjs.size()%pbody->GetName());
-                    }
-                    else {
-                        ssinfo += str(boost::format("id=%d, linkmask=0x%x, numcols=%d")%bodyIdCached%_GetLinkMask(cache.linkEnableStates)%cache.vcolobjs.size());
-                    }
                 }
                 RAVELOG_WARN_FORMAT("%x tracking body not in current cached bodies (valid=%d) (tracking body %s (id=%d)) (env %d). Current cache is: %s", this%isValid%trackingbody.GetName()%bodyId%trackingbody.GetEnv()->GetId()%ssinfo);
             }
@@ -766,9 +763,8 @@ public:
 
             // remove bodies not attached anymore
             
-            int bodyId = -1;
+            int bodyId = 0;
             for (KinBodyCache& cache : vecCachedBodies) {
-                ++bodyId;
                 KinBodyConstPtr pbody = cache.pwbody.lock();
                 // could be the case that the same pointer was re-added to the environment so have to check the environment id
                 // make sure we don't need to make this asusmption of body id change when bodies are removed and re-added
@@ -783,10 +779,9 @@ public:
                     cache.vcolobjs.resize(0);
                     cache.Invalidate();
                 }
+                ++bodyId;
             }
         }
-
-        //_RemoveTrailingInvalidCachedBodies();
 
         if( _tmpSortedBuffer.size() > 0 ) {
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
