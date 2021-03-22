@@ -68,22 +68,6 @@ inline void EnsureVectorSize(std::vector<T>& vec, size_t size)
     }
 }
 
-/// \brief shrinks vector size by removing trailing null entries. element of vector has to be a boost shared pointer for null checking.
-template <typename T>
-inline void RemoveTrailingNull(std::vector<boost::shared_ptr<T> >& vec,
-                               bool keepFirstElement = true,
-                               bool forceRemoveLastElement = true)
-{
-    int numErase = forceRemoveLastElement; // last element is already decided to be erased if forceRemoveLastElement
-    const int numMaximumElementsToRemove = vec.size() - (int) keepFirstElement;
-    for (; numErase < numMaximumElementsToRemove; ++numErase) {
-        if (!!vec[vec.size() - 1 - numErase]) {
-            break;
-        }
-    }
-    vec.erase(vec.end() - numErase, vec.end());
- }
-
 /// \brief fcl spaces manages the individual collision objects and sets up callbacks to track their changes.
 ///
 /// It does not know or manage the broadphase manager
