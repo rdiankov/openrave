@@ -81,22 +81,20 @@ public:
     }
     std::string GetXMLId() const {
         // some readable are not xml readable and does have a xml id
-        ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
-        if (!pxmlreadable) {
+        if (!_readable) {
             return "";
         }
-        return pxmlreadable->GetXMLId();
+        return _readable->GetXMLId();
     }
 
     object SerializeXML(int options=0) {
         // some readable are not xml readable and does not get serialized here
-        ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
-        if (!pxmlreadable) {
+        if (!_readable) {
             return py::none_();
         }
         std::string xmlid;
         OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
-        if( !pxmlreadable->SerializeXML(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options) ) {
+        if( !_readable->SerializeXML(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options) ) {
             return py::none_();
         }
 
@@ -107,12 +105,11 @@ public:
 
     py::object SerializeJSON(dReal fUnitScale=1.0, int options=0) const
     {
-        ReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
-        if (!pjsonreadable) {
+        if (!_readable) {
             return py::none_();
         }
         rapidjson::Document doc;
-        if( !pjsonreadable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options) ) {
+        if( !_readable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options) ) {
             return py::none_();
         }
         return toPyObject(doc);
@@ -122,8 +119,7 @@ public:
     {
         rapidjson::Document doc;
         toRapidJSONValue(obj, doc, doc.GetAllocator());
-        ReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
-        return pjsonreadable->DeserializeJSON(doc, fUnitScale);
+        return _readable->DeserializeJSON(doc, fUnitScale);
     }
 
     ReadablePtr GetReadable() {
