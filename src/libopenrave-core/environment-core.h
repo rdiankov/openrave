@@ -973,10 +973,10 @@ public:
             }
         }
 
+        // no id for sensor right now
         if( !_CheckUniqueName(SensorBaseConstPtr(psensor), !!(addMode & IAM_StrictNameChecking)) ) {
             _EnsureUniqueName(psensor);
         }
-        // no id for sensor right now
         {
             ExclusiveLock lock(_mutexInterfaces);
             _listSensors.push_back(psensor);
@@ -1269,6 +1269,7 @@ public:
         }
         else {
             RAVELOG_DEBUG_FORMAT("setting %s collision checker", _pCurrentChecker->GetXMLId());
+            SharedLock lock(_mutexInterfaces);
             for (KinBodyPtr& pbody : _vecbodies) {
                 if (!pbody) {
                     continue;
@@ -3300,8 +3301,10 @@ protected:
                     BOOST_ASSERT( 0 < envBodyIndex);
                     BOOST_ASSERT( (int)_vecbodies.size() < envBodyIndex + 1 || !_vecbodies.at(envBodyIndex));
                     pnewrobot->_environmentBodyIndex = envBodyIndex; // I guess it's ok to directly set env body index, because it was unique in the other env.
-
-                    _AddKinBodyInternal(pnewrobot, envBodyIndex);
+                    {
+                        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+                        _AddKinBodyInternal(pnewrobot, envBodyIndex);
+                    }
                 }
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR_FORMAT("failed to clone robot %s: %s", robotInOtherEnv.GetName()%ex.what());
@@ -3340,7 +3343,10 @@ protected:
                     }
                     pnewbody->_environmentBodyIndex = envBodyIndex;
 
-                    _AddKinBodyInternal(pnewbody, envBodyIndex);
+                    {
+                        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+                        _AddKinBodyInternal(pnewbody, envBodyIndex);
+                    }
                 }
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR_FORMAT("env=%d, failed to clone body %s: %s", GetId()%body.GetName()%ex.what());
@@ -3538,7 +3544,7 @@ protected:
     /// \brief adds pbody to _vecbodies and other internal data structures
     /// \param pbody kin body to be added to the environment
     /// \param envBodyIndex environment body index of the pbody
-    /// assuming _mutexInterfaces is locked
+    /// assuming _mutexInterfaces is exclusively locked
     inline void _AddKinBodyInternal(KinBodyPtr pbody, int envBodyIndex)
     {
         EnsureVectorSize(_vecbodies, envBodyIndex+1);
@@ -3559,7 +3565,7 @@ protected:
 
     /// \brief assign body / sensor to unique id by adding suffix
     ///
-    /// assuming _mutexInterfaces is locked
+    /// locks _mutexInterfaces internally
     inline void _EnsureUniqueId(const KinBodyPtr& pbody)
     {
         const std::string baseId = pbody->GetId(); // has to store value instead of reference, as we call SetId internally
@@ -3567,6 +3573,7 @@ protected:
         while (true) {
             newId = str(boost::format("%s%d")%baseId%_assignedBodySensorNameIdSuffix++);
             pbody->SetId(newId);
+
             // most likely unique, but have to double check
             if( utils::IsValidName(newId) && _CheckUniqueId(pbody, false) ) {
                 if( !baseId.empty() ) {
@@ -3581,7 +3588,7 @@ protected:
 
     /// \brief name body / sensor to unique name by adding suffix
     ///
-    /// assuming _mutexInterfaces is locked
+    /// locks _mutexInterfaces internally
     template<typename T>
     inline void _EnsureUniqueName(const T& pObject)
     {
@@ -3590,6 +3597,8 @@ protected:
         while (true) {
             newName = str(boost::format("%s%d")%baseName%_assignedBodySensorNameIdSuffix++);
             pObject->SetName(newName);
+
+            SharedLock lock(_mutexInterfaces);
             // most likely unique, but have to double check
             if( utils::IsValidName(newName) && _CheckUniqueName(pObject, false) ) {
                 if( !baseName.empty() ) {
@@ -3601,9 +3610,12 @@ protected:
         }
     }
     
+    /// locks _mutexInterfaces internally
     virtual bool _CheckUniqueName(KinBodyConstPtr pbody, bool bDoThrow=false) const
     {
         const std::string& name = pbody->GetName();
+
+        SharedLock lock(_mutexInterfaces);
         const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
         if (it == _mapBodyNameIndex.end()) {
             return true;
@@ -3626,6 +3638,7 @@ protected:
     }
 
     /// \brief do not allow empty ids
+    /// locks _mutexInterfaces internally
     virtual bool _CheckUniqueId(KinBodyConstPtr pbody, bool bDoThrow=false) const
     {
         const std::string& inputBodyId = pbody->GetId();
@@ -3636,6 +3649,7 @@ protected:
             return false;
         }
         
+        SharedLock lock(_mutexInterfaces);
         const std::unordered_map<std::string, int>::const_iterator it = _mapBodyIdIndex.find(inputBodyId);
         if (it == _mapBodyIdIndex.end()) {
             return true;
@@ -3701,7 +3715,7 @@ protected:
         return envBodyIndex;
     }
 
-    /// assumes _mutexInterfaces is locked
+    /// assumes _mutexInterfaces is exclusively locked
     virtual void _UnassignEnvironmentBodyIndex(KinBody& body)
     {
         const int envBodyIndex = body._environmentBodyIndex;
