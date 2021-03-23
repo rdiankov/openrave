@@ -2495,7 +2495,7 @@ public:
         _UpdatePublishedBodies();
     }
 
-    /// assumes GetMutex() and _mutexInterfaces are both locked
+    /// assumes GetMutex() and _mutexInterfaces are both exclusively locked
     virtual void _UpdatePublishedBodies()
     {
         // updated the published bodies, resize dynamically in case an exception occurs
@@ -3072,7 +3072,7 @@ protected:
 
     /// \brief invalidates a kinbody from _vecbodies
     /// \param[in] bodyIndex environment body index of kin body to be invalidated
-    /// assumes environment and _mutexInterfaces are locked
+    /// assumes environment and _mutexInterfaces are exclusively locked
     KinBodyPtr _InvalidateKinBodyFromEnvBodyIndex(int bodyIndex)
     {
         KinBodyPtr& pbodyref = _vecbodies.at(bodyIndex);
