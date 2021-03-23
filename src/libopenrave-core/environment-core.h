@@ -92,6 +92,47 @@ public:
     }
 };
 
+class TimedExclusiveLock {
+public:
+    /**
+     * Try to exclusively lock a mutex for a given duration if the duration is a positive value. Otherwise it waits for the lock without a timeout.
+     */
+    TimedExclusiveLock(std::shared_timed_mutex& mutex, int64_t timeoutus)
+        : _mutex(mutex), _lockAquired(false)
+    {
+        if( timeoutus > 0 ) {
+            _lockAquired = _mutex.try_lock_for(std::chrono::microseconds(timeoutus));
+        }
+        else {
+            _mutex.lock();
+            _lockAquired = true;
+        }
+    }
+
+    /// \brief check if lock is succesfully aquired.
+    /// for consistency with TimedSharedLock
+    inline bool operator!() const {
+        return !_lockAquired;
+    }
+    
+    /// \brief unlocks mutex if preiously locked
+    ~TimedExclusiveLock()
+    {
+        if (_lockAquired) {
+            _mutex.unlock();
+            _lockAquired = false;
+        }
+    }
+
+    // prohibit copying
+    TimedExclusiveLock& operator=(const TimedExclusiveLock&) = delete;
+    TimedExclusiveLock(const TimedExclusiveLock&) = delete;
+
+protected:
+    std::shared_timed_mutex& _mutex;
+    bool _lockAquired;
+};
+
 class Environment : public EnvironmentBase
 {
     class GraphHandleMulti : public GraphHandle
@@ -2488,7 +2529,7 @@ public:
     virtual void UpdatePublishedBodies(uint64_t timeout=0)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        TimedSharedLock lock(_mutexInterfaces, timeout);
+        TimedExclusiveLock lock(_mutexInterfaces, timeout);
         if (!lock) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
         }
