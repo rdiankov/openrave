@@ -26,6 +26,8 @@
 #endif
 
 #include <unordered_map>
+#include <mutex>
+#include <shared_mutex>
 
 #include <pcrecpp.h>
 
@@ -56,6 +58,39 @@ inline void EnsureVectorSize(std::vector<T>& vec, size_t size)
     }
 }
 
+
+
+class TimedUniqueLock : public std::unique_lock<std::timed_mutex> {
+public:
+    /**
+     * Try to lock a mutex for a given duration if the duration is a positive value. Otherwise it waits for the lock without a timeout.
+     */
+    TimedUniqueLock(std::timed_mutex& mutex, int64_t timeoutus)
+        : std::unique_lock<std::timed_mutex>(mutex, std::defer_lock) {
+        if( timeoutus >= 0 ) {
+            this->try_lock_for(std::chrono::microseconds(timeoutus));
+        }
+        else {
+            this->lock();
+        }
+    }
+};
+
+class TimedSharedLock : public std::shared_lock<std::shared_timed_mutex> {
+public:
+    /**
+     * Try to lock a mutex for a given duration if the duration is a positive value. Otherwise it waits for the lock without a timeout.
+     */
+    TimedSharedLock(std::shared_timed_mutex& mutex, int64_t timeoutus)
+        : std::shared_lock<std::shared_timed_mutex>(mutex, std::defer_lock) {
+        if( timeoutus >= 0 ) {
+            this->try_lock_for(std::chrono::microseconds(timeoutus));
+        }
+        else {
+            this->lock();
+        }
+    }
+};
 
 class Environment : public EnvironmentBase
 {
@@ -98,7 +133,7 @@ public:
         virtual ~CollisionCallbackData() {
             boost::shared_ptr<Environment> penv = _pweakenv.lock();
             if( !!penv ) {
-                boost::timed_mutex::scoped_lock lock(penv->_mutexInterfaces);
+                std::lock_guard< std::shared_timed_mutex > lock(penv->_mutexInterfaces);
                 penv->_listRegisteredCollisionCallbacks.erase(_iterator);
             }
         }
@@ -119,7 +154,7 @@ public:
         virtual ~BodyCallbackData() {
             boost::shared_ptr<Environment> penv = _pweakenv.lock();
             if( !!penv ) {
-                boost::timed_mutex::scoped_lock lock(penv->_mutexInterfaces);
+                std::lock_guard< std::shared_timed_mutex > lock(penv->_mutexInterfaces);
                 penv->_listRegisteredBodyCallbacks.erase(_iterator);
             }
         }
@@ -266,7 +301,7 @@ public:
         list< pair<ModuleBasePtr, std::string> > listModules;
         list<ViewerBasePtr> listViewers = _listViewers;
         {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             listModules = _listModules;
             listViewers = _listViewers;
         }
@@ -298,7 +333,7 @@ public:
             std::vector<KinBodyPtr> vecbodies;
             list<SensorBasePtr> listSensors;
             {
-                boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
                 vecbodies.swap(_vecbodies);
                 listSensors.swap(_listSensors);
                 _vPublishedBodies.clear();
@@ -358,8 +393,7 @@ public:
         
         std::vector<KinBodyPtr> vcallbackbodies;
         {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
 
             for (KinBodyPtr& pbody : _vecbodies) {
                 if (!pbody) {
@@ -400,7 +434,7 @@ public:
 
         list< pair<ModuleBasePtr, std::string> > listModules;
         {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             listModules = _listModules;
         }
 
@@ -426,14 +460,14 @@ public:
     {
         CHECK_INTERFACE(pinterface);
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         _listOwnedInterfaces.push_back(pinterface);
     }
     virtual void DisownInterface(InterfaceBasePtr pinterface)
     {
         CHECK_INTERFACE(pinterface);
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         _listOwnedInterfaces.remove(pinterface);
     }
 
@@ -460,7 +494,7 @@ public:
         }
         else {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             _listModules.emplace_back(module,  cmdargs);
         }
 
@@ -470,15 +504,15 @@ public:
     void GetModules(std::list<ModuleBasePtr>& listModules, uint64_t timeout) const
     {
         if( timeout == 0 ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             listModules.clear();
             FOREACHC(it, _listModules) {
                 listModules.push_back(it->first);
             }
         }
         else {
-            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
-            if (!lock.owns_lock()) {
+            TimedSharedLock lock(_mutexInterfaces, timeout);
+            if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             listModules.clear();
@@ -905,8 +939,8 @@ public:
             }
         }
         {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            const int newBodyIndex = AssignEnvironmentBodyIndex(pbody);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+            const int newBodyIndex = _AssignEnvironmentBodyIndex(pbody);
             {
                 EnsureVectorSize(_vecbodies, newBodyIndex+1);
                 _vecbodies.at(newBodyIndex) = pbody;
@@ -985,8 +1019,8 @@ public:
             }
         }
         {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            const int newBodyIndex = AssignEnvironmentBodyIndex(robot);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+            const int newBodyIndex = _AssignEnvironmentBodyIndex(robot);
             {
                 EnsureVectorSize(_vecbodies, newBodyIndex+1);
                 _vecbodies.at(newBodyIndex) = robot;
@@ -1049,7 +1083,7 @@ public:
         }
         // no id for sensor right now
         {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             _listSensors.push_back(psensor);
         }
         psensor->Configure(SensorBase::CC_PowerOn);
@@ -1065,7 +1099,7 @@ public:
             KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
             const int envBodyIndex = pbody->GetEnvironmentBodyIndex();
             {
-                boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
                 if ( envBodyIndex <= 0 || envBodyIndex > ((int) _vecbodies.size()) - 1 || !_vecbodies.at(envBodyIndex)) {
                     return false;
                 }
@@ -1118,7 +1152,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         KinBodyPtr pbody;
         {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
             if (it != _mapBodyNameIndex.end()) {
                 const KinBodyPtr& pExistingBody =  _vecbodies.at(it->second);
@@ -1138,7 +1172,7 @@ public:
 
     virtual UserDataPtr RegisterBodyCallback(const BodyCallbackFn& callback)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         BodyCallbackDataPtr pdata(new BodyCallbackData(callback,boost::static_pointer_cast<Environment>(shared_from_this())));
         pdata->_iterator = _listRegisteredBodyCallbacks.insert(_listRegisteredBodyCallbacks.end(),pdata);
         return pdata;
@@ -1150,7 +1184,7 @@ public:
             //RAVELOG_VERBOSE_FORMAT("env=%d, empty name is used to find body. Maybe caller has to be fixed.", GetId());
             return KinBodyPtr();
         }
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if (!_vecbodies.empty()) {
             const int envBodyIndex = _FindBodyIndexByName(pname);
             const KinBodyPtr& pbody = _vecbodies.at(envBodyIndex);
@@ -1168,7 +1202,7 @@ public:
             return KinBodyPtr();
         }
 
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         const std::unordered_map<std::string, int>::const_iterator it = _mapBodyIdIndex.find(id);
         if (it == _mapBodyIdIndex.end()) {
             RAVELOG_WARN_FORMAT("env %d, id %s is not found", GetId()%id);
@@ -1184,10 +1218,11 @@ public:
 
     int GetNumBodies() const override
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         return _GetNumBodies();
     }
 
+    // assumes _mutexInterfaces is locked
     inline int _GetNumBodies() const
     {
         // this returns number of valid (non nullptr) bodies, not the same as _vecbodies.size()
@@ -1197,7 +1232,7 @@ public:
 
     int GetMaxEnvironmentBodyIndex() const override
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if (_vecbodies.size() < 2) { // if there is only one element, it's a nullpointer
             return 0;
         }
@@ -1223,7 +1258,7 @@ public:
 
     virtual RobotBasePtr GetRobot(const std::string& pname) const
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         const int envBodyIndex = _FindBodyIndexByName(pname);
         const KinBodyPtr& pbody = _vecbodies.at(envBodyIndex);
         if (!!pbody && pbody->IsRobot()) {
@@ -1258,7 +1293,7 @@ public:
     
     virtual SensorBasePtr GetSensor(const std::string& name) const
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         for (const KinBodyPtr& pbody : _vecbodies) {
             if( !!pbody && pbody->IsRobot() ) {
                 const RobotBasePtr& probot = RaveInterfaceCast<RobotBase>(pbody);
@@ -1303,20 +1338,20 @@ public:
 
     virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::static_pointer_cast<Environment>(shared_from_this())));
         pdata->_iterator = _listRegisteredCollisionCallbacks.insert(_listRegisteredCollisionCallbacks.end(),pdata);
         return pdata;
     }
     virtual bool HasRegisteredCollisionCallbacks() const
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         return _listRegisteredCollisionCallbacks.size() > 0;
     }
 
     virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>& listcallbacks) const
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         listcallbacks.clear();
         FOREACHC(it, _listRegisteredCollisionCallbacks) {
             CollisionCallbackDataPtr pdata = boost::dynamic_pointer_cast<CollisionCallbackData>(it->lock());
@@ -1452,7 +1487,7 @@ public:
         list<SensorBasePtr> listSensors;
         list< pair<ModuleBasePtr, std::string> > listModules;
         {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             vecbodies = _vecbodies;
             listSensors = _listSensors;
             listModules = _listModules;
@@ -1498,7 +1533,7 @@ public:
     virtual void GetBodies(std::vector<KinBodyPtr>& bodies, uint64_t timeout) const
     {
         if( timeout == 0 ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             
             bodies.clear();
             for (const KinBodyPtr& pbody : _vecbodies) {
@@ -1509,8 +1544,8 @@ public:
             }
         }
         else {
-            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
-            if (!lock.owns_lock()) {
+            TimedSharedLock lock(_mutexInterfaces, timeout);
+            if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             bodies.clear();
@@ -1526,7 +1561,7 @@ public:
     virtual void GetRobots(std::vector<RobotBasePtr>& robots, uint64_t timeout) const
     {
         if( timeout == 0 ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             robots.clear();
             for (const KinBodyPtr& pbody : _vecbodies) {
                 if (!pbody || !pbody->IsRobot()) {
@@ -1536,8 +1571,8 @@ public:
             }
         }
         else {
-            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
-            if (!lock.owns_lock()) {
+            TimedSharedLock lock(_mutexInterfaces, timeout);
+            if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             robots.clear();
@@ -1553,12 +1588,12 @@ public:
     virtual void GetSensors(std::vector<SensorBasePtr>& vsensors, uint64_t timeout) const
     {
         if( timeout == 0 ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             _GetSensors(vsensors);
         }
         else {
-            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
-            if (!lock.owns_lock()) {
+            TimedSharedLock lock(_mutexInterfaces, timeout);
+            if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             _GetSensors(vsensors);
@@ -1645,7 +1680,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!robot ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             FOREACH(itviewer, _listViewers) {
                 (*itviewer)->RemoveKinBody(robot);
             }
@@ -1765,7 +1800,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!robot ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             FOREACH(itviewer, _listViewers) {
                 (*itviewer)->RemoveKinBody(robot);
             }
@@ -1835,7 +1870,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!body ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             FOREACH(itviewer, _listViewers) {
                 (*itviewer)->RemoveKinBody(body);
             }
@@ -1954,7 +1989,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!body ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             FOREACH(itviewer, _listViewers) {
                 (*itviewer)->RemoveKinBody(body);
             }
@@ -2301,7 +2336,7 @@ public:
     {
         CHECK_INTERFACE(pnewviewer);
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         BOOST_ASSERT(find(_listViewers.begin(),_listViewers.end(),pnewviewer) == _listViewers.end() );
         _CheckUniqueName(ViewerBaseConstPtr(pnewviewer),true);
         _listViewers.push_back(pnewviewer);
@@ -2309,7 +2344,7 @@ public:
 
     virtual ViewerBasePtr GetViewer(const std::string& name) const
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( name.size() == 0 ) {
             return _listViewers.size() > 0 ? _listViewers.front() : ViewerBasePtr();
         }
@@ -2323,13 +2358,13 @@ public:
 
     void GetViewers(std::list<ViewerBasePtr>& listViewers) const
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         listViewers = _listViewers;
     }
 
     virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -2341,7 +2376,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -2353,7 +2388,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -2365,7 +2400,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -2377,7 +2412,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -2389,7 +2424,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -2401,7 +2436,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -2413,7 +2448,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -2425,7 +2460,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -2437,7 +2472,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -2449,7 +2484,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -2461,7 +2496,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -2472,10 +2507,9 @@ public:
         return handles;
     }
 
-    KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) override
+    KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) const override
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        boost::mutex::scoped_lock locknetwork(_mutexEnvironmentIds);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         if (0 < bodyIndex && bodyIndex < (int) _vecbodies.size()) {
             return _vecbodies.at(bodyIndex);
         }
@@ -2525,12 +2559,12 @@ public:
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies, uint64_t timeout)
     {
         if( timeout == 0 ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             vbodies = _vPublishedBodies;
         }
         else {
-            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
-            if (!lock.owns_lock()) {
+            TimedSharedLock lock(_mutexInterfaces, timeout);
+            if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             vbodies = _vPublishedBodies;
@@ -2540,7 +2574,7 @@ public:
     virtual bool GetPublishedBody(const std::string &name, KinBody::BodyState& bodystate, uint64_t timeout=0)
     {
         if( timeout == 0 ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
                 if ( _vPublishedBodies[ibody].strname == name) {
                     bodystate = _vPublishedBodies[ibody];
@@ -2549,8 +2583,8 @@ public:
             }
         }
         else {
-            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
-            if (!lock.owns_lock()) {
+            TimedSharedLock lock(_mutexInterfaces, timeout);
+            if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
@@ -2567,7 +2601,7 @@ public:
     virtual bool GetPublishedBodyJointValues(const std::string& name, std::vector<dReal> &jointValues, uint64_t timeout=0)
     {
         if( timeout == 0 ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
                 if ( _vPublishedBodies[ibody].strname == name) {
                     jointValues = _vPublishedBodies[ibody].jointvalues;
@@ -2576,8 +2610,8 @@ public:
             }
         }
         else {
-            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
-            if (!lock.owns_lock()) {
+            TimedSharedLock lock(_mutexInterfaces, timeout);
+            if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
@@ -2594,7 +2628,7 @@ public:
     void GetPublishedBodyTransformsMatchingPrefix(const std::string& prefix, std::vector<std::pair<std::string, Transform> >& nameTransfPairs, uint64_t timeout = 0)
     {
         if( timeout == 0 ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             nameTransfPairs.resize(0);
             if( nameTransfPairs.capacity() < _vPublishedBodies.size() ) {
                 nameTransfPairs.reserve(_vPublishedBodies.size());
@@ -2606,8 +2640,8 @@ public:
             }
         }
         else {
-            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
-            if (!lock.owns_lock()) {
+            TimedSharedLock lock(_mutexInterfaces, timeout);
+            if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
 
@@ -2627,12 +2661,12 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         if( timeout == 0 ) {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             _UpdatePublishedBodies();
         }
         else {
-            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
-            if (!lock.owns_lock()) {
+            TimedSharedLock lock(_mutexInterfaces, timeout);
+            if (!lock) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             _UpdatePublishedBodies();
@@ -2701,23 +2735,25 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::vector<KinBodyPtr> vBodies;
+        int numBodies = 0;
         {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             vBodies = _vecbodies;
+            numBodies = _GetNumBodies();
         }
-        const int numBodies = _GetNumBodies();
         info._vBodyInfos.resize(numBodies);
         int validBodyItr = 0;
         for(KinBodyPtr& pbody : vBodies) {
             if (!pbody) {
                 continue;
             }
+            KinBody::KinBodyInfoPtr& pbodyFromInfo = info._vBodyInfos.at(validBodyItr);
             if (pbody->IsRobot()) {
-                info._vBodyInfos[validBodyItr].reset(new RobotBase::RobotBaseInfo());
-                RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(info._vBodyInfos[validBodyItr])));
+                pbodyFromInfo.reset(new RobotBase::RobotBaseInfo());
+                RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pbodyFromInfo)));
             } else {
-                info._vBodyInfos[validBodyItr].reset(new KinBody::KinBodyInfo());
-                pbody->ExtractInfo(*info._vBodyInfos[validBodyItr]);
+                pbodyFromInfo.reset(new KinBody::KinBodyInfo());
+                pbody->ExtractInfo(*pbodyFromInfo);
             }
             ++validBodyItr;
         }
@@ -2763,9 +2799,20 @@ public:
         // make a copy of _vecbodies because we will be doing some reordering
         std::vector<KinBodyPtr> vBodies;
         {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             vBodies = _vecbodies;
         }
+        {
+            for (std::vector<KinBodyPtr>::iterator it = vBodies.begin();
+                 it != vBodies.end();) {
+                if (!*it) {
+                    it = vBodies.erase(it);
+                }
+                else {
+                    it++;
+                }
+            }
+        }            
         std::vector<int> vUsedBodyIndices; // used indices of vBodies
 
         // internally manipulates _vecbodies using _AddKinBody/_AddRobot/_RemoveKinBodyFromIterator
@@ -2851,7 +2898,7 @@ public:
                         itExisting = vBodies.end();
                         vRemovedBodies.push_back(pBody);
 
-                        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
                         vector<KinBodyPtr>::iterator itBodyToRemove = std::find(_vecbodies.begin(), _vecbodies.end(), pBody);
                         if( itBodyToRemove != _vecbodies.end() ) {
                             _InvalidateKinBodyFromEnvBodyIndex(pBody->GetEnvironmentBodyIndex());
@@ -2908,7 +2955,7 @@ public:
 
                 // updating this body requires removing it and re-adding it to env
                 {
-                    boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                    std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
                     vector<KinBodyPtr>::iterator itExisting = std::find(_vecbodies.begin(), _vecbodies.end(), pMatchExistingBody);
                     if( itExisting != _vecbodies.end() ) {
                         _InvalidateKinBodyFromEnvBodyIndex(pMatchExistingBody->GetEnvironmentBodyIndex());
@@ -3034,10 +3081,11 @@ public:
         if( updateMode != UFIM_OnlySpecifiedBodiesExact ) {
             // remove extra bodies at the end of vBodies
             if( vBodies.size() > info._vBodyInfos.size() ) {
-                boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
                 for (std::vector<KinBodyPtr>::iterator itBody = vBodies.begin() + info._vBodyInfos.size(); itBody != vBodies.end(); ) {
                     KinBodyPtr pBody = *itBody;
                     if (!pBody) {
+                        ++itBody;
                         continue;
                     }
                     RAVELOG_VERBOSE_FORMAT("remove extra body env=%d, id=%s, name=%s", GetId()%pBody->_id%pBody->_name);
@@ -3147,7 +3195,7 @@ public:
 
     void NotifyKinBodyNameChanged(const std::string& oldName, const std::string& newName) override
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(oldName);
         if (it == _mapBodyNameIndex.end()) {
             return;
@@ -3160,7 +3208,7 @@ public:
 
     void NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) override
     {
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
         const std::unordered_map<std::string, int>::const_iterator it = _mapBodyIdIndex.find(oldId);
         if (it == _mapBodyIdIndex.end()) {
             return;
@@ -3209,7 +3257,7 @@ protected:
         if (_mapBodyIdIndex.erase(id) == 0) {
             RAVELOG_WARN_FORMAT("env=%d, pbody of id %s not found in _mapBodyIdIndex of size %d, this should not happen!", GetId()%id%_mapBodyIdIndex.size());
         }
-        UnassignEnvironmentBodyIndex(pbody);
+        _UnassignEnvironmentBodyIndex(pbody);
         pbody.reset();
 
         _nBodiesModifiedStamp++;
@@ -3255,7 +3303,6 @@ protected:
         _fDeltaSimTime = r->_fDeltaSimTime;
         _nCurSimTime = 0;
         _nSimStartTime = utils::GetMicroTime();
-        _environmentIndexRecyclePool = r->_environmentIndexRecyclePool;
         _bRealTime = r->_bRealTime;
 
         _name = r->_name;
@@ -3271,7 +3318,7 @@ protected:
         if( !bCheckSharedResources || !(options & Clone_Bodies) ) {
             {
                 // clear internal interface lists
-                boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
                 // release all grabbed
                 for (KinBodyPtr& probot : _vecbodies) {
                     if (!!probot) {
@@ -3286,6 +3333,8 @@ protected:
                 _vecbodies.clear();
                 _mapBodyNameIndex.clear();
                 _mapBodyIdIndex.clear();
+                _environmentIndexRecyclePool.clear();
+
                 _vPublishedBodies.clear();
             }
         }
@@ -3293,7 +3342,7 @@ protected:
         list<ViewerBasePtr> listViewers = _listViewers;
         list< pair<ModuleBasePtr, std::string> > listModules = _listModules;
         {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             _listViewers.clear();
             _listModules.clear();
         }
@@ -3313,7 +3362,6 @@ protected:
         }
 
         EnvironmentMutex::scoped_lock lock(GetMutex());
-        //boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds); // why is this here? if locked, then KinBody::_ComputeInternalInformation freezes on GetBodyFromEnvironmentId call
 
         bool bCollisionCheckerChanged = false;
         if( !!r->GetCollisionChecker() ) {
@@ -3352,12 +3400,14 @@ protected:
         }
 
         if( options & Clone_Bodies ) {
-            boost::timed_mutex::scoped_lock lock(r->_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(r->_mutexInterfaces);
+            _environmentIndexRecyclePool = r->_environmentIndexRecyclePool;
+
             std::vector<std::pair<Vector,Vector> > linkvelocities;
             std::vector<KinBodyPtr> vecbodies;
-            if( bCheckSharedResources ) {
-                std::unordered_map<std::string, int> mapBodyNameIndex, mapBodyIdIndex;
+            std::unordered_map<std::string, int> mapBodyNameIndex, mapBodyIdIndex;
 
+            if( bCheckSharedResources ) {
                 // delete any bodies/robots from mapBodies that are not in r->_vecbodies
                 vecbodies.swap(_vecbodies);
                 mapBodyNameIndex.swap(_mapBodyNameIndex);
@@ -3398,7 +3448,7 @@ protected:
                     const int envBodyIndex = robotInOtherEnv.GetEnvironmentBodyIndex();
                     BOOST_ASSERT( 0 < envBodyIndex);
                     BOOST_ASSERT( (int)_vecbodies.size() < envBodyIndex + 1 || !_vecbodies.at(envBodyIndex));
-                    pnewrobot->_environmentBodyIndex = envBodyIndex;
+                    pnewrobot->_environmentBodyIndex = envBodyIndex; // I guess it's ok to directly set env body index, because it was unique in the other env.
 
                     {
                         EnsureVectorSize(_vecbodies, envBodyIndex + 1);
@@ -3428,11 +3478,11 @@ protected:
                     KinBodyPtr pnewbody;
                     if( bCheckSharedResources ) {
                         const std::string& name = body.GetName();
-                        const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
-                        if (it != _mapBodyNameIndex.end()) {
+                        const std::unordered_map<std::string, int>::const_iterator it = mapBodyNameIndex.find(name);
+                        if (it != mapBodyNameIndex.end()) {
                             const int envBodyIndex = it->second;
-                            BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size());
-                            const KinBodyPtr& pNewBodyCandidate = _vecbodies.at(envBodyIndex);
+                            BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) vecbodies.size());
+                            const KinBodyPtr& pNewBodyCandidate = vecbodies.at(envBodyIndex);
                             if( !pNewBodyCandidate ) {
                                 RAVELOG_WARN_FORMAT("env=%d, a body (name=%s, envBodyIndex=%d) in vecbodies is not initialized", GetId()%name%envBodyIndex);
                             }
@@ -3558,7 +3608,7 @@ protected:
             }
         }
         if( options & Clone_Sensors ) {
-            boost::timed_mutex::scoped_lock lock(r->_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex >  lock(r->_mutexInterfaces);
             FOREACHC(itsensor,r->_listSensors) {
                 try {
                     SensorBasePtr pnewsensor = RaveCreateSensor(shared_from_this(), (*itsensor)->GetXMLId());
@@ -3741,9 +3791,9 @@ protected:
         return true;
     }
 
-    virtual int AssignEnvironmentBodyIndex(KinBodyPtr pbody)
+    /// assumes _mutexInterfaces is locked
+    virtual int _AssignEnvironmentBodyIndex(KinBodyPtr pbody)
     {
-        boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         const bool bRecycleId = !_environmentIndexRecyclePool.empty();
         int envBodyIndex = 0;
         if (bRecycleId) {
@@ -3760,9 +3810,9 @@ protected:
         return envBodyIndex;
     }
 
-    virtual void UnassignEnvironmentBodyIndex(KinBodyPtr pbody)
+    /// assumes _mutexInterfaces is locked
+    virtual void _UnassignEnvironmentBodyIndex(KinBodyPtr pbody)
     {
-        boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         if (!pbody) {
             RAVELOG_WARN_FORMAT("env=%d, body is nullptr", GetId());
             return;
@@ -3884,7 +3934,7 @@ protected:
     {
         std::list<UserDataWeakPtr> listRegisteredBodyCallbacks;
         {
-            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             listRegisteredBodyCallbacks = _listRegisteredBodyCallbacks;
         }
         FOREACH(it, listRegisteredBodyCallbacks) {
@@ -4066,9 +4116,9 @@ protected:
     std::unordered_map<std::string, int> _mapBodyNameIndex; /// maps body name to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
     std::unordered_map<std::string, int> _mapBodyIdIndex; /// maps body id to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
 
-    std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. 
+    std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. protected by _mutexInterfaces
 
-    int _assignedBodySensorNameSuffix; // cache of suffix used to make body (robot) and sensor name unique in env
+    int _assignedBodySensorNameSuffix; // cache of suffix used to make body (including robot) and sensor name unique in env
     int _assignedBodyIdSuffix; // cache of suffix used to make body id unique in env
 
     list< std::pair<ModuleBasePtr, std::string> > _listModules;     ///< modules loaded in the environment and the strings they were intialized with. Initialization strings are used for cloning.
@@ -4086,8 +4136,11 @@ protected:
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation
 
     mutable EnvironmentMutex _mutexEnvironment;          ///< protects internal data from multithreading issues
-    mutable boost::mutex _mutexEnvironmentIds;      ///< protects _vecbodies/_vecrobots from multithreading issues
-    mutable boost::timed_mutex _mutexInterfaces;     ///< lock when managing interfaces like _listOwnedInterfaces, _listModules
+    mutable std::shared_timed_mutex _mutexInterfaces;     ///< lock when managing interfaces like _listOwnedInterfaces, _listModules as well as _vecbodies and supporting data such as _mapBodyNameIndex, _mapBodyIdIndex and _environmentIndexRecyclePool
+
+    using ExclusiveLock = std::lock_guard< std::shared_timed_mutex >;
+    using SharedConfigLock = std::shared_lock< std::shared_timed_mutex >;
+
     mutable boost::mutex _mutexInit;     ///< lock for destroying the environment
 
     vector<KinBody::BodyState> _vPublishedBodies;

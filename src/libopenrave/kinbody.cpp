@@ -4869,12 +4869,14 @@ void KinBody::_DeinitializeInternalInformation()
 
 bool KinBody::IsAttached(const KinBody &body) const
 {
+    // handle obvious cases without doing expensive operations
     if(this == &body ) {
         return true;
     }
     else if (_listAttachedBodies.empty()) {
         return false;
     }
+
     std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
     vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
@@ -4883,19 +4885,36 @@ bool KinBody::IsAttached(const KinBody &body) const
 
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
+    // by spec "including this body.", include this body
+    // vAttached is not sorted, so cannot do binary search
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
 
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        return;
+    }
+
+    const EnvironmentBase& env = *GetEnv();
     std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
-    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+
+    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
+    for (const KinBodyConstPtr& pbody : setAttached) {
+        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
+    }
+
     int numAttached = _GetNumAttached(vAttachedVisited);
     if( numAttached ) {
-        EnvironmentBase& env = *GetEnv();
         for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
-            if (vAttachedVisited[bodyIndex] == 1 ) {
+            if (vAttachedVisited[bodyIndex] == 1) {
                 KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
                 if( !!pbody ) {
-                    setAttached.insert(setAttached.end(), pbody);
+                    setAttached.insert(pbody);
+                    if (--numAttached == 0) {
+                        // already filled vAttached with contents of vAttachedVisited
+                        return;
+                    }
                 }
             }
         }
@@ -4904,18 +4923,36 @@ void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 
 void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 {
-    setAttached.insert(shared_kinbody_const());
+    // by spec "including this body.", include this body
+    // vAttached is not sorted, so cannot do binary search
+    setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
 
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        return;
+    }
+
+    const EnvironmentBase& env = *GetEnv();
     std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
-    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+
+    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
+    for (const KinBodyConstPtr& pbody : setAttached) {
+        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
+    }
+
     int numAttached = _GetNumAttached(vAttachedVisited);
     if( numAttached ) {
-        EnvironmentBase& env = *GetEnv();
         for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
             if (vAttachedVisited[bodyIndex] == 1) {
                 KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
                 if( !!pbody ) {
-                    setAttached.insert(setAttached.end(), pbody);
+                    setAttached.insert(pbody);
+                    if (--numAttached == 0) {
+                        // already filled vAttached with contents of vAttachedVisited
+                        return;
+                    }
                 }
             }
         }
@@ -4924,9 +4961,10 @@ void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 
 void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 {
+    const bool thisInInput = !vAttached.empty() && find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) != vAttached.end();
     // by spec "including this body.", include this body
     // vAttached is not sorted, so cannot do binary search
-    if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
+    if( !thisInInput ) {
         vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     }
 
@@ -4935,8 +4973,9 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
         return;
     }
 
+    const EnvironmentBase& env = *GetEnv();
     std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
-    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
     // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
@@ -4944,21 +4983,25 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
         vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
     }
 
+    int numAttached = 0;
     {
-        const int numAttached = _GetNumAttached(vAttachedVisited);
+        numAttached = _GetNumAttached(vAttachedVisited);
         if (numAttached == 0) {
             return;
         }
         vAttached.reserve(vAttached.size() + numAttached);
     }
 
-    EnvironmentBase& env = *GetEnv();
     for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
         // 0 means not attached, -1 means it was already in original vAttached so skip
         if (vAttachedVisited[bodyIndex] == 1) {
             KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
             if( !!pbody ) {
                 vAttached.push_back(pbody);
+                if (--numAttached == 0) {
+                    // already filled vAttached with contents of vAttachedVisited
+                    return;
+                }
             }
         }
     }
@@ -4966,9 +5009,10 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 
 void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
 {
+    const bool thisInInput = !vAttached.empty() && find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) != vAttached.end();
     // by spec "including this body.", include this body
     // vAttached is not sorted, so cannot do binary search
-    if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
+    if( !thisInInput ) {
         vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     }
 
@@ -4977,8 +5021,9 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
         return;
     }
 
+    const EnvironmentBase& env = *GetEnv();
     std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
-    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
     // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
@@ -4986,21 +5031,25 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
         vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
     }
 
+    int numAttached = 0;
     {
-        const int numAttached = _GetNumAttached(vAttachedVisited);
+        numAttached = _GetNumAttached(vAttachedVisited);
         if (numAttached == 0) {
             return;
         }
         vAttached.reserve(vAttached.size() + numAttached);
     }
 
-    EnvironmentBase& env = *GetEnv();
     for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
         // 0 means not attached, -1 means it was already in original vAttached so skip
         if (vAttachedVisited[bodyIndex] == 1) {
             KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
             if( !!pbody ) {
                 vAttached.push_back(pbody);
+                if (--numAttached == 0) {
+                    // already filled vAttached with contents of vAttachedVisited
+                    return;
+                }
             }
         }
     }
@@ -6028,42 +6077,11 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
-    FOREACH(it, info._mReadableInterfaces) {
-        ReadablePtr pReadable = boost::dynamic_pointer_cast<Readable>(GetReadableInterface(it->first));
-        if (!!pReadable) {
-            if ( (*(it->second)) != (*pReadable)) {
-                rapidjson::Document docReadable;
-                dReal fUnitScale = 1.0;
-                int options = 0;
-                it->second->SerializeJSON(docReadable, docReadable.GetAllocator(), fUnitScale, options);
-                pReadable->DeserializeJSON(docReadable, fUnitScale);
-                updateFromInfoResult = UFIR_Success;
-                RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s changed", _id%it->first);
-            }
-        }
-        else {
-            // TODO: create a new Readable?
-            SetReadableInterface(it->first, it->second);
-            updateFromInfoResult = UFIR_Success;
-            RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s added", _id%it->first);
-        }
+    if( UpdateReadableInterfaces(info._mReadableInterfaces) ) {
+        updateFromInfoResult = UFIR_Success;
+        RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface change", _id);
     }
-
-    // delete readableInterface
-    FOREACH(itExisting, GetReadableInterfaces()) {
-        bool bFound = false;
-        FOREACHC(it, info._mReadableInterfaces) {
-            if (itExisting->first == it->first) {
-                bFound = true;
-                break;
-            }
-        }
-        if (!bFound) {
-            ClearReadableInterface(itExisting->first);
-            updateFromInfoResult = UFIR_Success;
-            RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s removed", _id%itExisting->first);
-        }
-    }
+    
     return updateFromInfoResult;
 }
 

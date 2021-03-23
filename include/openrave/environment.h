@@ -529,7 +529,7 @@ public:
     virtual void UpdatePublishedBodies(uint64_t timeout=0) = 0;
 
     /// Get the corresponding body from its unique network id
-    virtual KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) = 0;
+    virtual KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) const = 0;
 
     /// Get the corresponding body from its unique network id
     inline KinBodyPtr GetBodyFromEnvironmentId(int bodyIndex) RAVE_DEPRECATED {
@@ -733,12 +733,14 @@ public:
 
     /// \brief notifys name of kin body is changed.
     ///
+    /// Should be called when name of body added to this env is modified. Should not be called when name of body in other env or not added to any env is modified.
     /// \param oldName name before change
     /// \param newName name after change
     virtual void NotifyKinBodyNameChanged(const std::string& oldName, const std::string& newName) = 0;
 
     /// \brief retries the named parameter to be tracked by the environment.
     ///
+    /// Should be called when id of body added to this env is modified. Should not be called when name of body in other env or not added to any env is modified.
     /// \param oldId id before change
     /// \param newId id after change
     virtual void NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) = 0;
