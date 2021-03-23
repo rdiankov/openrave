@@ -67,7 +67,7 @@ public:
      */
     TimedUniqueLock(std::timed_mutex& mutex, int64_t timeoutus)
         : std::unique_lock<std::timed_mutex>(mutex, std::defer_lock) {
-        if( timeoutus >= 0 ) {
+        if( timeoutus > 0 ) {
             this->try_lock_for(std::chrono::microseconds(timeoutus));
         }
         else {
@@ -83,7 +83,7 @@ public:
      */
     TimedSharedLock(std::shared_timed_mutex& mutex, int64_t timeoutus)
         : std::shared_lock<std::shared_timed_mutex>(mutex, std::defer_lock) {
-        if( timeoutus >= 0 ) {
+        if( timeoutus > 0 ) {
             this->try_lock_for(std::chrono::microseconds(timeoutus));
         }
         else {
