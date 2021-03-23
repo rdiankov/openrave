@@ -175,8 +175,7 @@ public:
 
         _nBodiesModifiedStamp = 0;
 
-        _assignedBodySensorNameSuffix = 0;
-        _assignedBodyIdSuffix = 0;
+        _assignedBodySensorNameIdSuffix = 0;
 
         _fDeltaSimTime = 0.01f;
         _nCurSimTime = 0;
@@ -905,56 +904,15 @@ public:
         }
 
         if( !_CheckUniqueName(KinBodyConstPtr(pbody), !!(addMode & IAM_StrictNameChecking)) ) {
-            // continue to add random numbers until a unique name is found
-            const string oldName = pbody->GetName();
-            string newName;
-            while (true) {
-                newName = str(boost::format("%s%d")%oldName%_assignedBodySensorNameSuffix++);
-                pbody->SetName(newName);
-                // most likely unique, but have to double check
-                if( utils::IsValidName(newName) && _CheckUniqueName(KinBodyConstPtr(pbody),false) ) {
-                    if( !oldName.empty() ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, setting body name from %s -> %s due to conflict", GetId()%oldName%newName);
-                    }
-                    break;
-                }
-                RAVELOG_INFO_FORMAT("env=%d, tried renaming body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%oldName%newName);
-            }
+            _EnsureUniqueName(pbody);
         }
         if( !_CheckUniqueId(KinBodyConstPtr(pbody), !!(addMode & IAM_StrictIdChecking)) ) {
-            // continue to add random numbers until a unique id is found
-            const string oldId = pbody->GetId();
-            string newId;
-            while (true) {
-                newId = str(boost::format("%s%d")%oldId%_assignedBodyIdSuffix++);
-                pbody->SetId(newId);
-                // most likely unique, but have to double check
-                if( utils::IsValidName(newId) && _CheckUniqueId(KinBodyConstPtr(pbody),false) ) {
-                    if( !oldId.empty() ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, setting body id from %s -> %s due to conflict", GetId()%oldId%newId);
-                    }
-                    break;
-                }
-                RAVELOG_INFO_FORMAT("env=%d, tried changed id for body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%oldId%newId);
-            }
+            _EnsureUniqueId(pbody);
         }
         {
             std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             const int newBodyIndex = _AssignEnvironmentBodyIndex(pbody);
-            {
-                EnsureVectorSize(_vecbodies, newBodyIndex+1);
-                _vecbodies.at(newBodyIndex) = pbody;
-            }
-            {
-                const std::string& name = pbody->GetName();
-                _mapBodyNameIndex[name] = newBodyIndex;
-                //RAVELOG_DEBUG_FORMAT("env=%d: name=%s -> bodyIndex=%d, _mapBodyNameIndex has %d elements", GetId()%name%newBodyIndex%_mapBodyNameIndex.size());
-            }
-            {
-                const std::string& id = pbody->GetId();
-                _mapBodyIdIndex[id] = newBodyIndex;
-                //RAVELOG_DEBUG_FORMAT("env=%d: id=%s -> bodyIndex=%d, _mapBodyIdIndex has %d elements", GetId()%id%newBodyIndex%_mapBodyIdIndex.size());
-            }
+            _AddKinBodyInternal(pbody, newBodyIndex);
             _nBodiesModifiedStamp++;
         }
         pbody->_ComputeInternalInformation();
@@ -986,57 +944,15 @@ public:
         }
 
         if( !_CheckUniqueName(KinBodyConstPtr(robot), !!(addMode & IAM_StrictNameChecking)) ) {
-            // continue to add random numbers until a unique name is found
-            const string oldName = robot->GetName();
-            string newName;
-            while (true) {
-                newName = str(boost::format("%s%d")%oldName%_assignedBodySensorNameSuffix++);
-                robot->SetName(newName);
-                // most likely unique, but have to double check
-                if( utils::IsValidName(newName) && _CheckUniqueName(KinBodyConstPtr(robot),false) ) {
-                    if( !oldName.empty() ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, setting body name from %s -> %s due to conflict", GetId()%oldName%newName);
-                    }
-                    break;
-                }
-                RAVELOG_INFO_FORMAT("env=%d, tried renaming body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%oldName%newName);
-            }
+            _EnsureUniqueName(robot);
         }
         if( !_CheckUniqueId(KinBodyConstPtr(robot), !!(addMode & IAM_StrictIdChecking)) ) {
-            // continue to add random numbers until a unique id is found
-            const string oldId = robot->GetId();
-            string newId;
-            while (true) {
-                newId = str(boost::format("%s%d")%oldId%_assignedBodyIdSuffix++);
-                robot->SetId(newId);
-                // most likely unique, but have to double check
-                if( utils::IsValidName(newId) && _CheckUniqueId(KinBodyConstPtr(robot),false) ) {
-                    if( !oldId.empty() ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, setting robot id from %s -> %s due to conflict", GetId()%oldId%newId);
-                    }
-                    break;
-                }
-            }
+            _EnsureUniqueId(robot);
         }
         {
             std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
             const int newBodyIndex = _AssignEnvironmentBodyIndex(robot);
-            {
-                EnsureVectorSize(_vecbodies, newBodyIndex+1);
-                _vecbodies.at(newBodyIndex) = robot;
-            }
-            {
-                const std::string& name = robot->GetName();
-                _mapBodyNameIndex[name] = newBodyIndex;
-                //RAVELOG_DEBUG_FORMAT("env=%d: name=%s -> bodyIndex=%d, _mapBodyNameIndex has %d elements", GetId()%name%newBodyIndex%_mapBodyNameIndex.size());
-            }
-            {
-                const std::string& id = robot->GetId();
-                _mapBodyIdIndex[id] = newBodyIndex;
-                //RAVELOG_DEBUG_FORMAT("env=%d: id=%s -> bodyIndex=%d, _mapBodyIdIndex has %d elements", GetId()%id%newBodyIndex%_mapBodyIdIndex.size());
-            }
-            
-
+            _AddKinBodyInternal(robot, newBodyIndex);
             _nBodiesModifiedStamp++;
         }
         robot->_ComputeInternalInformation(); // have to do this after _vecbodies is added since SensorBase::SetName can call EnvironmentBase::GetSensor to initialize itself
@@ -1065,21 +981,7 @@ public:
         }
 
         if( !_CheckUniqueName(SensorBaseConstPtr(psensor), !!(addMode & IAM_StrictNameChecking)) ) {
-            // continue to add random numbers until a unique name is found
-            const string oldName = psensor->GetName();
-            string newName;
-            while (true) {
-                newName = str(boost::format("%s%d")%oldName%_assignedBodySensorNameSuffix++);
-                psensor->SetName(newName);
-                // most likely unique, but have to double check
-                if( utils::IsValidName(newName) && _CheckUniqueName(SensorBaseConstPtr(psensor),false) ) {
-                    if( !oldName.empty() ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, setting body name from %s -> %s due to conflict", GetId()%oldName%newName);
-                    }
-                    break;
-                }
-                RAVELOG_INFO_FORMAT("env=%d, tried renaming body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%oldName%newName);
-            }
+            _EnsureUniqueName(psensor);
         }
         // no id for sensor right now
         {
@@ -3450,19 +3352,7 @@ protected:
                     BOOST_ASSERT( (int)_vecbodies.size() < envBodyIndex + 1 || !_vecbodies.at(envBodyIndex));
                     pnewrobot->_environmentBodyIndex = envBodyIndex; // I guess it's ok to directly set env body index, because it was unique in the other env.
 
-                    {
-                        EnsureVectorSize(_vecbodies, envBodyIndex + 1);
-                        _vecbodies.at(envBodyIndex) = pnewrobot;
-                    }
-                    {
-                        const std::string& name = pnewrobot->GetName();
-                        _mapBodyNameIndex[name] = envBodyIndex;
-                    }
-                    {
-                        const std::string& id = pnewrobot->GetId();
-                        _mapBodyIdIndex[id] = envBodyIndex;
-                    }
-
+                    _AddKinBodyInternal(pnewrobot, envBodyIndex);
                 }
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR_FORMAT("failed to clone robot %s: %s", robotInOtherEnv.GetName()%ex.what());
@@ -3501,18 +3391,7 @@ protected:
                     }
                     pnewbody->_environmentBodyIndex = envBodyIndex;
 
-                    {
-                        EnsureVectorSize(_vecbodies, envBodyIndex + 1);
-                        _vecbodies.at(envBodyIndex) = pnewbody;
-                    }
-                    {
-                        const std::string& name = pnewbody->GetName();
-                        _mapBodyNameIndex[name] = envBodyIndex;
-                    }
-                    {
-                        const std::string& id = pnewbody->GetId();
-                        _mapBodyIdIndex[id] = envBodyIndex;
-                    }
+                    _AddKinBodyInternal(pnewbody, envBodyIndex);
                 }
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR_FORMAT("env=%d, failed to clone body %s: %s", GetId()%body.GetName()%ex.what());
@@ -3707,9 +3586,72 @@ protected:
         }
     }
 
-    /// \brief checks if name is unique in _vecbodies
+    /// \brief adds pbody to _vecbodies and other internal data structures
+    /// \param pbody kin body to be added to the environment
+    /// \param envBodyIndex environment body index of the pbody
+    /// assuming _mutexInterfaces is locked
+    inline void _AddKinBodyInternal(KinBodyPtr pbody, int envBodyIndex)
+    {
+        EnsureVectorSize(_vecbodies, envBodyIndex+1);
+        _vecbodies.at(envBodyIndex) = pbody;
+
+        {
+            const std::string& name = pbody->GetName();
+            _mapBodyNameIndex[name] = envBodyIndex;
+            //RAVELOG_DEBUG_FORMAT("env=%d: name=%s -> bodyIndex=%d, _mapBodyNameIndex has %d elements", GetId()%name%envBodyIndex%_mapBodyNameIndex.size());
+        }
+
+        {
+            const std::string& id = pbody->GetId();
+            _mapBodyIdIndex[id] = envBodyIndex;
+            //RAVELOG_DEBUG_FORMAT("env=%d: id=%s -> bodyIndex=%d, _mapBodyIdIndex has %d elements", GetId()%id%newBodyIndex%_mapBodyIdIndex.size());
+        }
+    }
+
+    /// \brief assign body / sensor to unique id by adding suffix
     ///
     /// assuming _mutexInterfaces is locked
+    inline void _EnsureUniqueId(const KinBodyPtr& pbody)
+    {
+        const std::string baseId = pbody->GetId(); // has to store value instead of reference, as we call SetId internally
+        string newId;
+        while (true) {
+            newId = str(boost::format("%s%d")%baseId%_assignedBodySensorNameIdSuffix++);
+            pbody->SetId(newId);
+            // most likely unique, but have to double check
+            if( utils::IsValidName(newId) && _CheckUniqueId(pbody, false) ) {
+                if( !baseId.empty() ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, setting body id from %s -> %s due to conflict", GetId()%baseId%newId);
+                }
+                break;
+            }
+            RAVELOG_INFO_FORMAT("env=%d, tried renaming body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%baseId%newId);
+        }
+    }
+    
+
+    /// \brief name body / sensor to unique name by adding suffix
+    ///
+    /// assuming _mutexInterfaces is locked
+    template<typename T>
+    inline void _EnsureUniqueName(const T& pObject)
+    {
+        const std::string baseName = pObject->GetName(); // has to store value instead of reference, as we call SetName internally
+        string newName;
+        while (true) {
+            newName = str(boost::format("%s%d")%baseName%_assignedBodySensorNameIdSuffix++);
+            pObject->SetName(newName);
+            // most likely unique, but have to double check
+            if( utils::IsValidName(newName) && _CheckUniqueName(pObject, false) ) {
+                if( !baseName.empty() ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, setting body name from %s -> %s due to conflict", GetId()%baseName%newName);
+                }
+                break;
+            }
+            RAVELOG_INFO_FORMAT("env=%d, tried renaming object (body or sensor) from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%baseName%newName);
+        }
+    }
+    
     virtual bool _CheckUniqueName(KinBodyConstPtr pbody, bool bDoThrow=false) const
     {
         const std::string& name = pbody->GetName();
@@ -4118,8 +4060,7 @@ protected:
 
     std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. protected by _mutexInterfaces
 
-    int _assignedBodySensorNameSuffix; // cache of suffix used to make body (including robot) and sensor name unique in env
-    int _assignedBodyIdSuffix; // cache of suffix used to make body id unique in env
+    int _assignedBodySensorNameIdSuffix; // cache of suffix used to make body (including robot) and sensor name and id unique in env
 
     list< std::pair<ModuleBasePtr, std::string> > _listModules;     ///< modules loaded in the environment and the strings they were intialized with. Initialization strings are used for cloning.
     list<SensorBasePtr> _listSensors;     ///< sensors loaded in the environment
