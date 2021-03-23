@@ -174,7 +174,7 @@ public:
         virtual ~CollisionCallbackData() {
             boost::shared_ptr<Environment> penv = _pweakenv.lock();
             if( !!penv ) {
-                std::lock_guard< std::shared_timed_mutex > lock(penv->_mutexInterfaces);
+                ExclusiveLock lock(penv->_mutexInterfaces);
                 penv->_listRegisteredCollisionCallbacks.erase(_iterator);
             }
         }
@@ -195,7 +195,7 @@ public:
         virtual ~BodyCallbackData() {
             boost::shared_ptr<Environment> penv = _pweakenv.lock();
             if( !!penv ) {
-                std::lock_guard< std::shared_timed_mutex > lock(penv->_mutexInterfaces);
+                ExclusiveLock lock(penv->_mutexInterfaces);
                 penv->_listRegisteredBodyCallbacks.erase(_iterator);
             }
         }
@@ -373,7 +373,7 @@ public:
             std::vector<KinBodyPtr> vecbodies;
             list<SensorBasePtr> listSensors;
             {
-                std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+                ExclusiveLock lock(_mutexInterfaces);
                 vecbodies.swap(_vecbodies);
                 listSensors.swap(_listSensors);
                 _vPublishedBodies.clear();
@@ -433,7 +433,7 @@ public:
         
         std::vector<KinBodyPtr> vcallbackbodies;
         {
-            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+            ExclusiveLock lock(_mutexInterfaces);
 
             for (KinBodyPtr& pbody : _vecbodies) {
                 if (!pbody) {
@@ -502,14 +502,14 @@ public:
     {
         CHECK_INTERFACE(pinterface);
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+        ExclusiveLock lock(_mutexInterfaces);
         _listOwnedInterfaces.push_back(pinterface);
     }
     virtual void DisownInterface(InterfaceBasePtr pinterface)
     {
         CHECK_INTERFACE(pinterface);
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+        ExclusiveLock lock(_mutexInterfaces);
         _listOwnedInterfaces.remove(pinterface);
     }
 
@@ -536,7 +536,7 @@ public:
         }
         else {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
-            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+            ExclusiveLock lock(_mutexInterfaces);
             _listModules.emplace_back(module,  cmdargs);
         }
 
@@ -944,7 +944,7 @@ public:
             _EnsureUniqueId(pbody);
         }
         {
-            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+            ExclusiveLock lock(_mutexInterfaces);
             const int newBodyIndex = _AssignEnvironmentBodyIndex(pbody);
             _AddKinBodyInternal(pbody, newBodyIndex);
             _nBodiesModifiedStamp++;
@@ -984,7 +984,7 @@ public:
             _EnsureUniqueId(robot);
         }
         {
-            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+            ExclusiveLock lock(_mutexInterfaces);
             const int newBodyIndex = _AssignEnvironmentBodyIndex(robot);
             _AddKinBodyInternal(robot, newBodyIndex);
             _nBodiesModifiedStamp++;
@@ -3211,7 +3211,7 @@ protected:
         if( !bCheckSharedResources || !(options & Clone_Bodies) ) {
             {
                 // clear internal interface lists
-                std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+                ExclusiveLock lock(_mutexInterfaces);
                 // release all grabbed
                 for (KinBodyPtr& probot : _vecbodies) {
                     if (!!probot) {
@@ -3235,7 +3235,7 @@ protected:
         list<ViewerBasePtr> listViewers = _listViewers;
         list< pair<ModuleBasePtr, std::string> > listModules = _listModules;
         {
-            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+            ExclusiveLock lock(_mutexInterfaces);
             _listViewers.clear();
             _listModules.clear();
         }
@@ -3345,7 +3345,7 @@ protected:
                     BOOST_ASSERT( (int)_vecbodies.size() < envBodyIndex + 1 || !_vecbodies.at(envBodyIndex));
                     pnewrobot->_environmentBodyIndex = envBodyIndex; // I guess it's ok to directly set env body index, because it was unique in the other env.
                     {
-                        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+                        ExclusiveLock lock(_mutexInterfaces);
                         _AddKinBodyInternal(pnewrobot, envBodyIndex);
                     }
                 }
@@ -3389,7 +3389,7 @@ protected:
                     pnewbody->_environmentBodyIndex = envBodyIndex;
 
                     {
-                        std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+                        ExclusiveLock lock(_mutexInterfaces);
                         _AddKinBodyInternal(pnewbody, envBodyIndex);
                     }
                 }
@@ -3880,7 +3880,7 @@ protected:
     {
         std::list<UserDataWeakPtr> listRegisteredBodyCallbacks;
         {
-            std::lock_guard< std::shared_timed_mutex > lock(_mutexInterfaces);
+            ExclusiveLock lock(_mutexInterfaces);
             listRegisteredBodyCallbacks = _listRegisteredBodyCallbacks;
         }
         FOREACH(it, listRegisteredBodyCallbacks) {
