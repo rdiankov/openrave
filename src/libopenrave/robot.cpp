@@ -394,7 +394,7 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
 {
-    if( _bRestoreOnDestructor && !!_probot && _probot->GetEnvironmentId() != 0 ) {
+    if( _bRestoreOnDestructor && !!_probot && _probot->GetEnvironmentBodyIndex() != 0 ) {
         _RestoreRobot(_probot);
     }
 }
@@ -453,7 +453,7 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
     if( !probot ) {
         return;
     }
-    if( probot->GetEnvironmentId() == 0 ) {
+    if( probot->GetEnvironmentBodyIndex() == 0 ) {
         RAVELOG_WARN(str(boost::format("robot %s not added to environment, skipping restore")%probot->GetName()));
         return;
     }

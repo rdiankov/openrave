@@ -230,7 +230,7 @@ KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, Ki
     _userdata = 0;
     _bReload = false;
     _bDrawStateChanged = false;
-    _environmentid = pbody->GetEnvironmentId();
+    _environmentid = pbody->GetEnvironmentBodyIndex();
     _geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::_HandleGeometryChangedCallback,this));
     _drawcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::_HandleDrawChangedCallback,this));
 }
@@ -757,7 +757,7 @@ bool KinBodyItem::UpdateFromModel()
         }
 
         // make sure the body is still present!
-        if( _pbody->GetEnv()->GetBodyFromEnvironmentId(_environmentid) == _pbody ) {
+        if( _pbody->GetEnv()->GetBodyFromEnvironmentBodyIndex(_environmentid) == _pbody ) {
             _pbody->GetLinkTransformations(_vtrans, _vjointvalues);
             _pbody->GetDOFValues(vjointvalues);
         }
