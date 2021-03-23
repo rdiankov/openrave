@@ -3290,6 +3290,7 @@ protected:
                     if( !pnewrobot ) {
                         pnewrobot = RaveCreateRobot(shared_from_this(), robotInOtherEnv.GetXMLId());
                         pnewrobot->_name = robotInOtherEnv._name; // at least copy the names
+                        pnewrobot->_id = robotInOtherEnv._id;
                         listToClone.push_back(probotInOtherEnv);
                     }
                     else {
@@ -3336,6 +3337,7 @@ protected:
                     if( !pnewbody ) {
                         pnewbody.reset(new KinBody(PT_KinBody,shared_from_this()));
                         pnewbody->_name = body._name; // at least copy the names
+                        pnewbody->_id = body._id; // at least copy the names
                         listToClone.push_back(pbody);
                     }
                     else {
