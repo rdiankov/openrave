@@ -179,8 +179,8 @@ public:
 
     FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
         : _penv(penv), _userdatakey(userdatakey),
-          _currentpinfo(1, KinBodyInfoPtr()), // initialize with one null pointer, this is a place holder for null pointer so that we can return by reference. env id 0 means invalid so it's consistent with the definition as well
-          _bIsSelfCollisionChecker(true)
+        _currentpinfo(1, KinBodyInfoPtr()), // initialize with one null pointer, this is a place holder for null pointer so that we can return by reference. env id 0 means invalid so it's consistent with the definition as well
+        _bIsSelfCollisionChecker(true)
     {
 
         // After many test, OBB seems to be the only real option (followed by kIOS which is needed for distance checking)
@@ -215,7 +215,7 @@ public:
             pinfo->_geometrygroup = _geometrygroup;
         }
 
-        RAVELOG_VERBOSE_FORMAT("env=%d, self=%d, init body %s (%d)", pbody->GetEnv()->GetId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentBodyIndex());
+        RAVELOG_VERBOSE_FORMAT("env=%d, self=%d, init body %s (%d)", _penv->GetId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentBodyIndex());
         pinfo->Reset();
         pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
         // make sure that synchronization do occur !
@@ -372,28 +372,26 @@ public:
 
         poldinfo->nGeometryUpdateStamp += 1;
 
-        const int maxBodyIndex = pbody->GetEnv()->GetMaxEnvironmentBodyIndex();
+        const int maxBodyIndex = _penv->GetMaxEnvironmentBodyIndex();
         EnsureVectorSize(_cachedpinfo, maxBodyIndex + 1);
-            
-        const int bodyId = body.GetEnvironmentBodyIndex();
-        std::map< std::string, KinBodyInfoPtr >& cache = _cachedpinfo.at(bodyId);
-        cache[poldinfo->_geometrygroup] = poldinfo;
 
-        BOOST_ASSERT(bodyId != 0);
+        const int bodyIndex = body.GetEnvironmentBodyIndex();
+        OPENRAVE_ASSERT_OP_FORMAT(bodyIndex, !=, 0, "env=%d, body %s", _penv->GetId()%body.GetName(), OpenRAVE::ORE_InvalidState);
+        std::map< std::string, KinBodyInfoPtr >& cache = _cachedpinfo.at(bodyIndex);
+        cache[poldinfo->_geometrygroup] = poldinfo;
 
         KinBodyInfoPtr& pinfo = cache[groupname];
         if(!pinfo) {
-            RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%body.GetName()%bodyId%_penv->GetId());
+            RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%body.GetName()%bodyIndex%_penv->GetId());
             pinfo.reset(new KinBodyInfo);
             pinfo->_geometrygroup = groupname;
             InitKinBody(pbody, pinfo);
         }
         else {
-            RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%body.GetName()%bodyId);
+            RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%body.GetName()%bodyIndex);
             // Set the current info to use the KinBodyInfoPtr associated to groupname
-            const int envId = bodyId;
             EnsureVectorSize(_currentpinfo, maxBodyIndex + 1);
-            _currentpinfo.at(envId) = pinfo;
+            _currentpinfo.at(bodyIndex) = pinfo;
 
             // Revoke the information inside the cache so that a potentially outdated object does not survive
             cache.erase(groupname);
@@ -500,11 +498,12 @@ public:
     {
         int envId = body.GetEnvironmentBodyIndex();
         if ( envId <= 0 ) {
-            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id %d", body.GetEnv()->GetId()%body.GetName()%envId);
+            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id %d", _penv->GetId()%body.GetName()%envId);
         }
-
-        if (envId < (int) _currentpinfo.size()) {
-            return _currentpinfo.at(envId);
+        else {
+            if (envId < (int) _currentpinfo.size()) {
+                return _currentpinfo.at(envId);
+            }
         }
 
         return _currentpinfo.at(0); // invalid
@@ -514,11 +513,12 @@ public:
     {
         int envId = body.GetEnvironmentBodyIndex();
         if ( envId <= 0 ) {
-            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id %d", body.GetEnv()->GetId()%body.GetName()%envId);
+            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id %d", _penv->GetId()%body.GetName()%envId);
         }
-
-        if (envId < (int) _currentpinfo.size()) {
-            return _currentpinfo.at(envId);
+        else {
+            if (envId < (int) _currentpinfo.size()) {
+                return _currentpinfo.at(envId);
+            }
         }
 
         return _currentpinfo.at(0);
@@ -535,7 +535,9 @@ public:
             }
 
             const int envId = pbody->GetEnvironmentBodyIndex();
-            BOOST_ASSERT(envId != 0);
+            if( envId == 0 ) {
+                RAVELOG_WARN_FORMAT("env=%d, body '%s' has bodyIndex=0, so not adding to the environment!", _penv->GetId()%pbody->GetName());
+            }
 
             if (envId < (int) _currentpinfo.size()) {
                 _currentpinfo.at(envId).reset();
@@ -589,6 +591,9 @@ public:
         return _meshFactory;
     }
 
+    inline int GetEnvironmentId() const {
+        return _penv->GetId();
+    }
 private:
     static void _AddGeomInfoToBVHSubmodel(fcl::BVHModel<fcl::OBB>& model, KinBody::GeometryInfo const &info)
     {
@@ -749,7 +754,7 @@ private:
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
         const int bodyIndex = pbody->GetEnvironmentBodyIndex();
-        if (0 < bodyIndex && bodyIndex < _currentpinfo.size()) {
+        if (0 < bodyIndex && bodyIndex < (int)_currentpinfo.size()) {
             const KinBodyInfoPtr& pcurrentinfo = _currentpinfo.at(bodyIndex);
 
             if( !!pinfo && pinfo == pcurrentinfo ) {//pinfo->_geometrygroup.size() == 0 ) {
