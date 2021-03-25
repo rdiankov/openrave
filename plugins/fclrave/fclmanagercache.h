@@ -216,7 +216,7 @@ public:
                             _tmpSortedBuffer.insert(it, pcol.get());
                         }
                         else {
-                            RAVELOG_WARN_FORMAT("env=%d body %s link %s is added multiple times", pbody->GetEnv()->GetId()%pbody->GetName()%(*itlink)->GetName());
+                            RAVELOG_WARN_FORMAT("env=%d(%s) body %s link %s is added multiple times", pbody->GetEnv()->GetId()%pbody->GetEnv()->GetName()%pbody->GetName()%(*itlink)->GetName());
                         }
                     }
                     bsetUpdateStamp = true;
@@ -763,7 +763,7 @@ public:
                 // could be the case that the same pointer was re-added to the environment so have to check the environment id
                 // make sure we don't need to make this asusmption of body id change when bodies are removed and re-added
                 if( !pbody || attachedBodies.count(pbody) == 0 || pbody->GetEnvironmentBodyIndex() != bodyIndex ) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%bodyIndex);
+                    RAVELOG_VERBOSE_FORMAT("env=%d(%s), %x, %u removing old cache %d", pbody->GetEnv()->GetId()%pbody->GetEnv()->GetName()%this%_lastSyncTimeStamp%bodyIndex);
                     // not in attached bodies so should remove
                     FOREACH(itcol, cache.vcolobjs) {
                         if( !!itcol->get() ) {
@@ -840,7 +840,7 @@ private:
                         _tmpSortedBuffer.insert(it, pcol.get());
                     }
                     else {
-                        RAVELOG_WARN_FORMAT("env=%d body %s link %s is added multiple times", body.GetEnv()->GetId()%body.GetName()%link.GetName());
+                        RAVELOG_WARN_FORMAT("env=%d(%s) body %s link %s is added multiple times", body.GetEnv()->GetId()%body.GetEnv()->GetName()%body.GetName()%link.GetName());
                     }
                     vcolobjs[linkIndex] = pcol;
                     bsetUpdateStamp = true;
