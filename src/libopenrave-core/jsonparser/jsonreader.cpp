@@ -186,6 +186,7 @@ public:
 
         EnvironmentBase::EnvironmentBaseInfo envInfo;
         if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
+            _deserializeOptions |= IDO_PartialUpdate;
             _ExtractSpecifiedBodies(envInfo, rEnvInfo);
         }
         else {

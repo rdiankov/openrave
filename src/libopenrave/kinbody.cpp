@@ -271,9 +271,6 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
-    bool wasEmpty = __isEmpty;
-    __isEmpty = false; // reset empty flag
-
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
 
@@ -345,7 +342,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 continue;
             }
 
-            if (!wasEmpty && !isCreated) {
+            if ((options & IDO_PartialUpdate) != 0 && !isCreated) {
                 // we do not allow creating new info if __created__ was not specified
                 // this is to avoid creating new info that is partial
                 RAVELOG_DEBUG_FORMAT("not creating new grabbed info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
@@ -362,14 +359,14 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options, wasEmpty);
+            UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options);
         }
     }
 
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options, wasEmpty);
+            UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options);
         }
     }
 

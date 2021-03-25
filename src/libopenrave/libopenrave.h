@@ -491,7 +491,7 @@ inline const char *strcasestr(const char *s, const char *find)
 
 /// \brief Update current info from json value. Create a new one if there is no id matched.
 template<typename T>
-void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<boost::shared_ptr<T> >& vInfos, const char* pNameInJson, dReal fUnitScale, int options, bool wasEmpty)
+void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<boost::shared_ptr<T> >& vInfos, const char* pNameInJson, dReal fUnitScale, int options)
 {
     std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(value, "id");
     bool isCreated = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__created__", false);
@@ -535,7 +535,7 @@ void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<
         RAVELOG_DEBUG_FORMAT("not deleting info with id \"%s\" even though \"__deleted__\" flag is set, because it does not exist", id);
         return;
     }
-    if (!wasEmpty && !isCreated) {
+    if ((options & IDO_PartialUpdate) != 0 && !isCreated) {
         // we do not allow creating new info if __created__ was not specified
         // this is to avoid creating new info that is partial
         RAVELOG_DEBUG_FORMAT("not creating new info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);

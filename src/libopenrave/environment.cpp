@@ -100,9 +100,6 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
 
 void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping)
 {
-    bool wasEmpty = __isEmpty;
-    __isEmpty = false; // reset empty flag
-
     if( !rEnvInfo.IsObject() ) {
         throw OPENRAVE_EXCEPTION_FORMAT("Passed in JSON '%s' is not a valid EnvironmentInfo object", orjson::DumpJson(rEnvInfo), ORE_InvalidArguments);
     }
@@ -177,7 +174,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
             if (isRobot) {
                 if (itExistingBodyInfo == _vBodyInfos.end()) {
                     // in case no such id
-                    if (!wasEmpty && !isCreated) {
+                    if ((options & IDO_PartialUpdate) != 0 && !isCreated) {
                         RAVELOG_DEBUG_FORMAT("not creating new robot info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
                     } else if (!isDeleted) {
                         RobotBase::RobotBaseInfoPtr pRobotBaseInfo(new RobotBase::RobotBaseInfo());
@@ -210,7 +207,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                 // not a robot
                 if (itExistingBodyInfo == _vBodyInfos.end()) {
                     // in case no such id
-                    if (!wasEmpty && !isCreated) {
+                    if ((options & IDO_PartialUpdate) != 0 && !isCreated) {
                         RAVELOG_DEBUG_FORMAT("not creating new body info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
                     } else if (!isDeleted) {
                         KinBody::KinBodyInfoPtr pKinBodyInfo(new KinBody::KinBodyInfo());
