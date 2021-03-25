@@ -629,33 +629,35 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& rRobotBaseInfo, r
 
 void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
+    bool wasEmpty = __isEmpty;
     KinBodyInfo::DeserializeJSON(value, fUnitScale, options);
+    __isEmpty = false; // reset empty flag
 
     if (value.HasMember("tools")) {
         _vManipulatorInfos.reserve(value["tools"].Size() + _vManipulatorInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vManipulatorInfos, "name", fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vManipulatorInfos, "name", fUnitScale, options, wasEmpty);
         }
     }
 
     if (value.HasMember("attachedSensors")) {
         _vAttachedSensorInfos.reserve(value["attachedSensors"].Size() + _vAttachedSensorInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vAttachedSensorInfos, "name", fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vAttachedSensorInfos, "name", fUnitScale, options, wasEmpty);
         }
     }
 
     if (value.HasMember("connectedBodies")) {
         _vConnectedBodyInfos.reserve(value["connectedBodies"].Size() + _vConnectedBodyInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["connectedBodies"].Begin(); it != value["connectedBodies"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vConnectedBodyInfos, "name", fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vConnectedBodyInfos, "name", fUnitScale, options, wasEmpty);
         }
     }
 
     if (value.HasMember("gripperInfos")) {
         _vGripperInfos.reserve(value["gripperInfos"].Size() + _vGripperInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vGripperInfos, "name", fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vGripperInfos, "name", fUnitScale, options, wasEmpty);
         }
     }
 }

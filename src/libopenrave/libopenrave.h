@@ -491,45 +491,10 @@ inline const char *strcasestr(const char *s, const char *find)
 
 /// \brief Update current info from json value. Create a new one if there is no id matched.
 template<typename T>
-void UpdateOrCreateInfo(const rapidjson::Value& value, std::vector<boost::shared_ptr<T> >& vInfos, dReal fUnitScale, int options)
+void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<boost::shared_ptr<T> >& vInfos, const char* pNameInJson, dReal fUnitScale, int options, bool wasEmpty)
 {
     std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(value, "id");
-    bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
-    typename std::vector<boost::shared_ptr<T> >::iterator itExistingInfo = vInfos.end();
-    if (!id.empty()) {
-        // only try to find old info if id is not empty
-        FOREACH(itInfo, vInfos) {
-            if ((*itInfo)->_id == id) {
-                itExistingInfo = itInfo;
-                break;
-            }
-        }
-    }
-    // here we allow items with empty id to be created because
-    // when we load things from json, some id could be missing on file
-    // and for the partial update case, the id should be non-empty
-    if (itExistingInfo != vInfos.end()) {
-        if (isDeleted) {
-            vInfos.erase(itExistingInfo);
-            return;
-        }
-        (*itExistingInfo)->DeserializeJSON(value, fUnitScale, options);
-        (*itExistingInfo)->_id = id;
-        return;
-    }
-    if (isDeleted) {
-        return;
-    }
-    boost::shared_ptr<T> pNewInfo(new T());
-    pNewInfo->DeserializeJSON(value, fUnitScale, options);
-    pNewInfo->_id = id;
-    vInfos.push_back(pNewInfo);
-}
-
-template<typename T>
-void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<boost::shared_ptr<T> >& vInfos, const char* pNameInJson, dReal fUnitScale, int options)
-{
-    std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(value, "id");
+    bool isCreated = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__created__", false);
     bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
     typename std::vector<boost::shared_ptr<T> >::iterator itExistingInfo = vInfos.end();
     if (!id.empty()) {
@@ -566,6 +531,14 @@ void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<
         return;
     }
     if (isDeleted) {
+        // deleted, but didn't exist in the first place
+        RAVELOG_DEBUG_FORMAT("not deleting info with id \"%s\" even though \"__deleted__\" flag is set, because it does not exist", id);
+        return;
+    }
+    if (!wasEmpty && !isCreated) {
+        // we do not allow creating new info if __created__ was not specified
+        // this is to avoid creating new info that is partial
+        RAVELOG_DEBUG_FORMAT("not creating new info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
         return;
     }
     boost::shared_ptr<T> pNewInfo(new T());

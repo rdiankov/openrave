@@ -271,6 +271,9 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
+    bool wasEmpty = __isEmpty;
+    __isEmpty = false; // reset empty flag
+
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
 
@@ -286,9 +289,9 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
         size_t iGrabbed = 0;
         for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
-            //UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
             const rapidjson::Value& rGrabbed = *it;
             std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "id");
+            bool isCreated = OpenRAVE::orjson::GetJsonValueByKey<bool>(rGrabbed, "__created__", false);
             bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(rGrabbed, "__deleted__", false);
             std::vector<GrabbedInfoPtr>::iterator itMatchingId = _vGrabbedInfos.end();
             std::vector<GrabbedInfoPtr>::iterator itMatchingName = _vGrabbedInfos.end();
@@ -342,6 +345,13 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 continue;
             }
 
+            if (!wasEmpty && !isCreated) {
+                // we do not allow creating new info if __created__ was not specified
+                // this is to avoid creating new info that is partial
+                RAVELOG_DEBUG_FORMAT("not creating new grabbed info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
+                continue;
+            }
+
             GrabbedInfoPtr pNewInfo(new GrabbedInfo());
             pNewInfo->DeserializeJSON(rGrabbed, fUnitScale, options);
             pNewInfo->_id = id;
@@ -352,14 +362,14 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options, wasEmpty);
         }
     }
 
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options, wasEmpty);
         }
     }
 

@@ -219,6 +219,9 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options)
 {
+    bool wasEmpty = __isEmpty;
+    __isEmpty = false; // reset empty flag
+
     orjson::LoadJsonValueByKey(value, "id", _id);
     orjson::LoadJsonValueByKey(value, "name", _name);
 
@@ -308,7 +311,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     if (value.HasMember("geometries")) {
         _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["geometries"].Begin(); it != value["geometries"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vgeometryinfos, "name", fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vgeometryinfos, "name", fUnitScale, options, wasEmpty);
         }
     }
 
@@ -323,7 +326,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     //         size_t iGeometry = 0;
     //         for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
     //             std::string id = orjson::GetStringJsonValueByKey(*im, "id");
-    //             UpdateOrCreateInfoWithNameCheck(*im, id, vgeometries, "name", fUnitScale);
+    //             UpdateOrCreateInfoWithNameCheck(*im, id, vgeometries, "name", fUnitScale, wasEmpty);
     //         }
     //     }
     // }

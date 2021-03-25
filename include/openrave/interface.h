@@ -73,6 +73,8 @@ public:
     /// \param options combination of IDO_X options
     /// \param multiply all translational values by fUnitScale
     virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) = 0;
+
+    bool __isEmpty = true; ///< flag to indicate that DeserializeJSON has never been called on this info structure, thus allowing creation of children that do not explicitly have __created__ flag set, otherwise, do not allow creation of new child missing __created__ flag because it could be partial
 };
 
 /** \brief <b>[interface]</b> Base class for all interfaces that OpenRAVE provides. See \ref interface_concepts.

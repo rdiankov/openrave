@@ -100,6 +100,9 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
 
 void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping)
 {
+    bool wasEmpty = __isEmpty;
+    __isEmpty = false; // reset empty flag
+
     if( !rEnvInfo.IsObject() ) {
         throw OPENRAVE_EXCEPTION_FORMAT("Passed in JSON '%s' is not a valid EnvironmentInfo object", orjson::DumpJson(rEnvInfo), ORE_InvalidArguments);
     }
@@ -133,7 +136,6 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
         orjson::LoadJsonValueByKey(rEnvInfo, "gravity", _gravity);
     }
 
-
     if (rEnvInfo.HasMember("bodies")) {
         _vBodyInfos.reserve(_vBodyInfos.size() + rEnvInfo["bodies"].Size());
         const rapidjson::Value& rBodies = rEnvInfo["bodies"];
@@ -141,6 +143,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
             const rapidjson::Value& rKinBodyInfo = rBodies[iInputBodyIndex];
 
             std::string id = orjson::GetStringJsonValueByKey(rKinBodyInfo, "id");
+            bool isCreated = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "__created__", false);
             bool isDeleted = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "__deleted__", false);
 
             // then find previous body
@@ -174,7 +177,9 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
             if (isRobot) {
                 if (itExistingBodyInfo == _vBodyInfos.end()) {
                     // in case no such id
-                    if (!isDeleted) {
+                    if (!wasEmpty && !isCreated) {
+                        RAVELOG_DEBUG_FORMAT("not creating new robot info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
+                    } else if (!isDeleted) {
                         RobotBase::RobotBaseInfoPtr pRobotBaseInfo(new RobotBase::RobotBaseInfo());
                         pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                         pRobotBaseInfo->_id = id;
@@ -205,7 +210,9 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                 // not a robot
                 if (itExistingBodyInfo == _vBodyInfos.end()) {
                     // in case no such id
-                    if (!isDeleted) {
+                    if (!wasEmpty && !isCreated) {
+                        RAVELOG_DEBUG_FORMAT("not creating new body info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
+                    } else if (!isDeleted) {
                         KinBody::KinBodyInfoPtr pKinBodyInfo(new KinBody::KinBodyInfo());
                         pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                         pKinBodyInfo->_id = id;
