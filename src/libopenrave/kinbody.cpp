@@ -350,7 +350,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
             }
 
             GrabbedInfoPtr pNewInfo(new GrabbedInfo());
-            pNewInfo->DeserializeJSON(rGrabbed, fUnitScale, options);
+            pNewInfo->DeserializeJSON(rGrabbed, fUnitScale, (options & ~IDO_PartialUpdate));
             pNewInfo->_id = id;
             _vGrabbedInfos.push_back(pNewInfo);
         }

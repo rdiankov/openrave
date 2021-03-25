@@ -178,7 +178,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                         RAVELOG_DEBUG_FORMAT("not creating new robot info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
                     } else if (!isDeleted) {
                         RobotBase::RobotBaseInfoPtr pRobotBaseInfo(new RobotBase::RobotBaseInfo());
-                        pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
+                        pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, (options & ~IDO_PartialUpdate));
                         pRobotBaseInfo->_id = id;
                         _vBodyInfos.push_back(pRobotBaseInfo);
                     }
@@ -211,7 +211,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                         RAVELOG_DEBUG_FORMAT("not creating new body info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
                     } else if (!isDeleted) {
                         KinBody::KinBodyInfoPtr pKinBodyInfo(new KinBody::KinBodyInfo());
-                        pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
+                        pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, (options & ~IDO_PartialUpdate));
                         pKinBodyInfo->_id = id;
                         _vBodyInfos.push_back(pKinBodyInfo);
                         RAVELOG_VERBOSE_FORMAT("created new body id='%s'", id);

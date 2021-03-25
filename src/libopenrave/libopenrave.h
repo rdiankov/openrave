@@ -542,7 +542,7 @@ void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<
         return;
     }
     boost::shared_ptr<T> pNewInfo(new T());
-    pNewInfo->DeserializeJSON(value, fUnitScale, options);
+    pNewInfo->DeserializeJSON(value, fUnitScale, (options & ~IDO_PartialUpdate));
     pNewInfo->_id = id;
     vInfos.push_back(pNewInfo);
 }
