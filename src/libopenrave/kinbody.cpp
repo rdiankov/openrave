@@ -345,7 +345,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
             if ((options & IDO_PartialUpdate) != 0 && !isCreated) {
                 // we do not allow creating new info if __created__ was not specified
                 // this is to avoid creating new info that is partial
-                RAVELOG_DEBUG_FORMAT("not creating new grabbed info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
+                RAVELOG_WARN_FORMAT("not creating new grabbed info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
                 continue;
             }
 

@@ -175,7 +175,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                 if (itExistingBodyInfo == _vBodyInfos.end()) {
                     // in case no such id
                     if ((options & IDO_PartialUpdate) != 0 && !isCreated) {
-                        RAVELOG_DEBUG_FORMAT("not creating new robot info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
+                        RAVELOG_WARN_FORMAT("not creating new robot info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
                     } else if (!isDeleted) {
                         RobotBase::RobotBaseInfoPtr pRobotBaseInfo(new RobotBase::RobotBaseInfo());
                         pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, (options & ~IDO_PartialUpdate));
@@ -208,7 +208,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                 if (itExistingBodyInfo == _vBodyInfos.end()) {
                     // in case no such id
                     if ((options & IDO_PartialUpdate) != 0 && !isCreated) {
-                        RAVELOG_DEBUG_FORMAT("not creating new body info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
+                        RAVELOG_WARN_FORMAT("not creating new body info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
                     } else if (!isDeleted) {
                         KinBody::KinBodyInfoPtr pKinBodyInfo(new KinBody::KinBodyInfo());
                         pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, (options & ~IDO_PartialUpdate));

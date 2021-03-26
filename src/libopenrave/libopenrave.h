@@ -532,13 +532,13 @@ void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<
     }
     if (isDeleted) {
         // deleted, but didn't exist in the first place
-        RAVELOG_DEBUG_FORMAT("not deleting info with id \"%s\" even though \"__deleted__\" flag is set, because it does not exist", id);
+        RAVELOG_WARN_FORMAT("not deleting info with id \"%s\" even though \"__deleted__\" flag is set, because it does not exist", id);
         return;
     }
     if ((options & IDO_PartialUpdate) != 0 && !isCreated) {
         // we do not allow creating new info if __created__ was not specified
         // this is to avoid creating new info that is partial
-        RAVELOG_DEBUG_FORMAT("not creating new info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
+        RAVELOG_WARN_FORMAT("not creating new info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
         return;
     }
     boost::shared_ptr<T> pNewInfo(new T());
