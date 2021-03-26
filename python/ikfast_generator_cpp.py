@@ -1882,7 +1882,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
     def _writeGinacEquations(self, varnamefn, allexprs):
         allcode = cStringIO.StringIO()
         for i,expr in enumerate(allexprs):
-            print '%d/%d'%(i,len(allexprs))
+            print('%d/%d'%(i,len(allexprs)))
             code,sepcodelist = self._WriteGinacExprCode(expr)
             for sepcode in sepcodelist:
                 allcode.write(sepcode)
