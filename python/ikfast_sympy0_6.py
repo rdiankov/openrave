@@ -1620,7 +1620,7 @@ class IKFastSolver(AutoReloader):
 #                             sym = c
 #                             break
 #                     if sym is None:
-#                         sym = self.gsymbolgen.next()
+#                         sym = next(self.gsymbolgen)
 #                         log.info('adding global symbol %s=%s'%(sym,T[i]))
 #                         self.globalsymbols.append((sym,T[i]))
 #                     T[i] = sym
@@ -2859,13 +2859,13 @@ class IKFastSolver(AutoReloader):
         allmonoms = dict()
         for left,right in izip(leftsideeqs,rightsideeqs):
             if right != S.Zero:
-                rightsidedummy.append(symbolgen.next())
+                rightsidedummy.append(next(symbolgen))
                 localsymbols.append((rightsidedummy[-1],right.as_basic().expand()))
             else:
                 rightsidedummy.append(S.Zero)
             for m in left.iter_monoms():
                 if __builtin__.sum(m) > 0 and not m in allmonoms:
-                    newvar = vargen.next()
+                    newvar = next(vargen)
                     localsymbols.append((newvar,Poly(S.Zero,*left.symbols).add_term(S.One,m).as_basic()))
                     allmonoms[m] = newvar
 
@@ -2912,10 +2912,10 @@ class IKFastSolver(AutoReloader):
                                     gmult = gsym*(-gcommon/common0)
                                     break
                             if gmult is None:
-                                gmult = symbolgen.next()
+                                gmult = next(symbolgen)
                                 dividesymbols.append((gmult,S.One/leftcoeffs[0]))
                             newc = (c*gmult).subs(localsymbols).expand()
-                            sym = symbolgen.next()
+                            sym = next(symbolgen)
                             localsymbols.append((sym,newc))
                             newleft = newleft + sym
                     numsymbolcoeffs.append(0)
@@ -4408,7 +4408,7 @@ class IKFastSolver(AutoReloader):
                                 prevsolution = AST.SolverBreak()
                                 for divisor,linearsolution in linearsolutions:
                                     assert(len(linearsolution)==1)
-                                    divisorsymbol = self.gsymbolgen.next()
+                                    divisorsymbol = next(self.gsymbolgen)
                                     solversolution = AST.SolverSolution(varsyms[ileftvar].name,jointeval=[2*atan(linearsolution[0]/divisorsymbol)],isHinge=self.isHinge(varsyms[ileftvar].name))
                                     prevsolution = AST.SolverCheckZeros(varsyms[ileftvar].name,[divisorsymbol],zerobranch=[prevsolution],nonzerobranch=[solversolution],thresh=1e-6)
                                     prevsolution.dictequations = [(divisorsymbol,divisor)]
@@ -4475,11 +4475,11 @@ class IKFastSolver(AutoReloader):
                         for i in range(shape[0]):
                             for j in range(shape[1]):
                                 if Mall[idegree][i,j] != S.Zero:
-                                    sym = self.gsymbolgen.next()
+                                    sym = next(self.gsymbolgen)
                                     Malltemp[idegree][i,j] = sym
                                     dictequations.append((sym,Mall[idegree][i,j]))
                         M += Malltemp[idegree]*leftvar**idegree
-                    tempsymbols = [self.gsymbolgen.next() for i in range(16)]
+                    tempsymbols = [next(self.gsymbolgen) for i in range(16)]
                     tempsubs = []
                     for i in range(16):
                         if M[i] != S.Zero:
@@ -4919,7 +4919,7 @@ class IKFastSolver(AutoReloader):
                             cvarfracsimp_denom = -cvarfracsimp_denom
                         if self.equal(svarfracsimp_denom,cvarfracsimp_denom) and not svarfracsimp_denom.is_number:
                             log.debug('%s solution: denominator is equal %s, doing a global substitution',var.name,svarfracsimp_denom)
-                            denom = self.gsymbolgen.next()
+                            denom = next(self.gsymbolgen)
                             solversolution.dictequations.append((denom,sign(svarfracsimp_denom)))
                             svarsolsimp = self.trigsimp(svarfrac[0],othersolvedvars)*denom
                             cvarsolsimp = self.trigsimp(cvarfrac[0],othersolvedvars)*denom
@@ -5096,7 +5096,7 @@ class IKFastSolver(AutoReloader):
         reduceeqns = [Poly(eq.as_basic().subs(pairwisesubs),*pairwisevars) for rank,eq in orgeqns if rank < 4*maxcomplexity]
         for i,eq in enumerate(reduceeqns):
             if eq.TC != S.Zero and not eq.TC.is_Symbol:
-                n=symbolgen.next()
+                n=next(symbolgen)
                 allsymbols.append((n,eq.TC.subs(allsymbols)))
                 reduceeqns[i] += n-eq.TC
         
@@ -5513,7 +5513,7 @@ class IKFastSolver(AutoReloader):
             if (c.is_number and len(str(c)) > 40) or (not c.is_number and not c.is_Symbol):
                 # if it is a product of a symbol and a number, then ignore
                 if not c.is_Mul or not all([e.is_number or e.is_Symbol for e in c.args]):
-                    sym = symbolgen.next()
+                    sym = next(symbolgen)
                     symbols.append((sym,c))
                     c = sym
             if __builtin__.sum(m) == 0:
@@ -5531,7 +5531,7 @@ class IKFastSolver(AutoReloader):
             symbolgen = cse_main.numbered_symbols('const')
         symbols = []
         if expr.is_number:
-            result = symbolgen.next()
+            result = next(symbolgen)
             symbols.append((result,expr))
         elif expr.is_Mul:
             result = S.One
