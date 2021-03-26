@@ -279,7 +279,7 @@ CodeGenerators = {}
 # except ImportError:
 #     pass
 try:
-    import ikfast_generator_cpp
+    from . import ikfast_generator_cpp
     CodeGenerators['cpp'] = ikfast_generator_cpp.CodeGenerator
     IkType = ikfast_generator_cpp.IkType
 except ImportError:
