@@ -3766,7 +3766,7 @@ protected:
         const int envBodyIndex = body._environmentBodyIndex;
         if (0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()) {
             _environmentIndexRecyclePool.insert(envBodyIndex); // for recycle later
-            RAVELOG_DEBUG_FORMAT("env=%d, removed body name=\"%s\" (environmentBodyIndex=%d), recycle body index later", GetId()%body.GetName()%body._environmentBodyIndex);
+            RAVELOG_VERBOSE_FORMAT("env=%d, removed body name=\"%s\" (environmentBodyIndex=%d), recycle body index later", GetId()%body.GetName()%body._environmentBodyIndex);
         }
         else {
             RAVELOG_WARN_FORMAT("env=%d, removed body name=\"%s\" (environmentBodyIndex=%d, _vecbodies size=%d) is not valid. ", GetId()%body.GetName()%body._environmentBodyIndex%_vecbodies.size());
