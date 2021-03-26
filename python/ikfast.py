@@ -2153,7 +2153,7 @@ class IKFastSolver(AutoReloader):
         """
         self._CheckPreemptFn(progress=0.5)
         if lang is None:
-            if CodeGenerators.has_key('cpp'):
+            if 'cpp' in CodeGenerators:
                 lang = 'cpp'
             else:
                 lang = CodeGenerators.keys()[0]
@@ -8382,8 +8382,8 @@ class IKFastSolver(AutoReloader):
                     continue
                 if s is not None:
                     sollist = None
-                    if hasattr(s,'has_key'):
-                        if s.has_key(varsym.svar) and s.has_key(varsym.cvar):
+                    if isinstance(s,dict):
+                        if varsym.svar in s and varsym.cvar in s:
                             sollist = [(s[varsym.svar],s[varsym.cvar])]
                         else:
                             sollist = []
