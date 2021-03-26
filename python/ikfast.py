@@ -6512,7 +6512,7 @@ class IKFastSolver(AutoReloader):
                 # need to do 1234*group[3] hack in order to get the Poly domain to recognize group[3] (sympy 0.7.1)
                 p = Poly(eq+1234*group[3],group[0],group[1],group[2])
                 p -= Poly(1234*group[3], *p.gens, domain=p.domain)
-            except (PolynomialError, CoercionFailed, ZeroDivisionError), e:
+            except (PolynomialError, CoercionFailed, ZeroDivisionError) as e:
                 continue
             changed = False
             listterms = list(p.terms())
@@ -8377,7 +8377,7 @@ class IKFastSolver(AutoReloader):
                 
                 try:
                     s = solve(comb[1],[varsym.svar,varsym.cvar])
-                except (PolynomialError,CoercionFailed), e:
+                except (PolynomialError,CoercionFailed) as e:
                     log.debug('solveSingleVariable: failed: %s',e)
                     continue
                 if s is not None:
