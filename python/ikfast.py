@@ -1983,7 +1983,7 @@ class IKFastSolver(AutoReloader):
                     checkforzeros += self.checkForDivideByZero(arg)
                 if eq.exp.is_number and eq.exp < 0:
                     checkforzeros.append(eq.base)
-        except AssertionError,e:
+        except AssertionError as e:
             log.warn('%s',e)
 
         if len(checkforzeros) > 0:
@@ -2075,7 +2075,7 @@ class IKFastSolver(AutoReloader):
                     sol.score = oo # infinity
                 else:
                     sol.score += checkpow(sexpr,sexprs)
-        except AssertionError, e:
+        except AssertionError as e:
             log.warn('%s',e)
             sol.score=1e10
 
@@ -2722,7 +2722,7 @@ class IKFastSolver(AutoReloader):
             try:
                 log.info('last 2 axes are intersecting')
                 tree = self.solve5DIntersectingAxes(T0links,manippos,D,solvejointvars,endbranchtree)
-            except self.CannotSolveError, e:
+            except self.CannotSolveError as e:
                 log.warn('%s', e)
 
         if tree is None:
@@ -2834,7 +2834,7 @@ class IKFastSolver(AutoReloader):
                     try:
                         coupledsolutions,usedvars = solvemethod(rawpolyeqs2[index],newsolvejointvars,endbranchtree=[AST.SolverSequence([endbranchtree2])], AllEquationsExtra=AllEquations)
                         break
-                    except self.CannotSolveError, e:
+                    except self.CannotSolveError as e:
                         log.warn('%s', e)
                         continue
                     
@@ -2974,7 +2974,7 @@ class IKFastSolver(AutoReloader):
                         T0links.append(self.affineInverse(T1links.pop(-1)))
                     tree = self.solveFullIK_6DGeneral(T0links, T1links, solvejointvars, endbranchtree, usesolvers=1)
                     break
-                except (self.CannotSolveError,self.IKFeasibilityError), e:
+                except (self.CannotSolveError,self.IKFeasibilityError) as e:
                     log.warn('%s',e)
             
             if tree is None:
@@ -2987,7 +2987,7 @@ class IKFastSolver(AutoReloader):
                             T0links.append(self.affineInverse(T1links.pop(-1)))
                         tree = self.solveFullIK_6DGeneral(T0links, T1links, solvejointvars, endbranchtree, usesolvers=6)
                         break
-                    except (self.CannotSolveError,self.IKFeasibilityError), e:
+                    except (self.CannotSolveError,self.IKFeasibilityError) as e:
                         log.warn('%s',e)
                 
         if tree is None:
@@ -3002,7 +3002,7 @@ class IKFastSolver(AutoReloader):
             try:
                 return self.solve6DIntersectingAxes(T0links,T1links,transvars,rotvars,solveRotationFirst=solveRotationFirst, endbranchtree=endbranchtree)
             
-            except (self.CannotSolveError,self.IKFeasibilityError), e:
+            except (self.CannotSolveError,self.IKFeasibilityError) as e:
                 log.warn('%s',e)
         return None
 
@@ -3303,7 +3303,7 @@ class IKFastSolver(AutoReloader):
                         self.sortComplexity(AllEquationsExtra)
                         coupledsolutions,usedvars = solvemethod(rawpolyeqs,solvejointvars,endbranchtree=endbranchtree,AllEquationsExtra=AllEquationsExtraPruned)
                         break
-                except self.CannotSolveError, e:
+                except self.CannotSolveError as e:
                     if rawpolyeqs2[splitindex] is not None and len(rawpolyeqs2[splitindex]) > 0:
                         log.warn(u'solving %s: %s', rawpolyeqs2[splitindex][0][0].gens, e)
                     else:
@@ -3499,7 +3499,7 @@ class IKFastSolver(AutoReloader):
         try:
             tree = self.SolveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars=self.freejointvars,solsubs=self.freevarsubs[:],endbranchtree=endbranchtree)
             tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
-        except self.CannotSolveError, e:
+        except self.CannotSolveError as e:
             log.debug('failed to solve using SolveAllEquations: %s', e)
             if 0:
                 solvejointvar0sols = solve(AllEquations[4], solvejointvars[0])
@@ -3531,7 +3531,7 @@ class IKFastSolver(AutoReloader):
                             for solution in rawsolutions:
                                 self.ComputeSolutionComplexity(solution,othersolvedvars,solvejointvars)
                                 solutions.append((solution,curvar))
-                        except self.CannotSolveError, e:
+                        except self.CannotSolveError as e:
                             gatheredexceptions.append((curvar.name, e))
                     else:
                         gatheredexceptions.append((curvar.name,None))
@@ -3600,7 +3600,7 @@ class IKFastSolver(AutoReloader):
                         exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs[ioffset:],ileftvar)
                         log.info('ioffset %d'%ioffset)
                         break
-                    except self.CannotSolveError, e:
+                    except self.CannotSolveError as e:
                         log.debug('solveDialytically errors: %s',e)
 
                 if exportcoeffeqs is None:
@@ -3928,7 +3928,7 @@ class IKFastSolver(AutoReloader):
                     reducedeqs += [[Poly(eq[0],*usedvars[j]),Poly(eq[1],*usedvars[1-j])] for eq in reducedeqs2] + [[Poly(S.Zero,*polyeq[j].gens),polyeq[1-j]-polyeq[j].as_expr()] for polyeq in polyeqs if sum(polyeq[j].degree_list()) == 0]
                     if len(reducedeqs) > 0:
                         break;
-            except self.CannotSolveError,e:
+            except self.CannotSolveError as e:
                 log.warn(e)
                 continue
 
@@ -4390,7 +4390,7 @@ class IKFastSolver(AutoReloader):
             try:
                 exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=getsubs)
                 break
-            except self.CannotSolveError,e:
+            except self.CannotSolveError as e:
                 log.warn('failed with leftvar %s: %s',leftvar,e)
 
         if exportcoeffeqs is None:
@@ -4928,7 +4928,7 @@ class IKFastSolver(AutoReloader):
                         denominator = self.trigsimp((denominator/common).subs(self.freevarsubsinv),self.freejointvars).subs(self.freevarsubs)
                         try:
                             q,r=div(numerator*AUdet,denominator,self.freevars)
-                        except PolynomialError, e:
+                        except PolynomialError as e:
                             # 1/(-9000000*cj16 - 9000000) contains an element of the generators set
                             raise self.CannotSolveError('cannot divide for matrix inversion: %s'%e)
                         
@@ -5073,7 +5073,7 @@ class IKFastSolver(AutoReloader):
                     if not allzeros:
                         try:
                             AUinv = AU.inv()
-                        except ValueError, e:
+                        except ValueError as e:
                             raise self.CannotSolveError(u'failed to invert matrix: %e'%e)
                         
                         BUresult = AUinv*BU
@@ -5146,7 +5146,7 @@ class IKFastSolver(AutoReloader):
                         jointtrees2 += self.SolveAllEquations(AllEquationsOrig,curvars=curvars,othersolvedvars=self.freejointvars+[curvar,halfanglevar],solsubs=self.freevarsubs+curvarsubs+self.Variable(halfanglevar).subs,endbranchtree=endbranchtree, canguessvars=False, currentcases=currentcases, currentcasesubs=currentcasesubs)
                         return preprocesssolutiontree+solutiontree+treefirst,solvejointvars
                     
-                    except self.CannotSolveError,e:
+                    except self.CannotSolveError as e:
                         # try another strategy
                         log.debug(e)
                         
@@ -5180,7 +5180,7 @@ class IKFastSolver(AutoReloader):
                                 # atan2(0,0) produces an invalid solution
                                 jointtrees3.append(AST.SolverSolution(jointname,jointeval=[atan2(X[indices[i+1]],X[indices[i]])],isHinge=self.IsHinge(jointname)))
                                 usedvars.append(Symbol(jointname))
-                            except Exception, e:
+                            except Exception as e:
                                 log.warn(e)
                                 
                         jointcheckeqs = []
@@ -5196,7 +5196,7 @@ class IKFastSolver(AutoReloader):
                     else:
                         log.warn('AUinv not initialized, perhaps missing important equations')
                         
-                except self.CannotSolveError,e:
+                except self.CannotSolveError as e:
                     log.info(e)
                 
             try:
@@ -5217,13 +5217,13 @@ class IKFastSolver(AutoReloader):
                         jointtrees += finaltree
                         return preprocesssolutiontree+[halfanglesolution]+nexttree,usedvars
                     
-                    except self.CannotSolveError,e:
+                    except self.CannotSolveError as e:
                         log.debug('failed to solve for final variable %s, so returning just two: %s'%(usedvars[2],str(usedvars[0:2])))
                         jointtrees += endbranchtree
                         # sometimes the last variable cannot be solved, so returned the already solved variables and let the higher function take care of it 
                         return preprocesssolutiontree+[halfanglesolution]+nexttree,usedvars[0:2]
                 
-            except self.CannotSolveError,e:
+            except self.CannotSolveError as e:
                 log.debug(u'failed solving first two variables pairwise: %s', e)
                 
         if len(reducedeqs) < 3:
@@ -5328,13 +5328,13 @@ class IKFastSolver(AutoReloader):
             try:
                 solutiontree = self.SolveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars=self.freejointvars[:], solsubs=self.freevarsubs[:], endbranchtree=endbranchtree, canguessvars=False, currentcases=currentcases, currentcasesubs=currentcasesubs)
                 return solutiontree, solvejointvars
-            except self.CannotSolveError, e:
+            except self.CannotSolveError as e:
                 log.debug(u'failed solving all variables: %s', e)
                 
             try:
                 solutiontree = self.SolveAllEquations(AllEquations,curvars=usedvars,othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:], unknownvars=unusedvars, endbranchtree=endbranchtree, canguessvars=False, currentcases=currentcases, currentcasesubs=currentcasesubs)
                 return solutiontree, usedvars
-            except self.CannotSolveError, e:
+            except self.CannotSolveError as e:
                 log.debug(u'failed solving used variables: %s', e)
             
             for ivar in range(3):
@@ -5346,7 +5346,7 @@ class IKFastSolver(AutoReloader):
                         solutiontree = self.SolveAllEquations(AllEquations,curvars=[usedvars[ivar]],othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:],endbranchtree=[AST.SolverSequence([endbranchtree2])],unknownvars=unknownvars+unusedvars, canguessvars=False, currentcases=currentcases, currentcasesubs=currentcasesubs)
                         endbranchtree2 += self.SolveAllEquations(AllEquations,curvars=unknownvars[0:2],othersolvedvars=self.freejointvars[:]+[usedvars[ivar]],solsubs=self.freevarsubs[:]+self.Variable(usedvars[ivar]).subs, unknownvars=unusedvars, endbranchtree=endbranchtree, canguessvars=False, currentcases=currentcases, currentcasesubs=currentcasesubs)
                     return preprocesssolutiontree+solutiontree, usedvars#+unusedvars#[unknownvars[1], usedvars[ivar]]#
-                except self.CannotSolveError, e:
+                except self.CannotSolveError as e:
                     log.debug(u'single variable %s failed: %s', usedvars[ivar], e)
                     
 #         try:
@@ -5365,21 +5365,21 @@ class IKFastSolver(AutoReloader):
                 try:
                     exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=getsubs)
                     break
-                except self.CannotSolveError,e:
+                except self.CannotSolveError as e:
                     log.warn('failed with leftvar %s: %s',newreducedeqs[0].gens[ileftvar],e)
             else:
                 for dialyticeqs in combinations(newreducedeqs,3):
                     try:
                         exportcoeffeqs,exportmonoms = self.solveDialytically(dialyticeqs,ileftvar,getsubs=getsubs)
                         break
-                    except self.CannotSolveError,e:
+                    except self.CannotSolveError as e:
                         log.warn('failed with leftvar %s: %s',newreducedeqs[0].gens[ileftvar],e)
                 
                 for dialyticeqs in combinations(newreducedeqs,4):
                     try:
                         exportcoeffeqs,exportmonoms = self.solveDialytically(dialyticeqs,ileftvar,getsubs=getsubs)
                         break
-                    except self.CannotSolveError,e:
+                    except self.CannotSolveError as e:
                         log.warn('failed with leftvar %s: %s',newreducedeqs[0].gens[ileftvar],e)
 
                 if exportcoeffeqs is None:
@@ -5388,7 +5388,7 @@ class IKFastSolver(AutoReloader):
                         try:
                             exportcoeffeqs,exportmonoms = self.solveDialytically(dialyticeqs,ileftvar,getsubs=getsubs)
                             break
-                        except self.CannotSolveError,e:
+                        except self.CannotSolveError as e:
                             log.warn('failed with leftvar %s: %s',newreducedeqs[0].gens[ileftvar],e)
             if exportcoeffeqs is not None:
                 break
@@ -5432,7 +5432,7 @@ class IKFastSolver(AutoReloader):
                             eqnew += term
                         try:
                             newpeq = Poly(eqnew,htvars)
-                        except PolynomialError, e:
+                        except PolynomialError as e:
                             # most likel uservar0solution was bad...
                             raise self.CannotSolveError('equation %s cannot be represented as a polynomial'%eqnew)
                         
@@ -5540,7 +5540,7 @@ class IKFastSolver(AutoReloader):
                                     #solutiontree = self.SolveAllEquations(AllEquations,curvars=curvars,othersolvedvars=self.freejointvars[:]+[solvevar],solsubs=self.freevarsubs[:]+self.Variable(solvevar).subs,endbranchtree=endbranchtree)
                                     return preprocesssolutiontree+[firstsolution]+solutiontree,usedvars+unusedvars
 
-                                except self.CannotSolveError, e:
+                                except self.CannotSolveError as e:
                                     log.debug('could not solve full variables from scratch, so use existing solution: %s', e)
                                     secondsolution = AST.SolverSolution(htvar.name[2:], isHinge=self.IsHinge(htvar.name[2:]))
                                     secondsolution.jointeval = [2*atan2(B.as_expr(), A.as_expr())]
@@ -5601,7 +5601,7 @@ class IKFastSolver(AutoReloader):
                                 eqnew += term.expand()
                             try:
                                 newpeq = Poly(eqnew,*polyvars)
-                            except PolynomialError, e:
+                            except PolynomialError as e:
                                 # most likel uservar0solution was bad
                                 raise self.CannotSolveError('equation %s cannot be represented as a polynomial'%eqnew)
 
@@ -5644,7 +5644,7 @@ class IKFastSolver(AutoReloader):
                             if Mall is not None:
                                 leftvar=processedequations[0].gens[ileftvar]
                                 break
-                        except self.CannotSolveError, e:
+                        except self.CannotSolveError as e:
                             log.debug(e)
                     if Mall is None:
                         continue
@@ -6044,7 +6044,7 @@ class IKFastSolver(AutoReloader):
                     otherjointtrees += endbranchtree
                     return tree, list(usedvars)
                 
-            except self.CannotSolveError,e:
+            except self.CannotSolveError as e:
                 pass
         
         log.info('build final equations for symbols: %s',finaleqsymbols)
@@ -6155,7 +6155,7 @@ class IKFastSolver(AutoReloader):
             try:
                 exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=None)
                 break
-            except self.CannotSolveError,e:
+            except self.CannotSolveError as e:
                 log.warn('failed with leftvar %s: %s',leftvar,e)
 
         if exportcoeffeqs is None:
@@ -6275,7 +6275,7 @@ class IKFastSolver(AutoReloader):
                     subsvals = [(s,v.evalf()) for s,v in subs]
                     try:
                         subs = subsvals+getsubs(subsvals)
-                    except self.CannotSolveError, e:
+                    except self.CannotSolveError as e:
                         # getsubs failed (sometimes it requires solving inverse matrix), so go to next set
                         continue
                 # have to sub at least twice with the global symbols
@@ -6286,7 +6286,7 @@ class IKFastSolver(AutoReloader):
                 eps = 10**-(self.precision-3)
                 try:
                     Anumpy = numpy.array(numpy.array(A), numpy.float64)
-                except ValueError, e:
+                except ValueError as e:
                     log.warn(u'could not convert to numpy array: %s', e)
                     continue
                 
@@ -6297,7 +6297,7 @@ class IKFastSolver(AutoReloader):
                 if all([Abs(f) > eps for f in eigenvals]):
                     try:
                         Ainv = A.inv(method='LU')
-                    except ValueError, e:
+                    except ValueError as e:
                         log.error('error when taking inverse: %s', e)
                         continue
                     B = Ainv*Mall[1].subs(subs)
@@ -6566,7 +6566,7 @@ class IKFastSolver(AutoReloader):
         """
         try:
             p = Poly(eq,*symbols)
-        except (PolynomialError, CoercionFailed), e:
+        except (PolynomialError, CoercionFailed) as e:
             return None
         
         changed = False
@@ -6601,7 +6601,7 @@ class IKFastSolver(AutoReloader):
         changed = False
         try:
             p = Poly(eq,*symbols)
-        except (PolynomialError, CoercionFailed), e:
+        except (PolynomialError, CoercionFailed) as e:
             return None
 
         listterms = list(p.terms())
@@ -6718,7 +6718,7 @@ class IKFastSolver(AutoReloader):
                                         newsubsdict[constantSymbol] = newsolution
                             except PolynomialError:
                                 pass
-                except PolynomialError, e:
+                except PolynomialError as e:
                     # expected from simplifyTransform if eq is too complex
                     pass
                 
@@ -6917,11 +6917,11 @@ class IKFastSolver(AutoReloader):
         for var0,var1,raweqns,complexity in curvarsubssol:
             try:
                 rawsolutions=self.SolvePairVariables(raweqns,var0,var1,othersolvedvars,unknownvars=curvars+unknownvars)
-            except self.CannotSolveError, e:
+            except self.CannotSolveError as e:
                 log.debug(e)
 #                 try:
 #                     rawsolutions=self.SolvePrismaticHingePairVariables(raweqns,var0,var1,othersolvedvars,unknownvars=curvars+unknownvars)
-#                 except self.CannotSolveError, e:
+#                 except self.CannotSolveError as e:
 #                     log.debug(e)
                 rawsolutions = []
             for solution in rawsolutions:
@@ -6929,7 +6929,7 @@ class IKFastSolver(AutoReloader):
                 try:
                     self.ComputeSolutionComplexity(solution,othersolvedvars,curvars)
                     solutions.append((solution,Symbol(solution.jointname)))
-                except self.CannotSolveError, e:
+                except self.CannotSolveError as e:
                     log.warn(u'equation failed to compute solution complexity: %s', solution.jointeval)
             if len(rawsolutions) > 0: # solving a pair is rare, so any solution will do
                 break
@@ -7148,7 +7148,7 @@ class IKFastSolver(AutoReloader):
                                             if s.jointeval is None:
                                                 s.jointeval = []
                                             s.jointeval.append(S.One*value)
-                                    except (RuntimeError, AssertionError),e: # 
+                                    except (RuntimeError, AssertionError) as e: # 
                                         log.warn('othervar %s=%f: %s',str(othervar),value,e)
 
                                 if s.jointeval is not None and len(s.jointeval) > 0:
@@ -7163,7 +7163,7 @@ class IKFastSolver(AutoReloader):
                                     # checksimplezeroexpr was too complex
                                     pass
                                 
-                                except self.CannotSolveError,e:
+                                except self.CannotSolveError as e:
                                     # this is actually a little tricky, sometimes really good solutions can have a divide that looks like:
                                     # ((0.405 + 0.331*cj2)**2 + 0.109561*sj2**2 (manusarm_left)
                                     # This will never be 0, but the solution cannot be solved. Instead of rejecting, add a condition to check if checksimplezeroexpr itself is 0 or not
@@ -7384,7 +7384,7 @@ class IKFastSolver(AutoReloader):
                     for ipossiblesub, possiblesub in enumerate(possiblesubs):
                         try:
                             eq = checkzero.subs(possiblesub).evalf(n=30)
-                        except RuntimeError, e:
+                        except RuntimeError as e:
                             # most likely doing (1/x).subs(x,0) produces a RuntimeError (infinite recursion...)
                             log.warn(e)
                             continue
@@ -7424,7 +7424,7 @@ class IKFastSolver(AutoReloader):
                                 continue
                             try:
                                 eq2 = eq.subs(possiblesub2).evalf(n=30)
-                            except RuntimeError, e:
+                            except RuntimeError as e:
                                 # most likely doing (1/x).subs(x,0) produces a RuntimeError (infinite recursion...)
                                 log.warn(e)
                                 continue
@@ -7615,7 +7615,7 @@ class IKFastSolver(AutoReloader):
                         self.degeneratecases.AddCases(newcases)
                     else:
                         log.warn('already has handled cases %r', newcases)                        
-            except self.CannotSolveError, e:
+            except self.CannotSolveError as e:
                 log.debug(e)
                 continue
             finally:
@@ -7821,7 +7821,7 @@ class IKFastSolver(AutoReloader):
 #                                 Mall[i,j] = Poly(Mall[i,j],leftvar)
                         try:
                             Malldet = Mall.berkowitz_det()
-                        except Exception, e:
+                        except Exception as e:
                             log.warn('failed to compute determinant: %s', e)
                             continue
                         
@@ -7906,7 +7906,7 @@ class IKFastSolver(AutoReloader):
                             if Mall is not None:
                                 leftvar=polyeqs[0].gens[ileftvar]
                                 break
-                        except self.CannotSolveError, e:
+                        except self.CannotSolveError as e:
                             log.debug(e)
                         
                     if Mall is None:
@@ -7977,7 +7977,7 @@ class IKFastSolver(AutoReloader):
                         continue
                     pfinals = [det]
                     break
-                except self.CannotSolveError,e:
+                except self.CannotSolveError as e:
                     log.debug(e)
                     
         if pfinals is None:
@@ -8155,7 +8155,7 @@ class IKFastSolver(AutoReloader):
             trigsubs = [(varsym.svar**2,1-varsym.cvar**2), (varsym.svar**3,varsym.svar*(1-varsym.cvar**2))]
             try:
                 peq = Poly(eq.subs(varsym.subs).subs(trigsubs),varsym.cvar,varsym.svar)
-            except PolynomialError, e:
+            except PolynomialError as e:
                 raise self.CannotSolveError('solveHighDegreeEquationsHalfAngle: poly error (%r)'%eq)
             
             if peq.has(varsym.var):
@@ -8296,7 +8296,7 @@ class IKFastSolver(AutoReloader):
                         hasdividebyzero = any([len(self.checkForDivideByZero(self._SubstituteGlobalSymbols(s)))>0 for s in jointsolutions])
                         if not hasdividebyzero:
                             return returnfirstsolutions
-                except NotImplementedError, e:
+                except NotImplementedError as e:
                     # when solve cannot solve an equation
                     log.warn(e)
             
@@ -8315,14 +8315,14 @@ class IKFastSolver(AutoReloader):
                                 jointsolutions.append(2*atan(s4, evaluate=True))
                             else:
                                 jointsolutions.append(2*atan(s4, evaluate=False)) # don't evalute since chances if this being a number is very low                                                          
-                        except RuntimeError, e:
+                        except RuntimeError as e:
                             log.warn('got runtime error when taking atan: %s', e)
                     if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:
                         returnfirstsolutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
                         hasdividebyzero = any([len(self.checkForDivideByZero(self._SubstituteGlobalSymbols(s)))>0 for s in jointsolutions])
                         if not hasdividebyzero:
                             return returnfirstsolutions
-                except NotImplementedError, e:
+                except NotImplementedError as e:
                     # when solve cannot solve an equation
                     log.warn(e)
         if len(returnfirstsolutions) > 0:
@@ -8474,7 +8474,7 @@ class IKFastSolver(AutoReloader):
                             
                             try:
                                 expandedsol = atan2check(svarsolsimp,cvarsolsimp)
-                            except RuntimeError, e:
+                            except RuntimeError as e:
                                 log.warn(u'most likely got recursion error when calling atan2: %s', e)
                                 continue
                             
@@ -8575,9 +8575,9 @@ class IKFastSolver(AutoReloader):
                             solutions.append(AST.SolverSolution(var.name,jointevalcos=jointsolutions,isHinge=self.IsHinge(var.name)))
                             solutions[-1].equationsused = equationsused
                         continue
-                except self.CannotSolveError,e:
+                except self.CannotSolveError as e:
                     log.debug(e)
-                except NotImplementedError, e:
+                except NotImplementedError as e:
                     # when solve cannot solve an equation
                     log.warn(e)
             if numsvar > 0:
@@ -8590,9 +8590,9 @@ class IKFastSolver(AutoReloader):
                             solutions.append(AST.SolverSolution(var.name,jointevalsin=jointsolutions,isHinge=self.IsHinge(var.name)))
                             solutions[-1].equationsused = equationsused
                         continue
-                except self.CannotSolveError,e:
+                except self.CannotSolveError as e:
                     log.debug(e)
-                except NotImplementedError, e:
+                except NotImplementedError as e:
                     # when solve cannot solve an equation
                     log.warn(e)
 
@@ -8608,7 +8608,7 @@ class IKFastSolver(AutoReloader):
                     if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions) > 0:
                         solutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
                         solutions[-1].equationsused = equationsused
-                except NotImplementedError, e:
+                except NotImplementedError as e:
                     # when solve cannot solve an equation
                     log.warn(e)
                 continue
@@ -8616,7 +8616,7 @@ class IKFastSolver(AutoReloader):
                 solution = self.solveHighDegreeEquationsHalfAngle([eqnew],varsym,symbols)
                 solutions.append(solution.subs(symbols))
                 solutions[-1].equationsused = equationsused
-            except self.CannotSolveError,e:
+            except self.CannotSolveError as e:
                 log.debug(e)
         if len(solutions) > 0:                
             return solutions
@@ -8921,7 +8921,7 @@ class IKFastSolver(AutoReloader):
             if len(goodgroup) == 0:
                 try:
                     return self.SolvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)
-                except self.CannotSolveError,e:
+                except self.CannotSolveError as e:
                     log.warn('%s',e)
 
                 # try a separate approach where the two variables are divided on both sides
@@ -8986,7 +8986,7 @@ class IKFastSolver(AutoReloader):
                 if len(lineareqs) > 0:
                     try:
                         return [self.solveHighDegreeEquationsHalfAngle(lineareqs,varsym1)]
-                    except self.CannotSolveError,e:
+                    except self.CannotSolveError as e:
                         log.warn('%s',e)
 
                 raise self.CannotSolveError('cannot cleanly separate pair equations')

@@ -109,7 +109,7 @@ def main(env,options):
         time.sleep(0.4)
         simtime = env.GetSimulationTime()*1e-6
         realtime = time.time()-starttime
-        print 'sim time: %fs, real time: %fs, diff = %fs'%(simtime,realtime,simtime-realtime)
+        print('sim time: %fs, real time: %fs, diff = %fs'%(simtime,realtime,simtime-realtime))
 
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments

@@ -65,7 +65,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
             try:
                 if self._databasefile:
                     self._databasefile.close()
-            except Exception,e:
+            except Exception as e:
                 log.warn(e)
             self._databasefile = None
             
@@ -95,7 +95,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 return params
             else:
                 log.error('version is wrong %s!=%s ',modelversion,self.getversion())
-        except MemoryError,e:
+        except MemoryError as e:
             log.error('%s failed: ',filename,e)
         except:
             pass
@@ -246,14 +246,14 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 filename=model.getfilename(True)
                 if len(filename) == 0:
                     filename=model.getfilename(False)
-                print filename
+                print(filename)
                 openravepy_int.RaveDestroy()
                 sys.exit(0)
             if options.gethas:
                 hasmodel=model.load()
                 if hasmodel:
                     hasmodel = os.path.isfile(model.getfilename(True))
-                print int(hasmodel)
+                print(int(hasmodel))
                 openravepy_int.RaveDestroy()
                 sys.exit(not hasmodel)
             if options.viewername is not None:
