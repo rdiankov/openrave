@@ -139,6 +139,7 @@ public:
 
     JSONReader(const AttributesList& atts, EnvironmentBasePtr penv, const std::string& defaultSuffix) : _penv(penv), _defaultSuffix(defaultSuffix)
     {
+        _deserializeOptions = 0;
         FOREACHC(itatt, atts) {
             if (itatt->first == "openravescheme") {
                 std::stringstream ss(itatt->second);
@@ -155,6 +156,11 @@ public:
                 // take the first argument given from scalegeometry to set as the overall geometry scale
                 ss >> _fGeomScale;
             }
+            else if (itatt->first == "partialupdate") {
+                if (_stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1") {
+                    _deserializeOptions |= IDO_PartialUpdate;
+                }
+            }
         }
         if (_vOpenRAVESchemeAliases.size() == 0) {
             _vOpenRAVESchemeAliases.push_back("openrave");
@@ -162,7 +168,6 @@ public:
 
         // set global scale when initalize jsonreader.
         _fGlobalScale = 1.0 / _penv->GetUnit().second;
-        _deserializeOptions = 0;
     }
 
     virtual ~JSONReader()
@@ -186,7 +191,6 @@ public:
 
         EnvironmentBase::EnvironmentBaseInfo envInfo;
         if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
-            _deserializeOptions |= IDO_PartialUpdate;
             _ExtractSpecifiedBodies(envInfo, rEnvInfo);
         }
         else {

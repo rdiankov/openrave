@@ -49,13 +49,13 @@ enum SerializationOptions
 
 enum InfoSerializeOption
 {
-    ISO_ReferenceUriHint = 1, ///< if set, will save the referenceURI as a hint rather than as a referenceUri
+    ISO_ReferenceUriHint = (1 << 0), ///< if set, will save the referenceURI as a hint rather than as a referenceUri
 };
 
 enum InfoDeserializeOption
 {
-    IDO_IgnoreReferenceUri = 1, ///< if set, will ignore the referenceURI when loading
-    IDO_PartialUpdate = 2, ///< if set, the deserialize call is meant for partially updating existing info
+    IDO_IgnoreReferenceUri = (1 << 0), ///< if set, will ignore the referenceURI when loading
+    IDO_PartialUpdate = (1 << 1), ///< if set, the deserialize call is meant for partially updating existing info, __created__ flag is checked before new info will be created
 };
 
 /// \brief base info for serialization
