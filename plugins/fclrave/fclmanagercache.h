@@ -763,7 +763,9 @@ public:
                 // could be the case that the same pointer was re-added to the environment so have to check the environment id
                 // make sure we don't need to make this asusmption of body id change when bodies are removed and re-added
                 if( !pbody || attachedBodies.count(pbody) == 0 || pbody->GetEnvironmentBodyIndex() != bodyIndex ) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%bodyIndex);
+                    if( !!pbody && IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+                        RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%bodyIndex);
+                    }
                     // not in attached bodies so should remove
                     FOREACH(itcol, cache.vcolobjs) {
                         if( !!itcol->get() ) {
