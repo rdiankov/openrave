@@ -312,9 +312,11 @@ bool InterfaceBase::UpdateReadableInterfaces(const std::map<std::string, Readabl
         READERSMAP::iterator itExisting = __mapReadableInterfaces.find(it->first);
         if( itExisting != __mapReadableInterfaces.end() ) {
             if( !!it->second ) {
-                itExisting->second = it->second; // should we make a clone?
-                bChanged = true;
-                RAVELOG_VERBOSE_FORMAT("readable interface %s changed", it->first);
+                if( *(itExisting->second) != *(it->second) ) {
+                    itExisting->second = it->second; // should we make a clone?
+                    bChanged = true;
+                    RAVELOG_VERBOSE_FORMAT("readable interface %s changed", it->first);
+                }
             }
             else {
                 // remove when null is given
