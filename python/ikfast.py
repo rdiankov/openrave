@@ -2156,7 +2156,7 @@ class IKFastSolver(AutoReloader):
             if 'cpp' in CodeGenerators:
                 lang = 'cpp'
             else:
-                lang = CodeGenerators.keys()[0]
+                lang = next(iter(CodeGenerators.keys()))
         log.info('generating %s code...'%lang)
         if self._checkpreemptfn is not None:
             import weakref
@@ -3574,7 +3574,7 @@ class IKFastSolver(AutoReloader):
 
                 newreducedeqs = []
                 for peq in rawpolyeqs:
-                    maxdenom = [0]*(len(polyvars)/2)
+                    maxdenom = [0]*(len(polyvars)//2)
                     for monoms in peq.monoms():
                         for i in range(len(maxdenom)):
                             maxdenom[i] = max(maxdenom[i],monoms[2*i]+monoms[2*i+1])
@@ -4552,7 +4552,7 @@ class IKFastSolver(AutoReloader):
             for ipeq,peq in enumerate(neweqs):
                 peq0dict = peq[0].as_dict()
                 if len(peq0dict) == 1:
-                    monomkey = peq0dict.keys()[0]
+                    monomkey = next(iter(peq0dict.keys()))
                     monomcoeff = peq0dict[monomkey]
                     monomvalue = peq[1].as_expr()
                     if sympy_smaller_073:
@@ -4701,7 +4701,7 @@ class IKFastSolver(AutoReloader):
                     peq0norm = Poly(peq0norm, *peq[0].gens)
                     peq1norm = Poly(peq1norm, *peq[1].gens)
                     peq0dict = peq0norm.as_dict()
-                    monom, value = peq0dict.items()[0]
+                    monom, value = next(iter(peq0dict.items()))
                     if len(peq0dict) == 1 and __builtin__.sum(monom) == 1:
                         indices = [index for index in range(4) if monom[index] == 1]
                         if len(indices) > 0 and indices[0] < 4:
@@ -4724,7 +4724,7 @@ class IKFastSolver(AutoReloader):
             else:
                 if peq[0] != S.Zero:
                     peq0dict = peq[0].as_dict()
-                    monom, value = peq0dict.items()[0]
+                    monom, value = next(iter(peq0dict.items()))
                     if len(peq0dict) == 1 and __builtin__.sum(monom) == 1:
                         indices = [index for index in range(4) if monom[index] == 1]
                         if len(indices) > 0 and indices[0] < 4:
@@ -6224,7 +6224,7 @@ class IKFastSolver(AutoReloader):
         if len(allmonoms)<2*len(dialyticeqs):
             log.warn('solveDialytically equations %d > %d, should be equal...', 2*len(dialyticeqs),len(allmonoms))
             # TODO not sure how to select the equations
-            N = len(allmonoms)/2
+            N = len(allmonoms)//2
             dialyticeqs = dialyticeqs[:N]
         if len(allmonoms) == 0 or len(allmonoms)>2*len(dialyticeqs):
             raise self.CannotSolveError('solveDialytically: more unknowns than equations %d>%d'%(len(allmonoms), 2*len(dialyticeqs)))
@@ -7739,7 +7739,7 @@ class IKFastSolver(AutoReloader):
                 # the denoms for 0,1 and 2,3 are the same
                 for i in [0,2]:
                     denom = fraction(halftansubs[i][1])[1]
-                    term *= denom**(maxdenom[i/2]-monoms[i]-monoms[i+1])
+                    term *= denom**(maxdenom[i//2]-monoms[i]-monoms[i+1])
                 complexityvalue = self.codeComplexity(term.expand())
                 if complexityvalue < 450:
                     eqnew += simplify(term)

@@ -304,7 +304,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             except OSError as e:
                 pass
 
-            with open(statsfilename, 'w') as f:
+            with open(statsfilename, 'wb') as f:
                 pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f)
             log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
 
@@ -332,7 +332,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                         log.debug('setting self.iksolver to %s', self.manip.GetIkSolver())
                         self.iksolver = self.manip.GetIkSolver()
             
-            with open(filename, 'r') as f:
+            with open(filename, 'rb') as f:
                 modelversion,self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc = pickle.load(f)
             if modelversion != self.getversion():
                 log.warn('version is wrong %s!=%s',modelversion,self.getversion())

@@ -26,7 +26,10 @@ import time, sys, logging, multiprocessing
 #from nose.plugins import multiprocess
 from noseplugins import multiprocess,xunitmultiprocess, capture, callableclass
 
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 _multiprocess_can_split_ = True
 
@@ -317,5 +320,5 @@ if __name__ == "__main__":
         else:
             stat.append(None)
         stats.append(stat)
-    with open('ikfaststats.pp','w') as f:
+    with open('ikfaststats.pp','wb') as f:
         pickle.dump([stats,options], f)
