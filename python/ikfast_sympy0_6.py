@@ -1539,7 +1539,7 @@ class IKFastSolver(AutoReloader):
             if CodeGenerators.has_key('cpp'):
                 lang = 'cpp'
             else:
-                lang = CodeGenerators.keys()[0]
+                lang = next(iter(CodeGenerators.keys()))
         log.info('generating %s code...'%lang)
         return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__,iktypestr=self._iktype).generate(chaintree)
 

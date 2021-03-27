@@ -93,7 +93,7 @@ class TestIkFast(EnvironmentSetup):
             numiktests = int(self.numiktests[numfree])
             chunksize = 100 # have to split into chunks because of timeouts
             cmd = 'DebugIK robot %s threshold %f '%(robot.GetName(), self.errorthreshold)
-            for ichunk in range((numiktests+chunksize-1)/chunksize):
+            for ichunk in range((numiktests+chunksize-1)//chunksize):
                 res = self.ikfastproblem.SendCommand(cmd+'numtests %d '%chunksize).split()
                 numtested += int(res[0])
                 numsuccessful += int(res[1])

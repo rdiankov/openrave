@@ -89,7 +89,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
         if len(filename) == 0:
             return None
         try:
-            with open(filename, 'r') as f:
+            with open(filename, 'rb') as f:
                 modelversion,params = pickle.load(f)
             if modelversion == self.getversion():
                 return params
@@ -109,7 +109,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
             makedirs(os.path.split(filename)[0])            
         except OSError:
             pass
-        with open(filename, 'w') as f:
+        with open(filename, 'wb') as f:
             pickle.dump((self.getversion(),params), f)
     def generate(self):
         raise NotImplementedError()

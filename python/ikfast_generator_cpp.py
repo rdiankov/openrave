@@ -121,13 +121,13 @@ def evalNumbers(expr):
             evalexprs.append(newresult)
         N = len(evalexprs)
         while N > 1:
-            for i in range(N/2):
+            for i in range(N//2):
                 evalexprs[2*i]+=evalexprs[2*i+1]
                 evalexprs[i] = evalexprs[2*i]
             if N & 1:
-                evalexprs[N/2] = evalexprs[N-1]
+                evalexprs[N//2] = evalexprs[N-1]
                 N += 1
-            N /= 2
+            N //= 2
         return evalexprs[0]
     
     elif expr.is_Pow:
@@ -624,7 +624,7 @@ int main(int argc, char** argv)
             code += "}; return freeindices; }\n"
         code += "IKFAST_API int GetNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int GetIkRealSize() { return sizeof(IkReal); }\n\n"
-        code += 'IKFAST_API int GetIkType() { return 0x%x; }\n\n'%iktype
+        code += 'IKFAST_API int GetIkType() { return 0x%x; }\n\n'%int(iktype)
         code += "class IKSolver {\npublic:\n"
         
         usedvars = []
