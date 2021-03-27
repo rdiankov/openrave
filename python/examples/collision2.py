@@ -48,7 +48,7 @@ def main(env,options):
         # get first collision
         report = CollisionReport()
         collision=env.CheckCollision(robot,report=report)
-        print '%d contacts'%len(report.contacts)
+        print('%d contacts'%len(report.contacts))
         positions = [c.pos for c in report.contacts]
 
     h1=env.plot3(array(positions),20,[1,0,0])
@@ -59,7 +59,7 @@ def main(env,options):
         for link in robot.GetLinks():
             collision=env.CheckCollision(link,report=report)
             if len(report.contacts) > 0:
-                print 'link %s %d contacts'%(link.GetName(),len(report.contacts))
+                print('link %s %d contacts'%(link.GetName(),len(report.contacts)))
                 positions += [c.pos for c in report.contacts]
 
     h2=env.plot3(array(positions),20,[1,0,0])

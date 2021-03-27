@@ -101,9 +101,9 @@ class TestBinaryTrajectory(EnvironmentSetup):
 		assert list(trajectory2.GetWaypoints(0, trajectory2.GetNumWaypoints())) == list(trajectory2Copy.GetWaypoints(0, trajectory2Copy.GetNumWaypoints()))
 		assert list(trajectory3.GetWaypoints(0, trajectory3.GetNumWaypoints())) == list(trajectory3Copy.GetWaypoints(0, trajectory3Copy.GetNumWaypoints()))
 
-                trajectory1.SetDescription('test')
-                assert(trajectory1.GetDescription()=='test')
+		trajectory1.SetDescription('test')
+		assert(trajectory1.GetDescription()=='test')
                 
-                trajBinary1 = trajectory1.serialize()
-                trajectory1Copy.deserialize(trajBinary1)
-                assert(trajectory1Copy.GetDescription()=='test')
+		trajBinary1 = trajectory1.serialize()
+		trajectory1Copy.deserialize(trajBinary1)
+		assert(trajectory1Copy.GetDescription()=='test')

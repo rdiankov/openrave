@@ -70,12 +70,11 @@ from ..openravepy_ext import transformPoints
 from ..openravepy_int import RaveFindDatabaseFile, RaveDestroy, Environment, KinBody, rotationMatrixFromQuat, quatRotateDirection, rotationMatrixFromAxisAngle, RaveGetDefaultViewerType
 from . import DatabaseGenerator
 from .. import pyANN
-import convexdecomposition
+from . import convexdecomposition
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh, SpaceSamplerExtra
 import time
 import os.path
 from optparse import OptionParser
-from itertools import izip
 from os import makedirs
 
 import logging
@@ -113,7 +112,7 @@ class LinkStatisticsModel(DatabaseGenerator):
     def LoadPickle(self):
         try:
             params = DatabaseGenerator.load(self)
-        except Exception, e:
+        except Exception as e:
             log.warn(u'failed to load linkstatistics: %s', e)
             return False
         

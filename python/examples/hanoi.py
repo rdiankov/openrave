@@ -49,8 +49,8 @@ class HanoiPuzzle:
             self.lmodel.autogenerate()
         self.lmodel.setRobotWeights()
         self.lmodel.setRobotResolutions(xyzdelta=0.002) # the pegs are really thin
-        print 'robot resolutions: ',robot.GetDOFResolutions()
-        print 'robot weights: ',robot.GetDOFWeights()
+        print('robot resolutions: %r'%robot.GetDOFResolutions())
+        print('robot weights: %r'%robot.GetDOFWeights())
         with self.env: # lock the environment
             self.basemanip = interfaces.BaseManipulation(self.robot,plannername=plannername)
             self.taskmanip = interfaces.TaskManipulation(self.robot,plannername=plannername)
@@ -139,7 +139,7 @@ class HanoiPuzzle:
                 raveLogInfo('move to dest peg')
                 self.waitrobot() # wait for robot to complete all trajectories
                 return True
-            except planning_error, e:
+            except planning_error as e:
                 raveLogWarn(str(e))
         raise planning_error('failed to put block')
 
@@ -181,7 +181,7 @@ class HanoiPuzzle:
                         self.waitrobot()
                         raveLogInfo('done with one disk')
                         return True
-                    except planning_error,e:
+                    except planning_error as e:
                         raveLogWarn(str(e))
                         with self.env:
                             self.robot.ReleaseAllGrabbed()

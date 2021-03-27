@@ -176,7 +176,7 @@ class FastGraspingThreaded:
 
                 grasps = array(grasps)
                 jointvalues = array(jointvalues)
-                print 'found %d grasps in %.3fs'%(len(grasps),totaltime)
+                print('found %d grasps in %.3fs'%(len(grasps),totaltime))
                 return grasps, jointvalues
 
     def showgrasps(self, grasps, jointvalues):
