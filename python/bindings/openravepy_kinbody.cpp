@@ -1547,6 +1547,15 @@ void PyLink::AddGeometry(object ogeometryinfo, bool addToGroups)
     _plink->AddGeometry(pygeom->GetGeometryInfo(), addToGroups);
 }
 
+void PyLink::AddGeometryToGroup(object ogeometryinfo, const std::string& groupname)
+{
+    PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(ogeometryinfo);
+    if( !pygeom ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
+    }
+    _plink->AddGeometryToGroup(pygeom->GetGeometryInfo(), groupname);
+}
+
 void PyLink::RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups)
 {
     _plink->RemoveGeometryByName(geometryname, removeFromAllGroups);
@@ -3129,12 +3138,12 @@ void PyKinBody::SetDOFVelocities(object odofvelocities, object olinearvel, objec
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     try {
 #endif
-        _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
+    _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    }
-    catch (const py::error_already_set& e) {
-        this->SetDOFVelocities(odofvelocities, py::extract<uint32_t>(olinearvel), oangularvel);
-    }
+}
+catch (const py::error_already_set& e) {
+    this->SetDOFVelocities(odofvelocities, py::extract<uint32_t>(olinearvel), oangularvel);
+}
 #endif
 }
 
@@ -5499,6 +5508,7 @@ void init_openravepy_kinbody()
                           .def("GetGeometries",&PyLink::GetGeometries, DOXY_FN(KinBody::Link,GetGeometries))
                           .def("InitGeometries",&PyLink::InitGeometries, PY_ARGS("geometries") DOXY_FN(KinBody::Link,InitGeometries))
                           .def("AddGeometry", &PyLink::AddGeometry, PY_ARGS("geometryinfo", "addToGroups") DOXY_FN(KinBody::Link,AddGeometry))
+                          .def("AddGeometryToGroup", &PyLink::AddGeometryToGroup, PY_ARGS("geometryinfo", "groupname") DOXY_FN(KinBody::Link, AddGeometryToGroup))
                           .def("RemoveGeometryByName", &PyLink::RemoveGeometryByName, PY_ARGS("geometryname", "removeFromAllGroups") DOXY_FN(KinBody::Link,RemoveGeometryByName))
                           .def("SetGeometriesFromGroup",&PyLink::SetGeometriesFromGroup, PY_ARGS("name") DOXY_FN(KinBody::Link,SetGeometriesFromGroup))
                           .def("GetGeometriesFromGroup",&PyLink::GetGeometriesFromGroup, PY_ARGS("name") DOXY_FN(KinBody::Link,GetGeometriesFromGroup))
