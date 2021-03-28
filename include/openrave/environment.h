@@ -450,12 +450,17 @@ public:
 
     /// \brief Query a body from its id. <b>[multi-thread safe]</b>
     ///
-    /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentId!
+    /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentBodyIndex!
     virtual KinBodyPtr GetKinBodyById(const std::string& id) const =0;
+
+    /// \brief Query the largest environment body index in this environment. <b>[multi-thread safe]</b>
+    ///
+    /// \return largetst environment body index among the bodies in this environment
+    virtual int GetMaxEnvironmentBodyIndex() const = 0;
 
     /// \brief Return the number of bodies currently in the environment. <b>[multi-thread safe]</b>
     virtual int GetNumBodies() const = 0;
-
+    
     /// \brief Query a sensor from its name. <b>[multi-thread safe]</b>
     /// \return first sensor that matches with name, note that sensors attached to robots have the robot name as a prefix.
     virtual SensorBasePtr GetSensor(const std::string& name) const =0;
@@ -524,7 +529,12 @@ public:
     virtual void UpdatePublishedBodies(uint64_t timeout=0) = 0;
 
     /// Get the corresponding body from its unique network id
-    virtual KinBodyPtr GetBodyFromEnvironmentId(int id) = 0;
+    virtual KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) const = 0;
+
+    /// Get the corresponding body from its unique network id
+    inline KinBodyPtr GetBodyFromEnvironmentId(int bodyIndex) RAVE_DEPRECATED {
+        return GetBodyFromEnvironmentBodyIndex(bodyIndex);
+    }
 
     /// \brief Triangulation of the body including its current transformation. trimesh will be appended the new data.  <b>[multi-thread safe]</b>
     ///
@@ -720,6 +730,22 @@ public:
     /// internally locks the environment mutex
     /// if parameter is not present, will return defaultValue
     virtual uint64_t GetUInt64Parameter(const std::string& parameterName, uint64_t defaultValue) const = 0;
+
+    /// \brief notifys name of kin body is changed.
+    ///
+    /// Should be called when name of body added to this env is modified. Should not be called when name of body in other env or not added to any env is modified.
+    /// \param oldName name before change
+    /// \param newName name after change
+    /// \return true if can make the change, and the changes are notified. Otherwise false meaning there will be a conflict
+    virtual bool NotifyKinBodyNameChanged(const std::string& oldName, const std::string& newName) = 0;
+
+    /// \brief retries the named parameter to be tracked by the environment.
+    ///
+    /// Should be called when id of body added to this env is modified. Should not be called when name of body in other env or not added to any env is modified.
+    /// \param oldId id before change
+    /// \param newId id after change
+    /// \return true if can make the change, and the changes are notified. Otherwise false meaning there will be a conflict
+    virtual bool NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) = 0;
 
     /// \brief info structure used to initialize environment
     class OPENRAVE_API EnvironmentBaseInfo : public InfoBase

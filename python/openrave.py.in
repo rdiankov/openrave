@@ -30,7 +30,7 @@ __builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
 try:
     import openravepy
 except ImportError:
-    print "openravepy is not set into PYTHONPATH env variable, attempting to add"
+    print("openravepy is not set into PYTHONPATH env variable, attempting to add")
     # use openrave-config to get the correct install path
     from subprocess import Popen, PIPE
     try:
@@ -92,9 +92,9 @@ if __name__ == "__main__":
                     try:
                         m=__import__('openravepy.databases.'+name)
                         if type(m) is ModuleType:
-                            print name
-                    except ImportError, e:
-                        print e
+                            print(name)
+                    except ImportError as e:
+                        print(e)
             
             RaveDestroy()        
             sys.exit(0)
@@ -105,9 +105,9 @@ if __name__ == "__main__":
                     try:
                         m=__import__('openravepy.examples.'+name)
                         if type(m) is ModuleType:
-                            print name
-                    except ImportError, e:
-                        print e
+                            print(name)
+                    except ImportError as e:
+                        print(e)
             
             RaveDestroy()        
             sys.exit(0)
@@ -117,13 +117,13 @@ if __name__ == "__main__":
             try:
                 database=getattr(databases,args[0])
             except (AttributeError,IndexError):
-                print 'bad database generator, current list of executable generators are:'
+                print('bad database generator, current list of executable generators are:')
                 for name in dir(databases):
                     if not name.startswith('__'):
                         try:
                             m=__import__('openravepy.databases.'+name)
                             if type(m) is ModuleType:
-                                print name
+                                print(name)
                         except ImportError:
                             pass
 
@@ -140,13 +140,13 @@ if __name__ == "__main__":
                 import openravepy.examples
                 example = getattr(openravepy.examples,args[0])
             except (AttributeError,IndexError):
-                print 'bad example, current list of executable examples are:'
+                print('bad example, current list of executable examples are:')
                 for name in dir(openravepy.examples):
                     if not name.startswith('__'):
                         try:
                             m=__import__('openravepy.examples.'+name)
                             if type(m) is ModuleType:
-                                print name
+                                print(name)
                         except ImportError:
                             pass
 
@@ -166,7 +166,7 @@ if __name__ == "__main__":
             for type,names in interfaces.iteritems():
                 if options.listinterfaces.lower() == str(type).lower():
                     for name in names:
-                        print name
+                        print(name)
                     break
 
             RaveDestroy()
@@ -179,12 +179,12 @@ if __name__ == "__main__":
             for pluginname,info in plugins:
                 for type,names in info.interfacenames:
                     interfacenames[type] += [(n,pluginname) for n in names]
-            print 'Number of plugins: %d'%len(plugins)
+            print('Number of plugins: %d'%len(plugins))
             for type,names in interfacenames.iteritems():
-                print '%s: %d'%(str(type),len(names))
+                print('%s: %d'%(str(type),len(names)))
                 names.sort()
                 for interfacename,pluginname in names:
-                    print '  %s - %s'%(interfacename,pluginname)
+                    print('  %s - %s'%(interfacename,pluginname))
             RaveDestroy()
             sys.exit(0)
         env,viewername = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True,returnviewer=True)

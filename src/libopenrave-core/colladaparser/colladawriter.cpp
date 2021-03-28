@@ -537,7 +537,7 @@ private:
         int globalid = 0;
         FOREACHC(itbody,listbodies) {
             BOOST_ASSERT((*itbody)->GetEnv()==_penv);
-            BOOST_ASSERT(_mapBodyIds.find((*itbody)->GetEnvironmentId()) == _mapBodyIds.end());
+            BOOST_ASSERT(_mapBodyIds.find((*itbody)->GetEnvironmentBodyIndex()) == _mapBodyIds.end());
             const std::string& bodyId = (*itbody)->_id;
             // try to restore what id was used
             // check for id that has format bodyX_motion
@@ -556,7 +556,7 @@ private:
                         }
                     }
                     if (!bDuplicateIdFound) {
-                        _mapBodyIds[(*itbody)->GetEnvironmentId()] = numericBodyId;
+                        _mapBodyIds[(*itbody)->GetEnvironmentBodyIndex()] = numericBodyId;
                     }
                 }
                 catch (const boost::bad_lexical_cast&) {
@@ -566,8 +566,8 @@ private:
         }
         FOREACHC(itbody,listbodies) {
             // for body ids not in bodyX_motion format that cannot be restored, use new unique numeric ids
-            if (_mapBodyIds.find((*itbody)->GetEnvironmentId()) == _mapBodyIds.end()) {
-                _mapBodyIds[(*itbody)->GetEnvironmentId()] = globalid++;
+            if (_mapBodyIds.find((*itbody)->GetEnvironmentBodyIndex()) == _mapBodyIds.end()) {
+                _mapBodyIds[(*itbody)->GetEnvironmentBodyIndex()] = globalid++;
             }
         }
         FOREACHC(itbody,listbodies) {
@@ -597,7 +597,7 @@ private:
     {
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         _CreateScene(probot->GetName());
-        _mapBodyIds[probot->GetEnvironmentId()] = 0;
+        _mapBodyIds[probot->GetEnvironmentBodyIndex()] = 0;
         _AssignLinkSids(probot);
         _AssignJointSids(probot);
 
@@ -623,7 +623,7 @@ private:
         }
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         _CreateScene(pbody->GetName());
-        _mapBodyIds[pbody->GetEnvironmentId()] = 0;
+        _mapBodyIds[pbody->GetEnvironmentBodyIndex()] = 0;
         _AssignLinkSids(pbody);
         _AssignJointSids(pbody);
 
@@ -689,7 +689,7 @@ private:
     virtual boost::shared_ptr<instance_articulated_system_output> _WriteKinBodyExternal(KinBodyPtr pbody, domInstance_kinematics_sceneRef ikscene)
     {
         RAVELOG_DEBUG(str(boost::format("writing body %s as external reference")%pbody->GetName()));
-        string asid = str(boost::format("body%d")%_mapBodyIds[pbody->GetEnvironmentId()]);
+        string asid = str(boost::format("body%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
         //string asmid = str(boost::format("%s_motion")%asid);
         string asmid = str(boost::format("%s_motion")%asid);
         string iasmid = str(boost::format("%s_motion_inst")%asid);
@@ -845,7 +845,7 @@ private:
 
                 // write bindings
                 {
-                    std::string smodelref = str(boost::format("ikmodel_extern%d_%d")%_mapBodyIds[pbody->GetEnvironmentId()]%imodel);
+                    std::string smodelref = str(boost::format("ikmodel_extern%d_%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%imodel);
                     domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
                     param->setSid(smodelref.c_str());
                     daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(itmodel->ikmodelsidref.c_str());
@@ -855,7 +855,7 @@ private:
                         // have to write another level of parameters
                         domKinematics_newparamRef param2 = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
                         daeSafeCast<domKinematics_newparam::domSIDREF>(param2->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%articulated_system_motion->getId()%smodelref).c_str());
-                        smodelref = str(boost::format("ikmodel%d_%d")%_mapBodyIds[pbody->GetEnvironmentId()]%imodel);
+                        smodelref = str(boost::format("ikmodel%d_%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%imodel);
                         param2->setSid(smodelref.c_str());
                     }
                     iasout->vkinematicsbindings.emplace_back(smodelref,  sidref);
@@ -877,7 +877,7 @@ private:
                     }
                 }
                 ipmout->ipm->setUrl(_ComputeExternalURI(daeURI(*ipmout->ipm,itmodel->pmodel)));
-                ipmout->ipm->setSid(str(boost::format("pmodel%d_inst")%_mapBodyIds[pbody->GetEnvironmentId()]).c_str());
+                ipmout->ipm->setSid(str(boost::format("pmodel%d_inst")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]).c_str());
                 ipmout->pmout.reset(new physics_model_output()); // need a physics model output in case this is a robot and is grabbing links
                 ipmout->pmout->pbody = pbody;
                 ipmout->pmout->vrigidbodysids.resize(pbody->GetLinks().size());
@@ -934,8 +934,8 @@ private:
     /// \brief Write robot in a given scene
     virtual boost::shared_ptr<instance_articulated_system_output> _WriteKinBody(KinBodyPtr pbody)
     {
-        RAVELOG_VERBOSE(str(boost::format("writing robot as instance_articulated_system (%d) %s\n")%_mapBodyIds[pbody->GetEnvironmentId()]%pbody->GetName()));
-        string asid = str(boost::format("body%d")%_mapBodyIds[pbody->GetEnvironmentId()]);
+        RAVELOG_VERBOSE(str(boost::format("writing robot as instance_articulated_system (%d) %s\n")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%pbody->GetName()));
+        string asid = str(boost::format("body%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
         string askid = str(boost::format("%s_kinematics")%asid);
         string asmid = str(boost::format("%s_motion")%asid);
         string iassid = str(boost::format("%s_inst")%asmid);
@@ -1163,7 +1163,7 @@ private:
                 ElectricMotorActuatorInfoPtr infoElectricMotor = pjoint->GetInfo()._infoElectricMotor;
                 daeElementRef instance_actuator = ptec->add("instance_actuator");
 
-                std::string stractuator = str(boost::format("body%d_actuator_%s")%_mapBodyIds[pbody->GetEnvironmentId()]%_GetJointSid(pjoint));
+                std::string stractuator = str(boost::format("body%d_actuator_%s")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%_GetJointSid(pjoint));
                 std::string url = std::string("#") + stractuator;
                 instance_actuator->setAttribute("url",url.c_str());
 
@@ -1235,7 +1235,7 @@ private:
     virtual boost::shared_ptr<instance_kinematics_model_output> _WriteInstance_kinematics_model(KinBodyPtr pbody, daeElementRef parent, const string& sidscope)
     {
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
-        RAVELOG_VERBOSE(str(boost::format("writing instance_kinematics_model (%d) %s\n")%_mapBodyIds[pbody->GetEnvironmentId()]%pbody->GetName()));
+        RAVELOG_VERBOSE(str(boost::format("writing instance_kinematics_model (%d) %s\n")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%pbody->GetName()));
         boost::shared_ptr<kinematics_model_output> kmout = WriteKinematics_model(pbody);
 
         boost::shared_ptr<instance_kinematics_model_output> ikmout(new instance_kinematics_model_output());
@@ -1866,7 +1866,7 @@ private:
         pmout.reset(new physics_model_output());
         pmout->pbody = pbody;
         pmout->pmodel = daeSafeCast<domPhysics_model>(_physicsModelsLib->add(COLLADA_ELEMENT_PHYSICS_MODEL));
-        string pmodelid = str(boost::format("pmodel%d")%_mapBodyIds[pbody->GetEnvironmentId()]);
+        string pmodelid = str(boost::format("pmodel%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
         pmout->pmodel->setId(pmodelid.c_str());
         pmout->pmodel->setName(pbody->GetName().c_str());
         Transform tbaseinv = pbody->GetTransform().inverse();
@@ -2615,7 +2615,7 @@ private:
                 }
                 SensorBasePtr popenravesensor = (*itattachedsensor)->GetSensor();
                 if( !!popenravesensor ) {
-                    string strsensor = str(boost::format("robot%d_sensor%d")%_mapBodyIds[probot->GetEnvironmentId()]%sensorindex);
+                    string strsensor = str(boost::format("robot%d_sensor%d")%_mapBodyIds[probot->GetEnvironmentBodyIndex()]%sensorindex);
                     mapAttachedSensorIDs[*itattachedsensor] = strsensor;
                     sensorindex++;
                 }
@@ -2907,10 +2907,10 @@ private:
     }
 
     virtual std::string _GetNodeId(KinBodyConstPtr pbody) {
-        return str(boost::format("visual%d")%_mapBodyIds[pbody->GetEnvironmentId()]);
+        return str(boost::format("visual%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
     }
     virtual std::string _GetNodeId(KinBody::LinkConstPtr plink) {
-        return str(boost::format("v%d.%s")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%_GetNodeSid(plink));
+        return str(boost::format("v%d.%s")%_mapBodyIds[plink->GetParent()->GetEnvironmentBodyIndex()]%_GetNodeSid(plink));
     }
     virtual std::string _GetNodeSid(KinBody::LinkConstPtr plink) {
         const std::string& linksid = _GetLinkSid(plink);
@@ -2949,7 +2949,7 @@ private:
         }
 
         // assign sid
-        std::map<KinBody::LinkConstPtr, std::string>& mapLinkSids = _mapBodyLinkSids[pBody->GetEnvironmentId()];
+        std::map<KinBody::LinkConstPtr, std::string>& mapLinkSids = _mapBodyLinkSids[pBody->GetEnvironmentBodyIndex()];
 
         // exisitng link id, if not duplicated, takes priority
         FOREACHC(itLink, vLinks) {
@@ -2995,18 +2995,18 @@ private:
     }
 
     virtual std::string _GetLinkSid(KinBody::LinkConstPtr plink) {
-        return _mapBodyLinkSids[plink->GetParent()->GetEnvironmentId()][plink];
+        return _mapBodyLinkSids[plink->GetParent()->GetEnvironmentBodyIndex()][plink];
     }
     virtual std::string _GetMotionId(KinBodyConstPtr pbody) {
-        return str(boost::format("body%d_motion")%_mapBodyIds[pbody->GetEnvironmentId()]);
+        return str(boost::format("body%d_motion")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
     }
 
     virtual std::string _GetGeometryId(KinBody::LinkConstPtr plink, int igeom) {
-        return str(boost::format("g%d_%s_geom%d")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%_GetLinkSid(plink)%igeom);
+        return str(boost::format("g%d_%s_geom%d")%_mapBodyIds[plink->GetParent()->GetEnvironmentBodyIndex()]%_GetLinkSid(plink)%igeom);
     }
 
     virtual std::string _GetExtraGeometryId(KinBody::LinkConstPtr plink, const std::string& groupname, int igeom) {
-        return str(boost::format("g%d_%s_extrageom%d_%s")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%_GetLinkSid(plink)%igeom%groupname);
+        return str(boost::format("g%d_%s_extrageom%d_%s")%_mapBodyIds[plink->GetParent()->GetEnvironmentBodyIndex()]%_GetLinkSid(plink)%igeom%groupname);
     }
 
     /// \brief assign unique sid for all joints in a body
@@ -3057,7 +3057,7 @@ private:
         }
 
         // assign sid
-        std::map<KinBody::JointConstPtr, std::string>& mapJointSids = _mapBodyJointSids[pBody->GetEnvironmentId()];
+        std::map<KinBody::JointConstPtr, std::string>& mapJointSids = _mapBodyJointSids[pBody->GetEnvironmentBodyIndex()];
 
         // existing joint id, if not duplicated, takes priority
         FOREACHC(itJoint, vJoints) {
@@ -3103,7 +3103,7 @@ private:
     }
 
     virtual std::string _GetJointSid(KinBody::JointConstPtr pjoint) {
-        return _mapBodyJointSids[pjoint->GetParent()->GetEnvironmentId()][pjoint];
+        return _mapBodyJointSids[pjoint->GetParent()->GetEnvironmentBodyIndex()][pjoint];
     }
 
     virtual std::string _GetJointNodeSid(KinBody::JointConstPtr pjoint, int iaxis) {
@@ -3111,7 +3111,7 @@ private:
     }
 
     virtual std::string _GetKinematicsModelId(KinBodyConstPtr pbody) {
-        return str(boost::format("kmodel%d")%_mapBodyIds[pbody->GetEnvironmentId()]);
+        return str(boost::format("kmodel%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
     }
 
     /// \brief compute the link transform when all joints are zero (regardless of mimic joints). This is the state

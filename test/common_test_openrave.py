@@ -24,7 +24,10 @@ from nose.tools import assert_raises
 import fnmatch
 import time
 import os
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import logging
 
 _multiprocess_can_split_ = True

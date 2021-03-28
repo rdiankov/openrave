@@ -152,7 +152,7 @@ class ReachabilityModel(DatabaseGenerator):
             except ImportError:
                 log.warn('python h5py library not found, will not be able to speedup database access')
                 return self.LoadPickle()
-        except Exception, e:
+        except Exception as e:
             log.warn(e)
             return False
 
@@ -210,7 +210,7 @@ class ReachabilityModel(DatabaseGenerator):
             f = None
             return self.has()
         
-        except Exception,e:
+        except Exception as e:
             log.debug('LoadHDF5 for %s: ',filename,e)
             return False
         finally:

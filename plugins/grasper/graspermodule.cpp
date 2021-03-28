@@ -184,8 +184,8 @@ public:
             }
             else if( cmd == "bodyid" ) {
                 // initialization
-                int id = 0; sinput >> id;
-                params->targetbody = GetEnv()->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0; sinput >> bodyIndex;
+                params->targetbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( cmd == "direction" ) {
                 // grasp

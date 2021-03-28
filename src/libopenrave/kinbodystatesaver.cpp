@@ -54,7 +54,7 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 {
-    if( _bRestoreOnDestructor && !!_pbody && _pbody->GetEnvironmentId() != 0 ) {
+    if( _bRestoreOnDestructor && !!_pbody && _pbody->GetEnvironmentBodyIndex() != 0 ) {
         _RestoreKinBody(_pbody);
     }
 }
@@ -79,7 +79,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     if( !pbody ) {
         return;
     }
-    if( pbody->GetEnvironmentId() == 0 ) {
+    if( pbody->GetEnvironmentBodyIndex() == 0 ) {
         RAVELOG_WARN_FORMAT("env=%d, body %s not added to environment, skipping restore", pbody->GetEnv()->GetId()%pbody->GetName());
         return;
     }
@@ -101,7 +101,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                 }
                 else {
                     // pgrabbed points to a different environment, so have to re-initialize
-                    KinBodyPtr pnewbody = pbody->GetEnv()->GetBodyFromEnvironmentId(pbodygrab->GetEnvironmentId());
+                    KinBodyPtr pnewbody = pbody->GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodygrab->GetEnvironmentBodyIndex());
                     if( !!pnewbody ) {
                         if( pbodygrab->GetKinematicsGeometryHash() != pnewbody->GetKinematicsGeometryHash() ) {
                             RAVELOG_WARN_FORMAT("env=%d, body %s is not similar across environments", pbody->GetEnv()->GetId()%pbodygrab->GetName());
@@ -118,7 +118,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                         }
                     }
                     else {
-                        RAVELOG_WARN_FORMAT("env=%d, could not find body %s with id %d", pbody->GetEnv()->GetId()%pbodygrab->GetName()%pbodygrab->GetEnvironmentId());
+                        RAVELOG_WARN_FORMAT("env=%d, could not find body %s with id %d", pbody->GetEnv()->GetId()%pbodygrab->GetName()%pbodygrab->GetEnvironmentBodyIndex());
                     }
                 }
             }
@@ -209,7 +209,7 @@ KinBody::KinBodyStateSaverRef::KinBodyStateSaverRef(KinBody& body, int options) 
 
 KinBody::KinBodyStateSaverRef::~KinBodyStateSaverRef()
 {
-    if( _bRestoreOnDestructor && !_bReleased && _body.GetEnvironmentId() != 0 ) {
+    if( _bRestoreOnDestructor && !_bReleased && _body.GetEnvironmentBodyIndex() != 0 ) {
         _RestoreKinBody(_body);
     }
 }
@@ -238,7 +238,7 @@ void KinBody::KinBodyStateSaverRef::SetRestoreOnDestructor(bool restore)
 
 void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
 {
-    if( body.GetEnvironmentId() == 0 ) {
+    if( body.GetEnvironmentBodyIndex() == 0 ) {
         RAVELOG_WARN(str(boost::format("body %s not added to environment, skipping restore")%body.GetName()));
         return;
     }
@@ -260,7 +260,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                 }
                 else {
                     // pgrabbed points to a different environment, so have to re-initialize
-                    KinBodyPtr pnewbody = body.GetEnv()->GetBodyFromEnvironmentId(pbodygrab->GetEnvironmentId());
+                    KinBodyPtr pnewbody = body.GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodygrab->GetEnvironmentBodyIndex());
                     if( pbodygrab->GetKinematicsGeometryHash() != pnewbody->GetKinematicsGeometryHash() ) {
                         RAVELOG_WARN(str(boost::format("body %s is not similar across environments")%pbodygrab->GetName()));
                     }

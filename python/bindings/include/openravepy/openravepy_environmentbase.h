@@ -173,6 +173,9 @@ public:
     object GetSensor(const std::string &name);
 
     object GetBodyFromEnvironmentId(int id);
+    object GetBodyFromEnvironmentBodyIndex(int id);
+
+    int GetMaxEnvironmentBodyIndex();
 
     int AddModule(PyModuleBasePtr prob, const std::string &args);
     bool RemoveProblem(PyModuleBasePtr prob);
