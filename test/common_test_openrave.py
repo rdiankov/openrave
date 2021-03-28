@@ -18,7 +18,12 @@ from openravepy import misc
 import numpy
 from numpy import *
 
-from itertools import izip, combinations
+from itertools import combinations
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
+
 import nose
 from nose.tools import assert_raises
 import fnmatch

@@ -184,7 +184,11 @@ if sympy_version >= '0.7.0':
     raise ImportError('ikfast needs sympy 0.6.x')
     
 import sys, copy, time, math, datetime
-import __builtin__
+if sys.version_info[0]<3:
+    import __builtin__
+else:
+    import builtins as __builtin__
+
 from optparse import OptionParser
 try:
     from openravepy.metaclass import AutoReloader
@@ -215,7 +219,11 @@ except ImportError:
     def isinf(x): return _isinf(float(x))
     def isnan(x): return _isnan(float(x))
 
-from itertools import izip
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
+
 try:
     from itertools import combinations, permutations
 except ImportError:

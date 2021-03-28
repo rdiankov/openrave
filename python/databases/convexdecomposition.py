@@ -83,12 +83,19 @@ import time
 import os.path
 from os import makedirs
 from optparse import OptionParser
-from itertools import izip
+
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
 
 try:
     from cStringIO import StringIO
-except:
-    from StringIO import StringIO
+except ImportError:
+    try:
+        from StringIO import StringIO
+    except ImportError:
+        from io import StringIO
     
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])

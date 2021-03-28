@@ -22,7 +22,7 @@ import numpy
 try:
     from itertools import izip
 except ImportError:
-    pass
+    izip = zip
 
 try:
     from threading import Thread
