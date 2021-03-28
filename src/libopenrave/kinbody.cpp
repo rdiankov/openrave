@@ -5945,11 +5945,15 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     if(_id != info._id) {
         if( _id.empty() ) {
             RAVELOG_DEBUG_FORMAT("env=%d, body %s assigning empty id to '%s'", GetEnv()->GetId()%GetName()%info._id);
+            SetId(info._id);
+        }
+        else if( info._id.empty() ) {
+            RAVELOG_INFO_FORMAT("env=%d, body %s do not update id since update has empty id", GetEnv()->GetId()%GetName());
         }
         else {
             RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());
+            SetId(info._id);
         }
-        SetId(info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
