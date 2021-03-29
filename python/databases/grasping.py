@@ -282,16 +282,16 @@ class GraspingModel(DatabaseGenerator):
             elif modelversion == 6:
                 self.grasps,self.graspindices,friction,linknames,plannername = params
             else:
-                print 'version is wrong ',modelversion,'!=',self.getversion()
+                print('version is wrong %r != %r'%(modelversion,self.getversion()))
 
             self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
             self.grasper = interfaces.Grasper(self.robot,friction,avoidlinks = [self.robot.GetLink(name) for name in linknames],plannername=plannername)
             return self.has()
 
-        except MemoryError,e:
-            print '%s memory failed: '%filename,e
-        except Exception, e:
-            print '%s failed: '%filename,e
+        except MemoryError as e:
+            print('%s memory failed: %r'%(filename,e))
+        except Exception as e:
+            print('%s failed: %r'%(filename,e))
         return False
 
     def save(self):
@@ -408,7 +408,7 @@ class GraspingModel(DatabaseGenerator):
                     producer,consumer,gatherer,numjobs = self.generatepcg(*args,**kwargs)
                     counter = 0
                     for work in producer():
-                        print 'grasp %d/%d'%(counter,numjobs)
+                        print('grasp %d/%d'%(counter,numjobs))
                         counter += 1
                         results = consumer(*work)
                         if len(results) > 0:
@@ -418,7 +418,7 @@ class GraspingModel(DatabaseGenerator):
             for b,enable in bodies:
                 b.Enable(enable)
             statesaver = None
-        print 'grasping finished in %fs'%(time.time()-starttime)
+        print('grasping finished in %fs'%(time.time()-starttime))
 
 
     def generatepcg(self,preshapes=None,standoffs=None,rolls=None,approachrays=None, graspingnoise=None,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,manipulatordirections=None,translationstepmult=None,finestep=None,friction=None,avoidlinks=None,plannername=None,boxdelta=None,spheredelta=None,normalanglerange=None):
@@ -426,7 +426,7 @@ class GraspingModel(DatabaseGenerator):
 
         All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
         @param checkgraspfn: If set, then will be used to validate the grasp. If its evaluation returns false, then grasp will not be added to set. Called by checkgraspfn(contacts,finalconfig,grasp,info)"""
-        print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
+        print('Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName()))
         if friction is None:
             friction = 0.4
         if avoidlinks is None:
@@ -446,7 +446,7 @@ class GraspingModel(DatabaseGenerator):
                 # do not fill with plannername
                 taskmanip = interfaces.TaskManipulation(self.robot)
                 final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
-            print 'setting preshape ',final
+            print('setting preshape %r'%final)
             preshapes = array([final])
         if rolls is None:
             rolls = arange(0,2*pi,pi/2)
@@ -491,8 +491,8 @@ class GraspingModel(DatabaseGenerator):
             grasp[self.graspindices.get('imanipulatordirection')] = manipulatordirection
             try:
                 contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=forceclosure,forceclosurethreshold=forceclosurethreshold)
-            except PlanningError, e:
-                print 'Grasp Failed: '
+            except PlanningError as e:
+                print('Grasp Failed: ')
                 print_exc(e)
                 return ()
             
@@ -521,7 +521,7 @@ class GraspingModel(DatabaseGenerator):
                 if not forceclosure or mindist >= forceclosurethreshold:
                     grasp[self.graspindices.get('performance')] = self._ComputeGraspPerformance(grasp, graspingnoise=graspingnoise,translate=True,forceclosure=False)
                     if checkgraspfn is None or checkgraspfn(contacts,finalconfig,grasp,{'mindist':mindist,'volume':volume}):
-                        print 'found good grasp'
+                        print('found good grasp')
                         return grasp,
                     
                 return ()
@@ -547,7 +547,7 @@ class GraspingModel(DatabaseGenerator):
         :param graspingnoise: A tuple of two values (randomoffset, number_of_tries)
         :param checkgraspfn: If set, then will be used to validate the grasp. If its evaluation returns false, then grasp will not be added to set. Called by checkgraspfn(contacts,finalconfig,grasp,info)
         """
-        print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
+        print('Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName()))
         translate = True
         if approachrays is None:
             if boxdelta is not None:
@@ -590,7 +590,7 @@ class GraspingModel(DatabaseGenerator):
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X|DOFAffine.Y|DOFAffine.Z if translate else 0)
             approachrays[:,3:6] = -approachrays[:,3:6]
             self.nextid, self.resultgrasps = self.grasper.GraspThreaded(approachrays=approachrays, rolls=rolls, standoffs=standoffs, preshapes=preshapes, manipulatordirections=manipulatordirections, target=self.target, graspingnoise=graspingnoise, forceclosurethreshold=forceclosurethreshold,numthreads=numthreads,translationstepmult=self.translationstepmult,finestep=self.finestep)
-            print 'graspthreaded done, processing grasps %d'%len(self.resultgrasps)
+            print('graspthreaded done, processing grasps %d'%len(self.resultgrasps))
 
             for resultgrasp in self.resultgrasps:
                 grasp = zeros(self.totaldof)
@@ -647,7 +647,7 @@ class GraspingModel(DatabaseGenerator):
                 graspingnoise=None
                 if options is not None:
                     if options.graspindex is not None:
-                        print 'showing grasp %d'%options.graspindex
+                        print('showing grasp %d'%options.graspindex)
                         grasps = [self.grasps[options.graspindex]]
                         delay=None
                     else:
@@ -658,13 +658,13 @@ class GraspingModel(DatabaseGenerator):
                 else:
                     grasps = self.grasps
                 for i,grasp in enumerate(grasps):
-                    print 'grasp %d/%d'%(i,len(grasps))
+                    print('grasp %d/%d'%(i,len(grasps)))
                     try:
                         with self.env:
                             contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,translate=True,forceclosure=forceclosure,graspingnoise=graspingnoise)
                             #contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=True)
                             if mindist == 0:
-                                print 'grasp is not in force closure!'
+                                print('grasp is not in force closure!')
                             if showcontacts:
                                 contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
                             self.robot.GetController().Reset(0)
@@ -675,8 +675,8 @@ class GraspingModel(DatabaseGenerator):
                             raw_input('press any key to continue: ')
                         elif delay > 0:
                             time.sleep(delay)
-                    except PlanningError,e:
-                        print 'bad grasp!',e
+                    except PlanningError as e:
+                        print('bad grasp! %r'%e)
 
     def showgrasp(self,grasp,collisionfree=False,useik=False,delay=None,showfinal=False):
         with self.robot.CreateRobotStateSaver():
@@ -704,7 +704,7 @@ class GraspingModel(DatabaseGenerator):
     def testGrasp(self,graspingnoise=None,Ngraspingtries = 20,forceclosurethreshold=1e-9,**kwargs):
         contacts,finalconfig,mindist,volume = self.runGrasp(graspingnoise=0,**kwargs)
         if mindist >= forceclosurethreshold and graspingnoise > 0:
-            print 'testing with noise',graspingnoise
+            print('testing with noise %r'%graspingnoise)
             # try several times and make sure that grasp succeeds all the time
             allfinaltrans = [finalconfig[1]]
             allfinaljoints = [finalconfig[0]]
@@ -725,9 +725,9 @@ class GraspingModel(DatabaseGenerator):
                 jointvaluesstd = self.jointmaxlengths*std(array(allfinaljoints),0)
                 # compute the max distance of each link
                 maxjointvaluestd = max([sum([jointvaluesstd[i] for i in range(len(self.robot.GetJoints())) if self.robot.DoesAffect(i,link.GetIndex())]) for link in self.robot.GetLinks()])
-                print 'grasp:',translationstd,maxjointvaluestd
+                print('grasp: %r'%translationstd,maxjointvaluestd)
                 if translationstd+maxjointvaluestd > 0.7*graspingnoise:
-                    print 'fragile grasp:',translationstd,maxjointvaluestd
+                    print('fragile grasp: %r %r'%(translationstd,maxjointvaluestd))
                     mindist = 0
         return contacts,finalconfig,mindist,volume
     
@@ -864,7 +864,7 @@ class GraspingModel(DatabaseGenerator):
                 if checkcollision and checkgrasper:
                     try:
                         contacts2,finalconfig2,mindist2,volume2 = self.runGraspFromTrans(grasp)
-                    except PlanningError, e:
+                    except PlanningError as e:
                         continue
                 validgrasps.append(grasp)
                 validindices.append(i)
@@ -905,7 +905,7 @@ class GraspingModel(DatabaseGenerator):
                 if checkcollision and checkgrasper:
                     try:
                         contacts,finalconfig,mindist,volume = self.runGraspFromTrans(grasp)
-                    except PlanningError, e:
+                    except PlanningError as e:
                         continue
 
             if returnfinal:
@@ -921,8 +921,8 @@ class GraspingModel(DatabaseGenerator):
                 kwargs['translate'] = True
                 kwargs['forceclosure'] = False
                 contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,**kwargs)
-            except PlanningError, e:
-                print 'grasp failed: ',e
+            except PlanningError as e:
+                print('grasp failed: %r'%e)
                 return inf
             
             # find closest contact to center of object
