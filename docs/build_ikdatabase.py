@@ -69,9 +69,9 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
         env.Reset()
         robot=env.ReadRobotXMLFile(robotfilename)
         if robot is None:
-            print 'failed ',robotfilename
+            print('failed %s'%robotfilename)
         else:
-            print 'processing ',robotname
+            print('processing %s'%robotname)
             env.AddRobot(robot)
             try:
                 entry = pysvn.Client().info(robot.GetXMLFilename())
@@ -111,7 +111,7 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
             Iy = viewer.GetCameraImage(width=width,height=height,transform=Ty,K=K)
             scipy.misc.pilutil.imsave(os.path.join(imagedir,imagename),hstack([Iall,Ix,Iy]))
 
-    print 'writing ',robotname
+    print('writing %s'%robotname)
     robotlink = 'robot-'+robotname
     robotxml = """.. _%s:\n\n%s Robot\n%s======
 

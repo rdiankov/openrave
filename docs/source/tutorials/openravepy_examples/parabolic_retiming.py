@@ -14,7 +14,7 @@ with env:
     traj.Insert(0,robot.GetActiveDOFValues())
     traj.Insert(1,goalvalues)
     planningutils.RetimeActiveDOFTrajectory(traj,robot,hastimestamps=False,maxvelmult=1,maxaccelmult=1,plannername='ParabolicTrajectoryRetimer')
-    print 'duration',traj.GetDuration()
+    print('duration %f'%traj.GetDuration())
 
 robot.GetController().SetPath(traj)
 robot.WaitForController(0)

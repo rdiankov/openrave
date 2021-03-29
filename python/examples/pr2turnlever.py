@@ -102,7 +102,7 @@ def main(env,options):
 
     with env:
         robot.Grab(target)
-        print 'planning for turning lever'
+        print('planning for turning lever')
         planner = RaveCreatePlanner(env,'workspacetrajectorytracker')
         params = Planner.PlannerParameters()
         params.SetRobotActiveJoints(robot)

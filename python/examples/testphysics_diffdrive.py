@@ -46,7 +46,7 @@ def main(env,options):
     starttime = time.time()
     while True:
         velocities = 4*(random.rand(robot.GetDOF())-0.5)
-        print 'velocities: ',velocities
+        print('velocities: %r'%velocities)
         robot.GetController().SendCommand('setvelocity '+' '.join(str(f) for f in velocities))
         time.sleep(2)
 
