@@ -139,6 +139,7 @@ public:
 
     JSONReader(const AttributesList& atts, EnvironmentBasePtr penv, const std::string& defaultSuffix) : _penv(penv), _defaultSuffix(defaultSuffix)
     {
+        _deserializeOptions = 0;
         FOREACHC(itatt, atts) {
             if (itatt->first == "openravescheme") {
                 std::stringstream ss(itatt->second);
@@ -155,6 +156,11 @@ public:
                 // take the first argument given from scalegeometry to set as the overall geometry scale
                 ss >> _fGeomScale;
             }
+            else if (itatt->first == "partialupdate") {
+                if (_stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1") {
+                    _deserializeOptions |= IDO_PartialUpdate;
+                }
+            }
         }
         if (_vOpenRAVESchemeAliases.size() == 0) {
             _vOpenRAVESchemeAliases.push_back("openrave");
@@ -162,7 +168,6 @@ public:
 
         // set global scale when initalize jsonreader.
         _fGlobalScale = 1.0 / _penv->GetUnit().second;
-        _deserializeOptions = 0;
     }
 
     virtual ~JSONReader()
@@ -564,7 +569,8 @@ protected:
             }
 
             if( insertIndex >= 0 ) {
-                envInfo._vBodyInfos.at(insertIndex)->DeserializeJSON(rRefKinBodyInfo, fUnitScale, _deserializeOptions);
+                // ignore IDO_PartialUpdate in _ExpandRapidJSON because the json is not coming from change noficiation
+                envInfo._vBodyInfos.at(insertIndex)->DeserializeJSON(rRefKinBodyInfo, fUnitScale, (_deserializeOptions & ~IDO_PartialUpdate));
             }
         }
         else {
@@ -592,7 +598,8 @@ protected:
                         pExistingBodyInfo = pNewRobotInfo;
                     }
 
-                    pExistingBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
+                    // ignore IDO_PartialUpdate in _ExpandRapidJSON because the json is not coming from change noficiation
+                    pExistingBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, (_deserializeOptions & ~IDO_PartialUpdate));
                     insertIndex = ibody;
                     break;
                 }
@@ -611,7 +618,8 @@ protected:
             else {
                 pNewKinBodyInfo.reset(new KinBody::KinBodyInfo());
             }
-            pNewKinBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
+            // ignore IDO_PartialUpdate in _ExpandRapidJSON because the json is not coming from change noficiation
+            pNewKinBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, (_deserializeOptions & ~IDO_PartialUpdate));
 
             if( !originBodyId.empty() ) {
                 pNewKinBodyInfo->_id = originBodyId;
@@ -705,7 +713,8 @@ protected:
             }
         }
 
-        pKinBodyInfo->DeserializeJSON(rBodyInfo, fUnitScale, _deserializeOptions);
+        // ignore IDO_PartialUpdate here because it is not coming from change notification
+        pKinBodyInfo->DeserializeJSON(rBodyInfo, fUnitScale, (_deserializeOptions & ~IDO_PartialUpdate));
 
         KinBodyPtr pBody;
         if( !!pRobotBaseInfo ) {

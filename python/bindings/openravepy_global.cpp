@@ -1352,6 +1352,22 @@ void init_openravepy_global()
     .value("OnlySpecifiedBodiesExact", UFIM_OnlySpecifiedBodiesExact)
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<InfoSerializeOption>(m, "InfoSerializeOption", py::arithmetic() DOXY_ENUM(InfoSerializeOption))
+#else
+    enum_<InfoSerializeOption>("InfoSerializeOption" DOXY_ENUM(InfoSerializeOption))
+#endif
+    .value("ReferenceUriHint",ISO_ReferenceUriHint)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<InfoDeserializeOption>(m, "InfoDeserializeOption", py::arithmetic() DOXY_ENUM(InfoDeserializeOption))
+#else
+    enum_<InfoDeserializeOption>("InfoDeserializeOption" DOXY_ENUM(InfoDeserializeOption))
+#endif
+    .value("IgnoreReferenceUri",IDO_IgnoreReferenceUri)
+    .value("PartialUpdate",IDO_PartialUpdate)
+    ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     enum_<InterfaceType>(m, "InterfaceType", py::arithmetic() DOXY_ENUM(InterfaceType))

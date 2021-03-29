@@ -286,9 +286,9 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
         size_t iGrabbed = 0;
         for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
-            //UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
             const rapidjson::Value& rGrabbed = *it;
             std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "id");
+            bool isCreated = OpenRAVE::orjson::GetJsonValueByKey<bool>(rGrabbed, "__created__", false);
             bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(rGrabbed, "__deleted__", false);
             std::vector<GrabbedInfoPtr>::iterator itMatchingId = _vGrabbedInfos.end();
             std::vector<GrabbedInfoPtr>::iterator itMatchingName = _vGrabbedInfos.end();
@@ -342,8 +342,15 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 continue;
             }
 
+            if ((options & IDO_PartialUpdate) != 0 && !isCreated) {
+                // we do not allow creating new info if __created__ was not specified
+                // this is to avoid creating new info that is partial
+                RAVELOG_WARN_FORMAT("not creating new grabbed info with id \"%s\" because its \"__created__\" flag is not set, and the data might be incomplete", id);
+                continue;
+            }
+
             GrabbedInfoPtr pNewInfo(new GrabbedInfo());
-            pNewInfo->DeserializeJSON(rGrabbed, fUnitScale, options);
+            pNewInfo->DeserializeJSON(rGrabbed, fUnitScale, (options & ~IDO_PartialUpdate));
             pNewInfo->_id = id;
             _vGrabbedInfos.push_back(pNewInfo);
         }
