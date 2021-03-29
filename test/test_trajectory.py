@@ -272,13 +272,13 @@ class TestTrajectory(EnvironmentSetup):
             curtime = 0
             trajdata = traj.Sample(0)
             for i in range(traj.GetNumWaypoints()-1):
-                print curtime
+                print(curtime)
                 start = traj.GetWaypoint(i)
                 end = traj.GetWaypoint(i+1)
                 enddeltatime = spec.ExtractDeltaTime(end)
                 if enddeltatime > stepsize:
                     for t in reversed(arange(curtime+enddeltatime,curtime,-stepsize)):
-                        print t
+                        print(t)
                         newdata = traj.Sample(t)
                         spec.InsertDeltaTime(newdata,t-curtime)
                         curtime = t
@@ -319,7 +319,7 @@ class TestTrajectory(EnvironmentSetup):
                 ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,True,maxvelmult=1,maxaccelmult=1,plannername='parabolictrajectoryretimer')
                 assert(ret.statusCode==PlannerStatusCode.Failed)
                 
-            except openrave_exception,e:
+            except openrave_exception as e:
                 pass
             
             ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,maxaccelmult=1,plannername='parabolictrajectoryretimer')
@@ -662,7 +662,7 @@ class TestTrajectory(EnvironmentSetup):
             try:
                 self.RunTrajectory(robot,traj)
                 raise ValueError('bad trajectory should throw an exception!')
-            except openrave_exception,e:
+            except openrave_exception as e:
                 pass
             
     def test_reverse(self):

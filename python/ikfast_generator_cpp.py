@@ -121,13 +121,13 @@ def evalNumbers(expr):
             evalexprs.append(newresult)
         N = len(evalexprs)
         while N > 1:
-            for i in range(N/2):
+            for i in range(N//2):
                 evalexprs[2*i]+=evalexprs[2*i+1]
                 evalexprs[i] = evalexprs[2*i]
             if N & 1:
-                evalexprs[N/2] = evalexprs[N-1]
+                evalexprs[N//2] = evalexprs[N-1]
                 N += 1
-            N /= 2
+            N //= 2
         return evalexprs[0]
     
     elif expr.is_Pow:
@@ -624,7 +624,7 @@ int main(int argc, char** argv)
             code += "}; return freeindices; }\n"
         code += "IKFAST_API int GetNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int GetIkRealSize() { return sizeof(IkReal); }\n\n"
-        code += 'IKFAST_API int GetIkType() { return 0x%x; }\n\n'%iktype
+        code += 'IKFAST_API int GetIkType() { return 0x%x; }\n\n'%int(iktype)
         code += "class IKSolver {\npublic:\n"
         
         usedvars = []
@@ -1882,7 +1882,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
     def _writeGinacEquations(self, varnamefn, allexprs):
         allcode = cStringIO.StringIO()
         for i,expr in enumerate(allexprs):
-            print '%d/%d'%(i,len(allexprs))
+            print('%d/%d'%(i,len(allexprs)))
             code,sepcodelist = self._WriteGinacExprCode(expr)
             for sepcode in sepcodelist:
                 allcode.write(sepcode)
@@ -1987,7 +1987,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 # check for divides by 0 in arguments, this could give two possible solutions?!?
                 # if common arguments is nan! solution is lost!
                 # use IKatan2WithCheck in order to make it robust against NaNs
-                iktansymbol = self.symbolgen.next()
+                iktansymbol = next(self.symbolgen)
                 
                 code2 = cStringIO.StringIO()
                 code2.write('CheckValue<IkReal> %s = IKatan2WithCheck(IkReal('%iktansymbol)
@@ -2066,7 +2066,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                         return code, []
                     else:
                         # need to create a new symbol
-                        ikpowsymbol = self.symbolgen.next()
+                        ikpowsymbol = next(self.symbolgen)
                         code2 = cStringIO.StringIO()
                         code2.write('IkReal ')
                         code2.write(str(ikpowsymbol))
@@ -2081,7 +2081,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                         return code,sepcodelist
                 elif expr.exp.is_integer:
                     # use IKPowWithIntegerCheck in order to make it robust
-                    ikpowsymbol = self.symbolgen.next()
+                    ikpowsymbol = next(self.symbolgen)
                     code2 = cStringIO.StringIO()
                     code2.write('CheckValue<IkReal> %s=IKPowWithIntegerCheck('%ikpowsymbol)
                     code3,sepcodelist = self._WriteExprCode(expr.base, code2)
@@ -2107,7 +2107,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 elif expr.exp < 0:
                     # use IKPowWithIntegerCheck in order to make it robust
                     # check if exprbase is 0
-                    ikpowsymbol = self.symbolgen.next()
+                    ikpowsymbol = next(self.symbolgen)
                     code2 = cStringIO.StringIO()
                     code2.write('IkReal %s = '%ikpowsymbol)
                     code3,sepcodelist = self._WriteExprCode(expr.base, code2)

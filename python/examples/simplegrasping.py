@@ -27,7 +27,6 @@ This type of example is suited for object geometries that are dynamically create
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 
-from itertools import izip
 import openravepy
 if not __openravepy_build_doc__:
     from openravepy import *
@@ -42,26 +41,26 @@ def main(env,options):
 
     bodies = [b for b in env.GetBodies() if not b.IsRobot() and linalg.norm(b.ComputeAABB().extents()) < 0.2]
     target = bodies[random.randint(len(bodies))]
-    print 'choosing target %s'%target
+    print('choosing target %s'%target)
 
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
     if not ikmodel.load():
         ikmodel.autogenerate()
     gmodel = databases.grasping.GraspingModel(robot,target)
     if not gmodel.load():
-        print 'generating grasping model (one time computation)'
+        print('generating grasping model (one time computation)')
         gmodel.init(friction=0.4,avoidlinks=[])
         gmodel.generate(approachrays=gmodel.computeBoxApproachRays(delta=0.04,normalanglerange=0))
         gmodel.save()
 
     returnnum = 5
 
-    print 'computing first %d valid grasps'%returnnum
+    print('computing first %d valid grasps'%returnnum)
     validgrasps,validindices = gmodel.computeValidGrasps(returnnum=returnnum)
     for validgrasp in validgrasps:
         gmodel.showgrasp(validgrasp)
 
-    print 'choosing a random grasp and move to its preshape'
+    print('choosing a random grasp and move to its preshape')
     basemanip = openravepy.interfaces.BaseManipulation(robot)
     with env:
         initialvalues = robot.GetDOFValues(gmodel.manip.GetArmIndices())
@@ -69,12 +68,12 @@ def main(env,options):
     for validgrasp in random.permutation(validgrasps):
         try:
             gmodel.moveToPreshape(validgrasp)
-            print 'move robot arm to grasp'
+            print('move robot arm to grasp')
             Tgrasp = gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)
             basemanip.MoveToHandPosition(matrices=[Tgrasp])
             break
-        except planning_error,e:
-            print 'try again: ',e
+        except planning_error as e:
+            print('try again: %r'%e)
 
     robot.WaitForController(10)
     taskmanip = openravepy.interfaces.TaskManipulation(robot)
@@ -85,11 +84,11 @@ def main(env,options):
     raw_input('press any key to release')
     taskmanip.ReleaseFingers(target=target)
     robot.WaitForController(10)
-    print 'initial values'
+    print('initial values')
     basemanip.MoveManipulator(initialvalues)
     robot.WaitForController(10)
 
-    print 'using the grasp iterator'
+    print('using the grasp iterator')
     with env:
         for validgrasp,validindex in gmodel.validGraspIterator():
             gmodel.showgrasp(validgrasp,useik=True,collisionfree=True,delay=0.4)
