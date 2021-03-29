@@ -569,7 +569,8 @@ protected:
             }
 
             if( insertIndex >= 0 ) {
-                envInfo._vBodyInfos.at(insertIndex)->DeserializeJSON(rRefKinBodyInfo, fUnitScale, _deserializeOptions);
+                // ignore IDO_PartialUpdate in _ExpandRapidJSON because the json is not coming from change noficiation
+                envInfo._vBodyInfos.at(insertIndex)->DeserializeJSON(rRefKinBodyInfo, fUnitScale, (_deserializeOptions & ~IDO_PartialUpdate));
             }
         }
         else {
@@ -597,7 +598,8 @@ protected:
                         pExistingBodyInfo = pNewRobotInfo;
                     }
 
-                    pExistingBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
+                    // ignore IDO_PartialUpdate in _ExpandRapidJSON because the json is not coming from change noficiation
+                    pExistingBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, (_deserializeOptions & ~IDO_PartialUpdate));
                     insertIndex = ibody;
                     break;
                 }
@@ -616,7 +618,8 @@ protected:
             else {
                 pNewKinBodyInfo.reset(new KinBody::KinBodyInfo());
             }
-            pNewKinBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
+            // ignore IDO_PartialUpdate in _ExpandRapidJSON because the json is not coming from change noficiation
+            pNewKinBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, (_deserializeOptions & ~IDO_PartialUpdate));
 
             if( !originBodyId.empty() ) {
                 pNewKinBodyInfo->_id = originBodyId;
@@ -710,7 +713,8 @@ protected:
             }
         }
 
-        pKinBodyInfo->DeserializeJSON(rBodyInfo, fUnitScale, _deserializeOptions);
+        // ignore IDO_PartialUpdate here because it is not coming from change notification
+        pKinBodyInfo->DeserializeJSON(rBodyInfo, fUnitScale, (_deserializeOptions & ~IDO_PartialUpdate));
 
         KinBodyPtr pBody;
         if( !!pRobotBaseInfo ) {
