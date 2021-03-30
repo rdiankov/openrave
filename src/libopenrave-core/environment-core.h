@@ -211,29 +211,12 @@ protected:
 public:
     Environment() : EnvironmentBase()
     {
-        _homedirectory = RaveGetHomeDirectory();
-        RAVELOG_DEBUG_FORMAT("env=%d(%s), setting openrave home directory to %s", GetId()%GetName()%_homedirectory);
+        _Init();
+    }
 
-        _nBodiesModifiedStamp = 0;
-
-        _assignedBodySensorNameIdSuffix = 0;
-
-        _fDeltaSimTime = 0.01f;
-        _nCurSimTime = 0;
-        _nSimStartTime = utils::GetMicroTime();
-        _bRealTime = true;
-        _bInit = false;
-        _bEnableSimulation = true;     // need to start by default
-        _unit = std::make_pair("meter",1.0); //default unit settings
-
-        _vRapidJsonLoadBuffer.resize(4000000);
-        _prLoadEnvAlloc.reset(new rapidjson::MemoryPoolAllocator<>(&_vRapidJsonLoadBuffer[0], _vRapidJsonLoadBuffer.size()));
-
-        _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
-        _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
-        _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", RaveGetInterfaceHash(PT_Controller), GetHash(), CreateMultiController);
-        _handlegenericphysicsengine = RaveRegisterInterface(PT_PhysicsEngine,"GenericPhysicsEngine", RaveGetInterfaceHash(PT_PhysicsEngine), GetHash(), CreateGenericPhysicsEngine);
-        _handlegenericcollisionchecker = RaveRegisterInterface(PT_CollisionChecker,"GenericCollisionChecker", RaveGetInterfaceHash(PT_CollisionChecker), GetHash(), CreateGenericCollisionChecker);
+    Environment(const std::string& name) : EnvironmentBase(name)
+    {
+        _Init();
     }
 
     virtual ~Environment()
@@ -513,7 +496,7 @@ public:
         _listOwnedInterfaces.remove(pinterface);
     }
 
-    virtual EnvironmentBasePtr CloneSelf(int options)
+    EnvironmentBasePtr CloneSelf(int options) override
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         boost::shared_ptr<Environment> penv(new Environment());
@@ -521,10 +504,25 @@ public:
         return penv;
     }
 
-    virtual void Clone(EnvironmentBaseConstPtr preference, int cloningoptions)
+    EnvironmentBasePtr CloneSelf(const std::string& clonedEnvName, int options) override
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        boost::shared_ptr<Environment> penv(new Environment(clonedEnvName));
+        penv->_Clone(boost::static_pointer_cast<Environment const>(shared_from_this()),options,false);
+        return penv;
+    }
+
+    void Clone(EnvironmentBaseConstPtr preference, int cloningoptions) override
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         _Clone(boost::static_pointer_cast<Environment const>(preference),cloningoptions,true);
+    }
+
+    void Clone(EnvironmentBaseConstPtr preference, const std::string& clonedEnvName, int cloningoptions) override
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        _Clone(boost::static_pointer_cast<Environment const>(preference), cloningoptions,true);
+        _name = clonedEnvName;
     }
 
     virtual int AddModule(ModuleBasePtr module, const std::string& cmdargs)
@@ -2622,7 +2620,6 @@ public:
             ++validBodyItr;
         }
         BOOST_ASSERT(validBodyItr == numBodies);
-        info._name = _name;
         info._keywords = _keywords;
         info._description = _description;
         if (!!_pPhysicsEngine) {
@@ -2646,7 +2643,7 @@ public:
         if( updateMode != UFIM_OnlySpecifiedBodiesExact ) {
             // copy basic info into EnvironmentBase
             _revision = info._revision;
-            _name = info._name;
+            //_name = info._name; not copying name, just like __nUniqueId, it is not updated from info
             _keywords = info._keywords;
             _description = info._description;
             _mapUInt64Parameters = info._uInt64Parameters;
@@ -3006,16 +3003,6 @@ public:
         return _revision;
     }
 
-    void SetName(const std::string& sceneName) override {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        _name = sceneName;
-    }
-
-    std::string GetName() const {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return _name;
-    }
-
     void SetDescription(const std::string& sceneDescription) override {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         _description = sceneDescription;
@@ -3111,6 +3098,33 @@ public:
 
 protected:
 
+    void _Init()
+    {
+        _homedirectory = RaveGetHomeDirectory();
+        RAVELOG_DEBUG_FORMAT("env=%d(%s), setting openrave home directory to %s", GetId()%GetName()%_homedirectory);
+
+        _nBodiesModifiedStamp = 0;
+
+        _assignedBodySensorNameIdSuffix = 0;
+
+        _fDeltaSimTime = 0.01f;
+        _nCurSimTime = 0;
+        _nSimStartTime = utils::GetMicroTime();
+        _bRealTime = true;
+        _bInit = false;
+        _bEnableSimulation = true;     // need to start by default
+        _unit = std::make_pair("meter",1.0); //default unit settings
+
+        _vRapidJsonLoadBuffer.resize(4000000);
+        _prLoadEnvAlloc.reset(new rapidjson::MemoryPoolAllocator<>(&_vRapidJsonLoadBuffer[0], _vRapidJsonLoadBuffer.size()));
+
+        _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
+        _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
+        _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", RaveGetInterfaceHash(PT_Controller), GetHash(), CreateMultiController);
+        _handlegenericphysicsengine = RaveRegisterInterface(PT_PhysicsEngine,"GenericPhysicsEngine", RaveGetInterfaceHash(PT_PhysicsEngine), GetHash(), CreateGenericPhysicsEngine);
+        _handlegenericcollisionchecker = RaveRegisterInterface(PT_CollisionChecker,"GenericCollisionChecker", RaveGetInterfaceHash(PT_CollisionChecker), GetHash(), CreateGenericCollisionChecker);
+    }
+
     /// \brief invalidates a kinbody from _vecbodies
     /// \param[in] bodyIndex environment body index of kin body to be invalidated
     /// assumes environment and _mutexInterfaces are exclusively locked
@@ -3198,7 +3212,6 @@ protected:
         _nSimStartTime = utils::GetMicroTime();
         _bRealTime = r->_bRealTime;
 
-        _name = r->_name;
         _description = r->_description;
         _keywords = r->_keywords;
         _mapUInt64Parameters = r->_mapUInt64Parameters;
