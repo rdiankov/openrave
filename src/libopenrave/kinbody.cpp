@@ -429,7 +429,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
 
 KinBody::~KinBody()
 {
-    RAVELOG_VERBOSE_FORMAT("env=%d, destructing kinbody '%s'", GetEnv()->GetId()%GetName());
+    RAVELOG_VERBOSE_FORMAT("env=%d(%s), destructing kinbody '%s'", GetEnv()->GetId()%GetEnv()->GetName()%GetName());
     Destroy();
 }
 
