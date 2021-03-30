@@ -423,7 +423,7 @@ public:
 
         _WriteTrajectory(ptraj,_cachednewspec, _vdata);
         // happens too often for debug message?
-        //RAVELOG_VERBOSE(str(boost::format("env=%d(%s), %s path duration=%es, timestep=%es")%GetEnv()->GetId()%GetEnv()->GetName()%GetXMLId()%ptraj->GetDuration()%_parameters->_fStepLength));
+        //RAVELOG_VERBOSE(str(boost::format("env=%d, %s path duration=%es, timestep=%es")%GetEnv()->GetId()%GetXMLId()%ptraj->GetDuration()%_parameters->_fStepLength));
         return OPENRAVE_PLANNER_STATUS(PS_HasSolution);
     }
 

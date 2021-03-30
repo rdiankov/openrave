@@ -949,7 +949,7 @@ protected:
 
 //            dReal fnewsegmentdist = _ComputeExpectedVelocityGroup(vstartvalues, vendvalues, ioptgroup);
 //            if( fnewsegmentdist > fenddist-fstartdist+1e-7 ) {
-//                RAVELOG_INFO_FORMAT("env=%d(%s), expected total distance is not that great: %f > %f, (fTimeToOptGroup=%f)", GetEnv()->GetId()%GetEnv()->GetName()%fnewsegmentdist%(fenddist-fstartdist)%fTimeToOptGroup);
+//                RAVELOG_INFO_FORMAT("env=%d, expected total distance is not that great: %f > %f, (fTimeToOptGroup=%f)", GetEnv()->GetId()%fnewsegmentdist%(fenddist-fstartdist)%fTimeToOptGroup);
 //                continue;
 //            }
 

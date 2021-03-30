@@ -756,7 +756,7 @@ void KinBody::SetName(const std::string& newname)
             // 1. clonebody = origbody.Clone()
             // 2. clonebody.SetName('cloned') // this shouldn't cause cache in env to be modified for origbody
             if( !GetEnv()->NotifyKinBodyNameChanged(_name, newname) ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("env=%d(%s), cannot change body '%s' name to '%s' since it conflicts with another body", GetEnv()->GetId()%GetEnv()->GetName()%_name%newname, ORE_BodyNameConflict);
+                throw OPENRAVE_EXCEPTION_FORMAT("env=%d, cannot change body '%s' name to '%s' since it conflicts with another body", GetEnv()->GetId()%_name%newname, ORE_BodyNameConflict);
             }
         }
         // have to replace the 2nd word of all the groups with the robot name
@@ -779,7 +779,7 @@ void KinBody::SetId(const std::string& newid)
     if( _id != newid ) {
         if (GetEnvironmentBodyIndex() > 0) {
             if( !GetEnv()->NotifyKinBodyIdChanged(_id, newid) ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("env=%d(%s), cannot change body '%s' id from '%s' -> '%s' since it conflicts with another body", GetEnv()->GetId()%GetEnv()->GetName()%_name%_id%newid, ORE_BodyIdConflict);
+                throw OPENRAVE_EXCEPTION_FORMAT("env=%d, cannot change body '%s' id from '%s' -> '%s' since it conflicts with another body", GetEnv()->GetId()%_name%_id%newid, ORE_BodyIdConflict);
             }
         }
         _id = newid;

@@ -1116,13 +1116,13 @@ public:
     KinBodyPtr GetKinBody(const std::string& pname) const override
     {
         if (pname.empty()) {
-            //RAVELOG_VERBOSE_FORMAT("env=%d(%s), empty name is used to find body. Maybe caller has to be fixed.", GetId()%GetName());
+            //RAVELOG_VERBOSE_FORMAT("env=%d, empty name is used to find body. Maybe caller has to be fixed.", GetId());
             return KinBodyPtr();
         }
         SharedLock lock(_mutexInterfaces);
         if (!_vecbodies.empty()) {
             const int envBodyIndex = _FindBodyIndexByName(pname);
-            //RAVELOG_VERBOSE_FORMAT("env=%d(%s), name %s (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%GetName()%pname%envBodyIndex);
+            //RAVELOG_VERBOSE_FORMAT("env=%d, name %s (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%pname%envBodyIndex);
             return _vecbodies.at(envBodyIndex);
         }
         return KinBodyPtr();
@@ -1147,7 +1147,7 @@ public:
                 return pbody;
             }
             else {
-                //RAVELOG_WARN_FORMAT("env=%d(%s), body '%s' has id '%s', but environment stored its id as '%s'", GetId()%pbody->GetName()%pbody->GetId()%GetId()%pbody->GetName()%pbody->GetName()%id);
+                //RAVELOG_WARN_FORMAT("env=%d, body '%s' has id '%s', but environment stored its id as '%s'", GetId()%pbody->GetName()%pbody->GetId()%id);
                 throw OPENRAVE_EXCEPTION_FORMAT("env=%d(%s), body '%s' has id '%s', but environment stored its id as '%s'", GetId()%pbody->GetName()%pbody->GetId()%GetId()%pbody->GetName()%pbody->GetName()%id, ORE_BodyIdConflict);
             }
         }
@@ -1218,7 +1218,7 @@ public:
         }
         const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
         if (it == _mapBodyNameIndex.end()) {
-            //RAVELOG_WARN_FORMAT("env=%d(%s), name %s is not found", GetId()%GetName()%name);
+            //RAVELOG_WARN_FORMAT("env=%d, name %s is not found", GetId()%name);
             return 0;
         }
         const int envBodyIndex = it->second;
@@ -3622,11 +3622,11 @@ protected:
             // most likely unique, but have to double check
             if( utils::IsValidName(newId) && _CheckUniqueId(pbody, false) ) {
                 if( !baseId.empty() ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d(%s), setting body id from %s -> %s due to conflict", GetId()%GetName()%baseId%newId);
+                    RAVELOG_DEBUG_FORMAT("env=%d, setting body id from %s -> %s due to conflict", GetId()%baseId%newId);
                 }
                 break;
             }
-            RAVELOG_INFO_FORMAT("env=%d(%s), tried renaming body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%GetName()%baseId%newId);
+            RAVELOG_INFO_FORMAT("env=%d, tried renaming body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%baseId%newId);
         }
     }
     
@@ -3647,11 +3647,11 @@ protected:
             // most likely unique, but have to double check
             if( utils::IsValidName(newName) && _CheckUniqueName(pObject, false) ) {
                 if( !baseName.empty() ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d(%s), setting body name from %s -> %s due to conflict", GetId()%GetName()%baseName%newName);
+                    RAVELOG_DEBUG_FORMAT("env=%d, setting body name from %s -> %s due to conflict", GetId()%baseName%newName);
                 }
                 break;
             }
-            RAVELOG_INFO_FORMAT("env=%d(%s), tried renaming object (body or sensor) from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%GetName()%baseName%newName);
+            RAVELOG_INFO_FORMAT("env=%d, tried renaming object (body or sensor) from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%baseName%newName);
         }
     }
     
@@ -3677,7 +3677,7 @@ protected:
         }
 
         if( bDoThrow ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d(%s), body (id=\"%s\", envBodyIndex=%d) has same name \"%s\" as existing body (id=\"%s\", envBodyIndex=%d)"), GetId()%GetName()%pbody->GetId()%pbody->GetEnvironmentBodyIndex()%name%pExistingBody->GetId()%pExistingBody->GetEnvironmentBodyIndex(), ORE_BodyNameConflict);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body (id=\"%s\", envBodyIndex=%d) has same name \"%s\" as existing body (id=\"%s\", envBodyIndex=%d)"), GetId()%pbody->GetId()%pbody->GetEnvironmentBodyIndex()%name%pExistingBody->GetId()%pExistingBody->GetEnvironmentBodyIndex(), ORE_BodyNameConflict);
         }
         return false;
     }
@@ -3711,7 +3711,7 @@ protected:
         }
 
         if( bDoThrow ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d(%s), body (name=\"%s\", envBodyIndex=%d) has same id \"%s\" as existing body (name=\"%s\", envBodyIndex=%d)"), GetId()%GetName()%pbody->GetId()%pbody->GetEnvironmentBodyIndex()%inputBodyId%pExistingBody->GetName()%pExistingBody->GetEnvironmentBodyIndex(), ORE_BodyIdConflict);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body (name=\"%s\", envBodyIndex=%d) has same id \"%s\" as existing body (name=\"%s\", envBodyIndex=%d)"), GetId()%pbody->GetId()%pbody->GetEnvironmentBodyIndex()%inputBodyId%pExistingBody->GetName()%pExistingBody->GetEnvironmentBodyIndex(), ORE_BodyIdConflict);
         }
         return false;
     }
@@ -3750,11 +3750,11 @@ protected:
             std::set<int>::iterator smallestIt = _environmentIndexRecyclePool.begin();
             envBodyIndex = *smallestIt;
             _environmentIndexRecyclePool.erase(smallestIt);
-            RAVELOG_DEBUG_FORMAT("env=%d(%s), recycled body envBodyIndex=%d for %s. %d remaining in pool", GetId()%GetName()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
+            RAVELOG_DEBUG_FORMAT("env=%d, recycled body envBodyIndex=%d for %s. %d remaining in pool", GetId()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
         }
         else {
             envBodyIndex = _vecbodies.empty() ? 1 : _vecbodies.size(); // skip 0
-            RAVELOG_DEBUG_FORMAT("env=%d(%s), assigned new body envBodyIndex=%d for \"%s\", this should not happen unless total number of bodies in env keeps increasing", GetId()%GetName()%envBodyIndex%pbody->GetName());
+            RAVELOG_DEBUG_FORMAT("env=%d, assigned new body envBodyIndex=%d for \"%s\", this should not happen unless total number of bodies in env keeps increasing", GetId()%envBodyIndex%pbody->GetName());
         }
         pbody->_environmentBodyIndex = envBodyIndex;
         return envBodyIndex;
@@ -3766,10 +3766,10 @@ protected:
         const int envBodyIndex = body._environmentBodyIndex;
         if (0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()) {
             _environmentIndexRecyclePool.insert(envBodyIndex); // for recycle later
-            RAVELOG_VERBOSE_FORMAT("env=%d(%s), removed body name=\"%s\" (environmentBodyIndex=%d), recycle body index later", GetId()%GetName()%body.GetName()%body._environmentBodyIndex);
+            RAVELOG_VERBOSE_FORMAT("env=%d, removed body name=\"%s\" (environmentBodyIndex=%d), recycle body index later", GetId()%body.GetName()%body._environmentBodyIndex);
         }
         else {
-            RAVELOG_WARN_FORMAT("env=%d(%s), removed body name=\"%s\" (environmentBodyIndex=%d, _vecbodies size=%d) is not valid. ", GetId()%GetName()%body.GetName()%body._environmentBodyIndex%_vecbodies.size());
+            RAVELOG_WARN_FORMAT("env=%d, removed body name=\"%s\" (environmentBodyIndex=%d, _vecbodies size=%d) is not valid. ", GetId()%body.GetName()%body._environmentBodyIndex%_vecbodies.size());
         }
 
         body._environmentBodyIndex = 0;

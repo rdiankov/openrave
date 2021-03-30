@@ -398,7 +398,7 @@ protected:
             nrejected++;
 
             dReal fExpectedDOFDistance = itendnode->first.at(idof) - itstartnode->first.at(idof);
-            // RAVELOG_DEBUG_FORMAT("env=%d(%s), prevdofdist=%.15e; newdofdist=%.15e; diff=%.15e", GetEnv()->GetId()%GetEnv()->GetName()%totalDOFDistance%RaveFabs(expectedDOFDistance)%(totalDOFDistance - RaveFabs(expectedDOFDistance)));
+            // RAVELOG_DEBUG_FORMAT("env=%d, prevdofdist=%.15e; newdofdist=%.15e; diff=%.15e", GetEnv()->GetId()%totalDOFDistance%RaveFabs(expectedDOFDistance)%(totalDOFDistance - RaveFabs(expectedDOFDistance)));
             if( RaveFabs(fExpectedDOFDistance) > fTotalDOFDistance - 0.1*parameters->_vConfigResolution.at(idof) ) {
                 // Even after a successful shortcut, the resulting path wouldn't be that much shorter. So skipping.
 #ifdef PROGRESS_DEBUG

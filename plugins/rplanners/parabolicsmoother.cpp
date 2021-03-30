@@ -1137,7 +1137,7 @@ public:
                 _totalTimeCheckManip += 0.000001f*(float)(_tEndCheckManip - _tStartCheckManip);
 #endif
                 if( retmanip.retcode != 0 ) {
-                    // RAVELOG_VERBOSE_FORMAT("env=%d(%s), from CheckManipConstraints2: retcode = %d", GetEnv()->GetId()%GetEnv()->GetName()%retmanip.retcode);
+                    // RAVELOG_VERBOSE_FORMAT("env=%d, from CheckManipConstraints2: retcode = %d", GetEnv()->GetId()%retmanip.retcode);
                     return retmanip;
                 }
             }
@@ -1333,7 +1333,7 @@ protected:
                 //     ss << "]; dx1=[";
                 //     SerializeValues(ss, dx1);
                 //     ss << "]; deltatime=" << (vswitchtimes.at(iswitch) - fprevtime);
-                //     RAVELOG_WARN_FORMAT("env=%d(%s), initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned a state error 0x%x; %s ignoring since we only care about time based constraints....", GetEnv()->GetId()%GetEnv()->GetName()%i%vnewpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
+                //     RAVELOG_WARN_FORMAT("env=%d, initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned a state error 0x%x; %s ignoring since we only care about time based constraints....", GetEnv()->GetId()%i%vnewpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
                 //     //retseg.retcode = 0;
                 // }
                 if( retseg.retcode != 0 ) {
