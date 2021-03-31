@@ -25,21 +25,6 @@ namespace OpenRAVE {
 
 constexpr dReal M_TWO_PI = 2 * M_PI;
 
-int KinBody::JointInfo::GetDOF() const
-{
-    if(_type & KinBody::JointSpecialBit) {
-        switch(_type) {
-        case KinBody::JointHinge2:
-        case KinBody::JointUniversal: return 2;
-        case KinBody::JointSpherical: return 3;
-        case KinBody::JointTrajectory: return 1;
-        default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("invalid joint type 0x%x"), _type, ORE_Failed);
-        }
-    }
-    return int(_type & 0xf);
-}
-
 void KinBody::JointInfo::Reset()
 {
     _type = JointNone;
@@ -533,21 +518,6 @@ KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
 
 KinBody::Joint::~Joint()
 {
-}
-
-int KinBody::Joint::GetDOF() const
-{
-    return _info.GetDOF();
-}
-
-bool KinBody::Joint::IsCircular() const
-{
-    return _info._bIsCircular[0] || _info._bIsCircular[1] || _info._bIsCircular[2];
-}
-
-bool KinBody::Joint::IsCircular(int iaxis) const
-{
-    return static_cast<bool>(_info._bIsCircular.at(iaxis));
 }
 
 bool KinBody::Joint::IsActive() const
@@ -1346,11 +1316,6 @@ void KinBody::Joint::GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dRea
         vLowerLimit.push_back(_info._vlowerlimit[i]);
         vUpperLimit.push_back(_info._vupperlimit[i]);
     }
-}
-
-std::pair<dReal, dReal> KinBody::Joint::GetLimit(int iaxis) const
-{
-    return make_pair(_info._vlowerlimit.at(iaxis),_info._vupperlimit.at(iaxis));
 }
 
 void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit)
@@ -2620,9 +2585,9 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     return updateFromInfoResult;
 }
 
-void KinBody::Joint::SetDOFLastSetValue(dReal dofvalue, const int iaxis) {
-    _doflastsetvalues[iaxis] = dofvalue;
-}
+//void KinBody::Joint::SetDOFLastSetValue(dReal dofvalue, const int iaxis) {
+//    _doflastsetvalues[iaxis] = dofvalue;
+//}
 
 void KinBody::Joint::serialize(std::ostream& o, int options) const
 {

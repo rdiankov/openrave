@@ -319,11 +319,6 @@ void KinBody::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
     }
 }
 
-int KinBody::GetNumGrabbed() const
-{
-    return (int)_vGrabbedBodies.size();
-}
-
 KinBodyPtr KinBody::GetGrabbedBody(int iGrabbed) const
 {
     GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(_vGrabbedBodies.at(iGrabbed));
