@@ -740,7 +740,7 @@ public:
         inline void SetNoncollidingLink(size_t linkIndex) {
             const size_t groupIndex = linkIndex / 32;
             if (_vForcedAdjacentLinks.size() < groupIndex + 1) {
-                _vForcedAdjacentLinks.resize(groupIndex + 1);
+                _vForcedAdjacentLinks.resize(groupIndex + 1, 0);
             }
             _vForcedAdjacentLinks.at(groupIndex) |= 1 << (linkIndex % 32);
         }
@@ -2886,12 +2886,12 @@ private:
 
     /// \brief adds the pair of links to the adjacency list.
     ///
-    /// \param linkIndices vector containing pair of link indies. Each pair of is set as adjacent links. For each pair, first has to be smaller than second.
+    /// \param linkIndices vector containing pair of link indies. Each pair of is set as adjacent links. For each pair, first and second must be different.
     virtual void SetAdjacentLinks(const std::vector<std::pair<int, int> >& linkIndices);
 
     /// \brief adds the pair of links to the adjacency list.
     ///
-    /// \param linkIndices vector of link index. Each combination among them is set as adjacent links. has to be sorted in ascending order
+    /// \param linkIndices vector of link index. Each combination among them is set as adjacent links. elements have to be unique
     virtual void SetAdjacentLinksCombinations(const std::vector<int>& linkIndices);
 
     virtual ManageDataPtr GetManageData() const {

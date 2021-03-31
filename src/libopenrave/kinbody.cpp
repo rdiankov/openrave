@@ -4695,8 +4695,8 @@ void KinBody::_ComputeInternalInformation()
         for (size_t index1 = 0; index1 < _vForcedAdjacentLinks.size(); index1++) {
             const std::vector<int32_t>& adjacentLinkBitmap = _vForcedAdjacentLinks.at(index1);
             size_t index2 = index1 + 1;
-            for (size_t bitmaskGroupIndex = index2 / 32; bitmaskGroupIndex < adjacentLinkBitmap.size(); bitmaskGroupIndex++) {
-                int value = adjacentLinkBitmap.at(bitmaskGroupIndex) >> index2; // need to shift by index2, as we are not starting from 0
+            for (size_t bitmapGroupIndex = index2 / 32; bitmapGroupIndex < adjacentLinkBitmap.size(); bitmapGroupIndex++) {
+                int value = adjacentLinkBitmap.at(bitmapGroupIndex) >> index2; // need to shift by index2, as we are not starting from 0
                 while (value > 0) {
                     if (value & 1) {
                         _setAdjacentLinks.insert(index1 | (index2 << 16));
@@ -5403,12 +5403,12 @@ void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
     if (_vForcedAdjacentLinks.size() < linkindex0 + 1) {
         _vForcedAdjacentLinks.resize(linkindex0 + 1);
     }
-    std::vector<int32_t>& adjacentLinkBitmap = _vForcedAdjacentLinks.at(linkindex0);
-    const int bitmaskGroupIndex = linkindex1/32;
-    if (adjacentLinkBitmap.size() < bitmaskGroupIndex + 1) {
-        adjacentLinkBitmap.resize(bitmaskGroupIndex + 1);
+    std::vector<int32_t>& adjacentLinkBitmapForLink0 = _vForcedAdjacentLinks.at(linkindex0);
+    const int bitmapGroupIndex = linkindex1/32;
+    if (adjacentLinkBitmapForLink0.size() < bitmapGroupIndex + 1) {
+        adjacentLinkBitmapForLink0.resize(bitmapGroupIndex + 1);
     }
-    adjacentLinkBitmap.at(bitmaskGroupIndex) |= 1 << (linkindex1%32);
+    adjacentLinkBitmapForLink0.at(bitmapGroupIndex) |= 1 << (linkindex1%32);
 }
 
 void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -5800,11 +5800,11 @@ void KinBody::_SetForcedAdjacentLinks(int linkindex0, int linkindex1)
         _vForcedAdjacentLinks.resize(linkindex0 + 1);
     }
     std::vector<int32_t>& adjacentLinkBitmapForLink0 = _vForcedAdjacentLinks.at(linkindex0);
-    const size_t bitmaskGroupIndex = linkindex1 / 32;
-    if (adjacentLinkBitmapForLink0.size() < bitmaskGroupIndex + 1) {
-        adjacentLinkBitmapForLink0.resize(bitmaskGroupIndex + 1, 0);
+    const size_t bitmapGroupIndex = linkindex1 / 32;
+    if (adjacentLinkBitmapForLink0.size() < bitmapGroupIndex + 1) {
+        adjacentLinkBitmapForLink0.resize(bitmapGroupIndex + 1, 0);
     }
-    adjacentLinkBitmapForLink0.at(bitmaskGroupIndex) |= 1 << (linkindex1 % 32);
+    adjacentLinkBitmapForLink0.at(bitmapGroupIndex) |= 1 << (linkindex1 % 32);
 }
 
 void KinBody::_InitAndAddLink(LinkPtr plink)
@@ -5835,9 +5835,9 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
     const size_t newLinkIndex = _veclinks.size();
     const size_t newLinkIndexGroupIndex = newLinkIndex / 32;
     const size_t newLinkIndexBitIndex = newLinkIndex % 32;
-    for (int bitmaskGroupIndex = 0; bitmaskGroupIndex < info._vForcedAdjacentLinks.size(); bitmaskGroupIndex++) {
-        int index = bitmaskGroupIndex * 32;
-        int value = info._vForcedAdjacentLinks.at(bitmaskGroupIndex);
+    for (int bitmapGroupIndex = 0; bitmapGroupIndex < info._vForcedAdjacentLinks.size(); bitmapGroupIndex++) {
+        int index = bitmapGroupIndex * 32;
+        int value = info._vForcedAdjacentLinks.at(bitmapGroupIndex);
         while (value > 0) {
             if (value & 1) {
                 if (_vForcedAdjacentLinks.size() < index + 1) {

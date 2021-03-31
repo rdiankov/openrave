@@ -2768,9 +2768,9 @@ private:
                 continue;
             }
             const std::vector<int32_t>& adjacentLinkBitmap = vForcedAdjacentLinks.at(linkIndex0);
-            for (int bitmaskGroupIndex = linkIndex0 / 32; bitmaskGroupIndex < adjacentLinkBitmap.size(); bitmaskGroupIndex++) {
-                size_t linkIndex1 = bitmaskGroupIndex * 32;
-                int value = adjacentLinkBitmap.at(bitmaskGroupIndex);
+            for (int bitmapGroupIndex = linkIndex0 / 32; bitmapGroupIndex < adjacentLinkBitmap.size(); bitmapGroupIndex++) {
+                size_t linkIndex1 = bitmapGroupIndex * 32;
+                int value = adjacentLinkBitmap.at(bitmapGroupIndex);
                 while (value > 0 && linkIndex1 < links.size()) {
                     if (value & 1) {
                         const KinBody::LinkPtr plink1 = links.at(linkIndex1);
