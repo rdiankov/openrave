@@ -4692,17 +4692,17 @@ void KinBody::_ComputeInternalInformation()
     // create the adjacency list
     {
         _setAdjacentLinks.clear();
-        FOREACH(itadj, _vForcedAdjacentLinks) {
-            LinkPtr pl0 = GetLink(itadj->first);
-            LinkPtr pl1 = GetLink(itadj->second);
-            if( !!pl0 && !!pl1 ) {
-                int ind0 = pl0->GetIndex();
-                int ind1 = pl1->GetIndex();
-                if( ind1 < ind0 ) {
-                    _setAdjacentLinks.insert(ind1|(ind0<<16));
-                }
-                else {
-                    _setAdjacentLinks.insert(ind0|(ind1<<16));
+        for (size_t index1 = 0; index1 < _vForcedAdjacentLinks.size(); index1++) {
+            const std::vector<int32_t>& adjacentLinkBitmap = _vForcedAdjacentLinks.at(index1);
+            size_t index2 = index1 + 1;
+            for (size_t bitmaskGroupIndex = index2 / 32; bitmaskGroupIndex < adjacentLinkBitmap.size(); bitmaskGroupIndex++) {
+                int value = adjacentLinkBitmap.at(bitmaskGroupIndex) >> index2; // need to shift by index2, as we are not starting from 0
+                while (value > 0) {
+                    if (value & 1) {
+                        _setAdjacentLinks.insert(index1 | (index2 << 16));
+                    }
+                    value >>= 1;
+                    index2++;
                 }
             }
         }
@@ -5354,21 +5354,61 @@ const std::set<int>& KinBody::GetAdjacentLinks() const
     return _setAdjacentLinks;
 }
 
+void KinBody::SetAdjacentLinksCombinations(const std::vector<int>& linkIndices)
+{
+    for (size_t idx0 = 0; idx0 < linkIndices.size(); idx0++) {
+        const int linkIndex0 = linkIndices[idx0];
+        for (size_t idx1 = idx0 + 1; idx1 < linkIndices.size(); idx1++) {
+            const int linkIndex1 = linkIndices[idx1];
+            OPENRAVE_ASSERT_OP(linkIndex0,!=,linkIndex1);
+            if (linkIndex0 < linkIndex1) {
+                _SetAdjacentLinksInternal(linkIndex0, linkIndex1);
+            }
+            else {
+                _SetAdjacentLinksInternal(linkIndex1, linkIndex0);
+            }                
+        }
+    }
+    _ResetInternalCollisionCache();
+}
+
+void KinBody::SetAdjacentLinks(const std::vector<std::pair<int, int> >& linkIndices)
+{
+    for ( const std::pair<int, int>& link01 : linkIndices) {
+        OPENRAVE_ASSERT_OP(link01.first, !=, link01.second);
+        if (link01.first < link01.second) {
+            _SetAdjacentLinksInternal(link01.first, link01.second);
+        }
+        else {
+            _SetAdjacentLinksInternal(link01.second, link01.first);
+        }
+    }
+    _ResetInternalCollisionCache();
+}
+
 void KinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
 {
     OPENRAVE_ASSERT_OP(linkindex0,!=,linkindex1);
     if( linkindex0 > linkindex1 ) {
         std::swap(linkindex0, linkindex1);
     }
-
-    _setAdjacentLinks.insert(linkindex0|(linkindex1<<16));
-    std::string linkname0 = _veclinks.at(linkindex0)->GetName();
-    std::string linkname1 = _veclinks.at(linkindex1)->GetName();
-    std::pair<std::string, std::string> adjpair = std::make_pair(linkname0, linkname1);
-    if( find(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), adjpair) == _vForcedAdjacentLinks.end() ) {
-        _vForcedAdjacentLinks.push_back(adjpair);
-    }
+    _SetAdjacentLinksInternal(linkindex0, linkindex1);
+    
     _ResetInternalCollisionCache();
+}
+
+void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
+{
+    _setAdjacentLinks.insert(linkindex0|(linkindex1<<16));
+    if (_vForcedAdjacentLinks.size() < linkindex0 + 1) {
+        _vForcedAdjacentLinks.resize(linkindex0 + 1);
+    }
+    std::vector<int32_t>& adjacentLinkBitmap = _vForcedAdjacentLinks.at(linkindex0);
+    const int bitmaskGroupIndex = linkindex1/32;
+    if (adjacentLinkBitmap.size() < bitmaskGroupIndex + 1) {
+        adjacentLinkBitmap.resize(bitmaskGroupIndex + 1);
+    }
+    adjacentLinkBitmap.at(bitmaskGroupIndex) |= 1 << (linkindex1%32);
 }
 
 void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -5754,6 +5794,19 @@ UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::fu
     return pdata;
 }
 
+void KinBody::_SetForcedAdjacentLinks(int linkindex0, int linkindex1)
+{
+    if (_vForcedAdjacentLinks.size() < linkindex0 + 1) {
+        _vForcedAdjacentLinks.resize(linkindex0 + 1);
+    }
+    std::vector<int32_t>& adjacentLinkBitmapForLink0 = _vForcedAdjacentLinks.at(linkindex0);
+    const size_t bitmaskGroupIndex = linkindex1 / 32;
+    if (adjacentLinkBitmapForLink0.size() < bitmaskGroupIndex + 1) {
+        adjacentLinkBitmapForLink0.resize(bitmaskGroupIndex + 1, 0);
+    }
+    adjacentLinkBitmapForLink0.at(bitmaskGroupIndex) |= 1 << (linkindex1 % 32);
+}
+
 void KinBody::_InitAndAddLink(LinkPtr plink)
 {
     CHECK_NO_INTERNAL_COMPUTATION;
@@ -5778,11 +5831,26 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
         plink->_vGeometries.push_back(geom);
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
-    FOREACHC(itadjacentname, info._vForcedAdjacentLinks) {
-        // make sure the same pair isn't added more than once
-        std::pair<std::string, std::string> adjpair = std::make_pair(info._name, *itadjacentname);
-        if( find(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), adjpair) == _vForcedAdjacentLinks.end() ) {
-            _vForcedAdjacentLinks.push_back(adjpair);
+
+    const size_t newLinkIndex = _veclinks.size();
+    const size_t newLinkIndexGroupIndex = newLinkIndex / 32;
+    const size_t newLinkIndexBitIndex = newLinkIndex % 32;
+    for (int bitmaskGroupIndex = 0; bitmaskGroupIndex < info._vForcedAdjacentLinks.size(); bitmaskGroupIndex++) {
+        int index = bitmaskGroupIndex * 32;
+        int value = info._vForcedAdjacentLinks.at(bitmaskGroupIndex);
+        while (value > 0) {
+            if (value & 1) {
+                if (_vForcedAdjacentLinks.size() < index + 1) {
+                    _vForcedAdjacentLinks.resize(index + 1);
+                }
+                std::vector<int32_t>& adjacentLinkBitmapPerLink = _vForcedAdjacentLinks.at(index);
+                if (adjacentLinkBitmapPerLink.size() < newLinkIndexGroupIndex + 1) {
+                    adjacentLinkBitmapPerLink.resize(newLinkIndexGroupIndex + 1, 0);
+                }
+                adjacentLinkBitmapPerLink.at(newLinkIndexGroupIndex) |= 1 << newLinkIndexBitIndex;
+            }
+            value >>= 1;
+            index++;
         }
     }
     _veclinks.push_back(plink);

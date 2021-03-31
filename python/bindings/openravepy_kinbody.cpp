@@ -433,8 +433,8 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
         _mapStringParameters[it->first] = ConvertStringToUnicode(it->second);
     }
     py::list vForcedAdjacentLinks;
-    FOREACHC(it, info._vForcedAdjacentLinks) {
-        vForcedAdjacentLinks.append(ConvertStringToUnicode(*it));
+    for (int32_t bitmap : info._vForcedAdjacentLinks) {
+        vForcedAdjacentLinks.append(bitmap);
     }
     FOREACHC(it, info._mapExtraGeometries) {
         _mapExtraGeometries[it->first] = toPyArray(it->second);
@@ -550,7 +550,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     }
 #endif
 
-    info._vForcedAdjacentLinks = ExtractArray<std::string>(_vForcedAdjacentLinks);
+    info._vForcedAdjacentLinks = ExtractArray<int32_t>(_vForcedAdjacentLinks);
     info._bStatic = _bStatic;
     info._bIsEnabled = _bIsEnabled;
     return pinfo;
@@ -3842,6 +3842,12 @@ void PyKinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
     _pbody->SetAdjacentLinks(linkindex0, linkindex1);
 }
 
+void PyKinBody::SetAdjacentLinksCombinations(object olinkIndices)
+{
+    const std::vector<int> linkIndices = ExtractArray<int>(olinkIndices);
+    _pbody->SetAdjacentLinksCombinations(linkIndices);
+}
+
 object PyKinBody::GetAdjacentLinks() const
 {
     py::list adjacent;
@@ -5386,6 +5392,7 @@ void init_openravepy_kinbody()
                          .def("GetNonAdjacentLinks",GetNonAdjacentLinks1, DOXY_FN(KinBody,GetNonAdjacentLinks))
                          .def("GetNonAdjacentLinks",GetNonAdjacentLinks2, PY_ARGS("adjacentoptions") DOXY_FN(KinBody,GetNonAdjacentLinks))
                          .def("SetAdjacentLinks",&PyKinBody::SetAdjacentLinks, PY_ARGS("linkindex0", "linkindex1") DOXY_FN(KinBody,SetAdjacentLinks))
+                         .def("SetAdjacentLinksCombinations",&PyKinBody::SetAdjacentLinksCombinations, PY_ARGS("linkIndices") DOXY_FN(KinBody,SetAdjacentLinksCombinations))
                          .def("GetAdjacentLinks",&PyKinBody::GetAdjacentLinks, DOXY_FN(KinBody,GetAdjacentLinks))
                          .def("GetManageData",&PyKinBody::GetManageData, DOXY_FN(KinBody,GetManageData))
                          .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp, DOXY_FN(KinBody,GetUpdateStamp))

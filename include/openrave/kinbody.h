@@ -705,7 +705,7 @@ public:
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
         /// force the following links to be treated as adjacent to this link
-        std::vector<std::string> _vForcedAdjacentLinks;
+        std::vector<int32_t> _vForcedAdjacentLinks;
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
         //// Static should be used when an object has infinite mass and
@@ -736,6 +736,15 @@ public:
         inline void AddModifiedField(LinkInfoField field) {
             _modifiedFields |= field;
         }
+
+        inline void SetNoncollidingLink(size_t linkIndex) {
+            const size_t groupIndex = linkIndex / 32;
+            if (_vForcedAdjacentLinks.size() < groupIndex + 1) {
+                _vForcedAdjacentLinks.resize(groupIndex + 1);
+            }
+            _vForcedAdjacentLinks.at(groupIndex) |= 1 << (linkIndex % 32);
+        }
+
 private:
         Transform _t; ///< the current transformation of the link with respect to the body coordinate system
 
@@ -2875,6 +2884,16 @@ private:
     /// \brief adds the pair of links to the adjacency list. This is
     virtual void SetAdjacentLinks(int linkindex0, int linkindex1);
 
+    /// \brief adds the pair of links to the adjacency list.
+    ///
+    /// \param linkIndices vector containing pair of link indies. Each pair of is set as adjacent links. For each pair, first has to be smaller than second.
+    virtual void SetAdjacentLinks(const std::vector<std::pair<int, int> >& linkIndices);
+
+    /// \brief adds the pair of links to the adjacency list.
+    ///
+    /// \param linkIndices vector of link index. Each combination among them is set as adjacent links. has to be sorted in ascending order
+    virtual void SetAdjacentLinksCombinations(const std::vector<int>& linkIndices);
+
     virtual ManageDataPtr GetManageData() const {
         return _pManageData;
     }
@@ -3168,6 +3187,10 @@ protected:
     /// Can only be called before internal robot hierarchy is initialized
     virtual void _InitAndAddJoint(JointPtr pjoint);
 
+    virtual void _SetForcedAdjacentLinks(int linkindex0, int linkindex1);
+
+    virtual void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
+    
     std::string _name; ///< name of body
     
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
@@ -3184,7 +3207,7 @@ protected:
     std::vector<JointPtr> _vPassiveJoints; ///< \see GetPassiveJoints()
     std::set<int> _setAdjacentLinks; ///< a set of which links are connected to which if link i and j are connected then
                                      ///< i|(j<<16) will be in the set where i<j.
-    std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
+    std::vector< std::vector<int32_t> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links. each element of outer vector is a vector who is a bit mask. _vForcedAdjacentLinks[i][j/32] & (1<< (j%32)) stores whether link of index i and j are adjacent. For example, if link i=3 and link j=40 are adjacent, then _vForcedAdjacentLinks[3][1] & (1<<8) is non-zero.
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
 
     std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies
