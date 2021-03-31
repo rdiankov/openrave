@@ -1973,7 +1973,7 @@ object PyRobotBase::GetActiveDOFMaxVel() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFMaxVel(values);
+    _probot->GetActiveDOFVelocityLimits(values);
     return toPyArray(values);
 }
 
@@ -1983,7 +1983,7 @@ object PyRobotBase::GetActiveDOFMaxAccel() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFMaxAccel(values);
+    _probot->GetActiveDOFAccelerationLimits(values);
     return toPyArray(values);
 }
 
@@ -1993,7 +1993,7 @@ object PyRobotBase::GetActiveDOFMaxJerk() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFMaxJerk(values);
+    _probot->GetActiveDOFJerkLimits(values);
     return toPyArray(values);
 }
 
@@ -2003,7 +2003,7 @@ object PyRobotBase::GetActiveDOFHardMaxVel() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFHardMaxVel(values);
+    _probot->GetActiveDOFHardVelocityLimits(values);
     return toPyArray(values);
 }
 
@@ -2013,7 +2013,7 @@ object PyRobotBase::GetActiveDOFHardMaxAccel() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFHardMaxAccel(values);
+    _probot->GetActiveDOFHardAccelerationLimits(values);
     return toPyArray(values);
 }
 
@@ -2023,7 +2023,7 @@ object PyRobotBase::GetActiveDOFHardMaxJerk() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFHardMaxJerk(values);
+    _probot->GetActiveDOFHardJerkLimits(values);
     return toPyArray(values);
 }
 

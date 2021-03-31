@@ -3884,11 +3884,6 @@ object PyKinBody::ExtractInfo() const {
     return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
 }
 
-
-PyInterfaceBasePtr PyKinBody::GetBasicCalculator(const std::string& sKinematicsGeometry) {
-    return toPyModule(_pbody->GetBasicCalculator(sKinematicsGeometry), _pyenv);
-}
-
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
 {
     PyKinBodyStateSaverPtr saver;
@@ -5404,7 +5399,6 @@ void init_openravepy_kinbody()
                          .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
 #endif
                          .def("ExtractInfo", &PyKinBody::ExtractInfo, DOXY_FN(KinBody, ExtractInfo))
-                         .def("GetBasicCalculator", &PyKinBody::GetBasicCalculator, "Get basic calculator of a kinbody with a specified kinematics geometry hash")
                          .def("__enter__",&PyKinBody::__enter__)
                          .def("__exit__",&PyKinBody::__exit__)
                          .def("__repr__",&PyKinBody::__repr__)

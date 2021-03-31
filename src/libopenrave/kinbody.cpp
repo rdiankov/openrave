@@ -4903,12 +4903,17 @@ void KinBody::_ComputeInternalInformation()
     }
     _nParametersChanged = 0;
 
-    _pCurrentKinematicsFunctions = _pKinematicsGenerator->GenerateKinematicsFunctions(*this);
-    if( !!_pCurrentKinematicsFunctions ) {
-        RAVELOG_DEBUG_FORMAT("env=%d, setting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+    if( !!_pKinematicsGenerator ) {
+        _pCurrentKinematicsFunctions = _pKinematicsGenerator->GenerateKinematicsFunctions(*this);
+        if( !!_pCurrentKinematicsFunctions ) {
+            RAVELOG_DEBUG_FORMAT("env=%d, setting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+        }
+        else {
+            RAVELOG_DEBUG_FORMAT("env=%d, failed to set custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+        }
     }
     else {
-        RAVELOG_DEBUG_FORMAT("env=%d, failed to set custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+        _pCurrentKinematicsFunctions.reset();
     }
 
     RAVELOG_VERBOSE_FORMAT("env=%d, initialized %s in %f[s]", GetEnv()->GetId()%GetName()%(1e-6*(utils::GetMicroTime()-starttime)));
