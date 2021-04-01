@@ -419,10 +419,11 @@ protected:
             for(int iInputBodyIndex = 0; iInputBodyIndex < (int)rBodies.Size(); ++iInputBodyIndex) {
                 const rapidjson::Value& rBodyInfo = rBodies[iInputBodyIndex];
                 std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
+                std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
                 std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
                 if (_IsExpandableReferenceUri(referenceUri)) {
                     std::set<std::string> circularReference;
-                    int insertIndex = _ExpandRapidJSON(envInfo, bodyId, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc, _filename);
+                    int insertIndex = _ExpandRapidJSON(envInfo, bodyId, bodyName, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc, _filename);
                     if( insertIndex < 0 ) {
                         RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s' inside file '%s'", referenceUri%_filename);
                         if (_bMustResolveURI) {
@@ -462,7 +463,7 @@ protected:
     /// \param rEnvInfo[in] used for resolving references pointing to the current environment
     ///
     /// \return the index into envInfo._vBodyInfos where the entry was edited. If failed, then return -1
-    int _ExpandRapidJSON(EnvironmentBase::EnvironmentBaseInfo& envInfo, const std::string& originBodyId, const rapidjson::Value& rEnvInfo, const std::string& referenceUri, std::set<std::string>& circularReference, dReal fUnitScale, rapidjson::Document::AllocatorType& alloc, const std::string& currentFilename) {
+    int _ExpandRapidJSON(EnvironmentBase::EnvironmentBaseInfo& envInfo, const std::string& originBodyId, const std::string& originBodyName, const rapidjson::Value& rEnvInfo, const std::string& referenceUri, std::set<std::string>& circularReference, dReal fUnitScale, rapidjson::Document::AllocatorType& alloc, const std::string& currentFilename) {
         if (circularReference.find(referenceUri) != circularReference.end()) {
             RAVELOG_ERROR_FORMAT("failed to load scene, circular reference to '%s' found on body %s", referenceUri%originBodyId);
             return -1;
@@ -494,13 +495,13 @@ protected:
                 }
             }
             if (!bFoundBody) {
-                RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body %s", referenceUri%originBodyId);
+                RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body id=%s, name=%s", referenceUri%originBodyId%originBodyName);
                 return -1;
             }
 
             std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rRefKinBodyInfo, "referenceUri", "");
             if (_IsExpandableReferenceUri(nextReferenceUri)) {
-                insertIndex = _ExpandRapidJSON(envInfo, originBodyId, rEnvInfo, nextReferenceUri, circularReference, fUnitScale, alloc, currentFilename);
+                insertIndex = _ExpandRapidJSON(envInfo, originBodyId, originBodyName, rEnvInfo, nextReferenceUri, circularReference, fUnitScale, alloc, currentFilename);
                 // regardless of insertIndex, should fall through so can process rEnvInfo
             }
             else if( !nextReferenceUri.empty() ) {
@@ -519,7 +520,7 @@ protected:
                 fullFilename = ResolveURI(scheme, path, boost::filesystem::path(currentFilename).parent_path().string(), GetOpenRAVESchemeAliases());
 #endif
                 if (fullFilename.empty()) {
-                    RAVELOG_ERROR_FORMAT("env=%d, failed to resolve referenceUri '%s' into a file. Coming from bodyId '%s' in file '%s'", _penv->GetId()%referenceUri%originBodyId%currentFilename);
+                    RAVELOG_ERROR_FORMAT("env=%d, failed to resolve referenceUri '%s' into a file. Coming from bodyId='%s', bodyName='%s' in file '%s'", _penv->GetId()%referenceUri%originBodyId%originBodyName%currentFilename);
                     if (_bMustResolveURI) {
                         throw OPENRAVE_EXCEPTION_FORMAT("Failed to resolve referenceUri='%s' in body definition '%s' from file '%s'", referenceUri%originBodyId%currentFilename, ORE_InvalidURI);
                     }
@@ -548,7 +549,7 @@ protected:
                 }
             }
             if (!bFoundBody) {
-                RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body %s", referenceUri%originBodyId);
+                RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body id=%s, name=%s", referenceUri%originBodyId%originBodyName);
                 return -1;
             }
 
@@ -556,7 +557,7 @@ protected:
 
             if (_IsExpandableReferenceUri(nextReferenceUri)) {
                 RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', and now processing its referenceUri='%s, took %u[us]'", _penv->GetId()%fullFilename%fragment%nextReferenceUri%(utils::GetMonotonicTime()-beforeOpenStampUS));
-                insertIndex = _ExpandRapidJSON(envInfo, originBodyId, *referenceDoc, nextReferenceUri, circularReference, fUnitScale, alloc, fullFilename);
+                insertIndex = _ExpandRapidJSON(envInfo, originBodyId, originBodyName, *referenceDoc, nextReferenceUri, circularReference, fUnitScale, alloc, fullFilename);
                 // regardless of insertIndex, should fall through so can process rEnvInfo
             }
             else {
@@ -568,7 +569,7 @@ protected:
             }
         }
         else {
-            RAVELOG_WARN_FORMAT("ignoring invalid referenceUri '%s' in body %s", referenceUri%originBodyId);
+            RAVELOG_WARN_FORMAT("ignoring invalid referenceUri '%s' in body id=%s, name=%s", referenceUri%originBodyId%originBodyName);
             return -1;
         }
 
@@ -625,7 +626,8 @@ protected:
                 // try matching with names
                 for(int ibody = 0; ibody < (int)envInfo._vBodyInfos.size(); ++ibody) {
                     KinBody::KinBodyInfoPtr& pExistingBodyInfo = envInfo._vBodyInfos[ibody];
-                    if( pExistingBodyInfo->_name == pNewKinBodyInfo->_name ) {
+                    if( !originBodyName.empty() && pExistingBodyInfo->_name == originBodyName ) {
+                        RAVELOG_VERBOSE_FORMAT("env=%d, found existing body with id='%s', name='%s', so overwriting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
                         envInfo._vBodyInfos[ibody] = pNewKinBodyInfo;
                         insertIndex = ibody;
                         break;
@@ -666,12 +668,13 @@ protected:
         // extract for robot
         bool isRobot = orjson::GetJsonValueByKey<bool>(rBodyInfo, "isRobot");
         std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
+        std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
         std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
         EnvironmentBase::EnvironmentBaseInfo envInfo; // dummy for reference uris
         int insertIndex = -1;
         if (_IsExpandableReferenceUri(referenceUri)) {
             std::set<std::string> circularReference; // dummy
-            insertIndex = _ExpandRapidJSON(envInfo, bodyId, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc, _filename);
+            insertIndex = _ExpandRapidJSON(envInfo, bodyId, bodyName, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc, _filename);
             if( insertIndex < 0 ) {
                 RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s' inside file '%s'", referenceUri%_filename);
                 if (_bMustResolveURI) {
@@ -760,7 +763,7 @@ protected:
             }
             std::set<std::string> circularReference;
             EnvironmentBase::EnvironmentBaseInfo envInfo;
-            int insertIndex = _ExpandRapidJSON(envInfo, "__connectedBody__", rEnvInfo, pConnected->_uri, circularReference, fUnitScale, alloc, _filename);
+            int insertIndex = _ExpandRapidJSON(envInfo, "__connectedBody__", "", rEnvInfo, pConnected->_uri, circularReference, fUnitScale, alloc, _filename);
             if( insertIndex < 0 ) {
                 RAVELOG_ERROR_FORMAT("env=%d, failed to load connected body from uri '%s'", _penv->GetId()%pConnected->_uri);
                 if (_bMustResolveURI) {
