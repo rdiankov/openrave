@@ -705,7 +705,7 @@ public:
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
         /// force the following links to be treated as adjacent to this link
-        std::vector<std::string> _vForcedAdjacentLinks;
+        std::vector<std::string> _vForcedAdjacentLinks; // link names. sorted.
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
         //// Static should be used when an object has infinite mass and
@@ -741,7 +741,7 @@ public:
             std::vector<std::string>::const_iterator it = lower_bound(_vForcedAdjacentLinks.begin(),
                                                                       _vForcedAdjacentLinks.end(),
                                                                       name);
-            if (it != _vForcedAdjacentLinks.end() && *it != name) {
+            if (it == _vForcedAdjacentLinks.end() || *it != name) {
                 _vForcedAdjacentLinks.insert(it, name);
             }
         }
