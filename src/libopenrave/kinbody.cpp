@@ -5330,14 +5330,9 @@ private:
     return _vNonAdjacentLinks.at(adjacentoptions);
 }
 
-const std::vector<int8_t>& KinBody::GetAdjacentLinks() const
-{
-    CHECK_INTERNAL_COMPUTATION;
-    return _vecAdjacentLinks;
-}
-
 bool KinBody::AreAdjacentLinks(int linkindex0, int linkindex1) const
 {
+    CHECK_INTERNAL_COMPUTATION;
     const size_t numLinks = GetLinks().size();
     return _vecAdjacentLinks.at(_GetIndex1d(linkindex0, linkindex1, numLinks));
 }

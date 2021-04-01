@@ -2879,9 +2879,6 @@ private:
     /// \param adjacentoptions a bitmask of \ref AdjacentOptions values
     virtual const std::vector<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
 
-    /// \brief return all possible link pairs whose collisions are ignored.
-    virtual const std::vector<int8_t>& GetAdjacentLinks() const;
-
     /// \brief adds the pair of links to the adjacency list. This is
     virtual void SetAdjacentLinks(int linkindex0, int linkindex1);
 
