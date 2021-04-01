@@ -3851,8 +3851,15 @@ void PyKinBody::SetAdjacentLinksCombinations(object olinkIndices)
 object PyKinBody::GetAdjacentLinks() const
 {
     py::list adjacent;
-    FOREACHC(it,_pbody->GetAdjacentLinks())
-    adjacent.append(py::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+    const size_t numLinks = _pbody->GetLinks().size();
+    for (size_t index0 = 0; index0 < numLinks; ++index0) {
+        for (size_t index1 = index0 + 1; index1 < numLinks; ++index1) {
+            if (_pbody->AreAdjacentLinks(index0, index1)) {
+                adjacent.append(py::make_tuple(index0, index1));
+            }
+        }
+    }
+                    
     return adjacent;
 }
 

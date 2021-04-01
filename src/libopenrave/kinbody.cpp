@@ -4702,6 +4702,9 @@ void KinBody::_ComputeInternalInformation()
     // create the adjacency list
     {
         _vecAdjacentLinks = _vForcedAdjacentLinks;
+        if (_vecAdjacentLinks.size() < numLinks*numLinks) {
+            _vecAdjacentLinks.resize(numLinks*numLinks);
+        }
 
         // make no-geometry links adjacent to all other links
         FOREACH(itlink0, _veclinks) {
