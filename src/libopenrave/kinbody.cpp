@@ -5299,8 +5299,8 @@ private:
         const size_t numLinks = GetLinks().size();
         for(size_t ind0 = 0; ind0 < _veclinks.size(); ++ind0) {
             for(size_t ind1 = ind0+1; ind1 < _veclinks.size(); ++ind1) {
-                const size_t index1d = ind0 * numLinks + ind1;
-                if(!_vecAdjacentLinks.at(index1d) && !collisionchecker->CheckCollision(LinkConstPtr(_veclinks[ind0]), LinkConstPtr(_veclinks[ind1])) ) {
+                const bool bAdjacent = AreAdjacentLinks(ind0, ind1);
+                if(!bAdjacent && !collisionchecker->CheckCollision(LinkConstPtr(_veclinks[ind0]), LinkConstPtr(_veclinks[ind1])) ) {
                     _vNonAdjacentLinks[0].push_back(ind0|(ind1<<16));
                 }
             }
@@ -5334,7 +5334,13 @@ bool KinBody::AreAdjacentLinks(int linkindex0, int linkindex1) const
 {
     CHECK_INTERNAL_COMPUTATION;
     const size_t numLinks = GetLinks().size();
-    return _vecAdjacentLinks.at(_GetIndex1d(linkindex0, linkindex1, numLinks));
+    const size_t index = _GetIndex1d(linkindex0, linkindex1, numLinks);
+    if (index < _vecAdjacentLinks.size()) {
+        return _vecAdjacentLinks.at(index);
+    }
+    RAVELOG_WARN_FORMAT("env=%d, body %s has %d links (size of _vecAdjacentLinks is %d). Cannot compute adjacent for index %d and %d (1d index is %d)",
+                        GetEnv()->GetId()%GetName()%numLinks%_vecAdjacentLinks.size()%linkindex0%linkindex1%index);
+    return false;
 }
 
 void KinBody::SetAdjacentLinksCombinations(const std::vector<int>& linkIndices)
