@@ -468,7 +468,7 @@ void KinBody::Destroy()
     _vJointsAffectingLinks.clear();
     _vDOFIndices.clear();
 
-    _vecAdjacentLinks.clear();
+    _vAdjacentLinks.clear();
     _vInitialLinkTransformations.clear();
     _vAllPairsShortestPaths.clear();
     _vClosedLoops.clear();
@@ -4701,9 +4701,9 @@ void KinBody::_ComputeInternalInformation()
     const size_t numLinks = GetLinks().size();
     // create the adjacency list
     {
-        _vecAdjacentLinks = _vForcedAdjacentLinks;
-        if (_vecAdjacentLinks.size() < numLinks*numLinks) {
-            _vecAdjacentLinks.resize(numLinks*numLinks);
+        _vAdjacentLinks = _vForcedAdjacentLinks;
+        if (_vAdjacentLinks.size() < numLinks*numLinks) {
+            _vAdjacentLinks.resize(numLinks*numLinks);
         }
 
         // make no-geometry links adjacent to all other links
@@ -4713,7 +4713,7 @@ void KinBody::_ComputeInternalInformation()
                 FOREACH(itlink1,_veclinks) {
                     if( *itlink0 != *itlink1 ) {
                         int ind1 = (*itlink1)->GetIndex();
-                        _vecAdjacentLinks.at(_GetIndex1d(ind0, ind1, numLinks)) = 1;
+                        _vAdjacentLinks.at(_GetIndex1d(ind0, ind1, numLinks)) = 1;
                     }
                 }
             }
@@ -4723,13 +4723,13 @@ void KinBody::_ComputeInternalInformation()
             FOREACH(itj, _vecjoints) {
                 int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
                 int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
-                _vecAdjacentLinks.at(_GetIndex1d(ind0, ind1, numLinks)) = 1;
+                _vAdjacentLinks.at(_GetIndex1d(ind0, ind1, numLinks)) = 1;
             }
 
             FOREACH(itj, _vPassiveJoints) {
                 int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
                 int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
-                _vecAdjacentLinks.at(_GetIndex1d(ind0, ind1, numLinks)) = 1;
+                _vAdjacentLinks.at(_GetIndex1d(ind0, ind1, numLinks)) = 1;
             }
 
             // if a pair links has exactly one non-static joint in the middle, then make the pair adjacent
@@ -4742,7 +4742,7 @@ void KinBody::_ComputeInternalInformation()
                         numstatic += (*it)->IsStatic();
                     }
                     if( numstatic+1 >= vjoints.size() ) {
-                        _vecAdjacentLinks.at(_GetIndex1d(ind0, ind1, numLinks)) = 1;
+                        _vAdjacentLinks.at(_GetIndex1d(ind0, ind1, numLinks)) = 1;
                     }
                 }
             }
@@ -5335,11 +5335,11 @@ bool KinBody::AreAdjacentLinks(int linkindex0, int linkindex1) const
     CHECK_INTERNAL_COMPUTATION;
     const size_t numLinks = GetLinks().size();
     const size_t index = _GetIndex1d(linkindex0, linkindex1, numLinks);
-    if (index < _vecAdjacentLinks.size()) {
-        return _vecAdjacentLinks.at(index);
+    if (index < _vAdjacentLinks.size()) {
+        return _vAdjacentLinks.at(index);
     }
-    RAVELOG_WARN_FORMAT("env=%d, body %s has %d links (size of _vecAdjacentLinks is %d). Cannot compute adjacent for index %d and %d (1d index is %d)",
-                        GetEnv()->GetId()%GetName()%numLinks%_vecAdjacentLinks.size()%linkindex0%linkindex1%index);
+    RAVELOG_WARN_FORMAT("env=%d, body %s has %d links (size of _vAdjacentLinks is %d). Cannot compute adjacent for index %d and %d (1d index is %d)",
+                        GetEnv()->GetId()%GetName()%numLinks%_vAdjacentLinks.size()%linkindex0%linkindex1%index);
     return false;
 }
 
@@ -5391,10 +5391,10 @@ void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
     const size_t numLinks = GetLinks().size();
     const size_t index = _GetIndex1d(linkindex0, linkindex1, numLinks);
 
-    if (_vecAdjacentLinks.size() < numLinks*numLinks) {
-        _vecAdjacentLinks.resize(numLinks*numLinks);
+    if (_vAdjacentLinks.size() < numLinks*numLinks) {
+        _vAdjacentLinks.resize(numLinks*numLinks);
     }
-    _vecAdjacentLinks.at(index) = 1;
+    _vAdjacentLinks.at(index) = 1;
 
     if (_vForcedAdjacentLinks.size() < numLinks*numLinks) {
         _vForcedAdjacentLinks.resize(numLinks*numLinks);
@@ -5472,7 +5472,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vJointsAffectingLinks = r->_vJointsAffectingLinks;
     _vDOFIndices = r->_vDOFIndices;
 
-    _vecAdjacentLinks = r->_vecAdjacentLinks;
+    _vAdjacentLinks = r->_vAdjacentLinks;
     _vInitialLinkTransformations = r->_vInitialLinkTransformations;
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
     _vAllPairsShortestPaths = r->_vAllPairsShortestPaths;
