@@ -2758,30 +2758,20 @@ private:
         domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
         ptec->setProfile("OpenRAVE");
         const std::vector<KinBody::LinkPtr>& links = pbody->GetLinks();
-        const std::vector< std::vector<int32_t> >& vForcedAdjacentLinks = pbody->_vForcedAdjacentLinks;
-        for (size_t linkIndex0 = 0; linkIndex0 < vForcedAdjacentLinks.size(); ++linkIndex0) {
-            if (links.size() < linkIndex0 + 1) {
-                break;
-            }
+        for (int linkIndex0 = 0; linkIndex0 < links.size(); ++linkIndex0) {
             const KinBody::LinkPtr plink0 = links.at(linkIndex0);
             if (!plink0) {
                 continue;
             }
-            const std::vector<int32_t>& adjacentLinkBitmap = vForcedAdjacentLinks.at(linkIndex0);
-            for (int bitmapGroupIndex = linkIndex0 / 32; bitmapGroupIndex < adjacentLinkBitmap.size(); bitmapGroupIndex++) {
-                size_t linkIndex1 = bitmapGroupIndex * 32;
-                int value = adjacentLinkBitmap.at(bitmapGroupIndex);
-                while (value > 0 && linkIndex1 < links.size()) {
-                    if (value & 1) {
-                        const KinBody::LinkPtr plink1 = links.at(linkIndex1);
-                        if (!!plink1) {
-                            daeElementRef pignore = ptec->add("ignore_link_pair");
-                            pignore->setAttribute("link0",vlinksidrefs.at(linkIndex0).c_str());
-                            pignore->setAttribute("link1",vlinksidrefs.at(linkIndex1).c_str());
-                        }
+            for (int linkIndex1 = linkIndex0 + 1; linkIndex1 < links.size(); ++linkIndex1) {
+                if (pbody->AreAdjacentLinks(linkIndex0, linkIndex1)) {
+                    const KinBody::LinkPtr plink1 = links.at(linkIndex1);
+                    if (!plink1) {
+                        continue;
                     }
-                    value >>= 1;
-                    linkIndex1++;
+                    daeElementRef pignore = ptec->add("ignore_link_pair");
+                    pignore->setAttribute("link0",vlinksidrefs.at(linkIndex0).c_str());
+                    pignore->setAttribute("link1",vlinksidrefs.at(linkIndex1).c_str());
                 }
             }
         }

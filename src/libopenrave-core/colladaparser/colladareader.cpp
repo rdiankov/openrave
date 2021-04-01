@@ -4968,7 +4968,7 @@ private:
                                 continue;
                             }
                             pbody->_SetForcedAdjacentLinks(plink0->GetIndex(), plink1->GetIndex());
-                            plink0->_info.SetNoncollidingLink(plink1->GetIndex()); // needs to set this as well because json serialization uses this.
+                            plink0->_info.SetNoncollidingLink(plink1->GetName()); // needs to set this as well because json serialization uses this.
                         }
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 

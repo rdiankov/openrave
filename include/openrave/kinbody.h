@@ -705,7 +705,7 @@ public:
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
         /// force the following links to be treated as adjacent to this link
-        std::vector<int32_t> _vForcedAdjacentLinks;
+        std::vector<std::string> _vForcedAdjacentLinks;
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
         //// Static should be used when an object has infinite mass and
@@ -737,12 +737,13 @@ public:
             _modifiedFields |= field;
         }
 
-        inline void SetNoncollidingLink(size_t linkIndex) {
-            const size_t groupIndex = linkIndex / 32;
-            if (_vForcedAdjacentLinks.size() < groupIndex + 1) {
-                _vForcedAdjacentLinks.resize(groupIndex + 1, 0);
+        inline void SetNoncollidingLink(const std::string& name) {
+            std::vector<std::string>::const_iterator it = lower_bound(_vForcedAdjacentLinks.begin(),
+                                                                      _vForcedAdjacentLinks.end(),
+                                                                      name);
+            if (it != _vForcedAdjacentLinks.end() && *it != name) {
+                _vForcedAdjacentLinks.insert(it, name);
             }
-            _vForcedAdjacentLinks.at(groupIndex) |= 1 << (linkIndex % 32);
         }
 
 private:
@@ -2879,11 +2880,14 @@ private:
     virtual const std::vector<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
 
     /// \brief return all possible link pairs whose collisions are ignored.
-    virtual const std::set<int>& GetAdjacentLinks() const;
+    virtual const std::vector<int8_t>& GetAdjacentLinks() const;
 
     /// \brief adds the pair of links to the adjacency list. This is
     virtual void SetAdjacentLinks(int linkindex0, int linkindex1);
 
+    /// \brief return if two links are adjacent links are not.
+    virtual bool AreAdjacentLinks(int linkindex0, int linkindex1) const;
+    
     /// \brief adds the pair of links to the adjacency list.
     ///
     /// \param linkIndices vector containing pair of link indies. Each pair of is set as adjacent links. For each pair, first and second must be different.
@@ -3205,9 +3209,8 @@ protected:
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
     std::vector< std::vector< std::pair<int16_t,int16_t> > > _vClosedLoopIndices; ///< \see GetClosedLoops
     std::vector<JointPtr> _vPassiveJoints; ///< \see GetPassiveJoints()
-    std::set<int> _setAdjacentLinks; ///< a set of which links are connected to which if link i and j are connected then
-                                     ///< i|(j<<16) will be in the set where i<j.
-    std::vector< std::vector<int32_t> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links. each element of outer vector is a vector who is a bit mask. _vForcedAdjacentLinks[i][j/32] & (1<< (j%32)) stores whether link of index i and j are adjacent. For example, if link i=3 and link j=40 are adjacent, then _vForcedAdjacentLinks[3][1] & (1<<8) is non-zero.
+    std::vector<int8_t> _setAdjacentLinks; ///< a vector of which links are connected to which if link i and j are connected then (i*N + j) is 1
+    std::vector<int8_t> _vForcedAdjacentLinks; ///< internally stores forced adjacent links. each element of outer vector is a vector who is a bit mask. if _vForcedAdjacentLinks[i*N + j] is 1, links of index i and j are forced adjacent links, where N is the total number of links.
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
 
     std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies

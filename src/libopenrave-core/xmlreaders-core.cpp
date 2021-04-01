@@ -2298,7 +2298,7 @@ public:
                         }
                         else {
                             size_t link1Index = plink1->GetIndex();
-                            plink0->_info.SetNoncollidingLink(link1Index);
+                            plink0->_info.SetNoncollidingLink(plink1->GetName());
                             _pchain->_SetForcedAdjacentLinks(plink0->GetIndex(), link1Index);
                         }                    
                     }
