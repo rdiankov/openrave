@@ -3209,7 +3209,7 @@ protected:
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
     std::vector< std::vector< std::pair<int16_t,int16_t> > > _vClosedLoopIndices; ///< \see GetClosedLoops
     std::vector<JointPtr> _vPassiveJoints; ///< \see GetPassiveJoints()
-    std::vector<int8_t> _setAdjacentLinks; ///< a vector of which links are connected to which if link i and j are connected then (i*N + j) is 1
+    std::vector<int8_t> _vecAdjacentLinks; ///< a vector of which links are connected to which if link i and j are connected then (i*N + j) is 1
     std::vector<int8_t> _vForcedAdjacentLinks; ///< internally stores forced adjacent links. each element of outer vector is a vector who is a bit mask. if _vForcedAdjacentLinks[i*N + j] is 1, links of index i and j are forced adjacent links, where N is the total number of links.
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
 
