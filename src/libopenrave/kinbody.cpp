@@ -35,8 +35,17 @@ const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type)
     return "";
 }
 
+/* given index pair i and j (i < j), convert to a scalar index as in the following table. this way, existing table entries stay valid when table is extended.
+| i\j          | 0   | 1   | 2   | 3   |
+| ------------ | --- | --- | --- | --- |
+| 0            | -   | 0   | 1   | 3   |
+| 1            | -   | -   | 2   | 4   |
+| 2            | -   | -   | -   | 5   |
+| 3            | -   | -   | -   | -   |
+ */    
 inline int _GetIndex1d(int index0, int index1)
 {
+    BOOST_ASSERT(index0 > 0 || index1 > 0);
     if (index0 < index1) {
         return index0 + index1 * (index1 - 1) /2;
     }
@@ -45,11 +54,11 @@ inline int _GetIndex1d(int index0, int index1)
     }
 }
     
-inline void _ResizeVectorFor2DTable(std::vector<int8_t>& vec, size_t tableSize)
+inline void _ResizeVectorFor2DTable(std::vector<int8_t>& vec, size_t vectorSize)
 {
-    const size_t expectedSize = tableSize * (tableSize - 1) / 2;
-    if (vec.size() < expectedSize) {
-        vec.resize(expectedSize, 0);
+    const size_t tableSize = vectorSize * (vectorSize - 1) / 2;
+    if (vec.size() < tableSize) {
+        vec.resize(tableSize, 0);
     }
 }
     
@@ -5324,7 +5333,6 @@ private:
         _nUpdateStampId++; // because transforms were modified
         _vNonAdjacentLinks[0].resize(0);
 
-        const size_t numLinks = GetLinks().size();
         for(size_t ind0 = 0; ind0 < _veclinks.size(); ++ind0) {
             for(size_t ind1 = ind0+1; ind1 < _veclinks.size(); ++ind1) {
                 const bool bAdjacent = AreAdjacentLinks(ind0, ind1);
