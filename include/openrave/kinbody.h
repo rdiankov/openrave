@@ -3206,7 +3206,7 @@ protected:
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
     std::vector< std::vector< std::pair<int16_t,int16_t> > > _vClosedLoopIndices; ///< \see GetClosedLoops
     std::vector<JointPtr> _vPassiveJoints; ///< \see GetPassiveJoints()
-    std::vector<int8_t> _vAdjacentLinks; ///< a vector of which links are connected to which if link i and j are connected and i < j, then value at (j*N + i) is 1 where N is the number of links for the body
+    std::vector<int8_t> _vAdjacentLinks; ///< a vector of which links are connected to which if link i and j are connected and i < j, then value at (i + j * (j - 1) /2) is 1 where N is the number of links for the body
     std::vector<int8_t> _vForcedAdjacentLinks; ///< internally stores forced adjacent links. \see _vAdjacentLinks for internal representation
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
 
