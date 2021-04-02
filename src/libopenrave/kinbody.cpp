@@ -38,10 +38,10 @@ const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type)
 inline int _GetIndex1d(int index0, int index1, int numLinks)
 {
     if (index0 < index1) {
-        return index0 * numLinks + index1;
+        return index0 + index1 * numLinks;
     }
     else {
-        return index1 * numLinks + index0;
+        return index1 + index0 * numLinks;
     }
 }
     
