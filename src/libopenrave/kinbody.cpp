@@ -4747,7 +4747,7 @@ void KinBody::_ComputeInternalInformation()
                 for (const LinkPtr& plink1 : _veclinks) {
                     const Link& link1 = *plink1;
                     int ind1 = link1.GetIndex();
-                    if (ind0 < ind1) {
+                    if (ind0 != ind1) {
                         _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
                     }
                 }
