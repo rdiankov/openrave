@@ -736,7 +736,7 @@ public:
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
         /// force the following links to be treated as adjacent to this link
-        std::vector<std::string> _vForcedAdjacentLinks;
+        std::vector<std::string> _vForcedAdjacentLinks; // link names. sorted.
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
         //// Static should be used when an object has infinite mass and
@@ -767,6 +767,16 @@ public:
         inline void AddModifiedField(LinkInfoField field) {
             _modifiedFields |= field;
         }
+
+        inline void SetNoncollidingLink(const std::string& name) {
+            std::vector<std::string>::const_iterator it = lower_bound(_vForcedAdjacentLinks.begin(),
+                                                                      _vForcedAdjacentLinks.end(),
+                                                                      name);
+            if (it == _vForcedAdjacentLinks.end() || *it != name) {
+                _vForcedAdjacentLinks.insert(it, name);
+            }
+        }
+
 private:
         Transform _t; ///< the current transformation of the link with respect to the body coordinate system
 
@@ -2943,11 +2953,21 @@ private:
     /// \param adjacentoptions a bitmask of \ref AdjacentOptions values
     virtual const std::vector<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
 
-    /// \brief return all possible link pairs whose collisions are ignored.
-    virtual const std::set<int>& GetAdjacentLinks() const;
-
     /// \brief adds the pair of links to the adjacency list. This is
-    virtual void SetAdjacentLinks(int linkindex0, int linkindex1);
+    void SetAdjacentLinks(int linkindex0, int linkindex1);
+
+    /// \brief return if two links are adjacent links are not.
+    bool AreAdjacentLinks(int linkindex0, int linkindex1) const;
+    
+    /// \brief adds the pair of links to the adjacency list.
+    ///
+    /// \param linkIndices vector containing pair of link indies. Each pair of is set as adjacent links. For each pair, first and second must be different.
+    void SetAdjacentLinksPairs(const std::vector<std::pair<int, int> >& linkIndices);
+
+    /// \brief adds the pair of links to the adjacency list.
+    ///
+    /// \param linkIndices vector of link index. Each combination among them is set as adjacent links. elements have to be unique
+    void SetAdjacentLinksCombinations(const std::vector<int>& linkIndices);
 
     inline ManageDataPtr GetManageData() const {
         return _pManageData;
@@ -3252,6 +3272,10 @@ protected:
     /// Can only be called before internal robot hierarchy is initialized
     void _InitAndAddJoint(JointPtr pjoint);
 
+    virtual void _SetForcedAdjacentLinks(int linkindex0, int linkindex1);
+
+    virtual void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
+    
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
@@ -3266,9 +3290,8 @@ protected:
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
     std::vector< std::vector< std::pair<int16_t,int16_t> > > _vClosedLoopIndices; ///< \see GetClosedLoops
     std::vector<JointPtr> _vPassiveJoints; ///< \see GetPassiveJoints()
-    std::set<int> _setAdjacentLinks; ///< a set of which links are connected to which if link i and j are connected then
-                                     ///< i|(j<<16) will be in the set where i<j.
-    std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
+    std::vector<int8_t> _vAdjacentLinks; ///< a vector of which links are connected to which if link i and j are connected and i < j, then value at (i + j * (j - 1) /2) is 1 where N is the number of links for the body
+    std::vector<int8_t> _vForcedAdjacentLinks; ///< internally stores forced adjacent links. \see _vAdjacentLinks for internal representation
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
 
     std::vector<Transform*> _vLinkTransformPointers; ///< holds a pointers to the Transform Link::_t  in _veclinks. Used for fast access fo the custom kinematics

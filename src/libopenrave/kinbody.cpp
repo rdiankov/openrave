@@ -35,6 +35,35 @@ const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type)
     return "";
 }
 
+/* given index pair i and j (i < j), convert to a scalar index as in the following table. this way, existing table entries stay valid when table is extended.
+| i\j          | 0   | 1   | 2   | 3   |
+| ------------ | --- | --- | --- | --- |
+| 0            | -   | 0   | 1   | 3   |
+| 1            | -   | -   | 2   | 4   |
+| 2            | -   | -   | -   | 5   |
+| 3            | -   | -   | -   | -   |
+this indexing is used for data structure holding symmetric 2d table information as 1d vector such as _vForcedAdjacentLinks.
+This way, when number of links increases, we do not need to restructure the existing entry.
+ */
+inline int _GetIndex1d(int index0, int index1)
+{
+    BOOST_ASSERT(index0 > 0 || index1 > 0);
+    if (index0 < index1) {
+        return index0 + index1 * (index1 - 1) /2;
+    }
+    else {
+        return index1 + index0 * (index0 - 1) /2;
+    }
+}
+    
+inline void _ResizeVectorFor2DTable(std::vector<int8_t>& vec, size_t vectorSize)
+{
+    const size_t tableSize = vectorSize * (vectorSize - 1) / 2;
+    if (vec.size() < tableSize) {
+        vec.resize(tableSize, 0);
+    }
+}
+    
 class ChangeCallbackData : public UserData
 {
 public:
@@ -459,7 +488,7 @@ void KinBody::Destroy()
     _vJointsAffectingLinks.clear();
     _vDOFIndices.clear();
 
-    _setAdjacentLinks.clear();
+    _vAdjacentLinks.clear();
     _vInitialLinkTransformations.clear();
     _vAllPairsShortestPaths.clear();
     _vClosedLoops.clear();
@@ -4720,82 +4749,71 @@ void KinBody::_ComputeInternalInformation()
     }
 
     __hashkinematics.resize(0);
+    const size_t numLinks = GetLinks().size();
 
     // create the adjacency list
     {
-        _setAdjacentLinks.clear();
-        FOREACH(itadj, _vForcedAdjacentLinks) {
-            LinkPtr pl0 = GetLink(itadj->first);
-            LinkPtr pl1 = GetLink(itadj->second);
-            if( !!pl0 && !!pl1 ) {
-                int ind0 = pl0->GetIndex();
-                int ind1 = pl1->GetIndex();
-                if( ind1 < ind0 ) {
-                    _setAdjacentLinks.insert(ind1|(ind0<<16));
+        _ResizeVectorFor2DTable(_vForcedAdjacentLinks, numLinks);
+        //std::fill(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), 0);
+    
+        for (const LinkPtr& plink : _veclinks) {
+            for (const std::string& forceAdjacentLinkFromInfo : plink->_info._vForcedAdjacentLinks) {
+                LinkPtr pLinkForceAdjacentLinkFromInfo = GetLink(forceAdjacentLinkFromInfo);
+                if (!pLinkForceAdjacentLinkFromInfo) {
+                    RAVELOG_WARN_FORMAT("env=%d, could not find link \"%s\" in _vForcedAdjacentLinks of body \"%s:%s\"", GetEnv()->GetId()%forceAdjacentLinkFromInfo%GetName()%plink->GetName());
+                    continue;
                 }
-                else {
-                    _setAdjacentLinks.insert(ind0|(ind1<<16));
-                }
+
+                const size_t forcedAdjacentLinkIndex = pLinkForceAdjacentLinkFromInfo->GetIndex();
+                _vForcedAdjacentLinks.at(_GetIndex1d(plink->_index, forcedAdjacentLinkIndex)) = 1;
             }
         }
 
+        _vAdjacentLinks = _vForcedAdjacentLinks;
+        // probably unnecessary, but just in case
+        _ResizeVectorFor2DTable(_vAdjacentLinks, numLinks);
+
         // make no-geometry links adjacent to all other links
-        FOREACH(itlink0, _veclinks) {
-            if( (*itlink0)->GetGeometries().size() == 0 ) {
-                int ind0 = (*itlink0)->GetIndex();
-                FOREACH(itlink1,_veclinks) {
-                    if( *itlink0 != *itlink1 ) {
-                        int ind1 = (*itlink1)->GetIndex();
-                        if( ind1 < ind0 ) {
-                            _setAdjacentLinks.insert(ind1|(ind0<<16));
-                        }
-                        else {
-                            _setAdjacentLinks.insert(ind0|(ind1<<16));
-                        }
+        for (const LinkPtr& plink0 : _veclinks) {
+            const Link& link0 = *plink0;
+            if( link0.GetGeometries().size() == 0 ) {
+                int ind0 = link0.GetIndex();
+                for (const LinkPtr& plink1 : _veclinks) {
+                    const Link& link1 = *plink1;
+                    int ind1 = link1.GetIndex();
+                    if (ind0 != ind1) {
+                        _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
                     }
                 }
             }
         }
 
         if( _bMakeJoinedLinksAdjacent ) {
-            FOREACH(itj, _vecjoints) {
-                int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
-                int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
-                if( ind1 < ind0 ) {
-                    _setAdjacentLinks.insert(ind1|(ind0<<16));
-                }
-                else {
-                    _setAdjacentLinks.insert(ind0|(ind1<<16));
-                }
+            for (const JointPtr& pjoint : _vecjoints) {
+                const Joint& joint = *pjoint;
+                int ind0 = joint._attachedbodies[0]->GetIndex();
+                int ind1 = joint._attachedbodies[1]->GetIndex();
+                _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
             }
 
-            FOREACH(itj, _vPassiveJoints) {
-                int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
-                int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
-                if( ind1 < ind0 ) {
-                    _setAdjacentLinks.insert(ind1|(ind0<<16));
-                }
-                else {
-                    _setAdjacentLinks.insert(ind0|(ind1<<16));
-                }
+            for (const JointPtr& pjoint : _vPassiveJoints) {
+                const Joint& joint = *pjoint;
+                int ind0 = joint._attachedbodies[0]->GetIndex();
+                int ind1 = joint._attachedbodies[1]->GetIndex();
+                _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
             }
 
             // if a pair links has exactly one non-static joint in the middle, then make the pair adjacent
             vector<JointPtr> vjoints;
-            for(int i = 0; i < (int)_veclinks.size()-1; ++i) {
-                for(int j = i+1; j < (int)_veclinks.size(); ++j) {
-                    GetChain(i,j,vjoints);
+            for(int ind0 = 0; ind0 < (int)_veclinks.size()-1; ++ind0) {
+                for(int ind1 = ind0+1; ind1 < (int)_veclinks.size(); ++ind1) {
+                    GetChain(ind0, ind1, vjoints);
                     size_t numstatic = 0;
                     FOREACH(it,vjoints) {
                         numstatic += (*it)->IsStatic();
                     }
                     if( numstatic+1 >= vjoints.size() ) {
-                        if( i < j ) {
-                            _setAdjacentLinks.insert(i|(j<<16));
-                        }
-                        else {
-                            _setAdjacentLinks.insert(j|(i<<16));
-                        }
+                        _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
                     }
                 }
             }
@@ -5352,10 +5370,12 @@ private:
         }
         _nUpdateStampId++; // because transforms were modified
         _vNonAdjacentLinks[0].resize(0);
-        for(size_t i = 0; i < _veclinks.size(); ++i) {
-            for(size_t j = i+1; j < _veclinks.size(); ++j) {
-                if((_setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end())&& !collisionchecker->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
-                    _vNonAdjacentLinks[0].push_back(i|(j<<16));
+
+        for(size_t ind0 = 0; ind0 < _veclinks.size(); ++ind0) {
+            for(size_t ind1 = ind0+1; ind1 < _veclinks.size(); ++ind1) {
+                const bool bAdjacent = AreAdjacentLinks(ind0, ind1);
+                if(!bAdjacent && !collisionchecker->CheckCollision(LinkConstPtr(_veclinks[ind0]), LinkConstPtr(_veclinks[ind1])) ) {
+                    _vNonAdjacentLinks[0].push_back(ind0|(ind1<<16));
                 }
             }
         }
@@ -5384,27 +5404,61 @@ private:
     return _vNonAdjacentLinks.at(adjacentoptions);
 }
 
-const std::set<int>& KinBody::GetAdjacentLinks() const
+bool KinBody::AreAdjacentLinks(int linkindex0, int linkindex1) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    return _setAdjacentLinks;
+    const size_t index = _GetIndex1d(linkindex0, linkindex1);
+    if (index < _vAdjacentLinks.size()) {
+        return _vAdjacentLinks.at(index);
+    }
+    RAVELOG_WARN_FORMAT("env=%d, body %s has %d links (size of _vAdjacentLinks is %d). Cannot compute adjacent for index %d and %d (1d index is %d)",
+                        GetEnv()->GetId()%GetName()%GetLinks().size()%_vAdjacentLinks.size()%linkindex0%linkindex1%index);
+    return false;
+}
+
+void KinBody::SetAdjacentLinksCombinations(const std::vector<int>& linkIndices)
+{
+    for (size_t idx0 = 0; idx0 < linkIndices.size(); idx0++) {
+        const int linkIndex0 = linkIndices[idx0];
+        for (size_t idx1 = idx0 + 1; idx1 < linkIndices.size(); idx1++) {
+            const int linkIndex1 = linkIndices[idx1];
+            OPENRAVE_ASSERT_OP(linkIndex0,!=,linkIndex1);
+            _SetAdjacentLinksInternal(linkIndex0, linkIndex1);
+        }
+    }
+    _ResetInternalCollisionCache();
+}
+
+void KinBody::SetAdjacentLinksPairs(const std::vector<std::pair<int, int> >& linkIndices)
+{
+    for ( const std::pair<int, int>& link01 : linkIndices) {
+        OPENRAVE_ASSERT_OP(link01.first, !=, link01.second);
+        _SetAdjacentLinksInternal(link01.first, link01.second);
+    }
+    _ResetInternalCollisionCache();
 }
 
 void KinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
 {
     OPENRAVE_ASSERT_OP(linkindex0,!=,linkindex1);
-    if( linkindex0 > linkindex1 ) {
-        std::swap(linkindex0, linkindex1);
-    }
-
-    _setAdjacentLinks.insert(linkindex0|(linkindex1<<16));
-    std::string linkname0 = _veclinks.at(linkindex0)->GetName();
-    std::string linkname1 = _veclinks.at(linkindex1)->GetName();
-    std::pair<std::string, std::string> adjpair = std::make_pair(linkname0, linkname1);
-    if( find(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), adjpair) == _vForcedAdjacentLinks.end() ) {
-        _vForcedAdjacentLinks.push_back(adjpair);
-    }
+    _SetAdjacentLinksInternal(linkindex0, linkindex1);
+    
     _ResetInternalCollisionCache();
+}
+
+void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
+{
+    const size_t numLinks = GetLinks().size();
+    BOOST_ASSERT(linkindex0 < numLinks);
+    BOOST_ASSERT(linkindex1 < numLinks);
+    
+    const size_t index = _GetIndex1d(linkindex0, linkindex1);
+
+    _ResizeVectorFor2DTable(_vAdjacentLinks, numLinks);
+    _vAdjacentLinks.at(index) = 1;
+
+    _ResizeVectorFor2DTable(_vForcedAdjacentLinks, numLinks);
+    _vForcedAdjacentLinks.at(index) = 1;
 }
 
 void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -5481,7 +5535,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vJointsAffectingLinks = r->_vJointsAffectingLinks;
     _vDOFIndices = r->_vDOFIndices;
 
-    _setAdjacentLinks = r->_setAdjacentLinks;
+    _vAdjacentLinks = r->_vAdjacentLinks;
     _vInitialLinkTransformations = r->_vInitialLinkTransformations;
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
     _vAllPairsShortestPaths = r->_vAllPairsShortestPaths;
@@ -5797,6 +5851,17 @@ UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::fu
     return pdata;
 }
 
+void KinBody::_SetForcedAdjacentLinks(int linkindex0, int linkindex1)
+{
+    const size_t numLinks = GetLinks().size();
+    BOOST_ASSERT(linkindex0 < numLinks);
+    BOOST_ASSERT(linkindex1 < numLinks);
+    const size_t index = _GetIndex1d(linkindex0, linkindex1);
+
+    _ResizeVectorFor2DTable(_vForcedAdjacentLinks, numLinks);
+    _vForcedAdjacentLinks.at(index) = 1;
+}
+
 void KinBody::_InitAndAddLink(LinkPtr plink)
 {
     CHECK_NO_INTERNAL_COMPUTATION;
@@ -5821,13 +5886,7 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
         plink->_vGeometries.push_back(geom);
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
-    FOREACHC(itadjacentname, info._vForcedAdjacentLinks) {
-        // make sure the same pair isn't added more than once
-        std::pair<std::string, std::string> adjpair = std::make_pair(info._name, *itadjacentname);
-        if( find(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), adjpair) == _vForcedAdjacentLinks.end() ) {
-            _vForcedAdjacentLinks.push_back(adjpair);
-        }
-    }
+
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
 }

@@ -4967,8 +4967,8 @@ private:
                                 RAVELOG_WARN(str(boost::format("failed to resolve link1 %s\n")%pelt->getAttribute("link1")));
                                 continue;
                             }
-                            pbody->_vForcedAdjacentLinks.emplace_back(plink0->GetName(), plink1->GetName());
-                            plink0->_info._vForcedAdjacentLinks.push_back(plink1->GetName()); // needs to set this as well because json serialization uses this.
+                            pbody->_SetForcedAdjacentLinks(plink0->GetIndex(), plink1->GetIndex());
+                            plink0->_info.SetNoncollidingLink(plink1->GetName()); // needs to set this as well because json serialization uses this.
                         }
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 
