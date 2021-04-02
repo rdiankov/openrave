@@ -1208,24 +1208,40 @@ protected:
                         return false;
                     }
                     // if the distance between xmid and the real midpoint is big, then have to add another point in vnewpath
-                    dReal dist = 0;
+                    dReal distExpected2 = 0;
+                    dReal distToFirst2 = 0;
                     for(size_t idof = 0; idof < numdof; ++idof) {
                         dReal fexpected = 0.5*(vnewpath[iwaypoint+1].at(idof) + vnewpath[iwaypoint].at(idof));
                         dReal ferror = fexpected - xmid[idof];
-                        dist += ferror*ferror;
+                        distExpected2 += ferror*ferror;
+                        distToFirst2 += (xmid[idof] - vnewpath[iwaypoint][idof])*(xmid[idof] - vnewpath[iwaypoint][idof]);
                     }
-                    if( dist > 0.00001 ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d(%s), adding extra midpoint at %d/%d since dist^2=%f", GetEnv()->GetId()%GetEnv()->GetName()%iwaypoint%vnewpath.size()%dist);
-                        OPENRAVE_ASSERT_OP(xmid.size(),==,numdof);
-                        vnewpath.insert(vnewpath.begin()+iwaypoint+1, xmid);
-                        vforceinitialchecking[iwaypoint+1] = 1; // next point
-                        vforceinitialchecking.insert(vforceinitialchecking.begin()+iwaypoint+1, 1); // just inserted point
-                        nConsecutiveExpansions += 2;
-                        if( nConsecutiveExpansions > 10 ) {
-                            RAVELOG_WARN_FORMAT("env=%d(%s), too many consecutive expansions, %d/%d is bad", GetEnv()->GetId()%GetEnv()->GetName()%iwaypoint%vnewpath.size());
-                            return false;
+                    if( distExpected2 > 0.00001 ) {
+                        if( IS_DEBUGLEVEL(Level_Debug) ) {
+                            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                            for(const dReal midvalue : xmid) {
+                                ss << midvalue << ", ";
+                            }
+                            RAVELOG_DEBUG_FORMAT("env=%d(%s), adding extra midpoint [%s] at %d/%d since distExpected^2=%.16e", GetEnv()->GetId()%GetEnv()->GetName()%ss.str()%iwaypoint%vnewpath.size()%distExpected2);
                         }
-                        continue;
+                        OPENRAVE_ASSERT_OP(xmid.size(),==,numdof);
+                        if( distToFirst2 > 0.00001 ) {
+                            vnewpath.insert(vnewpath.begin()+iwaypoint+1, xmid);
+                            vforceinitialchecking[iwaypoint+1] = 1; // next point
+                            vforceinitialchecking.insert(vforceinitialchecking.begin()+iwaypoint+1, 1); // just inserted point
+                            nConsecutiveExpansions += 2;
+                            if( nConsecutiveExpansions > 10 ) {
+                                RAVELOG_WARN_FORMAT("env=%d(%s), too many consecutive expansions (%d), %d/%d is bad", GetEnv()->GetId()%GetEnv()->GetName()%nConsecutiveExpansions%iwaypoint%vnewpath.size());
+                                // have don't add the midpoint, just add the milestone..
+                                //return false;
+                            }
+                            else {
+                                continue;
+                            }
+                        }
+                        else {
+                            RAVELOG_WARN_FORMAT("env=%d(%s), barely any progress at %d/%d, distToFirst2=%.16e, so resuming", GetEnv()->GetId()%GetEnv()->GetName()%iwaypoint%vnewpath.size()%distToFirst2);
+                        }
                     }
                     if( nConsecutiveExpansions > 0 ) {
                         nConsecutiveExpansions--;

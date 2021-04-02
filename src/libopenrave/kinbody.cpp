@@ -2141,10 +2141,11 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                         else if( p[i] > upperlimit ) {
                             if( p[i] > upperlimit+g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN(str(boost::format("env=%d, dof %d value %e is greater than the upper limit %e")%GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit));
+                                    RAVELOG_WARN_FORMAT("env=%d, dof %d value %.16e is greater than the upper limit %.16e", GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %.16e is greater than the upper limit %.16e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %e is greater than the upper limit %e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %.16e is greater than the upper limit %.16e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
                                 }
                             }
                             *ptempjoints++ = upperlimit;
@@ -2161,6 +2162,14 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
 
     if( !!_pCurrentKinematicsFunctions ) {
         if(_pCurrentKinematicsFunctions->SetLinkTransforms(pJointValues, _vLinkTransformPointers)) {
+            // have to set _doflastsetvalues!
+            for(const JointPtr& pjoint : _vecjoints) {
+                Joint& joint = *pjoint;
+                int dofindex = joint.GetDOFIndex();
+                for(int iaxis = 0; iaxis < joint.GetDOF(); ++iaxis) {
+                    joint._doflastsetvalues[iaxis] = pJointValues[dofindex+iaxis];
+                }
+            }
             _UpdateGrabbedBodies();
             _PostprocessChangedParameters(Prop_LinkTransforms);
             return;
