@@ -42,7 +42,9 @@ const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type)
 | 1            | -   | -   | 2   | 4   |
 | 2            | -   | -   | -   | 5   |
 | 3            | -   | -   | -   | -   |
- */    
+this indexing is used for data structure holding symmetric 2d table information as 1d vector such as _vForcedAdjacentLinks.
+This way, when number of links increases, we do not need to restructure the existing entry.
+ */
 inline int _GetIndex1d(int index0, int index1)
 {
     BOOST_ASSERT(index0 > 0 || index1 > 0);
@@ -5411,6 +5413,9 @@ void KinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
 void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
 {
     const size_t numLinks = GetLinks().size();
+    BOOST_ASSERT(linkindex0 < numLinks);
+    BOOST_ASSERT(linkindex1 < numLinks);
+    
     const size_t index = _GetIndex1d(linkindex0, linkindex1);
 
     _ResizeVectorFor2DTable(_vAdjacentLinks, numLinks);
@@ -5806,6 +5811,8 @@ UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::fu
 void KinBody::_SetForcedAdjacentLinks(int linkindex0, int linkindex1)
 {
     const size_t numLinks = GetLinks().size();
+    BOOST_ASSERT(linkindex0 < numLinks);
+    BOOST_ASSERT(linkindex1 < numLinks);
     const size_t index = _GetIndex1d(linkindex0, linkindex1);
 
     _ResizeVectorFor2DTable(_vForcedAdjacentLinks, numLinks);
