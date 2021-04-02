@@ -42,6 +42,7 @@ class OPENRAVE_API EnvironmentBase : public boost::enable_shared_from_this<Envir
 {
 public:
     EnvironmentBase();
+    EnvironmentBase(const std::string& name);
     virtual ~EnvironmentBase();
 
     /// \brief Releases all environment resources, should be always called when environment stops being used.
@@ -83,11 +84,30 @@ public:
     /// \return An environment of the same type as this environment containing the copied information.
     virtual EnvironmentBasePtr CloneSelf(int options) = 0;
 
+    /// \brief Create and return a clone of the current environment.
+    ///
+    /// Clones do not share any memory or resource between each other.
+    /// or their parent making them ideal for performing separte planning experiments while keeping
+    /// the parent environment unchanged.
+    /// By default a clone only copies the collision checkers and physics engine.
+    /// When bodies are cloned, the unique ids are preserved across environments (each body can be referenced with its id in both environments). The attached and grabbed bodies of each body/robot are also copied to the new environment.
+    /// \param clonedEnvName The name of the cloned (and retuned) environment
+    /// \param options A set of \ref CloningOptions describing what is actually cloned.
+    /// \return An environment of the same type as this environment containing the copied information.
+    virtual EnvironmentBasePtr CloneSelf(const std::string& clonedEnvName, int options) = 0;
+
     /// \brief Clones the reference environment into the current environment
     ///
     /// Tries to preserve computation by re-using bodies/interfaces that are already similar between the current and reference environments.
     /// \param[in] cloningoptions The parts of the environment to clone. Parts not specified are left as is.
     virtual void Clone(EnvironmentBaseConstPtr preference, int cloningoptions) = 0;
+
+    /// \brief Clones the reference environment into the current environment
+    ///
+    /// Tries to preserve computation by re-using bodies/interfaces that are already similar between the current and reference environments.
+    /// \param[in] clonedEnvName The name of the cloned environment
+    /// \param[in] cloningoptions The parts of the environment to clone. Parts not specified are left as is.
+    virtual void Clone(EnvironmentBaseConstPtr preference, const std::string& clonedEnvName, int cloningoptions) = 0;
 
     /// \brief Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs. <b>[multi-thread safe]</b>
     ///
@@ -764,7 +784,6 @@ public:
         /// \param vInputToBodyInfoMapping maps indices into rEnvInfo["bodies"] into indices of _vBodyInfos: rEnvInfo["bodies"][i] -> _vBodyInfos[vInputToBodyInfoMapping[i]]. This forces certain _vBodyInfos to get updated with specific input. Use -1 for no mapping
         void DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping);
 
-        std::string _name;   ///< environment name
         std::string _description;   ///< environment description
         std::vector<std::string> _keywords;  ///< some string values for describinging the environment
         Vector _gravity = Vector(0,0,-9.797930195020351);  ///< gravity and gravity direction of the environment
@@ -780,11 +799,10 @@ public:
     /// \brief returns environment revision number
     virtual int GetRevision() const = 0;
 
-    /// \brief sets the scene name
-    virtual void SetName(const std::string& sceneName) = 0;
-
     /// \brief returns the scene name
-    virtual std::string GetName() const = 0;
+    inline const std::string& GetName() const {
+        return _name;
+    }
 
     /// \brief sets the scene description
     virtual void SetDescription(const std::string& sceneDescription) = 0;
@@ -810,7 +828,6 @@ public:
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, UpdateFromInfoMode updateMode) = 0;
 
     int _revision = 0;  ///< environment current revision
-    std::string _name;   ///< environment name
     std::string _description;   ///< environment description
     std::vector<std::string> _keywords;  ///< some string values for describinging the environment
 
@@ -818,6 +835,10 @@ protected:
     virtual const char* GetHash() const {
         return OPENRAVE_ENVIRONMENT_HASH;
     }
+
+    void _InitializeInternal();
+
+    std::string _name;   ///< environment name. only set during construction and cloning.
 
 private:
     UserDataPtr __pUserData;         ///< \see GetUserData

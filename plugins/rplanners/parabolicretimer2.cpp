@@ -170,7 +170,7 @@ protected:
                 }
 
                 bSuccess = false;
-                RAVELOG_VERBOSE_FORMAT("env=%d, manip constraints invalidated. iSlowDown = %d/%d, slowing down by %.15e", GetEnv()->GetId()%iSlowDown%maxSlowDownTries%ret.fTimeBasedSurpassMult);
+                RAVELOG_VERBOSE_FORMAT("env=%d(%s), manip constraints invalidated. iSlowDown = %d/%d, slowing down by %.15e", GetEnv()->GetId()%GetEnv()->GetName()%iSlowDown%maxSlowDownTries%ret.fTimeBasedSurpassMult);
                 // Slow down by reducing vellimits and accellimits.
                 for (size_t j = 0; j < vellimits.size(); ++j ) {
                     dReal fminvel = max(RaveFabs(_v0vel[j]), RaveFabs(_v1vel[j]));
@@ -270,7 +270,7 @@ protected:
             }
             OPENRAVE_ASSERT_OP(deltatime,>,0);
             if( deltatime < RampOptimizer::g_fRampEpsilon ) {
-                RAVELOG_WARN_FORMAT("env=%d, delta time is really ill-conditioned: %e", GetEnv()->GetId()%deltatime);
+                RAVELOG_WARN_FORMAT("env=%d(%s), delta time is really ill-conditioned: %e", GetEnv()->GetId()%GetEnv()->GetName()%deltatime);
             }
 
             bool bSuccess = _interpolator.ComputeNDTrajectoryFixedDuration(_v0pos, _v1pos, _v0vel, _v1vel, deltatime, info->_vConfigLowerLimit, info->_vConfigUpperLimit, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, _cacheRampNDVect);
@@ -361,7 +361,7 @@ protected:
             Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetTransform6D().rot))*2;
             dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
             if( !_interpolator.Compute1DTrajectory(0, angledelta, anglevelprev, anglevel, info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
-                RAVELOG_WARN_FORMAT("env=%d, Failed solving Interpolate1D for angles", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), Failed solving Interpolate1D for angles", GetEnv()->GetId()%GetEnv()->GetName());
                 return -1;
             }
             // dReal bmin, bmax;
@@ -384,7 +384,7 @@ protected:
             Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetRotation3D()))*2;
             dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
             if( !_interpolator.Compute1DTrajectory(0, angledelta, anglevelprev, anglevel, info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
-                RAVELOG_WARN_FORMAT("env=%d, Failed solving Interpolate1D for angles", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), Failed solving Interpolate1D for angles", GetEnv()->GetId()%GetEnv()->GetName());
                 return -1;
             }
             // dReal bmin, bmax;
@@ -411,7 +411,7 @@ protected:
                 Vector angularvelocity(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2));
                 dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
                 if( !_interpolator.Compute1DTrajectory(0, angledelta, anglevelprev, anglevel, info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
-                    RAVELOG_WARN_FORMAT("env=%d, Failed solving Interpolate1D for angles", GetEnv()->GetId());
+                    RAVELOG_WARN_FORMAT("env=%d(%s), Failed solving Interpolate1D for angles", GetEnv()->GetId()%GetEnv()->GetName());
                     return -1;
                 }
                 // dReal bmin, bmax;
@@ -434,7 +434,7 @@ protected:
         case IKP_TranslationXAxisAngleZNorm4D: {
             dReal angledelta = utils::SubtractCircularAngle(ikparam.GetTranslationXAxisAngleZNorm4D().second,ikparamprev.GetTranslationXAxisAngleZNorm4D().second);
             if( !_interpolator.Compute1DTrajectory(0, angledelta, *(itdataprev+info->gvel.offset + 0), *(itdata+info->gvel.offset + 0), info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
-                RAVELOG_WARN_FORMAT("env=%d, Failed solving Interpolate1D for angles", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), Failed solving Interpolate1D for angles", GetEnv()->GetId()%GetEnv()->GetName());
                 return -1;
             }
             // dReal bmin, bmax;
@@ -453,7 +453,7 @@ protected:
         case IKP_TranslationYAxisAngleXNorm4D: {
             dReal angledelta = utils::SubtractCircularAngle(ikparam.GetTranslationYAxisAngleXNorm4D().second,ikparamprev.GetTranslationYAxisAngleXNorm4D().second);
             if( !_interpolator.Compute1DTrajectory(0, angledelta, *(itdataprev+info->gvel.offset + 0), *(itdata+info->gvel.offset + 0), info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
-                RAVELOG_WARN_FORMAT("env=%d, Failed solving Interpolate1D for angles", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), Failed solving Interpolate1D for angles", GetEnv()->GetId()%GetEnv()->GetName());
                 return -1;
             }
 
@@ -466,7 +466,7 @@ protected:
         case IKP_TranslationZAxisAngleYNorm4D: {
             dReal angledelta = utils::SubtractCircularAngle(ikparam.GetTranslationZAxisAngleYNorm4D().second,ikparamprev.GetTranslationZAxisAngleYNorm4D().second);
             if( !_interpolator.Compute1DTrajectory(0, angledelta, *(itdataprev+info->gvel.offset + 0), *(itdata+info->gvel.offset + 0), info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
-                RAVELOG_WARN_FORMAT("env=%d, Failed solving Interpolate1D for angles", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), Failed solving Interpolate1D for angles", GetEnv()->GetId()%GetEnv()->GetName());
                 return -1;
             }
 
@@ -479,7 +479,7 @@ protected:
         case IKP_TranslationZAxisAngle4D: {
             dReal angledelta = RaveFabs(ikparam.GetTranslationZAxisAngle4D().second - ikparamprev.GetTranslationZAxisAngle4D().second);
             if( !_interpolator.Compute1DTrajectory(0, angledelta, *(itdataprev+info->gvel.offset + 0), *(itdata+info->gvel.offset + 0), info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
-                RAVELOG_WARN_FORMAT("env=%d, Failed solving Interpolate1D for angles", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), Failed solving Interpolate1D for angles", GetEnv()->GetId()%GetEnv()->GetName());
                 return -1;
             }
 
@@ -507,7 +507,7 @@ protected:
 
             bool bSuccess = _translationinterpolator.ComputeArbitraryVelNDTrajectory(xyz0, xyz1, xyzvelprev, xyzvel, vlowerlimit, vupperlimit, vvellimit, vaccellimit, _cacheRampNDVect, true);
             if( !bSuccess) {
-                RAVELOG_WARN_FORMAT("env=%d, Failed to solve InterpolateArbitraryVelND for XYZ", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), Failed to solve InterpolateArbitraryVelND for XYZ", GetEnv()->GetId()%GetEnv()->GetName());
                 return -1;
             }
             dReal duration = 0;
@@ -634,7 +634,7 @@ protected:
             }
             OPENRAVE_ASSERT_OP(deltatime,>,0);
             if( deltatime < RampOptimizer::g_fRampEpsilon ) {
-                RAVELOG_WARN_FORMAT("env=%d, delta time is really ill-conditioned: %e", GetEnv()->GetId()%deltatime);
+                RAVELOG_WARN_FORMAT("env=%d(%s), delta time is really ill-conditioned: %e", GetEnv()->GetId()%GetEnv()->GetName()%deltatime);
             }
 
             IkParameterization ikparamprev, ikparam;

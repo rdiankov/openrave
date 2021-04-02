@@ -158,7 +158,7 @@ protected:
                 if( retseg.retcode == 0 ) {
                     break;
                 }
-                RAVELOG_VERBOSE_FORMAT("env=%d, manip constraints invalidated try %d, slowing down by %f", GetEnv()->GetId()%islowdowntry%retseg.fTimeBasedSurpassMult);
+                RAVELOG_VERBOSE_FORMAT("env=%d(%s), manip constraints invalidated try %d, slowing down by %f", GetEnv()->GetId()%GetEnv()->GetName()%islowdowntry%retseg.fTimeBasedSurpassMult);
                 // have to slow down the ramp and check again
                 for(size_t j = 0; j < vellimits.size(); ++j) {
                     // have to watch out that velocities don't drop under dx0 & dx1!
@@ -169,7 +169,7 @@ protected:
                 mintime = -1; // have to reset in case this is the last try
             }
             if( mintime < 0 ) {
-                RAVELOG_WARN_FORMAT("env=%d, manip constraints failed to slow ramp down by", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), manip constraints failed to slow ramp down by", GetEnv()->GetId()%GetEnv()->GetName());
             }
         }
         else {
@@ -250,7 +250,7 @@ protected:
             }
             OPENRAVE_ASSERT_OP(deltatime,>,0);
             if( deltatime < ParabolicRamp::EpsilonT ) {
-                RAVELOG_WARN_FORMAT("env=%d, delta time is really ill-conditioned: %e", GetEnv()->GetId()%deltatime);
+                RAVELOG_WARN_FORMAT("env=%d(%s), delta time is really ill-conditioned: %e", GetEnv()->GetId()%GetEnv()->GetName()%deltatime);
             }
 
             bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
@@ -279,7 +279,7 @@ protected:
                 dReal curtime = 0;
                 for(size_t j=0; j < ramp.size(); j++) {
                     if(RaveFabs(ramp[j].a1) > maxaccel+1e-5 || RaveFabs(ramp[j].a2) > maxaccel+1e-5 || RaveFabs(ramp[j].v) > maxvel+1e-5) {
-                        RAVELOG_WARN_FORMAT("env=%d, ramp violates limits: %f>%f || %f>%f || %f>%f", GetEnv()->GetId()%RaveFabs(ramp[j].a1)%maxaccel%RaveFabs(ramp[j].a2)%maxaccel%RaveFabs(ramp[j].v)%maxvel);
+                        RAVELOG_WARN_FORMAT("env=%d(%s), ramp violates limits: %f>%f || %f>%f || %f>%f", GetEnv()->GetId()%GetEnv()->GetName()%RaveFabs(ramp[j].a1)%maxaccel%RaveFabs(ramp[j].a2)%maxaccel%RaveFabs(ramp[j].v)%maxvel);
                         return false;
                     }
 
@@ -382,7 +382,7 @@ protected:
             Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetTransform6D().rot))*2;
             dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
             if( !ParabolicRamp::SolveMinTimeBounded(0,anglevelprev,angledelta,anglevel, info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp) ) {
-                RAVELOG_WARN_FORMAT("env=%d, failed solving mintime for angles", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), failed solving mintime for angles", GetEnv()->GetId()%GetEnv()->GetName());
                 return -1;
             }
             mintime = ramp.EndTime();
@@ -398,7 +398,7 @@ protected:
             Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetRotation3D()))*2;
             dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
             if( !ParabolicRamp::SolveMinTimeBounded(0,anglevelprev,angledelta,anglevel, info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp) ) {
-                RAVELOG_WARN_FORMAT("env=%d, failed solving mintime for angles", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), failed solving mintime for angles", GetEnv()->GetId()%GetEnv()->GetName());
                 return -1;
             }
             mintime = ramp.EndTime();
@@ -418,7 +418,7 @@ protected:
                 Vector angularvelocity(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2));
                 dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
                 if( !ParabolicRamp::SolveMinTimeBounded(0,anglevelprev,angledelta,anglevel, info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp) ) {
-                    RAVELOG_WARN_FORMAT("env=%d, failed solving mintime for angles", GetEnv()->GetId());
+                    RAVELOG_WARN_FORMAT("env=%d(%s), failed solving mintime for angles", GetEnv()->GetId()%GetEnv()->GetName());
                     return -1;
                 }
                 mintime = ramp.EndTime();
@@ -434,7 +434,7 @@ protected:
         case IKP_TranslationXAxisAngleZNorm4D: {
             dReal angledelta = utils::SubtractCircularAngle(ikparam.GetTranslationXAxisAngleZNorm4D().second,ikparamprev.GetTranslationXAxisAngleZNorm4D().second);
             if( !ParabolicRamp::SolveMinTimeBounded(0,*(itdataprev+info->gvel.offset+0),angledelta,*(itdata+info->gvel.offset+0), info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp) ) {
-                RAVELOG_WARN_FORMAT("env=%d, failed solving mintime for angles", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), failed solving mintime for angles", GetEnv()->GetId()%GetEnv()->GetName());
                 return false;
             }
             mintime = ramp.EndTime();
@@ -446,7 +446,7 @@ protected:
         case IKP_TranslationYAxisAngleXNorm4D: {
             dReal angledelta = utils::SubtractCircularAngle(ikparam.GetTranslationYAxisAngleXNorm4D().second,ikparamprev.GetTranslationYAxisAngleXNorm4D().second);
             if( !ParabolicRamp::SolveMinTimeBounded(0,*(itdataprev+info->gvel.offset+0),angledelta,*(itdata+info->gvel.offset+0), info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp) ) {
-                RAVELOG_WARN_FORMAT("env=%d, failed solving mintime for angles", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), failed solving mintime for angles", GetEnv()->GetId()%GetEnv()->GetName());
                 return false;
             }
             mintime = ramp.EndTime();
@@ -456,7 +456,7 @@ protected:
             break;
         }
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, does not support parameterization 0x%x"), GetEnv()->GetId()%ikparam.GetType(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d(%s), does not support parameterization 0x%x"), GetEnv()->GetId()%GetEnv()->GetName()%ikparam.GetType(),ORE_InvalidArguments);
         }
         if( transoffset >= 0 ) {
             std::vector<dReal> xyz0(3, 0), xyz1(3), xyzvelprev(3), xyzvel(3), vlowerlimit(3), vupperlimit(3);
@@ -473,7 +473,7 @@ protected:
             _ramps.resize(3);
             dReal xyzmintime =  ParabolicRamp::SolveMinTimeBounded(xyz0,xyzvelprev,xyz1,xyzvel, vaccellimit, vvellimit, vlowerlimit, vupperlimit, _ramps, _parameters->_multidofinterp);
             if( xyzmintime < 0 ) {
-                RAVELOG_WARN_FORMAT("env=%d, failed solving mintime for xyz", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%d(%s), failed solving mintime for xyz", GetEnv()->GetId()%GetEnv()->GetName());
                 return -1;
             }
             mintime = max(mintime,xyzmintime);
@@ -561,7 +561,7 @@ protected:
             break;
         }
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, does not support parameterization 0x%x"), GetEnv()->GetId()%iktype,ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d(%s), does not support parameterization 0x%x"), GetEnv()->GetId()%GetEnv()->GetName()%iktype,ORE_InvalidArguments);
         }
         if( transoffset >= 0 ) {
             for(int j = 0; j < 3; ++j) {
@@ -594,7 +594,7 @@ protected:
             }
             OPENRAVE_ASSERT_OP(deltatime,>,0);
             if( deltatime < ParabolicRamp::EpsilonT ) {
-                RAVELOG_WARN_FORMAT("env=%d, delta time is really ill-conditioned: %e", GetEnv()->GetId()%deltatime);
+                RAVELOG_WARN_FORMAT("env=%d(%s), delta time is really ill-conditioned: %e", GetEnv()->GetId()%GetEnv()->GetName()%deltatime);
             }
 
             IkParameterization ikparamprev, ikparam;
@@ -701,7 +701,7 @@ protected:
                 break;
             }
             default:
-                throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, does not support parameterization 0x%x"), GetEnv()->GetId()%ikparam.GetType(),ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d(%s), does not support parameterization 0x%x"), GetEnv()->GetId()%GetEnv()->GetName()%ikparam.GetType(),ORE_InvalidArguments);
             }
 
             if( transoffset >= 0 ) {
@@ -746,7 +746,7 @@ protected:
                 dReal curtime = 0;
                 for(size_t j=0; j < ramp.size(); j++) {
                     if(RaveFabs(ramp[j].v) > maxvel+1e-5) {
-                        RAVELOG_WARN_FORMAT("env=%d, ramp violates limits: %f>%f", GetEnv()->GetId()%RaveFabs(ramp[j].v)%maxvel);
+                        RAVELOG_WARN_FORMAT("env=%d(%s), ramp violates limits: %f>%f", GetEnv()->GetId()%GetEnv()->GetName()%RaveFabs(ramp[j].v)%maxvel);
                         return false;
                     }
                     // why is this commented out?
@@ -866,7 +866,7 @@ protected:
                     break;
                 }
                 default:
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, does not support parameterization 0x%x"), GetEnv()->GetId()%ikparam.GetType(),ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d(%s), does not support parameterization 0x%x"), GetEnv()->GetId()%GetEnv()->GetName()%ikparam.GetType(),ORE_InvalidArguments);
                 }
                 if( transoffset >= 0 && transindex >= 0 ) {
                     for(size_t j = 0; j < 3; ++j) {

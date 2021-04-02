@@ -476,9 +476,10 @@ public:
         if (ikscene.getCount() == 0) {
             return false;
         }
-        if (!!ikscene[0]->getName()) {
-            _penv->_name = ikscene[0]->getName();
-        }
+        // name is not settable for now, we can make a special exception by makin cooladareader a friend class if we want to load name from saved scenes
+        // if (!!ikscene[0]->getName()) {
+        //     _penv->_name = ikscene[0]->getName();
+        // }
 
         if( !!_dom->getAsset() ) {
             if( !!_dom->getAsset()->getUp_axis() && !!_penv->GetPhysicsEngine() ) {

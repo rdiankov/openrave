@@ -170,7 +170,7 @@ public:
         _DumpTrajectory(ptraj, Level_Verbose, 2);
 #endif
 
-        RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs\n", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+        RAVELOG_DEBUG_FORMAT("env=%d(%s), path optimizing - computation time=%fs\n", GetEnv()->GetId()%GetEnv()->GetName()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         if( parameters->_sPostProcessingPlanner.size() == 0 ) {
             // no other planner so at least retime
             PlannerStatus status = _linearretimer->PlanPath(ptraj, planningoptions);
@@ -219,7 +219,7 @@ protected:
             uint32_t endIndex = 2+(_puniformsampler->SampleSequenceOneUInt32()%((uint32_t)listpath.size()-2));
             uint32_t startIndex = _puniformsampler->SampleSequenceOneUInt32()%(endIndex-1);
 #ifdef PROGRESS_DEBUG
-            RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, start shortcutting with i0=%d; i1=%d", GetEnv()->GetId()%itercount%numiters%startIndex%endIndex);
+            RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, start shortcutting with i0=%d; i1=%d", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters%startIndex%endIndex);
 #endif
 
             itstartnode = listpath.begin();
@@ -237,7 +237,7 @@ protected:
                 // The shortest possible distance between the start and the end of the shortcut (according to
                 // _distmetricfn) is not really short so reject it.
 #ifdef PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it may not make significant improvement. originalSegmentDistance=%.15e, expectedNewDistance=%.15e, diff=%.15e, fStepLength=%.15e", GetEnv()->GetId()%itercount%numiters%totaldistance%expectedtotaldistance%(totaldistance - expectedtotaldistance)%parameters->_fStepLength);
+                RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, rejecting since it may not make significant improvement. originalSegmentDistance=%.15e, expectedNewDistance=%.15e, diff=%.15e, fStepLength=%.15e", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters%totaldistance%expectedtotaldistance%(totaldistance - expectedtotaldistance)%parameters->_fStepLength);
 #endif
                 continue;
             }
@@ -253,12 +253,12 @@ protected:
                     ss << *itval << ", ";
                 }
                 ss << "]";
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints failed, retcode=0x%x. %s", GetEnv()->GetId()%itercount%numiters%ret%ss.str());
+                RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, CheckPathAllConstraints failed, retcode=0x%x. %s", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters%ret%ss.str());
 #endif
                 // if( nrejected++ > (int)listpath.size()+8 ) {
                 if( false ) {
 #ifdef PROGRESS_DEBUG
-                    RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, breaking due to too many consecutive rejection. nrejected=%d, listpath.size()=%d", GetEnv()->GetId()%itercount%numiters%nrejected%listpath.size());
+                    RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, breaking due to too many consecutive rejection. nrejected=%d, listpath.size()=%d", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters%nrejected%listpath.size());
 #endif
                     break;
                 }
@@ -266,7 +266,7 @@ protected:
             }
             if(_filterreturn->_configurations.size() == 0 ) {
 #ifdef PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints succeeded but did not fill in _filterreturn->_configurations so rejecting.", GetEnv()->GetId()%itercount%numiters);
+                RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, CheckPathAllConstraints succeeded but did not fill in _filterreturn->_configurations so rejecting.", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters);
 #endif
                 continue;
             }
@@ -296,7 +296,7 @@ protected:
                 // new path is not that good, so reject
                 nrejected++;
 #ifdef PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it does not make significant improvement. originalSegmentDistance=%.15e, newSegmentDistance=%.15e, diff=%.15e, fStepLength=%.15e", GetEnv()->GetId()%itercount%numiters%totaldistance%newtotaldistance%(totaldistance - newtotaldistance)%parameters->_fStepLength);
+                RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, rejecting since it does not make significant improvement. originalSegmentDistance=%.15e, newSegmentDistance=%.15e, diff=%.15e, fStepLength=%.15e", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters%totaldistance%newtotaldistance%(totaldistance - newtotaldistance)%parameters->_fStepLength);
 #endif
                 continue;
             }
@@ -324,17 +324,17 @@ protected:
             FOREACH(ittempnode, listpath) {
                 newdistance += ittempnode->second;
             }
-            RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d successful, listpath.size()=%d, totaldistance=%.15e", GetEnv()->GetId()%itercount%numiters%listpath.size()%newdistance);
+            RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d successful, listpath.size()=%d, totaldistance=%.15e", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters%listpath.size()%newdistance);
 #endif
 
             if( listpath.size() <= 2 ) {
 #ifdef PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, breaking since listpath.size()=%d", GetEnv()->GetId()%itercount%numiters%listpath.size());
+                RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, breaking since listpath.size()=%d", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters%listpath.size());
 #endif
                 break;
             }
         }
-        RAVELOG_DEBUG_FORMAT("env=%d, linear shortcut finished at iter=%d, successful=%d", GetEnv()->GetId()%itercount%numshortcuts);
+        RAVELOG_DEBUG_FORMAT("env=%d(%s), linear shortcut finished at iter=%d, successful=%d", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numshortcuts);
         return numshortcuts;
     }
 
@@ -380,7 +380,7 @@ protected:
                 continue;
             }
 #ifdef PROGRESS_DEBUG
-            RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, start shortcutting idof=%d with i0=%d; i1=%d", GetEnv()->GetId()%iiter%numiters%idof%startIndex%endIndex);
+            RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, start shortcutting idof=%d with i0=%d; i1=%d", GetEnv()->GetId()%GetEnv()->GetName()%iiter%numiters%idof%startIndex%endIndex);
 #endif
 
             itstartnode = listpath.begin();
@@ -402,7 +402,7 @@ protected:
             if( RaveFabs(fExpectedDOFDistance) > fTotalDOFDistance - 0.1*parameters->_vConfigResolution.at(idof) ) {
                 // Even after a successful shortcut, the resulting path wouldn't be that much shorter. So skipping.
 #ifdef PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it may not make significant improvement. originalDOFDistance=%.15e, expectedDOFDistance=%.15e, diff=%.15e, dofresolution=%.15e", GetEnv()->GetId()%iiter%numiters%fTotalDOFDistance%fExpectedDOFDistance%(fTotalDOFDistance - fExpectedDOFDistance)%parameters->_vConfigResolution.at(idof));
+                RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, rejecting since it may not make significant improvement. originalDOFDistance=%.15e, expectedDOFDistance=%.15e, diff=%.15e, dofresolution=%.15e", GetEnv()->GetId()%GetEnv()->GetName()%iiter%numiters%fTotalDOFDistance%fExpectedDOFDistance%(fTotalDOFDistance - fExpectedDOFDistance)%parameters->_vConfigResolution.at(idof));
 #endif
                 continue;
             }
@@ -454,14 +454,14 @@ protected:
 
                     // Need to set state to vnextconfig since _neighstatefn expects the starting values to be set
                     if( parameters->SetStateValues(vnextconfig, 0) != 0 ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, failed to set state", GetEnv()->GetId()%itercount%numiters);
+                        RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, failed to set state", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters);
                         bSuccess = false;
                         break;
                     }
 
                     int neighstatus = parameters->_neighstatefn(vnextconfig, vdeltaconfig, NSO_FromPathShortcutting);
                     if( neighstatus == NSS_Failed ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, failed neighstatus %d", GetEnv()->GetId()%itercount%numiters%neighstatus);
+                        RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, failed neighstatus %d", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters%neighstatus);
                         bSuccess = false;
                         break;
                     }
@@ -469,7 +469,7 @@ protected:
                     if( itnode == itendnode ) {
                         // last point, should be NSS_Reached (not NSS_SuccessfulWithDeviation)
                         if( neighstatus != NSS_Reached ) {
-                            RAVELOG_WARN_FORMAT("env=%d, iter=%d/%d, expecting last point to be within constraints, but was not, cannot shortcut, unreached neighstatus=%d.", GetEnv()->GetId()%itercount%numiters%neighstatus);
+                            RAVELOG_WARN_FORMAT("env=%d(%s), iter=%d/%d, expecting last point to be within constraints, but was not, cannot shortcut, unreached neighstatus=%d.", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters%neighstatus);
                             bSuccess = false;
                             break;
                         }
@@ -486,14 +486,14 @@ protected:
                         ss << *itval << ", ";
                     }
                     ss << "]";
-                    RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints failed, retcode=0x%x. %s", GetEnv()->GetId()%itercount%numiters%ret%ss.str());
+                    RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, CheckPathAllConstraints failed, retcode=0x%x. %s", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters%ret%ss.str());
 #endif
                     bSuccess = false;
                     break;
                 }
                 if(_filterreturn->_configurations.size() == 0 ) {
 #ifdef PROGRESS_DEBUG
-                    RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints succeeded but did not fill in _filterreturn->_configurations so rejecting.", GetEnv()->GetId()%itercount%numiters);
+                    RAVELOG_DEBUG_FORMAT("env=%d(%s), iter=%d/%d, CheckPathAllConstraints succeeded but did not fill in _filterreturn->_configurations so rejecting.", GetEnv()->GetId()%GetEnv()->GetName()%itercount%numiters);
 #endif
                     bSuccess = false;
                     break;
@@ -555,7 +555,7 @@ protected:
             }
             listpath.erase(itstartnode, itendnode);
         }
-        RAVELOG_DEBUG_FORMAT("env=%d, shortcut one dof; numshortcuts=%d", GetEnv()->GetId()%numshortcuts);
+        RAVELOG_DEBUG_FORMAT("env=%d(%s), shortcut one dof; numshortcuts=%d", GetEnv()->GetId()%GetEnv()->GetName()%numshortcuts);
         return numshortcuts;
     }
 
@@ -606,7 +606,7 @@ protected:
             for( int f = 1; f < numSteps; f++ ) {
                 // Need to set state to vnextconfig since _neighstatefn expects the starting values to be set
                 if( parameters->SetStateValues(qcur, 0) != 0 ) {
-                    RAVELOG_WARN_FORMAT("env=%d, failed to set state values, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetId()%(ipoint - 1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());
+                    RAVELOG_WARN_FORMAT("env=%d(%s), failed to set state values, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetId()%GetEnv()->GetName()%(ipoint - 1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());
                     qcur = listpath.back().first; // restore qcur
                     break;
                 }
@@ -623,12 +623,12 @@ protected:
                     neighstatus = parameters->_neighstatefn(qcur, dq, NSO_FromPathShortcutting);
                 }
                 if( neighstatus == NSS_SuccessfulWithDeviation ) {
-                    RAVELOG_WARN_FORMAT("env=%d, neighstatefn returned different configuration than qcur, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetId()%(ipoint - 1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());
+                    RAVELOG_WARN_FORMAT("env=%d(%s), neighstatefn returned different configuration than qcur, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetId()%GetEnv()->GetName()%(ipoint - 1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());
                     qcur = listpath.back().first; // restore qcur
                     break;
                 }
                 else if( neighstatus == NSS_Failed ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, neighstatefn failed mult=%d, perhaps non-linear constraints are used?", GetEnv()->GetId()%mult);
+                    RAVELOG_DEBUG_FORMAT("env=%d(%s), neighstatefn failed mult=%d, perhaps non-linear constraints are used?", GetEnv()->GetId()%GetEnv()->GetName()%mult);
                     mult++;
                     continue;
                 }
