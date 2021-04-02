@@ -123,7 +123,6 @@ public:
 
 typedef boost::shared_ptr<ElectricMotorActuatorInfo> ElectricMotorActuatorInfoPtr;
 
-
 ///< New kinematics functions to be used by KinBody
 class OPENRAVE_API KinematicsFunctions
 {
@@ -131,8 +130,12 @@ public:
     virtual ~KinematicsFunctions() {
     }
 
-    /// function that sets links' transforms
-    boost::function<bool(const std::vector<Transform*>&)> setLinkTransformsFn;
+    /// \brief function that sets links' transforms
+    ///
+    /// \param[in] pJointValues the full dof values of the robot in DOF order
+    /// \param[out] Output the link transforms to this vector
+    /// \return true if function completed and changed the link transforms. If returns false, the operation could not be compelted.
+    virtual bool SetLinkTransforms(const dReal* pJointValues, const std::vector<Transform*>& vLinkTransformPointers) = 0;
 };
 
 typedef boost::shared_ptr<KinematicsFunctions> KinematicsFunctionsPtr;
@@ -193,16 +196,18 @@ public:
         Prop_BodyRemoved = 0x10000000, ///< if a KinBody is removed from the environment
     };
 
+    class OPENRAVE_API Link; // forward decl
+    class OPENRAVE_API Geometry; // forward decl
+
     /// \brief used for specifying the type of limit checking and the messages associated with it
-    enum CheckLimitsAction {
+    enum CheckLimitsAction
+    {
         CLA_Nothing = 0, ///< no checking
         CLA_CheckLimits = 1, /// < checks and warns if the limits are overboard (default)
         CLA_CheckLimitsSilent = 2, ///< checks the limits and silently clamps the joint values (used if the code expects bad values as part of normal operation)
         CLA_CheckLimitsThrow = 3, ///< check the limits and throws if something went wrong
     };
 
-    class OPENRAVE_API Link; // forward decl
-    class OPENRAVE_API Geometry; // forward decl
 
     /// \brief Describes the properties of a geometric primitive.
     ///
@@ -2318,7 +2323,7 @@ private:
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     void GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
-    
+
     /// \brief Returns all the joint velocities as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
@@ -3248,7 +3253,7 @@ protected:
     void _InitAndAddJoint(JointPtr pjoint);
 
     std::string _name; ///< name of body
-    
+
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
     std::vector<JointPtr> _vTopologicallySortedJoints; ///< \see GetDependencyOrderedJoints
     std::vector<JointPtr> _vTopologicallySortedJointsAll; ///< Similar to _vDependencyOrderedJoints except includes _vecjoints and _vPassiveJoints
@@ -3267,7 +3272,7 @@ protected:
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
 
     std::vector<Transform*> _vLinkTransformPointers; ///< holds a pointers to the Transform Link::_t  in _veclinks. Used for fast access fo the custom kinematics
-        
+
     std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies
 
     mutable std::vector<std::list<UserDataWeakPtr> > _vlistRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. _vlistRegisteredCallbacks[index] is the list of change callbacks where 1<<index is part of KinBodyProperty, this makes it easy to find out if any particular bits have callbacks. The registration/de-registration of the lists can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable.
@@ -3283,7 +3288,7 @@ protected:
     mutable std::vector< boost::array<dReal, 3> > _vPassiveJointAccelerationsCache;
     mutable std::vector<uint8_t> _vLinksVisitedCache;
     mutable std::vector<dReal> _vTempMimicValues, _vTempMimicValues2, _vTempMimicValues3;
-    
+
 
     ConfigurationSpecification _spec;
     CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions

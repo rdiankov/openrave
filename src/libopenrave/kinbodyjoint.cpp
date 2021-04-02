@@ -2139,15 +2139,15 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         vDependedJointValues.push_back(dependedjoint->GetValue(dofformat.axis));
     }
 
-    if( IS_DEBUGLEVEL(Level_Verbose) ) {
-        std::stringstream ss;
-        ss << "joint \"" << this->GetName() << "\" of jointindex " << thisdofformat.jointindex << " depends on joints ";
-        for(const Mimic::DOFFormat& dofformat : vdofformats) {
-            const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
-            ss << dependedjoint->GetName() << ", ";
-        }
-        RAVELOG_VERBOSE(ss.str());
-    }
+//    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//        std::stringstream ss;
+//        ss << "joint \"" << this->GetName() << "\" of jointindex " << thisdofformat.jointindex << " depends on joints ";
+//        for(const Mimic::DOFFormat& dofformat : vdofformats) {
+//            const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
+//            ss << dependedjoint->GetName() << ", ";
+//        }
+//        RAVELOG_VERBOSE(ss.str());
+//    }
 
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > localmap;
     const size_t nvars = vdofformats.size(); ///< number of joints on which this joint depends on
@@ -2166,9 +2166,9 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
             RAVELOG_WARN_FORMAT("This mimic joint %s depends on joint %s, but the user did not provide the mimic velocity formula. Now treat the first-order partial derivative as 0", this->GetName() % dependedjoint->GetName());
         }
 
-        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            RAVELOG_VERBOSE_FORMAT("∂(J%d)/∂(J%d) = ∂(%s)/∂(%s) = %.8e", thisdofformat.jointindex % jointindex % this->GetName() % dependedjoint->GetName() % fvel);
-        }
+//        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//            RAVELOG_VERBOSE_FORMAT("∂(J%d)/∂(J%d) = ∂(%s)/∂(%s) = %.8e", thisdofformat.jointindex % jointindex % this->GetName() % dependedjoint->GetName() % fvel);
+//        }
 
         if(dependedjoint->IsMimic(dofformat.axis)) {
             // depended joint is also mimic; go down the dependency tree and collect partial derivatives by chain rule

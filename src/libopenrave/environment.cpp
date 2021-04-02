@@ -162,7 +162,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
 
             if( itExistingBodyInfo != _vBodyInfos.end() ) {
                 isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itExistingBodyInfo);
-                RAVELOG_VERBOSE_FORMAT("found existing body with id='%s', isRobot = %d", id%isExistingRobot);
+                RAVELOG_VERBOSE_FORMAT("found existing body '%s' with id='%s', isRobot = %d", (*itExistingBodyInfo)->_name%id%isExistingRobot);
             }
 
             // here we allow body infos with empty id to be created because

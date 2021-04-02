@@ -2131,12 +2131,10 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     }
 
     if( !!_pCurrentKinematicsFunctions ) {
-        if( !!_pCurrentKinematicsFunctions->setLinkTransformsFn ) {
-            if(_pCurrentKinematicsFunctions->setLinkTransformsFn(_vLinkTransformPointers)) {
-                _UpdateGrabbedBodies();
-                _PostprocessChangedParameters(Prop_LinkTransforms);
-                return;
-            }
+        if(_pCurrentKinematicsFunctions->SetLinkTransforms(pJointValues, _vLinkTransformPointers)) {
+            _UpdateGrabbedBodies();
+            _PostprocessChangedParameters(Prop_LinkTransforms);
+            return;
         }
     }
 
@@ -5580,8 +5578,8 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
     }
 
-    _pKinematicsGenerator = r->_pKinematicsGenerator;
-    _pCurrentKinematicsFunctions = r->_pCurrentKinematicsFunctions;
+    // can copy the generator, but not the functions! use SetKinematicsGenerator
+    SetKinematicsGenerator(r->_pKinematicsGenerator);
 
     _nUpdateStampId++; // update the stamp instead of copying
 }
@@ -6141,6 +6139,10 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 
 void KinBody::SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator)
 {
+    if( _pKinematicsGenerator == pGenerator ) {
+        // same pointer, so do nothing
+        return;
+    }
     _pKinematicsGenerator = pGenerator;
     if( !!_pKinematicsGenerator ) {
         _pCurrentKinematicsFunctions = _pKinematicsGenerator->GenerateKinematicsFunctions(*this);

@@ -3129,12 +3129,12 @@ void PyKinBody::SetDOFVelocities(object odofvelocities, object olinearvel, objec
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     try {
 #endif
-        _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
+    _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    }
-    catch (const py::error_already_set& e) {
-        this->SetDOFVelocities(odofvelocities, py::extract<uint32_t>(olinearvel), oangularvel);
-    }
+}
+catch (const py::error_already_set& e) {
+    this->SetDOFVelocities(odofvelocities, py::extract<uint32_t>(olinearvel), oangularvel);
+}
 #endif
 }
 
@@ -3741,6 +3741,11 @@ object PyKinBody::IsGrabbing(PyKinBodyPtr pbody) const
     CHECK_POINTER(pbody);
     KinBody::LinkPtr plink = _pbody->IsGrabbing(*pbody->GetBody());
     return toPyKinBodyLink(plink,_pyenv);
+}
+
+int PyKinBody::GetNumGrabbed() const
+{
+    return _pbody->GetNumGrabbed();
 }
 
 object PyKinBody::GetGrabbed() const
@@ -5294,6 +5299,7 @@ void init_openravepy_kinbody()
                          .def("ReleaseAllGrabbedWithLink",&PyKinBody::ReleaseAllGrabbedWithLink, PY_ARGS("grablink") DOXY_FN(KinBody,ReleaseAllGrabbedWithLink))
                          .def("RegrabAll",&PyKinBody::RegrabAll, DOXY_FN(KinBody,RegrabAll))
                          .def("IsGrabbing",&PyKinBody::IsGrabbing,PY_ARGS("body") DOXY_FN(KinBody,IsGrabbing))
+                         .def("GetNumGrabbed", &PyKinBody::GetNumGrabbed, DOXY_FN(KinBody,GetNumGrabbed))
                          .def("GetGrabbed",&PyKinBody::GetGrabbed, DOXY_FN(KinBody,GetGrabbed))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("GetGrabbedInfo", &PyKinBody::GetGrabbedInfo,
