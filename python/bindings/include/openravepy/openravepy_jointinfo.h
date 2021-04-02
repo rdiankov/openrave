@@ -333,6 +333,7 @@ public:
     void InitGeometries(object ogeometryinfos);
 
     void AddGeometry(object ogeometryinfo, bool addToGroups);
+    void AddGeometryToGroup(object ogeometryinfo, const std::string& groupname);
 
     void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
     void SetGeometriesFromGroup(const std::string& name);

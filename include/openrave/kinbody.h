@@ -997,6 +997,12 @@ public:
         /// \param addToGroups if true, will add the same ginfo to all groups
         void AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroups);
 
+        /// \brief adds geometry info to the geometry group specified by groupname
+        ///
+        /// Will store the geometry pointer to use for later, so do not modify after this.
+        /// \param groupname the name of the geometry group to add this new geometry info to
+        void AddGeometryToGroup(KinBody::GeometryInfoPtr pginfo, const std::string& groupname);
+
         /// \brief removes geometry that matches a name from the current geometries and possibly stored extra group geometries
         ///
         /// \param removeFromAllGroups if true, will check and remove the geometry from all stored groups
@@ -3272,10 +3278,10 @@ protected:
     /// Can only be called before internal robot hierarchy is initialized
     void _InitAndAddJoint(JointPtr pjoint);
 
-    virtual void _SetForcedAdjacentLinks(int linkindex0, int linkindex1);
+    void _SetForcedAdjacentLinks(int linkindex0, int linkindex1);
 
-    virtual void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
-    
+    void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
+
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
