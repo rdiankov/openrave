@@ -187,7 +187,11 @@ __license__ = 'Lesser GPL, Version 3'
 __version__ = '0x1000004b' # hex of the version, has to be prefixed with 0x. also in ikfast.h
 
 import sys, copy, time, math, datetime
-import __builtin__
+if sys.version_info[0]<3:
+    import __builtin__
+else:
+    import builtins as __builtin__
+
 from optparse import OptionParser
 try:
     from openravepy.metaclass import AutoReloader
@@ -223,7 +227,13 @@ except ImportError:
     def isnan(x): return _isnan(float(x))
 
 from operator import itemgetter
-from itertools import izip, chain, product
+from itertools import chain, product
+
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
+
 try:
     from itertools import combinations, permutations
 except ImportError:

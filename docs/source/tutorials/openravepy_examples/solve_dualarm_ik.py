@@ -2,7 +2,10 @@
 """
 from openravepy import *
 from numpy import *
-from itertools import izip
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
 import time
 env = Environment() # create the environment
 env.SetViewer('qtcoin') # start the viewer

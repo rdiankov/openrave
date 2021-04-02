@@ -18,7 +18,10 @@ from .. import PlanningError
 
 from numpy import *
 from copy import copy as shallowcopy
-import cStringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 import logging
 log = logging.getLogger('openravepy.interfaces.TaskManipulation')
@@ -82,7 +85,7 @@ class TaskManipulation:
                 grasptranslationstepmult=gmodel.translationstepmult
             if graspfinestep is None:
                 graspfinestep=gmodel.finestep
-        cmd = cStringIO.StringIO()
+        cmd = StringIO()
         cmd.write('graspplanning target %s approachoffset %.15e grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1]))
         for f in grasps.flat:
             cmd.write('%.15e '%f)
