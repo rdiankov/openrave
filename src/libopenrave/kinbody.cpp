@@ -4702,17 +4702,20 @@ void KinBody::_ComputeInternalInformation()
     // create the adjacency list
     {
         _vAdjacentLinks = _vForcedAdjacentLinks;
+        // probably unnecessary, but just in case
         if (_vAdjacentLinks.size() < numLinks*numLinks) {
-            _vAdjacentLinks.resize(numLinks*numLinks);
+            _vAdjacentLinks.resize(numLinks*numLinks, 0);
         }
 
         // make no-geometry links adjacent to all other links
-        FOREACH(itlink0, _veclinks) {
-            if( (*itlink0)->GetGeometries().size() == 0 ) {
-                int ind0 = (*itlink0)->GetIndex();
-                FOREACH(itlink1,_veclinks) {
-                    if( *itlink0 != *itlink1 ) {
-                        int ind1 = (*itlink1)->GetIndex();
+        for (const LinkPtr& plink0 : _veclinks) {
+            const Link& link0 = *plink0;
+            if( link0.GetGeometries().size() == 0 ) {
+                int ind0 = link0.GetIndex();
+                for (const LinkPtr& plink1 : _veclinks) {
+                    const Link& link1 = *plink1;
+                    int ind1 = link1.GetIndex();
+                    if (ind0 < ind1) {
                         _vAdjacentLinks.at(_GetIndex1d(ind0, ind1, numLinks)) = 1;
                     }
                 }
@@ -4720,15 +4723,17 @@ void KinBody::_ComputeInternalInformation()
         }
 
         if( _bMakeJoinedLinksAdjacent ) {
-            FOREACH(itj, _vecjoints) {
-                int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
-                int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
+            for (const JointPtr& pjoint : _vecjoints) {
+                const Joint& joint = *pjoint;
+                int ind0 = joint._attachedbodies[0]->GetIndex();
+                int ind1 = joint._attachedbodies[1]->GetIndex();
                 _vAdjacentLinks.at(_GetIndex1d(ind0, ind1, numLinks)) = 1;
             }
 
-            FOREACH(itj, _vPassiveJoints) {
-                int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
-                int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
+            for (const JointPtr& pjoint : _vPassiveJoints) {
+                const Joint& joint = *pjoint;
+                int ind0 = joint._attachedbodies[0]->GetIndex();
+                int ind1 = joint._attachedbodies[1]->GetIndex();
                 _vAdjacentLinks.at(_GetIndex1d(ind0, ind1, numLinks)) = 1;
             }
 
@@ -5350,27 +5355,17 @@ void KinBody::SetAdjacentLinksCombinations(const std::vector<int>& linkIndices)
         for (size_t idx1 = idx0 + 1; idx1 < linkIndices.size(); idx1++) {
             const int linkIndex1 = linkIndices[idx1];
             OPENRAVE_ASSERT_OP(linkIndex0,!=,linkIndex1);
-            if (linkIndex0 < linkIndex1) {
-                _SetAdjacentLinksInternal(linkIndex0, linkIndex1);
-            }
-            else {
-                _SetAdjacentLinksInternal(linkIndex1, linkIndex0);
-            }                
+            _SetAdjacentLinksInternal(linkIndex0, linkIndex1);
         }
     }
     _ResetInternalCollisionCache();
 }
 
-void KinBody::SetAdjacentLinks(const std::vector<std::pair<int, int> >& linkIndices)
+void KinBody::SetAdjacentLinksPairs(const std::vector<std::pair<int, int> >& linkIndices)
 {
     for ( const std::pair<int, int>& link01 : linkIndices) {
         OPENRAVE_ASSERT_OP(link01.first, !=, link01.second);
-        if (link01.first < link01.second) {
-            _SetAdjacentLinksInternal(link01.first, link01.second);
-        }
-        else {
-            _SetAdjacentLinksInternal(link01.second, link01.first);
-        }
+        _SetAdjacentLinksInternal(link01.first, link01.second);
     }
     _ResetInternalCollisionCache();
 }
@@ -5392,12 +5387,12 @@ void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
     const size_t index = _GetIndex1d(linkindex0, linkindex1, numLinks);
 
     if (_vAdjacentLinks.size() < numLinks*numLinks) {
-        _vAdjacentLinks.resize(numLinks*numLinks);
+        _vAdjacentLinks.resize(numLinks*numLinks, 0);
     }
     _vAdjacentLinks.at(index) = 1;
 
     if (_vForcedAdjacentLinks.size() < numLinks*numLinks) {
-        _vForcedAdjacentLinks.resize(numLinks*numLinks);
+        _vForcedAdjacentLinks.resize(numLinks*numLinks, 0);
     }
     _vForcedAdjacentLinks.at(index) = 1;
 }
@@ -5791,7 +5786,7 @@ void KinBody::_SetForcedAdjacentLinks(int linkindex0, int linkindex1)
     const size_t index = _GetIndex1d(linkindex0, linkindex1, numLinks);
 
     if (_vForcedAdjacentLinks.size() < numLinks*numLinks) {
-        _vForcedAdjacentLinks.resize(numLinks*numLinks);
+        _vForcedAdjacentLinks.resize(numLinks*numLinks, 0);
     }
     _vForcedAdjacentLinks.at(index) = 1;
 }
@@ -5821,9 +5816,9 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
 
-    const size_t newLinkIndex = _veclinks.size();
-    const size_t newLinkIndexGroupIndex = newLinkIndex / 32;
-    const size_t newLinkIndexBitIndex = newLinkIndex % 32;
+    const size_t newLinkSizeAfterAdded = _veclinks.size() + 1;
+    _vForcedAdjacentLinks.resize(newLinkSizeAfterAdded*newLinkSizeAfterAdded, 0);
+    
     for (const std::string& forceAdjacentLinkFromInfo : info._vForcedAdjacentLinks) {
         LinkPtr pLinkForceAdjacentLinkFromInfo = GetLink(forceAdjacentLinkFromInfo);
         if (!pLinkForceAdjacentLinkFromInfo) {
@@ -5832,7 +5827,7 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
         }
 
         const size_t forcedAdjacentLinkIndex = pLinkForceAdjacentLinkFromInfo->GetIndex();
-        // _vForcedAdjacentLinks
+        _vForcedAdjacentLinks.at(_GetIndex1d(plink->_index, forcedAdjacentLinkIndex, newLinkSizeAfterAdded)) = 1;
     }
     _veclinks.push_back(plink);
 }

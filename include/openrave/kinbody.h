@@ -2888,7 +2888,7 @@ private:
     /// \brief adds the pair of links to the adjacency list.
     ///
     /// \param linkIndices vector containing pair of link indies. Each pair of is set as adjacent links. For each pair, first and second must be different.
-    virtual void SetAdjacentLinks(const std::vector<std::pair<int, int> >& linkIndices);
+    virtual void SetAdjacentLinksPairs(const std::vector<std::pair<int, int> >& linkIndices);
 
     /// \brief adds the pair of links to the adjacency list.
     ///
