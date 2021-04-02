@@ -45,6 +45,14 @@ inline int _GetIndex1d(int index0, int index1)
     }
 }
     
+inline void _ResizeVectorFor2DTable(std::vector<int8_t>& vec, size_t tableSize)
+{
+    const size_t expectedSize = tableSize * (tableSize - 1) / 2;
+    if (vec.size() < expectedSize) {
+        vec.resize(expectedSize, 0);
+    }
+}
+    
 class ChangeCallbackData : public UserData
 {
 public:
@@ -4702,7 +4710,7 @@ void KinBody::_ComputeInternalInformation()
 
     // create the adjacency list
     {
-        _vForcedAdjacentLinks.resize(numLinks*numLinks, 0);
+        _ResizeVectorFor2DTable(_vForcedAdjacentLinks, numLinks);
         //std::fill(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), 0);
     
         for (const LinkPtr& plink : _veclinks) {
@@ -4720,9 +4728,7 @@ void KinBody::_ComputeInternalInformation()
 
         _vAdjacentLinks = _vForcedAdjacentLinks;
         // probably unnecessary, but just in case
-        if (_vAdjacentLinks.size() < numLinks*numLinks) {
-            _vAdjacentLinks.resize(numLinks*numLinks, 0);
-        }
+        _ResizeVectorFor2DTable(_vAdjacentLinks, numLinks);
 
         // make no-geometry links adjacent to all other links
         for (const LinkPtr& plink0 : _veclinks) {
@@ -5360,7 +5366,7 @@ bool KinBody::AreAdjacentLinks(int linkindex0, int linkindex1) const
         return _vAdjacentLinks.at(index);
     }
     RAVELOG_WARN_FORMAT("env=%d, body %s has %d links (size of _vAdjacentLinks is %d). Cannot compute adjacent for index %d and %d (1d index is %d)",
-                        GetEnv()->GetId()%GetName()%numLinks%_vAdjacentLinks.size()%linkindex0%linkindex1%index);
+                        GetEnv()->GetId()%GetName()%GetLinks().size()%_vAdjacentLinks.size()%linkindex0%linkindex1%index);
     return false;
 }
 
@@ -5399,14 +5405,10 @@ void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
     const size_t numLinks = GetLinks().size();
     const size_t index = _GetIndex1d(linkindex0, linkindex1);
 
-    if (_vAdjacentLinks.size() < numLinks*numLinks) {
-        _vAdjacentLinks.resize(numLinks*numLinks, 0);
-    }
+    _ResizeVectorFor2DTable(_vAdjacentLinks, numLinks);
     _vAdjacentLinks.at(index) = 1;
 
-    if (_vForcedAdjacentLinks.size() < numLinks*numLinks) {
-        _vForcedAdjacentLinks.resize(numLinks*numLinks, 0);
-    }
+    _ResizeVectorFor2DTable(_vForcedAdjacentLinks, numLinks);
     _vForcedAdjacentLinks.at(index) = 1;
 }
 
@@ -5798,9 +5800,7 @@ void KinBody::_SetForcedAdjacentLinks(int linkindex0, int linkindex1)
     const size_t numLinks = GetLinks().size();
     const size_t index = _GetIndex1d(linkindex0, linkindex1);
 
-    if (_vForcedAdjacentLinks.size() < numLinks*numLinks) {
-        _vForcedAdjacentLinks.resize(numLinks*numLinks, 0);
-    }
+    _ResizeVectorFor2DTable(_vForcedAdjacentLinks, numLinks);
     _vForcedAdjacentLinks.at(index) = 1;
 }
 
