@@ -479,6 +479,7 @@ void KinBody::Destroy()
     _listAttachedBodies.clear();
 
     _veclinks.clear();
+    _vLinkTransformPointers.clear();
     _vecjoints.clear();
     _vTopologicallySortedJoints.clear();
     _vTopologicallySortedJointsAll.clear();
@@ -534,6 +535,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const
         plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
     __struri = uri;
     return true;
 }
@@ -576,6 +578,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
         plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
     __struri = uri;
     return true;
 }
@@ -605,6 +608,7 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible,
         plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
     __struri = uri;
     return true;
 }
@@ -627,6 +631,7 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::s
     Link::GeometryPtr geom(new Link::Geometry(plink,info));
     plink->_vGeometries.push_back(geom);
     _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
     __struri = uri;
     return true;
 }
@@ -656,6 +661,7 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
     _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
     __struri = uri;
     return true;
 }
@@ -719,6 +725,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         pjoint->_info = *rawinfo;
         _InitAndAddJoint(pjoint);
     }
+    _vLinkTransformPointers.clear();
     __struri = uri;
     return true;
 }
@@ -749,6 +756,7 @@ void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const st
             _InitAndAddJoint(pjoint);
         }
     }
+    _vLinkTransformPointers.clear();
     __struri = uri;
 }
 
@@ -1361,11 +1369,6 @@ void KinBody::SetTransform(const Transform& trans)
     _PostprocessChangedParameters(Prop_LinkTransforms);
 }
 
-Transform KinBody::GetTransform() const
-{
-    return _veclinks.size() > 0 ? _veclinks.front()->GetTransform() : Transform();
-}
-
 bool KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
 {
     if (_veclinks.size() == 0) {
@@ -1713,11 +1716,6 @@ uint64_t KinBody::GetLinkEnableStatesMask() const
     return linkstate;
 }
 
-KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
-{
-    return _vecjoints.at(_vDOFIndices.at(dofindex));
-}
-
 AABB KinBody::ComputeAABB(bool bEnabledOnlyLinks) const
 {
     Vector vmin, vmax;
@@ -2063,7 +2061,11 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     OPENRAVE_ASSERT_OP_FORMAT((int)vJointValues.size(),>=,expecteddof, "env=%d, not enough values %d<%d", GetEnv()->GetId()%vJointValues.size()%GetDOF(),ORE_InvalidArguments);
 
     const dReal* pJointValues = &vJointValues[0];
-    if( checklimits != CLA_Nothing || dofindices.size() > 0 ) {
+
+    if(checklimits == CLA_Nothing && dofindices.empty()) {
+        _vTempJoints = vJointValues;
+    }
+    else {
         _vTempJoints.resize(GetDOF());
         if( dofindices.size() > 0 ) {
             // user only set a certain number of indices, so have to fill the temporary array with the full set of values first
@@ -2077,35 +2079,37 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         dReal* ptempjoints = &_vTempJoints[0];
 
         // check the limits
-        vector<dReal> upperlim, lowerlim;
-        FOREACHC(it, _vecjoints) {
-            const dReal* p = pJointValues+(*it)->GetDOFIndex();
+        for(const JointPtr& pjoint : _vecjoints) {
+            const Joint& joint = *pjoint;
+
+            const dReal* p = pJointValues+joint.GetDOFIndex();
             if( checklimits == CLA_Nothing ) {
                 // limits should not be checked, so just copy
-                for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                for(int i = 0; i < joint.GetDOF(); ++i) {
                     *ptempjoints++ = p[i];
                 }
                 continue;
             }
-            OPENRAVE_ASSERT_OP( (*it)->GetDOF(), <=, 3 );
-            (*it)->GetLimits(lowerlim, upperlim);
-            if( (*it)->GetType() == JointSpherical ) {
+            if( joint.GetType() == JointSpherical ) {
                 dReal fcurang = fmod(RaveSqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]),2*PI);
-                if( fcurang < lowerlim[0] ) {
+                dReal lowerlimit = joint.GetLowerLimit(0);
+                dReal upperlimit = joint.GetUpperLimit(0);
+
+                if( fcurang < lowerlimit ) {
                     if( fcurang < 1e-10 ) {
-                        *ptempjoints++ = lowerlim[0]; *ptempjoints++ = 0; *ptempjoints++ = 0;
+                        *ptempjoints++ = lowerlimit; *ptempjoints++ = 0; *ptempjoints++ = 0;
                     }
                     else {
-                        dReal fmult = lowerlim[0]/fcurang;
+                        dReal fmult = lowerlimit/fcurang;
                         *ptempjoints++ = p[0]*fmult; *ptempjoints++ = p[1]*fmult; *ptempjoints++ = p[2]*fmult;
                     }
                 }
-                else if( fcurang > upperlim[0] ) {
+                else if( fcurang > upperlimit ) {
                     if( fcurang < 1e-10 ) {
-                        *ptempjoints++ = upperlim[0]; *ptempjoints++ = 0; *ptempjoints++ = 0;
+                        *ptempjoints++ = upperlimit; *ptempjoints++ = 0; *ptempjoints++ = 0;
                     }
                     else {
-                        dReal fmult = upperlim[0]/fcurang;
+                        dReal fmult = upperlimit/fcurang;
                         *ptempjoints++ = p[0]*fmult; *ptempjoints++ = p[1]*fmult; *ptempjoints++ = p[2]*fmult;
                     }
                 }
@@ -2114,33 +2118,36 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                 }
             }
             else {
-                for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                    if( (*it)->IsCircular(i) ) {
+                for(int i = 0; i < joint.GetDOF(); ++i) {
+                    if( joint.IsCircular(i) ) {
                         // don't normalize since user is expecting the values he sets are exactly returned via GetDOFValues
                         *ptempjoints++ = p[i]; //utils::NormalizeCircularAngle(p[i],(*it)->_vcircularlowerlimit[i],(*it)->_vcircularupperlimit[i]);
                     }
                     else {
-                        if( p[i] < lowerlim[i] ) {
-                            if( p[i] < lowerlim[i]-g_fEpsilonEvalJointLimit ) {
+                        dReal lowerlimit = joint.GetLowerLimit(0);
+                        dReal upperlimit = joint.GetUpperLimit(0);
+
+                        if( p[i] < lowerlimit ) {
+                            if( p[i] < lowerlimit-g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN(str(boost::format("env=%d, dof %d value %e is smaller than the lower limit %e")%GetEnv()->GetId()%((*it)->GetDOFIndex()+i)%p[i]%lowerlim[i]));
+                                    RAVELOG_WARN(str(boost::format("env=%d, dof %d value %e is smaller than the lower limit %e")%GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit));
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %e is smaller than the lower limit %e"), GetEnv()->GetId()%((*it)->GetDOFIndex()+i)%p[i]%lowerlim[i], ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %e is smaller than the lower limit %e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit, ORE_InvalidArguments);
                                 }
                             }
-                            *ptempjoints++ = lowerlim[i];
+                            *ptempjoints++ = lowerlimit;
                         }
-                        else if( p[i] > upperlim[i] ) {
-                            if( p[i] > upperlim[i]+g_fEpsilonEvalJointLimit ) {
+                        else if( p[i] > upperlimit ) {
+                            if( p[i] > upperlimit+g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN(str(boost::format("env=%d, dof %d value %e is greater than the upper limit %e")%GetEnv()->GetId()%((*it)->GetDOFIndex()+i)%p[i]%upperlim[i]));
+                                    RAVELOG_WARN(str(boost::format("env=%d, dof %d value %e is greater than the upper limit %e")%GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit));
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %e is greater than the upper limit %e"), GetEnv()->GetId()%((*it)->GetDOFIndex()+i)%p[i]%upperlim[i], ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %e is greater than the upper limit %e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
                                 }
                             }
-                            *ptempjoints++ = upperlim[i];
+                            *ptempjoints++ = upperlimit;
                         }
                         else {
                             *ptempjoints++ = p[i];
@@ -2150,6 +2157,14 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
             }
         }
         pJointValues = &_vTempJoints[0];
+    }
+
+    if( !!_pCurrentKinematicsFunctions ) {
+        if(_pCurrentKinematicsFunctions->SetLinkTransforms(pJointValues, _vLinkTransformPointers)) {
+            _UpdateGrabbedBodies();
+            _PostprocessChangedParameters(Prop_LinkTransforms);
+            return;
+        }
     }
 
     // have to compute the angles ahead of time since they are dependent on the link
@@ -2188,10 +2203,13 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         }
     }
 
-    std::vector<uint8_t> vlinkscomputed(_veclinks.size(),0);
+    std::vector<uint8_t>& vlinkscomputed = _vLinksVisitedCache;
+    vlinkscomputed.resize(_veclinks.size());
+    std::fill(vlinkscomputed.begin(), vlinkscomputed.end(), 0);
     vlinkscomputed[0] = 1;
     boost::array<dReal,3> dummyvalues; // dummy values for a joint
-    std::vector<dReal> vtempvalues, veval;
+    std::vector<dReal>& vtempvalues = _vTempMimicValues;
+    std::vector<dReal>& veval = _vTempMimicValues2;
 
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
         const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
@@ -2226,10 +2244,11 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                     }
                     const int err = joint._Eval(i, 0, vtempvalues, veval);
                     if( err ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, failed to evaluate joint %s, fparser error %d")%GetEnv()->GetId()%joint.GetName()%err));
+                        RAVELOG_WARN_FORMAT("env=%d, failed to evaluate joint %s, fparser error %d", GetEnv()->GetId()%joint.GetName()%err);
                     }
                     else {
-                        const std::vector<dReal> vevalcopy = veval;
+                        std::vector<dReal>& vevalcopy = _vTempMimicValues3;
+                        vevalcopy = veval;
                         for(std::vector<dReal>::iterator iteval = veval.begin(); iteval != veval.end(); ) {
                             if( jointtype == JointSpherical || joint.IsCircular(i) ) {
                             }
@@ -2320,6 +2339,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
 
         Transform tjoint;
         if( jointtype & JointSpecialBit ) {
+            //RAVELOG_DEBUG_FORMAT("Joint %s's jointtype = %d has special bit", GetName() % jointtype);
             switch(jointtype) {
             case JointHinge2: {
                 Transform tfirst;
@@ -2418,6 +2438,12 @@ const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJoints() cons
 {
     CHECK_INTERNAL_COMPUTATION;
     return _vTopologicallySortedJoints;
+}
+
+const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJointsAll() const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    return _vTopologicallySortedJointsAll;
 }
 
 const std::vector< std::vector< std::pair<KinBody::LinkPtr, KinBody::JointPtr> > >& KinBody::GetClosedLoops() const
@@ -3972,6 +3998,12 @@ void KinBody::_ComputeInternalInformation()
     uint64_t starttime = utils::GetMicroTime();
     _nHierarchyComputed = 1;
 
+    _vLinkTransformPointers.clear();
+    if( !!_pCurrentKinematicsFunctions ) {
+        RAVELOG_DEBUG_FORMAT("env=%d, resetting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+        _pCurrentKinematicsFunctions.reset();
+    }
+
     int lindex=0;
     FOREACH(itlink,_veclinks) {
         (*itlink)->_index = lindex; // always reset, necessary since index cannot be initialized by custom links
@@ -4789,6 +4821,11 @@ void KinBody::_ComputeInternalInformation()
         _ResetInternalCollisionCache();
     }
 
+    _vLinkTransformPointers.resize(_veclinks.size());
+    for(int ilink = 0; ilink < (int)_veclinks.size(); ++ilink) {
+        _vLinkTransformPointers[ilink] = &_veclinks[ilink]->_info._t;
+    }
+
     _nHierarchyComputed = 2;
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
@@ -4881,7 +4918,21 @@ void KinBody::_ComputeInternalInformation()
         index += 1;
     }
     _nParametersChanged = 0;
-    RAVELOG_VERBOSE_FORMAT("initialized %s in %fs", GetName()%(1e-6*(utils::GetMicroTime()-starttime)));
+
+    if( !!_pKinematicsGenerator ) {
+        _pCurrentKinematicsFunctions = _pKinematicsGenerator->GenerateKinematicsFunctions(*this);
+        if( !!_pCurrentKinematicsFunctions ) {
+            RAVELOG_DEBUG_FORMAT("env=%d, setting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+        }
+        else {
+            RAVELOG_DEBUG_FORMAT("env=%d, failed to set custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+        }
+    }
+    else {
+        _pCurrentKinematicsFunctions.reset();
+    }
+
+    RAVELOG_VERBOSE_FORMAT("env=%d, initialized %s in %f[s]", GetEnv()->GetId()%GetName()%(1e-6*(utils::GetMicroTime()-starttime)));
 }
 
 void KinBody::_DeinitializeInternalInformation()
@@ -5077,11 +5128,6 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
     }
 }
 
-bool KinBody::HasAttached() const
-{
-    return _listAttachedBodies.size() > 0;
-}
-
 bool KinBody::_IsAttached(int otherBodyid, std::vector<int8_t>& vAttachedVisited) const
 {
     for (const KinBodyWeakPtr& pbody : _listAttachedBodies) {
@@ -5234,16 +5280,6 @@ bool KinBody::IsVisible() const
         }
     }
     return false;
-}
-
-int KinBody::GetEnvironmentId() const
-{
-    return _environmentBodyIndex;
-}
-
-int KinBody::GetEnvironmentBodyIndex() const
-{
-    return _environmentBodyIndex;
 }
 
 int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
@@ -5430,13 +5466,16 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     InterfaceBase::Clone(preference,cloningoptions);
     KinBodyConstPtr r = RaveInterfaceConstCast<KinBody>(preference);
 
+    _pKinematicsGenerator.reset();
+    _pCurrentKinematicsFunctions.reset();
     _name = r->_name;
     _nHierarchyComputed = r->_nHierarchyComputed;
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
     __hashkinematics = r->__hashkinematics;
     _vTempJoints = r->_vTempJoints;
 
-    _veclinks.resize(0); _veclinks.reserve(r->_veclinks.size());
+    _vLinkTransformPointers.clear(); _vLinkTransformPointers.reserve(r->_veclinks.size());
+    _veclinks.clear(); _veclinks.reserve(r->_veclinks.size());
     FOREACHC(itlink, r->_veclinks) {
         LinkPtr pnewlink(new Link(shared_kinbody()));
         // TODO should create a Link::Clone method
@@ -5449,6 +5488,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
         pnewlink->_vGeometries = vnewgeometries;
         _veclinks.push_back(pnewlink);
+        _vLinkTransformPointers.push_back(&pnewlink->_info._t);
     }
 
     _vecjoints.resize(0); _vecjoints.reserve(r->_vecjoints.size());
@@ -5591,6 +5631,9 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
             // InitKinBody will be called when the body is added to the environment.
         }
     }
+
+    // can copy the generator, but not the functions! use SetKinematicsGenerator
+    SetKinematicsGenerator(r->_pKinematicsGenerator);
 
     _nUpdateStampId++; // update the stamp instead of copying
 }
@@ -5845,6 +5888,7 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
     }
 
     _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
 }
 
 void KinBody::_InitAndAddJoint(JointPtr pjoint)
@@ -6148,8 +6192,32 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface change", _id);
     }
-    
+
     return updateFromInfoResult;
+}
+
+void KinBody::SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator)
+{
+    if( _pKinematicsGenerator == pGenerator ) {
+        // same pointer, so do nothing
+        return;
+    }
+    _pKinematicsGenerator = pGenerator;
+    if( !!_pKinematicsGenerator ) {
+        _pCurrentKinematicsFunctions = _pKinematicsGenerator->GenerateKinematicsFunctions(*this);
+        if( !!_pCurrentKinematicsFunctions ) {
+            RAVELOG_DEBUG_FORMAT("env=%d, setting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+        }
+        else {
+            RAVELOG_DEBUG_FORMAT("env=%d, failed to set custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+        }
+    }
+    else {
+        if( !!_pCurrentKinematicsFunctions ) {
+            RAVELOG_DEBUG_FORMAT("env=%d, resetting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+            _pCurrentKinematicsFunctions.reset();
+        }
+    }
 }
 
 } // end namespace OpenRAVE

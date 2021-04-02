@@ -1,5 +1,34 @@
 cmake_policy(SET CMP0005 NEW)
-set(openrave_lib_SOURCES configurationspecification.cpp controller.cpp fparsermulti.h iksolver.cpp interface.cpp kinbody.cpp kinbodycollision.cpp kinbodygeometry.cpp kinbodygrab.cpp kinbodyjoint.cpp kinbodylink.cpp  kinbodystatesaver.cpp libopenrave.cpp libopenrave.h openravemathextra.cpp planner.cpp plannerparameters.cpp planningutils.cpp plugindatabase.h robot.cpp robotconnectedbody.cpp robotmanipulator.cpp sensorsystem.cpp trajectory.cpp utils.cpp xmlreaders.cpp openravemsgpack.cpp environment.cpp ${rave_header_files})
+set(openrave_lib_SOURCES
+  configurationspecification.cpp
+  controller.cpp
+  environment.cpp
+  fparsermulti.h
+  iksolver.cpp
+  interface.cpp
+  kinbody.cpp
+  kinbodycollision.cpp
+  kinbodygeometry.cpp
+  kinbodygrab.cpp
+  kinbodyjoint.cpp
+  kinbodylink.cpp
+  kinbodystatesaver.cpp
+  libopenrave.cpp
+  libopenrave.h
+  openravemathextra.cpp
+  openravemsgpack.cpp
+  planner.cpp
+  plannerparameters.cpp
+  planningutils.cpp
+  plugindatabase.h
+  robot.cpp
+  robotconnectedbody.cpp
+  robotmanipulator.cpp
+  sensorsystem.cpp
+  trajectory.cpp
+  utils.cpp
+  xmlreaders.cpp
+  ${rave_header_files})
 
 check_function_exists(asinh HAS_ASINH)
 check_function_exists(acosh HAS_ACOSH)

@@ -1574,11 +1574,6 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
     }
 }
 
-const std::vector<int>& RobotBase::GetActiveDOFIndices() const
-{
-    return _nActiveDOF < 0 ? _vAllDOFIndices : _vActiveDOFIndices;
-}
-
 ConfigurationSpecification RobotBase::GetActiveConfigurationSpecification(const std::string& interpolation) const
 {
     if( interpolation.size() == 0 ) {
