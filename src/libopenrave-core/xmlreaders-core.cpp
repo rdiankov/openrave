@@ -2283,7 +2283,6 @@ public:
             else if( xmlname == "adjacent" ) {
                 pair<string, string> entry;
                 _ss >> entry.first >> entry.second;
-                _pchain->_vForcedAdjacentLinks.push_back(entry);
                 KinBody::LinkPtr plink0 = _pchain->GetLink(entry.first);
                 if( !plink0 ) {
                     RAVELOG_WARN(str(boost::format("failed to resolve link0 %s\n")%entry.first));
@@ -2293,7 +2292,15 @@ public:
                         RAVELOG_WARN(str(boost::format("failed to resolve link1 %s\n")%entry.second));
                     }
                     else {
-                        plink0->_info._vForcedAdjacentLinks.push_back(entry.second);
+                        KinBody::LinkPtr plink1 = _pchain->GetLink(entry.second);
+                        if( !plink1 ) {
+                            RAVELOG_WARN(str(boost::format("failed to resolve link1 %s\n")%entry.second));
+                        }
+                        else {
+                            size_t link1Index = plink1->GetIndex();
+                            plink0->_info.SetNoncollidingLink(plink1->GetName());
+                            _pchain->_SetForcedAdjacentLinks(plink0->GetIndex(), link1Index);
+                        }
                     }
                 }
             }

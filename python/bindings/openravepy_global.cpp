@@ -1438,6 +1438,16 @@ void init_openravepy_global()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
+    m.def("GetMicroTime", utils::GetMicroTime, "get microsecond time");
+    m.def("GetNanoTime" , utils::GetNanoTime , "get nanosecond time" );
+#else
+    def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
+    def("GetMicroTime", utils::GetMicroTime, "get microsecond time");
+    def("GetNanoTime" , utils::GetNanoTime , "get nanosecond time" );
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_< OPENRAVE_SHARED_PTR< void > >(m, "VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
 #else
     class_< OPENRAVE_SHARED_PTR< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");

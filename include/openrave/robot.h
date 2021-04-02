@@ -36,24 +36,25 @@ public:
     class OPENRAVE_API ManipulatorInfo : public InfoBase
     {
 public:
-        ManipulatorInfo() {}
+        ManipulatorInfo() {
+        }
         ManipulatorInfo(const ManipulatorInfo& other) {
             *this = other;
         };
         bool operator==(const ManipulatorInfo& other) const {
             return _name == other._name
-                && _sBaseLinkName == other._sBaseLinkName
-                && _sIkChainEndLinkName == other._sIkChainEndLinkName
-                && _sEffectorLinkName == other._sEffectorLinkName
-                && _tLocalTool == other._tLocalTool
-                && _vChuckingDirection == other._vChuckingDirection
-                && _vdirection == other._vdirection
-                && _sIkSolverXMLId == other._sIkSolverXMLId
-                && _vGripperJointNames == other._vGripperJointNames
-                && _grippername == other._grippername
-                && _toolChangerConnectedBodyToolName == other._toolChangerConnectedBodyToolName
-                && _vRestrictGraspSetNames == other._vRestrictGraspSetNames
-                && _id == other._id;
+                   && _sBaseLinkName == other._sBaseLinkName
+                   && _sIkChainEndLinkName == other._sIkChainEndLinkName
+                   && _sEffectorLinkName == other._sEffectorLinkName
+                   && _tLocalTool == other._tLocalTool
+                   && _vChuckingDirection == other._vChuckingDirection
+                   && _vdirection == other._vdirection
+                   && _sIkSolverXMLId == other._sIkSolverXMLId
+                   && _vGripperJointNames == other._vGripperJointNames
+                   && _grippername == other._grippername
+                   && _toolChangerConnectedBodyToolName == other._toolChangerConnectedBodyToolName
+                   && _vRestrictGraspSetNames == other._vRestrictGraspSetNames
+                   && _id == other._id;
         }
         bool operator!=(const ManipulatorInfo& other) const {
             return !operator==(other);
@@ -89,7 +90,8 @@ public:
     class OPENRAVE_API GripperInfo : public InfoBase
     {
 public:
-        GripperInfo() {};
+        GripperInfo() {
+        };
         GripperInfo(const GripperInfo& other) {
             *this = other;
         };
@@ -97,10 +99,10 @@ public:
         GripperInfo& operator=(const GripperInfo& other);
         bool operator==(const GripperInfo& other) const {
             return _id == other._id
-                && name == other.name
-                && grippertype == other.grippertype
-                && gripperJointNames == other.gripperJointNames
-                && _docGripperInfo == other._docGripperInfo;
+                   && name == other.name
+                   && grippertype == other.grippertype
+                   && gripperJointNames == other.gripperJointNames
+                   && _docGripperInfo == other._docGripperInfo;
         }
         bool operator!=(const GripperInfo& other) const {
             return !operator==(other);
@@ -555,7 +557,8 @@ private:
     class OPENRAVE_API AttachedSensorInfo : public InfoBase
     {
 public:
-        AttachedSensorInfo() {}
+        AttachedSensorInfo() {
+        }
         AttachedSensorInfo(const AttachedSensorInfo& other) {
             *this = other;
         };
@@ -576,12 +579,12 @@ public:
         }
         bool operator==(const AttachedSensorInfo& other) const {
             return _id == other._id
-                && _name == other._name
-                && _linkname == other._linkname
-                && _trelative == other._trelative
-                && _sensorname == other._sensorname
-                && _referenceAttachedSensorName == other._referenceAttachedSensorName
-                && _docSensorGeometry == other._docSensorGeometry;
+                   && _name == other._name
+                   && _linkname == other._linkname
+                   && _trelative == other._trelative
+                   && _sensorname == other._sensorname
+                   && _referenceAttachedSensorName == other._referenceAttachedSensorName
+                   && _docSensorGeometry == other._docSensorGeometry;
         }
         bool operator!=(const AttachedSensorInfo& other) const {
             return !operator==(other);
@@ -887,12 +890,13 @@ private:
     class OPENRAVE_API RobotBaseInfo : public KinBodyInfo
     {
 public:
-        RobotBaseInfo() : KinBodyInfo() {}
+        RobotBaseInfo() : KinBodyInfo() {
+        }
         RobotBaseInfo(const RobotBaseInfo& other) : KinBodyInfo(other) {
             *this = other;
         };
         bool operator==(const RobotBaseInfo& other) const;
-        bool operator!=(const RobotBaseInfo& other) const{
+        bool operator!=(const RobotBaseInfo& other) const {
             return !operator==(other);
         }
 
@@ -997,21 +1001,21 @@ private:
     /// \return true if an active state changed
     virtual bool SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates);
 
-    virtual void SetName(const std::string& name);
+    void SetName(const std::string& name) override;
 
-    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits = 1, const std::vector<int>& dofindices = std::vector<int>());
-    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, uint32_t checklimits = 1);
+    void SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits = 1, const std::vector<int>& dofindices = std::vector<int>()) override;
+    void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, uint32_t checklimits = 1) override;
 
-    virtual void SetLinkTransformations(const std::vector<Transform>& transforms);
-    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues);
+    void SetLinkTransformations(const std::vector<Transform>& transforms) override;
+    void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues) override;
 
-    virtual bool SetVelocity(const Vector& linearvel, const Vector& angularvel);
-    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,uint32_t checklimits = 1);
-    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = 1, const std::vector<int>& dofindices = std::vector<int>());
+    bool SetVelocity(const Vector& linearvel, const Vector& angularvel) override;
+    void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,uint32_t checklimits = 1) override;
+    void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = 1, const std::vector<int>& dofindices = std::vector<int>()) override;
 
     /// \see SetTransform
     /// Also transforms the robot and updates the attached sensors and grabbed bodies.
-    virtual void SetTransform(const Transform& trans);
+    void SetTransform(const Transform& trans) override;
 
     /** Methods using the active degrees of freedoms of the robot. Active DOFs are a way for the
         user to specify degrees of freedom of interest for a current execution block. All planners
@@ -1030,7 +1034,7 @@ private:
         \param dofindices the indices of the original degrees of freedom to use.
         \param affine A bitmask of \ref DOFAffine values
      */
-    virtual void SetActiveDOFs(const std::vector<int>& dofindices, int affine = OpenRAVE::DOF_NoTransform);
+    void SetActiveDOFs(const std::vector<int>& dofindices, int affine = OpenRAVE::DOF_NoTransform);
 
     /** \brief Set the joint indices and affine transformation dofs that the planner should use. If \ref DOF_RotationAxis is specified, then rotationaxis is set as the new axis.
 
@@ -1038,16 +1042,16 @@ private:
         \param affine A bitmask of \ref DOFAffine values
         \param rotationaxis if \ref DOF_RotationAxis is specified, pRotationAxis is used as the new axis
      */
-    virtual void SetActiveDOFs(const std::vector<int>& dofindices, int affine, const Vector& rotationaxis);
-    virtual int GetActiveDOF() const {
+    void SetActiveDOFs(const std::vector<int>& dofindices, int affine, const Vector& rotationaxis);
+    inline int GetActiveDOF() const {
         return _nActiveDOF >= 0 ? _nActiveDOF : GetDOF();
     }
-    virtual int GetAffineDOF() const {
+    inline int GetAffineDOF() const {
         return _nAffineDOFs;
     }
 
     /// \deprecated (11/10/07)
-    virtual int GetAffineDOFIndex(DOFAffine dof) const {
+    inline int GetAffineDOFIndex(DOFAffine dof) const {
         return GetActiveDOFIndices().size()+RaveGetIndexFromAffineDOF(GetAffineDOF(),dof);
     }
 
@@ -1057,9 +1061,11 @@ private:
     virtual ConfigurationSpecification GetActiveConfigurationSpecification(const std::string& interpolation="") const;
 
     /// \brief Return the set of active dof indices of the joints.
-    virtual const std::vector<int>& GetActiveDOFIndices() const;
+    inline const std::vector<int>& GetActiveDOFIndices() const {
+        return _nActiveDOF < 0 ? _vAllDOFIndices : _vActiveDOFIndices;
+    }
 
-    virtual const Vector& GetAffineRotationAxis() const {
+    inline const Vector& GetAffineRotationAxis() const {
         return vActvAffineRotationAxis;
     }
     virtual void SetAffineTranslationLimits(const Vector& lower, const Vector& upper);
@@ -1091,43 +1097,43 @@ private:
     /// \brief gets the quaternion limits
     ///
     /// \param quatangle quaternion_start * max_angle. acos(q dot quaternion_start) <= max_angle
-    virtual Vector GetAffineRotationQuatLimits() const {
+    inline Vector GetAffineRotationQuatLimits() const {
         return _vRotationQuatLimitStart * _fQuatLimitMaxAngle;
     }
-    virtual const Vector& GetAffineTranslationMaxVels() const {
+    inline const Vector& GetAffineTranslationMaxVels() const {
         return _vTranslationMaxVels;
     }
-    virtual const Vector& GetAffineRotationAxisMaxVels() const {
+    inline const Vector& GetAffineRotationAxisMaxVels() const {
         return _vRotationAxisMaxVels;
     }
-    virtual const Vector& GetAffineRotation3DMaxVels() const {
+    inline const Vector& GetAffineRotation3DMaxVels() const {
         return _vRotation3DMaxVels;
     }
-    virtual dReal GetAffineRotationQuatMaxVels() const {
+    inline dReal GetAffineRotationQuatMaxVels() const {
         return _fQuatMaxAngleVelocity;
     }
-    virtual const Vector& GetAffineTranslationResolution() const {
+    inline const Vector& GetAffineTranslationResolution() const {
         return _vTranslationResolutions;
     }
-    virtual const Vector& GetAffineRotationAxisResolution() const {
+    inline const Vector& GetAffineRotationAxisResolution() const {
         return _vRotationAxisResolutions;
     }
-    virtual const Vector& GetAffineRotation3DResolution() const {
+    inline const Vector& GetAffineRotation3DResolution() const {
         return _vRotation3DResolutions;
     }
-    virtual dReal GetAffineRotationQuatResolution() const {
+    inline dReal GetAffineRotationQuatResolution() const {
         return _fQuatAngleResolution;
     }
-    virtual const Vector& GetAffineTranslationWeights() const {
+    inline const Vector& GetAffineTranslationWeights() const {
         return _vTranslationWeights;
     }
-    virtual const Vector& GetAffineRotationAxisWeights() const {
+    inline const Vector& GetAffineRotationAxisWeights() const {
         return _vRotationAxisWeights;
     }
-    virtual const Vector& GetAffineRotation3DWeights() const {
+    inline const Vector& GetAffineRotation3DWeights() const {
         return _vRotation3DWeights;
     }
-    virtual dReal GetAffineRotationQuatWeights() const {
+    inline dReal GetAffineRotationQuatWeights() const {
         return _fQuatAngleResolution;
     }
 
@@ -1144,12 +1150,6 @@ private:
     virtual void GetActiveDOFHardVelocityLimits(std::vector<dReal>& v) const;
     virtual void GetActiveDOFHardAccelerationLimits(std::vector<dReal>& v) const;
     virtual void GetActiveDOFHardJerkLimits(std::vector<dReal>& v) const;
-    virtual void GetActiveDOFMaxVel(std::vector<dReal>& v) const {
-        return GetActiveDOFVelocityLimits(v);
-    }
-    virtual void GetActiveDOFMaxAccel(std::vector<dReal>& v) const {
-        return GetActiveDOFAccelerationLimits(v);
-    }
     virtual void GetActiveDOFMaxJerk(std::vector<dReal>& v) const {
         return GetActiveDOFJerkLimits(v);
     }
@@ -1272,7 +1272,7 @@ private:
         when checking collisions between the grabbed body and the robot.
         \return true if successful and body is grabbed.
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore);
+    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore) override;
 
     /** \brief Grab a body with the specified link.
 
@@ -1280,7 +1280,7 @@ private:
         \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
         \return true if successful and body is grabbed/
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith);
+    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith) override;
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
@@ -1310,7 +1310,7 @@ private:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /// \return true if this body is derived from RobotBase
-    virtual bool IsRobot() const {
+    bool IsRobot() const override {
         return true;
     }
 
@@ -1347,9 +1347,9 @@ protected:
     RobotBase(EnvironmentBasePtr penv);
 
     /// \brief Proprocess the manipulators and sensors and build the specific robot hashes.
-    virtual void _ComputeInternalInformation();
+    void _ComputeInternalInformation() override;
 
-    virtual void _DeinitializeInternalInformation();
+    void _DeinitializeInternalInformation() override;
 
     /// \brief Proprocess with _vecConnectedBodies and reinitialize robot.
     virtual void _ComputeConnectedBodiesInformation();

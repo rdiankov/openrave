@@ -433,8 +433,8 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
         _mapStringParameters[it->first] = ConvertStringToUnicode(it->second);
     }
     py::list vForcedAdjacentLinks;
-    FOREACHC(it, info._vForcedAdjacentLinks) {
-        vForcedAdjacentLinks.append(ConvertStringToUnicode(*it));
+    for (const std::string& linkName : info._vForcedAdjacentLinks) {
+        vForcedAdjacentLinks.append(linkName);
     }
     FOREACHC(it, info._mapExtraGeometries) {
         _mapExtraGeometries[it->first] = toPyArray(it->second);
@@ -3129,12 +3129,12 @@ void PyKinBody::SetDOFVelocities(object odofvelocities, object olinearvel, objec
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     try {
 #endif
-        _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
+    _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    }
-    catch (const py::error_already_set& e) {
-        this->SetDOFVelocities(odofvelocities, py::extract<uint32_t>(olinearvel), oangularvel);
-    }
+}
+catch (const py::error_already_set& e) {
+    this->SetDOFVelocities(odofvelocities, py::extract<uint32_t>(olinearvel), oangularvel);
+}
 #endif
 }
 
@@ -3743,6 +3743,11 @@ object PyKinBody::IsGrabbing(PyKinBodyPtr pbody) const
     return toPyKinBodyLink(plink,_pyenv);
 }
 
+int PyKinBody::GetNumGrabbed() const
+{
+    return _pbody->GetNumGrabbed();
+}
+
 object PyKinBody::GetGrabbed() const
 {
     py::list bodies;
@@ -3842,11 +3847,24 @@ void PyKinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
     _pbody->SetAdjacentLinks(linkindex0, linkindex1);
 }
 
+void PyKinBody::SetAdjacentLinksCombinations(object olinkIndices)
+{
+    const std::vector<int> linkIndices = ExtractArray<int>(olinkIndices);
+    _pbody->SetAdjacentLinksCombinations(linkIndices);
+}
+
 object PyKinBody::GetAdjacentLinks() const
 {
     py::list adjacent;
-    FOREACHC(it,_pbody->GetAdjacentLinks())
-    adjacent.append(py::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+    const size_t numLinks = _pbody->GetLinks().size();
+    for (size_t index0 = 0; index0 < numLinks; ++index0) {
+        for (size_t index1 = index0 + 1; index1 < numLinks; ++index1) {
+            if (_pbody->AreAdjacentLinks(index0, index1)) {
+                adjacent.append(py::make_tuple(index0, index1));
+            }
+        }
+    }
+                    
     return adjacent;
 }
 
@@ -3883,7 +3901,6 @@ object PyKinBody::ExtractInfo() const {
     _pbody->ExtractInfo(info);
     return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
 }
-
 
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
 {
@@ -5295,6 +5312,7 @@ void init_openravepy_kinbody()
                          .def("ReleaseAllGrabbedWithLink",&PyKinBody::ReleaseAllGrabbedWithLink, PY_ARGS("grablink") DOXY_FN(KinBody,ReleaseAllGrabbedWithLink))
                          .def("RegrabAll",&PyKinBody::RegrabAll, DOXY_FN(KinBody,RegrabAll))
                          .def("IsGrabbing",&PyKinBody::IsGrabbing,PY_ARGS("body") DOXY_FN(KinBody,IsGrabbing))
+                         .def("GetNumGrabbed", &PyKinBody::GetNumGrabbed, DOXY_FN(KinBody,GetNumGrabbed))
                          .def("GetGrabbed",&PyKinBody::GetGrabbed, DOXY_FN(KinBody,GetGrabbed))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("GetGrabbedInfo", &PyKinBody::GetGrabbedInfo,
@@ -5386,6 +5404,7 @@ void init_openravepy_kinbody()
                          .def("GetNonAdjacentLinks",GetNonAdjacentLinks1, DOXY_FN(KinBody,GetNonAdjacentLinks))
                          .def("GetNonAdjacentLinks",GetNonAdjacentLinks2, PY_ARGS("adjacentoptions") DOXY_FN(KinBody,GetNonAdjacentLinks))
                          .def("SetAdjacentLinks",&PyKinBody::SetAdjacentLinks, PY_ARGS("linkindex0", "linkindex1") DOXY_FN(KinBody,SetAdjacentLinks))
+                         .def("SetAdjacentLinksCombinations",&PyKinBody::SetAdjacentLinksCombinations, PY_ARGS("linkIndices") DOXY_FN(KinBody,SetAdjacentLinksCombinations))
                          .def("GetAdjacentLinks",&PyKinBody::GetAdjacentLinks, DOXY_FN(KinBody,GetAdjacentLinks))
                          .def("GetManageData",&PyKinBody::GetManageData, DOXY_FN(KinBody,GetManageData))
                          .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp, DOXY_FN(KinBody,GetUpdateStamp))
