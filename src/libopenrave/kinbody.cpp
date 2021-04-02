@@ -4699,8 +4699,25 @@ void KinBody::_ComputeInternalInformation()
 
     __hashkinematics.resize(0);
     const size_t numLinks = GetLinks().size();
+
     // create the adjacency list
     {
+        _vForcedAdjacentLinks.resize(numLinks*numLinks);
+        std::fill(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), 0);
+    
+        for (const LinkPtr& plink : _veclinks) {
+            for (const std::string& forceAdjacentLinkFromInfo : plink->_info._vForcedAdjacentLinks) {
+                LinkPtr pLinkForceAdjacentLinkFromInfo = GetLink(forceAdjacentLinkFromInfo);
+                if (!pLinkForceAdjacentLinkFromInfo) {
+                    RAVELOG_WARN_FORMAT("env=%d, could not find link \"%s\" in _vForcedAdjacentLinks of body \"%s:%s\"", GetEnv()->GetId()%forceAdjacentLinkFromInfo%GetName()%plink->GetName());
+                    continue;
+                }
+
+                const size_t forcedAdjacentLinkIndex = pLinkForceAdjacentLinkFromInfo->GetIndex();
+                _vForcedAdjacentLinks.at(_GetIndex1d(plink->_index, forcedAdjacentLinkIndex, numLinks)) = 1;
+            }
+        }
+
         _vAdjacentLinks = _vForcedAdjacentLinks;
         // probably unnecessary, but just in case
         if (_vAdjacentLinks.size() < numLinks*numLinks) {
@@ -5816,19 +5833,6 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
 
-    const size_t newLinkSizeAfterAdded = _veclinks.size() + 1;
-    _vForcedAdjacentLinks.resize(newLinkSizeAfterAdded*newLinkSizeAfterAdded, 0);
-    
-    for (const std::string& forceAdjacentLinkFromInfo : info._vForcedAdjacentLinks) {
-        LinkPtr pLinkForceAdjacentLinkFromInfo = GetLink(forceAdjacentLinkFromInfo);
-        if (!pLinkForceAdjacentLinkFromInfo) {
-            RAVELOG_WARN_FORMAT("env=%d, could not find link \"%s\" in _vForcedAdjacentLinks of body \"%s:%s\"", GetEnv()->GetId()%forceAdjacentLinkFromInfo%GetName()%plink->GetName());
-            continue;
-        }
-
-        const size_t forcedAdjacentLinkIndex = pLinkForceAdjacentLinkFromInfo->GetIndex();
-        _vForcedAdjacentLinks.at(_GetIndex1d(plink->_index, forcedAdjacentLinkIndex, newLinkSizeAfterAdded)) = 1;
-    }
     _veclinks.push_back(plink);
 }
 
