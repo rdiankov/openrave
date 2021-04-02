@@ -916,7 +916,7 @@ private:
             if( !o1info.first ) {
                 if( _bParentlessCollisionObject ) {
                     if( !!o2info.second ) {
-                        RAVELOG_WARN_FORMAT("env=%d, fcl::CollisionObject o1 %x collides with link2 %s:%s, but collision ignored", GetEnv()->GetId()%o1%o2info.second->GetParent()->GetName()%o2info.second->GetName());
+                        RAVELOG_WARN_FORMAT("env=%d(%s), fcl::CollisionObject o1 %x collides with link2 %s:%s, but collision ignored", GetEnv()->GetId()%GetEnv()->GetName()%o1%o2info.second->GetParent()->GetName()%o2info.second->GetName());
                     }
                 }
                 return false;
@@ -927,7 +927,7 @@ private:
             if( !o2info.first ) {
                 if( _bParentlessCollisionObject ) {
                     if( !!o1info.second ) {
-                        RAVELOG_WARN_FORMAT("env=%d, link1 %s:%s collides with fcl::CollisionObject o2 %x, but collision ignored", GetEnv()->GetId()%o1info.second->GetParent()->GetName()%o1info.second->GetName()%o2);
+                        RAVELOG_WARN_FORMAT("env=%d(%s), link1 %s:%s collides with fcl::CollisionObject o2 %x, but collision ignored", GetEnv()->GetId()%GetEnv()->GetName()%o1info.second->GetParent()->GetName()%o1info.second->GetName()%o2);
                     }
                 }
                 return false;
@@ -1125,14 +1125,14 @@ private:
         if( !o1info.second && !o1info.first ) {
             // o1 is standalone object
             if( _bParentlessCollisionObject && !!o2info.second ) {
-                RAVELOG_WARN_FORMAT("env=%d, fcl::CollisionObject o1 %x collides with link2 %s:%s, but is ignored for distance computation", GetEnv()->GetId()%o1%o2info.second->GetParent()->GetName()%o2info.second->GetName());
+                RAVELOG_WARN_FORMAT("env=%d(%s), fcl::CollisionObject o1 %x collides with link2 %s:%s, but is ignored for distance computation", GetEnv()->GetId()%GetEnv()->GetName()%o1%o2info.second->GetParent()->GetName()%o2info.second->GetName());
             }
             return false;
         }
         if( !o2info.second && !o2info.first ) {
             // o2 is standalone object
             if( _bParentlessCollisionObject && !!o1info.second ) {
-                RAVELOG_WARN_FORMAT("env=%d, link1 %s:%s collides with fcl::CollisionObject o2 %x, but is ignored for distance computation", GetEnv()->GetId()%o1info.second->GetParent()->GetName()%o1info.second->GetName()%o2);
+                RAVELOG_WARN_FORMAT("env=%d(%s), link1 %s:%s collides with fcl::CollisionObject o2 %x, but is ignored for distance computation", GetEnv()->GetId()%GetEnv()->GetName()%o1info.second->GetParent()->GetName()%o1info.second->GetName()%o2);
             }
             return false;
         }
@@ -1239,7 +1239,7 @@ private:
             }
             return std::make_pair(link_raw, plink);
         }
-        RAVELOG_WARN_FORMAT("env=%d, fcl collision object %x does not have a link attached (userdatakey %s)", GetEnv()->GetId()%(&collObj)%_userdatakey);
+        RAVELOG_WARN_FORMAT("env=%d(%s), fcl collision object %x does not have a link attached (userdatakey %s)", GetEnv()->GetId()%GetEnv()->GetName()%(&collObj)%_userdatakey);
         _bParentlessCollisionObject = true;
         return std::make_pair(link_raw, LinkConstPtr());
     }
@@ -1304,7 +1304,7 @@ private:
     void _PrintCollisionManagerInstanceB(const KinBody& body, FCLCollisionManagerInstance& manager)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName());
+            RAVELOG_WARN_FORMAT("env=%d(%s), self=%d, body %s ", GetEnv()->GetId()%GetEnv()->GetName()%_bIsSelfCollisionChecker%body.GetName());
             _bParentlessCollisionObject = false;
         }
     }
@@ -1312,7 +1312,7 @@ private:
     void _PrintCollisionManagerInstanceSelf(const KinBody& body)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName());
+            RAVELOG_WARN_FORMAT("env=%d(%s), self=%d, body %s ", GetEnv()->GetId()%GetEnv()->GetName()%_bIsSelfCollisionChecker%body.GetName());
             _bParentlessCollisionObject = false;
         }
     }
@@ -1320,7 +1320,7 @@ private:
     void _PrintCollisionManagerInstanceBL(const KinBody& body, FCLCollisionManagerInstance& manager, const KinBody::Link& link)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s with link %s:%s (enabled=%d) ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName()%link.GetParent()->GetName()%link.GetName()%link.IsEnabled());
+            RAVELOG_WARN_FORMAT("env=%d(%s), self=%d, body %s with link %s:%s (enabled=%d) ", GetEnv()->GetId()%GetEnv()->GetName()%_bIsSelfCollisionChecker%body.GetName()%link.GetParent()->GetName()%link.GetName()%link.IsEnabled());
             _bParentlessCollisionObject = false;
         }
     }
@@ -1328,7 +1328,7 @@ private:
     void _PrintCollisionManagerInstanceBE(const KinBody& body, FCLCollisionManagerInstance& manager, FCLCollisionManagerInstance& envManager)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName());
+            RAVELOG_WARN_FORMAT("env=%d(%s), self=%d, body %s ", GetEnv()->GetId()%GetEnv()->GetName()%_bIsSelfCollisionChecker%body.GetName());
             _bParentlessCollisionObject = false;
         }
     }
@@ -1336,7 +1336,7 @@ private:
     void _PrintCollisionManagerInstance(const KinBody& body1, FCLCollisionManagerInstance& manager1, const KinBody& body2, FCLCollisionManagerInstance& manager2)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, self=%d, body1 %s (enabled=%d) body2 %s (enabled=%d) ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body1.GetName()%body1.IsEnabled()%body2.GetName()%body2.IsEnabled());
+            RAVELOG_WARN_FORMAT("env=%d(%s), self=%d, body1 %s (enabled=%d) body2 %s (enabled=%d) ", GetEnv()->GetId()%GetEnv()->GetName()%_bIsSelfCollisionChecker%body1.GetName()%body1.IsEnabled()%body2.GetName()%body2.IsEnabled());
             _bParentlessCollisionObject = false;
         }
     }
@@ -1344,7 +1344,7 @@ private:
     void _PrintCollisionManagerInstanceLE(const KinBody::Link& link, FCLCollisionManagerInstance& envManager)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, self=%d, link %s:%s (enabled=%d) ", GetEnv()->GetId()%_bIsSelfCollisionChecker%link.GetParent()->GetName()%link.GetName()%link.IsEnabled());
+            RAVELOG_WARN_FORMAT("env=%d(%s), self=%d, link %s:%s (enabled=%d) ", GetEnv()->GetId()%GetEnv()->GetName()%_bIsSelfCollisionChecker%link.GetParent()->GetName()%link.GetName()%link.IsEnabled());
             _bParentlessCollisionObject = false;
         }
     }

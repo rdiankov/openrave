@@ -2504,7 +2504,7 @@ void DummyXMLReader::characters(const std::string& ch)
     }
 }
 
-EnvironmentBase::EnvironmentBase()
+void EnvironmentBase::_InitializeInternal()
 {
     if( !RaveGlobalState() ) {
         RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state is not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.", boost::this_thread::get_id());
@@ -2513,6 +2513,17 @@ EnvironmentBase::EnvironmentBase()
         RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state finished initializing in %u[us].", boost::this_thread::get_id()%(utils::GetMicroTime()-starttime));
     }
     __nUniqueId = RaveGlobal::instance()->RegisterEnvironment(this);
+}
+
+EnvironmentBase::EnvironmentBase()
+{
+    _InitializeInternal();
+}
+
+EnvironmentBase::EnvironmentBase(const std::string& name)
+    : _name(name)
+{
+    _InitializeInternal();
 }
 
 EnvironmentBase::~EnvironmentBase()

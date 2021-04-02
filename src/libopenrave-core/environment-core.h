@@ -33,7 +33,7 @@
 
 #define CHECK_INTERFACE(pinterface) { \
         if( (pinterface)->GetEnv() != shared_from_this() ) \
-            throw openrave_exception(str(boost::format(_("env=%d, Interface %s:%s is from a different environment (env=%d) than the current one."))%GetId()%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()%(pinterface)->GetEnv()->GetId()),ORE_InvalidArguments); \
+            throw openrave_exception(str(boost::format(_("env=%d(%s), Interface %s:%s is from a different environment (env=%d(%s)) than the current one."))%GetId()%GetName()%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()%(pinterface)->GetEnv()->GetId()%(pinterface)->GetEnv()->GetName()),ORE_InvalidArguments); \
 } \
 
 #define CHECK_COLLISION_BODY(body) { \
@@ -211,29 +211,12 @@ protected:
 public:
     Environment() : EnvironmentBase()
     {
-        _homedirectory = RaveGetHomeDirectory();
-        RAVELOG_DEBUG_FORMAT("env=%d, setting openrave home directory to %s", GetId()%_homedirectory);
+        _Init();
+    }
 
-        _nBodiesModifiedStamp = 0;
-
-        _assignedBodySensorNameIdSuffix = 0;
-
-        _fDeltaSimTime = 0.01f;
-        _nCurSimTime = 0;
-        _nSimStartTime = utils::GetMicroTime();
-        _bRealTime = true;
-        _bInit = false;
-        _bEnableSimulation = true;     // need to start by default
-        _unit = std::make_pair("meter",1.0); //default unit settings
-
-        _vRapidJsonLoadBuffer.resize(4000000);
-        _prLoadEnvAlloc.reset(new rapidjson::MemoryPoolAllocator<>(&_vRapidJsonLoadBuffer[0], _vRapidJsonLoadBuffer.size()));
-
-        _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
-        _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
-        _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", RaveGetInterfaceHash(PT_Controller), GetHash(), CreateMultiController);
-        _handlegenericphysicsengine = RaveRegisterInterface(PT_PhysicsEngine,"GenericPhysicsEngine", RaveGetInterfaceHash(PT_PhysicsEngine), GetHash(), CreateGenericPhysicsEngine);
-        _handlegenericcollisionchecker = RaveRegisterInterface(PT_CollisionChecker,"GenericCollisionChecker", RaveGetInterfaceHash(PT_CollisionChecker), GetHash(), CreateGenericCollisionChecker);
+    Environment(const std::string& name) : EnvironmentBase(name)
+    {
+        _Init();
     }
 
     virtual ~Environment()
@@ -322,22 +305,22 @@ public:
     {
         boost::mutex::scoped_lock lockdestroy(_mutexInit);
         if( !_bInit ) {
-            RAVELOG_VERBOSE_FORMAT("env=%d is already destroyed", GetId());
+            RAVELOG_VERBOSE_FORMAT("env=%d(%s) is already destroyed", GetId()%GetName());
             return;
         }
 
         // destruction order is *very* important, don't touch it without consultation
         _bInit = false;
 
-        RAVELOG_VERBOSE_FORMAT("env=%d destructor, _vecbodies.size():%d", GetId()%_vecbodies.size());
+        RAVELOG_VERBOSE_FORMAT("env=%d(%s) destructor, _vecbodies.size():%d", GetId()%GetName()%_vecbodies.size());
         if (_vecbodies.size() > 10000 || _mapBodyNameIndex.size() > 10000 || _mapBodyIdIndex.size() > 10000) { // don't know good threshold
-            RAVELOG_WARN_FORMAT("env=%d, _vecbodies.size():%d, _mapBodyNameIndex.size():%d, _mapBodyIdIndex.size():%d seems large, maybe there is memory leak", GetId()%_vecbodies.size()%_mapBodyNameIndex.size());
+            RAVELOG_WARN_FORMAT("env=%d(%s), _vecbodies.size():%d, _mapBodyNameIndex.size():%d, _mapBodyIdIndex.size():%d seems large, maybe there is memory leak", GetId()%GetName()%_vecbodies.size()%_mapBodyNameIndex.size());
         }
         _StopSimulationThread();
 
         // destroy the modules (their destructors could attempt to lock environment, so have to do it before global lock)
         // however, do not clear the _listModules yet
-        RAVELOG_DEBUG_FORMAT("env=%d destroy module", GetId());
+        RAVELOG_DEBUG_FORMAT("env=%d(%s) destroy module", GetId()%GetName());
         list< pair<ModuleBasePtr, std::string> > listModules;
         list<ViewerBasePtr> listViewers = _listViewers;
         {
@@ -513,7 +496,7 @@ public:
         _listOwnedInterfaces.remove(pinterface);
     }
 
-    virtual EnvironmentBasePtr CloneSelf(int options)
+    EnvironmentBasePtr CloneSelf(int options) override
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         boost::shared_ptr<Environment> penv(new Environment());
@@ -521,10 +504,25 @@ public:
         return penv;
     }
 
-    virtual void Clone(EnvironmentBaseConstPtr preference, int cloningoptions)
+    EnvironmentBasePtr CloneSelf(const std::string& clonedEnvName, int options) override
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        boost::shared_ptr<Environment> penv(new Environment(clonedEnvName));
+        penv->_Clone(boost::static_pointer_cast<Environment const>(shared_from_this()),options,false);
+        return penv;
+    }
+
+    void Clone(EnvironmentBaseConstPtr preference, int cloningoptions) override
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         _Clone(boost::static_pointer_cast<Environment const>(preference),cloningoptions,true);
+    }
+
+    void Clone(EnvironmentBaseConstPtr preference, const std::string& clonedEnvName, int cloningoptions) override
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        _Clone(boost::static_pointer_cast<Environment const>(preference), cloningoptions,true);
+        _name = clonedEnvName;
     }
 
     virtual int AddModule(ModuleBasePtr module, const std::string& cmdargs)
@@ -1137,7 +1135,7 @@ public:
         SharedLock lock(_mutexInterfaces);
         const std::unordered_map<std::string, int>::const_iterator it = _mapBodyIdIndex.find(id);
         if (it == _mapBodyIdIndex.end()) {
-            RAVELOG_WARN_FORMAT("env=%d, id %s is not found", GetId()%id);
+            RAVELOG_WARN_FORMAT("env=%d(%s), id %s is not found", GetId()%GetName()%id);
             return 0;
         }
         const int envBodyIndex = it->second;
@@ -1148,7 +1146,7 @@ public:
             }
             else {
                 //RAVELOG_WARN_FORMAT("env=%d, body '%s' has id '%s', but environment stored its id as '%s'", GetId()%pbody->GetName()%pbody->GetId()%id);
-                throw OPENRAVE_EXCEPTION_FORMAT("env=%d, body '%s' has id '%s', but environment stored its id as '%s'", GetId()%pbody->GetName()%pbody->GetId()%id, ORE_BodyIdConflict);
+                throw OPENRAVE_EXCEPTION_FORMAT("env=%d(%s), body '%s' has id '%s', but environment stored its id as '%s'", GetId()%pbody->GetName()%pbody->GetId()%GetId()%pbody->GetName()%pbody->GetName()%id, ORE_BodyIdConflict);
             }
         }
         return KinBodyPtr();
@@ -1201,10 +1199,10 @@ public:
         }
 
         if (!pbody) {
-            RAVELOG_WARN_FORMAT("env=%d, name %s (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%pname%envBodyIndex);
+            RAVELOG_WARN_FORMAT("env=%d(%s), name %s (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%GetName()%pname%envBodyIndex);
         }
         else {
-            RAVELOG_WARN_FORMAT("env=%d, name %s (envBodyIndex=%d) is not robot", GetId()%pname%envBodyIndex);
+            RAVELOG_WARN_FORMAT("env=%d(%s), name %s (envBodyIndex=%d) is not robot", GetId()%GetName()%pname%envBodyIndex);
         }
 
         return RobotBasePtr();
@@ -1256,7 +1254,7 @@ public:
         }
         _pPhysicsEngine = pengine;
         if( !_pPhysicsEngine ) {
-            RAVELOG_DEBUG_FORMAT("env=%d, disabling physics for", GetId());
+            RAVELOG_DEBUG_FORMAT("env=%d(%s), disabling physics for", GetId()%GetName());
             _pPhysicsEngine = RaveCreatePhysicsEngine(shared_from_this(),"GenericPhysicsEngine");
             _SetDefaultGravity();
         }
@@ -2622,7 +2620,6 @@ public:
             ++validBodyItr;
         }
         BOOST_ASSERT(validBodyItr == numBodies);
-        info._name = _name;
         info._keywords = _keywords;
         info._description = _description;
         if (!!_pPhysicsEngine) {
@@ -2646,7 +2643,7 @@ public:
         if( updateMode != UFIM_OnlySpecifiedBodiesExact ) {
             // copy basic info into EnvironmentBase
             _revision = info._revision;
-            _name = info._name;
+            //_name = info._name; not copying name, just like __nUniqueId, it is not updated from info
             _keywords = info._keywords;
             _description = info._description;
             _mapUInt64Parameters = info._uInt64Parameters;
@@ -2758,7 +2755,7 @@ public:
                     KinBodyPtr pBody = *itExisting;
                     bool bInterfaceMatches = pBody->GetXMLId() == pKinBodyInfo->_interfaceType;
                     if( !bInterfaceMatches || pBody->IsRobot() != pKinBodyInfo->_isRobot ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, body %s interface is changed, remove old body from environment. xmlid=%s, _interfaceType=%s, isRobot %d != %d", GetId()%pBody->_id%pBody->GetXMLId()%pKinBodyInfo->_interfaceType%pBody->IsRobot()%pKinBodyInfo->_isRobot);
+                        RAVELOG_VERBOSE_FORMAT("env=%d(%s), body %s interface is changed, remove old body from environment. xmlid=%s, _interfaceType=%s, isRobot %d != %d", GetId()%GetName()%pBody->_id%pBody->GetXMLId()%pKinBodyInfo->_interfaceType%pBody->IsRobot()%pKinBodyInfo->_isRobot);
                         itExisting = vBodies.end();
                         vRemovedBodies.push_back(pBody);
 
@@ -2793,7 +2790,7 @@ public:
 
             KinBodyPtr pInitBody; // body that has to be Init() again
             if( !!pMatchExistingBody ) {
-                RAVELOG_VERBOSE_FORMAT("env=%d, update existing body %s", GetId()%pMatchExistingBody->_id);
+                RAVELOG_VERBOSE_FORMAT("env=%d(%s), update existing body %s", GetId()%GetName()%pMatchExistingBody->_id);
                 // interface should match at this point
                 // update existing body or robot
                 UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
@@ -2808,7 +2805,7 @@ public:
                 } else {
                     updateFromInfoResult = pMatchExistingBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                 }
-                RAVELOG_VERBOSE_FORMAT("env=%d, update body %s from info result %d", GetId()%pMatchExistingBody->_id%updateFromInfoResult);
+                RAVELOG_VERBOSE_FORMAT("env=%d(%s), update body %s from info result %d", GetId()%GetName()%pMatchExistingBody->_id%updateFromInfoResult);
                 if (updateFromInfoResult == UFIR_NoChange) {
                     continue;
                 }
@@ -2952,7 +2949,7 @@ public:
                         ++itBody;
                         continue;
                     }
-                    RAVELOG_VERBOSE_FORMAT("remove extra body env=%d, id=%s, name=%s", GetId()%pBody->_id%pBody->_name);
+                    RAVELOG_VERBOSE_FORMAT("remove extra body env=%d(%s), id=%s, name=%s", GetId()%GetName()%pBody->_id%pBody->_name);
 
                     vector<KinBodyPtr>::iterator itBodyToRemove = std::find(_vecbodies.begin(), _vecbodies.end(), pBody);
                     if( itBodyToRemove != _vecbodies.end() ) {
@@ -2988,13 +2985,13 @@ public:
                         vGrabbedInfos.push_back(*itGrabbedInfo);
                     }
                     else {
-                        RAVELOG_WARN_FORMAT("env=%d, body %s grabbed by %s is gone, ignoring grabbed info %s", GetId()%(*itGrabbedInfo)->_grabbedname%pKinBodyInfo->_name%(*itGrabbedInfo)->_id);
+                        RAVELOG_WARN_FORMAT("env=%d(%s), body %s grabbed by %s is gone, ignoring grabbed info %s", GetId()%GetName()%(*itGrabbedInfo)->_grabbedname%pKinBodyInfo->_name%(*itGrabbedInfo)->_id);
                     }
                 }
                 (*itExistingBody)->ResetGrabbed(vGrabbedInfos);
             }
             else {
-                RAVELOG_WARN_FORMAT("env=%d, could not find body with name='%s'", GetId()%bodyName);
+                RAVELOG_WARN_FORMAT("env=%d(%s), could not find body with name='%s'", GetId()%GetName()%bodyName);
             }
         }
 
@@ -3004,16 +3001,6 @@ public:
     int GetRevision() const override {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         return _revision;
-    }
-
-    void SetName(const std::string& sceneName) override {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        _name = sceneName;
-    }
-
-    std::string GetName() const {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return _name;
     }
 
     void SetDescription(const std::string& sceneDescription) override {
@@ -3079,7 +3066,7 @@ public:
         const int envBodyIndex = itOld->second;
         _mapBodyNameIndex.erase(itOld);
         _mapBodyNameIndex[newName] = envBodyIndex;
-        RAVELOG_VERBOSE_FORMAT("env=%d, body \"%s\" is renamed to \"%s\"", GetId()%oldName%newName);
+        RAVELOG_VERBOSE_FORMAT("env=%d(%s), body \"%s\" is renamed to \"%s\"", GetId()%GetName()%oldName%newName);
         return true;
     }
 
@@ -3105,11 +3092,38 @@ public:
         const int envBodyIndex = itOld->second;
         _mapBodyIdIndex.erase(itOld);
         _mapBodyIdIndex[newId] = envBodyIndex;
-        RAVELOG_VERBOSE_FORMAT("env=%d, body id changed from \"%s\" to \"%s\"", GetId()%oldId%newId);
+        RAVELOG_VERBOSE_FORMAT("env=%d(%s), body id changed from \"%s\" to \"%s\"", GetId()%GetName()%oldId%newId);
         return true;
     }
 
 protected:
+
+    void _Init()
+    {
+        _homedirectory = RaveGetHomeDirectory();
+        RAVELOG_DEBUG_FORMAT("env=%d(%s), setting openrave home directory to %s", GetId()%GetName()%_homedirectory);
+
+        _nBodiesModifiedStamp = 0;
+
+        _assignedBodySensorNameIdSuffix = 0;
+
+        _fDeltaSimTime = 0.01f;
+        _nCurSimTime = 0;
+        _nSimStartTime = utils::GetMicroTime();
+        _bRealTime = true;
+        _bInit = false;
+        _bEnableSimulation = true;     // need to start by default
+        _unit = std::make_pair("meter",1.0); //default unit settings
+
+        _vRapidJsonLoadBuffer.resize(4000000);
+        _prLoadEnvAlloc.reset(new rapidjson::MemoryPoolAllocator<>(&_vRapidJsonLoadBuffer[0], _vRapidJsonLoadBuffer.size()));
+
+        _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
+        _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
+        _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", RaveGetInterfaceHash(PT_Controller), GetHash(), CreateMultiController);
+        _handlegenericphysicsengine = RaveRegisterInterface(PT_PhysicsEngine,"GenericPhysicsEngine", RaveGetInterfaceHash(PT_PhysicsEngine), GetHash(), CreateGenericPhysicsEngine);
+        _handlegenericcollisionchecker = RaveRegisterInterface(PT_CollisionChecker,"GenericCollisionChecker", RaveGetInterfaceHash(PT_CollisionChecker), GetHash(), CreateGenericCollisionChecker);
+    }
 
     /// \brief invalidates a kinbody from _vecbodies
     /// \param[in] bodyIndex environment body index of kin body to be invalidated
@@ -3125,7 +3139,7 @@ protected:
         // before deleting, make sure no robots are grabbing it!!
         for (KinBodyPtr& probot : _vecbodies) {
             if( !!probot && probot->IsGrabbing(body) ) {
-                RAVELOG_WARN_FORMAT("env=%d, remove %s already grabbed by robot %s!", GetId()%body.GetName()%probot->GetName());
+                RAVELOG_WARN_FORMAT("env=%d(%s), remove %s already grabbed by robot %s!", GetId()%GetName()%body.GetName()%probot->GetName());
                 probot->Release(body);
             }
         }
@@ -3141,11 +3155,11 @@ protected:
 
         // invalidate cache
         if (_mapBodyNameIndex.erase(name) == 0) {
-            RAVELOG_WARN_FORMAT("env=%d, pbody of name %s not found in _mapBodyNameIndex of size %d, this should not happen!", GetId()%name%_mapBodyNameIndex.size());
+            RAVELOG_WARN_FORMAT("env=%d(%s), pbody of name %s not found in _mapBodyNameIndex of size %d, this should not happen!", GetId()%GetName()%name%_mapBodyNameIndex.size());
         }
         const std::string& id = body.GetId();
         if (_mapBodyIdIndex.erase(id) == 0) {
-            RAVELOG_WARN_FORMAT("env=%d, pbody of id %s not found in _mapBodyIdIndex of size %d, this should not happen!", GetId()%id%_mapBodyIdIndex.size());
+            RAVELOG_WARN_FORMAT("env=%d(%s), pbody of id %s not found in _mapBodyIdIndex of size %d, this should not happen!", GetId()%GetName()%id%_mapBodyIdIndex.size());
         }
         _UnassignEnvironmentBodyIndex(body);
 
@@ -3198,7 +3212,6 @@ protected:
         _nSimStartTime = utils::GetMicroTime();
         _bRealTime = r->_bRealTime;
 
-        _name = r->_name;
         _description = r->_description;
         _keywords = r->_keywords;
         _mapUInt64Parameters = r->_mapUInt64Parameters;
@@ -3369,7 +3382,7 @@ protected:
                             BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) vecbodies.size());
                             const KinBodyPtr& pNewBodyCandidate = vecbodies.at(envBodyIndex);
                             if( !pNewBodyCandidate ) {
-                                RAVELOG_WARN_FORMAT("env=%d, a body (name=%s, envBodyIndex=%d) in vecbodies is not initialized", GetId()%name%envBodyIndex);
+                                RAVELOG_WARN_FORMAT("env=%d(%s), a body (name=%s, envBodyIndex=%d) in vecbodies is not initialized", GetId()%GetName()%name%envBodyIndex);
                             }
                             else if (pNewBodyCandidate->GetKinematicsGeometryHash() == body.GetKinematicsGeometryHash() ) {
                                 pnewbody = pNewBodyCandidate;
@@ -3394,7 +3407,7 @@ protected:
                     }
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("env=%d, failed to clone body %s: %s", GetId()%body.GetName()%ex.what());
+                    RAVELOG_ERROR_FORMAT("env=%d(%s), failed to clone body %s: %s", GetId()%GetName()%body.GetName()%ex.what());
                 }
             }
 

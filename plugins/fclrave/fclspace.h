@@ -97,7 +97,7 @@ public:
             void Reset() {
                 if( !!linkBV.second ) {
                     if( !!GetLink() ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, resetting link %s:%s col=0x%x", GetLink()->GetParent()->GetEnv()->GetId()%GetLink()->GetParent()->GetName()%GetLink()->GetName()%(uint64_t)linkBV.second.get());
+                        RAVELOG_VERBOSE_FORMAT("env=%d(%s), resetting link %s:%s col=0x%x", GetLink()->GetParent()->GetEnv()->GetId()%GetLink()->GetParent()->GetEnv()->GetName()%GetLink()->GetParent()->GetName()%GetLink()->GetName()%(uint64_t)linkBV.second.get());
                     }
                     else {
                         RAVELOG_VERBOSE_FORMAT("resetting unknown link col=0x%x", (uint64_t)linkBV.second.get());
@@ -215,7 +215,7 @@ public:
             pinfo->_geometrygroup = _geometrygroup;
         }
 
-        RAVELOG_VERBOSE_FORMAT("env=%d, self=%d, init body %s (%d)", _penv->GetId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentBodyIndex());
+        RAVELOG_VERBOSE_FORMAT("env=%d(%s), self=%d, init body %s (%d)", _penv->GetId()%_penv->GetName()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentBodyIndex());
         pinfo->Reset();
         pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
         // make sure that synchronization do occur !
@@ -286,7 +286,7 @@ public:
             }
 
             if( linkinfo->vgeoms.size() == 0 ) {
-                RAVELOG_DEBUG_FORMAT("Initializing link %s/%s with 0 geometries (env %d) (userdatakey %s)",pbody->GetName()%plink->GetName()%_penv->GetId()%_userdatakey);
+                RAVELOG_DEBUG_FORMAT("env=%d, Initializing body '%s' (index=%d) link '%s' with 0 geometries (env %d) (userdatakey %s)", _penv->GetId()%pbody->GetName()%pbody->GetEnvironmentBodyIndex()%plink->GetName()%_penv->GetId()%_userdatakey);
             }
             else {
                 CollisionGeometryPtr pfclgeomBV = std::make_shared<fcl::Box>(enclosingBV.max_ - enclosingBV.min_);
@@ -376,7 +376,7 @@ public:
         EnsureVectorSize(_cachedpinfo, maxBodyIndex + 1);
 
         const int bodyIndex = body.GetEnvironmentBodyIndex();
-        OPENRAVE_ASSERT_OP_FORMAT(bodyIndex, !=, 0, "env=%d, body %s", _penv->GetId()%body.GetName(), OpenRAVE::ORE_InvalidState);
+        OPENRAVE_ASSERT_OP_FORMAT(bodyIndex, !=, 0, "env=%d(%s), body %s", _penv->GetId()%_penv->GetName()%body.GetName(), OpenRAVE::ORE_InvalidState);
         std::map< std::string, KinBodyInfoPtr >& cache = _cachedpinfo.at(bodyIndex);
         cache[poldinfo->_geometrygroup] = poldinfo;
 
@@ -388,7 +388,7 @@ public:
             InitKinBody(pbody, pinfo);
         }
         else {
-            RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%body.GetName()%bodyIndex);
+            RAVELOG_VERBOSE_FORMAT("env=%d(%s), switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%_penv->GetName()%groupname%body.GetName()%bodyIndex);
             // Set the current info to use the KinBodyInfoPtr associated to groupname
             EnsureVectorSize(_currentpinfo, maxBodyIndex + 1);
             _currentpinfo.at(bodyIndex) = pinfo;
@@ -498,7 +498,7 @@ public:
     {
         int envId = body.GetEnvironmentBodyIndex();
         if ( envId <= 0 ) {
-            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id %d", _penv->GetId()%body.GetName()%envId);
+            RAVELOG_WARN_FORMAT("env=%d(%s), body %s has invalid environment id %d", _penv->GetId()%_penv->GetName()%body.GetName()%envId);
         }
         else {
             if (envId < (int) _currentpinfo.size()) {
@@ -513,7 +513,7 @@ public:
     {
         int envId = body.GetEnvironmentBodyIndex();
         if ( envId <= 0 ) {
-            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id %d", _penv->GetId()%body.GetName()%envId);
+            RAVELOG_WARN_FORMAT("env=%d(%s), body %s has invalid environment id %d", _penv->GetId()%_penv->GetName()%body.GetName()%envId);
         }
         else {
             if (envId < (int) _currentpinfo.size()) {
@@ -536,7 +536,7 @@ public:
 
             const int envId = pbody->GetEnvironmentBodyIndex();
             if( envId == 0 ) {
-                RAVELOG_WARN_FORMAT("env=%d, body '%s' has bodyIndex=0, so not adding to the environment!", _penv->GetId()%pbody->GetName());
+                RAVELOG_WARN_FORMAT("env=%d(%s), body '%s' has bodyIndex=0, so not adding to the environment!", _penv->GetId()%_penv->GetName()%pbody->GetName());
             }
 
             if (envId < (int) _currentpinfo.size()) {

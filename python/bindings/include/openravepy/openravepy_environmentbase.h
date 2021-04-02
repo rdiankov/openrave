@@ -72,6 +72,7 @@ protected:
 
 public:
     PyEnvironmentBase(int options=ECO_StartSimulationThread);
+    PyEnvironmentBase(const std::string& name, int options=ECO_StartSimulationThread);
     PyEnvironmentBase(EnvironmentBasePtr penv);
 
     PyEnvironmentBase(const PyEnvironmentBase &pyenv);
@@ -82,8 +83,10 @@ public:
     void Destroy();
 
     PyEnvironmentBasePtr CloneSelf(int options);
+    PyEnvironmentBasePtr CloneSelf(const std::string& clonedEnvName, int options);
 
     void Clone(PyEnvironmentBasePtr pyreference, int options);
+    void Clone(PyEnvironmentBasePtr pyreference, const std::string& clonedEnvName, int options);
 
     bool SetCollisionChecker(PyCollisionCheckerBasePtr pchecker);
     object GetCollisionChecker();

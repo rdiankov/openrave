@@ -476,9 +476,10 @@ public:
         if (ikscene.getCount() == 0) {
             return false;
         }
-        if (!!ikscene[0]->getName()) {
-            _penv->_name = ikscene[0]->getName();
-        }
+        // name is not settable for now, we can make a special exception by makin cooladareader a friend class if we want to load name from saved scenes
+        // if (!!ikscene[0]->getName()) {
+        //     _penv->_name = ikscene[0]->getName();
+        // }
 
         if( !!_dom->getAsset() ) {
             if( !!_dom->getAsset()->getUp_axis() && !!_penv->GetPhysicsEngine() ) {
@@ -4967,8 +4968,8 @@ private:
                                 RAVELOG_WARN(str(boost::format("failed to resolve link1 %s\n")%pelt->getAttribute("link1")));
                                 continue;
                             }
-                            pbody->_vForcedAdjacentLinks.emplace_back(plink0->GetName(), plink1->GetName());
-                            plink0->_info._vForcedAdjacentLinks.push_back(plink1->GetName()); // needs to set this as well because json serialization uses this.
+                            pbody->_SetForcedAdjacentLinks(plink0->GetIndex(), plink1->GetIndex());
+                            plink0->_info.SetNoncollidingLink(plink1->GetName()); // needs to set this as well because json serialization uses this.
                         }
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 

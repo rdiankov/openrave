@@ -23,6 +23,7 @@ Contributors
 * Alan Tan - simplemanipulation python example
 * Atsushi Tsuda - multithreading of grasper plugin
 * Nick Hillier - bobcat model, ode physics additions
+* Guangning Tan - pybind11 python bindings, mimic joint related computations, fast forward kinematics calculations, code optimizations
 
 .. _`Rosen Diankov`: http://www.programmingvision.com
 

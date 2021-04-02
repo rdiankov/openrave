@@ -966,9 +966,6 @@ EnvironmentBase::EnvironmentBaseInfoPtr PyEnvironmentBase::PyEnvironmentBaseInfo
     pInfo->_description = _description;
 #else
     pInfo->_vBodyInfos = _ExtractBodyInfoArray(_vBodyInfos);
-    if (!_name.is_none()) {
-        pInfo->_name = py::extract<std::string>(_name);
-    }
     size_t numkeywords = (size_t)py::len(_keywords);
     for(size_t i=0; i < numkeywords; i++) {
         pInfo->_keywords.push_back(py::extract<std::string>(_keywords[i]));
@@ -1021,7 +1018,6 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
         }
     }
     _vBodyInfos = vBodyInfos;
-    _name = ConvertStringToUnicode(info._name);
     py::list vKeywords;
     FOREACHC(itKeyword, info._keywords) {
         py::object keyword = ConvertStringToUnicode(*itKeyword);
@@ -1092,6 +1088,15 @@ PyEnvironmentBase::PyEnvironmentBase(int options)
     }
     _penv = RaveCreateEnvironment(options);
 }
+
+PyEnvironmentBase::PyEnvironmentBase(const std::string& name, int options)
+{
+    if( !RaveGlobalState() ) {
+        RaveInitialize(true);
+    }
+    _penv = RaveCreateEnvironment(name, options);
+}
+
 PyEnvironmentBase::PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv) {
 }
 
@@ -1128,6 +1133,22 @@ PyEnvironmentBasePtr PyEnvironmentBase::CloneSelf(int options)
     return pnewenv;
 }
 
+PyEnvironmentBasePtr PyEnvironmentBase::CloneSelf(const std::string& clonedEnvName, int options)
+{
+//        string strviewer;
+//        if( options & Clone_Viewer ) {
+//            boost::mutex::scoped_lock lockcreate(_mutexViewer);
+//            if( !!_penv->GetViewer() ) {
+//                strviewer = _penv->GetViewer()->GetXMLId();
+//            }
+//        }
+    PyEnvironmentBasePtr pnewenv(new PyEnvironmentBase(_penv->CloneSelf(clonedEnvName, options)));
+//        if( strviewer.size() > 0 ) {
+//            pnewenv->SetViewer(strviewer);
+//        }
+    return pnewenv;
+}
+
 void PyEnvironmentBase::Clone(PyEnvironmentBasePtr pyreference, int options)
 {
     if( options & Clone_Viewer ) {
@@ -1140,6 +1161,20 @@ void PyEnvironmentBase::Clone(PyEnvironmentBasePtr pyreference, int options)
         }
     }
     _penv->Clone(pyreference->GetEnv(),options);
+}
+
+void PyEnvironmentBase::Clone(PyEnvironmentBasePtr pyreference, const std::string& clonedEnvName, int options)
+{
+    if( options & Clone_Viewer ) {
+        if( !!_penv->GetViewer() && !!pyreference->GetEnv()->GetViewer() ) {
+            if( _penv->GetViewer()->GetXMLId() != pyreference->GetEnv()->GetViewer()->GetXMLId() ) {
+                RAVELOG_VERBOSE("reset the viewer since it has to be cloned\n");
+                //boost::mutex::scoped_lock lockcreate(pyreference->_mutexViewer);
+                SetViewer("");
+            }
+        }
+    }
+    _penv->Clone(pyreference->GetEnv(),clonedEnvName, options);
 }
 
 bool PyEnvironmentBase::SetCollisionChecker(PyCollisionCheckerBasePtr pchecker)
@@ -2572,11 +2607,6 @@ int PyEnvironmentBase::GetRevision() const
     return _penv->GetRevision();
 }
 
-void PyEnvironmentBase::SetName(const std::string& sceneName)
-{
-    _penv->SetName(sceneName);
-}
-
 py::object PyEnvironmentBase::GetName() const
 {
     return ConvertStringToUnicode(_penv->GetName());
@@ -3028,6 +3058,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
     ;
 
     {
+        void (PyEnvironmentBase::*pclone)(PyEnvironmentBasePtr, int) = &PyEnvironmentBase::Clone;
+        void (PyEnvironmentBase::*pclonename)(PyEnvironmentBasePtr, const std::string&, int) = &PyEnvironmentBase::Clone;
+        PyEnvironmentBasePtr (PyEnvironmentBase::*pcloneself)(int) = &PyEnvironmentBase::CloneSelf;
+        PyEnvironmentBasePtr (PyEnvironmentBase::*pcloneselfname)(const std::string&, int) = &PyEnvironmentBase::CloneSelf;
         bool (PyEnvironmentBase::*pcolb)(PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolbr)(PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolbb)(PyKinBodyPtr,PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
@@ -3087,11 +3121,14 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def(init<const PyEnvironmentBase&>(), "penv"_a)
 #else
                      .def(init<optional<int> >(py::args("options")))
+                     .def(init<std::string, optional<int> >(py::args("name", "options")))
 #endif
                      .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
                      .def("Destroy",&PyEnvironmentBase::Destroy, DOXY_FN(EnvironmentBase,Destroy))
-                     .def("CloneSelf",&PyEnvironmentBase::CloneSelf, PY_ARGS("options") DOXY_FN(EnvironmentBase,CloneSelf))
-                     .def("Clone",&PyEnvironmentBase::Clone, PY_ARGS("reference","options") DOXY_FN(EnvironmentBase,Clone))
+                     .def("CloneSelf",pcloneself, PY_ARGS("options") DOXY_FN(EnvironmentBase,CloneSelf))
+                     .def("CloneSelf",pcloneselfname, PY_ARGS("clonedEnvName", "options") DOXY_FN(EnvironmentBase,CloneSelf))
+                     .def("Clone",pclone, PY_ARGS("reference","options") DOXY_FN(EnvironmentBase,Clone))
+                     .def("Clone",pclonename, PY_ARGS("reference", "clonedEnvName", "options") DOXY_FN(EnvironmentBase,Clone))
                      .def("SetCollisionChecker",&PyEnvironmentBase::SetCollisionChecker, PY_ARGS("collisionchecker") DOXY_FN(EnvironmentBase,SetCollisionChecker))
                      .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker, DOXY_FN(EnvironmentBase,GetCollisionChecker))
                      .def("CheckCollision",pcolb, PY_ARGS("body") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; CollisionReportPtr"))
@@ -3390,7 +3427,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
                      .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
                      .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info", "updateMode") DOXY_FN(EnvironmentBase,UpdateFromInfo))
-                     .def("SetName", &PyEnvironmentBase::SetName, PY_ARGS("sceneName") DOXY_FN(EnvironmentBase,SetName))
                      .def("GetName", &PyEnvironmentBase::GetName, DOXY_FN(EnvironmentBase,GetName))
                      .def("SetDescription", &PyEnvironmentBase::SetDescription, PY_ARGS("sceneDescription") DOXY_FN(EnvironmentBase,SetDescription))
                      .def("GetDescription", &PyEnvironmentBase::GetDescription, DOXY_FN(EnvironmentBase,GetDescription))

@@ -30,7 +30,6 @@ bool EnvironmentBase::EnvironmentBaseInfo::operator==(const EnvironmentBaseInfo&
 {
     return _vBodyInfos == other._vBodyInfos
            && _revision == other._revision
-           && _name == other._name
            && _description == other._description
            && _keywords == other._keywords
            && _gravity == other._gravity
@@ -46,7 +45,6 @@ bool EnvironmentBase::EnvironmentBaseInfo::operator!=(const EnvironmentBaseInfo&
 
 void EnvironmentBase::EnvironmentBaseInfo::Reset()
 {
-    _name.clear();
     _description.clear();
     _keywords.clear();
     _gravity = Vector(0,0,-9.797930195020351);
@@ -61,9 +59,6 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
     // for all SerializeJSON, we clear the output
     rEnvInfo.SetObject();
 
-    if( !_name.empty() ) {
-        orjson::SetJsonValueByKey(rEnvInfo, "name", _name, allocator);
-    }
     orjson::SetJsonValueByKey(rEnvInfo, "keywords", _keywords, allocator);
     if( !_description.empty() ) {
         orjson::SetJsonValueByKey(rEnvInfo, "description", _description, allocator);
@@ -109,10 +104,6 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
 
     if (rEnvInfo.HasMember("revision")) {
         orjson::LoadJsonValueByKey(rEnvInfo, "revision", _revision);
-    }
-
-    if (rEnvInfo.HasMember("name")) {
-        orjson::LoadJsonValueByKey(rEnvInfo, "name", _name);
     }
 
     if (rEnvInfo.HasMember("keywords")) {
@@ -162,7 +153,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
 
             if( itExistingBodyInfo != _vBodyInfos.end() ) {
                 isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itExistingBodyInfo);
-                RAVELOG_VERBOSE_FORMAT("found existing body with id='%s', isRobot = %d", id%isExistingRobot);
+                RAVELOG_VERBOSE_FORMAT("found existing body '%s' with id='%s', isRobot = %d", (*itExistingBodyInfo)->_name%id%isExistingRobot);
             }
 
             // here we allow body infos with empty id to be created because

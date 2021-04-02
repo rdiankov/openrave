@@ -216,7 +216,7 @@ public:
                             _tmpSortedBuffer.insert(it, pcol.get());
                         }
                         else {
-                            RAVELOG_WARN_FORMAT("env=%d body %s link %s is added multiple times", pbody->GetEnv()->GetId()%pbody->GetName()%(*itlink)->GetName());
+                            RAVELOG_WARN_FORMAT("env=%d(%s) body %s link %s is added multiple times", pbody->GetEnv()->GetId()%pbody->GetEnv()->GetName()%pbody->GetName()%(*itlink)->GetName());
                         }
                     }
                     bsetUpdateStamp = true;
@@ -842,7 +842,7 @@ private:
                         _tmpSortedBuffer.insert(it, pcol.get());
                     }
                     else {
-                        RAVELOG_WARN_FORMAT("env=%d body %s link %s is added multiple times", body.GetEnv()->GetId()%body.GetName()%link.GetName());
+                        RAVELOG_WARN_FORMAT("env=%d(%s) body %s link %s is added multiple times", body.GetEnv()->GetId()%body.GetEnv()->GetName()%body.GetName()%link.GetName());
                     }
                     vcolobjs[linkIndex] = pcol;
                     bsetUpdateStamp = true;

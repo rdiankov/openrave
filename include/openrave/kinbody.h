@@ -123,6 +123,35 @@ public:
 
 typedef boost::shared_ptr<ElectricMotorActuatorInfo> ElectricMotorActuatorInfoPtr;
 
+///< New kinematics functions to be used by KinBody
+class OPENRAVE_API KinematicsFunctions
+{
+public:
+    virtual ~KinematicsFunctions() {
+    }
+
+    /// \brief function that sets links' transforms
+    ///
+    /// \param[in] pJointValues the full dof values of the robot in DOF order
+    /// \param[out] Output the link transforms to this vector
+    /// \return true if function completed and changed the link transforms. If returns false, the operation could not be compelted.
+    virtual bool SetLinkTransforms(const dReal* pJointValues, const std::vector<Transform*>& vLinkTransformPointers) = 0;
+};
+
+typedef boost::shared_ptr<KinematicsFunctions> KinematicsFunctionsPtr;
+
+class OPENRAVE_API KinematicsGenerator
+{
+public:
+    virtual ~KinematicsGenerator() {
+    }
+
+    /// \brief generates kinematics functions for a body and returns the struct
+    virtual KinematicsFunctionsPtr GenerateKinematicsFunctions(const KinBody& body) = 0;
+};
+
+typedef boost::shared_ptr<KinematicsGenerator> KinematicsGeneratorPtr;
+
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
  */
@@ -167,16 +196,18 @@ public:
         Prop_BodyRemoved = 0x10000000, ///< if a KinBody is removed from the environment
     };
 
+    class OPENRAVE_API Link; // forward decl
+    class OPENRAVE_API Geometry; // forward decl
+
     /// \brief used for specifying the type of limit checking and the messages associated with it
-    enum CheckLimitsAction {
+    enum CheckLimitsAction
+    {
         CLA_Nothing = 0, ///< no checking
         CLA_CheckLimits = 1, /// < checks and warns if the limits are overboard (default)
         CLA_CheckLimitsSilent = 2, ///< checks the limits and silently clamps the joint values (used if the code expects bad values as part of normal operation)
         CLA_CheckLimitsThrow = 3, ///< check the limits and throws if something went wrong
     };
 
-    class OPENRAVE_API Link; // forward decl
-    class OPENRAVE_API Geometry; // forward decl
 
     /// \brief Describes the properties of a geometric primitive.
     ///
@@ -705,7 +736,7 @@ public:
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
         /// force the following links to be treated as adjacent to this link
-        std::vector<std::string> _vForcedAdjacentLinks;
+        std::vector<std::string> _vForcedAdjacentLinks; // link names. sorted.
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
         //// Static should be used when an object has infinite mass and
@@ -736,6 +767,16 @@ public:
         inline void AddModifiedField(LinkInfoField field) {
             _modifiedFields |= field;
         }
+
+        inline void SetNoncollidingLink(const std::string& name) {
+            std::vector<std::string>::const_iterator it = lower_bound(_vForcedAdjacentLinks.begin(),
+                                                                      _vForcedAdjacentLinks.end(),
+                                                                      name);
+            if (it == _vForcedAdjacentLinks.end() || *it != name) {
+                _vForcedAdjacentLinks.insert(it, name);
+            }
+        }
+
 private:
         Transform _t; ///< the current transformation of the link with respect to the body coordinate system
 
@@ -831,12 +872,12 @@ public:
         AABB ComputeAABBFromTransform(const Transform& tLink) const;
 
         /// \brief Compute the aabb of all the geometries from the given groupname. If the given geomgroupname does not exist in this link, will throw an exception.
-        virtual AABB ComputeAABBForGeometryGroup(const std::string& geomgroupname) const;
-        virtual AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const;
-        virtual AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tLink) const;
+        AABB ComputeAABBForGeometryGroup(const std::string& geomgroupname) const;
+        AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const;
+        AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tLink) const;
 
         /// \brief Return the current transformation of the link in the world coordinate system.
-        inline Transform GetTransform() const {
+        inline const Transform& GetTransform() const {
             return _info._t;
         }
 
@@ -910,7 +951,7 @@ public:
 
         /// \brief Sets the transform of the link regardless of kinematics
         ///
-        /// \param[in] t the new transformation
+        /// \param[in] transform the new transformation
         void SetTransform(const Transform& transform);
 
         /// adds an external force at pos (absolute coords)
@@ -1254,7 +1295,20 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
-        int GetDOF() const;
+        inline int GetDOF() const {
+            if(_type & KinBody::JointSpecialBit) {
+                switch(_type) {
+                case KinBody::JointHinge2:
+                case KinBody::JointUniversal: return 2;
+                case KinBody::JointSpherical: return 3;
+                case KinBody::JointTrajectory: return 1;
+                default:
+                    throw OPENRAVE_EXCEPTION_FORMAT("invalid joint type 0x%x", _type, ORE_Failed);
+                }
+            }
+
+            return int(_type & 0xf);
+        }
 
         inline const std::string& GetId() const {
             return _id;
@@ -1420,10 +1474,10 @@ public:
             }
         }
 
-        inline LinkPtr GetFirstAttached() const {
+        inline const LinkPtr& GetFirstAttached() const {
             return _attachedbodies[0];
         }
-        inline LinkPtr GetSecondAttached() const {
+        inline const LinkPtr& GetSecondAttached() const {
             return _attachedbodies[1];
         }
 
@@ -1444,10 +1498,14 @@ public:
         void SetResolution(dReal resolution, int iaxis=0);
 
         /// \brief The degrees of freedom of the joint. Each joint supports a max of 3 degrees of freedom.
-        int GetDOF() const;
+        inline int GetDOF() const {
+            return _info.GetDOF();
+        }
 
         /// \brief Return true if any of the joint axes has an identification at some of its lower and upper limits.
-        bool IsCircular() const;
+        inline bool IsCircular() const {
+            return _info._bIsCircular[0] || _info._bIsCircular[1] || _info._bIsCircular[2];
+        }
 
         /// \brief Return true if joint is active
         bool IsActive() const;
@@ -1458,7 +1516,9 @@ public:
         /// at its lower limit. The most common identification on revolute joints at -pi and pi. 'circularity' means the
         /// joint does not stop at limits.
         /// Although currently not developed, it could be possible to support identification for joints that are not revolute.
-        bool IsCircular(int iaxis) const;
+        inline bool IsCircular(int iaxis) const {
+            return static_cast<bool>(_info._bIsCircular[iaxis]);
+        }
 
         /// \brief returns true if the axis describes a rotation around an axis.
         ///
@@ -1512,8 +1572,23 @@ public:
          */
         void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend=false) const;
 
+        inline void GetLimits(boost::array<dReal,3>& vLowerLimit, boost::array<dReal,3>& vUpperLimit) const {
+            vLowerLimit = _info._vlowerlimit;
+            vUpperLimit = _info._vupperlimit;
+        }
+
         /// \brief returns the lower and upper limit of one axis of the joint
-        std::pair<dReal, dReal> GetLimit(int iaxis=0) const;
+        inline std::pair<dReal, dReal> GetLimit(int iaxis=0) const {
+            return std::make_pair(_info._vlowerlimit.at(iaxis),_info._vupperlimit.at(iaxis));
+        }
+
+        inline dReal GetLowerLimit(int iaxis=0) const {
+            return _info._vlowerlimit[iaxis];
+        }
+
+        inline dReal GetUpperLimit(int iaxis=0) const {
+            return _info._vupperlimit[iaxis];
+        }
 
         /// \brief \see GetLimits
         void SetLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
@@ -1778,6 +1853,9 @@ public:
 
         /// \brief update Joint according to new JointInfo, returns false if update cannot be performed and requires InitFromInfo
         UpdateFromInfoResult UpdateFromInfo(const KinBody::JointInfo& info);
+
+        /// \brief update the cached _doflastsetvalues
+        //virtual void SetDOFLastSetValue(dReal dofvalue, const int iaxis = 0);
 
 protected:
         JointInfo _info;
@@ -2244,7 +2322,7 @@ private:
     virtual void SetId(const std::string& newid);
 
     /// \brief Unique name of the body.
-    virtual const std::string& GetId() const {
+    const std::string& GetId() const {
         return _id;
     }
 
@@ -2255,79 +2333,72 @@ private:
     /// \brief Number controllable degrees of freedom of the body.
     ///
     /// Only uses _vecjoints and last joint for computation, so can work before _ComputeInternalInformation is called.
-    virtual int GetDOF() const;
+    int GetDOF() const;
 
     /// \brief Returns all the joint values as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns all the joint velocities as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns all the joint limits as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns all the joint velocity limits as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFVelocityLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFVelocityLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the max velocity for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFVelocityLimits(std::vector<dReal>& maxvelocities, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFVelocityLimits(std::vector<dReal>& maxvelocities, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the max acceleration for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFAccelerationLimits(std::vector<dReal>& maxaccelerations, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFAccelerationLimits(std::vector<dReal>& maxaccelerations, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the max jerk for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the hard max velocity for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFHardVelocityLimits(std::vector<dReal>& maxvels, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFHardVelocityLimits(std::vector<dReal>& maxvels, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the hard max acceleration for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFHardAccelerationLimits(std::vector<dReal>& maxaccels, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFHardAccelerationLimits(std::vector<dReal>& maxaccels, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the hard max jerk for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFHardJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFHardJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the max torque for each DOF
-    virtual void GetDOFTorqueLimits(std::vector<dReal>& maxaccelerations) const;
+    void GetDOFTorqueLimits(std::vector<dReal>& maxaccelerations) const;
 
-    /// \deprecated (11/05/26)
-    virtual void GetDOFMaxVel(std::vector<dReal>& v) const RAVE_DEPRECATED {
-        GetDOFVelocityLimits(v);
-    }
-    virtual void GetDOFMaxAccel(std::vector<dReal>& v) const RAVE_DEPRECATED {
-        GetDOFAccelerationLimits(v);
-    }
-    virtual void GetDOFMaxTorque(std::vector<dReal>& v) const;
+    void GetDOFMaxTorque(std::vector<dReal>& v) const;
 
     /// \brief get the dof resolutions
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFResolutions(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFResolutions(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief get dof weights
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFWeights(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFWeights(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief \see GetDOFVelocityLimits
     virtual void SetDOFVelocityLimits(const std::vector<dReal>& maxlimits);
@@ -2364,7 +2435,7 @@ private:
     virtual void SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief Returns the joints making up the controllable degrees of freedom of the body.
-    const std::vector<JointPtr>& GetJoints() const {
+    inline const std::vector<JointPtr>& GetJoints() const {
         return _vecjoints;
     }
 
@@ -2374,7 +2445,7 @@ private:
         joint index and no dof index. Passive joints allows mimic joints to be hidden from the users.
         However, there are cases when passive joints are not mimic; for example, suspension mechanism on vehicles.
      */
-    const std::vector<JointPtr>& GetPassiveJoints() const {
+    inline const std::vector<JointPtr>& GetPassiveJoints() const {
         return _vPassiveJoints;
     }
 
@@ -2382,7 +2453,13 @@ private:
     ///
     /// In the case of closed loops, the joints are returned in the order closest to the root.
     /// All the joints affecting a particular joint's transformation will always come before the joint in the list.
-    virtual const std::vector<JointPtr>& GetDependencyOrderedJoints() const;
+    const std::vector<JointPtr>& GetDependencyOrderedJoints() const;
+
+    /// \brief Returns all active and passive joints in hierarchical order starting at the base link.
+    ///
+    /// In the case of closed loops, the joints are returned in the order closest to the root.
+    /// All the joints affecting a particular joint's transformation will always come before the joint in the list.
+    const std::vector<JointPtr>& GetDependencyOrderedJointsAll() const;
 
     /** \brief Return the set of unique closed loops of the kinematics hierarchy.
 
@@ -2390,7 +2467,7 @@ private:
         [l_0,l_1,l_2] will consist of three joints connecting l_0 to l_1, l_1 to l_2, and l_2 to l_0.
         The first element in the pair is the link l_X, the second element in the joint connecting l_X to l_(X+1).
      */
-    virtual const std::vector< std::vector< std::pair<LinkPtr, JointPtr> > >& GetClosedLoops() const;
+    const std::vector< std::vector< std::pair<LinkPtr, JointPtr> > >& GetClosedLoops() const;
 
     /** \en \brief Computes the minimal chain of joints that are between two links in the order of linkindex1 to linkindex2
 
@@ -2410,17 +2487,17 @@ private:
         \param[out] vjoints　関節の経路
         \return 経路が存在している場合，trueを返す．
      */
-    virtual bool GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const;
+    bool GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const;
 
     /// \brief similar to \ref GetChain(int,int,std::vector<JointPtr>&) except returns the links along the path.
-    virtual bool GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vlinks) const;
+    bool GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vlinks) const;
 
     /// \brief Returns true if the dof index affects the relative transformation between the two links.
     ///
     /// The internal implementation uses \ref KinBody::DoesAffect, therefore mimic indices are correctly handled.
     /// \param[in] linkindex1 the link index to start the search
     /// \param[in] linkindex2 the link index where the search ends
-    virtual bool IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const;
+    bool IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const;
 
     /// \brief Return the index of the joint with the given name, else -1.
     int GetJointIndex(const std::string& name) const;
@@ -2431,7 +2508,10 @@ private:
     /// \brief Returns the joint that covers the degree of freedom index.
     ///
     /// Note that the mapping of joint structures is not the same as the values in GetJointValues since each joint can have more than one degree of freedom.
-    JointPtr GetJointFromDOFIndex(int dofindex) const;
+    inline const JointPtr& GetJointFromDOFIndex(int dofindex) const {
+        return _vecjoints.at(_vDOFIndices.at(dofindex));
+    }
+
     //@}
 
     /// \brief Computes the configuration difference values1-values2 and stores it in values1.
@@ -2448,36 +2528,36 @@ private:
     virtual void SetDOFTorques(const std::vector<dReal>& torques, bool add);
 
     /// \brief Returns all the rigid links of the body.
-    virtual const std::vector<LinkPtr>& GetLinks() const {
+    const std::vector<LinkPtr>& GetLinks() const {
         return _veclinks;
     }
 
     /// \brief returns true if the DOF describes a rotation around an axis.
     ///
     /// \param dofindex the degree of freedom index
-    virtual bool IsDOFRevolute(int dofindex) const;
+    bool IsDOFRevolute(int dofindex) const;
 
     /// \brief returns true if the DOF describes a translation around an axis.
     ///
     /// \param dofindex the degree of freedom index
-    virtual bool IsDOFPrismatic(int dofindex) const;
+    bool IsDOFPrismatic(int dofindex) const;
 
     /// return a pointer to the link with the given name
-    virtual LinkPtr GetLink(const std::string& name) const;
+    LinkPtr GetLink(const std::string& name) const;
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
 
     /// \brief get the transformations of all the links at once
-    virtual void GetLinkTransformations(std::vector<Transform>& transforms) const;
+    void GetLinkTransformations(std::vector<Transform>& transforms) const;
 
     /// \brief get the transformations of all the links and the dof branches at once.
     ///
     /// Knowing the dof branches allows the robot to recover the full state of the joints with SetLinkTransformations
-    virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<dReal>& doflastsetvalues) const;
+    void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<dReal>& doflastsetvalues) const;
 
     /// \brief gets the enable states of all links
-    virtual void GetLinkEnableStates(std::vector<uint8_t>& enablestates) const;
+    void GetLinkEnableStates(std::vector<uint8_t>& enablestates) const;
 
     /// \brief gets a mask of the link enable states.
     ///
@@ -2485,7 +2565,9 @@ private:
     virtual uint64_t GetLinkEnableStatesMask() const;
 
     /// queries the transfromation of the first link of the body
-    virtual Transform GetTransform() const;
+    inline const Transform GetTransform() const {
+        return _veclinks.size() > 0 ? _veclinks.front()->GetTransform() : Transform();
+    }
 
     /// \brief Set the velocity of the base link, rest of links are set to a consistent velocity so entire robot moves correctly.
     /// \param linearvel linear velocity
@@ -2515,7 +2597,7 @@ private:
     /// \brief Returns the linear and angular velocities for each link
     ///
     /// \param[out] velocities The velocities of the link frames with respect to the world coordinate system are returned.
-    virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
+    void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
     /// \brief link index and the linear and angular accelerations of the link. First is linear acceleration of the link's coordinate system, and second is the angular acceleration of this coordinate system.
     typedef std::map<int, std::pair<Vector,Vector> > AccelerationMap;
@@ -2534,7 +2616,7 @@ private:
         \param[out] linkaccelerations the linear and angular accelerations of link (in that order)
         \param[in] externalaccelerations [optional] The external accelerations to add to each link.
      */
-    virtual void GetLinkAccelerations(const std::vector<dReal>& dofaccelerations, std::vector<std::pair<Vector,Vector> >& linkaccelerations, AccelerationMapConstPtr externalaccelerations=AccelerationMapConstPtr()) const;
+    void GetLinkAccelerations(const std::vector<dReal>& dofaccelerations, std::vector<std::pair<Vector,Vector> >& linkaccelerations, AccelerationMapConstPtr externalaccelerations=AccelerationMapConstPtr()) const;
 
     /** \en \brief set the transform of the first link (the rest of the links are computed based on the joint values).
 
@@ -2549,41 +2631,41 @@ private:
     /// \brief Return an axis-aligned bounding box of the entire object in the world coordinate system.
     ///
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
-    virtual AABB ComputeAABB(bool bEnabledOnlyLinks=false) const;
+    AABB ComputeAABB(bool bEnabledOnlyLinks=false) const;
 
     /// \brief returns an axis-aligned bounding box when body has transform tBody.
     ///
     /// AABB equivalent to SetTransform(tBody); aabb = ComptueAABB(bEnabledOnlyLinks).
     /// \brief tBody the transform to put this kinbody in when computing the AABB
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
-    virtual AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
+    AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
     /// \brief returns an axis-aligned bounding box when body has identity transform
     ///
     /// Internally equivalent to ComputeAABBFromTransform(Transform(), ...)
-    virtual AABB ComputeLocalAABB(bool bEnabledOnlyLinks=false) const;
+    AABB ComputeLocalAABB(bool bEnabledOnlyLinks=false) const;
 
     /// \brief Return the axis-aligned bounding box of the specified geometries of the kinbody in the world coordinate system. If any of the links does not have the geometry group geomgroupname, will throw an exception.
-    virtual AABB ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
-    virtual AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
-    virtual AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tBody, bool bEnabledOnlyLinks=false) const;
+    AABB ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
+    AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
+    AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
     /// \brief Return the center of mass of entire robot in the world coordinate system.
-    virtual Vector GetCenterOfMass() const;
+    Vector GetCenterOfMass() const;
 
     /// \brief Enables or disables all the links.
-    virtual void Enable(bool enable);
+    void Enable(bool enable);
 
     /// \return true if any link of the KinBody is enabled
-    virtual bool IsEnabled() const;
+    bool IsEnabled() const;
 
     /// \brief Sets all the links as visible or not visible.
     ///
     /// \return true if changed
-    virtual bool SetVisible(bool visible);
+    bool SetVisible(bool visible);
 
     /// \return true if any link of the KinBody is visible.
-    virtual bool IsVisible() const;
+    bool IsVisible() const;
 
     /// \brief Sets the joint values of the robot.
     ///
@@ -2591,10 +2673,6 @@ private:
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
-
-    virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = true) {
-        SetDOFValues(values,static_cast<uint32_t>(checklimits));
-    }
 
     /// \brief Sets the joint values and transformation of the body.
     ///
@@ -2812,21 +2890,23 @@ private:
     //@}
 
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
-    virtual bool IsAttached(KinBodyConstPtr body) const RAVE_DEPRECATED {
+    bool IsAttached(KinBodyConstPtr body) const RAVE_DEPRECATED {
         return IsAttached(*body);
     }
-    virtual bool IsAttached(const KinBody &body) const;
+    bool IsAttached(const KinBody &body) const;
 
     /// \brief Recursively get all attached bodies of this body, including this body.
     ///
     /// \param setAttached fills with the attached bodies. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
-    virtual void GetAttached(std::set<KinBodyPtr>& setAttached) const;
-    virtual void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
-    virtual void GetAttached(std::vector<KinBodyPtr>& vAttached) const;
-    virtual void GetAttached(std::vector<KinBodyConstPtr>& vAttached) const;
+    void GetAttached(std::set<KinBodyPtr>& setAttached) const;
+    void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
+    void GetAttached(std::vector<KinBodyPtr>& vAttached) const;
+    void GetAttached(std::vector<KinBodyConstPtr>& vAttached) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
-    virtual bool HasAttached() const;
+    inline bool HasAttached() const {
+        return _listAttachedBodies.size() > 0;
+    }
 
     /// \brief Return true if this body is derived from RobotBase.
     virtual bool IsRobot() const {
@@ -2837,12 +2917,16 @@ private:
     ///
     /// If object is not added to the environment, this will return 0. So checking if GetEnvironmentBodyIndex() is 0 is a good way to check if object is present in the environment.
     /// This id will not be copied when cloning in order to respect another environment's ids.
-    virtual int GetEnvironmentBodyIndex() const;
+    inline int GetEnvironmentBodyIndex() const {
+        return _environmentBodyIndex;
+    }
 
     /// \brief return a unique id of the body used in the environment.
     ///
     /// deprecated, GetEnvironmentBodyIndex should be used
-    virtual int GetEnvironmentId() const RAVE_DEPRECATED;
+    int GetEnvironmentId() const RAVE_DEPRECATED {
+        return _environmentBodyIndex;
+    }
 
     /** \brief Returns a nonzero value if the joint index effects the link transformation.
 
@@ -2852,7 +2936,7 @@ private:
         \param jointindex index of the joint
         \param linkindex index of the link
      */
-    virtual int8_t DoesAffect(int jointindex, int linkindex) const;
+    int8_t DoesAffect(int jointindex, int linkindex) const;
 
     /** \brief Returns a nonzero value if the dof index effects the link transformation.
 
@@ -2862,7 +2946,7 @@ private:
         \param dofindex index of DOF as returned from \ref GetDOFValues
         \param linkindex index of the link
      */
-    virtual int8_t DoesDOFAffectLink(int dofindex, int linkindex) const;
+    int8_t DoesDOFAffectLink(int dofindex, int linkindex) const;
 
     /// \brief specifies the type of adjacent link information to receive
     enum AdjacentOptions
@@ -2875,13 +2959,23 @@ private:
     /// \param adjacentoptions a bitmask of \ref AdjacentOptions values
     virtual const std::vector<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
 
-    /// \brief return all possible link pairs whose collisions are ignored.
-    virtual const std::set<int>& GetAdjacentLinks() const;
-
     /// \brief adds the pair of links to the adjacency list. This is
-    virtual void SetAdjacentLinks(int linkindex0, int linkindex1);
+    void SetAdjacentLinks(int linkindex0, int linkindex1);
 
-    virtual ManageDataPtr GetManageData() const {
+    /// \brief return if two links are adjacent links are not.
+    bool AreAdjacentLinks(int linkindex0, int linkindex1) const;
+    
+    /// \brief adds the pair of links to the adjacency list.
+    ///
+    /// \param linkIndices vector containing pair of link indies. Each pair of is set as adjacent links. For each pair, first and second must be different.
+    void SetAdjacentLinksPairs(const std::vector<std::pair<int, int> >& linkIndices);
+
+    /// \brief adds the pair of links to the adjacency list.
+    ///
+    /// \param linkIndices vector of link index. Each combination among them is set as adjacent links. elements have to be unique
+    void SetAdjacentLinksCombinations(const std::vector<int>& linkIndices);
+
+    inline ManageDataPtr GetManageData() const {
         return _pManageData;
     }
 
@@ -2890,8 +2984,13 @@ private:
     /// The stamp is used by the collision checkers, physics engines, or any other item
     /// that needs to keep track of any changes of the KinBody as it moves.
     /// Currently stamps monotonically increment for every transformation/joint angle change.
-    virtual int GetUpdateStamp() const {
+    inline int GetUpdateStamp() const {
         return _nUpdateStampId;
+    }
+
+    /// \brief Increments the unique id that indicates the number of transformation state changes of any link. Used to check if robot state has changed.
+    void IncrementUpdateStamp(const int inc=1) {
+        _nUpdateStampId += inc;
     }
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
@@ -3017,33 +3116,35 @@ private:
     LinkPtr IsGrabbing(KinBodyConstPtr body) const RAVE_DEPRECATED {
         return IsGrabbing(*body);
     }
-    virtual LinkPtr IsGrabbing(const KinBody &body) const;
+    LinkPtr IsGrabbing(const KinBody &body) const;
 
     /** \brief gets all grabbed bodies of the body
 
         \param[out] vbodies filled with the grabbed bodies
      */
-    virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
+    void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
 
     /// \brief returns number of grabbed targets
-    virtual int GetNumGrabbed() const;
+    inline int GetNumGrabbed() const {
+        return (int)_vGrabbedBodies.size();
+    }
 
     /// \brief return the valid grabbed body. If the grabbed body is not in the environment, will just return empty
     ///
     /// \param iGrabbed index into the grabbed body. Max is GetNumGrabbed()-1
-    virtual KinBodyPtr GetGrabbedBody(int iGrabbed) const;
+    KinBodyPtr GetGrabbedBody(int iGrabbed) const;
 
     /** \brief gets all grabbed bodies of the body
 
         \param[out] vgrabbedinfo filled with the grabbed info for every body. The pointers are newly created.
      */
-    virtual void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
+    void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
 
     /** \brief gets all grabbed bodies of the body
 
         \param[out] vgrabbedinfo all the grabbed infos
      */
-    virtual void GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const;
+    void GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const;
 
     /** \brief gets the grabbed info of a grabbed object whose name matches grabbedname
 
@@ -3051,21 +3152,21 @@ private:
         \param[out] grabbedInfo initialized with the grabbed info
         \return true if robot is grabbing body with name "grabbedname" and grabbedInfo is initialized
      */
-    virtual bool GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbedInfo) const;
+    bool GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbedInfo) const;
 
     /** \brief resets the grabbed bodies of the body
 
         Any currently grabbed bodies will be first released.
         \param[out] vgrabbedinfo filled with the grabbed info for every body
      */
-    virtual void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vgrabbedinfo);
+    void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vgrabbedinfo);
 
     /** \brief returns all the links of the body whose links are being ignored by the grabbed body.
 
         \param[in] body the grabbed body
         \param[out] list of the ignored links
      */
-    virtual void GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const;
+    void GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const;
 
     //@}
 
@@ -3085,6 +3186,9 @@ private:
     /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromKinBodyInfo(const KinBodyInfo& info);
 
+    /// \brief Associate the kinbody's current kinematics geometry hash with a forward kinematics generator
+    virtual void SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator);
+
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
@@ -3098,9 +3202,9 @@ protected:
     }
 
     /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
-    virtual void _Regrab(UserDataPtr pgrabbed);
+    void _Regrab(UserDataPtr pgrabbed);
 
-    virtual void SetManageData(ManageDataPtr pdata) {
+    void SetManageData(ManageDataPtr pdata) {
         _pManageData = pdata;
     }
 
@@ -3135,29 +3239,29 @@ protected:
     virtual void _PostprocessChangedParameters(uint32_t parameters);
 
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
-    virtual bool _IsAttached(const KinBody &body, std::set<KinBodyConstPtr>& setChecked) const;
+    bool _IsAttached(const KinBody &body, std::set<KinBodyConstPtr>& setChecked) const;
 
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     ///
     /// \param visited is a vector indexed by each body's EnvironmentBodyIndex to show whether it was visited or not in the computation. If 0, then not initialized, if 1, then visited and attached, if -1, then visited and not attached
-    virtual bool _IsAttached(int otherBodyId, std::vector<int8_t>& vAttachedVisited) const;
+    bool _IsAttached(int otherBodyId, std::vector<int8_t>& vAttachedVisited) const;
 
     /// \brief finds all attached bodies who should be considered as one during collision (ie one is grabbing the other)
     ///
     /// recursively visits all attached bodies, and sets vAttachedVisited for attached bodies to 1.
     /// \param vAttachedVisited indexed by environmentBodyIndex
     /// \return number of elements attached (excluding initially non-zero elements in vAttachedVisited)
-    virtual int _GetNumAttached(std::vector<int8_t>& vAttachedVisited) const;
+    int _GetNumAttached(std::vector<int8_t>& vAttachedVisited) const;
 
     /// \brief adds an attached body
-    virtual void _AttachBody(KinBodyPtr body);
+    void _AttachBody(KinBodyPtr body);
 
     /// \brief removes an attached body
     ///
     /// \return true if body was successfully found and removed
-    virtual bool _RemoveAttachedBody(KinBody &body);
+    bool _RemoveAttachedBody(KinBody &body);
 
-    virtual void _UpdateGrabbedBodies();
+    void _UpdateGrabbedBodies();
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
@@ -3166,13 +3270,17 @@ protected:
     ///
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized.
-    virtual void _InitAndAddLink(LinkPtr plink);
+    void _InitAndAddLink(LinkPtr plink);
 
     /// \brief initializes and adds a link to internal hierarchy.
     ///
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized
-    virtual void _InitAndAddJoint(JointPtr pjoint);
+    void _InitAndAddJoint(JointPtr pjoint);
+
+    void _SetForcedAdjacentLinks(int linkindex0, int linkindex1);
+
+    void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
     std::string _name; ///< name of body
 
@@ -3188,10 +3296,11 @@ protected:
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
     std::vector< std::vector< std::pair<int16_t,int16_t> > > _vClosedLoopIndices; ///< \see GetClosedLoops
     std::vector<JointPtr> _vPassiveJoints; ///< \see GetPassiveJoints()
-    std::set<int> _setAdjacentLinks; ///< a set of which links are connected to which if link i and j are connected then
-                                     ///< i|(j<<16) will be in the set where i<j.
-    std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
+    std::vector<int8_t> _vAdjacentLinks; ///< a vector of which links are connected to which if link i and j are connected and i < j, then value at (i + j * (j - 1) /2) is 1 where N is the number of links for the body
+    std::vector<int8_t> _vForcedAdjacentLinks; ///< internally stores forced adjacent links. \see _vAdjacentLinks for internal representation
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
+
+    std::vector<Transform*> _vLinkTransformPointers; ///< holds a pointers to the Transform Link::_t  in _veclinks. Used for fast access fo the custom kinematics
 
     std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies
 
@@ -3207,9 +3316,14 @@ protected:
     mutable std::vector< boost::array<dReal, 3> > _vPassiveJointValuesCache;
     mutable std::vector< boost::array<dReal, 3> > _vPassiveJointAccelerationsCache;
     mutable std::vector<uint8_t> _vLinksVisitedCache;
+    mutable std::vector<dReal> _vTempMimicValues, _vTempMimicValues2, _vTempMimicValues3;
+
 
     ConfigurationSpecification _spec;
     CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions
+
+    KinematicsGeneratorPtr _pKinematicsGenerator; ///< holds the generator for kinematics. KinBody calls it everytime its kinematics change
+    KinematicsFunctionsPtr _pCurrentKinematicsFunctions; ///< currently generated kinematics functions
 
     int _environmentBodyIndex; ///< \see GetEnvironmentBodyIndex
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
