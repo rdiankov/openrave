@@ -204,6 +204,7 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
     {
         value.SetDouble(PyFloat_AsDouble(obj.ptr()));
     }
+#if PY_MAJOR_VERSION < 3
     else if (PyInt_Check(obj.ptr()))
     {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -212,10 +213,17 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
         value.SetInt64(PyLong_AsLong(obj.ptr()));
 #endif
     }
+#endif
     else if (PyLong_Check(obj.ptr()))
     {
         value.SetInt64(PyLong_AsLong(obj.ptr()));
     }
+#if PY_MAJOR_VERSION >= 3
+    else if (PyUnicode_Check(obj.ptr()))
+    {
+        value.SetString(PyUnicode_AsUTF8(obj.ptr()), PyUnicode_GET_SIZE(obj.ptr()), allocator);
+    }
+#else
     else if (PyString_Check(obj.ptr()))
     {
         value.SetString(PyString_AsString(obj.ptr()), PyString_GET_SIZE(obj.ptr()), allocator);
@@ -224,6 +232,7 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
     {
         value.SetString(PyBytes_AsString(obj.ptr()), PyBytes_GET_SIZE(obj.ptr()), allocator);
     }
+#endif
     else if (PyTuple_Check(obj.ptr()))
     {
         py::tuple t = py::extract<py::tuple>(obj);
@@ -1735,7 +1744,11 @@ object PyEnvironmentBase::WriteToMemory(const std::string &filetype, const int o
     else {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // https://github.com/pybind/pybind11/issues/1201
+#if PY_MAJOR_VERSION >= 3
+        return py::cast<py::object>(PyUnicode_FromStringAndSize(output.data(), output.size()));
+#else
         return py::cast<py::object>(PyString_FromStringAndSize(output.data(), output.size()));
+#endif
 #else
         return py::to_object(py::handle<>(PyString_FromStringAndSize(output.data(), output.size())));
 #endif

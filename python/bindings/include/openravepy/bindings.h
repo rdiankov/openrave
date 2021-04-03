@@ -297,7 +297,11 @@ inline std::string GetPyErrorString()
     if(error != nullptr) {
         string = PyObject_Str(value);
         if(string != nullptr) {
+#if PY_MAJOR_VERSION >= 3
+            s.assign(PyUnicode_AsUTF8(string));
+#else
             s.assign(PyString_AsString(string));
+#endif
             Py_DECREF(string);
         }
     }
