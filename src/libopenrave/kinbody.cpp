@@ -2142,7 +2142,6 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                             if( p[i] > upperlimit+g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
                                     RAVELOG_WARN_FORMAT("env=%d, dof %d value %.16e is greater than the upper limit %.16e", GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit);
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %.16e is greater than the upper limit %.16e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
                                     throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %.16e is greater than the upper limit %.16e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
