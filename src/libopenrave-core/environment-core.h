@@ -523,6 +523,12 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         _Clone(boost::static_pointer_cast<Environment const>(preference), cloningoptions,true);
         _name = clonedEnvName;
+        if (_name.empty()) {
+            _formatedNameId = str(boost::format("%d")%GetId());
+        }
+        else {
+            _formatedNameId = str(boost::format("%d(%s)")%GetId()%_name);
+        }
     }
 
     virtual int AddModule(ModuleBasePtr module, const std::string& cmdargs)

@@ -734,6 +734,16 @@ public:
         return __nUniqueId;
     }
 
+    /// \brief returns the scene name
+    inline const std::string& GetName() const {
+        return _name;
+    }
+
+    /// \brief returns the scene name and id as formated string
+    inline const std::string& GetNameId() const {
+        return _formatedNameId;
+    }
+
     /// \brief sets a named parameter to be tracked by the environment
     ///
     /// internally locks the environment mutex
@@ -799,11 +809,6 @@ public:
     /// \brief returns environment revision number
     virtual int GetRevision() const = 0;
 
-    /// \brief returns the scene name
-    inline const std::string& GetName() const {
-        return _name;
-    }
-
     /// \brief sets the scene description
     virtual void SetDescription(const std::string& sceneDescription) = 0;
 
@@ -839,6 +844,7 @@ protected:
     void _InitializeInternal();
 
     std::string _name;   ///< environment name. only set during construction and cloning.
+    std::string _formatedNameId; ///< environment name and id. \see GetNameId
 
 private:
     UserDataPtr __pUserData;         ///< \see GetUserData

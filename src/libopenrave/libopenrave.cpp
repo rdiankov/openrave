@@ -2523,6 +2523,13 @@ EnvironmentBase::EnvironmentBase()
 EnvironmentBase::EnvironmentBase(const std::string& name)
     : _name(name)
 {
+    if (_name.empty()) {
+        _formatedNameId = str(boost::format("%d")%__nUniqueId);
+    }
+    else {
+        _formatedNameId = str(boost::format("%d(%s)")%__nUniqueId%_name);
+    }
+
     _InitializeInternal();
 }
 
