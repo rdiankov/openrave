@@ -2612,6 +2612,11 @@ py::object PyEnvironmentBase::GetName() const
     return ConvertStringToUnicode(_penv->GetName());
 }
 
+py::object PyEnvironmentBase::GetNameId() const
+{
+    return ConvertStringToUnicode(_penv->GetNameId());
+}
+
 void PyEnvironmentBase::SetDescription(const std::string& sceneDescription)
 {
     _penv->SetDescription(sceneDescription);
@@ -3428,6 +3433,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
                      .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info", "updateMode") DOXY_FN(EnvironmentBase,UpdateFromInfo))
                      .def("GetName", &PyEnvironmentBase::GetName, DOXY_FN(EnvironmentBase,GetName))
+                     .def("GetNameId", &PyEnvironmentBase::GetNameId, DOXY_FN(EnvironmentBase,GetNameId))
                      .def("SetDescription", &PyEnvironmentBase::SetDescription, PY_ARGS("sceneDescription") DOXY_FN(EnvironmentBase,SetDescription))
                      .def("GetDescription", &PyEnvironmentBase::GetDescription, DOXY_FN(EnvironmentBase,GetDescription))
                      .def("SetKeywords", &PyEnvironmentBase::SetKeywords, PY_ARGS("sceneKeywords") DOXY_FN(EnvironmentBase,SetKeywords))

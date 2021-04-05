@@ -2518,19 +2518,21 @@ void EnvironmentBase::_InitializeInternal()
 EnvironmentBase::EnvironmentBase()
 {
     _InitializeInternal();
+    // __nUniqueId is assigned in _InitializeInternal
+    _formatedNameId = str(boost::format("%d")%__nUniqueId);
 }
 
 EnvironmentBase::EnvironmentBase(const std::string& name)
     : _name(name)
 {
+    _InitializeInternal();
+    // __nUniqueId is assigned in _InitializeInternal
     if (_name.empty()) {
         _formatedNameId = str(boost::format("%d")%__nUniqueId);
     }
     else {
         _formatedNameId = str(boost::format("%d(%s)")%__nUniqueId%_name);
     }
-
-    _InitializeInternal();
 }
 
 EnvironmentBase::~EnvironmentBase()

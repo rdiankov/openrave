@@ -292,9 +292,9 @@ public:
 
     int GetRevision() const;
 
-    void SetName(const std::string& sceneName);
-
     py::object GetName() const;
+
+    py::object GetNameId() const;
 
     void SetDescription(const std::string& sceneDescription);
 
