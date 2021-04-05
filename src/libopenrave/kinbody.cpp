@@ -18,9 +18,9 @@
 #include <algorithm>
 
 // used for functions that are also used internally
-#define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "env=%d(%s), body %s cannot be added to environment when doing this operation, current value is %d", GetEnv()->GetId()%GetEnv()->GetName()%GetName()%_nHierarchyComputed, ORE_InvalidState);
-#define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "env=%d(%s), body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetId()%GetEnv()->GetName()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
-#define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "env=%d(%s), body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetId()%GetEnv()->GetName()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
+#define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "env=%s, body %s cannot be added to environment when doing this operation, current value is %d", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_InvalidState);
+#define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "env=%s, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
+#define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "env=%s, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
 namespace OpenRAVE {
 
@@ -458,7 +458,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
 
 KinBody::~KinBody()
 {
-    RAVELOG_VERBOSE_FORMAT("env=%d(%s), destructing kinbody '%s'", GetEnv()->GetId()%GetEnv()->GetName()%GetName());
+    RAVELOG_VERBOSE_FORMAT("env=%s, destructing kinbody '%s'", GetEnv()->GetNameId()%GetName());
     Destroy();
 }
 
@@ -1400,7 +1400,7 @@ bool KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
 void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel, const Vector& angularvel, uint32_t checklimits)
 {
     CHECK_INTERNAL_COMPUTATION;
-    OPENRAVE_ASSERT_OP_FORMAT((int)vDOFVelocities.size(), >=, GetDOF(), "env=%d(%s), not enough values %d!=%d", GetEnv()->GetId()%GetEnv()->GetName()%vDOFVelocities.size()%GetDOF(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT((int)vDOFVelocities.size(), >=, GetDOF(), "env=%s, not enough values %d!=%d", GetEnv()->GetNameId()%vDOFVelocities.size()%GetDOF(),ORE_InvalidArguments);
     std::vector<std::pair<Vector,Vector> >& velocities = _vVelocitiesCache;
     velocities.resize(_veclinks.size());
     velocities.at(0).first = linearvel;
@@ -1461,7 +1461,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                                 dummyvalues[i] += veval.at(ipartial) * partialvelocity;
                             }
                             else {
-                                RAVELOG_DEBUG_FORMAT("env=%d(%s), cannot evaluate partial velocity for mimic joint %s, perhaps equations don't exist", GetEnv()->GetId()%GetEnv()->GetName()%pjoint->GetName());
+                                RAVELOG_DEBUG_FORMAT("env=%s, cannot evaluate partial velocity for mimic joint %s, perhaps equations don't exist", GetEnv()->GetNameId()%pjoint->GetName());
                             }
                         }
                     }
@@ -1634,7 +1634,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, uint32_
             return SetDOFVelocities(vDOFVelocities,linearvel,angularvel,checklimits);
         }
     }
-    OPENRAVE_ASSERT_OP_FORMAT(vDOFVelocities.size(),==,dofindices.size(),"env=%d(%s), index sizes do not match %d!=%d", GetEnv()->GetId()%GetEnv()->GetName()%vDOFVelocities.size()%dofindices.size(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT(vDOFVelocities.size(),==,dofindices.size(),"env=%s, index sizes do not match %d!=%d", GetEnv()->GetNameId()%vDOFVelocities.size()%dofindices.size(), ORE_InvalidArguments);
     // have to recreate the correct vector
     std::vector<dReal> vfulldof(GetDOF());
     std::vector<int>::const_iterator it;
@@ -1981,7 +1981,7 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
     else {
         RAVELOG_DEBUG("SetLinkTransformations should be called with doflastsetvalues, re-setting all values\n");
     }
-    OPENRAVE_ASSERT_OP_FORMAT(vbodies.size(), >=, _veclinks.size(), "env=%d(%s), not enough links %d<%d", GetEnv()->GetId()%GetEnv()->GetName()%vbodies.size()%_veclinks.size(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT(vbodies.size(), >=, _veclinks.size(), "env=%s, not enough links %d<%d", GetEnv()->GetNameId()%vbodies.size()%_veclinks.size(),ORE_InvalidArguments);
     vector<Transform>::const_iterator it;
     vector<LinkPtr>::iterator itlink;
     for(it = vbodies.begin(), itlink = _veclinks.begin(); it != vbodies.end(); ++it, ++itlink) {
@@ -1998,7 +1998,7 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
 
 void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues)
 {
-    OPENRAVE_ASSERT_OP_FORMAT(transforms.size(), >=, _veclinks.size(), "env=%d(%s), not enough links %d<%d", GetEnv()->GetId()%GetEnv()->GetName()%transforms.size()%_veclinks.size(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT(transforms.size(), >=, _veclinks.size(), "env=%s, not enough links %d<%d", GetEnv()->GetNameId()%transforms.size()%_veclinks.size(),ORE_InvalidArguments);
     vector<Transform>::const_iterator it;
     vector<LinkPtr>::iterator itlink;
     for(it = transforms.begin(), itlink = _veclinks.begin(); it != transforms.end(); ++it, ++itlink) {
@@ -2058,7 +2058,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         return;
     }
     int expecteddof = dofindices.size() > 0 ? (int)dofindices.size() : GetDOF();
-    OPENRAVE_ASSERT_OP_FORMAT((int)vJointValues.size(),>=,expecteddof, "env=%d(%s), not enough values %d<%d", GetEnv()->GetId()%GetEnv()->GetName()%vJointValues.size()%GetDOF(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT((int)vJointValues.size(),>=,expecteddof, "env=%s, not enough values %d<%d", GetEnv()->GetNameId()%vJointValues.size()%GetDOF(),ORE_InvalidArguments);
 
     const dReal* pJointValues = &vJointValues[0];
 
@@ -2196,13 +2196,13 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                 if( !joint.IsCircular(j) ) {
                     if( jvals[j] < vlowerlimit.at(j) ) {
                         if( jvals[j] < vlowerlimit.at(j) - 5e-4f ) {
-                            RAVELOG_WARN_FORMAT("env=%d(%s), dummy joint out of lower limit! %e < %e", GetEnv()->GetId()%GetEnv()->GetName() % vlowerlimit.at(j) % jvals[j]);
+                            RAVELOG_WARN_FORMAT("env=%s, dummy joint out of lower limit! %e < %e", GetEnv()->GetNameId() % vlowerlimit.at(j) % jvals[j]);
                         }
                         jvals[j] = vlowerlimit.at(j);
                     }
                     else if( jvals[j] > vupperlimit.at(j) ) {
                         if( jvals[j] > vupperlimit.at(j) + 5e-4f ) {
-                            RAVELOG_WARN_FORMAT("env=%d(%s), dummy joint out of upper limit! %e > %e", GetEnv()->GetId()%GetEnv()->GetName() % vupperlimit.at(j) % jvals[j]);
+                            RAVELOG_WARN_FORMAT("env=%s, dummy joint out of upper limit! %e > %e", GetEnv()->GetNameId() % vupperlimit.at(j) % jvals[j]);
                         }
                         jvals[j] = vupperlimit.at(j);
                     }
@@ -2308,7 +2308,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                                     veval.push_back(eval);
                                 }
                             }
-                            OPENRAVE_ASSERT_FORMAT(!veval.empty(), "env=%d(%s), no valid values for joint %s", GetEnv()->GetId()%GetEnv()->GetName()%joint.GetName(),ORE_Assert);
+                            OPENRAVE_ASSERT_FORMAT(!veval.empty(), "env=%s, no valid values for joint %s", GetEnv()->GetNameId()%joint.GetName(),ORE_Assert);
                         }
                         if( veval.size() > 1 ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
@@ -5596,7 +5596,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
         GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
         if( !pgrabbedref ) {
-            RAVELOG_WARN_FORMAT("env=%d(%s), have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetId()%GetEnv()->GetName());
+            RAVELOG_WARN_FORMAT("env=%s, have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetNameId());
             continue;
         }
 
