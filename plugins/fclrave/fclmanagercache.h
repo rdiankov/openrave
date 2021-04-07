@@ -315,7 +315,7 @@ public:
                 ensuredVecCachedBodies = true;
             }
             int bodyIndex = body.GetEnvironmentBodyIndex();
-            if( !_vecExcludeBodyIndices[bodyIndex]) {
+            if( _vecExcludeBodyIndices.size() < bodyIndex + 1 || !_vecExcludeBodyIndices[bodyIndex]) {
                 bool bIsValid = _vecCachedBodies.at(bodyIndex).IsValid();
                 if( !bIsValid) {
                     const FCLSpace::KinBodyInfoPtr& pinfo = _fclspace.GetInfo(body);
