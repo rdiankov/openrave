@@ -63,7 +63,9 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             Set(pbody, pinfo);
         }
 
-        void Set(const KinBodyConstPtr& pbody, const FCLSpace::KinBodyInfoPtr& pinfo)
+        void Set(const KinBodyConstPtr& pbody,
+                 const FCLSpace::KinBodyInfoPtr& pinfo,
+                 const std::vector<uint8_t>& linkEnableStateCache = std::vector<uint8_t>())
         {
             pwbody = pbody;
             pwinfo = pinfo;
@@ -73,7 +75,12 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             geometrygroup = pinfo->_geometrygroup;
             nAttachedBodiesUpdateStamp = pinfo->nAttachedBodiesUpdateStamp;
             nActiveDOFUpdateStamp = pinfo->nActiveDOFUpdateStamp;
-            pbody->GetLinkEnableStates(linkEnableStates);
+            if (linkEnableStateCache.empty()) {
+                pbody->GetLinkEnableStates(linkEnableStates);
+            }
+            else {
+                linkEnableStates = linkEnableStateCache;
+            }
 
             if (!vcolobjs.empty()) {
                 std::stringstream ss;
@@ -230,8 +237,7 @@ public:
                 const int bodyIndex = (*itbody)->GetEnvironmentBodyIndex();
                 //EnsureVectorSize(_vecCachedBodies, bodyIndex);
                 KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
-                cache.Set(*itbody, pinfo);
-                cache.linkEnableStates = _linkEnableStates;
+                cache.Set(*itbody, pinfo, _linkEnableStates);
                 cache.vcolobjs.swap(vcolobjs);
             }
             else {
@@ -283,21 +289,23 @@ public:
         bool ensuredVecCachedBodies = false;
         std::vector<CollisionObjectPtr> vcolobjs;
         for (const KinBodyConstPtr& pbody : vbodies) {
+            if (!pbody) {
+                continue;
+            }
             const KinBody& body = *pbody;
             if (!ensuredVecCachedBodies) {
                 EnsureVectorSize(_vecCachedBodies, body.GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
                 ensuredVecCachedBodies = true;
             }
             int bodyIndex = body.GetEnvironmentBodyIndex();
-            if( _setExcludeBodyIndices.count(bodyIndex) == 0 ) {
+            if( !_vecExcludeBodyIndices[bodyIndex]) {
                 bool bIsValid = _vecCachedBodies.at(bodyIndex).IsValid();
                 if( !bIsValid) {
-                    FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(body);
+                    const FCLSpace::KinBodyInfoPtr& pinfo = _fclspace.GetInfo(body);
                     if( _AddBody(body, pinfo, vcolobjs, _linkEnableStates, false) ) { // new collision objects are already added to _tmpSortedBuffer
                         KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
-                        cache.Set(pbody, pinfo);
+                        cache.Set(pbody, pinfo, _linkEnableStates);
                         cache.vcolobjs.swap(vcolobjs);
-                        cache.linkEnableStates = _linkEnableStates;
                     }
                 }
             }
@@ -747,9 +755,8 @@ public:
                     bcallsetup = true;
                 }
                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u adding body %s (%d)", cache.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%cache.GetName()%attachedBodyIndex);
-                cache.Set(pattached, pinfo);
+                cache.Set(pattached, pinfo, _linkEnableStates);
                 cache.vcolobjs.swap(vcolobjs);
-                cache.linkEnableStates = _linkEnableStates;
                 //                    else {
                 //                        RAVELOG_VERBOSE_FORMAT("env=%d %x could not add attached body %s for tracking body %s", trackingbody.GetEnv()->GetId()%this%cache.GetName()%trackingbody.GetName());
                 //                    }
