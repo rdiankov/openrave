@@ -1700,7 +1700,7 @@ void KinBody::GetLinkEnableStates(std::vector<uint8_t>& enablestates) const
 {
     enablestates.resize(_veclinks.size());
     for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
-        enablestates[ilink] = _veclinks[ilink]->IsEnabled();
+        enablestates[ilink] = _veclinks[ilink]->_info._bIsEnabled;
     }
 }
 
