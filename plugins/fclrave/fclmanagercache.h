@@ -267,20 +267,37 @@ public:
     void InitEnvironment(const std::set<KinBodyConstPtr>& excludedbodies)
     {
         _ptrackingbody.reset();
-        _setExcludeBodyIndices.clear();
         pmanager->clear();
         for (KinBodyCache& bodyCache : _vecCachedBodies) {
             bodyCache.Invalidate();
         }
 
-        FOREACH(itbody, excludedbodies) {
-            _setExcludeBodyIndices.insert((*itbody)->GetEnvironmentBodyIndex());
+        if (!_vecExcludeBodyIndices.empty()) {
+            std::fill(_vecExcludeBodyIndices.begin(),
+                      _vecExcludeBodyIndices.end(),
+                      0);
+        }
+        if (!excludedbodies.empty()) {
+            int maxEnvBodyIndex = -1;
+            for (const KinBodyConstPtr& pbody : excludedbodies) {
+                if (!pbody) {
+                    continue;
+                }
+                if (maxEnvBodyIndex == -1) {
+                    maxEnvBodyIndex = pbody->GetEnv()->GetMaxEnvironmentBodyIndex();
+                    if (_vecExcludeBodyIndices.size() < maxEnvBodyIndex + 1) {
+                        _vecExcludeBodyIndices.resize(maxEnvBodyIndex + 1, 0);
+                    }
+                }
+
+                _vecExcludeBodyIndices[pbody->GetEnvironmentBodyIndex()] = 1;
+            }
         }
         pmanager->setup();
     }
 
     /// \brief makes sure that all the bodies are currently in the scene (if they are not explicitly excluded)
-    void EnsureBodies(const std::set<KinBodyConstPtr>& vbodies)
+    void EnsureBodies(const std::vector<KinBodyConstPtr>& vbodies)
     {
         _tmpSortedBuffer.resize(0);
         if (vbodies.empty()) {
@@ -804,10 +821,6 @@ public:
         return _lastSyncTimeStamp;
     }
 
-    inline const std::set<int>& GetExcludeBodyIndices() const {
-        return _setExcludeBodyIndices;
-    }
-
     void PrintStatus(uint32_t debuglevel)
     {
         if( IS_DEBUGLEVEL(debuglevel) ) {
@@ -906,7 +919,7 @@ private:
     std::vector<KinBodyCache> _vecCachedBodies; ///< vector of KinBodyCache(weak body, updatestamp)) where index is KinBody::GetEnvironmentBodyIndex. Index 0 has invalid entry because valid env id starts from 1.
     uint32_t _lastSyncTimeStamp; ///< timestamp when last synchronized
 
-    std::set<int> _setExcludeBodyIndices; ///< any bodies that should not be considered inside the manager, used with environment mode
+    std::vector<uint8_t> _vecExcludeBodyIndices; ///< any bodies that should not be considered inside the manager, used with environment mode
     CollisionGroup _tmpSortedBuffer; ///< cache, sorted so that we can efficiently search
 
     KinBodyConstWeakPtr _ptrackingbody; ///< if set, then only tracking the attached bodies if this body
