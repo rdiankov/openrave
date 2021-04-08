@@ -297,6 +297,7 @@ public:
     bool CheckSelfCollision(PyCollisionReportPtr pReport=PyCollisionReportPtr(), PyCollisionCheckerBasePtr pycollisionchecker=PyCollisionCheckerBasePtr());
     bool IsAttached(PyKinBodyPtr pattachbody);
     py::object GetAttached() const;
+    py::object GetAttachedEnvironmentBodyIndices() const;
     void SetZeroConfiguration();
     void SetNonCollidingConfiguration();
     py::object GetConfigurationSpecification(const std::string& interpolation="") const;

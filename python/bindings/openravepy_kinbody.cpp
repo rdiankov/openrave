@@ -3685,6 +3685,19 @@ object PyKinBody::GetAttached() const
     return attached;
 }
 
+object PyKinBody::GetAttachedEnvironmentBodyIndices() const
+{
+    py::list attached;
+    std::vector<int8_t> vattached;
+    _pbody->GetAttachedEnvironmentBodyIndices(vattached);
+    for (size_t envBodyIndex = 1; envBodyIndex < vattached.size(); ++envBodyIndex) {
+        if (vattached[envBodyIndex]) {
+            attached.append(envBodyIndex);
+        }
+    }
+    return attached;
+}
+
 void PyKinBody::SetZeroConfiguration()
 {
     _pbody->SetZeroConfiguration();
@@ -5381,6 +5394,7 @@ void init_openravepy_kinbody()
 #endif
                          .def("IsAttached",&PyKinBody::IsAttached,PY_ARGS("body") DOXY_FN(KinBody,IsAttached))
                          .def("GetAttached",&PyKinBody::GetAttached, DOXY_FN(KinBody,GetAttached))
+                         .def("GetAttachedEnvironmentBodyIndices",&PyKinBody::GetAttachedEnvironmentBodyIndices, DOXY_FN(KinBody,GetAttachedEnvironmentBodyIndices))
                          .def("SetZeroConfiguration",&PyKinBody::SetZeroConfiguration, DOXY_FN(KinBody,SetZeroConfiguration))
                          .def("SetNonCollidingConfiguration",&PyKinBody::SetNonCollidingConfiguration, DOXY_FN(KinBody,SetNonCollidingConfiguration))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
