@@ -217,10 +217,11 @@ public:
                     CollisionObjectPtr pcol = _fclspace.GetLinkBV(*pinfo, (*itlink)->GetIndex());
                     vcolobjs[(*itlink)->GetIndex()] = pcol;
                     if( !!pcol ) {
-                        CollisionGroup::const_iterator it = std::lower_bound(_tmpSortedBuffer.begin(), _tmpSortedBuffer.end(), pcol.get());
+                        fcl::CollisionObject* pcolObj = pcol.get();
+                        CollisionGroup::const_iterator it = std::lower_bound(_tmpSortedBuffer.begin(), _tmpSortedBuffer.end(), pcolObj);
                         // keep _tmpSortedBuffer sorted so that we can efficiently search
-                        if (it == _tmpSortedBuffer.end() || *it != pcol.get()) {
-                            _tmpSortedBuffer.insert(it, pcol.get());
+                        if (it == _tmpSortedBuffer.end() || *it != pcolObj) {
+                            _tmpSortedBuffer.insert(it, pcolObj);
                         }
                         else {
                             RAVELOG_WARN_FORMAT("env=%s body %s link %s is added multiple times", pbody->GetEnv()->GetNameId()%pbody->GetName()%(*itlink)->GetName());
