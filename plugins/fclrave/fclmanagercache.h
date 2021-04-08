@@ -860,7 +860,10 @@ private:
     /// should not add anything to _vecCachedBodies! insert to _tmpSortedBuffer
     bool _AddBody(const KinBody& body, const FCLSpace::KinBodyInfoPtr& pinfo, std::vector<CollisionObjectPtr>& vcolobjs, std::vector<uint8_t>& linkEnableStates, bool bTrackActiveDOF)
     {
-        vcolobjs.resize(0); // reset so that existing collision objects can go away
+        // reset so that existing collision objects can go away
+        for (CollisionObjectPtr& pcolObj : vcolobjs) {
+            pcolObj.reset();
+        }
         vcolobjs.resize(body.GetLinks().size(), CollisionObjectPtr());
         bool bsetUpdateStamp = false;
         body.GetLinkEnableStates(linkEnableStates);
