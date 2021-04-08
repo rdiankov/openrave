@@ -566,6 +566,7 @@ public:
     }
 
 
+    /// \brief returns bodies initialized by this space. Note that some entries are null pointer.
     const std::vector<KinBodyConstPtr>& GetEnvBodies() const {
         return _vecInitializedBodies;
     }

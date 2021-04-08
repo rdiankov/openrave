@@ -742,9 +742,12 @@ public:
 
         _fclspace->Synchronize();
         std::set<KinBodyConstPtr> excludedBodies;
-        FOREACH(itbody, _fclspace->GetEnvBodies()) {
-            if( find(vIncludedBodies.begin(), vIncludedBodies.end(), *itbody) == vIncludedBodies.end() ) {
-                excludedBodies.insert(*itbody);
+        for (const OpenRAVE::KinBodyConstPtr& pbody : _fclspace->GetEnvBodies()) {
+            if (!pbody) {
+                continue;
+            }
+            if( find(vIncludedBodies.begin(), vIncludedBodies.end(), pbody) == vIncludedBodies.end() ) {
+                excludedBodies.insert(pbody);
             }
         }
         FCLCollisionManagerInstance& envManager = _GetEnvManager(excludedBodies);
