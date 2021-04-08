@@ -1696,12 +1696,15 @@ void KinBody::GetLinkTransformations(std::vector<Transform>& transforms, std::ve
     }
 }
 
+inline bool _ExtractIsEnabled(const KinBody::LinkPtr& plink)
+{
+    return plink->GetInfo()._bIsEnabled;
+}
+
 void KinBody::GetLinkEnableStates(std::vector<uint8_t>& enablestates) const
 {
     enablestates.resize(_veclinks.size());
-    for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
-        enablestates[ilink] = _veclinks[ilink]->_info._bIsEnabled;
-    }
+    std::transform(_veclinks.begin(), _veclinks.end(), enablestates.begin(), _ExtractIsEnabled);
 }
 
 uint64_t KinBody::GetLinkEnableStatesMask() const
