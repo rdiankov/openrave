@@ -570,7 +570,8 @@ public:
             if( bRead ) {
                 if( !!ifstream(fullfilename.c_str()) ) {
                     return fullfilename;
-                }            }
+                }
+            }
             else {
                 return fullfilename;
             }
