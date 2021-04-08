@@ -26,6 +26,8 @@ try:
 except NameError:
     __builtins__['__openravepy_build_doc__'] = False
 
+import sys
+
 from .openravepy_int import *
 from .openravepy_int import __version__
 from .openravepy_int import __author__
@@ -97,7 +99,10 @@ class PlanningError(Exception):
     def __init__(self,parameter=u'', recoverySuggestions=None):
         """:param recoverySuggestions: list of unicode suggestions to fix or recover from the error
         """
-        self.parameter = unicode(parameter)
+        if sys.version_info[0]>=3:
+            self.parameter = parameter
+        else:
+            self.parameter = unicode(parameter)
         if recoverySuggestions is None:
             self.recoverySuggestions = []
         else:

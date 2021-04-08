@@ -247,7 +247,7 @@ def build(allstats,buildoptions,outputdir,env):
             if not stat[0] in robotdict:
                 robotdict[stat[0]] = []
             robotdict[stat[0]].append(stat[1:])
-    robotlist = sorted(robotdict.iteritems(), key=operator.itemgetter(0))
+    robotlist = sorted(robotdict.items(), key=operator.itemgetter(0))
     robotxml = ''
     robotnames = []
     for robotfilename, robotstats in robotlist:
