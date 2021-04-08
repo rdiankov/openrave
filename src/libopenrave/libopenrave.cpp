@@ -602,18 +602,35 @@ public:
         _nDebugLevel = level;
     }
 
+    int GetDebugLevel()
+    {
+        int level = _nDebugLevel;
+        if (_logger != NULL && _logger->getEffectiveLevel() != NULL) {
+            level = _logger->getEffectiveLevel()->toInt();
+            switch (level) {
+            case log4cxx::Level::FATAL_INT: level = Level_Fatal; break;
+            case log4cxx::Level::ERROR_INT: level = Level_Error; break;
+            case log4cxx::Level::WARN_INT:  level = Level_Warn; break;
+            case log4cxx::Level::INFO_INT:  level = Level_Info; break;
+            case log4cxx::Level::DEBUG_INT: level = Level_Debug; break;
+            case log4cxx::Level::TRACE_INT: level = Level_Verbose; break;
+            default: level = Level_Info;
+            }
+        }
+        return level | (_nDebugLevel & ~Level_OutputMask);
+    }
+
 #else
     void SetDebugLevel(int level)
     {
         _nDebugLevel = level;
     }
 
-#endif
-
     int GetDebugLevel()
     {
         return _nDebugLevel;
     }
+#endif
 
     class XMLReaderFunctionData : public UserData
     {
