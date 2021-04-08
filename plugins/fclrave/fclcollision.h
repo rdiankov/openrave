@@ -489,15 +489,6 @@ public:
         }
 
         _fclspace->SynchronizeWithAttached(*plink->GetParent());
-
-        std::set<KinBodyConstPtr> attachedBodies;
-        pbody->GetAttached(attachedBodies);
-        FOREACH(itbody, attachedBodies) {
-            if( (*itbody)->GetEnvironmentBodyIndex() ) { // for now GetAttached can hold bodies that are not initialized
-                _fclspace->SynchronizeWithAttached(**itbody);
-            }
-        }
-
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(*plink);
 
         if( !pcollLink ) {
@@ -541,7 +532,7 @@ public:
         }
 
         std::vector<int8_t> attachedBodyIndices;
-        plink->GetParent()->GetAttached(attachedBodyIndices);
+        plink->GetParent()->GetAttachedEnvironmentBodyIndices(attachedBodyIndices);
         FCLCollisionManagerInstance& envManager = _GetEnvManager(attachedBodyIndices);
 
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
@@ -573,7 +564,7 @@ public:
         FCLCollisionManagerInstance& bodyManager = _GetBodyManager(pbody, !!(_options & OpenRAVE::CO_ActiveDOFs));
 
         std::vector<int8_t> attachedBodyIndices;
-        pbody->GetAttached(attachedBodyIndices);
+        pbody->GetAttachedEnvironmentBodyIndices(attachedBodyIndices);
         FCLCollisionManagerInstance& envManager = _GetEnvManager(attachedBodyIndices);
 
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);

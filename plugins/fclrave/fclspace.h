@@ -497,10 +497,15 @@ public:
     void SynchronizeWithAttached(const KinBody &body)
     {
         if( body.HasAttached() ) {
-            std::set<KinBodyPtr> setAttachedpBodyTemp;
-            body.GetAttached(setAttachedpBodyTemp);
-            FOREACH(itbody, setAttachedpBodyTemp) {
-                Synchronize(**itbody);
+            std::vector<int8_t> vecAttachedEnvBodyIndices;
+            body.GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
+            for (size_t envBodyIndex = 1; envBodyIndex < vecAttachedEnvBodyIndices.size(); envBodyIndex++) {
+                if (vecAttachedEnvBodyIndices[envBodyIndex]) {
+                    KinBodyPtr pattachedBody = _penv->GetBodyFromEnvironmentBodyIndex(envBodyIndex);
+                    if (!!pattachedBody) {
+                        Synchronize(*pattachedBody);
+                    }
+                }
             }
         }
         else {

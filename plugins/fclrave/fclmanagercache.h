@@ -174,13 +174,13 @@ public:
     void InitBodyManager(KinBodyConstPtr pbody, bool bTrackActiveDOF)
     {
         _ptrackingbody = pbody;
-        std::set<KinBodyConstPtr> attachedBodies;
-        pbody->GetAttached(attachedBodies);
+        std::vector<int8_t> vecAttachedEnvBodyIndices;
+        pbody->GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
         _bTrackActiveDOF = false;
         if( bTrackActiveDOF && pbody->IsRobot() ) {
             RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
             if( !!probot ) {
-                _UpdateActiveLinks(probot);
+                _UpdateActiveLinks(*probot);
                 _bTrackActiveDOF = true;
             }
         }
@@ -196,24 +196,29 @@ public:
         for (KinBodyCache& bodyCache : _vecCachedBodies) {
             bodyCache.Invalidate();
         }
-        int maxBodyIndex = pbody->GetEnv()->GetMaxEnvironmentBodyIndex();
+        const EnvironmentBase& env = *pbody->GetEnv();
+        int maxBodyIndex = env.GetMaxEnvironmentBodyIndex();
         EnsureVectorSize(_vecCachedBodies, maxBodyIndex+1);
-
-        FOREACH(itbody, attachedBodies) {
-            FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(**itbody);
+        for (size_t envBodyIndex = 1; envBodyIndex < vecAttachedEnvBodyIndices.size(); envBodyIndex++) {
+            if (!vecAttachedEnvBodyIndices[envBodyIndex]) {
+                continue;
+            }
+            KinBodyPtr pAttachedBody = env.GetBodyFromEnvironmentBodyIndex(envBodyIndex);
+            const KinBody& attachedBody = *pAttachedBody;
+            FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(attachedBody);
             if( !pinfo ) {
                 // don't init something that isn't initialized in this checker.
-                RAVELOG_VERBOSE_FORMAT("body %s has attached body %s which is not initialized in this checker, ignoring for now", pbody->GetName()%(*itbody)->GetName());
+                RAVELOG_VERBOSE_FORMAT("body %s has attached body %s which is not initialized in this checker, ignoring for now", pbody->GetName()%attachedBody.GetName());
                 continue;
             }
 
             bool bsetUpdateStamp = false;
-            _linkEnableStates.resize((*itbody)->GetLinks().size()); ///< links that are currently inside the manager
+            _linkEnableStates.resize(attachedBody.GetLinks().size()); ///< links that are currently inside the manager
             std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
             vcolobjs.clear(); // reset any existing collision objects
-            vcolobjs.resize((*itbody)->GetLinks().size(),CollisionObjectPtr());
-            FOREACH(itlink, (*itbody)->GetLinks()) {
-                if( (*itlink)->IsEnabled() && (*itbody != pbody || !_bTrackActiveDOF || _vTrackingActiveLinks.at((*itlink)->GetIndex())) ) {
+            vcolobjs.resize(attachedBody.GetLinks().size(),CollisionObjectPtr());
+            FOREACH(itlink, attachedBody.GetLinks()) {
+                if( (*itlink)->IsEnabled() && (pAttachedBody != pbody || !_bTrackActiveDOF || _vTrackingActiveLinks.at((*itlink)->GetIndex())) ) {
                     CollisionObjectPtr pcol = _fclspace.GetLinkBV(*pinfo, (*itlink)->GetIndex());
                     vcolobjs[(*itlink)->GetIndex()] = pcol;
                     if( !!pcol ) {
@@ -234,24 +239,24 @@ public:
 
             // regardless if the linkmask, have to always add to cache in order to track!
             if( 1 ) {//bsetUpdateStamp ) {
-                //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s (%d) linkmask=0x%x, _tmpSortedBuffer.size()=%d", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%pbody->GetEnvironmentBodyIndex()%_GetLinkMask(_linkEnableStates)%_tmpSortedBuffer.size());
-                const int bodyIndex = (*itbody)->GetEnvironmentBodyIndex();
+                //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s (%d) linkmask=0x%x, _tmpSortedBuffer.size()=%d", attachedBody.GetEnv()->GetId()%this%attachedBody.GetName()%pbody->GetEnvironmentBodyIndex()%_GetLinkMask(_linkEnableStates)%_tmpSortedBuffer.size());
+                const int bodyIndex = attachedBody.GetEnvironmentBodyIndex();
                 //EnsureVectorSize(_vecCachedBodies, bodyIndex);
                 KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
-                cache.Set(*itbody, pinfo, _linkEnableStates);
+                cache.Set(pAttachedBody, pinfo, _linkEnableStates);
                 cache.vcolobjs.swap(vcolobjs);
             }
             else {
 //                if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
 //                    std::stringstream ss;
-//                    for(size_t ilink = 0; ilink < (*itbody)->GetLinks().size(); ++ilink) {
-//                        ss << (int)(*itbody)->GetLinks()[ilink]->IsEnabled();
-//                        if( pbody == *itbody ) {
+//                    for(size_t ilink = 0; ilink < attachedBody.GetLinks().size(); ++ilink) {
+//                        ss << (int)attachedBody.GetLinks()[ilink]->IsEnabled();
+//                        if( pbody == pAttachedBody ) {
 //                            ss << "(" << _vTrackingActiveLinks.at(ilink) << ")";
 //                        }
 //                        ss << ",";
 //                    }
-//                    RAVELOG_VERBOSE_FORMAT("env=%d, %x not tracking adding body %s: links=[%s]", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%ss.str());
+//                    RAVELOG_VERBOSE_FORMAT("env=%d, %x not tracking adding body %s: links=[%s]", attachedBody.GetEnv()->GetId()%this%attachedBody.GetName()%ss.str());
 //                }
             }
         }
@@ -420,38 +425,39 @@ public:
             }
             else {
                 FCLSpace::KinBodyInfoPtr pinfo = trackingCache.pwinfo.lock();
-                FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(trackingbody); // necessary in case pinfos were swapped!
+                const FCLSpace::KinBodyInfoPtr& pnewinfo = _fclspace.GetInfo(trackingbody); // necessary in case pinfos were swapped!
                 if( trackingCache.nActiveDOFUpdateStamp != pnewinfo->nActiveDOFUpdateStamp ) {
                     if( trackingbody.IsRobot() ) {
                         RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(ptrackingbody);
                         if( !!probot ) {
+                            const RobotBase& robot = *probot;
                             if( pinfo != pnewinfo ) {
                                 // going to recreate everything in below step anyway, so no need to update collision objects
-                                _UpdateActiveLinks(probot);
+                                _UpdateActiveLinks(robot);
                             }
                             else {
                                 // check for any tracking link changes
-                                _vTrackingActiveLinks.resize(probot->GetLinks().size(), 0);
+                                _vTrackingActiveLinks.resize(robot.GetLinks().size(), 0);
                                 // the active links might have changed
-                                _linkEnableStates.resize(probot->GetLinks().size()); ///< links that are currently inside the manager
+                                _linkEnableStates.resize(robot.GetLinks().size()); ///< links that are currently inside the manager
                                 std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
-                                for(size_t ilink = 0; ilink < probot->GetLinks().size(); ++ilink) {
+                                for(size_t ilink = 0; ilink < robot.GetLinks().size(); ++ilink) {
                                     int isLinkActive = 0;
-                                    FOREACH(itindex, probot->GetActiveDOFIndices()) {
-                                        if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), ilink) ) {
+                                    FOREACH(itindex, robot.GetActiveDOFIndices()) {
+                                        if( robot.DoesAffect(robot.GetJointFromDOFIndex(*itindex)->GetJointIndex(), ilink) ) {
                                             isLinkActive = 1;
                                             break;
                                         }
                                     }
 
-                                    bool bIsActiveLinkEnabled = probot->GetLinks()[ilink]->IsEnabled() && isLinkActive;
+                                    bool bIsActiveLinkEnabled = robot.GetLinks()[ilink]->IsEnabled() && isLinkActive;
 
                                     if( bIsActiveLinkEnabled ) {
                                         _linkEnableStates.at(ilink) = 1;
                                     }
                                     if( _vTrackingActiveLinks[ilink] != isLinkActive ) {
                                         _vTrackingActiveLinks[ilink] = isLinkActive;
-                                        CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(*pnewinfo, probot->GetLinks()[ilink]->GetIndex());
+                                        CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(*pnewinfo, robot.GetLinks()[ilink]->GetIndex());
                                         if( bIsActiveLinkEnabled && !!pcolobj ) {
 #ifdef FCLRAVE_USE_REPLACEOBJECT
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
@@ -740,13 +746,18 @@ public:
 
         if( bAttachedBodiesChanged && !!ptrackingbody ) {
             // since tracking have to update all the bodies
-            std::set<KinBodyConstPtr> attachedBodies;
-            ptrackingbody->GetAttached(attachedBodies);
+            std::vector<int8_t> vecAttachedEnvBodyIndices;
+            ptrackingbody->GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
             std::vector<CollisionObjectPtr> vcolobjs;
             //RAVELOG_VERBOSE_FORMAT("env=%d, %x %u setting %d attached bodies for body %s (%d)", ptrackingbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%attachedBodies.size()%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentBodyIndex());
             // add any new bodies
             bool vectorSizeIsEnsured = false;
-            for (const KinBodyConstPtr& pattached : attachedBodies) {
+            const EnvironmentBase& env = *ptrackingbody->GetEnv();
+            for (size_t envBodyIndex = 1; envBodyIndex < vecAttachedEnvBodyIndices.size(); envBodyIndex++) {
+                if (!vecAttachedEnvBodyIndices[envBodyIndex]) {
+                    continue;
+                }
+                const KinBodyPtr& pattached = env.GetBodyFromEnvironmentBodyIndex(envBodyIndex);
                 const KinBody& attached = *pattached;
                 if (!vectorSizeIsEnsured) {
                     EnsureVectorSize(_vecCachedBodies, attached.GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
@@ -779,7 +790,12 @@ public:
                 KinBodyConstPtr pbody = cache.pwbody.lock();
                 // could be the case that the same pointer was re-added to the environment so have to check the environment id
                 // make sure we don't need to make this asusmption of body id change when bodies are removed and re-added
-                if( !pbody || attachedBodies.count(pbody) == 0 || pbody->GetEnvironmentBodyIndex() != bodyIndex ) {
+                bool isInvalid = !pbody;
+                if (!isInvalid) {
+                    const int currentBodyEnvBodyIndex = pbody->GetEnvironmentBodyIndex();
+                    isInvalid = !vecAttachedEnvBodyIndices[currentBodyEnvBodyIndex] || currentBodyEnvBodyIndex != bodyIndex;
+                }
+                if( isInvalid ) {
                     if( !!pbody && IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
                         RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%bodyIndex);
                     }
@@ -865,13 +881,13 @@ private:
         return bsetUpdateStamp;
     }
 
-    void _UpdateActiveLinks(RobotBaseConstPtr probot)
+    void _UpdateActiveLinks(const RobotBase& robot)
     {
-        _vTrackingActiveLinks.resize(probot->GetLinks().size());
-        for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
+        _vTrackingActiveLinks.resize(robot.GetLinks().size());
+        for(size_t i = 0; i < robot.GetLinks().size(); ++i) {
             int isLinkActive = 0;
-            FOREACH(itindex, probot->GetActiveDOFIndices()) {
-                if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), i) ) {
+            FOREACH(itindex, robot.GetActiveDOFIndices()) {
+                if( robot.DoesAffect(robot.GetJointFromDOFIndex(*itindex)->GetJointIndex(), i) ) {
                     isLinkActive = 1;
                     break;
                 }

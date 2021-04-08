@@ -2902,7 +2902,11 @@ private:
     void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
     void GetAttached(std::vector<KinBodyPtr>& vAttached) const;
     void GetAttached(std::vector<KinBodyConstPtr>& vAttached) const;
-    void GetAttached(std::vector<int8_t>& vAttached) const;
+
+    /// \brief Recursively get all attached bodies of this body, including this body.
+    ///
+    /// \param vAttached fills with the attached bodies. Unlike GetAttached, non-zero entries in this is not ignored when recursing on their attached bodies for efficiency. If the size of vAttached is larger than number of bodies in the env, vAttached may not be shrinked.
+    void GetAttachedEnvironmentBodyIndices(std::vector<int8_t>& vAttached) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
     inline bool HasAttached() const {
