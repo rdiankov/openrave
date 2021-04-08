@@ -730,16 +730,16 @@ private:
                 pcoll->computeAABB();
 
                 //info.vlinks[i]->nLastStamp = info.nLastStamp;
-                FOREACHC(itgeomcoll, info.vlinks[i]->vgeoms) {
-                    CollisionObjectPtr pcoll = (*itgeomcoll).second;
-                    Transform pose = vtrans[i] * (*itgeomcoll).first;
+                for (const TransformCollisionPair& pgeom : info.vlinks[i]->vgeoms) {
+                    fcl::CollisionObject& coll = *pgeom.second;
+                    Transform pose = vtrans[i] * pgeom.first;
                     fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                     fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
-                    pcoll->setTranslation(newPosition);
-                    pcoll->setQuatRotation(newOrientation);
+                    coll.setTranslation(newPosition);
+                    coll.setQuatRotation(newOrientation);
                     // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
-                    pcoll->computeAABB();
+                    coll.computeAABB();
                 }
             }
 
