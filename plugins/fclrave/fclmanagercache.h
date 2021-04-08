@@ -264,7 +264,7 @@ public:
     }
 
     /// \brief sets up manager for environment checking
-    void InitEnvironment(const std::set<KinBodyConstPtr>& excludedbodies)
+    void InitEnvironment(const std::vector<int8_t>& excludedEnvBodyIndices)
     {
         _ptrackingbody.reset();
         pmanager->clear();
@@ -277,20 +277,12 @@ public:
                       _vecExcludeBodyIndices.end(),
                       0);
         }
-        if (!excludedbodies.empty()) {
-            int maxEnvBodyIndex = -1;
-            for (const KinBodyConstPtr& pbody : excludedbodies) {
-                if (!pbody) {
-                    continue;
-                }
-                if (maxEnvBodyIndex == -1) {
-                    maxEnvBodyIndex = pbody->GetEnv()->GetMaxEnvironmentBodyIndex();
-                    if (_vecExcludeBodyIndices.size() < maxEnvBodyIndex + 1) {
-                        _vecExcludeBodyIndices.resize(maxEnvBodyIndex + 1, 0);
-                    }
-                }
-
-                _vecExcludeBodyIndices[pbody->GetEnvironmentBodyIndex()] = 1;
+        if (_vecExcludeBodyIndices.size() < excludedEnvBodyIndices.size()) {
+            _vecExcludeBodyIndices.resize(excludedEnvBodyIndices.size(), 0);
+        }
+        for (size_t index = 1; index < excludedEnvBodyIndices.size(); ++index) {
+            if (excludedEnvBodyIndices[index]) {
+                _vecExcludeBodyIndices[index] = 1;
             }
         }
         pmanager->setup();
@@ -919,7 +911,7 @@ private:
     std::vector<KinBodyCache> _vecCachedBodies; ///< vector of KinBodyCache(weak body, updatestamp)) where index is KinBody::GetEnvironmentBodyIndex. Index 0 has invalid entry because valid env id starts from 1.
     uint32_t _lastSyncTimeStamp; ///< timestamp when last synchronized
 
-    std::vector<uint8_t> _vecExcludeBodyIndices; ///< any bodies that should not be considered inside the manager, used with environment mode
+    std::vector<int8_t> _vecExcludeBodyIndices; ///< any bodies that should not be considered inside the manager, used with environment mode
     CollisionGroup _tmpSortedBuffer; ///< cache, sorted so that we can efficiently search
 
     KinBodyConstWeakPtr _ptrackingbody; ///< if set, then only tracking the attached bodies if this body

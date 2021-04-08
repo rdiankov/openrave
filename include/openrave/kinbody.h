@@ -2902,6 +2902,7 @@ private:
     void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
     void GetAttached(std::vector<KinBodyPtr>& vAttached) const;
     void GetAttached(std::vector<KinBodyConstPtr>& vAttached) const;
+    void GetAttached(std::vector<int8_t>& vAttached) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
     inline bool HasAttached() const {

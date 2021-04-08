@@ -5136,6 +5136,43 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
     }
 }
 
+void KinBody::GetAttached(std::vector<int8_t>& vAttached) const
+{
+    const EnvironmentBase& env = *GetEnv();
+    if (vAttached.size() < env.GetMaxEnvironmentBodyIndex() + 1) {
+        vAttached.resize(env.GetMaxEnvironmentBodyIndex() + 1, 0);
+    }
+
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        vAttached.at(GetEnvironmentBodyIndex()) = 1;
+        return;
+    }
+
+    for (int8_t& value : vAttached) {
+        if (value > 0) {
+            // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
+            value = -1;
+        }
+    }
+    vAttached.at(GetEnvironmentBodyIndex()) = 1;
+
+    int numAttached = 0;
+    {
+        numAttached = _GetNumAttached(vAttached);
+        if (numAttached == 0) {
+            return;
+        }
+        vAttached.reserve(vAttached.size() + numAttached);
+    }
+
+    for (int8_t& value : vAttached) {
+        if (value == -1) {
+            value = 1;
+        }
+    }
+}
+
 bool KinBody::_IsAttached(int otherBodyid, std::vector<int8_t>& vAttachedVisited) const
 {
     for (const KinBodyWeakPtr& pbody : _listAttachedBodies) {
