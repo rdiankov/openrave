@@ -5570,16 +5570,6 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
     }
 
-    _listAttachedBodies.clear(); // will be set in the environment
-    if( !(cloningoptions & Clone_IgnoreAttachedBodies) ) {
-        FOREACHC(itatt, r->_listAttachedBodies) {
-            KinBodyConstPtr pattref = itatt->lock();
-            if( !!pattref ) {
-                _listAttachedBodies.push_back(GetEnv()->GetBodyFromEnvironmentBodyIndex(pattref->GetEnvironmentBodyIndex()));
-            }
-        }
-    }
-
     // cannot copy the velocities since it requires the physics engine to be initialized with this kinbody, which might not happen before the clone..?
 //    std::vector<std::pair<Vector,Vector> > velocities;
 //    r->GetLinkVelocities(velocities);
@@ -5592,7 +5582,9 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _ResetInternalCollisionCache();
 
     // clone the grabbed bodies, note that this can fail if the new cloned environment hasn't added the bodies yet (check out Environment::Clone)
-    _vGrabbedBodies.clear(); _vGrabbedBodies.reserve(r->_vGrabbedBodies.size());
+    _listAttachedBodies.clear(); // will be set in the environment
+    _vGrabbedBodies.clear();
+    _vGrabbedBodies.reserve(r->_vGrabbedBodies.size());
     FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
         GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
         if( !pgrabbedref ) {
@@ -5622,6 +5614,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 pgrabbed->_listNonCollidingLinks.push_back(_veclinks.at((*itlinkref)->GetIndex()));
             }
             _vGrabbedBodies.push_back(pgrabbed);
+            _AttachBody(pgrabbedbody);
         }
     }
 
