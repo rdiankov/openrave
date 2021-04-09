@@ -240,9 +240,8 @@ public:
             // regardless if the linkmask, have to always add to cache in order to track!
             if( 1 ) {//bsetUpdateStamp ) {
                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s (%d) linkmask=0x%x, _tmpSortedBuffer.size()=%d", attachedBody.GetEnv()->GetId()%this%attachedBody.GetName()%pbody->GetEnvironmentBodyIndex()%_GetLinkMask(_linkEnableStates)%_tmpSortedBuffer.size());
-                const int bodyIndex = attachedBody.GetEnvironmentBodyIndex();
                 //EnsureVectorSize(_vecCachedBodies, bodyIndex);
-                KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
+                KinBodyCache& cache = _vecCachedBodies.at(envBodyIndex);
                 cache.Set(pAttachedBody, pinfo, _linkEnableStates);
                 cache.vcolobjs.swap(vcolobjs);
             }
@@ -278,19 +277,7 @@ public:
             bodyCache.Invalidate();
         }
 
-        if (!_vecExcludeBodyIndices.empty()) {
-            std::fill(_vecExcludeBodyIndices.begin(),
-                      _vecExcludeBodyIndices.end(),
-                      0);
-        }
-        if (_vecExcludeBodyIndices.size() < excludedEnvBodyIndices.size()) {
-            _vecExcludeBodyIndices.resize(excludedEnvBodyIndices.size(), 0);
-        }
-        for (size_t index = 1; index < excludedEnvBodyIndices.size(); ++index) {
-            if (excludedEnvBodyIndices[index]) {
-                _vecExcludeBodyIndices[index] = 1;
-            }
-        }
+        _vecExcludeBodyIndices = excludedEnvBodyIndices;
         pmanager->setup();
     }
 
@@ -793,19 +780,19 @@ public:
 
             // remove bodies not attached anymore
 
-            for(int bodyIndex = 0; bodyIndex < (int)_vecCachedBodies.size(); ++bodyIndex) {
-                KinBodyCache& cache = _vecCachedBodies[bodyIndex];
+            for(int cachedBodyIndex = 0; cachedBodyIndex < (int)_vecCachedBodies.size(); ++cachedBodyIndex) {
+                KinBodyCache& cache = _vecCachedBodies[cachedBodyIndex];
                 KinBodyConstPtr pbody = cache.pwbody.lock();
                 // could be the case that the same pointer was re-added to the environment so have to check the environment id
                 // make sure we don't need to make this asusmption of body id change when bodies are removed and re-added
                 bool isInvalid = !pbody;
                 if (!isInvalid) {
                     const int currentBodyEnvBodyIndex = pbody->GetEnvironmentBodyIndex();
-                    isInvalid = !vecAttachedEnvBodyIndices[currentBodyEnvBodyIndex] || currentBodyEnvBodyIndex != bodyIndex;
+                    isInvalid = !vecAttachedEnvBodyIndices[currentBodyEnvBodyIndex] || currentBodyEnvBodyIndex != cachedBodyIndex;
                 }
                 if( isInvalid ) {
                     if( !!pbody && IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%bodyIndex);
+                        RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%cachedBodyIndex);
                     }
                     // not in attached bodies so should remove
                     FOREACH(itcol, cache.vcolobjs) {
