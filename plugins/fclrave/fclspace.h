@@ -710,13 +710,14 @@ private:
     {
         //KinBodyPtr pbody = info.GetBody();
         if( info.nLastStamp != body.GetUpdateStamp()) {
-            vector<Transform> vtrans;
+            vector<Transform>& vtrans = _vtransCache;
             body.GetLinkTransformations(vtrans);
             info.nLastStamp = body.GetUpdateStamp();
             BOOST_ASSERT( body.GetLinks().size() == info.vlinks.size() );
             BOOST_ASSERT( vtrans.size() == info.vlinks.size() );
+            CollisionObjectPtr pcoll;
             for(size_t i = 0; i < vtrans.size(); ++i) {
-                CollisionObjectPtr pcoll = info.vlinks[i]->linkBV.second;
+                pcoll = info.vlinks[i]->linkBV.second;
                 if( !pcoll ) {
                     continue;
                 }
@@ -847,6 +848,7 @@ private:
     std::vector<KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. Index of the vector is the environment id (id of the body in the env, not __nUniqueId of env) of the kinbody at that index. The index being environment id makes it easier to compare objects without getting a handle to their pointers. Whenever a KinBodyInfoPtr goes into this map, it is removed from _cachedpinfo. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
 
     bool _bIsSelfCollisionChecker; // Currently not used
+    vector<Transform> _vtransCache;
 };
 
 #ifdef RAVE_REGISTER_BOOST
