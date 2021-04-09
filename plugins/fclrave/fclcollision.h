@@ -489,6 +489,7 @@ public:
         }
 
         _fclspace->SynchronizeWithAttached(*plink->GetParent());
+        _fclspace->SynchronizeWithAttached(*pbody);
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(*plink);
 
         if( !pcollLink ) {
