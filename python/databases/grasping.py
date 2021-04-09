@@ -249,7 +249,7 @@ class GraspingModel(DatabaseGenerator):
         # graspikparam_nocol is the serialized IkParameterization. It can hold a max of 8 values, the first being the type
         self.graspindices = dict()
         self.totaldof = 0
-        for name,dof in graspdof.iteritems():
+        for name,dof in graspdof.items():
             self.graspindices[name] = range(self.totaldof,self.totaldof+dof)
             self.totaldof += dof
     def clone(self,envother):
