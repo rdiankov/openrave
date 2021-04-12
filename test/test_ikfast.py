@@ -75,7 +75,7 @@ def measurement(name,value):
 def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
     global env, ikfastproblem, globalstats
     iktype = None
-    for value,type in IkParameterizationType.values.iteritems():
+    for value,type in IkParameterizationType.values.items():
         if type.name == iktypestr:
             iktype = type
             break
@@ -237,7 +237,7 @@ def parseoptions(args=None):
     else:
         iktypes = []
         for iktype in options.iktypes.split(','):
-            for value,type in IkParameterizationType.values.iteritems():
+            for value,type in IkParameterizationType.values.items():
                 if type.name.lower() == iktype.lower():
                     iktypes.append(type)
                     break

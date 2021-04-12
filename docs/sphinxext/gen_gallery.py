@@ -93,7 +93,7 @@ class GalleryDirective(Directive):
                 rows.append(link_template%(name,linkdir+'/'+gallerytype+'.'+name, imagelinkdir+'/'+gallerytype+'/'+imthumbname, name,docstring))
                     
         # have to have different links for different builders
-        #for buildertype,link_template in link_templates.iteritems():
+        #for buildertype,link_template in link_templates.items():
 # 
 #             for modulename, name, docstring in modulenames:
 #                 imthumbname = name+'_thumb.'+imageext
