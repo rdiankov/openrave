@@ -3128,6 +3128,11 @@ object PyKinBody::GetLinkEnableStates() const
     return toPyArray(enablestates);
 }
 
+object PyKinBody::GetLinkEnableStatesMasks() const
+{
+    return toPyArray(_pbody->GetLinkEnableStatesMasks());
+}
+
 void PyKinBody::SetLinkEnableStates(object oenablestates)
 {
     std::vector<uint8_t> enablestates = ExtractArray<uint8_t>(oenablestates);
@@ -5236,6 +5241,7 @@ void init_openravepy_kinbody()
 #endif
                          .def("GetLinkEnableStates",&PyKinBody::GetLinkEnableStates, DOXY_FN(KinBody,GetLinkEnableStates))
                          .def("SetLinkEnableStates",&PyKinBody::SetLinkEnableStates, DOXY_FN(KinBody,SetLinkEnableStates))
+                         .def("GetLinkEnableStatesMasks",&PyKinBody::GetLinkEnableStatesMasks, DOXY_FN(KinBody,GetLinkEnableStatesMasks))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("ComputeAABB", &PyKinBody::ComputeAABB,
                               "enabledOnlyLinks"_a = false,

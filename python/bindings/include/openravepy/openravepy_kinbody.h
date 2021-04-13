@@ -246,6 +246,7 @@ public:
     void SetLinkTransformations(py::object transforms, py::object odoflastvalues=py::none_());
     void SetLinkVelocities(py::object ovelocities);
     py::object GetLinkEnableStates() const;
+    py::object GetLinkEnableStatesMasks() const;
     void SetLinkEnableStates(py::object oenablestates);
     bool SetVelocity(py::object olinearvel, py::object oangularvel);
     void SetDOFVelocities(py::object odofvelocities, py::object olinearvel, py::object oangularvel, uint32_t checklimits);
