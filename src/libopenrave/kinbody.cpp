@@ -5318,8 +5318,8 @@ void KinBody::Enable(bool bEnable)
 
 bool KinBody::IsEnabled() const
 {
-    FOREACHC(it, _veclinks) {
-        if((*it)->IsEnabled()) {
+    for (uint64_t mask : _vLinkEnableStatesMask) {
+        if (mask > 0) {
             return true;
         }
     }
