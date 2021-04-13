@@ -5300,10 +5300,16 @@ void KinBody::Enable(bool bEnable)
     bool bchanged = false;
     FOREACH(it, _veclinks) {
         if( (*it)->_info._bIsEnabled != bEnable ) {
-            (*it)->_Enable(bEnable);
+            (*it)->_info._bIsEnabled = bEnable;
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
+    }
+    if (bEnable) {
+        std::fill(_vLinkEnableStatesMask.begin(), _vLinkEnableStatesMask.end(), UINT64_MAX);
+    }
+    else {
+        std::fill(_vLinkEnableStatesMask.begin(), _vLinkEnableStatesMask.end(), 0);
     }
     if( bchanged ) {
         _PostprocessChangedParameters(Prop_LinkEnable);
