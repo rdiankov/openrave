@@ -1723,21 +1723,27 @@ void KinBody::GetLinkTransformations(std::vector<Transform>& transforms, std::ve
 
 void KinBody::GetLinkEnableStates(vector<uint8_t>& enablestates) const
 {
+    //RAVELOG_INFO_FORMAT("env=%s, body=%s", GetEnv()->GetNameId()%GetName());
     enablestates.resize(_veclinks.size());
     enablestates.assign(LinkPtrEnabledConstIterator(_veclinks.begin()),
                         LinkPtrEnabledConstIterator(_veclinks.end()));
 }
 
-uint64_t KinBody::GetLinkEnableStatesMask() const
+void KinBody::NotifyLinkEnabled(size_t linkIndex, bool bEnable)
 {
-    if( _veclinks.size() > 64 ) {
-        RAVELOG_WARN_FORMAT("%s has too many links and will only return enable mask for first 64", _name);
+    const int bitMaskGroupIndex = linkIndex / 64;
+    if (_vLinkEnableStatesMask.size() <= bitMaskGroupIndex) {
+        _vLinkEnableStatesMask.resize(bitMaskGroupIndex + 1, 0);
     }
-    uint64_t linkstate = 0;
-    for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
-        linkstate |= ((uint64_t)_veclinks[ilink]->_info._bIsEnabled<<ilink);
+
+    uint64_t& mask = _vLinkEnableStatesMask[bitMaskGroupIndex];
+    const size_t bit = linkIndex % 64;
+    if (bEnable) {
+        mask |= 1LU << bit;
     }
-    return linkstate;
+    else {
+        mask &= ~(1LU << bit);
+    }
 }
 
 AABB KinBody::ComputeAABB(bool bEnabledOnlyLinks) const
@@ -2050,7 +2056,7 @@ void KinBody::SetLinkEnableStates(const std::vector<uint8_t>& enablestates)
     for(size_t ilink = 0; ilink < enablestates.size(); ++ilink) {
         bool bEnable = enablestates[ilink]!=0;
         if( _veclinks[ilink]->_info._bIsEnabled != bEnable ) {
-            _veclinks[ilink]->_info._bIsEnabled = bEnable;
+            _veclinks[ilink]->_Enable(bEnable);
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
@@ -4858,6 +4864,17 @@ void KinBody::_ComputeInternalInformation()
         _vLinkTransformPointers[ilink] = &_veclinks[ilink]->_info._t;
     }
 
+    _vLinkEnableStatesMask.clear();
+    _vLinkEnableStatesMask.resize(1 + _veclinks.size() / 64, 0);
+    for(int ilink = 0; ilink < (int)_veclinks.size(); ++ilink) {
+        if (_veclinks[ilink]->IsEnabled()) {
+            EnableLinkStateBit(_vLinkEnableStatesMask, ilink);
+        }
+        else {
+            DisableLinkStateBit(_vLinkEnableStatesMask, ilink);
+        }
+    }    
+
     _nHierarchyComputed = 2;
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
@@ -5283,7 +5300,7 @@ void KinBody::Enable(bool bEnable)
     bool bchanged = false;
     FOREACH(it, _veclinks) {
         if( (*it)->_info._bIsEnabled != bEnable ) {
-            (*it)->_info._bIsEnabled = bEnable;
+            (*it)->_Enable(bEnable);
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
@@ -5539,6 +5556,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         _veclinks.push_back(pnewlink);
         _vLinkTransformPointers.push_back(&pnewlink->_info._t);
     }
+    _vLinkEnableStatesMask = r->_vLinkEnableStatesMask;
 
     _vecjoints.resize(0); _vecjoints.reserve(r->_vecjoints.size());
     FOREACHC(itjoint, r->_vecjoints) {

@@ -4,6 +4,7 @@
 
 #include "plugindefs.h"
 #include "fclspace.h"
+#include "openrave/kinbody.h"
 
 namespace fclrave {
 
@@ -65,7 +66,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
 
         void Set(const KinBodyConstPtr& pbody,
                  const FCLSpace::KinBodyInfoPtr& pinfo,
-                 const std::vector<uint8_t>& linkEnableStateCache = std::vector<uint8_t>())
+                 const std::vector<uint64_t>& linkEnableStateCache = std::vector<uint64_t>())
         {
             pwbody = pbody;
             pwinfo = pinfo;
@@ -76,10 +77,10 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             nAttachedBodiesUpdateStamp = pinfo->nAttachedBodiesUpdateStamp;
             nActiveDOFUpdateStamp = pinfo->nActiveDOFUpdateStamp;
             if (linkEnableStateCache.empty()) {
-                pbody->GetLinkEnableStates(linkEnableStates);
+                linkEnableStatesBitmasks = pbody->GetLinkEnableStatesMasks();
             }
             else {
-                linkEnableStates = linkEnableStateCache;
+                linkEnableStatesBitmasks = linkEnableStateCache;
             }
 
             if (!vcolobjs.empty()) {
@@ -120,7 +121,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             nGeometryUpdateStamp = 0;
             nAttachedBodiesUpdateStamp = 0;
             nActiveDOFUpdateStamp = 0;
-            linkEnableStates.clear();
+            linkEnableStatesBitmasks.clear();
             // vcolobjs is left as is without clearing on purpose
             // clearing should happen together with manager unregisterObject
             //vcolobjs.clear();
@@ -142,7 +143,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
         int nGeometryUpdateStamp; ///< copied from FCLSpace::KinBodyInfo when geometry was last updated
         int nAttachedBodiesUpdateStamp; /// copied from FCLSpace::KinBodyInfo when attached bodies was last updated
         int nActiveDOFUpdateStamp; ///< update stamp when the active dof changed
-        std::vector<uint8_t> linkEnableStates; ///< links that are currently inside the manager
+        std::vector<uint64_t> linkEnableStatesBitmasks; ///< links that are currently inside the manager
         std::vector<CollisionObjectPtr> vcolobjs; ///< collision objects used for each link (use link index). have to hold pointers so that KinBodyInfo does not remove them!
         std::string geometrygroup; ///< cached geometry group
     };
@@ -213,14 +214,16 @@ public:
             }
 
             bool bsetUpdateStamp = false;
-            _linkEnableStates.resize(attachedBody.GetLinks().size()); ///< links that are currently inside the manager
-            std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
+            _linkEnableStatesBitmasks.resize(attachedBody.GetLinkEnableStatesMasks().size());
+            std::fill(_linkEnableStatesBitmasks.begin(), _linkEnableStatesBitmasks.end(), 0);
             vcolobjs.clear(); // reset any existing collision objects
             vcolobjs.resize(attachedBody.GetLinks().size(),CollisionObjectPtr());
-            FOREACH(itlink, attachedBody.GetLinks()) {
-                if( (*itlink)->IsEnabled() && (pAttachedBody != pbody || !_bTrackActiveDOF || _vTrackingActiveLinks.at((*itlink)->GetIndex())) ) {
-                    CollisionObjectPtr pcol = _fclspace.GetLinkBV(*pinfo, (*itlink)->GetIndex());
-                    vcolobjs[(*itlink)->GetIndex()] = pcol;
+            for (const KinBody::LinkPtr& plink : attachedBody.GetLinks()) {
+                const KinBody::Link& link = *plink;
+                const int linkIndex = link.GetIndex();
+                if( link.IsEnabled() && (pAttachedBody != pbody || !_bTrackActiveDOF || _vTrackingActiveLinks.at(linkIndex)) ) {
+                    CollisionObjectPtr pcol = _fclspace.GetLinkBV(*pinfo, linkIndex);
+                    vcolobjs[linkIndex] = pcol;
                     if( !!pcol ) {
                         fcl::CollisionObject* pcolObj = pcol.get();
                         CollisionGroup::const_iterator it = std::lower_bound(_tmpSortedBuffer.begin(), _tmpSortedBuffer.end(), pcolObj);
@@ -229,20 +232,20 @@ public:
                             _tmpSortedBuffer.insert(it, pcolObj);
                         }
                         else {
-                            RAVELOG_WARN_FORMAT("env=%s body %s link %s is added multiple times", pbody->GetEnv()->GetNameId()%pbody->GetName()%(*itlink)->GetName());
+                            RAVELOG_WARN_FORMAT("env=%s body %s link %s is added multiple times", pbody->GetEnv()->GetNameId()%pbody->GetName()%link.GetName());
                         }
                     }
                     bsetUpdateStamp = true;
-                    _linkEnableStates.at((*itlink)->GetIndex()) = 1;
+                    OpenRAVE::EnableLinkStateBit(_linkEnableStatesBitmasks, linkIndex);
                 }
             }
 
             // regardless if the linkmask, have to always add to cache in order to track!
             if( 1 ) {//bsetUpdateStamp ) {
-                //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s (%d) linkmask=0x%x, _tmpSortedBuffer.size()=%d", attachedBody.GetEnv()->GetId()%this%attachedBody.GetName()%pbody->GetEnvironmentBodyIndex()%_GetLinkMask(_linkEnableStates)%_tmpSortedBuffer.size());
+                //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s (%d) linkmask=0x%x, _tmpSortedBuffer.size()=%d", attachedBody.GetEnv()->GetId()%this%attachedBody.GetName()%pbody->GetEnvironmentBodyIndex()%_GetLinkMask(_linkEnableStatesBitmasks)%_tmpSortedBuffer.size());
                 //EnsureVectorSize(_vecCachedBodies, bodyIndex);
                 KinBodyCache& cache = _vecCachedBodies.at(envBodyIndex);
-                cache.Set(pAttachedBody, pinfo, _linkEnableStates);
+                cache.Set(pAttachedBody, pinfo, _linkEnableStatesBitmasks);
                 cache.vcolobjs.swap(vcolobjs);
             }
             else {
@@ -304,9 +307,9 @@ public:
                 bool bIsValid = _vecCachedBodies.at(bodyIndex).IsValid();
                 if( !bIsValid) {
                     const FCLSpace::KinBodyInfoPtr& pinfo = _fclspace.GetInfo(body);
-                    if( _AddBody(body, pinfo, vcolobjs, _linkEnableStates, false) ) { // new collision objects are already added to _tmpSortedBuffer
+                    if( _AddBody(body, pinfo, vcolobjs, _linkEnableStatesBitmasks, false) ) { // new collision objects are already added to _tmpSortedBuffer
                         KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
-                        cache.Set(pbody, pinfo, _linkEnableStates);
+                        cache.Set(pbody, pinfo, _linkEnableStatesBitmasks);
                         cache.vcolobjs.swap(vcolobjs);
                     }
                 }
@@ -368,17 +371,6 @@ public:
         return false;
     }
 
-    uint64_t _GetLinkMask(const std::vector<uint8_t>& linkEnableStates)
-    {
-        uint64_t linkmask=0;
-        for(size_t ilink = 0; ilink < linkEnableStates.size(); ++ilink) {
-            if( linkEnableStates[ilink] ) {
-                linkmask |= 1 << ilink;
-            }
-        }
-        return linkmask;
-    }
-
     /// \brief Synchronizes the element of the manager instance whose update stamps are outdated
     void Synchronize()
     {
@@ -399,12 +391,15 @@ public:
                 for(int bodyIndexCached = 0; bodyIndexCached < (int)_vecCachedBodies.size(); ++bodyIndexCached) {
                     const KinBodyCache& cache = _vecCachedBodies[bodyIndexCached];
                     if( cache.IsValid() ) {
+                        ssinfo += str(boost::format("(id=%d, linkmask="));
+                        for (uint64_t bitmask : cache.linkEnableStatesBitmasks) {
+                            ssinfo += str(boost::format("(0x%x:")%bitmask);
+                        }
+                        ssinfo += str(boost::format("(, numcols=%d")%cache.vcolobjs.size());
+                        
                         KinBodyConstPtr pbody = cache.pwbody.lock(); ///< weak pointer to body
                         if( !!pbody ) {
-                            ssinfo += str(boost::format("(id=%d, linkmask=0x%x, numcols=%d, name=%s), ")%bodyIndexCached%_GetLinkMask(cache.linkEnableStates)%cache.vcolobjs.size()%pbody->GetName());
-                        }
-                        else {
-                            ssinfo += str(boost::format("id=%d, linkmask=0x%x, numcols=%d")%bodyIndexCached%_GetLinkMask(cache.linkEnableStates)%cache.vcolobjs.size());
+                            ssinfo += str(boost::format("(, name=%s), ")%pbody->GetName());
                         }
                     }
                 }
@@ -426,8 +421,8 @@ public:
                                 // check for any tracking link changes
                                 _vTrackingActiveLinks.resize(robot.GetLinks().size(), 0);
                                 // the active links might have changed
-                                _linkEnableStates.resize(robot.GetLinks().size()); ///< links that are currently inside the manager
-                                std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
+                                _linkEnableStatesBitmasks.resize(robot.GetLinkEnableStatesMasks().size());
+                                std::fill(_linkEnableStatesBitmasks.begin(), _linkEnableStatesBitmasks.end(), 0);
                                 for(size_t ilink = 0; ilink < robot.GetLinks().size(); ++ilink) {
                                     int isLinkActive = 0;
                                     FOREACH(itindex, robot.GetActiveDOFIndices()) {
@@ -436,12 +431,13 @@ public:
                                             break;
                                         }
                                     }
-
-                                    bool bIsActiveLinkEnabled = robot.GetLinks()[ilink]->IsEnabled() && isLinkActive;
-
-                                    if( bIsActiveLinkEnabled ) {
-                                        _linkEnableStates.at(ilink) = 1;
+                                    const size_t bitmaskGroupIndex = ilink / 64;
+                                    const size_t bit = ilink % 64;
+                                    if (!isLinkActive) {
+                                        OpenRAVE::DisableLinkStateBit(_linkEnableStatesBitmasks, ilink);
                                     }
+                                    bool bIsActiveLinkEnabled = OpenRAVE::IsLinkStateBitEnabled(_linkEnableStatesBitmasks, ilink) && isLinkActive;
+
                                     if( _vTrackingActiveLinks[ilink] != isLinkActive ) {
                                         _vTrackingActiveLinks[ilink] = isLinkActive;
                                         CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(*pnewinfo, robot.GetLinks()[ilink]->GetIndex());
@@ -486,7 +482,7 @@ public:
                                 }
 
                                 trackingCache.nActiveDOFUpdateStamp = pnewinfo->nActiveDOFUpdateStamp;
-                                trackingCache.linkEnableStates = _linkEnableStates;
+                                trackingCache.linkEnableStatesBitmasks = _linkEnableStatesBitmasks;
                             }
                         }
                     }
@@ -524,7 +520,7 @@ public:
                     }
                 }
                 cache.vcolobjs.resize(0);
-                _AddBody(body, pnewinfo, cache.vcolobjs, cache.linkEnableStates, _bTrackActiveDOF&&pbody==ptrackingbody);
+                _AddBody(body, pnewinfo, cache.vcolobjs, cache.linkEnableStatesBitmasks, _bTrackActiveDOF&&pbody==ptrackingbody);
                 cache.pwinfo = pnewinfo;
                 //cache.ResetStamps();
                 // need to update the stamps here so that we do not try to unregisterObject below and get into an error
@@ -547,12 +543,11 @@ public:
             FCLSpace::KinBodyInfo& kinBodyInfo = *pinfo;
             if( kinBodyInfo.nLinkUpdateStamp != cache.nLinkUpdateStamp ) {
                 // links changed
-                std::vector<uint8_t> newLinkEnableStates;
-                body.GetLinkEnableStates(newLinkEnableStates);
+                std::vector<uint64_t> newLinkEnableStates = pbody->GetLinkEnableStatesMasks();
                 if( _bTrackActiveDOF && ptrackingbody == pbody ) {
                     for(size_t itestlink = 0; itestlink < _vTrackingActiveLinks.size(); ++itestlink) {
                         if( !_vTrackingActiveLinks[itestlink] ) {
-                            newLinkEnableStates.at(itestlink) = 0;
+                            OpenRAVE::DisableLinkStateBit(newLinkEnableStates, itestlink);
                         }
                     }
                 }
@@ -560,9 +555,9 @@ public:
                 //uint64_t changed = cache.linkmask ^ newlinkmask;
                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed link %d != %d, linkmask=0x%x", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentBodyIndex()%kinBodyInfo.nLinkUpdateStamp%cache.nLinkUpdateStamp%_GetLinkMask(newLinkEnableStates));
                 for(uint64_t ilink = 0; ilink < kinBodyInfo.vlinks.size(); ++ilink) {
-                    uint8_t changed = cache.linkEnableStates.at(ilink) != newLinkEnableStates.at(ilink);
+                    uint8_t changed = OpenRAVE::IsLinkStateBitEnabled(cache.linkEnableStatesBitmasks, ilink) != OpenRAVE::IsLinkStateBitEnabled(newLinkEnableStates, ilink);
                     if( changed ) {
-                        if( newLinkEnableStates.at(ilink) ) {
+                        if( OpenRAVE::IsLinkStateBitEnabled(newLinkEnableStates, ilink) ) {
                             CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(kinBodyInfo, ilink);
                             if( !!pcolobj ) {
                                 fcl::CollisionObject* pColObjRaw = pcolobj.get();
@@ -605,16 +600,16 @@ public:
                     }
                 }
 
-                cache.linkEnableStates = newLinkEnableStates;
+                cache.linkEnableStatesBitmasks = newLinkEnableStates;
                 cache.nLinkUpdateStamp = kinBodyInfo.nLinkUpdateStamp;
             }
             if( kinBodyInfo.nGeometryUpdateStamp != cache.nGeometryUpdateStamp ) {
 
                 if( cache.geometrygroup.size() == 0 || cache.geometrygroup != kinBodyInfo._geometrygroup ) {
-                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed geometry %d != %d, linkmask=0x%x", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentBodyIndex()%kinBodyInfo.nGeometryUpdateStamp%cache.nGeometryUpdateStamp%_GetLinkMask(cache.linkEnableStates));
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed geometry %d != %d, linkmask=0x%x", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentBodyIndex()%kinBodyInfo.nGeometryUpdateStamp%cache.nGeometryUpdateStamp%_GetLinkMask(cache.linkEnableStatesBitmasks));
                     // vcolobjs most likely changed
                     for(uint64_t ilink = 0; ilink < kinBodyInfo.vlinks.size(); ++ilink) {
-                        if( cache.linkEnableStates.at(ilink) ) {
+                        if( OpenRAVE::IsLinkStateBitEnabled(cache.linkEnableStatesBitmasks, ilink) ) {
                             CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(*pinfo, ilink);
                             if( !!pcolobj ) {
                                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s adding obj %x from link %d", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%body.GetName()%pColObjRaw%ilink);
@@ -665,12 +660,12 @@ public:
             if( kinBodyInfo.nLastStamp != cache.nLastStamp ) {
                 if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
                     //Transform tpose = body.GetTransform();
-                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u body %s (%for cache changed transform %d != %d, num=%d, mask=0x%x, trans=(%.3f, %.3f, %.3f)", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentBodyIndex()%kinBodyInfo.nLastStamp%cache.nLastStamp%kinBodyInfo.vlinks.size()%_GetLinkMask(cache.linkEnableStates)%tpose.trans.x%tpose.trans.y%tpose.trans.z);
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u body %s (%for cache changed transform %d != %d, num=%d, mask=0x%x, trans=(%.3f, %.3f, %.3f)", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%body.GetName()%body.GetEnvironmentBodyIndex()%kinBodyInfo.nLastStamp%cache.nLastStamp%kinBodyInfo.vlinks.size()%_GetLinkMask(cache.linkEnableStatesBitmasks)%tpose.trans.x%tpose.trans.y%tpose.trans.z);
                 }
                 // transform changed
                 CollisionObjectPtr pcolobj;
                 for(uint64_t ilink = 0; ilink < kinBodyInfo.vlinks.size(); ++ilink) {
-                    if( cache.linkEnableStates.at(ilink) ) {
+                    if( OpenRAVE::IsLinkStateBitEnabled(cache.linkEnableStatesBitmasks, ilink) ) {
                         pcolobj = _fclspace.GetLinkBV(*pinfo, ilink);
                         if( !!pcolobj ) {
                             //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s adding obj %x from link %d", body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%body.GetName()%pColObjRaw%ilink);
@@ -767,11 +762,11 @@ public:
 
                 FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(attached);
                 vcolobjs.resize(0);
-                if( _AddBody(attached, pinfo, vcolobjs, _linkEnableStates, _bTrackActiveDOF&&(pattached == ptrackingbody)) ) {
+                if( _AddBody(attached, pinfo, vcolobjs, _linkEnableStatesBitmasks, _bTrackActiveDOF&&(pattached == ptrackingbody)) ) {
                     bcallsetup = true;
                 }
                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u adding body %s (%d)", cache.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%cache.GetName()%attachedBodyIndex);
-                cache.Set(pattached, pinfo, _linkEnableStates);
+                cache.Set(pattached, pinfo, _linkEnableStatesBitmasks);
                 cache.vcolobjs.swap(vcolobjs);
                 //                    else {
                 //                        RAVELOG_VERBOSE_FORMAT("env=%d %x could not add attached body %s for tracking body %s", trackingbody.GetEnv()->GetId()%this%cache.GetName()%trackingbody.GetName());
@@ -845,7 +840,7 @@ private:
     /// \brief adds a body to the manager, returns true if something was added
     ///
     /// should not add anything to _vecCachedBodies! insert to _tmpSortedBuffer
-    bool _AddBody(const KinBody& body, const FCLSpace::KinBodyInfoPtr& pinfo, std::vector<CollisionObjectPtr>& vcolobjs, std::vector<uint8_t>& linkEnableStates, bool bTrackActiveDOF)
+    bool _AddBody(const KinBody& body, const FCLSpace::KinBodyInfoPtr& pinfo, std::vector<CollisionObjectPtr>& vcolobjs, std::vector<uint64_t>& linkEnableStatesBitmasks, bool bTrackActiveDOF)
     {
         // reset so that existing collision objects can go away
         for (CollisionObjectPtr& pcolObj : vcolobjs) {
@@ -853,12 +848,15 @@ private:
         }
         vcolobjs.resize(body.GetLinks().size(), CollisionObjectPtr());
         bool bsetUpdateStamp = false;
-        body.GetLinkEnableStates(linkEnableStates);
+        linkEnableStatesBitmasks = body.GetLinkEnableStatesMasks();
         for (const KinBody::LinkPtr& plink : body.GetLinks()) {
             const KinBody::Link& link = *plink;
             const int linkIndex = link.GetIndex();
-            linkEnableStates[linkIndex] &= (!bTrackActiveDOF || _vTrackingActiveLinks.at(linkIndex));
-            if( linkEnableStates[linkIndex]) {
+
+            if (!(!bTrackActiveDOF || _vTrackingActiveLinks.at(linkIndex))) {
+                OpenRAVE::DisableLinkStateBit(linkEnableStatesBitmasks, linkIndex);
+            }
+            if( OpenRAVE::IsLinkStateBitEnabled(linkEnableStatesBitmasks, linkIndex) ) {
                 //pinfo->vlinks.at(linkIndex).listRegisteredManagers.push_back(shared_from_this());
 
                 CollisionObjectPtr pcol = _fclspace.GetLinkBV(*pinfo, linkIndex);
@@ -931,7 +929,7 @@ private:
 
     KinBodyConstWeakPtr _ptrackingbody; ///< if set, then only tracking the attached bodies if this body
     std::vector<int> _vTrackingActiveLinks; ///< indices of which links are active for tracking body
-    std::vector<uint8_t> _linkEnableStates; ///< links that are currently inside the manager
+    std::vector<uint64_t> _linkEnableStatesBitmasks; ///< links that are currently inside the manager
 
     bool _bTrackActiveDOF; ///< if true and _ptrackingbody is valid, then should be tracking the active dof of the _ptrackingbody
 

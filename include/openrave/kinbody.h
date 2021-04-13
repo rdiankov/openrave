@@ -1107,6 +1107,8 @@ public:
         UpdateFromInfoResult UpdateFromInfo(const KinBody::LinkInfo& info);
 
 protected:
+        void _Enable(bool enable);
+        
         /// \brief Updates the cached information due to changes in the collision data.
         ///
         /// \param parameterschanged if true, will
@@ -2559,10 +2561,14 @@ private:
     /// \brief gets the enable states of all links
     void GetLinkEnableStates(std::vector<uint8_t>& enablestates) const;
 
-    /// \brief gets a mask of the link enable states.
+    void NotifyLinkEnabled(size_t linkIndex, bool bEnable);
+
+    /// \brief gets a vector of masks of the link enable states.
     ///
-    /// If there are more than 64 links in the kinbody, then will give a warning. User should throw exception themselves.
-    virtual uint64_t GetLinkEnableStatesMask() const;
+    inline const std::vector<uint64_t>& GetLinkEnableStatesMasks() const
+    {
+        return _vLinkEnableStatesMask;
+    }
 
     /// queries the transfromation of the first link of the body
     inline const Transform GetTransform() const {
@@ -3296,6 +3302,8 @@ protected:
     std::vector<JointPtr> _vDOFOrderedJoints; ///< all joints of the body ordered on how they are arranged within the degrees of freedom
     std::vector<LinkPtr> _veclinks; ///< \see GetLinks
     std::vector<int> _vDOFIndices; ///< cached start joint indices, indexed by dof indices
+    std::vector<uint64_t> _vLinkEnableStatesMask; /// bit map containing enabled info of links. If bit 0 of _vLinkEnableBitMap[0] is 1, link 0 is disabled. If bit 2 of _vLinkEnableBitMap[1] is 1, link 66 is disabled. 
+
     std::vector<std::pair<int16_t,int16_t> > _vAllPairsShortestPaths; ///< all-pairs shortest paths through the link hierarchy. The first value describes the parent link index, and the second value is an index into _vecjoints or _vPassiveJoints. If the second value is greater or equal to  _vecjoints.size() then it indexes into _vPassiveJoints.
     std::vector<int8_t> _vJointsAffectingLinks; ///< joint x link: (jointindex*_veclinks.size()+linkindex). entry is non-zero if the joint affects the link in the forward kinematics. If negative, the partial derivative of ds/dtheta should be negated.
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
@@ -3372,6 +3380,27 @@ private:
     friend class ChangeCallbackData;
     friend class Grabbed;
 };
+
+/// \brief checks if link is enabled from vector of link enable state mask
+/// intended to be used on return value of GetLinkEnableStatesMasks()
+inline bool IsLinkStateBitEnabled(const std::vector<uint64_t>& linkEnableStateMasks, int linkIndex)
+{
+    return linkEnableStateMasks.at(linkIndex / 64) & (1LU << (linkIndex % 64));
+}
+
+/// \brief checks if link is enabled from vector of link enable state mask
+/// intended to be used on return value of GetLinkEnableStatesMasks()
+inline void DisableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, int linkIndex)
+{
+    linkEnableStateMasks.at(linkIndex / 64) &= ~(1LU << (linkIndex % 64));
+}
+
+/// \brief checks if link is enabled from vector of link enable state mask
+/// intended to be used on return value of GetLinkEnableStatesMasks()
+inline void EnableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, int linkIndex)
+{
+    linkEnableStateMasks.at(linkIndex / 64) |= 1LU << (linkIndex % 64);
+}
 
 } // end namespace OpenRAVE
 
