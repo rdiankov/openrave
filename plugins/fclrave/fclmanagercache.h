@@ -421,8 +421,7 @@ public:
                                 // check for any tracking link changes
                                 _vTrackingActiveLinks.resize(robot.GetLinks().size(), 0);
                                 // the active links might have changed
-                                _linkEnableStatesBitmasks.resize(robot.GetLinkEnableStatesMasks().size());
-                                std::fill(_linkEnableStatesBitmasks.begin(), _linkEnableStatesBitmasks.end(), 0);
+                                _linkEnableStatesBitmasks = robot.GetLinkEnableStatesMasks();
                                 for(size_t ilink = 0; ilink < robot.GetLinks().size(); ++ilink) {
                                     int isLinkActive = 0;
                                     FOREACH(itindex, robot.GetActiveDOFIndices()) {
@@ -431,8 +430,6 @@ public:
                                             break;
                                         }
                                     }
-                                    const size_t bitmaskGroupIndex = ilink / 64;
-                                    const size_t bit = ilink % 64;
                                     if (!isLinkActive) {
                                         OpenRAVE::DisableLinkStateBit(_linkEnableStatesBitmasks, ilink);
                                     }
@@ -543,7 +540,7 @@ public:
             FCLSpace::KinBodyInfo& kinBodyInfo = *pinfo;
             if( kinBodyInfo.nLinkUpdateStamp != cache.nLinkUpdateStamp ) {
                 // links changed
-                std::vector<uint64_t> newLinkEnableStates = pbody->GetLinkEnableStatesMasks();
+                std::vector<uint64_t> newLinkEnableStates = body.GetLinkEnableStatesMasks();
                 if( _bTrackActiveDOF && ptrackingbody == pbody ) {
                     for(size_t itestlink = 0; itestlink < _vTrackingActiveLinks.size(); ++itestlink) {
                         if( !_vTrackingActiveLinks[itestlink] ) {
