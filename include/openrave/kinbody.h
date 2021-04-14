@@ -152,6 +152,28 @@ public:
 
 typedef boost::shared_ptr<KinematicsGenerator> KinematicsGeneratorPtr;
 
+
+/// \brief checks if link is enabled from vector of link enable state mask
+/// intended to be used on return value of GetLinkEnableStatesMasks()
+inline bool IsLinkStateBitEnabled(const std::vector<uint64_t>& linkEnableStateMasks, int linkIndex)
+{
+    return linkEnableStateMasks.at(linkIndex / 64) & (1LU << (linkIndex % 64));
+}
+
+/// \brief checks if link is enabled from vector of link enable state mask
+/// intended to be used on return value of GetLinkEnableStatesMasks()
+inline void DisableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, int linkIndex)
+{
+    linkEnableStateMasks.at(linkIndex / 64) &= ~(1LU << (linkIndex % 64));
+}
+
+/// \brief checks if link is enabled from vector of link enable state mask
+/// intended to be used on return value of GetLinkEnableStatesMasks()
+inline void EnableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, int linkIndex)
+{
+    linkEnableStateMasks.at(linkIndex / 64) |= 1LU << (linkIndex % 64);
+}
+
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
  */
@@ -2567,6 +2589,9 @@ private:
     ///
     inline const std::vector<uint64_t>& GetLinkEnableStatesMasks() const
     {
+        for (size_t linkIndex = 0; linkIndex < GetLinks().size(); linkIndex++) {
+            BOOST_ASSERT(IsLinkStateBitEnabled(_vLinkEnableStatesMask, linkIndex) == GetLinks()[linkIndex]->IsEnabled());
+        }
         return _vLinkEnableStatesMask;
     }
 
@@ -3380,27 +3405,6 @@ private:
     friend class ChangeCallbackData;
     friend class Grabbed;
 };
-
-/// \brief checks if link is enabled from vector of link enable state mask
-/// intended to be used on return value of GetLinkEnableStatesMasks()
-inline bool IsLinkStateBitEnabled(const std::vector<uint64_t>& linkEnableStateMasks, int linkIndex)
-{
-    return linkEnableStateMasks.at(linkIndex / 64) & (1LU << (linkIndex % 64));
-}
-
-/// \brief checks if link is enabled from vector of link enable state mask
-/// intended to be used on return value of GetLinkEnableStatesMasks()
-inline void DisableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, int linkIndex)
-{
-    linkEnableStateMasks.at(linkIndex / 64) &= ~(1LU << (linkIndex % 64));
-}
-
-/// \brief checks if link is enabled from vector of link enable state mask
-/// intended to be used on return value of GetLinkEnableStatesMasks()
-inline void EnableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, int linkIndex)
-{
-    linkEnableStateMasks.at(linkIndex / 64) |= 1LU << (linkIndex % 64);
-}
 
 } // end namespace OpenRAVE
 
