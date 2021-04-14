@@ -4,7 +4,6 @@
 
 #include "plugindefs.h"
 #include "fclspace.h"
-#include "openrave/kinbody.h"
 
 namespace fclrave {
 
