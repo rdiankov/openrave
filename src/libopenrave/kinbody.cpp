@@ -1733,16 +1733,13 @@ void KinBody::NotifyLinkEnabled(size_t linkIndex, bool bEnable)
 {
     const int bitMaskGroupIndex = linkIndex / 64;
     if (_vLinkEnableStatesMask.size() <= bitMaskGroupIndex) {
-        _vLinkEnableStatesMask.resize(bitMaskGroupIndex + 1, UINT64_MAX); // enable links by default because LinkInfo::_bIsEnabled is true by default
+        _vLinkEnableStatesMask.resize(bitMaskGroupIndex + 1, 0);
     }
-
-    uint64_t& mask = _vLinkEnableStatesMask[bitMaskGroupIndex];
-    const size_t bit = linkIndex % 64;
     if (bEnable) {
-        mask |= 1LU << bit;
+        EnableLinkStateBit(_vLinkEnableStatesMask, linkIndex);
     }
     else {
-        mask &= ~(1LU << bit);
+        DisableLinkStateBit(_vLinkEnableStatesMask, linkIndex);
     }
 }
 
@@ -4865,13 +4862,11 @@ void KinBody::_ComputeInternalInformation()
     }
 
     _vLinkEnableStatesMask.clear();
-    _vLinkEnableStatesMask.resize(1 + _veclinks.size() / 64, UINT64_MAX);
-    for(int ilink = 0; ilink < (int)_veclinks.size(); ++ilink) {
-        if (_veclinks[ilink]->IsEnabled()) {
-            EnableLinkStateBit(_vLinkEnableStatesMask, ilink);
-        }
-        else {
-            DisableLinkStateBit(_vLinkEnableStatesMask, ilink);
+    _vLinkEnableStatesMask.resize(1 + _veclinks.size() / 64, 0);
+    for (const LinkPtr& plink : _veclinks) {
+        const Link& link = *plink;
+        if (link.IsEnabled()) {
+            EnableLinkStateBit(_vLinkEnableStatesMask, link.GetIndex());
         }
     }    
 
@@ -5298,19 +5293,28 @@ bool KinBody::_RemoveAttachedBody(KinBody &body)
 void KinBody::Enable(bool bEnable)
 {
     bool bchanged = false;
-    FOREACH(it, _veclinks) {
-        if( (*it)->_info._bIsEnabled != bEnable ) {
-            (*it)->_info._bIsEnabled = bEnable;
+    for (const LinkPtr& plink : _veclinks) {
+        Link& link = *plink;
+        if( link._info._bIsEnabled != bEnable ) {
+            link._info._bIsEnabled = bEnable;
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
     }
+    
     if (bEnable) {
-        std::fill(_vLinkEnableStatesMask.begin(), _vLinkEnableStatesMask.end(), UINT64_MAX);
+        // enable every bit, but make sure that bits beyond _veclinks.size() is 0, otherwise KinBody::IsEnabled may return true even when every link is disabled.
+        if (_vLinkEnableStatesMask.size() > 1) {
+            std::fill(_vLinkEnableStatesMask.begin(), _vLinkEnableStatesMask.end(), UINT64_MAX);
+        }
+        if (!_vLinkEnableStatesMask.empty()) {
+            _vLinkEnableStatesMask.back() = (1LU << (_veclinks.size() % 64) ) - 1;
+        }
     }
     else {
         std::fill(_vLinkEnableStatesMask.begin(), _vLinkEnableStatesMask.end(), 0);
     }
+    
     if( bchanged ) {
         _PostprocessChangedParameters(Prop_LinkEnable);
     }
