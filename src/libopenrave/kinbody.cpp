@@ -1733,7 +1733,7 @@ void KinBody::NotifyLinkEnabled(size_t linkIndex, bool bEnable)
 {
     const int bitMaskGroupIndex = linkIndex / 64;
     if (_vLinkEnableStatesMask.size() <= bitMaskGroupIndex) {
-        _vLinkEnableStatesMask.resize(bitMaskGroupIndex + 1, 0);
+        _vLinkEnableStatesMask.resize(bitMaskGroupIndex + 1, UINT64_MAX); // enable links by default because LinkInfo::_bIsEnabled is true by default
     }
 
     uint64_t& mask = _vLinkEnableStatesMask[bitMaskGroupIndex];
@@ -4865,7 +4865,7 @@ void KinBody::_ComputeInternalInformation()
     }
 
     _vLinkEnableStatesMask.clear();
-    _vLinkEnableStatesMask.resize(1 + _veclinks.size() / 64, 0);
+    _vLinkEnableStatesMask.resize(1 + _veclinks.size() / 64, UINT64_MAX);
     for(int ilink = 0; ilink < (int)_veclinks.size(); ++ilink) {
         if (_veclinks[ilink]->IsEnabled()) {
             EnableLinkStateBit(_vLinkEnableStatesMask, ilink);
