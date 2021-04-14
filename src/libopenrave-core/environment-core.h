@@ -3222,6 +3222,8 @@ protected:
         _keywords = r->_keywords;
         _mapUInt64Parameters = r->_mapUInt64Parameters;
 
+        _assignedBodySensorNameIdSuffix = r->_assignedBodySensorNameIdSuffix;
+        
         _bInit = true;
         _bEnableSimulation = r->_bEnableSimulation;
 
