@@ -1675,9 +1675,7 @@ void KinBody::GetLinkTransformationPointers(vector<const Transform*>& vtrans) co
         RAVELOG_VERBOSE("GetLinkTransformations should be called with doflastsetvalues\n");
     }
 
-    std::vector<Transform*>::const_iterator itLinkTransformPtr = _vLinkTransformPointers.begin();
     vtrans.resize(_veclinks.size());
-
     for (size_t index = 0; index < vtrans.size(); ++index) {
         vtrans[index] = &(*_vLinkTransformPointers[index]);
     }
@@ -1720,6 +1718,7 @@ void KinBody::GetLinkEnableStates(std::vector<uint8_t>& enablestates) const
 
 void KinBody::NotifyLinkEnabled(size_t linkIndex, bool bEnable)
 {
+    ResizeLinkStateBitMasks(_vLinkEnableStatesMask, _veclinks.size());
     if (bEnable) {
         EnableLinkStateBit(_vLinkEnableStatesMask, linkIndex);
     }

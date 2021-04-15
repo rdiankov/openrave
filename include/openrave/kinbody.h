@@ -155,27 +155,35 @@ typedef boost::shared_ptr<KinematicsGenerator> KinematicsGeneratorPtr;
 
 /// \brief checks if link is enabled from vector of link enable state mask
 /// intended to be used on return value of GetLinkEnableStatesMasks()
-inline bool IsLinkStateBitEnabled(const std::vector<uint64_t>& linkEnableStateMasks, int linkIndex)
+inline bool IsLinkStateBitEnabled(const std::vector<uint64_t>& linkEnableStateMasks, size_t linkIndex)
 {
     return linkEnableStateMasks.at(linkIndex / 64) & (1LU << (linkIndex % 64));
 }
 
 /// \brief checks if link is enabled from vector of link enable state mask
 /// intended to be used on return value of GetLinkEnableStatesMasks()
-inline void DisableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, int linkIndex)
+inline void DisableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, size_t linkIndex)
 {
     linkEnableStateMasks.at(linkIndex / 64) &= ~(1LU << (linkIndex % 64));
 }
 
 /// \brief checks if link is enabled from vector of link enable state mask
 /// intended to be used on return value of GetLinkEnableStatesMasks()
-inline void EnableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, int linkIndex)
+inline void EnableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, size_t linkIndex)
 {
     linkEnableStateMasks.at(linkIndex / 64) |= 1LU << (linkIndex % 64);
 }
 
 /// \brief resizes linkEnableStateMasks according to numLinks and initialize to 0's (disabled)
-inline void InitializeLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMasks, int numLinks)
+inline void ResizeLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMasks, size_t numLinks)
+{
+    if (linkEnableStateMasks.size() < numLinks / 64 + 1) {
+        linkEnableStateMasks.resize(numLinks / 64 + 1, 0);
+    }
+}
+
+/// \brief resizes linkEnableStateMasks according to numLinks and initialize to 0's (disabled)
+inline void InitializeLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMasks, size_t numLinks)
 {
     linkEnableStateMasks.resize(numLinks / 64 + 1);
     std::fill(linkEnableStateMasks.begin(), linkEnableStateMasks.end(), 0);
@@ -188,7 +196,7 @@ inline void DisableAllLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMa
 }
 
 /// \brief sets linkEnableStateMasks to all 1's according to numLinks
-inline void EnableAllLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMasks, int numLinks)
+inline void EnableAllLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMasks, size_t numLinks)
 {
     if (linkEnableStateMasks.empty()) {
         return;
