@@ -733,7 +733,7 @@ public:
         _fclspace->Synchronize();
         std::set<int> excludedBodyIndices;
         for (const KinBodyConstPtr& pbody : _fclspace->GetEnvBodies()) {
-            if( find(vIncludedBodies.begin(), vIncludedBodies.end(), pbody) == vIncludedBodies.end() ) {
+            if( !!pbody && find(vIncludedBodies.begin(), vIncludedBodies.end(), pbody) == vIncludedBodies.end() ) {
                 excludedBodyIndices.insert(pbody->GetEnvironmentBodyIndex());
             }
         }
