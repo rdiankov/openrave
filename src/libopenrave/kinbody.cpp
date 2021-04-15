@@ -4949,10 +4949,10 @@ void KinBody::_ComputeInternalInformation()
     if( !!_pKinematicsGenerator ) {
         _pCurrentKinematicsFunctions = _pKinematicsGenerator->GenerateKinematicsFunctions(*this);
         if( !!_pCurrentKinematicsFunctions ) {
-            RAVELOG_DEBUG_FORMAT("env=%d, setting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+            RAVELOG_DEBUG_FORMAT("env=%s, setting custom kinematics functions for body %s", GetEnv()->GetNameId()%GetName());
         }
         else {
-            RAVELOG_DEBUG_FORMAT("env=%d, failed to set custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+            RAVELOG_DEBUG_FORMAT("env=%s, failed to set custom kinematics functions for body %s", GetEnv()->GetNameId()%GetName());
         }
     }
     else {
@@ -6274,12 +6274,18 @@ void KinBody::SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator)
     }
     _pKinematicsGenerator = pGenerator;
     if( !!_pKinematicsGenerator ) {
-        _pCurrentKinematicsFunctions = _pKinematicsGenerator->GenerateKinematicsFunctions(*this);
+        try {
+            _pCurrentKinematicsFunctions = _pKinematicsGenerator->GenerateKinematicsFunctions(*this);
+        }
+        catch(std::exception& ex) {
+            RAVELOG_WARN_FORMAT("env=%s, failed to generate the kinematics functions: %s", ex.what());
+            throw;
+        }
         if( !!_pCurrentKinematicsFunctions ) {
-            RAVELOG_DEBUG_FORMAT("env=%d, setting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+            RAVELOG_DEBUG_FORMAT("env=%s, setting custom kinematics functions for body %s", GetEnv()->GetNameId()%GetName());
         }
         else {
-            RAVELOG_DEBUG_FORMAT("env=%d, failed to set custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+            RAVELOG_DEBUG_FORMAT("env=%s, failed to set custom kinematics functions for body %s", GetEnv()->GetNameId()%GetName());
         }
     }
     else {
