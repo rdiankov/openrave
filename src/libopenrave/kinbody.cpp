@@ -1718,7 +1718,10 @@ void KinBody::GetLinkEnableStates(std::vector<uint8_t>& enablestates) const
 
 void KinBody::NotifyLinkEnabled(size_t linkIndex, bool bEnable)
 {
-    ResizeLinkStateBitMasks(_vLinkEnableStatesMask, _veclinks.size());
+    if (_vLinkEnableStatesMask.empty()) {
+        RAVELOG_VERBOSE_FORMAT("env=%s, body=%s is not initialized probably this is still in initiailization phase. So skip notifying link enabled (index=%d, value=%d) and let _ComputeInternalInformation() take care of this later", GetEnv()->GetNameId()%GetName()%linkIndex%bEnable);
+        return;
+    }
     if (bEnable) {
         EnableLinkStateBit(_vLinkEnableStatesMask, linkIndex);
     }
@@ -4851,7 +4854,7 @@ void KinBody::_ComputeInternalInformation()
         if (link.IsEnabled()) {
             EnableLinkStateBit(_vLinkEnableStatesMask, link.GetIndex());
         }
-    }    
+    }
 
     _nHierarchyComputed = 2;
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
