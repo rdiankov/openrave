@@ -1494,7 +1494,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
             for(int i = 0; i < pjoint->GetDOF(); ++i) {
                 if( pvalues[i] < vlower.at(dofindex+i)-g_fEpsilonJointLimit ) {
                     if( checklimits == CLA_CheckLimits ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e<%.15e")%GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i)));
+                        RAVELOG_WARN(str(boost::format("env=%s, dof %d velocity is not in limits %.15e<%.15e")%GetEnv()->GetNameId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i)));
                     }
                     else if( checklimits == CLA_CheckLimitsThrow ) {
                         throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e<%.15e"), GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i), ORE_InvalidArguments);
@@ -1503,7 +1503,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                 }
                 else if( pvalues[i] > vupper.at(dofindex+i)+g_fEpsilonJointLimit ) {
                     if( checklimits == CLA_CheckLimits ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e>%.15e")%GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i)));
+                        RAVELOG_WARN(str(boost::format("env=%s, dof %d velocity is not in limits %.15e>%.15e")%GetEnv()->GetNameId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i)));
                     }
                     else if( checklimits == CLA_CheckLimitsThrow ) {
                         throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e>%.15e"), GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i), ORE_InvalidArguments);
