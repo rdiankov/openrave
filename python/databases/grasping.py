@@ -273,7 +273,7 @@ class GraspingModel(DatabaseGenerator):
         if len(filename) == 0:
             return None
         try:
-            with open(filename, 'r') as f:
+            with open(filename, 'rb') as f:
                 modelversion,params = pickle.load(f)
             if modelversion == self.getversion():
                 self.grasps,self.graspindices,friction,linknames,plannername,self.translationstepmult,self.finestep,self.graspsetname = params
