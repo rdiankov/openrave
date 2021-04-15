@@ -1986,8 +1986,10 @@ object PyEnvironmentBase::GetBodyFromEnvironmentBodyIndex(int bodyIndex)
 object PyEnvironmentBase::GetBodiesFromEnvironmentBodyIndices(object bodyIndices)
 {
     const std::vector<int> vBodyIndices = ExtractArray<int>(bodyIndices);
+    const std::set<int> setBodyIndices(vBodyIndices.begin(), vBodyIndices.end());
+    
     std::vector<KinBodyPtr> vbodies;
-    _penv->GetBodiesFromEnvironmentBodyIndices(vBodyIndices, vbodies);
+    _penv->GetBodiesFromEnvironmentBodyIndices(setBodyIndices, vbodies);
 
     py::list bodies;
     for (const KinBodyPtr& pbody : vbodies) {

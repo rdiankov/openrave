@@ -174,8 +174,6 @@ public:
     void InitBodyManager(KinBodyConstPtr pbody, bool bTrackActiveDOF)
     {
         _ptrackingbody = pbody;
-        std::vector<int8_t> vecAttachedEnvBodyIndices;
-        pbody->GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
         _bTrackActiveDOF = false;
         if( bTrackActiveDOF && pbody->IsRobot() ) {
             RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
@@ -199,11 +197,15 @@ public:
         const EnvironmentBase& env = *pbody->GetEnv();
         int maxBodyIndex = env.GetMaxEnvironmentBodyIndex();
         EnsureVectorSize(_vecCachedBodies, maxBodyIndex+1);
-        for (size_t envBodyIndex = 1; envBodyIndex < vecAttachedEnvBodyIndices.size(); envBodyIndex++) {
-            if (!vecAttachedEnvBodyIndices[envBodyIndex]) {
-                continue;
-            }
-            KinBodyPtr pAttachedBody = env.GetBodyFromEnvironmentBodyIndex(envBodyIndex);
+
+        std::vector<KinBodyPtr> vecAttachedBodies;
+        std::set<int> vecAttachedEnvBodyIndices;
+        pbody->GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
+        env.GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, vecAttachedBodies);
+
+        std::vector<KinBodyPtr>::const_iterator itrAttached = vecAttachedBodies.begin();
+        for (int envBodyIndex : vecAttachedEnvBodyIndices) {
+            const KinBodyPtr& pAttachedBody = *itrAttached++;
             const KinBody& attachedBody = *pAttachedBody;
             FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(attachedBody);
             if( !pinfo ) {
@@ -271,6 +273,7 @@ public:
     }
 
     /// \brief sets up manager for environment checking
+    /// \param excludedEnvBodyIndices Index corresponds to the environement body index. value 1 means excluded. if value at index 5 is 1, KinBody with env body index 5 is excluded
     void InitEnvironment(const std::vector<int8_t>& excludedEnvBodyIndices)
     {
         _ptrackingbody.reset();
@@ -732,18 +735,19 @@ public:
 
         if( bAttachedBodiesChanged && !!ptrackingbody ) {
             // since tracking have to update all the bodies
-            std::vector<int8_t> vecAttachedEnvBodyIndices;
-            ptrackingbody->GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
+            std::vector<KinBodyPtr> vecAttachedEnvBodies;
+            const EnvironmentBase& env = *ptrackingbody->GetEnv();
+            {
+                std::set<int> vecAttachedEnvBodyIndices;
+                ptrackingbody->GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
+                env.GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, vecAttachedEnvBodies);
+            }
+            
             std::vector<CollisionObjectPtr> vcolobjs;
             //RAVELOG_VERBOSE_FORMAT("env=%d, %x %u setting %d attached bodies for body %s (%d)", ptrackingbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%attachedBodies.size()%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentBodyIndex());
             // add any new bodies
             bool vectorSizeIsEnsured = false;
-            const EnvironmentBase& env = *ptrackingbody->GetEnv();
-            for (size_t envBodyIndex = 1; envBodyIndex < vecAttachedEnvBodyIndices.size(); envBodyIndex++) {
-                if (!vecAttachedEnvBodyIndices[envBodyIndex]) {
-                    continue;
-                }
-                const KinBodyPtr& pattached = env.GetBodyFromEnvironmentBodyIndex(envBodyIndex);
+            for (const KinBodyPtr& pattached : vecAttachedEnvBodies) {
                 const KinBody& attached = *pattached;
                 if (!vectorSizeIsEnsured) {
                     EnsureVectorSize(_vecCachedBodies, attached.GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
@@ -770,8 +774,7 @@ public:
             }
 
             // remove bodies not attached anymore
-
-            for(int cachedBodyIndex = 0; cachedBodyIndex < (int)_vecCachedBodies.size(); ++cachedBodyIndex) {
+            for(int cachedBodyIndex = 1; cachedBodyIndex < (int)_vecCachedBodies.size(); ++cachedBodyIndex) {
                 KinBodyCache& cache = _vecCachedBodies[cachedBodyIndex];
                 KinBodyConstPtr pbody = cache.pwbody.lock();
                 // could be the case that the same pointer was re-added to the environment so have to check the environment id
@@ -779,7 +782,7 @@ public:
                 bool isInvalid = !pbody;
                 if (!isInvalid) {
                     const int currentBodyEnvBodyIndex = pbody->GetEnvironmentBodyIndex();
-                    isInvalid = !vecAttachedEnvBodyIndices[currentBodyEnvBodyIndex] || currentBodyEnvBodyIndex != cachedBodyIndex;
+                    isInvalid = currentBodyEnvBodyIndex != cachedBodyIndex;
                 }
                 if( isInvalid ) {
                     if( !!pbody && IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
@@ -849,7 +852,7 @@ private:
             const KinBody::Link& link = *plink;
             const int linkIndex = link.GetIndex();
 
-            if (!(!bTrackActiveDOF || _vTrackingActiveLinks.at(linkIndex))) {
+            if (bTrackActiveDOF && !_vTrackingActiveLinks.at(linkIndex)) {
                 OpenRAVE::DisableLinkStateBit(linkEnableStatesBitmasks, linkIndex);
             }
             if( OpenRAVE::IsLinkStateBitEnabled(linkEnableStatesBitmasks, linkIndex) ) {
@@ -920,7 +923,7 @@ private:
     std::vector<KinBodyCache> _vecCachedBodies; ///< vector of KinBodyCache(weak body, updatestamp)) where index is KinBody::GetEnvironmentBodyIndex. Index 0 has invalid entry because valid env id starts from 1.
     uint32_t _lastSyncTimeStamp; ///< timestamp when last synchronized
 
-    std::vector<int8_t> _vecExcludeBodyIndices; ///< any bodies that should not be considered inside the manager, used with environment mode. index of vector is the environment body index. Value 1 means that the body should be excluded.
+    std::vector<int8_t> _vecExcludeBodyIndices; ///< any bodies that should not be considered inside the manager, used with environment mode. includes environment body index of of bodies who should be excluded.
     CollisionGroup _tmpSortedBuffer; ///< cache, sorted so that we can efficiently search
 
     KinBodyConstWeakPtr _ptrackingbody; ///< if set, then only tracking the attached bodies if this body

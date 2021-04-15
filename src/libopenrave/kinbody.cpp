@@ -5024,7 +5024,6 @@ void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 {
     // by spec "including this body.", include this body
-    // vAttached is not sorted, so cannot do binary search
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
 
     // early exist, probably this is the case most of the time
@@ -5155,21 +5154,38 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
     }
 }
 
-void KinBody::GetAttachedEnvironmentBodyIndices(std::vector<int8_t>& vAttached) const
+void KinBody::GetAttachedEnvironmentBodyIndices(std::set<int>& setAttached) const
 {
-    const EnvironmentBase& env = *GetEnv();
-    if (vAttached.size() < env.GetMaxEnvironmentBodyIndex() + 1) {
-        vAttached.resize(env.GetMaxEnvironmentBodyIndex() + 1, 0);
-    }
-
-    vAttached.at(GetEnvironmentBodyIndex()) = 1;
+    // by spec "including this body.", include this body
+    setAttached.insert(GetEnvironmentBodyIndex());
 
     // early exist, probably this is the case most of the time
     if (_listAttachedBodies.empty()) {
         return;
     }
 
-    _GetNumAttached(vAttached);
+    const EnvironmentBase& env = *GetEnv();
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+
+    // by spec "If any bodies are already in vAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
+    for (int envBodyIndex : setAttached) {
+        vAttachedVisited.at(envBodyIndex) = -1;
+    }
+
+    int numAttached = _GetNumAttached(vAttachedVisited);
+    if( numAttached ) {
+        for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
+            if (vAttachedVisited[bodyIndex] == 1) {
+                setAttached.insert(bodyIndex);
+                if (--numAttached == 0) {
+                    // already filled vAttached with contents of vAttachedVisited
+                    return;
+                }
+            }
+        }
+    }
 }
 
 bool KinBody::_IsAttached(int otherBodyid, std::vector<int8_t>& vAttachedVisited) const

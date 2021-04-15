@@ -2629,9 +2629,6 @@ private:
     ///
     inline const std::vector<uint64_t>& GetLinkEnableStatesMasks() const
     {
-        for (size_t linkIndex = 0; linkIndex < GetLinks().size(); linkIndex++) {
-            BOOST_ASSERT(IsLinkStateBitEnabled(_vLinkEnableStatesMask, linkIndex) == GetLinks()[linkIndex]->IsEnabled());
-        }
         return _vLinkEnableStatesMask;
     }
 
@@ -2976,8 +2973,8 @@ private:
 
     /// \brief Recursively get all attached bodies of this body, including this body.
     ///
-    /// \param vAttached fills with the attached bodies. Unlike GetAttached, non-zero entries in this is not ignored when recursing on their attached bodies for efficiency. If the size of vAttached is larger than number of bodies in the env, vAttached may not be shrinked.
-    void GetAttachedEnvironmentBodyIndices(std::vector<int8_t>& vAttached) const;
+    /// \param vAttached fills with the environment body index of attached bodies.
+    void GetAttachedEnvironmentBodyIndices(std::set<int>& vAttached) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
     inline bool HasAttached() const {

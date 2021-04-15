@@ -497,14 +497,13 @@ public:
     void SynchronizeWithAttached(const KinBody &body)
     {
         if( body.HasAttached() ) {
-            std::vector<int8_t> vecAttachedEnvBodyIndices;
+            std::set<int> vecAttachedEnvBodyIndices;
             body.GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
-            for (size_t envBodyIndex = 1; envBodyIndex < vecAttachedEnvBodyIndices.size(); envBodyIndex++) {
-                if (vecAttachedEnvBodyIndices[envBodyIndex]) {
-                    KinBodyPtr pattachedBody = _penv->GetBodyFromEnvironmentBodyIndex(envBodyIndex);
-                    if (!!pattachedBody) {
-                        Synchronize(*pattachedBody);
-                    }
+            std::vector<KinBodyPtr> attachedBodies;
+            _penv->GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, attachedBodies);
+            for (const KinBodyPtr& pattachedBody : attachedBodies) {
+                if (!!pattachedBody) {
+                    Synchronize(*pattachedBody);
                 }
             }
         }
@@ -548,7 +547,7 @@ public:
         if( !!pbody ) {
             RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d (userdatakey %s) : %s") % _penv->GetId() % _userdatakey % pbody->GetName()));
             const int envId = pbody->GetEnvironmentBodyIndex();
-            if (envId < _vecInitializedBodies.size()) {
+            if (envId < (int) _vecInitializedBodies.size()) {
                 _vecInitializedBodies.at(envId).reset();
             }
             KinBodyInfoPtr& pinfo = GetInfo(*pbody);
