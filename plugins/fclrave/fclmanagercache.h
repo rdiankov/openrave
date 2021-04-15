@@ -199,12 +199,12 @@ public:
         EnsureVectorSize(_vecCachedBodies, maxBodyIndex+1);
 
         std::vector<KinBodyPtr> vecAttachedBodies;
-        std::set<int> vecAttachedEnvBodyIndices;
-        pbody->GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
-        env.GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, vecAttachedBodies);
+        std::set<int> setAttachedEnvBodyIndices;
+        pbody->GetAttachedEnvironmentBodyIndices(setAttachedEnvBodyIndices);
+        env.GetBodiesFromEnvironmentBodyIndices(setAttachedEnvBodyIndices, vecAttachedBodies);
 
         std::vector<KinBodyPtr>::const_iterator itrAttached = vecAttachedBodies.begin();
-        for (int envBodyIndex : vecAttachedEnvBodyIndices) {
+        for (int envBodyIndex : setAttachedEnvBodyIndices) {
             const KinBodyPtr& pAttachedBody = *itrAttached++;
             const KinBody& attachedBody = *pAttachedBody;
             FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(attachedBody);
@@ -215,29 +215,32 @@ public:
             }
 
             bool bsetUpdateStamp = false;
-            _linkEnableStatesBitmasks.resize(attachedBody.GetLinkEnableStatesMasks().size());
-            std::fill(_linkEnableStatesBitmasks.begin(), _linkEnableStatesBitmasks.end(), 0);
+            _linkEnableStatesBitmasks = attachedBody.GetLinkEnableStatesMasks();
             vcolobjs.clear(); // reset any existing collision objects
             vcolobjs.resize(attachedBody.GetLinks().size(),CollisionObjectPtr());
             for (const KinBody::LinkPtr& plink : attachedBody.GetLinks()) {
                 const KinBody::Link& link = *plink;
                 const int linkIndex = link.GetIndex();
-                if( link.IsEnabled() && (pAttachedBody != pbody || !_bTrackActiveDOF || _vTrackingActiveLinks.at(linkIndex)) ) {
-                    CollisionObjectPtr pcol = _fclspace.GetLinkBV(*pinfo, linkIndex);
-                    vcolobjs[linkIndex] = pcol;
-                    if( !!pcol ) {
-                        fcl::CollisionObject* pcolObj = pcol.get();
-                        CollisionGroup::const_iterator it = std::lower_bound(_tmpSortedBuffer.begin(), _tmpSortedBuffer.end(), pcolObj);
-                        // keep _tmpSortedBuffer sorted so that we can efficiently search
-                        if (it == _tmpSortedBuffer.end() || *it != pcolObj) {
-                            _tmpSortedBuffer.insert(it, pcolObj);
+                if( OpenRAVE::IsLinkStateBitEnabled(_linkEnableStatesBitmasks, linkIndex)) {
+                    if (pAttachedBody != pbody || !_bTrackActiveDOF || _vTrackingActiveLinks.at(linkIndex)) {
+                        CollisionObjectPtr pcol = _fclspace.GetLinkBV(*pinfo, linkIndex);
+                        vcolobjs[linkIndex] = pcol;
+                        if( !!pcol ) {
+                            fcl::CollisionObject* pcolObj = pcol.get();
+                            CollisionGroup::const_iterator it = std::lower_bound(_tmpSortedBuffer.begin(), _tmpSortedBuffer.end(), pcolObj);
+                            // keep _tmpSortedBuffer sorted so that we can efficiently search
+                            if (it == _tmpSortedBuffer.end() || *it != pcolObj) {
+                                _tmpSortedBuffer.insert(it, pcolObj);
+                            }
+                            else {
+                                RAVELOG_WARN_FORMAT("env=%s body %s link %s is added multiple times", pbody->GetEnv()->GetNameId()%pbody->GetName()%link.GetName());
+                            }
                         }
-                        else {
-                            RAVELOG_WARN_FORMAT("env=%s body %s link %s is added multiple times", pbody->GetEnv()->GetNameId()%pbody->GetName()%link.GetName());
-                        }
+                        bsetUpdateStamp = true;
                     }
-                    bsetUpdateStamp = true;
-                    OpenRAVE::EnableLinkStateBit(_linkEnableStatesBitmasks, linkIndex);
+                    else {
+                        OpenRAVE::DisableLinkStateBit(_linkEnableStatesBitmasks, linkIndex);
+                    }
                 }
             }
 
