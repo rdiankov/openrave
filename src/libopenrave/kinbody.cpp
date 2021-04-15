@@ -1656,42 +1656,31 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
     GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(),velocities);
 }
 
-
-
-struct LinkPtrEnabledConstIterator : vector<KinBody::LinkPtr>::const_iterator
-{
-    using base_class = vector<KinBody::LinkPtr>::const_iterator;
-    using value_type = uint8_t;
-    LinkPtrEnabledConstIterator(const vector<KinBody::LinkPtr>::const_iterator& it)
-        : vector<KinBody::LinkPtr>::const_iterator(it)
-    {}
-    uint8_t operator*() const {
-        return vector<KinBody::LinkPtr>::const_iterator::operator*()->GetInfo()._bIsEnabled;
-    }
-};
-
-
-struct LinkPtrTransformConstIterator : vector<KinBody::LinkPtr>::const_iterator
-{
-    using base_class = vector<KinBody::LinkPtr>::const_iterator;
-    using value_type = Transform;
-    LinkPtrTransformConstIterator(const vector<KinBody::LinkPtr>::const_iterator& it)
-        : vector<KinBody::LinkPtr>::const_iterator(it)
-    {}
-    const Transform& operator*() const {
-        return vector<KinBody::LinkPtr>::const_iterator::operator*()->GetTransform();
-    }
-};
-
-
 void KinBody::GetLinkTransformations(vector<Transform>& vtrans) const
 {
     if( RaveGetDebugLevel() & Level_VerifyPlans ) {
         RAVELOG_VERBOSE("GetLinkTransformations should be called with doflastsetvalues\n");
     }
     vtrans.resize(_veclinks.size());
-    vtrans.assign(LinkPtrTransformConstIterator(_veclinks.cbegin()),
-                  LinkPtrTransformConstIterator(_veclinks.cend()));
+    vector<Transform>::iterator it;
+    vector<LinkPtr>::const_iterator itlink;
+    for(it = vtrans.begin(), itlink = _veclinks.begin(); it != vtrans.end(); ++it, ++itlink) {
+        *it = (*itlink)->GetTransform();
+    }
+}
+
+void KinBody::GetLinkTransformationPointers(vector<const Transform*>& vtrans) const
+{
+    if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+        RAVELOG_VERBOSE("GetLinkTransformations should be called with doflastsetvalues\n");
+    }
+
+    std::vector<Transform*>::const_iterator itLinkTransformPtr = _vLinkTransformPointers.begin();
+    vtrans.resize(_veclinks.size());
+
+    for (size_t index = 0; index < vtrans.size(); ++index) {
+        vtrans[index] = &(*_vLinkTransformPointers[index]);
+    }
 }
 
 void KinBody::GetLinkTransformations(std::vector<Transform>& transforms, std::vector<dReal>& doflastsetvalues) const
@@ -1721,12 +1710,12 @@ void KinBody::GetLinkTransformations(std::vector<Transform>& transforms, std::ve
     }
 }
 
-void KinBody::GetLinkEnableStates(vector<uint8_t>& enablestates) const
+void KinBody::GetLinkEnableStates(std::vector<uint8_t>& enablestates) const
 {
-    //RAVELOG_INFO_FORMAT("env=%s, body=%s", GetEnv()->GetNameId()%GetName());
     enablestates.resize(_veclinks.size());
-    enablestates.assign(LinkPtrEnabledConstIterator(_veclinks.begin()),
-                        LinkPtrEnabledConstIterator(_veclinks.end()));
+    for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
+        enablestates[ilink] = _veclinks[ilink]->IsEnabled();
+    }
 }
 
 void KinBody::NotifyLinkEnabled(size_t linkIndex, bool bEnable)
@@ -5513,7 +5502,7 @@ void KinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
 
 void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
 {
-    const size_t numLinks = GetLinks().size();
+    const int numLinks = GetLinks().size();
     BOOST_ASSERT(linkindex0 < numLinks);
     BOOST_ASSERT(linkindex1 < numLinks);
     
@@ -5919,7 +5908,7 @@ UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::fu
 
 void KinBody::_SetForcedAdjacentLinks(int linkindex0, int linkindex1)
 {
-    const size_t numLinks = GetLinks().size();
+    const int numLinks = GetLinks().size();
     BOOST_ASSERT(linkindex0 < numLinks);
     BOOST_ASSERT(linkindex1 < numLinks);
     const size_t index = _GetIndex1d(linkindex0, linkindex1);

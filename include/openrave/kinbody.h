@@ -2600,6 +2600,9 @@ private:
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
 
+    /// \brief get the pointers to transformation of all the links at once
+    void GetLinkTransformationPointers(std::vector<const Transform*>& vtrans) const;
+    
     /// \brief get the transformations of all the links at once
     void GetLinkTransformations(std::vector<Transform>& transforms) const;
 

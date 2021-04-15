@@ -710,18 +710,19 @@ private:
     {
         //KinBodyPtr pbody = info.GetBody();
         if( info.nLastStamp != body.GetUpdateStamp()) {
-            vector<Transform>& vtrans = _vtransCache;
-            body.GetLinkTransformations(vtrans);
+            vector<const Transform*> vecLinkTransformPointers;
+            body.GetLinkTransformationPointers(vecLinkTransformPointers);
             info.nLastStamp = body.GetUpdateStamp();
             BOOST_ASSERT( body.GetLinks().size() == info.vlinks.size() );
-            BOOST_ASSERT( vtrans.size() == info.vlinks.size() );
+            BOOST_ASSERT( vecLinkTransformPointers.size() == info.vlinks.size() );
             CollisionObjectPtr pcoll;
-            for(size_t i = 0; i < vtrans.size(); ++i) {
+            for(size_t i = 0; i < vecLinkTransformPointers.size(); ++i) {
                 pcoll = info.vlinks[i]->linkBV.second;
                 if( !pcoll ) {
                     continue;
                 }
-                Transform pose = vtrans[i] * info.vlinks[i]->linkBV.first;
+                const Transform& linkTransform = *vecLinkTransformPointers[i];
+                Transform pose = linkTransform * info.vlinks[i]->linkBV.first;
                 fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                 fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
@@ -733,7 +734,7 @@ private:
                 //info.vlinks[i]->nLastStamp = info.nLastStamp;
                 for (const TransformCollisionPair& pgeom : info.vlinks[i]->vgeoms) {
                     fcl::CollisionObject& coll = *pgeom.second;
-                    Transform pose = vtrans[i] * pgeom.first;
+                    Transform pose = linkTransform * pgeom.first;
                     fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                     fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
@@ -848,7 +849,6 @@ private:
     std::vector<KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. Index of the vector is the environment id (id of the body in the env, not __nUniqueId of env) of the kinbody at that index. The index being environment id makes it easier to compare objects without getting a handle to their pointers. Whenever a KinBodyInfoPtr goes into this map, it is removed from _cachedpinfo. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
 
     bool _bIsSelfCollisionChecker; // Currently not used
-    vector<Transform> _vtransCache;
 };
 
 #ifdef RAVE_REGISTER_BOOST
