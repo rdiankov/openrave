@@ -1983,6 +1983,27 @@ object PyEnvironmentBase::GetBodyFromEnvironmentBodyIndex(int bodyIndex)
     return py::to_object(openravepy::toPyKinBody(_penv->GetBodyFromEnvironmentBodyIndex(bodyIndex),shared_from_this()));
 }
 
+object PyEnvironmentBase::GetBodiesFromEnvironmentBodyIndices(object bodyIndices)
+{
+    const std::vector<int> vBodyIndices = ExtractArray<int>(bodyIndices);
+    std::vector<KinBodyPtr> vbodies;
+    _penv->GetBodiesFromEnvironmentBodyIndices(vBodyIndices, vbodies);
+
+    py::list bodies;
+    for (const KinBodyPtr& pbody : vbodies) {
+        if (!pbody) {
+            bodies.append(py::none_());
+        }
+        else if ( pbody->IsRobot() ) {
+            bodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(pbody),shared_from_this()));
+        }
+        else {
+            bodies.append(openravepy::toPyKinBody(pbody,shared_from_this()));
+        }
+    }
+    return bodies;
+}
+
 int PyEnvironmentBase::GetMaxEnvironmentBodyIndex()
 {
     return _penv->GetMaxEnvironmentBodyIndex();
@@ -3281,6 +3302,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetSensor",&PyEnvironmentBase::GetSensor, PY_ARGS("name") DOXY_FN(EnvironmentBase,GetSensor))
                      .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId, DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentId))
                      .def("GetBodyFromEnvironmentBodyIndex",&PyEnvironmentBase::GetBodyFromEnvironmentBodyIndex, PY_ARGS("bodyIndex") DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentBodyIndex))
+                     .def("GetBodiesFromEnvironmentBodyIndices",&PyEnvironmentBase::GetBodiesFromEnvironmentBodyIndices, PY_ARGS("bodyIndex") DOXY_FN(EnvironmentBase,GetBodiesFromEnvironmentBodyIndices))
                      .def("GetMaxEnvironmentBodyIndex",&PyEnvironmentBase::GetMaxEnvironmentBodyIndex, DOXY_FN(EnvironmentBase,GetMaxEnvironmentBodyIndex))
                      .def("AddModule",&PyEnvironmentBase::AddModule,PY_ARGS("module","args") DOXY_FN(EnvironmentBase,AddModule))
                      .def("LoadProblem",&PyEnvironmentBase::AddModule,PY_ARGS("module","args") DOXY_FN(EnvironmentBase,AddModule))

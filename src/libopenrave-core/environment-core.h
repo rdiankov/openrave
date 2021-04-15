@@ -2431,6 +2431,23 @@ public:
         return KinBodyPtr();
     }
 
+    void GetBodiesFromEnvironmentBodyIndices(const std::vector<int>& bodyIndices,
+                                             std::vector<KinBodyPtr>& bodies) const override
+    {
+        bodies.clear();
+        bodies.reserve(bodyIndices.size());
+        SharedLock lock(_mutexInterfaces);
+        for (int bodyIndex : bodyIndices) {
+            if (0 < bodyIndex && bodyIndex < (int) _vecbodies.size()) {
+                bodies.push_back(_vecbodies.at(bodyIndex));
+            }
+            else {
+                RAVELOG_WARN_FORMAT("env=%s, could not find body for environment body index=%d from %d bodies", GetNameId()%bodyIndex%_vecbodies.size());
+                bodies.push_back(KinBodyPtr());
+            }
+        }
+    }
+
     virtual void StartSimulation(dReal fDeltaTime, bool bRealTime)
     {
         {
