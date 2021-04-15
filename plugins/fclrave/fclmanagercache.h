@@ -737,11 +737,9 @@ public:
             // since tracking have to update all the bodies
             std::vector<KinBodyPtr> vecAttachedEnvBodies;
             const EnvironmentBase& env = *ptrackingbody->GetEnv();
-            {
-                std::set<int> vecAttachedEnvBodyIndices;
-                ptrackingbody->GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
-                env.GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, vecAttachedEnvBodies);
-            }
+            std::set<int> setAttachedEnvBodyIndices;
+            ptrackingbody->GetAttachedEnvironmentBodyIndices(setAttachedEnvBodyIndices);
+            env.GetBodiesFromEnvironmentBodyIndices(setAttachedEnvBodyIndices, vecAttachedEnvBodies);
             
             std::vector<CollisionObjectPtr> vcolobjs;
             //RAVELOG_VERBOSE_FORMAT("env=%d, %x %u setting %d attached bodies for body %s (%d)", ptrackingbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%attachedBodies.size()%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentBodyIndex());
@@ -782,7 +780,7 @@ public:
                 bool isInvalid = !pbody;
                 if (!isInvalid) {
                     const int currentBodyEnvBodyIndex = pbody->GetEnvironmentBodyIndex();
-                    isInvalid = currentBodyEnvBodyIndex != cachedBodyIndex;
+                    isInvalid = setAttachedEnvBodyIndices.find(currentBodyEnvBodyIndex) == setAttachedEnvBodyIndices.end() || currentBodyEnvBodyIndex != cachedBodyIndex;
                 }
                 if( isInvalid ) {
                     if( !!pbody && IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
