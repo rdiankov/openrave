@@ -84,7 +84,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
 
             if (!vcolobjs.empty()) {
                 std::stringstream ss;
-                ss << "env=" << pbody->GetEnv()->GetId() << ", FCLCollisionManagerInstance 0x" << hex << this;
+                ss << "env=" << pbody->GetEnv()->GetNameId() << ", FCLCollisionManagerInstance 0x" << hex << this;
                 ss << " has " << dec << vcolobjs.size() << " collion objects (";
                 for (const CollisionObjectPtr& obj : vcolobjs) {
                     ss << "0x" << hex << obj << ", ";
@@ -106,11 +106,12 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             }
             if( vcolobjs.size() > 0 ) { // should never happen
                 KinBodyConstPtr pbody = pwbody.lock();
-                std::string name;
+                std::string bodyName, envNameId;
                 if( !!pbody ) {
-                    name = pbody->GetName();
+                    bodyName = pbody->GetName();
+                    envNameId = pbody->GetEnv()->GetNameId();
                 }
-                RAVELOG_WARN_FORMAT("there are %d fcl collision objects left for body %s", vcolobjs.size()%name);
+                RAVELOG_WARN_FORMAT("env=%s, there are %d fcl collision objects left for body %s", envNameId%vcolobjs.size()%bodyName);
             }
 
             pwbody.reset();
