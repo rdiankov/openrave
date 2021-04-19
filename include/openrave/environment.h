@@ -556,7 +556,7 @@ public:
     /// Calling GetBodyFromEnvironmentBodyIndex in loop should be replaced by this function to minimize scoped lock constrution and deconstruction
     /// \param[in] bodyIndices body indices
     /// \param[out] bodies vector of bodies in the same order as bodyIndices
-    virtual void GetBodiesFromEnvironmentBodyIndices(const std::set<int>& bodyIndices,
+    virtual void GetBodiesFromEnvironmentBodyIndices(const std::vector<int>& bodyIndices,
                                                      std::vector<KinBodyPtr>& bodies) const = 0;
 
     /// Get the corresponding body from its unique network id

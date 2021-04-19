@@ -3697,7 +3697,7 @@ object PyKinBody::GetAttached() const
 object PyKinBody::GetAttachedEnvironmentBodyIndices() const
 {
     py::list attached;
-    std::set<int> vattached;
+    std::vector<int> vattached;
     _pbody->GetAttachedEnvironmentBodyIndices(vattached);
     for (int envBodyIndex : vattached) {
         attached.append(envBodyIndex);

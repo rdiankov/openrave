@@ -497,7 +497,7 @@ public:
     void SynchronizeWithAttached(const KinBody &body)
     {
         if( body.HasAttached() ) {
-            std::set<int> vecAttachedEnvBodyIndices;
+            std::vector<int> vecAttachedEnvBodyIndices;
             body.GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
             std::vector<KinBodyPtr> attachedBodies;
             _penv->GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, attachedBodies);

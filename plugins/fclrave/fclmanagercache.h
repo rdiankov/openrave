@@ -199,12 +199,12 @@ public:
         EnsureVectorSize(_vecCachedBodies, maxBodyIndex+1);
 
         std::vector<KinBodyPtr> vecAttachedBodies;
-        std::set<int> setAttachedEnvBodyIndices;
-        pbody->GetAttachedEnvironmentBodyIndices(setAttachedEnvBodyIndices);
-        env.GetBodiesFromEnvironmentBodyIndices(setAttachedEnvBodyIndices, vecAttachedBodies);
+        std::vector<int> vecAttachedEnvBodyIndices;
+        pbody->GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
+        env.GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, vecAttachedBodies);
 
         std::vector<KinBodyPtr>::const_iterator itrAttached = vecAttachedBodies.begin();
-        for (int envBodyIndex : setAttachedEnvBodyIndices) {
+        for (int envBodyIndex : vecAttachedEnvBodyIndices) {
             const KinBodyPtr& pAttachedBody = *itrAttached++;
             const KinBody& attachedBody = *pAttachedBody;
             FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(attachedBody);
@@ -740,9 +740,9 @@ public:
             // since tracking have to update all the bodies
             std::vector<KinBodyPtr> vecAttachedEnvBodies;
             const EnvironmentBase& env = *ptrackingbody->GetEnv();
-            std::set<int> setAttachedEnvBodyIndices;
-            ptrackingbody->GetAttachedEnvironmentBodyIndices(setAttachedEnvBodyIndices);
-            env.GetBodiesFromEnvironmentBodyIndices(setAttachedEnvBodyIndices, vecAttachedEnvBodies);
+            std::vector<int> vecAttachedEnvBodyIndices;
+            ptrackingbody->GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
+            env.GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, vecAttachedEnvBodies);
             
             std::vector<CollisionObjectPtr> vcolobjs;
             //RAVELOG_VERBOSE_FORMAT("env=%d, %x %u setting %d attached bodies for body %s (%d)", ptrackingbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%attachedBodies.size()%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentBodyIndex());
@@ -783,7 +783,8 @@ public:
                 bool isInvalid = !pbody;
                 if (!isInvalid) {
                     const int currentBodyEnvBodyIndex = pbody->GetEnvironmentBodyIndex();
-                    isInvalid = setAttachedEnvBodyIndices.find(currentBodyEnvBodyIndex) == setAttachedEnvBodyIndices.end() || currentBodyEnvBodyIndex != cachedBodyIndex;
+                    const vector<int>::const_iterator it = lower_bound(vecAttachedEnvBodyIndices.begin(), vecAttachedEnvBodyIndices.end(), currentBodyEnvBodyIndex);
+                    isInvalid =  (it == vecAttachedEnvBodyIndices.end() || *it != currentBodyEnvBodyIndex) || currentBodyEnvBodyIndex != cachedBodyIndex;
                 }
                 if( isInvalid ) {
                     if( !!pbody && IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {

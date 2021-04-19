@@ -2431,7 +2431,7 @@ public:
         return KinBodyPtr();
     }
 
-    void GetBodiesFromEnvironmentBodyIndices(const std::set<int>& bodyIndices,
+    void GetBodiesFromEnvironmentBodyIndices(const std::vector<int>& bodyIndices,
                                              std::vector<KinBodyPtr>& bodies) const override
     {
         bodies.clear();

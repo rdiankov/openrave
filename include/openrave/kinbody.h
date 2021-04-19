@@ -2969,13 +2969,17 @@ private:
     /// \param setAttached fills with the attached bodies. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
     void GetAttached(std::set<KinBodyPtr>& setAttached) const;
     void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
+
+    /// \brief Recursively get all attached bodies of this body, including this body.
+    ///
+    /// \param vAttached fills with the attached bodies in ascending order of environment body index. If any bodies are already in vAttached, then ignores recursing on their attached bodies. Input has to be sorted in ascending order of environment body index as well.
     void GetAttached(std::vector<KinBodyPtr>& vAttached) const;
     void GetAttached(std::vector<KinBodyConstPtr>& vAttached) const;
 
     /// \brief Recursively get all attached bodies of this body, including this body.
     ///
-    /// \param vAttached fills with the environment body index of attached bodies.
-    void GetAttachedEnvironmentBodyIndices(std::set<int>& vAttached) const;
+    /// \param vAttached fills with the environment body index of attached bodies sorted in ascending order. Input has to be sorted in ascending order as well.
+    void GetAttachedEnvironmentBodyIndices(std::vector<int>& vAttached) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
     inline bool HasAttached() const {
