@@ -1669,18 +1669,6 @@ void KinBody::GetLinkTransformations(vector<Transform>& vtrans) const
     }
 }
 
-void KinBody::GetLinkTransformationPointers(vector<const Transform*>& vtrans) const
-{
-    if( RaveGetDebugLevel() & Level_VerifyPlans ) {
-        RAVELOG_VERBOSE("GetLinkTransformations should be called with doflastsetvalues\n");
-    }
-
-    vtrans.resize(_veclinks.size());
-    for (size_t index = 0; index < vtrans.size(); ++index) {
-        vtrans[index] = &(*_vLinkTransformPointers[index]);
-    }
-}
-
 void KinBody::GetLinkTransformations(std::vector<Transform>& transforms, std::vector<dReal>& doflastsetvalues) const
 {
     transforms.resize(_veclinks.size());
