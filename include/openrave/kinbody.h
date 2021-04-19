@@ -157,35 +157,36 @@ typedef boost::shared_ptr<KinematicsGenerator> KinematicsGeneratorPtr;
 /// intended to be used on return value of GetLinkEnableStatesMasks()
 inline bool IsLinkStateBitEnabled(const std::vector<uint64_t>& linkEnableStateMasks, size_t linkIndex)
 {
-    return linkEnableStateMasks.at(linkIndex / 64) & (1LU << (linkIndex % 64));
+    return linkEnableStateMasks.at(linkIndex >> 6) & (1LU << (linkIndex & 0x3f));
 }
 
 /// \brief checks if link is enabled from vector of link enable state mask
 /// intended to be used on return value of GetLinkEnableStatesMasks()
 inline void DisableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, size_t linkIndex)
 {
-    linkEnableStateMasks.at(linkIndex / 64) &= ~(1LU << (linkIndex % 64));
+    linkEnableStateMasks.at(linkIndex >> 6) &= ~(1LU << (linkIndex & 0x3f));
 }
 
 /// \brief checks if link is enabled from vector of link enable state mask
 /// intended to be used on return value of GetLinkEnableStatesMasks()
 inline void EnableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, size_t linkIndex)
 {
-    linkEnableStateMasks.at(linkIndex / 64) |= 1LU << (linkIndex % 64);
+    linkEnableStateMasks.at(linkIndex >> 6) |= 1LU << (linkIndex & 0x3f);
 }
 
 /// \brief resizes linkEnableStateMasks according to numLinks and initialize to 0's (disabled)
 inline void ResizeLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMasks, size_t numLinks)
 {
-    if (linkEnableStateMasks.size() < numLinks / 64 + 1) {
-        linkEnableStateMasks.resize(numLinks / 64 + 1, 0);
+    const size_t size = (numLinks >> 6) + 1;
+    if (linkEnableStateMasks.size() < size) {
+        linkEnableStateMasks.resize(size, 0);
     }
 }
 
 /// \brief resizes linkEnableStateMasks according to numLinks and initialize to 0's (disabled)
 inline void InitializeLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMasks, size_t numLinks)
 {
-    linkEnableStateMasks.resize(numLinks / 64 + 1);
+    linkEnableStateMasks.resize((numLinks >> 6) + 1);
     std::fill(linkEnableStateMasks.begin(), linkEnableStateMasks.end(), 0);
 }
 
@@ -206,7 +207,7 @@ inline void EnableAllLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMas
         std::fill(linkEnableStateMasks.begin(), linkEnableStateMasks.end() - 1, UINT64_MAX);
     }
 
-    linkEnableStateMasks.back() = (1LU << (numLinks % 64) ) - 1;
+    linkEnableStateMasks.back() = (1LU << (numLinks & 0x3f)) - 1;
 }
 
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
