@@ -1941,17 +1941,17 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         if code is None:
             code = StringIO()
         if expr.is_Function:
-            if expr.func == Abs:
+            if expr.func.__name__ == Abs.__name__:
                 code.write('IKabs(')
                 code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
             elif expr.func == conjugate:
                 # because we're not dealing with imaginary, this is just the regular number
                 code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
                 return code,sepcodelist
-            elif expr.func == sign:
+            elif expr.func.__name__ == sign.__name__:
                 code.write('IKsign(')
                 code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
-            elif expr.func == acos:
+            elif expr.func.__name__ == acos.__name__:
                 code.write('IKacos(')
                 pos0 = code.tell()
                 code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
@@ -1960,7 +1960,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 exprbase = code.read(pos1-pos0)
                 code.seek(pos1)
                 sepcodelist.append('if( (%s) < -1-IKFAST_SINCOS_THRESH || (%s) > 1+IKFAST_SINCOS_THRESH )\n    continue;\n'%(exprbase,exprbase))
-            elif expr.func == asin:
+            elif expr.func.__name__ == asin.__name__:
                 code.write('IKasin(')
                 pos0 = code.tell()
                 code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
@@ -1969,7 +1969,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 exprbase = code.read(pos1-pos0)
                 code.seek(pos1)
                 sepcodelist.append('if( (%s) < -1-IKFAST_SINCOS_THRESH || (%s) > 1+IKFAST_SINCOS_THRESH )\n    continue;\n'%(exprbase,exprbase))
-            elif expr.func == atan2check:
+            elif expr.func.__name__ == atan2check.__name__:
                 code.write('IKatan2(')
                 # check for divides by 0 in arguments, this could give two possible solutions?!?
                 # if common arguments is nan! solution is lost!
@@ -2006,19 +2006,19 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 code.write('%s.value'%iktansymbol)
                 return code,sepcodelist
             
-            elif expr.func == sin:
+            elif expr.func.__name__ == sin.__name__:
                 code.write('IKsin(')
                 code2,sepcodelist = self._WriteExprCode(expr.args[0], code)
-            elif expr.func == cos:
+            elif expr.func.__name__ == cos.__name__:
                 code.write('IKcos(')
                 code2,sepcodelist = self._WriteExprCode(expr.args[0], code)
-            elif expr.func == fmod:
+            elif expr.func.__name__ == fmod.__name__:
                 code.write('IKfmod(')
                 code2,sepcodelist = self._WriteExprCode(expr.args[0], code)
                 code.write(', ')
                 code3,sepcodelist2 = self._WriteExprCode(expr.args[1], code)
                 sepcodelist += sepcodelist2
-            elif expr.func == RemoveAbsFn:
+            elif expr.func.__name__ == RemoveAbsFn.__name__:
                 return self._WriteExprCode(expr.args[0], code)
             
             else:
@@ -2056,7 +2056,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             return code, sepcodelist
         
         elif expr.is_Pow:
-            if expr.base.is_Function and expr.base.func == RemoveAbsFn:
+            if expr.base.is_Function and expr.base.func.__name__ == RemoveAbsFn.__name__:
                 return self._WriteExprCode(Pow(expr.base.args[0], expr.exp, evaluate=False), code)
             
             if expr.exp.is_number:
