@@ -5614,7 +5614,16 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 pgrabbed->_listNonCollidingLinks.push_back(_veclinks.at((*itlinkref)->GetIndex()));
             }
             _vGrabbedBodies.push_back(pgrabbed);
-            _AttachBody(pgrabbedbody);
+            try {
+                // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
+                _AttachBody(pgrabbedbody);
+            }
+            catch(...) {
+                RAVELOG_ERROR_FORMAT("env=%s, failed in attach body", GetEnv()->GetNameId());
+                BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
+                _vGrabbedBodies.pop_back();
+                throw;
+            }
         }
     }
 
