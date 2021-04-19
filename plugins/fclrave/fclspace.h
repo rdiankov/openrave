@@ -712,14 +712,14 @@ private:
             info.nLastStamp = body.GetUpdateStamp();
             BOOST_ASSERT( body.GetLinks().size() == info.vlinks.size() );
             CollisionObjectPtr pcoll;
-            for(size_t i = 0; i < vecLinkTransformPointers.size(); ++i) {
-                const KinBody::Link& link = *info.vlinks[i];
-                pcoll = link.linkBV.second;
+            for(size_t i = 0; i < body.GetLinks().size(); ++i) {
+                const FCLSpace::KinBodyInfo::LinkInfo& linkInfo = *info.vlinks[i];
+                pcoll = linkInfo.linkBV.second;
                 if( !pcoll ) {
                     continue;
                 }
-                const Transform& linkTransform = link.GetTransform();
-                Transform pose = linkTransform * link.linkBV.first;
+                const Transform& linkTransform = body.GetLinks()[i]->GetTransform();
+                Transform pose = linkTransform * linkInfo.linkBV.first;
                 fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                 fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
@@ -729,7 +729,7 @@ private:
                 pcoll->computeAABB();
 
                 //info.vlinks[i]->nLastStamp = info.nLastStamp;
-                for (const TransformCollisionPair& pgeom : link.vgeoms) {
+                for (const TransformCollisionPair& pgeom : linkInfo.vgeoms) {
                     fcl::CollisionObject& coll = *pgeom.second;
                     Transform pose = linkTransform * pgeom.first;
                     fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
