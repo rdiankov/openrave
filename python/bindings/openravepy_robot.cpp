@@ -180,6 +180,7 @@ void PyAttachedSensorInfo::_Update(const RobotBase::AttachedSensorInfo& info) {
     _linkname = ConvertStringToUnicode(info._linkname);
     _trelative = ReturnTransform(info._trelative);
     _sensorname = ConvertStringToUnicode(info._sensorname);
+    _referenceAttachedSensorName = ConvertStringToUnicode(info._referenceAttachedSensorName);
     _sensorgeometry = toPySensorGeometry(info._sensorname, info._docSensorGeometry);
 }
 
@@ -200,6 +201,9 @@ RobotBase::AttachedSensorInfoPtr PyAttachedSensorInfo::GetAttachedSensorInfo() c
     }
     if( !IS_PYTHONOBJECT_NONE(_sensorname) ) {
         pinfo->_sensorname = py::extract<std::string>(_sensorname);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_referenceAttachedSensorName) ) {
+        pinfo->_referenceAttachedSensorName = py::extract<std::string>(_referenceAttachedSensorName);
     }
     rapidjson::Document docSensorGeometry;
     if(!!_sensorgeometry) {
@@ -1969,7 +1973,7 @@ object PyRobotBase::GetActiveDOFMaxVel() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFMaxVel(values);
+    _probot->GetActiveDOFVelocityLimits(values);
     return toPyArray(values);
 }
 
@@ -1979,7 +1983,7 @@ object PyRobotBase::GetActiveDOFMaxAccel() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFMaxAccel(values);
+    _probot->GetActiveDOFAccelerationLimits(values);
     return toPyArray(values);
 }
 
@@ -1989,7 +1993,7 @@ object PyRobotBase::GetActiveDOFMaxJerk() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFMaxJerk(values);
+    _probot->GetActiveDOFJerkLimits(values);
     return toPyArray(values);
 }
 
@@ -1999,7 +2003,7 @@ object PyRobotBase::GetActiveDOFHardMaxVel() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFHardMaxVel(values);
+    _probot->GetActiveDOFHardVelocityLimits(values);
     return toPyArray(values);
 }
 
@@ -2009,7 +2013,7 @@ object PyRobotBase::GetActiveDOFHardMaxAccel() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFHardMaxAccel(values);
+    _probot->GetActiveDOFHardAccelerationLimits(values);
     return toPyArray(values);
 }
 
@@ -2019,7 +2023,7 @@ object PyRobotBase::GetActiveDOFHardMaxJerk() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFHardMaxJerk(values);
+    _probot->GetActiveDOFHardJerkLimits(values);
     return toPyArray(values);
 }
 
@@ -2422,6 +2426,7 @@ void init_openravepy_robot()
                                 .def_readwrite("_linkname", &PyAttachedSensorInfo::_linkname)
                                 .def_readwrite("_trelative", &PyAttachedSensorInfo::_trelative)
                                 .def_readwrite("_sensorname", &PyAttachedSensorInfo::_sensorname)
+                                .def_readwrite("_referenceAttachedSensorName",&PyAttachedSensorInfo::_referenceAttachedSensorName)
                                 .def_readwrite("_sensorgeometry", &PyAttachedSensorInfo::_sensorgeometry)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                 .def("SerializeJSON", &PyAttachedSensorInfo::SerializeJSON,

@@ -17,47 +17,47 @@ Each sub-module contains a 'run' function that can be called directly with optio
 """
 
 # tutorials showing a single functionality (simple)
-import tutorial_grasptransform
-import tutorial_ik5d
-import tutorial_iklookat
-import tutorial_iklookat_multiple
-import tutorial_iksolutions
-import tutorial_iktranslation
-import tutorial_iktranslation2d
-import tutorial_inversereachability
-import tutorial_plotting
+from . import tutorial_grasptransform
+from . import tutorial_ik5d
+from . import tutorial_iklookat
+from . import tutorial_iklookat_multiple
+from . import tutorial_iksolutions
+from . import tutorial_iktranslation
+from . import tutorial_iktranslation2d
+from . import tutorial_inversereachability
+from . import tutorial_plotting
 
 # examples showing complex demos
-import calibrationviews
-import checkconvexdecomposition
-import checkvisibility
-import collision
-import collision2
-import constraintplanning
-import cubeassembly
-import dualarmdemo_schunk
-import fastgrasping
-import fastgraspingthreaded
-import graspplanning
-import hanoi
-import inversekinematicspick
-import movehandstraight
-import pr2turnlever
+from . import calibrationviews
+from . import checkconvexdecomposition
+from . import checkvisibility
+from . import collision
+from . import collision2
+from . import constraintplanning
+from . import cubeassembly
+from . import dualarmdemo_schunk
+from . import fastgrasping
+from . import fastgraspingthreaded
+from . import graspplanning
+from . import hanoi
+from . import inversekinematicspick
+from . import movehandstraight
+from . import pr2turnlever
 
 try:
     from PyQt4 import QtGui, QtCore
-    import qtexampleselector
-    import qtserverprocess
+    from . import qtexampleselector
+    from . import qtserverprocess
 except ImportError:
     pass
 
-import showsensors
-import simplegrasping
-import simplemanipulation
-import simplenavigation
-import testphysics
-import testphysics_controller
-import testphysics_diffdrive
-import testupdatingbodies
-import testviewercallback
-import visibilityplanning
+from . import showsensors
+from . import simplegrasping
+from . import simplemanipulation
+from . import simplenavigation
+from . import testphysics
+from . import testphysics_controller
+from . import testphysics_diffdrive
+from . import testupdatingbodies
+from . import testviewercallback
+from . import visibilityplanning

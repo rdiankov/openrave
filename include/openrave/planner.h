@@ -172,6 +172,23 @@ private:
     virtual PlannerParameters& operator=(const PlannerParameters& r);
     virtual void copy(boost::shared_ptr<PlannerParameters const> r);
 
+    virtual bool operator==(const Readable& other) const override {
+        if (GetXMLId() != other.GetXMLId()) {
+            return false;
+        }
+        const PlannerParameters* pOther = dynamic_cast<const PlannerParameters*>(&other);
+        if (!pOther) {
+            return false;
+        }
+        return this == pOther; // pointer compare, becase we cannot compare boost::function in this
+    }
+
+    virtual ReadablePtr CloneSelf() const override {
+        boost::shared_ptr<PlannerParameters> pNew(new PlannerParameters());
+        *pNew = *this;
+        return pNew;
+    }
+
     /// \brief sets up the planner parameters to use the active joints of the robot
     virtual void SetRobotActiveJoints(RobotBasePtr robot);
 

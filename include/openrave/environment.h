@@ -42,6 +42,7 @@ class OPENRAVE_API EnvironmentBase : public boost::enable_shared_from_this<Envir
 {
 public:
     EnvironmentBase();
+    EnvironmentBase(const std::string& name);
     virtual ~EnvironmentBase();
 
     /// \brief Releases all environment resources, should be always called when environment stops being used.
@@ -83,11 +84,30 @@ public:
     /// \return An environment of the same type as this environment containing the copied information.
     virtual EnvironmentBasePtr CloneSelf(int options) = 0;
 
+    /// \brief Create and return a clone of the current environment.
+    ///
+    /// Clones do not share any memory or resource between each other.
+    /// or their parent making them ideal for performing separte planning experiments while keeping
+    /// the parent environment unchanged.
+    /// By default a clone only copies the collision checkers and physics engine.
+    /// When bodies are cloned, the unique ids are preserved across environments (each body can be referenced with its id in both environments). The attached and grabbed bodies of each body/robot are also copied to the new environment.
+    /// \param clonedEnvName The name of the cloned (and retuned) environment
+    /// \param options A set of \ref CloningOptions describing what is actually cloned.
+    /// \return An environment of the same type as this environment containing the copied information.
+    virtual EnvironmentBasePtr CloneSelf(const std::string& clonedEnvName, int options) = 0;
+
     /// \brief Clones the reference environment into the current environment
     ///
     /// Tries to preserve computation by re-using bodies/interfaces that are already similar between the current and reference environments.
     /// \param[in] cloningoptions The parts of the environment to clone. Parts not specified are left as is.
     virtual void Clone(EnvironmentBaseConstPtr preference, int cloningoptions) = 0;
+
+    /// \brief Clones the reference environment into the current environment
+    ///
+    /// Tries to preserve computation by re-using bodies/interfaces that are already similar between the current and reference environments.
+    /// \param[in] clonedEnvName The name of the cloned environment
+    /// \param[in] cloningoptions The parts of the environment to clone. Parts not specified are left as is.
+    virtual void Clone(EnvironmentBaseConstPtr preference, const std::string& clonedEnvName, int cloningoptions) = 0;
 
     /// \brief Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs. <b>[multi-thread safe]</b>
     ///
@@ -450,12 +470,17 @@ public:
 
     /// \brief Query a body from its id. <b>[multi-thread safe]</b>
     ///
-    /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentId!
+    /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentBodyIndex!
     virtual KinBodyPtr GetKinBodyById(const std::string& id) const =0;
+
+    /// \brief Query the largest environment body index in this environment. <b>[multi-thread safe]</b>
+    ///
+    /// \return largetst environment body index among the bodies in this environment
+    virtual int GetMaxEnvironmentBodyIndex() const = 0;
 
     /// \brief Return the number of bodies currently in the environment. <b>[multi-thread safe]</b>
     virtual int GetNumBodies() const = 0;
-
+    
     /// \brief Query a sensor from its name. <b>[multi-thread safe]</b>
     /// \return first sensor that matches with name, note that sensors attached to robots have the robot name as a prefix.
     virtual SensorBasePtr GetSensor(const std::string& name) const =0;
@@ -524,7 +549,12 @@ public:
     virtual void UpdatePublishedBodies(uint64_t timeout=0) = 0;
 
     /// Get the corresponding body from its unique network id
-    virtual KinBodyPtr GetBodyFromEnvironmentId(int id) = 0;
+    virtual KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) const = 0;
+
+    /// Get the corresponding body from its unique network id
+    inline KinBodyPtr GetBodyFromEnvironmentId(int bodyIndex) RAVE_DEPRECATED {
+        return GetBodyFromEnvironmentBodyIndex(bodyIndex);
+    }
 
     /// \brief Triangulation of the body including its current transformation. trimesh will be appended the new data.  <b>[multi-thread safe]</b>
     ///
@@ -644,6 +674,12 @@ public:
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual OpenRAVE::GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
 
+    /// \brief Draws a label. <b>[multi-thread safe]</b>
+    ///
+    /// \param worldPosition is the position of the label in world space.
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
+    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition) = 0;
+
     /// \brief Draws a box. <b>[multi-thread safe]</b>
     ///
     /// extents are half the width, height, and depth of the box
@@ -698,6 +734,49 @@ public:
         return __nUniqueId;
     }
 
+    /// \brief returns the scene name
+    inline const std::string& GetName() const {
+        return _name;
+    }
+
+    /// \brief returns the scene name and id as formated string
+    inline const std::string& GetNameId() const {
+        return _formatedNameId;
+    }
+
+    /// \brief sets a named parameter to be tracked by the environment
+    ///
+    /// internally locks the environment mutex
+    virtual void SetUInt64Parameter(const std::string& parameterName, uint64_t value) = 0;
+
+    /// \brief removes a named parameter tracked by the environment
+    ///
+    /// internally locks the environment mutex
+    /// \return true if parameter was in the environment and now is removed
+    virtual bool RemoveUInt64Parameter(const std::string& parameterName) = 0;
+
+    /// \brief retries the named parameter to be tracked by the environment.
+    ///
+    /// internally locks the environment mutex
+    /// if parameter is not present, will return defaultValue
+    virtual uint64_t GetUInt64Parameter(const std::string& parameterName, uint64_t defaultValue) const = 0;
+
+    /// \brief notifys name of kin body is changed.
+    ///
+    /// Should be called when name of body added to this env is modified. Should not be called when name of body in other env or not added to any env is modified.
+    /// \param oldName name before change
+    /// \param newName name after change
+    /// \return true if can make the change, and the changes are notified. Otherwise false meaning there will be a conflict
+    virtual bool NotifyKinBodyNameChanged(const std::string& oldName, const std::string& newName) = 0;
+
+    /// \brief retries the named parameter to be tracked by the environment.
+    ///
+    /// Should be called when id of body added to this env is modified. Should not be called when name of body in other env or not added to any env is modified.
+    /// \param oldId id before change
+    /// \param newId id after change
+    /// \return true if can make the change, and the changes are notified. Otherwise false meaning there will be a conflict
+    virtual bool NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) = 0;
+
     /// \brief info structure used to initialize environment
     class OPENRAVE_API EnvironmentBaseInfo : public InfoBase
     {
@@ -715,37 +794,32 @@ public:
         /// \param vInputToBodyInfoMapping maps indices into rEnvInfo["bodies"] into indices of _vBodyInfos: rEnvInfo["bodies"][i] -> _vBodyInfos[vInputToBodyInfoMapping[i]]. This forces certain _vBodyInfos to get updated with specific input. Use -1 for no mapping
         void DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping);
 
-        std::string _name;   ///< environment name
         std::string _description;   ///< environment description
         std::vector<std::string> _keywords;  ///< some string values for describinging the environment
         Vector _gravity = Vector(0,0,-9.797930195020351);  ///< gravity and gravity direction of the environment
         std::string _uri; ///< optional, the URI this environment comes from
         std::string _referenceUri; ///< optional, if the environment was opened by referencing another environment file, then this is the URI for that file.
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
+        std::map<std::string, uint64_t> _uInt64Parameters; ///< user parameters associated with the environment
         int _revision = 0;  ///< environment revision number
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;
 
     /// \brief returns environment revision number
-    inline int GetRevision() const {
-        return _revision;
-    }
+    virtual int GetRevision() const = 0;
 
-    /// \brief returns the scene name
-    inline const std::string& GetName() const {
-        return _name;
-    }
+    /// \brief sets the scene description
+    virtual void SetDescription(const std::string& sceneDescription) = 0;
 
     /// \brief returns the scene description
-    inline const std::string& GetDescription() const {
-        return _description;
-    }
+    virtual std::string GetDescription() const = 0;
+
+    /// \brief sets the scene keywords
+    virtual void SetKeywords(const std::vector<std::string>& sceneKeywords) = 0;
 
     /// \brief returns the scene keywords
-    inline const std::vector<std::string>& GetKeywords() const {
-        return _keywords;
-    }
+    virtual std::vector<std::string> GetKeywords() const = 0;
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
     virtual void ExtractInfo(EnvironmentBaseInfo& info) = 0;
@@ -755,11 +829,10 @@ public:
     /// \param vCreatedBodies the bodies created in this operation
     /// \param vModifiedBodies the bodies modified in this operation
     /// \param vRemovedBodies the bodies removed from the environment in this operation
-    /// \param updateMode one if UFIM_X
+    /// \param updateMode one of UFIM_X
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, UpdateFromInfoMode updateMode) = 0;
 
     int _revision = 0;  ///< environment current revision
-    std::string _name;   ///< environment name
     std::string _description;   ///< environment description
     std::vector<std::string> _keywords;  ///< some string values for describinging the environment
 
@@ -767,6 +840,11 @@ protected:
     virtual const char* GetHash() const {
         return OPENRAVE_ENVIRONMENT_HASH;
     }
+
+    void _InitializeInternal();
+
+    std::string _name;   ///< environment name. only set during construction and cloning.
+    std::string _formatedNameId; ///< environment name and id. \see GetNameId
 
 private:
     UserDataPtr __pUserData;         ///< \see GetUserData

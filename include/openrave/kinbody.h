@@ -123,6 +123,35 @@ public:
 
 typedef boost::shared_ptr<ElectricMotorActuatorInfo> ElectricMotorActuatorInfoPtr;
 
+///< New kinematics functions to be used by KinBody
+class OPENRAVE_API KinematicsFunctions
+{
+public:
+    virtual ~KinematicsFunctions() {
+    }
+
+    /// \brief function that sets links' transforms
+    ///
+    /// \param[in] pJointValues the full dof values of the robot in DOF order
+    /// \param[out] Output the link transforms to this vector
+    /// \return true if function completed and changed the link transforms. If returns false, the operation could not be compelted.
+    virtual bool SetLinkTransforms(const dReal* pJointValues, const std::vector<Transform*>& vLinkTransformPointers) = 0;
+};
+
+typedef boost::shared_ptr<KinematicsFunctions> KinematicsFunctionsPtr;
+
+class OPENRAVE_API KinematicsGenerator
+{
+public:
+    virtual ~KinematicsGenerator() {
+    }
+
+    /// \brief generates kinematics functions for a body and returns the struct
+    virtual KinematicsFunctionsPtr GenerateKinematicsFunctions(const KinBody& body) = 0;
+};
+
+typedef boost::shared_ptr<KinematicsGenerator> KinematicsGeneratorPtr;
+
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
  */
@@ -167,13 +196,18 @@ public:
         Prop_BodyRemoved = 0x10000000, ///< if a KinBody is removed from the environment
     };
 
+    class OPENRAVE_API Link; // forward decl
+    class OPENRAVE_API Geometry; // forward decl
+
     /// \brief used for specifying the type of limit checking and the messages associated with it
-    enum CheckLimitsAction {
+    enum CheckLimitsAction
+    {
         CLA_Nothing = 0, ///< no checking
         CLA_CheckLimits = 1, /// < checks and warns if the limits are overboard (default)
         CLA_CheckLimitsSilent = 2, ///< checks the limits and silently clamps the joint values (used if the code expects bad values as part of normal operation)
         CLA_CheckLimitsThrow = 3, ///< check the limits and throws if something went wrong
     };
+
 
     /// \brief Describes the properties of a geometric primitive.
     ///
@@ -259,8 +293,6 @@ public:
         inline const std::string& GetName() const {
             return _name;
         }
-
-        Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
@@ -373,9 +405,281 @@ public:
         /// \brief Generates the calibration board's dot grid mesh based on calibration board settings
         void GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation=1) const;
 
+        enum GeometryInfoField : uint32_t
+        {
+            GIF_Transform = (1 << 0), // _t field
+            GIF_Mesh = (1 << 1), // _meshcollision field
+        };
+
+        inline const Transform& GetTransform() const {
+            return _t;
+        }
+        inline void SetTransform(const Transform& t) {
+            _t = t;
+            _modifiedFields |= GIF_Transform;
+        }
+
+        inline bool IsModifiedField(GeometryInfoField field) const {
+            return !!(_modifiedFields & field);
+        }
+private:
+        Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
+
+        uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of GeometryInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
+
+        /// \brief adds modified fields
+        inline void AddModifiedField(GeometryInfoField field) {
+            _modifiedFields |= field;
+        }
+
+        friend class Geometry;
+        friend class Link;
+        friend class KinBody;
+        friend class RobotBase;
     };
+
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
+
+    /// \brief geometry object holding a link parent and wrapping access to a protected geometry info
+    class OPENRAVE_API Geometry
+    {
+public:
+        /// \deprecated (12/07/16)
+        static const GeometryType GeomNone RAVE_DEPRECATED = OpenRAVE::GT_None;
+        static const GeometryType GeomBox RAVE_DEPRECATED = OpenRAVE::GT_Box;
+        static const GeometryType GeomSphere RAVE_DEPRECATED = OpenRAVE::GT_Sphere;
+        static const GeometryType GeomCylinder RAVE_DEPRECATED = OpenRAVE::GT_Cylinder;
+        static const GeometryType GeomTrimesh RAVE_DEPRECATED = OpenRAVE::GT_TriMesh;
+
+        Geometry(boost::shared_ptr<Link> parent, const KinBody::GeometryInfo& info);
+        ~Geometry() {
+        }
+
+        /// \brief get local geometry transform
+        inline const Transform& GetTransform() const {
+            return _info._t;
+        }
+        inline GeometryType GetType() const {
+            return _info._type;
+        }
+
+        inline const Vector& GetRenderScale() const {
+            return _info._vRenderScale;
+        }
+
+        inline const std::string& GetRenderFilename() const {
+            return _info._filenamerender;
+        }
+        inline float GetTransparency() const {
+            return _info._fTransparency;
+        }
+        /// \deprecated (12/1/12)
+        inline bool IsDraw() const RAVE_DEPRECATED {
+            return _info._bVisible;
+        }
+        inline bool IsVisible() const {
+            return _info._bVisible;
+        }
+        inline bool IsModifiable() const {
+            return _info._bModifiable;
+        }
+
+        inline dReal GetSphereRadius() const {
+            return _info._vGeomData.x;
+        }
+        inline dReal GetCylinderRadius() const {
+            return _info._vGeomData.x;
+        }
+        inline dReal GetCylinderHeight() const {
+            return _info._vGeomData.y;
+        }
+        inline const Vector& GetBoxExtents() const {
+            return _info._vGeomData;
+        }
+        inline const Vector& GetContainerOuterExtents() const {
+            return _info._vGeomData;
+        }
+        inline const Vector& GetContainerInnerExtents() const {
+            return _info._vGeomData2;
+        }
+        inline const Vector& GetContainerBottomCross() const {
+            return _info._vGeomData3;
+        }
+        inline const Vector& GetContainerBottom() const {
+            return _info._vGeomData4;
+        }
+        inline const RaveVector<float>& GetDiffuseColor() const {
+            return _info._vDiffuseColor;
+        }
+        inline const RaveVector<float>& GetAmbientColor() const {
+            return _info._vAmbientColor;
+        }
+        inline const std::string& GetId() const {
+            return _info._id;
+        }
+        inline const std::string& GetName() const {
+            return _info._name;
+        }
+
+        /// \brief returns the local collision mesh
+        inline const TriMesh& GetCollisionMesh() const {
+            return _info._meshcollision;
+        }
+
+        inline const KinBody::GeometryInfo& GetInfo() const {
+            return _info;
+        }
+
+        inline const KinBody::GeometryInfo& UpdateAndGetInfo() {
+            UpdateInfo();
+            return _info;
+        }
+
+        void UpdateInfo();
+
+        /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+        void ExtractInfo(KinBody::GeometryInfo& info) const;
+
+        /// \brief update Geometry according to new GeometryInfo, returns false if update cannot be performed and requires InitFromInfo
+        UpdateFromInfoResult UpdateFromInfo(const KinBody::GeometryInfo& info);
+
+        /// cage
+        //@{
+        inline const Vector& GetCageBaseExtents() const {
+            return _info._vGeomData;
+        }
+
+        /// \brief compute the inner empty volume in the parent link coordinate system
+        ///
+        /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
+        bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
+        //@}
+
+        bool InitCollisionMesh(float fTessellation=1);
+
+        /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
+        AABB ComputeAABB(const Transform& trans) const;
+
+        uint8_t GetSideWallExists() const;
+
+        void serialize(std::ostream& o, int options) const;
+
+        /// \brief sets a new collision mesh and notifies every registered callback about it
+        void SetCollisionMesh(const TriMesh& mesh);
+        /// \brief sets visible flag. if changed, notifies every registered callback about it.
+        ///
+        /// \return true if changed
+        bool SetVisible(bool visible);
+
+        /// \deprecated (12/1/12)
+        inline void SetDraw(bool bDraw) RAVE_DEPRECATED {
+            SetVisible(bDraw);
+        }
+        /// \brief set transparency level (0 is opaque)
+        void SetTransparency(float f);
+        /// \brief override diffuse color of geometry material
+        void SetDiffuseColor(const RaveVector<float>& color);
+        /// \brief override ambient color of geometry material
+        void SetAmbientColor(const RaveVector<float>& color);
+
+        /// \brief validates the contact normal on the surface of the geometry and makes sure the normal faces "outside" of the shape.
+        ///
+        /// \param position the position of the contact point specified in the link's coordinate system
+        /// \param normal the unit normal of the contact point specified in the link's coordinate system
+        /// \return true if the normal is changed to face outside of the shape
+        bool ValidateContactNormal(const Vector& position, Vector& normal) const;
+
+        /// \brief sets a new render filename for the geometry. This does not change the collision
+        void SetRenderFilename(const std::string& renderfilename);
+
+        /// \brief sets the name of the geometry
+        void SetName(const std::string& name);
+
+        /// \brief generates the dot mesh of a calibration board
+        inline void GetCalibrationBoardDotMesh(TriMesh& tri) {
+            _info.GenerateCalibrationBoardDotMesh(tri);
+        }
+        /// \brief returns the color of the calibration board's dot mesh
+        inline RaveVector<float> GetCalibrationBoardDotColor() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].dotColor;
+            }
+            return Vector(0, 0, 0);
+        }
+        /// \brief returns x dimension (in dots) of the calibration board dot grid
+        inline int GetCalibrationBoardNumDotsX() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].numDotsX;
+            }
+            return 0;
+        }
+        /// \brief returns y dimension (in dots) of the calibration board dot grid
+        inline int GetCalibrationBoardNumDotsY() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].numDotsY;
+            }
+            return 0;
+        }
+        /// \brief returns x dot distance of the calibration board dot grid
+        inline dReal GetCalibrationBoardDotsDistanceX() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].dotsDistanceX;
+            }
+            return 0;
+        }
+        /// \brief returns y dot distance of the calibration board dot grid
+        inline dReal GetCalibrationBoardDotsDistanceY() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].dotsDistanceY;
+            }
+            return 0;
+        }
+
+        /// \brief returns pattern name of the calibration board dot grid
+        inline std::string GetCalibrationBoardPatternName() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].patternName;
+            }
+            return std::string();
+        }
+        /// \brief returns x dot distance of the calibration board dot grid
+        inline dReal GetCalibrationBoardDotDiameterDistanceRatio() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].dotDiameterDistanceRatio;
+            }
+            return 0;
+        }
+        /// \brief returns x dot distance of the calibration board dot grid
+        inline dReal GetCalibrationBoardBigDotDiameterDistanceRatio() const {
+            if (_info._calibrationBoardParameters.size() != 0) {
+                return _info._calibrationBoardParameters[0].bigDotDiameterDistanceRatio;
+            }
+            return 0;
+        }
+
+protected:
+        boost::weak_ptr<Link> _parent;
+        KinBody::GeometryInfo _info; ///< geometry info
+#ifdef RAVE_PRIVATE
+#ifdef _MSC_VER
+        friend class OpenRAVEXMLParser::LinkXMLReader;
+        friend class OpenRAVEXMLParser::KinBodyXMLReader;
+        friend class XFileReader;
+#else
+        friend class ::OpenRAVEXMLParser::LinkXMLReader;
+        friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
+        friend class ::XFileReader;
+#endif
+#endif
+        friend class ColladaReader;
+        friend class RobotBase;
+        friend class KinBody;
+        friend class KinBody::Link;
+    };
+
+    typedef boost::shared_ptr<Geometry> GeometryPtr;
+    typedef boost::shared_ptr<Geometry const> GeometryConstPtr;
 
     /// \brief Describes the properties of a link used to initialize it
     class OPENRAVE_API LinkInfo : public InfoBase
@@ -424,8 +728,7 @@ public:
         std::string _id;
         /// \brief unique link name
         std::string _name;
-        /// the current transformation of the link with respect to the body coordinate system
-        Transform _t;
+
         /// the frame for inertia and center of mass of the link in the link's coordinate system
         Transform _tMassFrame;
         /// mass of link
@@ -436,7 +739,7 @@ public:
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
         /// force the following links to be treated as adjacent to this link
-        std::vector<std::string> _vForcedAdjacentLinks;
+        std::vector<std::string> _vForcedAdjacentLinks; // link names. sorted.
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
         //// Static should be used when an object has infinite mass and
@@ -449,6 +752,45 @@ public:
 
         /// \brief the name of the geometry group currently set for this link
         std::string _currentGeometryGroupName;
+
+        enum LinkInfoField : uint32_t
+        {
+            LIF_Transform = (1 << 0), // _t field
+        };
+
+        inline const Transform& GetTransform() const {
+            return _t;
+        }
+        inline void SetTransform(const Transform& t) {
+            _t = t;
+            _modifiedFields |= LIF_Transform;
+        }
+
+        inline bool IsModifiedField(LinkInfoField field) const {
+            return !!(_modifiedFields & field);
+        }
+        /// \brief adds modified fields
+        inline void AddModifiedField(LinkInfoField field) {
+            _modifiedFields |= field;
+        }
+
+        inline void SetNoncollidingLink(const std::string& name) {
+            std::vector<std::string>::const_iterator it = lower_bound(_vForcedAdjacentLinks.begin(),
+                                                                      _vForcedAdjacentLinks.end(),
+                                                                      name);
+            if (it == _vForcedAdjacentLinks.end() || *it != name) {
+                _vForcedAdjacentLinks.insert(it, name);
+            }
+        }
+
+private:
+        Transform _t; ///< the current transformation of the link with respect to the body coordinate system
+
+        uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
+
+        friend class Link;
+        friend class KinBody;
+        friend class RobtBase;
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
@@ -458,10 +800,13 @@ public:
     {
 public:
         Link(KinBodyPtr parent);         ///< pass in a ODE world
-        virtual ~Link();
+        ~Link();
 
         /// \deprecated (12/10/18)
         typedef KinBody::GeometryInfo GeometryInfo RAVE_DEPRECATED;
+        typedef KinBody::Geometry Geometry;
+        typedef KinBody::GeometryPtr GeometryPtr;
+        typedef KinBody::GeometryConstPtr GeometryConstPtr;
         typedef boost::shared_ptr<KinBody::GeometryInfo> GeometryInfoPtr RAVE_DEPRECATED;
         typedef TriMesh TRIMESH RAVE_DEPRECATED;
         typedef GeometryType GeomType RAVE_DEPRECATED;
@@ -470,247 +815,6 @@ public:
         static const GeometryType GeomSphere RAVE_DEPRECATED = OpenRAVE::GT_Sphere;
         static const GeometryType GeomCylinder RAVE_DEPRECATED = OpenRAVE::GT_Cylinder;
         static const GeometryType GeomTrimesh RAVE_DEPRECATED = OpenRAVE::GT_TriMesh;
-
-        /// \brief geometry object holding a link parent and wrapping access to a protected geometry info
-        class OPENRAVE_API Geometry
-        {
-public:
-            /// \deprecated (12/07/16)
-            static const GeometryType GeomNone RAVE_DEPRECATED = OpenRAVE::GT_None;
-            static const GeometryType GeomBox RAVE_DEPRECATED = OpenRAVE::GT_Box;
-            static const GeometryType GeomSphere RAVE_DEPRECATED = OpenRAVE::GT_Sphere;
-            static const GeometryType GeomCylinder RAVE_DEPRECATED = OpenRAVE::GT_Cylinder;
-            static const GeometryType GeomTrimesh RAVE_DEPRECATED = OpenRAVE::GT_TriMesh;
-
-            Geometry(boost::shared_ptr<Link> parent, const KinBody::GeometryInfo& info);
-            virtual ~Geometry() {
-            }
-
-            /// \brief get local geometry transform
-            inline const Transform& GetTransform() const {
-                return _info._t;
-            }
-            inline GeometryType GetType() const {
-                return _info._type;
-            }
-
-            inline const Vector& GetRenderScale() const {
-                return _info._vRenderScale;
-            }
-
-            inline const std::string& GetRenderFilename() const {
-                return _info._filenamerender;
-            }
-            inline float GetTransparency() const {
-                return _info._fTransparency;
-            }
-            /// \deprecated (12/1/12)
-            inline bool IsDraw() const RAVE_DEPRECATED {
-                return _info._bVisible;
-            }
-            inline bool IsVisible() const {
-                return _info._bVisible;
-            }
-            inline bool IsModifiable() const {
-                return _info._bModifiable;
-            }
-
-            inline dReal GetSphereRadius() const {
-                return _info._vGeomData.x;
-            }
-            inline dReal GetCylinderRadius() const {
-                return _info._vGeomData.x;
-            }
-            inline dReal GetCylinderHeight() const {
-                return _info._vGeomData.y;
-            }
-            inline const Vector& GetBoxExtents() const {
-                return _info._vGeomData;
-            }
-            inline const Vector& GetContainerOuterExtents() const {
-                return _info._vGeomData;
-            }
-            inline const Vector& GetContainerInnerExtents() const {
-                return _info._vGeomData2;
-            }
-            inline const Vector& GetContainerBottomCross() const {
-                return _info._vGeomData3;
-            }
-            inline const Vector& GetContainerBottom() const {
-                return _info._vGeomData4;
-            }
-            inline const RaveVector<float>& GetDiffuseColor() const {
-                return _info._vDiffuseColor;
-            }
-            inline const RaveVector<float>& GetAmbientColor() const {
-                return _info._vAmbientColor;
-            }
-            inline const std::string& GetId() const {
-                return _info._id;
-            }
-            inline const std::string& GetName() const {
-                return _info._name;
-            }
-
-            /// \brief returns the local collision mesh
-            inline const TriMesh& GetCollisionMesh() const {
-                return _info._meshcollision;
-            }
-
-            inline const KinBody::GeometryInfo& GetInfo() const {
-                return _info;
-            }
-
-            inline const KinBody::GeometryInfo& UpdateAndGetInfo() {
-                UpdateInfo();
-                return _info;
-            }
-
-            virtual void UpdateInfo();
-
-            /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-            virtual void ExtractInfo(KinBody::GeometryInfo& info) const;
-
-            /// \brief update Geometry according to new GeometryInfo, returns false if update cannot be performed and requires InitFromInfo
-            virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::GeometryInfo& info);
-
-            /// cage
-            //@{
-            inline const Vector& GetCageBaseExtents() const {
-                return _info._vGeomData;
-            }
-
-            /// \brief compute the inner empty volume in the parent link coordinate system
-            ///
-            /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
-            virtual bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
-            //@}
-
-            virtual bool InitCollisionMesh(float fTessellation=1);
-
-            /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
-            virtual AABB ComputeAABB(const Transform& trans) const;
-
-            virtual uint8_t GetSideWallExists() const;
-
-            virtual void serialize(std::ostream& o, int options) const;
-
-            /// \brief sets a new collision mesh and notifies every registered callback about it
-            virtual void SetCollisionMesh(const TriMesh& mesh);
-            /// \brief sets visible flag. if changed, notifies every registered callback about it.
-            ///
-            /// \return true if changed
-            virtual bool SetVisible(bool visible);
-
-            /// \deprecated (12/1/12)
-            inline void SetDraw(bool bDraw) RAVE_DEPRECATED {
-                SetVisible(bDraw);
-            }
-            /// \brief set transparency level (0 is opaque)
-            virtual void SetTransparency(float f);
-            /// \brief override diffuse color of geometry material
-            virtual void SetDiffuseColor(const RaveVector<float>& color);
-            /// \brief override ambient color of geometry material
-            virtual void SetAmbientColor(const RaveVector<float>& color);
-
-            /// \brief validates the contact normal on the surface of the geometry and makes sure the normal faces "outside" of the shape.
-            ///
-            /// \param position the position of the contact point specified in the link's coordinate system
-            /// \param normal the unit normal of the contact point specified in the link's coordinate system
-            /// \return true if the normal is changed to face outside of the shape
-            virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
-
-            /// \brief sets a new render filename for the geometry. This does not change the collision
-            virtual void SetRenderFilename(const std::string& renderfilename);
-
-            /// \brief sets the name of the geometry
-            virtual void SetName(const std::string& name);
-
-            /// \brief generates the dot mesh of a calibration board
-            inline void GetCalibrationBoardDotMesh(TriMesh& tri) {
-                _info.GenerateCalibrationBoardDotMesh(tri);
-            }
-            /// \brief returns the color of the calibration board's dot mesh
-            inline RaveVector<float> GetCalibrationBoardDotColor() const {
-                if (_info._calibrationBoardParameters.size() != 0) {
-                    return _info._calibrationBoardParameters[0].dotColor;
-                }
-                return Vector(0, 0, 0);
-            }
-            /// \brief returns x dimension (in dots) of the calibration board dot grid
-            inline int GetCalibrationBoardNumDotsX() const {
-                if (_info._calibrationBoardParameters.size() != 0) {
-                    return _info._calibrationBoardParameters[0].numDotsX;
-                }
-                return 0;
-            }
-            /// \brief returns y dimension (in dots) of the calibration board dot grid
-            inline int GetCalibrationBoardNumDotsY() const {
-                if (_info._calibrationBoardParameters.size() != 0) {
-                    return _info._calibrationBoardParameters[0].numDotsY;
-                }
-                return 0;
-            }
-            /// \brief returns x dot distance of the calibration board dot grid
-            inline dReal GetCalibrationBoardDotsDistanceX() const {
-                if (_info._calibrationBoardParameters.size() != 0) {
-                    return _info._calibrationBoardParameters[0].dotsDistanceX;
-                }
-                return 0;
-            }
-            /// \brief returns y dot distance of the calibration board dot grid
-            inline dReal GetCalibrationBoardDotsDistanceY() const {
-                if (_info._calibrationBoardParameters.size() != 0) {
-                    return _info._calibrationBoardParameters[0].dotsDistanceY;
-                }
-                return 0;
-            }
-
-            /// \brief returns pattern name of the calibration board dot grid
-            inline std::string GetCalibrationBoardPatternName() const {
-                if (_info._calibrationBoardParameters.size() != 0) {
-                    return _info._calibrationBoardParameters[0].patternName;
-                }
-                return std::string();
-            }
-            /// \brief returns x dot distance of the calibration board dot grid
-            inline dReal GetCalibrationBoardDotDiameterDistanceRatio() const {
-                if (_info._calibrationBoardParameters.size() != 0) {
-                    return _info._calibrationBoardParameters[0].dotDiameterDistanceRatio;
-                }
-                return 0;
-            }
-            /// \brief returns x dot distance of the calibration board dot grid
-            inline dReal GetCalibrationBoardBigDotDiameterDistanceRatio() const {
-                if (_info._calibrationBoardParameters.size() != 0) {
-                    return _info._calibrationBoardParameters[0].bigDotDiameterDistanceRatio;
-                }
-                return 0;
-            }
-
-protected:
-            boost::weak_ptr<Link> _parent;
-            KinBody::GeometryInfo _info; ///< geometry info
-#ifdef RAVE_PRIVATE
-#ifdef _MSC_VER
-            friend class OpenRAVEXMLParser::LinkXMLReader;
-            friend class OpenRAVEXMLParser::KinBodyXMLReader;
-            friend class XFileReader;
-#else
-            friend class ::OpenRAVEXMLParser::LinkXMLReader;
-            friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
-            friend class ::XFileReader;
-#endif
-#endif
-            friend class ColladaReader;
-            friend class RobotBase;
-            friend class KinBody;
-            friend class KinBody::Link;
-        };
-
-        typedef boost::shared_ptr<Geometry> GeometryPtr;
-        typedef boost::shared_ptr<Geometry const> GeometryConstPtr;
-        typedef Geometry GEOMPROPERTIES RAVE_DEPRECATED;
 
         inline const std::string& GetId() const {
             return _info._id;
@@ -731,18 +835,18 @@ protected:
         }
 
         /// \brief Enables a Link. An enabled link takes part in collision detection and physics simulations
-        virtual void Enable(bool enable);
+        void Enable(bool enable);
 
         /// \brief returns true if the link is enabled. \see Enable
-        virtual bool IsEnabled() const;
+        bool IsEnabled() const;
 
         /// \brief Sets all the geometries of the link as visible or non visible.
         ///
         /// \return true if changed
-        virtual bool SetVisible(bool visible);
+        bool SetVisible(bool visible);
 
         /// \return true if any geometry of the link is visible.
-        virtual bool IsVisible() const;
+        bool IsVisible() const;
 
         /// \brief parent body that link belongs to.
         ///
@@ -765,24 +869,24 @@ protected:
         }
 
         /// \brief Compute the aabb of all the geometries of the link in the link coordinate system
-        virtual AABB ComputeLocalAABB() const;
+        AABB ComputeLocalAABB() const;
 
         /// \brief Compute the aabb of all the geometries of the link in the world coordinate system
-        virtual AABB ComputeAABB() const;
+        AABB ComputeAABB() const;
 
         /// \brief returns an axis-aligned bounding box when link has transform tLink.
         ///
         /// AABB equivalent to setting link transform to tLink and calling ComptueAABB()
         /// \brief tLink the world transform to put this link in when computing the AABB
-        virtual AABB ComputeAABBFromTransform(const Transform& tLink) const;
+        AABB ComputeAABBFromTransform(const Transform& tLink) const;
 
-        /// \brief Compute the aabb of all the geometries from the given groupname
-        virtual AABB ComputeAABBForGeometryGroup(const std::string& geomgroupname) const;
-        virtual AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const;
-        virtual AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tLink) const;
+        /// \brief Compute the aabb of all the geometries from the given groupname. If the given geomgroupname does not exist in this link, will throw an exception.
+        AABB ComputeAABBForGeometryGroup(const std::string& geomgroupname) const;
+        AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const;
+        AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tLink) const;
 
         /// \brief Return the current transformation of the link in the world coordinate system.
-        inline Transform GetTransform() const {
+        inline const Transform& GetTransform() const {
             return _info._t;
         }
 
@@ -791,7 +895,7 @@ protected:
         /// A parent link is is immediately connected to this link by a joint and has a path to the root joint so that it is possible
         /// to compute this link's transformation from its parent.
         /// \param[out] filled with the parent links
-        virtual void GetParentLinks(std::vector< boost::shared_ptr<Link> >& vParentLinks) const;
+        void GetParentLinks(std::vector< boost::shared_ptr<Link> >& vParentLinks) const;
 
         /// \brief Tests if a link is a direct parent.
         ///
@@ -800,7 +904,7 @@ protected:
         bool IsParentLink(boost::shared_ptr<Link const> plink) const RAVE_DEPRECATED {
             return IsParentLink(*plink);
         }
-        virtual bool IsParentLink(const Link &link) const;
+        bool IsParentLink(const Link &link) const;
 
         /// \brief return center of mass offset in the link's local coordinate frame
         inline Vector GetLocalCOM() const {
@@ -817,19 +921,19 @@ protected:
         }
 
         /// \brief return inertia in link's local coordinate frame. The translation component is the the COM in the link's frame.
-        virtual TransformMatrix GetLocalInertia() const;
+        TransformMatrix GetLocalInertia() const;
 
         // \brief return inertia around the link's COM in the global coordinate frame.
-        virtual TransformMatrix GetGlobalInertia() const;
+        TransformMatrix GetGlobalInertia() const;
 
         /// \brief sets a new mass frame with respect to the link coordinate system
-        virtual void SetLocalMassFrame(const Transform& massframe);
+        void SetLocalMassFrame(const Transform& massframe);
 
         /// \brief sets new principal moments of inertia (with respect to the mass frame)
-        virtual void SetPrincipalMomentsOfInertia(const Vector& inertiamoments);
+        void SetPrincipalMomentsOfInertia(const Vector& inertiamoments);
 
         /// \brief set a new mass
-        virtual void SetMass(dReal mass);
+        void SetMass(dReal mass);
 
         /// \brief return the mass frame in the link's local coordinate system that holds the center of mass and principal axes for inertia.
         inline const Transform& GetLocalMassFrame() const {
@@ -852,105 +956,111 @@ protected:
         /// \brief sets a link to be static.
         ///
         /// Because this can affect the kinematics, it requires the body's internal structures to be recomputed
-        virtual void SetStatic(bool bStatic);
+        void SetStatic(bool bStatic);
 
         /// \brief Sets the transform of the link regardless of kinematics
         ///
-        /// \param[in] t the new transformation
-        virtual void SetTransform(const Transform& transform);
+        /// \param[in] transform the new transformation
+        void SetTransform(const Transform& transform);
 
         /// adds an external force at pos (absolute coords)
         /// \param[in] force the direction and magnitude of the force
         /// \param[in] pos in the world where the force is getting applied
         /// \param[in] add if true, force is added to previous forces, otherwise it is set
-        virtual void SetForce(const Vector& force, const Vector& pos, bool add);
+        void SetForce(const Vector& force, const Vector& pos, bool add);
 
         /// adds torque to a body (absolute coords)
         /// \param add if true, torque is added to previous torques, otherwise it is set
-        virtual void SetTorque(const Vector& torque, bool add);
+        void SetTorque(const Vector& torque, bool add);
 
         /// forces the velocity of the link
         /// \param[in] linearvel the translational velocity
         /// \param[in] angularvel is the rotation axis * angular speed
-        virtual void SetVelocity(const Vector& linearvel, const Vector& angularvel);
+        void SetVelocity(const Vector& linearvel, const Vector& angularvel);
 
         /// \brief get the velocity of the link
         /// \param[out] linearvel the translational velocity
         /// \param[out] angularvel is the rotation axis * angular speed
-        virtual void GetVelocity(Vector& linearvel, Vector& angularvel) const;
+        void GetVelocity(Vector& linearvel, Vector& angularvel) const;
 
         /// \brief return the linear/angular velocity of the link
-        virtual std::pair<Vector,Vector> GetVelocity() const;
+        std::pair<Vector,Vector> GetVelocity() const;
 
         /// \brief returns a list of all the geometry objects.
         inline const std::vector<GeometryPtr>& GetGeometries() const {
             return _vGeometries;
         }
-        virtual GeometryPtr GetGeometry(int index);
+        GeometryPtr GetGeometry(int index);
 
         /// \brief inits the current geometries with the new geometry info.
         ///
         /// This gives a user control for dynamically changing the object geometry. Note that the kinbody/robot hash could change.
         /// \param geometries a list of geometry infos to be initialized into new geometry objects, note that the geometry info data is copied
         /// \param bForceRecomputeMeshCollision if true, then recompute mesh collision for all non-tri meshes
-        virtual void InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision=true);
-        virtual void InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision=true);
+        void InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision=true);
+        void InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision=true);
 
         /// \brief adds geometry info to all the current geometries and possibly stored extra group geometries
         ///
         /// Will store the geometry pointer to use for later, so do not modify after this.
         /// \param addToGroups if true, will add the same ginfo to all groups
-        virtual void AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroups);
+        void AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroups);
+
+        /// \brief adds geometry info to the geometry group specified by groupname
+        ///
+        /// Will store the geometry pointer to use for later, so do not modify after this.
+        /// \param groupname the name of the geometry group to add this new geometry info to
+        void AddGeometryToGroup(KinBody::GeometryInfoPtr pginfo, const std::string& groupname);
 
         /// \brief removes geometry that matches a name from the current geometries and possibly stored extra group geometries
         ///
         /// \param removeFromAllGroups if true, will check and remove the geometry from all stored groups
-        virtual void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
+        void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
 
         /// \brief initializes the link with geometries from the extra geomeries in LinkInfo
         ///
         /// \param name The name of the geometry group. If name is empty, will initialize the default geometries.
         /// \throw If name does not exist in GetInfo()._mapExtraGeometries, then throw an exception.
-        virtual void SetGeometriesFromGroup(const std::string& name);
+        void SetGeometriesFromGroup(const std::string& name);
 
         /// \brief returns a const reference to the vector of geometries for a particular group
         ///
         /// \param name The name of the geometry group.
         /// \throw openrave_exception If the group does not exist, throws an exception.
-        virtual const std::vector<KinBody::GeometryInfoPtr>& GetGeometriesFromGroup(const std::string& name) const;
+        const std::vector<KinBody::GeometryInfoPtr>& GetGeometriesFromGroup(const std::string& name) const;
 
         /// \brief stores geometries for later retrieval
         ///
         /// the list is stored inside _GetInfo()._mapExtraGeometries. Note that the pointers are copied and not the data, so
         /// any be careful not to modify the geometries afterwards
-        virtual void SetGroupGeometries(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
+        void SetGroupGeometries(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
         /// \brief returns the number of geometries stored from a particular key
         ///
         /// \return if -1, then the geometries are not in _mapExtraGeometries, otherwise the number
-        virtual int GetGroupNumGeometries(const std::string& name) const;
+        int GetGroupNumGeometries(const std::string& name) const;
 
         /// \brief swaps the geometries with the link
-        virtual void SwapGeometries(boost::shared_ptr<Link>& link);
+        void SwapGeometries(boost::shared_ptr<Link>& link);
 
         /// validates the contact normal on link and makes sure the normal faces "outside" of the geometry shape it lies on. An exception can be thrown if position is not on a geometry surface
         /// \param position the position of the contact point specified in the link's coordinate system, assumes it is on a particular geometry
         /// \param normal the unit normal of the contact point specified in the link's coordinate system
         /// \return true if the normal is changed to face outside of the shape
-        virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
+        bool ValidateContactNormal(const Vector& position, Vector& normal) const;
 
         /// \brief returns true if plink is rigidily attahced to this link.
         bool IsRigidlyAttached(boost::shared_ptr<Link const> plink) const RAVE_DEPRECATED {
             return IsRigidlyAttached(*plink);
         }
-        virtual bool IsRigidlyAttached(const Link &link) const;
+        bool IsRigidlyAttached(const Link &link) const;
 
         /// \brief Gets all the rigidly attached links to linkindex, also adds the link to the list.
         ///
         /// \param vattachedlinks the array to insert all links attached to linkindex with the link itself.
-        virtual void GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> >& vattachedlinks) const;
+        void GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> >& vattachedlinks) const;
 
-        virtual void serialize(std::ostream& o, int options) const;
+        void serialize(std::ostream& o, int options) const;
 
         /// \brief return a map of custom float parameters
         inline const std::map<std::string, std::vector<dReal> >& GetFloatParameters() const {
@@ -960,7 +1070,7 @@ protected:
         /// \brief set custom float parameters
         ///
         /// \param parameters if empty, then removes the parameter
-        virtual void SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters);
+        void SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters);
 
         /// \brief return a map of custom integer parameters
         inline const std::map<std::string, std::vector<int> >& GetIntParameters() const {
@@ -970,7 +1080,7 @@ protected:
         /// \brief set custom int parameters
         ///
         /// \param parameters if empty, then removes the parameter
-        virtual void SetIntParameters(const std::string& key, const std::vector<int>& parameters);
+        void SetIntParameters(const std::string& key, const std::vector<int>& parameters);
 
         /// \brief return a map of custom float parameters
         inline const std::map<std::string, std::string >& GetStringParameters() const {
@@ -980,10 +1090,10 @@ protected:
         /// \brief set custom string parameters
         ///
         /// \param value if empty, then removes the parameter
-        virtual void SetStringParameters(const std::string& key, const std::string& value);
+        void SetStringParameters(const std::string& key, const std::string& value);
 
         /// \brief Updates several fields in \ref _info depending on the current state of the link
-        virtual void UpdateInfo();
+        void UpdateInfo();
 
         /// \brief returns the current info structure of the link.
         ///
@@ -1000,16 +1110,16 @@ protected:
         }
 
         /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-        virtual void ExtractInfo(KinBody::LinkInfo& info) const;
+        void ExtractInfo(KinBody::LinkInfo& info) const;
 
         /// \brief update Link according to new LinkInfo, returns false if update cannot be performed and requires InitFromInfo
-        virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::LinkInfo& info);
+        UpdateFromInfoResult UpdateFromInfo(const KinBody::LinkInfo& info);
 
 protected:
         /// \brief Updates the cached information due to changes in the collision data.
         ///
         /// \param parameterschanged if true, will
-        virtual void _Update(bool parameterschanged=true, uint32_t extraParametersChanged=0);
+        void _Update(bool parameterschanged=true, uint32_t extraParametersChanged=0);
 
         std::vector<GeometryPtr> _vGeometries;         ///< \see GetGeometries
 
@@ -1194,7 +1304,20 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
-        int GetDOF() const;
+        inline int GetDOF() const {
+            if(_type & KinBody::JointSpecialBit) {
+                switch(_type) {
+                case KinBody::JointHinge2:
+                case KinBody::JointUniversal: return 2;
+                case KinBody::JointSpherical: return 3;
+                case KinBody::JointTrajectory: return 1;
+                default:
+                    throw OPENRAVE_EXCEPTION_FORMAT("invalid joint type 0x%x", _type, ORE_Failed);
+                }
+            }
+
+            return int(_type & 0xf);
+        }
 
         inline const std::string& GetId() const {
             return _id;
@@ -1285,7 +1408,7 @@ public:
         static const KinBody::JointType JointTrajectory RAVE_DEPRECATED = KinBody::JointTrajectory;
 
         Joint(KinBodyPtr parent, KinBody::JointType type = KinBody::JointNone);
-        virtual ~Joint();
+        ~Joint();
 
         inline const std::string& GetId() const {
             return _info._id;
@@ -1360,10 +1483,10 @@ public:
             }
         }
 
-        inline LinkPtr GetFirstAttached() const {
+        inline const LinkPtr& GetFirstAttached() const {
             return _attachedbodies[0];
         }
-        inline LinkPtr GetSecondAttached() const {
+        inline const LinkPtr& GetSecondAttached() const {
             return _attachedbodies[1];
         }
 
@@ -1374,23 +1497,27 @@ public:
         /// \brief gets all resolutions for the joint axes
         ///
         /// \param[in] bAppend if true will append to the end of the vector instead of erasing it
-        virtual void GetResolutions(std::vector<dReal>& resolutions, bool bAppend=false) const;
+        void GetResolutions(std::vector<dReal>& resolutions, bool bAppend=false) const;
 
         /// \brief The discretization of the joint used when line-collision checking.
         ///
         /// The resolutions are set as large as possible such that the joint will not go through obstacles of determined size.
-        virtual dReal GetResolution(int iaxis=0) const;
+        dReal GetResolution(int iaxis=0) const;
 
-        virtual void SetResolution(dReal resolution, int iaxis=0);
+        void SetResolution(dReal resolution, int iaxis=0);
 
         /// \brief The degrees of freedom of the joint. Each joint supports a max of 3 degrees of freedom.
-        virtual int GetDOF() const;
+        inline int GetDOF() const {
+            return _info.GetDOF();
+        }
 
         /// \brief Return true if any of the joint axes has an identification at some of its lower and upper limits.
-        virtual bool IsCircular() const;
+        inline bool IsCircular() const {
+            return _info._bIsCircular[0] || _info._bIsCircular[1] || _info._bIsCircular[2];
+        }
 
         /// \brief Return true if joint is active
-        virtual bool IsActive() const;
+        bool IsActive() const;
 
         /// \brief Return true if joint axis has an identification at some of its lower and upper limits.
         ///
@@ -1398,50 +1525,53 @@ public:
         /// at its lower limit. The most common identification on revolute joints at -pi and pi. 'circularity' means the
         /// joint does not stop at limits.
         /// Although currently not developed, it could be possible to support identification for joints that are not revolute.
-        virtual bool IsCircular(int iaxis) const;
+        inline bool IsCircular(int iaxis) const {
+            return static_cast<bool>(_info._bIsCircular[iaxis]);
+        }
 
         /// \brief returns true if the axis describes a rotation around an axis.
         ///
         /// \param iaxis the axis of the joint to return the results for
-        virtual bool IsRevolute(int iaxis) const;
+        bool IsRevolute(int iaxis) const;
 
         /// \brief returns true if the axis describes a translation around an axis.
         ///
         /// \param iaxis the axis of the joint to return the results for
-        virtual bool IsPrismatic(int iaxis) const;
+        bool IsPrismatic(int iaxis) const;
 
         /// \brief Return true if joint can be treated as a static binding (ie all limits are 0)
-        virtual bool IsStatic() const;
+        bool IsStatic() const;
 
         /// \brief Return all the joint values with the correct offsets applied
         ///
         /// \param bAppend if true will append to the end of the vector instead of erasing it
         /// \return degrees of freedom of the joint (even if pValues is NULL)
-        virtual void GetValues(std::vector<dReal>& values, bool bAppend=false) const;
-        virtual void GetValues(boost::array<dReal, 3>& values) const;
+        void GetValues(std::vector<dReal>& values, bool bAppend=false) const;
+        void GetValues(boost::array<dReal,3>& values) const;
 
         /// \brief Return the value of the specified joint axis only.
-        virtual dReal GetValue(int axis) const;
+        dReal GetValue(int axis) const;
 
         /// \brief Gets the joint velocities
         ///
         /// \param bAppend if true will append to the end of the vector instead of erasing it
         /// \return the degrees of freedom of the joint (even if pValues is NULL)
-        virtual void GetVelocities(std::vector<dReal>& values, bool bAppend=false) const;
+        void GetVelocities(std::vector<dReal>& values, bool bAppend=false) const;
+        void GetVelocities(boost::array<dReal,3>& values) const;
 
         /// \brief Return the velocity of the specified joint axis only.
-        virtual dReal GetVelocity(int axis) const;
+        dReal GetVelocity(int axis) const;
 
         /// \brief Add effort (force or torque) to the joint
-        virtual void AddTorque(const std::vector<dReal>& torques);
+        void AddTorque(const std::vector<dReal>& torques);
 
         /// \brief The anchor of the joint in global coordinates.
-        virtual Vector GetAnchor() const;
+        Vector GetAnchor() const;
 
         /// \brief The axis of the joint in global coordinates
         ///
         /// \param[in] axis the axis to get
-        virtual Vector GetAxis(int axis = 0) const;
+        Vector GetAxis(int axis = 0) const;
 
         /** \brief Get the limits of the joint
 
@@ -1449,129 +1579,144 @@ public:
             \param[out] vUpperLimit the upper limits
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
          */
-        virtual void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend=false) const;
+        void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend=false) const;
+
+        inline void GetLimits(boost::array<dReal,3>& vLowerLimit, boost::array<dReal,3>& vUpperLimit) const {
+            vLowerLimit = _info._vlowerlimit;
+            vUpperLimit = _info._vupperlimit;
+        }
 
         /// \brief returns the lower and upper limit of one axis of the joint
-        virtual std::pair<dReal, dReal> GetLimit(int iaxis=0) const;
+        inline std::pair<dReal, dReal> GetLimit(int iaxis=0) const {
+            return std::make_pair(_info._vlowerlimit.at(iaxis),_info._vupperlimit.at(iaxis));
+        }
+
+        inline dReal GetLowerLimit(int iaxis=0) const {
+            return _info._vlowerlimit[iaxis];
+        }
+
+        inline dReal GetUpperLimit(int iaxis=0) const {
+            return _info._vupperlimit[iaxis];
+        }
 
         /// \brief \see GetLimits
-        virtual void SetLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
+        void SetLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
 
         /** \brief Returns the max velocities of the joint
 
             \param[out] the max velocity
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
          */
-        virtual void GetVelocityLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+        void GetVelocityLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
 
-        virtual void GetVelocityLimits(std::vector<dReal>& vlower, std::vector<dReal>& vupper, bool bAppend=false) const;
+        void GetVelocityLimits(std::vector<dReal>& vlower, std::vector<dReal>& vupper, bool bAppend=false) const;
 
         /// \brief returns the lower and upper velocity limit of one axis of the joint
-        virtual std::pair<dReal, dReal> GetVelocityLimit(int iaxis=0) const;
+        std::pair<dReal, dReal> GetVelocityLimit(int iaxis=0) const;
 
         /// \brief \see GetVelocityLimits
-        virtual void SetVelocityLimits(const std::vector<dReal>& vmax);
+        void SetVelocityLimits(const std::vector<dReal>& vmax);
 
         /** \brief Returns the max accelerations of the joint
 
             \param[out] the max acceleration
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
          */
-        virtual void GetAccelerationLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+        void GetAccelerationLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
 
-        virtual dReal GetAccelerationLimit(int iaxis=0) const;
+        dReal GetAccelerationLimit(int iaxis=0) const;
 
         /// \brief \see GetAccelerationLimits
-        virtual void SetAccelerationLimits(const std::vector<dReal>& vmax);
+        void SetAccelerationLimits(const std::vector<dReal>& vmax);
 
         /** \brief Returns the max jerks of the joint
 
             \param[out] the max jerk
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
          */
-        virtual void GetJerkLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+        void GetJerkLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
 
-        virtual dReal GetJerkLimit(int iaxis=0) const;
+        dReal GetJerkLimit(int iaxis=0) const;
 
         /// \brief \see GetJerkLimits
-        virtual void SetJerkLimits(const std::vector<dReal>& vmax);
+        void SetJerkLimits(const std::vector<dReal>& vmax);
 
         /** \brief Returns the hard max velocities of the joint
 
             \param[out] the max vel
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
          */
-        virtual void GetHardVelocityLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+        void GetHardVelocityLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
 
-        virtual dReal GetHardVelocityLimit(int iaxis=0) const;
+        dReal GetHardVelocityLimit(int iaxis=0) const;
 
         /// \brief \see GetHardVelocityLimits
-        virtual void SetHardVelocityLimits(const std::vector<dReal>& vmax);
+        void SetHardVelocityLimits(const std::vector<dReal>& vmax);
 
         /** \brief Returns the hard max accelerations of the joint
 
             \param[out] the max accel
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
          */
-        virtual void GetHardAccelerationLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+        void GetHardAccelerationLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
 
-        virtual dReal GetHardAccelerationLimit(int iaxis=0) const;
+        dReal GetHardAccelerationLimit(int iaxis=0) const;
 
         /// \brief \see GetHardAccelerationLimits
-        virtual void SetHardAccelerationLimits(const std::vector<dReal>& vmax);
+        void SetHardAccelerationLimits(const std::vector<dReal>& vmax);
 
         /** \brief Returns the hard max jerks of the joint
 
             \param[out] the max jerk
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
          */
-        virtual void GetHardJerkLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+        void GetHardJerkLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
 
-        virtual dReal GetHardJerkLimit(int iaxis=0) const;
+        dReal GetHardJerkLimit(int iaxis=0) const;
 
         /// \brief \see GetHardJerkLimits
-        virtual void SetHardJerkLimits(const std::vector<dReal>& vmax);
+        void SetHardJerkLimits(const std::vector<dReal>& vmax);
 
         /** \brief Returns the max torques of the joint
 
             \param[out] the max torque
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
          */
-        virtual void GetTorqueLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+        void GetTorqueLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
 
         /// \brief \see GetTorqueLimits
-        virtual void SetTorqueLimits(const std::vector<dReal>& vmax);
+        void SetTorqueLimits(const std::vector<dReal>& vmax);
 
         /** \brief Returns the max inertias of the joint
 
             \param[out] the max inertia
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
          */
-        virtual void GetInertiaLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+        void GetInertiaLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
 
         /// \brief \see GetInertiaLimits
-        virtual void SetInertiaLimits(const std::vector<dReal>& vmax);
+        void SetInertiaLimits(const std::vector<dReal>& vmax);
 
         /// \brief gets all weights for the joint axes
         ///
         /// \param[in] bAppend if true will append to the end of the vector instead of erasing it
-        virtual void GetWeights(std::vector<dReal>& weights, bool bAppend=false) const;
+        void GetWeights(std::vector<dReal>& weights, bool bAppend=false) const;
 
         /// \brief The weight associated with a joint's axis for computing a distance in the robot configuration space.
-        virtual dReal GetWeight(int axis=0) const;
+        dReal GetWeight(int axis=0) const;
 
         /// \brief \see GetWeight
-        virtual void SetWeights(const std::vector<dReal>& weights);
+        void SetWeights(const std::vector<dReal>& weights);
 
         /// \brief Computes the configuration difference values1-values2 and stores it in values1.
         ///
         /// Takes into account joint limits and wrapping of circular joints.
-        virtual void SubtractValues(std::vector<dReal>& values1, const std::vector<dReal>& values2) const;
+        void SubtractValues(std::vector<dReal>& values1, const std::vector<dReal>& values2) const;
 
         /// \brief Returns the configuration difference value1-value2 for axis i.
         ///
         /// Takes into account joint limits and wrapping of circular joints.
-        virtual dReal SubtractValue(dReal value1, dReal value2, int iaxis) const;
+        dReal SubtractValue(dReal value1, dReal value2, int iaxis) const;
 
         /// \brief Return internal offset parameter that determines the branch the angle centers on
         ///
@@ -1587,22 +1732,22 @@ public:
         }
 
         /// \brief \see GetWrapOffset
-        virtual void SetWrapOffset(dReal offset, int iaxis=0);
+        void SetWrapOffset(dReal offset, int iaxis=0);
 
-        virtual void serialize(std::ostream& o, int options) const;
+        void serialize(std::ostream& o, int options) const;
 
         /// @name Internal Hierarchy Methods
         //@{
         /// \brief Return the parent link which the joint measures its angle off from (either GetFirstAttached() or GetSecondAttached())
-        virtual LinkPtr GetHierarchyParentLink() const;
+        LinkPtr GetHierarchyParentLink() const;
         /// \brief Return the child link whose transformation is computed by this joint's values (either GetFirstAttached() or GetSecondAttached())
-        virtual LinkPtr GetHierarchyChildLink() const;
+        LinkPtr GetHierarchyChildLink() const;
         /// \brief The axis of the joint in local coordinates.
-        virtual const Vector& GetInternalHierarchyAxis(int axis = 0) const;
+        const Vector& GetInternalHierarchyAxis(int axis = 0) const;
         /// \brief Left multiply transform given the base body.
-        virtual const Transform& GetInternalHierarchyLeftTransform() const;
+        const Transform& GetInternalHierarchyLeftTransform() const;
         /// \brief Right multiply transform given the base body.
-        virtual const Transform& GetInternalHierarchyRightTransform() const;
+        const Transform& GetInternalHierarchyRightTransform() const;
         //@}
 
         /// A mimic joint's angles are automatically determined from other joints based on a general purpose formula.
@@ -1611,14 +1756,14 @@ public:
         //@{
 
         /// \deprecated (11/1/1)
-        virtual int GetMimicJointIndex() const RAVE_DEPRECATED;
+        int GetMimicJointIndex() const RAVE_DEPRECATED;
         /// \deprecated (11/1/1)
-        virtual const std::vector<dReal> GetMimicCoeffs() const RAVE_DEPRECATED;
+        const std::vector<dReal> GetMimicCoeffs() const RAVE_DEPRECATED;
 
         /// \brief Returns true if a particular axis of the joint is mimiced.
         ///
         /// \param axis the axis to query. When -1 returns true if any of the axes have mimic joints
-        virtual bool IsMimic(int axis=-1) const;
+        bool IsMimic(int axis=-1) const;
 
         /** \brief If the joint is mimic, returns the equation to compute its value
 
@@ -1630,7 +1775,7 @@ public:
 
             Set 'format' to "mathml". The joint variables are specified with <csymbol>. If a targetted joint has more than one degree of freedom, then axis is suffixed with _\%d. If 'type' is 1 or 2, the partial derivatives are outputted as consecutive <math></math> tags in the same order as \ref Mimic::_vdofformat
          */
-        virtual std::string GetMimicEquation(int axis=0, int type=0, const std::string& format="") const;
+        std::string GetMimicEquation(int axis=0, int type=0, const std::string& format="") const;
 
         /** \brief Returns the set of DOF indices that the computation of a joint axis depends on. Order is arbitrary.
 
@@ -1638,7 +1783,7 @@ public:
             copied over. Therefore, the dof indices returned can be more than the actual variables used in the equation.
             \throw openrave_exception Throws an exception if the axis is not mimic.
          */
-        virtual void GetMimicDOFIndices(std::vector<int>& vmimicdofs, int axis=0) const;
+        void GetMimicDOFIndices(std::vector<int>& vmimicdofs, int axis=0) const;
 
         /** \brief Sets the mimic properties of the joint.
 
@@ -1659,7 +1804,7 @@ public:
             \param[in] acceleq Second-order partial derivatives of poseq with respect to all used DOFs. Only the variables used in poseq are allowed to be used. Optional.
             \throw openrave_exception Throws an exception if the mimic equation is invalid in any way.
          */
-        virtual void SetMimicEquations(int axis, const std::string& poseq, const std::string& veleq, const std::string& acceleq="");
+        void SetMimicEquations(int axis, const std::string& poseq, const std::string& veleq, const std::string& acceleq="");
         //@}
 
         /// \brief return a map of custom float parameters
@@ -1670,7 +1815,7 @@ public:
         /// \brief set custom float parameters
         ///
         /// \param parameters if empty, then removes the parameter
-        virtual void SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters);
+        void SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters);
 
         /// \brief return a map of custom integer parameters
         inline const std::map<std::string, std::vector<int> >& GetIntParameters() const {
@@ -1680,7 +1825,7 @@ public:
         /// \brief set custom int parameters
         ///
         /// \param parameters if empty, then removes the parameter
-        virtual void SetIntParameters(const std::string& key, const std::vector<int>& parameters);
+        void SetIntParameters(const std::string& key, const std::vector<int>& parameters);
 
         /// \brief return a map of custom string parameters
         inline const std::map<std::string, std::string >& GetStringParameters() const {
@@ -1690,7 +1835,7 @@ public:
         /// \brief set custom string parameters
         ///
         /// \param parameters if empty, then removes the parameter
-        virtual void SetStringParameters(const std::string& key, const std::string& value);
+        void SetStringParameters(const std::string& key, const std::string& value);
 
         /// \brief return controlMode for this joint
         inline JointControlMode GetControlMode() const {
@@ -1698,7 +1843,7 @@ public:
         }
 
         /// \brief Updates several fields in \ref _info depending on the current state of the joint.
-        virtual void UpdateInfo();
+        void UpdateInfo();
         /// \brief returns the JointInfo structure containing all information.
         ///
         /// Some values in this structure like _vcurrentvalues need to be updated, so make sure to call \ref UpdateInfo() right before this function is called.
@@ -1713,10 +1858,13 @@ public:
         }
 
         /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-        virtual void ExtractInfo(KinBody::JointInfo& info) const;
+        void ExtractInfo(KinBody::JointInfo& info) const;
 
         /// \brief update Joint according to new JointInfo, returns false if update cannot be performed and requires InitFromInfo
-        virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::JointInfo& info);
+        UpdateFromInfoResult UpdateFromInfo(const KinBody::JointInfo& info);
+
+        /// \brief update the cached _doflastsetvalues
+        //virtual void SetDOFLastSetValue(dReal dofvalue, const int iaxis = 0);
 
 protected:
         JointInfo _info;
@@ -1730,7 +1878,7 @@ protected:
             \param[in] iaxis the axis
             \param[in,out] vcachedpartials set of cached partials for each degree of freedom
          */
-        virtual void _ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, const int iaxis, std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mapcachedpartials) const;
+        void _ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, const int iaxis, std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mapcachedpartials) const;
 
         /** \brief Compute internal transformations and specify the attached links of the joint.
 
@@ -1744,10 +1892,10 @@ protected:
             \param vinitialvalues the current values of the robot used to set the 0 offset of the robot
             \param bProcessStatic if true, then check to see if the joint is static and then set its cache and reduce its limits. If false, treat the joint as non-static.
          */
-        virtual void _ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
+        void _ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
 
         /// \brief once all the joints have been computed and initiailzed, call this function
-        virtual void _ComputeInternalStaticInformation();
+        void _ComputeInternalStaticInformation();
 
         /// \brief evaluates the mimic joint equation using vdependentvalues
         ///
@@ -1756,13 +1904,15 @@ protected:
         /// \param[in] vdependentvalues input values ordered with respect to _vdofformat[iaxis]
         /// \param[out] voutput the output values
         /// \return an internal error code, 0 if no error
-        virtual int _Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput) const;
+        int _Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput) const;
 
         /// \brief compute joint velocities given the parent and child link transformations/velocities
-        virtual void _GetVelocities(std::vector<dReal>& values, bool bAppend, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const;
+        ///
+        /// \param pValues[out] where velocities get output to, allows to write GetDOF() entries
+        void _GetVelocities(dReal* pValues, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const;
 
         /// \brief Return the velocity of the specified joint axis only.
-        virtual dReal _GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const;
+        dReal _GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const;
 
         boost::array<dReal,3> _doflastsetvalues; ///< the last set value by the kinbody (_voffsets not applied). For revolute joints that have a range greater than 2*pi, it is only possible to recover the joint value from the link positions mod 2*pi. In order to recover the branch, multiplies of 2*pi are added/subtracted to this value that is closest to _doflastsetvalues. For circular joints, the last set value can be ignored since they always return a value from [-pi,pi)
 
@@ -1849,7 +1999,7 @@ public:
 public:
         BodyState() : updatestamp(0), environmentid(0) {
         }
-        virtual ~BodyState() {
+        ~BodyState() {
         }
 
         /// \brief clears any previous set state
@@ -1876,7 +2026,7 @@ public:
         std::vector<dReal> jointvalues; ///< \see KinBody::GetDOFValues
         std::string uri; ///< \see KinBody::GetURI
         int updatestamp; ///< \see KinBody::GetUpdateStamp
-        int environmentid; ///< \see KinBody::GetEnvironmentId
+        int environmentid; ///< \see KinBody::GetEnvironmentBodyIndex
         std::string activeManipulatorName; ///< the currently active manpiulator set for the body
         Transform activeManipulatorTransform; ///< the active manipulator's transform
         std::vector<GrabbedInfo> vGrabbedInfos; ///< list of grabbed bodies
@@ -1979,8 +2129,26 @@ public:
         std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 
         bool _isRobot = false; ///< true if should create a RobotBasePtr
+
+        enum KinBodyInfoField {
+            KBIF_Transform = (1 << 0), // _transform field
+            KBIF_DOFValues = (1 << 1), // _dofValues field
+        };
+        inline bool IsModifiedField(KinBodyInfoField field) const {
+            return !!(_modifiedFields & field);
+        }
+        /// \brief adds modified fields
+        inline void AddModifiedField(KinBodyInfoField field) {
+            _modifiedFields |= field;
+        }
+
+private:
+        uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of KinBodyInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
+
 protected:
         virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value);
+
+        friend class KinBody; ///< for changing _modifiedFields
 
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
@@ -2163,7 +2331,7 @@ private:
     virtual void SetId(const std::string& newid);
 
     /// \brief Unique name of the body.
-    virtual const std::string& GetId() const {
+    const std::string& GetId() const {
         return _id;
     }
 
@@ -2174,79 +2342,72 @@ private:
     /// \brief Number controllable degrees of freedom of the body.
     ///
     /// Only uses _vecjoints and last joint for computation, so can work before _ComputeInternalInformation is called.
-    virtual int GetDOF() const;
+    int GetDOF() const;
 
     /// \brief Returns all the joint values as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns all the joint velocities as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns all the joint limits as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns all the joint velocity limits as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFVelocityLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFVelocityLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the max velocity for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFVelocityLimits(std::vector<dReal>& maxvelocities, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFVelocityLimits(std::vector<dReal>& maxvelocities, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the max acceleration for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFAccelerationLimits(std::vector<dReal>& maxaccelerations, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFAccelerationLimits(std::vector<dReal>& maxaccelerations, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the max jerk for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the hard max velocity for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFHardVelocityLimits(std::vector<dReal>& maxvels, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFHardVelocityLimits(std::vector<dReal>& maxvels, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the hard max acceleration for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFHardAccelerationLimits(std::vector<dReal>& maxaccels, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFHardAccelerationLimits(std::vector<dReal>& maxaccels, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the hard max jerk for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFHardJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFHardJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief Returns the max torque for each DOF
-    virtual void GetDOFTorqueLimits(std::vector<dReal>& maxaccelerations) const;
+    void GetDOFTorqueLimits(std::vector<dReal>& maxaccelerations) const;
 
-    /// \deprecated (11/05/26)
-    virtual void GetDOFMaxVel(std::vector<dReal>& v) const RAVE_DEPRECATED {
-        GetDOFVelocityLimits(v);
-    }
-    virtual void GetDOFMaxAccel(std::vector<dReal>& v) const RAVE_DEPRECATED {
-        GetDOFAccelerationLimits(v);
-    }
-    virtual void GetDOFMaxTorque(std::vector<dReal>& v) const;
+    void GetDOFMaxTorque(std::vector<dReal>& v) const;
 
     /// \brief get the dof resolutions
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFResolutions(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFResolutions(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief get dof weights
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFWeights(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+    void GetDOFWeights(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief \see GetDOFVelocityLimits
     virtual void SetDOFVelocityLimits(const std::vector<dReal>& maxlimits);
@@ -2283,7 +2444,7 @@ private:
     virtual void SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief Returns the joints making up the controllable degrees of freedom of the body.
-    const std::vector<JointPtr>& GetJoints() const {
+    inline const std::vector<JointPtr>& GetJoints() const {
         return _vecjoints;
     }
 
@@ -2293,7 +2454,7 @@ private:
         joint index and no dof index. Passive joints allows mimic joints to be hidden from the users.
         However, there are cases when passive joints are not mimic; for example, suspension mechanism on vehicles.
      */
-    const std::vector<JointPtr>& GetPassiveJoints() const {
+    inline const std::vector<JointPtr>& GetPassiveJoints() const {
         return _vPassiveJoints;
     }
 
@@ -2301,7 +2462,13 @@ private:
     ///
     /// In the case of closed loops, the joints are returned in the order closest to the root.
     /// All the joints affecting a particular joint's transformation will always come before the joint in the list.
-    virtual const std::vector<JointPtr>& GetDependencyOrderedJoints() const;
+    const std::vector<JointPtr>& GetDependencyOrderedJoints() const;
+
+    /// \brief Returns all active and passive joints in hierarchical order starting at the base link.
+    ///
+    /// In the case of closed loops, the joints are returned in the order closest to the root.
+    /// All the joints affecting a particular joint's transformation will always come before the joint in the list.
+    const std::vector<JointPtr>& GetDependencyOrderedJointsAll() const;
 
     /** \brief Return the set of unique closed loops of the kinematics hierarchy.
 
@@ -2309,7 +2476,7 @@ private:
         [l_0,l_1,l_2] will consist of three joints connecting l_0 to l_1, l_1 to l_2, and l_2 to l_0.
         The first element in the pair is the link l_X, the second element in the joint connecting l_X to l_(X+1).
      */
-    virtual const std::vector< std::vector< std::pair<LinkPtr, JointPtr> > >& GetClosedLoops() const;
+    const std::vector< std::vector< std::pair<LinkPtr, JointPtr> > >& GetClosedLoops() const;
 
     /** \en \brief Computes the minimal chain of joints that are between two links in the order of linkindex1 to linkindex2
 
@@ -2329,28 +2496,31 @@ private:
         \param[out] vjoints　関節の経路
         \return 経路が存在している場合，trueを返す．
      */
-    virtual bool GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const;
+    bool GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const;
 
     /// \brief similar to \ref GetChain(int,int,std::vector<JointPtr>&) except returns the links along the path.
-    virtual bool GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vlinks) const;
+    bool GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vlinks) const;
 
     /// \brief Returns true if the dof index affects the relative transformation between the two links.
     ///
     /// The internal implementation uses \ref KinBody::DoesAffect, therefore mimic indices are correctly handled.
     /// \param[in] linkindex1 the link index to start the search
     /// \param[in] linkindex2 the link index where the search ends
-    virtual bool IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const;
+    bool IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const;
 
     /// \brief Return the index of the joint with the given name, else -1.
-    virtual int GetJointIndex(const std::string& name) const;
+    int GetJointIndex(const std::string& name) const;
 
     /// \brief Return a pointer to the joint with the given name. Search in the regular and passive joints.
-    virtual JointPtr GetJoint(const std::string& name) const;
+    JointPtr GetJoint(const std::string& name) const;
 
     /// \brief Returns the joint that covers the degree of freedom index.
     ///
     /// Note that the mapping of joint structures is not the same as the values in GetJointValues since each joint can have more than one degree of freedom.
-    virtual JointPtr GetJointFromDOFIndex(int dofindex) const;
+    inline const JointPtr& GetJointFromDOFIndex(int dofindex) const {
+        return _vecjoints.at(_vDOFIndices.at(dofindex));
+    }
+
     //@}
 
     /// \brief Computes the configuration difference values1-values2 and stores it in values1.
@@ -2367,36 +2537,36 @@ private:
     virtual void SetDOFTorques(const std::vector<dReal>& torques, bool add);
 
     /// \brief Returns all the rigid links of the body.
-    virtual const std::vector<LinkPtr>& GetLinks() const {
+    const std::vector<LinkPtr>& GetLinks() const {
         return _veclinks;
     }
 
     /// \brief returns true if the DOF describes a rotation around an axis.
     ///
     /// \param dofindex the degree of freedom index
-    virtual bool IsDOFRevolute(int dofindex) const;
+    bool IsDOFRevolute(int dofindex) const;
 
     /// \brief returns true if the DOF describes a translation around an axis.
     ///
     /// \param dofindex the degree of freedom index
-    virtual bool IsDOFPrismatic(int dofindex) const;
+    bool IsDOFPrismatic(int dofindex) const;
 
     /// return a pointer to the link with the given name
-    virtual LinkPtr GetLink(const std::string& name) const;
+    LinkPtr GetLink(const std::string& name) const;
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
 
     /// \brief get the transformations of all the links at once
-    virtual void GetLinkTransformations(std::vector<Transform>& transforms) const;
+    void GetLinkTransformations(std::vector<Transform>& transforms) const;
 
     /// \brief get the transformations of all the links and the dof branches at once.
     ///
     /// Knowing the dof branches allows the robot to recover the full state of the joints with SetLinkTransformations
-    virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<dReal>& doflastsetvalues) const;
+    void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<dReal>& doflastsetvalues) const;
 
     /// \brief gets the enable states of all links
-    virtual void GetLinkEnableStates(std::vector<uint8_t>& enablestates) const;
+    void GetLinkEnableStates(std::vector<uint8_t>& enablestates) const;
 
     /// \brief gets a mask of the link enable states.
     ///
@@ -2404,7 +2574,9 @@ private:
     virtual uint64_t GetLinkEnableStatesMask() const;
 
     /// queries the transfromation of the first link of the body
-    virtual Transform GetTransform() const;
+    inline const Transform GetTransform() const {
+        return _veclinks.size() > 0 ? _veclinks.front()->GetTransform() : Transform();
+    }
 
     /// \brief Set the velocity of the base link, rest of links are set to a consistent velocity so entire robot moves correctly.
     /// \param linearvel linear velocity
@@ -2434,7 +2606,7 @@ private:
     /// \brief Returns the linear and angular velocities for each link
     ///
     /// \param[out] velocities The velocities of the link frames with respect to the world coordinate system are returned.
-    virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
+    void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
     /// \brief link index and the linear and angular accelerations of the link. First is linear acceleration of the link's coordinate system, and second is the angular acceleration of this coordinate system.
     typedef std::map<int, std::pair<Vector,Vector> > AccelerationMap;
@@ -2453,7 +2625,7 @@ private:
         \param[out] linkaccelerations the linear and angular accelerations of link (in that order)
         \param[in] externalaccelerations [optional] The external accelerations to add to each link.
      */
-    virtual void GetLinkAccelerations(const std::vector<dReal>& dofaccelerations, std::vector<std::pair<Vector,Vector> >& linkaccelerations, AccelerationMapConstPtr externalaccelerations=AccelerationMapConstPtr()) const;
+    void GetLinkAccelerations(const std::vector<dReal>& dofaccelerations, std::vector<std::pair<Vector,Vector> >& linkaccelerations, AccelerationMapConstPtr externalaccelerations=AccelerationMapConstPtr()) const;
 
     /** \en \brief set the transform of the first link (the rest of the links are computed based on the joint values).
 
@@ -2468,41 +2640,41 @@ private:
     /// \brief Return an axis-aligned bounding box of the entire object in the world coordinate system.
     ///
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
-    virtual AABB ComputeAABB(bool bEnabledOnlyLinks=false) const;
+    AABB ComputeAABB(bool bEnabledOnlyLinks=false) const;
 
     /// \brief returns an axis-aligned bounding box when body has transform tBody.
     ///
     /// AABB equivalent to SetTransform(tBody); aabb = ComptueAABB(bEnabledOnlyLinks).
     /// \brief tBody the transform to put this kinbody in when computing the AABB
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
-    virtual AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
+    AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
     /// \brief returns an axis-aligned bounding box when body has identity transform
     ///
     /// Internally equivalent to ComputeAABBFromTransform(Transform(), ...)
-    virtual AABB ComputeLocalAABB(bool bEnabledOnlyLinks=false) const;
+    AABB ComputeLocalAABB(bool bEnabledOnlyLinks=false) const;
 
-    /// \brief Return the axis-aligned bounding box of the specified geometries of the kinbody in the world coordinate system.
-    virtual AABB ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
-    virtual AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
-    virtual AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tBody, bool bEnabledOnlyLinks=false) const;
+    /// \brief Return the axis-aligned bounding box of the specified geometries of the kinbody in the world coordinate system. If any of the links does not have the geometry group geomgroupname, will throw an exception.
+    AABB ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
+    AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
+    AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
     /// \brief Return the center of mass of entire robot in the world coordinate system.
-    virtual Vector GetCenterOfMass() const;
+    Vector GetCenterOfMass() const;
 
     /// \brief Enables or disables all the links.
-    virtual void Enable(bool enable);
+    void Enable(bool enable);
 
     /// \return true if any link of the KinBody is enabled
-    virtual bool IsEnabled() const;
+    bool IsEnabled() const;
 
     /// \brief Sets all the links as visible or not visible.
     ///
     /// \return true if changed
-    virtual bool SetVisible(bool visible);
+    bool SetVisible(bool visible);
 
     /// \return true if any link of the KinBody is visible.
-    virtual bool IsVisible() const;
+    bool IsVisible() const;
 
     /// \brief Sets the joint values of the robot.
     ///
@@ -2510,10 +2682,6 @@ private:
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
-
-    virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = true) {
-        SetDOFValues(values,static_cast<uint32_t>(checklimits));
-    }
 
     /// \brief Sets the joint values and transformation of the body.
     ///
@@ -2731,21 +2899,23 @@ private:
     //@}
 
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
-    virtual bool IsAttached(KinBodyConstPtr body) const RAVE_DEPRECATED {
+    bool IsAttached(KinBodyConstPtr body) const RAVE_DEPRECATED {
         return IsAttached(*body);
     }
-    virtual bool IsAttached(const KinBody &body) const;
+    bool IsAttached(const KinBody &body) const;
 
     /// \brief Recursively get all attached bodies of this body, including this body.
     ///
     /// \param setAttached fills with the attached bodies. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
-    virtual void GetAttached(std::set<KinBodyPtr>& setAttached) const;
-    virtual void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
-    virtual void GetAttached(std::vector<KinBodyPtr>& vAttached) const;
-    virtual void GetAttached(std::vector<KinBodyConstPtr>& vAttached) const;
+    void GetAttached(std::set<KinBodyPtr>& setAttached) const;
+    void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
+    void GetAttached(std::vector<KinBodyPtr>& vAttached) const;
+    void GetAttached(std::vector<KinBodyConstPtr>& vAttached) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
-    virtual bool HasAttached() const;
+    inline bool HasAttached() const {
+        return _listAttachedBodies.size() > 0;
+    }
 
     /// \brief Return true if this body is derived from RobotBase.
     virtual bool IsRobot() const {
@@ -2754,9 +2924,18 @@ private:
 
     /// \brief return a unique id of the body used in the environment.
     ///
-    /// If object is not added to the environment, this will return 0. So checking if GetEnvironmentId() is 0 is a good way to check if object is present in the environment.
+    /// If object is not added to the environment, this will return 0. So checking if GetEnvironmentBodyIndex() is 0 is a good way to check if object is present in the environment.
     /// This id will not be copied when cloning in order to respect another environment's ids.
-    virtual int GetEnvironmentId() const;
+    inline int GetEnvironmentBodyIndex() const {
+        return _environmentBodyIndex;
+    }
+
+    /// \brief return a unique id of the body used in the environment.
+    ///
+    /// deprecated, GetEnvironmentBodyIndex should be used
+    int GetEnvironmentId() const RAVE_DEPRECATED {
+        return _environmentBodyIndex;
+    }
 
     /** \brief Returns a nonzero value if the joint index effects the link transformation.
 
@@ -2766,7 +2945,7 @@ private:
         \param jointindex index of the joint
         \param linkindex index of the link
      */
-    virtual int8_t DoesAffect(int jointindex, int linkindex) const;
+    int8_t DoesAffect(int jointindex, int linkindex) const;
 
     /** \brief Returns a nonzero value if the dof index effects the link transformation.
 
@@ -2776,7 +2955,7 @@ private:
         \param dofindex index of DOF as returned from \ref GetDOFValues
         \param linkindex index of the link
      */
-    virtual int8_t DoesDOFAffectLink(int dofindex, int linkindex) const;
+    int8_t DoesDOFAffectLink(int dofindex, int linkindex) const;
 
     /// \brief specifies the type of adjacent link information to receive
     enum AdjacentOptions
@@ -2789,13 +2968,23 @@ private:
     /// \param adjacentoptions a bitmask of \ref AdjacentOptions values
     virtual const std::vector<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
 
-    /// \brief return all possible link pairs whose collisions are ignored.
-    virtual const std::set<int>& GetAdjacentLinks() const;
-
     /// \brief adds the pair of links to the adjacency list. This is
-    virtual void SetAdjacentLinks(int linkindex0, int linkindex1);
+    void SetAdjacentLinks(int linkindex0, int linkindex1);
 
-    virtual ManageDataPtr GetManageData() const {
+    /// \brief return if two links are adjacent links are not.
+    bool AreAdjacentLinks(int linkindex0, int linkindex1) const;
+
+    /// \brief adds the pair of links to the adjacency list.
+    ///
+    /// \param linkIndices vector containing pair of link indies. Each pair of is set as adjacent links. For each pair, first and second must be different.
+    void SetAdjacentLinksPairs(const std::vector<std::pair<int, int> >& linkIndices);
+
+    /// \brief adds the pair of links to the adjacency list.
+    ///
+    /// \param linkIndices vector of link index. Each combination among them is set as adjacent links. elements have to be unique
+    void SetAdjacentLinksCombinations(const std::vector<int>& linkIndices);
+
+    inline ManageDataPtr GetManageData() const {
         return _pManageData;
     }
 
@@ -2804,8 +2993,13 @@ private:
     /// The stamp is used by the collision checkers, physics engines, or any other item
     /// that needs to keep track of any changes of the KinBody as it moves.
     /// Currently stamps monotonically increment for every transformation/joint angle change.
-    virtual int GetUpdateStamp() const {
+    inline int GetUpdateStamp() const {
         return _nUpdateStampId;
+    }
+
+    /// \brief Increments the unique id that indicates the number of transformation state changes of any link. Used to check if robot state has changed.
+    void IncrementUpdateStamp(const int inc=1) {
+        _nUpdateStampId += inc;
     }
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
@@ -2931,33 +3125,35 @@ private:
     LinkPtr IsGrabbing(KinBodyConstPtr body) const RAVE_DEPRECATED {
         return IsGrabbing(*body);
     }
-    virtual LinkPtr IsGrabbing(const KinBody &body) const;
+    LinkPtr IsGrabbing(const KinBody &body) const;
 
     /** \brief gets all grabbed bodies of the body
 
         \param[out] vbodies filled with the grabbed bodies
      */
-    virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
+    void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
 
     /// \brief returns number of grabbed targets
-    virtual int GetNumGrabbed() const;
+    inline int GetNumGrabbed() const {
+        return (int)_vGrabbedBodies.size();
+    }
 
     /// \brief return the valid grabbed body. If the grabbed body is not in the environment, will just return empty
     ///
     /// \param iGrabbed index into the grabbed body. Max is GetNumGrabbed()-1
-    virtual KinBodyPtr GetGrabbedBody(int iGrabbed) const;
+    KinBodyPtr GetGrabbedBody(int iGrabbed) const;
 
     /** \brief gets all grabbed bodies of the body
 
         \param[out] vgrabbedinfo filled with the grabbed info for every body. The pointers are newly created.
      */
-    virtual void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
+    void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
 
     /** \brief gets all grabbed bodies of the body
 
         \param[out] vgrabbedinfo all the grabbed infos
      */
-    virtual void GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const;
+    void GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const;
 
     /** \brief gets the grabbed info of a grabbed object whose name matches grabbedname
 
@@ -2965,21 +3161,21 @@ private:
         \param[out] grabbedInfo initialized with the grabbed info
         \return true if robot is grabbing body with name "grabbedname" and grabbedInfo is initialized
      */
-    virtual bool GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbedInfo) const;
+    bool GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbedInfo) const;
 
     /** \brief resets the grabbed bodies of the body
 
         Any currently grabbed bodies will be first released.
         \param[out] vgrabbedinfo filled with the grabbed info for every body
      */
-    virtual void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vgrabbedinfo);
+    void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vgrabbedinfo);
 
     /** \brief returns all the links of the body whose links are being ignored by the grabbed body.
 
         \param[in] body the grabbed body
         \param[out] list of the ignored links
      */
-    virtual void GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const;
+    void GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const;
 
     //@}
 
@@ -2999,14 +3195,25 @@ private:
     /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromKinBodyInfo(const KinBodyInfo& info);
 
+    /// \brief Associate the kinbody's current kinematics geometry hash with a forward kinematics generator
+    virtual void SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator);
+
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
 
-    /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
-    virtual void _Regrab(UserDataPtr pgrabbed);
+    inline const Joint& _GetJointFromDOFIndex(int dofindex) const {
+        return *_vecjoints.at(_vDOFIndices.at(dofindex));
+    }
 
-    virtual void SetManageData(ManageDataPtr pdata) {
+    inline Joint& _GetJointFromDOFIndex(int dofindex) {
+        return *_vecjoints.at(_vDOFIndices.at(dofindex));
+    }
+
+    /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
+    void _Regrab(UserDataPtr pgrabbed);
+
+    void SetManageData(ManageDataPtr pdata) {
         _pManageData = pdata;
     }
 
@@ -3041,17 +3248,29 @@ protected:
     virtual void _PostprocessChangedParameters(uint32_t parameters);
 
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
-    virtual bool _IsAttached(const KinBody &body, std::set<KinBodyConstPtr>& setChecked) const;
+    bool _IsAttached(const KinBody &body, std::set<KinBodyConstPtr>& setChecked) const;
+
+    /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
+    ///
+    /// \param visited is a vector indexed by each body's EnvironmentBodyIndex to show whether it was visited or not in the computation. If 0, then not initialized, if 1, then visited and attached, if -1, then visited and not attached
+    bool _IsAttached(int otherBodyId, std::vector<int8_t>& vAttachedVisited) const;
+
+    /// \brief finds all attached bodies who should be considered as one during collision (ie one is grabbing the other)
+    ///
+    /// recursively visits all attached bodies, and sets vAttachedVisited for attached bodies to 1.
+    /// \param vAttachedVisited indexed by environmentBodyIndex
+    /// \return number of elements attached (excluding initially non-zero elements in vAttachedVisited)
+    int _GetNumAttached(std::vector<int8_t>& vAttachedVisited) const;
 
     /// \brief adds an attached body
-    virtual void _AttachBody(KinBodyPtr body);
+    void _AttachBody(KinBodyPtr body);
 
     /// \brief removes an attached body
     ///
     /// \return true if body was successfully found and removed
-    virtual bool _RemoveAttachedBody(KinBody &body);
+    bool _RemoveAttachedBody(KinBody &body);
 
-    virtual void _UpdateGrabbedBodies();
+    void _UpdateGrabbedBodies();
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
@@ -3060,15 +3279,20 @@ protected:
     ///
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized.
-    virtual void _InitAndAddLink(LinkPtr plink);
+    void _InitAndAddLink(LinkPtr plink);
 
     /// \brief initializes and adds a link to internal hierarchy.
     ///
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized
-    virtual void _InitAndAddJoint(JointPtr pjoint);
+    void _InitAndAddJoint(JointPtr pjoint);
+
+    void _SetForcedAdjacentLinks(int linkindex0, int linkindex1);
+
+    void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
     std::string _name; ///< name of body
+
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
     std::vector<JointPtr> _vTopologicallySortedJoints; ///< \see GetDependencyOrderedJoints
     std::vector<JointPtr> _vTopologicallySortedJointsAll; ///< Similar to _vDependencyOrderedJoints except includes _vecjoints and _vPassiveJoints
@@ -3081,10 +3305,11 @@ protected:
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
     std::vector< std::vector< std::pair<int16_t,int16_t> > > _vClosedLoopIndices; ///< \see GetClosedLoops
     std::vector<JointPtr> _vPassiveJoints; ///< \see GetPassiveJoints()
-    std::set<int> _setAdjacentLinks; ///< a set of which links are connected to which if link i and j are connected then
-                                     ///< i|(j<<16) will be in the set where i<j.
-    std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
+    std::vector<int8_t> _vAdjacentLinks; ///< a vector of which links are connected to which if link i and j are connected and i < j, then value at (i + j * (j - 1) /2) is 1 where N is the number of links for the body
+    std::vector<int8_t> _vForcedAdjacentLinks; ///< internally stores forced adjacent links. \see _vAdjacentLinks for internal representation
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
+
+    std::vector<Transform*> _vLinkTransformPointers; ///< holds a pointers to the Transform Link::_t  in _veclinks. Used for fast access fo the custom kinematics
 
     std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies
 
@@ -3095,10 +3320,21 @@ protected:
     mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].
     std::vector<Transform> _vInitialLinkTransformations; ///< the initial transformations of each link specifying at least one pose where the robot is collision free
 
+    mutable std::vector<int8_t> _vAttachedVisitedCache; ///< cache
+    mutable std::vector<std::pair<Vector,Vector> > _vVelocitiesCache;
+    mutable std::vector< boost::array<dReal, 3> > _vPassiveJointValuesCache;
+    mutable std::vector< boost::array<dReal, 3> > _vPassiveJointAccelerationsCache;
+    mutable std::vector<uint8_t> _vLinksVisitedCache;
+    mutable std::vector<dReal> _vTempMimicValues, _vTempMimicValues2, _vTempMimicValues3;
+
+
     ConfigurationSpecification _spec;
     CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions
 
-    int _environmentid; ///< \see GetEnvironmentId
+    KinematicsGeneratorPtr _pKinematicsGenerator; ///< holds the generator for kinematics. KinBody calls it everytime its kinematics change
+    KinematicsFunctionsPtr _pCurrentKinematicsFunctions; ///< currently generated kinematics functions
+
+    int _environmentBodyIndex; ///< \see GetEnvironmentBodyIndex
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     uint32_t _nParametersChanged; ///< set of parameters that changed and need callbacks
     ManageDataPtr _pManageData;

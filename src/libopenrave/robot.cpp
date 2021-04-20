@@ -98,6 +98,7 @@ void RobotBase::AttachedSensorInfo::Reset()
     _linkname.clear();
     _trelative = Transform();
     _sensorname.clear();
+    _referenceAttachedSensorName.clear();
     _docSensorGeometry = rapidjson::Document();
 }
 
@@ -109,6 +110,7 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     orjson::SetJsonValueByKey(value, "linkName", _linkname, allocator);
     orjson::SetJsonValueByKey(value, "transform", _trelative, allocator);
     orjson::SetJsonValueByKey(value, "type", _sensorname, allocator);
+    orjson::SetJsonValueByKey(value, "referenceAttachedSensorName", _referenceAttachedSensorName, allocator);
 
     if (_docSensorGeometry.IsObject() && _docSensorGeometry.MemberCount() > 0) {
         rapidjson::Value sensorGeometry;
@@ -124,6 +126,7 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
     orjson::LoadJsonValueByKey(value, "linkName", _linkname);
     orjson::LoadJsonValueByKey(value, "transform", _trelative);
     orjson::LoadJsonValueByKey(value, "type", _sensorname);
+    orjson::LoadJsonValueByKey(value, "referenceAttachedSensorName", _referenceAttachedSensorName);
 
     if (value.HasMember("sensorGeometry")) {
         if (!_docSensorGeometry.IsObject()) {
@@ -238,6 +241,7 @@ void RobotBase::AttachedSensor::ExtractInfo(AttachedSensorInfo& info) const
     info._id = _info._id;
     info._name = _info._name;
     info._trelative = _info._trelative;
+    info._referenceAttachedSensorName = _info._referenceAttachedSensorName;
     info._sensorname.clear();
     info._linkname.clear();
 
@@ -281,6 +285,12 @@ UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::
         return UFIR_RequireReinitialize;
     }
 
+    // referenceAttachedSensorName
+    if (_info._referenceAttachedSensorName != info._referenceAttachedSensorName) {
+        RAVELOG_VERBOSE_FORMAT("attached sensor %s referenceAttachedSensorName changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
     // sensor name
     if (_info._sensorname != info._sensorname) {
         RAVELOG_VERBOSE_FORMAT("attached sensor %s sensor name changed", _info._id);
@@ -294,7 +304,7 @@ UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::
     }
 
     // _trelative
-    if (!GetRelativeTransform().Compare(info._trelative)) {
+    if (GetRelativeTransform().CompareTransform(info._trelative, g_fEpsilon)) {
         SetRelativeTransform(info._trelative);
         RAVELOG_VERBOSE_FORMAT("attached sensor %s relative transform changed", _info._id);
         updateFromInfoResult = UFIR_Success;
@@ -384,7 +394,7 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
 {
-    if( _bRestoreOnDestructor && !!_probot && _probot->GetEnvironmentId() != 0 ) {
+    if( _bRestoreOnDestructor && !!_probot && _probot->GetEnvironmentBodyIndex() != 0 ) {
         _RestoreRobot(_probot);
     }
 }
@@ -443,7 +453,7 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
     if( !probot ) {
         return;
     }
-    if( probot->GetEnvironmentId() == 0 ) {
+    if( probot->GetEnvironmentBodyIndex() == 0 ) {
         RAVELOG_WARN(str(boost::format("robot %s not added to environment, skipping restore")%probot->GetName()));
         return;
     }
@@ -624,28 +634,28 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
     if (value.HasMember("tools")) {
         _vManipulatorInfos.reserve(value["tools"].Size() + _vManipulatorInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vManipulatorInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vManipulatorInfos, "name", fUnitScale, options);
         }
     }
 
     if (value.HasMember("attachedSensors")) {
         _vAttachedSensorInfos.reserve(value["attachedSensors"].Size() + _vAttachedSensorInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vAttachedSensorInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vAttachedSensorInfos, "name", fUnitScale, options);
         }
     }
 
     if (value.HasMember("connectedBodies")) {
         _vConnectedBodyInfos.reserve(value["connectedBodies"].Size() + _vConnectedBodyInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["connectedBodies"].Begin(); it != value["connectedBodies"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vConnectedBodyInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vConnectedBodyInfos, "name", fUnitScale, options);
         }
     }
 
     if (value.HasMember("gripperInfos")) {
         _vGripperInfos.reserve(value["gripperInfos"].Size() + _vGripperInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vGripperInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vGripperInfos, "name", fUnitScale, options);
         }
     }
 }
@@ -1562,11 +1572,6 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
         q1.at(index) -= q2.at(index); index++;
         q1.at(index) -= q2.at(index); index++;
     }
-}
-
-const std::vector<int>& RobotBase::GetActiveDOFIndices() const
-{
-    return _nActiveDOF < 0 ? _vAllDOFIndices : _vActiveDOFIndices;
 }
 
 ConfigurationSpecification RobotBase::GetActiveConfigurationSpecification(const std::string& interpolation) const

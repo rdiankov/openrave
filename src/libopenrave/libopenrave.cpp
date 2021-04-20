@@ -395,6 +395,11 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapikparameterization[IKP_TranslationYAxisAngleXNorm4D] = "TranslationYAxisAngleXNorm4D";
         _mapikparameterization[IKP_TranslationZAxisAngleYNorm4D] = "TranslationZAxisAngleYNorm4D";
         BOOST_ASSERT(_mapikparameterization.size()==IKP_NumberOfParameterizations);
+
+        // add IKP_None for serialization later.
+        // do this after _mapikparameterization.size()==IKP_NumberOfParameterizations check, IKP_None is not counted in IKP_NumberOfParameterizations
+        _mapikparameterization[IKP_None] = "None";
+
         FOREACH(it,_mapikparameterization) {
             std::string name = it->second;
             std::transform(name.begin(), name.end(), name.begin(), ::tolower);
@@ -438,8 +443,9 @@ public:
             RAVELOG_WARN("failed to set to C locale: %s\n",e.what());
         }
 
-        _pdatabase.reset(new RaveDatabase());
-        if( !_pdatabase->Init(bLoadAllPlugins) ) {
+        // since initialization depends on _pdatabase, have pdatabase be local until it is complete
+        boost::shared_ptr<RaveDatabase> pdatabase(new RaveDatabase());
+        if( !pdatabase->Init(bLoadAllPlugins) ) {
             RAVELOG_FATAL("failed to create the openrave plugin database\n");
         }
 
@@ -479,6 +485,7 @@ public:
         }
 
         _UpdateDataDirs();
+        _pdatabase = pdatabase; // finally initialize!
         return 0;
     }
 
@@ -595,18 +602,35 @@ public:
         _nDebugLevel = level;
     }
 
+    int GetDebugLevel()
+    {
+        int level = _nDebugLevel;
+        if (_logger != NULL && _logger->getEffectiveLevel() != NULL) {
+            level = _logger->getEffectiveLevel()->toInt();
+            switch (level) {
+            case log4cxx::Level::FATAL_INT: level = Level_Fatal; break;
+            case log4cxx::Level::ERROR_INT: level = Level_Error; break;
+            case log4cxx::Level::WARN_INT:  level = Level_Warn; break;
+            case log4cxx::Level::INFO_INT:  level = Level_Info; break;
+            case log4cxx::Level::DEBUG_INT: level = Level_Debug; break;
+            case log4cxx::Level::TRACE_INT: level = Level_Verbose; break;
+            default: level = Level_Info;
+            }
+        }
+        return level | (_nDebugLevel & ~Level_OutputMask);
+    }
+
 #else
     void SetDebugLevel(int level)
     {
         _nDebugLevel = level;
     }
 
-#endif
-
     int GetDebugLevel()
     {
         return _nDebugLevel;
     }
+#endif
 
     class XMLReaderFunctionData : public UserData
     {
@@ -882,6 +906,10 @@ protected:
         return std::string();
     }
 
+    boost::mutex& GetInitializationMutex() {
+        return _mutexInitialization;
+    }
+
 protected:
     static void _create()
     {
@@ -1061,6 +1089,7 @@ private:
     // state that is initialized/destroyed
     boost::shared_ptr<RaveDatabase> _pdatabase;
     int _nDebugLevel;
+    boost::mutex _mutexInitialization; ///< external mutex for initialization only
     boost::mutex _mutexinternal;
     std::map<InterfaceType, XMLREADERSMAP > _mapxmlreaders;
     std::map<InterfaceType, JSONREADERSMAP > _mapjsonreaders;
@@ -1089,6 +1118,7 @@ private:
 #endif
 
     friend void RaveInitializeFromState(UserDataPtr);
+    friend int RaveInitialize(bool bLoadAllPlugins, int level);
     friend UserDataPtr RaveGlobalState();
 };
 
@@ -1149,7 +1179,15 @@ std::string RaveFindDatabaseFile(const std::string& filename, bool bRead)
 
 int RaveInitialize(bool bLoadAllPlugins, int level)
 {
-    return RaveGlobal::instance()->Initialize(bLoadAllPlugins,level);
+    boost::shared_ptr<RaveGlobal>& state = RaveGlobal::instance();
+    boost::mutex::scoped_lock lock(state->GetInitializationMutex());
+    if( state->_IsInitialized() ) {
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE already initialized, so not initializing again", boost::this_thread::get_id());
+        return 0;
+    }
+    else {
+        return state->Initialize(bLoadAllPlugins,level);
+    }
 }
 
 void RaveInitializeFromState(UserDataPtr globalstate)
@@ -1160,9 +1198,18 @@ void RaveInitializeFromState(UserDataPtr globalstate)
 UserDataPtr RaveGlobalState()
 {
     // only return valid pointer if initialized!
-    boost::shared_ptr<RaveGlobal> state = RaveGlobal::_state;
-    if( !!state && state->_IsInitialized() ) {
-        return state;
+    boost::shared_ptr<RaveGlobal>& state = RaveGlobal::instance();
+    if( !!state ) {
+        if( state->_IsInitialized() ) {
+            return state;
+        }
+        else {
+            // make sure another thread is not initializing the state!
+            boost::mutex::scoped_lock lock(state->GetInitializationMutex());
+            if( state->_IsInitialized() ) {
+                return state;
+            }
+        }
     }
     return UserDataPtr();
 }
@@ -2474,13 +2521,35 @@ void DummyXMLReader::characters(const std::string& ch)
     }
 }
 
-EnvironmentBase::EnvironmentBase()
+void EnvironmentBase::_InitializeInternal()
 {
     if( !RaveGlobalState() ) {
-        RAVELOG_WARN("OpenRAVE global state not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.\n");
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state is not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.", boost::this_thread::get_id());
+        uint64_t starttime = utils::GetMicroTime();
         RaveInitialize(true);
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state finished initializing in %u[us].", boost::this_thread::get_id()%(utils::GetMicroTime()-starttime));
     }
     __nUniqueId = RaveGlobal::instance()->RegisterEnvironment(this);
+}
+
+EnvironmentBase::EnvironmentBase()
+{
+    _InitializeInternal();
+    // __nUniqueId is assigned in _InitializeInternal
+    _formatedNameId = str(boost::format("%d")%__nUniqueId);
+}
+
+EnvironmentBase::EnvironmentBase(const std::string& name)
+    : _name(name)
+{
+    _InitializeInternal();
+    // __nUniqueId is assigned in _InitializeInternal
+    if (_name.empty()) {
+        _formatedNameId = str(boost::format("%d")%__nUniqueId);
+    }
+    else {
+        _formatedNameId = str(boost::format("%d(%s)")%__nUniqueId%_name);
+    }
 }
 
 EnvironmentBase::~EnvironmentBase()
@@ -2561,11 +2630,6 @@ bool SensorBase::CameraGeomData::SerializeXML(BaseXMLWriterPtr writer, int optio
     writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(measurement_time));
     writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(gain));
     //writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
-    if( sensor_reference.size() > 0 ) {
-        atts.emplace_back("url",  sensor_reference);
-        writer->AddChild("sensor_reference",atts);
-        atts.clear();
-    }
     if( target_region.size() > 0 ) {
         atts.emplace_back("url",  target_region);
         writer->AddChild("target_region",atts);
@@ -2577,7 +2641,6 @@ bool SensorBase::CameraGeomData::SerializeXML(BaseXMLWriterPtr writer, int optio
 bool SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
-    orjson::SetJsonValueByKey(value, "sensorReference", sensor_reference, allocator);
     orjson::SetJsonValueByKey(value, "targetRegion", target_region, allocator);
     orjson::SetJsonValueByKey(value, "intrinsics", intrinsics, allocator);
     orjson::SetJsonValueByKey(value, "width", width, allocator);
@@ -2590,7 +2653,6 @@ bool SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjso
 bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
-    orjson::LoadJsonValueByKey(value, "sensorReference", sensor_reference);
     orjson::LoadJsonValueByKey(value, "targetRegion", target_region);
     orjson::LoadJsonValueByKey(value, "intrinsics", intrinsics);
     orjson::LoadJsonValueByKey(value, "width", width);

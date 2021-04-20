@@ -40,6 +40,7 @@
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/version.hpp>
+#include <boost/bind.hpp>
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #ifndef USE_PYBIND11_PYTHON_BINDINGS

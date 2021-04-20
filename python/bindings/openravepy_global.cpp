@@ -81,22 +81,20 @@ public:
     }
     std::string GetXMLId() const {
         // some readable are not xml readable and does have a xml id
-        ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
-        if (!pxmlreadable) {
+        if (!_readable) {
             return "";
         }
-        return pxmlreadable->GetXMLId();
+        return _readable->GetXMLId();
     }
 
     object SerializeXML(int options=0) {
         // some readable are not xml readable and does not get serialized here
-        ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
-        if (!pxmlreadable) {
+        if (!_readable) {
             return py::none_();
         }
         std::string xmlid;
         OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
-        if( !pxmlreadable->SerializeXML(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options) ) {
+        if( !_readable->SerializeXML(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options) ) {
             return py::none_();
         }
 
@@ -107,12 +105,11 @@ public:
 
     py::object SerializeJSON(dReal fUnitScale=1.0, int options=0) const
     {
-        ReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
-        if (!pjsonreadable) {
+        if (!_readable) {
             return py::none_();
         }
         rapidjson::Document doc;
-        if( !pjsonreadable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options) ) {
+        if( !_readable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options) ) {
             return py::none_();
         }
         return toPyObject(doc);
@@ -122,8 +119,7 @@ public:
     {
         rapidjson::Document doc;
         toRapidJSONValue(obj, doc, doc.GetAllocator());
-        ReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
-        return pjsonreadable->DeserializeJSON(doc, fUnitScale);
+        return _readable->DeserializeJSON(doc, fUnitScale);
     }
 
     ReadablePtr GetReadable() {
@@ -1356,6 +1352,7 @@ void init_openravepy_global()
     .value("OnlySpecifiedBodiesExact", UFIM_OnlySpecifiedBodiesExact)
     ;
 
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     enum_<InterfaceType>(m, "InterfaceType", py::arithmetic() DOXY_ENUM(InterfaceType))
 #else
@@ -1439,6 +1436,16 @@ void init_openravepy_global()
 //     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
 // #endif
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
+    m.def("GetMicroTime", utils::GetMicroTime, "get microsecond time");
+    m.def("GetNanoTime" , utils::GetNanoTime , "get nanosecond time" );
+#else
+    def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
+    def("GetMicroTime", utils::GetMicroTime, "get microsecond time");
+    def("GetNanoTime" , utils::GetNanoTime , "get nanosecond time" );
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_< OPENRAVE_SHARED_PTR< void > >(m, "VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");

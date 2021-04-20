@@ -225,6 +225,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _t);
         _t.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
+        _modifiedFields |= KinBody::LinkInfo::LIF_Transform;
     }
     if (value.HasMember("massTransform")) {
         orjson::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
@@ -307,7 +308,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     if (value.HasMember("geometries")) {
         _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["geometries"].Begin(); it != value["geometries"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vgeometryinfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vgeometryinfos, "name", fUnitScale, options);
         }
     }
 
@@ -322,7 +323,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     //         size_t iGeometry = 0;
     //         for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
     //             std::string id = orjson::GetStringJsonValueByKey(*im, "id");
-    //             UpdateOrCreateInfo(*im, id, vgeometries, fUnitScale);
+    //             UpdateOrCreateInfoWithNameCheck(*im, id, vgeometries, "name", fUnitScale);
     //         }
     //     }
     // }
@@ -783,20 +784,20 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
         // check if similar name exists and throw if it does
         FOREACH(itgeometry, _vGeometries) {
             if( (*itgeometry)->GetName() == ginfo._name ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
             }
         }
 
         FOREACH(itgeometryinfo, _info._vgeometryinfos) {
             if( (*itgeometryinfo)->_name == ginfo._name ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
             }
         }
         if( addToGroups ) {
             FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
                 FOREACH(itgeometryinfo, itgeometrygroup->second) {
                     if( (*itgeometryinfo)->_name == ginfo._name ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s for group %s has conflicting name for link %s"), ginfo._name%itgeometrygroup->first%GetName(), ORE_InvalidArguments);
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s for group %s has conflicting name for link %s"), ginfo._name%itgeometrygroup->first%GetName(), ORE_InvalidArguments);
                     }
                 }
             }
@@ -811,6 +812,30 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
             itgeometrygroup->second.push_back(pginfo);
         }
     }
+    _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
+}
+
+void KinBody::Link::AddGeometryToGroup(KinBody::GeometryInfoPtr pginfo, const std::string& groupname)
+{
+    if( !pginfo ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("tried to add improper geometry to link %s"), GetName(), ORE_InvalidArguments);
+    }
+
+    const KinBody::GeometryInfo& ginfo = *pginfo;
+
+    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.find(groupname);
+    if( it == _info._mapExtraGeometries.end() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("geometry group %s does not exist for link %s"), groupname%GetName(), ORE_InvalidArguments);
+    }
+    if( ginfo._name.size() > 0 ) {
+        FOREACHC(itgeometryinfo, it->second) {
+            if( (*itgeometryinfo)->_name == ginfo._name ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s for group %s has conflicting name for link %s"), ginfo._name%groupname%GetName(), ORE_InvalidArguments);
+            }
+        }
+    }
+
+    it->second.push_back(pginfo);
     _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
@@ -946,6 +971,7 @@ void KinBody::Link::UpdateInfo()
 void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
 {
     info = _info;
+    info._modifiedFields = 0;
     info._vgeometryinfos.resize(_vGeometries.size());
     for (size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
         info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
@@ -964,10 +990,12 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         return updateFromInfoResult;
     }
 
-    if (TransformDistanceFast(GetTransform(), info._t) > g_fEpsilonLinear) {
-        RAVELOG_VERBOSE_FORMAT("link %s transform changed", _info._id);
-        SetTransform(info._t);
-        updateFromInfoResult = UFIR_Success;
+    // transform
+    if( info.IsModifiedField(KinBody::LinkInfo::LIF_Transform) ) {
+        if (TransformDistanceFast(GetTransform(), info._t) > g_fEpsilonLinear) {
+            RAVELOG_VERBOSE_FORMAT("link %s transform changed", _info._id);
+            return UFIR_RequireReinitialize;
+        }
     }
 
     // name

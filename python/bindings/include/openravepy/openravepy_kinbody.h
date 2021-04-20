@@ -166,6 +166,7 @@ public:
 protected:
         void _Update(const KinBody::KinBodyInfo& info);
     }; // class PyKinBodyInfo
+    typedef OPENRAVE_SHARED_PTR<PyKinBodyInfo> PyKinBodyInfoPtr;
 
 
 protected:
@@ -309,10 +310,12 @@ public:
     void ReleaseAllGrabbedWithLink(py::object pylink);
     void RegrabAll();
     py::object IsGrabbing(PyKinBodyPtr pbody) const;
+    int GetNumGrabbed() const;
     py::object GetGrabbed() const;
     py::object GetGrabbedInfo(py::object ograbbedname=py::none_()) const;
     void ResetGrabbed(py::object ograbbedinfos);
     bool IsRobot() const;
+    int GetEnvironmentBodyIndex() const;
     int GetEnvironmentId() const;
     int DoesAffect(int jointindex, int linkindex ) const;
     int DoesDOFAffectLink(int dofindex, int linkindex ) const;
@@ -320,6 +323,7 @@ public:
     py::object GetNonAdjacentLinks() const;
     py::object GetNonAdjacentLinks(int adjacentoptions) const;
     void SetAdjacentLinks(int linkindex0, int linkindex1);
+    void SetAdjacentLinksCombinations(py::object olinkIndices);
     py::object GetAdjacentLinks() const;
     py::object GetManageData() const;
     int GetUpdateStamp() const;
@@ -329,6 +333,7 @@ public:
 
     py::object ExtractInfo() const;
 
+    PyInterfaceBasePtr GetBasicCalculator(const std::string& sKinematicsGeometry);
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);
     virtual std::string __repr__();
     virtual std::string __str__();

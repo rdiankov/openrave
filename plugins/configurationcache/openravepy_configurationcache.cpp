@@ -193,7 +193,15 @@ typedef OPENRAVE_SHARED_PTR<PyConfigurationCache> PyConfigurationCachePtr;
 OPENRAVE_PYTHON_MODULE(openravepy_configurationcache)
 {
     using namespace configurationcachepy;
-    import_array();
+
+    // expansion of the macro `import_array()` in
+    // numpy/core/include/numpy/__multiarray_api.h
+    if (_import_array() < 0) {
+        PyErr_Print();
+        PyErr_SetString(PyExc_ImportError, "numpy.core.multiarray failed to import");
+        return;
+    }
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.attr("__doc__") = "The module contains configuration cache bindings for openravepy\n";
 #else
