@@ -532,9 +532,8 @@ public:
             return false;
         }
 
-        std::vector<int> attachedBodyIndices;
-        plink->GetParent()->GetAttachedEnvironmentBodyIndices(attachedBodyIndices);
-        FCLCollisionManagerInstance& envManager = _GetEnvManager(attachedBodyIndices);
+        plink->GetParent()->GetAttachedEnvironmentBodyIndices(_attachedBodyIndicesCache);
+        FCLCollisionManagerInstance& envManager = _GetEnvManager(_attachedBodyIndicesCache);
 
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
         if( _options & OpenRAVE::CO_Distance ) {
@@ -1369,7 +1368,7 @@ private:
 
     typedef std::map< std::pair<const void*, int>, FCLCollisionManagerInstancePtr> BODYMANAGERSMAP; ///< Maps pairs of (body, bactiveDOFs) to oits manager
     BODYMANAGERSMAP _bodymanagers; ///< managers for each of the individual bodies. each manager should be called with InitBodyManager. Cannot use KinBodyPtr here since that will maintain a reference to the body!
-    std::map< std::vector<int>, FCLCollisionManagerInstancePtr> _envmanagers;
+    std::map< std::vector<int>, FCLCollisionManagerInstancePtr> _envmanagers; // key is sorted vector of environment body indices of excluded bodies
     int _nGetEnvManagerCacheClearCount; ///< count down until cache can be cleared
 
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
@@ -1392,6 +1391,8 @@ private:
     std::vector<fcl::Triangle> _fclTrianglesCache;
     std::vector<KinBodyPtr> _vCachedGrabbedBodies;
 
+    std::vector<int> _attachedBodyIndicesCache;
+    
     bool _bIsSelfCollisionChecker; // Currently not used
     bool _bParentlessCollisionObject; ///< if set to true, the last collision command ran into colliding with an unknown object
 };
