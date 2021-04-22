@@ -4976,6 +4976,7 @@ bool KinBody::IsAttached(const KinBody &body) const
 
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
+    setAttached.clear();
     // by spec "including this body.", include this body
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
 
@@ -4989,10 +4990,7 @@ void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
     vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
-    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
-    for (const KinBodyConstPtr& pbody : setAttached) {
-        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
-    }
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = -1;
 
     int numAttached = _GetNumAttached(vAttachedVisited);
     if( numAttached ) {
@@ -5013,6 +5011,7 @@ void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 
 void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 {
+    setAttached.clear();
     // by spec "including this body.", include this body
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
 
@@ -5026,10 +5025,7 @@ void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
     vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
-    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
-    for (const KinBodyConstPtr& pbody : setAttached) {
-        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
-    }
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = -1;
 
     int numAttached = _GetNumAttached(vAttachedVisited);
     if( numAttached ) {
@@ -5048,30 +5044,13 @@ void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
     }
 }
 
-
-inline bool CompareKinBodyConstPtrByEnvironmentBodyIndex(const KinBodyConstPtr& pbody1, int environmentBodyIndex)
-{
-    return pbody1->GetEnvironmentBodyIndex() <  environmentBodyIndex;
-}
-
-inline bool CompareKinBodyPtrByEnvironmentBodyIndex(const KinBodyPtr& pbody1, int environmentBodyIndex)
-{
-    return pbody1->GetEnvironmentBodyIndex() <  environmentBodyIndex;
-}
-
-
 void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 {
-    // by spec "including this body.", include this body
-    {
-        const std::vector<KinBodyPtr>::const_iterator it = lower_bound(vAttached.begin(), vAttached.end(), GetEnvironmentBodyIndex(), CompareKinBodyPtrByEnvironmentBodyIndex);
-        if (it == vAttached.end() || *it != shared_kinbody_const()) {
-            vAttached.insert(it, boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
-        }
-    }
+    vAttached.clear();
 
     // early exist, probably this is the case most of the time
     if (_listAttachedBodies.empty()) {
+        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
         return;
     }
 
@@ -5080,25 +5059,14 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
     vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
-    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
-    for (const KinBodyConstPtr& pbody : vAttached) {
-        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
-    }
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = 1;
+    int numAttached = 1 + _GetNumAttached(vAttachedVisited); // +1 for self
 
-    int numAttached = 0;
-    {
-        numAttached = _GetNumAttached(vAttachedVisited);
-        if (numAttached == 0) {
-            return;
-        }
-        vAttached.reserve(vAttached.size() + numAttached);
-    }
-
+    vAttached.reserve(numAttached);
     for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
         // 0 means not attached, -1 means it was already in original vAttached so skip
         if (vAttachedVisited[bodyIndex] == 1) {
-            const std::vector<KinBodyPtr>::const_iterator it = lower_bound(vAttached.begin(), vAttached.end(), bodyIndex, CompareKinBodyConstPtrByEnvironmentBodyIndex);
-            vAttached.insert(it, env.GetBodyFromEnvironmentBodyIndex(bodyIndex));
+            vAttached.push_back(env.GetBodyFromEnvironmentBodyIndex(bodyIndex));
             if (--numAttached == 0) {
                 // already filled vAttached with contents of vAttachedVisited
                 return;
@@ -5109,16 +5077,11 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 
 void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
 {
-    // by spec "including this body.", include this body
-    {
-        const std::vector<KinBodyConstPtr>::const_iterator it = lower_bound(vAttached.begin(), vAttached.end(), GetEnvironmentBodyIndex(), CompareKinBodyConstPtrByEnvironmentBodyIndex);
-        if (it == vAttached.end() || *it != shared_kinbody_const()) {
-            vAttached.insert(it, shared_kinbody_const());
-        }
-    }
+    vAttached.clear();
 
     // early exist, probably this is the case most of the time
     if (_listAttachedBodies.empty()) {
+        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
         return;
     }
 
@@ -5127,25 +5090,14 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
     vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
-    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
-    for (const KinBodyConstPtr& pbody : vAttached) {
-        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
-    }
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = 1;
+    int numAttached = 1 + _GetNumAttached(vAttachedVisited); // +1 for self
 
-    int numAttached = 0;
-    {
-        numAttached = _GetNumAttached(vAttachedVisited);
-        if (numAttached == 0) {
-            return;
-        }
-        vAttached.reserve(vAttached.size() + numAttached);
-    }
-
+    vAttached.reserve(numAttached);
     for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
         // 0 means not attached, -1 means it was already in original vAttached so skip
         if (vAttachedVisited[bodyIndex] == 1) {
-            const std::vector<KinBodyConstPtr>::const_iterator it = lower_bound(vAttached.begin(), vAttached.end(), bodyIndex, CompareKinBodyConstPtrByEnvironmentBodyIndex);
-            vAttached.insert(it, env.GetBodyFromEnvironmentBodyIndex(bodyIndex));
+            vAttached.push_back(env.GetBodyFromEnvironmentBodyIndex(bodyIndex));
             if (--numAttached == 0) {
                 // already filled vAttached with contents of vAttachedVisited
                 return;
@@ -5156,16 +5108,11 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
 
 void KinBody::GetAttachedEnvironmentBodyIndices(std::vector<int>& vAttached) const
 {
-    // by spec "including this body.", include this body
-    {
-        const std::vector<int>::const_iterator it = lower_bound(vAttached.begin(), vAttached.end(), GetEnvironmentBodyIndex());
-        if (it == vAttached.end() || *it != GetEnvironmentBodyIndex()) {
-            vAttached.insert(it, GetEnvironmentBodyIndex());
-        }
-    }
+    vAttached.clear();
 
     // early exist, probably this is the case most of the time
     if (_listAttachedBodies.empty()) {
+        vAttached.push_back(GetEnvironmentBodyIndex());
         return;
     }
 
@@ -5174,21 +5121,16 @@ void KinBody::GetAttachedEnvironmentBodyIndices(std::vector<int>& vAttached) con
     vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
-    // by spec "If any bodies are already in vAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
-    for (int envBodyIndex : vAttached) {
-        vAttachedVisited.at(envBodyIndex) = -1;
-    }
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = 1;
+    int numAttached = 1 + _GetNumAttached(vAttachedVisited); // +1 for self
 
-    int numAttached = _GetNumAttached(vAttachedVisited);
-    if( numAttached ) {
-        for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
-            if (vAttachedVisited[bodyIndex] == 1) {
-                const std::vector<int>::const_iterator it = lower_bound(vAttached.begin(), vAttached.end(), bodyIndex);
-                vAttached.insert(it, bodyIndex);
-                if (--numAttached == 0) {
-                    // already filled vAttached with contents of vAttachedVisited
-                    return;
-                }
+    vAttached.reserve(numAttached);
+    for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
+        if (vAttachedVisited[bodyIndex] == 1) {
+            vAttached.push_back(bodyIndex);
+            if (--numAttached == 0) {
+                // already filled vAttached with contents of vAttachedVisited
+                return;
             }
         }
     }

@@ -546,7 +546,8 @@ public:
             FCLSpace::KinBodyInfo& kinBodyInfo = *pinfo;
             if( kinBodyInfo.nLinkUpdateStamp != cache.nLinkUpdateStamp ) {
                 // links changed
-                std::vector<uint64_t> newLinkEnableStates = body.GetLinkEnableStatesMasks();
+                std::vector<uint64_t>& newLinkEnableStates = _linkEnableStatesCache;
+                newLinkEnableStates = body.GetLinkEnableStatesMasks();
                 if( _bTrackActiveDOF && ptrackingbody == pbody ) {
                     for(size_t itestlink = 0; itestlink < _vTrackingActiveLinks.size(); ++itestlink) {
                         if( !_vTrackingActiveLinks[itestlink] ) {
@@ -932,6 +933,7 @@ private:
     KinBodyConstWeakPtr _ptrackingbody; ///< if set, then only tracking the attached bodies if this body
     std::vector<int> _vTrackingActiveLinks; ///< indices of which links are active for tracking body
     std::vector<uint64_t> _linkEnableStatesBitmasks; ///< links that are currently inside the manager
+    std::vector<uint64_t> _linkEnableStatesCache; ///< memory holder for receiving return value of GetLinkEnableStatesMasks in Synchronize.
 
     bool _bTrackActiveDOF; ///< if true and _ptrackingbody is valid, then should be tracking the active dof of the _ptrackingbody
 
