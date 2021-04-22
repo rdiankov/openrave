@@ -656,7 +656,7 @@ public:
 
         _fclspace->Synchronize();
         FCLCollisionManagerInstance& envManager = _GetEnvManager(std::vector<int>());
-        
+
         const std::vector<KinBodyConstPtr> vbodyexcluded;
         const std::vector<LinkConstPtr> vlinkexcluded;
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
@@ -690,16 +690,16 @@ public:
         envManager.GetManager()->collide(&ctriobj, &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         return query._bCollision;
     }
-    
+
     virtual bool CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, CollisionReportPtr report = CollisionReportPtr()) override
     {
         if( !!report ) {
             report->Reset(_options);
         }
-        
+
         _fclspace->Synchronize();
         FCLCollisionManagerInstance& envManager = _GetEnvManager(std::vector<int>());
-        
+
         const std::vector<KinBodyConstPtr> vbodyexcluded;
         const std::vector<LinkConstPtr> vlinkexcluded;
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
@@ -762,7 +762,7 @@ public:
         envManager.GetManager()->collide(&cboxobj, &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         return query._bCollision;
     }
-    
+
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
         START_TIMING_OPT(_statistics, "BodySelf",_options,pbody->IsRobot());
@@ -791,7 +791,7 @@ public:
         query.bselfCollision = true;
 #ifdef FCLRAVE_CHECKPARENTLESS
         boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceSelf, this, boost::ref(*pbody)));
-#endif            
+#endif
         KinBodyInfoPtr pinfo = _fclspace->GetInfo(*pbody);
         FOREACH(itset, nonadjacent) {
             size_t index1 = *itset&0xffff, index2 = *itset>>16;
@@ -1284,7 +1284,7 @@ private:
             for (int excludeBodyIndex : excludedBodyEnvIndices) {
                 vecExcludedBodyEnvIndices.at(excludeBodyIndex) = 1;
             }
-            
+
             p->InitEnvironment(vecExcludedBodyEnvIndices);
             it = _envmanagers.insert(std::map<std::vector<int>, FCLCollisionManagerInstancePtr>::value_type(excludedBodyEnvIndices, p)).first;
         }
@@ -1359,7 +1359,7 @@ private:
 
         return false;
     }
-    
+
     int _options;
     boost::shared_ptr<FCLSpace> _fclspace;
     int _numMaxContacts;
@@ -1392,7 +1392,7 @@ private:
     std::vector<KinBodyPtr> _vCachedGrabbedBodies;
 
     std::vector<int> _attachedBodyIndicesCache;
-    
+
     bool _bIsSelfCollisionChecker; // Currently not used
     bool _bParentlessCollisionObject; ///< if set to true, the last collision command ran into colliding with an unknown object
 };

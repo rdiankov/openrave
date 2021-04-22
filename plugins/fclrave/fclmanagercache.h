@@ -60,12 +60,13 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
 
         KinBodyCache(const KinBodyConstPtr& pbody, const FCLSpace::KinBodyInfoPtr& pinfo)
         {
-            Set(pbody, pinfo);
+            std::vector<uint64_t> linkEnableStateCacheDummy;
+            SetBodyData(pbody, pinfo, linkEnableStateCacheDummy);
         }
 
-        void Set(const KinBodyConstPtr& pbody,
-                 const FCLSpace::KinBodyInfoPtr& pinfo,
-                 const std::vector<uint64_t>& linkEnableStateCache = std::vector<uint64_t>())
+        void SetBodyData(const KinBodyConstPtr& pbody,
+                         const FCLSpace::KinBodyInfoPtr& pinfo,
+                         const std::vector<uint64_t>& linkEnableStateCache)
         {
             pwbody = pbody;
             pwinfo = pinfo;
@@ -250,7 +251,7 @@ public:
                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s (%d) linkmask=0x%x, _tmpSortedBuffer.size()=%d", attachedBody.GetEnv()->GetId()%this%attachedBody.GetName()%pbody->GetEnvironmentBodyIndex()%_GetLinkMask(_linkEnableStatesBitmasks)%_tmpSortedBuffer.size());
                 //EnsureVectorSize(_vecCachedBodies, bodyIndex);
                 KinBodyCache& cache = _vecCachedBodies.at(envBodyIndex);
-                cache.Set(pAttachedBody, pinfo, _linkEnableStatesBitmasks);
+                cache.SetBodyData(pAttachedBody, pinfo, _linkEnableStatesBitmasks);
                 cache.vcolobjs.swap(vcolobjs);
             }
             else {
@@ -309,13 +310,13 @@ public:
                 ensuredVecCachedBodies = true;
             }
             int bodyIndex = body.GetEnvironmentBodyIndex();
-            if( _vecExcludeBodyIndices.size() < bodyIndex + 1 || !_vecExcludeBodyIndices[bodyIndex]) {
+            if( bodyIndex >= (int)_vecExcludeBodyIndices.size() || !_vecExcludeBodyIndices[bodyIndex]) {
                 bool bIsValid = _vecCachedBodies.at(bodyIndex).IsValid();
                 if( !bIsValid) {
                     const FCLSpace::KinBodyInfoPtr& pinfo = _fclspace.GetInfo(body);
                     if( _AddBody(body, pinfo, vcolobjs, _linkEnableStatesBitmasks, false) ) { // new collision objects are already added to _tmpSortedBuffer
                         KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
-                        cache.Set(pbody, pinfo, _linkEnableStatesBitmasks);
+                        cache.SetBodyData(pbody, pinfo, _linkEnableStatesBitmasks);
                         cache.vcolobjs.swap(vcolobjs);
                     }
                 }
@@ -402,7 +403,7 @@ public:
                             ssinfo += str(boost::format("(0x%x:")%bitmask);
                         }
                         ssinfo += str(boost::format("(, numcols=%d")%cache.vcolobjs.size());
-                        
+
                         KinBodyConstPtr pbody = cache.pwbody.lock(); ///< weak pointer to body
                         if( !!pbody ) {
                             ssinfo += str(boost::format("(, name=%s), ")%pbody->GetName());
@@ -740,12 +741,12 @@ public:
 
         if( bAttachedBodiesChanged && !!ptrackingbody ) {
             // since tracking have to update all the bodies
-            std::vector<KinBodyPtr> vecAttachedEnvBodies;
+            std::vector<KinBodyPtr>& vecAttachedEnvBodies = _vecAttachedEnvBodiesCache;
+            std::vector<int>& vecAttachedEnvBodyIndices = _vecAttachedEnvBodyIndicesCache;
             const EnvironmentBase& env = *ptrackingbody->GetEnv();
-            std::vector<int> vecAttachedEnvBodyIndices;
             ptrackingbody->GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
             env.GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, vecAttachedEnvBodies);
-            
+
             std::vector<CollisionObjectPtr> vcolobjs;
             //RAVELOG_VERBOSE_FORMAT("env=%d, %x %u setting %d attached bodies for body %s (%d)", ptrackingbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%attachedBodies.size()%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentBodyIndex());
             // add any new bodies
@@ -764,12 +765,12 @@ public:
                 }
 
                 FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(attached);
-                vcolobjs.resize(0);
+                vcolobjs.clear();
                 if( _AddBody(attached, pinfo, vcolobjs, _linkEnableStatesBitmasks, _bTrackActiveDOF&&(pattached == ptrackingbody)) ) {
                     bcallsetup = true;
                 }
                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u adding body %s (%d)", cache.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%cache.GetName()%attachedBodyIndex);
-                cache.Set(pattached, pinfo, _linkEnableStatesBitmasks);
+                cache.SetBodyData(pattached, pinfo, _linkEnableStatesBitmasks);
                 cache.vcolobjs.swap(vcolobjs);
                 //                    else {
                 //                        RAVELOG_VERBOSE_FORMAT("env=%d %x could not add attached body %s for tracking body %s", trackingbody.GetEnv()->GetId()%this%cache.GetName()%trackingbody.GetName());
@@ -934,6 +935,9 @@ private:
     std::vector<int> _vTrackingActiveLinks; ///< indices of which links are active for tracking body
     std::vector<uint64_t> _linkEnableStatesBitmasks; ///< links that are currently inside the manager
     std::vector<uint64_t> _linkEnableStatesCache; ///< memory holder for receiving return value of GetLinkEnableStatesMasks in Synchronize.
+
+    std::vector<KinBodyPtr> _vecAttachedEnvBodiesCache;
+    std::vector<int> _vecAttachedEnvBodyIndicesCache;
 
     bool _bTrackActiveDOF; ///< if true and _ptrackingbody is valid, then should be tracking the active dof of the _ptrackingbody
 

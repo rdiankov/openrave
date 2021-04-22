@@ -497,9 +497,9 @@ public:
     void SynchronizeWithAttached(const KinBody &body)
     {
         if( body.HasAttached() ) {
-            std::vector<int> vecAttachedEnvBodyIndices;
+            std::vector<int>& vecAttachedEnvBodyIndices = _vecAttachedEnvBodyIndicesCache;
             body.GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
-            std::vector<KinBodyPtr> attachedBodies;
+            std::vector<KinBodyPtr>& attachedBodies = _vecAttachedBodiesCache;
             _penv->GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, attachedBodies);
             for (const KinBodyPtr& pattachedBody : attachedBodies) {
                 if (!!pattachedBody) {
@@ -844,6 +844,9 @@ private:
     std::vector<KinBodyConstPtr> _vecInitializedBodies; ///< vector of the kinbody initialized in this space. index is the environment body index. nullptr means uninitialized.
     std::vector<std::map< std::string, KinBodyInfoPtr> > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
     std::vector<KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. Index of the vector is the environment id (id of the body in the env, not __nUniqueId of env) of the kinbody at that index. The index being environment id makes it easier to compare objects without getting a handle to their pointers. Whenever a KinBodyInfoPtr goes into this map, it is removed from _cachedpinfo. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
+
+    std::vector<int> _vecAttachedEnvBodyIndicesCache; ///< cache
+    std::vector<KinBodyPtr> _vecAttachedBodiesCache; ///< cache
 
     bool _bIsSelfCollisionChecker; // Currently not used
 };
