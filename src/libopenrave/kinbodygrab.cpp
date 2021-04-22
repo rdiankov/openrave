@@ -50,7 +50,7 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
                     ss << (*itbody)->GetName() << ", ";
                 }
             }
-            RAVELOG_WARN_FORMAT("env=%d, body %s trying to grab body %s with %d attached bodies [%s]", GetEnv()->GetId()%GetName()%pbody->GetName()%setAttached.size()%ss.str());
+            RAVELOG_WARN_FORMAT("env=%s, body %s trying to grab body %s with %d attached bodies [%s]", GetEnv()->GetNameId()%GetName()%pbody->GetName()%setAttached.size()%ss.str());
         }
     }
 

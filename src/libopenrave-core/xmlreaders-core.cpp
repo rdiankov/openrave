@@ -880,7 +880,7 @@ public:
         if( bStaticSet ) {
             _plink->_info._bStatic = bStatic;
         }
-        _plink->_info._bIsEnabled = bIsEnabled;
+        _plink->_Enable(bIsEnabled);
     }
     virtual ~LinkXMLReader() {
     }

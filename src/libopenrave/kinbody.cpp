@@ -1494,7 +1494,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
             for(int i = 0; i < pjoint->GetDOF(); ++i) {
                 if( pvalues[i] < vlower.at(dofindex+i)-g_fEpsilonJointLimit ) {
                     if( checklimits == CLA_CheckLimits ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e<%.15e")%GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i)));
+                        RAVELOG_WARN(str(boost::format("env=%s, dof %d velocity is not in limits %.15e<%.15e")%GetEnv()->GetNameId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i)));
                     }
                     else if( checklimits == CLA_CheckLimitsThrow ) {
                         throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e<%.15e"), GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i), ORE_InvalidArguments);
@@ -1503,7 +1503,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                 }
                 else if( pvalues[i] > vupper.at(dofindex+i)+g_fEpsilonJointLimit ) {
                     if( checklimits == CLA_CheckLimits ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e>%.15e")%GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i)));
+                        RAVELOG_WARN(str(boost::format("env=%s, dof %d velocity is not in limits %.15e>%.15e")%GetEnv()->GetNameId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i)));
                     }
                     else if( checklimits == CLA_CheckLimitsThrow ) {
                         throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e>%.15e"), GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i), ORE_InvalidArguments);
@@ -1704,16 +1704,18 @@ void KinBody::GetLinkEnableStates(std::vector<uint8_t>& enablestates) const
     }
 }
 
-uint64_t KinBody::GetLinkEnableStatesMask() const
+void KinBody::NotifyLinkEnabled(size_t linkIndex, bool bEnable)
 {
-    if( _veclinks.size() > 64 ) {
-        RAVELOG_WARN_FORMAT("%s has too many links and will only return enable mask for first 64", _name);
+    if (_vLinkEnableStatesMask.empty()) {
+        RAVELOG_VERBOSE_FORMAT("env=%s, body=%s is not initialized probably this is still in initiailization phase. So skip notifying link enabled (index=%d, value=%d) and let _ComputeInternalInformation() take care of this later", GetEnv()->GetNameId()%GetName()%linkIndex%bEnable);
+        return;
     }
-    uint64_t linkstate = 0;
-    for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
-        linkstate |= ((uint64_t)_veclinks[ilink]->_info._bIsEnabled<<ilink);
+    if (bEnable) {
+        EnableLinkStateBit(_vLinkEnableStatesMask, linkIndex);
     }
-    return linkstate;
+    else {
+        DisableLinkStateBit(_vLinkEnableStatesMask, linkIndex);
+    }
 }
 
 AABB KinBody::ComputeAABB(bool bEnabledOnlyLinks) const
@@ -2026,7 +2028,7 @@ void KinBody::SetLinkEnableStates(const std::vector<uint8_t>& enablestates)
     for(size_t ilink = 0; ilink < enablestates.size(); ++ilink) {
         bool bEnable = enablestates[ilink]!=0;
         if( _veclinks[ilink]->_info._bIsEnabled != bEnable ) {
-            _veclinks[ilink]->_info._bIsEnabled = bEnable;
+            _veclinks[ilink]->_Enable(bEnable);
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
@@ -4834,6 +4836,14 @@ void KinBody::_ComputeInternalInformation()
         _vLinkTransformPointers[ilink] = &_veclinks[ilink]->_info._t;
     }
 
+    InitializeLinkStateBitMasks(_vLinkEnableStatesMask, _veclinks.size());
+    for (const LinkPtr& plink : _veclinks) {
+        const Link& link = *plink;
+        if (link.IsEnabled()) {
+            EnableLinkStateBit(_vLinkEnableStatesMask, link.GetIndex());
+        }
+    }
+
     _nHierarchyComputed = 2;
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
@@ -4966,8 +4976,8 @@ bool KinBody::IsAttached(const KinBody &body) const
 
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
+    setAttached.clear();
     // by spec "including this body.", include this body
-    // vAttached is not sorted, so cannot do binary search
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
 
     // early exist, probably this is the case most of the time
@@ -4980,10 +4990,7 @@ void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
     vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
-    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
-    for (const KinBodyConstPtr& pbody : setAttached) {
-        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
-    }
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = -1;
 
     int numAttached = _GetNumAttached(vAttachedVisited);
     if( numAttached ) {
@@ -5004,8 +5011,8 @@ void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 
 void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 {
+    setAttached.clear();
     // by spec "including this body.", include this body
-    // vAttached is not sorted, so cannot do binary search
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
 
     // early exist, probably this is the case most of the time
@@ -5018,10 +5025,7 @@ void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
     vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
-    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
-    for (const KinBodyConstPtr& pbody : setAttached) {
-        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
-    }
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = -1;
 
     int numAttached = _GetNumAttached(vAttachedVisited);
     if( numAttached ) {
@@ -5042,15 +5046,11 @@ void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 
 void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 {
-    const bool thisInInput = !vAttached.empty() && find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) != vAttached.end();
-    // by spec "including this body.", include this body
-    // vAttached is not sorted, so cannot do binary search
-    if( !thisInInput ) {
-        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
-    }
+    vAttached.clear();
 
     // early exist, probably this is the case most of the time
     if (_listAttachedBodies.empty()) {
+        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
         return;
     }
 
@@ -5059,30 +5059,17 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
     vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
-    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
-    for (const KinBodyConstPtr& pbody : vAttached) {
-        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
-    }
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = 1;
+    int numAttached = 1 + _GetNumAttached(vAttachedVisited); // +1 for self
 
-    int numAttached = 0;
-    {
-        numAttached = _GetNumAttached(vAttachedVisited);
-        if (numAttached == 0) {
-            return;
-        }
-        vAttached.reserve(vAttached.size() + numAttached);
-    }
-
+    vAttached.reserve(numAttached);
     for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
         // 0 means not attached, -1 means it was already in original vAttached so skip
         if (vAttachedVisited[bodyIndex] == 1) {
-            KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
-            if( !!pbody ) {
-                vAttached.push_back(pbody);
-                if (--numAttached == 0) {
-                    // already filled vAttached with contents of vAttachedVisited
-                    return;
-                }
+            vAttached.push_back(env.GetBodyFromEnvironmentBodyIndex(bodyIndex));
+            if (--numAttached == 0) {
+                // already filled vAttached with contents of vAttachedVisited
+                return;
             }
         }
     }
@@ -5090,15 +5077,11 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 
 void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
 {
-    const bool thisInInput = !vAttached.empty() && find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) != vAttached.end();
-    // by spec "including this body.", include this body
-    // vAttached is not sorted, so cannot do binary search
-    if( !thisInInput ) {
-        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
-    }
+    vAttached.clear();
 
     // early exist, probably this is the case most of the time
     if (_listAttachedBodies.empty()) {
+        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
         return;
     }
 
@@ -5107,30 +5090,47 @@ void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
     vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
     std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
 
-    // by spec "If any bodies are already in setAttached, then ignores recursing on their attached bodies.", ignore bodies in original vAttached
-    for (const KinBodyConstPtr& pbody : vAttached) {
-        vAttachedVisited.at(pbody->GetEnvironmentBodyIndex()) = -1;
-    }
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = 1;
+    int numAttached = 1 + _GetNumAttached(vAttachedVisited); // +1 for self
 
-    int numAttached = 0;
-    {
-        numAttached = _GetNumAttached(vAttachedVisited);
-        if (numAttached == 0) {
-            return;
-        }
-        vAttached.reserve(vAttached.size() + numAttached);
-    }
-
+    vAttached.reserve(numAttached);
     for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
         // 0 means not attached, -1 means it was already in original vAttached so skip
         if (vAttachedVisited[bodyIndex] == 1) {
-            KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
-            if( !!pbody ) {
-                vAttached.push_back(pbody);
-                if (--numAttached == 0) {
-                    // already filled vAttached with contents of vAttachedVisited
-                    return;
-                }
+            vAttached.push_back(env.GetBodyFromEnvironmentBodyIndex(bodyIndex));
+            if (--numAttached == 0) {
+                // already filled vAttached with contents of vAttachedVisited
+                return;
+            }
+        }
+    }
+}
+
+void KinBody::GetAttachedEnvironmentBodyIndices(std::vector<int>& vAttached) const
+{
+    vAttached.clear();
+
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        vAttached.push_back(GetEnvironmentBodyIndex());
+        return;
+    }
+
+    const EnvironmentBase& env = *GetEnv();
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = 1;
+    int numAttached = 1 + _GetNumAttached(vAttachedVisited); // +1 for self
+
+    vAttached.reserve(numAttached);
+    for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
+        if (vAttachedVisited[bodyIndex] == 1) {
+            vAttached.push_back(bodyIndex);
+            if (--numAttached == 0) {
+                // already filled vAttached with contents of vAttachedVisited
+                return;
             }
         }
     }
@@ -5240,13 +5240,22 @@ bool KinBody::_RemoveAttachedBody(KinBody &body)
 void KinBody::Enable(bool bEnable)
 {
     bool bchanged = false;
-    FOREACH(it, _veclinks) {
-        if( (*it)->_info._bIsEnabled != bEnable ) {
-            (*it)->_info._bIsEnabled = bEnable;
+    for (const LinkPtr& plink : _veclinks) {
+        Link& link = *plink;
+        if( link._info._bIsEnabled != bEnable ) {
+            link._info._bIsEnabled = bEnable;
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
     }
+    
+    if (bEnable) {
+        EnableAllLinkStateBitMasks(_vLinkEnableStatesMask, _veclinks.size());
+    }
+    else {
+        DisableAllLinkStateBitMasks(_vLinkEnableStatesMask);
+    }
+    
     if( bchanged ) {
         _PostprocessChangedParameters(Prop_LinkEnable);
     }
@@ -5254,8 +5263,8 @@ void KinBody::Enable(bool bEnable)
 
 bool KinBody::IsEnabled() const
 {
-    FOREACHC(it, _veclinks) {
-        if((*it)->IsEnabled()) {
+    for (uint64_t mask : _vLinkEnableStatesMask) {
+        if (mask > 0) {
             return true;
         }
     }
@@ -5456,7 +5465,7 @@ void KinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
 
 void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
 {
-    const size_t numLinks = GetLinks().size();
+    const int numLinks = GetLinks().size();
     BOOST_ASSERT(linkindex0 < numLinks);
     BOOST_ASSERT(linkindex1 < numLinks);
     
@@ -5498,6 +5507,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         _veclinks.push_back(pnewlink);
         _vLinkTransformPointers.push_back(&pnewlink->_info._t);
     }
+    _vLinkEnableStatesMask = r->_vLinkEnableStatesMask;
 
     _vecjoints.resize(0); _vecjoints.reserve(r->_vecjoints.size());
     FOREACHC(itjoint, r->_vecjoints) {
@@ -5861,7 +5871,7 @@ UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::fu
 
 void KinBody::_SetForcedAdjacentLinks(int linkindex0, int linkindex1)
 {
-    const size_t numLinks = GetLinks().size();
+    const int numLinks = GetLinks().size();
     BOOST_ASSERT(linkindex0 < numLinks);
     BOOST_ASSERT(linkindex1 < numLinks);
     const size_t index = _GetIndex1d(linkindex0, linkindex1);

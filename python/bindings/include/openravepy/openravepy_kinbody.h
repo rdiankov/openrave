@@ -246,6 +246,7 @@ public:
     void SetLinkTransformations(py::object transforms, py::object odoflastvalues=py::none_());
     void SetLinkVelocities(py::object ovelocities);
     py::object GetLinkEnableStates() const;
+    py::object GetLinkEnableStatesMasks() const;
     void SetLinkEnableStates(py::object oenablestates);
     bool SetVelocity(py::object olinearvel, py::object oangularvel);
     void SetDOFVelocities(py::object odofvelocities, py::object olinearvel, py::object oangularvel, uint32_t checklimits);
@@ -297,6 +298,7 @@ public:
     bool CheckSelfCollision(PyCollisionReportPtr pReport=PyCollisionReportPtr(), PyCollisionCheckerBasePtr pycollisionchecker=PyCollisionCheckerBasePtr());
     bool IsAttached(PyKinBodyPtr pattachbody);
     py::object GetAttached() const;
+    py::object GetAttachedEnvironmentBodyIndices() const;
     void SetZeroConfiguration();
     void SetNonCollidingConfiguration();
     py::object GetConfigurationSpecification(const std::string& interpolation="") const;

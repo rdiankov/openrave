@@ -489,15 +489,7 @@ public:
         }
 
         _fclspace->SynchronizeWithAttached(*plink->GetParent());
-
-        std::set<KinBodyConstPtr> attachedBodies;
-        pbody->GetAttached(attachedBodies);
-        FOREACH(itbody, attachedBodies) {
-            if( (*itbody)->GetEnvironmentBodyIndex() ) { // for now GetAttached can hold bodies that are not initialized
-                _fclspace->SynchronizeWithAttached(**itbody);
-            }
-        }
-
+        _fclspace->SynchronizeWithAttached(*pbody);
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(*plink);
 
         if( !pcollLink ) {
@@ -540,9 +532,8 @@ public:
             return false;
         }
 
-        std::set<KinBodyConstPtr> attachedBodies;
-        plink->GetParent()->GetAttached(attachedBodies);
-        FCLCollisionManagerInstance& envManager = _GetEnvManager(attachedBodies);
+        plink->GetParent()->GetAttachedEnvironmentBodyIndices(_attachedBodyIndicesCache);
+        FCLCollisionManagerInstance& envManager = _GetEnvManager(_attachedBodyIndicesCache);
 
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
         if( _options & OpenRAVE::CO_Distance ) {
@@ -572,9 +563,9 @@ public:
         _fclspace->Synchronize();
         FCLCollisionManagerInstance& bodyManager = _GetBodyManager(pbody, !!(_options & OpenRAVE::CO_ActiveDOFs));
 
-        std::set<KinBodyConstPtr> attachedBodies;
-        pbody->GetAttached(attachedBodies);
-        FCLCollisionManagerInstance& envManager = _GetEnvManager(attachedBodies);
+        std::vector<int> attachedBodyIndices;
+        pbody->GetAttachedEnvironmentBodyIndices(attachedBodyIndices);
+        FCLCollisionManagerInstance& envManager = _GetEnvManager(attachedBodyIndices);
 
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
         if( _options & OpenRAVE::CO_Distance ) {
@@ -664,9 +655,8 @@ public:
         }
 
         _fclspace->Synchronize();
-        std::set<KinBodyConstPtr> attachedBodies;
-        FCLCollisionManagerInstance& envManager = _GetEnvManager(attachedBodies);
-        
+        FCLCollisionManagerInstance& envManager = _GetEnvManager(std::vector<int>());
+
         const std::vector<KinBodyConstPtr> vbodyexcluded;
         const std::vector<LinkConstPtr> vlinkexcluded;
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
@@ -700,17 +690,16 @@ public:
         envManager.GetManager()->collide(&ctriobj, &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         return query._bCollision;
     }
-    
+
     virtual bool CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, CollisionReportPtr report = CollisionReportPtr()) override
     {
         if( !!report ) {
             report->Reset(_options);
         }
-        
+
         _fclspace->Synchronize();
-        std::set<KinBodyConstPtr> attachedBodies;
-        FCLCollisionManagerInstance& envManager = _GetEnvManager(attachedBodies);
-        
+        FCLCollisionManagerInstance& envManager = _GetEnvManager(std::vector<int>());
+
         const std::vector<KinBodyConstPtr> vbodyexcluded;
         const std::vector<LinkConstPtr> vlinkexcluded;
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
@@ -741,13 +730,15 @@ public:
         }
 
         _fclspace->Synchronize();
-        std::set<KinBodyConstPtr> excludedBodies;
-        FOREACH(itbody, _fclspace->GetEnvBodies()) {
-            if( find(vIncludedBodies.begin(), vIncludedBodies.end(), *itbody) == vIncludedBodies.end() ) {
-                excludedBodies.insert(*itbody);
+        std::vector<int> excludedBodyIndices;
+        for (const KinBodyConstPtr& pbody : _fclspace->GetEnvBodies()) {
+            if( !!pbody && find(vIncludedBodies.begin(), vIncludedBodies.end(), pbody) == vIncludedBodies.end() ) {
+                const int envBodyIndex = pbody->GetEnvironmentBodyIndex();
+                std::vector<int>::iterator it = lower_bound(excludedBodyIndices.begin(), excludedBodyIndices.end(), envBodyIndex);
+                excludedBodyIndices.insert(it, envBodyIndex);
             }
         }
-        FCLCollisionManagerInstance& envManager = _GetEnvManager(excludedBodies);
+        FCLCollisionManagerInstance& envManager = _GetEnvManager(excludedBodyIndices);
 
         const std::vector<KinBodyConstPtr> vbodyexcluded;
         const std::vector<LinkConstPtr> vlinkexcluded;
@@ -771,7 +762,7 @@ public:
         envManager.GetManager()->collide(&cboxobj, &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         return query._bCollision;
     }
-    
+
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
         START_TIMING_OPT(_statistics, "BodySelf",_options,pbody->IsRobot());
@@ -800,7 +791,7 @@ public:
         query.bselfCollision = true;
 #ifdef FCLRAVE_CHECKPARENTLESS
         boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceSelf, this, boost::ref(*pbody)));
-#endif            
+#endif
         KinBodyInfoPtr pinfo = _fclspace->GetInfo(*pbody);
         FOREACH(itset, nonadjacent) {
             size_t index1 = *itset&0xffff, index2 = *itset>>16;
@@ -1264,19 +1255,17 @@ private:
         return *it->second;
     }
 
-    FCLCollisionManagerInstance& _GetEnvManager(const std::set<KinBodyConstPtr>& excludedbodies)
+    /// \brief gets environment manager corresponding to excludedBodyEnvIndices
+    /// \param excludedBodyEnvIndices vector of environment body indices for excluded bodies. sorted in ascending order
+    FCLCollisionManagerInstance& _GetEnvManager(const std::vector<int>& excludedBodyEnvIndices)
     {
         _bParentlessCollisionObject = false;
-        std::set<int> setExcludeBodyIds; ///< any
-        FOREACH(itbody, excludedbodies) {
-            setExcludeBodyIds.insert((*itbody)->GetEnvironmentBodyIndex());
-        }
 
         // check the cache and cleanup any unused environments
         if( --_nGetEnvManagerCacheClearCount < 0 ) {
             uint32_t curtime = OpenRAVE::utils::GetMilliTime();
             _nGetEnvManagerCacheClearCount = 100000;
-            std::map<std::set<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.begin();
+            std::map<std::vector<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.begin();
             while(it != _envmanagers.end()) {
                 if( (it->second->GetLastSyncTimeStamp() - curtime) > 10000 ) {
                     //RAVELOG_VERBOSE_FORMAT("env=%d erasing manager at %u", GetEnv()->GetId()%it->second->GetLastSyncTimeStamp());
@@ -1288,11 +1277,16 @@ private:
             }
         }
 
-        std::map<std::set<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.find(setExcludeBodyIds);
+        std::map<std::vector<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.find(excludedBodyEnvIndices);
         if( it == _envmanagers.end() ) {
             FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
-            p->InitEnvironment(excludedbodies);
-            it = _envmanagers.insert(std::map<std::set<int>, FCLCollisionManagerInstancePtr>::value_type(setExcludeBodyIds, p)).first;
+            vector<int8_t> vecExcludedBodyEnvIndices(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
+            for (int excludeBodyIndex : excludedBodyEnvIndices) {
+                vecExcludedBodyEnvIndices.at(excludeBodyIndex) = 1;
+            }
+
+            p->InitEnvironment(vecExcludedBodyEnvIndices);
+            it = _envmanagers.insert(std::map<std::vector<int>, FCLCollisionManagerInstancePtr>::value_type(excludedBodyEnvIndices, p)).first;
         }
         it->second->EnsureBodies(_fclspace->GetEnvBodies());
         it->second->Synchronize();
@@ -1365,7 +1359,7 @@ private:
 
         return false;
     }
-    
+
     int _options;
     boost::shared_ptr<FCLSpace> _fclspace;
     int _numMaxContacts;
@@ -1374,7 +1368,7 @@ private:
 
     typedef std::map< std::pair<const void*, int>, FCLCollisionManagerInstancePtr> BODYMANAGERSMAP; ///< Maps pairs of (body, bactiveDOFs) to oits manager
     BODYMANAGERSMAP _bodymanagers; ///< managers for each of the individual bodies. each manager should be called with InitBodyManager. Cannot use KinBodyPtr here since that will maintain a reference to the body!
-    std::map< std::set<int>, FCLCollisionManagerInstancePtr> _envmanagers;
+    std::map< std::vector<int>, FCLCollisionManagerInstancePtr> _envmanagers; // key is sorted vector of environment body indices of excluded bodies
     int _nGetEnvManagerCacheClearCount; ///< count down until cache can be cleared
 
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
@@ -1396,6 +1390,8 @@ private:
     std::vector<fcl::Vec3f> _fclPointsCache;
     std::vector<fcl::Triangle> _fclTrianglesCache;
     std::vector<KinBodyPtr> _vCachedGrabbedBodies;
+
+    std::vector<int> _attachedBodyIndicesCache;
 
     bool _bIsSelfCollisionChecker; // Currently not used
     bool _bParentlessCollisionObject; ///< if set to true, the last collision command ran into colliding with an unknown object

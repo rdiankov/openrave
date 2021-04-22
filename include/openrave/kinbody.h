@@ -152,6 +152,64 @@ public:
 
 typedef boost::shared_ptr<KinematicsGenerator> KinematicsGeneratorPtr;
 
+
+/// \brief checks if link is enabled from vector of link enable state mask
+/// intended to be used on return value of GetLinkEnableStatesMasks()
+inline bool IsLinkStateBitEnabled(const std::vector<uint64_t>& linkEnableStateMasks, size_t linkIndex)
+{
+    return linkEnableStateMasks.at(linkIndex >> 6) & (1LU << (linkIndex & 0x3f));
+}
+
+/// \brief checks if link is enabled from vector of link enable state mask
+/// intended to be used on return value of GetLinkEnableStatesMasks()
+inline void DisableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, size_t linkIndex)
+{
+    linkEnableStateMasks.at(linkIndex >> 6) &= ~(1LU << (linkIndex & 0x3f));
+}
+
+/// \brief checks if link is enabled from vector of link enable state mask
+/// intended to be used on return value of GetLinkEnableStatesMasks()
+inline void EnableLinkStateBit(std::vector<uint64_t>& linkEnableStateMasks, size_t linkIndex)
+{
+    linkEnableStateMasks.at(linkIndex >> 6) |= 1LU << (linkIndex & 0x3f);
+}
+
+/// \brief resizes linkEnableStateMasks according to numLinks and initialize to 0's (disabled)
+inline void ResizeLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMasks, size_t numLinks)
+{
+    const size_t size = (numLinks >> 6) + 1;
+    if (linkEnableStateMasks.size() < size) {
+        linkEnableStateMasks.resize(size, 0);
+    }
+}
+
+/// \brief resizes linkEnableStateMasks according to numLinks and initialize to 0's (disabled)
+inline void InitializeLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMasks, size_t numLinks)
+{
+    linkEnableStateMasks.resize((numLinks >> 6) + 1);
+    std::fill(linkEnableStateMasks.begin(), linkEnableStateMasks.end(), 0);
+}
+
+/// \brief sets linkEnableStateMasks to all 0's (disabled)
+inline void DisableAllLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMasks)
+{
+    std::fill(linkEnableStateMasks.begin(), linkEnableStateMasks.end(), 0);
+}
+
+/// \brief sets linkEnableStateMasks to all 1's according to numLinks
+inline void EnableAllLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMasks, size_t numLinks)
+{
+    if (linkEnableStateMasks.empty()) {
+        return;
+    }
+    // enable every bit, but make sure that bits beyond numLinks is 0, otherwise KinBody::IsEnabled may return true even when every link is disabled.
+    if (linkEnableStateMasks.size() > 1) {
+        std::fill(linkEnableStateMasks.begin(), linkEnableStateMasks.end() - 1, UINT64_MAX);
+    }
+
+    linkEnableStateMasks.back() = (1LU << (numLinks & 0x3f)) - 1;
+}
+
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
  */
@@ -1107,6 +1165,9 @@ public:
         UpdateFromInfoResult UpdateFromInfo(const KinBody::LinkInfo& info);
 
 protected:
+        /// \brief enables / disables LinkInfo as well as notifies parent KinBody
+        void _Enable(bool enable);
+        
         /// \brief Updates the cached information due to changes in the collision data.
         ///
         /// \param parameterschanged if true, will
@@ -2547,7 +2608,7 @@ private:
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
-
+    
     /// \brief get the transformations of all the links at once
     void GetLinkTransformations(std::vector<Transform>& transforms) const;
 
@@ -2559,10 +2620,15 @@ private:
     /// \brief gets the enable states of all links
     void GetLinkEnableStates(std::vector<uint8_t>& enablestates) const;
 
-    /// \brief gets a mask of the link enable states.
+    /// \brief notifies link is enabled / disabled. Should be called from Link class to keep internal cache of KinBody consistent with that of LinkInfo.
+    void NotifyLinkEnabled(size_t linkIndex, bool bEnable);
+
+    /// \brief gets a vector of masks of the link enable states.
     ///
-    /// If there are more than 64 links in the kinbody, then will give a warning. User should throw exception themselves.
-    virtual uint64_t GetLinkEnableStatesMask() const;
+    inline const std::vector<uint64_t>& GetLinkEnableStatesMasks() const
+    {
+        return _vLinkEnableStatesMask;
+    }
 
     /// queries the transfromation of the first link of the body
     inline const Transform GetTransform() const {
@@ -2897,11 +2963,20 @@ private:
 
     /// \brief Recursively get all attached bodies of this body, including this body.
     ///
-    /// \param setAttached fills with the attached bodies. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
+    /// \param[out] setAttached fills with the attached bodies.
     void GetAttached(std::set<KinBodyPtr>& setAttached) const;
     void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
+
+    /// \brief Recursively get all attached bodies of this body, including this body.
+    ///
+    /// \param[out] vAttached fills with the attached bodies in ascending order of environment body index.
     void GetAttached(std::vector<KinBodyPtr>& vAttached) const;
     void GetAttached(std::vector<KinBodyConstPtr>& vAttached) const;
+
+    /// \brief Recursively get all attached bodies of this body, including this body.
+    ///
+    /// \param[out] vAttached fills with the environment body index of attached bodies sorted in ascending order.
+    void GetAttachedEnvironmentBodyIndices(std::vector<int>& vAttached) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
     inline bool HasAttached() const {
@@ -3291,6 +3366,8 @@ protected:
     std::vector<JointPtr> _vDOFOrderedJoints; ///< all joints of the body ordered on how they are arranged within the degrees of freedom
     std::vector<LinkPtr> _veclinks; ///< \see GetLinks
     std::vector<int> _vDOFIndices; ///< cached start joint indices, indexed by dof indices
+    std::vector<uint64_t> _vLinkEnableStatesMask; /// bit mask containing enabled info of links. If bit 0 of _vLinkEnableBitMap[0] is 1, link 0 is enabled. If bit 2 of _vLinkEnableBitMap[1] is 0, link 66 is disabled. Used for fast access to the LinkInfo::_bIsEnabled
+
     std::vector<std::pair<int16_t,int16_t> > _vAllPairsShortestPaths; ///< all-pairs shortest paths through the link hierarchy. The first value describes the parent link index, and the second value is an index into _vecjoints or _vPassiveJoints. If the second value is greater or equal to  _vecjoints.size() then it indexes into _vPassiveJoints.
     std::vector<int8_t> _vJointsAffectingLinks; ///< joint x link: (jointindex*_veclinks.size()+linkindex). entry is non-zero if the joint affects the link in the forward kinematics. If negative, the partial derivative of ds/dtheta should be negated.
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops

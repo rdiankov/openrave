@@ -195,8 +195,11 @@ public:
     void DestroyEnvironment()
     {
         RAVELOG_VERBOSE_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)", _penv->GetId()%_userdatakey);
-        FOREACH(itbody, _setInitializedBodies) {
-            KinBodyInfoPtr& pinfo = GetInfo(**itbody);
+        for (KinBodyConstPtr pbody : _vecInitializedBodies) {
+            if (!pbody) {
+                continue;
+            }
+            KinBodyInfoPtr& pinfo = GetInfo(*pbody);
             if( !!pinfo ) {
                 pinfo->Reset();
             }
@@ -205,7 +208,7 @@ public:
         // in that case, null pointer should be returned, instead of range error from _currentpinfo.at(0). for that purpose, keep the first element here.
         _currentpinfo.erase(_currentpinfo.begin() + 1, _currentpinfo.end());
         _cachedpinfo.clear();
-        _setInitializedBodies.clear();
+        _vecInitializedBodies.clear();
     }
 
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), bool bSetToCurrentPInfo=true)
@@ -286,7 +289,7 @@ public:
             }
 
             if( linkinfo->vgeoms.size() == 0 ) {
-                RAVELOG_DEBUG_FORMAT("env=%d, Initializing body '%s' (index=%d) link '%s' with 0 geometries (env %d) (userdatakey %s)", _penv->GetId()%pbody->GetName()%pbody->GetEnvironmentBodyIndex()%plink->GetName()%_penv->GetId()%_userdatakey);
+                RAVELOG_DEBUG_FORMAT("env=%s, Initializing body '%s' (index=%d) link '%s' with 0 geometries (env %d) (userdatakey %s)", _penv->GetNameId()%pbody->GetName()%pbody->GetEnvironmentBodyIndex()%plink->GetName()%_penv->GetId()%_userdatakey);
             }
             else {
                 CollisionGeometryPtr pfclgeomBV = std::make_shared<fcl::Box>(enclosingBV.max_ - enclosingBV.min_);
@@ -313,14 +316,15 @@ public:
         pinfo->_bodyremovedcallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyRemoved, boost::bind(&FCLSpace::RemoveUserData, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::bind(&OpenRAVE::utils::sptr_from<const KinBody>, boost::weak_ptr<const KinBody>(pbody))));
 
         const int envId = pbody->GetEnvironmentBodyIndex();
+        const int maxEnvId = _penv->GetMaxEnvironmentBodyIndex();
         BOOST_ASSERT(envId != 0);
         if( bSetToCurrentPInfo ) {
-            const int maxEnvId = _penv->GetMaxEnvironmentBodyIndex();
             EnsureVectorSize(_currentpinfo, maxEnvId + 1);
             _currentpinfo.at(envId) = pinfo;
         }
         //_cachedpinfo[pbody->GetEnvironmentBodyIndex()] what to do with the cache?
-        _setInitializedBodies.insert(pbody);
+        EnsureVectorSize(_vecInitializedBodies, maxEnvId + 1);
+        _vecInitializedBodies.at(envId) = pbody;
 
         //Do I really need to synchronize anything at that point ?
         _Synchronize(*pinfo, *pbody);
@@ -346,8 +350,11 @@ public:
     {
         // should always do this since bodies can have different geometry groups set
         _geometrygroup = groupname;
-        FOREACHC(itbody, _setInitializedBodies) {
-            SetBodyGeometryGroup(*itbody, groupname);
+        for (const KinBodyConstPtr& pbody : _vecInitializedBodies) {
+            if (!pbody) {
+                continue;
+            }
+            SetBodyGeometryGroup(pbody, groupname);
         }
     }
 
@@ -448,10 +455,14 @@ public:
 
         // reinitialize all the KinBodyInfo
 
-        FOREACH(itbody, _setInitializedBodies) {
-            KinBodyInfoPtr& pinfo = GetInfo(**itbody);
+        for (const KinBodyConstPtr& pbody : _vecInitializedBodies) {
+            if (!pbody) {
+                continue;
+            }
+            const KinBody& body = *pbody;
+            KinBodyInfoPtr& pinfo = GetInfo(body);
             pinfo->nGeometryUpdateStamp++;
-            InitKinBody(*itbody, pinfo);
+            InitKinBody(pbody, pinfo);
         }
         _cachedpinfo.clear();
     }
@@ -464,8 +475,11 @@ public:
     void Synchronize()
     {
         // We synchronize only the initialized bodies, which differs from oderave
-        FOREACH(itbody, _setInitializedBodies) {
-            Synchronize(**itbody);
+        for (const KinBodyConstPtr& pbody : _vecInitializedBodies) {
+            if (!pbody) {
+                continue;
+            }
+            Synchronize(*pbody);
         }
     }
 
@@ -483,10 +497,14 @@ public:
     void SynchronizeWithAttached(const KinBody &body)
     {
         if( body.HasAttached() ) {
-            std::set<KinBodyPtr> setAttachedpBodyTemp;
-            body.GetAttached(setAttachedpBodyTemp);
-            FOREACH(itbody, setAttachedpBodyTemp) {
-                Synchronize(**itbody);
+            std::vector<int>& vecAttachedEnvBodyIndices = _vecAttachedEnvBodyIndicesCache;
+            body.GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
+            std::vector<KinBodyPtr>& attachedBodies = _vecAttachedBodiesCache;
+            _penv->GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, attachedBodies);
+            for (const KinBodyPtr& pattachedBody : attachedBodies) {
+                if (!!pattachedBody) {
+                    Synchronize(*pattachedBody);
+                }
             }
         }
         else {
@@ -528,13 +546,15 @@ public:
     void RemoveUserData(KinBodyConstPtr pbody) {
         if( !!pbody ) {
             RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d (userdatakey %s) : %s") % _penv->GetId() % _userdatakey % pbody->GetName()));
-            _setInitializedBodies.erase(pbody);
+            const int envId = pbody->GetEnvironmentBodyIndex();
+            if (envId < (int) _vecInitializedBodies.size()) {
+                _vecInitializedBodies.at(envId).reset();
+            }
             KinBodyInfoPtr& pinfo = GetInfo(*pbody);
             if( !!pinfo ) {
                 pinfo->Reset();
             }
 
-            const int envId = pbody->GetEnvironmentBodyIndex();
             if( envId == 0 ) {
                 RAVELOG_WARN_FORMAT("env=%s, body '%s' has bodyIndex=0, so not adding to the environment!", _penv->GetNameId()%pbody->GetName());
             }
@@ -550,8 +570,9 @@ public:
     }
 
 
-    const std::set<KinBodyConstPtr>& GetEnvBodies() const {
-        return _setInitializedBodies;
+    /// \brief returns bodies initialized by this space. Note that some entries are null pointer.
+    const std::vector<KinBodyConstPtr>& GetEnvBodies() const {
+        return _vecInitializedBodies;
     }
 
     inline CollisionObjectPtr GetLinkBV(const KinBody::Link &link) {
@@ -688,17 +709,17 @@ private:
     {
         //KinBodyPtr pbody = info.GetBody();
         if( info.nLastStamp != body.GetUpdateStamp()) {
-            vector<Transform> vtrans;
-            body.GetLinkTransformations(vtrans);
             info.nLastStamp = body.GetUpdateStamp();
             BOOST_ASSERT( body.GetLinks().size() == info.vlinks.size() );
-            BOOST_ASSERT( vtrans.size() == info.vlinks.size() );
-            for(size_t i = 0; i < vtrans.size(); ++i) {
-                CollisionObjectPtr pcoll = info.vlinks[i]->linkBV.second;
+            CollisionObjectPtr pcoll;
+            for(size_t i = 0; i < body.GetLinks().size(); ++i) {
+                const FCLSpace::KinBodyInfo::LinkInfo& linkInfo = *info.vlinks[i];
+                pcoll = linkInfo.linkBV.second;
                 if( !pcoll ) {
                     continue;
                 }
-                Transform pose = vtrans[i] * info.vlinks[i]->linkBV.first;
+                const Transform& linkTransform = body.GetLinks()[i]->GetTransform();
+                Transform pose = linkTransform * linkInfo.linkBV.first;
                 fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                 fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
@@ -708,16 +729,16 @@ private:
                 pcoll->computeAABB();
 
                 //info.vlinks[i]->nLastStamp = info.nLastStamp;
-                FOREACHC(itgeomcoll, info.vlinks[i]->vgeoms) {
-                    CollisionObjectPtr pcoll = (*itgeomcoll).second;
-                    Transform pose = vtrans[i] * (*itgeomcoll).first;
+                for (const TransformCollisionPair& pgeom : linkInfo.vgeoms) {
+                    fcl::CollisionObject& coll = *pgeom.second;
+                    Transform pose = linkTransform * pgeom.first;
                     fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                     fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
-                    pcoll->setTranslation(newPosition);
-                    pcoll->setQuatRotation(newOrientation);
+                    coll.setTranslation(newPosition);
+                    coll.setQuatRotation(newOrientation);
                     // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
-                    pcoll->computeAABB();
+                    coll.computeAABB();
                 }
             }
 
@@ -820,9 +841,12 @@ private:
     std::string _bvhRepresentation;
     MeshFactory _meshFactory;
 
-    std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
+    std::vector<KinBodyConstPtr> _vecInitializedBodies; ///< vector of the kinbody initialized in this space. index is the environment body index. nullptr means uninitialized.
     std::vector<std::map< std::string, KinBodyInfoPtr> > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
     std::vector<KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. Index of the vector is the environment id (id of the body in the env, not __nUniqueId of env) of the kinbody at that index. The index being environment id makes it easier to compare objects without getting a handle to their pointers. Whenever a KinBodyInfoPtr goes into this map, it is removed from _cachedpinfo. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
+
+    std::vector<int> _vecAttachedEnvBodyIndicesCache; ///< cache
+    std::vector<KinBodyPtr> _vecAttachedBodiesCache; ///< cache
 
     bool _bIsSelfCollisionChecker; // Currently not used
 };

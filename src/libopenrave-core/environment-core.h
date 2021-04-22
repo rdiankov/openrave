@@ -2431,6 +2431,23 @@ public:
         return KinBodyPtr();
     }
 
+    void GetBodiesFromEnvironmentBodyIndices(const std::vector<int>& bodyIndices,
+                                             std::vector<KinBodyPtr>& bodies) const override
+    {
+        bodies.clear();
+        bodies.reserve(bodyIndices.size());
+        SharedLock lock(_mutexInterfaces);
+        for (int bodyIndex : bodyIndices) {
+            if (0 < bodyIndex && bodyIndex < (int) _vecbodies.size()) {
+                bodies.push_back(_vecbodies.at(bodyIndex));
+            }
+            else {
+                RAVELOG_WARN_FORMAT("env=%s, could not find body for environment body index=%d from %d bodies", GetNameId()%bodyIndex%_vecbodies.size());
+                bodies.push_back(KinBodyPtr());
+            }
+        }
+    }
+
     virtual void StartSimulation(dReal fDeltaTime, bool bRealTime)
     {
         {
@@ -3222,6 +3239,8 @@ protected:
         _keywords = r->_keywords;
         _mapUInt64Parameters = r->_mapUInt64Parameters;
 
+        _assignedBodySensorNameIdSuffix = r->_assignedBodySensorNameIdSuffix;
+        
         _bInit = true;
         _bEnableSimulation = r->_bEnableSimulation;
 
@@ -3769,11 +3788,11 @@ protected:
             std::set<int>::iterator smallestIt = _environmentIndexRecyclePool.begin();
             envBodyIndex = *smallestIt;
             _environmentIndexRecyclePool.erase(smallestIt);
-            RAVELOG_DEBUG_FORMAT("env=%d, recycled body envBodyIndex=%d for %s. %d remaining in pool", GetId()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
+            RAVELOG_DEBUG_FORMAT("env=%s, recycled body envBodyIndex=%d for %s. %d remaining in pool", GetNameId()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
         }
         else {
             envBodyIndex = _vecbodies.empty() ? 1 : _vecbodies.size(); // skip 0
-            RAVELOG_DEBUG_FORMAT("env=%d, assigned new body envBodyIndex=%d for \"%s\", this should not happen unless total number of bodies in env keeps increasing", GetId()%envBodyIndex%pbody->GetName());
+            RAVELOG_DEBUG_FORMAT("env=%s, assigned new body envBodyIndex=%d for \"%s\", this should not happen unless total number of bodies in env keeps increasing", GetNameId()%envBodyIndex%pbody->GetName());
         }
         pbody->_environmentBodyIndex = envBodyIndex;
         return envBodyIndex;
@@ -3785,10 +3804,10 @@ protected:
         const int envBodyIndex = body._environmentBodyIndex;
         if (0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()) {
             _environmentIndexRecyclePool.insert(envBodyIndex); // for recycle later
-            RAVELOG_VERBOSE_FORMAT("env=%d, removed body name=\"%s\" (environmentBodyIndex=%d), recycle body index later", GetId()%body.GetName()%body._environmentBodyIndex);
+            RAVELOG_VERBOSE_FORMAT("env=%s, removed body name=\"%s\" (environmentBodyIndex=%d), recycle body index later", GetNameId()%body.GetName()%body._environmentBodyIndex);
         }
         else {
-            RAVELOG_WARN_FORMAT("env=%d, removed body name=\"%s\" (environmentBodyIndex=%d, _vecbodies size=%d) is not valid. ", GetId()%body.GetName()%body._environmentBodyIndex%_vecbodies.size());
+            RAVELOG_WARN_FORMAT("env=%s, removed body name=\"%s\" (environmentBodyIndex=%d, _vecbodies size=%d) is not valid. ", GetNameId()%body.GetName()%body._environmentBodyIndex%_vecbodies.size());
         }
 
         body._environmentBodyIndex = 0;

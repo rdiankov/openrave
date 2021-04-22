@@ -3128,6 +3128,11 @@ object PyKinBody::GetLinkEnableStates() const
     return toPyArray(enablestates);
 }
 
+object PyKinBody::GetLinkEnableStatesMasks() const
+{
+    return toPyArray(_pbody->GetLinkEnableStatesMasks());
+}
+
 void PyKinBody::SetLinkEnableStates(object oenablestates)
 {
     std::vector<uint8_t> enablestates = ExtractArray<uint8_t>(oenablestates);
@@ -3685,6 +3690,17 @@ object PyKinBody::GetAttached() const
     _pbody->GetAttached(vattached);
     FOREACHC(it,vattached) {
         attached.append(PyKinBodyPtr(new PyKinBody(*it,_pyenv)));
+    }
+    return attached;
+}
+
+object PyKinBody::GetAttachedEnvironmentBodyIndices() const
+{
+    py::list attached;
+    std::vector<int> vattached;
+    _pbody->GetAttachedEnvironmentBodyIndices(vattached);
+    for (int envBodyIndex : vattached) {
+        attached.append(envBodyIndex);
     }
     return attached;
 }
@@ -5223,6 +5239,7 @@ void init_openravepy_kinbody()
 #endif
                          .def("GetLinkEnableStates",&PyKinBody::GetLinkEnableStates, DOXY_FN(KinBody,GetLinkEnableStates))
                          .def("SetLinkEnableStates",&PyKinBody::SetLinkEnableStates, DOXY_FN(KinBody,SetLinkEnableStates))
+                         .def("GetLinkEnableStatesMasks",&PyKinBody::GetLinkEnableStatesMasks, DOXY_FN(KinBody,GetLinkEnableStatesMasks))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("ComputeAABB", &PyKinBody::ComputeAABB,
                               "enabledOnlyLinks"_a = false,
@@ -5385,6 +5402,7 @@ void init_openravepy_kinbody()
 #endif
                          .def("IsAttached",&PyKinBody::IsAttached,PY_ARGS("body") DOXY_FN(KinBody,IsAttached))
                          .def("GetAttached",&PyKinBody::GetAttached, DOXY_FN(KinBody,GetAttached))
+                         .def("GetAttachedEnvironmentBodyIndices",&PyKinBody::GetAttachedEnvironmentBodyIndices, DOXY_FN(KinBody,GetAttachedEnvironmentBodyIndices))
                          .def("SetZeroConfiguration",&PyKinBody::SetZeroConfiguration, DOXY_FN(KinBody,SetZeroConfiguration))
                          .def("SetNonCollidingConfiguration",&PyKinBody::SetNonCollidingConfiguration, DOXY_FN(KinBody,SetNonCollidingConfiguration))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
