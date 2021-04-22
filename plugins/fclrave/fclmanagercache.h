@@ -209,7 +209,7 @@ public:
         for (int envBodyIndex : vecAttachedEnvBodyIndices) {
             const KinBodyPtr& pAttachedBody = *itrAttached++;
             const KinBody& attachedBody = *pAttachedBody;
-            FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(attachedBody);
+            const FCLSpace::KinBodyInfoPtr& pinfo = _fclspace.GetInfo(attachedBody);
             if( !pinfo ) {
                 // don't init something that isn't initialized in this checker.
                 RAVELOG_VERBOSE_FORMAT("body %s has attached body %s which is not initialized in this checker, ignoring for now", pbody->GetName()%attachedBody.GetName());
@@ -514,7 +514,7 @@ public:
 
             pinfo = cache.pwinfo.lock();
             const KinBody& body = *pbody;
-            FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(body); // necessary in case pinfos were swapped!
+            const FCLSpace::KinBodyInfoPtr& pnewinfo = _fclspace.GetInfo(body); // necessary in case pinfos were swapped!
             if( pinfo != pnewinfo ) {
                 // everything changed!
                 RAVELOG_VERBOSE_FORMAT("%u body %s entire KinBodyInfo changed", _lastSyncTimeStamp%pbody->GetName());
@@ -747,7 +747,6 @@ public:
             ptrackingbody->GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
             env.GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, vecAttachedEnvBodies);
 
-            std::vector<CollisionObjectPtr> vcolobjs;
             //RAVELOG_VERBOSE_FORMAT("env=%d, %x %u setting %d attached bodies for body %s (%d)", ptrackingbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%attachedBodies.size()%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentBodyIndex());
             // add any new bodies
             bool vectorSizeIsEnsured = false;
@@ -764,14 +763,13 @@ public:
                     continue;
                 }
 
-                FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(attached);
-                vcolobjs.clear();
-                if( _AddBody(attached, pinfo, vcolobjs, _linkEnableStatesBitmasks, _bTrackActiveDOF&&(pattached == ptrackingbody)) ) {
+                const FCLSpace::KinBodyInfoPtr& pinfo = _fclspace.GetInfo(attached);
+                if( _AddBody(attached, pinfo, cache.vcolobjs, _linkEnableStatesBitmasks, _bTrackActiveDOF&&(pattached == ptrackingbody)) ) {
                     bcallsetup = true;
                 }
                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u adding body %s (%d)", cache.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%cache.GetName()%attachedBodyIndex);
                 cache.SetBodyData(pattached, pinfo, _linkEnableStatesBitmasks);
-                cache.vcolobjs.swap(vcolobjs);
+                //cache.vcolobjs.swap(vcolobjs);
                 //                    else {
                 //                        RAVELOG_VERBOSE_FORMAT("env=%d %x could not add attached body %s for tracking body %s", trackingbody.GetEnv()->GetId()%this%cache.GetName()%trackingbody.GetName());
                 //                    }
