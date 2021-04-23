@@ -1747,7 +1747,10 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                                 else if( *iteval > pjoint->_info._vupperlimit[i]+g_fEpsilonEvalJointLimit ) {
                                     veval.push_back(pjoint->_info._vupperlimit[i]);
                                     if( checklimits == CLA_CheckLimits ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_info._vupperlimit[i]%*iteval));
+                                        // Comment this log to avoid flooding,
+                                        // due to a bug is not yet fixed until https://github.com/rdiankov/openrave/commit/ad0f06c94b3cc0c74ac1b2c506ba0faba6590bb7
+
+                                        // RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_info._vupperlimit[i]%*iteval));
                                     }
                                     else if( checklimits == CLA_CheckLimitsThrow ) {
                                         throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s: upper limit (%e) is not followed: %e"), pjoint->GetName()%pjoint->_info._vupperlimit[i]%*iteval, ORE_InvalidArguments);
