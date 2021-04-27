@@ -18,6 +18,25 @@
 
 namespace OpenRAVE {
 
+void IkFailureInfo::Clear()
+{
+    _vconfig.resize(0);
+    _preport.reset();
+}
+
+void IkFailureInfo::InitCollisionReport(CollisionReportPtr& pnewreport)
+{
+    if( !!pnewreport ) {
+        if( !_preport ) {
+            _preport.reset(new CollisionReport());
+        }
+        *_preport = *pnewreport;
+    }
+    else {
+        _preport.reset();
+    }
+}
+
 bool IkReturn::Append(const IkReturn& r)
 {
     bool bclashing = false;
@@ -55,7 +74,7 @@ void IkReturn::Clear()
     _mapdata.clear();
     _userdata.reset();
     _vsolution.resize(0);
-    //_reports.resize(0); // TODO
+    _ikFailureInfo.Clear();
 }
 
 class CustomIkSolverFilterData : public boost::enable_shared_from_this<CustomIkSolverFilterData>, public UserData

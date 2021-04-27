@@ -36,7 +36,7 @@ enum IkFilterOptions
     IKFO_IgnoreEndEffectorCollisions=0x10, ///< \see IKFO_IgnoreEndEffectorEnvCollisions
     IKFO_IgnoreEndEffectorEnvCollisions=0x10, ///< will not check collision with the environment and the end effector links and bodies attached to the end effector links. The end effector links are defined by \ref RobotBase::Manipulator::GetChildLinks. Use this option when \ref RobotBase::Manipulator::CheckEndEffectorCollision has already been called, or it is ok for the end effector to collide given the IK constraints. Self-collisions between the moving links and end effector are still checked.
     IKFO_IgnoreEndEffectorSelfCollisions=0x20, ///< will not check self-collisions with the end effector. The end effector links are defined by \ref RobotBase::Manipulator::GetChildLinks. Use this option if it is ok for the end effector to collide given the IK constraints. Collisions between the moving links and end effector are still checked.
-    //IKFO_FillCollisionReports=0x1000, ///< if set, will fill the collision reports of the IkReturn structure (TODO)
+    IKFO_FillFailureInformation=0x1000, ///< will fill in failure information in ikReturn._ikFailureInfo when FindIKSolution/FindIKSolutions fails. If calling FindIKSolution/FindIKSolutions from python, this option has to be used along with the function argument ikreturn=True.
 };
 
 /// \brief Return value for the ik filter that can be optionally set on an ik solver.
@@ -70,6 +70,23 @@ static const IkReturnAction IKFR_Reject RAVE_DEPRECATED = IKRA_Reject;
 static const IkReturnAction IKFR_Quit RAVE_DEPRECATED = IKRA_Quit;
 typedef IkReturnAction IkFilterReturn RAVE_DEPRECATED;
 
+class OPENRAVE_API IkFailureInfo
+{
+public:
+    IkFailureInfo()
+    {
+    }
+
+    /// \brief clears the data
+    void Clear();
+
+    /// \brief initializes _preport according to the passed in report.
+    void InitCollisionReport(CollisionReportPtr& preport);
+
+    std::vector< dReal > _vconfig; ///< the robot configuration that does not pass the checks.
+    CollisionReportPtr _preport;   ///< the collision report from when some collision checking fails.
+};
+
 class OPENRAVE_API IkReturn
 {
 public:
@@ -90,8 +107,6 @@ public:
     bool Append(const IkReturn& r);
 
     /// \brief clears the data, leaves the _action unchanged
-    ///
-    /// if _preport is set, will call Reset on it.
     void Clear();
 
     typedef std::map<std::string, std::vector<dReal> > CustomData;
@@ -100,6 +115,7 @@ public:
     CustomData _mapdata; ///< name/value pairs for custom data computed in the filters. Cascading filters using the same name will overwrite this until the last executed filter (with lowest priority).
     UserDataPtr _userdata; ///< if the name/value pairs are not enough, can further use a pointer to custom data. Cascading filters with valid _userdata pointers will overwrite this until the last executed filter (with lowest priority).
     //std::vector<CollisionReport> _reports; ///< all the reports that are written with the collision information if ik failed due to collisions. Only valid if _action has IKRA_RejectSelfCollision or IKRA_RejectEnvCollision set. (TODO)
+    IkFailureInfo _ikFailureInfo; ///< contains failure information associated with this IkReturn.
 };
 
 /** \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_iksolver.
@@ -301,7 +317,7 @@ public:
 
     /// \brief returns the kinematics structure hash this ik solver is encoded to. Checked with \ref RobotBase::Manipulator::GetKinematicsStructureHash()
     virtual const std::string& GetKinematicsStructureHash() const OPENRAVE_DUMMY_IMPLEMENTATION;
-    
+
 protected:
     inline IkSolverBasePtr shared_iksolver() {
         return boost::static_pointer_cast<IkSolverBase>(shared_from_this());

@@ -718,6 +718,7 @@ OPENRAVEPY_API PySensorGeometryPtr toPySensorGeometry(const std::string& sensorn
 
 OPENRAVEPY_API bool ExtractIkReturn(py::object o, IkReturn& ikfr);
 OPENRAVEPY_API py::object toPyIkReturn(const IkReturn& ret);
+OPENRAVEPY_API py::object toPyIkFailureInfo(const IkFailureInfo& ikFailureInfo);
 
 OPENRAVEPY_API py::object GetUserData(UserDataPtr pdata);
 
