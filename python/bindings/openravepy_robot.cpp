@@ -981,16 +981,24 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
 object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, int filteroptions, bool ikreturn, bool releasegil) const
 {
     IkParameterization ikparam;
+    if( filteroptions & IKFO_FillFailureInformation ) {
+        if( !ikreturn ) {
+            RAVELOG_WARN("IKFO_FillFailureInformation is specified but ikreturn is false.");
+            filteroptions &= (~IKFO_FillFailureInformation);
+        }
+    }
     EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ikreturn ) {
         std::vector<IkReturnPtr> vikreturns;
         if( ExtractIkParameterization(oparam,ikparam) ) {
-            if( !_FindIKSolutions(ikparam,filteroptions,vikreturns,releasegil) ) {
-                return py::list();
-            }
+            _FindIKSolutions(ikparam, filteroptions, vikreturns, releasegil);
         }
         // assume transformation matrix
-        else if( !_FindIKSolutions(ExtractTransform(oparam),filteroptions,vikreturns,releasegil) ) {
+        else {
+            _FindIKSolutions(ExtractTransform(oparam), filteroptions, vikreturns, releasegil);
+        }
+        // When the option IKFO_FillFailureInformation is given, vikreturns can be non-empty even though there are no valid ik solutions.
+        if( vikreturns.empty() ) {
             return py::list();
         }
 
@@ -1040,16 +1048,24 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, object freepar
 {
     std::vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
     IkParameterization ikparam;
+    if( filteroptions & IKFO_FillFailureInformation ) {
+        if( !ikreturn ) {
+            RAVELOG_WARN("IKFO_FillFailureInformation is specified but ikreturn is false.");
+            filteroptions &= (~IKFO_FillFailureInformation);
+        }
+    }
     EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ikreturn ) {
         std::vector<IkReturnPtr> vikreturns;
         if( ExtractIkParameterization(oparam,ikparam) ) {
-            if( !_FindIKSolutions(ikparam,vfreeparams,filteroptions,vikreturns,releasegil) ) {
-                return py::list();
-            }
+            _FindIKSolutions(ikparam, vfreeparams, filteroptions, vikreturns, releasegil);
         }
         // assume transformation matrix
-        else if( !_FindIKSolutions(ExtractTransform(oparam),vfreeparams,filteroptions,vikreturns,releasegil) ) {
+        else {
+            _FindIKSolutions(ExtractTransform(oparam), vfreeparams, filteroptions, vikreturns, releasegil);
+        }
+        // When the option IKFO_FillFailureInformation is given, vikreturns can be non-empty even though there are no valid ik solutions.
+        if( vikreturns.empty() ) {
             return py::list();
         }
 

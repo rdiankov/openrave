@@ -236,6 +236,9 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
         if( !!pitdata && pitdata->_priority >= minpriority && pitdata->_priority <= maxpriority) {
             IkReturn ret = pitdata->_filterfn(solution,manipulator,param);
             if( ret != IKRA_Success ) {
+                if( !!filterreturn ) {
+                    filterreturn->_action = static_cast<IkReturnAction>(filterreturn->_action | ret._action);
+                }
                 return ret._action; // just return the action
             }
             if( vtestsolution.size() > 0 ) {
@@ -250,7 +253,7 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
                     if( RaveFabs(vtestsolution.at(i)-vtestsolution2.at(i)) > g_fEpsilonJointLimit ) {
                         int dofindex = manipulator->GetArmIndices()[i];
                         KinBody::JointPtr pjoint = robot->GetJointFromDOFIndex(dofindex); // for debugging
-                        
+
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                         ss << "dof " << dofindex << " of solution=[";
                         FOREACH(itvalue, vtestsolution) {
