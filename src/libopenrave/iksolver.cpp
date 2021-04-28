@@ -24,7 +24,7 @@ void IkFailureInfo::Clear()
     _preport.reset();
 }
 
-void IkFailureInfo::InitCollisionReport(CollisionReportPtr& pnewreport)
+void IkFailureInfo::InitCollisionReport(const CollisionReportPtr& pnewreport)
 {
     if( !!pnewreport ) {
         if( !_preport ) {
@@ -37,12 +37,39 @@ void IkFailureInfo::InitCollisionReport(CollisionReportPtr& pnewreport)
     }
 }
 
+bool IkFailureInfo::Append(const IkFailureInfo& r)
+{
+    bool bclashing = false;
+    if( !r._vconfig.empty() ) {
+        if( !_vconfig.empty() ) {
+            RAVELOG_WARN("IkFailureInfo already has _vconfig set, but overwriting it anyway.");
+            bclashing = true;
+        }
+        _vconfig = r._vconfig;
+    }
+    if( r._ikparam.GetType() != IKP_None ) {
+        if( _ikparam.GetType() != IKP_None ) {
+            RAVELOG_WARN("IkFailureInfo already has _ikparam set, but overwriting it anyway.");
+            bclashing = true;
+        }
+        _ikparam = r._ikparam;
+    }
+    if( !!r._preport ) {
+        if( !!_preport ) {
+            RAVELOG_WARN("IkFailureInfo already has _preport set, but overwriting it anyway.");
+            bclashing = true;
+        }
+        InitCollisionReport(r._preport);
+    }
+    return bclashing;
+}
+
 bool IkReturn::Append(const IkReturn& r)
 {
     bool bclashing = false;
     if( !!r._userdata ) {
         if( !!_userdata ) {
-            RAVELOG_WARN("IkReturn already has _userdata set, but overwriting anyway\n");
+            RAVELOG_WARN("IkReturn already has _userdata set, but overwriting it anyway.");
             bclashing = true;
         }
         _userdata = r._userdata;
@@ -61,11 +88,12 @@ bool IkReturn::Append(const IkReturn& r)
     }
     if( r._vsolution.size() > 0 ) {
         if( _vsolution.size() > 0 ) {
-            RAVELOG_WARN("IkReturn already has _vsolution set, but overwriting anyway\n");
+            RAVELOG_WARN("IkReturn already has _vsolution set, but overwriting it anyway.");
             bclashing = true;
         }
         _vsolution = r._vsolution;
     }
+    bclashing |= _ikFailureInfo.Append(r._ikFailureInfo);
     return bclashing;
 }
 
@@ -237,6 +265,7 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
             IkReturn ret = pitdata->_filterfn(solution,manipulator,param);
             if( ret != IKRA_Success ) {
                 if( !!filterreturn ) {
+                    filterreturn->Append(ret);
                     filterreturn->_action = static_cast<IkReturnAction>(filterreturn->_action | ret._action);
                 }
                 return ret._action; // just return the action

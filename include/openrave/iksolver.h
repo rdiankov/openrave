@@ -81,10 +81,17 @@ public:
     void Clear();
 
     /// \brief initializes _preport according to the passed in report.
-    void InitCollisionReport(CollisionReportPtr& preport);
+    void InitCollisionReport(const CollisionReportPtr& preport);
 
+    /// \brief appends the data of the input IkFailureInfo to this structure
+    /// \return true if data clashes. Also outputs text in such cases.
+    bool Append(const IkFailureInfo& r);
+
+    typedef std::map<std::string, std::vector<dReal> > CustomData;
     std::vector< dReal > _vconfig; ///< the robot configuration that does not pass the checks.
+    IkParameterization _ikparam;   ///< the ikparam that fails (could be different from the ikparam given to FindIKSolutions call).
     CollisionReportPtr _preport;   ///< the collision report from when some collision checking fails.
+    CustomData _mapdata;
 };
 
 class OPENRAVE_API IkReturn
@@ -103,7 +110,7 @@ public:
     /// \brief appends the data of one IkReturn to this structure
     ///
     /// _action is untouched, _vsolution is overridden if non-empty
-    /// \return If data clashes, will output text and return false
+    /// \return true if data clashes. Also outputs text in such cases.
     bool Append(const IkReturn& r);
 
     /// \brief clears the data, leaves the _action unchanged
