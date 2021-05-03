@@ -76,8 +76,11 @@ public:
     IkFailureInfo()
     {
     }
+    IkFailureInfo(IkReturnAction action) : _action(action)
+    {
+    }
 
-    /// \brief clears the data
+    /// \brief clears the data. _action is left unchanged.
     void Clear();
 
     /// \brief initializes _preport according to the passed in report.
@@ -88,10 +91,43 @@ public:
     bool Append(const IkFailureInfo& r);
 
     typedef std::map<std::string, std::vector<dReal> > CustomData;
+    IkReturnAction _action;
     std::vector< dReal > _vconfig; ///< the robot configuration that does not pass the checks.
     IkParameterization _ikparam;   ///< the ikparam that fails (could be different from the ikparam given to FindIKSolutions call).
     CollisionReportPtr _preport;   ///< the collision report from when some collision checking fails.
     CustomData _mapdata;
+};
+
+class OPENRAVE_API IkFailureAccumulator
+{
+public:
+    IkFailureAccumulator();
+
+    inline const size_t GetCurrentSize() const
+    {
+        return _nextIndex;
+    }
+
+    inline void ResetIndex(const size_t nextIndex=0)
+    {
+        _nextIndex = nextIndex;
+    }
+
+    /// \brief Retrieve ikFailureInfo from the specified index. Assume the input index is valid.
+    inline const IkFailureInfo& GetIkFailureInfo(size_t index) const
+    {
+        return _vIkFailureInfos[index];
+    }
+
+protected:
+    /// \brief Get the next available IkFailureInfo to fill in failure information.
+    IkFailureInfo& GetNextAvailableIkFailureInfo();
+
+    friend class IkSolverBase;
+
+private:
+    std::vector<IkFailureInfo> _vIkFailureInfos;
+    size_t _nextIndex = 0;
 };
 
 class OPENRAVE_API IkReturn
@@ -220,6 +256,10 @@ public:
         \return true if solution is found
      */
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution = boost::shared_ptr< std::vector<dReal> >()) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkFailureAccumulatorPtr paccumulator, boost::shared_ptr< std::vector<dReal> > solution = boost::shared_ptr< std::vector<dReal> >())
+    {
+        return Solve(param, q0, filteroptions, solution);
+    }
 
     /** \brief Return a joint configuration for the given end effector transform.
 
@@ -230,6 +270,7 @@ public:
         \return true if solution is found
      */
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn);
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkFailureAccumulatorPtr paccumulator, IkReturnPtr ikreturn);
 
     /** \brief Return all joint configurations for the given end effector transform.
 
@@ -239,6 +280,10 @@ public:
         \return true if at least one solution is found
      */
     virtual bool SolveAll(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
+    virtual bool SolveAll(const IkParameterization& param, int filteroptions, IkFailureAccumulatorPtr paccumulator, std::vector< std::vector<dReal> >& solutions)
+    {
+        return SolveAll(param, filteroptions, solutions);
+    }
 
     /// \deprecated (12/05/01)
     virtual bool Solve(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& solutions) RAVE_DEPRECATED {
@@ -253,6 +298,7 @@ public:
         \return true if at least one solution is found
      */
     virtual bool SolveAll(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& ikreturns);
+    virtual bool SolveAll(const IkParameterization& param, int filteroptions, IkFailureAccumulatorPtr paccumulator, std::vector<IkReturnPtr>& ikreturns);
 
     /** Return a joint configuration for the given end effector transform.
 
@@ -265,6 +311,10 @@ public:
         \return true if solution is found
      */
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution=boost::shared_ptr< std::vector<dReal> >()) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorPtr paccumulator, boost::shared_ptr< std::vector<dReal> > solution=boost::shared_ptr< std::vector<dReal> >())
+    {
+        return Solve(param, q0, vFreeParameters, filteroptions, solution);
+    }
 
     /** Return a joint configuration for the given end effector transform.
 
@@ -277,6 +327,7 @@ public:
         \return true if solution is found
      */
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn);
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorPtr paccumulator, IkReturnPtr ikreturn);
 
     /** \brief Return all joint configurations for the given end effector transform.
 
@@ -288,6 +339,10 @@ public:
         \return true at least one solution is found
      */
     virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
+    virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorPtr paccumulator, std::vector< std::vector<dReal> >& solutions)
+    {
+        return SolveAll(param, vFreeParameters, filteroptions, solutions);
+    }
 
     /// \deprecated (12/05/01)
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& solutions) RAVE_DEPRECATED {
@@ -304,6 +359,7 @@ public:
         \return true at least one solution is found
      */
     virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& ikreturns);
+    virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorPtr paccumulator, std::vector<IkReturnPtr>& ikreturns);
 
     /// \brief returns true if the solver supports a particular ik parameterization as input.
     virtual bool Supports(IkParameterizationType iktype) const OPENRAVE_DUMMY_IMPLEMENTATION;
