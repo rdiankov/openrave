@@ -49,8 +49,16 @@ namespace numeric = py::numeric;
 
 PyIkFailureInfo::PyIkFailureInfo(const IkFailureInfo& ikFailureInfo) : _ikFailureInfo(ikFailureInfo) {
 }
-object PyIkFailureInfo::GetCheckedConfiguration() {
+object PyIkFailureInfo::GetConfiguration() {
     return toPyArray(_ikFailureInfo._vconfig);
+}
+object PyIkFailureInfo::GetIkParam() {
+    if( _ikFailureInfo._ikparam.GetType() == IKP_None ) {
+        return py::none_();
+    }
+    else {
+        return toPyIkParameterization(_ikFailureInfo._ikparam);
+    }
 }
 object PyIkFailureInfo::GetCollisionReport() {
     if( !!_ikFailureInfo._preport ) {
@@ -58,6 +66,18 @@ object PyIkFailureInfo::GetCollisionReport() {
     }
     else {
         return py::none_();
+    }
+}
+
+PyIkFailureAccumulator::PyIkFailureAccumulator() {
+    _ikFailureAccumulator = IkFailureAccumulator();
+}
+object PyIkFailureAccumulator::GetIkFailureInfo(size_t index) const {
+    if( index >= _ikFailureAccumulator.GetCurrentSize() ) {
+        return py::none_();
+    }
+    else {
+        return py::to_object(PyIkFailureInfoPtr(new PyIkFailureInfo(_ikFailureAccumulator.GetIkFailureInfo(index))));
     }
 }
 
@@ -90,17 +110,24 @@ object PyIkReturn::GetMapDataDict() {
     }
     return odata;
 }
-object PyIkReturn::GetIkFailureInfo() {
-    return toPyIkFailureInfo(_ret._ikFailureInfo);
-}
-object PyIkReturn::GetCheckedConfiguration() {
-    if( _ret._action == IKRA_Success ) {
-        return toPyArray(_ret._vsolution);
+object PyIkReturn::GetIkFailureInfos() {
+    py::list pyreturns;
+    FOREACHC(itIkFailureInfo, _ret._vIkFailureInfos) {
+        pyreturns.append(py::to_object(PyIkFailureInfoPtr(new PyIkFailureInfo(**itIkFailureInfo))));
     }
-    else {
-        return toPyArray(_ret._ikFailureInfo._vconfig);
-    }
+    return pyreturns;
 }
+// object PyIkReturn::GetIkFailureInfo() {
+//     return toPyIkFailureInfo(_ret._ikFailureInfo);
+// }
+// object PyIkReturn::GetCheckedConfiguration() {
+//     if( _ret._action == IKRA_Success ) {
+//         return toPyArray(_ret._vsolution);
+//     }
+//     else {
+//         return toPyArray(_ret._ikFailureInfo._vconfig);
+//     }
+// }
 
 void PyIkReturn::SetUserData(PyUserData pdata) {
     _ret._userdata = pdata._handle;
@@ -263,6 +290,16 @@ object PyIkSolverBase::RegisterCustomFilter(int priority, object fncallback)
     return toPyUserData(_pIkSolver->RegisterCustomFilter(priority,boost::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_pIkSolver,_1,_2,_3)));
 }
 
+bool ExtractIkFailureAccumulator(object o, IkFailureAccumulator& ikFailureAccumulator)
+{
+    extract_<PyIkFailureAccumulatorPtr> pyIkFailureAccumulator(o);
+    if( pyIkFailureAccumulator.check() ) {
+        ikFailureAccumulator = ((PyIkFailureAccumulatorPtr)pyIkFailureAccumulator)->_ikFailureAccumulator;
+        return true;
+    }
+    return false;
+}
+
 bool ExtractIkReturn(object o, IkReturn& ikfr)
 {
     extract_<PyIkReturnPtr > pyikfr(o);
@@ -365,9 +402,23 @@ void init_openravepy_iksolver()
 #else
     class_<PyIkFailureInfo, PyIkFailureInfoPtr>("IkFailureInfo", DOXY_CLASS(IkFailureInfo), no_init)
 #endif
-    .def("GetCheckedConfiguration", &PyIkFailureInfo::GetCheckedConfiguration, "Returns the configuration checked by the iksolver/registered filters.")
+    .def("GetConfiguration", &PyIkFailureInfo::GetConfiguration, "Returns the configuration that fails the check by the iksolver/registered filters.")
+    .def("GetIkParam", &PyIkFailureInfo::GetIkParam, "Returns the ikparam that fails the check by the iksolver/registered filters.")
     .def("GetCollisionReport", &PyIkFailureInfo::GetCollisionReport, "Returns the collision report generated during ik computation.")
     ;
+
+    // PyIkFailureAccumulator
+    {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        scope_ ikfailureaccumulator = class_<PyIkFailureAccumulator, PyIkFailureAccumulatorPtr>(m, "IkFailureAccumulator", DOXY_CLASS(IkFailureAccumulator))
+                                      .def(init<>())
+#else
+        scope_ ikfailureaccumulator = class_<PyIkFailureAccumulator, PyIkFailureAccumulatorPtr>("IkFailureAccumulator", DOXY_CLASS(IkFailureAccumulator))
+#endif
+                                      .def("GetCurrentSize", &PyIkFailureAccumulator::GetCurrentSize, "Return the current active size of the accumulator")
+                                      .def("GetIkFailureInfo", &PyIkFailureAccumulator::GetIkFailureInfo, PY_ARGS("index") DOXY_FN(IkFailureAccumulator, GetIkFailureInfo "Get ikFailureInfo at the specified index"))
+        ;
+    } // PyIkFailureAccumulator
 
     {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -382,8 +433,9 @@ void init_openravepy_iksolver()
                           .def("GetUserData",&PyIkReturn::GetUserData, "Retuns IkReturn::_userdata")
                           .def("GetMapData",&PyIkReturn::GetMapData, PY_ARGS("key") "Indexes into the map and returns an array of numbers. If key doesn't exist, returns None")
                           .def("GetMapDataDict",&PyIkReturn::GetMapDataDict, "Returns a dictionary copy for IkReturn::_mapdata")
-                          .def("GetIkFailureInfo",&PyIkReturn::GetIkFailureInfo, "Returns PyIkFailureInfo containing information of failure associated with this IkReturn")
-                          .def("GetCheckedConfiguration",&PyIkReturn::GetCheckedConfiguration, "Returns the configuration checked by the iksolver/registered filters.")
+                          .def("GetIkFailureInfos",&PyIkReturn::GetIkFailureInfos, "Returns PyIkFailureInfos containing information of failure associated with this IkReturn")
+                          // .def("GetIkFailureInfo",&PyIkReturn::GetIkFailureInfo, "Returns PyIkFailureInfo containing information of failure associated with this IkReturn")
+                          // .def("GetCheckedConfiguration",&PyIkReturn::GetCheckedConfiguration, "Returns the configuration checked by the iksolver/registered filters.")
                           .def("SetUserData",&PyIkReturn::SetUserData,PY_ARGS("data") "Set IKReturn::_userdata")
                           .def("SetSolution",&PyIkReturn::SetSolution,PY_ARGS("solution") "Set IKReturn::_vsolution")
                           .def("SetMapKeyValue",&PyIkReturn::SetMapKeyValue,PY_ARGS("key", "value") "Adds key/value pair to IKReturn::_mapdata")

@@ -27,13 +27,26 @@ class PyIkFailureInfo
 {
 public:
     PyIkFailureInfo(const IkFailureInfo& ikFailureInfo);
-    object GetCheckedConfiguration();
+    object GetConfiguration();
+    object GetIkParam();
     object GetCollisionReport();
 
     IkFailureInfo _ikFailureInfo;
 };
 
 typedef OPENRAVE_SHARED_PTR<PyIkFailureInfo> PyIkFailureInfoPtr;
+
+class PyIkFailureAccumulator
+{
+public:
+    PyIkFailureAccumulator();
+    inline int GetCurrentSize() const {
+	return _ikFailureAccumulator.GetCurrentSize();
+    }
+    object GetIkFailureInfo(size_t index) const;
+
+    IkFailureAccumulator _ikFailureAccumulator;
+};
 
 class PyIkReturn
 {
@@ -46,8 +59,9 @@ public:
     object GetUserData();
     object GetMapData(const std::string& key);
     object GetMapDataDict();
-    object GetIkFailureInfo();
-    object GetCheckedConfiguration();
+    object GetIkFailureInfos();
+    // object GetIkFailureInfo();
+    // object GetCheckedConfiguration();
 
     void SetUserData(PyUserData pdata);
     void SetSolution(object osolution);
