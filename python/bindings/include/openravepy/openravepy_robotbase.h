@@ -131,13 +131,13 @@ public:
         bool _FindIKSolutions(const IkParameterization& ikparam, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil, IkFailureAccumulatorPtr paccumulator=nullptr) const;
         bool _FindIKSolutions(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil, IkFailureAccumulatorPtr paccumulator=nullptr) const;
 
-        object FindIKSolution(object oparam, int filteroptions, bool ikreturn=false, bool releasegil=false, object oikFailureAccumulator=py::none_()) const;
+        object FindIKSolution(object oparam, int filteroptions, bool ikreturn=false, bool releasegil=false, PyIkFailureAccumulatorPtr=nullptr) const;
 
-        object FindIKSolution(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false, object oikFailureAccumulator=py::none_()) const;
+        object FindIKSolution(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false, PyIkFailureAccumulatorPtr=nullptr) const;
 
         object FindIKSolutions(object oparam, int filteroptions, bool ikreturn=false, bool releasegil=false, PyIkFailureAccumulatorPtr=nullptr) const;
 
-        object FindIKSolutions(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false, object oikFailureAccumulator=py::none_()) const;
+        object FindIKSolutions(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false, PyIkFailureAccumulatorPtr=nullptr) const;
 
         object GetIkParameterization(object oparam, bool inworld=true);
 

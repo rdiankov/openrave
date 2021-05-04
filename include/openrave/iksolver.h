@@ -90,12 +90,17 @@ public:
     /// \return true if data clashes. Also outputs text in such cases.
     bool Append(const IkFailureInfo& r);
 
+    int GetIndex() const {
+        return _index;
+    }
+
     typedef std::map<std::string, std::vector<dReal> > CustomData;
     IkReturnAction _action;
     std::vector< dReal > _vconfig; ///< the robot configuration that does not pass the checks.
     IkParameterization _ikparam;   ///< the ikparam that fails (could be different from the ikparam given to FindIKSolutions call).
     CollisionReportPtr _preport;   ///< the collision report from when some collision checking fails.
     CustomData _mapdata;
+    int _index; // for debugging
 };
 
 class OPENRAVE_API IkFailureAccumulator

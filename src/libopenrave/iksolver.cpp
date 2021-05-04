@@ -22,6 +22,7 @@ void IkFailureInfo::Clear()
 {
     _vconfig.resize(0);
     _preport.reset();
+    _index = -1;
 }
 
 void IkFailureInfo::InitCollisionReport(const CollisionReportPtr& pnewreport)
@@ -73,8 +74,10 @@ IkFailureInfo& IkFailureAccumulator::GetNextAvailableIkFailureInfo()
     if( _nextIndex >= _vIkFailureInfos.size() ) {
         _vIkFailureInfos.resize(_vIkFailureInfos.size() + 100);
     }
-    IkFailureInfo& ikFailureInfo = _vIkFailureInfos[_nextIndex++];
+    IkFailureInfo& ikFailureInfo = _vIkFailureInfos[_nextIndex];
     ikFailureInfo.Clear();
+    ikFailureInfo._index = _nextIndex;
+    _nextIndex++;
     return ikFailureInfo;
 }
 
@@ -83,8 +86,10 @@ IkFailureInfoPtr IkFailureAccumulator::GetNextAvailableIkFailureInfoPtr()
     if( _nextIndex >= _vIkFailureInfos.size() ) {
         _vIkFailureInfos.resize(_vIkFailureInfos.size() + 100);
     }
-    IkFailureInfoPtr pIkFailureInfo(&_vIkFailureInfos[_nextIndex++], utils::null_deleter());
+    IkFailureInfoPtr pIkFailureInfo(&_vIkFailureInfos[_nextIndex], utils::null_deleter());
     pIkFailureInfo->Clear();
+    pIkFailureInfo->_index = _nextIndex;
+    _nextIndex++;
     return pIkFailureInfo;
 }
 
