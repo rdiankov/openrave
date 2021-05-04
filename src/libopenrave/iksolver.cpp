@@ -78,6 +78,16 @@ IkFailureInfo& IkFailureAccumulator::GetNextAvailableIkFailureInfo()
     return ikFailureInfo;
 }
 
+IkFailureInfoPtr IkFailureAccumulator::GetNextAvailableIkFailureInfoPtr()
+{
+    if( _nextIndex >= _vIkFailureInfos.size() ) {
+        _vIkFailureInfos.resize(_vIkFailureInfos.size() + 100);
+    }
+    IkFailureInfoPtr pIkFailureInfo(&_vIkFailureInfos[_nextIndex++], utils::null_deleter());
+    pIkFailureInfo->Clear();
+    return pIkFailureInfo;
+}
+
 bool IkReturn::Append(const IkReturn& r)
 {
     bool bclashing = false;
@@ -107,7 +117,9 @@ bool IkReturn::Append(const IkReturn& r)
         }
         _vsolution = r._vsolution;
     }
-    bclashing |= _ikFailureInfo.Append(r._ikFailureInfo);
+    // bclashing |= _ikFailureInfo.Append(r._ikFailureInfo);
+    _vIkFailureInfos.reserve(_vIkFailureInfos.size() + r._vIkFailureInfos.size());
+    _vIkFailureInfos.insert(_vIkFailureInfos.end(), r._vIkFailureInfos.begin(), r._vIkFailureInfos.end());
     return bclashing;
 }
 
@@ -116,7 +128,8 @@ void IkReturn::Clear()
     _mapdata.clear();
     _userdata.reset();
     _vsolution.resize(0);
-    _ikFailureInfo.Clear();
+    // _ikFailureInfo.Clear();
+    _vIkFailureInfos.clear();
 }
 
 class CustomIkSolverFilterData : public boost::enable_shared_from_this<CustomIkSolverFilterData>, public UserData

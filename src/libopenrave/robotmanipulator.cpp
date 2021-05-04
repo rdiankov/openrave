@@ -308,13 +308,12 @@ void RobotBase::Manipulator::GetGripperDOFValues(std::vector<dReal>& v) const
     GetRobot()->GetDOFValues(v, __vgripperdofindices);
 }
 
-
-bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vector<dReal>& solution, int filteroptions, IkFailureAccumulatorPtr paccumulator) const
+bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vector<dReal>& solution, int filteroptions) const
 {
-    return FindIKSolution(goal, vector<dReal>(), solution, filteroptions, paccumulator);
+    return FindIKSolution(goal, vector<dReal>(), solution, filteroptions);
 }
 
-bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, int filteroptions, IkFailureAccumulatorPtr paccumulator) const
+bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, int filteroptions) const
 {
     IkSolverBasePtr pIkSolver = GetIkSolver();
     OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
@@ -333,15 +332,15 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
         localgoal=goal;
     }
     boost::shared_ptr< vector<dReal> > psolution(&solution, utils::null_deleter());
-    return vFreeParameters.size() == 0 ? pIkSolver->Solve(localgoal, solution, filteroptions, paccumulator, psolution) : pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, paccumulator, psolution);
+    return vFreeParameters.size() == 0 ? pIkSolver->Solve(localgoal, solution, filteroptions, psolution) : pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, psolution);
 }
 
-bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, int filteroptions, IkFailureAccumulatorPtr paccumulator) const
+bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, int filteroptions) const
 {
-    return FindIKSolutions(goal, vector<dReal>(), solutions, filteroptions, paccumulator);
+    return FindIKSolutions(goal, vector<dReal>(), solutions, filteroptions);
 }
 
-bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions, IkFailureAccumulatorPtr paccumulator) const
+bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const
 {
     IkSolverBasePtr pIkSolver = GetIkSolver();
     OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
@@ -353,7 +352,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
     else {
         localgoal=goal;
     }
-    return vFreeParameters.size() == 0 ? pIkSolver->SolveAll(localgoal,filteroptions,paccumulator,solutions) : pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,paccumulator,solutions);
+    return vFreeParameters.size() == 0 ? pIkSolver->SolveAll(localgoal,filteroptions,solutions) : pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,solutions);
 }
 
 
