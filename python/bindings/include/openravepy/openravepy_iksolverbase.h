@@ -27,9 +27,13 @@ class PyIkFailureInfo
 {
 public:
     PyIkFailureInfo(const IkFailureInfo& ikFailureInfo);
+    IkReturnAction GetAction();
     object GetConfiguration();
     object GetIkParam();
     object GetCollisionReport();
+    std::string GetDescription();
+    object GetMapData(const std::string& key);
+    object GetMapDataDict();
 
     IkFailureInfo _ikFailureInfo;
 };
@@ -41,7 +45,7 @@ class PyIkFailureAccumulator
 public:
     PyIkFailureAccumulator();
     inline int GetCurrentSize() const {
-	return _ikFailureAccumulator.GetCurrentSize();
+        return _ikFailureAccumulator.GetCurrentSize();
     }
     object GetIkFailureInfo(size_t index) const;
 
@@ -60,8 +64,6 @@ public:
     object GetMapData(const std::string& key);
     object GetMapDataDict();
     object GetIkFailureInfos();
-    // object GetIkFailureInfo();
-    // object GetCheckedConfiguration();
 
     void SetUserData(PyUserData pdata);
     void SetSolution(object osolution);

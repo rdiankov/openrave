@@ -38,6 +38,34 @@ void IkFailureInfo::InitCollisionReport(const CollisionReportPtr& pnewreport)
     }
 }
 
+void IkFailureInfo::SetDescription(const std::string& description)
+{
+    _description = description;
+}
+
+void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Document::AllocatorType& alloc) const
+{
+    rIkFailureInfo.SetObject();
+    orjson::SetJsonValueByKey(rIkFailureInfo, "action", _action, alloc);
+    if( _vconfig.size() > 0 ) {
+        orjson::SetJsonValueByKey(rIkFailureInfo, "config", _vconfig, alloc);
+    }
+    if( _ikparam.GetType() != IKP_None ) {
+        orjson::SetJsonValueByKey(rIkFailureInfo, "ikparam", _ikparam, alloc);
+    }
+    if( !!_preport ) {
+        orjson::SetJsonValueByKey(rIkFailureInfo, "collisionReport", _preport->__str__(), alloc);
+    }
+    orjson::SetJsonValueByKey(rIkFailureInfo, "description", _description, alloc);
+    if( _mapdata.size() > 0 ) {
+        rapidjson::Value mapdatajson(rapidjson::kObjectType);
+        FOREACHC(itKeyValue, _mapdata) {
+            orjson::SetJsonValueByKey(mapdatajson, itKeyValue->first.c_str(), itKeyValue->second, alloc);
+        }
+        orjson::SetJsonValueByKey(rIkFailureInfo, "mapdata", mapdatajson, alloc);
+    }
+}
+
 bool IkFailureInfo::Append(const IkFailureInfo& r)
 {
     bool bclashing = false;

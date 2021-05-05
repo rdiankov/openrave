@@ -86,6 +86,10 @@ public:
     /// \brief initializes _preport according to the passed in report.
     void InitCollisionReport(const CollisionReportPtr& preport);
 
+    void SetDescription(const std::string& description);
+
+    void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
+
     /// \brief appends the data of the input IkFailureInfo to this structure
     /// \return true if data clashes. Also outputs text in such cases.
     bool Append(const IkFailureInfo& r);
@@ -95,11 +99,12 @@ public:
     }
 
     typedef std::map<std::string, std::vector<dReal> > CustomData;
-    IkReturnAction _action;
+    IkReturnAction _action;        ///< the IkReturnAction corresponding to this failure
     std::vector< dReal > _vconfig; ///< the robot configuration that does not pass the checks.
     IkParameterization _ikparam;   ///< the ikparam that fails (could be different from the ikparam given to FindIKSolutions call).
     CollisionReportPtr _preport;   ///< the collision report from when some collision checking fails.
-    CustomData _mapdata;
+    std::string _description;      ///< a string describing the failure
+    CustomData _mapdata;           ///< stored additional information that does not fit elsewhere
     int _index; // for debugging
 };
 
