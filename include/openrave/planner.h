@@ -477,7 +477,7 @@ protected:
     {
         return false;
     }
-    
+
     /// \brief output the planner parameters in a string (in XML format)
     ///
     /// \param options if 1 will skip writing the extra parameters
@@ -523,6 +523,8 @@ public:
     PlannerStatus(const std::string& description, const uint32_t statusCode, CollisionReportPtr& report);
     PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam);
     PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam, CollisionReportPtr& report);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam, const std::vector<IkFailureInfoPtr>& vIkFailureInfos);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<IkFailureInfoPtr>& vIkFailureInfos);
     PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues);
     PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr& report);
 
@@ -551,6 +553,7 @@ public:
     std::vector<dReal> jointValues;         // Optional, the robot's joint values in rad or m
     CollisionReportPtr report;              ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
     std::string errorOrigin;                // Auto, a string representing the code path of the error.
+    std::vector<IkFailureInfoPtr> vIkFailureInfos; ///< Optional, ikFailureInfos collected from the run.
 
     std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int > mCollidingLinksCount; // Counter for colliding links
     uint32_t numPlannerIterations; ///< number of planner iterations before failure
