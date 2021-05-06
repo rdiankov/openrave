@@ -102,10 +102,6 @@ public:
 
     void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
 
-    /// \brief appends the data of the input IkFailureInfo to this structure
-    /// \return true if data clashes. Also outputs text in such cases.
-    bool Append(const IkFailureInfo& r);
-
     inline void SetIkParam(const IkParameterization& ikparam) {
         if( ikparam.GetType() != IKP_None ) {
             _ikparam = ikparam;
@@ -197,7 +193,6 @@ public:
     CustomData _mapdata; ///< name/value pairs for custom data computed in the filters. Cascading filters using the same name will overwrite this until the last executed filter (with lowest priority).
     UserDataPtr _userdata; ///< if the name/value pairs are not enough, can further use a pointer to custom data. Cascading filters with valid _userdata pointers will overwrite this until the last executed filter (with lowest priority).
     //std::vector<CollisionReport> _reports; ///< all the reports that are written with the collision information if ik failed due to collisions. Only valid if _action has IKRA_RejectSelfCollision or IKRA_RejectEnvCollision set. (TODO)
-    // IkFailureInfo _ikFailureInfo; ///< contains failure information associated with this IkReturn.
     std::vector<IkFailureInfoPtr> _vIkFailureInfos;
 };
 

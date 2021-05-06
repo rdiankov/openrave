@@ -67,33 +67,6 @@ void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Docu
     }
 }
 
-bool IkFailureInfo::Append(const IkFailureInfo& r)
-{
-    bool bclashing = false;
-    if( !r._vconfig.empty() ) {
-        if( !_vconfig.empty() ) {
-            RAVELOG_WARN("IkFailureInfo already has _vconfig set, but overwriting it anyway.");
-            bclashing = true;
-        }
-        _vconfig = r._vconfig;
-    }
-    if( r.HasValidIkParam() ) {
-        if( _bIkParamValid ) {
-            RAVELOG_WARN("IkFailureInfo already has _ikparam set, but overwriting it anyway.");
-            bclashing = true;
-        }
-        SetIkParam(r.GetIkParam());
-    }
-    if( !!r._preport ) {
-        if( !!_preport ) {
-            RAVELOG_WARN("IkFailureInfo already has _preport set, but overwriting it anyway.");
-            bclashing = true;
-        }
-        InitCollisionReport(r._preport);
-    }
-    return bclashing;
-}
-
 IkFailureAccumulator::IkFailureAccumulator()
 {
 }
@@ -151,7 +124,6 @@ bool IkReturn::Append(const IkReturn& r)
         }
         _vsolution = r._vsolution;
     }
-    // bclashing |= _ikFailureInfo.Append(r._ikFailureInfo);
     _vIkFailureInfos.reserve(_vIkFailureInfos.size() + r._vIkFailureInfos.size());
     _vIkFailureInfos.insert(_vIkFailureInfos.end(), r._vIkFailureInfos.begin(), r._vIkFailureInfos.end());
     return bclashing;
@@ -162,7 +134,6 @@ void IkReturn::Clear()
     _mapdata.clear();
     _userdata.reset();
     _vsolution.resize(0);
-    // _ikFailureInfo.Clear();
     _vIkFailureInfos.clear();
 }
 

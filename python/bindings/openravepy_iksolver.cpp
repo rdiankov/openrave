@@ -310,16 +310,6 @@ object PyIkSolverBase::RegisterCustomFilter(int priority, object fncallback)
     return toPyUserData(_pIkSolver->RegisterCustomFilter(priority,boost::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_pIkSolver,_1,_2,_3)));
 }
 
-bool ExtractIkFailureAccumulator(object o, IkFailureAccumulator& ikFailureAccumulator)
-{
-    extract_<PyIkFailureAccumulatorPtr> pyIkFailureAccumulator(o);
-    if( pyIkFailureAccumulator.check() ) {
-        ikFailureAccumulator = ((PyIkFailureAccumulatorPtr)pyIkFailureAccumulator)->_ikFailureAccumulator;
-        return true;
-    }
-    return false;
-}
-
 bool ExtractIkReturn(object o, IkReturn& ikfr)
 {
     extract_<PyIkReturnPtr > pyikfr(o);
