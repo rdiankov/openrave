@@ -6228,7 +6228,7 @@ void KinBody::SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator)
             _pCurrentKinematicsFunctions = _pKinematicsGenerator->GenerateKinematicsFunctions(*this);
         }
         catch(std::exception& ex) {
-            RAVELOG_WARN_FORMAT("env=%s, failed to generate the kinematics functions: %s", ex.what());
+            RAVELOG_WARN_FORMAT("env=%s, failed to generate the kinematics functions: %s", GetEnv()->GetNameId()%ex.what());
             throw;
         }
         if( !!_pCurrentKinematicsFunctions ) {
