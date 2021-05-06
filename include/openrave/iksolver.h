@@ -76,8 +76,20 @@ public:
     IkFailureInfo()
     {
     }
-    IkFailureInfo(IkReturnAction action) : _action(action)
+
+    inline void Init(const IkFailureInfo& ikFailureInfo)
     {
+        _action = ikFailureInfo._action;
+        _vconfig = ikFailureInfo._vconfig;
+        _description = ikFailureInfo._description;
+        _mapdata = ikFailureInfo._mapdata;
+        InitCollisionReport(ikFailureInfo._preport);
+        if( ikFailureInfo.HasValidIkParam() ) {
+            SetIkParam(ikFailureInfo.GetIkParam());
+        }
+        else {
+            _bIkParamValid = false;
+        }
     }
 
     /// \brief clears the data. _action is left unchanged.
