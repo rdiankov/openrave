@@ -94,6 +94,22 @@ public:
     /// \return true if data clashes. Also outputs text in such cases.
     bool Append(const IkFailureInfo& r);
 
+    inline void SetIkParam(const IkParameterization& ikparam) {
+        if( ikparam.GetType() != IKP_None ) {
+            _ikparam = ikparam;
+            _bIkParamValid = true;
+        }
+        else {
+            _bIkParamValid = false;
+        }
+    }
+    inline bool HasValidIkParam() const {
+        return _bIkParamValid;
+    }
+    inline const IkParameterization& GetIkParam() const {
+        return _ikparam;
+    }
+
     int GetIndex() const {
         return _index;
     }
@@ -101,11 +117,14 @@ public:
     typedef std::map<std::string, std::vector<dReal> > CustomData;
     IkReturnAction _action;        ///< the IkReturnAction corresponding to this failure
     std::vector< dReal > _vconfig; ///< the robot configuration that does not pass the checks.
-    IkParameterization _ikparam;   ///< the ikparam that fails (could be different from the ikparam given to FindIKSolutions call).
     CollisionReportPtr _preport;   ///< the collision report from when some collision checking fails.
     std::string _description;      ///< a string describing the failure
     CustomData _mapdata;           ///< stored additional information that does not fit elsewhere
     int _index; // for debugging
+
+private:
+    IkParameterization _ikparam;   ///< the ikparam that fails (could be different from the ikparam given to FindIKSolutions call).
+    bool _bIkParamValid=false;     ///< a flag determining whether _ikparam is valid.
 };
 
 class OPENRAVE_API IkFailureAccumulator

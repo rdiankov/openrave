@@ -56,11 +56,11 @@ object PyIkFailureInfo::GetConfiguration() {
     return toPyArray(_ikFailureInfo._vconfig);
 }
 object PyIkFailureInfo::GetIkParam() {
-    if( _ikFailureInfo._ikparam.GetType() == IKP_None ) {
-        return py::none_();
+    if( _ikFailureInfo.HasValidIkParam() ) {
+        return toPyIkParameterization(_ikFailureInfo.GetIkParam());
     }
     else {
-        return toPyIkParameterization(_ikFailureInfo._ikparam);
+        return py::none_();
     }
 }
 object PyIkFailureInfo::GetCollisionReport() {

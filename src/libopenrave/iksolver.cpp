@@ -21,6 +21,7 @@ namespace OpenRAVE {
 void IkFailureInfo::Clear()
 {
     _vconfig.resize(0);
+    _bIkParamValid = false;
     _preport.reset();
     _index = -1;
 }
@@ -50,7 +51,7 @@ void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Docu
     if( _vconfig.size() > 0 ) {
         orjson::SetJsonValueByKey(rIkFailureInfo, "config", _vconfig, alloc);
     }
-    if( _ikparam.GetType() != IKP_None ) {
+    if( _bIkParamValid ) {
         orjson::SetJsonValueByKey(rIkFailureInfo, "ikparam", _ikparam, alloc);
     }
     if( !!_preport ) {
@@ -76,12 +77,12 @@ bool IkFailureInfo::Append(const IkFailureInfo& r)
         }
         _vconfig = r._vconfig;
     }
-    if( r._ikparam.GetType() != IKP_None ) {
-        if( _ikparam.GetType() != IKP_None ) {
+    if( r.HasValidIkParam() ) {
+        if( _bIkParamValid ) {
             RAVELOG_WARN("IkFailureInfo already has _ikparam set, but overwriting it anyway.");
             bclashing = true;
         }
-        _ikparam = r._ikparam;
+        SetIkParam(r.GetIkParam());
     }
     if( !!r._preport ) {
         if( !!_preport ) {
