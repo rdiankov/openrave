@@ -100,7 +100,7 @@ public:
 
     void SetDescription(const std::string& description);
 
-    void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
+    void SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Document::AllocatorType& alloc) const;
 
     inline void SetIkParam(const IkParameterization& ikparam) {
         if( ikparam.GetType() != IKP_None ) {

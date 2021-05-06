@@ -88,6 +88,11 @@ object PyIkFailureInfo::GetMapDataDict() {
     }
     return odata;
 }
+object PyIkFailureInfo::SerializeJSON() {
+    rapidjson::Document rIkFailureInfo(rapidjson::kObjectType);
+    _ikFailureInfo.SaveToJson(rIkFailureInfo, rIkFailureInfo.GetAllocator());
+    return toPyObject(rIkFailureInfo);
+}
 
 PyIkFailureAccumulator::PyIkFailureAccumulator() {
     _ikFailureAccumulator = IkFailureAccumulator();
@@ -419,6 +424,7 @@ void init_openravepy_iksolver()
     .def("GetDescription", &PyIkFailureInfo::GetDescription, "Returns the description of this failure.")
     .def("GetMapData", &PyIkFailureInfo::GetMapData, PY_ARGS("key") "Returns an array of numbers corresponding the entry specified by key in IkFailureInfo::_mapdata. If key does not exist in the map, returns None.")
     .def("GetMapDataDict", &PyIkFailureInfo::GetMapDataDict, "Returns a dictionary copy of IkFailureInfo::_mapdata")
+    .def("SerializeJSON", &PyIkFailureInfo::SerializeJSON, "Returns a JSON struct for this IkFailureInfo")
     ;
 
     // PyIkFailureAccumulator

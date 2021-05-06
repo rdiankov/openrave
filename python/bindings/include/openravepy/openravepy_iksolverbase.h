@@ -35,6 +35,8 @@ public:
     object GetMapData(const std::string& key);
     object GetMapDataDict();
 
+    py::object SerializeJSON();
+
     IkFailureInfo _ikFailureInfo;
 };
 
