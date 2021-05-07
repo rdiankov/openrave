@@ -542,13 +542,16 @@ void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<
         }
     }
     else {
+        // sometimes names can be empty, in which case, always create a new object
         std::string name = OpenRAVE::orjson::GetStringJsonValueByKey(value, pNameInJson);
-        // only try to find old info if id is not empty
-        FOREACH(itInfo, vInfos) {
-            if ((*itInfo)->GetName() == name) {
-                itExistingInfo = itInfo;
-                id = (*itInfo)->_id;
-                break;
+        if( !name.empty() ) {
+            // only try to find old info if id is not empty
+            FOREACH(itInfo, vInfos) {
+                if ((*itInfo)->GetName() == name) {
+                    itExistingInfo = itInfo;
+                    id = (*itInfo)->_id;
+                    break;
+                }
             }
         }
     }
