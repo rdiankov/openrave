@@ -88,7 +88,7 @@ IkFailureInfoPtr IkFailureAccumulator::GetNextAvailableIkFailureInfoPtr()
     if( _nextIndex >= _vIkFailureInfos.size() ) {
         _vIkFailureInfos.resize(_vIkFailureInfos.size() + 100);
     }
-    IkFailureInfoPtr pIkFailureInfo(&_vIkFailureInfos[_nextIndex], utils::null_deleter());
+    IkFailureInfoPtr pIkFailureInfo = boost::make_shared<IkFailureInfo>(_vIkFailureInfos[_nextIndex]);
     pIkFailureInfo->Clear();
     pIkFailureInfo->_index = _nextIndex;
     _nextIndex++;
