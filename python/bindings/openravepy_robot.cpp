@@ -916,7 +916,7 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptio
             IkReturn ikreturn(IKRA_Reject);
             IkFailureAccumulatorPtr paccumulator;
             if( !!pyaccumulator ) {
-                paccumulator = IkFailureAccumulatorPtr(&pyaccumulator->_ikFailureAccumulator, utils::null_deleter());
+                paccumulator = boost::make_shared<IkFailureAccumulator>(pyaccumulator->_ikFailureAccumulator);
             }
             _FindIKSolution(ikparam,filteroptions,ikreturn,releasegil,paccumulator);
             return openravepy::toPyIkReturn(ikreturn);
@@ -935,7 +935,7 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptio
             IkReturn ikreturn(IKRA_Reject);
             IkFailureAccumulatorPtr paccumulator;
             if( !!pyaccumulator ) {
-                paccumulator = IkFailureAccumulatorPtr(&pyaccumulator->_ikFailureAccumulator, utils::null_deleter());
+                paccumulator = boost::make_shared<IkFailureAccumulator>(pyaccumulator->_ikFailureAccumulator);
             }
             _FindIKSolution(ExtractTransform(oparam),filteroptions,ikreturn,releasegil,paccumulator);
             return openravepy::toPyIkReturn(ikreturn);
@@ -960,7 +960,7 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
             IkReturn ikreturn(IKRA_Reject);
             IkFailureAccumulatorPtr paccumulator;
             if( !!pyaccumulator ) {
-                paccumulator = IkFailureAccumulatorPtr(&pyaccumulator->_ikFailureAccumulator, utils::null_deleter());
+                paccumulator = boost::make_shared<IkFailureAccumulator>(pyaccumulator->_ikFailureAccumulator);
             }
             _FindIKSolution(ikparam,vfreeparams,filteroptions,ikreturn,releasegil,paccumulator);
             return openravepy::toPyIkReturn(ikreturn);
@@ -979,7 +979,7 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
             IkReturn ikreturn(IKRA_Reject);
             IkFailureAccumulatorPtr paccumulator;
             if( !!pyaccumulator ) {
-                paccumulator = IkFailureAccumulatorPtr(&pyaccumulator->_ikFailureAccumulator, utils::null_deleter());
+                paccumulator = boost::make_shared<IkFailureAccumulator>(pyaccumulator->_ikFailureAccumulator);
             }
             _FindIKSolution(ExtractTransform(oparam),vfreeparams,filteroptions,ikreturn,releasegil,paccumulator);
             return openravepy::toPyIkReturn(ikreturn);
