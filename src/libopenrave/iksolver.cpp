@@ -21,9 +21,11 @@ namespace OpenRAVE {
 void IkFailureInfo::Clear()
 {
     _vconfig.resize(0);
-    _bIkParamValid = false;
     _preport.reset();
+    _description.clear();
+    _mapdata.clear();
     _index = -1;
+    _bIkParamValid = false;
 }
 
 void IkFailureInfo::InitCollisionReport(const CollisionReportPtr& pnewreport)

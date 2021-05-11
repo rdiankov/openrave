@@ -36,7 +36,6 @@ enum IkFilterOptions
     IKFO_IgnoreEndEffectorCollisions=0x10, ///< \see IKFO_IgnoreEndEffectorEnvCollisions
     IKFO_IgnoreEndEffectorEnvCollisions=0x10, ///< will not check collision with the environment and the end effector links and bodies attached to the end effector links. The end effector links are defined by \ref RobotBase::Manipulator::GetChildLinks. Use this option when \ref RobotBase::Manipulator::CheckEndEffectorCollision has already been called, or it is ok for the end effector to collide given the IK constraints. Self-collisions between the moving links and end effector are still checked.
     IKFO_IgnoreEndEffectorSelfCollisions=0x20, ///< will not check self-collisions with the end effector. The end effector links are defined by \ref RobotBase::Manipulator::GetChildLinks. Use this option if it is ok for the end effector to collide given the IK constraints. Collisions between the moving links and end effector are still checked.
-    IKFO_FillFailureInformation=0x1000, ///< will fill in failure information in ikReturn._ikFailureInfo when FindIKSolution/FindIKSolutions fails. If calling FindIKSolution/FindIKSolutions from python, this option has to be used along with the function argument ikreturn=True.
 };
 
 /// \brief Return value for the ik filter that can be optionally set on an ik solver.

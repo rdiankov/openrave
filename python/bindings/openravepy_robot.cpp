@@ -1062,12 +1062,6 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, object freepar
 {
     std::vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
     IkParameterization ikparam;
-    if( filteroptions & IKFO_FillFailureInformation ) {
-        if( !ikreturn ) {
-            RAVELOG_WARN("IKFO_FillFailureInformation is specified but ikreturn is false.");
-            filteroptions &= (~IKFO_FillFailureInformation);
-        }
-    }
     EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ikreturn ) {
         std::vector<IkReturnPtr> vikreturns;
@@ -1082,7 +1076,7 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, object freepar
         else {
             _FindIKSolutions(ExtractTransform(oparam), vfreeparams, filteroptions, vikreturns, releasegil, paccumulator);
         }
-        // When the option IKFO_FillFailureInformation is given, vikreturns can be non-empty even though there are no valid ik solutions.
+        // When paccumulator is given, vikreturns can be non-empty even though there are no valid ik solutions.
         if( vikreturns.empty() ) {
             return py::list();
         }

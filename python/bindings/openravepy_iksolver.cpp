@@ -391,7 +391,6 @@ void init_openravepy_iksolver()
     .value("IgnoreEndEffectorCollisions",IKFO_IgnoreEndEffectorCollisions)
     .value("IgnoreEndEffectorEnvCollisions",IKFO_IgnoreEndEffectorEnvCollisions)
     .value("IgnoreEndEffectorSelfCollisions",IKFO_IgnoreEndEffectorSelfCollisions)
-    .value("FillFailureInformation",IKFO_FillFailureInformation)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
