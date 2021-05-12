@@ -11,6 +11,8 @@ namespace fclrave {
 typedef KinBody::LinkConstPtr LinkConstPtr;
 typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
 typedef boost::weak_ptr<const KinBody> KinBodyConstWeakPtr;
+typedef KinBody::GeometryConstPtr GeometryConstPtr;
+typedef boost::weak_ptr<KinBody::Geometry> GeometryWeakPtr;
 using OpenRAVE::ORE_Assert;
 
 // Warning : this is the only place where we use std::shared_ptr (for compatibility with fcl)
@@ -82,6 +84,30 @@ public:
     class KinBodyInfo : public boost::enable_shared_from_this<KinBodyInfo>, public OpenRAVE::UserData
     {
 public:
+        class GeometryInfo
+        {
+public:
+            GeometryInfo() : bFromKinBodyGeometry(false) {
+            }
+
+            GeometryInfo(KinBody::GeometryPtr pgeom) : _pgeom(pgeom), bFromKinBodyGeometry(true) {
+            }
+
+            virtual ~GeometryInfo() {
+                Reset();
+            }
+
+            void Reset() {
+            }
+
+            KinBody::GeometryPtr GetGeometry() {
+                return _pgeom.lock();
+            }
+
+            GeometryWeakPtr _pgeom;
+            bool bFromKinBodyGeometry; ///< if true, then from kinbodygeometry. Otherwise from standalone object that does not have any KinBody associations
+        };
+
         class LinkInfo
         {
 public:
@@ -111,6 +137,9 @@ public:
                     (*itgeompair).second.reset();
                 }
                 vgeoms.resize(0);
+
+                // make sure to clear vgeominfos after vgeoms because the CollisionObject inside each vgeom element has a corresponding vgeominfo as a void pointer.
+                vgeominfos.resize(0);
             }
 
             KinBody::LinkPtr GetLink() {
@@ -118,6 +147,7 @@ public:
             }
 
             KinBody::LinkWeakPtr _plink;
+            vector< boost::shared_ptr<GeometryInfo> > vgeominfos; ///< info for every geometry of the kinbody
 
             //int nLastStamp; ///< Tracks if the collision geometries are up to date wrt the body update stamp. This is for narrow phase collision
             TransformCollisionPair linkBV; ///< pair of the transformation and collision object corresponding to a bounding OBB for the link
@@ -243,6 +273,7 @@ public:
                         throw OpenRAVE::OpenRAVEException(str(boost::format("Failed to access geometry info %d for link %s:%s with geometrygroup %s")%igeominfo%plink->GetParent()->GetName()%plink->GetName()%pinfo->_geometrygroup), OpenRAVE::ORE_InvalidState);
                     }
                     const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, *pgeominfo);
+                    pfclgeom->setUserData(nullptr);
 
                     if( !pfclgeom ) {
                         continue;
@@ -265,12 +296,17 @@ public:
             else {
                 const std::vector<KinBody::Link::GeometryPtr> & vgeometries = plink->GetGeometries();
                 FOREACH(itgeom, vgeometries) {
+                    const KinBody::GeometryPtr& pgeom = *itgeom;
                     const KinBody::GeometryInfo& geominfo = (*itgeom)->GetInfo();
                     const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, geominfo);
 
                     if( !pfclgeom ) {
                         continue;
                     }
+                    boost::shared_ptr<KinBodyInfo::GeometryInfo> pfclgeominfo(new KinBodyInfo::GeometryInfo(pgeom));
+                    pfclgeom->setUserData(pfclgeominfo.get());
+                    // save the pointers
+                    linkinfo->vgeominfos.push_back(pfclgeominfo);
 
                     // We do not set the transformation here and leave it to _Synchronize
                     CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
@@ -293,6 +329,7 @@ public:
             }
             else {
                 CollisionGeometryPtr pfclgeomBV = std::make_shared<fcl::Box>(enclosingBV.max_ - enclosingBV.min_);
+                pfclgeomBV->setUserData(nullptr);
                 CollisionObjectPtr pfclcollBV = boost::make_shared<fcl::CollisionObject>(pfclgeomBV);
                 Transform trans(Vector(1,0,0,0),ConvertVectorFromFCL(0.5 * (enclosingBV.min_ + enclosingBV.max_)));
                 pfclcollBV->setUserData(linkinfo.get());

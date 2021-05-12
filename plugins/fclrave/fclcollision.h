@@ -638,6 +638,7 @@ public:
         FCLSpace::KinBodyInfo::LinkInfo objUserData;
 
         CollisionGeometryPtr ctrigeom = _fclspace->GetMeshFactory()(_fclPointsCache, _fclTrianglesCache);
+        ctrigeom->setUserData(nullptr);
         fcl::CollisionObject ctriobj(ctrigeom);
         //ctriobj.computeAABB(); // necessary?
         ctriobj.setUserData(&objUserData);
@@ -681,6 +682,7 @@ public:
         FCLSpace::KinBodyInfo::LinkInfo objUserData;
 
         CollisionGeometryPtr ctrigeom = _fclspace->GetMeshFactory()(_fclPointsCache, _fclTrianglesCache);
+        ctrigeom->setUserData(nullptr);
         fcl::CollisionObject ctriobj(ctrigeom);
         //ctriobj.computeAABB(); // necessary?
         ctriobj.setUserData(&objUserData);
@@ -708,6 +710,7 @@ public:
         FCLSpace::KinBodyInfo::LinkInfo objUserData;
 
         CollisionGeometryPtr cboxgeom = make_shared<fcl::Box>(ab.extents.x*2,ab.extents.y*2,ab.extents.z*2);
+        cboxgeom->setUserData(nullptr);
         fcl::CollisionObject cboxobj(cboxgeom);
 
         fcl::Vec3f newPosition = ConvertVectorToFCL(aabbPose * ab.pos);
@@ -748,6 +751,7 @@ public:
         FCLSpace::KinBodyInfo::LinkInfo objUserData;
 
         CollisionGeometryPtr cboxgeom = make_shared<fcl::Box>(ab.extents.x*2,ab.extents.y*2,ab.extents.z*2);
+        cboxgeom->setUserData(nullptr);
         fcl::CollisionObject cboxobj(cboxgeom);
 
         fcl::Vec3f newPosition = ConvertVectorToFCL(aabbPose * ab.pos);
@@ -1030,8 +1034,12 @@ private:
         if( numContacts > 0 ) {
             if( !!pcb->_report ) {
                 std::pair<FCLSpace::KinBodyInfo::LinkInfo*, LinkConstPtr> o1info = GetCollisionLink(*o1), o2info = GetCollisionLink(*o2);
+                std::pair<FCLSpace::KinBodyInfo::GeometryInfo*, GeometryConstPtr> o1geominfo = GetCollisionGeometry(*o1), o2geominfo = GetCollisionGeometry(*o2);
+
                 LinkConstPtr& plink1 = o1info.second;
                 LinkConstPtr& plink2 = o2info.second;
+                GeometryConstPtr& pgeom1 = o1geominfo.second;
+                GeometryConstPtr& pgeom2 = o2geominfo.second;
 
                 // plink1 or plink2 can be None if object is standalone (ie coming from trimesh)
 
@@ -1047,6 +1055,8 @@ private:
                 _reportcache.Reset(_options);
                 _reportcache.plink1 = plink1;
                 _reportcache.plink2 = plink2;
+                _reportcache.pgeom1 = pgeom1;
+                _reportcache.pgeom2 = pgeom2;
 
                 // TODO : eliminate the contacts points (insertion sort (std::lower) + binary_search ?) duplicated
                 // How comes that there are duplicated contacts points ?
@@ -1072,6 +1082,8 @@ private:
 
                 pcb->_report->plink1 = _reportcache.plink1;
                 pcb->_report->plink2 = _reportcache.plink2;
+                pcb->_report->pgeom1 = _reportcache.pgeom1;
+                pcb->_report->pgeom2 = _reportcache.pgeom2;
                 if( pcb->_report->contacts.size() == 0) {
                     pcb->_report->contacts.swap(_reportcache.contacts);
                 } else {
@@ -1225,7 +1237,7 @@ private:
             LinkConstPtr plink = link_raw->GetLink();
             if( !plink ) {
                 if( link_raw->bFromKinBodyLink ) {
-                    RAVELOG_WARN_FORMAT("The link %s was lost from fclspace (env %d) (userdatakey %s)", GetEnv()->GetId()%link_raw->bodylinkname%_userdatakey);
+                    RAVELOG_WARN_FORMAT("The link %s was lost from fclspace (env %d) (userdatakey %s)", link_raw->bodylinkname%GetEnv()->GetId()%_userdatakey);
                 }
             }
             return std::make_pair(link_raw, plink);
@@ -1233,6 +1245,22 @@ private:
         RAVELOG_WARN_FORMAT("env=%s, fcl collision object %x does not have a link attached (userdatakey %s)", GetEnv()->GetNameId()%(&collObj)%_userdatakey);
         _bParentlessCollisionObject = true;
         return std::make_pair(link_raw, LinkConstPtr());
+    }
+
+    std::pair<FCLSpace::KinBodyInfo::GeometryInfo*, GeometryConstPtr> GetCollisionGeometry(const fcl::CollisionObject &collObj)
+    {
+        const std::shared_ptr<const fcl::CollisionGeometry>& collgeom = collObj.collisionGeometry();
+        FCLSpace::KinBodyInfo::GeometryInfo* geom_raw = static_cast<FCLSpace::KinBodyInfo::GeometryInfo *>(collgeom->getUserData());
+        if( !!geom_raw ) {
+            GeometryConstPtr pgeom = geom_raw->GetGeometry();
+            if( !pgeom ) {
+                if( geom_raw->bFromKinBodyGeometry ) {
+                    RAVELOG_WARN_FORMAT("The geom was lost from fclspace (env %d) (userdatakey %s)", GetEnv()->GetId()%_userdatakey);
+                }
+            }
+            return std::make_pair(geom_raw, pgeom);
+        }
+        return std::make_pair(geom_raw, GeometryConstPtr());
     }
 
     inline BroadPhaseCollisionManagerPtr _CreateManager() {

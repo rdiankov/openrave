@@ -2012,6 +2012,8 @@ void CollisionReport::Reset(int coloptions)
         vLinkColliding.resize(0);
         plink1.reset();
         plink2.reset();
+        pgeom1.reset();
+        pgeom2.reset();
     }
 }
 
@@ -2059,6 +2061,9 @@ std::string CollisionReport::__str__() const
                 RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink1->GetName());
                 s << "[deleted]:" << plink1->GetName();
             }
+            if( !!pgeom1 ) {
+                s << ":" << (pgeom1->GetName() == "" ? "[unnamed]" : pgeom1->GetName());
+            }
         }
         s << ")x(";
         if( !!plink2 ) {
@@ -2069,6 +2074,9 @@ std::string CollisionReport::__str__() const
             else {
                 RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink2->GetName());
                 s << "[deleted]:" << plink2->GetName();
+            }
+            if( !!pgeom2 ) {
+                s << ":" << (pgeom2->GetName() == "" ? "[unnamed]" : pgeom2->GetName());
             }
         }
         s << ")";
