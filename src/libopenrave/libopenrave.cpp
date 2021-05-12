@@ -2080,6 +2080,66 @@ std::string CollisionReport::__str__() const
     return s.str();
 }
 
+void CollisionReport::CONTACT::SaveToJson(rapidjson::Value& rContact, rapidjson::Document::AllocatorType& alloc) const
+{
+    rContact.SetObject();
+    orjson::SetJsonValueByKey(rContact, "pos", pos, alloc);
+    orjson::SetJsonValueByKey(rContact, "norm", norm, alloc);
+    orjson::SetJsonValueByKey(rContact, "depth", depth, alloc);
+}
+
+void CollisionReport::SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::Document::AllocatorType& alloc) const
+{
+    rCollisionReport.SetObject();
+
+    rapidjson::Value rCollidingLinkPairs;
+    rCollidingLinkPairs.SetArray();
+    if( vLinkColliding.size() > 0 ) {
+        FOREACHC(itlinkpair, vLinkColliding) {
+            rapidjson::Value rPair;
+            rPair.SetObject();
+            if( !!itlinkpair->first ) {
+                orjson::SetJsonValueByKey(rPair, "bodyName1", itlinkpair->first->GetParent()->GetName(), alloc);
+                orjson::SetJsonValueByKey(rPair, "linkName1", itlinkpair->first->GetName(), alloc);
+            }
+            if( !!itlinkpair->second ) {
+                orjson::SetJsonValueByKey(rPair, "bodyName2", itlinkpair->second->GetParent()->GetName(), alloc);
+                orjson::SetJsonValueByKey(rPair, "linkName2", itlinkpair->second->GetName(), alloc);
+            }
+            rCollidingLinkPairs.PushBack(rPair, alloc);
+        }
+    }
+    else {
+        rapidjson::Value rPair;
+        rPair.SetObject();
+        if( !!plink1 ) {
+            orjson::SetJsonValueByKey(rPair, "bodyName1", plink1->GetParent()->GetName(), alloc);
+            orjson::SetJsonValueByKey(rPair, "linkName1", plink1->GetName(), alloc);
+        }
+        if( !!plink2 ) {
+            orjson::SetJsonValueByKey(rPair, "bodyName2", plink2->GetParent()->GetName(), alloc);
+            orjson::SetJsonValueByKey(rPair, "linkName2", plink2->GetName(), alloc);
+        }
+        rCollidingLinkPairs.PushBack(rPair, alloc);
+    }
+    orjson::SetJsonValueByKey(rCollisionReport, "collidingLinkPairs", rCollidingLinkPairs, alloc);
+
+    if( contacts.size() > 0 ) {
+        rapidjson::Value rContacts;
+        rContacts.SetArray();
+        FOREACHC(itcontact, contacts) {
+            rapidjson::Value rContact;
+            itcontact->SaveToJson(rContact, alloc);
+            rContacts.PushBack(rContact, alloc);
+        }
+        orjson::SetJsonValueByKey(rCollisionReport, "contacts", rContacts, alloc);
+    }
+
+    if( minDistance < 1e10 ) {
+        orjson::SetJsonValueByKey(rCollisionReport, "minDistance", minDistance, alloc);
+    }
+}
+
 bool PhysicsEngineBase::GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque)
 {
     force = Vector(0,0,0);

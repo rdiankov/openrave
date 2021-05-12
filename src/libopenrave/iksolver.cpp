@@ -57,7 +57,9 @@ void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Docu
         orjson::SetJsonValueByKey(rIkFailureInfo, "ikparam", _ikparam, alloc);
     }
     if( !!_preport ) {
-        orjson::SetJsonValueByKey(rIkFailureInfo, "collisionReport", _preport->__str__(), alloc);
+        rapidjson::Value rCollisionReport;
+        _preport->SaveToJson(rCollisionReport, alloc);
+        orjson::SetJsonValueByKey(rIkFailureInfo, "collisionReport", rCollisionReport, alloc);
     }
     orjson::SetJsonValueByKey(rIkFailureInfo, "description", _description, alloc);
     if( _mapdata.size() > 0 ) {

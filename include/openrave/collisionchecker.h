@@ -66,6 +66,8 @@ public:
         Vector pos;  ///< where the contact occured
         Vector norm; ///< the normals of the faces
         dReal depth; ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
+
+	void SaveToJson(rapidjson::Value& rContact, rapidjson::Document::AllocatorType& alloc) const;
     };
 
     CollisionReport() {
@@ -78,6 +80,8 @@ public:
     /// depending on nKeepPrevious will keep previous data.
     virtual void Reset(int coloptions = 0);
     virtual std::string __str__() const;
+
+    void SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::Document::AllocatorType& alloc) const;
 
     KinBody::LinkConstPtr plink1, plink2; ///< the colliding links if a collision involves a bodies. Collisions do not always occur with 2 bodies like ray collisions, so these fields can be empty.
 
