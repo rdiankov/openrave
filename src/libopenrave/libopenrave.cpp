@@ -2062,7 +2062,7 @@ std::string CollisionReport::__str__() const
                 s << "[deleted]:" << plink1->GetName();
             }
             if( !!pgeom1 ) {
-                s << ":" << (pgeom1->GetName() == "" ? "[unnamed]" : pgeom1->GetName());
+                s << ":" << pgeom1->GetName();
             }
         }
         s << ")x(";
@@ -2076,7 +2076,7 @@ std::string CollisionReport::__str__() const
                 s << "[deleted]:" << plink2->GetName();
             }
             if( !!pgeom2 ) {
-                s << ":" << (pgeom2->GetName() == "" ? "[unnamed]" : pgeom2->GetName());
+                s << ":" << pgeom2->GetName();
             }
         }
         s << ")";
