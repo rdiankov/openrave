@@ -279,7 +279,7 @@ public:
                     // We do not set the transformation here and leave it to _Synchronize
                     CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
                     pfclcoll->setUserData(linkinfo.get());
-                    linkinfo->vgeoms.push_back(TransformCollisionPair(pgeominfo->GetTransform(), pfclcoll));
+                    linkinfo->vgeoms.push_back(TransformCollisionPair(geominfo.GetTransform(), pfclcoll));
 
                     KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), geominfo);
                     if( itgeominfo == vgeometryinfos.begin() ) {
