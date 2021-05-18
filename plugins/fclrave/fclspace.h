@@ -270,11 +270,11 @@ public:
                     }
                     const KinBody::GeometryInfo& geominfo = *pgeominfo;
                     const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, geominfo);
-                    pfclgeom->setUserData(nullptr);
 
                     if( !pfclgeom ) {
                         continue;
                     }
+                    pfclgeom->setUserData(nullptr);
 
                     // We do not set the transformation here and leave it to _Synchronize
                     CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
