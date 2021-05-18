@@ -94,10 +94,6 @@ public:
             }
 
             virtual ~GeometryInfo() {
-                Reset();
-            }
-
-            void Reset() {
             }
 
             KinBody::GeometryPtr GetGeometry() {
