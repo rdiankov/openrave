@@ -101,6 +101,7 @@ public:
             }
 
             GeometryWeakPtr _pgeom;
+            std::string bodylinkgeomname; // for debugging purposes
             bool bFromKinBodyGeometry; ///< if true, then from kinbodygeometry. Otherwise from standalone object that does not have any KinBody associations
         };
 
@@ -143,7 +144,7 @@ public:
             }
 
             KinBody::LinkWeakPtr _plink;
-            vector< boost::shared_ptr<GeometryInfo> > vgeominfos; ///< info for every geometry of the kinbody
+            vector< boost::shared_ptr<GeometryInfo> > vgeominfos; ///< info for every geometry of the link
 
             //int nLastStamp; ///< Tracks if the collision geometries are up to date wrt the body update stamp. This is for narrow phase collision
             TransformCollisionPair linkBV; ///< pair of the transformation and collision object corresponding to a bounding OBB for the link
@@ -256,7 +257,6 @@ public:
             boost::shared_ptr<KinBodyInfo::LinkInfo> linkinfo(new KinBodyInfo::LinkInfo(plink));
 
 
-            typedef boost::range_detail::any_iterator<KinBody::GeometryInfo, boost::forward_traversal_tag, KinBody::GeometryInfo const&, std::ptrdiff_t> GeometryInfoIterator;
             fcl::AABB enclosingBV;
 
             // Glue code for a unified access to geometries
@@ -293,13 +293,14 @@ public:
                 const std::vector<KinBody::Link::GeometryPtr> & vgeometries = plink->GetGeometries();
                 FOREACH(itgeom, vgeometries) {
                     const KinBody::GeometryPtr& pgeom = *itgeom;
-                    const KinBody::GeometryInfo& geominfo = (*itgeom)->GetInfo();
+                    const KinBody::GeometryInfo& geominfo = pgeom->GetInfo();
                     const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, geominfo);
 
                     if( !pfclgeom ) {
                         continue;
                     }
                     boost::shared_ptr<KinBodyInfo::GeometryInfo> pfclgeominfo(new KinBodyInfo::GeometryInfo(pgeom));
+                    pfclgeominfo->bodylinkgeomname = pbody->GetName() + "/" + plink->GetName() + "/" + pgeom->GetName();
                     pfclgeom->setUserData(pfclgeominfo.get());
                     // save the pointers
                     linkinfo->vgeominfos.push_back(pfclgeominfo);

@@ -1237,7 +1237,7 @@ private:
             LinkConstPtr plink = link_raw->GetLink();
             if( !plink ) {
                 if( link_raw->bFromKinBodyLink ) {
-                    RAVELOG_WARN_FORMAT("The link %s was lost from fclspace (env %d) (userdatakey %s)", link_raw->bodylinkname%GetEnv()->GetId()%_userdatakey);
+                    RAVELOG_WARN_FORMAT("env=%s, The link %s was lost from fclspace (userdatakey %s)", GetEnv()->GetNameId()%link_raw->bodylinkname%_userdatakey);
                 }
             }
             return std::make_pair(link_raw, plink);
@@ -1255,7 +1255,7 @@ private:
             GeometryConstPtr pgeom = geom_raw->GetGeometry();
             if( !pgeom ) {
                 if( geom_raw->bFromKinBodyGeometry ) {
-                    RAVELOG_WARN_FORMAT("The geom was lost from fclspace (env %d) (userdatakey %s)", GetEnv()->GetId()%_userdatakey);
+                    RAVELOG_WARN_FORMAT("env=%s, The geom %s was lost from fclspace (userdatakey %s)", GetEnv()->GetNameId()%geom_raw->bodylinkgeomname%_userdatakey);
                 }
             }
             return std::make_pair(geom_raw, pgeom);
