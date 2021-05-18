@@ -268,7 +268,8 @@ public:
                         int igeominfo = itgeominfo - vgeometryinfos.begin();
                         throw OpenRAVE::OpenRAVEException(str(boost::format("Failed to access geometry info %d for link %s:%s with geometrygroup %s")%igeominfo%plink->GetParent()->GetName()%plink->GetName()%pinfo->_geometrygroup), OpenRAVE::ORE_InvalidState);
                     }
-                    const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, *pgeominfo);
+                    const KinBody::GeometryInfo& geominfo = *pgeominfo;
+                    const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, geominfo);
                     pfclgeom->setUserData(nullptr);
 
                     if( !pfclgeom ) {
@@ -280,7 +281,7 @@ public:
                     pfclcoll->setUserData(linkinfo.get());
                     linkinfo->vgeoms.push_back(TransformCollisionPair(pgeominfo->GetTransform(), pfclcoll));
 
-                    KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *pgeominfo);
+                    KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), geominfo);
                     if( itgeominfo == vgeometryinfos.begin() ) {
                         enclosingBV = ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                     }
