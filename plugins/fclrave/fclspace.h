@@ -96,7 +96,7 @@ public:
             virtual ~GeometryInfo() {
             }
 
-            KinBody::GeometryPtr GetGeometry() {
+            inline KinBody::GeometryPtr GetGeometry() {
                 return _pgeom.lock();
             }
 
@@ -139,7 +139,7 @@ public:
                 vgeominfos.resize(0);
             }
 
-            KinBody::LinkPtr GetLink() {
+            inline KinBody::LinkPtr GetLink() {
                 return _plink.lock();
             }
 
