@@ -1234,7 +1234,7 @@ private:
     {
         FCLSpace::KinBodyInfo::LinkInfo* link_raw = static_cast<FCLSpace::KinBodyInfo::LinkInfo *>(collObj.getUserData());
         if( !!link_raw ) {
-            LinkConstPtr plink = link_raw->GetLink();
+            const LinkConstPtr& plink = link_raw->GetLink();
             if( !plink ) {
                 if( link_raw->bFromKinBodyLink ) {
                     RAVELOG_WARN_FORMAT("env=%s, The link %s was lost from fclspace (userdatakey %s)", GetEnv()->GetNameId()%link_raw->bodylinkname%_userdatakey);
@@ -1252,7 +1252,7 @@ private:
         const std::shared_ptr<const fcl::CollisionGeometry>& collgeom = collObj.collisionGeometry();
         FCLSpace::KinBodyInfo::GeometryInfo* geom_raw = static_cast<FCLSpace::KinBodyInfo::GeometryInfo *>(collgeom->getUserData());
         if( !!geom_raw ) {
-            GeometryConstPtr pgeom = geom_raw->GetGeometry();
+            const GeometryConstPtr& pgeom = geom_raw->GetGeometry();
             if( !pgeom ) {
                 if( geom_raw->bFromKinBodyGeometry ) {
                     RAVELOG_WARN_FORMAT("env=%s, The geom %s was lost from fclspace (userdatakey %s)", GetEnv()->GetNameId()%geom_raw->bodylinkgeomname%_userdatakey);
