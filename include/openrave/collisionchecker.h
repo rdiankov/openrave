@@ -67,7 +67,7 @@ public:
         Vector norm; ///< the normals of the faces
         dReal depth; ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
 
-	void SaveToJson(rapidjson::Value& rContact, rapidjson::Document::AllocatorType& alloc) const;
+        void SaveToJson(rapidjson::Value& rContact, rapidjson::Document::AllocatorType& alloc) const;
     };
 
     CollisionReport() {

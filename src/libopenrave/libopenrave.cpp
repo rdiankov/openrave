@@ -2290,6 +2290,21 @@ void TriMesh::serialize(std::ostream& o, int options) const
     }
 }
 
+void TriMesh::SerializeJSON(rapidjson::Value& rTriMesh, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    rTriMesh.SetObject();
+    rapidjson::Value rVertices;
+    rVertices.SetArray();
+    rVertices.Reserve(vertices.size()*3, allocator);
+    for(size_t ivertex = 0; ivertex < vertices.size(); ++ivertex) {
+        rVertices.PushBack(vertices[ivertex][0]*fUnitScale, allocator);
+        rVertices.PushBack(vertices[ivertex][1]*fUnitScale, allocator);
+        rVertices.PushBack(vertices[ivertex][2]*fUnitScale, allocator);
+    }
+    rTriMesh.AddMember("vertices", rVertices, allocator);
+    orjson::SetJsonValueByKey(rTriMesh, "indices", indices, allocator);
+}
+
 void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
 {
     _setRobotLinksToIgnore = setRobotLinksToIgnore;
