@@ -3060,34 +3060,25 @@ bool  HullLibrary::CleanupVertices(NxU32 svcount,
 	center[1] = dy*0.5f + bmin[1];
 	center[2] = dz*0.5f + bmin[2];
 
-	if ( dx < EPSILON || dy < EPSILON || dz < EPSILON || svcount < 3 )
+	if ( dx < MIN_EXTENT || dy < MIN_EXTENT || dz < MIN_EXTENT || svcount < 3 )
 	{
+            if (dx < MIN_EXTENT) {
+                dx = MIN_EXTENT;
+            }
+            if (dy < MIN_EXTENT) {
+                dy = MIN_EXTENT;
+            }
+            if (dz < MIN_EXTENT) {
+                dz = MIN_EXTENT;
+            }
+		NxF32 x1 = center[0] - dx * 0.5;
+		NxF32 x2 = center[0] + dx * 0.5;
 
-		NxF32 len = FLT_MAX;
+		NxF32 y1 = center[1] - dy * 0.5;
+		NxF32 y2 = center[1] + dy * 0.5;
 
-		if ( dx > EPSILON && dx < len ) len = dx;
-		if ( dy > EPSILON && dy < len ) len = dy;
-		if ( dz > EPSILON && dz < len ) len = dz;
-
-		if ( len == FLT_MAX )
-		{
-			dx = dy = dz = 0.01f; // one centimeter
-		}
-		else
-		{
-			if ( dx < EPSILON ) dx = len * 0.05f; // 1/5th the shortest non-zero edge.
-			if ( dy < EPSILON ) dy = len * 0.05f;
-			if ( dz < EPSILON ) dz = len * 0.05f;
-		}
-
-		NxF32 x1 = center[0] - dx;
-		NxF32 x2 = center[0] + dx;
-
-		NxF32 y1 = center[1] - dy;
-		NxF32 y2 = center[1] + dy;
-
-		NxF32 z1 = center[2] - dz;
-		NxF32 z2 = center[2] + dz;
+		NxF32 z1 = center[2] - dz * 0.5;
+		NxF32 z2 = center[2] + dz * 0.5;
 
 		AddPoint(vcount,vertices,x1,y1,z1);
 		AddPoint(vcount,vertices,x2,y1,z1);
@@ -3208,37 +3199,30 @@ bool  HullLibrary::CleanupVertices(NxU32 svcount,
 		NxF32 dy = bmax[1] - bmin[1];
 		NxF32 dz = bmax[2] - bmin[2];
 
-		if ( dx < EPSILON || dy < EPSILON || dz < EPSILON || vcount < 3)
+		if ( dx < MIN_EXTENT || dy < MIN_EXTENT || dz < MIN_EXTENT || vcount < 3)
 		{
 			NxF32 cx = dx*0.5f + bmin[0];
 			NxF32 cy = dy*0.5f + bmin[1];
 			NxF32 cz = dz*0.5f + bmin[2];
 
-			NxF32 len = FLT_MAX;
+                        if (dx < MIN_EXTENT) {
+                            dx = MIN_EXTENT;
+                        }
+                        if (dy < MIN_EXTENT) {
+                            dy = MIN_EXTENT;
+                        }
+                        if (dz < MIN_EXTENT) {
+                            dz = MIN_EXTENT;
+                        }
 
-			if ( dx >= EPSILON && dx < len ) len = dx;
-			if ( dy >= EPSILON && dy < len ) len = dy;
-			if ( dz >= EPSILON && dz < len ) len = dz;
+			NxF32 x1 = cx - dx * 0.5;
+			NxF32 x2 = cx + dx * 0.5;
 
-			if ( len == FLT_MAX )
-			{
-				dx = dy = dz = 0.01f; // one centimeter
-			}
-			else
-			{
-				if ( dx < EPSILON ) dx = len * 0.05f; // 1/5th the shortest non-zero edge.
-				if ( dy < EPSILON ) dy = len * 0.05f;
-				if ( dz < EPSILON ) dz = len * 0.05f;
-			}
+			NxF32 y1 = cy - dy * 0.5;
+			NxF32 y2 = cy + dy * 0.5;
 
-			NxF32 x1 = cx - dx;
-			NxF32 x2 = cx + dx;
-
-			NxF32 y1 = cy - dy;
-			NxF32 y2 = cy + dy;
-
-			NxF32 z1 = cz - dz;
-			NxF32 z2 = cz + dz;
+			NxF32 z1 = cz - dz * 0.5;
+			NxF32 z2 = cz + dz * 0.5;
 
 			vcount = 0; // add box
 
