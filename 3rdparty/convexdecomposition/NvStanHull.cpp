@@ -3017,7 +3017,7 @@ bool  HullLibrary::CleanupVertices(NxU32 svcount,
 	if ( svcount == 0 ) return false;
 
 
-	#define EPSILON 0.000001f // close enough to consider two floating point numbers to be 'the same'.
+	#define MIN_EXTENT 0.01f // minimum extent of aabb, 1cm
 
 	vcount = 0;
 
