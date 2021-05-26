@@ -3062,7 +3062,11 @@ bool  HullLibrary::CleanupVertices(NxU32 svcount,
 
 	if ( dx < EPSILON || dy < EPSILON || dz < EPSILON || svcount < 3 )
 	{
-
+		assert( dx < EPSILON );
+		assert( dy < EPSILON );
+		assert( dz < EPSILON );
+		assert( svcount < 3 );
+            
 		NxF32 len = FLT_MAX;
 
 		if ( dx > EPSILON && dx < len ) len = dx;
@@ -3210,6 +3214,10 @@ bool  HullLibrary::CleanupVertices(NxU32 svcount,
 
 		if ( dx < EPSILON || dy < EPSILON || dz < EPSILON || vcount < 3)
 		{
+                    assert( dx < EPSILON );
+                    assert( dy < EPSILON );
+                    assert( dz < EPSILON );
+                    assert( svcount < 3 );
 			NxF32 cx = dx*0.5f + bmin[0];
 			NxF32 cy = dy*0.5f + bmin[1];
 			NxF32 cz = dz*0.5f + bmin[2];
