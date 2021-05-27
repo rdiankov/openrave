@@ -58,14 +58,14 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
         {
         }
 
-        KinBodyCache(const KinBodyConstPtr& pbody, const FCLSpace::KinBodyInfoPtr& pinfo)
+        KinBodyCache(const KinBodyConstPtr& pbody, const FCLSpace::FCLKinBodyInfoPtr& pinfo)
         {
             std::vector<uint64_t> linkEnableStateCacheDummy;
             SetBodyData(pbody, pinfo, linkEnableStateCacheDummy);
         }
 
         void SetBodyData(const KinBodyConstPtr& pbody,
-                         const FCLSpace::KinBodyInfoPtr& pinfo,
+                         const FCLSpace::FCLKinBodyInfoPtr& pinfo,
                          const std::vector<uint64_t>& linkEnableStateCache)
         {
             pwbody = pbody;
@@ -138,14 +138,14 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
         }
 
         KinBodyConstWeakPtr pwbody; ///< weak pointer to body
-        FCLSpace::KinBodyInfoWeakPtr pwinfo; ///< weak pointer to info
-        int nLastStamp; ///< copyied from FCLSpace::KinBodyInfo when body was last updated
-        int nLinkUpdateStamp; ///< copied from FCLSpace::KinBodyInfo when body was last updated
-        int nGeometryUpdateStamp; ///< copied from FCLSpace::KinBodyInfo when geometry was last updated
-        int nAttachedBodiesUpdateStamp; /// copied from FCLSpace::KinBodyInfo when attached bodies was last updated
+        FCLSpace::FCLKinBodyInfoWeakPtr pwinfo; ///< weak pointer to info
+        int nLastStamp; ///< copyied from FCLSpace::FCLKinBodyInfo when body was last updated
+        int nLinkUpdateStamp; ///< copied from FCLSpace::FCLKinBodyInfo when body was last updated
+        int nGeometryUpdateStamp; ///< copied from FCLSpace::FCLKinBodyInfo when geometry was last updated
+        int nAttachedBodiesUpdateStamp; /// copied from FCLSpace::FCLKinBodyInfo when attached bodies was last updated
         int nActiveDOFUpdateStamp; ///< update stamp when the active dof changed
         std::vector<uint64_t> linkEnableStatesBitmasks; ///< links that are currently inside the manager
-        std::vector<CollisionObjectPtr> vcolobjs; ///< collision objects used for each link (use link index). have to hold pointers so that KinBodyInfo does not remove them!
+        std::vector<CollisionObjectPtr> vcolobjs; ///< collision objects used for each link (use link index). have to hold pointers so that FCLKinBodyInfo does not remove them!
         std::string geometrygroup; ///< cached geometry group
     };
 
@@ -209,7 +209,7 @@ public:
         for (int envBodyIndex : vecAttachedEnvBodyIndices) {
             const KinBodyPtr& pAttachedBody = *itrAttached++;
             const KinBody& attachedBody = *pAttachedBody;
-            const FCLSpace::KinBodyInfoPtr& pinfo = _fclspace.GetInfo(attachedBody);
+            const FCLSpace::FCLKinBodyInfoPtr& pinfo = _fclspace.GetInfo(attachedBody);
             if( !pinfo ) {
                 // don't init something that isn't initialized in this checker.
                 RAVELOG_VERBOSE_FORMAT("body %s has attached body %s which is not initialized in this checker, ignoring for now", pbody->GetName()%attachedBody.GetName());
@@ -313,7 +313,7 @@ public:
             if( bodyIndex >= (int)_vecExcludeBodyIndices.size() || !_vecExcludeBodyIndices[bodyIndex]) {
                 bool bIsValid = _vecCachedBodies.at(bodyIndex).IsValid();
                 if( !bIsValid) {
-                    const FCLSpace::KinBodyInfoPtr& pinfo = _fclspace.GetInfo(body);
+                    const FCLSpace::FCLKinBodyInfoPtr& pinfo = _fclspace.GetInfo(body);
                     if( _AddBody(body, pinfo, vcolobjs, _linkEnableStatesBitmasks, false) ) { // new collision objects are already added to _tmpSortedBuffer
                         KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
                         cache.SetBodyData(pbody, pinfo, _linkEnableStatesBitmasks);
@@ -337,7 +337,7 @@ public:
 //        std::map<int, KinBodyCache>::iterator it = _vecCachedBodies.find(pbody->GetEnvironmentBodyIndex());
 //        if( it == _vecCachedBodies.end() ) {
 //            std::vector<CollisionObjectPtr> vcolobjs;
-//            FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(pbody);
+//            FCLSpace::FCLKinBodyInfoPtr pinfo = _fclspace.GetInfo(pbody);
 //            uint64_t linkmask=0;
 //            if( _AddBody(pbody, pinfo, vcolobjs, linkmask, false) ) { // new collision objects are already added to _tmpSortedBuffer
 //                _vecCachedBodies[(pbody)->GetEnvironmentBodyIndex()] = KinBodyCache(pbody, pinfo);
@@ -413,8 +413,8 @@ public:
                 RAVELOG_WARN_FORMAT("%x tracking body not in current cached bodies (valid=%d) (tracking body %s (id=%d)) (env %d). Current cache is: %s", this%isValid%trackingbody.GetName()%trackingBodyIndex%trackingbody.GetEnv()->GetId()%ssinfo);
             }
             else {
-                FCLSpace::KinBodyInfoPtr pinfo = trackingCache.pwinfo.lock();
-                const FCLSpace::KinBodyInfoPtr& pnewinfo = _fclspace.GetInfo(trackingbody); // necessary in case pinfos were swapped!
+                FCLSpace::FCLKinBodyInfoPtr pinfo = trackingCache.pwinfo.lock();
+                const FCLSpace::FCLKinBodyInfoPtr& pnewinfo = _fclspace.GetInfo(trackingbody); // necessary in case pinfos were swapped!
                 if( trackingCache.nActiveDOFUpdateStamp != pnewinfo->nActiveDOFUpdateStamp ) {
                     if( trackingbody.IsRobot() ) {
                         RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(ptrackingbody);
@@ -495,7 +495,7 @@ public:
         }
 
 
-        FCLSpace::KinBodyInfoPtr pinfo;
+        FCLSpace::FCLKinBodyInfoPtr pinfo;
         KinBodyConstPtr pbody;
         for (KinBodyCache& cache : _vecCachedBodies) {
             pbody = cache.pwbody.lock();
@@ -514,10 +514,10 @@ public:
 
             pinfo = cache.pwinfo.lock();
             const KinBody& body = *pbody;
-            const FCLSpace::KinBodyInfoPtr& pnewinfo = _fclspace.GetInfo(body); // necessary in case pinfos were swapped!
+            const FCLSpace::FCLKinBodyInfoPtr& pnewinfo = _fclspace.GetInfo(body); // necessary in case pinfos were swapped!
             if( pinfo != pnewinfo ) {
                 // everything changed!
-                RAVELOG_VERBOSE_FORMAT("%u body %s entire KinBodyInfo changed", _lastSyncTimeStamp%pbody->GetName());
+                RAVELOG_VERBOSE_FORMAT("%u body %s entire FCLKinBodyInfo changed", _lastSyncTimeStamp%pbody->GetName());
                 FOREACH(itcolobj, cache.vcolobjs) {
                     if( !!itcolobj->get() ) {
                         pmanager->unregisterObject(itcolobj->get());
@@ -544,7 +544,7 @@ public:
                 }
             }
 
-            FCLSpace::KinBodyInfo& kinBodyInfo = *pinfo;
+            FCLSpace::FCLKinBodyInfo& kinBodyInfo = *pinfo;
             if( kinBodyInfo.nLinkUpdateStamp != cache.nLinkUpdateStamp ) {
                 // links changed
                 std::vector<uint64_t>& newLinkEnableStates = _linkEnableStatesCache;
@@ -763,7 +763,7 @@ public:
                     continue;
                 }
 
-                const FCLSpace::KinBodyInfoPtr& pinfo = _fclspace.GetInfo(attached);
+                const FCLSpace::FCLKinBodyInfoPtr& pinfo = _fclspace.GetInfo(attached);
                 if( _AddBody(attached, pinfo, cache.vcolobjs, _linkEnableStatesBitmasks, _bTrackActiveDOF&&(pattached == ptrackingbody)) ) {
                     bcallsetup = true;
                 }
@@ -842,7 +842,7 @@ private:
     /// \brief adds a body to the manager, returns true if something was added
     ///
     /// should not add anything to _vecCachedBodies! insert to _tmpSortedBuffer
-    bool _AddBody(const KinBody& body, const FCLSpace::KinBodyInfoPtr& pinfo, std::vector<CollisionObjectPtr>& vcolobjs, std::vector<uint64_t>& linkEnableStatesBitmasks, bool bTrackActiveDOF)
+    bool _AddBody(const KinBody& body, const FCLSpace::FCLKinBodyInfoPtr& pinfo, std::vector<CollisionObjectPtr>& vcolobjs, std::vector<uint64_t>& linkEnableStatesBitmasks, bool bTrackActiveDOF)
     {
         // reset so that existing collision objects can go away
         for (CollisionObjectPtr& pcolObj : vcolobjs) {
@@ -947,7 +947,7 @@ private:
     }
 
     void SaveCollisionObjectDebugInfos(fcl::CollisionObject* pcollobj) {
-        FCLSpace::KinBodyInfo::LinkInfo* pLINK = static_cast<FCLSpace::KinBodyInfo::LinkInfo*>(pcollobj->getUserData());
+        FCLSpace::FCLKinBodyInfo::LinkInfo* pLINK = static_cast<FCLSpace::FCLKinBodyInfo::LinkInfo*>(pcollobj->getUserData());
         _mapDebugCollisionObjects.insert(std::make_pair(pcollobj, std::make_pair(pLINK->bodylinkname, _fclspace.GetInfo(pLINK->GetLink()->GetParent())->_geometrygroup)));
     }
 
