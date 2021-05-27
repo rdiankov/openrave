@@ -5493,19 +5493,37 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 
     _vLinkTransformPointers.clear(); _vLinkTransformPointers.reserve(r->_veclinks.size());
     _veclinks.clear(); _veclinks.reserve(r->_veclinks.size());
-    FOREACHC(itlink, r->_veclinks) {
+    for (const LinkPtr& origLinkPtr : r->_veclinks) {
         LinkPtr pnewlink(new Link(shared_kinbody()));
+        Link& newlink = *pnewlink;
         // TODO should create a Link::Clone method
-        *pnewlink = **itlink; // be careful of copying pointers
-        pnewlink->_parent = shared_kinbody();
-        // have to copy all the geometries too!
-        std::vector<Link::GeometryPtr> vnewgeometries(pnewlink->_vGeometries.size());
-        for(size_t igeom = 0; igeom < vnewgeometries.size(); ++igeom) {
-            vnewgeometries[igeom].reset(new Link::Geometry(pnewlink, pnewlink->_vGeometries[igeom]->_info));
+        newlink = *origLinkPtr; // be careful of copying pointers
+        newlink._parent = shared_kinbody();
+
+        {
+            // have to copy all the geometries too!
+            std::vector<Link::GeometryPtr> vnewgeometries(newlink._vGeometries.size());
+            for(size_t igeom = 0; igeom < vnewgeometries.size(); ++igeom) {
+                vnewgeometries[igeom].reset(new Link::Geometry(pnewlink, newlink._vGeometries[igeom]->_info));
+            }
+            newlink._vGeometries = vnewgeometries;
         }
-        pnewlink->_vGeometries = vnewgeometries;
+        {
+            // deep copy extra geometries as well, otherwise changing value of map in original map affects value of cloned map
+            std::map< std::string, std::vector<GeometryInfoPtr> > newMapExtraGeometries;
+            for (const std::pair<std::string, std::vector<GeometryInfoPtr> >& keyValue : newlink._info._mapExtraGeometries) {
+                std::vector<GeometryInfoPtr> newvalues;
+                newvalues.reserve(keyValue.second.size());
+                for (const GeometryInfoPtr& geomInfoPtr : keyValue.second) {
+                    newvalues.push_back(GeometryInfoPtr(new GeometryInfo(*geomInfoPtr)));
+                }
+                newMapExtraGeometries[keyValue.first] = newvalues;
+            }
+            newlink._info._mapExtraGeometries = newMapExtraGeometries;
+        }
+
         _veclinks.push_back(pnewlink);
-        _vLinkTransformPointers.push_back(&pnewlink->_info._t);
+        _vLinkTransformPointers.push_back(&newlink._info._t);
     }
     _vLinkEnableStatesMask = r->_vLinkEnableStatesMask;
 
