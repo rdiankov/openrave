@@ -168,8 +168,13 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                     if (!isDeleted) {
                         RobotBase::RobotBaseInfoPtr pRobotBaseInfo(new RobotBase::RobotBaseInfo());
                         pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
-                        pRobotBaseInfo->_id = id;
-                        _vBodyInfos.push_back(pRobotBaseInfo);
+                        if (!pRobotBaseInfo->_name.empty()) {
+                            pRobotBaseInfo->_id = id;
+                            _vBodyInfos.push_back(pRobotBaseInfo);
+                            RAVELOG_VERBOSE_FORMAT("created new robot id='%s'", id);
+                        } else {
+                            RAVELOG_WARN_FORMAT("new robot id='%s' does not have a name, so skip creating", id);
+                        }
                     }
                     continue;
                 }
@@ -199,9 +204,13 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                     if (!isDeleted) {
                         KinBody::KinBodyInfoPtr pKinBodyInfo(new KinBody::KinBodyInfo());
                         pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
-                        pKinBodyInfo->_id = id;
-                        _vBodyInfos.push_back(pKinBodyInfo);
-                        RAVELOG_VERBOSE_FORMAT("created new body id='%s'", id);
+                        if (!pKinBodyInfo->_name.empty()) {
+                            pKinBodyInfo->_id = id;
+                            _vBodyInfos.push_back(pKinBodyInfo);
+                            RAVELOG_VERBOSE_FORMAT("created new body id='%s'", id);
+                        } else {
+                            RAVELOG_WARN_FORMAT("new body id='%s' does not have a name, so skip creating", id);
+                        }
                     }
                     continue;
                 }
