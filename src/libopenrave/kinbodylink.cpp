@@ -939,7 +939,7 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     }
 
     // mass frame
-    if (GetLocalMassFrame() != info._tMassFrame) {
+    if (TransformDistanceFast(GetLocalMassFrame(), info._tMassFrame) > g_fEpsilonLinear) {
         SetLocalMassFrame(info._tMassFrame);
         RAVELOG_VERBOSE_FORMAT("link %s mass frame changed", _info._id);
         updateFromInfoResult = UFIR_Success;

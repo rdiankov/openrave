@@ -2585,7 +2585,7 @@ bool SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjso
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
     orjson::SetJsonValueByKey(value, "sensorReference", sensor_reference, allocator);
     orjson::SetJsonValueByKey(value, "targetRegion", target_region, allocator);
-    orjson::SetJsonValueByKey(value, "intrinstics", intrinsics, allocator);
+    orjson::SetJsonValueByKey(value, "intrinsics", intrinsics, allocator);
     orjson::SetJsonValueByKey(value, "width", width, allocator);
     orjson::SetJsonValueByKey(value, "height", height, allocator);
     orjson::SetJsonValueByKey(value, "measurementTime", measurement_time, allocator);
@@ -2598,7 +2598,7 @@ bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, 
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
     orjson::LoadJsonValueByKey(value, "sensorReference", sensor_reference);
     orjson::LoadJsonValueByKey(value, "targetRegion", target_region);
-    orjson::LoadJsonValueByKey(value, "intrinstics", intrinsics);
+    orjson::LoadJsonValueByKey(value, "intrinsics", intrinsics);
     orjson::LoadJsonValueByKey(value, "width", width);
     orjson::LoadJsonValueByKey(value, "height", height);
     orjson::LoadJsonValueByKey(value, "measurementTime", measurement_time);
@@ -2606,6 +2606,35 @@ bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, 
     return true;
 }
 
+bool SensorBase::Force6DGeomData::SerializeXML(BaseXMLWriterPtr writer, int options) const
+{
+    SensorGeometry::SerializeXML(writer, options);
+    AttributesList atts;
+    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    writer->AddChild("polarity",atts)->SetCharData(boost::lexical_cast<std::string>(polarity));
+    ss.str("");
+    for (size_t i = 0; i < correction_matrix.size(); ++i) {
+        ss << correction_matrix[i] << " ";
+    }
+    writer->AddChild("correction_matrix",atts)->SetCharData(ss.str());
+    return true;
+}
+
+bool SensorBase::Force6DGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
+    orjson::SetJsonValueByKey(value, "polarity", polarity, allocator);
+    orjson::SetJsonValueByKey(value, "correction_matrix", correction_matrix, allocator, correction_matrix.size());
+    return true;
+}
+
+bool SensorBase::Force6DGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
+    orjson::LoadJsonValueByKey(value, "polarity", polarity);
+    orjson::LoadJsonValueByKey(value, "correction_matrix", correction_matrix);
+    return true;
+}
 
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {

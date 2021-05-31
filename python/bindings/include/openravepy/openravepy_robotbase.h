@@ -43,7 +43,7 @@ public:
     std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos;
     std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos;
     std::vector<RobotBase::ConnectedBodyInfoPtr> _vConnectedBodyInfos;
-    std::vector<RobotBase::GripperInfoPtr> _vGripperInfo;
+    std::vector<RobotBase::GripperInfoPtr> _vGripperInfos;
 #else
     py::object _vManipulatorInfos = py::none_();
     py::object _vAttachedSensorInfos = py::none_();
