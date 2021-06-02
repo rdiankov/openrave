@@ -4000,6 +4000,14 @@ object toPyKinBodyLink(KinBody::LinkPtr plink, object opyenv)
     return py::none_();
 }
 
+object toPyKinBodyGeometry(KinBody::GeometryPtr pgeom)
+{
+    if( !pgeom ) {
+        return py::none_();
+    }
+    return py::to_object(OPENRAVE_SHARED_PTR<PyLink::PyGeometry>(new PyLink::PyGeometry(pgeom)));
+}
+
 object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
 {
     if( !pjoint ) {
