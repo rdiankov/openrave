@@ -1156,19 +1156,19 @@ inline void _UpdateExtrema(const Vector& v, Vector& vmin, Vector& vmax)
     if( vmin.x > v.x ) {
         vmin.x = v.x;
     }
+    else if( vmax.x < v.x ) {
+        vmax.x = v.x;
+    }
     if( vmin.y > v.y ) {
         vmin.y = v.y;
+    }
+    else if( vmax.y < v.y ) {
+        vmax.y = v.y;
     }
     if( vmin.z > v.z ) {
         vmin.z = v.z;
     }
-    if( vmax.x < v.x ) {
-        vmax.x = v.x;
-    }
-    if( vmax.y < v.y ) {
-        vmax.y = v.y;
-    }
-    if( vmax.z < v.z ) {
+    else if( vmax.z < v.z ) {
         vmax.z = v.z;
     }
 }
