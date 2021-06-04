@@ -1559,33 +1559,22 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     }
 
     switchpointsList.push_back(0);
-    // switchpointsList.push_back(curvesVectIn[0].GetDuration());
-    {
-        // Although functions to recompute trajectories with a fixed duration have been called prior
-        // to this, the duration of each dof can still be a bit different (but within the acceptable
-        // range). Should use the actual max duration as the duration of rampmdVectOut.
-        dReal maxDuration = 0;
-        for( size_t idof = 0; idof < _ndof; ++idof ) {
-            if( curvesVectIn[idof].GetDuration() > maxDuration ) {
-                maxDuration = curvesVectIn[idof].GetDuration();
-            }
+    // Although functions to recompute trajectories with a fixed duration have been called prior
+    // to this, the duration of each dof can still be a bit different (but within the acceptable
+    // range). Should use the actual max duration as the duration of rampndVectOut.
+    dReal maxDuration = 0;
+    for( size_t idof = 0; idof < _ndof; ++idof ) {
+        if( curvesVectIn[idof].GetDuration() > maxDuration ) {
+            maxDuration = curvesVectIn[idof].GetDuration();
         }
-        switchpointsList.push_back(maxDuration);
     }
+    switchpointsList.push_back(maxDuration);
+
     for (size_t idof = 0; idof < _ndof; ++idof) {
         dReal sw = 0;
         for (std::vector<Ramp>::const_iterator itramp = curvesVectIn[idof].GetRamps().begin(); itramp != curvesVectIn[idof].GetRamps().end(); ++itramp) {
             sw += itramp->duration;
             std::vector<dReal>::iterator it = std::lower_bound(switchpointsList.begin(), switchpointsList.end(), sw);
-
-            // if( it == switchpointsList.end() ) {
-            //     // Since durations of ParabolicCurves in curvesVectIn can be different (as long as
-            //     // it is within the acceptable range), (it) can be switchpointsList.end().  Just
-            //     // need to confirm that the difference is within the expected range.
-            //     BOOST_ASSERT( FuzzyEquals(sw, switchpointsList.back(), g_fRampEpsilon) );
-            //     continue;
-            // }
-
             // Since we already have t = 0 and t = duration in switchpointsList, it must point to
             // some value between *(switchpointsList.begin()) and *(switchpointsList.end() - 1)
             // (exclusive).
