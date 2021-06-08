@@ -1151,6 +1151,28 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     orjson::LoadJsonValueByKey(value, "modifiable", _bModifiable);
 }
 
+inline void _UpdateExtrema(const Vector& v, Vector& vmin, Vector& vmax)
+{
+    if( vmin.x > v.x ) {
+        vmin.x = v.x;
+    }
+    else if( vmax.x < v.x ) {
+        vmax.x = v.x;
+    }
+    if( vmin.y > v.y ) {
+        vmin.y = v.y;
+    }
+    else if( vmax.y < v.y ) {
+        vmax.y = v.y;
+    }
+    if( vmin.z > v.z ) {
+        vmin.z = v.z;
+    }
+    else if( vmax.z < v.z ) {
+        vmax.z = v.z;
+    }
+}
+
 AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
 {
     AABB ab;
@@ -1301,30 +1323,25 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
         // Cage: init collision mesh?
         // just use _meshcollision
         if( _meshcollision.vertices.size() > 0) {
-            Vector vmin, vmax; vmin = vmax = tglobal*_meshcollision.vertices.at(0);
-            FOREACHC(itv, _meshcollision.vertices) {
-                Vector v = tglobal * *itv;
-                if( vmin.x > v.x ) {
-                    vmin.x = v.x;
+            // no need to check rot(2,2), guaranteed to be 1 if rot(0,0) and rot(1,1) are both 1
+            const bool bRotationIsIdentity = RaveFabs(tglobal.rot(0,0) - 1.0) <= g_fEpsilon && RaveFabs(tglobal.rot(1,1) - 1.0) <= g_fEpsilon;
+            Vector vmin, vmax; 
+            // if no rotation (identity), skip rotation of vertices
+            if (bRotationIsIdentity) {
+                vmin = vmax = _meshcollision.vertices.at(0);
+                for (const Vector& vertex : _meshcollision.vertices) {
+                    _UpdateExtrema(vertex, vmin, vmax);
                 }
-                if( vmin.y > v.y ) {
-                    vmin.y = v.y;
+                ab.pos = (dReal)0.5*(vmax+vmin) + tglobal.trans;
+            }
+            else {
+                vmin = vmax = tglobal*_meshcollision.vertices.at(0);
+                for (const Vector& vertex : _meshcollision.vertices) {
+                    _UpdateExtrema(tglobal * vertex, vmin, vmax);
                 }
-                if( vmin.z > v.z ) {
-                    vmin.z = v.z;
-                }
-                if( vmax.x < v.x ) {
-                    vmax.x = v.x;
-                }
-                if( vmax.y < v.y ) {
-                    vmax.y = v.y;
-                }
-                if( vmax.z < v.z ) {
-                    vmax.z = v.z;
-                }
+                ab.pos = (dReal)0.5*(vmax+vmin);
             }
             ab.extents = (dReal)0.5*(vmax-vmin);
-            ab.pos = (dReal)0.5*(vmax+vmin);
         }
         else {
             ab.pos = tglobal.trans;
