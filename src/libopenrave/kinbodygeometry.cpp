@@ -1324,7 +1324,7 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
         // just use _meshcollision
         if( _meshcollision.vertices.size() > 0) {
             // no need to check rot(2,2), guaranteed to be 1 if rot(0,0) and rot(1,1) are both 1
-            const bool bRotationIsIdentity = RaveFabs(tglobal.rot(0,0) - 1.0) < g_fEpsilon && RaveFabs(tglobal.rot(1,1) - 1.0) < g_fEpsilon;
+            const bool bRotationIsIdentity = RaveFabs(tglobal.rot(0,0) - 1.0) <= g_fEpsilon && RaveFabs(tglobal.rot(1,1) - 1.0) <= g_fEpsilon;
             Vector vmin, vmax; 
             // if no rotation (identity), skip rotation of vertices
             if (bRotationIsIdentity) {
