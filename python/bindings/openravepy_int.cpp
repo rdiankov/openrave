@@ -361,6 +361,47 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
             }
         }
     }
+    else if (PyArray_CheckScalar(obj.ptr())) {
+        const PyObject* objPtr = obj.ptr();
+
+        if (PyArray_IsScalar(objPtr, Bool)) {
+            value.SetBool(PyArrayScalar_VAL(objPtr, Bool));
+        }
+        else if (PyArray_IsScalar(objPtr, Float32)) {
+            value.SetFloat(PyArrayScalar_VAL(objPtr, Float32));
+        }
+        else if (PyArray_IsScalar(objPtr, Float64)) {
+            value.SetDouble(PyArrayScalar_VAL(objPtr, Float64));
+        }
+        else if (PyArray_IsScalar(objPtr, Int8)) {
+            value.SetInt64(PyArrayScalar_VAL(objPtr, Int8));
+        }
+        else if (PyArray_IsScalar(objPtr, Int16)) {
+            value.SetInt64(PyArrayScalar_VAL(objPtr, Int16));
+        }
+        else if (PyArray_IsScalar(objPtr, Int32)) {
+            value.SetInt64(PyArrayScalar_VAL(objPtr, Int32));
+        }
+        else if (PyArray_IsScalar(objPtr, Int64)) {
+            value.SetInt64(PyArrayScalar_VAL(objPtr, Int64));
+        }
+        else if (PyArray_IsScalar(objPtr, UInt8)) {
+            value.SetUint64(PyArrayScalar_VAL(objPtr, UInt8));
+        }
+        else if (PyArray_IsScalar(objPtr, UInt16)) {
+            value.SetUint64(PyArrayScalar_VAL(objPtr, UInt16));
+        }
+        else if (PyArray_IsScalar(objPtr, UInt32)) {
+            value.SetUint64(PyArrayScalar_VAL(objPtr, UInt32));
+        }
+        else if (PyArray_IsScalar(objPtr, UInt64)) {
+            value.SetUint64(PyArrayScalar_VAL(objPtr, UInt64));
+        }
+        else {
+            std::string reprstr = extract<std::string>(obj.attr("__repr__")());
+            throw OPENRAVE_EXCEPTION_FORMAT(_("Unsupported python scalar '%s'"), reprstr, ORE_InvalidArguments);
+        }
+    }
     else
     {
         std::string reprstr = extract<std::string>(obj.attr("__repr__")());
