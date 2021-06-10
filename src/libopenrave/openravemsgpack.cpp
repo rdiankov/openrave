@@ -22,6 +22,16 @@
 #include <msgpack.hpp>
 #include <rapidjson/document.h>
 
+static inline unsigned int read32be(const void *p){
+	const unsigned char *x=(const unsigned char*)p;
+	return x[3]|(x[2]<<8)|(x[1]<<16)|((unsigned int)x[0]<<24);
+}
+
+static inline unsigned long long int read64be(const void *p){
+	const unsigned char *x=(const unsigned char*)p;
+	return x[7]|(x[6]<<8)|(x[5]<<16)|((unsigned int)x[4]<<24)|( (unsigned long long int)(x[3]|(x[2]<<8)|(x[1]<<16)|((unsigned int)x[0]<<24)) <<32);
+}
+
 namespace msgpack {
 
 MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
@@ -63,6 +73,27 @@ struct convert< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> 
                     ptr->val.convert(&val);
 
                     v.AddMember(key, val, v.GetAllocator());
+                }
+            }
+                break;
+            case msgpack::type::EXT: {
+                if (o.via.ext.type() == -1)
+                {
+                    if (o.via.ext.size == 8)
+                    {
+                        unsigned long long dat = read64be(o.via.ext.data());
+                        time_t secs = dat & 0x00000003ffffffff;
+                        unsigned long long nsecs = dat >> 34;
+                        tm tm;
+                        memset(&tm,0,sizeof(tm));
+                        gmtime_r(&secs, &tm);
+                        std::string ret;
+                        ret.resize(128);
+                        strftime(&ret[0], ret.size(), "%Y-%m-%dT%H:%M:%S", &tm);
+                        snprintf(&ret[0]+strlen(&ret[0]), ret.size()-strlen(&ret[0]), ".%06llu+09:00", nsecs/1000);
+                        ret.resize(strlen(&ret[0]));
+                        v.SetString(ret.c_str(), ret.size(), v.GetAllocator()); return o;
+                    }
                 }
             }
                 break;
