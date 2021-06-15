@@ -32,6 +32,18 @@ public:
         _vXMLParameters.push_back("expectedsize");
     }
 
+    virtual void _Copy(const PlannerParameters& r) override
+    {
+        PlannerParameters::_Copy(r);
+        const ExplorationParameters* pother = dynamic_cast<const ExplorationParameters*>(&r);
+        if (!pother) {
+            return;
+        }
+        const ExplorationParameters& other = *pother;
+        _fExploreProb = other._fExploreProb;
+        _nExpectedDataSize = other._nExpectedDataSize;
+    }
+
     dReal _fExploreProb; ///< explore close to the neighbors already added
     int _nExpectedDataSize; ///< the expected number of nodes of the RRT tree to expand to before returning a solution. This allows the RRT tree to build up
 
@@ -101,6 +113,21 @@ public:
         _vXMLParameters.push_back("goalcoeff");
         _vXMLParameters.push_back("maxchildren");
         _vXMLParameters.push_back("maxsampletries");
+    }
+
+    virtual void _Copy(const PlannerParameters& r) override
+    {
+        PlannerParameters::_Copy(r);
+        const RAStarParameters* pother = dynamic_cast<const RAStarParameters*>(&r);
+        if (!pother) {
+            return;
+        }
+        const RAStarParameters& other = *pother;
+        fRadius = other.fRadius;
+        fDistThresh = other.fDistThresh;
+        fGoalCoeff = other.fGoalCoeff;
+        nMaxChildren = other.nMaxChildren;
+        nMaxSampleTries = other.nMaxSampleTries;
     }
 
     dReal fRadius;          ///< _pDistMetric thresh is the radius that children must be within parents
@@ -178,6 +205,28 @@ public:
         _vXMLParameters.push_back("numgradsamples");
         _vXMLParameters.push_back("visgraspthresh");
         _vXMLParameters.push_back("graspdistthresh");
+    }
+
+    virtual void _Copy(const PlannerParameters& r) override
+    {
+        PlannerParameters::_Copy(r);
+        const GraspSetParameters* pother = dynamic_cast<const GraspSetParameters*>(&r);
+        if (!pother) {
+            return;
+        }
+        const GraspSetParameters& other = *pother;
+
+        _vgrasps = other._vgrasps;
+        if (!!other._ptarget) {
+            // is this correct to assume that env body index is same for this and other env?
+            _ptarget = _penv->GetBodyFromEnvironmentBodyIndex(other._ptarget->GetEnvironmentBodyIndex());
+        }
+        else {
+            _ptarget.reset();
+        }
+        _nGradientSamples = other._nGradientSamples;
+        _fVisibiltyGraspThresh = other._fVisibiltyGraspThresh;
+        _fGraspDistThresh = other._fGraspDistThresh;
     }
 
     std::vector<Transform> _vgrasps;     ///< grasps with respect to the target object
@@ -286,6 +335,41 @@ public:
         _bProcessingGrasp = false;
     }
 
+    virtual void _Copy(const PlannerParameters& r) override
+    {
+        PlannerParameters::_Copy(r);
+
+        const GraspParameters* pother = dynamic_cast<const GraspParameters*>(&r);
+        if (!pother) {
+            return;
+        }
+        const GraspParameters& other = *pother;
+
+        fstandoff = other.fstandoff;
+        if (!!other.targetbody) {
+            targetbody = _penv->GetBodyFromEnvironmentBodyIndex(other.targetbody->GetEnvironmentBodyIndex());
+        }
+        else {
+            targetbody.reset();
+        }
+        ftargetroll = other.ftargetroll;
+        vtargetdirection = other.vtargetdirection;
+        vtargetposition = other.vtargetposition;
+        vmanipulatordirection = other.vmanipulatordirection;
+        btransformrobot = other.btransformrobot;
+        breturntrajectory = other.breturntrajectory;
+        bonlycontacttarget = other.bonlycontacttarget;
+        btightgrasp = other.btightgrasp;
+        bavoidcontact = other.bavoidcontact;
+        vavoidlinkgeometry = other.vavoidlinkgeometry;
+        fcoarsestep = other.fcoarsestep;
+        ffinestep = other.ffinestep;
+        ftranslationstepmult = other.ftranslationstepmult;
+        fgraspingnoise = other.fgraspingnoise;
+        vintersectplane = other.vintersectplane;
+        vordereddofindices = other.vordereddofindices;
+    }
+    
     dReal fstandoff;     ///< start closing fingers when at this distance
     KinBodyPtr targetbody;     ///< the target that will be grasped, all parameters will be in this coordinate system. if not present, then below transformations are in absolute coordinate system.
     dReal ftargetroll;     ///< rotate the hand about the palm normal (if one exists) by this many radians
@@ -463,6 +547,25 @@ public:
         _vXMLParameters.push_back("verifyinitialpath");
     }
 
+    virtual void _Copy(const PlannerParameters& r) override
+    {
+        PlannerParameters::_Copy(r);
+
+        const TrajectoryTimingParameters* pother = dynamic_cast<const TrajectoryTimingParameters*>(&r);
+        if (!pother) {
+            return;
+        }
+        const TrajectoryTimingParameters& other = *pother;
+
+        _interpolation = other._interpolation;
+        _hastimestamps = other._hastimestamps;
+        _hasvelocities = other._hasvelocities;
+        _pointtolerance = other._pointtolerance;
+        _outputaccelchanges = other._outputaccelchanges;
+        _multidofinterp = other._multidofinterp;
+        verifyinitialpath = other.verifyinitialpath;
+    }
+
     std::string _interpolation;
     dReal _pointtolerance; ///< multiple of dof resolutions to set on discretization tolerance
     bool _hastimestamps, _hasvelocities;
@@ -564,6 +667,34 @@ public:
         _vXMLParameters.push_back("nshortcutcycles");
         _vXMLParameters.push_back("searchvelaccelmult");
         _vXMLParameters.push_back("durationimprovementcutoffratio");
+    }
+
+    virtual void _Copy(const PlannerParameters& r) override
+    {
+        TrajectoryTimingParameters::_Copy(r);
+
+        const ConstraintTrajectoryTimingParameters* pother = dynamic_cast<const ConstraintTrajectoryTimingParameters*>(&r);
+        if (!pother) {
+            return;
+        }
+
+        const ConstraintTrajectoryTimingParameters& other = *pother;
+
+        maxlinkspeed = other.maxlinkspeed;
+        maxlinkaccel = other.maxlinkaccel;
+        manipname = other.manipname;
+        maxmanipspeed = other.maxmanipspeed;
+        maxmanipaccel = other.maxmanipaccel;
+        vConstraintManipDir = other.vConstraintManipDir;
+        vConstraintGlobalDir = other.vConstraintGlobalDir;
+        fCosManipAngleThresh = other.fCosManipAngleThresh;
+        mingripperdistance = other.mingripperdistance;
+        velocitydistancethresh = other.velocitydistancethresh;
+        maxmergeiterations = other.maxmergeiterations;
+        minswitchtime = other.minswitchtime;
+        nshortcutcycles = other.nshortcutcycles;
+        fSearchVelAccelMult = other.fSearchVelAccelMult;
+        durationImprovementCutoffRatio = other.durationImprovementCutoffRatio;
     }
 
     dReal maxlinkspeed; ///< max speed in m/s that any point on any link goes. 0 means no speed limit
@@ -702,6 +833,8 @@ public:
         return _penv;
     }
 
+    virtual void _Copy(const PlannerParameters& r) override;
+    
     dReal maxdeviationangle;     ///< the maximum angle the next iksolution can deviate from the expected direction computed by the jacobian
     bool maintaintiming;     ///< maintain timing with input trajectory
     bool greedysearch;     ///< if true, will greeidly choose solutions (can possibly fail even a solution exists)
@@ -730,6 +863,13 @@ class OPENRAVE_API RRTParameters : public PlannerBase::PlannerParameters
 public:
     RRTParameters() : _minimumgoalpaths(1), _bProcessing(false) {
         _vXMLParameters.push_back("minimumgoalpaths");
+    }
+
+    virtual void _Copy(const PlannerParameters& r) override
+    {
+        PlannerParameters::_Copy(r);
+        const RRTParameters& other = dynamic_cast<const RRTParameters&>(r);
+        _minimumgoalpaths = other._minimumgoalpaths;
     }
 
     size_t _minimumgoalpaths; ///< minimum number of goals to connect to before exiting. the goal with the shortest path is returned.
@@ -791,6 +931,20 @@ public:
         _vXMLParameters.push_back("nrrtextenttype");
         _vXMLParameters.push_back("nminiterations");
     }
+
+    virtual void _Copy(const PlannerParameters& r) override
+    {
+        RRTParameters::_Copy(r);
+        const BasicRRTParameters* pother = dynamic_cast<const BasicRRTParameters*>(&r);
+        if (!pother) {
+            return;
+        }
+
+        const BasicRRTParameters& other = *pother;
+        _fGoalBiasProb = other._fGoalBiasProb;
+        _nRRTExtentType = other._nRRTExtentType;
+        _nMinIterations = other._nMinIterations;
+    }    
 
     dReal _fGoalBiasProb;
     int _nRRTExtentType; ///< the rrt extent type. if 0 then extend all the way to the sampled position. if 1, then just extend one step length before sampling again.

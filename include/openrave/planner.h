@@ -164,10 +164,11 @@ private:
 
     typedef boost::shared_ptr<StateSaver> StateSaverPtr;
 
-    /** \brief Attemps to copy data from one set of parameters to another in the safest manner.
+    /** \brief Attemps to copy data from one set of parameters to another.
 
-        First serializes the data of the right hand into a string, then initializes the current parameters via >>
         pointers to functions are copied directly
+
+        classes deriving from PlannerParameters have to override _Copy function for coping of variables introduced in derived class.
      */
     virtual PlannerParameters& operator=(const PlannerParameters& r);
     virtual void copy(boost::shared_ptr<PlannerParameters const> r);
@@ -437,6 +438,12 @@ private:
     std::list<SpaceSamplerBasePtr> _listInternalSamplers;
 
 protected:
+    /// \brief copies other into this
+    ///
+    /// This is called from assignment operator(=), each derived class is responsible for overriding this.
+    /// overriding _Copy should copy member variables introduced in derived class, and also call Base class' _Copy to make sure member variables in base class is also copied
+    virtual void _Copy(const PlannerParameters& other);
+
     // router to a default implementation of _checkpathconstraintsfn that calls on _checkpathvelocityconstraintsfn
     bool _CheckPathConstraintsOld(const std::vector<dReal>&q0, const std::vector<dReal>&q1, IntervalType interval, ConfigurationListPtr pvCheckedConfigurations) {
         RAVELOG_VERBOSE("using deprecated PlannerParameters::_checkpathconstraintsfn, consider switching to PlannerParameters::_checkpathvelocityconstraintsfn\n");
