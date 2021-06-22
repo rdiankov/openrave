@@ -1110,11 +1110,23 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
 
     PlannerParametersPtr params(new PlannerParameters());
     params->copy(GetParameters());
+    const std::string originalExtraParameters = params->_sExtraParameters;
     params->_sExtraParameters += GetParameters()->_sPostProcessingParameters;
     params->_sPostProcessingPlanner = "";
     params->_sPostProcessingParameters = "";
+
+    {
+        // deserialize _sExtraParameters into _sPostProcessingPlanner and _sPostProcessingParameters
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost and planners' initial conditions can vioalte constraints
+        ss << *params;
+        ss >> *params;
+    }
+    
+    params->_sExtraParameters = originalExtraParameters;// restore original _sExtraParameters, otherwise we can get into infinite loop of post processing
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
     //params->_nMaxPlanningTime = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters??
+
     if( __cachePostProcessPlanner->InitPlan(probot, params) ) {
         return __cachePostProcessPlanner->PlanPath(ptraj);
     }
