@@ -375,8 +375,6 @@ void PlannerParameters::_Copy(const PlannerParameters& other)
     _fStepLength = other._fStepLength;
     _nRandomGeneratorSeed = other._nRandomGeneratorSeed;
     _plannerparametersdepth = other._plannerparametersdepth;
-
-    _vXMLParameters = other._vXMLParameters;
 }
 
 int PlannerParameters::SetStateValues(const std::vector<dReal>& values, int options) const
@@ -385,6 +383,57 @@ int PlannerParameters::SetStateValues(const std::vector<dReal>& values, int opti
         return _setstatevaluesfn(values, options);
     }
     throw openrave_exception(_("need to set PlannerParameters::_setstatevaluesfn"));
+}
+
+bool PlannerParameters::ParseExtraParameters()
+{
+    const std::string originalExtraParameters = _sExtraParameters;
+    _sExtraParameters += _sPostProcessingParameters;
+    {
+        std::stringstream ss;
+        ss << *this;
+        RAVELOG_WARN_FORMAT("params->_sExtraParameters=%s", _sExtraParameters);
+    }
+
+    _sPostProcessingPlanner = "";
+    _sPostProcessingParameters = "";
+
+    {
+        std::stringstream ss;
+        ss << *this;
+        RAVELOG_WARN_FORMAT("params 0=%s", ss.str());
+    }
+    {
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost and planners' initial conditions can vioalte constraints
+        ss << *this;
+        ss >> *this;
+    }
+    {
+        std::stringstream ss;
+        ss << *this;
+        RAVELOG_WARN_FORMAT("params 1=%s", ss.str());
+    }
+
+    // // now 
+    // _sExtraParameters = originalExtraParameters + _sPostProcessingParameters;
+    // _sPostProcessingPlanner = "";
+    // _sPostProcessingParameters = "";
+
+
+    // {
+    //     std::stringstream ss;
+    //     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); have to do this or otherwise precision gets lost and planners' initial conditions can vioalte constraints
+    //     ss << *this;
+    //     ss >> *this;
+    // }
+    // {
+    //     std::stringstream ss;
+    //     ss << *this;
+    //     RAVELOG_WARN_FORMAT("params 2=%s", ss.str());
+    // }
+
+    _sExtraParameters = originalExtraParameters;
 }
 
 bool PlannerParameters::serialize(std::ostream& O, int options) const
@@ -1073,7 +1122,7 @@ bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
     boost::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
     isParameters >> *localparams;
     localparams->Validate();
-    return InitPlan(pbase,localparams);
+    return InitPlan(pbase,localparams, false);
 }
 
 UserDataPtr PlannerBase::RegisterPlanCallback(const PlanCallbackFn& callbackfn)
@@ -1115,19 +1164,10 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     params->_sPostProcessingPlanner = "";
     params->_sPostProcessingParameters = "";
 
-    {
-        // deserialize _sExtraParameters into _sPostProcessingPlanner and _sPostProcessingParameters
-        std::stringstream ss;
-        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost and planners' initial conditions can vioalte constraints
-        ss << *params;
-        ss >> *params;
-    }
-    
-    params->_sExtraParameters = originalExtraParameters;// restore original _sExtraParameters, otherwise we can get into infinite loop of post processing
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
     //params->_nMaxPlanningTime = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters??
 
-    if( __cachePostProcessPlanner->InitPlan(probot, params) ) {
+    if( __cachePostProcessPlanner->InitPlan(probot, params, true) ) {
         return __cachePostProcessPlanner->PlanPath(ptraj);
     }
 

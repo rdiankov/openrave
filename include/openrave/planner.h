@@ -437,6 +437,8 @@ private:
     /// For example, when _samplefn is set and a SpaceSampler is used as the underlying number generator, then it should be added to this list.
     std::list<SpaceSamplerBasePtr> _listInternalSamplers;
 
+    virtual bool ParseExtraParameters();
+
 protected:
     /// \brief copies other into this
     ///
@@ -608,7 +610,7 @@ public:
         \param robot main robot to be used for planning
         \param params The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.
      */
-    virtual bool InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params) = 0;
+    virtual bool InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params, bool loadExtraParameters) = 0;
 
     /** \brief Setup scene, robot, and properties of the plan, and reset all structures with pparams.
 

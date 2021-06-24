@@ -596,6 +596,7 @@ protected:
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
+        RAVELOG_WARN_FORMAT("%d:%s", _bProcessing%name);
         if( _bProcessing ) {
             return PE_Ignore;
         }
@@ -606,11 +607,13 @@ protected:
         }
 
         _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="hasvelocities" || name=="pointtolerance" || name=="outputaccelchanges" || name=="multidofinterp"||name=="verifyinitialpath";
+        RAVELOG_WARN_FORMAT("%d:%s", _bProcessing%name);
         return _bProcessing ? PE_Support : PE_Pass;
     }
 
     virtual bool endElement(const std::string& name)
     {
+        RAVELOG_WARN_FORMAT("%d:%s", _bProcessing%name);
         if( _bProcessing ) {
             if( name == "interpolation") {
                 _ss >> _interpolation;
