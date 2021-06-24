@@ -17,6 +17,8 @@
 #include "openraveplugindefs.h"
 #include "manipconstraints2.h"
 
+#include <sstream>
+
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_rplanners", msgid)
 
 namespace rplanners {
@@ -48,19 +50,25 @@ public:
         _bmanipconstraints = false;
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params, bool loadExtraParameters) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         params->Validate();
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
+        if (loadExtraParameters) {
+            std::stringstream ss;
+            ss << *params;
+            ss >> *_parameters;
+        }
+
         // reset the cache
         _cachedoldspec = ConfigurationSpecification();
         _cachednewspec = ConfigurationSpecification();
         return _InitPlan();
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
@@ -96,6 +104,10 @@ public:
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {
+        return _parameters;
+    }
+
+    virtual PlannerParametersPtr GetParameters() {
         return _parameters;
     }
 

@@ -40,12 +40,20 @@ public:
     virtual ~GraspGradientPlanner() {
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams, bool loadExtraParameters) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset();
         boost::shared_ptr<GraspSetParameters> parameters(new GraspSetParameters(GetEnv()));
         parameters->copy(pparams);
+        if (loadExtraParameters) {
+            std::stringstream ss;
+            ss << *pparams;
+            ss >> *parameters;
+        }
+        else {
+            parameters->copy(pparams);
+        }
         _robot = pbase;
         RobotBase::RobotStateSaver savestate(_robot);
 

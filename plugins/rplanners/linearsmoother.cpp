@@ -29,7 +29,7 @@ public:
     virtual ~LinearSmoother() {
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params, bool loadExtraParameters) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
@@ -38,7 +38,7 @@ public:
         return _InitPlan();
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
@@ -59,7 +59,7 @@ public:
         if( !!_puniformsampler ) {
             _puniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
         }
-        _linearretimer->InitPlan(RobotBasePtr(), _parameters);
+        _linearretimer->InitPlan(RobotBasePtr(), _parameters, false);
 
         _vConfigVelocityLimitInv.resize(_parameters->_vConfigVelocityLimit.size());
         for(int i = 0; i < (int)_vConfigVelocityLimitInv.size(); ++i) {
