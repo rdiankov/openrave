@@ -445,7 +445,9 @@ protected:
     ///
     /// This is called from assignment operator(=), each derived class is responsible for overriding this.
     /// overriding _Copy should copy member variables introduced in derived class, and also call Base class' _Copy to make sure member variables in base class is also copied
-    virtual void _Copy(const PlannerParameters& other);
+    /// \param other planner parameter from which to copy
+    /// \return whether copying succeeds. if downcasting to same class as this fails, should return false
+    virtual bool _Copy(const PlannerParameters& other);
 
     // router to a default implementation of _checkpathconstraintsfn that calls on _checkpathvelocityconstraintsfn
     bool _CheckPathConstraintsOld(const std::vector<dReal>&q0, const std::vector<dReal>&q1, IntervalType interval, ConfigurationListPtr pvCheckedConfigurations) {

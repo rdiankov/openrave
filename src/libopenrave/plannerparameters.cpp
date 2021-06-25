@@ -37,14 +37,15 @@ typedef bai::base64_from_binary<    // convert binary values to base64 character
             >
         > base64_text;
 
-void WorkspaceTrajectoryParameters::_Copy(const PlannerParameters& r)
+bool WorkspaceTrajectoryParameters::_Copy(const PlannerParameters& r)
 {
-    PlannerParameters::_Copy(r);
+    if (!PlannerParameters::_Copy(r)) {
+        return false;
+    }
     
     const WorkspaceTrajectoryParameters* pother = dynamic_cast<const WorkspaceTrajectoryParameters*>(&r);
-
     if (!pother) {
-        return;
+        return false;
     }
 
     const WorkspaceTrajectoryParameters& other = *pother;
@@ -64,6 +65,8 @@ void WorkspaceTrajectoryParameters::_Copy(const PlannerParameters& r)
     else {
         workspacetraj.reset();
     }
+
+    return true;
 }
 
 WorkspaceTrajectoryParameters::WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), ignorefirstcollisionee(0), ignorelastcollisionee(0), minimumcompletetime(0), _penv(penv), _bProcessing(false) {

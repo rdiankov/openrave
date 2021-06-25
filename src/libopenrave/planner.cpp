@@ -340,7 +340,7 @@ void PlannerParameters::copy(boost::shared_ptr<PlannerParameters const> r)
     _Copy(*r);
 }
 
-void PlannerParameters::_Copy(const PlannerParameters& other)
+bool PlannerParameters::_Copy(const PlannerParameters& other)
 {
     // reset
     _costfn = other._costfn;
@@ -375,6 +375,8 @@ void PlannerParameters::_Copy(const PlannerParameters& other)
     _fStepLength = other._fStepLength;
     _nRandomGeneratorSeed = other._nRandomGeneratorSeed;
     _plannerparametersdepth = other._plannerparametersdepth;
+
+    return true;
 }
 
 void PlannerParameters::LoadExtraParameters(const std::string& extraParameters)
