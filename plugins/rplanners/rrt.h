@@ -294,11 +294,12 @@ Some python code to display data::\n\
         dReal length;
     };
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams, bool loadExtraParameters) override
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams, const std::string& extraParameters) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new RRTParameters());
         _parameters->copy(pparams);
+        _parameters->LoadExtraParameters(extraParameters);
         if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
             _parameters.reset();
             return false;
@@ -691,11 +692,12 @@ public:
     virtual ~BasicRrtPlanner() {
     }
 
-    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams, bool loadExtraParameters)
+    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams, const std::string& extraParameters)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new BasicRRTParameters());
         _parameters->copy(pparams);
+        _parameters->LoadExtraParameters(extraParameters);
         if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
             _parameters.reset();
             return false;
@@ -953,11 +955,12 @@ public:
     virtual ~ExplorationPlanner() {
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams, bool loadExtraParameters) override
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams, const std::string& extraParameters) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new ExplorationParameters());
         _parameters->copy(pparams);
+        _parameters->LoadExtraParameters(extraParameters);
         if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
             _parameters.reset();
             return false;

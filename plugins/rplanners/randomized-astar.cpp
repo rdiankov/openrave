@@ -308,7 +308,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
 
     // Planning Methods
     ///< manipulator state is also set
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams, bool loadExtraParameters) override
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams, const std::string& extraParameters) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset();
@@ -316,6 +316,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         _robot = pbase;
         boost::shared_ptr<RAStarParameters> parameters(new RAStarParameters());
         parameters->copy(pparams);
+        parameters->LoadExtraParameters(extraParameters);
 
         RobotBase::RobotStateSaver savestate(_robot);
 

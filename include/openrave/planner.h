@@ -166,7 +166,7 @@ private:
 
     /** \brief Attemps to copy data from one set of parameters to another.
 
-        pointers to functions are copied directly
+        pointers to functions and member variables are copied directly
 
         classes deriving from PlannerParameters have to override _Copy function for coping of variables introduced in derived class.
      */
@@ -437,7 +437,8 @@ private:
     /// For example, when _samplefn is set and a SpaceSampler is used as the underlying number generator, then it should be added to this list.
     std::list<SpaceSamplerBasePtr> _listInternalSamplers;
 
-    virtual bool ParseExtraParameters();
+    /// loads extra parameters xml string into this, used when setting parameters from _sPostProcessingParameters
+    virtual void LoadExtraParameters(const std::string& extraParameters);
 
 protected:
     /// \brief copies other into this
@@ -610,7 +611,7 @@ public:
         \param robot main robot to be used for planning
         \param params The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.
      */
-    virtual bool InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params, bool loadExtraParameters) = 0;
+    virtual bool InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params, const std::string& extraParameters) = 0;
 
     /** \brief Setup scene, robot, and properties of the plan, and reset all structures with pparams.
 

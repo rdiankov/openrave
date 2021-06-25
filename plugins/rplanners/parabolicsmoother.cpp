@@ -199,30 +199,12 @@ public:
         _feasibilitychecker.SetEnvID(GetEnv()->GetId()); // set envid for logging purpose
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params, bool loadExtraParameters)
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params, const std::string& extraParameters)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
-        const std::string originalExtraParameters = _parameters->_sExtraParameters;
-
         _parameters->copy(params);
-        if (loadExtraParameters) {
-            std::stringstream ss;
-            ss << "<" << params->GetXMLId() << ">" << endl;
-            ss << params->_sExtraParameters << endl;
-            ss << "</" << params->GetXMLId() << ">" << endl;
-
-            //RAVELOG_WARN_FORMAT("ss 2=%s", ss.str());
-
-            ss >> *_parameters;
-
-            // RAVELOG_WARN_FORMAT("_sExtraParameters 2=%s", _parameters->_sExtraParameters);
-            // RAVELOG_WARN_FORMAT("_sPostProcessingPlanner 2=%s", _parameters->_sPostProcessingPlanner);
-            // RAVELOG_WARN_FORMAT("_sPostProcessingParameters 2=%s", _parameters->_sPostProcessingParameters);
-
-            _parameters->_sExtraParameters = originalExtraParameters;
-        }
-
+        _parameters->LoadExtraParameters(extraParameters);
         return _InitPlan();
     }
 

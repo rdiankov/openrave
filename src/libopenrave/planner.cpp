@@ -377,63 +377,28 @@ void PlannerParameters::_Copy(const PlannerParameters& other)
     _plannerparametersdepth = other._plannerparametersdepth;
 }
 
+void PlannerParameters::LoadExtraParameters(const std::string& extraParameters)
+{
+    if (extraParameters.empty()) {
+        // nothing to load
+        return;
+    }
+    
+    std::stringstream ss;
+
+    ss << "<" << GetXMLId() << ">" << endl;
+    ss << extraParameters << endl;
+    ss << "</" << GetXMLId() << ">" << endl;
+
+    ss >> *this;
+}
+
 int PlannerParameters::SetStateValues(const std::vector<dReal>& values, int options) const
 {
     if( !!_setstatevaluesfn ) {
         return _setstatevaluesfn(values, options);
     }
     throw openrave_exception(_("need to set PlannerParameters::_setstatevaluesfn"));
-}
-
-bool PlannerParameters::ParseExtraParameters()
-{
-    const std::string originalExtraParameters = _sExtraParameters;
-    _sExtraParameters += _sPostProcessingParameters;
-    {
-        std::stringstream ss;
-        ss << *this;
-        RAVELOG_WARN_FORMAT("params->_sExtraParameters=%s", _sExtraParameters);
-    }
-
-    _sPostProcessingPlanner = "";
-    _sPostProcessingParameters = "";
-
-    {
-        std::stringstream ss;
-        ss << *this;
-        RAVELOG_WARN_FORMAT("params 0=%s", ss.str());
-    }
-    {
-        std::stringstream ss;
-        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost and planners' initial conditions can vioalte constraints
-        ss << *this;
-        ss >> *this;
-    }
-    {
-        std::stringstream ss;
-        ss << *this;
-        RAVELOG_WARN_FORMAT("params 1=%s", ss.str());
-    }
-
-    // // now 
-    // _sExtraParameters = originalExtraParameters + _sPostProcessingParameters;
-    // _sPostProcessingPlanner = "";
-    // _sPostProcessingParameters = "";
-
-
-    // {
-    //     std::stringstream ss;
-    //     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); have to do this or otherwise precision gets lost and planners' initial conditions can vioalte constraints
-    //     ss << *this;
-    //     ss >> *this;
-    // }
-    // {
-    //     std::stringstream ss;
-    //     ss << *this;
-    //     RAVELOG_WARN_FORMAT("params 2=%s", ss.str());
-    // }
-
-    _sExtraParameters = originalExtraParameters;
 }
 
 bool PlannerParameters::serialize(std::ostream& O, int options) const
@@ -1122,7 +1087,7 @@ bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
     boost::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
     isParameters >> *localparams;
     localparams->Validate();
-    return InitPlan(pbase,localparams, false);
+    return InitPlan(pbase,localparams, "");
 }
 
 UserDataPtr PlannerBase::RegisterPlanCallback(const PlanCallbackFn& callbackfn)
@@ -1159,7 +1124,6 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
 
     PlannerParametersPtr params(new PlannerParameters());
     params->copy(GetParameters());
-    const std::string originalExtraParameters = params->_sExtraParameters;
     params->_sExtraParameters += GetParameters()->_sPostProcessingParameters;
     params->_sPostProcessingPlanner = "";
     params->_sPostProcessingParameters = "";
@@ -1167,7 +1131,7 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
     //params->_nMaxPlanningTime = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters??
 
-    if( __cachePostProcessPlanner->InitPlan(probot, params, true) ) {
+    if( __cachePostProcessPlanner->InitPlan(probot, params, params->_sExtraParameters) ) {
         return __cachePostProcessPlanner->PlanPath(ptraj);
     }
 
