@@ -35,9 +35,8 @@ public:
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
-        const std::string originalExtraParameters = _parameters->_sExtraParameters;
-
         _parameters->copy(params);
+
         if (loadExtraParameters) {
             std::stringstream ss;
 
@@ -46,8 +45,6 @@ public:
             ss << "</" << params->GetXMLId() << ">" << endl;
 
             ss >> *_parameters;
-
-            _parameters->_sExtraParameters = originalExtraParameters;
         }
 
         _probot = pbase;
