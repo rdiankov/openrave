@@ -1112,6 +1112,9 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
     //params->_nMaxPlanningTime = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters??
     if( __cachePostProcessPlanner->InitPlan(probot, params) ) {
+        std::stringstream ss;
+        ss << *__cachePostProcessPlanner->GetParameters();
+        RAVELOG_WARN_FORMAT("env=%s, %s", GetEnv()->GetNameId()%(ss.str()));
         return __cachePostProcessPlanner->PlanPath(ptraj);
     }
 
