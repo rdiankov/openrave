@@ -725,7 +725,7 @@ protected:
                     }
                 }
                 
-                if( !_pGrasperPlanner->InitPlan(_robot,graspparams,"") ) {
+                if( !_pGrasperPlanner->InitPlan(_robot,graspparams,graspparams->_sExtraParameters) ) {
                     RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
                     continue;
                 }
@@ -1192,7 +1192,7 @@ protected:
         ptraj->Init(_robot->GetActiveConfigurationSpecification());
         ptraj->Insert(0,graspparams->vinitialconfig); // have to add the first point
 
-        if( !graspplanner->InitPlan(_robot, graspparams, "") ) {
+        if( !graspplanner->InitPlan(_robot, graspparams, graspparams->_sExtraParameters) ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
@@ -1324,7 +1324,7 @@ protected:
         graspparams->bonlycontacttarget = false;
         graspparams->bavoidcontact = true;
 
-        if( !graspplanner->InitPlan(_robot, graspparams, "") ) {
+        if( !graspplanner->InitPlan(_robot, graspparams, graspparams->_sExtraParameters) ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
@@ -1470,7 +1470,7 @@ protected:
         graspparams->bonlycontacttarget = false;
         graspparams->bavoidcontact = true;
 
-        if( !graspplanner->InitPlan(_robot, graspparams, "") ) {
+        if( !graspplanner->InitPlan(_robot, graspparams, graspparams->_sExtraParameters) ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
@@ -1725,7 +1725,7 @@ protected:
 
         stringstream ss;
         for(int iter = 0; iter < nMaxTries; ++iter) {
-            if( !_pRRTPlanner->InitPlan(_robot, params, "") ) {
+            if( !_pRRTPlanner->InitPlan(_robot, params, params->_sExtraParameters) ) {
                 RAVELOG_WARN("InitPlan failed\n");
                 ptraj.reset();
                 return ptraj;
@@ -1804,7 +1804,7 @@ protected:
             graspparams->btightgrasp = false;
             graspparams->bavoidcontact = true;
             // TODO: in order to reproduce the same exact conditions as the original grasp, have to also transfer the step sizes
-            if( !_pGrasperPlanner->InitPlan(_robot,graspparams,"") ) {
+            if( !_pGrasperPlanner->InitPlan(_robot,graspparams,graspparams->_sExtraParameters) ) {
                 RAVELOG_DEBUG("grasper planner InitPlan failed\n");
                 return IKRA_Reject;
             }

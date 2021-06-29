@@ -58,7 +58,7 @@ public:
         if( _parameters->_fStepLength <= 0 ) {
             _parameters->_fStepLength = 0.04;
         }
-        _linearretimer->InitPlan(RobotBasePtr(), _parameters, "");
+        _linearretimer->InitPlan(RobotBasePtr(), _parameters, _parameters->_sExtraParameters);
         _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         if( !!_puniformsampler ) {
             _puniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);

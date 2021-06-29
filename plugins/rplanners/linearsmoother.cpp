@@ -60,7 +60,7 @@ public:
         if( !!_puniformsampler ) {
             _puniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
         }
-        _linearretimer->InitPlan(RobotBasePtr(), _parameters, "");
+        _linearretimer->InitPlan(RobotBasePtr(), _parameters, _parameters->_sExtraParameters);
 
         _vConfigVelocityLimitInv.resize(_parameters->_vConfigVelocityLimit.size());
         for(int i = 0; i < (int)_vConfigVelocityLimitInv.size(); ++i) {

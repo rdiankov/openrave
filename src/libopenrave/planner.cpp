@@ -1133,6 +1133,7 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
     //params->_nMaxPlanningTime = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters??
 
+    // post processing parameters is nested, here we pop one level of GetParameters()->_sPostProcessingParameters and parse into _sPostProcessingParameters and _sPostProcessingPlanner of __cachePostProcessPlanner
     if( __cachePostProcessPlanner->InitPlan(probot, params, params->_sExtraParameters + GetParameters()->_sPostProcessingParameters) ) {
         return __cachePostProcessPlanner->PlanPath(ptraj);
     }

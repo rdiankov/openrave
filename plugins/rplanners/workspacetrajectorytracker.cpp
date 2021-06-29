@@ -286,7 +286,7 @@ Planner Parameters\n\
             return PlannerStatus("bPrevInCollision" ,PS_Failed);
         }
 
-        if( !_retimerplanner->InitPlan(RobotBasePtr(),_parameters,"") || !_retimerplanner->PlanPath(poutputtraj).GetStatusCode() ) {
+        if( !_retimerplanner->InitPlan(RobotBasePtr(),_parameters,_parameters->_sExtraParameters) || !_retimerplanner->PlanPath(poutputtraj).GetStatusCode() ) {
             return PlannerStatus(PS_Failed);
         }
 
