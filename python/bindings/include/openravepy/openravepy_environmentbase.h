@@ -177,7 +177,8 @@ public:
 
     object GetBodyFromEnvironmentId(int id);
     object GetBodyFromEnvironmentBodyIndex(int id);
-
+    object GetBodiesFromEnvironmentBodyIndices(object bodyIndices);
+    
     int GetMaxEnvironmentBodyIndex();
 
     int AddModule(PyModuleBasePtr prob, const std::string &args);

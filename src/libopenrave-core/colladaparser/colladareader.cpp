@@ -5035,10 +5035,10 @@ private:
                             bool bIsEnabled=true;
                             if( resolveCommon_bool_or_param(pelt, referenceElt, bIsEnabled) ) {
                                 if( bAndWithPrevious ) {
-                                    plink->_info._bIsEnabled &= bIsEnabled;
+                                    plink->_Enable(plink->IsEnabled() & bIsEnabled);
                                 }
                                 else {
-                                    plink->_info._bIsEnabled = bIsEnabled;
+                                    plink->_Enable(bIsEnabled);
                                 }
                             }
                         }

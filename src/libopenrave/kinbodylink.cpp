@@ -363,9 +363,15 @@ void KinBody::Link::Enable(bool bEnable)
     if( _info._bIsEnabled != bEnable ) {
         KinBodyPtr parent = GetParent();
         parent->_nNonAdjacentLinkCache &= ~AO_Enabled;
-        _info._bIsEnabled = bEnable;
+        _Enable(bEnable);
         GetParent()->_PostprocessChangedParameters(Prop_LinkEnable);
     }
+}
+
+void KinBody::Link::_Enable(bool bEnable)
+{
+    _info._bIsEnabled = bEnable;
+    GetParent()->NotifyLinkEnabled(GetIndex(), bEnable);
 }
 
 bool KinBody::Link::IsEnabled() const
