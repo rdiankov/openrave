@@ -143,7 +143,7 @@ inline void ParseJson(rapidjson::Document& d, const std::string& str) {
         } else {
             substr = str;
         }
-        throw OPENRAVE_EXCEPTION_FORMAT("JSON string is invalid (offset %u) %s str=%s", ((unsigned)d.GetErrorOffset())%GetParseError_En(d.GetParseError())%substr, OpenRAVE::ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("JSON string is invalid (offset %u) %s str=%s", ((unsigned)tempDoc.GetErrorOffset())%GetParseError_En(tempDoc.GetParseError())%substr, OpenRAVE::ORE_InvalidArguments);
     }
     tempDoc.Swap(d);
 }

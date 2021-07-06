@@ -2391,7 +2391,7 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
 
     if( pgrabbedbody->IsEnabled() ) {
         FOREACH(itnoncolliding, _mapLinkIsNonColliding) {
-            if( itnoncolliding->second && itnoncolliding->first->IsEnabled() ) {
+            if( itnoncolliding->second ) {
                 //RAVELOG_VERBOSE(str(boost::format("non-colliding link %s for grabbed body %s")%(*itlink)->GetName()%pgrabbedbody->GetName()));
                 _listNonCollidingLinks.push_back(itnoncolliding->first);
             }
@@ -2505,7 +2505,7 @@ void Grabbed::UpdateCollidingLinks()
             }
         }
 
-        if( itnoncolliding->second && itnoncolliding->first->IsEnabled() ) {
+        if( itnoncolliding->second ) {
             _listNonCollidingLinks.push_back(itnoncolliding->first);
         }
         ++itnoncolliding;
