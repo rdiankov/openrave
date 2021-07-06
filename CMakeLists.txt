@@ -55,7 +55,7 @@ option(OPT_INSTALL_3DMODELDATA "If ON, then install the 3D model data." ON)
 option(OPT_EXTRA_ROBOTS "If ON, then install extra robots as part of 3D model data" ON)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 
 if(OPT_DOUBLE_PRECISION)
