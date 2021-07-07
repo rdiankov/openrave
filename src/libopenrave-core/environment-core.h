@@ -2649,6 +2649,7 @@ public:
             info._gravity = _pPhysicsEngine->GetGravity();
         }
         info._uInt64Parameters = _mapUInt64Parameters;
+        info._unit = _unit;
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
