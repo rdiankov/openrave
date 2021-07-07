@@ -2670,6 +2670,7 @@ public:
             _keywords = info._keywords;
             _description = info._description;
             _mapUInt64Parameters = info._uInt64Parameters;
+            _unit = info._unit;
 
             // set gravity
             if (!!_pPhysicsEngine) {
@@ -2678,6 +2679,7 @@ public:
                     _pPhysicsEngine->SetGravity(info._gravity);
                 }
             }
+
         }
 
         // make a copy of _vecbodies because we will be doing some reordering
