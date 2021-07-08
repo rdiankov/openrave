@@ -127,20 +127,7 @@ public:
             list< std::pair< vector<dReal>, dReal> > listpath;
             dReal totaldist = 0;
 
-            bool isBranching = false;
-            if(!!_probot && _nUseSingleDOFSmoothing == 1) {
-                std::set<KinBody::LinkConstPtr> setJoints;
-                FOREACHC(it, _probot->GetActiveDOFIndices()) {
-                    KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
-                    bool canInsert = setJoints.insert(pjoint->GetHierarchyParentLink()).second;
-                    if(!canInsert) {
-                        isBranching = true;
-                        break;
-                    }
-                }
-            }
-
-            if( _nUseSingleDOFSmoothing == 3 or (isBranching and _nUseSingleDOFSmoothing == 1)) {
+            if( _nUseSingleDOFSmoothing == 3 ) {
                 uint32_t basetime1 = utils::GetMilliTime();
                 list< vector<dReal> > listsimplepath;
                 for(size_t i = 0; i < ptraj->GetNumWaypoints(); ++i) {
