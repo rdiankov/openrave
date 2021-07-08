@@ -611,8 +611,8 @@ public:
         Transform _trelative;         ///< relative transform of the sensor with respect to the attached link
         std::string _sensorname; ///< name of the sensor interface to create, in other words the sensor type
         std::string _referenceAttachedSensorName; ///< name of another attached sensor in the same robot, that whose data is referenced. This sensor transforms the data in a particular way.
-        std::string _sensorMaker;
-        std::string _sensorModel;
+        std::string _sensorMaker; ///< maker name of the sensor
+        std::string _sensorModel; ///< model name of the sensor
         rapidjson::Document _docSensorGeometry; ///< the sensor geometry to initialize the sensor with
     };
     typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
