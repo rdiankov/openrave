@@ -243,6 +243,8 @@ class SpaceSamplerBase;
 class IkParameterization;
 class ConfigurationSpecification;
 class IkReturn;
+class IkFailureInfo;
+class IkFailureAccumulator;
 class Readable;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
@@ -298,6 +300,8 @@ typedef boost::weak_ptr<Readable> ReadableWeakPtr;
 typedef boost::shared_ptr<IkReturn> IkReturnPtr;
 typedef boost::shared_ptr<IkReturn const> IkReturnConstPtr;
 typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
+typedef boost::shared_ptr<IkFailureInfo> IkFailureInfoPtr;
+typedef boost::shared_ptr<IkFailureAccumulator> IkFailureAccumulatorPtr;
 
 class BaseXMLReader;
 typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
@@ -2385,6 +2389,8 @@ public:
 
     AABB ComputeAABB() const;
     void serialize(std::ostream& o, int options=0) const;
+
+    void SerializeJSON(rapidjson::Value& rTriMesh, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
 
     friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh &trimesh);
     friend OPENRAVE_API std::istream& operator>>(std::istream& I, TriMesh& trimesh);

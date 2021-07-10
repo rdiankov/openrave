@@ -23,6 +23,37 @@
 namespace openravepy {
 using py::object;
 
+class PyIkFailureInfo
+{
+public:
+    PyIkFailureInfo(const IkFailureInfo& ikFailureInfo);
+    IkReturnAction GetAction();
+    object GetConfiguration();
+    object GetIkParam();
+    object GetCollisionReport();
+    std::string GetDescription();
+    object GetMapData(const std::string& key);
+    object GetMapDataDict();
+
+    py::object SerializeJSON();
+
+    IkFailureInfo _ikFailureInfo;
+};
+
+typedef OPENRAVE_SHARED_PTR<PyIkFailureInfo> PyIkFailureInfoPtr;
+
+class PyIkFailureAccumulator
+{
+public:
+    PyIkFailureAccumulator();
+    inline int GetCurrentSize() const {
+        return _ikFailureAccumulator.GetCurrentSize();
+    }
+    object GetIkFailureInfo(size_t index) const;
+
+    IkFailureAccumulator _ikFailureAccumulator;
+};
+
 class PyIkReturn
 {
 public:
@@ -34,6 +65,7 @@ public:
     object GetUserData();
     object GetMapData(const std::string& key);
     object GetMapDataDict();
+    object GetIkFailureInfos();
 
     void SetUserData(PyUserData pdata);
     void SetSolution(object osolution);

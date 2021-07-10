@@ -176,6 +176,19 @@ PlannerStatus::PlannerStatus(const std::string& description, const uint32_t stat
     InitCollisionReport(report);
 }
 
+PlannerStatus::PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam, const std::vector<IkFailureInfoPtr>& vIkFailureInfos) :
+    PlannerStatus(description, statusCode)
+{
+    this->ikparam = ikparam;
+    this->vIkFailureInfos = vIkFailureInfos;
+}
+
+PlannerStatus::PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<IkFailureInfoPtr>& vIkFailureInfos) :
+    PlannerStatus(description, statusCode)
+{
+    this->vIkFailureInfos = vIkFailureInfos;
+}
+
 PlannerStatus::PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues) :
     PlannerStatus(description, statusCode)
 {

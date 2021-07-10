@@ -36,7 +36,6 @@ enum IkFilterOptions
     IKFO_IgnoreEndEffectorCollisions=0x10, ///< \see IKFO_IgnoreEndEffectorEnvCollisions
     IKFO_IgnoreEndEffectorEnvCollisions=0x10, ///< will not check collision with the environment and the end effector links and bodies attached to the end effector links. The end effector links are defined by \ref RobotBase::Manipulator::GetChildLinks. Use this option when \ref RobotBase::Manipulator::CheckEndEffectorCollision has already been called, or it is ok for the end effector to collide given the IK constraints. Self-collisions between the moving links and end effector are still checked.
     IKFO_IgnoreEndEffectorSelfCollisions=0x20, ///< will not check self-collisions with the end effector. The end effector links are defined by \ref RobotBase::Manipulator::GetChildLinks. Use this option if it is ok for the end effector to collide given the IK constraints. Collisions between the moving links and end effector are still checked.
-    //IKFO_FillCollisionReports=0x1000, ///< if set, will fill the collision reports of the IkReturn structure (TODO)
 };
 
 /// \brief Return value for the ik filter that can be optionally set on an ik solver.
@@ -70,6 +69,101 @@ static const IkReturnAction IKFR_Reject RAVE_DEPRECATED = IKRA_Reject;
 static const IkReturnAction IKFR_Quit RAVE_DEPRECATED = IKRA_Quit;
 typedef IkReturnAction IkFilterReturn RAVE_DEPRECATED;
 
+class OPENRAVE_API IkFailureInfo
+{
+public:
+    IkFailureInfo()
+    {
+    }
+
+    inline void Init(const IkFailureInfo& ikFailureInfo)
+    {
+        _action = ikFailureInfo._action;
+        _vconfig = ikFailureInfo._vconfig;
+        _description = ikFailureInfo._description;
+        _mapdata = ikFailureInfo._mapdata;
+        InitCollisionReport(ikFailureInfo._preport);
+        if( ikFailureInfo.HasValidIkParam() ) {
+            SetIkParam(ikFailureInfo.GetIkParam());
+        }
+        else {
+            _bIkParamValid = false;
+        }
+    }
+
+    /// \brief clears the data. _action is left unchanged.
+    void Clear();
+
+    /// \brief initializes _preport according to the passed in report.
+    void InitCollisionReport(const CollisionReportPtr& preport);
+
+    void SetDescription(const std::string& description);
+
+    void SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Document::AllocatorType& alloc) const;
+
+    inline void SetIkParam(const IkParameterization& ikparam) {
+        if( ikparam.GetType() != IKP_None ) {
+            _ikparam = ikparam;
+            _bIkParamValid = true;
+        }
+        else {
+            _bIkParamValid = false;
+        }
+    }
+    inline bool HasValidIkParam() const {
+        return _bIkParamValid;
+    }
+    inline const IkParameterization& GetIkParam() const {
+        return _ikparam;
+    }
+
+    int GetIndex() const {
+        return _index;
+    }
+
+    typedef std::map<std::string, std::vector<dReal> > CustomData;
+    IkReturnAction _action;        ///< the IkReturnAction corresponding to this failure
+    std::vector< dReal > _vconfig; ///< the robot configuration that does not pass the checks.
+    CollisionReportPtr _preport;   ///< the collision report from when some collision checking fails.
+    std::string _description;      ///< a string describing the failure
+    CustomData _mapdata;           ///< stored additional information that does not fit elsewhere
+    int _index; // for debugging
+
+private:
+    IkParameterization _ikparam;   ///< the ikparam that fails (could be different from the ikparam given to FindIKSolutions call).
+    bool _bIkParamValid=false;     ///< a flag determining whether _ikparam is valid.
+};
+
+class OPENRAVE_API IkFailureAccumulator
+{
+public:
+    IkFailureAccumulator();
+
+    inline const size_t GetCurrentSize() const
+    {
+        return _nextIndex;
+    }
+
+    inline void ResetIndex(const size_t nextIndex=0)
+    {
+        _nextIndex = nextIndex;
+    }
+
+    /// \brief Retrieve ikFailureInfo from the specified index. Assume the input index is valid.
+    inline const IkFailureInfo& GetIkFailureInfo(size_t index) const
+    {
+        return _vIkFailureInfos[index];
+    }
+
+    /// \brief Get the next available IkFailureInfo to fill in failure information.
+    IkFailureInfo& GetNextAvailableIkFailureInfo();
+    IkFailureInfoPtr GetNextAvailableIkFailureInfoPtr();
+
+private:
+    std::vector<IkFailureInfo> _vIkFailureInfos;
+    size_t _nextIndex = 0;
+};
+
 class OPENRAVE_API IkReturn
 {
 public:
@@ -86,12 +180,10 @@ public:
     /// \brief appends the data of one IkReturn to this structure
     ///
     /// _action is untouched, _vsolution is overridden if non-empty
-    /// \return If data clashes, will output text and return false
+    /// \return true if data clashes. Also outputs text in such cases.
     bool Append(const IkReturn& r);
 
     /// \brief clears the data, leaves the _action unchanged
-    ///
-    /// if _preport is set, will call Reset on it.
     void Clear();
 
     typedef std::map<std::string, std::vector<dReal> > CustomData;
@@ -100,6 +192,7 @@ public:
     CustomData _mapdata; ///< name/value pairs for custom data computed in the filters. Cascading filters using the same name will overwrite this until the last executed filter (with lowest priority).
     UserDataPtr _userdata; ///< if the name/value pairs are not enough, can further use a pointer to custom data. Cascading filters with valid _userdata pointers will overwrite this until the last executed filter (with lowest priority).
     //std::vector<CollisionReport> _reports; ///< all the reports that are written with the collision information if ik failed due to collisions. Only valid if _action has IKRA_RejectSelfCollision or IKRA_RejectEnvCollision set. (TODO)
+    std::vector<IkFailureInfoPtr> _vIkFailureInfos;
 };
 
 /** \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_iksolver.
@@ -207,6 +300,7 @@ public:
         \return true if solution is found
      */
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn);
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkFailureAccumulatorPtr paccumulator, IkReturnPtr ikreturn);
 
     /** \brief Return all joint configurations for the given end effector transform.
 
@@ -230,6 +324,7 @@ public:
         \return true if at least one solution is found
      */
     virtual bool SolveAll(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& ikreturns);
+    virtual bool SolveAll(const IkParameterization& param, int filteroptions, IkFailureAccumulatorPtr paccumulator, std::vector<IkReturnPtr>& ikreturns);
 
     /** Return a joint configuration for the given end effector transform.
 
@@ -254,6 +349,7 @@ public:
         \return true if solution is found
      */
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn);
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorPtr paccumulator, IkReturnPtr ikreturn);
 
     /** \brief Return all joint configurations for the given end effector transform.
 
@@ -281,6 +377,7 @@ public:
         \return true at least one solution is found
      */
     virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& ikreturns);
+    virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorPtr paccumulator, std::vector<IkReturnPtr>& ikreturns);
 
     /// \brief returns true if the solver supports a particular ik parameterization as input.
     virtual bool Supports(IkParameterizationType iktype) const OPENRAVE_DUMMY_IMPLEMENTATION;
@@ -301,7 +398,7 @@ public:
 
     /// \brief returns the kinematics structure hash this ik solver is encoded to. Checked with \ref RobotBase::Manipulator::GetKinematicsStructureHash()
     virtual const std::string& GetKinematicsStructureHash() const OPENRAVE_DUMMY_IMPLEMENTATION;
-    
+
 protected:
     inline IkSolverBasePtr shared_iksolver() {
         return boost::static_pointer_cast<IkSolverBase>(shared_from_this());
