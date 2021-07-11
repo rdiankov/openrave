@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyTrajectoryBase : public PyInterfaceBase
+class OPENRAVEPY_API PyTrajectoryBase : public PyInterfaceBase
 {
 protected:
     TrajectoryBasePtr _ptrajectory;
