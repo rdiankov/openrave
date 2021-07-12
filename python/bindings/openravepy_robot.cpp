@@ -181,6 +181,8 @@ void PyAttachedSensorInfo::_Update(const RobotBase::AttachedSensorInfo& info) {
     _trelative = ReturnTransform(info._trelative);
     _sensorname = ConvertStringToUnicode(info._sensorname);
     _referenceAttachedSensorName = ConvertStringToUnicode(info._referenceAttachedSensorName);
+    _sensorMaker = ConvertStringToUnicode(info._sensorMaker);
+    _sensorModel = ConvertStringToUnicode(info._sensorModel);
     _sensorgeometry = toPySensorGeometry(info._sensorname, info._docSensorGeometry);
 }
 
@@ -204,6 +206,12 @@ RobotBase::AttachedSensorInfoPtr PyAttachedSensorInfo::GetAttachedSensorInfo() c
     }
     if( !IS_PYTHONOBJECT_NONE(_referenceAttachedSensorName) ) {
         pinfo->_referenceAttachedSensorName = py::extract<std::string>(_referenceAttachedSensorName);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_sensorMaker) ) {
+        pinfo->_sensorMaker = py::extract<std::string>(_sensorMaker);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_sensorModel) ) {
+        pinfo->_sensorModel = py::extract<std::string>(_sensorModel);
     }
     rapidjson::Document docSensorGeometry;
     if(!!_sensorgeometry) {
@@ -2427,6 +2435,8 @@ void init_openravepy_robot()
                                 .def_readwrite("_trelative", &PyAttachedSensorInfo::_trelative)
                                 .def_readwrite("_sensorname", &PyAttachedSensorInfo::_sensorname)
                                 .def_readwrite("_referenceAttachedSensorName",&PyAttachedSensorInfo::_referenceAttachedSensorName)
+                                .def_readwrite("_sensorMaker",&PyAttachedSensorInfo::_sensorMaker)
+                                .def_readwrite("_sensorModel",&PyAttachedSensorInfo::_sensorModel)
                                 .def_readwrite("_sensorgeometry", &PyAttachedSensorInfo::_sensorgeometry)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                 .def("SerializeJSON", &PyAttachedSensorInfo::SerializeJSON,
