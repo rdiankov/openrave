@@ -31,16 +31,17 @@ public:
     virtual ~ShortcutLinearPlanner() {
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params, const std::string& extraParameters) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         _parameters->copy(params);
+        _parameters->LoadExtraParameters(extraParameters);
         _probot = pbase;
         return _InitPlan();
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
@@ -57,7 +58,7 @@ public:
         if( _parameters->_fStepLength <= 0 ) {
             _parameters->_fStepLength = 0.04;
         }
-        _linearretimer->InitPlan(RobotBasePtr(), _parameters);
+        _linearretimer->InitPlan(RobotBasePtr(), _parameters, _parameters->_sExtraParameters);
         _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         if( !!_puniformsampler ) {
             _puniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);

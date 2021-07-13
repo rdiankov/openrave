@@ -164,10 +164,11 @@ private:
 
     typedef boost::shared_ptr<StateSaver> StateSaverPtr;
 
-    /** \brief Attemps to copy data from one set of parameters to another in the safest manner.
+    /** \brief Attemps to copy data from one set of parameters to another.
 
-        First serializes the data of the right hand into a string, then initializes the current parameters via >>
-        pointers to functions are copied directly
+        pointers to functions and member variables are copied directly
+
+        classes deriving from PlannerParameters have to override _Copy function for coping of variables introduced in derived class.
      */
     virtual PlannerParameters& operator=(const PlannerParameters& r);
     virtual void copy(boost::shared_ptr<PlannerParameters const> r);
@@ -436,7 +437,18 @@ private:
     /// For example, when _samplefn is set and a SpaceSampler is used as the underlying number generator, then it should be added to this list.
     std::list<SpaceSamplerBasePtr> _listInternalSamplers;
 
+    /// loads extra parameters xml string into this, used when setting parameters from _sPostProcessingParameters
+    virtual void LoadExtraParameters(const std::string& extraParameters);
+
 protected:
+    /// \brief copies other into this
+    ///
+    /// This is called from assignment operator(=), each derived class is responsible for overriding this.
+    /// overriding _Copy should copy member variables introduced in derived class, and also call Base class' _Copy to make sure member variables in base class is also copied
+    /// \param other planner parameter from which to copy
+    /// \return whether copying succeeds. if downcasting to same class as this fails, should return false
+    virtual bool _Copy(const PlannerParameters& other);
+
     // router to a default implementation of _checkpathconstraintsfn that calls on _checkpathvelocityconstraintsfn
     bool _CheckPathConstraintsOld(const std::vector<dReal>&q0, const std::vector<dReal>&q1, IntervalType interval, ConfigurationListPtr pvCheckedConfigurations) {
         RAVELOG_VERBOSE("using deprecated PlannerParameters::_checkpathconstraintsfn, consider switching to PlannerParameters::_checkpathvelocityconstraintsfn\n");
@@ -601,7 +613,7 @@ public:
         \param robot main robot to be used for planning
         \param params The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.
      */
-    virtual bool InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params) = 0;
+    virtual bool InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params, const std::string& extraParameters) = 0;
 
     /** \brief Setup scene, robot, and properties of the plan, and reset all structures with pparams.
 

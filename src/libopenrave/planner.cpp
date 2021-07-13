@@ -328,51 +328,71 @@ PlannerParameters::PlannerParameters(const PlannerParameters &r)
 
 PlannerParameters& PlannerParameters::operator=(const PlannerParameters& r)
 {
-    // reset
-    _costfn = r._costfn;
-    _goalfn = r._goalfn;
-    _distmetricfn = r._distmetricfn;
-    _checkpathvelocityconstraintsfn = r._checkpathvelocityconstraintsfn;
-    _samplefn = r._samplefn;
-    _sampleneighfn = r._sampleneighfn;
-    _samplegoalfn = r._samplegoalfn;
-    _sampleinitialfn = r._sampleinitialfn;
-    _setstatevaluesfn = r._setstatevaluesfn;
-    _getstatefn = r._getstatefn;
-    _diffstatefn = r._diffstatefn;
-    _neighstatefn = r._neighstatefn;
-    _listInternalSamplers = r._listInternalSamplers;
-
-    vinitialconfig.resize(0);
-    _vInitialConfigVelocities.resize(0);
-    _vGoalConfigVelocities.resize(0);
-    vgoalconfig.resize(0);
-    _configurationspecification = ConfigurationSpecification();
-    _vConfigLowerLimit.resize(0);
-    _vConfigUpperLimit.resize(0);
-    _vConfigResolution.resize(0);
-    _vConfigVelocityLimit.resize(0);
-    _vConfigAccelerationLimit.resize(0);
-    _sPostProcessingPlanner = "";
-    _sPostProcessingParameters.resize(0);
-    _sExtraParameters.resize(0);
-    _nMaxIterations = 0;
-    _nMaxPlanningTime = 0;
-    _fStepLength = 0.04f;
-    _nRandomGeneratorSeed = 0;
-    _plannerparametersdepth = 0;
-
-    // transfer data
-    std::stringstream ss;
-    ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost and planners' initial conditions can vioalte constraints
-    ss << r;
-    ss >> *this;
+    _Copy(r);
     return *this;
 }
 
 void PlannerParameters::copy(boost::shared_ptr<PlannerParameters const> r)
 {
-    *this = *r;
+    if (!r) {
+        return;
+    }
+    _Copy(*r);
+}
+
+bool PlannerParameters::_Copy(const PlannerParameters& other)
+{
+    // reset
+    _costfn = other._costfn;
+    _goalfn = other._goalfn;
+    _distmetricfn = other._distmetricfn;
+    _checkpathvelocityconstraintsfn = other._checkpathvelocityconstraintsfn;
+    _samplefn = other._samplefn;
+    _sampleneighfn = other._sampleneighfn;
+    _samplegoalfn = other._samplegoalfn;
+    _sampleinitialfn = other._sampleinitialfn;
+    _setstatevaluesfn = other._setstatevaluesfn;
+    _getstatefn = other._getstatefn;
+    _diffstatefn = other._diffstatefn;
+    _neighstatefn = other._neighstatefn;
+    _listInternalSamplers = other._listInternalSamplers;
+
+    vinitialconfig = other.vinitialconfig;
+    _vInitialConfigVelocities = other._vInitialConfigVelocities;
+    _vGoalConfigVelocities = other._vGoalConfigVelocities;
+    vgoalconfig = other.vgoalconfig;
+    _configurationspecification = other._configurationspecification;
+    _vConfigLowerLimit = other._vConfigLowerLimit;
+    _vConfigUpperLimit = other._vConfigUpperLimit;
+    _vConfigResolution = other._vConfigResolution;
+    _vConfigVelocityLimit = other._vConfigVelocityLimit;
+    _vConfigAccelerationLimit = other._vConfigAccelerationLimit;
+    _sPostProcessingPlanner = other._sPostProcessingPlanner;
+    _sPostProcessingParameters = other._sPostProcessingParameters;
+    _sExtraParameters = other._sExtraParameters;
+    _nMaxIterations = other._nMaxIterations;
+    _nMaxPlanningTime = other._nMaxPlanningTime;
+    _fStepLength = other._fStepLength;
+    _nRandomGeneratorSeed = other._nRandomGeneratorSeed;
+    _plannerparametersdepth = other._plannerparametersdepth;
+
+    return true;
+}
+
+void PlannerParameters::LoadExtraParameters(const std::string& extraParameters)
+{
+    if (extraParameters.empty()) {
+        // nothing to load
+        return;
+    }
+    
+    std::stringstream ss;
+
+    ss << "<" << GetXMLId() << ">" << endl;
+    ss << extraParameters << endl;
+    ss << "</" << GetXMLId() << ">" << endl;
+
+    ss >> *this;
 }
 
 int PlannerParameters::SetStateValues(const std::vector<dReal>& values, int options) const
@@ -1069,7 +1089,7 @@ bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
     boost::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
     isParameters >> *localparams;
     localparams->Validate();
-    return InitPlan(pbase,localparams);
+    return InitPlan(pbase,localparams, "");
 }
 
 UserDataPtr PlannerBase::RegisterPlanCallback(const PlanCallbackFn& callbackfn)
@@ -1106,12 +1126,15 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
 
     PlannerParametersPtr params(new PlannerParameters());
     params->copy(GetParameters());
-    params->_sExtraParameters += GetParameters()->_sPostProcessingParameters;
+    //params->_sExtraParameters += GetParameters()->_sPostProcessingParameters;
     params->_sPostProcessingPlanner = "";
     params->_sPostProcessingParameters = "";
+
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
     //params->_nMaxPlanningTime = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters??
-    if( __cachePostProcessPlanner->InitPlan(probot, params) ) {
+
+    // post processing parameters is nested, here we pop one level of GetParameters()->_sPostProcessingParameters and parse into _sPostProcessingParameters and _sPostProcessingPlanner of __cachePostProcessPlanner
+    if( __cachePostProcessPlanner->InitPlan(probot, params, params->_sExtraParameters + GetParameters()->_sPostProcessingParameters) ) {
         return __cachePostProcessPlanner->PlanPath(ptraj);
     }
 

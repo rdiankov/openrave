@@ -199,11 +199,12 @@ public:
         _feasibilitychecker.SetEnvID(GetEnv()->GetId()); // set envid for logging purpose
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params, const std::string& extraParameters)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
+        _parameters->LoadExtraParameters(extraParameters);
         return _InitPlan();
     }
 
