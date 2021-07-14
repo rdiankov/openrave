@@ -52,7 +52,7 @@ public:
             boxes[0].extents = Vector(0.01,0.1,0.01);
             target->InitFromBoxes(boxes,true);
             target->SetName("lever");
-            penv->Add(target);
+            penv->Add(target, OpenRAVE::IAM_StrictNameChecking);
             Transform t;
             t.trans = Vector(-0.2,-0.2,1);
             target->SetTransform(t);

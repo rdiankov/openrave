@@ -26,9 +26,9 @@ public:
         string robotfilename = "robots/barrettwam.robot.xml";
         RaveSetDebugLevel(Level_Debug);
         RobotBasePtr probot1 = penv->ReadRobotURI(RobotBasePtr(), robotfilename);
-        penv->Add(probot1,true);
+        penv->Add(probot1, OpenRAVE::IAM_AllowRenaming);
         RobotBasePtr probot2 = penv->ReadRobotURI(RobotBasePtr(), robotfilename);
-        penv->Add(probot2,true);
+        penv->Add(probot2, OpenRAVE::IAM_AllowRenaming);
         Transform trobot2 = probot2->GetTransform(); trobot2.trans.y += 0.5;
         probot2->SetTransform(trobot2);
 
@@ -54,19 +54,21 @@ public:
                 params->_getstatefn(params->vinitialconfig);
                 params->vgoalconfig.resize(params->GetDOF());
 
+                std::vector<dReal> vzero(params->GetDOF(), 0.0);
+
                 // find a set of free joint values for the robot
                 {
                     while(1) {
                         for(int i = 0; i < params->GetDOF(); ++i) {
                             params->vgoalconfig[i] = params->_vConfigLowerLimit[i] + (params->_vConfigUpperLimit[i]-params->_vConfigLowerLimit[i])*RaveRandomFloat();
                         }
-                        params->_setstatefn(params->vgoalconfig);
-                        if( params->_checkpathconstraintsfn(params->vgoalconfig,params->vgoalconfig,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
+                        params->SetStateValues(params->vgoalconfig);
+                        if( params->CheckPathAllConstraints(params->vgoalconfig,params->vgoalconfig,vzero,vzero,0,IT_OpenStart) ) {
                             break;
                         }
                     }
                     // restore robot state
-                    params->_setstatefn(params->vinitialconfig);
+                    params->SetStateValues(params->vinitialconfig);
                 }
 
                 RAVELOG_INFO("starting to plan\n");
@@ -76,7 +78,7 @@ public:
 
                 // create a new output trajectory
                 TrajectoryBasePtr ptraj = RaveCreateTrajectory(penv,"");
-                if( !planner->PlanPath(ptraj) ) {
+                if( !planner->PlanPath(ptraj).HasSolution() ) {
                     RAVELOG_WARN("plan failed, trying again\n");
                     continue;
                 }

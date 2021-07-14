@@ -45,8 +45,10 @@
 
 using namespace OpenRAVE;
 using namespace std;
+namespace py = boost::python;
 
 namespace cppexamples {
+
 
 class FunctionUserData : public UserData
 {

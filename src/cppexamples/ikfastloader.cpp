@@ -50,7 +50,7 @@ int main(int argc, char ** argv)
             penv->Destroy();
             return 2;
         }
-        penv->Add(probot);
+        penv->Add(probot, OpenRAVE::IAM_StrictNameChecking);
 
         ModuleBasePtr pikfast = RaveCreateModule(penv,"ikfast");
         penv->Add(pikfast,true,"");

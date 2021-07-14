@@ -6,6 +6,7 @@
     <b>Full Example Code:</b>
  */
 #include <openrave/openrave.h>
+#include <openrave/xmlreaders.h>
 #include <openrave/plugin.h>
 
 using namespace std;
@@ -16,10 +17,10 @@ namespace cppexamples {
 class CustomController : public ControllerBase
 {
 public:
-    class XMLData : public XMLReadable
+    class XMLData : public xmlreaders::HierarchicalXMLReadable
     {
 public:
-        XMLData() : XMLReadable("piddata") {
+        XMLData() : xmlreaders::HierarchicalXMLReadable("piddata", AttributesList()) {
         }
         vector<dReal> pgains,igains;
     };
@@ -36,7 +37,7 @@ public:
                 RAVELOG_INFO("%s=%s\n",itatt->first.c_str(),itatt->second.c_str());
         }
 
-        virtual XMLReadablePtr GetReadable() {
+        virtual ReadablePtr GetReadable() {
             return _piddata;
         }
 

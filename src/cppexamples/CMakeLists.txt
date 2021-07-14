@@ -5,7 +5,7 @@ set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../..) # only used for cppe
 find_package(OpenRAVE REQUIRED)
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
-  add_definitions("-fno-strict-aliasing -Wall")
+  add_definitions("-fno-strict-aliasing -Wall -fPIC")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
 find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams python thread system)
@@ -92,6 +92,7 @@ endif()
 # include qt4 examples
 find_package(Qt4 COMPONENTS QtCore QtGui)
 if (QT_FOUND)
+  add_definitions(-DQT_NO_VERSION_TAGGING)
   include_directories(${QT_INCLUDES})
   build_openrave_executable(orqtcoinviewercustom)
   target_link_libraries(orqtcoinviewercustom ${QT_QTGUI_LIBRARY})

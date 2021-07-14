@@ -25,7 +25,7 @@ void SetViewer(EnvironmentBasePtr penv, const string& viewername)
     BOOST_ASSERT(!!viewer);
 
     // attach it to the environment:
-    penv->Add(viewer);
+    penv->Add(viewer, OpenRAVE::IAM_AllowRenaming);
 
     // finally call the viewer's infinite loop (this is why a separate thread is needed)
     bool showgui = true;

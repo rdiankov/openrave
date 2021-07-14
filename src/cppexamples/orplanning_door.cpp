@@ -96,12 +96,13 @@ public:
         return bsuccess;
     }
 
-    void SetState(const std::vector<dReal>& v)
+    int SetState(const std::vector<dReal>& v, int options)
     {
         vector<dReal> vtemp = v;
         if( !_SetState(vtemp) ) {
             throw OPENRAVE_EXCEPTION_FORMAT0("could not set state",ORE_InvalidArguments);
         }
+        return 0;
     }
 
     void GetState(std::vector<dReal>& v)
@@ -203,15 +204,15 @@ public:
         params->_samplefn = boost::bind(&DoorConfiguration::Sample,shared_from_this(),_1);
         params->_sampleneighfn.clear(); // won't be using it
 
-        params->_setstatefn = boost::bind(&DoorConfiguration::SetState,shared_from_this(),_1);
+        params->_setstatevaluesfn = boost::bind(&DoorConfiguration::SetState,shared_from_this(),_1,_2);
         params->_getstatefn = boost::bind(&DoorConfiguration::GetState,shared_from_this(),_1);
         params->_neighstatefn = boost::bind(&DoorConfiguration::NeightState,shared_from_this(),_1,_2,_3);
 
         std::list<KinBodyPtr> listCheckCollisions;
         listCheckCollisions.push_back(_probot);
-        _collision.reset(new planningutils::LineCollisionConstraint(listCheckCollisions));
+        _collision.reset(new planningutils::DynamicsCollisionConstraint(params, listCheckCollisions));
         // _checkpathconstraintsfn had been deprecated, so this line no longer works
-        params->_checkpathconstraintsfn = boost::bind(&planningutils::LineCollisionConstraint::Check,_collision,params, _1, _2, _3, _4);
+        params->_checkpathvelocityconstraintsfn = boost::bind(&planningutils::DynamicsCollisionConstraint::Check,_collision, _1, _2, _3, _4, _5, _6, _7, _8);
 
         _ikfilter = _pmanip->GetIkSolver()->RegisterCustomFilter(0, boost::bind(&DoorConfiguration::_CheckContinuityFilter, shared_from_this(), _1, _2, _3));
     }
@@ -227,7 +228,7 @@ public:
 
     boost::shared_ptr<planningutils::SimpleDistanceMetric> _robotdistmetric, _doordistmetric;
     boost::shared_ptr<planningutils::SimpleNeighborhoodSampler> _robotsamplefn, _doorsamplefn;
-    boost::shared_ptr<planningutils::LineCollisionConstraint> _collision;
+    boost::shared_ptr<planningutils::DynamicsCollisionConstraint> _collision;
 };
 
 typedef boost::shared_ptr<DoorConfiguration> DoorConfigurationPtr;
@@ -292,12 +293,12 @@ public:
 
                         try {
                             params->_getstatefn(params->vinitialconfig);
-                            params->_setstatefn(params->vinitialconfig);
+                            params->SetStateValues(params->vinitialconfig);
                             params->_getstatefn(params->vinitialconfig);
 
                             params->vgoalconfig = params->vinitialconfig;
                             params->vgoalconfig.back() = RaveRandomFloat()*1.5; // in radians
-                            params->_setstatefn(params->vgoalconfig);
+                            params->SetStateValues(params->vgoalconfig);
                             params->_getstatefn(params->vgoalconfig);
                             break;
                         }
@@ -309,12 +310,12 @@ public:
                 else {
                     try {
                         params->_getstatefn(params->vinitialconfig);
-                        params->_setstatefn(params->vinitialconfig);
+                        params->SetStateValues(params->vinitialconfig);
                         params->_getstatefn(params->vinitialconfig);
 
                         params->vgoalconfig = params->vinitialconfig;
                         params->vgoalconfig.back() = RaveRandomFloat()*1.5; // in radians
-                        params->_setstatefn(params->vgoalconfig);
+                        params->SetStateValues(params->vgoalconfig);
                         params->_getstatefn(params->vgoalconfig);
                     }
                     catch(const openrave_exception& ex) {
@@ -331,7 +332,7 @@ public:
                 }
 
                 // create a new output trajectory
-                if( !planner->PlanPath(ptraj) ) {
+                if( !planner->PlanPath(ptraj).HasSolution() ) {
                     RAVELOG_WARN("plan failed, trying again\n");
                     continue;
                 }
