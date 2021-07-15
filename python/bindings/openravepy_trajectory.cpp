@@ -231,6 +231,14 @@ object PyTrajectoryBase::SamplePointsSameDeltaTime2D(dReal deltatime,
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
+object PyTrajectoryBase::SamplePointsSameDeltaTime2D(dReal deltatime,
+                                                     bool ensureLastPoint,
+                                                     OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
+{
+    PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
+    return this->SamplePointsSameDeltaTime2D(deltatime, ensureLastPoint, pyspec);
+}
+
 object PyTrajectoryBase::SamplePoints2D(object otimes, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
 {
     PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
@@ -531,6 +539,7 @@ void init_openravepy_trajectory()
     object (PyTrajectoryBase::*SamplePoints2D3)(object, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>) const = &PyTrajectoryBase::SamplePoints2D;
     object (PyTrajectoryBase::*SamplePointsSameDeltaTime2D1)(dReal, bool) const = &PyTrajectoryBase::SamplePointsSameDeltaTime2D;
     object (PyTrajectoryBase::*SamplePointsSameDeltaTime2D2)(dReal, bool, PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::SamplePointsSameDeltaTime2D;
+    object (PyTrajectoryBase::*SamplePointsSameDeltaTime2D3)(dReal, bool, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>) const = &PyTrajectoryBase::SamplePointsSameDeltaTime2D;
     object (PyTrajectoryBase::*GetWaypoints1)(size_t,size_t) const = &PyTrajectoryBase::GetWaypoints;
     object (PyTrajectoryBase::*GetWaypoints2)(size_t,size_t,PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::GetWaypoints;
     object (PyTrajectoryBase::*GetWaypoints3)(size_t, size_t, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>) const = &PyTrajectoryBase::GetWaypoints;
@@ -570,6 +579,10 @@ void init_openravepy_trajectory()
     .def("SamplePoints2D",SamplePoints2D3, PY_ARGS("times","group") DOXY_FN(TrajectoryBase,SamplePoints2D "std::vector; std::vector; const ConfigurationSpecification::Group"))
     .def("SamplePointsSameDeltaTime2D",SamplePointsSameDeltaTime2D1, PY_ARGS("deltatime","ensurelastpoint") DOXY_FN(TrajectoryBase,SamplePointsSameDeltaTime2D "dReal; bool"))
     .def("SamplePointsSameDeltaTime2D",SamplePointsSameDeltaTime2D2, PY_ARGS("deltatime","ensurelastpoint","spec") DOXY_FN(TrajectoryBase,SamplePointsSameDeltaTime2D "dReal; bool; const ConfigurationSpecification"))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    // why boost::python can resolve this overload?
+    .def("SamplePointsSameDeltaTime2D",SamplePointsSameDeltaTime2D3, PY_ARGS("deltatime","ensurelastpoint","group") DOXY_FN(TrajectoryBase,SamplePointsSameDeltaTime2D "dReal; bool; const ConfigurationSpecification::Group"))
+#endif
     .def("GetConfigurationSpecification",&PyTrajectoryBase::GetConfigurationSpecification,DOXY_FN(TrajectoryBase,GetConfigurationSpecification))
     .def("GetNumWaypoints",&PyTrajectoryBase::GetNumWaypoints,DOXY_FN(TrajectoryBase,GetNumWaypoints))
     .def("GetWaypoints",GetWaypoints1, PY_ARGS("startindex","endindex") DOXY_FN(TrajectoryBase, GetWaypoints "size_t; size_t; std::vector"))
