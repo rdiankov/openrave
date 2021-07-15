@@ -2411,6 +2411,15 @@ void init_openravepy_robot()
             return pyinfo;
         }
                                       ))
+                             .def("__copy__", [](const PyManipulatorInfo& self){ return self; })
+                             .def("__deepcopy__",
+                                      [](const PyManipulatorInfo &pyinfo, const py::dict& memo) {
+            auto state = ManipulatorInfo_pickle_suite::getstate(pyinfo);
+            PyManipulatorInfo pyinfo_new;
+            ManipulatorInfo_pickle_suite::setstate(pyinfo_new, state);
+            return pyinfo_new;
+        }
+                                      )
 #else
                              .def_pickle(ManipulatorInfo_pickle_suite())
 #endif
