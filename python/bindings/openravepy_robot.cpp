@@ -1730,7 +1730,7 @@ object PyRobotBase::GetGripperInfo(const std::string& name)
 {
     RobotBase::GripperInfoPtr pGripperInfo = _probot->GetGripperInfo(name);
     if( !pGripperInfo ) {
-        return py::object();
+        return py::none_();
     }
 
     rapidjson::Document rGripperInfo;
