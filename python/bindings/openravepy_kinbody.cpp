@@ -5123,7 +5123,7 @@ void init_openravepy_kinbody()
         std::string sGetChainDoc = std::string(DOXY_FN(KinBody,GetChain)) + std::string("If returnjoints is false will return a list of links, otherwise will return a list of links (default is true)");
         std::string sComputeInverseDynamicsDoc = std::string(":param returncomponents: If True will return three N-element arrays that represents the torque contributions to M, C, and G.\n\n:param externalforcetorque: A dictionary of link indices and a 6-element array of forces/torques in that order.\n\n") + std::string(DOXY_FN(KinBody, ComputeInverseDynamics));
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ kinbody = class_<PyKinBody, OPENRAVE_SHARED_PTR<PyKinBody>, PyInterfaceBase>(m, "KinBody", DOXY_CLASS(KinBody))
+        scope_ kinbody = class_<PyKinBody, OPENRAVE_SHARED_PTR<PyKinBody>, PyInterfaceBase>(m, "KinBody", py::dynamic_attr(), DOXY_CLASS(KinBody))
 #else
         scope_ kinbody = class_<PyKinBody, OPENRAVE_SHARED_PTR<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
 #endif
