@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyConfigurationSpecification : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyConfigurationSpecification>
+class OPENRAVEPY_API PyConfigurationSpecification : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyConfigurationSpecification>
 {
 public:
     PyConfigurationSpecification();
