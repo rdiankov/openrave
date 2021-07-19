@@ -572,6 +572,8 @@ public:
             _trelative = other._trelative;
             _sensorname = other._sensorname;
             _referenceAttachedSensorName = other._referenceAttachedSensorName;
+            _sensorMaker = other._sensorMaker;
+            _sensorModel = other._sensorModel;
             rapidjson::Document docSensorGeometry;
             if (other._docSensorGeometry.IsObject()) {
                 docSensorGeometry.CopyFrom(other._docSensorGeometry, docSensorGeometry.GetAllocator());
@@ -586,6 +588,8 @@ public:
                    && _trelative == other._trelative
                    && _sensorname == other._sensorname
                    && _referenceAttachedSensorName == other._referenceAttachedSensorName
+                   && _sensorMaker == other._sensorMaker
+                   && _sensorModel == other._sensorModel
                    && _docSensorGeometry == other._docSensorGeometry;
         }
         bool operator!=(const AttachedSensorInfo& other) const {
@@ -609,6 +613,8 @@ public:
         Transform _trelative;         ///< relative transform of the sensor with respect to the attached link
         std::string _sensorname; ///< name of the sensor interface to create, in other words the sensor type
         std::string _referenceAttachedSensorName; ///< name of another attached sensor in the same robot, that whose data is referenced. This sensor transforms the data in a particular way.
+        std::string _sensorMaker; ///< maker name of the sensor
+        std::string _sensorModel; ///< model name of the sensor
         rapidjson::Document _docSensorGeometry; ///< the sensor geometry to initialize the sensor with
     };
     typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
