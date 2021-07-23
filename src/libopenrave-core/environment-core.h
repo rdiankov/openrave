@@ -2649,6 +2649,7 @@ public:
             info._gravity = _pPhysicsEngine->GetGravity();
         }
         info._uInt64Parameters = _mapUInt64Parameters;
+        info._unit = _unit;
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
@@ -2670,6 +2671,7 @@ public:
             _keywords = info._keywords;
             _description = info._description;
             _mapUInt64Parameters = info._uInt64Parameters;
+            _unit = info._unit;
 
             // set gravity
             if (!!_pPhysicsEngine) {
@@ -2678,6 +2680,7 @@ public:
                     _pPhysicsEngine->SetGravity(info._gravity);
                 }
             }
+
         }
 
         // make a copy of _vecbodies because we will be doing some reordering

@@ -399,7 +399,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             return 0;
         }
 
-        const dReal linkdistthresh = linkdistthresh;
+        const dReal linkdistthresh = _linkdistthresh;
         const dReal linkdistthresh2 = _linkdistthresh2;
 
         if( _bResetIterationsOnSample ) {
@@ -767,7 +767,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     robotsaver.Release();
                 }
 
-                RAVELOG_DEBUG_FORMAT("env=%d, succeeded iterations=%d, computation=%fs, bHasNeighStateFn=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d", _environmentid%iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bHasNeighStateFn%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure);
+                RAVELOG_DEBUG_FORMAT("env=%d, succeeded iterations=%d, computation=%fs, bHasNeighStateFn=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, nLinkDistThreshRejections=%d", _environmentid%iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bHasNeighStateFn%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure%nLinkDistThreshRejections);
                 return 1;
             } // end if( !bCollision && !bConstraintFailed )
 
