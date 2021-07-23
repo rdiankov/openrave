@@ -46,7 +46,7 @@ Planner Parameters\n\
     virtual ~WorkspaceTrajectoryTracker() {
     }
 
-    virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params)
+    virtual PlannerStatus InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
@@ -285,7 +285,7 @@ Planner Parameters\n\
             return PlannerStatus("bPrevInCollision" ,PS_Failed);
         }
 
-        if( !_retimerplanner->InitPlan(RobotBasePtr(),_parameters) || !_retimerplanner->PlanPath(poutputtraj).GetStatusCode() ) {
+        if( !_retimerplanner->InitPlan(RobotBasePtr(),_parameters).GetStatusCode() || !_retimerplanner->PlanPath(poutputtraj).GetStatusCode() ) {
             return PlannerStatus(PS_Failed);
         }
 

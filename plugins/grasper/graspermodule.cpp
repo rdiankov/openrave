@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
+#include <openrave/openravejson.h>
+
 #include <algorithm>
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
@@ -328,7 +330,7 @@ public:
         params->SetRobotActiveJoints(_robot);
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
-        if( !_planner->InitPlan(_robot, params) ) {
+        if( !_planner->InitPlan(_robot, params).GetStatusCode() ) {
             RAVELOG_WARN("InitPlan failed\n");
             return false;
         }
@@ -986,7 +988,7 @@ public:
                 ptraj->Init(probot->GetActiveConfigurationSpecification());
 
                 // InitPlan/PlanPath
-                if( !planner->InitPlan(probot, params) ) {
+                if( !planner->InitPlan(probot, params).GetStatusCode() ) {
                     RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                     continue;
                 }
@@ -1070,7 +1072,7 @@ public:
                         probot->SetActiveDOFs(worker_params->vactiveindices,worker_params->affinedofs,worker_params->affineaxis);
                         params->vinitialconfig.resize(0);
                         ptraj->Init(probot->GetActiveConfigurationSpecification());
-                        if( !planner->InitPlan(probot, params) ) {
+                        if( !planner->InitPlan(probot, params).GetStatusCode() ) {
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }

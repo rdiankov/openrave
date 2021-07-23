@@ -41,8 +41,9 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
     virtual ~RrtPlanner() {
     }
 
-    virtual bool _InitPlan(RobotBasePtr pbase, PlannerParametersPtr params)
+    virtual PlannerStatus _InitPlan(RobotBasePtr pbase, PlannerParametersPtr params)
     {
+        RAVELOG_ERROR_FORMAT("env=%d, yoooooooooooo", GetEnv()->GetId());
         params->Validate();
         _goalindex = -1;
         _startindex = -1;
@@ -57,12 +58,13 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             (*it)->SetSeed(params->_nRandomGeneratorSeed);
         }
 
+        PlannerStatus planningstatus;
         PlannerParameters::StateSaver savestate(params);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         if( (int)params->vinitialconfig.size() % params->GetDOF() ) {
             RAVELOG_ERROR_FORMAT("env=%d, initial config wrong dim: %d %% %d != 0", GetEnv()->GetId()%params->vinitialconfig.size()%params->GetDOF());
-            return false;
+            return planningstatus;
         }
 
         _vecInitialNodes.resize(0);
@@ -75,6 +77,10 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             _filterreturn->Clear();
             if( params->CheckPathAllConstraints(vinitialconfig,vinitialconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCollisionReport, _filterreturn) != 0 ) {
                 RAVELOG_DEBUG_FORMAT("env=%d, initial configuration for rrt does not satisfy constraints: %s", GetEnv()->GetId()%_filterreturn->_report.__str__());
+                planningstatus.statusCode |= PS_FailedDueToInitial;
+                CollisionReportPtr pColReport = boost::make_shared<CollisionReport>(_filterreturn->_report);
+                planningstatus.InitCollisionReport(pColReport);
+                planningstatus.AddCollisionReport(_filterreturn->_report);
                 continue;
             }
             _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitialconfig, _vecInitialNodes.size()));
@@ -82,10 +88,12 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 
         if( _treeForward.GetNumNodes() == 0 && !params->_sampleinitialfn ) {
             RAVELOG_WARN_FORMAT("env=%d, no initial configurations", GetEnv()->GetId());
-            return false;
+            planningstatus.statusCode |= PS_FailedDueToInitial;
+            return planningstatus;
         }
-
-        return true;
+        
+        planningstatus.statusCode |= PS_HasSolution;
+        return planningstatus;
     }
 
 //    /// \brief simple path optimization given a path of dof values
@@ -294,14 +302,15 @@ Some python code to display data::\n\
         dReal length;
     };
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new RRTParameters());
         _parameters->copy(pparams);
-        if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
+        PlannerStatus status = RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters);
+        if( !(status.GetStatusCode() & PS_HasSolution) ) {
             _parameters.reset();
-            return false;
+            return status;
         }
 
         _fGoalBiasProb = dReal(0.01);
@@ -690,14 +699,15 @@ public:
     virtual ~BasicRrtPlanner() {
     }
 
-    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new BasicRRTParameters());
         _parameters->copy(pparams);
-        if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
+        PlannerStatus status = RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters);
+        if( !(status.GetStatusCode() & PS_HasSolution) ) {
             _parameters.reset();
-            return false;
+            return status;
         }
 
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
@@ -952,14 +962,15 @@ public:
     virtual ~ExplorationPlanner() {
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new ExplorationParameters());
         _parameters->copy(pparams);
-        if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
+        PlannerStatus status = RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters);
+        if( !(status.GetStatusCode() & PS_HasSolution) ) {
             _parameters.reset();
-            return false;
+            return status;
         }
         RAVELOG_DEBUG_FORMAT("env=%d, ExplorationPlanner::InitPlan - RRT Planner Initialized", GetEnv()->GetId());
         return true;
