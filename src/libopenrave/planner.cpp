@@ -239,27 +239,32 @@ void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Docu
     if(jointValues.size() > 0) {
         orjson::SetJsonValueByKey(rPlannerStatus, "jointValues", jointValues, alloc);
     }
-
     if(!!report) {
         rapidjson::Value reportjson(rapidjson::kObjectType);
         if(!!report->plink1) {
             orjson::SetJsonValueByKey(reportjson, "plink1", report->plink1->GetName(), alloc);
+            orjson::SetJsonValueByKey(reportjson, "pbody1", report->plink1->GetParent()->GetName(), alloc);
         }
         if(!!report->plink2) {
             orjson::SetJsonValueByKey(reportjson, "plink2", report->plink2->GetName(), alloc);
+            orjson::SetJsonValueByKey(reportjson, "pbody2", report->plink2->GetParent()->GetName(), alloc);
         }
-        rapidjson::Value reportContactsjson(rapidjson::kObjectType);
-        for (size_t i=0; i<report->contacts.size(); ++i) {
-            rapidjson::Value reportContactsPosjson(rapidjson::kObjectType);
-            orjson::SetJsonValueByKey(reportContactsPosjson, "x", report->contacts[i].pos.x, alloc);
-            orjson::SetJsonValueByKey(reportContactsPosjson, "y", report->contacts[i].pos.y, alloc);
-            orjson::SetJsonValueByKey(reportContactsPosjson, "z", report->contacts[i].pos.z, alloc);
 
-            rapidjson::Value rname;
-            orjson::SaveJsonValue(rname, std::to_string(i), alloc);
-            reportContactsjson.AddMember(rname, reportContactsPosjson, alloc);
+        if (!report->contacts.empty()) {
+            rapidjson::Value reportContactsjson(rapidjson::kObjectType);
+            for (size_t i=0; i<report->contacts.size(); ++i) {
+                rapidjson::Value reportContactsPosjson(rapidjson::kObjectType);
+                orjson::SetJsonValueByKey(reportContactsPosjson, "x", report->contacts[i].pos.x, alloc);
+                orjson::SetJsonValueByKey(reportContactsPosjson, "y", report->contacts[i].pos.y, alloc);
+                orjson::SetJsonValueByKey(reportContactsPosjson, "z", report->contacts[i].pos.z, alloc);
+
+                rapidjson::Value rname;
+                orjson::SaveJsonValue(rname, std::to_string(i), alloc);
+                reportContactsjson.AddMember(rname, reportContactsPosjson, alloc);
+            }
+            orjson::SetJsonValueByKey(reportjson, "contacts", reportContactsjson, alloc);
         }
-        orjson::SetJsonValueByKey(reportjson, "contacts", reportContactsjson, alloc);
+
         //Eventually, serialization could be in openravejson.h
         orjson::SetJsonValueByKey(rPlannerStatus, "collisionReport", reportjson, alloc);
     }
@@ -1063,7 +1068,7 @@ PlannerBase::PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, pe
 {
 }
 
-bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+PlannerStatus PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
 {
     RAVELOG_WARN(str(boost::format("using default planner parameters structure to de-serialize parameters data inside %s, information might be lost!! Please define a InitPlan(robot,stream) function!\n")%GetXMLId()));
     boost::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
@@ -1111,12 +1116,14 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     params->_sPostProcessingParameters = "";
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
     //params->_nMaxPlanningTime = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters??
-    if( __cachePostProcessPlanner->InitPlan(probot, params) ) {
+
+    PlannerStatus status =  __cachePostProcessPlanner->InitPlan(probot, params);
+   if( (status.GetStatusCode() & PS_HasSolution)) {
         return __cachePostProcessPlanner->PlanPath(ptraj);
     }
 
     // do not fall back to a default linear smoother like in the past! that makes behavior unpredictable
-    return PlannerStatus(PS_Failed);
+    return status;
 }
 
 PlannerAction PlannerBase::_CallCallbacks(const PlannerProgress& progress)

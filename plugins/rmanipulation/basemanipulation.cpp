@@ -322,7 +322,7 @@ protected:
             return false;
         }
 
-        if( !planner->InitPlan(robot, params) ) {
+        if( !planner->InitPlan(robot, params).GetStatusCode() ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
@@ -521,7 +521,7 @@ protected:
         RAVELOG_DEBUG("starting planning\n");
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
-            if( !rrtplanner->InitPlan(robot, params) ) {
+            if( !rrtplanner->InitPlan(robot, params).GetStatusCode() ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
@@ -852,7 +852,7 @@ protected:
         RAVELOG_DEBUG("starting planning\n");
 
         for(int iter = 0; iter < nMaxTries; ++iter) {
-            if( !rrtplanner->InitPlan(robot, params) ) {
+            if( !rrtplanner->InitPlan(robot, params).GetStatusCode() ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }

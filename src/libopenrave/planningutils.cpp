@@ -614,8 +614,10 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
-    if( !planner->InitPlan(probot,params) ) {
-        return PlannerStatus("InitPlan failed", PS_Failed);
+
+    PlannerStatus statusFromInit = planner->InitPlan(probot,params);
+    if( !(statusFromInit.GetStatusCode() & PS_HasSolution) ) {
+        return statusFromInit;
     }
     PlannerStatus plannerStatus = planner->PlanPath(traj);
     if( plannerStatus.GetStatusCode() != PS_HasSolution ) {
@@ -643,9 +645,14 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = false;
     params->_sExtraParameters += plannerparameters;
-    if( !_planner->InitPlan(_robot,params) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s"), plannername%_robot->GetName(), ORE_InvalidArguments);
+
+    PlannerStatus statusFromInit = _planner->InitPlan(_robot,params);
+    if( !(statusFromInit.GetStatusCode() & PS_HasSolution) ) {
+        rapidjson::Document rStatus(rapidjson::kObjectType);
+        statusFromInit.SaveToJson(rStatus, rStatus.GetAllocator());
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s:%s"), plannername%_robot->GetName()%(orjson::DumpJson(rStatus)), ORE_InvalidArguments);
     }
+
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
 }
@@ -684,9 +691,14 @@ void ActiveDOFTrajectorySmoother::_UpdateParameters()
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = false;
     params->_sExtraParameters = _parameters->_sExtraParameters;
-    if( !_planner->InitPlan(_robot,params) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s"), _planner->GetXMLId()%_robot->GetName(), ORE_InvalidArguments);
+
+    PlannerStatus statusFromInit = _planner->InitPlan(_robot,params);
+    if( !(statusFromInit.GetStatusCode() & PS_HasSolution) ) {
+        rapidjson::Document rStatus(rapidjson::kObjectType);
+        statusFromInit.SaveToJson(rStatus, rStatus.GetAllocator());
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s:%s"), _planner->GetXMLId()%_robot->GetName()%(orjson::DumpJson(rStatus)), ORE_InvalidArguments);
     }
+
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
 }
 
@@ -706,8 +718,12 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
     params->_setstatevaluesfn.clear();
     params->_checkpathvelocityconstraintsfn.clear();
     params->_sExtraParameters = plannerparameters;
-    if( !_planner->InitPlan(_robot,params) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s"), plannername%_robot->GetName(), ORE_InvalidArguments);
+
+    PlannerStatus statusFromInit = _planner->InitPlan(_robot,params);
+    if( !(statusFromInit.GetStatusCode() & PS_HasSolution) ) {
+        rapidjson::Document rStatus(rapidjson::kObjectType);
+        statusFromInit.SaveToJson(rStatus, rStatus.GetAllocator());
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s:%s"), _planner->GetXMLId()%_robot->GetName()%(orjson::DumpJson(rStatus)), ORE_InvalidArguments);
     }
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectoryRetimer::_UpdateParameters, this));
@@ -729,8 +745,11 @@ PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool 
     TrajectoryTimingParametersPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
     if( parameters->_hastimestamps != hastimestamps ) {
         parameters->_hastimestamps = hastimestamps;
-        if( !_planner->InitPlan(_robot,parameters) ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s"), _planner->GetXMLId()%_robot->GetName(), ORE_InvalidArguments);
+        PlannerStatus statusFromInit = _planner->InitPlan(_robot,parameters);
+        if( !(statusFromInit.GetStatusCode() & PS_HasSolution) ) {
+            rapidjson::Document rStatus(rapidjson::kObjectType);
+            statusFromInit.SaveToJson(rStatus, rStatus.GetAllocator());
+            throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s:%s"), _planner->GetXMLId()%_robot->GetName()%(orjson::DumpJson(rStatus)), ORE_InvalidArguments);
         }
     }
 
@@ -748,8 +767,11 @@ void ActiveDOFTrajectoryRetimer::_UpdateParameters()
     params->_setstatevaluesfn.clear();
     params->_checkpathvelocityconstraintsfn.clear();
     params->_sExtraParameters = _parameters->_sExtraParameters;
-    if( !_planner->InitPlan(_robot,params) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s"), _planner->GetXMLId()%_robot->GetName(), ORE_InvalidArguments);
+    PlannerStatus statusFromInit = _planner->InitPlan(_robot,params);
+    if( !(statusFromInit.GetStatusCode() & PS_HasSolution) ) {
+        rapidjson::Document rStatus(rapidjson::kObjectType);
+        statusFromInit.SaveToJson(rStatus, rStatus.GetAllocator());
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s:%s"), _planner->GetXMLId()%_robot->GetName()%(orjson::DumpJson(rStatus)), ORE_InvalidArguments);
     }
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
 }
@@ -785,8 +807,10 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
-    if( !planner->InitPlan(RobotBasePtr(),params) ) {
-        return PlannerStatus("InitPlan failed", PS_Failed);
+
+    PlannerStatus statusFromInit = planner->InitPlan(RobotBasePtr(),params);
+    if( !(statusFromInit.GetStatusCode() & PS_HasSolution) ) {
+        return statusFromInit;
     }
     PlannerStatus plannerStatus = planner->PlanPath(traj);
     if( !(plannerStatus.statusCode & PS_HasSolution) ) {
@@ -985,9 +1009,11 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters = plannerparameters;
 
-    if( !planner->InitPlan(RobotBasePtr(),params) ) {
-        return PlannerStatus("InitPlan failed", PS_Failed);
+    PlannerStatus statusFromInit = planner->InitPlan(RobotBasePtr(),params);
+    if( !(statusFromInit.GetStatusCode() & PS_HasSolution) ) {
+        return statusFromInit;
     }
+
     PlannerStatus plannerStatus = planner->PlanPath(traj);
     if( plannerStatus.GetStatusCode() != PS_HasSolution ) {
         return plannerStatus;
@@ -1024,8 +1050,11 @@ void AffineTrajectoryRetimer::SetPlanner(const std::string& plannername, const s
         if( !!_parameters ) {
             _parameters->_sExtraParameters = _extraparameters;
             if( !!_planner ) {
-                if( !_planner->InitPlan(RobotBasePtr(), _parameters) ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s"), _plannername, ORE_InvalidArguments);
+                PlannerStatus statusFromInit = _planner->InitPlan(RobotBasePtr(), _parameters);
+                if( !(statusFromInit.GetStatusCode() & PS_HasSolution) ) {
+                    rapidjson::Document rStatus(rapidjson::kObjectType);
+                    statusFromInit.SaveToJson(rStatus, rStatus.GetAllocator());
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s:%s"), _plannername%(orjson::DumpJson(rStatus)), ORE_InvalidArguments);
                 }
             }
         }
@@ -1139,9 +1168,12 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         bInitPlan = true;
     }
     if( bInitPlan ) {
-        if( !_planner->InitPlan(RobotBasePtr(),parameters) ) {
+        PlannerStatus statusFromInit = _planner->InitPlan(RobotBasePtr(),parameters);
+        if( !(statusFromInit.GetStatusCode() & PS_HasSolution) ) {
             stringstream ss; ss << trajspec;
-            throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with affine trajectory spec: %s"), _plannername%ss.str(), ORE_InvalidArguments);
+            rapidjson::Document rStatus(rapidjson::kObjectType);
+            statusFromInit.SaveToJson(rStatus, rStatus.GetAllocator());
+            throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with affine trajectory spec: %s, msg=%s"), _plannername%ss.str()%(orjson::DumpJson(rStatus)), ORE_InvalidArguments);
         }
     }
 
@@ -1468,8 +1500,12 @@ size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalue
     params->_hastimestamps = false;
 
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolictrajectoryretimer"));
-    if( !planner->InitPlan(RobotBasePtr(),params) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT0(_("failed to InitPlan"),ORE_Failed);
+
+    PlannerStatus statusFromInit = planner->InitPlan(RobotBasePtr(),params);
+    if( !(statusFromInit.GetStatusCode() & PS_HasSolution) ) {
+        rapidjson::Document rStatus(rapidjson::kObjectType);
+        statusFromInit.SaveToJson(rStatus, rStatus.GetAllocator());
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s:%s"), plannername%(orjson::DumpJson(rStatus)), ORE_InvalidArguments);
     }
 
     return InsertWaypointWithSmoothing(index, dofvalues, dofvelocities, traj, planner);
