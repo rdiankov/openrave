@@ -141,10 +141,10 @@ public:
                 return false;
             }
 
-            if( !planner->InitPlan(robot, params).GetStatusCode() ) {
+            if( !planner->InitPlan(robot, params).HasSolution() ) {
                 return false;
             }
-            if( !planner->PlanPath(ptraj).GetStatusCode() ) {
+            if( !planner->PlanPath(ptraj).HasSolution() ) {
                 return false;
             }
 

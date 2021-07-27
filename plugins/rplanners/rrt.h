@@ -43,7 +43,6 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 
     virtual PlannerStatus _InitPlan(RobotBasePtr pbase, PlannerParametersPtr params)
     {
-        RAVELOG_ERROR_FORMAT("env=%d, yoooooooooooo", GetEnv()->GetId());
         params->Validate();
         _goalindex = -1;
         _startindex = -1;
@@ -58,15 +57,16 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             (*it)->SetSeed(params->_nRandomGeneratorSeed);
         }
 
-        PlannerStatus planningstatus;
         PlannerParameters::StateSaver savestate(params);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         if( (int)params->vinitialconfig.size() % params->GetDOF() ) {
-            RAVELOG_ERROR_FORMAT("env=%s, initial config wrong dim: %d %% %d != 0", GetEnv()->GetNameId()%params->vinitialconfig.size()%params->GetDOF());
-            return planningstatus;
+            const std::string msg(str(boost::format("env=%s, initial config wrong dim: %d %% %d != 0")%GetEnv()->GetNameId()%params->vinitialconfig.size()%params->GetDOF()));
+            RAVELOG_ERROR(msg);
+            return PlannerStatus(msg, PS_Failed);
         }
 
+        PlannerStatus planningstatus;
         _vecInitialNodes.resize(0);
         _sampleConfig.resize(params->GetDOF());
         // TODO perhaps distmetricfn should take into number of revolutions of circular joints
@@ -92,8 +92,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             return planningstatus;
         }
         
-        planningstatus.statusCode |= PS_HasSolution;
-        return planningstatus;
+        return PlannerStatus(PS_HasSolution);
     }
 
 //    /// \brief simple path optimization given a path of dof values

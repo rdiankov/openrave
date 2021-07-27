@@ -990,7 +990,7 @@ public:
                     RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                     continue;
                 }
-                if( !planner->PlanPath(ptraj).GetStatusCode() ) {
+                if( !planner->PlanPath(ptraj).HasSolution() ) {
                     RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                     continue;
                 }
@@ -1074,7 +1074,7 @@ public:
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }
-                        if( !planner->PlanPath(ptraj).GetStatusCode() ) {
+                        if( !planner->PlanPath(ptraj).HasSolution() ) {
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }

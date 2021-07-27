@@ -275,7 +275,7 @@ protected:
                 return false;
             }
 
-            if(rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
+            if(rrtplanner->PlanPath(ptraj).HasSolution() ) {
                 bSuccess = true;
                 RAVELOG_INFOA("finished planning\n");
                 break;

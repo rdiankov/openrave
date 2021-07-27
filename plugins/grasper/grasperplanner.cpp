@@ -45,7 +45,6 @@ public:
             std::stringstream ss;
             ss << "env=" << GetEnv()->GetNameId()
                << " robot \"" << _robot->GetName() << "\" has active dof(" << _robot->GetActiveDOF() << ") <= 0";
-            std::string description = "failed to init retimer planner\n";
             return PlannerStatus(ss.str(), PS_Failed);
         }
 
