@@ -2109,10 +2109,12 @@ void CollisionReport::SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::
             if( !!itlinkpair->first ) {
                 orjson::SetJsonValueByKey(rPair, "bodyName1", itlinkpair->first->GetParent()->GetName(), alloc);
                 orjson::SetJsonValueByKey(rPair, "linkName1", itlinkpair->first->GetName(), alloc);
+                orjson::SetJsonValueByKey(rPair, "geomName1", !!pgeom1 ? pgeom1->GetName() : std::string(""), alloc);
             }
             if( !!itlinkpair->second ) {
                 orjson::SetJsonValueByKey(rPair, "bodyName2", itlinkpair->second->GetParent()->GetName(), alloc);
                 orjson::SetJsonValueByKey(rPair, "linkName2", itlinkpair->second->GetName(), alloc);
+                orjson::SetJsonValueByKey(rPair, "geomName2", !!pgeom2 ? pgeom2->GetName() : std::string(""), alloc);
             }
             rCollidingLinkPairs.PushBack(rPair, alloc);
         }
@@ -2123,10 +2125,12 @@ void CollisionReport::SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::
         if( !!plink1 ) {
             orjson::SetJsonValueByKey(rPair, "bodyName1", plink1->GetParent()->GetName(), alloc);
             orjson::SetJsonValueByKey(rPair, "linkName1", plink1->GetName(), alloc);
+            orjson::SetJsonValueByKey(rPair, "geomName1", !!pgeom1 ? pgeom1->GetName() : std::string(""), alloc);
         }
         if( !!plink2 ) {
             orjson::SetJsonValueByKey(rPair, "bodyName2", plink2->GetParent()->GetName(), alloc);
             orjson::SetJsonValueByKey(rPair, "linkName2", plink2->GetName(), alloc);
+            orjson::SetJsonValueByKey(rPair, "geomName2", !!pgeom2 ? pgeom2->GetName() : std::string(""), alloc);
         }
         rCollidingLinkPairs.PushBack(rPair, alloc);
     }
