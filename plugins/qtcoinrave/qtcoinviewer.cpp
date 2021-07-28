@@ -360,7 +360,7 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
 
     // set to the classic locale so that number serialization/hashing works correctly
     // for some reason qt4 resets the locale to the default locale at some point, and openrave stops working
-    // std::locale::global(std::locale::classic());
+    std::locale::global(std::locale::classic());
 
     if( nAlwaysOnTopFlag != 0 ) {
         Qt::WindowFlags flags = Qt::CustomizeWindowHint | Qt::WindowStaysOnTopHint;
