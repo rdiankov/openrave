@@ -802,7 +802,7 @@ public:
             // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
             const FCLSpace::FCLKinBodyInfo::LinkInfo& pLINK1 = *pinfo->vlinks.at(index1);
             const FCLSpace::FCLKinBodyInfo::LinkInfo& pLINK2 = *pinfo->vlinks.at(index2);
-            if( !pLINK1.linkBV.second->getAABB().overlap(pLINK2.linkBV.second->getAABB()) ) {
+            if( !pLINK1.linkBV.second || !pLINK2.linkBV.second || !pLINK1.linkBV.second->getAABB().overlap(pLINK2.linkBV.second->getAABB()) ) {
                 continue;
             }
             FOREACH(itgeom1, pLINK1.vgeoms) {
@@ -860,7 +860,7 @@ public:
             if( plink->GetIndex() == index1 || plink->GetIndex() == index2 ) {
                 const FCLSpace::FCLKinBodyInfo::LinkInfo& pLINK1 = *pinfo->vlinks.at(index1);
                 const FCLSpace::FCLKinBodyInfo::LinkInfo& pLINK2 = *pinfo->vlinks.at(index2);
-                if( !pLINK1.linkBV.second->getAABB().overlap(pLINK2.linkBV.second->getAABB()) ) {
+                if( !pLINK1.linkBV.second || !pLINK2.linkBV.second || !pLINK1.linkBV.second->getAABB().overlap(pLINK2.linkBV.second->getAABB()) ) {
                     continue;
                 }
                 FOREACH(itgeom1, pLINK1.vgeoms) {

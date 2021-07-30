@@ -63,6 +63,7 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
     if( !_description.empty() ) {
         orjson::SetJsonValueByKey(rEnvInfo, "description", _description, allocator);
     }
+    orjson::SetJsonValueByKey(rEnvInfo, "unit", _unit, allocator);
     orjson::SetJsonValueByKey(rEnvInfo, "gravity", _gravity, allocator);
     if( !_referenceUri.empty() ) {
         orjson::SetJsonValueByKey(rEnvInfo, "referenceUri", _referenceUri, allocator);
@@ -104,6 +105,10 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
 
     if (rEnvInfo.HasMember("revision")) {
         orjson::LoadJsonValueByKey(rEnvInfo, "revision", _revision);
+    }
+
+    if (rEnvInfo.HasMember("unit")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "unit", _unit);
     }
 
     if (rEnvInfo.HasMember("keywords")) {

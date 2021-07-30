@@ -3599,6 +3599,14 @@ public:
                     if( !!preference_attach_sensor ) {
                         pattachedsensor->_info._referenceAttachedSensorName = preference_attach_sensor->getAttribute("name");
                     }
+                    daeElementRef psensor_maker = tec->getChild("sensor_maker");
+                    if (!!psensor_maker) {
+                        pattachedsensor->_info._sensorMaker = psensor_maker->getCharData();
+                    }
+                    daeElementRef psensor_model = tec->getChild("sensor_model");
+                    if (!!psensor_model) {
+                        pattachedsensor->_info._sensorModel = psensor_model->getCharData();
+                    }
                     pattachedsensor->_info._id = str(boost::format("attachedSensor%d")%probot->_vecAttachedSensors.size());
                     probot->_vecAttachedSensors.push_back(pattachedsensor);
                 }
@@ -3631,7 +3639,7 @@ public:
             // migrate <sensor_reference> to _referenceAttachedSensorName
             if( pattachedsensor->_info._referenceAttachedSensorName.size() == 0) {
                 daeTArray<daeElementRef> children;
-                itextract->second->getChildren(children);                
+                itextract->second->getChildren(children);
                 for (size_t i = 0; i < children.getCount(); i++) {
                     std::string xmltag = utils::ConvertToLowerCase(children[i]->getElementName());
                     if (xmltag == "sensor_reference") {
