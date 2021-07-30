@@ -217,20 +217,6 @@ public:
     }
 };
 
-// TODO: Remove AutoPyArrayObjectDereferencer in favor of PyCapsule
-class OPENRAVEPY_API AutoPyArrayObjectDereferencer
-{
-public:
-    AutoPyArrayObjectDereferencer(PyArrayObject* pyarrobj) : _pyarrobj(pyarrobj) {
-    }
-    ~AutoPyArrayObjectDereferencer() {
-        Py_DECREF(_pyarrobj);
-    }
-
-private:
-    PyArrayObject* _pyarrobj;
-};
-
 template<typename T>
 class OPENRAVEPY_API PyCapsule
 {
@@ -285,6 +271,8 @@ private:
 };
 
 typedef PyCapsule<PyArrayObject> PyArrayCapsule;
+
+typedef PyArrayCapsule AutoPyArrayObjectDereferencer;  // Backwards compatibility
 
 inline RaveVector<float> ExtractFloat3(const py::object& o)
 {
