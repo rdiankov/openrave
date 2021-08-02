@@ -20,6 +20,7 @@ namespace OpenRAVE {
 
 void IkFailureInfo::Clear()
 {
+    _action = IKRA_Reject;
     _vconfig.resize(0);
     _preport.reset();
     _description.clear();

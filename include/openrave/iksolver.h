@@ -122,7 +122,7 @@ public:
     }
 
     typedef std::map<std::string, std::vector<dReal> > CustomData;
-    IkReturnAction _action;        ///< the IkReturnAction corresponding to this failure
+    IkReturnAction _action = IKRA_Reject; ///< the IkReturnAction corresponding to this failure
     std::vector< dReal > _vconfig; ///< the robot configuration that does not pass the checks.
     CollisionReportPtr _preport;   ///< the collision report from when some collision checking fails.
     std::string _description;      ///< a string describing the failure
