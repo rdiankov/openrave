@@ -67,6 +67,8 @@ By default will sample the robot's active DOFs. Parameters part of the interface
  //");
         RegisterJSONCommand("GetFailuresCount", boost::bind(&ConfigurationJitterer::GetFailuresCountCommand, this, _1, _2, _3),
                             "Gets the numbers of failing jittered configurations from the latest call categorized based on the failure reasons.");
+        RegisterJSONCommand("GetCurrentParameters", boost::bind(&ConfigurationJitterer::GetCurrentParametersCommand, this, _1, _2, _3),
+                            "Gets the current values of parameters.");
 
         bool bUseCache = false;
         std::string robotname, samplername = "MT19937";
@@ -389,6 +391,37 @@ By default will sample the robot's active DOFs. Parameters part of the interface
     {
         _counter.SaveToJson(output, alloc);
         return true;
+    }
+
+    virtual bool GetCurrentParametersCommand(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& alloc)
+    {
+        output.SetObject();
+        if( _busebiasing ) {
+            orjson::SetJsonValueByKey(output, "jitterBiasDirection", _vbiasdirection, alloc);
+            orjson::SetJsonValueByKey(output, "nullSampleProb", _nullsampleprob, alloc);
+            orjson::SetJsonValueByKey(output, "nullBiasSampleProb", _nullbiassampleprob, alloc);
+            orjson::SetJsonValueByKey(output, "deltaSampleProb", _deltasampleprob, alloc);
+        }
+        orjson::SetJsonValueByKey(output, "currentJointValues", _curdof, alloc);
+        orjson::SetJsonValueByKey(output, "maxJitter", _maxjitter, alloc);
+        orjson::SetJsonValueByKey(output, "maxJitterIterations", _maxiterations, alloc);
+        orjson::SetJsonValueByKey(output, "maxJitterLinkDist", _linkdistthresh, alloc);
+        orjson::SetJsonValueByKey(output, "jitterPerturbation", _perturbation, alloc);
+        orjson::SetJsonValueByKey(output, "jitterNeighDistThresh", _neighdistthresh, alloc);
+        orjson::SetJsonValueByKey(output, "resetIterationsOnSample", _bResetIterationsOnSample, alloc);
+        if( !!_pmanip ) {
+            orjson::SetJsonValueByKey(output, "manipName", _pmanip->GetName(), alloc);
+            if( !!_pConstraintToolDirection ) {
+                rapidjson::Value rConstraintToolDirection;
+                _pConstraintToolDirection->SaveToJson(rConstraintToolDirection, alloc);
+                orjson::SetJsonValueByKey(output, "constraintToolDirection", rConstraintToolDirection, alloc);
+            }
+            if( !!_pConstraintToolPosition ) {
+                rapidjson::Value rConstraintToolPosition;
+                _pConstraintToolPosition->SaveToJson(rConstraintToolPosition, alloc);
+                orjson::SetJsonValueByKey(output, "constraintToolPosition", rConstraintToolPosition, alloc);
+            }
+        }
     }
 
     /// \brief Jitters the current configuration and sets a new configuration on the environment. The jittered

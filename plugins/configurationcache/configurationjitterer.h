@@ -12,6 +12,14 @@ public:
     ManipDirectionThresh(const ManipDirectionThresh &r) : vManipDir(r.vManipDir), vGlobalDir(r.vGlobalDir), fCosAngleThresh(r.fCosAngleThresh) {
     }
 
+    void SaveToJson(rapidjson::Value& rManipDirectionThresh, rapidjson::Document::AllocatorType& alloc) const
+    {
+        rManipDirectionThresh.SetObject();
+        orjson::SetJsonValueByKey(rManipDirectionThresh, "manipDir", vManipDir, alloc);
+        orjson::SetJsonValueByKey(rManipDirectionThresh, "globalDir", vGlobalDir, alloc);
+        orjson::SetJsonValueByKey(rManipDirectionThresh, "cosAngleThresh", fCosAngleThresh, alloc);
+    }
+
     inline bool IsInConstraints(const Transform& tmanip) const
     {
         return tmanip.rotate(vManipDir).dot3(vGlobalDir) >= fCosAngleThresh;
@@ -36,6 +44,16 @@ public:
     ManipPositionConstraints() {
     }
     ManipPositionConstraints(const ManipPositionConstraints &r) : obb(r.obb) {
+    }
+
+    void SaveToJson(rapidjson::Value& rManipPositionConstraints, rapidjson::Document::AllocatorType& alloc) const
+    {
+        rManipPositionConstraints.SetObject();
+        orjson::SetJsonValueByKey(rManipPositionConstraints, "right", obb.right, alloc);
+        orjson::SetJsonValueByKey(rManipPositionConstraints, "up", obb.right, alloc);
+        orjson::SetJsonValueByKey(rManipPositionConstraints, "dir", obb.right, alloc);
+        orjson::SetJsonValueByKey(rManipPositionConstraints, "pos", obb.right, alloc);
+        orjson::SetJsonValueByKey(rManipPositionConstraints, "extents", obb.right, alloc);
     }
 
     inline bool IsInConstraints(const Transform& tmanip) const
@@ -70,27 +88,27 @@ struct FailureCounter
     }
 
     inline void Reset() {
-	nNeighStateFailure = 0;
-	nConstraintToolDirFailure = 0;
-	nConstraintToolPositionFailure = 0;
-	nEnvCollisionFailure = 0;
-	nSelfCollisionFailure = 0;
-	nSameSamples = 0;
-	nCacheHitSamples = 0;
-	nLinkDistThreshRejections = 0;
+        nNeighStateFailure = 0;
+        nConstraintToolDirFailure = 0;
+        nConstraintToolPositionFailure = 0;
+        nEnvCollisionFailure = 0;
+        nSelfCollisionFailure = 0;
+        nSameSamples = 0;
+        nCacheHitSamples = 0;
+        nLinkDistThreshRejections = 0;
     }
 
     void SaveToJson(rapidjson::Value& rFailureCounter, rapidjson::Document::AllocatorType& alloc) const
     {
-	rFailureCounter.SetObject();
-	orjson::SetJsonValueByKey(rFailureCounter, "neighStateFailure", nNeighStateFailure, alloc);
-	orjson::SetJsonValueByKey(rFailureCounter, "constraintToolDirFailure", nConstraintToolDirFailure, alloc);
-	orjson::SetJsonValueByKey(rFailureCounter, "constraintToolPositionFailure", nConstraintToolPositionFailure, alloc);
-	orjson::SetJsonValueByKey(rFailureCounter, "envCollisionFailure", nEnvCollisionFailure, alloc);
-	orjson::SetJsonValueByKey(rFailureCounter, "selfCollisionFailure", nSelfCollisionFailure, alloc);
-	orjson::SetJsonValueByKey(rFailureCounter, "sameSamples", nSameSamples, alloc);
-	orjson::SetJsonValueByKey(rFailureCounter, "cacheHitSamples", nCacheHitSamples, alloc);
-	orjson::SetJsonValueByKey(rFailureCounter, "linkDistThreshRejections", nLinkDistThreshRejections, alloc);
+        rFailureCounter.SetObject();
+        orjson::SetJsonValueByKey(rFailureCounter, "neighStateFailure", nNeighStateFailure, alloc);
+        orjson::SetJsonValueByKey(rFailureCounter, "constraintToolDirFailure", nConstraintToolDirFailure, alloc);
+        orjson::SetJsonValueByKey(rFailureCounter, "constraintToolPositionFailure", nConstraintToolPositionFailure, alloc);
+        orjson::SetJsonValueByKey(rFailureCounter, "envCollisionFailure", nEnvCollisionFailure, alloc);
+        orjson::SetJsonValueByKey(rFailureCounter, "selfCollisionFailure", nSelfCollisionFailure, alloc);
+        orjson::SetJsonValueByKey(rFailureCounter, "sameSamples", nSameSamples, alloc);
+        orjson::SetJsonValueByKey(rFailureCounter, "cacheHitSamples", nCacheHitSamples, alloc);
+        orjson::SetJsonValueByKey(rFailureCounter, "linkDistThreshRejections", nLinkDistThreshRejections, alloc);
     }
 
     int nNeighStateFailure = 0;
