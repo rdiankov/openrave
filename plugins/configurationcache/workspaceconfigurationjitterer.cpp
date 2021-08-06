@@ -663,6 +663,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                             break;
                         }
                     } // end for ix
+                    if( !bSuccess ) {
+                        break;
+                    }
                 }
 
                 if (!bSuccess) {
