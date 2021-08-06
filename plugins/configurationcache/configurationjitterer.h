@@ -50,10 +50,10 @@ public:
     {
         rManipPositionConstraints.SetObject();
         orjson::SetJsonValueByKey(rManipPositionConstraints, "right", obb.right, alloc);
-        orjson::SetJsonValueByKey(rManipPositionConstraints, "up", obb.right, alloc);
-        orjson::SetJsonValueByKey(rManipPositionConstraints, "dir", obb.right, alloc);
-        orjson::SetJsonValueByKey(rManipPositionConstraints, "pos", obb.right, alloc);
-        orjson::SetJsonValueByKey(rManipPositionConstraints, "extents", obb.right, alloc);
+        orjson::SetJsonValueByKey(rManipPositionConstraints, "up", obb.up, alloc);
+        orjson::SetJsonValueByKey(rManipPositionConstraints, "dir", obb.dir, alloc);
+        orjson::SetJsonValueByKey(rManipPositionConstraints, "pos", obb.pos, alloc);
+        orjson::SetJsonValueByKey(rManipPositionConstraints, "extents", obb.extents, alloc);
     }
 
     inline bool IsInConstraints(const Transform& tmanip) const
