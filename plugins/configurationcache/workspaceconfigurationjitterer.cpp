@@ -60,6 +60,8 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         "sets the _bResetIterationsOnSample: whether or not to reset _nNumIterations every time Sample is called.");
         RegisterCommand("SetNullSpaceSamplingProb",boost::bind(&WorkspaceConfigurationJitterer::SetNullSpaceSamplingProbCommand, this, _1, _2),
                         "sets the probability to add perturbations from the nullspace of the Jacobian.");
+        RegisterJSONCommand("GetFailuresCount", boost::bind(&WorkspaceConfigurationJitterer::GetFailuresCountCommand, this, _1, _2, _3),
+                            "Gets the numbers of failing jittered configurations from the latest call categorized based on the failure reasons.");
 
 #ifndef OPENRAVE_HAS_LAPACK
         throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot use WorkspaceConfigurationJitterer since lapack is not supported"), ORE_CommandNotSupported);
@@ -385,6 +387,12 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _neighstatefn = neighstatefn;
     }
 
+    virtual bool GetFailuresCountCommand(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& alloc)
+    {
+        _counter.SaveToJson(output, alloc);
+        return true;
+    }
+
     /// \brief Jitters the current configuration and sets a new configuration on the environment. The jittered
     ///        configuration will also be checked with small perturbations to make sure that it is not too close to
     ///        boundaries of collision constraints and tool direction constraints.
@@ -423,14 +431,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         vnewdof.resize(GetDOF());
 
         // count of types of failures to better give user that info
-        int nNeighStateFailure = 0;
-        int nConstraintToolDirFailure = 0;
-        int nConstraintToolPositionFailure = 0;
-        int nEnvCollisionFailure = 0;
-        int nSelfCollisionFailure = 0;
-        int nSampleSamples = 0;
-        int nCacheHitSamples = 0;
-        int nLinkDistThreshRejections = 0;
+        _counter.Reset();
 
         if( _nNumIterations == 0 ) {
             // Check _curdof + perturbation
@@ -453,7 +454,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
                 if( !!_pConstraintToolDirection ) {
                     if( !_pConstraintToolDirection->IsInConstraints(_pmanip->GetTransform()) ) {
-                        nConstraintToolDirFailure++;
+                        _counter.nConstraintToolDirFailure++;
                         bConstraintFailed = true;
                         break;
 
@@ -461,7 +462,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 }
                 if( !!_pConstraintToolPosition ) {
                     if( !_pConstraintToolPosition->IsInConstraints(_pmanip->GetTransform()) ) {
-                        nConstraintToolPositionFailure++;
+                        _counter.nConstraintToolPositionFailure++;
                         bConstraintFailed = true;
                         break;
 
@@ -477,7 +478,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         ss << "]; report=" << _report->__str__();
                         RAVELOG_VERBOSE(ss.str());
                     }
-                    nEnvCollisionFailure++;
+                    _counter.nEnvCollisionFailure++;
                     bCollision = true;
                     break;
                 }
@@ -492,15 +493,15 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         ss << "]; report=" << _report->__str__();
                         RAVELOG_VERBOSE(ss.str());
                     }
-                    nSelfCollisionFailure++;
+                    _counter.nSelfCollisionFailure++;
                     bCollision = true;
                     break;
                 }
             }
 
             if( (!bCollision && !bConstraintFailed) || _maxjitter <= 0 ) {
-                if( nNeighStateFailure > 0 ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, initial point configuration is good, but neigh state failed %d times", GetEnv()->GetId()%nNeighStateFailure);
+                if( _counter.nNeighStateFailure > 0 ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, initial point configuration is good, but neigh state failed %d times", GetEnv()->GetId()%_counter.nNeighStateFailure);
                 }
                 return -1;
             }
@@ -587,7 +588,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 vnewdof = _curdof;
                 _probot->SetActiveDOFValues(vnewdof); // need to set robot configuration before calling _neighstatefn
                 if( _neighstatefn(vnewdof, _deltadof, 0) == NSS_Failed) {
-                    nNeighStateFailure++;
+                    _counter.nNeighStateFailure++;
                     continue;
                 }
             }
@@ -595,7 +596,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             if( !!_cache ) {
                 if( !!_cache->FindNearestNode(vnewdof, _neighdistthresh).first ) {
                     _cachehit++;
-                    nCacheHitSamples++;
+                    _counter.nCacheHitSamples++;
                     continue;
                 }
             }
@@ -665,7 +666,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 }
 
                 if (!bSuccess) {
-                    nLinkDistThreshRejections++;
+                    _counter.nLinkDistThreshRejections++;
                     continue;
                 }
             }
@@ -691,7 +692,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( !!_pConstraintToolDirection ) {
                     if( !_pConstraintToolDirection->IsInConstraints(_pmanip->GetTransform()) ) {
                         bConstraintFailed = true;
-                        nConstraintToolDirFailure++;
+                        _counter.nConstraintToolDirFailure++;
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                             ss << "env=" << _environmentid << ", direction constraints failed colvalues=[";
@@ -708,7 +709,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( !!_pConstraintToolPosition ) {
                     if( !_pConstraintToolPosition->IsInConstraints(_pmanip->GetTransform()) ) {
                         bConstraintFailed = true;
-                        nConstraintToolPositionFailure++;
+                        _counter.nConstraintToolPositionFailure++;
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                             ss << "env=" << _environmentid << ", position constraints failed colvalues=[";
@@ -724,11 +725,11 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
                 if( GetEnv()->CheckCollision(_probot, _report) ) {
                     bCollision = true;
-                    nEnvCollisionFailure++;
+                    _counter.nEnvCollisionFailure++;
                 }
                 if( !bCollision && _probot->CheckSelfCollision(_report)) {
                     bCollision = true;
-                    nSelfCollisionFailure++;
+                    _counter.nSelfCollisionFailure++;
                 }
 
                 if( bCollision ) {
@@ -767,13 +768,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     robotsaver.Release();
                 }
 
-                RAVELOG_DEBUG_FORMAT("env=%d, succeeded iterations=%d, computation=%fs, bHasNeighStateFn=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, nLinkDistThreshRejections=%d", _environmentid%iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bHasNeighStateFn%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure%nLinkDistThreshRejections);
+                RAVELOG_DEBUG_FORMAT("env=%d, succeeded iterations=%d, computation=%fs, bHasNeighStateFn=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, nLinkDistThreshRejections=%d", _environmentid%iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bHasNeighStateFn%_counter.nNeighStateFailure%_counter.nConstraintToolDirFailure%_counter.nConstraintToolPositionFailure%_counter.nEnvCollisionFailure%_counter.nSelfCollisionFailure%_counter.nLinkDistThreshRejections);
                 return 1;
             } // end if( !bCollision && !bConstraintFailed )
 
         } // end for iter
 
-        RAVELOG_INFO_FORMAT("env=%d, failed iterations=%d (max=%d), computation=%fs, bHasNeighStateFn=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, cachehit=%d, samesamples=%d, nLinkDistThreshRejections=%d", _environmentid%_nNumIterations%_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bHasNeighStateFn%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure%nCacheHitSamples%nSampleSamples%nLinkDistThreshRejections);
+        RAVELOG_INFO_FORMAT("env=%d, failed iterations=%d (max=%d), computation=%fs, bHasNeighStateFn=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, cachehit=%d, samesamples=%d, nLinkDistThreshRejections=%d", _environmentid%_nNumIterations%_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bHasNeighStateFn%_counter.nNeighStateFailure%_counter.nConstraintToolDirFailure%_counter.nConstraintToolPositionFailure%_counter.nEnvCollisionFailure%_counter.nSelfCollisionFailure%_counter.nCacheHitSamples%_counter.nSameSamples%_counter.nLinkDistThreshRejections);
         return 0;
     }
 
@@ -969,6 +970,8 @@ protected:
     ///< Advantage of using neightstatefn is that user constraints can be met like maintaining a certain orientation of the gripper.
 
     UserDataPtr _limitscallback, _grabbedcallback; ///< limits,grabbed change handles
+
+    FailureCounter _counter;
 
     /// \return Return 0 if jitter failed and constraints are not satisfied. -1 if constraints are originally satisfied. 1 if jitter succeeded, configuration is different, and constraints are satisfied.
 

@@ -1,3 +1,4 @@
+#include <openrave/openravejson.h>
 #include "configurationcachetree.h"
 
 namespace configurationcache {
@@ -61,5 +62,45 @@ public:
 };
 
 typedef OPENRAVE_SHARED_PTR<ManipPositionConstraints> ManipPositionConstraintsPtr;
+
+struct FailureCounter
+{
+    FailureCounter()
+    {
+    }
+
+    inline void Reset() {
+	nNeighStateFailure = 0;
+	nConstraintToolDirFailure = 0;
+	nConstraintToolPositionFailure = 0;
+	nEnvCollisionFailure = 0;
+	nSelfCollisionFailure = 0;
+	nSameSamples = 0;
+	nCacheHitSamples = 0;
+	nLinkDistThreshRejections = 0;
+    }
+
+    void SaveToJson(rapidjson::Value& rFailureCounter, rapidjson::Document::AllocatorType& alloc) const
+    {
+	rFailureCounter.SetObject();
+	orjson::SetJsonValueByKey(rFailureCounter, "neighStateFailure", nNeighStateFailure, alloc);
+	orjson::SetJsonValueByKey(rFailureCounter, "constraintToolDirFailure", nConstraintToolDirFailure, alloc);
+	orjson::SetJsonValueByKey(rFailureCounter, "constraintToolPositionFailure", nConstraintToolPositionFailure, alloc);
+	orjson::SetJsonValueByKey(rFailureCounter, "envCollisionFailure", nEnvCollisionFailure, alloc);
+	orjson::SetJsonValueByKey(rFailureCounter, "selfCollisionFailure", nSelfCollisionFailure, alloc);
+	orjson::SetJsonValueByKey(rFailureCounter, "sameSamples", nSameSamples, alloc);
+	orjson::SetJsonValueByKey(rFailureCounter, "cacheHitSamples", nCacheHitSamples, alloc);
+	orjson::SetJsonValueByKey(rFailureCounter, "linkDistThreshRejections", nLinkDistThreshRejections, alloc);
+    }
+
+    int nNeighStateFailure = 0;
+    int nConstraintToolDirFailure = 0;
+    int nConstraintToolPositionFailure = 0;
+    int nEnvCollisionFailure = 0;
+    int nSelfCollisionFailure = 0;
+    int nSameSamples = 0;
+    int nCacheHitSamples = 0;
+    int nLinkDistThreshRejections = 0;
+}; // end struct FailureCounter
 
 } // end namespace configurationcache
