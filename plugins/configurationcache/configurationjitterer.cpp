@@ -907,7 +907,9 @@ protected:
         _probot->SetActiveDOFs(_vActiveIndices, _nActiveAffineDOFs, _vActiveAffineAxis);
         _probot->GetActiveDOFValues(_curdof);
         _probot->GetDOFValues(_fulldof);
-        _tLocalTool = _pmanip->GetLocalToolTransform();
+        if( !!_pmanip ) {
+            _tLocalTool = _pmanip->GetLocalToolTransform();
+        }
 
         _vOriginalTransforms.resize(_vLinks.size());
         _vOriginalInvTransforms.resize(_vLinks.size());
