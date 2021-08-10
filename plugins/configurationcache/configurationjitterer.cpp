@@ -125,6 +125,8 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _nRandomGeneratorSeed = 0;
         _nNumIterations = 0;
 
+        _fulldof.resize(_probot->GetDOF(), 0);
+
         _report.reset(new CollisionReport());
         _maxiterations=5000;
         _maxjitter=0.02;
@@ -402,7 +404,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             orjson::SetJsonValueByKey(output, "nullBiasSampleProb", _nullbiassampleprob, alloc);
             orjson::SetJsonValueByKey(output, "deltaSampleProb", _deltasampleprob, alloc);
         }
-        orjson::SetJsonValueByKey(output, "currentJointValues", _curdof, alloc);
+        orjson::SetJsonValueByKey(output, "currentJointValues", _fulldof, alloc);
         orjson::SetJsonValueByKey(output, "maxJitter", _maxjitter, alloc);
         orjson::SetJsonValueByKey(output, "maxJitterIterations", _maxiterations, alloc);
         orjson::SetJsonValueByKey(output, "maxJitterLinkDist", _linkdistthresh, alloc);
@@ -411,6 +413,17 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         orjson::SetJsonValueByKey(output, "resetIterationsOnSample", _bResetIterationsOnSample, alloc);
         if( !!_pmanip ) {
             orjson::SetJsonValueByKey(output, "manipName", _pmanip->GetName(), alloc);
+            rapidjson::Value rTransform;
+            rTransform.SetArray();
+            rTransform.Reserve(7, alloc);
+            rTransform.PushBack(_tLocalTool.rot[0], alloc);
+            rTransform.PushBack(_tLocalTool.rot[1], alloc);
+            rTransform.PushBack(_tLocalTool.rot[2], alloc);
+            rTransform.PushBack(_tLocalTool.rot[3], alloc);
+            rTransform.PushBack(_tLocalTool.trans[0], alloc);
+            rTransform.PushBack(_tLocalTool.trans[1], alloc);
+            rTransform.PushBack(_tLocalTool.trans[2], alloc);
+            orjson::SetJsonValueByKey(output, "localToolPose", rTransform, alloc);
             if( !!_pConstraintToolDirection ) {
                 rapidjson::Value rConstraintToolDirection;
                 _pConstraintToolDirection->SaveToJson(rConstraintToolDirection, alloc);
@@ -875,13 +888,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     robotsaver.Release();
                 }
 
-                RAVELOG_DEBUG_FORMAT("succeed iterations=%d, computation=%fs, bConstraint=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d",iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bConstraint%_counter.nNeighStateFailure%_counter.nConstraintToolDirFailure%_counter.nConstraintToolPositionFailure%_counter.nEnvCollisionFailure%_counter.nSelfCollisionFailure);
+                RAVELOG_DEBUG_FORMAT("env=%s, succeed iterations=%d, computation=%fs, bConstraint=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d", GetEnv()->GetNameId()%iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bConstraint%_counter.nNeighStateFailure%_counter.nConstraintToolDirFailure%_counter.nConstraintToolPositionFailure%_counter.nEnvCollisionFailure%_counter.nSelfCollisionFailure);
                 //RAVELOG_VERBOSE_FORMAT("succeed iterations=%d, cachehits=%d, cache size=%d, originaldist=%f, computation=%fs\n",iter%_cachehit%cache.GetNumNodes()%cache.ComputeDistance(_curdof, vnewdof)%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
                 return 1;
             }
         }
 
-        RAVELOG_INFO_FORMAT("failed iterations=%d (max=%d), computation=%fs, bConstraint=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, cachehit=%d, samesamples=%d, nLinkDistThreshRejections=%d",_nNumIterations%_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bConstraint%_counter.nNeighStateFailure%_counter.nConstraintToolDirFailure%_counter.nConstraintToolPositionFailure%_counter.nEnvCollisionFailure%_counter.nSelfCollisionFailure%_counter.nCacheHitSamples%_counter.nSameSamples%_counter.nLinkDistThreshRejections);
+        RAVELOG_INFO_FORMAT("env=%s, failed iterations=%d (max=%d), computation=%fs, bConstraint=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, cachehit=%d, samesamples=%d, nLinkDistThreshRejections=%d", GetEnv()->GetNameId()%_nNumIterations%_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bConstraint%_counter.nNeighStateFailure%_counter.nConstraintToolDirFailure%_counter.nConstraintToolPositionFailure%_counter.nEnvCollisionFailure%_counter.nSelfCollisionFailure%_counter.nCacheHitSamples%_counter.nSameSamples%_counter.nLinkDistThreshRejections);
         //RAVELOG_WARN_FORMAT("failed iterations=%d, cachehits=%d, cache size=%d, jitter time=%fs", _maxiterations%_cachehit%cache.GetNumNodes()%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
         return 0;
     }
@@ -893,6 +906,8 @@ protected:
     {
         _probot->SetActiveDOFs(_vActiveIndices, _nActiveAffineDOFs, _vActiveAffineAxis);
         _probot->GetActiveDOFValues(_curdof);
+        _probot->GetDOFValues(_fulldof);
+        _tLocalTool = _pmanip->GetLocalToolTransform();
 
         _vOriginalTransforms.resize(_vLinks.size());
         _vOriginalInvTransforms.resize(_vLinks.size());
@@ -1057,6 +1072,7 @@ protected:
     dReal _linkdistthresh, _linkdistthresh2; ///< the maximum distance to allow a link to move. If 0, then will disable checking
 
     std::vector<dReal> _curdof, _newdof2, _deltadof, _deltadof2, _vonesample;
+    std::vector<dReal> _fulldof; ///< full robot dof values
 
     CacheTreePtr _cache; ///< caches the visisted configurations
     int _cachehit;
@@ -1076,6 +1092,7 @@ protected:
     // manip constraints
     ManipDirectionThreshPtr _pConstraintToolDirection; ///< constrain direction
     ManipPositionConstraintsPtr _pConstraintToolPosition; ///< constraint position
+    Transform _tLocalTool; ///< manipulator local tool pose
 
     //Vector vManipConstraintBoxMin, vManipConstraintBoxMax; // constraint position
 
