@@ -27,7 +27,7 @@ if(USE_PYBIND11_PYTHON_BINDINGS)
   set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS_BACKUP}) # restore
   add_definitions(${Boost_CFLAGS})
   set(CMAKE_REQUIRED_INCLUDES ${PYTHON_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${REQUIRED_INCLUDES})
-  set(CMAKE_REQUIRED_LIBRARIES ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY})
+  set(CMAKE_REQUIRED_LIBRARIES ${PYTHON_LIBRARIES})
   set(CMAKE_REQUIRED_FLAGS ${Boost_CFLAGS} "-DCMAKE_BUILD_TYPE:STRING=Release")
   check_cxx_source_runs("
     // python
@@ -57,7 +57,7 @@ if(USE_PYBIND11_PYTHON_BINDINGS)
     set(OPENRAVEPY_COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL -fvisibility=hidden") # pybind11 requires less visibility
         
     # link
-    set(OPENRAVEPY_LINKED_LIBRARIES "${STDC_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY}")
+    set(OPENRAVEPY_LINKED_LIBRARIES ${STDC_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY})
     if( CLOCK_GETTIME_FOUND )
       set(OPENRAVEPY_LINKED_LIBRARIES ${OPENRAVEPY_LINKED_LIBRARIES} rt)
     endif()
@@ -128,6 +128,9 @@ elseif( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
   add_definitions(${Boost_CFLAGS})
   set(CMAKE_REQUIRED_INCLUDES ${PYTHON_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${REQUIRED_INCLUDES})
   # Need to link Boost::System on macOS for symbols boost::system::system_category(), boost::system::generic_category()
+  # Note: adding Boost to CMAKE_REQUIRED_LIBRARIES is not compatible without -DBoost_NO_BOOST_CMAKE=1 with new Boost
+  # ( see https://gitlab.kitware.com/cmake/cmake/-/issues/22373 ),
+  # but that version is not compatible with boost::python anyway.
   set(CMAKE_REQUIRED_LIBRARIES ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY})
   set(CMAKE_REQUIRED_FLAGS ${Boost_CFLAGS} "-DCMAKE_BUILD_TYPE:STRING=Release")
 
@@ -154,7 +157,7 @@ elseif( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
     include_directories(${CMAKE_CURRENT_BINARY_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/include ${PYTHON_INCLUDE_DIRS} ${OPENRAVE_INCLUDE_LOCAL_DIRS} ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS})
 
     # libraries to link
-    set(OPENRAVEPY_LINKED_LIBRARIES "${STDC_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY}")
+    set(OPENRAVEPY_LINKED_LIBRARIES ${STDC_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
     if( CLOCK_GETTIME_FOUND )
       set(OPENRAVEPY_LINKED_LIBRARIES ${OPENRAVEPY_LINKED_LIBRARIES} rt)
     endif()
