@@ -36,6 +36,7 @@ void IkFailureInfo::InitCollisionReport(const CollisionReportPtr& pnewreport)
             _preport.reset(new CollisionReport());
         }
         *_preport = *pnewreport;
+        _preport->FillBodyNames();
     }
     else {
         _preport.reset();

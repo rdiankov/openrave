@@ -81,6 +81,8 @@ public:
     virtual void Reset(int coloptions = 0);
     virtual std::string __str__() const;
 
+    virtual void FillBodyNames();
+    
     void SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::Document::AllocatorType& alloc) const;
 
     KinBody::LinkConstPtr plink1, plink2; ///< the colliding links if a collision involves a bodies. Collisions do not always occur with 2 bodies like ray collisions, so these fields can be empty.
@@ -98,6 +100,7 @@ public:
 
     uint8_t nKeepPrevious; ///< if 1, will keep all previous data when resetting the collision checker. otherwise will reset
 
+    std::string bodyName1, bodyName2; /// the names of the bodies plink1 and plink2 belong to. Directly store the names here since if the parent has been destroyed, the parent's name cannot be obtained from plink.
 };
 
 typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
