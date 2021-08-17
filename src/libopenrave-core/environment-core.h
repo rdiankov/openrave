@@ -114,7 +114,7 @@ public:
     inline bool operator!() const {
         return !_lockAquired;
     }
-    
+
     /// \brief unlocks mutex if preiously locked
     ~TimedExclusiveLock()
     {
@@ -413,7 +413,7 @@ public:
         if( !!_pCurrentChecker ) {
             _pCurrentChecker->DestroyEnvironment();
         }
-        
+
         std::vector<KinBodyPtr> vcallbackbodies;
         {
             ExclusiveLock lock(_mutexInterfaces);
@@ -2649,6 +2649,7 @@ public:
             info._gravity = _pPhysicsEngine->GetGravity();
         }
         info._uInt64Parameters = _mapUInt64Parameters;
+        info._unit = _unit;
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
@@ -2670,6 +2671,7 @@ public:
             _keywords = info._keywords;
             _description = info._description;
             _mapUInt64Parameters = info._uInt64Parameters;
+            _unit = info._unit;
 
             // set gravity
             if (!!_pPhysicsEngine) {
@@ -2678,17 +2680,18 @@ public:
                     _pPhysicsEngine->SetGravity(info._gravity);
                 }
             }
+
         }
 
         // make a copy of _vecbodies because we will be doing some reordering
         std::vector<KinBodyPtr> vBodies;
+        std::list<KinBodyPtr> listBodiesTemporarilyRenamed; // in order to avoid clashing names, sometimes bodies are renamed temporariliy and placed in this list. If they targetted again with a different name, then they are put back into the environment
         {
             SharedLock lock(_mutexInterfaces);
             vBodies = _vecbodies;
         }
         {
-            for (std::vector<KinBodyPtr>::iterator it = vBodies.begin();
-                 it != vBodies.end();) {
+            for (std::vector<KinBodyPtr>::iterator it = vBodies.begin(); it != vBodies.end(); ) {
                 if (!*it) {
                     it = vBodies.erase(it);
                 }
@@ -2696,7 +2699,7 @@ public:
                     it++;
                 }
             }
-        }            
+        }
         std::vector<int> vUsedBodyIndices; // used indices of vBodies
 
         // internally manipulates _vecbodies using _AddKinBody/_AddRobot/_RemoveKinBodyFromIterator
@@ -2794,7 +2797,9 @@ public:
                     if( itExisting != itExistingSameName && itExistingSameName != vBodies.end() ) {
                         // new name will conflict with *itExistingSameName, so should change the names to something temporarily
                         // for now, clear since the body should be processed later again
-                        (*itExistingSameName)->_name.clear();
+                        RAVELOG_DEBUG_FORMAT("env=%s, have to clear body name '%s' id=%s for loading body with id=%s", GetNameId()%(*itExistingSameName)->GetName()%(*itExistingSameName)->GetId()%(*itExisting)->GetId());
+                        (*itExistingSameName)->SetName(_GetUniqueName((*itExistingSameName)->GetName()+"_renamedDueToConflict_"));
+                        listBodiesTemporarilyRenamed.push_back(*itExistingSameName);
                     }
                     pMatchExistingBody = *itExisting;
                     int nMatchingIndex = itExisting-vBodies.begin();
@@ -2813,6 +2818,8 @@ public:
 
             KinBodyPtr pInitBody; // body that has to be Init() again
             if( !!pMatchExistingBody ) {
+                listBodiesTemporarilyRenamed.remove(pMatchExistingBody); // if targreted, then do not need to remove anymore
+
                 RAVELOG_VERBOSE_FORMAT("env=%s, update existing body %s", GetNameId()%pMatchExistingBody->_id);
                 // interface should match at this point
                 // update existing body or robot
@@ -2983,6 +2990,12 @@ public:
                     itBody = vBodies.erase(itBody);
                 }
             }
+        }
+
+        for(KinBodyPtr pRenamedBody : listBodiesTemporarilyRenamed) {
+            RAVELOG_INFO_FORMAT("env=%s, body '%s' (id=%s) was renamed to avoid a name conflict, but not modified to another name, so assuming that it should be deleted", GetNameId()%pRenamedBody->GetName()%pRenamedBody->GetId());
+            Remove(pRenamedBody);
+            vRemovedBodies.push_back(pRenamedBody);
         }
 
         // after all bodies are added, update the grab states
@@ -3240,7 +3253,7 @@ protected:
         _mapUInt64Parameters = r->_mapUInt64Parameters;
 
         _assignedBodySensorNameIdSuffix = r->_assignedBodySensorNameIdSuffix;
-        
+
         _bInit = true;
         _bEnableSimulation = r->_bEnableSimulation;
 
@@ -3525,7 +3538,7 @@ protected:
             }
         }
         if( options & Clone_Sensors ) {
-            ExclusiveLock  lock(r->_mutexInterfaces);
+            ExclusiveLock lock(r->_mutexInterfaces);
             FOREACHC(itsensor,r->_listSensors) {
                 try {
                     SensorBasePtr pnewsensor = RaveCreateSensor(shared_from_this(), (*itsensor)->GetXMLId());
@@ -3667,7 +3680,7 @@ protected:
             RAVELOG_INFO_FORMAT("env=%d, tried renaming body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%baseId%newId);
         }
     }
-    
+
 
     /// \brief name body / sensor to unique name by adding suffix
     ///
@@ -3676,12 +3689,13 @@ protected:
     inline void _EnsureUniqueName(const T& pObject)
     {
         const std::string baseName = pObject->GetName(); // has to store value instead of reference, as we call SetName internally
+        BOOST_ASSERT(utils::IsValidName(baseName));
         string newName;
         while (true) {
             newName = str(boost::format("%s%d")%baseName%_assignedBodySensorNameIdSuffix++);
             pObject->SetName(newName);
 
-            SharedLock lock(_mutexInterfaces);
+            //SharedLock lock(_mutexInterfaces); // _CheckUniqueId already locks _mutexInterfaces
             // most likely unique, but have to double check
             if( utils::IsValidName(newName) && _CheckUniqueName(pObject, false) ) {
                 if( !baseName.empty() ) {
@@ -3692,7 +3706,24 @@ protected:
             RAVELOG_INFO_FORMAT("env=%d, tried renaming object (body or sensor) from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%baseName%newName);
         }
     }
-    
+
+    inline std::string _GetUniqueName(const std::string& baseName)
+    {
+        BOOST_ASSERT(utils::IsValidName(baseName));
+        std::string newName;
+        while (true) {
+            newName = str(boost::format("%s%d")%baseName%_assignedBodySensorNameIdSuffix++);
+
+            //SharedLock lock(_mutexInterfaces);
+            // most likely unique, but have to double check
+            if( utils::IsValidName(newName) && _CheckUniqueName(newName, false) ) {
+                break;
+            }
+        }
+
+        return newName;
+    }
+
     /// locks _mutexInterfaces internally
     virtual bool _CheckUniqueName(KinBodyConstPtr pbody, bool bDoThrow=false) const
     {
@@ -3706,7 +3737,7 @@ protected:
 
         const int envBodyIndex = it->second;
         BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()); // if _mapBodyNameIndex contained invalid env body indexBody, it's a bug that _mapBodyNameIndex and _vecbodies are not in sync
-        
+
         const KinBodyPtr& pExistingBody = _vecbodies.at(envBodyIndex);
         BOOST_ASSERT(!!pExistingBody); // if _mapBodyNameIndex contained env body index of null KinBody, it's a bug that _mapBodyNameIndex and _vecbodies are not in sync
 
@@ -3720,6 +3751,24 @@ protected:
         return false;
     }
 
+    /// \brief return true if no body has this name
+    ///
+    /// \param name name of the body
+    virtual bool _CheckUniqueName(const std::string& name, bool bDoThrow=false) const
+    {
+        SharedLock lock(_mutexInterfaces);
+        const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
+        if (it == _mapBodyNameIndex.end()) {
+            return true;
+        }
+
+        const int envBodyIndex = it->second;
+        BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()); // if _mapBodyNameIndex contained invalid env body indexBody, it's a bug that _mapBodyNameIndex and _vecbodies are not in sync
+
+        // should not be here...
+        return !_vecbodies.at(envBodyIndex);
+    }
+
     /// \brief do not allow empty ids
     /// locks _mutexInterfaces internally
     virtual bool _CheckUniqueId(KinBodyConstPtr pbody, bool bDoThrow=false) const
@@ -3731,16 +3780,16 @@ protected:
             }
             return false;
         }
-        
+
         SharedLock lock(_mutexInterfaces);
         const std::unordered_map<std::string, int>::const_iterator it = _mapBodyIdIndex.find(inputBodyId);
         if (it == _mapBodyIdIndex.end()) {
             return true;
         }
-        
+
         const int envBodyIndex = it->second;
         BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()); // if _mapBodyIdIndex contained invalid env body indexBody, it's a bug that _mapBodyIdIndex and _vecbodies are not in sync
-        
+
         const KinBodyPtr& pExistingBody = _vecbodies.at(envBodyIndex);
         BOOST_ASSERT(!!pExistingBody); // if _mapBodyIdIndex contained env body index of null KinBody, it's a bug that _mapBodyIdIndex and _vecbodies are not in sync
 
