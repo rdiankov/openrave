@@ -152,15 +152,14 @@ public:
     /// \brief Retrieve ikFailureInfo from the specified index. Assume the input index is valid.
     inline const IkFailureInfo& GetIkFailureInfo(size_t index) const
     {
-        return _vIkFailureInfos[index];
+        return *_vIkFailureInfos[index];
     }
 
     /// \brief Get the next available IkFailureInfo to fill in failure information.
-    IkFailureInfo& GetNextAvailableIkFailureInfo();
     IkFailureInfoPtr GetNextAvailableIkFailureInfoPtr();
 
 private:
-    std::vector<IkFailureInfo> _vIkFailureInfos;
+    std::vector<IkFailureInfoPtr> _vIkFailureInfos;
     size_t _nextIndex = 0;
 };
 

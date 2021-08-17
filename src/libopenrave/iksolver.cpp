@@ -76,25 +76,18 @@ IkFailureAccumulator::IkFailureAccumulator()
 {
 }
 
-IkFailureInfo& IkFailureAccumulator::GetNextAvailableIkFailureInfo()
-{
-    if( _nextIndex >= _vIkFailureInfos.size() ) {
-        _vIkFailureInfos.resize(_vIkFailureInfos.size() + 100);
-    }
-    IkFailureInfo& ikFailureInfo = _vIkFailureInfos[_nextIndex];
-    ikFailureInfo.Clear();
-    ikFailureInfo._index = _nextIndex;
-    _nextIndex++;
-    return ikFailureInfo;
-}
-
 IkFailureInfoPtr IkFailureAccumulator::GetNextAvailableIkFailureInfoPtr()
 {
     if( _nextIndex >= _vIkFailureInfos.size() ) {
         _vIkFailureInfos.resize(_vIkFailureInfos.size() + 100);
     }
-    IkFailureInfoPtr pIkFailureInfo = boost::make_shared<IkFailureInfo>(_vIkFailureInfos[_nextIndex]);
-    pIkFailureInfo->Clear();
+    IkFailureInfoPtr& pIkFailureInfo = _vIkFailureInfos[_nextIndex];
+    if( !pIkFailureInfo ) {
+        pIkFailureInfo = boost::make_shared<IkFailureInfo>();
+    }
+    else {
+        pIkFailureInfo->Clear();
+    }
     pIkFailureInfo->_index = _nextIndex;
     _nextIndex++;
     return pIkFailureInfo;
