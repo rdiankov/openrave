@@ -6181,6 +6181,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 
     // name
     if (GetName() != info._name) {
+        OPENRAVE_ASSERT_OP(info._name.size(), >, 0);
         SetName(info._name);
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("body %s updated due to name change", _id);
