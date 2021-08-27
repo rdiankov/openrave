@@ -2139,7 +2139,6 @@ void CollisionReport::SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::
                     RAVELOG_WARN_FORMAT("parent of link %s has already been destroyed.", itlinkpair->first->GetName());
                 }
                 orjson::SetJsonValueByKey(rPair, "linkName1", itlinkpair->first->GetName(), alloc);
-                orjson::SetJsonValueByKey(rPair, "geomName1", !!pgeom1 ? pgeom1->GetName() : std::string(""), alloc);
             }
             if( !!itlinkpair->second ) {
                 KinBodyPtr pparent2 = itlinkpair->second->GetParent(true);
@@ -2150,7 +2149,6 @@ void CollisionReport::SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::
                     RAVELOG_WARN_FORMAT("parent of link %s has already been destroyed.", itlinkpair->second->GetName());
                 }
                 orjson::SetJsonValueByKey(rPair, "linkName2", itlinkpair->second->GetName(), alloc);
-                orjson::SetJsonValueByKey(rPair, "geomName2", !!pgeom2 ? pgeom2->GetName() : std::string(""), alloc);
             }
             rCollidingLinkPairs.PushBack(rPair, alloc);
         }
