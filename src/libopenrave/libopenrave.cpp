@@ -2027,30 +2027,47 @@ std::string CollisionReport::__str__() const
     if( vLinkColliding.size() > 0 ) {
         s << "pairs=" << vLinkColliding.size();
         int index = 0;
-        FOREACH(itlinkpair, vLinkColliding) {
+        bool bHasCollidingBodyNames = vBodyColliding.size() == vLinkColliding.size();
+        std::vector<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> >::const_iterator itlinkpair = vLinkColliding.begin();
+        std::vector<std::pair<KinBody::GeometryConstPtr, KinBody::GeometryConstPtr> >::const_iterator itgeompair = vGeomColliding.begin();
+        for(; itlinkpair != vLinkColliding.end(); ++itlinkpair, ++itgeompair, ++index ) {
             s << ", [" << index << "](";
             if( !!itlinkpair->first ) {
                 KinBodyPtr parent = itlinkpair->first->GetParent(true);
                 if( !!parent ) {
-                    s << parent->GetName() << ":" << itlinkpair->first->GetName();
+                    s << parent->GetName();
+                }
+                else if( bHasCollidingBodyNames ) {
+                    s << vBodyColliding[index].first;
                 }
                 else {
                     RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", itlinkpair->first->GetName());
-                    s << "[deleted]:" << itlinkpair->first->GetName();
+                    s << "[deleted]";
+                }
+                s << ":" << itlinkpair->first->GetName();
+                if( !!itgeompair->first ) {
+                    s << ":" << itgeompair->first->GetName();
                 }
             }
             s << ")x(";
             if( !!itlinkpair->second ) {
                 KinBodyPtr parent = itlinkpair->second->GetParent(true);
                 if( !!parent ) {
-                    s << parent->GetName() << ":" << itlinkpair->second->GetName();
+                    s << parent->GetName();
+                }
+                else if( bHasCollidingBodyNames ) {
+                    s << vBodyColliding[index].second;
                 }
                 else {
                     RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", itlinkpair->second->GetName());
-                    s << "[deleted]:" << itlinkpair->second->GetName();
+                    s << "[deleted]";
+                }
+                s << ":" << itlinkpair->second->GetName();
+                if( !!itgeompair->second ) {
+                    s << ":" << itgeompair->second->GetName();
                 }
             }
-            s << ") ";
+            s << ")";
             ++index;
         }
     }
