@@ -1093,10 +1093,13 @@ private:
 
                 if( _options & OpenRAVE::CO_AllLinkCollisions ) {
                     // We maintain vLinkColliding ordered
-                    LinkPair linkPair = MakeLinkPair(plink1, plink2);
+                    LinkGeomPairs linkGeomPairs = MakeLinkGeomPairs(plink1, plink2, pgeom1, pgeom2);
+                    LinkPair& linkPair = linkGeomPairs.first;
+                    GeomPair& geomPair = linkGeomPairs.second;
                     typedef std::vector< std::pair< LinkConstPtr, LinkConstPtr > >::iterator PairIterator;
                     PairIterator end = pcb->_report->vLinkColliding.end(), first = std::lower_bound(pcb->_report->vLinkColliding.begin(), end, linkPair);
                     if( first == end || *first != linkPair ) {
+                        pcb->_report->vGeomColliding.insert(pcb->_report->vGeomColliding.begin() + (first - pcb->_report->vLinkColliding.begin()), geomPair); // have to do this before vLinkCollision.insert since first could be invalidated.
                         pcb->_report->vLinkColliding.insert(first, linkPair);
                     }
                 }
@@ -1221,12 +1224,13 @@ private:
     }
 #endif
 
-    static LinkPair MakeLinkPair(LinkConstPtr plink1, LinkConstPtr plink2)
+    static LinkGeomPairs MakeLinkGeomPairs(LinkConstPtr plink1, LinkConstPtr plink2, GeometryConstPtr pgeom1, GeometryConstPtr pgeom2)
     {
         if( plink1.get() < plink2.get() ) {
-            return make_pair(plink1, plink2);
-        } else {
-            return make_pair(plink2, plink1);
+            return make_pair(make_pair(plink1, plink2), make_pair(pgeom1, pgeom2));
+        }
+        else {
+            return make_pair(make_pair(plink2, plink1), make_pair(pgeom2, pgeom1));
         }
     }
 
