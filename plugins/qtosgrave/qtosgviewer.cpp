@@ -1604,6 +1604,7 @@ void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, c
     box->setCenter(osg::Vec3(vpos.x, vpos.y, vpos.z));
 
     osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
+    sd->setColor(osg::Vec4f(0.33203125f, 0.5f, 0.898437f, 1.0f));
     geode->addDrawable(sd);
 
     // don't do transparent bin since that is too slow for big point clouds...
