@@ -236,6 +236,7 @@ public:
     object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=py::none_());
 
     object drawbox(object opos, object oextents, object ocolor=py::none_());
+    object drawboxarray(object opos, object oextents, object ocolor=py::none_());
 
     object drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture);
     object drawplane(object otransform, object oextents, const boost::multi_array<float,3>&vtexture);
