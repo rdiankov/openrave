@@ -134,7 +134,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             robot->SetActiveDOFValues(newdof,KinBody::CLA_CheckLimitsSilent);
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 robot->GetActiveDOFValues(newdof);
-                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 for(size_t i = 0; i < newdof.size(); ++i ) {
                     if( i > 0 ) {
                         ss << "," << newdof[i];
@@ -235,7 +235,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
         if( parameters->CheckPathAllConstraints(newdof,newdof,zerodof,zerodof,0,IT_OpenStart) != 0 ) {
             bCollision = true;
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 ss << "constraints failed, ";
                 for(size_t i = 0; i < newdof.size(); ++i ) {
                     if( i > 0 ) {
@@ -325,7 +325,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
             if( parameters->CheckPathAllConstraints(newdof,newdof,zerodof,zerodof,0,IT_OpenStart) != 0 ) {
                 bCollision = true;
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                     ss << "constraints failed, ";
                     for(size_t i = 0; i < newdof.size(); ++i ) {
                         if( i > 0 ) {
@@ -371,7 +371,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
             }
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 parameters->_getstatefn(newdof);
-                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 for(size_t i = 0; i < newdof.size(); ++i ) {
                     if( i > 0 ) {
                         ss << "," << newdof[i];
@@ -537,7 +537,7 @@ public:
                             dReal fprevdist = _parameters->_distmetricfn(vprevconfig,vtemp);
                             dReal fcurdist = _parameters->_distmetricfn(vcurconfig,vtemp);
                             if( fprevdist > g_fEpsilonLinear ) {
-                                OPENRAVE_ASSERT_OP_FORMAT(fprevdist, >, fcurdist, "time %fs-%fs, neightstatefn returned a configuration closer to the previous configuration %f than the expected current %f, wrote trajectory to %s",*itprevtime%*itsampletime%fprevdist%fcurdist%DumpTrajectory(trajectory), ORE_InconsistentConstraints);
+                                OPENRAVE_ASSERT_OP_FORMAT(fprevdist, >, fcurdist, "time %fs-%fs, neighstatefn returned a configuration closer to the previous configuration %f than the expected current %f, wrote trajectory to %s",*itprevtime%*itsampletime%fprevdist%fcurdist%DumpTrajectory(trajectory), ORE_InconsistentConstraints);
                             }
                         }
                         itprevconfig=itcurconfig;
@@ -573,7 +573,6 @@ protected:
 
 void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep)
 {
-    EnvironmentMutex::scoped_lock lockenv(trajectory->GetEnv()->GetMutex());
     if( !parameters ) {
         PlannerBase::PlannerParametersPtr newparams(new PlannerBase::PlannerParameters());
         newparams->SetConfigurationSpecification(trajectory->GetEnv(), trajectory->GetConfigurationSpecification().GetTimeDerivativeSpecification(0));
@@ -593,7 +592,7 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
@@ -610,8 +609,6 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
     }
     if( !bsmooth ) {
         params->_setstatevaluesfn.clear();
-        params->_setstatefn.clear();
-        params->_checkpathconstraintsfn.clear();
         params->_checkpathvelocityconstraintsfn.clear();
     }
 
@@ -619,17 +616,18 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(probot,params) ) {
-        return PS_Failed;
+        return PlannerStatus("InitPlan failed", PS_Failed);
     }
-    if( planner->PlanPath(traj) != PS_HasSolution ) {
-        return PS_Failed;
+    PlannerStatus plannerStatus = planner->PlanPath(traj);
+    if( plannerStatus.GetStatusCode() != PS_HasSolution ) {
+        return plannerStatus;
     }
 
     if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
         RobotBase::RobotStateSaver saver(probot);
         planningutils::VerifyTrajectory(params,traj);
     }
-    return PS_HasSolution;
+    return PlannerStatus(PS_HasSolution);
 }
 
 ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, const std::string& _plannername, const std::string& plannerparameters)
@@ -653,7 +651,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
 }
 
-PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
+PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -663,13 +661,13 @@ PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
     CollisionOptionsStateSaver optionstate(env->GetCollisionChecker(),env->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-    PlannerStatus status = _planner->PlanPath(traj);
-    if( status & PS_HasSolution ) {
+    PlannerStatus status = _planner->PlanPath(traj, planningoptions);
+    if( status.GetStatusCode() & PS_HasSolution ) {
         if( RaveGetDebugLevel() & Level_VerifyPlans ) {
             RobotBase::RobotStateSaver saver(_robot);
             planningutils::VerifyTrajectory(_planner->GetParameters(),traj);
@@ -707,8 +705,6 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = false;
     params->_setstatevaluesfn.clear();
-    params->_setstatefn.clear();
-    params->_checkpathconstraintsfn.clear();
     params->_checkpathvelocityconstraintsfn.clear();
     params->_sExtraParameters = plannerparameters;
     if( !_planner->InitPlan(_robot,params) ) {
@@ -718,7 +714,7 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectoryRetimer::_UpdateParameters, this));
 }
 
-PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps)
+PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -728,7 +724,7 @@ PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool 
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     TrajectoryTimingParametersPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
@@ -739,7 +735,7 @@ PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool 
         }
     }
 
-    return _planner->PlanPath(traj);
+    return _planner->PlanPath(traj, planningoptions);
 }
 
 void ActiveDOFTrajectoryRetimer::_UpdateParameters()
@@ -751,8 +747,6 @@ void ActiveDOFTrajectoryRetimer::_UpdateParameters()
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = false;
     params->_setstatevaluesfn.clear();
-    params->_setstatefn.clear();
-    params->_checkpathconstraintsfn.clear();
     params->_checkpathvelocityconstraintsfn.clear();
     params->_sExtraParameters = _parameters->_sExtraParameters;
     if( !_planner->InitPlan(_robot,params) ) {
@@ -771,7 +765,7 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
@@ -786,8 +780,6 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
     }
     if( !bsmooth ) {
         params->_setstatevaluesfn.clear();
-        params->_setstatefn.clear();
-        params->_checkpathconstraintsfn.clear();
         params->_checkpathvelocityconstraintsfn.clear();
     }
 
@@ -795,17 +787,18 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
-        return PS_Failed;
+        return PlannerStatus("InitPlan failed", PS_Failed);
     }
-    if( planner->PlanPath(traj) != PS_HasSolution ) {
-        return PS_Failed;
+    PlannerStatus plannerStatus = planner->PlanPath(traj);
+    if( !(plannerStatus.statusCode & PS_HasSolution) ) {
+        return plannerStatus;
     }
 
     if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
         PlannerBase::PlannerParameters::StateSaver saver(params);
         planningutils::VerifyTrajectory(params,traj);
     }
-    return PS_HasSolution;
+    return PlannerStatus(PS_HasSolution);
 }
 
 static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int> vrotaxes)
@@ -879,7 +872,8 @@ public:
     virtual ~PlannerStateSaver() {
         int ret = _setfn(_savedvalues, 0);
         if( ret != 0 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set state in PlannerStateSaver, return=%d"), ret, ORE_Assert); // throwing from destructor, is this okay?
+            // probably should not throw here
+            RAVELOG_WARN_FORMAT(_("failed to set state in PlannerStateSaver, return=%d"), ret);
         }
     }
 
@@ -899,7 +893,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
@@ -983,9 +977,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
     }
     else {
         params->_setstatevaluesfn.clear();
-        params->_setstatefn.clear();
         params->_getstatefn.clear();
-        params->_checkpathconstraintsfn.clear();
         params->_checkpathvelocityconstraintsfn.clear();
     }
 
@@ -993,13 +985,15 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
 
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters = plannerparameters;
+
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
-        return PS_Failed;
+        return PlannerStatus("InitPlan failed", PS_Failed);
     }
-    if( planner->PlanPath(traj) != PS_HasSolution ) {
-        return PS_Failed;
+    PlannerStatus plannerStatus = planner->PlanPath(traj);
+    if( plannerStatus.GetStatusCode() != PS_HasSolution ) {
+        return plannerStatus;
     }
-    return PS_HasSolution;
+    return PlannerStatus(PS_HasSolution);
 }
 
 AffineTrajectoryRetimer::AffineTrajectoryRetimer(const std::string& plannername, const std::string& plannerparameters)
@@ -1039,7 +1033,7 @@ void AffineTrajectoryRetimer::SetPlanner(const std::string& plannername, const s
     }
 }
 
-PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps)
+PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need retiming, but should at least add a time group
@@ -1049,7 +1043,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
@@ -1064,9 +1058,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         parameters.reset(new TrajectoryTimingParameters());
         parameters->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
         parameters->_setstatevaluesfn.clear();
-        parameters->_setstatefn.clear();
         parameters->_getstatefn.clear();
-        parameters->_checkpathconstraintsfn.clear();
         parameters->_checkpathvelocityconstraintsfn.clear();
         parameters->_sExtraParameters += _extraparameters;
         _parameters = parameters;
@@ -1154,7 +1146,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         }
     }
 
-    return _planner->PlanPath(traj);
+    return _planner->PlanPath(traj, planningoptions);
 }
 
 PlannerStatus SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
@@ -1335,7 +1327,7 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     // This ensures that the beginning and final velocities will be preserved
     //RAVELOG_VERBOSE_FORMAT("env=%d, inserting point into %d with planner %s and parameters %s", robot->GetEnv()->GetId()%waypointindex%newplannername%plannerparameters);
     // make sure velocities are set
-    if( !(RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")) & PS_HasSolution) ) {
+    if( !(RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")).GetStatusCode() & PS_HasSolution) ) {
         throw OPENRAVE_EXCEPTION_FORMAT("env=%d failed to retime init traj", robot->GetEnv()->GetId(), ORE_Assert);
     }
 
@@ -1426,7 +1418,7 @@ size_t InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& d
     trajinitial->Init(newspec);
     trajinitial->Insert(0,vwaypointstart);
     trajinitial->Insert(1,vwaypointend);
-    if( !(planner->PlanPath(trajinitial) & PS_HasSolution) ) {
+    if( !(planner->PlanPath(trajinitial).GetStatusCode() & PS_HasSolution) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("failed to plan path"), ORE_Assert);
     }
 
@@ -1536,7 +1528,7 @@ size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalue
         ptesttraj->Insert(0,vwaypoint);
         ptesttraj->Insert(1,vstartdata,spectotal);
 
-        if( planner->PlanPath(ptesttraj) & PS_HasSolution ) {
+        if( planner->PlanPath(ptesttraj).GetStatusCode() & PS_HasSolution ) {
             // before checking, make sure it is better than we currently have
             dReal fNewDuration = fRemainingDuration+ptesttraj->GetDuration();
             if( fNewDuration < fBestDuration ) {
@@ -2092,7 +2084,7 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
     }
 }
 
-DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersConstPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _torquelimitmode(0), _perturbation(0.1)
+DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersConstPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _torquelimitmode(DC_NominalTorque), _perturbation(0.1)
 {
     BOOST_ASSERT(listCheckBodies.size()>0);
     _report.reset(new CollisionReport());
@@ -2122,7 +2114,7 @@ void DynamicsCollisionConstraint::SetFilterMask(int filtermask)
     _filtermask = filtermask;
 }
 
-void DynamicsCollisionConstraint::SetTorqueLimitMode(int torquelimitmode)
+void DynamicsCollisionConstraint::SetTorqueLimitMode(DynamicsConstraintsType torquelimitmode)
 {
     _torquelimitmode = torquelimitmode;
 }
@@ -2135,7 +2127,7 @@ void DynamicsCollisionConstraint::SetPerturbation(dReal perturbation)
 int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParametersConstPtr params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn)
 {
 //    if( IS_DEBUGLEVEL(Level_Verbose) ) {
-//        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+//        stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
 //        ss << "checking values=[";
 //            for(size_t i = 0; i < vdofvalues.size(); ++i ) {
 //            if( i > 0 ) {
@@ -2205,15 +2197,15 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                 for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
                     // TODO use the ElectricMotorActuatorInfo if present to get the real max torque depending on the speed
                     std::pair<dReal, dReal> torquelimits;
-                    if( _torquelimitmode == 1 ) {
+                    if( _torquelimitmode == DC_InstantaneousTorque ) {
                         torquelimits = (*itjoint)->GetInstantaneousTorqueLimits(idof);
                     }
-                    else { // _torquelimitmode == 0
+                    else {
                         torquelimits = (*itjoint)->GetNominalTorqueLimits(idof);
                     }
 
                     if( torquelimits.first < torquelimits.second ) {
-                        _vtorquevalues.push_back(make_pair((*itjoint)->GetDOFIndex()+idof,torquelimits));
+                        _vtorquevalues.emplace_back((*itjoint)->GetDOFIndex()+idof, torquelimits);
                     }
                 }
             }
@@ -2237,7 +2229,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                     // TODO use the ElectricMotorActuatorInfo if present to get the real torque with friction
                     if( fcurtorque < torquelimits.first || fcurtorque > torquelimits.second ) {
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            stringstream ssvel; ssvel << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            stringstream ssvel; ssvel << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                             FOREACHC(itvel, vdofvelocities) {
                                 ssvel << *itvel << ",";
                             }
@@ -2286,7 +2278,7 @@ void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
         PlannerBase::PlannerParametersConstPtr params = _parameters.lock();
         std::vector<dReal> vcurrentvalues;
         params->_getstatefn(vcurrentvalues);
-        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+        stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         if( _listCheckBodies.size() > 0 ) {
             ss << "env=" << _listCheckBodies.front()->GetEnv()->GetId() << ", ";
         }
@@ -2338,6 +2330,16 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     //         all-linear interpolation
     //     }
     // }
+    int neighstateoptions = NSO_OnlyHardConstraints;
+    if( options&CFO_FromPathSampling ) {
+        neighstateoptions = NSO_FromPathSampling;
+    }
+    else if( options&CFO_FromPathShortcutting ) {
+        neighstateoptions = NSO_FromPathShortcutting;
+    }
+    else if( options&CFO_FromTrajectorySmoother ) {
+        neighstateoptions = NSO_OnlyHardConstraints|NSO_FromTrajectorySmoother; // for now, trajectory smoother uses hard constraints
+    }
 
     // bHasRampDeviatedFromInterpolation indicates if all the checked configurations deviate from the expected interpolation connecting q0 and q1.
     //
@@ -2570,7 +2572,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
 
     if( maskinterpolation == IT_Default && (timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size()) ) {
-        // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
+        // just in case, have to set the current values to _vtempconfig since neighstatefn expects the state to be set.
         if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
             if( !!filterreturn ) {
                 filterreturn->_returncode = CFO_StateSettingError;
@@ -2762,7 +2764,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( dqscale < 1 ) {
                 numRepeating++;
                 if( dqscale <= 0.01 ) {
-                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                     ss << "x0=[";
                     RaveSerializeValues(ss, q0);
                     ss << "]; x1=[";
@@ -2779,7 +2781,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     return CFO_StateSettingError;
                 }
                 if( numRepeating > numSteps*2 ) {
-                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                     ss << "x0=[";
                     RaveSerializeValues(ss, q0);
                     ss << "]; x1=[";
@@ -2823,7 +2825,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     }
 
                     {
-                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                         ss << "x0=[";
                         RaveSerializeValues(ss, q0);
                         ss << "]; x1=[";
@@ -2846,7 +2848,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
             }
 
-            int neighstatus = params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints);
+            int neighstatus = params->_neighstatefn(_vtempconfig, dQ, neighstateoptions);
             if( neighstatus == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
@@ -3030,7 +3032,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             *it *= fisteps;
         }
 
-        // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
+        // just in case, have to set the current values to _vtempconfig since neighstatefn expects the state to be set.
         if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
             if( !!filterreturn ) {
                 filterreturn->_returncode = CFO_StateSettingError;
@@ -3042,14 +3044,14 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         _vstepconfig.resize(dQ.size());
         _vtempconfig2 = _vtempconfig; // keep record of _vtempconfig before being modified in _neighstatefn
         if( start > 0 ) {
-            // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
+            // just in case, have to set the current values to _vtempconfig since neighstatefn expects the state to be set.
             if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
                 return CFO_StateSettingError;
             }
-            int neighstatus = params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints);
+            int neighstatus = params->_neighstatefn(_vtempconfig, dQ, neighstateoptions);
             if( neighstatus == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
@@ -3167,7 +3169,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 return CFO_StateSettingError;
             }
-            int neighstatus = params->_neighstatefn(_vtempconfig, _vprevtempconfig, NSO_OnlyHardConstraints);
+            int neighstatus = params->_neighstatefn(_vtempconfig, _vprevtempconfig, neighstateoptions);
             if( neighstatus == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;

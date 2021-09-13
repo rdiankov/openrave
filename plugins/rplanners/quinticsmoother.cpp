@@ -116,7 +116,7 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         uint32_t startTime = utils::GetMilliTime();
 
@@ -295,7 +295,7 @@ public:
 
             int numShortcuts = 0;
             dReal originalDuration = pwptraj.duration;
-            if( !!_parameters->_setstatevaluesfn || !!_parameters->_setstatefn ) {
+            if( !!_parameters->_setstatevaluesfn ) {
                 // TODO: _parameters->_fStepLength*0.99 is chosen arbitrarily here. Maybe we can do better.
                 numShortcuts = _Shortcut(pwptraj, _parameters->_nMaxIterations, _parameters->_fStepLength*0.99);
                 if( numShortcuts < 0 ) {

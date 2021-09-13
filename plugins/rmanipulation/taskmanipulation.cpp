@@ -176,7 +176,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             RAVELOG_WARN("could not find an rrt planner\n");
             return -1;
         }
-        RAVELOG_DEBUG(str(boost::format("using %s planner\n")%plannername));
+        RAVELOG_DEBUG_FORMAT("env=%d, using %s planner", GetEnv()->GetId()%plannername);
 
         if( graspername.size() > 0 ) {
             _pGrasperPlanner = RaveCreatePlanner(GetEnv(),graspername);
@@ -704,7 +704,7 @@ protected:
                     graspparams->vmanipulatordirection = Vector(pgrasp[imanipulatordirection], pgrasp[imanipulatordirection+1], pgrasp[imanipulatordirection+2]);
                 }
                 else {
-                    graspparams->vmanipulatordirection = pmanip->GetDirection();
+                    graspparams->vmanipulatordirection = pmanip->GetLocalToolDirection();
                 }
                 if( iGraspTranslationOffset >= 0 ) {
                     RAVELOG_WARN("igrasptranslationoffset not supported yet\n");
@@ -730,7 +730,7 @@ protected:
                     continue;
                 }
                 
-                if( !_pGrasperPlanner->PlanPath(_phandtraj) ) {
+                if( !_pGrasperPlanner->PlanPath(_phandtraj).GetStatusCode() ) {
                     RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
                     continue;
                 }
@@ -745,7 +745,7 @@ protected:
                     vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                 }
                 else {
-                    vglobalpalmdir = pmanip->GetTransform().rotate(pmanip->GetDirection());
+                    vglobalpalmdir = pmanip->GetTransform().rotate(pmanip->GetLocalToolDirection());
                 }
 
                 // move back a little if robot/target in collision
@@ -805,7 +805,7 @@ protected:
 
                 if( pmanip->GetIkSolver()->Supports(IKP_TranslationDirection5D) ) {
                     // get a valid transformation
-                    tGoalEndEffector.SetTranslationDirection5D(RAY(tgoal.trans,tgoal.rotate(pmanip->GetDirection())));
+                    tGoalEndEffector.SetTranslationDirection5D(RAY(tgoal.trans,tgoal.rotate(pmanip->GetLocalToolDirection())));
                     if( !pmanip->FindIKSolution(tGoalEndEffector,IKFO_CheckEnvCollisions, ikreturn) ) {
                         RAVELOG_DEBUG(str(boost::format("grasp %d: ik 5d failed reason 0x%x")%igrasp%ikreturn->_action));
                         continue; // failed
@@ -845,7 +845,7 @@ protected:
                 }
                 else {
                     if( tApproachEndEffector.GetType() == IKP_Transform6D ) {
-                        vglobalpalmdir = tApproachEndEffector.GetTransform6D().rotate(pmanip->GetDirection());
+                        vglobalpalmdir = tApproachEndEffector.GetTransform6D().rotate(pmanip->GetLocalToolDirection());
                     }
                     else {
                         vglobalpalmdir = tApproachEndEffector.GetTranslationDirection5D().dir;
@@ -1197,7 +1197,7 @@ protected:
             return false;
         }
 
-        if( !graspplanner->PlanPath(ptraj) ) {
+        if( !graspplanner->PlanPath(ptraj).GetStatusCode() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
@@ -1329,7 +1329,7 @@ protected:
             return false;
         }
 
-        if( !graspplanner->PlanPath(ptraj) ) {
+        if( !graspplanner->PlanPath(ptraj).GetStatusCode() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
@@ -1475,7 +1475,7 @@ protected:
             return false;
         }
 
-        if( !graspplanner->PlanPath(ptraj) ) {
+        if( !graspplanner->PlanPath(ptraj).GetStatusCode() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
@@ -1731,7 +1731,7 @@ protected:
                 return ptraj;
             }
 
-            if( _pRRTPlanner->PlanPath(ptraj) ) {
+            if( _pRRTPlanner->PlanPath(ptraj).GetStatusCode() ) {
                 stringstream sinput; sinput << "GetGoalIndex";
                 _pRRTPlanner->SendCommand(ss,sinput);
                 ss >> nGoalIndex;     // extract the goal index
@@ -1809,7 +1809,7 @@ protected:
                 return IKRA_Reject;
             }
 
-            if( !_pGrasperPlanner->PlanPath(_phandtraj) ) {
+            if( !_pGrasperPlanner->PlanPath(_phandtraj).GetStatusCode() ) {
                 RAVELOG_DEBUG("grasper planner PlanPath failed\n");
                 return IKRA_Reject;
             }

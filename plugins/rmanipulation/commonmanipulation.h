@@ -144,7 +144,7 @@ public:
             if( !planner->InitPlan(robot, params) ) {
                 return false;
             }
-            if( !planner->PlanPath(ptraj) ) {
+            if( !planner->PlanPath(ptraj).GetStatusCode() ) {
                 return false;
             }
 
@@ -373,10 +373,10 @@ protected:
         if( strsavetraj.size() || !!pout ) {
             if( strsavetraj.size() > 0 ) {
                 ofstream f(strsavetraj.c_str());
-                pActiveTraj->serialize(f);
+                pActiveTraj->serialize(f, 0x8000);
             }
             if( !!pout ) {
-                pActiveTraj->serialize(*pout);
+                pActiveTraj->serialize(*pout, 0x8000);
             }
         }
 

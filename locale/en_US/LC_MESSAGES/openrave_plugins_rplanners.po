@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-08-10 16:28+0900\n"
+"POT-Creation-Date: 2018-06-22 14:33+0900\n"
 "PO-Revision-Date: 2015-08-10 16:28+0900\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -17,41 +17,55 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: plugins/rplanners/parabolicretimer.cpp:266 plugins/rplanners/cubicretimer.cpp:271
+#: plugins/rplanners/constraintparabolicsmoother.cpp:320
+msgid "Could not obtain a feasible trajectory from initial quadratic trajectory\n"
+msgstr ""
+
+#: plugins/rplanners/rrt.h:506
+#, c-format
+msgid "RRT plan failed to connect after %fs\n"
+msgstr ""
+
+#: plugins/rplanners/constraintparabolicsmoother.cpp:392
+#, c-format
+msgid "Ramp %d/%d of original traj invalid"
+msgstr ""
+
+#: plugins/rplanners/parabolicretimer.cpp:350 plugins/rplanners/parabolicretimer2.cpp:326 plugins/rplanners/cubicretimer.cpp:273
 msgid "_ComputeMinimumTimeAffine not implemented"
 msgstr "_ComputeMinimumTimeAffine not implemented"
 
-#: plugins/rplanners/cubicretimer.cpp:287
+#: plugins/rplanners/cubicretimer.cpp:289
 msgid "_ComputeMinimumTimeIk not implemented"
 msgstr "_ComputeMinimumTimeIk not implemented"
 
-#: plugins/rplanners/parabolicretimer.cpp:270 plugins/rplanners/cubicretimer.cpp:275
+#: plugins/rplanners/parabolicretimer.cpp:354 plugins/rplanners/parabolicretimer2.cpp:331 plugins/rplanners/cubicretimer.cpp:277
 msgid "_ComputeVelocitiesAffine not implemented"
 msgstr "_ComputeVelocitiesAffine not implemented"
 
-#: plugins/rplanners/cubicretimer.cpp:291
+#: plugins/rplanners/cubicretimer.cpp:293
 msgid "_ComputeVelocitiesIk not implemented"
 msgstr "_ComputeVelocitiesIk not implemented"
 
-#: plugins/rplanners/parabolicretimer.cpp:278 plugins/rplanners/cubicretimer.cpp:283
+#: plugins/rplanners/parabolicretimer.cpp:362 plugins/rplanners/parabolicretimer2.cpp:341 plugins/rplanners/cubicretimer.cpp:285
 msgid "_WriteAffine not implemented"
 msgstr "_WriteAffine not implemented"
 
-#: plugins/rplanners/cubicretimer.cpp:300
+#: plugins/rplanners/cubicretimer.cpp:302
 msgid "_WriteIk not implemented"
 msgstr "_WriteIk not implemented"
 
-#: plugins/rplanners/parabolicretimer.cpp:359 plugins/rplanners/parabolicretimer.cpp:454 plugins/rplanners/parabolicretimer.cpp:575 plugins/rplanners/parabolicretimer.cpp:732 plugins/rplanners/linearretimer.cpp:220
+#: plugins/rplanners/parabolicretimer.cpp:459 plugins/rplanners/parabolicretimer.cpp:564 plugins/rplanners/parabolicretimer.cpp:704 plugins/rplanners/parabolicretimer.cpp:869 plugins/rplanners/parabolicretimer2.cpp:480 plugins/rplanners/parabolicretimer2.cpp:590 plugins/rplanners/parabolicretimer2.cpp:752 plugins/rplanners/parabolicretimer2.cpp:866 plugins/rplanners/parabolicretimer2.cpp:953 plugins/rplanners/linearretimer.cpp:222
 #, c-format
 msgid "does not support parameterization 0x%x"
 msgstr "does not support parameterization 0x%x"
 
-#: plugins/rplanners/trajectoryretimer.h:132
+#: plugins/rplanners/trajectoryretimer.h:145 plugins/rplanners/trajectoryretimer2.h:143
 #, c-format
 msgid "lower limit for traj point %d dof %d is not followed (%.15e < %.15e)"
 msgstr "lower limit for traj point %d dof %d is not followed (%.15e < %.15e)"
 
-#: plugins/rplanners/parabolicretimer.cpp:274 plugins/rplanners/cubicretimer.cpp:279 plugins/rplanners/cubicretimer.cpp:295
+#: plugins/rplanners/parabolicretimer.cpp:358 plugins/rplanners/parabolicretimer2.cpp:336 plugins/rplanners/cubicretimer.cpp:281 plugins/rplanners/cubicretimer.cpp:297
 msgid "not implemented"
 msgstr "not implemented"
 
@@ -59,7 +73,12 @@ msgstr "not implemented"
 msgid "original ramp is in collision!"
 msgstr "original ramp is in collision!"
 
-#: plugins/rplanners/trajectoryretimer.h:138
+#: plugins/rplanners/constraintparabolicsmoother.cpp:499
+#, c-format
+msgid "parabolic planner failed: %s"
+msgstr ""
+
+#: plugins/rplanners/trajectoryretimer.h:151 plugins/rplanners/trajectoryretimer2.h:149
 #, c-format
 msgid "upper limit for traj point %d dof %d is not followed (%.15e > %.15e)"
 msgstr "upper limit for traj point %d dof %d is not followed (%.15e > %.15e)"

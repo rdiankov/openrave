@@ -43,7 +43,7 @@ public:
         __description = ":Interface Author: Puttichai Lertkultanon and Rosen Diankov\n\nSimple quintic trajectory retiming while passing through all the waypoints. Waypoints will not be modified. This assumes that all waypoints have zero velocity and acceleration (unless the start and final points are forced). Overwrites the velocities, accelerations, and timestamps of the input trajectory.";
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         _interpolator.Initialize(_parameters->GetDOF(), GetEnv()->GetId());
         _translationInterpolator.Initialize(3, GetEnv()->GetId());

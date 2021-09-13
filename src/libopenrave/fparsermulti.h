@@ -48,7 +48,7 @@ const T& mymax(const T& a, const T& b)
         for(size_t ii = 0; ii < (SPin0).size(); ++ii) { \
             for(size_t jj = 0; jj < (SPin1).size(); ++jj) { \
                 if( EVAL_MULTI_COMPARE_INDICES((SPin0)[ii].second, (SPin1)[jj].second) ) { \
-                    _vtemp_.push_back(std::make_pair(fn((SPin0)[ii].first,(SPin1)[jj].first),mymax((SPin0)[ii].second,(SPin1)[jj].second))); \
+                    _vtemp_.emplace_back(fn((SPin0)[ii].first,(SPin1)[jj].first),mymax((SPin0)[ii].second, (SPin1)[jj].second)); \
                 } \
             } \
         } \
@@ -71,7 +71,7 @@ const T& mymax(const T& a, const T& b)
         for(size_t ii = 0; ii < (SPin0).size(); ++ii) { \
             for(size_t jj = 0; jj < (SPin1).size(); ++jj) { \
                 if( EVAL_MULTI_COMPARE_INDICES((SPin0)[ii].second, (SPin1)[jj].second) ) { \
-                    _vtemp_.push_back(std::make_pair((SPin0)[ii].first op (SPin1)[jj].first,mymax((SPin0)[ii].second,(SPin1)[jj].second))); \
+                    _vtemp_.emplace_back((SPin0)[ii].first op (SPin1)[jj].first,mymax((SPin0)[ii].second, (SPin1)[jj].second)); \
                 } \
             } \
         } \
@@ -703,7 +703,7 @@ public:
 // Variables:
             default:
                 Stack[++SP].resize(0);
-                Stack[SP].push_back(std::make_pair(Vars[byteCode[IP]-VarBegin],int(-1)));
+                Stack[SP].emplace_back(Vars[byteCode[IP]-VarBegin], int(-1));
             }
         }
 
@@ -727,6 +727,7 @@ public:
     static std::string mlNumber(T a)
     {
         std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
         ss << "<cn type=\"real\">" << a << "</cn>" << endl;
         return ss.str();
     }

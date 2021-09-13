@@ -132,7 +132,7 @@ void SimpleSensorSystem::AddRegisteredBodies(const std::vector<KinBodyPtr>& vbod
     }
 }
 
-KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReadableConstPtr _pdata)
+KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, ReadableConstPtr _pdata)
 {
     BOOST_ASSERT(pbody->GetEnv()==GetEnv());
     boost::shared_ptr<XMLData const> pdata = boost::static_pointer_cast<XMLData const>(_pdata);
@@ -145,14 +145,14 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReada
     }
 
     boost::mutex::scoped_lock lock(_mutex);
-    if( _mapbodies.find(pbody->GetEnvironmentId()) != _mapbodies.end() ) {
+    if( _mapbodies.find(pbody->GetEnvironmentBodyIndex()) != _mapbodies.end() ) {
         RAVELOG_WARN(str(boost::format("body %s already added\n")%pbody->GetName()));
         return KinBody::ManageDataPtr();
     }
 
     boost::shared_ptr<BodyData> b = CreateBodyData(pbody, pdata);
     b->lastupdated = utils::GetMicroTime();
-    _mapbodies[pbody->GetEnvironmentId()] = b;
+    _mapbodies[pbody->GetEnvironmentBodyIndex()] = b;
     RAVELOG_VERBOSE(str(boost::format("system adding body %s (%s), total: %d\n")%pbody->GetName()%pbody->GetURI()%_mapbodies.size()));
     SetManageData(pbody,b);
     return b;
@@ -161,7 +161,7 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReada
 bool SimpleSensorSystem::RemoveKinBody(KinBodyPtr pbody)
 {
     boost::mutex::scoped_lock lock(_mutex);
-    bool bSuccess = _mapbodies.erase(pbody->GetEnvironmentId())>0;
+    bool bSuccess = _mapbodies.erase(pbody->GetEnvironmentBodyIndex())>0;
     RAVELOG_VERBOSE(str(boost::format("system removing body %s %s\n")%pbody->GetName()%(bSuccess ? "succeeded" : "failed")));
     return bSuccess;
 }
@@ -169,13 +169,13 @@ bool SimpleSensorSystem::RemoveKinBody(KinBodyPtr pbody)
 bool SimpleSensorSystem::IsBodyPresent(KinBodyPtr pbody)
 {
     boost::mutex::scoped_lock lock(_mutex);
-    return _mapbodies.find(pbody->GetEnvironmentId()) != _mapbodies.end();
+    return _mapbodies.find(pbody->GetEnvironmentBodyIndex()) != _mapbodies.end();
 }
 
 bool SimpleSensorSystem::EnableBody(KinBodyPtr pbody, bool bEnable)
 {
     boost::mutex::scoped_lock lock(_mutex);
-    BODIES::iterator it = _mapbodies.find(pbody->GetEnvironmentId());
+    BODIES::iterator it = _mapbodies.find(pbody->GetEnvironmentBodyIndex());
     if( it == _mapbodies.end() ) {
         RAVELOG_WARN("trying to %s body %s that is not in system\n", bEnable ? "enable" : "disable", pbody->GetName().c_str());
         return false;
@@ -188,12 +188,12 @@ bool SimpleSensorSystem::EnableBody(KinBodyPtr pbody, bool bEnable)
 bool SimpleSensorSystem::SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2)
 {
     //boost::mutex::scoped_lock lock(_mutex);
-    BODIES::iterator it = _mapbodies.find(pbody1->GetEnvironmentId());
+    BODIES::iterator it = _mapbodies.find(pbody1->GetEnvironmentBodyIndex());
     boost::shared_ptr<BodyData> pb1,pb2;
     if( it != _mapbodies.end() ) {
         pb1 = it->second;
     }
-    it = _mapbodies.find(pbody2->GetEnvironmentId());
+    it = _mapbodies.find(pbody2->GetEnvironmentBodyIndex());
     if( it != _mapbodies.end() ) {
         pb2 = it->second;
     }
@@ -250,7 +250,7 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
     BODIES::iterator itbody = _mapbodies.begin();
     while(itbody != _mapbodies.end()) {
         KinBody::LinkPtr plink = itbody->second->GetOffsetLink();
-        if( !!plink &&(plink->GetParent()->GetEnvironmentId()==0)) {
+        if( !!plink &&(plink->GetParent()->GetEnvironmentBodyIndex()==0)) {
             _mapbodies.erase(itbody++);
             continue;
         }

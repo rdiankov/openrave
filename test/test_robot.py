@@ -431,11 +431,11 @@ class RunRobot(EnvironmentSetup):
             assert(traj.GetNumWaypoints()==2)
             try:
                 ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
-                assert(ret==PlannerStatus.HasSolution)
+                assert(ret==PlannerStatusCode.HasSolution)
                 self.RunTrajectory(robot,traj)
                 raise ValueError('controller did not throw limit expected exception!')
             
-            except Exception, e:
+            except Exception as e:
                 pass
 
             traj.Init(robot.GetActiveConfigurationSpecification())
@@ -443,11 +443,11 @@ class RunRobot(EnvironmentSetup):
             assert(traj.GetNumWaypoints()==2)
             try:
                 ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=10)
-                assert(ret==PlannerStatus.HasSolution)
+                assert(ret==PlannerStatusCode.HasSolution)
                 self.RunTrajectory(robot,traj)
                 raise ValueError('controller did not throw velocity limit expected exception!')
             
-            except Exception, e:
+            except Exception as e:
                 pass
 
     def test_bigrange(self):
@@ -730,7 +730,7 @@ class RunRobot(EnvironmentSetup):
 
                 # optional print check
                 #for inworld in [True, False]:
-                #    print manip.GetIkParameterization(ikp, inworld=inworld)
+                #    print(manip.GetIkParameterization(ikp, inworld=inworld))
     
 #generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
 

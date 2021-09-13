@@ -18,13 +18,13 @@ import nose
 from nose.plugins import failuredetail
 from noseplugins import capture, callableclass
 
-usemultiprocess = False
 try:
     from multiprocessing import cpu_count
     from noseplugins import xunitmultiprocess, multiprocess
     usemultiprocess = True
 except ImportError:
     def cpu_count(): return 1
+usemultiprocess = False 
     
 if __name__ == "__main__":
     import test_kinematics
@@ -43,14 +43,14 @@ if __name__ == "__main__":
 
     numprocesses = options.numprocesses if options.numprocesses is not None else cpu_count()
     if usemultiprocess:
-        print 'using multiprocess'
+        print('using multiprocess')
         multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp,failuredetail.FailureDetail,callableclass.CallableClass]
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(logging.Formatter('%(name)s %(asctime)s: %(levelname)s %(message)s'))
         multiprocess.log.addHandler(handler)
         multiprocess.log.setLevel(logging.DEBUG)
     else:
-        print 'multiprocess disabled'
+        print('multiprocess disabled')
     argv=['nosetests','-v','-d','--with-callableclass','-s']
     if options.os_only:
         argv.append('test_programs.py')
@@ -64,4 +64,5 @@ if __name__ == "__main__":
         plugins+=[multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()]
         argv += ['--with-xunitmp','--xunit-file=results.xml','--processes=%d'%numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker']
         
+    # from IPython import embed; embed()
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)

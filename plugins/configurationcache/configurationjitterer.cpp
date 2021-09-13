@@ -23,69 +23,9 @@
 #include <boost/numeric/bindings/lapack/gesdd.hpp>
 #endif
 
-#include "configurationcachetree.h"
+#include "configurationjitterer.h"
 
 namespace configurationcache {
-
-/// \brief holds parameters for threshing the direction. if dot(manipdir, tooldir) > cosanglethresh, then ok
-class ManipDirectionThresh
-{
-public:
-    ManipDirectionThresh() : vManipDir(0,0,1), vGlobalDir(0,0,1), fCosAngleThresh(0.9999999) {
-    }
-    ManipDirectionThresh(const ManipDirectionThresh &r) : vManipDir(r.vManipDir), vGlobalDir(r.vGlobalDir), fCosAngleThresh(r.fCosAngleThresh) {
-    }
-
-    inline bool IsInConstraints(const Transform& tmanip) const
-    {
-        return tmanip.rotate(vManipDir).dot3(vGlobalDir) >= fCosAngleThresh;
-    }
-
-    /// \return the cos of the angle between current tmanip and the global dir
-    inline dReal ComputeCosAngle(const Transform& tmanip) const {
-        return tmanip.rotate(vManipDir).dot3(vGlobalDir);
-    }
-
-    Vector vManipDir; ///< direction on the manipulator
-    Vector vGlobalDir; ///< direction in world coordinates
-    dReal fCosAngleThresh; ///< the cos angle threshold
-};
-
-typedef boost::shared_ptr<ManipDirectionThresh> ManipDirectionThreshPtr;
-
-/// \brief holds parameters for threshing the position with respect to a bounding box.
-class ManipPositionConstraints
-{
-public:
-    ManipPositionConstraints() {
-    }
-    ManipPositionConstraints(const ManipPositionConstraints &r) : obb(r.obb) {
-    }
-
-    inline bool IsInConstraints(const Transform& tmanip) const
-    {
-        // transform tmanip.trans in obb coordinate system
-        Vector vdelta = tmanip.trans - obb.pos;
-        dReal fright = obb.right.dot(vdelta);
-        if( RaveFabs(fright) > obb.extents.x ) {
-            return false;
-        }
-        dReal fup = obb.up.dot(vdelta);
-        if( RaveFabs(fup) > obb.extents.y ) {
-            return false;
-        }
-        dReal fdir = obb.dir.dot(vdelta);
-        if( RaveFabs(fdir) > obb.extents.z ) {
-            return false;
-        }
-
-        return true;
-    }
-
-    OBB obb;
-};
-
-typedef boost::shared_ptr<ManipPositionConstraints> ManipPositionConstraintsPtr;
 
 class ConfigurationJitterer : public SpaceSamplerBase
 {
@@ -267,7 +207,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
     bool SetPerturbationCommand(std::ostream& sout, std::istream& sinput)
     {
-        int perturbation=0;
+        dReal perturbation=0;
         sinput >> perturbation;
         if( perturbation < 0 ) {
             return false;
@@ -484,7 +424,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         int nSampleSamples = 0;
         int nCacheHitSamples = 0;
         int nLinkDistThreshRejections = 0;
-        
+
         if( _nNumIterations == 0 ) {
             FOREACH(itperturbation,perturbations) {
                 // Perturbation is added to a config to make sure that the config is not too close to collision and tool
@@ -1010,7 +950,7 @@ protected:
     {
         vector<KinBodyPtr> vgrabbedbodies;
         _probot->GetGrabbed(vgrabbedbodies);
-        _vLinks.resize(_probot->GetLinks().size());
+        _vLinks = _probot->GetLinks(); // robot itself might have changed?
         FOREACHC(itgrabbed, vgrabbedbodies) {
             FOREACHC(itlink2, (*itgrabbed)->GetLinks()) {
                 _vLinks.push_back(*itlink2);
@@ -1019,7 +959,7 @@ protected:
 
         // update all the grabbed links
         _vLinkAABBs.resize(_vLinks.size());
-        for(size_t i = _probot->GetLinks().size(); i < _vLinks.size(); ++i) {
+        for(size_t i = 0; i < _vLinks.size(); ++i) {
             _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
         }
 

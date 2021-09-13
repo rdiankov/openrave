@@ -47,9 +47,10 @@ OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxItera
  */
 OPENRAVE_API int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters, int maxiterations=5000, dReal maxjitter=0.015, dReal perturbation=1e-5);
 
-/** \brief validates a trajectory with respect to the planning constraints. <b>[multi-thread safe]</b>
+/** \brief validates a trajectory with respect to the planning constraints.
 
     checks internal data structures and verifies that all trajectory via points do not violate joint position, velocity, and acceleration limits.
+    Assume that the environment that is used to create parameters is locked. (If the given parameters is not initialized, will attempt to create a new PlannerParameters with trajectory->GetEnv(). In this case, trajectory->GetEnv() should be locked.)
     \param parameters the planner parameters passed to the planner that returned the trajectory. If not initialized, will attempt to create a new PlannerParameters structure from trajectory->GetConfigurationSpecification()
     \param trajectory trajectory of points to be checked
     \param samplingstep If == 0, then will only test the supports points in trajectory->GetPoints(). If > 0, then will sample the trajectory at this time interval and check that smoothness is satisfied along with segment constraints.
@@ -148,7 +149,7 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, int planningoptions=0);
 
 protected:
     void _UpdateParameters();
@@ -188,7 +189,7 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, bool hastimestamps=false);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, bool hastimestamps=false, int planningoptions=0);
 
 protected:
     void _UpdateParameters();
@@ -246,7 +247,7 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, int planningoptions=0);
 
 protected:
     std::string _plannername, _extraparameters;
@@ -426,7 +427,7 @@ public:
     /// \brief if using dynamics limiting, choose whether to use the nominal torque or max instantaneous torque.
     ///
     /// \param torquelimitmode 1 if should use instantaneous max torque, 0 if should use nominal torque
-    virtual void SetTorqueLimitMode(int torquelimitmode);
+    virtual void SetTorqueLimitMode(DynamicsConstraintsType torquelimitmode);
 
     /// \brief set user check fucntions
     ///
@@ -465,7 +466,7 @@ protected:
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckBodies;
     int _filtermask;
-    int _torquelimitmode; ///< 1 if should use instantaneous max torque, 0 if should use nominal torque
+    DynamicsConstraintsType _torquelimitmode; ///< 1 if should use instantaneous max torque, 0 if should use nominal torque
     dReal _perturbation;
     boost::array< boost::function<bool() >, 2> _usercheckfns;
 
