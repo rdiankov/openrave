@@ -300,8 +300,7 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     }
     else if (PyArray_Check(obj.ptr()) ) {
-        PyArrayObject* pyarrayvalues = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(obj.ptr()));
-        AutoPyArrayObjectDereferencer pydecref(pyarrayvalues);
+        PyArrayCapsule pyarrayvalues(PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(obj.ptr())));
 
         int ndims = PyArray_NDIM(pyarrayvalues);
         npy_intp* dims = PyArray_DIMS(pyarrayvalues);
@@ -1586,8 +1585,7 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
     CollisionReport report;
     CollisionReportPtr preport(&report,null_deleter());
 
-    PyArrayObject *pPyRays = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(rays.ptr()));
-    AutoPyArrayObjectDereferencer pyderef(pPyRays);
+    PyArrayCapsule pPyRays(PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(rays.ptr())));
 
     if( !PyArray_ISFLOAT(pPyRays) ) {
         throw OpenRAVEException(_("rays has to be a float array\n"));

@@ -350,8 +350,7 @@ public:
             if (!PyArray_ISFLOAT(pPyVertices)) {
                 throw openrave_exception(_("vertices must be in float"), ORE_InvalidArguments);
             }
-            PyArrayObject* pPyVerticesContiguous = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyVertices));
-            AutoPyArrayObjectDereferencer pydecref(pPyVerticesContiguous);
+            PyArrayCapsule pPyVerticesContiguous(PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyVertices)));
 
             const size_t typeSize = PyArray_ITEMSIZE(pPyVerticesContiguous);
             const size_t n = PyArray_DIM(pPyVerticesContiguous, 0);
@@ -393,8 +392,7 @@ public:
             if (PyArray_NDIM(pPyIndices) != 2 || PyArray_DIM(pPyIndices, 1) != 3 || !PyArray_ISINTEGER(pPyIndices)) {
                 throw openrave_exception(_("indices must be a Nx3 int array"), ORE_InvalidArguments);
             }
-            PyArrayObject* pPyIndiciesContiguous = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyIndices));
-            AutoPyArrayObjectDereferencer pydecref(pPyIndiciesContiguous);
+            PyArrayCapsule pPyIndiciesContiguous(PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyIndices)));
 
             const size_t typeSize = PyArray_ITEMSIZE(pPyIndiciesContiguous);
             const bool signedInt = PyArray_ISSIGNED(pPyIndiciesContiguous);

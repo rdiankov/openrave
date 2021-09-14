@@ -203,6 +203,8 @@ protected:
     PyThreadState *_save;
 };
 
+typedef OPENRAVE_SHARED_PTR<PythonThreadSaver> PythonThreadSaverPtr;
+
 /// \brief release and restore the python GIL... no thread state saved..?
 class OPENRAVEPY_API PythonGILSaver
 {
@@ -215,20 +217,62 @@ public:
     }
 };
 
-class OPENRAVEPY_API AutoPyArrayObjectDereferencer
+template<typename T>
+class OPENRAVEPY_API PyCapsule
 {
 public:
-    AutoPyArrayObjectDereferencer(PyArrayObject* pyarrobj) : _pyarrobj(pyarrobj) {
+    // \brief disables copy constructor to avoid calling Py_DECREF more than once
+    PyCapsule(const PyCapsule<T>&) = delete;
+
+    // \brief the only entrypoint that allows a nullptr. Expects a `reset` call to follow
+    PyCapsule()
+      : _ptr(nullptr)
+    {
     }
-    ~AutoPyArrayObjectDereferencer() {
-        Py_DECREF(_pyarrobj);
+
+    // \param ptr a not-null pointer
+    PyCapsule(T* ptr)
+      : _ptr(_PreventNullPtr(ptr))
+    {
+    }
+
+    // \param ptr a not-null pointer
+    void reset(T* ptr)
+    {
+        _ptr = _PreventNullPtr(ptr);
+    }
+
+    T* get() const
+    {
+        return _ptr;
+    }
+
+    operator T*() const
+    {
+        return _ptr;
+    }
+
+    ~PyCapsule() {
+        if (_ptr != nullptr) {
+            Py_DECREF(_ptr);
+        }
     }
 
 private:
-    PyArrayObject* _pyarrobj;
+    T* _ptr;
+
+    static T* _PreventNullPtr(T* ptr)
+    {
+        if (ptr == nullptr) {
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("Invalid Numpy-array pointer. Failed to get contiguous array?"), ORE_InvalidArguments);
+        }
+        return ptr;
+    }
 };
 
-typedef OPENRAVE_SHARED_PTR<PythonThreadSaver> PythonThreadSaverPtr;
+typedef PyCapsule<PyArrayObject> PyArrayCapsule;
+
+typedef PyArrayCapsule AutoPyArrayObjectDereferencer;  // Backwards compatibility
 
 inline RaveVector<float> ExtractFloat3(const py::object& o)
 {
