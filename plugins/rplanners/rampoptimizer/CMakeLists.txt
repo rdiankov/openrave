@@ -32,7 +32,7 @@ if( HAVE_ALL_PYTHON_HEADERS )
     # pybind11 requires less visibility
     set(OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS "${OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS} -fvisibility=hidden")
   else()
-    message(STATUS "Build openravepy_RAMPOPTIMIZER with Boost.Python")
+    message(STATUS "Build openravepy_rampoptimizer with Boost.Python")
   endif()
 
   set_target_properties(openravepy_rampoptimizer
@@ -43,5 +43,5 @@ if( HAVE_ALL_PYTHON_HEADERS )
   endif()
   install(TARGETS openravepy_rampoptimizer DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
 else()
-  message(STATUS "HAVE_ALL_PYTHON_HEADERS = ${HAVE_ALL_PYTHON_HEADERS}; do not build openravepy_ramptopimizer")
+  message(STATUS "HAVE_ALL_PYTHON_HEADERS = ${HAVE_ALL_PYTHON_HEADERS}; do not build openravepy_rampoptimizer")
 endif()
