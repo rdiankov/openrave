@@ -2103,8 +2103,8 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
                 throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %d"), n,ORE_InvalidArguments);
             }
             for(size_t i = 0; i < n/3; ++i) {
-                vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[i]),
-                            py::extract<float>(odata[i+1]), py::extract<float>(odata[i+2])));
+                vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[3*i]),
+                            py::extract<float>(odata[3*i+1]), py::extract<float>(odata[3*i+2])));
             }
             return n/3;
         }
@@ -2116,8 +2116,8 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
             }
             const object& o = odata.attr("flat");
             for(size_t i = 0; i < num; ++i) {
-                vvectors.emplace_back(RaveVector<float>(py::extract<float>(o[i]),
-                            py::extract<float>(o[i+1]), py::extract<float>(o[i+2])));
+                vvectors.emplace_back(RaveVector<float>(py::extract<float>(o[3*i]),
+                            py::extract<float>(o[3*i+1]), py::extract<float>(o[3*i+2])));
             }
             return num;
         }
@@ -2131,8 +2131,8 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
         throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %d"), n,ORE_InvalidArguments);
     }
     for(size_t i = 0; i < n/3; ++i) {
-        vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[i]),
-                    py::extract<float>(odata[i+1]), py::extract<float>(odata[i+2])));
+        vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[3*i]),
+                    py::extract<float>(odata[3*i+1]), py::extract<float>(odata[3*i+2])));
     }
     return vvectors.size();
 }
