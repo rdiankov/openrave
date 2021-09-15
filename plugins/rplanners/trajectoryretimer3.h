@@ -280,30 +280,30 @@ public:
                     }
 
                     if( iGroupType == 0 ) {
-                        if( 1 ) {//_parameters->_hasvelocities || _parameters->_hasaccelerations ) {
+                        if( _parameters->_hasvelocities || _parameters->_hasaccelerations ) {
                             _listCheckFns.push_back(boost::bind(&TrajectoryRetimer3::_CheckJointValues, this, _listGroupInfos.back(), _1, _2, _3));
                         }
-                        // else {
-                        //     _listComputeVelocitiesAccelerationsFns.push_back(boost::bind(&TrajectoryRetimer3::_ComputeVelocitiesAccelerationsJointValues, this, _listGroupInfos.back(), _1, _2, _3));
-                        // }
+                        else {
+                            _listComputeVelocitiesAccelerationsFns.push_back(boost::bind(&TrajectoryRetimer3::_ComputeVelocitiesAccelerationsJointValues, this, _listGroupInfos.back(), _1, _2, _3));
+                        }
                         _listWriteFns.push_back(boost::bind(&TrajectoryRetimer3::_WriteJointValues, this, _listGroupInfos.back(), _1, _2, _3));
                     }
                     else if( iGroupType == 1 ) {
-                        if( 1 ) {//_parameters->_hasvelocities || _parameters->_hasaccelerations ) {
+                        if( _parameters->_hasvelocities || _parameters->_hasaccelerations ) {
                             _listCheckFns.push_back(boost::bind(&TrajectoryRetimer3::_CheckAffine, this, _listGroupInfos.back(), affineDofs, _1, _2, _3));
                         }
-                        // else {
-                        //     _listComputeVelocitiesAccelerationsFns.push_back(boost::bind(&TrajectoryRetimer3::_ComputeVelocitiesAccelerationsAffine, this, _listGroupInfos.back(), affineDofs, _1, _2, _3));
-                        // }
+                        else {
+                            _listComputeVelocitiesAccelerationsFns.push_back(boost::bind(&TrajectoryRetimer3::_ComputeVelocitiesAccelerationsAffine, this, _listGroupInfos.back(), affineDofs, _1, _2, _3));
+                        }
                         _listWriteFns.push_back(boost::bind(&TrajectoryRetimer3::_WriteAffine, this, _listGroupInfos.back(), affineDofs, _1, _2, _3));
                     }
                     else if( iGroupType == 2 ) {
-                        if( 1 ) {//_parameters->_hasvelocities || _parameters->_hasaccelerations ) {
+                        if( _parameters->_hasvelocities || _parameters->_hasaccelerations ) {
                             _listCheckFns.push_back(boost::bind(&TrajectoryRetimer3::_CheckIk, this, _listGroupInfos.back(), ikType, _1, _2, _3));
                         }
-                        // else {
-                        //     _listComputeVelocitiesAccelerationsFns.push_back(boost::bind(&TrajectoryRetimer3::_ComputeVelocitiesAccelerationsIk, this, _listGroupInfos.back(), ikType, _1, _2, _3));
-                        // }
+                        else {
+                            _listComputeVelocitiesAccelerationsFns.push_back(boost::bind(&TrajectoryRetimer3::_ComputeVelocitiesAccelerationsIk, this, _listGroupInfos.back(), ikType, _1, _2, _3));
+                        }
                         _listWriteFns.push_back(boost::bind(&TrajectoryRetimer3::_WriteIk, this, _listGroupInfos.back(), ikType, _1, _2, _3));
                     }
 
@@ -380,7 +380,7 @@ public:
                     dReal minTime = 0;
                     // At this point, positions, velocities, and accelerations should already be filled (either with
                     // zeros or with the existing data from ptraj).
-                    if( _parameters->_hastimestamps && (_parameters->_hasvelocities || _parameters->_hasaccelerations) ) {
+                    if( _parameters->_hastimestamps && (_parameters->_hasvelocities && _parameters->_hasaccelerations) ) {
                         // Arbitrary boundary velocities and accelerations: Since we have timestamps, we have full
                         // description of this trajectory segment. We can check if all limits (positions,
                         // velocities, accelerations, jerks, etc.) are respected.
@@ -392,12 +392,6 @@ public:
                         }
                     }
                     else {
-                        if( _parameters->_hasvelocities || _parameters->_hasaccelerations ) {
-                            // Minimum time computation of this arbitrary velocities/accelerations cases is not
-                            // supported yet
-                            BOOST_ASSERT(false);
-                        }
-
                         // Compute the largest minimum time
                         FOREACH(itMinTimeFn, _listComputeMinTimeFns) {
                             dReal fGroupTime = (*itMinTimeFn)(itOrgDiff, itDataPrev, itData);
@@ -414,9 +408,9 @@ public:
                                     // Make fGroupTime multiple of steplength.
                                     fGroupTime = std::ceil((fGroupTime / _parameters->_fStepLength) - g_fEpsilonJointLimit) * _parameters->_fStepLength;
                                 }
-                                if( minTime < fGroupTime ) {
-                                    minTime = fGroupTime;
-                                }
+                            }
+                            if( minTime < fGroupTime ) {
+                                minTime = fGroupTime;
                             }
                         }
 
@@ -496,11 +490,11 @@ protected:
 
     virtual dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType ikType, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::const_iterator itData) = 0;
 
-    // /// \brief _ComputeVelocitiesAccelerationsX (where X is one of JointValues, Affine, or Ik): given deltaTime,
-    // ///        computes velocities and accelerations
-    // virtual void _ComputeVelocitiesAccelerationsJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData) = 0;
-    // virtual void _ComputeVelocitiesAccelerationsAffine(GroupInfoConstPtr info, int affineDofs, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData) = 0;
-    // virtual void _ComputeVelocitiesAccelerationsIk(GroupInfoConstPtr info, IkParameterizationType ikType, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData) = 0;
+    /// \brief _ComputeVelocitiesAccelerationsX (where X is one of JointValues, Affine, or Ik): given deltaTime,
+    ///        computes velocities and accelerations
+    virtual void _ComputeVelocitiesAccelerationsJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData) = 0;
+    virtual void _ComputeVelocitiesAccelerationsAffine(GroupInfoConstPtr info, int affineDofs, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData) = 0;
+    virtual void _ComputeVelocitiesAccelerationsIk(GroupInfoConstPtr info, IkParameterizationType ikType, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData) = 0;
 
     /// \brief _CheckX (where X is one of JointValues, Affine, or Ik): given deltaTime, velocities, and accelerations,
     ///        check limits.

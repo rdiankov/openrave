@@ -1310,6 +1310,9 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
         else if( interpolation.size() == 0 || interpolation == "quadratic" ) {
             newplannername = "parabolictrajectoryretimer";
         }
+        else if( interpolation == "quintic" ) {
+            newplannername = "quintictrajectoryretimer";
+        }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT(_("currently do not support retiming for %s interpolations"),interpolation,ORE_InvalidArguments);
         }

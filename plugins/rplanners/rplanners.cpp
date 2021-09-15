@@ -34,6 +34,7 @@ PlannerBasePtr CreateParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::is
 PlannerBasePtr CreateParabolicTrajectoryRetimer2(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateCubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateQuinticSmoother(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateQuinticTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 }
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
@@ -92,6 +93,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if( interfacename == "quinticsmoother" ) {
             return rplanners::CreateQuinticSmoother(penv, sinput);
         }
+        else if( interfacename == "quintictrajectoryretimer" ) {
+            return rplanners::CreateQuinticTrajectoryRetimer(penv, sinput);
+        }
         break;
     default:
         break;
@@ -117,6 +121,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Planner].push_back("ParabolicSmoother2");
     info.interfacenames[PT_Planner].push_back("ConstraintParabolicSmoother");
     info.interfacenames[PT_Planner].push_back("QuinticSmoother");
+    info.interfacenames[PT_Planner].push_back("QuinticTrajectoryRetimer");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
