@@ -1042,6 +1042,14 @@ protected:
                         }
                         // If this slow down iteration fails due to time-based constraints, we will try to generate a slightly longer trajectory segment in the next iteration.
                         fTryDuration = tempChunk.duration;
+
+                        { // For debugging
+                            polycheckret = _limitsChecker.CheckChunk(tempChunk, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, velLimits, accelLimits, jerkLimits);
+                            if( polycheckret != PiecewisePolynomials::PCR_Normal ) {
+                                RAVELOG_ERROR_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; incorrect interpolation procedure. polycheckret=0x%x", _envId%iter%numIters%t0%t1%polycheckret);
+                                break;
+                            }
+                        }
                     }
                     else {
                         _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, fTryDuration*fCurDurationMult, tempChunk);
