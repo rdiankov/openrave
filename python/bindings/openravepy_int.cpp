@@ -2622,6 +2622,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlinestrip_overloads, drawlinestrip, 2
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlinelist_overloads, drawlinelist, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawarrow_overloads, drawarrow, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawbox_overloads, drawbox, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawboxarray_overloads, drawboxarray, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendJSONCommand_overloads, SendJSONCommand, 2, 4)
@@ -3166,6 +3167,16 @@ Because race conditions can pop up when trying to lock the openrave environment 
                           )
 #else
                      .def("drawbox",&PyEnvironmentBase::drawbox,drawbox_overloads(PY_ARGS("pos","extents","color") DOXY_FN(EnvironmentBase,drawbox)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                     .def("drawboxarray", &PyEnvironmentBase::drawboxarray,
+                          "pos"_a,
+                          "extents"_a,
+                          "color"_a = py::none_(),
+                          DOXY_FN(EnvironmentBase,drawboxarray)
+                          )
+#else
+                     .def("drawboxarray",&PyEnvironmentBase::drawboxarray,drawbox_overloads(PY_ARGS("pos","extents","color") DOXY_FN(EnvironmentBase,drawboxarray)))
 #endif
                      .def("drawplane",drawplane1, PY_ARGS("transform","extents","texture") DOXY_FN(EnvironmentBase,drawplane))
                      .def("drawplane",drawplane2, PY_ARGS("transform","extents","texture") DOXY_FN(EnvironmentBase,drawplane))
