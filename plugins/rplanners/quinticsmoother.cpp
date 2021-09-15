@@ -61,9 +61,10 @@ public:
 
     bool _InitPlan()
     {
-        if( _parameters->_nMaxIterations <= 0 ) {
-            _parameters->_nMaxIterations = 100;
-        }
+        // Allow zero iterations.
+        // if( _parameters->_nMaxIterations <= 0 ) {
+        //     _parameters->_nMaxIterations = 100;
+        // }
         _ndof = _parameters->GetDOF();
         _bUsePerturbation = true;
         _bExpectedModifiedConfigurations = (_parameters->fCosManipAngleThresh > -1 + g_fEpsilonLinear);
@@ -360,6 +361,7 @@ public:
             dReal fTrimEdgesTime = _parameters->_fStepLength*2; // we ignore constraints during [0, fTrimEdgesTime] and [duration - fTrimEdgesTime, duration]
             PiecewisePolynomials::Chunk& tempChunk = _cacheChunk; // for storing interpolation results
             std::vector<PiecewisePolynomials::Chunk>& vChunksOut = _cacheVChunksOut; // for storing chunks before putting them into the final trajcetory and for storing CheckChunkAllConstraints results
+            std::vector<PiecewisePolynomials::Chunk>& tempChunks = _cacheTempChunks;
             PiecewisePolynomials::Chunk &trimmedChunk = _cacheTrimmedChunk, &remChunk = _cacheRemChunk;
 
             for( std::vector<PiecewisePolynomials::Chunk>::const_iterator itChunk = pwptraj.vchunks.begin(); itChunk != pwptraj.vchunks.end(); ++itChunk ) {
@@ -369,12 +371,14 @@ public:
                 }
 
                 trimmedChunk = *itChunk;
-                vChunksOut.resize(1);
-                vChunksOut[0] = trimmedChunk;
                 ++_progress._iteration;
 
                 // Check constraints if not yet checked
-                if( !itChunk->constraintChecked ) {
+                if( itChunk->constraintChecked ) {
+                    vChunksOut.resize(1);
+                    vChunksOut[0] = trimmedChunk;
+                }
+                else {
                     // Check joint limits + velocity/acceleration/jerk limits
                     int limitsret = _limitsChecker.CheckChunk(trimmedChunk, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit, _parameters->_vConfigJerkLimit);
                     if( limitsret != PiecewisePolynomials::PCR_Normal ) {
@@ -410,7 +414,7 @@ public:
 
                     _bUsePerturbation = false; // turn checking with perturbation off here.
                     if( bCheck ) {
-                        PiecewisePolynomials::CheckReturn checkret = CheckChunkAllConstraints(trimmedChunk, 0xffff, vChunksOut);
+                        PiecewisePolynomials::CheckReturn checkret = CheckChunkAllConstraints(trimmedChunk, 0xffff, tempChunks);
                         if( checkret.retcode != 0 ) {
                             RAVELOG_DEBUG_FORMAT("env=%d, Final CheckChunkAllConstraints failed iChunk=%d/%d with ret=0x%x. bTrimmedFront=%d; bTrimmedBack=%d", _envId%(itChunk - pwptraj.vchunks.begin())%pwptraj.vchunks.size()%checkret.retcode%bTrimmedBack%bTrimmedBack);
                             // Try to stretch the duration of the segment in hopes of fixing constraints violation.
@@ -432,21 +436,19 @@ public:
                                 _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, newChunkDuration, tempChunk);
 
                                 // TODO
-                                PiecewisePolynomials::CheckReturn newcheckret = CheckChunkAllConstraints(tempChunk, 0xffff, vChunksOut);
+                                PiecewisePolynomials::CheckReturn newcheckret = CheckChunkAllConstraints(tempChunk, 0xffff, tempChunks);
                                 if( newcheckret.retcode == 0 ) {
-                                    // The new chunk passes constraints checking. Need to
-                                    // re-populate vChunksOut with the result.
-                                    trimmedChunk = tempChunk; // copy the result to trimmedChunk
+                                    // The new chunk passes constraints checking.
                                     bDilationSuccessful = true;
                                     break;
                                 }
 
                                 if( iDilation > 1 ) {
-                                    iDilation += timeIncrement;
+                                    newChunkDuration += timeIncrement;
                                 }
                                 else {
                                     // Increase the duration a tiny bit first
-                                    iDilation += 5*PiecewisePolynomials::g_fPolynomialEpsilon;
+                                    newChunkDuration += 5*PiecewisePolynomials::g_fPolynomialEpsilon;
                                 }
                             }
                             if( !bDilationSuccessful ) {
@@ -455,16 +457,13 @@ public:
                                 return PS_Failed;
                             }
                         }
-                    }
+                    } // end bCheck
 
                     vChunksOut.resize(0);
-                    if( vChunksOut.capacity() < 2 ) {
-                        vChunksOut.reserve(2);
-                    }
                     if( bTrimmedFront ) {
                         vChunksOut.push_back(remChunk);
                     }
-                    vChunksOut.push_back(trimmedChunk);
+                    vChunksOut.insert(vChunksOut.end(), tempChunks.begin(), tempChunks.end());
                     if( bTrimmedBack ) {
                         vChunksOut.push_back(remChunk);
                     }
@@ -1245,7 +1244,7 @@ protected:
     std::vector<dReal> _cacheVellimits, _cacheAccelLimits, _cacheJerkLimits;
     PiecewisePolynomials::Chunk _cacheChunk;
     PiecewisePolynomials::Chunk _cacheTrimmedChunk, _cacheRemChunk; ///< for constraints checking at the very end
-    std::vector<PiecewisePolynomials::Chunk> _cacheVChunksOut;
+    std::vector<PiecewisePolynomials::Chunk> _cacheVChunksOut, _cacheTempChunks;
 
     // for use in CheckChunkAllConstraints. TODO: write descriptions for these variables
     std::vector<dReal> _cacheX0Vect2, _cacheX1Vect2, _cacheV0Vect2, _cacheV1Vect2, _cacheA0Vect2, _cacheA1Vect2;
