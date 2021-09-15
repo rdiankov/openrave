@@ -238,6 +238,9 @@ void RobotBase::Manipulator::SetName(const std::string& name)
 
 Transform RobotBase::Manipulator::GetTransform() const
 {
+    if( !__pEffector ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, robot '%s' manipulator '%s' has no end effector with name '%s'"), __probot.lock()->GetEnv()->GetNameId()%__probot.lock()->GetName()%_info._name%_info._sEffectorLinkName, ORE_InvalidArguments);
+    }
     return __pEffector->GetTransform() * _info._tLocalTool;
 }
 
@@ -1797,8 +1800,29 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
         }
     }
 
-    // init the gripper dof indices
     std::vector<dReal> vChuckingDirection;
+
+    GripperInfoPtr pGripperInfo;
+    if( !_info._grippername.empty() ) {
+        pGripperInfo = probot->GetGripperInfo(_info._grippername);
+        if( !!pGripperInfo ) {
+
+            if( _info._vGripperJointNames.empty() ) {
+                _info._vGripperJointNames = pGripperInfo->gripperJointNames;
+                if( !_info._vGripperJointNames.empty() ) {
+                    RAVELOG_VERBOSE_FORMAT("For manipulator '%s', using %d gripperJointNames from gripperInfo '%s'", _info._name%_info._vGripperJointNames.size()%_info._grippername);
+                }
+            }
+
+            if( _info._vChuckingDirection.empty() ) {
+                if( pGripperInfo->_docGripperInfo.IsObject() ) {
+                    orjson::LoadJsonValueByKey(pGripperInfo->_docGripperInfo, "chuckingDirection", _info._vChuckingDirection);
+                }
+            }
+        }
+    }
+
+    // init the gripper dof indices
     size_t ichuckingdirection = 0;
     FOREACHC(itjointname,_info._vGripperJointNames) {
         JointPtr pjoint = probot->GetJoint(*itjointname);

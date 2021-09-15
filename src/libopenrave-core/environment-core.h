@@ -1197,6 +1197,10 @@ public:
 
     virtual RobotBasePtr GetRobot(const std::string& pname) const
     {
+        if( pname.empty() ) {
+            return RobotBasePtr();
+        }
+
         SharedLock lock(_mutexInterfaces);
         const int envBodyIndex = _FindBodyIndexByName(pname);
         const KinBodyPtr& pbody = _vecbodies.at(envBodyIndex);
@@ -1205,10 +1209,10 @@ public:
         }
 
         if (!pbody) {
-            RAVELOG_WARN_FORMAT("env=%s, name %s (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetNameId()%pname%envBodyIndex);
+            RAVELOG_WARN_FORMAT("env=%s, name '%s' (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetNameId()%pname%envBodyIndex);
         }
         else {
-            RAVELOG_WARN_FORMAT("env=%s, name %s (envBodyIndex=%d) is not robot", GetNameId()%pname%envBodyIndex);
+            RAVELOG_WARN_FORMAT("env=%s, name '%s' (envBodyIndex=%d) is not robot.", GetNameId()%pname%envBodyIndex);
         }
 
         return RobotBasePtr();
