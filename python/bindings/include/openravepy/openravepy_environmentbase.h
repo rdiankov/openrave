@@ -225,6 +225,9 @@ public:
     /// returns the number of colors
     static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors);
 
+    /// returns the number of vectors
+    static size_t _getListVector(object odata, std::vector<RaveVector<float>>& vvectors);
+
     static std::pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors);
 
     object plot3(object opoints,float pointsize,object ocolors=py::none_(),int drawstyle=0);

@@ -2092,6 +2092,51 @@ size_t PyEnvironmentBase::_getGraphColors(object ocolors, std::vector<float>&vco
     return 1;
 }
 
+size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<float>>& vvectors) {
+    std::vector<float> vpoints;
+    if( PyObject_HasAttrString(odata.ptr(),"shape") ) {
+        object datashape = odata.attr("shape");
+        switch(len(datashape)) {
+        case 1: {
+            const size_t n = len(odata);
+            if (n%3) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %d"), n,ORE_InvalidArguments);
+            }
+            for(size_t i = 0; i < n/3; ++i) {
+                vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[i]),
+                            py::extract<float>(odata[i+1]), py::extract<float>(odata[i+2])));
+            }
+            return n/3;
+        }
+        case 2: {
+            const int num = py::extract<int>(datashape[0]);
+            const int dim = py::extract<int>(datashape[1]);
+            if(dim != 3) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %dx%d"), num%dim,ORE_InvalidArguments);
+            }
+            const object& o = odata.attr("flat");
+            for(size_t i = 0; i < num; ++i) {
+                vvectors.emplace_back(RaveVector<float>(py::extract<float>(o[i]),
+                            py::extract<float>(o[i+1]), py::extract<float>(o[i+2])));
+            }
+            return num;
+        }
+        default:
+            throw OpenRAVEException(_("data have bad dimension"));
+        }
+    }
+    // assume it is a regular 1D list
+    const size_t n = len(odata);
+    if (n%3) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %d"), n,ORE_InvalidArguments);
+    }
+    for(size_t i = 0; i < n/3; ++i) {
+        vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[i]),
+                    py::extract<float>(odata[i+1]), py::extract<float>(odata[i+2])));
+    }
+    return vvectors.size();
+}
+
 std::pair<size_t,size_t> PyEnvironmentBase::_getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors)
 {
     size_t numpoints = _getGraphPoints(opoints,vpoints);
@@ -2170,6 +2215,21 @@ object PyEnvironmentBase::drawbox(object opos, object oextents, object ocolor)
     }
     return toPyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents)));
 }
+
+object PyEnvironmentBase::drawboxarray(object opos, object oextents, object ocolor)
+{
+    RaveVector<float> vcolor(1,0.5,0.5,1);
+    if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
+        vcolor = ExtractVector34(ocolor,1.0f);
+    }
+    std::vector<RaveVector<float>> vvectors;
+    const size_t numpos = _getListVector(opos, vvectors);
+    if (numpos <= 0) {
+        throw OpenRAVEException("a list of positions is empty" ,ORE_InvalidArguments);
+    }
+    return toPyGraphHandle(_penv->drawboxarray(vvectors,ExtractVector3(oextents)));
+}
+
 
 object PyEnvironmentBase::drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture)
 {
