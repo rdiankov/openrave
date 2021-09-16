@@ -173,8 +173,14 @@ dReal Polynomial::Evaldn(dReal t, size_t n) const
     return val;
 }
 
+Polynomial Polynomial::Differentiate() const
+{
+    return Polynomial(vcoeffsd);
+}
+
 void Polynomial::_FindAllLocalExtrema()
 {
+    vcextrema.resize(0);
     if( vcoeffsd.size() == 0 ) {
         // No extrema since the function is constant
         return;
@@ -199,7 +205,6 @@ void Polynomial::_FindAllLocalExtrema()
     int numroots = 0;
     polyroots((int)degree - 1 - iNonZeroLeadCoeff, &rawcoeffs[iNonZeroLeadCoeff], &rawroots[0], numroots);
     rawroots.resize(numroots);
-    vcextrema.resize(0);
 
     if( numroots == 0 ) {
         return;
@@ -295,9 +300,9 @@ void Polynomial::FindAllLocalExtrema(size_t ideriv, std::vector<Coordinate>& vco
     }
 
     int numroots = 0;
-    int iNonZeroLeadCoeff = 0;
+    int iNonZeroLeadCoeff = -1;
     for( size_t icoeff = 0; icoeff < numcoeffs; ++icoeff ) {
-        if( _vcurcoeffs[icoeff] != 0 ) {
+        if( iNonZeroLeadCoeff < 0 && _vcurcoeffs[icoeff] != 0 ) {
             iNonZeroLeadCoeff = icoeff;
             break;
         }

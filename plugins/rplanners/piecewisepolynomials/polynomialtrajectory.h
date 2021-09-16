@@ -86,8 +86,8 @@ public:
     /// \brief Evaluate the n-th derivative of this polynomial at time t.
     dReal Evaldn(dReal t, size_t n) const;
 
-    // /// \brief Return the polynomial d/dt p(t)
-    // Polynomial Differentiate();
+    /// \brief Return the polynomial d/dt p(t)
+    Polynomial Differentiate() const;
 
     // /// \brief Return the polynomial int p(t) dt
     // Polynomial Integrate();
