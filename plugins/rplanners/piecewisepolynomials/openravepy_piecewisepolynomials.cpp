@@ -105,8 +105,6 @@ public:
         return !!c || (point != c->point) || (value != c->value);
     }
 
-    dReal point;
-    dReal value;
 private:
     void _PostProcess()
     {
@@ -114,6 +112,9 @@ private:
         value = _pcoord->value;
     }
 
+public:
+    dReal point;
+    dReal value;
     CoordinatePtr _pcoord;
 }; // end class PyCoordinate
 
@@ -194,6 +195,20 @@ public:
         return oExtrema;
     }
 
+    py::object Serialize() const
+    {
+        std::stringstream ss;
+        _ppolynomial->Serialize(ss);
+        return py::to_object(ss.str());
+    }
+
+    void Deserialize(const std::string s)
+    {
+        std::stringstream ss(s);
+        _ppolynomial->Deserialize(ss);
+        _PostProcess();
+    }
+
     std::string __repr__()
     {
         return _srep;
@@ -216,10 +231,251 @@ private:
         _srep += "])";
     }
 
+public:
     PolynomialPtr _ppolynomial;
     std::string _srep; // string representation of this polynomial
 }; // end class PyPolynomial
 
+std::vector<piecewisepolynomials::Polynomial> ExtractArrayPolynomials(const py::object ov)
+{
+    size_t numPolynomials = len(ov);
+    std::vector<piecewisepolynomials::Polynomial> v;
+    v.reserve(numPolynomials);
+    for(size_t ipoly = 0; ipoly < numPolynomials; ++ipoly ) {
+        PyPolynomialPtr ppypoly = py::extract<PyPolynomialPtr>(ov[ipoly]);
+        if( !!ppypoly ) {
+            v.push_back(*(ppypoly->_ppolynomial));
+        }
+        else {
+            RAVELOG_ERROR_FORMAT("failed to get polynomial at index=%d", ipoly);
+        }
+    }
+}
+
+class PyChunk {
+public:
+    PyChunk()
+    {
+        _pchunk.reset(new piecewisepolynomials::Chunk());
+        _PostProcess();
+    }
+    PyChunk(const dReal duration, const py::object ovpolynomials)
+    {
+        std::vector<piecewisepolynomials::Polynomial> vpolynomials = ExtractArrayPolynomials(ovpolynomials);
+        _pchunk.reset(new piecewisepolynomials::Chunk(duration, vpolynomials));
+        _PostProcess();
+    }
+
+    void Initialize(const dReal duration, const py::object ovpolynomials)
+    {
+        std::vector<piecewisepolynomials::Polynomial> vpolynomials = ExtractArrayPolynomials(ovpolynomials);
+        _pchunk->Initialize(duration, vpolynomials);
+        _PostProcess();
+    }
+
+    void UpdateInitialValues(const py::object ovinitialvalues)
+    {
+        std::vector<dReal> vinitialvalues = openravepy::ExtractArray<dReal>(ovinitialvalues);
+        _pchunk->UpdateInitialValues(vinitialvalues);
+        _PostProcess();
+    }
+
+    PyChunkPtr Cut(dReal t)
+    {
+        piecewisepolynomials::Chunk remChunk;
+        _pchunk->Cut(t, remChunk);
+        PyChunkPtr pyRemChunk(new PyChunk());
+        pyRemChunk->_pchunk->Initialize(remChunk.duration, remChunk.vpolynomials);
+        return pyRemChunk;
+    }
+
+    py::object Eval(dReal t) const
+    {
+        std::vector<dReal> res;
+        _pchunk->Eval(t, res);
+        return openravepy::toPyArray(res);
+    }
+
+    py::object Evald1(dReal t) const
+    {
+        std::vector<dReal> res;
+        _pchunk->Evald1(t, res);
+        return openravepy::toPyArray(res);
+    }
+
+    py::object Evald2(dReal t) const
+    {
+        std::vector<dReal> res;
+        _pchunk->Evald2(t, res);
+        return openravepy::toPyArray(res);
+    }
+
+    py::object Evald3(dReal t) const
+    {
+        std::vector<dReal> res;
+        _pchunk->Evald3(t, res);
+        return openravepy::toPyArray(res);
+    }
+
+    py::object Evaldn(dReal t, size_t n) const
+    {
+        std::vector<dReal> res;
+        _pchunk->Evaldn(t, n, res);
+        return openravepy::toPyArray(res);
+    }
+
+    void SetConstant(const py::object ox0Vect, const dReal duration, const size_t degree)
+    {
+        std::vector<dReal> x0Vect = openravepy::ExtractArray<dReal>(ox0Vect);
+        _pchunk->SetConstant(x0Vect, duration, degree);
+        _PostProcess();
+    }
+
+    py::object Serialize() const
+    {
+        std::stringstream ss;
+        _pchunk->Serialize(ss);
+        return py::to_object(ss.str());
+    }
+
+    void Deserialize(const std::string s)
+    {
+        std::stringstream ss(s);
+        _pchunk->Deserialize(ss);
+        _PostProcess();
+    }
+
+private:
+    void _PostProcess()
+    {
+    }
+
+public:
+    ChunkPtr _pchunk;
+}; // end class PyChunk
+
+std::vector<piecewisepolynomials::Chunk> ExtractArrayChunks(const py::object ov)
+{
+    size_t numChunks = len(ov);
+    std::vector<piecewisepolynomials::Chunk> v;
+    v.reserve(numChunks);
+    for(size_t ichunk = 0; ichunk < numChunks; ++ichunk ) {
+        PyChunkPtr ppychunk = py::extract<PyChunkPtr>(ov[ichunk]);
+        if( !!ppychunk ) {
+            v.push_back(*(ppychunk->_pchunk));
+        }
+        else {
+            RAVELOG_ERROR_FORMAT("failed to get chunk at index=%d", ichunk);
+        }
+    }
+}
+
+class PyPiecewisePolynomialTrajectory {
+public:
+    PyPiecewisePolynomialTrajectory()
+    {
+        _ptraj.reset(new piecewisepolynomials::PiecewisePolynomialTrajectory());
+        _PostProcess();
+    }
+    PyPiecewisePolynomialTrajectory(const py::object ovchunks)
+    {
+        std::vector<piecewisepolynomials::Chunk> vchunks = ExtractArrayChunks(ovchunks);
+        _ptraj.reset(new piecewisepolynomials::PiecewisePolynomialTrajectory(vchunks));
+        _PostProcess();
+    }
+
+    void Initialize(const py::object ovchunks)
+    {
+        std::vector<piecewisepolynomials::Chunk> vchunks = ExtractArrayChunks(ovchunks);
+        _ptraj->Initialize(vchunks);
+        _PostProcess();
+    }
+
+    py::object Eval(dReal t) const
+    {
+        std::vector<dReal> res;
+        _ptraj->Eval(t, res);
+        return openravepy::toPyArray(res);
+    }
+
+    py::object Evald1(dReal t) const
+    {
+        std::vector<dReal> res;
+        _ptraj->Evald1(t, res);
+        return openravepy::toPyArray(res);
+    }
+
+    py::object Evald2(dReal t) const
+    {
+        std::vector<dReal> res;
+        _ptraj->Evald2(t, res);
+        return openravepy::toPyArray(res);
+    }
+
+    py::object Evald3(dReal t) const
+    {
+        std::vector<dReal> res;
+        _ptraj->Evald3(t, res);
+        return openravepy::toPyArray(res);
+    }
+
+    py::object Evaldn(dReal t, size_t n) const
+    {
+        std::vector<dReal> res;
+        _ptraj->Evaldn(t, n, res);
+        return openravepy::toPyArray(res);
+    }
+
+    py::object FindChunkIndex(dReal t) const
+    {
+        size_t index;
+        dReal remainder;
+        _ptraj->FindChunkIndex(t, index, remainder);
+        return py::make_tuple(index, remainder);
+    }
+
+    py::object Serialize() const
+    {
+        std::stringstream ss;
+        _ptraj->Serialize(ss);
+        return py::to_object(ss.str());
+    }
+
+    void Deserialize(std::string s)
+    {
+        std::stringstream ss(s);
+        _ptraj->Deserialize(ss);
+        _PostProcess();
+    }
+
+    void ReplaceSegment(dReal t0, dReal t1, const py::object ovchunks)
+    {
+        std::vector<piecewisepolynomials::Chunk> vchunks = ExtractArrayChunks(ovchunks);
+        _ptraj->ReplaceSegment(t0, t1, vchunks);
+        _PostProcess();
+    }
+
+    void Reset()
+    {
+        _ptraj->Reset();
+    }
+
+private:
+    void _PostProcess()
+    {
+        degree = _ptraj->degree;
+        dof = _ptraj->dof;
+        duration = _ptraj->duration;
+    }
+
+public:
+    size_t degree;
+    size_t dof;
+    dReal duration;
+
+    PiecewisePolynomialTrajectoryPtr _ptraj;
+
+}; // end class PyPiecewisePolynomialTrajectory
 
 } // end namespace piecewisepolynomialspy
 
@@ -271,14 +527,59 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def(init<>())
     .def(init<py::object>(py::args("coeffs")))
 #endif
+    .def("Initialize", &PyPolynomial::Initialize, PY_ARGS("coeffs") "Reinitialize this polynomial with the given coefficients.")
+    .def("PadCoefficients", &PyPolynomial::PadCoefficients, PY_ARGS("newdegree") "Append zeros to the coefficient vectors")
     .def("Eval", &PyPolynomial::Eval, PY_ARGS("t") "Evaluate the value of this polynomial at the given parameter t")
     .def("Evald1", &PyPolynomial::Evald1, PY_ARGS("t") "Evaluate the first derivative of this polynomial at the given parameter t")
     .def("Evald2", &PyPolynomial::Evald2, PY_ARGS("t") "Evaluate the second derivative of this polynomial at the given parameter t")
     .def("Evald3", &PyPolynomial::Evald3, PY_ARGS("t") "Evaluate the third derivative of this polynomial at the given parameter t")
-    .def("Evaldn", &PyPolynomial::Evald3, PY_ARGS("t") "Evaluate the n-th derivative of this polynomial at the given parameter t")
+    .def("Evaldn", &PyPolynomial::Evald3, PY_ARGS("t", "n") "Evaluate the n-th derivative of this polynomial at the given parameter t")
     .def("GetExtrema", &PyPolynomial::GetExtrema, "Return the list of extrema of this polynomial")
     .def("FindAllLocalExtrema", &PyPolynomial::FindAllLocalExtrema, PY_ARGS("ideriv") "Return the list of extrema of the i-th derivative of this polynomial")
+    .def("Serialize", &PyPolynomial::Serialize, "Serialize this polynomial into string")
+    .def("Deserialize", &PyPolynomial::Deserialize, PY_ARGS("s") "Deserialize a polynomial from the given string")
     .def("__repr__", &PyPolynomial::__repr__)
     .def("__str__", &PyPolynomial::__str__)
-    ;
+    ; // end class_ PyPolynomial
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyChunk, PyChunkPtr>(m, "Chunk", "PiecewisePolynomials::Chunk wrapper")
+    .def(init<>())
+    .def(init<dReal, py::object>(), "duration"_a, "vpolynomials"_a)
+#else
+    class_<PyChunk, PyChunkPtr>("Chunk", "PiecewisePolynomials::Chunk wrapper", no_init)
+    .def(init<>())
+    .def(init<dReal, py::object>(py::args("duration", "vpolynomials")))
+#endif
+    .def("Initialize", &PyChunk::Initialize, PY_ARGS("duration", "vpolynomials") "Reinitialize this chunk with the given duration and polynomials.")
+    .def("Cut", &PyChunk::Cut, PY_ARGS("t") "Cut this chunk into two halves. The left half (from t = 0 to t = t) is stored in this chunk. The right half is returned.")
+    .def("Eval", &PyChunk::Eval, PY_ARGS("t") "Evaluate the value of this chunk at the given parameter t")
+    .def("Evald1", &PyChunk::Evald1, PY_ARGS("t") "Evaluate the first derivative of this chunk at the given parameter t")
+    .def("Evald2", &PyChunk::Evald2, PY_ARGS("t") "Evaluate the second derivative of this chunk at the given parameter t")
+    .def("Evald3", &PyChunk::Evald3, PY_ARGS("t") "Evaluate the third derivative of this chunk at the given parameter t")
+    .def("Evaldn", &PyChunk::Evald3, PY_ARGS("t", "n") "Evaluate the n-th derivative of this chunk at the given parameter t")
+    .def("SetConstant", &PyChunk::SetConstant, PY_ARGS("x0Vect", "duration", "degree") "Initialize this chunk with constant polynomials")
+    .def("Serialize", &PyChunk::Serialize, "Serialize this chunk into string")
+    .def("Deserialize", &PyChunk::Deserialize, PY_ARGS("s") "Deserialize a chunk from the given string")
+    ; // end class_ PyChunk
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyPiecewisePolynomialTrajectory, PyPiecewisePolynomialTrajectoryPtr>(m, "PiecewisePolynomialTrajectory", "PiecewisePolynomials::PiecewisePolynomialTrajectory wrapper")
+    .def(init<>())
+    .def(init<py::object>(), "chunks"_a)
+#else
+    class_<PyPiecewisePolynomialTrajectory, PyPiecewisePolynomialTrajectoryPtr>("PiecewisePolynomialTrajectory", "PiecewisePolynomials::PiecewisePolynomialTrajectory wrapper", no_init)
+    .def(init<>())
+    .def(init<py::object>(py::args("chunks")))
+#endif
+    .def("Initialize", &PyPiecewisePolynomialTrajectory::Initialize, PY_ARGS("chunks") "Reinitialize this trajectory with the given chunks.")
+    .def("Eval", &PyPiecewisePolynomialTrajectory::Eval, PY_ARGS("t") "Evaluate the value of this trajectory at the given parameter t")
+    .def("Evald1", &PyPiecewisePolynomialTrajectory::Evald1, PY_ARGS("t") "Evaluate the first derivative of this trajectory at the given parameter t")
+    .def("Evald2", &PyPiecewisePolynomialTrajectory::Evald2, PY_ARGS("t") "Evaluate the second derivative of this trajectory at the given parameter t")
+    .def("Evald3", &PyPiecewisePolynomialTrajectory::Evald3, PY_ARGS("t") "Evaluate the third derivative of this trajectory at the given parameter t")
+    .def("Evaldn", &PyPiecewisePolynomialTrajectory::Evald3, PY_ARGS("t", "n") "Evaluate the n-th derivative of this trajectory at the given parameter t")
+    .def("FindChunkIndex", &PyPiecewisePolynomialTrajectory::FindChunkIndex, PY_ARGS("t") "Find the index of the chunk in which the given time t falls into. Also compute the remainder of that chunk.")
+    .def("Serialize", &PyPiecewisePolynomialTrajectory::Serialize, "Serialize this trajectory into string")
+    .def("Deserialize", &PyPiecewisePolynomialTrajectory::Deserialize, PY_ARGS("s") "Deserialize a trajectory from the given string")
+    ; // end class_ PyPiecewisePolynomialTrajectory
 }

@@ -29,8 +29,13 @@ Polynomial::Polynomial(const std::vector<dReal>& c)
 void Polynomial::Initialize(const std::vector<dReal>& c)
 {
     OPENRAVE_ASSERT_OP(c.size(), >, 0);
-    degree = (c.size() - 1);
     vcoeffs = c;
+    Initialize();
+}
+
+void Polynomial::Initialize()
+{
+    degree = (vcoeffs.size() - 1);
 
     if( degree >= 1 ) {
         vcoeffsd.resize(degree);
@@ -360,10 +365,21 @@ void Polynomial::FindAllLocalExtrema(size_t ideriv, std::vector<Coordinate>& vco
 
 void Polynomial::Serialize(std::ostream& O) const
 {
-    O << vcoeffs[0];
-    for( size_t i = 1; i < vcoeffs.size(); ++i ) {
+    O << vcoeffs.size();
+    for( size_t i = 0; i < vcoeffs.size(); ++i ) {
         O << " " << vcoeffs[i];
     }
+}
+
+void Polynomial::Deserialize(std::istream& I)
+{
+    size_t numCoeffs;
+    I >> numCoeffs;
+    vcoeffs.resize(numCoeffs);
+    for( size_t i = 0; i < numCoeffs; ++i ) {
+        I >> vcoeffs[i];
+    }
+    Initialize();
 }
 
 //
@@ -386,6 +402,11 @@ void Chunk::Initialize(const dReal duration, const std::vector<Polynomial>& vpol
 {
     this->duration = duration;
     this->vpolynomials = vpolynomials;
+    Initialize();
+}
+
+void Chunk::Initialize()
+{
     this->dof = this->vpolynomials.size();
     this->degree = vpolynomials.front().degree;
     for( size_t i = 1; i < vpolynomials.size(); ++i ) {
@@ -469,6 +490,17 @@ void Chunk::Serialize(std::ostream& O) const
         O << "\n";
         vpolynomials[ipoly].Serialize(O);
     }
+}
+
+void Chunk::Deserialize(std::istream& I)
+{
+    I >> duration;
+    I >> dof;
+    vpolynomials.resize(dof);
+    for( size_t ipoly = 0; ipoly < dof; ++ipoly ) {
+        vpolynomials[ipoly].Deserialize(I);
+    }
+    Initialize();
 }
 
 void Chunk::SetConstant(const std::vector<dReal>& x0Vect, const dReal duration, const size_t degree)
@@ -587,11 +619,23 @@ void PiecewisePolynomialTrajectory::Evaldn(dReal t, size_t n, std::vector<dReal>
 
 void PiecewisePolynomialTrajectory::Serialize(std::ostream& O) const
 {
-    vchunks.front().Serialize(O);
-    for( size_t ichunk = 1; ichunk < vchunks.size(); ++ichunk ) {
+    O << vchunks.size();
+    for( size_t ichunk = 0; ichunk < vchunks.size(); ++ichunk ) {
         O << "\n";
         vchunks[ichunk].Serialize(O);
     }
+}
+
+void PiecewisePolynomialTrajectory::Deserialize(std::istream& I)
+{
+    size_t numChunks;
+    I >> numChunks;
+    vchunks.resize(numChunks);
+    for( size_t ichunk = 0; ichunk < numChunks; ++ichunk ) {
+        vchunks[ichunk].Deserialize(I);
+    }
+
+    Initialize();
 }
 
 void PiecewisePolynomialTrajectory::ReplaceSegment(dReal t0, dReal t1, const std::vector<Chunk>& vchunks)

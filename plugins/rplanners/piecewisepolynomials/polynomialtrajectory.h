@@ -59,8 +59,11 @@ public:
     //
     // Functions
     //
-    /// \brief (Re)Initialize this polynomial with the given coefficients.
+    /// \brief Initialize this polynomial with the given coefficients.
     void Initialize(const std::vector<dReal>& c);
+
+    /// \brief Initialize this polynomial with the existing coefficients
+    void Initialize();
 
     /// \brief Append zeros to the coefficient vectors.
     void PadCoefficients(size_t newdegree);
@@ -95,7 +98,11 @@ public:
         return vcextrema;
     }
 
+    /// \brief
     void Serialize(std::ostream& O) const;
+
+    /// \brief
+    void Deserialize(std::istream& I);
 
     /// \brief Find all local extrema of this polynomial. Keep the results in vcextrema in ascending
     /// order.
@@ -140,11 +147,14 @@ public:
     /// \brief
     void UpdateInitialValues(std::vector<dReal>& vinitialvalues);
 
-    /// \brief
+    /// \brief Initialize this chunk with the given duration and polynomials vector
     void Initialize(const dReal duration, const std::vector<Polynomial>& vpolynomials);
 
+    /// \brief Initialize this chunk with the existing duration and polynomials vector
+    void Initialize();
+
     /// \brief Cut this chunk into two halves. The left half (from t = 0 to t = t) is stored in
-    /// this. The righr half is returned via remChunk.
+    /// this. The right half is returned via remChunk.
     void Cut(dReal t, Chunk& remChunk);
 
     /// \brief Evaluate all polynomials at time t.
@@ -164,6 +174,9 @@ public:
 
     /// \brief
     void Serialize(std::ostream& O) const;
+
+    /// \brief
+    void Deserialize(std::istream& I);
 
     /// \brief Initialize this chunk with constant polynomials.
     void SetConstant(const std::vector<dReal>& x0Vect, const dReal duration, const size_t degree);
@@ -216,10 +229,10 @@ public:
     /// \brief Find the index of the chunk in which the given time t falls into. Also compute the remainder of that chunk.
     void FindChunkIndex(dReal t, size_t& index, dReal& remainder) const;
 
-    /// \brief
+    /// \brief Initialize this trajectory with the given chunks
     void Initialize(const std::vector<Chunk>& vchunks);
 
-    /// \brief Initiale the trajectory with existing chunks
+    /// \brief Initializee this trajectory with the existing chunks
     void Initialize();
 
     /// \brief
@@ -227,6 +240,9 @@ public:
 
     /// \brief
     void Serialize(std::ostream& O) const;
+
+    /// \brief
+    void Deserialize(std::istream& I);
 
     /// \brief
     void ReplaceSegment(dReal t0, dReal t1, const std::vector<Chunk>& vchunks);
