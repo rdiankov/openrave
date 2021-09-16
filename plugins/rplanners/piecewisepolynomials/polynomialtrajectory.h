@@ -87,7 +87,7 @@ public:
     dReal Evaldn(dReal t, size_t n) const;
 
     /// \brief Return the polynomial d/dt p(t)
-    Polynomial Differentiate() const;
+    Polynomial Differentiate(size_t ideriv) const;
 
     // /// \brief Return the polynomial int p(t) dt
     // Polynomial Integrate();

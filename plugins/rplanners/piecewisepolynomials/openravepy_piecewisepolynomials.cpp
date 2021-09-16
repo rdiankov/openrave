@@ -180,9 +180,9 @@ public:
         return _ppolynomial->Evaldn(t, n);
     }
 
-    PyPolynomialPtr Differentiate() const
+    PyPolynomialPtr Differentiate(size_t ideriv) const
     {
-        piecewisepolynomials::Polynomial newPoly = _ppolynomial->Differentiate();
+        piecewisepolynomials::Polynomial newPoly = _ppolynomial->Differentiate(ideriv);
         return PyPolynomialPtr(new PyPolynomial(newPoly.vcoeffs));
     }
 
@@ -592,7 +592,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Evald2", &PyPolynomial::Evald2, PY_ARGS("t") "Evaluate the second derivative of this polynomial at the given parameter t")
     .def("Evald3", &PyPolynomial::Evald3, PY_ARGS("t") "Evaluate the third derivative of this polynomial at the given parameter t")
     .def("Evaldn", &PyPolynomial::Evald3, PY_ARGS("t", "n") "Evaluate the n-th derivative of this polynomial at the given parameter t")
-    .def("Differentiate", &PyPolynomial::Differentiate,"Return the polynomial d/dt p(t) where p is this polynomial")
+    .def("Differentiate", &PyPolynomial::Differentiate,PY_ARGS("n") "Return the polynomial d^n/dt^n p(t) where p is this polynomial")
     .def("GetExtrema", &PyPolynomial::GetExtrema, "Return the list of extrema of this polynomial")
     .def("FindAllLocalExtrema", &PyPolynomial::FindAllLocalExtrema, PY_ARGS("ideriv") "Return the list of extrema of the i-th derivative of this polynomial")
     .def("Serialize", &PyPolynomial::Serialize, "Serialize this polynomial into string")
