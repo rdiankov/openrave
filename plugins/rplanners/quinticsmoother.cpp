@@ -140,7 +140,7 @@ public:
         }
 
         // Save original trajectory
-        _DumpOpenRAVETrajectory(ptraj, _dumpLevel);
+        _DumpOpenRAVETrajectory(ptraj, "beforeshortcut", _dumpLevel);
 
         // Save states
         std::vector<KinBody::KinBodyStateSaverPtr> vstatesavers;
@@ -278,7 +278,7 @@ public:
             // Time-parameterize the initial path
             if( !_ComputeInitialTiming(vWaypoints, pwptraj) ) {
                 RAVELOG_WARN_FORMAT("env=%d, Failed to time-parameterize the initial piecewise linear path", _envId);
-                _DumpOpenRAVETrajectory(ptraj, _errorDumpLevel);
+                _DumpOpenRAVETrajectory(ptraj, "failedinitial", _errorDumpLevel);
                 return PS_Failed;
             }
             RAVELOG_DEBUG_FORMAT("env=%d, Finished time-parameterizating the initial piecewise linear path. numWaypoints: %d -> %d", _envId%ptraj->GetNumWaypoints()%vWaypoints.size());
@@ -453,7 +453,7 @@ public:
                             }
                             if( !bDilationSuccessful ) {
                                 RAVELOG_WARN_FORMAT("env=%d, Failed checking constraints of iChunk=%d/%d", _envId%(itChunk - pwptraj.vchunks.begin())%pwptraj.vchunks.size());
-                                _DumpOpenRAVETrajectory(ptraj, _errorDumpLevel);
+                                _DumpOpenRAVETrajectory(ptraj, "faileddilation", _errorDumpLevel);
                                 return PS_Failed;
                             }
                         }
@@ -498,26 +498,14 @@ public:
             ptraj->Swap(_pDummyTraj);
         }
         catch( const std::exception& ex ) {
-            _DumpOpenRAVETrajectory(ptraj, _errorDumpLevel);
+            _DumpOpenRAVETrajectory(ptraj, "failedexception", _errorDumpLevel);
             RAVELOG_WARN_FORMAT("env=%d, Main planning loop threw an expection: %s", _envId%ex.what());
             return PS_Failed;
         }
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%f", _envId%(0.001f*(dReal)(utils::GetMilliTime() - startTime)));
 
-        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            try {
-                ptraj->Sample(x0Vect, 0.5*ptraj->GetDuration()); // reuse x0Vect
-                RAVELOG_VERBOSE_FORMAT("env=%d, Sampling for verification successful.", _envId);
-            }
-            catch( const std::exception& ex ) {
-                RAVELOG_WARN_FORMAT("env=%d, Traj sampling for verification failed: %s", _envId%ex.what());
-                _DumpOpenRAVETrajectory(ptraj, _errorDumpLevel);
-                return PS_Failed;
-            }
-        }
-
         // Save the final trajectory
-        _DumpOpenRAVETrajectory(ptraj, _dumpLevel);
+        _DumpOpenRAVETrajectory(ptraj, "final", _dumpLevel);
 
         return _ProcessPostPlanners(RobotBasePtr(), ptraj);
     }
@@ -1042,14 +1030,6 @@ protected:
                         }
                         // If this slow down iteration fails due to time-based constraints, we will try to generate a slightly longer trajectory segment in the next iteration.
                         fTryDuration = tempChunk.duration;
-
-                        { // For debugging
-                            polycheckret = _limitsChecker.CheckChunk(tempChunk, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, velLimits, accelLimits, jerkLimits);
-                            if( polycheckret != PiecewisePolynomials::PCR_Normal ) {
-                                RAVELOG_ERROR_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; incorrect interpolation procedure. polycheckret=0x%x", _envId%iter%numIters%t0%t1%polycheckret);
-                                break;
-                            }
-                        }
                     }
                     else {
                         _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, fTryDuration*fCurDurationMult, tempChunk);
@@ -1188,26 +1168,47 @@ protected:
             ss << "normal exit";
         }
         RAVELOG_DEBUG_FORMAT("env=%d, Finished at shortcut iter=%d/%d (%s), successful=%d; numSlowDowns=%d; duration: %.15e -> %.15e; diff=%.15e", _envId%iter%numIters%ss.str()%numShortcuts%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
-        _DumpPiecewisePolynomialTrajectory(pwptraj, _dumpLevel);
+        _DumpPiecewisePolynomialTrajectory(pwptraj, "aftershortcut", _dumpLevel);
 
         return numShortcuts;
     }
 
-    /// \brief
-    bool _DumpOpenRAVETrajectory(TrajectoryBasePtr ptraj, DebugLevel level)
+    /// \brief Dump OpenRAVE Trajectory to file
+    bool _DumpOpenRAVETrajectory(TrajectoryBasePtr ptraj, const char* suffix, DebugLevel level)
     {
         if( IS_DEBUGLEVEL(level) ) {
-            return true;
+            std::string filename = boost::str(boost::format("%s/quinticsmoother_%d_%s.ortraj")%RaveGetHomeDirectory()%_fileIndex%suffix);
+            try {
+                std::ofstream f(filename.c_str());
+                f << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                ptraj->serialize(f);
+                RAVELOG_INFO_FORMAT("env=%s, dumped openrave trajectory to %s", GetEnv()->GetNameId()%filename);
+            }
+            catch (const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("env=%s, failed to dump openrave trajectory to %s: %s", GetEnv()->GetNameId()%filename%ex.what());
+                return false;
+            }
         }
         else {
             return false;
         }
     }
 
-    /// \brief
-    bool _DumpPiecewisePolynomialTrajectory(PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj, DebugLevel level)
+    /// \brief Dump PiecewisePolynomialTrajectory to file
+    bool _DumpPiecewisePolynomialTrajectory(PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj, const char* suffix, DebugLevel level)
     {
         if( IS_DEBUGLEVEL(level) ) {
+            std::string filename = boost::str(boost::format("%s/quinticsmoother_%d_%s.pwptraj")%RaveGetHomeDirectory()%_fileIndex%suffix);
+            try {
+                std::ofstream f(filename.c_str());
+                f << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                pwptraj.Serialize(f);
+                RAVELOG_INFO_FORMAT("env=%s, dumped pwp-trajectory to %s", GetEnv()->GetNameId()%filename);
+            }
+            catch (const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("env=%s, failed to dump pwp-trajectory to %s: %s", GetEnv()->GetNameId()%filename%ex.what());
+                return false;
+            }
             return true;
         }
         else {
