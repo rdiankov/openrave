@@ -205,9 +205,10 @@ PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDeriv
     Chunk& tempChunk = _cacheChunk;
 
     // Try a greedy approach. Continue the interpolation with less duration even though the initial interpolation fails.
-    ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, T, chunk);
-    PolynomialCheckReturn ret = checker.CheckChunk(chunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
+    ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, T, tempChunk);
+    PolynomialCheckReturn ret = checker.CheckChunk(tempChunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
     if( ret == PCR_Normal ) {
+        chunk = tempChunk;
         bFound = true;
     }
 
@@ -217,7 +218,7 @@ PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDeriv
     while( fStepSize >= fCutoff ) {
         dReal fTestDuration = Tcur - fStepSize;
         ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, fTestDuration, tempChunk);
-        PolynomialCheckReturn ret2 = checker.CheckChunk(chunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
+        PolynomialCheckReturn ret2 = checker.CheckChunk(tempChunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
         if( ret2 == PCR_Normal ) {
             Tcur = fTestDuration;
             chunk = tempChunk;
