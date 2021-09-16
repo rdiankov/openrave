@@ -130,6 +130,11 @@ public:
         _ppolynomial.reset(new piecewisepolynomials::Polynomial(inputCoeffs));
         _PostProcess();
     }
+    PyPolynomial(const std::vector<dReal>& coeffs)
+    {
+        _ppolynomial.reset(new piecewisepolynomials::Polynomial(coeffs));
+        _PostProcess();
+    }
 
     void Initialize(const py::object ocoeffs)
     {
@@ -198,6 +203,7 @@ public:
     py::object Serialize() const
     {
         std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
         _ppolynomial->Serialize(ss);
         return py::to_object(ss.str());
     }
@@ -250,6 +256,7 @@ std::vector<piecewisepolynomials::Polynomial> ExtractArrayPolynomials(const py::
             RAVELOG_ERROR_FORMAT("failed to get polynomial at index=%d", ipoly);
         }
     }
+    return v;
 }
 
 class PyChunk {
@@ -262,6 +269,11 @@ public:
     PyChunk(const dReal duration, const py::object ovpolynomials)
     {
         std::vector<piecewisepolynomials::Polynomial> vpolynomials = ExtractArrayPolynomials(ovpolynomials);
+        _pchunk.reset(new piecewisepolynomials::Chunk(duration, vpolynomials));
+        _PostProcess();
+    }
+    PyChunk(const dReal duration, const std::vector<piecewisepolynomials::Polynomial>& vpolynomials)
+    {
         _pchunk.reset(new piecewisepolynomials::Chunk(duration, vpolynomials));
         _PostProcess();
     }
@@ -334,6 +346,7 @@ public:
     py::object Serialize() const
     {
         std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
         _pchunk->Serialize(ss);
         return py::to_object(ss.str());
     }
@@ -345,13 +358,34 @@ public:
         _PostProcess();
     }
 
+    py::object GetPolynomials() const
+    {
+        py::list pypolynomials;
+        for( size_t ipoly = 0; ipoly < dof; ++ipoly ) {
+            pypolynomials.append(PyPolynomialPtr(new PyPolynomial(_pchunk->vpolynomials[ipoly].vcoeffs)));
+        }
+        return pypolynomials;
+    }
+
+    PyPolynomialPtr GetPolynomial(int index) const
+    {
+        return PyPolynomialPtr(new PyPolynomial(_pchunk->vpolynomials[index].vcoeffs));
+    }
+
 private:
     void _PostProcess()
     {
+        degree = _pchunk->degree;
+        dof = _pchunk->dof;
+        duration = _pchunk->duration;
     }
 
 public:
     ChunkPtr _pchunk;
+
+    size_t degree;
+    size_t dof;
+    dReal duration;
 }; // end class PyChunk
 
 std::vector<piecewisepolynomials::Chunk> ExtractArrayChunks(const py::object ov)
@@ -368,6 +402,7 @@ std::vector<piecewisepolynomials::Chunk> ExtractArrayChunks(const py::object ov)
             RAVELOG_ERROR_FORMAT("failed to get chunk at index=%d", ichunk);
         }
     }
+    return v;
 }
 
 class PyPiecewisePolynomialTrajectory {
@@ -437,6 +472,7 @@ public:
     py::object Serialize() const
     {
         std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
         _ptraj->Serialize(ss);
         return py::to_object(ss.str());
     }
@@ -458,6 +494,22 @@ public:
     void Reset()
     {
         _ptraj->Reset();
+    }
+
+    py::object GetChunks() const
+    {
+        py::list pychunks;
+        for( size_t ichunk = 0; ichunk < dof; ++ichunk ) {
+            piecewisepolynomials::Chunk& chunk = _ptraj->vchunks[ichunk];
+            pychunks.append(PyChunkPtr(new PyChunk(chunk.duration, chunk.vpolynomials)));
+        }
+        return pychunks;
+    }
+
+    PyChunkPtr GetChunk(int index) const
+    {
+        piecewisepolynomials::Chunk& chunk = _ptraj->vchunks[index];
+        return PyChunkPtr(new PyChunk(chunk.duration, chunk.vpolynomials));
     }
 
 private:
@@ -551,6 +603,9 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def(init<>())
     .def(init<dReal, py::object>(py::args("duration", "vpolynomials")))
 #endif
+    .def_readonly("degree", &PyChunk::degree)
+    .def_readonly("dof", &PyChunk::dof)
+    .def_readonly("duration", &PyChunk::duration)
     .def("Initialize", &PyChunk::Initialize, PY_ARGS("duration", "vpolynomials") "Reinitialize this chunk with the given duration and polynomials.")
     .def("Cut", &PyChunk::Cut, PY_ARGS("t") "Cut this chunk into two halves. The left half (from t = 0 to t = t) is stored in this chunk. The right half is returned.")
     .def("Eval", &PyChunk::Eval, PY_ARGS("t") "Evaluate the value of this chunk at the given parameter t")
@@ -561,6 +616,8 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("SetConstant", &PyChunk::SetConstant, PY_ARGS("x0Vect", "duration", "degree") "Initialize this chunk with constant polynomials")
     .def("Serialize", &PyChunk::Serialize, "Serialize this chunk into string")
     .def("Deserialize", &PyChunk::Deserialize, PY_ARGS("s") "Deserialize a chunk from the given string")
+    .def("GetPolynomials", &PyChunk::GetPolynomials, "Return a list of polynomials from this chunk")
+    .def("GetPolynomial", &PyChunk::GetPolynomial, PY_ARGS("index") "Return the polynomial at the given index")
     ; // end class_ PyChunk
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -581,5 +638,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("FindChunkIndex", &PyPiecewisePolynomialTrajectory::FindChunkIndex, PY_ARGS("t") "Find the index of the chunk in which the given time t falls into. Also compute the remainder of that chunk.")
     .def("Serialize", &PyPiecewisePolynomialTrajectory::Serialize, "Serialize this trajectory into string")
     .def("Deserialize", &PyPiecewisePolynomialTrajectory::Deserialize, PY_ARGS("s") "Deserialize a trajectory from the given string")
+    .def("GetChunks", &PyPiecewisePolynomialTrajectory::GetChunks, "Return a list of chunks from this trajectory")
+    .def("GetChunk", &PyPiecewisePolynomialTrajectory::GetChunk, PY_ARGS("index") "Return the chunk at the given index")
     ; // end class_ PyPiecewisePolynomialTrajectory
 }
