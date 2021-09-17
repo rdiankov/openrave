@@ -24,15 +24,15 @@ namespace PiecewisePolynomialsInternal {
 
 enum PolynomialCheckReturn {
     PCR_Normal = 0,
-    PCR_PositionLimitsViolation = 0x1,     ///< local extrema of polynomial in the given range violate position limits
-    PCR_VelocityLimitsViolation = 0x2,     ///< local extrema of polynomial in the given range violate velocity limits
-    PCR_AccelerationLimitsViolation = 0x4, ///< local extrema of polynomial in the given range violate acceleration limits
-    PCR_JerkLimitsViolation = 0x8,         ///< local extrema of polynomial in the given range violate jerk limits
-    PCR_NegativeDuration = 0x10,           ///< the maximum of the range in which polynomial is defined is negative
-    PCR_PositionDiscrepancy = 0x10000,     ///< a terminal position (initial/final) is different from the given value
-    PCR_VelocityDiscrepancy = 0x20000,     ///< a terminal velocity (initial/final) is different from the given value
-    PCR_AccelerationDiscrepancy = 0x40000, ///< a terminal acceleration (initial/final) is different from the given value
-    PCR_DurationDiscrepancy = 0x100000,    ///< polynomial is defined in a range different from the given range
+    PCR_PositionLimitsViolation = 1,     ///< local extrema of polynomial in the given range violate position limits
+    PCR_VelocityLimitsViolation = 2,     ///< local extrema of polynomial in the given range violate velocity limits
+    PCR_AccelerationLimitsViolation = 3, ///< local extrema of polynomial in the given range violate acceleration limits
+    PCR_JerkLimitsViolation = 4,         ///< local extrema of polynomial in the given range violate jerk limits
+    PCR_NegativeDuration = 5,            ///< the maximum of the range in which polynomial is defined is negative
+    PCR_PositionDiscrepancy = 6,         ///< a terminal position (initial/final) is different from the given value
+    PCR_VelocityDiscrepancy = 7,         ///< a terminal velocity (initial/final) is different from the given value
+    PCR_AccelerationDiscrepancy = 8,     ///< a terminal acceleration (initial/final) is different from the given value
+    PCR_DurationDiscrepancy = 9,         ///< polynomial is defined in a range different from the given range
 };
 
 class PolynomialChecker {

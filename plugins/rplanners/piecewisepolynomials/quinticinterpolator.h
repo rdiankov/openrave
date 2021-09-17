@@ -37,13 +37,24 @@ public:
     //
     virtual void Initialize(size_t ndof, int envid=0) override;
 
-    virtual void Compute1DTrajectoryZeroTimeDerivativesOptimizeDuration(dReal x0, dReal x1, dReal vm, dReal am, dReal jm, Polynomial& p, dReal& T) override;
+    virtual PolynomialCheckReturn Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
+                                                                                          dReal vm, dReal am, dReal jm,
+                                                                                          std::vector<Polynomial>& polynomials, dReal& T) override;
 
-    virtual void Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T, Polynomial& p) override;
+    virtual PolynomialCheckReturn Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T,
+                                                                                           dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
+                                                                                           std::vector<Polynomial>& polynomials) override;
 
-    virtual void ComputeNDTrajectoryZeroTimeDerivativesOptimizeDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect, Chunk& chunk) override;
+    virtual PolynomialCheckReturn ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                                                                          const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
+                                                                                          std::vector<Chunk>& chunks) override;
 
-    virtual void ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, dReal T, Chunk& chunk) override;
+    virtual PolynomialCheckReturn ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                                                                           const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                                                                                           const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, const dReal T,
+                                                                                           const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
+                                                                                           const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
+                                                                                           std::vector<Chunk>& chunks) override;
 
     /*
          pseudocode:
@@ -61,21 +72,25 @@ public:
              traj = NULL
          return traj
      */
-    virtual PolynomialCheckReturn ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect, dReal T, Chunk& chunk) override;
+    virtual PolynomialCheckReturn ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                                                                               const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                                                                                               const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect,
+                                                                                               const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
+                                                                                               const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
+                                                                                               const dReal T, std::vector<Chunk>& chunks) override;
 
     //
     // Members
     //
     PolynomialChecker checker;
 
-    static const dReal _fifteenOverEight;
-    static const dReal _tenOverSqrtThree;
+    const dReal _fifteenOverEight = 1.875;
+    const dReal _tenOverSqrtThree = 10/Sqrt(3);
 
     std::vector<dReal> _cache1DCoeffs;
     std::vector<dReal> _cacheDVect;
-    std::vector<Polynomial> _cachePolynomialsVect;
-    Polynomial _cachePolynomial;
-    Chunk _cacheChunk;
+    std::vector<Polynomial> _cachePolynomials1, _cachePolynomials2;
+    std::vector<Chunk> _cacheChunks;
 };
 
 } // end namespace PiecewisePolynomialsInternal

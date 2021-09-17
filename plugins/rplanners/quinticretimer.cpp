@@ -187,12 +187,12 @@ protected:
             size_t maxSlowDownTries = 10;
             for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
                 if( bZeroVelAccel ) {
-                    _interpolator.ComputeNDTrajectoryZeroTimeDerivativesOptimizeDuration(_v0pos, _v1pos, vellimits, accellimits, jerklimits, _cacheChunk);
+                    _interpolator.ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(_v0pos, _v1pos, vellimits, accellimits, jerklimits, _cacheInterpolatedChunks);
                     bSuccess = true;
                 }
                 else {
                     dReal tryDuration = 100.0; // TODO: this is bad
-                    PiecewisePolynomials::PolynomialCheckReturn ret = _interpolator.ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, info->_vConfigLowerLimit, info->_vConfigUpperLimit, vellimits, accellimits, jerklimits, tryDuration, _cacheChunk);
+                    PiecewisePolynomials::PolynomialCheckReturn ret = _interpolator.ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, info->_vConfigLowerLimit, info->_vConfigUpperLimit, vellimits, accellimits, jerklimits, tryDuration, _cacheInterpolatedChunks);
                     if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
                         // Stop right away
                         break;
@@ -202,16 +202,20 @@ protected:
                     }
                 }
 
-                duration = _cacheChunk.duration;
+                duration = 0;
+                FOREACHC(itchunk, _cacheInterpolatedChunks) {
+                    duration += itchunk->duration;
+                }
                 if( duration < g_fEpsilon ) {
                     // Stop right away
                     bSuccess = false;
                     break;
                 }
 
-                PiecewisePolynomials::CheckReturn manipret = _manipConstraintChecker->CheckChunkManipConstraints(_cacheChunk);
+                // NOTE: For now suppose that _cacheInterpolatedChunks contains only one chunk
+                PiecewisePolynomials::CheckReturn manipret = _manipConstraintChecker->CheckChunkManipConstraints(_cacheInterpolatedChunks.front());
                 if( manipret.retcode == 0 ) {
-                    // Successful, so stop right away
+                    // Successful, so breaking right away.
                     break;
                 }
 
@@ -229,16 +233,20 @@ protected:
         else {
             // No manip constraint.
             if( bZeroVelAccel ) {
-                _interpolator.ComputeNDTrajectoryZeroTimeDerivativesOptimizeDuration(_v0pos, _v1pos, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit, _cacheChunk);
+                _interpolator.ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(_v0pos, _v1pos, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit, _cacheInterpolatedChunks);
                 bSuccess = true;
-                duration = _cacheChunk.duration;
             }
             else {
                 dReal tryDuration = 100.0; // TODO: this is bad.
-                PiecewisePolynomials::PolynomialCheckReturn ret = _interpolator.ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, info->_vConfigLowerLimit, info->_vConfigUpperLimit, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit, tryDuration, _cacheChunk);
+                PiecewisePolynomials::PolynomialCheckReturn ret = _interpolator.ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, info->_vConfigLowerLimit, info->_vConfigUpperLimit, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit, tryDuration, _cacheInterpolatedChunks);
                 if( ret == PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
                     bSuccess = true;
-                    duration = _cacheChunk.duration;
+                }
+            }
+            if( bSuccess ) {
+                duration = 0;
+                FOREACHC(itchunk, _cacheInterpolatedChunks) {
+                    duration += itchunk->duration;
                 }
             }
         }
@@ -404,8 +412,11 @@ protected:
                 RAVELOG_WARN_FORMAT("env=%s, delta time is really ill-conditioned: %e", GetEnv()->GetNameId()%deltatime);
             }
 
-            _interpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, deltatime, _cacheChunk);
-            PiecewisePolynomials::PolynomialCheckReturn ret = _checker.CheckChunk(_cacheChunk, info->_vConfigLowerLimit, info->_vConfigUpperLimit, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit);
+            PiecewisePolynomials::PolynomialCheckReturn ret = _interpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration
+                                                                  (_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, deltatime,
+                                                                  info->_vConfigLowerLimit, info->_vConfigUpperLimit,
+                                                                  info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit,
+                                                                  _cacheInterpolatedChunks);
             if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
                 return false;
             }
@@ -422,11 +433,14 @@ protected:
             }
             std::vector<dReal>::iterator ittargetdata = _vtrajpoints.begin();
 
+            // For now suppose that _cacheInterpolatedChunks contains only one chunk
+            const PiecewisePolynomials::Chunk& resultChunk = _cacheInterpolatedChunks.front();
+
             if( bIncludeFirstPoint ) {
                 for (int j = 0; j < info->gPos.dof; ++j) {
-                    *(ittargetdata + info->posIndex + j) = _cacheChunk.vpolynomials.at(j).Eval(0);
-                    *(ittargetdata + info->velIndex + j) = _cacheChunk.vpolynomials.at(j).Evald1(0);
-                    *(ittargetdata + info->accelIndex + j) = _cacheChunk.vpolynomials.at(j).Evald2(0);
+                    *(ittargetdata + info->posIndex + j) = resultChunk.vpolynomials.at(j).Eval(0);
+                    *(ittargetdata + info->velIndex + j) = resultChunk.vpolynomials.at(j).Evald1(0);
+                    *(ittargetdata + info->accelIndex + j) = resultChunk.vpolynomials.at(j).Evald2(0);
                 }
                 *(ittargetdata + info->timeIndex) = 0;
                 *(ittargetdata + info->waypointIndex) = 1;
@@ -434,11 +448,11 @@ protected:
             }
 
             for (int j = 0; j < info->gPos.dof; ++j) {
-                *(ittargetdata + info->posIndex + j) = _cacheChunk.vpolynomials.at(j).Eval(_cacheChunk.duration);
-                *(ittargetdata + info->velIndex + j) = _cacheChunk.vpolynomials.at(j).Evald1(_cacheChunk.duration);
-                *(ittargetdata + info->accelIndex + j) = _cacheChunk.vpolynomials.at(j).Evald2(_cacheChunk.duration);
+                *(ittargetdata + info->posIndex + j) = resultChunk.vpolynomials.at(j).Eval(resultChunk.duration);
+                *(ittargetdata + info->velIndex + j) = resultChunk.vpolynomials.at(j).Evald1(resultChunk.duration);
+                *(ittargetdata + info->accelIndex + j) = resultChunk.vpolynomials.at(j).Evald2(resultChunk.duration);
             }
-            *(ittargetdata + info->timeIndex) = _cacheChunk.duration;
+            *(ittargetdata + info->timeIndex) = resultChunk.duration;
             *(ittargetdata + info->waypointIndex) = 1;
             ittargetdata += ndof;
 
@@ -491,7 +505,7 @@ protected:
     vector<dReal> _v0pos, _v0vel, _v1pos, _v1vel, _v0acc, _v1acc;
     vector<dReal> _vtrajpoints;
     std::vector<dReal> _cachevellimits, _cacheaccellimits, _cachejerklimits;
-    PiecewisePolynomials::Chunk _cacheChunk;
+    std::vector<PiecewisePolynomials::Chunk> _cacheInterpolatedChunks;
 
 }; // end class QuinticTrajectoryRetimer
 

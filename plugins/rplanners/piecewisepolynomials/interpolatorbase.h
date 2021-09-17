@@ -45,6 +45,10 @@ public:
         throw OPENRAVE_EXCEPTION_FORMAT0("Initialize not implemented", ORE_NotImplemented);
     }
 
+    //
+    // 1D problems
+    //
+
     /*
        \brief Compute a 1d polynomial that interpolates x0 and x1. The duration is assigned
               such that the trajectory is as fast as possible while respecting all the given
@@ -58,15 +62,17 @@ public:
        \params am acceleration limit
        \params jm jerk limit
      */
-    virtual void Compute1DTrajectoryZeroTimeDerivativesOptimizeDuration(dReal x0, dReal x1, dReal vm, dReal am, dReal jm, Polynomial& p, dReal& T)
+    virtual PolynomialCheckReturn Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
+                                                                                          dReal vm, dReal am, dReal jm,
+                                                                                          std::vector<Polynomial>& polynomials, dReal& T)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("Compute1DTrajectoryZeroTimeDerivativesOptimizeDuration not implemented", ORE_NotImplemented);
     }
 
     /*
-       \brief Compute a 1d polynomial that interpolates (x0, v0, a0) and (x1, v1, a1) and
-             that has the given duration. Since there is a unique polynomial that interpolates the
-             given boundary conditions, we do not perform checking of limits here.
+       \brief Compute a 1d polynomial that interpolates (x0, v0, a0) and (x1, v1, a1). The duration
+              should computed to be as fast as possible while respecting all the given velocity,
+              acceleration, and jerk bounds.
 
        \params x0 initial position
        \params x1 final position
@@ -76,10 +82,36 @@ public:
        \params a1 final acceleration
        \params T the duration
      */
-    virtual void Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T, Polynomial& p)
+    virtual PolynomialCheckReturn Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1,
+                                                                                               dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
+                                                                                               std::vector<Polynomial>& polynomials, dReal& T)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration not implemented", ORE_NotImplemented);
     }
+
+    /*
+       \brief Compute a 1d polynomial that interpolates (x0, v0, a0) and (x1, v1, a1) and that has
+              the given duration while respecting all the given velocity, acceleration, and jerk
+              bounds.
+
+       \params x0 initial position
+       \params x1 final position
+       \params v0 initial velocity
+       \params v1 final velocity
+       \params a0 initial acceleration
+       \params a1 final acceleration
+       \params T the duration
+     */
+    virtual PolynomialCheckReturn Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T,
+                                                                                           dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
+                                                                                           std::vector<Polynomial>& polynomials)
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration not implemented", ORE_NotImplemented);
+    }
+
+    //
+    // ND problems
+    //
 
     /*
        \brief Compute an nd chunk that interpolates x0Vect and x1Vect. The problem is
@@ -103,7 +135,9 @@ public:
 
           where dVect = x1Vect - x0Vect.
      */
-    virtual void ComputeNDTrajectoryZeroTimeDerivativesOptimizeDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect, Chunk& chunk)
+    virtual PolynomialCheckReturn ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                                                                          const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
+                                                                                          std::vector<Chunk>& chunks)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("ComputeNDTrajectoryZeroTimeDerivativesOptimizeDuration not implemented", ORE_NotImplemented);
     }
@@ -121,7 +155,12 @@ public:
        \params a1Vect final acceleration
        \params T the required fixed duration
      */
-    virtual void ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, dReal T, Chunk& chunk)
+    virtual PolynomialCheckReturn ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                                                                           const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                                                                                           const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, const dReal T,
+                                                                                           const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
+                                                                                           const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
+                                                                                           std::vector<Chunk>& chunks)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration not implemented", ORE_NotImplemented);
     }
@@ -143,7 +182,12 @@ public:
        \params jmVect jerk limits
        \params T the initial guess of the duration (may be used or not used depending on the underlying method)
      */
-    virtual PolynomialCheckReturn ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect, dReal T, Chunk& chunk)
+    virtual PolynomialCheckReturn ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                                                                               const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                                                                                               const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect,
+                                                                                               const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
+                                                                                               const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
+                                                                                               const dReal T, std::vector<Chunk>& chunks)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration not implemented", ORE_NotImplemented);
     }

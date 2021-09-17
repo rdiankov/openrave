@@ -17,9 +17,6 @@ namespace OpenRAVE {
 
 namespace PiecewisePolynomialsInternal {
 
-const dReal QuinticInterpolator::_fifteenOverEight = 1.875;
-const dReal QuinticInterpolator::_tenOverSqrtThree = 10/Sqrt(3);
-
 QuinticInterpolator::QuinticInterpolator(size_t ndof, int envid)
 {
     this->Initialize(ndof, envid);
@@ -35,13 +32,16 @@ void QuinticInterpolator::Initialize(size_t ndof, int envid)
     _cache1DCoeffs.resize(6);
 
     _cacheDVect.resize(ndof);
-    _cachePolynomialsVect.resize(ndof);
+    _cachePolynomials1.resize(1);
+    _cachePolynomials2.resize(ndof);
 }
 
 //
 // 1D problem
 //
-void QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizeDuration(dReal x0, dReal x1, dReal vm, dReal am, dReal jm, Polynomial& p, dReal& T)
+PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
+                                                                                                   dReal vm, dReal am, dReal jm,
+                                                                                                   std::vector<Polynomial>& polynomials, dReal& T)
 {
     /*
        Describing a quintic polynomial as
@@ -98,11 +98,15 @@ void QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizeDuration
     vcoeffs[3] = 10*(x1 - x0)/T3;
     vcoeffs[4] = 15*(x0 - x1)/T4;
     vcoeffs[5] = 6*(x1 - x0)/T5;
-    p.Initialize(vcoeffs);
-    return;
+
+    polynomials.resize(1);
+    polynomials[0].Initialize(vcoeffs);
+    return PolynomialCheckReturn::PCR_Normal;
 }
 
-void QuinticInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T, Polynomial& p)
+PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T,
+                                                                                                    dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
+                                                                                                    std::vector<Polynomial>& polynomials)
 {
     dReal T2 = T*T;
     dReal T3 = T2*T;
@@ -116,14 +120,17 @@ void QuinticInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesFixedDurati
     vcoeffs[3] = (T2*(a1 - 3.0*a0) - T*(12.0*v0 + 8.0*v1) + 20.0*(x1 - x0))/(2*T3);
     vcoeffs[4] = (T2*(3.0*a0 - 2.0*a1) + T*(16.0*v0 + 14.0*v1) + 30.0*(x0 - x1))/(2*T4);
     vcoeffs[5] = (T2*(a1 - a0) - 6.0*T*(v1 + v0) + 12.0*(x1 - x0))/(2*T5);
-    p.Initialize(vcoeffs);
-    return;
+    polynomials.resize(1);
+    polynomials[0].Initialize(vcoeffs);
+    return checker.CheckPolynomial(polynomials[0], T, xmin, xmax, vm, am, jm);
 }
 
 //
 // ND problem
 //
-void QuinticInterpolator::ComputeNDTrajectoryZeroTimeDerivativesOptimizeDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect, Chunk& chunk)
+PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                                                                                   const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
+                                                                                                   std::vector<Chunk>& chunks)
 {
     OPENRAVE_ASSERT_OP(x0Vect.size(), ==, ndof);
     OPENRAVE_ASSERT_OP(x1Vect.size(), ==, ndof);
@@ -149,16 +156,18 @@ void QuinticInterpolator::ComputeNDTrajectoryZeroTimeDerivativesOptimizeDuration
     }
     if( !(vMin < g_fPolynomialInf && aMin < g_fPolynomialInf && jMin < g_fPolynomialInf) ) {
         // Displacements are zero.
-        chunk.SetConstant(x0Vect, 0, 5);
-        return;
+        chunks.resize(1);
+        chunks[0].SetConstant(x0Vect, 0, 5);
+        return PolynomialCheckReturn::PCR_Normal;
     }
 
-    Polynomial& p = _cachePolynomial;
+    std::vector<Polynomial>& templatePolynomials = _cachePolynomials1;
     dReal T;
-    Compute1DTrajectoryZeroTimeDerivativesOptimizeDuration(0, 1, vMin, aMin, jMin, p, T);
+    Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(0, 1, vMin, aMin, jMin, templatePolynomials, T);
+    const Polynomial& p = templatePolynomials[0];
 
     std::vector<dReal>& vcoeffs = _cache1DCoeffs;
-    std::vector<Polynomial>& vpolynomials = _cachePolynomialsVect;
+    std::vector<Polynomial>& vpolynomials = _cachePolynomials2; // should already have size=ndof
     for( size_t idof = 0; idof < ndof; ++idof ) {
         size_t icoeff = 0;
         for( std::vector<dReal>::const_iterator it = p.vcoeffs.begin(); it != p.vcoeffs.end(); ++it, ++icoeff ) {
@@ -167,11 +176,17 @@ void QuinticInterpolator::ComputeNDTrajectoryZeroTimeDerivativesOptimizeDuration
         vcoeffs[0] += x0Vect[idof];
         vpolynomials[idof].Initialize(vcoeffs);
     }
-    chunk.Initialize(T, vpolynomials);
-    return;
+    chunks.resize(1);
+    chunks[0].Initialize(T, vpolynomials);
+    return PolynomialCheckReturn::PCR_Normal;
 }
 
-void QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, dReal T, Chunk& chunk)
+PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                                                                                    const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                                                                                                    const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, const dReal T,
+                                                                                                    const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
+                                                                                                    const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
+                                                                                                    std::vector<Chunk>& chunks)
 {
     OPENRAVE_ASSERT_OP(x0Vect.size(), ==, ndof);
     OPENRAVE_ASSERT_OP(x1Vect.size(), ==, ndof);
@@ -180,14 +195,25 @@ void QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesFixedDurati
     OPENRAVE_ASSERT_OP(a0Vect.size(), ==, ndof);
     OPENRAVE_ASSERT_OP(a1Vect.size(), ==, ndof);
 
-    std::vector<Polynomial>& vpolynomials = _cachePolynomialsVect;
+    std::vector<Polynomial>& resultPolynomials = _cachePolynomials1;
+    std::vector<Polynomial>& finalPolynomials = _cachePolynomials2; // should already have size=ndof
     for( size_t idof = 0; idof < ndof; ++idof ) {
-        Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], a0Vect[idof], a1Vect[idof], T, vpolynomials[idof]);
+        Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], a0Vect[idof], a1Vect[idof], T,
+                                                                 xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], jmVect[idof], resultPolynomials);
+        finalPolynomials[idof] = resultPolynomials[0]; // can do this since for this quintic interpolator, resultPolynomials always has size=1
     }
-    chunk.Initialize(T, vpolynomials);
+    chunks.resize(1);
+    chunks[0].Initialize(T, finalPolynomials);
+
+    return checker.CheckChunk(chunks[0], xminVect, xmaxVect, vmVect, amVect, jmVect);
 }
 
-PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect, dReal T, Chunk& chunk)
+PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                                                                                        const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                                                                                                        const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect,
+                                                                                                        const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
+                                                                                                        const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
+                                                                                                        const dReal T, std::vector<Chunk>& chunks)
 {
     OPENRAVE_ASSERT_OP(x0Vect.size(), ==, ndof);
     OPENRAVE_ASSERT_OP(x1Vect.size(), ==, ndof);
@@ -202,13 +228,13 @@ PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDeriv
     OPENRAVE_ASSERT_OP(jmVect.size(), ==, ndof);
 
     bool bFound = false; // true if any of the interpolated trajectories is good.
-    Chunk& tempChunk = _cacheChunk;
+    std::vector<Chunk>& tempChunks = _cacheChunks;
 
     // Try a greedy approach. Continue the interpolation with less duration even though the initial interpolation fails.
-    ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, T, tempChunk);
-    PolynomialCheckReturn ret = checker.CheckChunk(tempChunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
-    if( ret == PCR_Normal ) {
-        chunk = tempChunk;
+    PolynomialCheckReturn ret = ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, T,
+                                                                                         xminVect, xmaxVect, vmVect, amVect, jmVect, tempChunks);
+    if( ret == PolynomialCheckReturn::PCR_Normal ) {
+        chunks = tempChunks;
         bFound = true;
     }
 
@@ -217,17 +243,17 @@ PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDeriv
     dReal Tcur = T;
     while( fStepSize >= fCutoff ) {
         dReal fTestDuration = Tcur - fStepSize;
-        ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, fTestDuration, tempChunk);
-        PolynomialCheckReturn ret2 = checker.CheckChunk(tempChunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
-        if( ret2 == PCR_Normal ) {
+        PolynomialCheckReturn ret2 = ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, fTestDuration,
+                                                                                              xminVect, xmaxVect, vmVect, amVect, jmVect, tempChunks);
+        if( ret2 == PolynomialCheckReturn::PCR_Normal ) {
             Tcur = fTestDuration;
-            chunk = tempChunk;
+            chunks = tempChunks;
             bFound = true;
         }
         fStepSize = 0.5*fStepSize;
     }
     if( bFound ) {
-        return PCR_Normal;
+        return PolynomialCheckReturn::PCR_Normal;
     }
     else {
         return ret; // return the first error
