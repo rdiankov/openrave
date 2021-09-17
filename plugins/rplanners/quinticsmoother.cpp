@@ -29,11 +29,6 @@ public:
     {
     }
 
-    virtual void _InitializeInterpolator() override
-    {
-        _pinterpolator.reset(new PiecewisePolynomials::QuinticInterpolator(_ndof, _envId));
-    }
-
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         uint32_t startTime = utils::GetMilliTime();
@@ -690,6 +685,11 @@ public:
     }
 
 protected:
+
+    virtual void _InitializeInterpolator() override
+    {
+        _pinterpolator.reset(new PiecewisePolynomials::QuinticInterpolator(_ndof, _envId));
+    }
 
     virtual PiecewisePolynomials::CheckReturn _ProcessConstraintReturnIntoChunks(ConstraintFilterReturnPtr contraintReturn, const PiecewisePolynomials::Chunk chunkIn,
                                                                                  std::vector<dReal>& x0Vect, std::vector<dReal>& x1Vect,

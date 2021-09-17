@@ -114,21 +114,20 @@ public:
         return !!_uniformSampler;
     }
 
-    virtual void _InitializeInterpolator()=0;
-
     virtual PlannerParametersConstPtr GetParameters() const
     {
         return _parameters;
     }
 
-    /// \brief TODO: write descriptions for this
+    /// \brief Check if the given sequence of chunks violates any constraints (excluding joint velocity, acceleration,
+    ///        and jerk limits, which are assumed to already be satisfied).
     virtual PiecewisePolynomials::CheckReturn CheckAllChunksAllConstraints(const std::vector<PiecewisePolynomials::Chunk>& vChunksIn, int options, std::vector<PiecewisePolynomials::Chunk>& vChunksOut)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("CheckAllChunksAllConstraints not implemented", ORE_NotImplemented);
     }
 
-    /// \brief Check if the given chunk violates any constraints (excluding joint velocity,
-    /// acceleration, and jerk limits, which are assumed to already be satisfied).
+    /// \brief Check if the given chunk violates any constraints (excluding joint velocity, acceleration, and jerk
+    ///        limits, which are assumed to already be satisfied).
     virtual PiecewisePolynomials::CheckReturn CheckChunkAllConstraints(const PiecewisePolynomials::Chunk& chunkIn, int options, std::vector<PiecewisePolynomials::Chunk>& vChunksOut)
     {
         std::vector<dReal> &x0Vect = _cacheX0Vect2, &x1Vect = _cacheX1Vect2, &v0Vect = _cacheV0Vect2, &v1Vect = _cacheV1Vect2, &a0Vect = _cacheA0Vect2, &a1Vect = _cacheA1Vect2;
@@ -223,7 +222,23 @@ protected:
         SS_Successful = 1,
     };
 
-    /// \brief TODO: write descriptions for this
+    /// \brief Initialize _pinterpolator.
+    virtual void _InitializeInterpolator()=0;
+
+    /// \brief Transfer information (configurations and timestamps) from constraintReturn into vChunksOut. Since the
+    ///        configurations in constraintReturn could deviate from the original input chunk (chunkIn), we need to take
+    ///        special care to construct new chunks that still respect all robot limits.
+    ///
+    /// \param[in] constraintReturn information returned from the Check function
+    /// \param[in] chunkIn the original chunk being checked.
+    /// \param[in] x0Vect for holding intermediate values
+    /// \param[in] x1Vect for holding intermediate values
+    /// \param[in] v0Vect for holding intermediate values
+    /// \param[in] v1Vect for holding intermediate values
+    /// \param[in] a0Vect for holding intermediate values
+    /// \param[in] a1Vect for holding intermediate values
+    /// \param[out] vChunksOut the resulting chunks reconstructed from constraintReturn
+    /// \return CheckReturn struct containing check result.
     virtual PiecewisePolynomials::CheckReturn _ProcessConstraintReturnIntoChunks(ConstraintFilterReturnPtr contraintReturn, const PiecewisePolynomials::Chunk chunkIn,
                                                                                  std::vector<dReal>& x0Vect, std::vector<dReal>& x1Vect,
                                                                                  std::vector<dReal>& v0Vect, std::vector<dReal>& v1Vect,
@@ -236,7 +251,18 @@ protected:
     /// \brief Given an OpenRAVE trajectory with the same type of joint values-interpolation as the initialized
     ///        interpolator, convert it into PiecewisePolynomialTrajectory representation by using the function
     ///        _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration to compute chunks.
-    PlannerStatus ConvertOpenRAVETrajectoryToPiecewisePolynomialTrajectorySameInterpolation(TrajectoryBasePtr ptraj, ConfigurationSpecification& posSpec, ConfigurationSpecification& velSpec, ConfigurationSpecification& accelSpec, ConfigurationSpecification& timeSpec, PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj)
+    ///
+    /// \param[in] ptraj
+    /// \param[in] posSpec ConfigurationSpecification for joint values
+    /// \param[in] velSpec ConfigurationSpecification for joint velocities
+    /// \param[in] accelSpec ConfigurationSpecification for joint accelerations
+    /// \param[in] timeSpec ConfigurationSpecification for deltatime
+    /// \param[out] pwptraj
+    /// \return true if successulf. false otherwise.
+    PlannerStatus ConvertOpenRAVETrajectoryToPiecewisePolynomialTrajectorySameInterpolation(TrajectoryBasePtr ptraj,
+                                                                                            ConfigurationSpecification& posSpec, ConfigurationSpecification& velSpec,
+                                                                                            ConfigurationSpecification& accelSpec, ConfigurationSpecification& timeSpec,
+                                                                                            PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj)
     {
         // Cache stuff
         std::vector<dReal> &x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect, &a0Vect = _cacheA0Vect, &a1Vect = _cacheA1Vect, &tVect = _cacheTVect;
@@ -281,6 +307,11 @@ protected:
     /// \brief Given an OpenRAVE path (trajectory without any timing information) and with every pair of waypoints
     ///        connected via a straight line (i.e. using linear interpolation), compute a piecewise polynomial
     ///        trajectory based on the path.
+    ///
+    /// \param[in] ptraj
+    /// \param[in] posSpec ConfigurationSpecification for joint values
+    /// \param[out] pwptraj
+    /// \return PS_HasSolution only if successful.
     PlannerStatus ConvertOpenRAVEPathToPiecewisePolynomialTrajectory(TrajectoryBasePtr ptraj, ConfigurationSpecification& posSpec, PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj)
     {
         // Cache stuff
@@ -491,6 +522,7 @@ protected:
     /// \param[in]  x1VectIn
     /// \param[in]  options
     /// \param[out] chunk a chunk that contains all the polynomials
+    /// \return true if successful. false otherwise.
     bool _ComputeSegmentWithZeroVelAccelEndpoints(const std::vector<dReal> &x0VectIn, const std::vector<dReal>& x1VectIn, int options, std::vector<PiecewisePolynomials::Chunk>& vChunksOut, size_t iWaypoint=0, size_t numWaypoints=0)
     {
         std::vector<dReal> &velLimits = _cacheVellimits, &accelLimits = _cacheAccelLimits, &jerkLimits = _cacheJerkLimits;
@@ -574,14 +606,20 @@ protected:
         return true;
     }
 
-    /// \brief
+    /// \brief Perform shortcutting procedure on the given piecewise polynomial trajectory
     virtual int _Shortcut(PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj, int numIters, dReal minTimeStep)
     {
         // Should be implemented in each derived class.
         return 0;
     }
 
-    /// \brief Dump OpenRAVE Trajectory to file
+    /// \brief Dump OpenRAVE Trajectory to file.
+    ///        The filename will have the form "quinticsmoother_<fileIndex>_<suffix>.ortraj".
+    ///
+    /// \param[in] ptraj trajectory to dump to file
+    /// \param[in] suffix The suffix to append to the filename
+    /// \param[in] level Only dump the trajectory if the current debug level is not less than this.
+    /// \return true if dumping is successful. false otherwise.
     bool _DumpOpenRAVETrajectory(TrajectoryBasePtr ptraj, const char* suffix, DebugLevel level)
     {
         if( IS_DEBUGLEVEL(level) ) {
@@ -602,7 +640,13 @@ protected:
         }
     }
 
-    /// \brief Dump PiecewisePolynomialTrajectory to file
+    /// \brief Dump PiecewisePolynomialTrajectory to file.
+    ///        The filename will have the form "quinticsmoother_<fileindex>_<suffix>.pwptraj".
+    ///
+    /// \param[in] ptraj trajectory to dump to file
+    /// \param[in] suffix The suffix to append to the filename
+    /// \param[in] level Only dump the trajectory if the current debug level is not less than this.
+    /// \return true if dumping is successful. false otherwise.
     bool _DumpPiecewisePolynomialTrajectory(PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj, const char* suffix, DebugLevel level)
     {
         if( IS_DEBUGLEVEL(level) ) {
@@ -651,9 +695,8 @@ protected:
     // cache
     size_t _nMaxDiscretizationSize;
     ConstraintFilterReturnPtr _constraintReturn;
-    TrajectoryBasePtr _pDummyTraj; ///< TODO: write a description for this
+    TrajectoryBasePtr _pDummyTraj; ///< for storing intermediate result during the process of converting pwptraj to openrave traj.
     PiecewisePolynomials::PiecewisePolynomialTrajectory _cacheTraj;
-    std::vector<dReal> _cacheTrajPoint; ///< stores a waypoint when converting PiecewisePolynomialTrajectory to OpenRAVE trajectory
 
     std::vector<dReal> _cacheX0Vect, _cacheX1Vect, _cacheV0Vect, _cacheV1Vect, _cacheA0Vect, _cacheA1Vect, _cacheTVect;
     std::vector<dReal> _cacheAllWaypoints; ///< stores the concatenation of all waypoints from the initial trajectory
@@ -663,9 +706,8 @@ protected:
     std::vector<PiecewisePolynomials::Chunk> _cacheInterpolatedChunks; ///< for storing interpolation results
     std::vector<PiecewisePolynomials::Chunk> _cacheCheckedChunks; ///< for storing results from CheckChunkAllConstraints
 
-    // for use in CheckChunkAllConstraints. TODO: write descriptions for these variables
+    // for use in CheckChunkAllConstraints.
     std::vector<dReal> _cacheX0Vect2, _cacheX1Vect2, _cacheV0Vect2, _cacheV1Vect2, _cacheA0Vect2, _cacheA1Vect2;
-    PiecewisePolynomials::Chunk _cacheChunk;
 
     std::vector<uint8_t> _cacheVVisitedDiscretization;
 }; // end class QuinticSmoother
