@@ -51,7 +51,7 @@ public:
     Polynomial()
     {
     };
-    Polynomial(const std::vector<dReal>& c);
+    Polynomial(const dReal T, const std::vector<dReal>& c);
     ~Polynomial()
     {
     }
@@ -60,7 +60,7 @@ public:
     // Functions
     //
     /// \brief Initialize this polynomial with the given coefficients.
-    void Initialize(const std::vector<dReal>& c);
+    void Initialize(const dReal T, const std::vector<dReal>& c);
 
     /// \brief Initialize this polynomial with the existing coefficients
     void Initialize();
@@ -70,6 +70,9 @@ public:
 
     /// \brief Update the weakest term coefficient.
     void UpdateInitialValue(dReal c0);
+
+    /// \brief Update the duration.
+    void UpdateDuration(dReal T);
 
     /// \brief Evaluate this polynomial at time t.
     dReal Eval(dReal t) const;
@@ -122,6 +125,9 @@ public:
     std::vector<dReal> vcoeffsddd; ///< vector of coefficients of the third derivative of this polynomial
     std::vector<Coordinate> vcextrema; ///< vector of pairs (t, p(t)) where each t is such that p(t) is a local extrema
 
+    dReal displacement; ///< the displacement done by this polynomial
+    dReal duration; ///< the duration T of this polynomial. The polynomial p(t) is valid for t \in [0, T].
+
     mutable std::vector<dReal> _vcurcoeffs;
 }; // end class Polynomial
 
@@ -147,6 +153,9 @@ public:
     /// \brief
     void UpdateInitialValues(std::vector<dReal>& vinitialvalues);
 
+    /// \brief
+    void UpdateDuration(dReal T);
+    
     /// \brief Initialize this chunk with the given duration and polynomials vector
     void Initialize(const dReal duration, const std::vector<Polynomial>& vpolynomials);
 

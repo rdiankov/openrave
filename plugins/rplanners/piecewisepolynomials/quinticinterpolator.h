@@ -39,7 +39,7 @@ public:
 
     virtual PolynomialCheckReturn Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
                                                                                           dReal vm, dReal am, dReal jm,
-                                                                                          std::vector<Polynomial>& polynomials, dReal& T) override;
+                                                                                          std::vector<Polynomial>& polynomials) override;
 
     virtual PolynomialCheckReturn Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T,
                                                                                            dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,

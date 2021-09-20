@@ -41,7 +41,7 @@ void QuinticInterpolator::Initialize(size_t ndof, int envid)
 //
 PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
                                                                                                    dReal vm, dReal am, dReal jm,
-                                                                                                   std::vector<Polynomial>& polynomials, dReal& T)
+                                                                                                   std::vector<Polynomial>& polynomials)
 {
     /*
        Describing a quintic polynomial as
@@ -85,7 +85,7 @@ PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivative
     dReal Ta = Sqrt( _tenOverSqrtThree * absd/am );
     dReal Tj = Cbrt( 30 * absd/jm );
 
-    T = Max(Max(Tv, Ta), Tj);
+    dReal T = Max(Max(Tv, Ta), Tj);
     dReal T2 = T*T;
     dReal T3 = T2*T;
     dReal T4 = T3*T;
@@ -100,7 +100,7 @@ PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivative
     vcoeffs[5] = 6*(x1 - x0)/T5;
 
     polynomials.resize(1);
-    polynomials[0].Initialize(vcoeffs);
+    polynomials[0].Initialize(T, vcoeffs);
     return PolynomialCheckReturn::PCR_Normal;
 }
 
@@ -121,8 +121,8 @@ PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryArbitraryTimeDeriv
     vcoeffs[4] = (T2*(3.0*a0 - 2.0*a1) + T*(16.0*v0 + 14.0*v1) + 30.0*(x0 - x1))/(2*T4);
     vcoeffs[5] = (T2*(a1 - a0) - 6.0*T*(v1 + v0) + 12.0*(x1 - x0))/(2*T5);
     polynomials.resize(1);
-    polynomials[0].Initialize(vcoeffs);
-    return checker.CheckPolynomial(polynomials[0], T, xmin, xmax, vm, am, jm);
+    polynomials[0].Initialize(T, vcoeffs);
+    return checker.CheckPolynomial(polynomials[0], xmin, xmax, vm, am, jm);
 }
 
 //
@@ -162,8 +162,7 @@ PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryZeroTimeDerivative
     }
 
     std::vector<Polynomial>& templatePolynomials = _cachePolynomials1;
-    dReal T;
-    Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(0, 1, vMin, aMin, jMin, templatePolynomials, T);
+    Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(0, 1, vMin, aMin, jMin, templatePolynomials);
     const Polynomial& p = templatePolynomials[0];
 
     std::vector<dReal>& vcoeffs = _cache1DCoeffs;
@@ -174,10 +173,10 @@ PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryZeroTimeDerivative
             vcoeffs[icoeff] = dVect[idof] * (*it);
         }
         vcoeffs[0] += x0Vect[idof];
-        vpolynomials[idof].Initialize(vcoeffs);
+        vpolynomials[idof].Initialize(p.duration, vcoeffs);
     }
     chunks.resize(1);
-    chunks[0].Initialize(T, vpolynomials);
+    chunks[0].Initialize(p.duration, vpolynomials);
     return PolynomialCheckReturn::PCR_Normal;
 }
 

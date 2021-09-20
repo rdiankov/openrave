@@ -124,22 +124,27 @@ public:
     {
         _ppolynomial.reset(new piecewisepolynomials::Polynomial());
     }
-    PyPolynomial(const py::object ocoeffs)
+    PyPolynomial(const dReal duration, const py::object ocoeffs)
     {
         std::vector<dReal> inputCoeffs = openravepy::ExtractArray<dReal>(ocoeffs);
-        _ppolynomial.reset(new piecewisepolynomials::Polynomial(inputCoeffs));
+        _ppolynomial.reset(new piecewisepolynomials::Polynomial(duration, inputCoeffs));
         _PostProcess();
     }
-    PyPolynomial(const std::vector<dReal>& coeffs)
+    PyPolynomial(const dReal duration, const std::vector<dReal>& coeffs)
     {
-        _ppolynomial.reset(new piecewisepolynomials::Polynomial(coeffs));
+        _ppolynomial.reset(new piecewisepolynomials::Polynomial(duration, coeffs));
+        _PostProcess();
+    }
+    PyPolynomial(const piecewisepolynomials::Polynomial& polynomial)
+    {
+        _ppolynomial.reset(new piecewisepolynomials::Polynomial(polynomial.duration, polynomial.vcoeffs));
         _PostProcess();
     }
 
-    void Initialize(const py::object ocoeffs)
+    void Initialize(const dReal duration, const py::object ocoeffs)
     {
         std::vector<dReal> inputCoeffs = openravepy::ExtractArray<dReal>(ocoeffs);
-        _ppolynomial->Initialize(inputCoeffs);
+        _ppolynomial->Initialize(duration, inputCoeffs);
         _PostProcess();
     }
 
@@ -152,6 +157,12 @@ public:
     void UpdateInitialValue(dReal c0)
     {
         _ppolynomial->UpdateInitialValue(c0);
+        _PostProcess();
+    }
+
+    void UpdateDuration(dReal duration)
+    {
+        _ppolynomial->UpdateDuration(duration);
         _PostProcess();
     }
 
@@ -183,7 +194,7 @@ public:
     PyPolynomialPtr Differentiate(size_t ideriv) const
     {
         piecewisepolynomials::Polynomial newPoly = _ppolynomial->Differentiate(ideriv);
-        return PyPolynomialPtr(new PyPolynomial(newPoly.vcoeffs));
+        return PyPolynomialPtr(new PyPolynomial(newPoly));
     }
 
     py::list GetExtrema() const
@@ -234,8 +245,11 @@ public:
 private:
     void _PostProcess()
     {
+        duration = _ppolynomial->duration;
+        displacement = _ppolynomial->displacement;
+
         _srep.clear();
-        _srep += "Polynomial([";
+        _srep += "Polynomial(" + std::to_string(duration) + ", [";
         FOREACHC(itcoeff, _ppolynomial->vcoeffs) {
             _srep += std::to_string(*itcoeff);
             _srep += ", ";
@@ -245,6 +259,8 @@ private:
 
 public:
     PolynomialPtr _ppolynomial;
+    dReal duration;
+    dReal displacement;
     std::string _srep; // string representation of this polynomial
 }; // end class PyPolynomial
 
@@ -298,12 +314,20 @@ public:
         _PostProcess();
     }
 
+    void UpdateDuration(const dReal duration)
+    {
+        _pchunk->UpdateDuration(duration);
+        _PostProcess();
+    }
+
     PyChunkPtr Cut(dReal t)
     {
         piecewisepolynomials::Chunk remChunk;
         _pchunk->Cut(t, remChunk);
+        _PostProcess();
+
         PyChunkPtr pyRemChunk(new PyChunk());
-        pyRemChunk->_pchunk->Initialize(remChunk.duration, remChunk.vpolynomials);
+        pyRemChunk->_Initialize(remChunk);
         return pyRemChunk;
     }
 
@@ -368,17 +392,24 @@ public:
     {
         py::list pypolynomials;
         for( size_t ipoly = 0; ipoly < dof; ++ipoly ) {
-            pypolynomials.append(PyPolynomialPtr(new PyPolynomial(_pchunk->vpolynomials[ipoly].vcoeffs)));
+            pypolynomials.append(PyPolynomialPtr(new PyPolynomial(_pchunk->vpolynomials[ipoly])));
         }
         return pypolynomials;
     }
 
     PyPolynomialPtr GetPolynomial(int index) const
     {
-        return PyPolynomialPtr(new PyPolynomial(_pchunk->vpolynomials[index].vcoeffs));
+
+        return PyPolynomialPtr(new PyPolynomial(_pchunk->vpolynomials.at(index)));
     }
 
 private:
+    void _Initialize(const piecewisepolynomials::Chunk& chunk)
+    {
+        _pchunk->Initialize(chunk.duration, chunk.vpolynomials);
+        _PostProcess();
+    }
+
     void _PostProcess()
     {
         degree = _pchunk->degree;
@@ -579,13 +610,17 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyPolynomial, PyPolynomialPtr>(m, "Polynomial", "PiecewisePolynomials::Polynomial wrapper")
     .def(init<>())
-    .def(init<py::object>(), "coeffs"_a)
+    .def(init<dReal, py::object>(), "duration"_a, "coeffs"_a)
 #else
     class_<PyPolynomial, PyPolynomialPtr>("Polynomial", "PiecewisePolynomials::Polynomial wrapper", no_init)
     .def(init<>())
-    .def(init<py::object>(py::args("coeffs")))
+    .def(init<dReal, py::object>(py::args("duration", "coeffs")))
 #endif
-    .def("Initialize", &PyPolynomial::Initialize, PY_ARGS("coeffs") "Reinitialize this polynomial with the given coefficients.")
+    .def_readonly("duration", &PyPolynomial::duration)
+    .def_readonly("displacement", &PyPolynomial::displacement)
+    .def("Initialize", &PyPolynomial::Initialize, PY_ARGS("duration", "coeffs") "Reinitialize this polynomial with the given coefficients.")
+    .def("UpdateInitialValue", &PyPolynomial::UpdateInitialValue, PY_ARGS("c0") "Update the weakest term coefficient")
+    .def("UpdateDuration", &PyPolynomial::UpdateDuration, PY_ARGS("duration") "Update the duration")
     .def("PadCoefficients", &PyPolynomial::PadCoefficients, PY_ARGS("newdegree") "Append zeros to the coefficient vectors")
     .def("Eval", &PyPolynomial::Eval, PY_ARGS("t") "Evaluate the value of this polynomial at the given parameter t")
     .def("Evald1", &PyPolynomial::Evald1, PY_ARGS("t") "Evaluate the first derivative of this polynomial at the given parameter t")
@@ -614,6 +649,8 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def_readonly("dof", &PyChunk::dof)
     .def_readonly("duration", &PyChunk::duration)
     .def("Initialize", &PyChunk::Initialize, PY_ARGS("duration", "vpolynomials") "Reinitialize this chunk with the given duration and polynomials.")
+    .def("UpdateInitialValues", &PyChunk::UpdateInitialValues, PY_ARGS("vinitialvalues") "Update the weakest term coefficient of polynomials in this chunk.")
+    .def("UpdateDuration", &PyChunk::UpdateDuration, PY_ARGS("duration") "Update the duration of this chunk")
     .def("Cut", &PyChunk::Cut, PY_ARGS("t") "Cut this chunk into two halves. The left half (from t = 0 to t = t) is stored in this chunk. The right half is returned.")
     .def("Eval", &PyChunk::Eval, PY_ARGS("t") "Evaluate the value of this chunk at the given parameter t")
     .def("Evald1", &PyChunk::Evald1, PY_ARGS("t") "Evaluate the first derivative of this chunk at the given parameter t")

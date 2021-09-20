@@ -21,15 +21,16 @@ namespace PiecewisePolynomialsInternal {
 //
 // Polynomial
 //
-Polynomial::Polynomial(const std::vector<dReal>& c)
+Polynomial::Polynomial(const dReal T, const std::vector<dReal>& c)
 {
-    this->Initialize(c);
+    this->Initialize(T, c);
 }
 
-void Polynomial::Initialize(const std::vector<dReal>& c)
+void Polynomial::Initialize(const dReal T, const std::vector<dReal>& c)
 {
     OPENRAVE_ASSERT_OP(c.size(), >, 0);
     vcoeffs = c;
+    duration = T;
     Initialize();
 }
 
@@ -68,6 +69,7 @@ void Polynomial::Initialize()
         vcoeffsddd.resize(0);
     }
 
+    displacement = Eval(duration) - Eval(0);
     _FindAllLocalExtrema();
 }
 
@@ -92,8 +94,20 @@ void Polynomial::UpdateInitialValue(dReal c0)
     vcoeffs[0] = c0;
 }
 
+void Polynomial::UpdateDuration(dReal T)
+{
+    duration = T;
+    displacement = Eval(duration) - Eval(0);
+}
+
 dReal Polynomial::Eval(dReal t) const
 {
+    if( t < 0 ) {
+        t = 0;
+    }
+    else if( t > duration ) {
+        t = duration;
+    }
     dReal val = vcoeffs.back();
     for( int i = (int)degree - 1; i >= 0; --i ) {
         val = val*t + vcoeffs[i];
@@ -105,6 +119,12 @@ dReal Polynomial::Evald1(dReal t) const
 {
     if( degree < 1 ) {
         return 0;
+    }
+    if( t < 0 ) {
+        t = 0;
+    }
+    else if( t > duration ) {
+        t = duration;
     }
     dReal val = vcoeffsd.back();
     for( int i = (int)degree - 2; i >= 0; --i ) {
@@ -118,6 +138,12 @@ dReal Polynomial::Evald2(dReal t) const
     if( degree < 2 ) {
         return 0;
     }
+    if( t < 0 ) {
+        t = 0;
+    }
+    else if( t > duration ) {
+        t = duration;
+    }
     dReal val = vcoeffsdd.back();
     for( int i = (int)degree - 3; i >= 0; --i ) {
         val = val*t + vcoeffsdd[i];
@@ -129,6 +155,12 @@ dReal Polynomial::Evald3(dReal t) const
 {
     if( degree < 3 ) {
         return 0;
+    }
+    if( t < 0 ) {
+        t = 0;
+    }
+    else if( t > duration ) {
+        t = duration;
     }
     dReal val = vcoeffsddd.back();
     for( int i = (int)degree - 4; i >= 0; --i ) {
@@ -154,6 +186,12 @@ dReal Polynomial::Evaldn(dReal t, size_t n) const
         return Evald3(t);
     }
 
+    if( t < 0 ) {
+        t = 0;
+    }
+    else if( t > duration ) {
+        t = duration;
+    }
     // The number of coefficients decreases every time we take a derivative.
     size_t numcoeffs = degree + 1 - n;
     _vcurcoeffs.resize(numcoeffs);
@@ -176,16 +214,16 @@ dReal Polynomial::Evaldn(dReal t, size_t n) const
 Polynomial Polynomial::Differentiate(size_t ideriv) const
 {
     if( ideriv == 0 ) {
-        return Polynomial(vcoeffs); // return a copy of itself
+        return Polynomial(duration, vcoeffs); // return a copy of itself
     }
     else if( ideriv == 1 ) {
-        return Polynomial(vcoeffsd);
+        return Polynomial(duration, vcoeffsd);
     }
     else if( ideriv == 2 ) {
-        return Polynomial(vcoeffsdd);
+        return Polynomial(duration, vcoeffsdd);
     }
     else if( ideriv == 3 ) {
-        return Polynomial(vcoeffsddd);
+        return Polynomial(duration, vcoeffsddd);
     }
     else if( ideriv <= degree ) {
         size_t inewderiv = ideriv - 3;
@@ -196,10 +234,10 @@ Polynomial Polynomial::Differentiate(size_t ideriv) const
                 _vcurcoeffs[icoeff] *= (mult + icoeff);
             }
         }
-        return Polynomial(_vcurcoeffs);
+        return Polynomial(duration, _vcurcoeffs);
     }
     else {
-        return Polynomial({0});
+        return Polynomial(duration, {0});
     }
 }
 
@@ -290,7 +328,8 @@ void Polynomial::FindAllLocalExtrema(size_t ideriv, std::vector<Coordinate>& vco
 
 void Polynomial::Serialize(std::ostream& O) const
 {
-    O << vcoeffs.size();
+    O << duration;
+    O << " " << vcoeffs.size();
     for( size_t i = 0; i < vcoeffs.size(); ++i ) {
         O << " " << vcoeffs[i];
     }
@@ -299,6 +338,7 @@ void Polynomial::Serialize(std::ostream& O) const
 void Polynomial::Deserialize(std::istream& I)
 {
     size_t numCoeffs;
+    I >> duration;
     I >> numCoeffs;
     vcoeffs.resize(numCoeffs);
     for( size_t i = 0; i < numCoeffs; ++i ) {
@@ -323,6 +363,15 @@ void Chunk::UpdateInitialValues(std::vector<dReal>&vinitialvalues)
     }
 }
 
+void Chunk::UpdateDuration(dReal T)
+{
+    OPENRAVE_ASSERT_OP(T, >=, 0);
+    duration = T;
+    for( size_t idof = 0; idof < dof; ++idof ) {
+        vpolynomials[idof].UpdateDuration(T);
+    }
+}
+
 void Chunk::Initialize(const dReal duration, const std::vector<Polynomial>& vpolynomials)
 {
     this->duration = duration;
@@ -333,11 +382,13 @@ void Chunk::Initialize(const dReal duration, const std::vector<Polynomial>& vpol
 void Chunk::Initialize()
 {
     this->dof = this->vpolynomials.size();
-    this->degree = vpolynomials.front().degree;
-    for( size_t i = 1; i < vpolynomials.size(); ++i ) {
+    this->degree = 0;
+    for( size_t i = 0; i < vpolynomials.size(); ++i ) {
         if( vpolynomials[i].degree > this->degree ) {
             this->degree = vpolynomials[i].degree;
         }
+
+        vpolynomials[i].UpdateDuration(duration);
     }
     for( size_t i = 1; i < this->vpolynomials.size(); ++i ) {
         if( this->vpolynomials[i].degree < this->degree ) {
@@ -348,9 +399,13 @@ void Chunk::Initialize()
 
 void Chunk::Cut(dReal t, Chunk& remChunk)
 {
+    // TODO: handle edge cases for t.
+    OPENRAVE_ASSERT_OP(t, >=, 0);
+    OPENRAVE_ASSERT_OP(t, <=, duration);
     // TODO: Need to find a better way to not have to create these vectors every time this function is called.
     std::vector<Polynomial> vpoly(this->dof);
     std::vector<dReal> vcoeffs(this->degree + 1);
+    const dReal originalDuration = this->duration;
     dReal fMult;
     for( size_t idof = 0; idof < this->dof; ++idof ) {
         fMult = 1.0;
@@ -358,11 +413,11 @@ void Chunk::Cut(dReal t, Chunk& remChunk)
             vcoeffs[icoeff] = this->vpolynomials[idof].Evaldn(t, icoeff)/fMult;
             fMult *= (icoeff + 1);
         }
-        vpoly[idof].Initialize(vcoeffs);
+        vpoly[idof].Initialize(originalDuration - t, vcoeffs);
     }
-    remChunk.Initialize(this->duration - t, vpoly);
+    remChunk.Initialize(originalDuration - t, vpoly);
 
-    this->duration = t;
+    this->UpdateDuration(t);
     remChunk.constraintChecked = this->constraintChecked;
 }
 
@@ -438,7 +493,7 @@ void Chunk::SetConstant(const std::vector<dReal>& x0Vect, const dReal duration, 
     for( size_t idof = 0; idof < this->dof; ++idof ) {
         // All other coefficients are zero.
         vcoeffs[0] = x0Vect[idof];
-        vpolynomials[idof].Initialize(vcoeffs);
+        vpolynomials[idof].Initialize(duration, vcoeffs);
     }
 }
 

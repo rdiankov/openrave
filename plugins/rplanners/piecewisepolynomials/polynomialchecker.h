@@ -48,7 +48,7 @@ public:
     void Initialize(size_t ndof, int envid);
 
     /// \brief
-    PolynomialCheckReturn CheckPolynomial(const Polynomial& p, const dReal T, const dReal xmin, const dReal xmax, const dReal vm=0, const dReal am=0, const dReal jm=0);
+    PolynomialCheckReturn CheckPolynomial(const Polynomial& p, const dReal xmin, const dReal xmax, const dReal vm=0, const dReal am=0, const dReal jm=0);
 
     /// \brief
     PolynomialCheckReturn CheckChunk(const Chunk& c, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect=std::vector<dReal>(), const std::vector<dReal>& amVect=std::vector<dReal>(), const std::vector<dReal>& jmVect=std::vector<dReal>());

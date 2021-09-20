@@ -64,7 +64,7 @@ public:
      */
     virtual PolynomialCheckReturn Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
                                                                                           dReal vm, dReal am, dReal jm,
-                                                                                          std::vector<Polynomial>& polynomials, dReal& T)
+                                                                                          std::vector<Polynomial>& polynomials)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("Compute1DTrajectoryZeroTimeDerivativesOptimizeDuration not implemented", ORE_NotImplemented);
     }
@@ -84,7 +84,7 @@ public:
      */
     virtual PolynomialCheckReturn Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1,
                                                                                                dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
-                                                                                               std::vector<Polynomial>& polynomials, dReal& T)
+                                                                                               std::vector<Polynomial>& polynomials)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration not implemented", ORE_NotImplemented);
     }

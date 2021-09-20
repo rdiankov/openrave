@@ -34,9 +34,10 @@ void PolynomialChecker::Initialize(size_t ndof, int envid)
     }
 }
 
-PolynomialCheckReturn PolynomialChecker::CheckPolynomial(const Polynomial& p, const dReal T, const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm)
+PolynomialCheckReturn PolynomialChecker::CheckPolynomial(const Polynomial& p, const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm)
 {
     std::vector<Coordinate>& vcoords = _cacheCoordsVect;
+    const dReal T = p.duration;
     dReal val;
     // Check position limits
     val = p.Eval(0);
@@ -189,7 +190,10 @@ PolynomialCheckReturn PolynomialChecker::CheckChunk(const Chunk& c, const std::v
         if( bHasJerkLimits ) {
             jm = jmVect[idof];
         }
-        ret = CheckPolynomial(c.vpolynomials[idof], c.duration, xminVect[idof], xmaxVect[idof], vm, am, jm);
+        if( !FuzzyEquals(c.duration, c.vpolynomials[idof].duration, g_fPolynomialEpsilon) ) {
+            return PCR_DurationDiscrepancy;
+        }
+        ret = CheckPolynomial(c.vpolynomials[idof], xminVect[idof], xmaxVect[idof], vm, am, jm);
         if( ret != PCR_Normal ) {
             break;
         }
@@ -217,7 +221,10 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomialTrajectory(cons
             if( bHasJerkLimits ) {
                 jm = jmVect[idof];
             }
-            ret = CheckPolynomial(itchunk->vpolynomials[idof], itchunk->duration, xminVect[idof], xmaxVect[idof], vm, am, jm);
+            if( !FuzzyEquals(itchunk->duration, itchunk->vpolynomials[idof].duration, g_fPolynomialEpsilon) ) {
+                return PCR_DurationDiscrepancy;
+            }
+            ret = CheckPolynomial(itchunk->vpolynomials[idof], xminVect[idof], xmaxVect[idof], vm, am, jm);
             if( ret != PCR_Normal ) {
 #ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
                 RAVELOG_VERBOSE_FORMAT("env=%d, checking traj failed ret=%x at ichunk=%d; idof=%d; t=%f; val=%f", envid%(itchunk - traj.vchunks.begin())%idof%ret%_failedPoint%_failedValue);

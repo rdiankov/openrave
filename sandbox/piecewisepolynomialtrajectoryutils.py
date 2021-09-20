@@ -4,13 +4,16 @@ import numpy as np
 from pylab import ion
 ion()
 
-def PlotPolynomial(polynomial, t0, t1, stepsize=0.01, fignum=None, **kwargs):
+def PlotPolynomial(polynomial, tstart=None, tend=None, stepsize=0.01, fignum=None, **kwargs):
     """
     
     """
-    tVect = np.arange(t0, t1, stepsize)
-    if tVect[-1] < t1:
-        tVect = np.append(tVect, t1)
+    if tstart is None and tend is None:
+        tstart = 0
+        tend = polynomial.duration
+    tVect = np.arange(tstart, tend, stepsize)
+    if tVect[-1] < tend:
+        tVect = np.append(tVect, tend)
 
     xVect = [polynomial.Eval(t) for t in tVect]
 
@@ -23,7 +26,7 @@ def PlotChunk(chunk, stepsize=0.01, fignum=None, **kwargs):
     """
     
     """
-    tVect = np.arange(0, chunk.duration)
+    tVect = np.arange(0, chunk.duration, stepsize)
     if tVect[-1] < chunk.duration:
         tVect = np.append(tVect, chunk.duration)
     
