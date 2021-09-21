@@ -73,7 +73,7 @@ inline dReal Sqrt(dReal x)
 inline dReal Cbrt(dReal x)
 {
     dReal r0, r1, r2;
-    int numroots = mathextra::CubicRoots(x, 0, 0, &r0, &r1, &r2);
+    /* int numroots = */mathextra::CubicRoots(x, 0, 0, &r0, &r1, &r2);
     return r0;
 }
 

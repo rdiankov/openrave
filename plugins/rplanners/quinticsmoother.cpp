@@ -165,7 +165,7 @@ public:
             }
 
             RAVELOG_VERBOSE_FORMAT("env=%d, start inserting waypoints into ptraj; expecting total=%d waypoints", _envId%(pwptraj.vchunks.size() + 1));
-            std::vector<dReal> &x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect, &a0Vect = _cacheA0Vect, &a1Vect = _cacheA1Vect, &tVect = _cacheTVect;
+            std::vector<dReal> &x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect, &a0Vect = _cacheA0Vect, &a1Vect = _cacheA1Vect;
             std::vector<dReal>& waypoint = _cacheAllWaypoints; // reuse _cacheAllWaypoints
             waypoint.resize(newSpec.GetDOF());
             pwptraj.vchunks.at(0).Eval(0, x0Vect);

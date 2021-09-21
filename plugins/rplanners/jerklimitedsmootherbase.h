@@ -634,6 +634,7 @@ protected:
                 RAVELOG_WARN_FORMAT("env=%s, failed to dump openrave trajectory to %s: %s", GetEnv()->GetNameId()%filename%ex.what());
                 return false;
             }
+            return true;
         }
         else {
             return false;
