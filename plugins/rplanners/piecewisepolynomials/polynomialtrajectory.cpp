@@ -348,6 +348,186 @@ void Polynomial::Deserialize(std::istream& I)
 }
 
 //
+// PiecewisePolynomial
+//
+PiecewisePolynomial::PiecewisePolynomial(std::vector<Polynomial>& polynomialsIn)
+{
+    Initialize(polynomialsIn);
+}
+
+void PiecewisePolynomial::Initialize(std::vector<Polynomial>& polynomialsIn)
+{
+    BOOST_ASSERT(!polynomialsIn.empty());
+    // This will invalidate polynomialsIn
+    _vpolynomials.swap(polynomialsIn);
+    dReal duration = 0;
+    for( std::vector<Polynomial>::const_iterator itpoly = _vpolynomials.begin(); itpoly != _vpolynomials.end(); ++itpoly ) {
+        duration += itpoly->duration;
+    }
+    _duration = duration;
+
+    UpdateInitialValue(_vpolynomials[0].vcoeffs[0]);
+}
+
+void PiecewisePolynomial::Initialize(Polynomial& polynomialIn)
+{
+    _vpolynomials.resize(0);
+    _vpolynomials.reserve(1);
+    _vpolynomials.emplace_back(polynomialIn);
+
+    dReal duration = 0;
+    for( std::vector<Polynomial>::const_iterator itpoly = _vpolynomials.begin(); itpoly != _vpolynomials.end(); ++itpoly ) {
+        duration += itpoly->duration;
+    }
+    _duration = duration;
+
+    UpdateInitialValue(_vpolynomials[0].vcoeffs[0]);
+}
+
+void PiecewisePolynomial::UpdateInitialValue(dReal c0)
+{
+    for( std::vector<Polynomial>::iterator itpoly = _vpolynomials.begin(); itpoly != _vpolynomials.end(); ++itpoly ) {
+        itpoly->UpdateInitialValue(c0);
+        c0 += itpoly->displacement;
+    }
+}
+
+void PiecewisePolynomial::FindPolynomialIndex(const dReal t, size_t& index, dReal& remainder) const
+{
+    if( t <= 0 ) {
+        index = 0;
+        remainder = 0;
+        return;
+    }
+    else if( t >= _duration ) {
+        index = _vpolynomials.size() - 1;
+        remainder = _vpolynomials.back().duration;
+        return;
+    }
+    else {
+        // Convention: if t lies exactly at a junction between _vpolynomials[i]
+        // and _vpolynomials[i + 1], we return index = i + 1 and remainder = 0
+        size_t testIndex = 0;
+        dReal currentTime = 0;
+        std::vector<Polynomial>::const_iterator itpoly = _vpolynomials.begin();
+        while( (itpoly - 1) != _vpolynomials.end() && t >= currentTime ) {
+            currentTime += itpoly->duration;
+            itpoly++;
+            testIndex++;
+        }
+        index = testIndex - 1;
+        remainder = t - (currentTime - (itpoly - 1)->duration);
+        return;
+    }
+}
+
+dReal PiecewisePolynomial::Eval(dReal t) const
+{
+    if( t <= 0 ) {
+        return _vpolynomials.front().Eval(0);
+    }
+    else if( t >= _duration ) {
+        return _vpolynomials.back().Eval(_vpolynomials.back().duration);
+    }
+
+    size_t index = 0;
+    dReal remainder = 0;
+    FindPolynomialIndex(t, index, remainder);
+    return _vpolynomials[index].Eval(remainder);
+}
+
+dReal PiecewisePolynomial::Evald1(dReal t) const
+{
+    if( t <= 0 ) {
+        return _vpolynomials.front().Evald1(0);
+    }
+    else if( t >= _duration ) {
+        return _vpolynomials.back().Evald1(_vpolynomials.back().duration);
+    }
+
+    size_t index = 0;
+    dReal remainder = 0;
+    FindPolynomialIndex(t, index, remainder);
+    return _vpolynomials[index].Evald1(remainder);
+}
+
+dReal PiecewisePolynomial::Evald2(dReal t) const
+{
+    if( t <= 0 ) {
+        return _vpolynomials.front().Evald2(0);
+    }
+    else if( t >= _duration ) {
+        return _vpolynomials.back().Evald2(_vpolynomials.back().duration);
+    }
+
+    size_t index = 0;
+    dReal remainder = 0;
+    FindPolynomialIndex(t, index, remainder);
+    return _vpolynomials[index].Evald2(remainder);
+}
+
+dReal PiecewisePolynomial::Evald3(dReal t) const
+{
+    if( t <= 0 ) {
+        return _vpolynomials.front().Evald3(0);
+    }
+    else if( t >= _duration ) {
+        return _vpolynomials.back().Evald3(_vpolynomials.back().duration);
+    }
+
+    size_t index = 0;
+    dReal remainder = 0;
+    FindPolynomialIndex(t, index, remainder);
+    return _vpolynomials[index].Evald3(remainder);
+}
+
+dReal PiecewisePolynomial::Evaldn(dReal t, size_t n) const
+{
+    if( t <= 0 ) {
+        return _vpolynomials.front().Evaldn(0, n);
+    }
+    else if( t >= _duration ) {
+        return _vpolynomials.back().Evaldn(_vpolynomials.back().duration, n);
+    }
+
+    size_t index = 0;
+    dReal remainder = 0;
+    FindPolynomialIndex(t, index, remainder);
+    return _vpolynomials[index].Evaldn(remainder, n);
+}
+
+void PiecewisePolynomial::Cut(dReal t, PiecewisePolynomial &remPWPolynomial)
+{
+    // TODO
+    throw OPENRAVE_EXCEPTION_FORMAT0("Cut not implemented", ORE_NotImplemented);
+}
+
+void PiecewisePolynomial::TrimFront(dReal t)
+{
+    // TODO
+    throw OPENRAVE_EXCEPTION_FORMAT0("TrimFront not implemented", ORE_NotImplemented);
+}
+
+void PiecewisePolynomial::TrimBack(dReal t)
+{
+    // TODO
+    throw OPENRAVE_EXCEPTION_FORMAT0("TrimBack not implemented", ORE_NotImplemented);
+}
+
+Polynomial PiecewisePolynomial::ExtractPolynomial(const dReal t0, const dReal t1) const
+{
+    OPENRAVE_ASSERT_OP(t1, >, t0);
+    size_t index0, index1;
+    dReal remainder0, remainder1;
+    FindPolynomialIndex(t0, index0, remainder0);
+    FindPolynomialIndex(t1, index1, remainder1);
+    OPENRAVE_ASSERT_OP(index0, ==, index1);
+    Polynomial p(t1 - t0, _vpolynomials[index0].vcoeffs);
+    p.UpdateInitialValue(Eval(t0));
+    return p;
+}
+
+//
 // Chunk
 //
 Chunk::Chunk(const dReal duration, const std::vector<Polynomial>& vpolynomials)
@@ -374,6 +554,11 @@ void Chunk::UpdateDuration(dReal T)
 
 void Chunk::Initialize(const dReal duration, const std::vector<Polynomial>& vpolynomials)
 {
+    for( std::vector<Polynomial>::const_iterator itpoly = vpolynomials.begin(); itpoly != vpolynomials.end(); ++itpoly ) {
+        if( !FuzzyEquals(itpoly->duration, duration, g_fPolynomialEpsilon) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("Polynomial index=%d has duration=%f (expected %f)", (itpoly - vpolynomials.begin())%(itpoly->duration)%duration, ORE_InvalidArguments);
+        }
+    }
     this->duration = duration;
     this->vpolynomials = vpolynomials;
     Initialize();

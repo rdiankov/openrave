@@ -39,11 +39,11 @@ public:
 
     virtual PolynomialCheckReturn Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
                                                                                           dReal vm, dReal am, dReal jm,
-                                                                                          std::vector<Polynomial>& polynomials) override;
+                                                                                          PiecewisePolynomial& pwpoly) override;
 
     virtual PolynomialCheckReturn Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T,
                                                                                            dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
-                                                                                           std::vector<Polynomial>& polynomials) override;
+                                                                                           PiecewisePolynomial& pwpoly) override;
 
     virtual PolynomialCheckReturn ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
                                                                                           const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
@@ -89,7 +89,9 @@ public:
 
     std::vector<dReal> _cache1DCoeffs;
     std::vector<dReal> _cacheDVect;
-    std::vector<Polynomial> _cachePolynomials1, _cachePolynomials2;
+    std::vector<Polynomial> _cachePolynomials;
+    Polynomial _cachePolynomial;
+    PiecewisePolynomial _cachePWPolynomial;
     std::vector<Chunk> _cacheChunks;
 };
 

@@ -64,7 +64,7 @@ public:
      */
     virtual PolynomialCheckReturn Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
                                                                                           dReal vm, dReal am, dReal jm,
-                                                                                          std::vector<Polynomial>& polynomials)
+                                                                                          PiecewisePolynomial& pwpoly)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("Compute1DTrajectoryZeroTimeDerivativesOptimizeDuration not implemented", ORE_NotImplemented);
     }
@@ -84,7 +84,7 @@ public:
      */
     virtual PolynomialCheckReturn Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1,
                                                                                                dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
-                                                                                               std::vector<Polynomial>& polynomials)
+                                                                                               PiecewisePolynomial& pwpoly)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration not implemented", ORE_NotImplemented);
     }
@@ -104,7 +104,7 @@ public:
      */
     virtual PolynomialCheckReturn Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T,
                                                                                            dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
-                                                                                           std::vector<Polynomial>& polynomials)
+                                                                                           PiecewisePolynomial& pwpoly)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration not implemented", ORE_NotImplemented);
     }
@@ -190,6 +190,50 @@ public:
                                                                                                const dReal T, std::vector<Chunk>& chunks)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration not implemented", ORE_NotImplemented);
+    }
+
+    void ConvertPiecewisePolynomialsToChunks(const std::vector<PiecewisePolynomial>& pwpolynomialsIn, std::vector<Chunk>& chunksOut)
+    {
+        std::vector<dReal> switchPointsList; // store the time instants where any dofs switches polynomials
+
+        switchPointsList.push_back(0);
+        dReal maxDuration = 0;
+        for( std::vector<PiecewisePolynomial>::const_iterator itpwpoly = pwpolynomialsIn.begin(); itpwpoly != pwpolynomialsIn.end(); ++itpwpoly ) {
+            if( itpwpoly->GetDuration() > maxDuration ) {
+                maxDuration = itpwpoly->GetDuration();
+            }
+        }
+        switchPointsList.push_back(maxDuration);
+
+        // Collect all remaining switch points
+        for( std::vector<PiecewisePolynomial>::const_iterator itpwpoly = pwpolynomialsIn.begin(); itpwpoly != pwpolynomialsIn.end(); ++itpwpoly ) {
+            dReal sw = 0;
+            for( std::vector<Polynomial>::const_iterator itpoly = itpwpoly->GetPolynomials().begin(); itpoly != itpwpoly->GetPolynomials().end(); ++itpoly ) {
+                sw += itpoly->duration;
+                std::vector<dReal>::iterator itsw = std::lower_bound(switchPointsList.begin(), switchPointsList.end(), sw);
+
+                // Since we already have t = 0 and t = duration in switchPointsList, itsw must point to some value
+                // between *(switchPointsList.begin()) and *(switchPointsList.end() - 1) (exclusive).
+
+                // Note also that skipping some switchpoints which are closer to their neighbors than
+                // g_fPolynomialEpsilon may introduce discrepancies greater than g_fPolynomialEpsilon.
+                if( !FuzzyEquals(sw, *itsw, 0.01*g_fPolynomialEpsilon) && !FuzzyEquals(sw, *(itsw - 1), 0.01*g_fPolynomialEpsilon) ) {
+                    switchPointsList.insert(itsw, sw);
+                }
+            }
+        }
+
+        chunksOut.resize(switchPointsList.size() - 1);
+        for( size_t iswitch = 1; iswitch < switchPointsList.size(); ++iswitch ) {
+            dReal t1 = switchPointsList[iswitch], t0 = switchPointsList[iswitch - 1];
+            dReal duration = t1 - t0;
+            std::vector<Polynomial> vpolynomials;
+            vpolynomials.reserve(ndof);
+            for( std::vector<PiecewisePolynomial>::const_iterator itpwpoly = pwpolynomialsIn.begin(); itpwpoly != pwpolynomialsIn.end(); ++itpwpoly ) {
+                vpolynomials.push_back( itpwpoly->ExtractPolynomial(t0, t1) );
+            }
+            chunksOut[iswitch - 1].Initialize(duration, vpolynomials);
+        }
     }
 
     //

@@ -32,8 +32,7 @@ void QuinticInterpolator::Initialize(size_t ndof, int envid)
     _cache1DCoeffs.resize(6);
 
     _cacheDVect.resize(ndof);
-    _cachePolynomials1.resize(1);
-    _cachePolynomials2.resize(ndof);
+    _cachePolynomials.resize(ndof);
 }
 
 //
@@ -41,7 +40,7 @@ void QuinticInterpolator::Initialize(size_t ndof, int envid)
 //
 PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
                                                                                                    dReal vm, dReal am, dReal jm,
-                                                                                                   std::vector<Polynomial>& polynomials)
+                                                                                                   PiecewisePolynomial& pwpoly)
 {
     /*
        Describing a quintic polynomial as
@@ -99,14 +98,15 @@ PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivative
     vcoeffs[4] = 15*(x0 - x1)/T4;
     vcoeffs[5] = 6*(x1 - x0)/T5;
 
-    polynomials.resize(1);
-    polynomials[0].Initialize(T, vcoeffs);
+    Polynomial& polynomial = _cachePolynomial;
+    polynomial.Initialize(T, vcoeffs);
+    pwpoly.Initialize(polynomial);
     return PolynomialCheckReturn::PCR_Normal;
 }
 
 PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T,
                                                                                                     dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
-                                                                                                    std::vector<Polynomial>& polynomials)
+                                                                                                    PiecewisePolynomial& pwpoly)
 {
     dReal T2 = T*T;
     dReal T3 = T2*T;
@@ -120,9 +120,11 @@ PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryArbitraryTimeDeriv
     vcoeffs[3] = (T2*(a1 - 3.0*a0) - T*(12.0*v0 + 8.0*v1) + 20.0*(x1 - x0))/(2*T3);
     vcoeffs[4] = (T2*(3.0*a0 - 2.0*a1) + T*(16.0*v0 + 14.0*v1) + 30.0*(x0 - x1))/(2*T4);
     vcoeffs[5] = (T2*(a1 - a0) - 6.0*T*(v1 + v0) + 12.0*(x1 - x0))/(2*T5);
-    polynomials.resize(1);
-    polynomials[0].Initialize(T, vcoeffs);
-    return checker.CheckPolynomial(polynomials[0], xmin, xmax, vm, am, jm);
+
+    Polynomial& polynomial = _cachePolynomial;
+    polynomial.Initialize(T, vcoeffs);
+    pwpoly.Initialize(polynomial);
+    return checker.CheckPolynomial(pwpoly.GetPolynomial(0), xmin, xmax, vm, am, jm);
 }
 
 //
@@ -161,12 +163,12 @@ PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryZeroTimeDerivative
         return PolynomialCheckReturn::PCR_Normal;
     }
 
-    std::vector<Polynomial>& templatePolynomials = _cachePolynomials1;
-    Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(0, 1, vMin, aMin, jMin, templatePolynomials);
-    const Polynomial& p = templatePolynomials[0];
+    PiecewisePolynomial& templatePWPolynomial = _cachePWPolynomial;
+    Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(0.0, 1.0, vMin, aMin, jMin, templatePWPolynomial);
+    const Polynomial& p = templatePWPolynomial.GetPolynomial(0);
 
     std::vector<dReal>& vcoeffs = _cache1DCoeffs;
-    std::vector<Polynomial>& vpolynomials = _cachePolynomials2; // should already have size=ndof
+    std::vector<Polynomial>& vpolynomials = _cachePolynomials; // should already have size=ndof
     for( size_t idof = 0; idof < ndof; ++idof ) {
         size_t icoeff = 0;
         for( std::vector<dReal>::const_iterator it = p.vcoeffs.begin(); it != p.vcoeffs.end(); ++it, ++icoeff ) {
@@ -194,12 +196,12 @@ PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDeriv
     OPENRAVE_ASSERT_OP(a0Vect.size(), ==, ndof);
     OPENRAVE_ASSERT_OP(a1Vect.size(), ==, ndof);
 
-    std::vector<Polynomial>& resultPolynomials = _cachePolynomials1;
-    std::vector<Polynomial>& finalPolynomials = _cachePolynomials2; // should already have size=ndof
+    PiecewisePolynomial& resultPWPolynomial = _cachePWPolynomial;
+    std::vector<Polynomial>& finalPolynomials = _cachePolynomials; // should already have size=ndof
     for( size_t idof = 0; idof < ndof; ++idof ) {
         Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], a0Vect[idof], a1Vect[idof], T,
-                                                                 xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], jmVect[idof], resultPolynomials);
-        finalPolynomials[idof] = resultPolynomials[0]; // can do this since for this quintic interpolator, resultPolynomials always has size=1
+                                                                 xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], jmVect[idof], resultPWPolynomial);
+        finalPolynomials[idof] = resultPWPolynomial.GetPolynomial(0); // can do this since for this quintic interpolator, resultPWPolynomial always has one polynomial
     }
     chunks.resize(1);
     chunks[0].Initialize(T, finalPolynomials);

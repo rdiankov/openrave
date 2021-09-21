@@ -131,6 +131,77 @@ public:
     mutable std::vector<dReal> _vcurcoeffs;
 }; // end class Polynomial
 
+class PiecewisePolynomial {
+public:
+    PiecewisePolynomial() {
+    }
+    PiecewisePolynomial(std::vector<Polynomial>& polynomialsIn);
+    ~PiecewisePolynomial() {
+    }
+
+    void Initialize(std::vector<Polynomial>& polynomialsIn);
+    void Initialize(Polynomial& polynomialIn);
+
+    /// \brief Update the weakest term coefficients of all the polynomials
+    void UpdateInitialValue(dReal c0);
+
+    /// \brief Find the index of the polynomial q that t falls into and also compute the remainder
+    ///        so that p(t) = q(remainder)
+    void FindPolynomialIndex(dReal t, size_t& index, dReal& remainder) const;
+
+    /// \brief Evaluate this piecewise polynomial at time t.
+    dReal Eval(dReal t) const;
+
+    /// \brief Evaluate the first derivative of this piecewise polynomial at time t.
+    dReal Evald1(dReal t) const;
+
+    /// \brief Evaluate the second derivative of this piecewise polynomial at time t.
+    dReal Evald2(dReal t) const;
+
+    /// \brief Evaluate the third derivative of this piecewise polynomial at time t.
+    dReal Evald3(dReal t) const;
+
+    /// \brief Evaluate the n-th derivative of this piecewise polynomial at time t.
+    dReal Evaldn(dReal t, size_t n) const;
+
+    /// \brief Cut the piecewise polynomial into two halves at time t. The left half is stored in the same
+    /// piecewise polynomial. The right half is returned via remPWPolynomial
+    void Cut(dReal t, PiecewisePolynomial &remPWPolynomial);
+
+    /// \brief Cut the piecewise polynomial into two halves at time t and keep the right half.
+    void TrimFront(dReal t);
+
+    /// \brief Cut the piecewise polynomial into two halves at time t and keep the left half.
+    void TrimBack(dReal t);
+
+    /// \brief Return a constant reference to _vpolynomials
+    inline const std::vector<Polynomial>& GetPolynomials() const
+    {
+        return _vpolynomials;
+    }
+
+    /// \brief Return a const reference to _vpolynomials[index]
+    inline const Polynomial& GetPolynomial(size_t index) const
+    {
+        return _vpolynomials.at(index);
+    }
+
+    /// \brief Get the total duration of the curve
+    inline const dReal GetDuration() const
+    {
+        return _duration;
+    }
+
+    /// \brief Return a new polynomial representing a segment starting from t0 and ending at t1. t0
+    ///        and t1 must be on the same polynomial, i.e.  FindPolynomialIndex(t0) and
+    ///        FindPolynomialIndex(t1) returns the same polynomial index.
+    Polynomial ExtractPolynomial(const dReal t0, const dReal t1) const;
+
+private:
+    dReal _duration; ///< the total duration of this piecewise polynomial
+    std::vector<Polynomial> _vpolynomials;
+}; // end class PiecewisePolynomial
+
 class Chunk {
 public:
     /*
@@ -155,7 +226,7 @@ public:
 
     /// \brief
     void UpdateDuration(dReal T);
-    
+
     /// \brief Initialize this chunk with the given duration and polynomials vector
     void Initialize(const dReal duration, const std::vector<Polynomial>& vpolynomials);
 
