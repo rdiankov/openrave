@@ -36,6 +36,11 @@ public:
     {
     }
 
+    virtual const std::string GetXMLId() const
+    {
+        return "interpolatorbase";
+    }
+
     //
     // Functions
     //

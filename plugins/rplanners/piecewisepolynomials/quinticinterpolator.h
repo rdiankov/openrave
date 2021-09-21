@@ -32,6 +32,11 @@ public:
     {
     }
 
+    virtual const std::string GetXMLId() const
+    {
+        return "quinticinterpolator";
+    }
+
     //
     // Functions
     //

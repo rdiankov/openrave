@@ -348,6 +348,12 @@ public:
 
 }; // end class PiecewisePolynomialTrajectory
 
+typedef boost::shared_ptr<Coordinate> CoordinatePtr;
+typedef boost::shared_ptr<Polynomial> PolynomialPtr;
+typedef boost::shared_ptr<PiecewisePolynomial> PiecewisePolynomialPtr;
+typedef boost::shared_ptr<Chunk> ChunkPtr;
+typedef boost::shared_ptr<PiecewisePolynomialTrajectory> PiecewisePolynomialTrajectoryPtr;
+
 } // end namespace PiecewisePolynomialsInternal
 
 } // end namespace OpenRAVE
