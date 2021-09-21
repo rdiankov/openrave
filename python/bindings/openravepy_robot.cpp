@@ -2112,8 +2112,14 @@ bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore)
 {
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
-    std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
-    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore);
+    if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
+        // linkstoignore is a list of link names
+        std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
+        return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreString);
+    }
+    // linkstoignore is a list of link indices
+    std::set<int> setlinkstoignoreInt = ExtractSet<int>(linkstoignore);
+    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreInt);
 }
 
 bool PyRobotBase::CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport)
