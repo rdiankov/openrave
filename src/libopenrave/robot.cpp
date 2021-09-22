@@ -2013,6 +2013,11 @@ bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::s
     return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore);
 }
 
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames)
+{
+    return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames);
+}
+
 void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
 {
     if( !pmanip ) {
