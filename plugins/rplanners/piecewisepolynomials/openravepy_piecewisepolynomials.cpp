@@ -13,6 +13,7 @@
 // limitations under the License.
 #include "polynomialtrajectory.h"
 #include "interpolatorbase.h"
+#include "cubicinterpolator.h"
 #include "quinticinterpolator.h"
 #include <pyconfig.h>
 #include <numpy/arrayobject.h>
@@ -679,6 +680,9 @@ public:
     {
         if( interpolatorname == "quinticinterpolator" ) {
             _pinterpolator.reset(new piecewisepolynomials::QuinticInterpolator(ndof, envid));
+        }
+        else if( interpolatorname == "cubicinterpolator" ) {
+            _pinterpolator.reset(new piecewisepolynomials::CubicInterpolator(ndof, envid));
         }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT("Invalid interpolatorname %s", interpolatorname, ORE_InvalidArguments);

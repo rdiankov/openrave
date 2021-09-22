@@ -384,6 +384,18 @@ void PiecewisePolynomial::Initialize(Polynomial& polynomialIn)
     UpdateInitialValue(_vpolynomials[0].vcoeffs[0]);
 }
 
+void PiecewisePolynomial::Append(Polynomial& newPolynomial)
+{
+    _vpolynomials.emplace_back(newPolynomial);
+    dReal duration = 0;
+    for( std::vector<Polynomial>::const_iterator itpoly = _vpolynomials.begin(); itpoly != _vpolynomials.end(); ++itpoly ) {
+        duration += itpoly->duration;
+    }
+    _duration = duration;
+
+    UpdateInitialValue(_vpolynomials[0].vcoeffs[0]);
+}
+
 void PiecewisePolynomial::UpdateInitialValue(dReal c0)
 {
     for( std::vector<Polynomial>::iterator itpoly = _vpolynomials.begin(); itpoly != _vpolynomials.end(); ++itpoly ) {

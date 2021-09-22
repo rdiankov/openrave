@@ -142,6 +142,8 @@ public:
     void Initialize(std::vector<Polynomial>& polynomialsIn);
     void Initialize(Polynomial& polynomialIn);
 
+    void Append(Polynomial& newPolynomial);
+
     /// \brief Update the weakest term coefficients of all the polynomials
     void UpdateInitialValue(dReal c0);
 
