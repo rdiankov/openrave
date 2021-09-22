@@ -1284,7 +1284,7 @@ private:
 
         \param[in] body the body to be grabbed
         \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
-        \param[in] setBodyLinksToIgnore Additional body link names that collision checker ignore
+        \param[in] setIgnoreBodyLinkNames Additional body link names that collision checker ignore
         when checking collisions between the grabbed body and the body.
         \return true if successful and body is grabbed.
      */
