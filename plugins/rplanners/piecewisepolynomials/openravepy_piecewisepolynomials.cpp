@@ -67,12 +67,14 @@ class PyPiecewisePolynomial;
 class PyChunk;
 class PyPiecewisePolynomialTrajectory;
 class PyInterpolator;
+class PyPolynomialChecker;
 typedef boost::shared_ptr<PyCoordinate> PyCoordinatePtr;
 typedef boost::shared_ptr<PyPolynomial> PyPolynomialPtr;
 typedef boost::shared_ptr<PyPiecewisePolynomial> PyPiecewisePolynomialPtr;
 typedef boost::shared_ptr<PyChunk> PyChunkPtr;
 typedef boost::shared_ptr<PyPiecewisePolynomialTrajectory> PyPiecewisePolynomialTrajectoryPtr;
 typedef boost::shared_ptr<PyInterpolator> PyInterpolatorPtr;
+typedef boost::shared_ptr<PyPolynomialChecker> PyPolynomialCheckerPtr;
 
 class PyCoordinate {
 public:
@@ -683,6 +685,12 @@ public:
     }
     PyInterpolator(const std::string& interpolatorname, size_t ndof, int envid)
     {
+        Initialize(interpolatorname, ndof, envid);
+        _PostProcess();
+    }
+
+    void Initialize(const std::string& interpolatorname, size_t ndof, int envid)
+    {
         if( interpolatorname == "quinticinterpolator" ) {
             _pinterpolator.reset(new piecewisepolynomials::QuinticInterpolator(ndof, envid));
         }
@@ -692,13 +700,6 @@ public:
         else {
             throw OPENRAVE_EXCEPTION_FORMAT("Invalid interpolatorname %s", interpolatorname, ORE_InvalidArguments);
         }
-        _PostProcess();
-    }
-
-    void Initialize(size_t ndof, int envid)
-    {
-        BOOST_ASSERT(!!_pinterpolator);
-        _pinterpolator->Initialize(ndof, envid);
         _PostProcess();
     }
 
@@ -728,6 +729,82 @@ private:
     int _envid;
     std::string _xmlid;
 }; // end class PyInterpolator
+
+class PyPolynomialChecker {
+public:
+    PyPolynomialChecker()
+    {
+        _pchecker.reset(new piecewisepolynomials::PolynomialChecker());
+    }
+    PyPolynomialChecker(size_t ndof, int envid)
+    {
+        _pchecker.reset(new piecewisepolynomials::PolynomialChecker(ndof, envid));
+    }
+
+    void Initialize(size_t ndof, int envid)
+    {
+        _pchecker->Initialize(ndof, envid);
+    }
+
+    uint8_t CheckPolynomial(const py::object opolynomial, const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm,
+                            const dReal x0, const dReal x1, const dReal v0, const dReal v1, const dReal a0, const dReal a1)
+    {
+        PyPolynomialPtr ppypoly = py::extract<PyPolynomialPtr>(opolynomial);
+        piecewisepolynomials::PolynomialCheckReturn ret = _pchecker->CheckPolynomial(*ppypoly->_ppolynomial, xmin, xmax, vm, am, jm, x0, x1, v0, v1, a0, a1);
+        return ret;
+    }
+
+    uint8_t CheckPiecewisePolynomial(const py::object opwpolynomial, const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm,
+                                     const dReal x0, const dReal x1, const dReal v0, const dReal v1, const dReal a0, const dReal a1)
+    {
+        PyPiecewisePolynomialPtr ppypwpoly = py::extract<PyPiecewisePolynomialPtr>(opwpolynomial);
+        piecewisepolynomials::PolynomialCheckReturn ret = _pchecker->CheckPiecewisePolynomial(*ppypwpoly->_ppwpoly, xmin, xmax, vm, am, jm, x0, x1, v0, v1, a0, a1);
+        return ret;
+    }
+
+    uint8_t CheckChunk(const py::object opychunk, const py::object oxminVect, const py::object oxmaxVect, const py::object ovmVect, const py::object oamVect, const py::object ojmVect,
+                       const py::object ox0Vect, const py::object ox1Vect, const py::object ov0Vect, const py::object ov1Vect, const py::object oa0Vect, const py::object oa1Vect)
+    {
+        PyChunkPtr ppychunk = py::extract<PyChunkPtr>(opychunk);
+        std::vector<dReal> xminVect = openravepy::ExtractArray<dReal>(oxminVect);
+        std::vector<dReal> xmaxVect = openravepy::ExtractArray<dReal>(oxmaxVect);
+        std::vector<dReal> vmVect = openravepy::ExtractArray<dReal>(ovmVect);
+        std::vector<dReal> amVect = openravepy::ExtractArray<dReal>(oamVect);
+        std::vector<dReal> jmVect = openravepy::ExtractArray<dReal>(ojmVect);
+        std::vector<dReal> x0Vect = openravepy::ExtractArray<dReal>(ox0Vect);
+        std::vector<dReal> x1Vect = openravepy::ExtractArray<dReal>(ox1Vect);
+        std::vector<dReal> v0Vect = openravepy::ExtractArray<dReal>(ov0Vect);
+        std::vector<dReal> v1Vect = openravepy::ExtractArray<dReal>(ov1Vect);
+        std::vector<dReal> a0Vect = openravepy::ExtractArray<dReal>(oa0Vect);
+        std::vector<dReal> a1Vect = openravepy::ExtractArray<dReal>(oa1Vect);
+        piecewisepolynomials::PolynomialCheckReturn ret = _pchecker->CheckChunk(*ppychunk->_pchunk, xminVect, xmaxVect, vmVect, amVect, jmVect,
+                                                                                x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect);
+        return ret;
+    }
+
+    uint8_t CheckPiecewisePolynomialTrajectory(const py::object otraj, const py::object oxminVect, const py::object oxmaxVect, const py::object ovmVect, const py::object oamVect, const py::object ojmVect,
+                                               const py::object ox0Vect, const py::object ox1Vect, const py::object ov0Vect, const py::object ov1Vect, const py::object oa0Vect, const py::object oa1Vect)
+    {
+        PyPiecewisePolynomialTrajectoryPtr ppytraj = py::extract<PyPiecewisePolynomialTrajectoryPtr>(otraj);
+        std::vector<dReal> xminVect = openravepy::ExtractArray<dReal>(oxminVect);
+        std::vector<dReal> xmaxVect = openravepy::ExtractArray<dReal>(oxmaxVect);
+        std::vector<dReal> vmVect = openravepy::ExtractArray<dReal>(ovmVect);
+        std::vector<dReal> amVect = openravepy::ExtractArray<dReal>(oamVect);
+        std::vector<dReal> jmVect = openravepy::ExtractArray<dReal>(ojmVect);
+        std::vector<dReal> x0Vect = openravepy::ExtractArray<dReal>(ox0Vect);
+        std::vector<dReal> x1Vect = openravepy::ExtractArray<dReal>(ox1Vect);
+        std::vector<dReal> v0Vect = openravepy::ExtractArray<dReal>(ov0Vect);
+        std::vector<dReal> v1Vect = openravepy::ExtractArray<dReal>(ov1Vect);
+        std::vector<dReal> a0Vect = openravepy::ExtractArray<dReal>(oa0Vect);
+        std::vector<dReal> a1Vect = openravepy::ExtractArray<dReal>(oa1Vect);
+        piecewisepolynomials::PolynomialCheckReturn ret = _pchecker->CheckPiecewisePolynomialTrajectory(*ppytraj->_ptraj, xminVect, xmaxVect, vmVect, amVect, jmVect,
+                                                                                                        x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect);
+        return ret;
+    }
+
+    piecewisepolynomials::PolynomialCheckerPtr _pchecker;
+
+}; // end class PyPolynomialChecker
 
 } // end namespace piecewisepolynomialspy
 
@@ -889,4 +966,43 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
 #endif
     .def("Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration", &PyInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration, PY_ARGS("x0", "x1", "vm", "am", "jm") "Docs of Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration")
     ; // end class_ PyInterpolator
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyPolynomialChecker, PyPolynomialCheckerPtr>(m, "PolynomialChecker", "wrapper for polynomial checkers")
+    .def(init<>())
+    .def(init<size_t, int>(),
+         "ndof"_a,
+         "envid"_a)
+#else
+    class_<PyPolynomialChecker, PyPolynomialCheckerPtr>("PolynomialChecker", "wrapper for polynomial checkers")
+    .def(init<>())
+    .def(init<size_t, int>(py::args("ndof", "envid")))
+#endif
+    .def("Initialize", &PyPolynomialChecker::Initialize, PY_ARGS("ndof", "envid") "Initialize this checker")
+    .def("CheckPolynomial", &PyPolynomialChecker::CheckPolynomial,
+         PY_ARGS("polynomial", "xmin", "xmax", "vm", "am", "jm", "x0", "x1", "v0", "v1", "a0", "a1") "Check if the given polynomial respects all the limits.")
+    .def("CheckPiecewisePolynomial", &PyPolynomialChecker::CheckPiecewisePolynomial,
+         PY_ARGS("pwpolynomial", "xmin", "xmax", "vm", "am", "jm", "x0", "x1", "v0", "v1", "a0", "a1") "Check if the given piecewise polynomial is consistent and respects all the limits.")
+    .def("CheckChunk", &PyPolynomialChecker::CheckChunk,
+         PY_ARGS("chunk", "xminVect", "xmaxVect", "vmVect", "amVect", "jmVect", "x0Vect", "x1Vect", "v0Vect", "v1Vect", "a0Vect", "a1Vect") "Check if the given chunk is consistent and respects all the limits.")
+    .def("CheckPiecewisePolynomialTrajectory", &PyPolynomialChecker::CheckPiecewisePolynomialTrajectory,
+         PY_ARGS("pwptraj", "xminVect", "xmaxVect", "vmVect", "amVect", "jmVect", "x0Vect", "x1Vect", "v0Vect", "v1Vect", "a0Vect", "a1Vect") "Check if the given piecewise polynomial trajectory is consistent and respects all the limits.")
+    ; // end class_ PyPolynomialChecker
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<piecewisepolynomials::PolynomialCheckReturn>(m, "PolynomialCheckReturn", py::arithmatic() DOXY_ENUM(piecewisepolynomials::PolynomialCheckReturn))
+#else
+    enum_<piecewisepolynomials::PolynomialCheckReturn>("PolynomialCheckReturn" DOXY_ENUM(piecewisepolynomials::PolynomialCheckReturn))
+#endif
+    .value("PCR_Normal", piecewisepolynomials::PCR_Normal)
+    .value("PCR_PositionLimitsViolation", piecewisepolynomials::PCR_PositionLimitsViolation)
+    .value("PCR_VelocityLimitsViolation", piecewisepolynomials::PCR_VelocityLimitsViolation)
+    .value("PCR_AccelerationLimitsViolation", piecewisepolynomials::PCR_AccelerationLimitsViolation)
+    .value("PCR_JerkLimitsViolation", piecewisepolynomials::PCR_JerkLimitsViolation)
+    .value("PCR_NegativeDuration", piecewisepolynomials::PCR_NegativeDuration)
+    .value("PCR_PositionDiscrepancy", piecewisepolynomials::PCR_PositionDiscrepancy)
+    .value("PCR_VelocityDiscrepancy", piecewisepolynomials::PCR_VelocityDiscrepancy)
+    .value("PCR_AccelerationDiscrepancy", piecewisepolynomials::PCR_AccelerationDiscrepancy)
+    .value("PCR_DurationDiscrepancy", piecewisepolynomials::PCR_DurationDiscrepancy)
+    ;
 }

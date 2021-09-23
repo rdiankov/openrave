@@ -124,7 +124,7 @@ PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryArbitraryTimeDeriv
     Polynomial& polynomial = _cachePolynomial;
     polynomial.Initialize(T, vcoeffs);
     pwpoly.Initialize(polynomial);
-    return checker.CheckPolynomial(pwpoly.GetPolynomial(0), xmin, xmax, vm, am, jm);
+    return checker.CheckPolynomial(pwpoly.GetPolynomial(0), xmin, xmax, vm, am, jm, x0, x1, v0, v1, a0, a1);
 }
 
 //
@@ -206,7 +206,7 @@ PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDeriv
     chunks.resize(1);
     chunks[0].Initialize(T, finalPolynomials);
 
-    return checker.CheckChunk(chunks[0], xminVect, xmaxVect, vmVect, amVect, jmVect);
+    return checker.CheckChunk(chunks[0], xminVect, xmaxVect, vmVect, amVect, jmVect, x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect);
 }
 
 PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
