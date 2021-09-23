@@ -1636,7 +1636,7 @@ void init_openravepy_global()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("SerializeJSON", &PyReadable::SerializeJSON,
          "unitScale"_a = 1.0,
-         "options"_a = py::none_(),
+         "options"_a = 0,
          DOXY_FN(Readable, SerializeJSON)
          )
     .def("DeserializeJSON", &PyReadable::DeserializeJSON,
