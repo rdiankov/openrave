@@ -118,7 +118,7 @@ public:
     std::vector<Coordinate> _cacheCoordsVect;
     std::vector<dReal> _cacheXVect, _cacheVVect, _cacheAVect;
 
-#ifdef JERK_LIMITED_CHECKER_DEBUG
+#ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
     dReal _failedPoint;
     dReal _failedValue;
     size_t _failedIndex;
