@@ -286,8 +286,9 @@ void Polynomial::_FindAllLocalExtrema()
 
     // Determine if a critical point is a local extrema or not.
     dReal prevpoint = vcextrema[0].point - 1;
+    int numDistinctRoots = (int)vcextrema.size();
     int writeindex = 0;
-    for( int readindex = 0; readindex < numroots; ++readindex ) {
+    for( int readindex = 0; readindex < numDistinctRoots; ++readindex ) {
         dReal leftpoint, rightpoint; // points at which to evaluate the polynomial values
         dReal leftvalue, rightvalue; // polynomial values evaluated at leftpoint and rightpoint, respectively
 
