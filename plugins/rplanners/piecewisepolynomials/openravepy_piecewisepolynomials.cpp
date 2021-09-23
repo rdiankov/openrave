@@ -375,6 +375,11 @@ public:
         return _ppwpoly->GetDuration();
     }
 
+    size_t GetNumPolynomials() const
+    {
+        return _ppwpoly->GetPolynomials().size();
+    }
+
 private:
     void _PostProcess()
     {
@@ -817,6 +822,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Evaldn", &PyPiecewisePolynomial::Evaldn, PY_ARGS("t", "n") "Evaluate the n-th derivative of this piecewise polynomial at the given parameter t")
     .def("GetPolynomials", &PyPiecewisePolynomial::GetPolynomials, "Return a list of polynomials from this piecewise polynomial")
     .def("GetPolynomial", &PyPiecewisePolynomial::GetPolynomial, PY_ARGS("index") "Return the polynomial at the given index")
+    .def("GetNumPolynomials", &PyPiecewisePolynomial::GetNumPolynomials, "Return the number of polynomials")
     ; // end class_ PyPiecewisePolynomial
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

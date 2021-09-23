@@ -39,7 +39,7 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryZeroTimeDerivativesO
                                                                                                  dReal vm, dReal am, dReal jm,
                                                                                                  PiecewisePolynomial& pwpoly)
 {
-    const dReal d = RaveFabs(x0 - x1);
+    const dReal d = RaveFabs(x1 - x0);
     const int icase = DetermineZeroTimeDerivativesCaseFromBoundaryConditions(d, vm, am, jm);
     dReal tj = -1;
     dReal ta = -1;
@@ -106,7 +106,7 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryZeroTimeDerivativesO
 
     // Segment4
     if( tv > 0 ) {
-        poly.Initialize(ta, std::vector<dReal>({prevPosition, v, 0.0, 0.0}));
+        poly.Initialize(tv, std::vector<dReal>({prevPosition, v, 0.0, 0.0}));
         vpolynomials.push_back(poly);
         prevPosition = poly.Eval(poly.duration);
         prevVelocity = v;
@@ -166,7 +166,7 @@ int CubicInterpolator::DetermineZeroTimeDerivativesCaseFromBoundaryConditions(co
     }
     else {
         if( condition2 ) {
-            if( condition3 ) {
+            if( condition4 ) {
                 return 2; // case C
             }
             else {
@@ -175,7 +175,7 @@ int CubicInterpolator::DetermineZeroTimeDerivativesCaseFromBoundaryConditions(co
         }
         else {
             if( condition3 ) {
-                return 1; // case B
+                return 2; // case C
             }
             else {
                 return 3; // case D
