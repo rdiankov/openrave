@@ -2425,6 +2425,15 @@ void init_openravepy_robot()
             return pyinfo;
         }
                                       ))
+                             .def("__copy__", [](const PyManipulatorInfo& self){ return self; })
+                             .def("__deepcopy__",
+                                      [](const PyManipulatorInfo &pyinfo, const py::dict& memo) {
+            auto state = ManipulatorInfo_pickle_suite::getstate(pyinfo);
+            PyManipulatorInfo pyinfo_new;
+            ManipulatorInfo_pickle_suite::setstate(pyinfo_new, state);
+            return pyinfo_new;
+        }
+                                      )
 #else
                              .def_pickle(ManipulatorInfo_pickle_suite())
 #endif
@@ -2517,7 +2526,7 @@ void init_openravepy_robot()
         bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
         bool (PyRobotBase::*initrobot)(object, object, object, object, const std::string&) = &PyRobotBase::Init;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody>(m, "Robot", DOXY_CLASS(RobotBase))
+        scope_ robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody>(m, "Robot", py::dynamic_attr(), DOXY_CLASS(RobotBase))
 #else
         scope_ robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", DOXY_CLASS(RobotBase), no_init)
 #endif
