@@ -1606,8 +1606,8 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
     py::array_t<bool> pycollision({nRays});
     py::buffer_info bufcollision = pycollision.request();
     bool* pcollision = (bool*) bufcollision.ptr;
-    for(int i=0;i<nRays;i++) {
-        pcollision[i] = false;
+    if( nRays > 0 ) {
+        memset(pcollision, 0, sizeof(bool)*nRays);
     }
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { nRays,6};
