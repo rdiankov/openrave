@@ -1310,7 +1310,7 @@ object PyRobotBase::PyAttachedSensor::GetTransformPose() const {
     return toPyArray(_pattached->GetTransform());
 }
 PyRobotBasePtr PyRobotBase::PyAttachedSensor::GetRobot() const {
-    return _pattached->GetRobot() ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv));
+    return !_pattached->GetRobot() ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv));
 }
 object PyRobotBase::PyAttachedSensor::GetName() const {
     return ConvertStringToUnicode(_pattached->GetName());
