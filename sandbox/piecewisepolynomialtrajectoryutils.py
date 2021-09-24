@@ -42,18 +42,33 @@ def PlotPiecewisePolynomial(pwpoly, stepsize=0.01, derivative=0, fignum=None, **
     plt.show(False)
     return fig
 
-def PlotChunk(chunk, stepsize=0.01, derivative=0, fignum=None, **kwargs):
+def PlotChunk(chunk, stepsize=0.01, derivative=0, fignum=None, timeoffset=0, reusefig=False, **kwargs):
     """
     
     """
     tVect = np.arange(0, chunk.duration, stepsize)
     if tVect[-1] < chunk.duration:
         tVect = np.append(tVect, chunk.duration)
-    
     xVect = [chunk.Evaldn(t, derivative) for t in tVect]
 
+    fig = None
+    if not reusefig:
+        fig = plt.figure(fignum)
+    
+    plt.plot(tVect + timeoffset, xVect, **kwargs)
+    plt.show(False)
+    return fig
+    
+def PlotChunks(chunks, stepsize=0.01, derivative=0, fignum=None, **kwargs):
+    """
+    
+    """
     fig = plt.figure(fignum)
-    plt.plot(tVect, xVect, **kwargs)
+
+    tstart = 0
+    for chunk in chunks:
+        PlotChunk(chunk, stepsize=stepsize, derivative=derivative, timeoffset=tstart, reusefig=True, **kwargs)
+        tstart += chunk.duration
     plt.show(False)
     return fig
     
