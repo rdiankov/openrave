@@ -89,7 +89,7 @@ void Polynomial::PadCoefficients(size_t newdegree)
     degree = newdegree;
 }
 
-void Polynomial::UpdateInitialValue(dReal c0)
+void Polynomial::UpdateInitialValue(const dReal c0)
 {
     vcoeffs[0] = c0;
 }
@@ -211,7 +211,7 @@ dReal Polynomial::Evaldn(dReal t, size_t n) const
     return val;
 }
 
-Polynomial Polynomial::Differentiate(size_t ideriv) const
+Polynomial Polynomial::Differentiate(const size_t ideriv) const
 {
     if( ideriv == 0 ) {
         return Polynomial(duration, vcoeffs); // return a copy of itself
@@ -239,6 +239,17 @@ Polynomial Polynomial::Differentiate(size_t ideriv) const
     else {
         return Polynomial(duration, {0});
     }
+}
+
+Polynomial Polynomial::Integrate(const dReal c) const
+{
+    std::vector<dReal> newCoeffs(vcoeffs.size() + 1, 0.0);
+    std::copy(vcoeffs.begin(), vcoeffs.end(), newCoeffs.begin() + 1);
+    newCoeffs[0] = c;
+    for( int div = 2; div < (int)newCoeffs.size(); ++div ) {
+        newCoeffs[div] = newCoeffs[div]/div;
+    }
+    return Polynomial(duration, newCoeffs);
 }
 
 void Polynomial::_FindAllLocalExtrema()
@@ -397,11 +408,12 @@ void PiecewisePolynomial::Append(Polynomial& newPolynomial)
     UpdateInitialValue(_vpolynomials[0].vcoeffs[0]);
 }
 
-void PiecewisePolynomial::UpdateInitialValue(dReal c0)
+void PiecewisePolynomial::UpdateInitialValue(const dReal c0)
 {
+    dReal newFirstCoeff = c0;
     for( std::vector<Polynomial>::iterator itpoly = _vpolynomials.begin(); itpoly != _vpolynomials.end(); ++itpoly ) {
-        itpoly->UpdateInitialValue(c0);
-        c0 += itpoly->displacement;
+        itpoly->UpdateInitialValue(newFirstCoeff);
+        newFirstCoeff += itpoly->displacement;
     }
 }
 
@@ -507,6 +519,27 @@ dReal PiecewisePolynomial::Evaldn(dReal t, size_t n) const
     dReal remainder = 0;
     FindPolynomialIndex(t, index, remainder);
     return _vpolynomials[index].Evaldn(remainder, n);
+}
+
+PiecewisePolynomial PiecewisePolynomial::Differentiate(const size_t ideriv) const
+{
+    std::vector<Polynomial> vNewPolynomials;
+    vNewPolynomials.reserve(_vpolynomials.size());
+    for( std::vector<Polynomial>::const_iterator itpoly = _vpolynomials.begin(); itpoly != _vpolynomials.end(); ++itpoly ) {
+        vNewPolynomials.emplace_back( itpoly->Differentiate(ideriv) );
+    }
+    return PiecewisePolynomial(vNewPolynomials); // initial values of all polynomials will be updated.
+}
+
+PiecewisePolynomial PiecewisePolynomial::Integrate(const dReal c) const
+{
+    std::vector<Polynomial> vNewPolynomials;
+    vNewPolynomials.reserve(_vpolynomials.size());
+    for( std::vector<Polynomial>::const_iterator itpoly = _vpolynomials.begin(); itpoly != _vpolynomials.end(); ++itpoly ) {
+        vNewPolynomials.emplace_back( itpoly->Integrate(0) );
+    }
+    vNewPolynomials.front().UpdateInitialValue(c);
+    return PiecewisePolynomial(vNewPolynomials); // initial values of all polynomials will be updated.
 }
 
 void PiecewisePolynomial::Cut(dReal t, PiecewisePolynomial &remPWPolynomial)

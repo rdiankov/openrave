@@ -69,7 +69,7 @@ public:
     void PadCoefficients(size_t newdegree);
 
     /// \brief Update the weakest term coefficient.
-    void UpdateInitialValue(dReal c0);
+    void UpdateInitialValue(const dReal c0);
 
     /// \brief Update the duration.
     void UpdateDuration(dReal T);
@@ -90,10 +90,10 @@ public:
     dReal Evaldn(dReal t, size_t n) const;
 
     /// \brief Return the polynomial d/dt p(t)
-    Polynomial Differentiate(size_t ideriv) const;
+    Polynomial Differentiate(const size_t ideriv) const;
 
-    // /// \brief Return the polynomial int p(t) dt
-    // Polynomial Integrate();
+    /// \brief Return the polynomial int p(t) dt
+    Polynomial Integrate(const dReal c=0) const;
 
     /// \brief Return
     inline const std::vector<Coordinate>& GetExtrema() const
@@ -145,7 +145,7 @@ public:
     void Append(Polynomial& newPolynomial);
 
     /// \brief Update the weakest term coefficients of all the polynomials
-    void UpdateInitialValue(dReal c0);
+    void UpdateInitialValue(const dReal c0);
 
     /// \brief Find the index of the polynomial q that t falls into and also compute the remainder
     ///        so that p(t) = q(remainder)
@@ -165,6 +165,12 @@ public:
 
     /// \brief Evaluate the n-th derivative of this piecewise polynomial at time t.
     dReal Evaldn(dReal t, size_t n) const;
+
+    /// \brief Return the polynomial d/dt p(t)
+    PiecewisePolynomial Differentiate(const size_t ideriv) const;
+
+    /// \brief Return the polynomial int p(t) dt
+    PiecewisePolynomial Integrate(const dReal c=0) const;
 
     /// \brief Cut the piecewise polynomial into two halves at time t. The left half is stored in the same
     /// piecewise polynomial. The right half is returned via remPWPolynomial
