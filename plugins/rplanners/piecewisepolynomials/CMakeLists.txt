@@ -2,7 +2,7 @@ find_package(Eigen3 REQUIRED)
 message(STATUS "Eigen3 version: ${Eigen3_VERSION}")
 include_directories(${EIGEN3_INCLUDE_DIRS})
 
-add_library(piecewisepolynomials STATIC polynomialcommon.h polynomialtrajectory.h polynomialtrajectory.cpp polynomialchecker.h polynomialchecker.cpp interpolatorbase.h cubicinterpolator.h cubicinterpolator.cpp quinticinterpolator.h quinticinterpolator.cpp feasibilitychecker.h)
+add_library(piecewisepolynomials STATIC polynomialcommon.h polynomialtrajectory.h polynomialtrajectory.cpp polynomialchecker.h polynomialchecker.cpp interpolatorbase.h cubicinterpolator.h cubicinterpolator.cpp quinticinterpolator.h quinticinterpolator.cpp feasibilitychecker.h generalrecursiveinterpolator.h generalrecursiveinterpolator.cpp)
 set_target_properties(piecewisepolynomials PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")		
 add_dependencies(piecewisepolynomials interfacehashes_target)		
 
@@ -14,7 +14,7 @@ if( HAVE_ALL_PYTHON_HEADERS )
   )
 
   # link
-  set(OPENRAVEPY_PIECEWISEPOLYNOMIALS_LINKED_LIBRARIES openravepy_int piecewisepolynomials ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY} ${LAPACK_LIBRARIES})
+  set(OPENRAVEPY_PIECEWISEPOLYNOMIALS_LINKED_LIBRARIES openravepy_int piecewisepolynomials rampoptimizer ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY} ${LAPACK_LIBRARIES})
   if(NOT USE_PYBIND11_PYTHON_BINDINGS)
     set(OPENRAVEPY_PIECEWISEPOLYNOMIALS_LINKED_LIBRARIES ${OPENRAVEPY_PIECEWISEPOLYNOMIALS_LINKED_LIBRARIES} ${Boost_PYTHON_LIBRARY})
   endif()

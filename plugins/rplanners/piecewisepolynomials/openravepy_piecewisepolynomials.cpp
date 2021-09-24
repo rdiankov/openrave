@@ -15,6 +15,7 @@
 #include "interpolatorbase.h"
 #include "cubicinterpolator.h"
 #include "quinticinterpolator.h"
+#include "generalrecursiveinterpolator.h"
 #include <pyconfig.h>
 #include <numpy/arrayobject.h>
 
@@ -67,6 +68,7 @@ class PyPiecewisePolynomial;
 class PyChunk;
 class PyPiecewisePolynomialTrajectory;
 class PyInterpolator;
+class PyGeneralRecursiveInterpolator;
 class PyPolynomialChecker;
 typedef boost::shared_ptr<PyCoordinate> PyCoordinatePtr;
 typedef boost::shared_ptr<PyPolynomial> PyPolynomialPtr;
@@ -74,6 +76,7 @@ typedef boost::shared_ptr<PyPiecewisePolynomial> PyPiecewisePolynomialPtr;
 typedef boost::shared_ptr<PyChunk> PyChunkPtr;
 typedef boost::shared_ptr<PyPiecewisePolynomialTrajectory> PyPiecewisePolynomialTrajectoryPtr;
 typedef boost::shared_ptr<PyInterpolator> PyInterpolatorPtr;
+typedef boost::shared_ptr<PyGeneralRecursiveInterpolator> PyGeneralRecursiveInterpolatorPtr;
 typedef boost::shared_ptr<PyPolynomialChecker> PyPolynomialCheckerPtr;
 
 class PyCoordinate {
@@ -195,9 +198,15 @@ public:
         return _ppolynomial->Evaldn(t, n);
     }
 
-    PyPolynomialPtr Differentiate(size_t ideriv) const
+    PyPolynomialPtr Differentiate(const size_t ideriv) const
     {
         piecewisepolynomials::Polynomial newPoly = _ppolynomial->Differentiate(ideriv);
+        return PyPolynomialPtr(new PyPolynomial(newPoly));
+    }
+
+    PyPolynomialPtr Integrate(const dReal c) const
+    {
+        piecewisepolynomials::Polynomial newPoly = _ppolynomial->Integrate(c);
         return PyPolynomialPtr(new PyPolynomial(newPoly));
     }
 
@@ -349,6 +358,18 @@ public:
     dReal Evaldn(dReal t, size_t n) const
     {
         return _ppwpoly->Evaldn(t, n);
+    }
+
+    PyPiecewisePolynomialPtr Differentiate(const size_t ideriv) const
+    {
+        piecewisepolynomials::PiecewisePolynomial newPWPoly = _ppwpoly->Differentiate(ideriv);
+        return PyPiecewisePolynomialPtr(new PyPiecewisePolynomial(newPWPoly));
+    }
+
+    PyPiecewisePolynomialPtr Integrate(const dReal c) const
+    {
+        piecewisepolynomials::PiecewisePolynomial newPWPoly = _ppwpoly->Integrate(c);
+        return PyPiecewisePolynomialPtr(new PyPiecewisePolynomial(newPWPoly));
     }
 
     // void Cut(dReal t, PiecewisePolynomial &remPWPolynomial);
@@ -752,6 +773,38 @@ private:
     std::string _xmlid;
 }; // end class PyInterpolator
 
+class PyGeneralRecursiveInterpolator {
+public:
+    PyGeneralRecursiveInterpolator()
+    {
+    }
+    PyGeneralRecursiveInterpolator(int envid)
+    {
+        _pinterpolator.reset(new piecewisepolynomials::GeneralRecursiveInterpolator(envid));
+    }
+
+    PyPiecewisePolynomialPtr Compute1DTrajectory(const size_t degree,
+                                                 const py::object oInitialState, const py::object oFinalState,
+                                                 const py::object oLowerBounds, const py::object oUpperBounds,
+                                                 const dReal fixedDuration)
+    {
+        std::vector<dReal> initialState = openravepy::ExtractArray<dReal>(oInitialState);
+        std::vector<dReal> finalState = openravepy::ExtractArray<dReal>(oFinalState);
+        std::vector<dReal> lowerBounds = openravepy::ExtractArray<dReal>(oLowerBounds);
+        std::vector<dReal> upperBounds = openravepy::ExtractArray<dReal>(oUpperBounds);
+        piecewisepolynomials::PiecewisePolynomial pwpoly;
+        piecewisepolynomials::PolynomialCheckReturn ret = _pinterpolator->Compute1DTrajectory(degree, initialState, finalState, lowerBounds, upperBounds, fixedDuration, pwpoly);
+        if( ret != piecewisepolynomials::PolynomialCheckReturn::PCR_Normal ) {
+            return nullptr;
+        }
+
+        return PyPiecewisePolynomialPtr(new PyPiecewisePolynomial(pwpoly));
+    }
+
+private:
+    piecewisepolynomials::GeneralRecursiveInterpolatorPtr _pinterpolator;
+}; // end class PyGeneralRecursiveInterpolator
+
 class PyPolynomialChecker {
 public:
     PyPolynomialChecker()
@@ -894,6 +947,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Evald3", &PyPolynomial::Evald3, PY_ARGS("t") "Evaluate the third derivative of this polynomial at the given parameter t")
     .def("Evaldn", &PyPolynomial::Evaldn, PY_ARGS("t", "n") "Evaluate the n-th derivative of this polynomial at the given parameter t")
     .def("Differentiate", &PyPolynomial::Differentiate,PY_ARGS("n") "Return the polynomial d^n/dt^n p(t) where p is this polynomial")
+    .def("Integrate", &PyPolynomial::Integrate,PY_ARGS("c") "Return polynomial q = integrate x=0 to x=t p(x) where p is this polynomial and q(0) = c.")
     .def("GetExtrema", &PyPolynomial::GetExtrema, "Return the list of extrema of this polynomial")
     .def("FindAllLocalExtrema", &PyPolynomial::FindAllLocalExtrema, PY_ARGS("ideriv") "Return the list of extrema of the i-th derivative of this polynomial")
     .def("Serialize", &PyPolynomial::Serialize, "Serialize this polynomial into string")
@@ -919,6 +973,8 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Evald2", &PyPiecewisePolynomial::Evald2, PY_ARGS("t") "Evaluate the second derivative of this piecewise polynomial at the given parameter t")
     .def("Evald3", &PyPiecewisePolynomial::Evald3, PY_ARGS("t") "Evaluate the third derivative of this piecewise polynomial at the given parameter t")
     .def("Evaldn", &PyPiecewisePolynomial::Evaldn, PY_ARGS("t", "n") "Evaluate the n-th derivative of this piecewise polynomial at the given parameter t")
+    .def("Differentiate", &PyPiecewisePolynomial::Differentiate,PY_ARGS("n") "Return the polynomial d^n/dt^n p(t) where p is this polynomial")
+    .def("Integrate", &PyPiecewisePolynomial::Integrate,PY_ARGS("c") "Return polynomial q = integrate x=0 to x=t p(x) where p is this polynomial and q(0) = c.")
     .def("GetPolynomials", &PyPiecewisePolynomial::GetPolynomials, "Return a list of polynomials from this piecewise polynomial")
     .def("GetPolynomial", &PyPiecewisePolynomial::GetPolynomial, PY_ARGS("index") "Return the polynomial at the given index")
     .def("GetNumPolynomials", &PyPiecewisePolynomial::GetNumPolynomials, "Return the number of polynomials")
@@ -992,6 +1048,18 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration", &PyInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration, PY_ARGS("x0", "x1", "vm", "am", "jm") "Docs of Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration")
     .def("ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration", &PyInterpolator::ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration, PY_ARGS("x0Vect", "x1Vect", "vmVect", "amVect", "jmVect") "Docs of ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration")
     ; // end class_ PyInterpolator
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyGeneralRecursiveInterpolator, PyGeneralRecursiveInterpolatorPtr>(m, "GeneralRecursiveInterpolator", "wrapper for general-recursive-interpolators")
+    .def(init<>())
+    .def(init<int>(), "envid"_a)
+#else
+    class_<PyGeneralRecursiveInterpolator, PyGeneralRecursiveInterpolatorPtr>("GeneralRecursiveInterpolator", "wrapper for general-recursive-interpolators")
+    .def(init<>())
+    .def(init<int>(py::args("envid")))
+#endif
+    .def("Compute1DTrajectory", &PyGeneralRecursiveInterpolator::Compute1DTrajectory, PY_ARGS("degree", "initialState", "finalState", "lowerBounds", "upperBounds", "fixedDuration") "Docs of Compute1DTrajectory")
+    ; // end class_ PyGeneralRecursiveInterpolator
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyPolynomialChecker, PyPolynomialCheckerPtr>(m, "PolynomialChecker", "wrapper for polynomial checkers")
