@@ -29,7 +29,10 @@ void CubicInterpolator::Initialize(size_t ndof, int envid)
     this->envid = envid;
     checker.Initialize(ndof, envid);
 
-    // TODO
+    _cache1DCoeffs.resize(4); // 4 coefficients for a cubic polynomial
+    _cacheDVect.resize(ndof);
+    _cachePolynomials.resize(ndof);
+    _cacheXVect.resize(ndof);
 }
 
 //
@@ -68,6 +71,7 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryZeroTimeDerivativesO
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("Got unexpected icase=%d", icase, ORE_InvalidArguments);
     }
+    RAVELOG_WARN_FORMAT("PUTTICHAI: icase=%d; tj=%f; ta=%f; tv=%f", icase%tj%ta%tv);
 
     // Depending on x0 and x1, we may need to start with negative v, a, and j.
     const bool startWithNegativeBounds = x0 > x1;
@@ -205,7 +209,62 @@ PolynomialCheckReturn CubicInterpolator::ComputeNDTrajectoryZeroTimeDerivativesO
                                                                                                  const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
                                                                                                  std::vector<Chunk>& chunks)
 {
-    throw OPENRAVE_EXCEPTION_FORMAT0("ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration not implemented", ORE_NotImplemented);
+    OPENRAVE_ASSERT_OP(x0Vect.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(x1Vect.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(vmVect.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(amVect.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(jmVect.size(), ==, ndof);
+
+    std::vector<dReal>& dVect = _cacheDVect;
+    SubtractVector(x1Vect, x0Vect, dVect);
+
+    // Compute the limiting velocity, acceleration, and jerk (sdMax, sddMax, sdddMax).
+    dReal vMin = g_fPolynomialInf;
+    dReal aMin = g_fPolynomialInf;
+    dReal jMin = g_fPolynomialInf;
+    dReal absDInv;
+    for( size_t idof = 0; idof < ndof; ++idof ) {
+        if( !FuzzyZero(dVect[idof], g_fPolynomialEpsilon) ) {
+            absDInv = Abs(1/dVect[idof]);
+            vMin = Min(vMin, vmVect[idof]*absDInv);
+            aMin = Min(aMin, amVect[idof]*absDInv);
+            jMin = Min(jMin, jmVect[idof]*absDInv);
+        }
+    }
+    if( !(vMin < g_fPolynomialInf && aMin < g_fPolynomialInf && jMin < g_fPolynomialInf) ) {
+        // Displacements are zero.
+        chunks.resize(1);
+        chunks[0].SetConstant(x0Vect, 0, 5);
+        return PolynomialCheckReturn::PCR_Normal;
+    }
+
+    PiecewisePolynomial& templatePWPolynomial = _cachePWPolynomial;
+    Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(0.0, 1.0, vMin, aMin, jMin, templatePWPolynomial);
+    const std::vector<Polynomial>& vTemplatePolynomials = templatePWPolynomial.GetPolynomials();
+    chunks.resize(vTemplatePolynomials.size()); // output
+
+    std::vector<dReal>& vcoeffs = _cache1DCoeffs; // for holding temporary coefficients for each dof. should already have size=4
+    std::vector<Polynomial>& vpolynomials = _cachePolynomials; // should already have size=ndof
+    std::vector<dReal>& xVect = _cacheXVect; // for holding the initial positions for each segment.
+    xVect = x0Vect;
+
+    size_t iCurrentChunk = 0;
+    for( std::vector<Polynomial>::const_iterator itpoly = vTemplatePolynomials.begin(); itpoly != vTemplatePolynomials.end(); ++itpoly, ++iCurrentChunk ) {
+        // For each of the template polynomial, initialize 1 chunk.
+
+        for( size_t idof = 0; idof < ndof; ++idof ) {
+            size_t icoeff = 0;
+            for( std::vector<dReal>::const_iterator itTemplateCoeff = itpoly->vcoeffs.begin(); itTemplateCoeff != itpoly->vcoeffs.end(); ++itTemplateCoeff, ++icoeff ) {
+                vcoeffs[icoeff] = dVect[idof] * (*itTemplateCoeff);
+            }
+            vcoeffs[0] = xVect[idof];
+            vpolynomials[idof].Initialize(itpoly->duration, vcoeffs);
+        }
+
+        chunks[iCurrentChunk].Initialize(itpoly->duration, vpolynomials);
+        chunks[iCurrentChunk].Eval(itpoly->duration, xVect);
+    }
+    return PolynomialCheckReturn::PCR_Normal;
 }
 
 PolynomialCheckReturn CubicInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,

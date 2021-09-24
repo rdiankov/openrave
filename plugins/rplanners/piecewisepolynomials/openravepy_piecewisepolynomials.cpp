@@ -716,6 +716,28 @@ public:
         }
     }
 
+    py::object ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(py::object ox0Vect, py::object ox1Vect,
+                                                                       py::object ovmVect, py::object oamVect, py::object ojmVect)
+    {
+        std::vector<dReal> vmVect = openravepy::ExtractArray<dReal>(ovmVect);
+        std::vector<dReal> amVect = openravepy::ExtractArray<dReal>(oamVect);
+        std::vector<dReal> jmVect = openravepy::ExtractArray<dReal>(ojmVect);
+        std::vector<dReal> x0Vect = openravepy::ExtractArray<dReal>(ox0Vect);
+        std::vector<dReal> x1Vect = openravepy::ExtractArray<dReal>(ox1Vect);
+        std::vector<piecewisepolynomials::Chunk> vchunks;
+        piecewisepolynomials::PolynomialCheckReturn ret = _pinterpolator->ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(x0Vect, x1Vect, vmVect, amVect, jmVect, vchunks);
+        if( ret != piecewisepolynomials::PCR_Normal ) {
+            return py::none_();
+        }
+
+        py::list pychunks;
+        for( size_t ichunk = 0; ichunk < vchunks.size(); ++ichunk ) {
+            piecewisepolynomials::Chunk& chunk = vchunks[ichunk];
+            pychunks.append(PyChunkPtr(new PyChunk(chunk.duration, chunk.vpolynomials)));
+        }
+        return pychunks;
+    }
+
 private:
     void _PostProcess()
     {
@@ -939,6 +961,9 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def(init<>())
     .def(init<py::object>(py::args("chunks")))
 #endif
+    .def_readonly("degree", &PyPiecewisePolynomialTrajectory::degree)
+    .def_readonly("dof", &PyPiecewisePolynomialTrajectory::dof)
+    .def_readonly("duration", &PyPiecewisePolynomialTrajectory::duration)
     .def("Initialize", &PyPiecewisePolynomialTrajectory::Initialize, PY_ARGS("chunks") "Reinitialize this trajectory with the given chunks.")
     .def("Eval", &PyPiecewisePolynomialTrajectory::Eval, PY_ARGS("t") "Evaluate the value of this trajectory at the given parameter t")
     .def("Evald1", &PyPiecewisePolynomialTrajectory::Evald1, PY_ARGS("t") "Evaluate the first derivative of this trajectory at the given parameter t")
@@ -965,6 +990,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def(init<const std::string&, size_t, int>(py::args("interpolatorname", "ndof", "envid")))
 #endif
     .def("Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration", &PyInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration, PY_ARGS("x0", "x1", "vm", "am", "jm") "Docs of Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration")
+    .def("ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration", &PyInterpolator::ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration, PY_ARGS("x0Vect", "x1Vect", "vmVect", "amVect", "jmVect") "Docs of ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration")
     ; // end class_ PyInterpolator
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

@@ -81,6 +81,10 @@ public:
     //
     PolynomialChecker checker;
 
+    std::vector<dReal> _cache1DCoeffs;
+    std::vector<dReal> _cacheDVect, _cacheXVect;
+    std::vector<Polynomial> _cachePolynomials;
+    PiecewisePolynomial _cachePWPolynomial;
 };
 
 } // end namespace PiecewisePolynomialsInternal
