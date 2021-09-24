@@ -27,6 +27,7 @@ void CubicInterpolator::Initialize(size_t ndof, int envid)
     OPENRAVE_ASSERT_OP(ndof, >, 0);
     this->ndof = ndof;
     this->envid = envid;
+    _pGeneralInterpolator.reset(new GeneralRecursiveInterpolator(envid));
     checker.Initialize(ndof, envid);
 
     _cache1DCoeffs.resize(4); // 4 coefficients for a cubic polynomial
@@ -192,14 +193,34 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryArbitraryTimeDerivat
                                                                                                       dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
                                                                                                       PiecewisePolynomial& pwpoly)
 {
-    throw OPENRAVE_EXCEPTION_FORMAT0("Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration not implemented", ORE_NotImplemented);
+    const std::vector<dReal> initialState({x0, v0, a0});
+    const std::vector<dReal> finalState({x1, v1, a1});
+    const std::vector<dReal> lowerBounds({xmin, -vm, -am, -jm});
+    const std::vector<dReal> upperBounds({xmax, vm, am, jm});
+    const size_t degree = 3;
+    PolynomialCheckReturn ret = _pGeneralInterpolator->Compute1DTrajectory(degree, initialState, finalState, lowerBounds, upperBounds, 0, pwpoly);
+    if( ret != PolynomialCheckReturn::PCR_Normal ) {
+        return ret;
+    }
+    ret = checker.CheckPiecewisePolynomial(pwpoly, xmin, xmax, vm, am, jm, x0, x1, v0, v1, a0, a1);
+    return ret;
 }
 
 PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T,
                                                                                                   dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
                                                                                                   PiecewisePolynomial& pwpoly)
 {
-    throw OPENRAVE_EXCEPTION_FORMAT0("Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration not implemented", ORE_NotImplemented);
+    const std::vector<dReal> initialState({x0, v0, a0});
+    const std::vector<dReal> finalState({x1, v1, a1});
+    const std::vector<dReal> lowerBounds({xmin, -vm, -am, -jm});
+    const std::vector<dReal> upperBounds({xmax, vm, am, jm});
+    const size_t degree = 3;
+    PolynomialCheckReturn ret = _pGeneralInterpolator->Compute1DTrajectory(degree, initialState, finalState, lowerBounds, upperBounds, T, pwpoly);
+    if( ret != PolynomialCheckReturn::PCR_Normal ) {
+        return ret;
+    }
+    ret = checker.CheckPiecewisePolynomial(pwpoly, xmin, xmax, vm, am, jm, x0, x1, v0, v1, a0, a1);
+    return ret;
 }
 
 //

@@ -737,6 +737,38 @@ public:
         }
     }
 
+    PyPiecewisePolynomialPtr Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
+                                                                                          dReal v0, dReal v1,
+                                                                                          dReal a0, dReal a1,
+                                                                                          dReal xmin, dReal xmax,
+                                                                                          dReal vm, dReal am, dReal jm)
+    {
+        piecewisepolynomials::PiecewisePolynomial pwpoly;
+        piecewisepolynomials::PolynomialCheckReturn ret = _pinterpolator->Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(x0, x1, v0, v1, a0, a1, xmin, xmax, vm, am, jm, pwpoly);
+        if( ret == piecewisepolynomials::PCR_Normal ) {
+            return PyPiecewisePolynomialPtr(new PyPiecewisePolynomial(pwpoly));
+        }
+        else {
+            return nullptr;
+        }
+    }
+
+    PyPiecewisePolynomialPtr Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1,
+                                                                                      dReal v0, dReal v1,
+                                                                                      dReal a0, dReal a1, dReal T,
+                                                                                      dReal xmin, dReal xmax,
+                                                                                      dReal vm, dReal am, dReal jm)
+    {
+        piecewisepolynomials::PiecewisePolynomial pwpoly;
+        piecewisepolynomials::PolynomialCheckReturn ret = _pinterpolator->Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(x0, x1, v0, v1, a0, a1, T, xmin, xmax, vm, am, jm, pwpoly);
+        if( ret == piecewisepolynomials::PCR_Normal ) {
+            return PyPiecewisePolynomialPtr(new PyPiecewisePolynomial(pwpoly));
+        }
+        else {
+            return nullptr;
+        }
+    }
+
     py::object ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(py::object ox0Vect, py::object ox1Vect,
                                                                        py::object ovmVect, py::object oamVect, py::object ojmVect)
     {
@@ -1046,6 +1078,8 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def(init<const std::string&, size_t, int>(py::args("interpolatorname", "ndof", "envid")))
 #endif
     .def("Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration", &PyInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration, PY_ARGS("x0", "x1", "vm", "am", "jm") "Docs of Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration")
+    .def("Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration", &PyInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration, PY_ARGS("x0", "x1", "v0", "v1", "a0", "a1", "xmin", "xmax", "vm", "am", "jm") "Docs of Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration")
+    .def("Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration", &PyInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration, PY_ARGS("x0", "x1", "v0", "v1", "a0", "a1", "xmin", "xmax", "T", "vm", "am", "jm") "Docs of Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration")
     .def("ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration", &PyInterpolator::ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration, PY_ARGS("x0Vect", "x1Vect", "vmVect", "amVect", "jmVect") "Docs of ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration")
     ; // end class_ PyInterpolator
 

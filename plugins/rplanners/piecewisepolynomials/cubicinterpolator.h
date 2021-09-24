@@ -15,6 +15,7 @@
 #define PIECEWISE_POLY_CUBIC_INTERPOLATOR_H
 
 #include "interpolatorbase.h"
+#include "generalrecursiveinterpolator.h"
 
 namespace OpenRAVE {
 
@@ -80,6 +81,7 @@ public:
     // Members
     //
     PolynomialChecker checker;
+    GeneralRecursiveInterpolatorPtr _pGeneralInterpolator;
 
     std::vector<dReal> _cache1DCoeffs;
     std::vector<dReal> _cacheDVect, _cacheXVect;
