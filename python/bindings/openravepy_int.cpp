@@ -3176,7 +3176,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                           DOXY_FN(EnvironmentBase,drawboxarray)
                           )
 #else
-                     .def("drawboxarray",&PyEnvironmentBase::drawboxarray,drawbox_overloads(PY_ARGS("pos","extents","color") DOXY_FN(EnvironmentBase,drawboxarray)))
+                     .def("drawboxarray",&PyEnvironmentBase::drawboxarray,drawboxarray_overloads(PY_ARGS("pos","extents","color") DOXY_FN(EnvironmentBase,drawboxarray)))
 #endif
                      .def("drawplane",drawplane1, PY_ARGS("transform","extents","texture") DOXY_FN(EnvironmentBase,drawplane))
                      .def("drawplane",drawplane2, PY_ARGS("transform","extents","texture") DOXY_FN(EnvironmentBase,drawplane))
