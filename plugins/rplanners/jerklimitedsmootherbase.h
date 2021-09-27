@@ -669,6 +669,44 @@ protected:
         }
     }
 
+    void _FormatInterpolationConditions(std::stringstream& ss,
+                                        const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                        const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                                        const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect,
+                                        const dReal deltaTime,
+                                        const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
+                                        const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect)
+    {
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+        ss << "x0Vect=[";
+        SerializeValues(ss, x0Vect);
+        ss << "]; x1Vect=[";
+        SerializeValues(ss, x1Vect);
+        ss << "]; v0Vect=[";
+        SerializeValues(ss, v0Vect);
+        ss << "]; v1Vect=[";
+        SerializeValues(ss, v1Vect);
+        ss << "]; a0Vect=[";
+        SerializeValues(ss, a0Vect);
+        ss << "]; a1Vect=[";
+        SerializeValues(ss, a1Vect);
+        ss << "]";
+        if( deltaTime > 0 ) {
+            ss << "; deltaTime=" << deltaTime;
+        }
+        ss << "; xminVect=[";
+        SerializeValues(ss, xminVect);
+        ss << "]; xmaxVect=[";
+        SerializeValues(ss, xmaxVect);
+        ss << "]; vmVect=[";
+        SerializeValues(ss, vmVect);
+        ss << "]; amVect=[";
+        SerializeValues(ss, amVect);
+        ss << "]; jmVect=[";
+        SerializeValues(ss, jmVect);
+        ss << "];";
+    }
+
     //
     // Members
     //
