@@ -749,6 +749,7 @@ public:
             return PyPiecewisePolynomialPtr(new PyPiecewisePolynomial(pwpoly));
         }
         else {
+            RAVELOG_DEBUG_FORMAT("interpolation failed with ret=%s", piecewisepolynomials::GetPolynomialCheckReturnString(ret));
             return nullptr;
         }
     }
@@ -765,12 +766,13 @@ public:
             return PyPiecewisePolynomialPtr(new PyPiecewisePolynomial(pwpoly));
         }
         else {
+            RAVELOG_DEBUG_FORMAT("interpolation failed with ret=%s", piecewisepolynomials::GetPolynomialCheckReturnString(ret));
             return nullptr;
         }
     }
 
-    py::object ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(py::object ox0Vect, py::object ox1Vect,
-                                                                       py::object ovmVect, py::object oamVect, py::object ojmVect)
+    py::object ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(const py::object ox0Vect, const py::object ox1Vect,
+                                                                       const py::object ovmVect, const py::object oamVect, const py::object ojmVect)
     {
         std::vector<dReal> vmVect = openravepy::ExtractArray<dReal>(ovmVect);
         std::vector<dReal> amVect = openravepy::ExtractArray<dReal>(oamVect);
@@ -780,6 +782,76 @@ public:
         std::vector<piecewisepolynomials::Chunk> vchunks;
         piecewisepolynomials::PolynomialCheckReturn ret = _pinterpolator->ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(x0Vect, x1Vect, vmVect, amVect, jmVect, vchunks);
         if( ret != piecewisepolynomials::PCR_Normal ) {
+            RAVELOG_DEBUG_FORMAT("interpolation failed with ret=%s", piecewisepolynomials::GetPolynomialCheckReturnString(ret));
+            return py::none_();
+        }
+
+        py::list pychunks;
+        for( size_t ichunk = 0; ichunk < vchunks.size(); ++ichunk ) {
+            piecewisepolynomials::Chunk& chunk = vchunks[ichunk];
+            pychunks.append(PyChunkPtr(new PyChunk(chunk.duration, chunk.vpolynomials)));
+        }
+        return pychunks;
+    }
+
+    py::object ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(const py::object ox0Vect, const py::object ox1Vect,
+                                                                        const py::object ov0Vect, const py::object ov1Vect,
+                                                                        const py::object oa0Vect, const py::object oa1Vect,
+                                                                        const dReal T,
+                                                                        const py::object oxminVect, const py::object oxmaxVect,
+                                                                        const py::object ovmVect, const py::object oamVect,
+                                                                        const py::object ojmVect)
+    {
+        std::vector<dReal> xminVect = openravepy::ExtractArray<dReal>(oxminVect);
+        std::vector<dReal> xmaxVect = openravepy::ExtractArray<dReal>(oxmaxVect);
+        std::vector<dReal> vmVect = openravepy::ExtractArray<dReal>(ovmVect);
+        std::vector<dReal> amVect = openravepy::ExtractArray<dReal>(oamVect);
+        std::vector<dReal> jmVect = openravepy::ExtractArray<dReal>(ojmVect);
+
+        std::vector<dReal> x0Vect = openravepy::ExtractArray<dReal>(ox0Vect);
+        std::vector<dReal> x1Vect = openravepy::ExtractArray<dReal>(ox1Vect);
+        std::vector<dReal> v0Vect = openravepy::ExtractArray<dReal>(ov0Vect);
+        std::vector<dReal> v1Vect = openravepy::ExtractArray<dReal>(ov1Vect);
+        std::vector<dReal> a0Vect = openravepy::ExtractArray<dReal>(oa0Vect);
+        std::vector<dReal> a1Vect = openravepy::ExtractArray<dReal>(oa1Vect);
+        std::vector<piecewisepolynomials::Chunk> vchunks;
+        piecewisepolynomials::PolynomialCheckReturn ret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, T, xminVect, xmaxVect, vmVect, amVect, jmVect, vchunks);
+        if( ret != piecewisepolynomials::PCR_Normal ) {
+            RAVELOG_DEBUG_FORMAT("interpolation failed with ret=%s", piecewisepolynomials::GetPolynomialCheckReturnString(ret));
+            return py::none_();
+        }
+
+        py::list pychunks;
+        for( size_t ichunk = 0; ichunk < vchunks.size(); ++ichunk ) {
+            piecewisepolynomials::Chunk& chunk = vchunks[ichunk];
+            pychunks.append(PyChunkPtr(new PyChunk(chunk.duration, chunk.vpolynomials)));
+        }
+        return pychunks;
+    }
+
+    py::object ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(const py::object ox0Vect, const py::object ox1Vect,
+                                                                            const py::object ov0Vect, const py::object ov1Vect,
+                                                                            const py::object oa0Vect, const py::object oa1Vect,
+                                                                            const py::object oxminVect, const py::object oxmaxVect,
+                                                                            const py::object ovmVect, const py::object oamVect,
+                                                                            const py::object ojmVect, const dReal T)
+    {
+        std::vector<dReal> xminVect = openravepy::ExtractArray<dReal>(oxminVect);
+        std::vector<dReal> xmaxVect = openravepy::ExtractArray<dReal>(oxmaxVect);
+        std::vector<dReal> vmVect = openravepy::ExtractArray<dReal>(ovmVect);
+        std::vector<dReal> amVect = openravepy::ExtractArray<dReal>(oamVect);
+        std::vector<dReal> jmVect = openravepy::ExtractArray<dReal>(ojmVect);
+
+        std::vector<dReal> x0Vect = openravepy::ExtractArray<dReal>(ox0Vect);
+        std::vector<dReal> x1Vect = openravepy::ExtractArray<dReal>(ox1Vect);
+        std::vector<dReal> v0Vect = openravepy::ExtractArray<dReal>(ov0Vect);
+        std::vector<dReal> v1Vect = openravepy::ExtractArray<dReal>(ov1Vect);
+        std::vector<dReal> a0Vect = openravepy::ExtractArray<dReal>(oa0Vect);
+        std::vector<dReal> a1Vect = openravepy::ExtractArray<dReal>(oa1Vect);
+        std::vector<piecewisepolynomials::Chunk> vchunks;
+        piecewisepolynomials::PolynomialCheckReturn ret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, xminVect, xmaxVect, vmVect, amVect, jmVect, T, vchunks);
+        if( ret != piecewisepolynomials::PCR_Normal ) {
+            RAVELOG_DEBUG_FORMAT("interpolation failed with ret=%s", piecewisepolynomials::GetPolynomialCheckReturnString(ret));
             return py::none_();
         }
 
@@ -1081,6 +1153,8 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration", &PyInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration, PY_ARGS("x0", "x1", "v0", "v1", "a0", "a1", "xmin", "xmax", "vm", "am", "jm") "Docs of Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration")
     .def("Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration", &PyInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration, PY_ARGS("x0", "x1", "v0", "v1", "a0", "a1", "xmin", "xmax", "T", "vm", "am", "jm") "Docs of Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration")
     .def("ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration", &PyInterpolator::ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration, PY_ARGS("x0Vect", "x1Vect", "vmVect", "amVect", "jmVect") "Docs of ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration")
+    .def("ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration", &PyInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration, PY_ARGS("x0Vect", "x1Vect", "v0Vect", "v1Vect", "a0Vect", "a1Vect", "xminVect", "xmaxVect", "vmVect", "amVect", "jmVect") "Docs of ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration")
+    .def("ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration", &PyInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration, PY_ARGS("x0Vect", "x1Vect", "v0Vect", "v1Vect", "a0Vect", "a1Vect", "T", "xminVect", "xmaxVect", "vmVect", "amVect", "jmVect", "T") "Docs of ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration")
     ; // end class_ PyInterpolator
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
