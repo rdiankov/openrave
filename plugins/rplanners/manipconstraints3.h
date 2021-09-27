@@ -363,11 +363,19 @@ public:
         }
         std::sort(vAllCriticalCoords.begin(), vAllCriticalCoords.end());
         if( interval != IT_OpenStart ) {
-            vCoords[0].point = 0; // reuse
+            // Reuse vCoords as a temporary holder
+            if( vCoords.size() == 0 ) {
+                vCoords.resize(1);
+            }
+            vCoords[0].point = 0;
             vAllCriticalCoords.insert(vAllCriticalCoords.begin(), vCoords[0]);
         }
         if( interval != IT_OpenEnd ) {
-            vCoords[0].point = chunkIn.duration; // reuse
+            // Reuse vCoords as a temporary holder
+            if( vCoords.size() == 0 ) {
+                vCoords.resize(1);
+            }
+            vCoords[0].point = chunkIn.duration;
             vAllCriticalCoords.push_back(vCoords[0]);
         }
 
