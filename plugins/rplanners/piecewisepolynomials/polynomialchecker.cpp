@@ -64,6 +64,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialValues(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedPoint = t;
         _failedValue = t;
+        _expectedValue = p.duration;
 #endif
         return PCR_DurationDiscrepancy;
     }
@@ -72,6 +73,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialValues(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedPoint = t;
         _failedValue = pos;
+        _expectedValue = x;
 #endif
         return PCR_PositionDiscrepancy;
     }
@@ -81,6 +83,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialValues(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedPoint = t;
         _failedValue = vel;
+        _expectedValue = v;
 #endif
         return PCR_VelocityDiscrepancy;
     }
@@ -90,6 +93,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialValues(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedPoint = t;
         _failedValue = accel;
+        _expectedValue = a;
 #endif
         return PCR_AccelerationDiscrepancy;
     }
@@ -108,6 +112,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedPoint = 0;
         _failedValue = val;
+        _expectedValue = val > xmax ? xmax : xmin;
 #endif
         return PCR_PositionLimitsViolation;
     }
@@ -116,6 +121,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedPoint = T;
         _failedValue = val;
+        _expectedValue = val > xmax ? xmax : xmin;
 #endif
         return PCR_PositionLimitsViolation;
     }
@@ -126,6 +132,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
                 _failedPoint = it->point;
                 _failedValue = it->value;
+                _expectedValue = it->value > xmax ? xmax : xmin;
 #endif
                 return PCR_PositionLimitsViolation;
             }
@@ -139,6 +146,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
             _failedPoint = 0;
             _failedValue = val;
+            _expectedValue = val > vm ? vm : -vm;
 #endif
             return PCR_VelocityLimitsViolation;
         }
@@ -147,6 +155,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
             _failedPoint = T;
             _failedValue = val;
+            _expectedValue = val > vm ? vm : -vm;
 #endif
             return PCR_VelocityLimitsViolation;
         }
@@ -158,6 +167,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
                     _failedPoint = it->point;
                     _failedValue = it->value;
+                    _expectedValue = it->value > vm ? vm : -vm;
 #endif
                     return PCR_VelocityLimitsViolation;
                 }
@@ -172,6 +182,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
             _failedPoint = 0;
             _failedValue = val;
+            _expectedValue = val > am ? am : -am;
 #endif
             return PCR_AccelerationLimitsViolation;
         }
@@ -180,6 +191,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
             _failedPoint = T;
             _failedValue = val;
+            _expectedValue = val > am ? am : -am;
 #endif
             return PCR_AccelerationLimitsViolation;
         }
@@ -191,6 +203,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
                     _failedPoint = it->point;
                     _failedValue = it->value;
+                    _expectedValue = it->value > am ? am : -am;
 #endif
                     return PCR_AccelerationLimitsViolation;
                 }
@@ -205,6 +218,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
             _failedPoint = 0;
             _failedValue = val;
+            _expectedValue = val > jm ? jm : -jm;
 #endif
             return PCR_JerkLimitsViolation;
         }
@@ -213,6 +227,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
             _failedPoint = T;
             _failedValue = val;
+            _expectedValue = val > jm ? jm : -jm;
 #endif
             return PCR_JerkLimitsViolation;
         }
@@ -224,6 +239,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
                     _failedPoint = it->point;
                     _failedValue = it->value;
+                    _expectedValue = it->value > jm ? jm : -jm;
 #endif
                     return PCR_JerkLimitsViolation;
                 }
@@ -250,7 +266,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomial(const Piecewis
     if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedIndex = 0;
-        RAVELOG_VERBOSE_FORMAT("index=%d; t=%f; value=%f; result=%s", _failedIndex%_failedPoint%_failedValue%GetPolynomialCheckReturnString(ret));
+        RAVELOG_VERBOSE_FORMAT("index=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
         return ret;
     }
@@ -258,7 +274,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomial(const Piecewis
     if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedIndex = numPolynomials - 1;
-        RAVELOG_VERBOSE_FORMAT("index=%d; t=%f; value=%f; result=%s", _failedIndex%_failedPoint%_failedValue%GetPolynomialCheckReturnString(ret));
+        RAVELOG_VERBOSE_FORMAT("index=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
         return ret;
     }
@@ -275,7 +291,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomial(const Piecewis
             if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
                 _failedIndex = (itpoly - vpolynomials.begin());
-                RAVELOG_VERBOSE_FORMAT("index=%d; t=%f; value=%f; result=%s", _failedIndex%_failedPoint%_failedValue%GetPolynomialCheckReturnString(ret));
+                RAVELOG_VERBOSE_FORMAT("index=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
                 return ret;
             }
@@ -286,7 +302,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomial(const Piecewis
         if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
             _failedIndex = (itpoly - vpolynomials.begin());
-            RAVELOG_VERBOSE_FORMAT("index=%d; t=%f; value=%f; result=%s", _failedIndex%_failedPoint%_failedValue%GetPolynomialCheckReturnString(ret));
+            RAVELOG_VERBOSE_FORMAT("index=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
             return ret;
         }
@@ -328,7 +344,8 @@ PolynomialCheckReturn PolynomialChecker::CheckChunk(const Chunk& c, const std::v
             _failedValue = c.vpolynomials[idof].duration;
             _failedPoint = c.vpolynomials[idof].duration;
             _failedDOF = idof;
-            RAVELOG_VERBOSE_FORMAT("idof=%d; t=%f; value=%f; result=%s", _failedDOF%_failedPoint%_failedValue%GetPolynomialCheckReturnString(ret));
+            _expectedValue = c.duration;
+            RAVELOG_VERBOSE_FORMAT("idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
             return PCR_DurationDiscrepancy;
         }
@@ -337,7 +354,7 @@ PolynomialCheckReturn PolynomialChecker::CheckChunk(const Chunk& c, const std::v
         if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
             _failedDOF = idof;
-            RAVELOG_VERBOSE_FORMAT("idof=%d; t=%f; value=%f; result=%s", _failedDOF%_failedPoint%_failedValue%GetPolynomialCheckReturnString(ret));
+            RAVELOG_VERBOSE_FORMAT("idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
             break;
         }
@@ -398,7 +415,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomialTrajectory(cons
     if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedIndex = 0;
-        RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%f; value=%f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%GetPolynomialCheckReturnString(ret));
+        RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
         return ret;
     }
@@ -407,7 +424,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomialTrajectory(cons
     if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedIndex = vchunks.size() - 1;
-        RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%f; value=%f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%GetPolynomialCheckReturnString(ret));
+        RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
         return ret;
     }
@@ -439,7 +456,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomialTrajectory(cons
                 _failedValue = itchunk->vpolynomials[idof].duration;
                 _failedIndex = (itchunk - vchunks.begin());
                 _failedDOF = idof;
-                RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%f; value=%f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%GetPolynomialCheckReturnString(ret));
+                RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
                 return PCR_DurationDiscrepancy;
             }
@@ -451,7 +468,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomialTrajectory(cons
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
                     _failedDOF = idof;
                     _failedIndex = (itchunk - vchunks.begin());
-                    RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%f; value=%f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%GetPolynomialCheckReturnString(ret));
+                    RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
                     return ret;
                 }
@@ -463,7 +480,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomialTrajectory(cons
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
                 _failedDOF = idof;
                 _failedIndex = (itchunk - vchunks.begin());
-                RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%f; value=%f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%GetPolynomialCheckReturnString(ret));
+                RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
                 return ret;
             }

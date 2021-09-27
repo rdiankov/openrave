@@ -36,6 +36,8 @@ enum PolynomialCheckReturn : uint8_t {
     PCR_GenericError = 0x10,
 };
 
+const char* GetPolynomialCheckReturnString(PolynomialCheckReturn ret);
+
 class PolynomialChecker {
 public:
     PolynomialChecker()
@@ -122,6 +124,7 @@ public:
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
     dReal _failedPoint;
     dReal _failedValue;
+    dReal _expectedValue;
     size_t _failedIndex;
     size_t _failedDOF;
 #endif
