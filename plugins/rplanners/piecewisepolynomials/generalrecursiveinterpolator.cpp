@@ -149,6 +149,9 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     newLowerBounds.assign(lowerBounds.begin() + velocityIndex, lowerBounds.end());
     newUpperBounds.assign(upperBounds.begin() + velocityIndex, upperBounds.end());
 
+    // Use tighter epsilon for checking convergence while still using g_fPolynomialEpsilon for checking zero duration.
+    const dReal epsilon = 1e-5*g_fPolynomialEpsilon;
+
     dReal totalDuration = 0;
     dReal duration2 = 0;
     bool bSuccess = false;
@@ -204,11 +207,11 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         // Step 12
         // Note: need a tighter bound when checking these velocities vmax, vmin. Otherwise, it might
         // not converge due to totalDuration not equal to fixedDuration.
-        if( FuzzyEquals(vmax, vmin, 1e-4*g_fPolynomialEpsilon) ) {
+        if( FuzzyEquals(vmax, vmin, epsilon) ) {
             v = vHat;
             vmin = vHat;
             vmax = vHat;
-            if( FuzzyEquals(vHat, upperBounds.at(velocityIndex) + 1, g_fPolynomialEpsilon) ) {
+            if( FuzzyEquals(vHat, upperBounds.at(velocityIndex) + 1, epsilon) ) {
                 // Step 14
                 return PolynomialCheckReturn::PCR_GenericError;
             }
@@ -222,12 +225,12 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         else {
             vLast = v;
         }
-        if( FuzzyEquals(vLast, v, g_fPolynomialEpsilon) ) {
-            if( (fixedDuration == 0) || FuzzyEquals(fixedDuration, totalDuration, g_fPolynomialEpsilon) ) {
+
+        if( FuzzyEquals(vLast, v, epsilon) ) {
+            if( (fixedDuration == 0) || FuzzyEquals(fixedDuration, totalDuration, epsilon) ) {
                 bSuccess = true;
                 break; // successful
             }
-
         }
     } // end for
 
@@ -236,12 +239,12 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     }
 
     // Check soundness
-    if( !FuzzyEquals(pwpoly1.Eval(pwpoly1.GetDuration()), v, g_fPolynomialEpsilon) ) {
-        RAVELOG_WARN_FORMAT("env=%d, interpolation successful but v1(%f)=%f is different from v=%f", envid%pwpoly1.Eval(pwpoly1.GetDuration())%pwpoly1.GetDuration()%v);
+    if( !FuzzyEquals(pwpoly1.Eval(pwpoly1.GetDuration()), v, epsilon) ) {
+        RAVELOG_WARN_FORMAT("env=%d, interpolation successful but v1(%f)=%.15f is different from v=%.15f", envid%pwpoly1.GetDuration()%pwpoly1.Eval(pwpoly1.GetDuration())%v);
         return PolynomialCheckReturn::PCR_GenericError;
     }
-    if( !FuzzyEquals(pwpoly3.Eval(0), v, g_fPolynomialEpsilon) ) {
-        RAVELOG_WARN_FORMAT("env=%d, interpolation successful but v3(0)=%f is different from v=%f", envid%pwpoly3.Eval(0)%v);
+    if( !FuzzyEquals(pwpoly3.Eval(0), v, epsilon) ) {
+        RAVELOG_WARN_FORMAT("env=%d, interpolation successful but v3(0)=%.15f is different from v=%.15f", envid%pwpoly3.Eval(0)%v);
         return PolynomialCheckReturn::PCR_GenericError;
     }
 
