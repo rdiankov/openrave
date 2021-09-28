@@ -982,6 +982,26 @@ public:
         return ret;
     }
 
+    uint8_t CheckChunks(const py::object ovchunks, const py::object oxminVect, const py::object oxmaxVect, const py::object ovmVect, const py::object oamVect, const py::object ojmVect,
+                        const py::object ox0Vect, const py::object ox1Vect, const py::object ov0Vect, const py::object ov1Vect, const py::object oa0Vect, const py::object oa1Vect)
+    {
+        std::vector<piecewisepolynomials::Chunk> vchunks = ExtractArrayChunks(ovchunks);
+        std::vector<dReal> xminVect = openravepy::ExtractArray<dReal>(oxminVect);
+        std::vector<dReal> xmaxVect = openravepy::ExtractArray<dReal>(oxmaxVect);
+        std::vector<dReal> vmVect = openravepy::ExtractArray<dReal>(ovmVect);
+        std::vector<dReal> amVect = openravepy::ExtractArray<dReal>(oamVect);
+        std::vector<dReal> jmVect = openravepy::ExtractArray<dReal>(ojmVect);
+        std::vector<dReal> x0Vect = openravepy::ExtractArray<dReal>(ox0Vect);
+        std::vector<dReal> x1Vect = openravepy::ExtractArray<dReal>(ox1Vect);
+        std::vector<dReal> v0Vect = openravepy::ExtractArray<dReal>(ov0Vect);
+        std::vector<dReal> v1Vect = openravepy::ExtractArray<dReal>(ov1Vect);
+        std::vector<dReal> a0Vect = openravepy::ExtractArray<dReal>(oa0Vect);
+        std::vector<dReal> a1Vect = openravepy::ExtractArray<dReal>(oa1Vect);
+        piecewisepolynomials::PolynomialCheckReturn ret = _pchecker->CheckChunks(vchunks, xminVect, xmaxVect, vmVect, amVect, jmVect,
+                                                                                 x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect);
+        return ret;
+    }
+
     uint8_t CheckPiecewisePolynomialTrajectory(const py::object otraj, const py::object oxminVect, const py::object oxmaxVect, const py::object ovmVect, const py::object oamVect, const py::object ojmVect,
                                                const py::object ox0Vect, const py::object ox1Vect, const py::object ov0Vect, const py::object ov1Vect, const py::object oa0Vect, const py::object oa1Vect)
     {
@@ -1212,6 +1232,8 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
          PY_ARGS("pwpolynomial", "xmin", "xmax", "vm", "am", "jm", "x0", "x1", "v0", "v1", "a0", "a1") "Check if the given piecewise polynomial is consistent and respects all the limits.")
     .def("CheckChunk", &PyPolynomialChecker::CheckChunk,
          PY_ARGS("chunk", "xminVect", "xmaxVect", "vmVect", "amVect", "jmVect", "x0Vect", "x1Vect", "v0Vect", "v1Vect", "a0Vect", "a1Vect") "Check if the given chunk is consistent and respects all the limits.")
+    .def("CheckChunks", &PyPolynomialChecker::CheckChunks,
+         PY_ARGS("pwptraj", "xminVect", "xmaxVect", "vmVect", "amVect", "jmVect", "x0Vect", "x1Vect", "v0Vect", "v1Vect", "a0Vect", "a1Vect") "Check if the given sequence of chunks is consistent and respects all the limits.")
     .def("CheckPiecewisePolynomialTrajectory", &PyPolynomialChecker::CheckPiecewisePolynomialTrajectory,
          PY_ARGS("pwptraj", "xminVect", "xmaxVect", "vmVect", "amVect", "jmVect", "x0Vect", "x1Vect", "v0Vect", "v1Vect", "a0Vect", "a1Vect") "Check if the given piecewise polynomial trajectory is consistent and respects all the limits.")
     ; // end class_ PyPolynomialChecker
