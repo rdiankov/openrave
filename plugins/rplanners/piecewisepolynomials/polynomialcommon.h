@@ -35,6 +35,8 @@ const static dReal g_fPolynomialEpsilon = 1e-10; // tolerance for polynomial int
 const static int g_nPrec = 12;         // precision when writing trajectories to files
 const static dReal g_fPolynomialInf = 1e300;     // threshold for deciding if a number is infinite
 
+const static dReal g_fEpsilonForTimeInstant = 0.01*g_fPolynomialEpsilon;
+
 #ifdef PIECEWISE_POLY_POLY_COMMON_H_USE_EIGEN
 template <typename T>
 using VectorXT = Eigen::Matrix<T, Eigen::Dynamic, 1>;

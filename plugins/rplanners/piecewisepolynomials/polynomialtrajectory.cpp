@@ -432,12 +432,12 @@ void PiecewisePolynomial::UpdateInitialValue(const dReal c0)
 
 void PiecewisePolynomial::FindPolynomialIndex(const dReal t, size_t& index, dReal& remainder) const
 {
-    if( t <= 0 ) {
+    if( t <= g_fEpsilonForTimeInstant ) {
         index = 0;
         remainder = 0;
         return;
     }
-    else if( t >= _duration ) {
+    else if( t >= _duration - g_fEpsilonForTimeInstant ) {
         index = _vpolynomials.size() - 1;
         remainder = _vpolynomials.back().duration;
         return;
@@ -448,23 +448,26 @@ void PiecewisePolynomial::FindPolynomialIndex(const dReal t, size_t& index, dRea
         size_t testIndex = 0;
         dReal currentTime = 0;
         std::vector<Polynomial>::const_iterator itpoly = _vpolynomials.begin();
-        while( (itpoly - 1) != _vpolynomials.end() && t >= currentTime ) {
+        while( (itpoly - 1) != _vpolynomials.end() && t >= currentTime - g_fEpsilonForTimeInstant ) {
             currentTime += itpoly->duration;
             itpoly++;
             testIndex++;
         }
         index = testIndex - 1;
         remainder = t - (currentTime - (itpoly - 1)->duration);
+        if( FuzzyZero(remainder, g_fEpsilonForTimeInstant) ) {
+            remainder = 0;
+        }
         return;
     }
 }
 
 dReal PiecewisePolynomial::Eval(dReal t) const
 {
-    if( t <= 0 ) {
+    if( t <= g_fEpsilonForTimeInstant ) {
         return _vpolynomials.front().Eval(0);
     }
-    else if( t >= _duration ) {
+    else if( t >= _duration - g_fEpsilonForTimeInstant ) {
         return _vpolynomials.back().Eval(_vpolynomials.back().duration);
     }
 
@@ -476,10 +479,10 @@ dReal PiecewisePolynomial::Eval(dReal t) const
 
 dReal PiecewisePolynomial::Evald1(dReal t) const
 {
-    if( t <= 0 ) {
+    if( t <= g_fEpsilonForTimeInstant ) {
         return _vpolynomials.front().Evald1(0);
     }
-    else if( t >= _duration ) {
+    else if( t >= _duration - g_fEpsilonForTimeInstant ) {
         return _vpolynomials.back().Evald1(_vpolynomials.back().duration);
     }
 
@@ -491,10 +494,10 @@ dReal PiecewisePolynomial::Evald1(dReal t) const
 
 dReal PiecewisePolynomial::Evald2(dReal t) const
 {
-    if( t <= 0 ) {
+    if( t <= g_fEpsilonForTimeInstant ) {
         return _vpolynomials.front().Evald2(0);
     }
-    else if( t >= _duration ) {
+    else if( t >= _duration - g_fEpsilonForTimeInstant ) {
         return _vpolynomials.back().Evald2(_vpolynomials.back().duration);
     }
 
@@ -506,10 +509,10 @@ dReal PiecewisePolynomial::Evald2(dReal t) const
 
 dReal PiecewisePolynomial::Evald3(dReal t) const
 {
-    if( t <= 0 ) {
+    if( t <= g_fEpsilonForTimeInstant ) {
         return _vpolynomials.front().Evald3(0);
     }
-    else if( t >= _duration ) {
+    else if( t >= _duration - g_fEpsilonForTimeInstant ) {
         return _vpolynomials.back().Evald3(_vpolynomials.back().duration);
     }
 
@@ -521,10 +524,10 @@ dReal PiecewisePolynomial::Evald3(dReal t) const
 
 dReal PiecewisePolynomial::Evaldn(dReal t, size_t n) const
 {
-    if( t <= 0 ) {
+    if( t <= g_fEpsilonForTimeInstant ) {
         return _vpolynomials.front().Evaldn(0, n);
     }
-    else if( t >= _duration ) {
+    else if( t >= _duration - g_fEpsilonForTimeInstant ) {
         return _vpolynomials.back().Evaldn(_vpolynomials.back().duration, n);
     }
 
