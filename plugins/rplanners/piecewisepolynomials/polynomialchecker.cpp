@@ -266,7 +266,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomial(const Piecewis
     if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedIndex = 0;
-        RAVELOG_VERBOSE_FORMAT("index=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
+        RAVELOG_VERBOSE_FORMAT("polynomial index=%d/%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%numPolynomials%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
         return ret;
     }
@@ -274,7 +274,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomial(const Piecewis
     if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedIndex = numPolynomials - 1;
-        RAVELOG_VERBOSE_FORMAT("index=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
+        RAVELOG_VERBOSE_FORMAT("polynomial index=%d/%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%numPolynomials%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
         return ret;
     }
@@ -291,7 +291,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomial(const Piecewis
             if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
                 _failedIndex = (itpoly - vpolynomials.begin());
-                RAVELOG_VERBOSE_FORMAT("index=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
+                RAVELOG_VERBOSE_FORMAT("polynomials index=%d/%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%numPolynomials%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
                 return ret;
             }
@@ -302,7 +302,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomial(const Piecewis
         if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
             _failedIndex = (itpoly - vpolynomials.begin());
-            RAVELOG_VERBOSE_FORMAT("index=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
+            RAVELOG_VERBOSE_FORMAT("polynomials index=%d/%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%numPolynomials%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
             return ret;
         }
@@ -423,7 +423,7 @@ PolynomialCheckReturn PolynomialChecker::CheckChunks(const std::vector<Chunk>& v
     if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedIndex = 0;
-        RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
+        RAVELOG_VERBOSE_FORMAT("chunkIndex=%d/%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%vchunks.size()%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
         return ret;
     }
@@ -432,7 +432,7 @@ PolynomialCheckReturn PolynomialChecker::CheckChunks(const std::vector<Chunk>& v
     if( ret != PCR_Normal ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedIndex = vchunks.size() - 1;
-        RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
+        RAVELOG_VERBOSE_FORMAT("chunkIndex=%d/%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%vchunks.size()%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
         return ret;
     }
@@ -464,7 +464,7 @@ PolynomialCheckReturn PolynomialChecker::CheckChunks(const std::vector<Chunk>& v
                 _failedValue = itchunk->vpolynomials[idof].duration;
                 _failedIndex = (itchunk - vchunks.begin());
                 _failedDOF = idof;
-                RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
+                RAVELOG_VERBOSE_FORMAT("chunkIndex=%d/%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%vchunks.size()%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
                 return PCR_DurationDiscrepancy;
             }
@@ -476,7 +476,7 @@ PolynomialCheckReturn PolynomialChecker::CheckChunks(const std::vector<Chunk>& v
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
                     _failedDOF = idof;
                     _failedIndex = (itchunk - vchunks.begin());
-                    RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
+                    RAVELOG_VERBOSE_FORMAT("chunkIndex=%d/%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%vchunks.size()%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
                     return ret;
                 }
@@ -488,7 +488,7 @@ PolynomialCheckReturn PolynomialChecker::CheckChunks(const std::vector<Chunk>& v
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
                 _failedDOF = idof;
                 _failedIndex = (itchunk - vchunks.begin());
-                RAVELOG_VERBOSE_FORMAT("chunkIndex=%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
+                RAVELOG_VERBOSE_FORMAT("chunkIndex=%d/%d; idof=%d; t=%.15f; value=%.15f; expected=%.15f; result=%s", _failedIndex%vchunks.size()%_failedDOF%_failedPoint%_failedValue%_expectedValue%GetPolynomialCheckReturnString(ret));
 #endif
                 return ret;
             }
