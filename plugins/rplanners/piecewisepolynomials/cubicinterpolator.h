@@ -87,6 +87,7 @@ public:
     std::vector<dReal> _cacheDVect, _cacheXVect;
     std::vector<Polynomial> _cachePolynomials;
     PiecewisePolynomial _cachePWPolynomial;
+    std::vector<PiecewisePolynomial> _cachePWPolynomials;
 };
 
 } // end namespace PiecewisePolynomialsInternal
