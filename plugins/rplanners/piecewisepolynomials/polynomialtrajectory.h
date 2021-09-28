@@ -74,6 +74,11 @@ public:
     /// \brief Update the duration.
     void UpdateDuration(dReal T);
 
+    /// \brief Reparameterize this polynomial p(t) into p(u) where u = t - t0. Suppose we originally
+    ///        have p.Eval(t0) = c. After reparameterization p.Reparameterize(t0), we will have
+    ///        p.Eval(0) = c.
+    void Reparameterize(const dReal t0);
+
     /// \brief Evaluate this polynomial at time t.
     dReal Eval(dReal t) const;
 

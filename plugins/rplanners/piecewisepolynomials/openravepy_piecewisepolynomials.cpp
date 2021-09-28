@@ -173,6 +173,12 @@ public:
         _PostProcess();
     }
 
+    void Reparameterize(const dReal t0)
+    {
+        _ppolynomial->Reparameterize(t0);
+        _PostProcess();
+    }
+
     dReal Eval(dReal t) const
     {
         return _ppolynomial->Eval(t);
@@ -228,6 +234,15 @@ public:
             oExtrema.append( PyCoordinate(itextremum->point, itextremum->value) );
         }
         return oExtrema;
+    }
+
+    py::list GetCoefficients() const
+    {
+        py::list ocoeffs;
+        FOREACHC(itcoeff, _ppolynomial->vcoeffs) {
+            ocoeffs.append( *itcoeff );
+        }
+        return ocoeffs;
     }
 
     py::object Serialize() const
@@ -401,6 +416,12 @@ public:
     size_t GetNumPolynomials() const
     {
         return _ppwpoly->GetPolynomials().size();
+    }
+
+    PyPolynomialPtr ExtractPolynomial(const dReal t0, const dReal t1) const
+    {
+        piecewisepolynomials::Polynomial poly = _ppwpoly->ExtractPolynomial(t0, t1);
+        return PyPolynomialPtr(new PyPolynomial(poly));
     }
 
 private:
@@ -1044,6 +1065,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Initialize", &PyPolynomial::Initialize, PY_ARGS("duration", "coeffs") "Reinitialize this polynomial with the given coefficients.")
     .def("UpdateInitialValue", &PyPolynomial::UpdateInitialValue, PY_ARGS("c0") "Update the weakest term coefficient")
     .def("UpdateDuration", &PyPolynomial::UpdateDuration, PY_ARGS("duration") "Update the duration")
+    .def("Reparameterize", &PyPolynomial::Reparameterize, PY_ARGS("t0") "Doc of Polynomial::Reparameterize")
     .def("PadCoefficients", &PyPolynomial::PadCoefficients, PY_ARGS("newdegree") "Append zeros to the coefficient vectors")
     .def("Eval", &PyPolynomial::Eval, PY_ARGS("t") "Evaluate the value of this polynomial at the given parameter t")
     .def("Evald1", &PyPolynomial::Evald1, PY_ARGS("t") "Evaluate the first derivative of this polynomial at the given parameter t")
@@ -1054,6 +1076,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Integrate", &PyPolynomial::Integrate,PY_ARGS("c") "Return polynomial q = integrate x=0 to x=t p(x) where p is this polynomial and q(0) = c.")
     .def("GetExtrema", &PyPolynomial::GetExtrema, "Return the list of extrema of this polynomial")
     .def("FindAllLocalExtrema", &PyPolynomial::FindAllLocalExtrema, PY_ARGS("ideriv") "Return the list of extrema of the i-th derivative of this polynomial")
+    .def("GetCoefficients", &PyPolynomial::GetCoefficients, "Return the list of all coefficients (weakest term first)")
     .def("Serialize", &PyPolynomial::Serialize, "Serialize this polynomial into string")
     .def("Deserialize", &PyPolynomial::Deserialize, PY_ARGS("s") "Deserialize a polynomial from the given string")
     .def("__repr__", &PyPolynomial::__repr__)
@@ -1077,11 +1100,13 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Evald2", &PyPiecewisePolynomial::Evald2, PY_ARGS("t") "Evaluate the second derivative of this piecewise polynomial at the given parameter t")
     .def("Evald3", &PyPiecewisePolynomial::Evald3, PY_ARGS("t") "Evaluate the third derivative of this piecewise polynomial at the given parameter t")
     .def("Evaldn", &PyPiecewisePolynomial::Evaldn, PY_ARGS("t", "n") "Evaluate the n-th derivative of this piecewise polynomial at the given parameter t")
+    .def("FindPolynomialIndex", &PyPiecewisePolynomial::FindPolynomialIndex, PY_ARGS("t") "Find the index of the polynomial q that t falls into and also compute the remainder so that p(t) = q(remainder)")
     .def("Differentiate", &PyPiecewisePolynomial::Differentiate,PY_ARGS("n") "Return the polynomial d^n/dt^n p(t) where p is this polynomial")
     .def("Integrate", &PyPiecewisePolynomial::Integrate,PY_ARGS("c") "Return polynomial q = integrate x=0 to x=t p(x) where p is this polynomial and q(0) = c.")
     .def("GetPolynomials", &PyPiecewisePolynomial::GetPolynomials, "Return a list of polynomials from this piecewise polynomial")
     .def("GetPolynomial", &PyPiecewisePolynomial::GetPolynomial, PY_ARGS("index") "Return the polynomial at the given index")
     .def("GetNumPolynomials", &PyPiecewisePolynomial::GetNumPolynomials, "Return the number of polynomials")
+    .def("ExtractPolynomial", &PyPiecewisePolynomial::ExtractPolynomial, PY_ARGS("t0", "t1") "Return a polynomial representing a segment starting from t0 and ending at t1.")
     ; // end class_ PyPiecewisePolynomial
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

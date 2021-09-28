@@ -100,6 +100,18 @@ void Polynomial::UpdateDuration(dReal T)
     displacement = Eval(duration) - Eval(0);
 }
 
+void Polynomial::Reparameterize(const dReal t0)
+{
+    // Perform change of variable: u = t - t0
+    // Compute coefficients of the new polynomial by doing Taylor series expansion at t = t0.
+    dReal fMult = 1.0;
+    for( size_t icoeff = 0; icoeff < this->degree; ++icoeff ) {
+        vcoeffs[icoeff] = this->Evaldn(t0, icoeff)/fMult;
+        fMult *= (icoeff + 1);
+    }
+    this->Initialize();
+}
+
 dReal Polynomial::Eval(dReal t) const
 {
     if( t < 0 ) {
@@ -567,9 +579,13 @@ Polynomial PiecewisePolynomial::ExtractPolynomial(const dReal t0, const dReal t1
     dReal remainder0, remainder1;
     FindPolynomialIndex(t0, index0, remainder0);
     FindPolynomialIndex(t1, index1, remainder1);
-    OPENRAVE_ASSERT_OP(index0, ==, index1);
-    Polynomial p(t1 - t0, _vpolynomials[index0].vcoeffs);
-    p.UpdateInitialValue(Eval(t0));
+    if( index0 != index1 ) {
+        OPENRAVE_ASSERT_OP(index0 + 1, ==, index1);
+        BOOST_ASSERT( FuzzyZero(remainder1, g_fPolynomialEpsilon) );
+    }
+    Polynomial p(_vpolynomials[index0]);
+    p.Reparameterize(remainder0);
+    p.UpdateDuration(t1 - t0);
     return p;
 }
 
@@ -634,17 +650,11 @@ void Chunk::Cut(dReal t, Chunk& remChunk)
     OPENRAVE_ASSERT_OP(t, >=, 0);
     OPENRAVE_ASSERT_OP(t, <=, duration);
     // TODO: Need to find a better way to not have to create these vectors every time this function is called.
-    std::vector<Polynomial> vpoly(this->dof);
-    std::vector<dReal> vcoeffs(this->degree + 1);
+    std::vector<Polynomial> vpoly = this->vpolynomials; // copy
     const dReal originalDuration = this->duration;
-    dReal fMult;
     for( size_t idof = 0; idof < this->dof; ++idof ) {
-        fMult = 1.0;
-        for( size_t icoeff = 0; icoeff < this->degree + 1; ++icoeff ) {
-            vcoeffs[icoeff] = this->vpolynomials[idof].Evaldn(t, icoeff)/fMult;
-            fMult *= (icoeff + 1);
-        }
-        vpoly[idof].Initialize(originalDuration - t, vcoeffs);
+        vpoly[idof].Reparameterize(t); // so that vpoly[idof].Eval(0) = this->vpolynomials[idof].Eval(t)
+        vpoly[idof].UpdateDuration(originalDuration - t);
     }
     remChunk.Initialize(originalDuration - t, vpoly);
 
