@@ -395,7 +395,7 @@ public:
         int iter = 0;
         for(; iter < numIters; ++iter ) {
             if( tTotal < minTimeStep ) {
-                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, tTotal=%.15e is too shortcut to continue (minTimeStep=%.15e)", _envId%iter%numIters%minTimeStep);
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, tTotal=%.15e is too shortcut to continue (minTimeStep=%.15e)", _envId%iter%numIters%tTotal%minTimeStep);
                 break;
             }
 
