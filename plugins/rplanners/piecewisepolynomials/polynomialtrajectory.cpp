@@ -76,15 +76,16 @@ void Polynomial::Initialize()
 void Polynomial::PadCoefficients(size_t newdegree)
 {
     OPENRAVE_ASSERT_OP(newdegree, >=, degree);
-    vcoeffs.assign(newdegree, 0); // increase the size to newdegree and fill it with 0s.
+    const size_t numcoeffs = newdegree + 1;
+    vcoeffs.resize(numcoeffs, 0); // increase the size to numcoeffs and fill it with 0s.
     if( vcoeffsd.size() > 0 ) {
-        vcoeffsd.assign(newdegree - 1, 0);
+        vcoeffsd.resize(numcoeffs - 1, 0);
     }
     if( vcoeffsdd.size() > 0 ) {
-        vcoeffsdd.assign(newdegree - 2, 0);
+        vcoeffsdd.assign(numcoeffs - 2, 0);
     }
     if( vcoeffsddd.size() > 0 ) {
-        vcoeffsddd.assign(newdegree - 3, 0);
+        vcoeffsddd.assign(numcoeffs - 3, 0);
     }
     degree = newdegree;
 }
