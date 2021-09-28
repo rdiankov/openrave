@@ -191,10 +191,14 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         }
 
         // Step 11.5
-        totalDuration = pwpoly1.GetDuration() + pwpoly3.GetDuration();
-        if( !FuzzyZero(duration2, g_fPolynomialEpsilon) ) {
-            // TODO: Should we check with FuzzyZero here?
-            totalDuration += duration2;
+        if( fixedDuration > 0 ) {
+            totalDuration = pwpoly1.GetDuration() + pwpoly3.GetDuration();
+            if( duration2 > 0 ) {
+                totalDuration += duration2;
+                if( totalDuration < fixedDuration ) {
+                    delta = -delta;
+                }
+            }
         }
 
         // Step 12
