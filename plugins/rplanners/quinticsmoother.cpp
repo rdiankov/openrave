@@ -676,11 +676,22 @@ public:
         return numShortcuts;
     }
 
-    /// \brief TODO: write descriptions for this
+    /// \brief Verify that the input sequence of chunks satisfy all constraints (including collisions, manip speed/accel, and possibly dynamics).
     virtual PiecewisePolynomials::CheckReturn CheckAllChunksAllConstraints(const std::vector<PiecewisePolynomials::Chunk>& vChunksIn, int options, std::vector<PiecewisePolynomials::Chunk>& vChunksOut) override
     {
         // For now, just suppose that vChunksIn has only one chunk (which is of course true when
         // using the current quinticinterpolator)
+        const PiecewisePolynomials::Chunk& chunk = vChunksIn.front();
+        // Make sure the first configuration is safe
+        std::vector<dReal> &x0Vect = _cacheX0Vect2, &v0Vect = _cacheV0Vect2, &a0Vect = _cacheA0Vect2;
+        chunk.Eval(0, x0Vect);
+        chunk.Evald1(0, v0Vect);
+        chunk.Evald2(0, a0Vect);
+        PiecewisePolynomials::CheckReturn checkret = CheckConfigAllConstraints(x0Vect, v0Vect, a0Vect, options);
+        if( checkret.retcode != 0 ) {
+            return checkret;
+        }
+        // Verify the rest.
         return CheckChunkAllConstraints(vChunksIn.front(), options, vChunksOut);
     }
 

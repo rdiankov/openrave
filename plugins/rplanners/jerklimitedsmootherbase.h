@@ -126,18 +126,39 @@ public:
         throw OPENRAVE_EXCEPTION_FORMAT0("CheckAllChunksAllConstraints not implemented", ORE_NotImplemented);
     }
 
+    virtual PiecewisePolynomials::CheckReturn CheckConfigAllConstraints(const std::vector<dReal>& xVect, const std::vector<dReal>& vVect, const std::vector<dReal>& aVect, int options)
+    {
+        if( _bUsePerturbation ) {
+            options |= CFO_CheckWithPerturbation;
+        }
+        try {
+            int ret = _parameters->CheckPathAllConstraints(xVect, xVect, vVect, vVect, aVect, aVect, 0, IT_OpenStart, options);
+            PiecewisePolynomials::CheckReturn checkret(ret);
+            if( ret == CFO_CheckTimeBasedConstraints ) {
+                checkret.fTimeBasedSurpassMult = 0.98;
+            }
+            return checkret;
+        }
+        catch( const std::exception& ex ) {
+            RAVELOG_WARN_FORMAT("env=%d, CheckPathAllConstraints threw an exception: %s", _envId%ex.what());
+            return 0xffff|CFO_FromTrajectorySmoother;
+        }
+    }
+
     /// \brief Check if the given chunk violates any constraints (excluding joint velocity, acceleration, and jerk
     ///        limits, which are assumed to already be satisfied).
+    ///        Important note: this function assumes that the first point of the input chunk has already been checked.
     virtual PiecewisePolynomials::CheckReturn CheckChunkAllConstraints(const PiecewisePolynomials::Chunk& chunkIn, int options, std::vector<PiecewisePolynomials::Chunk>& vChunksOut)
     {
         std::vector<dReal> &x0Vect = _cacheX0Vect2, &x1Vect = _cacheX1Vect2, &v0Vect = _cacheV0Vect2, &v1Vect = _cacheV1Vect2, &a0Vect = _cacheA0Vect2, &a1Vect = _cacheA1Vect2;
         chunkIn.Eval(0, x0Vect);
 
         if( chunkIn.duration <= g_fEpsilon ) {
-            // TODO: correcrtly handle this case
             vChunksOut.resize(1);
             vChunksOut[0].SetConstant(x0Vect, 0, 5);
-            BOOST_ASSERT(false);
+            // TODO: correcrtly handle this case. Should we actually store boundary conditions (v0,
+            // v1, a0, a1) directly in Chunk?
+            return PiecewisePolynomials::CheckReturn(0);
         }
 
         vChunksOut.resize(0);
