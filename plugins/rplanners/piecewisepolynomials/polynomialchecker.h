@@ -105,6 +105,13 @@ public:
     PolynomialCheckReturn CheckChunkLimits(const Chunk& c, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
                                            const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect);
 
+    /// \brief Check if the input sequence of chunks is consistent and respects all limits
+    PolynomialCheckReturn CheckChunks(const std::vector<Chunk>& chunks, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
+                                      const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
+                                      const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                      const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                                      const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect);
+
     /// \brief Check if the input trajectory is consistent and respects all limits
     PolynomialCheckReturn CheckPiecewisePolynomialTrajectory(const PiecewisePolynomialTrajectory& traj, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
                                                              const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,

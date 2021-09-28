@@ -400,6 +400,16 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomialTrajectory(cons
                                                                             const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
                                                                             const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect)
 {
+    return CheckChunks(traj.vchunks, xminVect, xmaxVect, vmVect, amVect, jmVect,
+                       x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect);
+}
+
+PolynomialCheckReturn PolynomialChecker::CheckChunks(const std::vector<Chunk>& vchunks, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
+                                                     const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
+                                                     const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                                     const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                                                     const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect)
+{
     dReal vm = 0;
     dReal am = 0;
     dReal jm = 0;
@@ -407,8 +417,6 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomialTrajectory(cons
     bool bHasAccelerationLimits = amVect.size() == ndof;
     bool bHasJerkLimits = jmVect.size() == ndof;
     PolynomialCheckReturn ret = PCR_Normal;
-
-    const std::vector<Chunk>& vchunks = traj.vchunks;
 
     // Check boundary conditions
     ret = CheckChunkValues(vchunks.front(), 0, x0Vect, v0Vect, a0Vect);
