@@ -92,7 +92,13 @@ void Polynomial::PadCoefficients(size_t newdegree)
 
 void Polynomial::UpdateInitialValue(const dReal c0)
 {
+    const dReal translationOffset = c0 - vcoeffs[0];
+    // Update the initial value
     vcoeffs[0] = c0;
+    // Update all local extrema
+    for( std::vector<Coordinate>::iterator itcoord = vcextrema.begin(); itcoord != vcextrema.end(); ++itcoord ) {
+        itcoord->value += translationOffset;
+    }
 }
 
 void Polynomial::UpdateDuration(dReal T)
