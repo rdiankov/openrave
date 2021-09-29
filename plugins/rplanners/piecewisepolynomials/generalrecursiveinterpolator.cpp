@@ -230,7 +230,7 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         }
 
         if( FuzzyEquals(vLast, v, epsilon) ) {
-            if( (fixedDuration == 0) || FuzzyEquals(fixedDuration, totalDuration, epsilon) ) {
+            if( (fixedDuration == 0) || FuzzyEquals(fixedDuration, totalDuration, g_fEpsilonForTimeInstant) ) {
                 bSuccess = true;
                 break; // successful
             }

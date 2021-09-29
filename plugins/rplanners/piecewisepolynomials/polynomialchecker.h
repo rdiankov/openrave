@@ -50,6 +50,19 @@ public:
 
     void Initialize(size_t ndof, int envid);
 
+    dReal GetEpsilonForPositionChecking() const {
+        return epsilonForPositionChecking;
+    }
+    dReal GetEpsilonForVelocityChecking() const {
+        return epsilonForVelocityChecking;
+    }
+    dReal GetEpsilonForAccelerationChecking() const {
+        return epsilonForAccelerationChecking;
+    }
+    void SetEpsilonForAccelerationChecking(const dReal epsilon) {
+        epsilonForAccelerationChecking = epsilon;
+    }
+
     /// \brief Check if the input polynomial is consistent and respects all limits
     ///
     /// \param[in] p the input polynomial
@@ -135,6 +148,12 @@ public:
     size_t _failedIndex;
     size_t _failedDOF;
 #endif
+
+private:
+    // Specific tolerance for checking discrepancies.
+    dReal epsilonForPositionChecking = g_fPolynomialEpsilon;
+    dReal epsilonForVelocityChecking = g_fPolynomialEpsilon;
+    dReal epsilonForAccelerationChecking = g_fPolynomialEpsilon;
 
 }; // end class PolynomialChecker
 

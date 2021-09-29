@@ -69,7 +69,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialValues(const Polynomial&
         return PCR_DurationDiscrepancy;
     }
     dReal pos = p.Eval(t);
-    if( !FuzzyEquals(pos, x, g_fPolynomialEpsilon) ) {
+    if( !FuzzyEquals(pos, x, epsilonForPositionChecking) ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedPoint = t;
         _failedValue = pos;
@@ -79,7 +79,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialValues(const Polynomial&
     }
 
     dReal vel = p.Evald1(t);
-    if( !FuzzyEquals(vel, v, g_fPolynomialEpsilon) ) {
+    if( !FuzzyEquals(vel, v, epsilonForVelocityChecking) ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedPoint = t;
         _failedValue = vel;
@@ -89,7 +89,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialValues(const Polynomial&
     }
 
     dReal accel = p.Evald2(t);
-    if( !FuzzyEquals(accel, a, g_fPolynomialEpsilon) ) {
+    if( !FuzzyEquals(accel, a, epsilonForAccelerationChecking) ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedPoint = t;
         _failedValue = accel;
