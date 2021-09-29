@@ -46,8 +46,8 @@ void CubicInterpolator::Initialize(size_t ndof, int envid)
 //
 // 1D Functions
 //
-PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
-                                                                                                 dReal vm, dReal am, dReal jm,
+PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(const dReal x0, const dReal x1,
+                                                                                                 const dReal vm, const dReal am, const dReal jm,
                                                                                                  PiecewisePolynomial& pwpoly)
 {
     const dReal d = RaveFabs(x1 - x0);
@@ -196,8 +196,8 @@ int CubicInterpolator::DetermineZeroTimeDerivativesCaseFromBoundaryConditions(co
     }
 }
 
-PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1,
-                                                                                                      dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
+PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(const dReal x0, const dReal x1, const dReal v0, const dReal v1, const dReal a0, const dReal a1,
+                                                                                                      const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm,
                                                                                                       PiecewisePolynomial& pwpoly)
 {
     const std::vector<dReal> initialState({x0, v0, a0});
@@ -213,8 +213,8 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryArbitraryTimeDerivat
     return ret;
 }
 
-PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T,
-                                                                                                  dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
+PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(const dReal x0, const dReal x1, const dReal v0, const dReal v1, const dReal a0, const dReal a1, const dReal T,
+                                                                                                  const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm,
                                                                                                   PiecewisePolynomial& pwpoly)
 {
     const std::vector<dReal> initialState({x0, v0, a0});

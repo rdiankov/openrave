@@ -38,8 +38,8 @@ void QuinticInterpolator::Initialize(size_t ndof, int envid)
 //
 // 1D problem
 //
-PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
-                                                                                                   dReal vm, dReal am, dReal jm,
+PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(const dReal x0, const dReal x1,
+                                                                                                   const dReal vm, const dReal am, const dReal jm,
                                                                                                    PiecewisePolynomial& pwpoly)
 {
     /*
@@ -104,8 +104,8 @@ PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivative
     return PolynomialCheckReturn::PCR_Normal;
 }
 
-PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T,
-                                                                                                    dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
+PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(const dReal x0, const dReal x1, const dReal v0, const dReal v1, const dReal a0, const dReal a1, const dReal T,
+                                                                                                    const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm,
                                                                                                     PiecewisePolynomial& pwpoly)
 {
     dReal T2 = T*T;

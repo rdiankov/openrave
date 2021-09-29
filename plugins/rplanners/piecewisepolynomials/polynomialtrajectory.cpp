@@ -73,7 +73,7 @@ void Polynomial::Initialize()
     _FindAllLocalExtrema();
 }
 
-void Polynomial::PadCoefficients(size_t newdegree)
+void Polynomial::PadCoefficients(const size_t newdegree)
 {
     OPENRAVE_ASSERT_OP(newdegree, >=, degree);
     const size_t numcoeffs = newdegree + 1;
@@ -101,7 +101,7 @@ void Polynomial::UpdateInitialValue(const dReal c0)
     }
 }
 
-void Polynomial::UpdateDuration(dReal T)
+void Polynomial::UpdateDuration(const dReal T)
 {
     duration = T;
     displacement = Eval(duration) - Eval(0);

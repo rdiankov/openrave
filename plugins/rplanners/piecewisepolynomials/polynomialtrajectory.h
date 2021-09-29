@@ -66,13 +66,13 @@ public:
     void Initialize();
 
     /// \brief Append zeros to the coefficient vectors.
-    void PadCoefficients(size_t newdegree);
+    void PadCoefficients(const size_t newdegree);
 
     /// \brief Update the weakest term coefficient.
     void UpdateInitialValue(const dReal c0);
 
     /// \brief Update the duration.
-    void UpdateDuration(dReal T);
+    void UpdateDuration(const dReal T);
 
     /// \brief Reparameterize this polynomial p(t) into p(u) where u = t - t0. Suppose we originally
     ///        have p.Eval(t0) = c. After reparameterization p.Reparameterize(t0), we will have
