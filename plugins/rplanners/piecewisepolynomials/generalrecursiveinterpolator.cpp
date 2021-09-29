@@ -41,6 +41,7 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::ComputeParabolic1DTrajectory
     RampOptimizer::ParabolicCurve curve;
     bool bInterpolationSuccess = parabolicInterpolator.Compute1DTrajectory(x0, x1, v0, v1, vm, am, curve);
     if( !bInterpolationSuccess ) {
+        RAVELOG_VERBOSE_FORMAT("env=%d, failed in ComputeParabolic1DTrajectoryOptimizedDuration", envid);
         return PolynomialCheckReturn::PCR_GenericError;
     }
 
@@ -58,6 +59,7 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::ComputeParabolic1DTrajectory
     RampOptimizer::ParabolicCurve curve;
     bool bInterpolationSuccess = parabolicInterpolator.Compute1DTrajectoryFixedDuration(x0, x1, v0, v1, vm, am, fixedDuration, curve);
     if( !bInterpolationSuccess ) {
+        RAVELOG_VERBOSE_FORMAT("env=%d, failed in ComputeParabolic1DTrajectoryFixedDuration", envid);
         return PolynomialCheckReturn::PCR_GenericError;
     }
 
@@ -79,6 +81,7 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::PostProcessParabolic1DTrajec
 
     RampOptimizer::ParabolicCheckReturn parabolicret = RampOptimizer::CheckRamps(curve.GetRamps(), xmin, xmax, vm, am, x0, x1, v0, v1);
     if( parabolicret != RampOptimizer::ParabolicCheckReturn::PCR_Normal ) {
+        RAVELOG_VERBOSE_FORMAT("env=%d, failed in PostProcessParabolic1DTrajectory", envid);
         return PolynomialCheckReturn::PCR_GenericError;
     }
     ConvertParabolicCurveToPiecewisePolynomial(curve, pwpoly);
