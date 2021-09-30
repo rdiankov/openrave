@@ -1291,6 +1291,8 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
 
 // Polynomial utilities
 
+// Coefficient computation given boundary conditions
+
 // Given boundary conditions (x0, dx0, ddx0), (x1, dx1, ddx1), and duration t, compute the
 // corresponding quintic coefficients a, b, c, d, e, f:
 // p(x) = ax^5 + bx^4 + cx^3 + dx^2 + ex + f.
@@ -1331,6 +1333,8 @@ inline void computecubiccoeffs(T x0, T x1, T dx0, T dx1, T ddx0, T ddx1, T t, T*
     return;
 }
 
+// Evaluation functions
+
 // Evaluate the given quintic at the given point. Strongest coefficient first.
 template <typename T>
 inline void evaluatequintic(const T* coeffs, const T t, T& val)
@@ -1351,6 +1355,29 @@ inline void evaluatequinticderiv2(const T* coeffs, const T t, T& val)
 {
     val = 2*coeffs[3] + t*(6*coeffs[2] + t*(12*coeffs[1] + t*20*coeffs[0]));
 }
+
+// Evaluate the given cubic at the given point. Strongest coefficient first.
+template <typename T>
+inline void evaluatecubic(const T* coeffs, const T t, T& val)
+{
+    val = coeffs[3] + t*(coeffs[2] + t*(coeffs[1] + t*(coeffs[0])));
+}
+
+// Evaluate the first derivative of the given cubic at the given point. Strongest coefficient first.
+template <typename T>
+inline void evaluatecubicderiv1(const T* coeffs, const T t, T& val)
+{
+    val = coeffs[2] + t*(2*coeffs[1] + t*(3*coeffs[0]));
+}
+
+// Evaluate the second derivative of the given cubic at the given point. Strongest coefficient first.
+template <typename T>
+inline void evaluatecubicderiv2(const T* coeffs, const T t, T& val)
+{
+    val = 2*coeffs[1] + t*(6*coeffs[0]);
+}
+
+// Functions for computing critical points.
 
 // Given a set of quintic coefficients, find all critical points (points at which the first
 // derivative vanishes).
@@ -1412,6 +1439,7 @@ inline bool computequinticnextdiscretizedstep(const T* coeffs, const T step, con
 
     T d5p = tempcoeffs[0];
 
+    // tempcoeffs holds coefficients of a polynomial resulting from Taylor series expansion of p at t = tcur.
     tempcoeffs[0] = d5p/120;
     tempcoeffs[1] = d4p/24;
     tempcoeffs[2] = d3p/6;
@@ -1435,6 +1463,52 @@ inline bool computequinticnextdiscretizedstep(const T* coeffs, const T step, con
     }
     else if( tempcoeffs[4] != 0 ) {
         polyroots<T, 1>(&tempcoeffs[4], rawroots, numroots);
+    }
+    bool bFound = false;
+    for( int i = 0; i < numroots; ++i ) {
+        if( rawroots[i] > 0 ) {
+            if( !bFound || (rawroots[i] < tdelta) ) {
+                bFound = true;
+                tdelta = rawroots[i];
+            }
+        }
+    }
+    return bFound;
+}
+
+// Given a set of coefficients of a cubic p(t) (strongest coefficient first), find smallest tdelta
+// > 0 such that p(tcur + tdelta) = p(tcur) + step. (step can be negative.)  *** Assume that if there
+// exists a critical point tc to the right of tcur, |p(tc) - p(tcur)| >= |step|. This is to
+// guarantee that tnext always exists.
+template <typename T>
+inline bool computecubicnextdiscretizedstep(const T* coeffs, const T step, const T tcur, T& tdelta)
+{
+    // Evaluate the 0th, 1st, 2nd, and 3rd derivatives of p
+    // T p = coeffs[3] + tcur*(coeffs[2] + tcur*(coeffs[1] + tcur*(coeffs[0])));
+    T tempcoeffs[] = {3*coeffs[0], 2*coeffs[1], coeffs[2], 0};
+    T d1p = tempcoeffs[2] + tcur*(tempcoeffs[1] + tcur*(tempcoeffs[0]));
+
+    tempcoeffs[0] *= 2;
+    T d2p = tempcoeffs[1] + tcur*(tempcoeffs[0]);
+
+    T d3p = tempcoeffs[0];
+
+    // tempcoeffs holds coefficients of a polynomial resulting from Taylor series expansion of p at t = tcur.
+    tempcoeffs[0] = d3p/6;
+    tempcoeffs[1] = d2p/2;
+    tempcoeffs[2] = d1p;
+    tempcoeffs[3] = -step;
+
+    int numroots = 0;
+    T rawroots[3];
+    if( tempcoeffs[0] != 0 ) {
+        polyroots<T, 3>(tempcoeffs, rawroots, numroots);
+    }
+    else if( tempcoeffs[1] != 0 ) {
+        polyroots<T, 2>(&tempcoeffs[1], rawroots, numroots);
+    }
+    else if( tempcoeffs[2] != 0 ) {
+        polyroots<T, 1>(&tempcoeffs[2], rawroots, numroots);
     }
     bool bFound = false;
     for( int i = 0; i < numroots; ++i ) {
