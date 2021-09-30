@@ -700,6 +700,7 @@ protected:
     virtual void _InitializeInterpolator() override
     {
         _pinterpolator.reset(new PiecewisePolynomials::QuinticInterpolator(_ndof, _envId));
+        _maskinterpolation = IT_Quintic;
     }
 
     virtual PiecewisePolynomials::CheckReturn _ProcessConstraintReturnIntoChunks(ConstraintFilterReturnPtr contraintReturn, const PiecewisePolynomials::Chunk chunkIn,

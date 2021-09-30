@@ -1311,6 +1311,26 @@ inline void computequinticcoeffs(T x0, T x1, T dx0, T dx1, T ddx0, T ddx1, T t, 
     return;
 }
 
+// Given boundary conditions (x0, dx0, ddx0), (x1, dx1, ddx1), and duration t, compute the
+// corresponding cubic coefficients a, b, c, d:
+// p(x) = ax^3 + bx^2 + cx + d.
+// This function assumes that the given boundary conditions are consistent.
+template <typename T>
+inline void computecubiccoeffs(T x0, T x1, T dx0, T dx1, T ddx0, T ddx1, T t, T* coeffs)
+{
+    coeffs[3] = x0;
+    coeffs[2] = dx0;
+    coeffs[1] = 0.5*ddx0;
+
+    T t2 = t*t;
+    T t3 = t2*t;
+    // The first coefficient is currently computed using only x1. It can be computed by using either
+    // dx1 or ddx1 too. Is it better to use some kind of weighted averages for this coefficient
+    // instead?
+    coeffs[0] = (x1 - x0 - dx0*t - 0.5*ddx0*t2)/t3;
+    return;
+}
+
 // Evaluate the given quintic at the given point. Strongest coefficient first.
 template <typename T>
 inline void evaluatequintic(const T* coeffs, const T t, T& val)

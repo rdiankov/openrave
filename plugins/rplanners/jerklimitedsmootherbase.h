@@ -110,6 +110,9 @@ public:
         _cacheA1Vect2.reserve(_ndof);
 
         _InitializeInterpolator();
+        if( _maskinterpolation == IT_Default ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("interpolation type is not set by the smoother yet.", ORE_InvalidArguments);
+        }
 
         return !!_uniformSampler;
     }
@@ -132,7 +135,7 @@ public:
             options |= CFO_CheckWithPerturbation;
         }
         try {
-            int ret = _parameters->CheckPathAllConstraints(xVect, xVect, vVect, vVect, aVect, aVect, 0, IT_OpenStart, options);
+            int ret = _parameters->CheckPathAllConstraints(xVect, xVect, vVect, vVect, aVect, aVect, 0, static_cast<IntervalType>(IT_OpenStart|_maskinterpolation), options);
             PiecewisePolynomials::CheckReturn checkret(ret);
             if( ret == CFO_CheckTimeBasedConstraints ) {
                 checkret.fTimeBasedSurpassMult = 0.98;
@@ -179,7 +182,7 @@ public:
 
         // Check all constraints by the check functtion
         try {
-            int ret = _parameters->CheckPathAllConstraints(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, chunkIn.duration, IT_OpenStart, options, _constraintReturn);
+            int ret = _parameters->CheckPathAllConstraints(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, chunkIn.duration, static_cast<IntervalType>(IT_OpenStart|_maskinterpolation), options, _constraintReturn);
             if( ret != 0 ) {
                 PiecewisePolynomials::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
@@ -243,7 +246,7 @@ protected:
         SS_Successful = 1,
     };
 
-    /// \brief Initialize _pinterpolator.
+    /// \brief Initialize _pinterpolator. Also set _maskinterpolation.
     virtual void _InitializeInterpolator()=0;
 
     /// \brief Transfer information (configurations and timestamps) from constraintReturn into vChunksOut. Since the
@@ -743,6 +746,7 @@ protected:
     bool _bManipConstraints; ///< if true, then there are manip vel/accel constraints
     boost::shared_ptr<ManipConstraintChecker3> _manipConstraintChecker;
     PlannerProgress _progress;
+    IntervalType _maskinterpolation = IT_Default; // a smoother derived from this class must set this according to their interpolation type
 
     // for logging
     int _envId;

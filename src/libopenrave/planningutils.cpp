@@ -27,7 +27,8 @@ namespace OpenRAVE {
 namespace planningutils {
 
 static const dReal g_fEpsilonQuadratic = RavePow(g_fEpsilon,0.55); // should be 0.6...perhaps this is related to parabolic smoother epsilons?
-static const dReal g_fEpsilonQuintic = RavePow(g_fEpsilon,0.45); // TODO: adjust this value
+static const dReal g_fEpsilonCubic = RavePow(g_fEpsilon,0.55);
+static const dReal g_fEpsilonQuintic = RavePow(g_fEpsilon,0.55);
 
 int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const PlannerBase::PlannerParameters::NeighStateFn& neighstatefn)
 {
@@ -3352,10 +3353,22 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
 
     BOOST_ASSERT(_listCheckBodies.size()>0);
-    int _environmentid = _listCheckBodies.front()->GetEnv()->GetId();
-    int maskoptions = options & _filtermask;
-    int maskinterval = interval & IT_IntervalMask;
-    size_t ndof = params->GetDOF();
+    const int _environmentid = _listCheckBodies.front()->GetEnv()->GetId();
+    const int maskoptions = options & _filtermask;
+    const int maskinterval = interval & IT_IntervalMask;
+    const int maskinterpolation = interval & IT_InterpolationMask;
+    const size_t ndof = params->GetDOF();
+
+    int neighstateoptions = NSO_OnlyHardConstraints;
+    if( options & CFO_FromPathSampling ) {
+        neighstateoptions = NSO_FromPathSampling;
+    }
+    else if( options & CFO_FromPathShortcutting ) {
+        neighstateoptions = NSO_FromPathShortcutting;
+    }
+    else if( options & CFO_FromTrajectorySmoother ) {
+        neighstateoptions = NSO_OnlyHardConstraints | NSO_FromTrajectorySmoother; // for now, trajectory smoother uses hard constraints
+    }
 
     int start = 0;
     bool bCheckEnd= false;
@@ -3396,11 +3409,40 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
 
     // Compute coefficients for all dofs. **Strongest term first**
-    _valldofscoeffs.resize(params->GetDOF()); // TODO: cache this
-    for( size_t idof = 0; idof < ndof; ++idof ) {
-        _valldofscoeffs[idof].resize(6);
-        mathextra::computequinticcoeffs(q0.at(idof), q1.at(idof), dq0.at(idof), dq1.at(idof), ddq0.at(idof), ddq1.at(idof), timeelapsed, &_valldofscoeffs[idof][0]);
-    }
+    _valldofscoeffs.resize(params->GetDOF());
+
+    switch( maskinterpolation ) {
+    case IT_Cubic:
+        for( size_t idof = 0; idof < ndof; ++idof ) {
+            _valldofscoeffs[idof].resize(4); // 4 coefficients for a cubic polynomial
+            mathextra::computecubiccoeffs(q0.at(idof), q1.at(idof), dq0.at(idof), dq1.at(idof), ddq0.at(idof), ddq1.at(idof), timeelapsed, &_valldofscoeffs[idof][0]);
+
+            // Since the problem is overdetermined, need to make sure that the given boundary conditions
+            // (positions, velocities, and accelerations) are consistent.
+            if( true ) {//( IS_DEBUGLEVEL(Level_Verbose) || IS_DEBUGLEVEL(Level_VerifyPlans) ) {
+                std::vector<dReal>& vcoeffs = _valldofscoeffs[idof];
+                dReal temp1 = 3*vcoeffs[0]*timeelapsed;
+                dReal temp2 = 2*vcoeffs[1];
+
+                dReal velocityError = RaveFabs( ((temp1 + temp2)*timeelapsed + vcoeffs[2]) - dq1.at(idof) );
+                OPENRAVE_ASSERT_OP_FORMAT(velocityError, <=, g_fEpsilonCubic, "dof %d final velocity is not consistent", idof, ORE_InvalidArguments);
+
+                dReal accelerationError = RaveFabs( (2*temp1 + temp2) - ddq1.at(idof) );
+                OPENRAVE_ASSERT_OP_FORMAT(velocityError, <=, 100*g_fEpsilonCubic, "dof %d final acceleration is not consistent", idof, ORE_InvalidArguments);
+            }
+        }
+        break;
+    case IT_Quintic:
+        for( size_t idof = 0; idof < ndof; ++idof ) {
+            _valldofscoeffs[idof].resize(6);
+            mathextra::computequinticcoeffs(q0.at(idof), q1.at(idof), dq0.at(idof), dq1.at(idof), ddq0.at(idof), ddq1.at(idof), timeelapsed, &_valldofscoeffs[idof][0]);
+        }
+        // There is a unique set of coefficients for a set of boundary conditions. No further
+        // consistency check is needed.
+        break;
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT("Unrecognized interpolation type %d", maskinterpolation, ORE_InvalidArguments);
+    } // end switch maskinterpolation
 
     _valldofscriticalpoints.resize(params->GetDOF());
     _valldofscriticalvalues.resize(params->GetDOF());
@@ -3803,7 +3845,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
         }
 
-        int neighstatus = params->_neighstatefn(_vtempconfig, dQ, NSO_OnlyHardConstraints);
+        int neighstatus = params->_neighstatefn(_vtempconfig, dQ, neighstateoptions);
         if( neighstatus == NSS_Failed ) {
             if( !!filterreturn ) {
                 filterreturn->_returncode = CFO_StateSettingError;
