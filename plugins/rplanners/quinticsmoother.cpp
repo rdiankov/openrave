@@ -538,8 +538,13 @@ public:
                                                                                        _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit,
                                                                                        velLimits, accelLimits, jerkLimits, tempChunks);
                         if( polycheckret != PolynomialCheckReturn::PCR_Normal ) {
-                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; iSlowDown=%d; current duration=%.15e; interpolation failed with polycheckret=0x%x", _envId%iter%numIters%t0%t1%iSlowDown%(fTryDuration*fCurDurationMult)%polycheckret);
+                            dReal prevTryDuration = fTryDuration*fCurDurationMult;
                             fCurDurationMult *= fDurationMult;
+                            if( fTryDuration*fCurDurationMult + minTimeStep > t1 - t0 ) {
+                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; iSlowDown=%d; current duration=%.15e; interpolation failed with polycheckret=0x%x. shortcut will not make significant improvement.", _envId%iter%numIters%t0%t1%iSlowDown%(prevTryDuration)%polycheckret);
+                                break; // must not slow down any further
+                            }
+                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; iSlowDown=%d; current duration=%.15e; interpolation failed with polycheckret=0x%x.", _envId%iter%numIters%t0%t1%iSlowDown%(prevTryDuration)%polycheckret);
                             continue; // maybe incrasing the duration might affect the peaks of vel/accel positively
                         }
                     }
