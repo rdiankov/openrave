@@ -29,6 +29,11 @@ public:
     {
     }
 
+    virtual const char* GetPlannerName() const override
+    {
+        return "quinticsmoother";
+    }
+
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         uint32_t startTime = utils::GetMilliTime();

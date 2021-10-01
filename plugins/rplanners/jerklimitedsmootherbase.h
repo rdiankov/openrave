@@ -44,6 +44,11 @@ public:
         _cacheVVisitedDiscretization.resize(_nMaxDiscretizationSize*_nMaxDiscretizationSize, 0);
     }
 
+    virtual const char* GetPlannerName() const
+    {
+        return "jerklimitedsmootherbase";
+    }
+
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -651,7 +656,7 @@ protected:
     bool _DumpOpenRAVETrajectory(TrajectoryBasePtr ptraj, const char* suffix, DebugLevel level)
     {
         if( IS_DEBUGLEVEL(level) ) {
-            std::string filename = boost::str(boost::format("%s/quinticsmoother_%d_%s.ortraj")%RaveGetHomeDirectory()%_fileIndex%suffix);
+            std::string filename = boost::str(boost::format("%s/%s_%d_%s.ortraj")%RaveGetHomeDirectory()%GetPlannerName()%_fileIndex%suffix);
             try {
                 std::ofstream f(filename.c_str());
                 f << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
@@ -679,7 +684,7 @@ protected:
     bool _DumpPiecewisePolynomialTrajectory(PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj, const char* suffix, DebugLevel level)
     {
         if( IS_DEBUGLEVEL(level) ) {
-            std::string filename = boost::str(boost::format("%s/quinticsmoother_%d_%s.pwptraj")%RaveGetHomeDirectory()%_fileIndex%suffix);
+            std::string filename = boost::str(boost::format("%s/%s_%d_%s.pwptraj")%RaveGetHomeDirectory()%GetPlannerName()%_fileIndex%suffix);
             try {
                 std::ofstream f(filename.c_str());
                 f << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
