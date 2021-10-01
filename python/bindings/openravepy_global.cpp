@@ -1441,6 +1441,26 @@ void init_openravepy_global()
 //     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
 // #endif
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<ConstraintFilterOptions>(m, "ConstraintFilterOptions", py::arithmetic() DOXY_ENUM(ConstraintFilterOptions))
+#else
+    enum_<ConstraintFilterOptions>("ConstraintFilterOptions" DOXY_ENUM(ConstraintFilterOptions))
+#endif
+    .value("CheckEnvCollisions", CFO_CheckEnvCollisions)
+    .value("CheckSelfCollisions", CFO_CheckSelfCollisions)
+    .value("CheckTimeBasedConstraints", CFO_CheckTimeBasedConstraints)
+    .value("BreakOnFirstValidation", CFO_BreakOnFirstValidation)
+    .value("CheckUserConstraints", CFO_CheckUserConstraints)
+    .value("CheckWithPerturbation", CFO_CheckWithPerturbation)
+    .value("FillCheckedConfiguration", CFO_FillCheckedConfiguration)
+    .value("FillCollisionReport", CFO_FillCollisionReport)
+    .value("FromPathSampling", CFO_FromPathSampling)
+    .value("FromPathShortcutting", CFO_FromPathShortcutting)
+    .value("FromTrajectorySmoother", CFO_FromTrajectorySmoother)
+    .value("FinalValuesNotReached", CFO_FinalValuesNotReached)
+    .value("StateSettingError", CFO_StateSettingError)
+    .value("RecommendedOptions", CFO_RecommendedOptions)
+    ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
@@ -1505,7 +1525,7 @@ void init_openravepy_global()
     .def("__copy__", [](const PyRay& self){
             return self;
         })
-    .def("__deepcopy__", [](const PyRay& pyray, const py::dict& memo) {
+    .def("__deepcopy__", [] (const PyRay &pyray, const py::dict& memo) {
             return PyRay(pyray.r);
         })
 #else

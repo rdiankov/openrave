@@ -235,7 +235,7 @@ public:
             ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
             ofilterreturn["invalidvelocities"] = toPyArray(pfilterreturn->_invalidvelocities);
             ofilterreturn["fTimeWhenInvalid"] = pfilterreturn->_fTimeWhenInvalid;
-            ofilterreturn["returncode"] = pfilterreturn->_returncode;
+            ofilterreturn["returncode"] = static_cast<ConstraintFilterOptions>(pfilterreturn->_returncode);
             ofilterreturn["reportstr"] = pfilterreturn->_report.__str__();
             return ofilterreturn;
         }
@@ -262,7 +262,7 @@ public:
             ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
             ofilterreturn["invalidvelocities"] = toPyArray(pfilterreturn->_invalidvelocities);
             ofilterreturn["fTimeWhenInvalid"] = pfilterreturn->_fTimeWhenInvalid;
-            ofilterreturn["returncode"] = pfilterreturn->_returncode;
+            ofilterreturn["returncode"] = static_cast<ConstraintFilterOptions>(pfilterreturn->_returncode);
             ofilterreturn["reportstr"] = pfilterreturn->_report.__str__();
             return ofilterreturn;
         }
