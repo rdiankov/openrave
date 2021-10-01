@@ -244,7 +244,7 @@ public:
         }
     }
 
-    object Check(object oq0, object oq1, object odq0, object odq1, object oddq0, object oddq1, dReal timeelapsed, IntervalType interval=IT_Closed, uint32_t options=0xffff, bool filterreturn=false)
+    object Check(object oq0, object oq1, object odq0, object odq1, object oddq0, object oddq1, dReal timeelapsed, uint32_t interval=0x3, uint32_t options=0xffff, bool filterreturn=false)
     {
         std::vector<dReal> q0 = ExtractArray<dReal>(oq0);
         std::vector<dReal> q1 = ExtractArray<dReal>(oq1);
@@ -252,9 +252,10 @@ public:
         std::vector<dReal> dq1 = ExtractArray<dReal>(odq1);
         std::vector<dReal> ddq0 = ExtractArray<dReal>(oddq0);
         std::vector<dReal> ddq1 = ExtractArray<dReal>(oddq1);
+        IntervalType intervalType = static_cast<IntervalType>(interval);
         if( filterreturn ) {
             ConstraintFilterReturnPtr pfilterreturn(new ConstraintFilterReturn());
-            _pconstraints->Check(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, interval, options, pfilterreturn);
+            _pconstraints->Check(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, intervalType, options, pfilterreturn);
             boost::python::dict ofilterreturn;
             ofilterreturn["configurations"] = toPyArray(pfilterreturn->_configurations);
             ofilterreturn["configurationtimes"] = toPyArray(pfilterreturn->_configurationtimes);
@@ -266,7 +267,7 @@ public:
             return ofilterreturn;
         }
         else {
-            return object(_pconstraints->Check(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, interval, options));
+            return object(_pconstraints->Check(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, intervalType, options));
         }
     }
 
@@ -747,12 +748,14 @@ void InitPlanningUtils()
         class_<planningutils::PyDHParameter, OPENRAVE_SHARED_PTR<planningutils::PyDHParameter> >(planningutils, "DHParameter", DOXY_CLASS(planningutils::DHParameter))
         .def(init<>())
         .def(init<object, int, object, dReal, dReal, dReal, dReal>(), "joint"_a, "parentindex"_a, "transform"_a, "d"_a, "a"_a, "theta"_a, "alpha"_a)
-        .def("__copy__", [](const planningutils::PyDHParameter& self){ return self; })
+        .def("__copy__", [](const planningutils::PyDHParameter& self){
+                return self;
+            })
         .def("__deepcopy__", [](const planningutils::PyDHParameter& self, const py::dict& memo) {
-            return planningutils::PyDHParameter(
-                /*self.joint*/py::none_(), self.parentindex, self.transform, self.d, self.a, self.theta, self.alpha
-            );
-        })
+                return planningutils::PyDHParameter(
+                    /*self.joint*/ py::none_(), self.parentindex, self.transform, self.d, self.a, self.theta, self.alpha
+                    );
+            })
 #else
         class_<planningutils::PyDHParameter, OPENRAVE_SHARED_PTR<planningutils::PyDHParameter> >("DHParameter", DOXY_CLASS(planningutils::DHParameter))
         .def(init<>())
@@ -896,7 +899,7 @@ void InitPlanningUtils()
         ;
 
         object (planningutils::PyDynamicsCollisionConstraint::*pcheck)(object, object, object, object, dReal, IntervalType, uint32_t, bool) = &planningutils::PyDynamicsCollisionConstraint::Check;
-        object (planningutils::PyDynamicsCollisionConstraint::*pcheckquintic)(object, object, object, object, object, object, dReal, IntervalType, uint32_t, bool) = &planningutils::PyDynamicsCollisionConstraint::Check;
+        object (planningutils::PyDynamicsCollisionConstraint::*pcheckwithaccels)(object, object, object, object, object, object, dReal, uint32_t, uint32_t, bool) = &planningutils::PyDynamicsCollisionConstraint::Check;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >(planningutils, "DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint))
         .def(init<object, object, uint32_t>(),
@@ -920,7 +923,7 @@ void InitPlanningUtils()
              "filterreturn"_a = false,
              DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)
              )
-        .def("Check", pcheckquintic,
+        .def("Check", pcheckwithaccels,
              "q0"_a,
              "q1"_a,
              "dq0"_a,
@@ -928,14 +931,14 @@ void InitPlanningUtils()
              "ddq0"_a,
              "ddq1"_a,
              "timeelapsed"_a,
-             "interval"_a,
+             "interval"_a = 0x3,
              "options"_a = 0xffff,
              "filterreturn"_a = false,
              DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)
              )
 #else
         .def("Check", pcheck, Check_overloads(PY_ARGS("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options", "filterreturn") DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
-        .def("Check", pcheckquintic, Check_overloads2(PY_ARGS("q0","q1", "dq0", "dq1", "ddq0", "ddq1", "timeelapsed", "interval", "options", "filterreturn") DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
+        .def("Check", pcheckwithaccels, Check_overloads2(PY_ARGS("q0","q1", "dq0", "dq1", "ddq0", "ddq1", "timeelapsed", "interval", "options", "filterreturn") DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
 #endif
         .def("GetReport", &planningutils::PyDynamicsCollisionConstraint::GetReport, DOXY_FN(planningutils::DynamicsCollisionConstraint,GetReport))
         .def("SetPlannerParameters", &planningutils::PyDynamicsCollisionConstraint::SetPlannerParameters, PY_ARGS("parameters") DOXY_FN(planningutils::DynamicsCollisionConstraint,SetPlannerParameters))

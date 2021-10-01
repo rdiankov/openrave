@@ -687,6 +687,11 @@ public:
         _ptraj->Reset();
     }
 
+    size_t GetNumChunks() const
+    {
+        return _ptraj->vchunks.size();
+    }
+
     py::object GetChunks() const
     {
         py::list pychunks;
@@ -1178,6 +1183,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("FindChunkIndex", &PyPiecewisePolynomialTrajectory::FindChunkIndex, PY_ARGS("t") "Find the index of the chunk in which the given time t falls into. Also compute the remainder of that chunk.")
     .def("Serialize", &PyPiecewisePolynomialTrajectory::Serialize, "Serialize this trajectory into string")
     .def("Deserialize", &PyPiecewisePolynomialTrajectory::Deserialize, PY_ARGS("s") "Deserialize a trajectory from the given string")
+    .def("GetNumChunks", &PyPiecewisePolynomialTrajectory::GetNumChunks, "Return the number of chunks in this trajectory")
     .def("GetChunks", &PyPiecewisePolynomialTrajectory::GetChunks, "Return a list of chunks from this trajectory")
     .def("GetChunk", &PyPiecewisePolynomialTrajectory::GetChunk, PY_ARGS("index") "Return the chunk at the given index")
     ; // end class_ PyPiecewisePolynomialTrajectory
