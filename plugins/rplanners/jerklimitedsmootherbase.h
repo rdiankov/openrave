@@ -109,6 +109,10 @@ public:
         _cacheA0Vect2.reserve(_ndof);
         _cacheA1Vect2.reserve(_ndof);
 
+        _cacheLowerLimits.resize(_ndof);
+        _cacheUpperLimits.resize(_ndof);
+        _cacheResolutions.resize(_ndof);
+
         _InitializeInterpolator();
         if( _maskinterpolation == IT_Default ) {
             throw OPENRAVE_EXCEPTION_FORMAT0("interpolation type is not set by the smoother yet.", ORE_InvalidArguments);
@@ -772,6 +776,7 @@ protected:
 
     // for use in CheckChunkAllConstraints.
     std::vector<dReal> _cacheX0Vect2, _cacheX1Vect2, _cacheV0Vect2, _cacheV1Vect2, _cacheA0Vect2, _cacheA1Vect2;
+    std::vector<dReal> _cacheLowerLimits, _cacheUpperLimits, _cacheResolutions; // for use in ProcessConstraintReturnIntoChunks
 
     std::vector<uint8_t> _cacheVVisitedDiscretization;
 }; // end class QuinticSmoother

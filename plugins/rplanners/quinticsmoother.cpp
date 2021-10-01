@@ -715,6 +715,15 @@ protected:
         if( vChunksOut.capacity() < _constraintReturn->_configurationtimes.size() ) {
             vChunksOut.reserve(_constraintReturn->_configurationtimes.size());
         }
+
+        std::vector<dReal>& lowerPositionLimit = _cacheLowerLimits;
+        std::vector<dReal>& upperPositionLimit = _cacheUpperLimits;
+        std::vector<dReal>& positionAllownace = _cacheResolutions;
+        for( size_t idof = 0; idof < _ndof; ++idof ) {
+            // Allow each dof to go beyond their temporary limit by this much.
+            positionAllownace[idof] = 0.01*_parameters->_vConfigResolution[idof];
+        }
+
         for( size_t itime = 0; itime < _constraintReturn->_configurationtimes.size(); ++itime, it += _ndof ) {
             // Retrieve the next config from _constraintReturn. Velocity and acceleration are
             // evaluated from the original chunk.
@@ -724,14 +733,43 @@ protected:
 
             dReal deltaTime = _constraintReturn->_configurationtimes[itime] - curTime;
             if( deltaTime > PiecewisePolynomials::g_fPolynomialEpsilon ) {
+                // Since CheckPathAllConstraints might have modified the configurations on chunkIn due to constraints,
+                // when reconstructing chunks from constraintReturn, should make sure again that the reconstructed
+                // chunks do not have overshooting positions as we may not be checking constraints on these chunks
+                // again.
+
+                // TODO: can actually deduce whether or not there are some extra constraints used in the check
+                // function. If not, then can skip these chunk reconstruction entirely.
+
+                // Set up temporary position limits for chunk reconstruction.
+                for( size_t idof = 0; idof < _ndof; ++idof ) {
+                    if( x0Vect[idof] > x1Vect[idof] ) {
+                        lowerPositionLimit[idof] = x1Vect[idof];
+                        upperPositionLimit[idof] = x0Vect[idof];
+                    }
+                    else {
+                        lowerPositionLimit[idof] = x0Vect[idof];
+                        upperPositionLimit[idof] = x1Vect[idof];
+                    }
+                    if( upperPositionLimit[idof] - lowerPositionLimit[idof] < _parameters->_vConfigResolution[idof] ) {
+                        const dReal midPoint = 0.5*(upperPositionLimit[idof] + lowerPositionLimit[idof]);
+                        const dReal allowance = 0.5*_parameters->_vConfigResolution[idof] + positionAllownace[idof];
+                        lowerPositionLimit[idof] = midPoint - allowance;
+                        upperPositionLimit[idof] = midPoint + allowance;
+                    }
+                    else {
+                        lowerPositionLimit[idof] -= positionAllownace[idof];
+                        upperPositionLimit[idof] += positionAllownace[idof];
+                    }
+                }
                 PiecewisePolynomials::PolynomialCheckReturn interpolatorret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration
                                                                                   (x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, deltaTime,
-                                                                                  _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit,
+                                                                                  lowerPositionLimit, upperPositionLimit,
                                                                                   _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit, _parameters->_vConfigJerkLimit,
                                                                                   tempChunks);
 
                 if( interpolatorret != PiecewisePolynomials::PCR_Normal ) {
-                    RAVELOG_WARN_FORMAT("env=%d, the output chunk is invalid: t=%f/%f; ret=%d", _envId%curTime%chunkIn.duration%interpolatorret);
+                    RAVELOG_VERBOSE_FORMAT("env=%d, the output chunk is invalid: t=%f/%f; ret=%d", _envId%curTime%chunkIn.duration%interpolatorret);
                     return PiecewisePolynomials::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9);
                 }
 

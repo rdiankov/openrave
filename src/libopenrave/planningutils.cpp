@@ -4042,7 +4042,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
 
         if( numPostNeighSteps > 1 ) {
-            RAVELOG_VERBOSE_FORMAT("numPostNeighSteps=%d", numPostNeighSteps);
+            // This is not very uncommon, after all, if _neighstatefn is some non-linear projection constraint.
+            RAVELOG_DEBUG_FORMAT("env=%d, have to divide the arc into %d steps even after the original interpolation is done.", _environmentid%numPostNeighSteps);
             std::vector<dReal> vpostdq(ndof), vpostddq(ndof), vpostdddq(ndof);
             dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
             for( size_t idof = 0; idof < ndof; ++idof ) {
