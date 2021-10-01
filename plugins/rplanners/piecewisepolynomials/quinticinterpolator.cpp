@@ -73,7 +73,7 @@ PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivative
        acceleration and the peak jerk are at their limits as
 
           Ta = sqrt( (10/sqrt(3)) * abs(x1 - x0)/am ) and
-          Tj = cbrt( 30 * abs(x1 - x0)/jm ).
+          Tj = cbrt( 60 * abs(x1 - x0)/jm ).
 
        Finally, the duration T that we choose such that all limits are respected is determined by
 
@@ -82,7 +82,7 @@ PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivative
     dReal absd = Abs(x1 - x0);
     dReal Tv = _fifteenOverEight * absd/vm;
     dReal Ta = Sqrt( _tenOverSqrtThree * absd/am );
-    dReal Tj = Cbrt( 30 * absd/jm );
+    dReal Tj = Cbrt( 60 * absd/jm );
 
     dReal T = Max(Max(Tv, Ta), Tj);
     dReal T2 = T*T;
