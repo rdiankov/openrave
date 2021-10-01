@@ -803,28 +803,20 @@ bool RobotBase::Manipulator::IsChildLink(const KinBody::Link &link) const
     }
 
     RobotBasePtr probot(__probot);
-    // get all child links of the manipualtor
     int iattlink = __pEffector->GetIndex();
-    FOREACHC(itlink, probot->GetLinks()) {
-        int ilink = (*itlink)->GetIndex();
-        if( ilink == iattlink ) {
-            continue;
+    int ilink = link.GetIndex();
+    if( ilink == iattlink ) {
+        return true;
+    }
+    // gripper needs to be affected by all joints
+    FOREACHC(itarmdof,__varmdofindices) {
+        if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
+            return false;
         }
-        // gripper needs to be affected by all joints
-        bool bGripperLink = true;
-        FOREACHC(itarmdof,__varmdofindices) {
-            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
-                bGripperLink = false;
-                break;
-            }
-        }
-        if( !bGripperLink ) {
-            continue;
-        }
-        for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
-            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
-                return true;
-            }
+    }
+    for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
+        if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+            return true;
         }
     }
     return false;
