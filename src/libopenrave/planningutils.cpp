@@ -3989,7 +3989,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
             }
             if( numPostNeighSteps > 1 ) {
-                RAVELOG_VERBOSE_FORMAT("env=%d, numPostNeighSteps=%d", _environmentid%numPostNeighSteps);
+                RAVELOG_DEBUG_FORMAT("env=%d, istep=%d; numPostNeighSteps=%d", _environmentid%istep%numPostNeighSteps);
                 std::vector<dReal> vpostdq(ndof), vpostddq(ndof), vpostdddq(ndof); // TODO: cache this
                 dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
                 for( size_t idof = 0; idof < ndof; ++idof ) {
@@ -4044,29 +4044,32 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         if( numPostNeighSteps > 1 ) {
             // This is not very uncommon, after all, if _neighstatefn is some non-linear projection constraint.
             RAVELOG_DEBUG_FORMAT("env=%d, have to divide the arc into %d steps even after the original interpolation is done.", _environmentid%numPostNeighSteps);
-            std::vector<dReal> vpostdq(ndof), vpostddq(ndof), vpostdddq(ndof);
-            dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
-            for( size_t idof = 0; idof < ndof; ++idof ) {
-                vpostdq[idof] = (q1[idof] - _vtempconfig[idof]) * fiNumPostNeighSteps;
-                vpostddq[idof] = (dq1[idof] - _vtempvelconfig[idof]) * fiNumPostNeighSteps;
-                vpostdddq[idof] = (ddq1[idof] - _vtempaccelconfig[idof]) * fiNumPostNeighSteps;
-            }
+            // std::vector<dReal> vpostdq(ndof), vpostddq(ndof), vpostdddq(ndof);
+            // dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
+            // for( size_t idof = 0; idof < ndof; ++idof ) {
+            //     vpostdq[idof] = (q1[idof] - _vtempconfig[idof]) * fiNumPostNeighSteps;
+            //     vpostddq[idof] = (dq1[idof] - _vtempvelconfig[idof]) * fiNumPostNeighSteps;
+            //     vpostdddq[idof] = (ddq1[idof] - _vtempaccelconfig[idof]) * fiNumPostNeighSteps;
+            // }
 
-            // Approximate everything between _vprevtempconfig and _vtempconfig (the projected
-            // configuration) using linear interpolation. TODO: maybe fix this later???
-            for( int ipoststep = 0; ipoststep + 1 < numPostNeighSteps; ++ipoststep ) {
-                for( size_t idof = 0; idof < ndof; ++idof ) {
-                    _vprevtempconfig[idof] += vpostdq[idof];
-                    _vprevtempvelconfig[idof] += vpostddq[idof];
-                }
-                int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, maskoptions, filterreturn);
-                if( nstateret != 0 ) {
-                    if( !!filterreturn ) {
-                        filterreturn->_returncode = nstateret;
-                    }
-                    return nstateret;
-                }
-            }
+            // // Approximate everything between _vprevtempconfig and _vtempconfig (the projected
+            // // configuration) using linear interpolation. TODO: maybe fix this later???
+            // for( int ipoststep = 0; ipoststep + 1 < numPostNeighSteps; ++ipoststep ) {
+            //     for( size_t idof = 0; idof < ndof; ++idof ) {
+            //         _vprevtempconfig[idof] += vpostdq[idof];
+            //         _vprevtempvelconfig[idof] += vpostddq[idof];
+            //     }
+            //     int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, maskoptions, filterreturn);
+            //     if( nstateret != 0 ) {
+            //         if( !!filterreturn ) {
+            //             filterreturn->_returncode = nstateret;
+            //         }
+            //         return nstateret;
+            //     }
+            // }
+
+            // May be too dangerous to allow it to pass when the final configuration does not reach q1.
+            return CFO_FinalValuesNotReached;
         }
     }
 
