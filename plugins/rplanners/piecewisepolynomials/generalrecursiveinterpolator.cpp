@@ -242,11 +242,11 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     }
 
     // Check soundness
-    if( !FuzzyEquals(pwpoly1.Eval(pwpoly1.GetDuration()), v, epsilon) ) {
+    if( !FuzzyEquals(pwpoly1.Eval(pwpoly1.GetDuration()), v, 100*epsilon) ) {
         RAVELOG_WARN_FORMAT("env=%d, interpolation successful but v1(%f)=%.15f is different from v=%.15f", envid%pwpoly1.GetDuration()%pwpoly1.Eval(pwpoly1.GetDuration())%v);
         return PolynomialCheckReturn::PCR_GenericError;
     }
-    if( !FuzzyEquals(pwpoly3.Eval(0), v, epsilon) ) {
+    if( !FuzzyEquals(pwpoly3.Eval(0), v, 100*epsilon) ) {
         RAVELOG_WARN_FORMAT("env=%d, interpolation successful but v3(0)=%.15f is different from v=%.15f", envid%pwpoly3.Eval(0)%v);
         return PolynomialCheckReturn::PCR_GenericError;
     }
