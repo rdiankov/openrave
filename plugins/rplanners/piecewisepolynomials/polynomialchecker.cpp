@@ -105,8 +105,13 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 {
     std::vector<Coordinate>& vcoords = _cacheCoordsVect;
     const dReal T = p.duration;
-    dReal val;
-    // Check position limits
+    const bool bCheckVelocity = p.degree > 0 && vm > g_fPolynomialEpsilon;
+    const bool bCheckAcceleration = p.degree > 1 && am > g_fPolynomialEpsilon;
+    const bool bCheckJerk = p.degree > 2 && jm > g_fPolynomialEpsilon;
+
+    dReal val; // for holding a temporary value
+
+    // Check position limits at boundaries
     val = p.Eval(0);
     if( val > xmax + g_fPolynomialEpsilon || val < xmin - g_fPolynomialEpsilon ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
@@ -125,22 +130,9 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #endif
         return PCR_PositionLimitsViolation;
     }
-    for( std::vector<Coordinate>::const_iterator it = p.GetExtrema().begin(); it != p.GetExtrema().end(); ++it ) {
-        if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
-            // This extremum occurs in the range
-            if( it->value > xmax + g_fPolynomialEpsilon || it->value < xmin - g_fPolynomialEpsilon ) {
-#ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
-                _failedPoint = it->point;
-                _failedValue = it->value;
-                _expectedValue = it->value > xmax ? xmax : xmin;
-#endif
-                return PCR_PositionLimitsViolation;
-            }
-        }
-    }
 
-    // Check velocity limits
-    if( p.degree > 0 && vm > g_fPolynomialEpsilon ) {
+    // Check velocity limits at boundaries
+    if( bCheckVelocity ) {
         val = p.Evald1(0);
         if( val > vm + g_fPolynomialEpsilon || val < -vm - g_fPolynomialEpsilon ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
@@ -159,24 +151,10 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #endif
             return PCR_VelocityLimitsViolation;
         }
-        p.FindAllLocalExtrema(1, vcoords);
-        for( std::vector<Coordinate>::const_iterator it = vcoords.begin(); it != vcoords.end(); ++it ) {
-            if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
-                // This extremum occurs in the range
-                if( it->value > vm + g_fPolynomialEpsilon || it->value < -vm - g_fPolynomialEpsilon ) {
-#ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
-                    _failedPoint = it->point;
-                    _failedValue = it->value;
-                    _expectedValue = it->value > vm ? vm : -vm;
-#endif
-                    return PCR_VelocityLimitsViolation;
-                }
-            }
-        }
     }
 
-    // Check acceleration limits
-    if( p.degree > 1 && am > g_fPolynomialEpsilon ) {
+    // Check acceleration limits at boundaries
+    if( bCheckAcceleration ) {
         val = p.Evald2(0);
         if( val > am + g_fPolynomialEpsilon || val < -am - g_fPolynomialEpsilon ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
@@ -195,24 +173,10 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #endif
             return PCR_AccelerationLimitsViolation;
         }
-        p.FindAllLocalExtrema(2, vcoords);
-        for( std::vector<Coordinate>::const_iterator it = vcoords.begin(); it != vcoords.end(); ++it ) {
-            if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
-                // This extremum occurs in the range
-                if( it->value > am + g_fPolynomialEpsilon || it->value < -am - g_fPolynomialEpsilon ) {
-#ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
-                    _failedPoint = it->point;
-                    _failedValue = it->value;
-                    _expectedValue = it->value > am ? am : -am;
-#endif
-                    return PCR_AccelerationLimitsViolation;
-                }
-            }
-        }
     }
 
-    // Check jerk limits
-    if( p.degree > 2 && jm > g_fPolynomialEpsilon ) {
+    // Check jerk limits at boundaries
+    if( bCheckJerk ) {
         val = p.Evald3(0);
         if( val > jm + epsilonForJerkLimitsChecking || val < -jm - epsilonForJerkLimitsChecking ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
@@ -231,6 +195,62 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #endif
             return PCR_JerkLimitsViolation;
         }
+    }
+
+    // Now bounadries are ok. Check in-between values.
+    // Check position limits
+    for( std::vector<Coordinate>::const_iterator it = p.GetExtrema().begin(); it != p.GetExtrema().end(); ++it ) {
+        if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
+            // This extremum occurs in the range
+            if( it->value > xmax + g_fPolynomialEpsilon || it->value < xmin - g_fPolynomialEpsilon ) {
+#ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
+                _failedPoint = it->point;
+                _failedValue = it->value;
+                _expectedValue = it->value > xmax ? xmax : xmin;
+#endif
+                return PCR_PositionLimitsViolation;
+            }
+        }
+    }
+
+    // Check velocity limits
+    if( bCheckVelocity ) {
+        p.FindAllLocalExtrema(1, vcoords);
+        for( std::vector<Coordinate>::const_iterator it = vcoords.begin(); it != vcoords.end(); ++it ) {
+            if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
+                // This extremum occurs in the range
+                if( it->value > vm + g_fPolynomialEpsilon || it->value < -vm - g_fPolynomialEpsilon ) {
+#ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
+                    _failedPoint = it->point;
+                    _failedValue = it->value;
+                    _expectedValue = it->value > vm ? vm : -vm;
+#endif
+                    return PCR_VelocityLimitsViolation;
+                }
+            }
+        }
+    }
+
+    // Check acceleration limits
+    if( bCheckAcceleration ) {
+        p.FindAllLocalExtrema(2, vcoords);
+        for( std::vector<Coordinate>::const_iterator it = vcoords.begin(); it != vcoords.end(); ++it ) {
+            if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
+                // This extremum occurs in the range
+                if( it->value > am + g_fPolynomialEpsilon || it->value < -am - g_fPolynomialEpsilon ) {
+#ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
+                    _failedPoint = it->point;
+                    _failedValue = it->value;
+                    _expectedValue = it->value > am ? am : -am;
+#endif
+                    return PCR_AccelerationLimitsViolation;
+                }
+            }
+        }
+    }
+
+    // Check jerk limits
+    if( bCheckJerk ) {
         p.FindAllLocalExtrema(3, vcoords);
         for( std::vector<Coordinate>::const_iterator it = vcoords.begin(); it != vcoords.end(); ++it ) {
             if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
