@@ -219,7 +219,7 @@ public:
     py::list GetExtrema() const
     {
         py::list oExtrema;
-        FOREACHC(itextremum, _ppolynomial->vcextrema) {
+        FOREACHC(itextremum, _ppolynomial->GetExtrema()) {
             oExtrema.append( PyCoordinate(itextremum->point, itextremum->value) );
         }
         return oExtrema;

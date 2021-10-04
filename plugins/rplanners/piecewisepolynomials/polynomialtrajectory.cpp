@@ -70,7 +70,7 @@ void Polynomial::Initialize()
     }
 
     displacement = Eval(duration) - Eval(0);
-    _FindAllLocalExtrema();
+    _bExtremaComputed = false; // need to invalidate vcextrema
 }
 
 void Polynomial::PadCoefficients(const size_t newdegree)
@@ -95,9 +95,12 @@ void Polynomial::UpdateInitialValue(const dReal c0)
     const dReal translationOffset = c0 - vcoeffs[0];
     // Update the initial value
     vcoeffs[0] = c0;
-    // Update all local extrema
-    for( std::vector<Coordinate>::iterator itcoord = vcextrema.begin(); itcoord != vcextrema.end(); ++itcoord ) {
-        itcoord->value += translationOffset;
+
+    if( _bExtremaComputed ) {
+        // If extrema are already computed, can adjust them directly
+        for( std::vector<Coordinate>::iterator itcoord = vcextrema.begin(); itcoord != vcextrema.end(); ++itcoord ) {
+            itcoord->value += translationOffset;
+        }
     }
 }
 
@@ -271,8 +274,9 @@ Polynomial Polynomial::Integrate(const dReal c) const
     return Polynomial(duration, newCoeffs);
 }
 
-void Polynomial::_FindAllLocalExtrema()
+void Polynomial::_FindAllLocalExtrema() const
 {
+    _bExtremaComputed = true;
     vcextrema.resize(0);
     if( vcoeffsd.size() == 0 ) {
         // No extrema since the function is constant
@@ -349,11 +353,11 @@ void Polynomial::_FindAllLocalExtrema()
 void Polynomial::FindAllLocalExtrema(size_t ideriv, std::vector<Coordinate>& vcoords) const
 {
     if( ideriv == 0 ) {
-        vcoords = vcextrema;
+        vcoords = GetExtrema();
         return;
     }
     Polynomial newpoly = this->Differentiate(ideriv);
-    vcoords = newpoly.vcextrema;
+    vcoords = newpoly.GetExtrema();
     return;
 }
 

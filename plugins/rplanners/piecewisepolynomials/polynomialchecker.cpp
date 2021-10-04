@@ -125,7 +125,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
 #endif
         return PCR_PositionLimitsViolation;
     }
-    for( std::vector<Coordinate>::const_iterator it = p.vcextrema.begin(); it != p.vcextrema.end(); ++it ) {
+    for( std::vector<Coordinate>::const_iterator it = p.GetExtrema().begin(); it != p.GetExtrema().end(); ++it ) {
         if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
             // This extremum occurs in the range
             if( it->value > xmax + g_fPolynomialEpsilon || it->value < xmin - g_fPolynomialEpsilon ) {

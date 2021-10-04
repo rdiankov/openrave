@@ -101,8 +101,11 @@ public:
     Polynomial Integrate(const dReal c=0) const;
 
     /// \brief Return
-    inline const std::vector<Coordinate>& GetExtrema() const
+    const std::vector<Coordinate>& GetExtrema() const
     {
+        if( !_bExtremaComputed ) {
+            _FindAllLocalExtrema();
+        }
         return vcextrema;
     }
 
@@ -111,10 +114,6 @@ public:
 
     /// \brief
     void Deserialize(std::istream& I);
-
-    /// \brief Find all local extrema of this polynomial. Keep the results in vcextrema in ascending
-    /// order.
-    void _FindAllLocalExtrema();
 
     /// \brief Find all local extrema of the ideriv-th derivative of this polynomial. Keep the
     /// results in vcoord in ascending order.
@@ -128,10 +127,17 @@ public:
     std::vector<dReal> vcoeffsd; ///< vector of coefficients of the first derivative of this polynomial
     std::vector<dReal> vcoeffsdd; ///< vector of coefficients of the second derivative of this polynomial
     std::vector<dReal> vcoeffsddd; ///< vector of coefficients of the third derivative of this polynomial
-    std::vector<Coordinate> vcextrema; ///< vector of pairs (t, p(t)) where each t is such that p(t) is a local extrema
 
     dReal displacement; ///< the displacement done by this polynomial
     dReal duration; ///< the duration T of this polynomial. The polynomial p(t) is valid for t \in [0, T].
+
+private:
+    /// \brief Find all local extrema of this polynomial. Keep the results in vcextrema in ascending
+    /// order.
+    void _FindAllLocalExtrema() const;
+
+    mutable std::vector<Coordinate> vcextrema; ///< vector of pairs (t, p(t)) where each t is such that p(t) is a local extremum.
+    mutable bool _bExtremaComputed=false; ///< indicates whether the list of local extrema has already been computed. The only function that modifies this flag is _FindAllLocalExtrema.
 
     mutable std::vector<dReal> _vcurcoeffs;
 }; // end class Polynomial
