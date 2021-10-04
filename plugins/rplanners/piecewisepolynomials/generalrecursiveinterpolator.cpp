@@ -239,11 +239,11 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     }
 
     // Check soundness
-    if( !FuzzyEquals(pwpoly1.Eval(pwpoly1.GetDuration()), v, 100*epsilon) ) {
+    if( !FuzzyEquals(pwpoly1.Eval(pwpoly1.GetDuration()), v, epsilonFinalValidation) ) {
         RAVELOG_WARN_FORMAT("env=%d, interpolation successful but v1(%f)=%.15f is different from v=%.15f", envid%pwpoly1.GetDuration()%pwpoly1.Eval(pwpoly1.GetDuration())%v);
         return PolynomialCheckReturn::PCR_GenericError;
     }
-    if( !FuzzyEquals(pwpoly3.Eval(0), v, 100*epsilon) ) {
+    if( !FuzzyEquals(pwpoly3.Eval(0), v, epsilonFinalValidation) ) {
         RAVELOG_WARN_FORMAT("env=%d, interpolation successful but v3(0)=%.15f is different from v=%.15f", envid%pwpoly3.Eval(0)%v);
         return PolynomialCheckReturn::PCR_GenericError;
     }
@@ -260,7 +260,7 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     }
     vFinalPolynomials.insert(vFinalPolynomials.end(), pwpoly3.GetPolynomials().begin(), pwpoly3.GetPolynomials().end());
     PiecewisePolynomial pwpolyFinal(vFinalPolynomials);
-    pwpoly = pwpolyFinal.Integrate(initialState.at(positionIndex));
+    pwpoly = pwpolyFinal.Integrate(initialState[positionIndex]);
     return PolynomialCheckReturn::PCR_Normal; // Final piecewise polynomial is to be checked outside.
 } // end Compute1DTrajectory
 
