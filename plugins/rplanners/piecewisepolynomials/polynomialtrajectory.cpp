@@ -265,13 +265,14 @@ Polynomial Polynomial::Differentiate(const size_t ideriv) const
 
 Polynomial Polynomial::Integrate(const dReal c) const
 {
-    std::vector<dReal> newCoeffs(vcoeffs.size() + 1, 0.0);
-    std::copy(vcoeffs.begin(), vcoeffs.end(), newCoeffs.begin() + 1);
-    newCoeffs[0] = c;
-    for( int div = 2; div < (int)newCoeffs.size(); ++div ) {
-        newCoeffs[div] = newCoeffs[div]/div;
+    // Reusing _vcurcoeffs as a temporary container
+    _vcurcoeffs.resize(vcoeffs.size() + 1);
+    _vcurcoeffs[0] = c;
+    _vcurcoeffs[1] = vcoeffs[0];
+    for( int div = 2; div < (int)_vcurcoeffs.size(); ++div ) {
+        _vcurcoeffs[div] = vcoeffs[div - 1]/div;
     }
-    return Polynomial(duration, newCoeffs);
+    return Polynomial(duration, _vcurcoeffs);
 }
 
 void Polynomial::_FindAllLocalExtrema() const
