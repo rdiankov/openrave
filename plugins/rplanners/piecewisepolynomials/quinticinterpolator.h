@@ -15,6 +15,7 @@
 #define PIECEWISE_POLY_QUINTIC_INTERPOLATOR_H
 
 #include "interpolatorbase.h"
+#include "generalrecursiveinterpolator.h"
 
 namespace OpenRAVE {
 
@@ -45,6 +46,10 @@ public:
     virtual PolynomialCheckReturn Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
                                                                                           dReal vm, dReal am, dReal jm,
                                                                                           PiecewisePolynomial& pwpoly) override;
+
+    virtual PolynomialCheckReturn Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1,
+                                                                                               dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
+                                                                                               PiecewisePolynomial& pwpoly) override;
 
     virtual PolynomialCheckReturn Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T,
                                                                                            dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
@@ -88,6 +93,7 @@ public:
     // Members
     //
     PolynomialChecker checker;
+    GeneralRecursiveInterpolatorPtr _pGeneralInterpolator;
 
     const dReal _fifteenOverEight = 1.875;
     const dReal _tenOverSqrtThree = 10/Sqrt(3);

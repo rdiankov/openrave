@@ -27,6 +27,7 @@ void QuinticInterpolator::Initialize(size_t ndof, int envid)
     OPENRAVE_ASSERT_OP(ndof, >, 0);
     this->ndof = ndof;
     this->envid = envid;
+    _pGeneralInterpolator.reset(new GeneralRecursiveInterpolator(envid));
     checker.Initialize(ndof, envid);
     checker.SetEpsilonForJerkLimitsChecking(100*g_fPolynomialEpsilon);
 
@@ -103,6 +104,23 @@ PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivative
     polynomial.Initialize(T, vcoeffs);
     pwpoly.Initialize(polynomial);
     return PolynomialCheckReturn::PCR_Normal;
+}
+
+PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1,
+                                                                                                        dReal xmin, dReal xmax, dReal vm, dReal am, dReal jm,
+                                                                                                        PiecewisePolynomial& pwpoly)
+{
+    // TODO: Is it ok to set 4-th and 5-th derivatives at boundaries to zero?
+    //       What values should the bounds are the 4-th and 5-th derivatives be?
+    std::vector<dReal> initialState({x0, v0, a0, 0, 0});
+    std::vector<dReal> finalState({x1, v1, a1, 0, 0});
+    std::vector<dReal> lowerBounds({xmin, -vm, -am, -jm, -10*jm, -100*jm});
+    std::vector<dReal> upperBounds({xmax, vm, am, jm, 10*jm, 100*jm});
+    PolynomialCheckReturn ret = _pGeneralInterpolator->Compute1DTrajectory(5, initialState, finalState, lowerBounds, upperBounds, 0, pwpoly);
+    if( ret != PolynomialCheckReturn::PCR_Normal ) {
+        return ret;
+    }
+    return checker.CheckPiecewisePolynomial(pwpoly, xmin, xmax, vm, am, jm, x0, x1, v0, v1, a0, a1);
 }
 
 PolynomialCheckReturn QuinticInterpolator::Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(const dReal x0, const dReal x1, const dReal v0, const dReal v1, const dReal a0, const dReal a1, const dReal T,
