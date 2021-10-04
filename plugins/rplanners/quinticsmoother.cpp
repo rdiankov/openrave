@@ -219,7 +219,7 @@ public:
                     bool bTrimmedBack = false;
                     bool bCheck = true;
                     if( itChunk - pwptraj.vchunks.begin() == 0 ) {
-                        if( itChunk->duration <= fTrimEdgesTime + g_fEpsilonLinear ) {
+                        if( itChunk->duration <= fTrimEdgesTime + PiecewisePolynomials::g_fPolynomialEpsilon ) {
                             // This chunk is too short. Skip checking
                             bCheck = false;
                         }
@@ -230,7 +230,7 @@ public:
                         }
                     }
                     else if( itChunk + 1 == pwptraj.vchunks.end() ) {
-                        if( itChunk->duration <= fTrimEdgesTime + g_fEpsilonLinear ) {
+                        if( itChunk->duration <= fTrimEdgesTime + PiecewisePolynomials::g_fPolynomialEpsilon ) {
                             // This chunk is too short. Skip checking
                             bCheck = false;
                         }
@@ -643,7 +643,13 @@ public:
                 dReal fDiff = (t1 - t0) - fSegmentTime;
 
                 // Replace the original portion with the shortcut segment.
-                pwptraj.ReplaceSegment(t0, t1, vChunksOut);
+                if( iter == 0 ) {
+                    // Since replacing the entire initial trajectory, just initial pwptraj with vChunksOut directly.
+                    pwptraj.Initialize(vChunksOut);
+                }
+                else {
+                    pwptraj.ReplaceSegment(t0, t1, vChunksOut);
+                }
                 // RAVELOG_DEBUG_FORMAT("env=%d, fSegmentTime=%f; fDiff=%f; prevduration=%f; newduration=%f", _envId%fSegmentTime%fDiff%tTotal%pwptraj.duration);
                 tTotal = pwptraj.duration;
                 fScore = fDiff/nItersFromPrevSuccessful;
@@ -662,7 +668,7 @@ public:
                 RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; successful. numSlowDowns=%d, tTotal=%.15e", _envId%iter%numIters%t0%t1%numSlowDowns%pwptraj.duration);
             }
             catch( const std::exception& ex ) {
-                RAVELOG_WARN_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; an exception occured. iIterProgress=0x%x: %s", _envId%iter%numIters%t0%t1%iIterProgress%ex.what());
+                RAVELOG_WARN_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; an exception occurred. iIterProgress=0x%x: %s", _envId%iter%numIters%t0%t1%iIterProgress%ex.what());
                 break;
             }
         } // end shortcut iterations
