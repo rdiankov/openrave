@@ -34,7 +34,7 @@ void CubicInterpolator::Initialize(size_t ndof, int envid)
     // limits. Subsequently, when evaluating a value of acceleration (which is linear in the jerk
     // limit), a small discrepancy in time might result in a relatively large discrepancy in
     // acceleration. Therefore, we increase the tolerance for acceleration checking.
-    checker.SetEpsilonForAccelerationChecking(100*g_fPolynomialEpsilon);
+    checker.SetEpsilonForAccelerationDiscrepancyChecking(100*g_fPolynomialEpsilon);
 
     _cache1DCoeffs.resize(4); // 4 coefficients for a cubic polynomial
     _cacheDVect.resize(ndof);

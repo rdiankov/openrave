@@ -28,6 +28,7 @@ void QuinticInterpolator::Initialize(size_t ndof, int envid)
     this->ndof = ndof;
     this->envid = envid;
     checker.Initialize(ndof, envid);
+    checker.SetEpsilonForJerkLimitsChecking(100*g_fPolynomialEpsilon);
 
     _cache1DCoeffs.resize(6);
 

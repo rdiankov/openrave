@@ -69,7 +69,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialValues(const Polynomial&
         return PCR_DurationDiscrepancy;
     }
     dReal pos = p.Eval(t);
-    if( !FuzzyEquals(pos, x, epsilonForPositionChecking) ) {
+    if( !FuzzyEquals(pos, x, epsilonForPositionDiscrepancyChecking) ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedPoint = t;
         _failedValue = pos;
@@ -79,7 +79,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialValues(const Polynomial&
     }
 
     dReal vel = p.Evald1(t);
-    if( !FuzzyEquals(vel, v, epsilonForVelocityChecking) ) {
+    if( !FuzzyEquals(vel, v, epsilonForVelocityDiscrepancyChecking) ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedPoint = t;
         _failedValue = vel;
@@ -89,7 +89,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialValues(const Polynomial&
     }
 
     dReal accel = p.Evald2(t);
-    if( !FuzzyEquals(accel, a, epsilonForAccelerationChecking) ) {
+    if( !FuzzyEquals(accel, a, epsilonForAccelerationDiscrepancyChecking) ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
         _failedPoint = t;
         _failedValue = accel;
@@ -214,7 +214,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
     // Check jerk limits
     if( p.degree > 2 && jm > g_fPolynomialEpsilon ) {
         val = p.Evald3(0);
-        if( val > jm + g_fPolynomialEpsilon || val < -jm - g_fPolynomialEpsilon ) {
+        if( val > jm + epsilonForJerkLimitsChecking || val < -jm - epsilonForJerkLimitsChecking ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
             _failedPoint = 0;
             _failedValue = val;
@@ -223,7 +223,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
             return PCR_JerkLimitsViolation;
         }
         val = p.Evald3(T);
-        if( val > jm + g_fPolynomialEpsilon || val < -jm - g_fPolynomialEpsilon ) {
+        if( val > jm + epsilonForJerkLimitsChecking || val < -jm - epsilonForJerkLimitsChecking ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
             _failedPoint = T;
             _failedValue = val;
@@ -235,7 +235,7 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomialLimits(const Polynomial&
         for( std::vector<Coordinate>::const_iterator it = vcoords.begin(); it != vcoords.end(); ++it ) {
             if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
                 // This extremum occurs in the range
-                if( it->value > jm + g_fPolynomialEpsilon || it->value < -jm - g_fPolynomialEpsilon ) {
+                if( it->value > jm + epsilonForJerkLimitsChecking || it->value < -jm - epsilonForJerkLimitsChecking ) {
 #ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
                     _failedPoint = it->point;
                     _failedValue = it->value;
