@@ -152,9 +152,6 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     newLowerBounds.assign(lowerBounds.begin() + velocityIndex, lowerBounds.end());
     newUpperBounds.assign(upperBounds.begin() + velocityIndex, upperBounds.end());
 
-    // Use tighter epsilon for checking convergence while still using g_fPolynomialEpsilon for checking zero duration.
-    const dReal epsilon = 1e-5*g_fPolynomialEpsilon;
-
     dReal totalDuration = 0;
     dReal duration2 = 0;
     bool bSuccess = false;
@@ -251,9 +248,12 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         return PolynomialCheckReturn::PCR_GenericError;
     }
 
+    const bool bHasMiddleSegment = !FuzzyZero(duration2, g_fPolynomialEpsilon);
+    const size_t numPolynomials = pwpoly1.GetPolynomials().size() + pwpoly3.GetPolynomials().size() + (bHasMiddleSegment ? 1 : 0);
     std::vector<Polynomial> vFinalPolynomials;
+    vFinalPolynomials.reserve(numPolynomials);
     vFinalPolynomials.insert(vFinalPolynomials.end(), pwpoly1.GetPolynomials().begin(), pwpoly1.GetPolynomials().end());
-    if( !FuzzyZero(duration2, g_fPolynomialEpsilon) ) {
+    if( bHasMiddleSegment ) {
         Polynomial poly(duration2, {v});
         poly.PadCoefficients(degree - 1);
         vFinalPolynomials.emplace_back(poly);

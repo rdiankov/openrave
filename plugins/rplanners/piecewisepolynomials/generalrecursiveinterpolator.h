@@ -99,6 +99,10 @@ public:
     const size_t velocityIndex = 1;
     const size_t accelerationIndex = 2;
 
+    // Use tighter epsilon for checking convergence while still using g_fPolynomialEpsilon for checking zero duration.
+    const dReal epsilon = 1e-5*g_fPolynomialEpsilon;
+    const dReal epsilonFinalValidation = 100*epsilon;
+
 }; // end class GeneralRecursiveInterpolator
 
 typedef boost::shared_ptr<GeneralRecursiveInterpolator> GeneralRecursiveInterpolatorPtr;
