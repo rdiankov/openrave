@@ -302,6 +302,10 @@ public:
     object ComputeAABB() const;
     object ComputeAABBFromTransform(object otransform) const;
 
+    object ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const;
+    object ComputeAABBForGeometryGroup(const std::string& geomgroupname) const;
+    object ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, object otransform) const;
+
     object GetTransform() const;
     object GetTransformPose() const;
 
@@ -329,6 +333,7 @@ public:
     void InitGeometries(object ogeometryinfos);
 
     void AddGeometry(object ogeometryinfo, bool addToGroups);
+    void AddGeometryToGroup(object ogeometryinfo, const std::string& groupname);
 
     void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
     void SetGeometriesFromGroup(const std::string& name);
@@ -408,6 +413,7 @@ public:
     bool IsCircular(int iaxis) const;
     bool IsRevolute(int iaxis) const;
     bool IsPrismatic(int iaxis) const;
+    bool IsActive() const;
     bool IsStatic() const;
 
     int GetDOF() const;

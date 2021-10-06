@@ -83,6 +83,8 @@ public:
 
     std::vector<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> > vLinkColliding; ///< all link collision pairs. Set when CO_AllCollisions is enabled.
 
+    KinBody::GeometryConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
+
     std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of plink1's surface. Filled if CO_UseContacts option is set.
 
     int options; ///< the options that the CollisionReport was called with. It is overwritten by the options set on the collision checker writing the report
@@ -92,7 +94,6 @@ public:
 
     uint8_t nKeepPrevious; ///< if 1, will keep all previous data when resetting the collision checker. otherwise will reset
 
-    //KinBody::Link::GeomConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
 };
 
 typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;

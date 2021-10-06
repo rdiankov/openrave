@@ -491,11 +491,10 @@ public:
         return !operator==(right);
     }
 
-    inline bool Compare(const RaveTransform<T>& rhs, T epsilon=1e-7) const {
-        T e1 = (rot-rhs.rot).lengthsqr4();
-        T e2 = (rot+rhs.rot).lengthsqr4();
-        T e = e1 < e2 ? e1 : e2;
-        return RaveSqrt((trans-rhs.trans).lengthsqr3() + e) <= epsilon;
+    /// \brief return true if any element of transform is different by mor ethan epsilon, otherwise false.
+    inline bool CompareTransform(const RaveTransform<T>& rhs, T epsilon) const {
+        return RaveFabs(trans.x - rhs.trans.x) > epsilon || RaveFabs(trans.y - rhs.trans.y) > epsilon || RaveFabs(trans.z - rhs.trans.z) > epsilon ||
+           RaveFabs(rot.x - rhs.rot.x) > epsilon || RaveFabs(rot.y - rhs.rot.y) > epsilon || RaveFabs(rot.z - rhs.rot.z) > epsilon || RaveFabs(rot.w - rhs.rot.w) > epsilon;
     }
 
     inline RaveTransform<T> inverse() const {
@@ -782,7 +781,7 @@ public:
     }
 
     template<typename U>
-    bool operator==(const RaveCameraIntrinsics<U>& r) {
+    bool operator==(const RaveCameraIntrinsics<U>& r) const {
         return distortion_model == r.distortion_model
             && distortion_coeffs == r.distortion_coeffs
             && focal_length == r.focal_length

@@ -100,6 +100,8 @@ public:
 
         void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
 
+        py::object GetGrabbedInfoHash() const;
+
         std::string __str__();
         py::object __unicode__();
 
@@ -164,6 +166,7 @@ public:
 protected:
         void _Update(const KinBody::KinBodyInfo& info);
     }; // class PyKinBodyInfo
+    typedef OPENRAVE_SHARED_PTR<PyKinBodyInfo> PyKinBodyInfoPtr;
 
 
 protected:
@@ -193,6 +196,8 @@ public:
     void SetLinkGroupGeometries(const std::string& geomname, py::object olinkgeometryinfos);
     void SetName(const std::string& name);
     py::object GetName() const;
+    void SetId(const std::string& bodyid);
+    std::string GetId() const;
     int GetDOF() const;
     py::object GetDOFValues() const;
     py::object GetDOFValues(py::object oindices) const;
@@ -241,6 +246,7 @@ public:
     void SetLinkTransformations(py::object transforms, py::object odoflastvalues=py::none_());
     void SetLinkVelocities(py::object ovelocities);
     py::object GetLinkEnableStates() const;
+    py::object GetLinkEnableStatesMasks() const;
     void SetLinkEnableStates(py::object oenablestates);
     bool SetVelocity(py::object olinearvel, py::object oangularvel);
     void SetDOFVelocities(py::object odofvelocities, py::object olinearvel, py::object oangularvel, uint32_t checklimits);
@@ -252,6 +258,9 @@ public:
     py::object ComputeAABB(bool bEnabledOnlyLinks=false);
     py::object ComputeAABBFromTransform(py::object otransform, bool bEnabledOnlyLinks=false);
     py::object ComputeLocalAABB(bool bEnabledOnlyLinks=false);
+    py::object ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false);
+    py::object ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, py::object otransform, bool bEnabledOnlyLinks=false);
+    py::object ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false);
     py::object GetCenterOfMass() const;
     void Enable(bool bEnable);
     bool IsEnabled() const;
@@ -289,6 +298,7 @@ public:
     bool CheckSelfCollision(PyCollisionReportPtr pReport=PyCollisionReportPtr(), PyCollisionCheckerBasePtr pycollisionchecker=PyCollisionCheckerBasePtr());
     bool IsAttached(PyKinBodyPtr pattachbody);
     py::object GetAttached() const;
+    py::object GetAttachedEnvironmentBodyIndices() const;
     void SetZeroConfiguration();
     void SetNonCollidingConfiguration();
     py::object GetConfigurationSpecification(const std::string& interpolation="") const;
@@ -302,10 +312,12 @@ public:
     void ReleaseAllGrabbedWithLink(py::object pylink);
     void RegrabAll();
     py::object IsGrabbing(PyKinBodyPtr pbody) const;
+    int GetNumGrabbed() const;
     py::object GetGrabbed() const;
     py::object GetGrabbedInfo(py::object ograbbedname=py::none_()) const;
     void ResetGrabbed(py::object ograbbedinfos);
     bool IsRobot() const;
+    int GetEnvironmentBodyIndex() const;
     int GetEnvironmentId() const;
     int DoesAffect(int jointindex, int linkindex ) const;
     int DoesDOFAffectLink(int dofindex, int linkindex ) const;
@@ -313,6 +325,7 @@ public:
     py::object GetNonAdjacentLinks() const;
     py::object GetNonAdjacentLinks(int adjacentoptions) const;
     void SetAdjacentLinks(int linkindex0, int linkindex1);
+    void SetAdjacentLinksCombinations(py::object olinkIndices);
     py::object GetAdjacentLinks() const;
     py::object GetManageData() const;
     int GetUpdateStamp() const;
@@ -322,6 +335,7 @@ public:
 
     py::object ExtractInfo() const;
 
+    PyInterfaceBasePtr GetBasicCalculator(const std::string& sKinematicsGeometry);
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);
     virtual std::string __repr__();
     virtual std::string __str__();

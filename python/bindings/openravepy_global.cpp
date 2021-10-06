@@ -81,22 +81,20 @@ public:
     }
     std::string GetXMLId() const {
         // some readable are not xml readable and does have a xml id
-        ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
-        if (!pxmlreadable) {
+        if (!_readable) {
             return "";
         }
-        return pxmlreadable->GetXMLId();
+        return _readable->GetXMLId();
     }
 
     object SerializeXML(int options=0) {
         // some readable are not xml readable and does not get serialized here
-        ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
-        if (!pxmlreadable) {
+        if (!_readable) {
             return py::none_();
         }
         std::string xmlid;
         OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
-        if( !pxmlreadable->SerializeXML(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options) ) {
+        if( !_readable->SerializeXML(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options) ) {
             return py::none_();
         }
 
@@ -107,12 +105,11 @@ public:
 
     py::object SerializeJSON(dReal fUnitScale=1.0, int options=0) const
     {
-        ReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
-        if (!pjsonreadable) {
+        if (!_readable) {
             return py::none_();
         }
         rapidjson::Document doc;
-        if( !pjsonreadable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options) ) {
+        if( !_readable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options) ) {
             return py::none_();
         }
         return toPyObject(doc);
@@ -122,8 +119,7 @@ public:
     {
         rapidjson::Document doc;
         toRapidJSONValue(obj, doc, doc.GetAllocator());
-        ReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(_readable);
-        return pjsonreadable->DeserializeJSON(doc, fUnitScale);
+        return _readable->DeserializeJSON(doc, fUnitScale);
     }
 
     ReadablePtr GetReadable() {
@@ -336,7 +332,7 @@ public:
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 
-    void GetTriMesh(TriMesh& mesh) {
+    void GetTriMesh(TriMesh& mesh) const {
         if( IS_PYTHONOBJECT_NONE(vertices) ) {
             throw OPENRAVE_EXCEPTION_FORMAT0("python TriMesh 'vertices' is not initialized correctly", ORE_InvalidState);
         }
@@ -1346,6 +1342,17 @@ void init_openravepy_global()
     .value("InverseKinematics",SO_InverseKinematics)
     .value("JointLimits",SO_JointLimits)
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<UpdateFromInfoMode>(m, "UpdateFromInfoMode", py::arithmetic() DOXY_ENUM(UpdateFromInfoMode))
+#else
+    enum_<UpdateFromInfoMode>("UpdateFromInfoMode" DOXY_ENUM(UpdateFromInfoMode))
+#endif
+    .value("Exact",UFIM_Exact)
+    .value("OnlySpecifiedBodiesExact", UFIM_OnlySpecifiedBodiesExact)
+    ;
+
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     enum_<InterfaceType>(m, "InterfaceType", py::arithmetic() DOXY_ENUM(InterfaceType))
 #else
@@ -1377,11 +1384,21 @@ void init_openravepy_global()
     .value("RealControllers",Clone_RealControllers)
     .value("Sensors",Clone_Sensors)
     .value("Modules",Clone_Modules)
-    .value("IgnoreAttachedBodies", Clone_IgnoreAttachedBodies)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     // Cannot export because openravepy_viewer already has "Viewer"
     // .export_values()
 #endif
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<InterfaceAddMode>(m, "InterfaceAddMode", py::arithmetic() DOXY_ENUM(InterfaceAddMode))
+#else
+    enum_<InterfaceAddMode>("InterfaceAddMode" DOXY_ENUM(InterfaceAddMode))
+#endif
+    .value("AllowRenaming",IAM_AllowRenaming)
+    .value("StrictNameChecking",IAM_StrictNameChecking)
+    .value("StrictIdChecking",IAM_StrictIdChecking)
+    .value("StrictNameIdChecking",IAM_StrictNameIdChecking)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1418,6 +1435,16 @@ void init_openravepy_global()
 //     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
 // #endif
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
+    m.def("GetMicroTime", utils::GetMicroTime, "get microsecond time");
+    m.def("GetNanoTime" , utils::GetNanoTime , "get nanosecond time" );
+#else
+    def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
+    def("GetMicroTime", utils::GetMicroTime, "get microsecond time");
+    def("GetNanoTime" , utils::GetNanoTime , "get nanosecond time" );
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_< OPENRAVE_SHARED_PTR< void > >(m, "VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
@@ -1469,6 +1496,10 @@ void init_openravepy_global()
     .def(init<>())
     .def(init<object, object>(), "pos"_a, "dir"_a)
     .def(init<const RAY&>(), "r"_a)
+    .def("__copy__", [](const PyRay& self){ return self; })
+    .def("__deepcopy__", [](const PyRay& pyray, const py::dict& memo) {
+        return PyRay(pyray.r);
+    })
 #else
     class_<PyRay, OPENRAVE_SHARED_PTR<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
     .def(init<object,object>(py::args("pos","dir")))
@@ -1515,8 +1546,11 @@ void init_openravepy_global()
             return self;
         })
     .def("__deepcopy__", [](const PyAABB& self, const py::dict& memo) {
+            return PyAABB(self.ab);
+            /*
             OPENRAVE_SHARED_PTR<PyAABB> pyaabb(new PyAABB(self.ab));
             return py::to_object(pyaabb);
+            */
         })
 #else
     class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
@@ -1561,6 +1595,12 @@ void init_openravepy_global()
     .def(init<>())
     .def(init<object, object>(), "vertices"_a, "indices"_a)
     .def(init<const TriMesh&>(), "mesh"_a)
+    .def("__copy__", [](const PyTriMesh& self){ return self; })
+    .def("__deepcopy__", [](const PyTriMesh& pymesh, const py::dict& memo) {
+        TriMesh mesh;
+        pymesh.GetTriMesh(mesh);
+        return PyTriMesh(mesh);
+    })
 #else
     class_<PyTriMesh, OPENRAVE_SHARED_PTR<PyTriMesh> >("TriMesh", DOXY_CLASS(TriMesh))
     .def(init<object,object>(py::args("vertices","indices")))
@@ -1608,15 +1648,15 @@ void init_openravepy_global()
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("SerializeJSON", &PyReadable::SerializeJSON,
-        "unitScale"_a = 1.0,
-        "options"_a = py::none_(),
-        DOXY_FN(Readable, SerializeJSON)
-    )
+         "unitScale"_a = 1.0,
+         "options"_a = 0,
+         DOXY_FN(Readable, SerializeJSON)
+         )
     .def("DeserializeJSON", &PyReadable::DeserializeJSON,
-        "obj"_a,
-        "unitScale"_a = 1.0,
-        DOXY_FN(Readable, DeserializeJSON)
-    )
+         "obj"_a,
+         "unitScale"_a = 1.0,
+         DOXY_FN(Readable, DeserializeJSON)
+         )
 #else
     .def("SerializeJSON", &PyReadable::SerializeJSON, SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(Readable, SerializeJSON)))
     .def("DeserializeJSON", &PyReadable::DeserializeJSON, DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(Readable, DeserializeJSON)))
@@ -1644,6 +1684,10 @@ void init_openravepy_global()
             .def(init<PyConfigurationSpecificationPtr>(), "pyspec"_a)
             .def(init<const ConfigurationSpecification::Group&>(), "group"_a)
             .def(init<const std::string&>(), "xmldata"_a)
+            .def("__copy__", [](const PyConfigurationSpecification& self){ return self; })
+            .def("__deepcopy__", [](const PyConfigurationSpecification& pyspec, const py::dict& memo) {
+                return PyConfigurationSpecification(pyspec._spec);
+            })
             .def("GetGroupFromName", &PyConfigurationSpecification::GetGroupFromName, DOXY_FN(ConfigurationSpecification,GetGroupFromName))
 #else
             class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
@@ -1803,11 +1847,11 @@ void init_openravepy_global()
         scope_ scope_stringreaders = class_<PyStringReaderStaticClass>("stringreaders")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                            .def_static("CreateStringReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+                                     .def_static("CreateStringReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
 #else
-                            // https://wiki.python.org/moin/boost.python/HowTo
-                            .def("CreateStringReadable", pyCreateStringReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
-                            .staticmethod("CreateStringReadable")
+                                     // https://wiki.python.org/moin/boost.python/HowTo
+                                     .def("CreateStringReadable", pyCreateStringReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+                                     .staticmethod("CreateStringReadable")
 #endif
         ;
     }
@@ -1819,11 +1863,11 @@ void init_openravepy_global()
         scope_ RAVE_DEPRECATED scope_xmlreaders = class_<xmlreaders::PyXMLReaderStaticClass>("xmlreaders")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                  .def_static("CreateStringXMLReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
+                                                  .def_static("CreateStringXMLReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
 #else
-                                  // https://wiki.python.org/moin/boost.python/HowTo
-                                  .def("CreateStringXMLReadable",xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
-                                  .staticmethod("CreateStringXMLReadable")
+                                                  // https://wiki.python.org/moin/boost.python/HowTo
+                                                  .def("CreateStringXMLReadable",xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
+                                                  .staticmethod("CreateStringXMLReadable")
 #endif
         ;
     }

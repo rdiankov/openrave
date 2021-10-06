@@ -161,7 +161,7 @@ UpdateFromInfoResult RobotBase::Manipulator::UpdateFromInfo(const RobotBase::Man
         updateFromInfoResult = UFIR_Success;
     }
 
-    if (!GetLocalToolTransform().Compare(info._tLocalTool)) {
+    if (GetLocalToolTransform().CompareTransform(info._tLocalTool, g_fEpsilon)) {
         SetLocalToolTransform(info._tLocalTool);
         RAVELOG_VERBOSE_FORMAT("manipulator %s local tool transform changed", _info._id);
         updateFromInfoResult = UFIR_Success;
@@ -238,6 +238,9 @@ void RobotBase::Manipulator::SetName(const std::string& name)
 
 Transform RobotBase::Manipulator::GetTransform() const
 {
+    if( !__pEffector ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, robot '%s' manipulator '%s' has no end effector with name '%s'"), __probot.lock()->GetEnv()->GetNameId()%__probot.lock()->GetName()%_info._name%_info._sEffectorLinkName, ORE_InvalidArguments);
+    }
     return __pEffector->GetTransform() * _info._tLocalTool;
 }
 
@@ -1623,8 +1626,12 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
     if( options & (SO_Kinematics|SO_InverseKinematics) ) {
         RobotBasePtr probot(__probot);
         Transform tcur;
-        std::vector<JointPtr> vjoints;
-        if( probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
+        vector<JointPtr> vjoints;
+        if(!!__pIkChainEndLink) {
+            probot->GetChain(__pBase->GetIndex(),__pIkChainEndLink->GetIndex(), vjoints);
+        }
+
+        if( vjoints.size() > 0 || probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
             // due to back compat issues, have to compute the end effector transform first
             FOREACH(itjoint, vjoints) {
                 tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform() * (*itjoint)->GetInternalHierarchyRightTransform();
@@ -1756,7 +1763,7 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
         if(!!__pIkChainEndLink) {
             probot->GetChain(__pBase->GetIndex(),__pIkChainEndLink->GetIndex(), vjoints);
         }
-            
+
         if( vjoints.size() > 0 || probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
             FOREACH(it,vjoints) {
                 if( (*it)->IsStatic() ) {
@@ -1794,8 +1801,29 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
         }
     }
 
-    // init the gripper dof indices
     std::vector<dReal> vChuckingDirection;
+
+    GripperInfoPtr pGripperInfo;
+    if( !_info._grippername.empty() ) {
+        pGripperInfo = probot->GetGripperInfo(_info._grippername);
+        if( !!pGripperInfo ) {
+
+            if( _info._vGripperJointNames.empty() ) {
+                _info._vGripperJointNames = pGripperInfo->gripperJointNames;
+                if( !_info._vGripperJointNames.empty() ) {
+                    RAVELOG_VERBOSE_FORMAT("For manipulator '%s', using %d gripperJointNames from gripperInfo '%s'", _info._name%_info._vGripperJointNames.size()%_info._grippername);
+                }
+            }
+
+            if( _info._vChuckingDirection.empty() ) {
+                if( pGripperInfo->_docGripperInfo.IsObject() ) {
+                    orjson::LoadJsonValueByKey(pGripperInfo->_docGripperInfo, "chuckingDirection", _info._vChuckingDirection);
+                }
+            }
+        }
+    }
+
+    // init the gripper dof indices
     size_t ichuckingdirection = 0;
     FOREACHC(itjointname,_info._vGripperJointNames) {
         JointPtr pjoint = probot->GetJoint(*itjointname);
@@ -1807,7 +1835,12 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
             if( pjoint->GetDOFIndex() >= 0 ) {
                 for(int i = 0; i < pjoint->GetDOF(); ++i) {
                     if( find(__varmdofindices.begin(), __varmdofindices.end(), pjoint->GetDOFIndex()+i) != __varmdofindices.end() ) {
-                        RAVELOG_ERROR(str(boost::format("manipulator %s gripper dof %d is also part of arm dof! excluding from gripper...")%GetName()%(pjoint->GetDOFIndex()+i)));
+
+                        std::stringstream ss;
+                        FOREACH(itindex, __varmdofindices) {
+                            ss << *itindex << ", ";
+                        }
+                        RAVELOG_ERROR_FORMAT("manipulator %s has gripper joint %s (dofIndex=%d) is also part of arm dofindices [%s]! Perhaps the manipulator's end effector '%s' is not set correctly. So excluding from gripper...", GetName()%pjoint->GetName()%(pjoint->GetDOFIndex()+i)%ss.str()%_info._sEffectorLinkName);
                     }
                     else {
                         __vgripperdofindices.push_back(pjoint->GetDOFIndex()+i);
@@ -1816,7 +1849,7 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
                         }
                         else {
                             vChuckingDirection.push_back(0);
-                            RAVELOG_WARN(str(boost::format("manipulator %s chucking direction not correct length, might get bad chucking/release grasping")%GetName()));
+                            RAVELOG_WARN_FORMAT("manipulator %s chucking direction not correct length, might get bad chucking/release grasping", GetName());
                         }
                     }
                 }

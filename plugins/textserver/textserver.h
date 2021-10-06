@@ -678,7 +678,7 @@ protected:
         if( !is ) {
             return KinBodyPtr();
         }
-        return GetEnv()->GetBodyFromEnvironmentId(index);
+        return GetEnv()->GetBodyFromEnvironmentBodyIndex(index);
     }
 
     RobotBasePtr orMacroGetRobot(istream& is)
@@ -688,7 +688,7 @@ protected:
         if( !is ) {
             return RobotBasePtr();
         }
-        KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(index);
+        KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(index);
         if( !pbody || !pbody->IsRobot() ) {
             return RobotBasePtr();
         }
@@ -886,8 +886,8 @@ protected:
             return false;
         }
         robot->SetName(robotname);
-        GetEnv()->Add(robot);
-        os << robot->GetEnvironmentId();
+        GetEnv()->Add(robot, IAM_StrictNameChecking);
+        os << robot->GetEnvironmentBodyIndex();
         return true;
     }
 
@@ -931,7 +931,7 @@ protected:
 
     bool worEnvCreateModule(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
     {
-        GetEnv()->Add(boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->first, true, boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->second);
+        GetEnv()->Add(boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->first, IAM_AllowRenaming, boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->second);
         return true;
     }
 
@@ -973,8 +973,8 @@ protected:
         }
         body->SetName(bodyname);
 
-        GetEnv()->Add(body);
-        os << body->GetEnvironmentId();
+        GetEnv()->Add(body, IAM_StrictNameChecking);
+        os << body->GetEnvironmentBodyIndex();
         return true;
     }
 
@@ -995,7 +995,7 @@ protected:
             os << "0";
         }
         else {
-            os << pbody->GetEnvironmentId();
+            os << pbody->GetEnvironmentBodyIndex();
         }
         return true;
     }
@@ -1010,7 +1010,7 @@ protected:
 
         os << vrobots.size() << " ";
         FOREACHC(it, vrobots) {
-            os << (*it)->GetEnvironmentId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetURI() << "\n ";
+            os << (*it)->GetEnvironmentBodyIndex() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetURI() << "\n ";
         }
         return true;
     }
@@ -1024,7 +1024,7 @@ protected:
         GetEnv()->GetBodies(vbodies);
         os << vbodies.size() << " ";
         FOREACHC(it, vbodies) {
-            os << (*it)->GetEnvironmentId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetURI() << "\n ";
+            os << (*it)->GetEnvironmentBodyIndex() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetURI() << "\n ";
         }
 
         return true;
@@ -2047,7 +2047,7 @@ protected:
                 return false;
             }
             if( bodyid ) {
-                KinBodyPtr pignore = GetEnv()->GetBodyFromEnvironmentId(bodyid);
+                KinBodyPtr pignore = GetEnv()->GetBodyFromEnvironmentBodyIndex(bodyid);
                 if( !pignore ) {
                     RAVELOG_WARN("failed to find body %d",bodyid);
                 }
@@ -2081,10 +2081,10 @@ protected:
         }
         int bodyindex = 0;
         if( !!preport->plink1 &&( preport->plink1->GetParent() != pbody) ) {
-            bodyindex = preport->plink1->GetParent()->GetEnvironmentId();
+            bodyindex = preport->plink1->GetParent()->GetEnvironmentBodyIndex();
         }
         if( !!preport->plink2 &&( preport->plink2->GetParent() != pbody) ) {
-            bodyindex = preport->plink2->GetParent()->GetEnvironmentId();
+            bodyindex = preport->plink2->GetParent()->GetEnvironmentBodyIndex();
         }
         os << bodyindex << " ";
 
@@ -2187,7 +2187,7 @@ protected:
 
         TriMesh trimesh;
         FOREACH(itbody, vbodies) {
-            if( (find(vobjids.begin(),vobjids.end(),(*itbody)->GetEnvironmentId()) == vobjids.end()) ^ !inclusive ) {
+            if( (find(vobjids.begin(),vobjids.end(),(*itbody)->GetEnvironmentBodyIndex()) == vobjids.end()) ^ !inclusive ) {
                 continue;
             }
             GetEnv()->Triangulate(trimesh, **itbody);

@@ -109,7 +109,6 @@ protected:
             ss->addUniform( new osg::Uniform("CartoonTexUnit", 0));
             ss->setAttributeAndModes( program.get(), osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
 
-
             ss->setTextureMode(0, GL_TEXTURE_2D, osg::StateAttribute::OVERRIDE | osg::StateAttribute::OFF);
 
             osg::ref_ptr<osg::Texture1D> texture = new osg::Texture1D;

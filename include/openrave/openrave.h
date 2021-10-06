@@ -243,6 +243,7 @@ class SpaceSamplerBase;
 class IkParameterization;
 class ConfigurationSpecification;
 class IkReturn;
+class Readable;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
 typedef boost::shared_ptr<CollisionReport const> CollisionReportConstPtr;
@@ -291,7 +292,9 @@ typedef boost::weak_ptr<SpaceSamplerBase> SpaceSamplerBaseWeakPtr;
 typedef boost::shared_ptr<EnvironmentBase> EnvironmentBasePtr;
 typedef boost::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
 typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
-
+typedef boost::shared_ptr<Readable> ReadablePtr;
+typedef boost::shared_ptr<Readable const> ReadableConstPtr;
+typedef boost::weak_ptr<Readable> ReadableWeakPtr;
 typedef boost::shared_ptr<IkReturn> IkReturnPtr;
 typedef boost::shared_ptr<IkReturn const> IkReturnConstPtr;
 typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
@@ -313,7 +316,6 @@ enum CloningOptions {
     Clone_Sensors = 0x0010, ///< if specified, will clone the sensors attached to the robot and added to the environment
     Clone_Modules = 0x0020, ///< if specified, will clone the modules attached to the environment
     Clone_PassOnMissingBodyReferences=0x00008000, ///< if specified, then does not throw an exception if a body reference is missing in the environment. For example, the grabbed body in GrabbedInfo
-    Clone_IgnoreAttachedBodies = 0x00010001, ///< if set, then ignore cloning any attached bodies so _listAttachedBodies becomes empty. Usually used to control grabbing states.
     Clone_All = 0xffffffff,
 };
 
@@ -321,8 +323,10 @@ enum CloningOptions {
 class OPENRAVE_API Readable : public UserData
 {
 public:
-    Readable() {}
-    virtual ~Readable() {}
+    Readable() {
+    }
+    virtual ~Readable() {
+    }
 
     Readable(const std::string& xmlid) : __xmlid(xmlid) {
     }
@@ -334,9 +338,7 @@ public:
     /// \brief serializes the interface
     ///
     /// \return true if serialized
-    virtual bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const = 0;//{
-//        return false;
-//    }
+    virtual bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const = 0;
 
     /// \return true if serialized
     virtual bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const {
@@ -348,21 +350,20 @@ public:
         return false;
     }
 
-    virtual bool operator==(const Readable& other) {
-        // by default, compare pointer value
-        return this == &other;
-    }
+    /// \return true if this readable is equivalent to other readable
+    virtual bool operator==(const Readable& other) const = 0;
 
-    virtual bool operator!=(const Readable& other) {
+    /// \return true if this readable is not equivalent to other readable
+    virtual bool operator!=(const Readable& other) const {
         return !operator==(other);
     }
+
+    /// \return return a cloned copy of this readable
+    virtual ReadablePtr CloneSelf() const = 0;
 
 private:
     std::string __xmlid;
 };
-
-typedef boost::shared_ptr<Readable> ReadablePtr;
-typedef boost::shared_ptr<Readable const> ReadableConstPtr;
 
 /// \brief a list of key-value pairs. It is possible for keys to repeat.
 typedef std::list<std::pair<std::string,std::string> > AttributesList;
@@ -460,8 +461,10 @@ class OPENRAVE_API BaseJSONReader : public boost::enable_shared_from_this<BaseJS
 {
 public:
 
-    BaseJSONReader() {}
-    virtual ~BaseJSONReader() {}
+    BaseJSONReader() {
+    }
+    virtual ~BaseJSONReader() {
+    }
 
     /// a readable interface that stores the information processsed for the current tag
     /// This pointer is used to the InterfaceBase class registered readers
@@ -599,24 +602,35 @@ enum IkParameterizationType {
     IKP_CustomDataBit = 0x00010000, ///< bit is set if the ikparameterization contains custom data, this is only used when serializing the ik parameterizations
 };
 
-class OPENRAVE_API StringReadable: public Readable
+class OPENRAVE_API StringReadable : public Readable
 {
 public:
     StringReadable(const std::string& id, const std::string& data);
     virtual ~StringReadable();
+
+    /// \brief sets new string data
+    void SetData(const std::string& newdata);
+
+    /// \brief gets a reference to the saved data;
+    const std::string& GetData() const;
+
     bool SerializeXML(BaseXMLWriterPtr wirter, int options=0) const override;
     bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
     bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
-    bool operator==(const Readable& other) override {
+    bool operator==(const Readable& other) const override {
+        if (GetXMLId() != other.GetXMLId()) {
+            return false;
+        }
         const StringReadable* pOther = dynamic_cast<const StringReadable*>(&other);
         if (!pOther) {
             return false;
         }
-
         return _data == pOther->_data;
     }
 
-    const std::string& GetData() const;
+    ReadablePtr CloneSelf() const override {
+        return ReadablePtr(new StringReadable(GetXMLId(), _data));
+    }
 
 private:
     std::string _data;
@@ -2129,9 +2143,9 @@ public:
 
     virtual bool operator==(const IkParameterization& other) const {
         return _id == other._id
-            && _type == other._type
-            && _transform == other._transform
-            && _mapCustomData == other._mapCustomData;
+               && _type == other._type
+               && _transform == other._transform
+               && _mapCustomData == other._mapCustomData;
     }
 
     virtual bool operator!=(const IkParameterization& other) const {

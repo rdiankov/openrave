@@ -24,12 +24,12 @@ public:
     {
 public:
         ConveyorLink(const std::string& name, Transform tinernal, KinBodyPtr parent) : Link(parent) {
-            _info._t = tinernal;
+            _info.SetTransform(tinernal);
             _info._mass = 0.01; // just an estimate
             _info._vinertiamoments = Vector(1,1,1);
             _info._name = name;
             _info._bStatic = false;
-            _info._bIsEnabled = true;
+            _Enable(true);
         }
     };
 
@@ -60,6 +60,30 @@ public:
 
         bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override {
             return false;
+        }
+
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const ConveyorInfo* pOther = dynamic_cast<const ConveyorInfo*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return _mimic == pOther->_mimic &&
+                _linkParent == pOther->_linkParent &&
+                _trajfollow == pOther->_trajfollow &&
+                _fLinkDensity == pOther->_fLinkDensity &&
+                _listGeometries == pOther->_listGeometries &&
+                _namebase == pOther->_namebase &&
+                _bIsCircular == pOther->_bIsCircular &&
+                _bCreated == pOther->_bCreated;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<ConveyorInfo> pNew(new ConveyorInfo());
+            *pNew = *this;
+            return pNew;
         }
         
         boost::shared_ptr<KinBody::Mimic> _mimic; // always has to mimic

@@ -534,7 +534,7 @@ class TestCOLLADA(EnvironmentSetup):
         env3 = Environment()
         
         for body2 in env2.GetBodies():
-            print 'opening ', body2.GetURI()
+            print('opening %s'%body2.GetURI())
             if body2.IsRobot():
                 body3 = env3.ReadRobotURI(body2.GetURI())
             else:

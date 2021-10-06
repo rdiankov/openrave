@@ -43,6 +43,9 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
     if( _options & Save_JointLimits ) {
         _pbody->GetDOFLimits(_vDOFLimits[0], _vDOFLimits[1]);
     }
+    if( _options & Save_JointResolutions ) {
+        _pbody->GetDOFResolutions(_vDOFResolutions);
+    }
     if( _options & Save_GrabbedBodies ) {
         _vGrabbedBodies = _pbody->_vGrabbedBodies;
     }
@@ -51,7 +54,7 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 {
-    if( _bRestoreOnDestructor && !!_pbody && _pbody->GetEnvironmentId() != 0 ) {
+    if( _bRestoreOnDestructor && !!_pbody && _pbody->GetEnvironmentBodyIndex() != 0 ) {
         _RestoreKinBody(_pbody);
     }
 }
@@ -76,7 +79,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     if( !pbody ) {
         return;
     }
-    if( pbody->GetEnvironmentId() == 0 ) {
+    if( pbody->GetEnvironmentBodyIndex() == 0 ) {
         RAVELOG_WARN_FORMAT("env=%d, body %s not added to environment, skipping restore", pbody->GetEnv()->GetId()%pbody->GetName());
         return;
     }
@@ -98,7 +101,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                 }
                 else {
                     // pgrabbed points to a different environment, so have to re-initialize
-                    KinBodyPtr pnewbody = pbody->GetEnv()->GetBodyFromEnvironmentId(pbodygrab->GetEnvironmentId());
+                    KinBodyPtr pnewbody = pbody->GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodygrab->GetEnvironmentBodyIndex());
                     if( !!pnewbody ) {
                         if( pbodygrab->GetKinematicsGeometryHash() != pnewbody->GetKinematicsGeometryHash() ) {
                             RAVELOG_WARN_FORMAT("env=%d, body %s is not similar across environments", pbody->GetEnv()->GetId()%pbodygrab->GetName());
@@ -115,7 +118,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                         }
                     }
                     else {
-                        RAVELOG_WARN_FORMAT("env=%d, could not find body %s with id %d", pbody->GetEnv()->GetId()%pbodygrab->GetName()%pbodygrab->GetEnvironmentId());
+                        RAVELOG_WARN_FORMAT("env=%d, could not find body %s with id %d", pbody->GetEnv()->GetId()%pbodygrab->GetName()%pbodygrab->GetEnvironmentBodyIndex());
                     }
                 }
             }
@@ -145,7 +148,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         bool bchanged = false;
         for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
             if( pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] ) {
-                pbody->GetLinks().at(i)->_info._bIsEnabled = !!_vEnabledLinks[i];
+                pbody->GetLinks().at(i)->_Enable(!!_vEnabledLinks[i]);
                 bchanged = true;
             }
         }
@@ -164,6 +167,9 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     }
     if( _options & Save_JointWeights ) {
         pbody->SetDOFWeights(_vDOFWeights);
+    }
+    if( _options & Save_JointResolutions ) {
+        pbody->SetDOFResolutions(_vDOFResolutions);
     }
 }
 
@@ -196,11 +202,14 @@ KinBody::KinBodyStateSaverRef::KinBodyStateSaverRef(KinBody& body, int options) 
     if( _options & Save_GrabbedBodies ) {
         _vGrabbedBodies = body._vGrabbedBodies;
     }
+    if( _options & Save_JointResolutions ) {
+        body.GetDOFResolutions(_vDOFResolutions);
+    }
 }
 
 KinBody::KinBodyStateSaverRef::~KinBodyStateSaverRef()
 {
-    if( _bRestoreOnDestructor && !_bReleased && _body.GetEnvironmentId() != 0 ) {
+    if( _bRestoreOnDestructor && !_bReleased && _body.GetEnvironmentBodyIndex() != 0 ) {
         _RestoreKinBody(_body);
     }
 }
@@ -229,7 +238,7 @@ void KinBody::KinBodyStateSaverRef::SetRestoreOnDestructor(bool restore)
 
 void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
 {
-    if( body.GetEnvironmentId() == 0 ) {
+    if( body.GetEnvironmentBodyIndex() == 0 ) {
         RAVELOG_WARN(str(boost::format("body %s not added to environment, skipping restore")%body.GetName()));
         return;
     }
@@ -251,7 +260,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                 }
                 else {
                     // pgrabbed points to a different environment, so have to re-initialize
-                    KinBodyPtr pnewbody = body.GetEnv()->GetBodyFromEnvironmentId(pbodygrab->GetEnvironmentId());
+                    KinBodyPtr pnewbody = body.GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodygrab->GetEnvironmentBodyIndex());
                     if( pbodygrab->GetKinematicsGeometryHash() != pnewbody->GetKinematicsGeometryHash() ) {
                         RAVELOG_WARN(str(boost::format("body %s is not similar across environments")%pbodygrab->GetName()));
                     }
@@ -293,7 +302,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
         bool bchanged = false;
         for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
             if( body.GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] ) {
-                body.GetLinks().at(i)->_info._bIsEnabled = !!_vEnabledLinks[i];
+                body.GetLinks().at(i)->_Enable(!!_vEnabledLinks[i]);
                 bchanged = true;
             }
         }
@@ -312,6 +321,9 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
     }
     if( _options & Save_JointWeights ) {
         body.SetDOFWeights(_vDOFWeights);
+    }
+    if( _options & Save_JointResolutions ) {
+        body.SetDOFResolutions(_vDOFResolutions);
     }
 }
 
