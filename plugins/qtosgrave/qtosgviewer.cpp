@@ -1604,6 +1604,7 @@ void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, c
     box->setCenter(osg::Vec3(vpos.x, vpos.y, vpos.z));
 
     osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
+    sd->setColor(osg::Vec4f(0.33203125f, 0.5f, 0.898437f, 1.0f));
     geode->addDrawable(sd);
 
     // don't do transparent bin since that is too slow for big point clouds...
@@ -1619,7 +1620,39 @@ GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVec
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
     _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vpos, vextents, false)); // copies ref counts
-    return GraphHandlePtr();
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+}
+
+void QtOSGViewer::_DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency)
+{
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    osg::ref_ptr<osg::Geode> geode(new osg::Geode());
+
+    for (size_t i = 0; i < vpos.size(); i++) {
+        const RaveVector<float>& pos = vpos[i];
+        osg::ref_ptr<osg::Box> box = new osg::Box();
+        box->setHalfLengths(osg::Vec3(vextents.x, vextents.y, vextents.z));
+        box->setCenter(osg::Vec3(pos.x, pos.y, pos.z));
+
+        osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
+        sd->setColor(osg::Vec4f(0.33203125f, 0.5f, 0.898437f, 1.0f));
+        geode->addDrawable(sd);
+    }
+
+    // don't do transparent bin since that is too slow for big point clouds...
+    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
+    handle->getOrCreateStateSet()->setRenderingHint(bUsingTransparency ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
+
+    trans->addChild(geode);
+    handle->addChild(trans);
+    _posgWidget->GetFigureRoot()->insertChild(0, handle);
+}
+
+GraphHandlePtr QtOSGViewer::drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBoxArray, this, handle, vpos, vextents, false)); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 void QtOSGViewer::_DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
