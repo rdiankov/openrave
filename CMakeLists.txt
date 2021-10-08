@@ -16,6 +16,7 @@ cmake_policy(SET CMP0002 NEW)
 # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
 cmake_policy(SET CMP0003 NEW)
 
+set(CMAKE_CXX_STANDARD 14) # C++14 for std::shared_timed_mutex
 # Use, i.e. don't skip the full RPATH for the build tree
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 
@@ -394,7 +395,6 @@ foreach(ldir ${Boost_LIBRARY_DIRS})
   endif()
 endforeach()
 
-add_definitions(-std=gnu++14) # with -std=c++14, typeof is not defined, so use gnu++14 for now
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
   add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
   set(EXTRA_COMPILE_FLAGS "-fPIC")
