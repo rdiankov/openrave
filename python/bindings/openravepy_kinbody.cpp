@@ -3779,6 +3779,27 @@ object PyKinBody::IsGrabbing(PyKinBodyPtr pbody) const
     return toPyKinBodyLink(plink,_pyenv);
 }
 
+bool PyKinBody::IsGrabbingWithLink(PyKinBodyPtr pbody, object pylink) const
+{
+    CHECK_POINTER(pbody);
+    CHECK_POINTER(pylink);
+    return _pbody->IsGrabbingWithLink(*(pbody->GetBody()), *GetKinBodyLink(pylink));
+}
+
+bool PyKinBody::IsGrabbingWithLink(PyKinBodyPtr pbody, object pylink, object linkstoignore) const
+{
+    CHECK_POINTER(pbody);
+    CHECK_POINTER(pylink);
+    if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
+        // linkstoignore is a list of link names
+        std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
+        return _pbody->IsGrabbingWithLink(*(pbody->GetBody()), *GetKinBodyLink(pylink), setlinkstoignoreString);
+    }
+    // linkstoignore is a list of link indices
+    std::set<int> setlinkstoignoreInt = ExtractSet<int>(linkstoignore);
+    return _pbody->IsGrabbingWithLink(*(pbody->GetBody()), *GetKinBodyLink(pylink), setlinkstoignoreInt);
+}
+
 int PyKinBody::GetNumGrabbed() const
 {
     return _pbody->GetNumGrabbed();
@@ -5117,6 +5138,8 @@ void init_openravepy_kinbody()
         void (PyKinBody::*setdofvelocities4)(object,object,object,uint32_t) = &PyKinBody::SetDOFVelocities;
         bool (PyKinBody::*pgrab2)(PyKinBodyPtr,object) = &PyKinBody::Grab;
         bool (PyKinBody::*pgrab4)(PyKinBodyPtr,object,object) = &PyKinBody::Grab;
+        bool (PyKinBody::*isgrabbingwithlink2)(PyKinBodyPtr,object) const = &PyKinBody::IsGrabbingWithLink;
+        bool (PyKinBody::*isgrabbingwithlink4)(PyKinBodyPtr,object,object) const = &PyKinBody::IsGrabbingWithLink;
         object (PyKinBody::*GetNonAdjacentLinks1)() const = &PyKinBody::GetNonAdjacentLinks;
         object (PyKinBody::*GetNonAdjacentLinks2)(int) const = &PyKinBody::GetNonAdjacentLinks;
         std::string sInitFromBoxesDoc = std::string(DOXY_FN(KinBody,InitFromBoxes "const std::vector< AABB; bool")) + std::string("\nboxes is a Nx6 array, first 3 columsn are position, last 3 are extents");
@@ -5427,6 +5450,8 @@ void init_openravepy_kinbody()
                          .def("ReleaseAllGrabbedWithLink",&PyKinBody::ReleaseAllGrabbedWithLink, PY_ARGS("grablink") DOXY_FN(KinBody,ReleaseAllGrabbedWithLink))
                          .def("RegrabAll",&PyKinBody::RegrabAll, DOXY_FN(KinBody,RegrabAll))
                          .def("IsGrabbing",&PyKinBody::IsGrabbing,PY_ARGS("body") DOXY_FN(KinBody,IsGrabbing))
+                         .def("IsGrabbingWithLink",isgrabbingwithlink2,PY_ARGS("body","grablink") DOXY_FN(RobotBase,IsGrabbingWithLink "KinBodyPtr; LinkPtr"))
+                         .def("IsGrabbingWithLink",isgrabbingwithlink4,PY_ARGS("body","grablink","linkstoignore") DOXY_FN(KinBody,IsGrabbingWithLink "KinBodyPtr; LinkPtr; const std::set"))
                          .def("GetNumGrabbed", &PyKinBody::GetNumGrabbed, DOXY_FN(KinBody,GetNumGrabbed))
                          .def("GetGrabbed",&PyKinBody::GetGrabbed, DOXY_FN(KinBody,GetGrabbed))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

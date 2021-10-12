@@ -306,6 +306,64 @@ KinBody::LinkPtr KinBody::IsGrabbing(const KinBody &body) const
     return LinkPtr();
 }
 
+bool KinBody::IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const
+{
+    for( const UserDataPtr& grabbedDataPtr : _vGrabbedBodies ) {
+        GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(grabbedDataPtr);
+        KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
+        if( !!pgrabbedbody && pgrabbedbody.get() == &body && pgrabbed->_plinkrobot.get() == &bodyLinkToGrabWith ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool KinBody::IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore) const
+{
+    for( const UserDataPtr& grabbedDataPtr : _vGrabbedBodies ) {
+        GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(grabbedDataPtr);
+        KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
+        if( !!pgrabbedbody && pgrabbedbody.get() == &body && pgrabbed->_plinkrobot.get() == &bodyLinkToGrabWith ) {
+            bool ignoringLinksMatch = true;
+            for( const LinkPtr& link : _veclinks ) {
+                const bool isLinkIgnored = find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ||
+                                           find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), link) == pgrabbed->_listNonCollidingLinks.end();
+                if( isLinkIgnored != (setBodyLinksToIgnore.count(link->GetIndex()) > 0) ) {
+                    ignoringLinksMatch = false;
+                    break;
+                }
+            }
+            if( ignoringLinksMatch ) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool KinBody::IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setBodyLinksToIgnore) const
+{
+    for( const UserDataPtr& grabbedDataPtr : _vGrabbedBodies ) {
+        GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(grabbedDataPtr);
+        KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
+        if( !!pgrabbedbody && pgrabbedbody.get() == &body && pgrabbed->_plinkrobot.get() == &bodyLinkToGrabWith ) {
+            bool ignoringLinksMatch = true;
+            for( const LinkPtr& link : _veclinks ) {
+                const bool isLinkIgnored = find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ||
+                                           find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), link) == pgrabbed->_listNonCollidingLinks.end();
+                if( isLinkIgnored != (setBodyLinksToIgnore.count(link->GetName()) > 0) ) {
+                    ignoringLinksMatch = false;
+                    break;
+                }
+            }
+            if( ignoringLinksMatch ) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void KinBody::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
 {
     vbodies.clear();

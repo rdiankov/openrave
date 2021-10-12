@@ -3193,6 +3193,18 @@ private:
     }
     LinkPtr IsGrabbing(const KinBody &body) const;
 
+    /** \brief Returns true if the body is grabbed with the given robot link.
+     */
+    bool IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const;
+
+    /** \brief Returns true if the body is grabbed with the given robot link and the ignored robot links match.
+     */
+    bool IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore) const;
+
+    /** \brief Returns true if the body is grabbed with the given robot link and the ignored robot links match.
+     */
+    bool IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setBodyLinksToIgnore) const;
+
     /** \brief gets all grabbed bodies of the body
 
         \param[out] vbodies filled with the grabbed bodies
