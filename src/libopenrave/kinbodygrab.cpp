@@ -349,15 +349,19 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
 
         // compare ignored robot links
         bool ignoringLinksMatch = true;
+        size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
         for( const LinkPtr& link : _veclinks ) {
             const bool isLinkIgnored = find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ||
                                        find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), link) == pgrabbed->_listNonCollidingLinks.end();
+            if( isLinkIgnored ) {
+                ++numIgnoredLinks;
+            }
             if( isLinkIgnored != (setBodyLinksToIgnore.count(link->GetIndex()) > 0) ) {
                 ignoringLinksMatch = false;
                 break;
             }
         }
-        if( ignoringLinksMatch ) {
+        if( ignoringLinksMatch && numIgnoredLinks == setBodyLinksToIgnore.size() ) {
             return GICR_Identical;
         }
     }
@@ -385,15 +389,19 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
 
         // compare ignored robot links
         bool ignoringLinksMatch = true;
+        size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
         for( const LinkPtr& link : _veclinks ) {
             const bool isLinkIgnored = find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ||
                                        find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), link) == pgrabbed->_listNonCollidingLinks.end();
+            if( isLinkIgnored ) {
+                ++numIgnoredLinks;
+            }
             if( isLinkIgnored != (setBodyLinksToIgnore.count(link->GetName()) > 0) ) {
                 ignoringLinksMatch = false;
                 break;
             }
         }
-        if( ignoringLinksMatch ) {
+        if( ignoringLinksMatch && numIgnoredLinks == setBodyLinksToIgnore.size() ) {
             return GICR_Identical;
         }
     }
