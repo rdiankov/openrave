@@ -306,9 +306,9 @@ KinBody::LinkPtr KinBody::IsGrabbing(const KinBody &body) const
     return LinkPtr();
 }
 
-int KinBody::IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const
+int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const
 {
-    GrabbedInfoComparisonResult defaultErrorCode = GICR_BodyNotGrabbed;
+    GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
     for( const UserDataPtr& grabbedDataPtr : _vGrabbedBodies ) {
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(grabbedDataPtr);
         KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
@@ -328,9 +328,9 @@ int KinBody::IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLi
     return defaultErrorCode;
 }
 
-int KinBody::IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore) const
+int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore) const
 {
-    GrabbedInfoComparisonResult defaultErrorCode = GICR_BodyNotGrabbed;
+    GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
     for( const UserDataPtr& grabbedDataPtr : _vGrabbedBodies ) {
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(grabbedDataPtr);
         KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
@@ -364,9 +364,9 @@ int KinBody::IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLi
     return defaultErrorCode;
 }
 
-int KinBody::IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setBodyLinksToIgnore) const
+int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setBodyLinksToIgnore) const
 {
-    GrabbedInfoComparisonResult defaultErrorCode = GICR_BodyNotGrabbed;
+    GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
     for( const UserDataPtr& grabbedDataPtr : _vGrabbedBodies ) {
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(grabbedDataPtr);
         KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();

@@ -312,8 +312,8 @@ public:
     void ReleaseAllGrabbedWithLink(py::object pylink);
     void RegrabAll();
     py::object IsGrabbing(PyKinBodyPtr pbody) const;
-    int IsGrabbingWithLink(PyKinBodyPtr pbody, py::object pylink) const;
-    int IsGrabbingWithLink(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore) const;
+    int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink) const;
+    int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore) const;
     int GetNumGrabbed() const;
     py::object GetGrabbed() const;
     py::object GetGrabbedInfo(py::object ograbbedname=py::none_()) const;

@@ -3193,8 +3193,8 @@ private:
     }
     LinkPtr IsGrabbing(const KinBody &body) const;
 
-    /// \brief Result of IsGrabbingWithLink() call
-    enum GrabbedInfoComparisonResult
+    /// \brief Result of CheckGrabbedInfo() call
+    enum GrabbedInfoCheckResult
     {
         GICR_Identical = 0, ///< Specified body is grabbed with specified grabbing link (and optionally, specified ignored links)
         GICR_BodyNotGrabbed = 1,  //< Specified body is not grabbed
@@ -3205,17 +3205,17 @@ private:
     /** \brief Checks whether a body is grabbed with the given robot link.
      *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
      */
-    int IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const;
+    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const;
 
     /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
      *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
      */
-    int IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore) const;
+    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore) const;
 
     /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
      *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
      */
-    int IsGrabbingWithLink(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setBodyLinksToIgnore) const;
+    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setBodyLinksToIgnore) const;
 
     /** \brief gets all grabbed bodies of the body
 
