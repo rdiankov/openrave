@@ -986,6 +986,10 @@ GraphHandlePtr QtCoinViewer::drawbox(const RaveVector<float>& vpos, const RaveVe
     pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
+GraphHandlePtr QtCoinViewer::drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents) {
+    // not implemented
+    return GraphHandlePtr();
+}
 
 class DrawPlaneMessage : public QtCoinViewer::EnvMessage
 {
