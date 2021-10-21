@@ -283,7 +283,7 @@ PlannerAction PyPlannerBase::_PlanCallback(object fncallback, PyEnvironmentBaseP
         PyErr_Print();
     }
     PlannerAction ret = PA_None;
-    if( IS_PYTHONOBJECT_NONE(res) || !res ) {
+    if( IS_PYTHONOBJECT_NONE(res) ) {
         ret = PA_None;
         RAVELOG_WARN("plan callback nothing returning, so executing default action\n");
     }
