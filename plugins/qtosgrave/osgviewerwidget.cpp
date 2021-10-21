@@ -663,9 +663,13 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
         _osgHudText->setBackdropColor(osg::Vec4(1,1,1,1));
         //setBackdropOffset
         _osgHudText->setColor(osg::Vec4(0,0,0,1));
-        //use prettier font
-        osg::ref_ptr<osgText::Font> font = osgText::readRefFontFile("./fonts/NotoSans-Regular.ttf");
-        _osgHudText->setFont(font);
+        // use prettier font
+        QFile fontFile(":/fonts/NotoSans-Regular.ttf");
+        fontFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered);
+        QByteArray ba = fontFile.readAll();
+        std::istringstream fontStream(ba.toStdString());
+        _osgHudText->setFont(osgText::readFontStream(fontStream));
+        fontFile.close();
 
         _osgHudText->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
 
