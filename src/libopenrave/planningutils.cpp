@@ -3729,9 +3729,14 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
                 // If frem > 0, this dof is reaching the next extrema before having moved for its resolution.
                 dReal frem = fdistanceallowance - RaveFabs(fdiffvalue);
-                bool bFound = true;
+                bool bFound = true; // false if we cannot find a suitable fnextvalue
                 while( frem > 0 ) {
                     // In this case, the next critical point is nearer than fdistanceallowance
+                    if( criticalpointindex + 1 == _valldofscriticalpoints[idof].size() ) {
+                        // The end of the segment is reached before having moved for the dof resolution.
+                        bFound = false;
+                        break;
+                    }
 
                     // Update fdistanceallowance
                     fdistanceallowance = fdistanceallowance - RaveFabs(fdiffvalue);
@@ -3739,11 +3744,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
                     criticalpointindex++;
                     vnextcriticalpointindices[idof]++;
-                    if( criticalpointindex == _valldofscriticalpoints[idof].size() ) {
-                        // The end of the segment is reached before having moved for the dof resolution.
-                        bFound = false;
-                        break;
-                    }
 
                     fcriticalvalue = _valldofscriticalvalues[idof][criticalpointindex];
                     fdiffvalue = fcriticalvalue - fnextvalue;
