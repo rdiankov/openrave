@@ -936,7 +936,7 @@ void QOSGViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Inte
                 if( !!geom ) {
                     geomname = geom->GetName();
                 }
-                _strRayInfoText = str(boost::format("mouse\xa0on\xa0%s:%s:%s: (%.5f,\xa0%.5f,\xa0%.5f), n=(%.5f,\xa0%.5f,\xa0%.5f)")%item->GetName()%linkname%geomname%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
+                _strRayInfoText = str(boost::format("mouse\xa0on\xa0%s:%s:%s: (%.2f,\xa0%.2f,\xa0%.2f), n=(%.2f,\xa0%.2f,\xa0%.2f)")%item->GetName()%linkname%geomname%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
                 std::replace(_strRayInfoText.begin(), _strRayInfoText.end(), '-', '\xac');
             }
             else {
@@ -954,7 +954,7 @@ void QOSGViewerWidget::UpdateFromOSG()
         _selectedItem->UpdateFromOSG();
         Transform t = _selectedItem->GetTransform();
         Vector trans = 1000.0 * _metersinunit * t.trans;
-        _strSelectedItemText = str(boost::format("Selected\xa0%s. trans=(%.5f,\xa0%.5f,\xa0%.5f)")%_selectedItem->GetName()%trans.x%trans.y%trans.z);
+        _strSelectedItemText = str(boost::format("Selected\xa0%s. trans=(%.2f,\xa0%.2f,\xa0%.2f)")%_selectedItem->GetName()%trans.x%trans.y%trans.z);
         std::replace(_strSelectedItemText.begin(), _strSelectedItemText.end(), '-', '\xac');
     }
     else {
