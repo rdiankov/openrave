@@ -923,9 +923,9 @@ void QOSGViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Inte
 
             if( !!item ) {
                 osg::Vec3d pos = intersection.getWorldIntersectPoint();
-                pos *= 1000.0;
+                pos *= 1000.0 * _metersinunit;
                 osg::Vec3d normal = intersection.getWorldIntersectNormal();
-                normal *= 1000.0;
+                normal *= 1000.0 * _metersinunit;
                 KinBody::LinkPtr link = item->GetLinkFromOSG(node);
                 std::string linkname;
                 if( !!link ) {
@@ -953,7 +953,7 @@ void QOSGViewerWidget::UpdateFromOSG()
         // have to update the underlying openrave model since dragger is most likely changing the positions
         _selectedItem->UpdateFromOSG();
         Transform t = _selectedItem->GetTransform();
-        Vector trans = 1000.0*t.trans;
+        Vector trans = 1000.0 * _metersinunit * t.trans;
         _strSelectedItemText = str(boost::format("Selected\xa0%s. trans=(%.5f,\xa0%.5f,\xa0%.5f)")%_selectedItem->GetName()%trans.x%trans.y%trans.z);
         std::replace(_strSelectedItemText.begin(), _strSelectedItemText.end(), '-', '\xac');
     }
