@@ -663,7 +663,9 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
         _osgHudText->setBackdropColor(osg::Vec4(1,1,1,1));
         //setBackdropOffset
         _osgHudText->setColor(osg::Vec4(0,0,0,1));
-        //text->setFontResolution(32,32);
+        //use prettier font
+        osg::ref_ptr<osgText::Font> font = osgText::readRefFontFile("./fonts/NotoSans-Regular.ttf");
+        _osgHudText->setFont(font);
 
         _osgHudText->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
 
@@ -917,7 +919,9 @@ void QOSGViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Inte
 
             if( !!item ) {
                 osg::Vec3d pos = intersection.getWorldIntersectPoint();
+                pos *= 1000.0;
                 osg::Vec3d normal = intersection.getWorldIntersectNormal();
+                normal *= 1000.0;
                 KinBody::LinkPtr link = item->GetLinkFromOSG(node);
                 std::string linkname;
                 if( !!link ) {
@@ -928,7 +932,8 @@ void QOSGViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Inte
                 if( !!geom ) {
                     geomname = geom->GetName();
                 }
-                _strRayInfoText = str(boost::format("mouse on %s:%s:%s: (%.5f, %.5f, %.5f), n=(%.5f, %.5f, %.5f)")%item->GetName()%linkname%geomname%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
+                _strRayInfoText = str(boost::format("mouse\xa0on\xa0%s:%s:%s: (%.5f,\xa0%.5f,\xa0%.5f), n=(%.5f,\xa0%.5f,\xa0%.5f)")%item->GetName()%linkname%geomname%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
+                std::replace(_strRayInfoText.begin(), _strRayInfoText.end(), '-', '\xac');
             }
             else {
                 _strRayInfoText.clear();
@@ -944,7 +949,9 @@ void QOSGViewerWidget::UpdateFromOSG()
         // have to update the underlying openrave model since dragger is most likely changing the positions
         _selectedItem->UpdateFromOSG();
         Transform t = _selectedItem->GetTransform();
-        _strSelectedItemText = str(boost::format("Selected %s. trans=(%.5f, %.5f, %.5f)")%_selectedItem->GetName()%t.trans.x%t.trans.y%t.trans.z);
+        Vector trans = 1000.0*t.trans;
+        _strSelectedItemText = str(boost::format("Selected\xa0%s. trans=(%.5f,\xa0%.5f,\xa0%.5f)")%_selectedItem->GetName()%trans.x%trans.y%trans.z);
+        std::replace(_strSelectedItemText.begin(), _strSelectedItemText.end(), '-', '\xac');
     }
     else {
         _strSelectedItemText.clear();
@@ -1144,9 +1151,11 @@ void QOSGViewerWidget::SetViewport(int width, int height)
     osg::Camera *hudcamera = _osghudview->getCamera();
     hudcamera->setViewport(0, 0, width * scale, height * scale);
 
-    double textheight = 12*scale;
+    double textheight = 18*scale;
     _osgHudText->setPosition(osg::Vec3(-width * scale / 2 + 10, height * scale / 2 - textheight, -50));
     _osgHudText->setCharacterSize(textheight);
+    // Set maximum width in order to enforce word wrapping
+    _osgHudText->setMaximumWidth(width * scale - 20);
     _UpdateHUDAxisTransform(width, height);
 }
 
