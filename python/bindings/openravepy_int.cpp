@@ -466,7 +466,7 @@ object toPyArray(const TransformMatrix& t)
 object toPyArray(const Transform& t)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvalues({7});
+    py::array_t<dReal> pyvalues(7);
     py::buffer_info buf = pyvalues.request();
     dReal* pvalue = (dReal*) buf.ptr;
     pvalue[0] = t.rot.x;
@@ -1603,7 +1603,7 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
     dReal* ppos = (dReal*) bufpos.ptr;
 
     // collision
-    py::array_t<bool> pycollision({nRays});
+    py::array_t<bool> pycollision(nRays);
     py::buffer_info bufcollision = pycollision.request();
     bool* pcollision = (bool*) bufcollision.ptr;
     if( nRays > 0 ) {
