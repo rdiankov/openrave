@@ -695,7 +695,7 @@ public:
     py::object GetChunks() const
     {
         py::list pychunks;
-        for( size_t ichunk = 0; ichunk < dof; ++ichunk ) {
+        for( size_t ichunk = 0; ichunk < _ptraj->vchunks.size(); ++ichunk ) {
             piecewisepolynomials::Chunk& chunk = _ptraj->vchunks[ichunk];
             pychunks.append(PyChunkPtr(new PyChunk(chunk.duration, chunk.vpolynomials)));
         }
