@@ -3414,43 +3414,46 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     // Compute coefficients for all dofs. **Strongest term first**
     _valldofscoeffs.resize(params->GetDOF());
 
-    dReal epsilon; // used as a threshold for various checks to follow
-    switch( maskinterpolation ) {
-    case IT_Cubic:
-        epsilon = g_fEpsilonCubic;
-        for( size_t idof = 0; idof < ndof; ++idof ) {
-            _valldofscoeffs[idof].resize(4); // 4 coefficients for a cubic polynomial
-            mathextra::computecubiccoeffs(q0.at(idof), q1.at(idof), dq0.at(idof), dq1.at(idof), ddq0.at(idof), ddq1.at(idof), timeelapsed, &_valldofscoeffs[idof][0]);
+    dReal epsilon = g_fEpsilon; // used as a threshold for various checks to follow
 
-            // Since the problem is overdetermined, need to make sure that the given boundary conditions
-            // (positions, velocities, and accelerations) are consistent.
-            if( true ) {//( IS_DEBUGLEVEL(Level_Verbose) || IS_DEBUGLEVEL(Level_VerifyPlans) ) {
-                std::vector<dReal>& vcoeffs = _valldofscoeffs[idof];
-                dReal temp1 = 3*vcoeffs[0]*timeelapsed;
-                dReal temp2 = 2*vcoeffs[1];
+    if( timeelapsed > 0 && dq0.size() == ndof && dq1.size() == ndof && ddq0.size() == ndof && ddq1.size() == ndof ) {
+        switch( maskinterpolation ) {
+        case IT_Cubic:
+            epsilon = g_fEpsilonCubic;
+            for( size_t idof = 0; idof < ndof; ++idof ) {
+                _valldofscoeffs[idof].resize(4); // 4 coefficients for a cubic polynomial
+                mathextra::computecubiccoeffs(q0.at(idof), q1.at(idof), dq0.at(idof), dq1.at(idof), ddq0.at(idof), ddq1.at(idof), timeelapsed, &_valldofscoeffs[idof][0]);
 
-                // p'(t) = 3*a*t^2 + 2*b*t + c. Check |p'(timeelapsed) - v1|.
-                dReal velocityError = RaveFabs( ((temp1 + temp2)*timeelapsed + vcoeffs[2]) - dq1.at(idof) );
-                OPENRAVE_ASSERT_OP_FORMAT(velocityError, <=, g_fEpsilonCubic, "dof %d final velocity is not consistent", idof, ORE_InvalidArguments);
+                // Since the problem is overdetermined, need to make sure that the given boundary conditions
+                // (positions, velocities, and accelerations) are consistent.
+                if( true ) {//( IS_DEBUGLEVEL(Level_Verbose) || IS_DEBUGLEVEL(Level_VerifyPlans) ) {
+                    std::vector<dReal>& vcoeffs = _valldofscoeffs[idof];
+                    dReal temp1 = 3*vcoeffs[0]*timeelapsed;
+                    dReal temp2 = 2*vcoeffs[1];
 
-                // p''(t) = 6*a*t + 2*b. Check |p''(timeelapsed) - a1|.
-                dReal accelerationError = RaveFabs( (2*temp1 + temp2) - ddq1.at(idof) );
-                OPENRAVE_ASSERT_OP_FORMAT(velocityError, <=, 100*g_fEpsilonCubic, "dof %d final acceleration is not consistent", idof, ORE_InvalidArguments);
+                    // p'(t) = 3*a*t^2 + 2*b*t + c. Check |p'(timeelapsed) - v1|.
+                    dReal velocityError = RaveFabs( ((temp1 + temp2)*timeelapsed + vcoeffs[2]) - dq1.at(idof) );
+                    OPENRAVE_ASSERT_OP_FORMAT(velocityError, <=, g_fEpsilonCubic, "dof %d final velocity is not consistent", idof, ORE_InvalidArguments);
+
+                    // p''(t) = 6*a*t + 2*b. Check |p''(timeelapsed) - a1|.
+                    dReal accelerationError = RaveFabs( (2*temp1 + temp2) - ddq1.at(idof) );
+                    OPENRAVE_ASSERT_OP_FORMAT(velocityError, <=, 100*g_fEpsilonCubic, "dof %d final acceleration is not consistent", idof, ORE_InvalidArguments);
+                }
             }
-        }
-        break;
-    case IT_Quintic:
-        epsilon = g_fEpsilonQuintic;
-        for( size_t idof = 0; idof < ndof; ++idof ) {
-            _valldofscoeffs[idof].resize(6);
-            mathextra::computequinticcoeffs(q0.at(idof), q1.at(idof), dq0.at(idof), dq1.at(idof), ddq0.at(idof), ddq1.at(idof), timeelapsed, &_valldofscoeffs[idof][0]);
-        }
-        // There is a unique set of coefficients for a set of boundary conditions. No further
-        // consistency check is needed.
-        break;
-    default:
-        throw OPENRAVE_EXCEPTION_FORMAT("Unrecognized interpolation type %d", maskinterpolation, ORE_InvalidArguments);
-    } // end switch maskinterpolation
+            break;
+        case IT_Quintic:
+            epsilon = g_fEpsilonQuintic;
+            for( size_t idof = 0; idof < ndof; ++idof ) {
+                _valldofscoeffs[idof].resize(6);
+                mathextra::computequinticcoeffs(q0.at(idof), q1.at(idof), dq0.at(idof), dq1.at(idof), ddq0.at(idof), ddq1.at(idof), timeelapsed, &_valldofscoeffs[idof][0]);
+            }
+            // There is a unique set of coefficients for a set of boundary conditions. No further
+            // consistency check is needed.
+            break;
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT("Unrecognized interpolation type %d", maskinterpolation, ORE_InvalidArguments);
+        } // end switch maskinterpolation
+    }
 
     _valldofscriticalpoints.resize(params->GetDOF());
     _valldofscriticalvalues.resize(params->GetDOF());
@@ -3471,81 +3474,47 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     const std::vector<dReal>& vConfigResolution = params->_vConfigResolution;
     std::vector<dReal>::const_iterator itres = vConfigResolution.begin();
     BOOST_ASSERT(vConfigResolution.size() == ndof);
-    for( int idof = 0; idof < (int)ndof; ++idof, ++itres ) {
-        dReal fabsdist = 0; // the total distance this DOF travels along this path
-        int steps = 0;      // the number of steps this dof needs to travel along the path
-        int numcriticalpoints = 0;
-        // TODO: maybe need a better way to handle zero leading coeff
-        switch( maskinterpolation ) {
-        case IT_Cubic:
-            _valldofscriticalpoints[idof].resize(4); // there could be no more than 2 inflection points for a cubic polynomial
-            _valldofscriticalvalues[idof].resize(4); // there could be no more than 2 inflection points for a cubic polynomial
-            if( _valldofscoeffs[idof][0] != 0 ) {
-                mathextra::computecubiccriticalpoints(&_valldofscoeffs[idof][0], &_valldofscriticalpoints[idof][0], numcriticalpoints);
-            }
-            else if( _valldofscoeffs[idof][1] != 0 ) {
-                mathextra::computequadraticcriticalpoints(&_valldofscoeffs[idof][1], &_valldofscriticalpoints[idof][0], numcriticalpoints);
-            }
-            break;
-        case IT_Quintic:
-            _valldofscriticalpoints[idof].resize(6); // there could be no more than 4 inflection points for a quintic polynomial
-            _valldofscriticalvalues[idof].resize(6); // there could be no more than 4 inflection points for a quintic polynomial
-            if( _valldofscoeffs[idof][0] != 0 ) {
-                mathextra::computequinticcriticalpoints(&_valldofscoeffs[idof][0], &_valldofscriticalpoints[idof][0], numcriticalpoints);
-            }
-            else if( _valldofscoeffs[idof][1] != 0 ) {
-                mathextra::computequarticcriticalpoints(&_valldofscoeffs[idof][1], &_valldofscriticalpoints[idof][0], numcriticalpoints);
-            }
-            else if( _valldofscoeffs[idof][2] != 0 ) {
-                mathextra::computecubiccriticalpoints(&_valldofscoeffs[idof][2], &_valldofscriticalpoints[idof][0], numcriticalpoints);
-            }
-            else if( _valldofscoeffs[idof][3] != 0 ) {
-                mathextra::computequadraticcriticalpoints(&_valldofscoeffs[idof][3], &_valldofscriticalpoints[idof][0], numcriticalpoints);
-            }
-            break;
-        default:
-            BOOST_ASSERT(0);
-        } // end switch maskinterpolation
-
-        if( numcriticalpoints == 0 ) {
-            // This dof moves monotonically from q0[idof] to q1[idof]
-            fabsdist = RaveFabs(dQ[idof]);
-
-            _valldofscriticalpoints[idof].resize(2);
-            _valldofscriticalpoints[idof][0] = 0;
-            _valldofscriticalpoints[idof][1] = timeelapsed;
-
-            _valldofscriticalvalues[idof].resize(2);
-            _valldofscriticalvalues[idof][0] = q0[idof];
-            _valldofscriticalvalues[idof][1] = q1[idof];
-        }
-        else {
-            BOOST_ASSERT(numcriticalpoints > 0);
-            // Sort the values and filter out the values that are not in the range [0, timeelapsed].
-            std::sort(_valldofscriticalpoints[idof].begin(), _valldofscriticalpoints[idof].begin() + numcriticalpoints);
-            size_t writeIndex = 0;
-            for( size_t readIndex = 0; readIndex < (size_t)numcriticalpoints; ++readIndex ) {
-                if( _valldofscriticalpoints[idof][readIndex] >= 0 && _valldofscriticalpoints[idof][readIndex] <= timeelapsed ) {
-                    if( readIndex > writeIndex ) {
-                        _valldofscriticalpoints[idof][writeIndex] = _valldofscriticalpoints[idof][readIndex];
-                    }
-
-                    switch( maskinterpolation ) {
-                    case IT_Cubic:
-                        mathextra::evaluatecubic(&_valldofscoeffs[idof][0], _valldofscriticalpoints[idof][writeIndex], _valldofscriticalvalues[idof][writeIndex]);
-                        break;
-                    case IT_Quintic:
-                        mathextra::evaluatequintic(&_valldofscoeffs[idof][0], _valldofscriticalpoints[idof][writeIndex], _valldofscriticalvalues[idof][writeIndex]);
-                        break;
-                    default:
-                        BOOST_ASSERT(0);
-                    } // end switch maskinterpolation
-
-                    ++writeIndex;
+    if( timeelapsed > 0 && dq0.size() == ndof && dq1.size() == ndof && ddq0.size() == ndof && ddq1.size() == ndof ) {
+        for( int idof = 0; idof < (int)ndof; ++idof, ++itres ) {
+            dReal fabsdist = 0; // the total distance this DOF travels along this path
+            int steps = 0;      // the number of steps this dof needs to travel along the path
+            int numcriticalpoints = 0;
+            // TODO: maybe need a better way to handle zero leading coeff
+            switch( maskinterpolation ) {
+            case IT_Cubic:
+                _valldofscriticalpoints[idof].resize(4); // there could be no more than 2 inflection points for a cubic polynomial
+                _valldofscriticalvalues[idof].resize(4); // there could be no more than 2 inflection points for a cubic polynomial
+                if( _valldofscoeffs[idof][0] != 0 ) {
+                    mathextra::computecubiccriticalpoints(&_valldofscoeffs[idof][0], &_valldofscriticalpoints[idof][0], numcriticalpoints);
                 }
-            }
-            if( writeIndex == 0 ) {
-                // No inflection point in [0, timeelapsed]. Just add t = 0 and t = timeelapsed to the list.
+                else if( _valldofscoeffs[idof][1] != 0 ) {
+                    mathextra::computequadraticcriticalpoints(&_valldofscoeffs[idof][1], &_valldofscriticalpoints[idof][0], numcriticalpoints);
+                }
+                break;
+            case IT_Quintic:
+                _valldofscriticalpoints[idof].resize(6); // there could be no more than 4 inflection points for a quintic polynomial
+                _valldofscriticalvalues[idof].resize(6); // there could be no more than 4 inflection points for a quintic polynomial
+                if( _valldofscoeffs[idof][0] != 0 ) {
+                    mathextra::computequinticcriticalpoints(&_valldofscoeffs[idof][0], &_valldofscriticalpoints[idof][0], numcriticalpoints);
+                }
+                else if( _valldofscoeffs[idof][1] != 0 ) {
+                    mathextra::computequarticcriticalpoints(&_valldofscoeffs[idof][1], &_valldofscriticalpoints[idof][0], numcriticalpoints);
+                }
+                else if( _valldofscoeffs[idof][2] != 0 ) {
+                    mathextra::computecubiccriticalpoints(&_valldofscoeffs[idof][2], &_valldofscriticalpoints[idof][0], numcriticalpoints);
+                }
+                else if( _valldofscoeffs[idof][3] != 0 ) {
+                    mathextra::computequadraticcriticalpoints(&_valldofscoeffs[idof][3], &_valldofscriticalpoints[idof][0], numcriticalpoints);
+                }
+                break;
+            default:
+                BOOST_ASSERT(0);
+            } // end switch maskinterpolation
+
+            if( numcriticalpoints == 0 ) {
+                // This dof moves monotonically from q0[idof] to q1[idof]
+                fabsdist = RaveFabs(dQ[idof]);
+
                 _valldofscriticalpoints[idof].resize(2);
                 _valldofscriticalpoints[idof][0] = 0;
                 _valldofscriticalpoints[idof][1] = timeelapsed;
@@ -3555,43 +3524,95 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 _valldofscriticalvalues[idof][1] = q1[idof];
             }
             else {
-                // Need to check if t = 0 and t = timeelapsed have already been added to the list
-                if( RaveFabs(_valldofscriticalpoints[idof].front()) > epsilon ) {
-                    _valldofscriticalpoints[idof].insert(_valldofscriticalpoints[idof].begin(), 0);
-                    _valldofscriticalvalues[idof].insert(_valldofscriticalvalues[idof].begin(), q0[idof]);
-                    writeIndex++;
+                BOOST_ASSERT(numcriticalpoints > 0);
+                // Sort the values and filter out the values that are not in the range [0, timeelapsed].
+                std::sort(_valldofscriticalpoints[idof].begin(), _valldofscriticalpoints[idof].begin() + numcriticalpoints);
+                size_t writeIndex = 0;
+                for( size_t readIndex = 0; readIndex < (size_t)numcriticalpoints; ++readIndex ) {
+                    if( _valldofscriticalpoints[idof][readIndex] >= 0 && _valldofscriticalpoints[idof][readIndex] <= timeelapsed ) {
+                        if( readIndex > writeIndex ) {
+                            _valldofscriticalpoints[idof][writeIndex] = _valldofscriticalpoints[idof][readIndex];
+                        }
+
+                        switch( maskinterpolation ) {
+                        case IT_Cubic:
+                            mathextra::evaluatecubic(&_valldofscoeffs[idof][0], _valldofscriticalpoints[idof][writeIndex], _valldofscriticalvalues[idof][writeIndex]);
+                            break;
+                        case IT_Quintic:
+                            mathextra::evaluatequintic(&_valldofscoeffs[idof][0], _valldofscriticalpoints[idof][writeIndex], _valldofscriticalvalues[idof][writeIndex]);
+                            break;
+                        default:
+                            BOOST_ASSERT(0);
+                        } // end switch maskinterpolation
+
+                        ++writeIndex;
+                    }
                 }
-                if( RaveFabs(_valldofscriticalpoints[idof].back() - timeelapsed) > epsilon ) {
-                    _valldofscriticalpoints[idof][writeIndex] = timeelapsed;
-                    _valldofscriticalvalues[idof][writeIndex] = q1[idof];
-                    writeIndex++;
+                if( writeIndex == 0 ) {
+                    // No inflection point in [0, timeelapsed]. Just add t = 0 and t = timeelapsed to the list.
+                    _valldofscriticalpoints[idof].resize(2);
+                    _valldofscriticalpoints[idof][0] = 0;
+                    _valldofscriticalpoints[idof][1] = timeelapsed;
+
+                    _valldofscriticalvalues[idof].resize(2);
+                    _valldofscriticalvalues[idof][0] = q0[idof];
+                    _valldofscriticalvalues[idof][1] = q1[idof];
                 }
-                _valldofscriticalpoints[idof].resize(writeIndex);
-                _valldofscriticalvalues[idof].resize(writeIndex);
+                else {
+                    // Need to check if t = 0 and t = timeelapsed have already been added to the list
+                    if( RaveFabs(_valldofscriticalpoints[idof].front()) > epsilon ) {
+                        _valldofscriticalpoints[idof].insert(_valldofscriticalpoints[idof].begin(), 0);
+                        _valldofscriticalvalues[idof].insert(_valldofscriticalvalues[idof].begin(), q0[idof]);
+                        writeIndex++;
+                    }
+                    if( RaveFabs(_valldofscriticalpoints[idof].back() - timeelapsed) > epsilon ) {
+                        _valldofscriticalpoints[idof][writeIndex] = timeelapsed;
+                        _valldofscriticalvalues[idof][writeIndex] = q1[idof];
+                        writeIndex++;
+                    }
+                    _valldofscriticalpoints[idof].resize(writeIndex);
+                    _valldofscriticalvalues[idof].resize(writeIndex);
+                }
+
+                // Compute accumulated distance
+                dReal fprevvalue = q0[idof];
+                for( size_t ipoint = 1; ipoint < _valldofscriticalpoints[idof].size(); ++ipoint ) {
+                    fabsdist += RaveFabs(_valldofscriticalvalues[idof][ipoint] - fprevvalue);
+                    fprevvalue = _valldofscriticalvalues[idof][ipoint];
+                }
+            }
+            if( *itres != 0 ) {
+                steps = (int)(fabsdist / *itres + 0.99);
+            }
+            else {
+                steps = (int)(fabsdist * 100);
             }
 
-            // Compute accumulated distance
-            dReal fprevvalue = q0[idof];
-            for( size_t ipoint = 1; ipoint < _valldofscriticalpoints[idof].size(); ++ipoint ) {
-                fabsdist += RaveFabs(_valldofscriticalvalues[idof][ipoint] - fprevvalue);
-                fprevvalue = _valldofscriticalvalues[idof][ipoint];
+            totalSteps += steps;
+            if( steps > numSteps ) {
+                nLargestStepIndex = idof;
+                numSteps = steps;
+            }
+        } // end for loop iterating through each dof to find discretization steps.
+
+        // RAVELOG_VERBOSE_FORMAT("env=%d, nLargestStepIndex=%d; numSteps=%d; totalSteps=%d", _environmentid%nLargestStepIndex%numSteps%totalSteps);
+    }
+    else {
+        for( int idof = 0; idof < (int)ndof; ++idof, ++itres) {
+            int steps;
+            if( *itres != 0 ) {
+                steps = (int)(RaveFabs(dQ[idof]) / *itres + 0.99);
+            }
+            else {
+                steps = (int)(RaveFabs(dQ[idof]) * 100);
+            }
+            totalSteps += steps;
+            if (steps > numSteps) {
+                numSteps = steps;
+                nLargestStepIndex = idof;
             }
         }
-        if( *itres != 0 ) {
-            steps = (int)(fabsdist / *itres + 0.99);
-        }
-        else {
-            steps = (int)(fabsdist * 100);
-        }
-
-        totalSteps += steps;
-        if( steps > numSteps ) {
-            nLargestStepIndex = idof;
-            numSteps = steps;
-        }
-    } // end for loop iterating through each dof to find discretization steps.
-
-    // RAVELOG_VERBOSE_FORMAT("env=%d, nLargestStepIndex=%d; numSteps=%d; totalSteps=%d", _environmentid%nLargestStepIndex%numSteps%totalSteps);
+    }
 
     // If nothing moves, just return.
     if( totalSteps == 0 && start > 0 ) {
