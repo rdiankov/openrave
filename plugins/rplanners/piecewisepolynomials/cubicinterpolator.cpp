@@ -302,7 +302,65 @@ PolynomialCheckReturn CubicInterpolator::ComputeNDTrajectoryArbitraryTimeDerivat
                                                                                                   const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
                                                                                                   std::vector<Chunk>& chunks)
 {
-    throw OPENRAVE_EXCEPTION_FORMAT0("ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration not implemented", ORE_NotImplemented);
+    OPENRAVE_ASSERT_OP(x0Vect.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(x1Vect.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(v0Vect.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(v1Vect.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(xminVect.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(xmaxVect.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(vmVect.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(amVect.size(), ==, ndof);
+
+    // Check inputs
+    for( size_t idof = 0; idof < ndof; ++idof ) {
+        const dReal& xmin = xminVect[idof];
+        const dReal& xmax = xmaxVect[idof];
+        const dReal& vm = vmVect[idof];
+        const dReal& am = amVect[idof];
+        if( x0Vect[idof] > xmax + g_fPolynomialEpsilon || x0Vect[idof] < xmin - g_fPolynomialEpsilon ) {
+            return PolynomialCheckReturn::PCR_PositionLimitsViolation;
+        }
+        if( x1Vect[idof] > xmax + g_fPolynomialEpsilon || x1Vect[idof] < xmin - g_fPolynomialEpsilon ) {
+            return PolynomialCheckReturn::PCR_PositionLimitsViolation;
+        }
+        if( v0Vect[idof] > vm + g_fPolynomialEpsilon || v0Vect[idof] < -vm - g_fPolynomialEpsilon ) {
+            return PolynomialCheckReturn::PCR_VelocityLimitsViolation;
+        }
+        if( v1Vect[idof] > vm + g_fPolynomialEpsilon || v1Vect[idof] < -vm - g_fPolynomialEpsilon ) {
+            return PolynomialCheckReturn::PCR_VelocityLimitsViolation;
+        }
+        if( a0Vect[idof] > am + g_fPolynomialEpsilon || a0Vect[idof] < -am - g_fPolynomialEpsilon ) {
+            return PolynomialCheckReturn::PCR_AccelerationLimitsViolation;
+        }
+        if( a1Vect[idof] > am + g_fPolynomialEpsilon || a1Vect[idof] < -am - g_fPolynomialEpsilon ) {
+            return PolynomialCheckReturn::PCR_AccelerationLimitsViolation;
+        }
+    }
+
+    for( size_t idof = 0; idof < ndof; ++idof ) {
+        PolynomialCheckReturn ret = Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(
+            x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], a0Vect[idof], a1Vect[idof], T,
+            xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], jmVect[idof],
+            _cachePWPolynomials[idof]);
+        if( ret != PolynomialCheckReturn::PCR_Normal ) {
+            RAVELOG_VERBOSE_FORMAT("env=%d, interpolation failed idof=%d; T=%.15f; x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15f; a0=%.15f; a1=%.15f; xmin=%.15f; xmax=%.15f; vm=%.15f; am=%.15f; jm=%.15f; ret=%s",
+                                   envid%idof%T%x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%a0Vect[idof]%a1Vect[idof]
+                                   %xminVect[idof]%xmaxVect[idof]%vmVect[idof]%amVect[idof]%jmVect[idof]
+                                   %GetPolynomialCheckReturnString(ret));
+            return ret;
+        }
+        if( !FuzzyEquals(T, _cachePWPolynomials[idof].GetDuration(), g_fPolynomialEpsilon) ) {
+            RAVELOG_VERBOSE_FORMAT("env=%d, interpolation failed idof=%d; T=%.15f; x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15f; a0=%.15f; a1=%.15f; xmin=%.15f; xmax=%.15f; vm=%.15f; am=%.15f; jm=%.15f; ret=%s",
+                                   envid%idof%T%x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%a0Vect[idof]%a1Vect[idof]
+                                   %xminVect[idof]%xmaxVect[idof]%vmVect[idof]%amVect[idof]%jmVect[idof]
+                                   %GetPolynomialCheckReturnString(ret));
+            return PolynomialCheckReturn::PCR_DurationDiscrepancy;
+        }
+    }
+
+    ConvertPiecewisePolynomialsToChunks(_cachePWPolynomials, chunks);
+    return checker.CheckChunks(chunks, xminVect, xmaxVect, vmVect, amVect, jmVect,
+                               x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect);
 }
 
 PolynomialCheckReturn CubicInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
