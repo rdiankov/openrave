@@ -213,6 +213,7 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
             vmax = vHat;
             if( FuzzyEquals(vHat, upperBounds.at(velocityIndex) + 1, epsilon) ) {
                 // Step 14
+                RAVELOG_VERBOSE_FORMAT("env=%d, failed to find a valid solution", envid);
                 return PolynomialCheckReturn::PCR_GenericError;
             }
         }
@@ -235,6 +236,7 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     } // end for
 
     if( !bSuccess ) {
+        RAVELOG_VERBOSE_FORMAT("env=%d, interpolation failed. max interations %d reached", envid%maxIters);
         return PolynomialCheckReturn::PCR_GenericError;
     }
 
