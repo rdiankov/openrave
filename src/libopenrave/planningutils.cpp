@@ -1311,6 +1311,9 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
         else if( interpolation.size() == 0 || interpolation == "quadratic" ) {
             newplannername = "parabolictrajectoryretimer";
         }
+        else if( interpolation == "cubic" ) {
+            newplannername = "cubictrajectoryretimer2";
+        }
         else if( interpolation == "quintic" ) {
             newplannername = "quintictrajectoryretimer";
         }
