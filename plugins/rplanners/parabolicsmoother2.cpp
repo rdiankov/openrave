@@ -384,7 +384,8 @@ public:
 
     bool _InitPlan()
     {
-        if( _parameters->_nMaxIterations <= 0 ) {
+        // Allow using max iterations = 0. In such cases, will only do initial time-parameterization.
+        if( _parameters->_nMaxIterations < 0 ) {
             _parameters->_nMaxIterations = 100;
         }
 
@@ -714,7 +715,7 @@ public:
 #ifdef SMOOTHER2_ENABLE_MERGING
             int nummerges = 0;
 #endif
-            if( !!parameters->_setstatevaluesfn ) {
+            if( !!parameters->_setstatevaluesfn && _parameters->_nMaxIterations > 0 ) {
                 // TODO: add a check here so that we do merging only when the initial path is linear (i.e. comes directly from a linear smoother or RRT)
 #ifdef SMOOTHER2_TIMING_DEBUG
                 _tShortcutStart = utils::GetMicroTime();
