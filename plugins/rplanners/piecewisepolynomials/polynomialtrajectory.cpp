@@ -593,6 +593,10 @@ Polynomial PiecewisePolynomial::ExtractPolynomial(const dReal t0, const dReal t1
     size_t index0, index1;
     dReal remainder0, remainder1;
     FindPolynomialIndex(t0, index0, remainder0);
+    // TODO: Is the following ok? We need the following check since we allow initializing a polynomial with zero duration.
+    while( _vpolynomials[index0].duration == 0 ) {
+        ++index0;
+    }
     FindPolynomialIndex(t1, index1, remainder1);
     if( index0 != index1 ) {
         OPENRAVE_ASSERT_OP(index0 + 1, ==, index1);
