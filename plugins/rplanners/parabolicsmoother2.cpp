@@ -734,6 +734,9 @@ public:
                     return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%_environmentid), PS_Interrupted);
                 }
             }
+            else {
+                RAVELOG_DEBUG_FORMAT("env=%s, skip shortcutting since nMaxIterations=%d", _environmentid%_parameters->_nMaxIterations);
+            }
 
             ++_progress._iteration;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
