@@ -931,7 +931,6 @@ void QOSGViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Inte
                 osg::Vec3d pos = intersection.getWorldIntersectPoint();
                 pos *= 1000.0 * _metersinunit;
                 osg::Vec3d normal = intersection.getWorldIntersectNormal();
-                normal *= 1000.0 * _metersinunit;
                 KinBody::LinkPtr link = item->GetLinkFromOSG(node);
                 std::string linkname;
                 if( !!link ) {
@@ -942,7 +941,7 @@ void QOSGViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Inte
                 if( !!geom ) {
                     geomname = geom->GetName();
                 }
-                _strRayInfoText = str(boost::format("mouse\xa0on\xa0%s:%s:%s: (%.2f,\xa0%.2f,\xa0%.2f), n=(%.2f,\xa0%.2f,\xa0%.2f)")%item->GetName()%linkname%geomname%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
+                _strRayInfoText = str(boost::format("mouse\xa0on\xa0%s:%s:%s: (%.2f,\xa0%.2f,\xa0%.2f), n=(%.5f,\xa0%.5f,\xa0%.5f)")%item->GetName()%linkname%geomname%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
                 std::replace(_strRayInfoText.begin(), _strRayInfoText.end(), '-', '\xac');
             }
             else {
