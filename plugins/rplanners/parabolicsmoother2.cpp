@@ -735,7 +735,7 @@ public:
                 }
             }
             else {
-                RAVELOG_DEBUG_FORMAT("env=%s, skip shortcutting since nMaxIterations=%d", _environmentid%_parameters->_nMaxIterations);
+                RAVELOG_DEBUG_FORMAT("env=%d, skip shortcutting since nMaxIterations=%d", _environmentid%_parameters->_nMaxIterations);
             }
 
             ++_progress._iteration;
@@ -3232,7 +3232,7 @@ protected:
                 }
 
                 if( shortcutRampNDVectOut.size() == 0 ) {
-                    RAVELOG_WARN("shortcutpath is empty!\n");
+                    RAVELOG_WARN_FORMAT("env=%d, shortcutpath is empty!", _environmentid);
                     continue;
                 }
 
