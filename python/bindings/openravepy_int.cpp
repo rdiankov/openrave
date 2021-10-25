@@ -1112,7 +1112,7 @@ CollisionAction PyEnvironmentBase::_CollisionCallback(object fncallback, Collisi
         PyErr_Print();
     }
     CollisionAction ret = CA_DefaultAction;
-    if( IS_PYTHONOBJECT_NONE(res) || !res ) {
+    if( IS_PYTHONOBJECT_NONE(res) ) {
         ret = CA_DefaultAction;
         RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
     }
