@@ -421,35 +421,35 @@ protected:
             if( info->ptraj->GetNumWaypoints() == 0) {
                 // Add the initial switch point only for the first point in the trajectory
                 bIncludeFirstPoint = true;
-                _vtrajpoints.resize(ndof*2);
+                _vtrajpoints.resize(ndof*(_cacheInterpolatedChunks.size() + 1));
             }
             else {
-                _vtrajpoints.resize(ndof);
+                _vtrajpoints.resize(ndof*_cacheInterpolatedChunks.size());
             }
             std::vector<dReal>::iterator ittargetdata = _vtrajpoints.begin();
 
-            // For now suppose that _cacheInterpolatedChunks contains only one chunk
-            const PiecewisePolynomials::Chunk& resultChunk = _cacheInterpolatedChunks.front();
-
             if( bIncludeFirstPoint ) {
+                const PiecewisePolynomials::Chunk& firstChunk = _cacheInterpolatedChunks.front();
                 for (int j = 0; j < info->gPos.dof; ++j) {
-                    *(ittargetdata + info->posIndex + j) = resultChunk.vpolynomials.at(j).Eval(0);
-                    *(ittargetdata + info->velIndex + j) = resultChunk.vpolynomials.at(j).Evald1(0);
-                    *(ittargetdata + info->accelIndex + j) = resultChunk.vpolynomials.at(j).Evald2(0);
+                    *(ittargetdata + info->posIndex + j) = firstChunk.vpolynomials.at(j).Eval(0);
+                    *(ittargetdata + info->velIndex + j) = firstChunk.vpolynomials.at(j).Evald1(0);
+                    *(ittargetdata + info->accelIndex + j) = firstChunk.vpolynomials.at(j).Evald2(0);
                 }
                 *(ittargetdata + info->timeIndex) = 0;
                 *(ittargetdata + info->waypointIndex) = 1;
                 ittargetdata += ndof;
             }
 
-            for (int j = 0; j < info->gPos.dof; ++j) {
-                *(ittargetdata + info->posIndex + j) = resultChunk.vpolynomials.at(j).Eval(resultChunk.duration);
-                *(ittargetdata + info->velIndex + j) = resultChunk.vpolynomials.at(j).Evald1(resultChunk.duration);
-                *(ittargetdata + info->accelIndex + j) = resultChunk.vpolynomials.at(j).Evald2(resultChunk.duration);
+            FOREACHC(itchunk, _cacheInterpolatedChunks) {
+                for (int j = 0; j < info->gPos.dof; ++j) {
+                    *(ittargetdata + info->posIndex + j) = itchunk->vpolynomials.at(j).Eval(itchunk->duration);
+                    *(ittargetdata + info->velIndex + j) = itchunk->vpolynomials.at(j).Evald1(itchunk->duration);
+                    *(ittargetdata + info->accelIndex + j) = itchunk->vpolynomials.at(j).Evald2(itchunk->duration);
+                }
+                *(ittargetdata + info->timeIndex) = itchunk->duration;
+                *(ittargetdata + info->waypointIndex) = 1;
+                ittargetdata += ndof;
             }
-            *(ittargetdata + info->timeIndex) = resultChunk.duration;
-            *(ittargetdata + info->waypointIndex) = 1;
-            ittargetdata += ndof;
 
             _vtrajpoints.at(_vtrajpoints.size() - ndof + info->waypointIndex) = 1;
             info->ptraj->Insert(info->ptraj->GetNumWaypoints(), _vtrajpoints);
