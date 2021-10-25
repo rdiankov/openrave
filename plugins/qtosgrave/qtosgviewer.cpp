@@ -183,18 +183,20 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     _mapGUIFunctionListLimits[ViewerCommandPriority::MEDIUM] = 1000;
     _mapGUIFunctionListLimits[ViewerCommandPriority::LOW] = 1000;
 
-    _bLockEnvironment = true;
-    _InitGUI(bCreateStatusBar, bCreateMenu);
-    _bUpdateEnvironment = true;
-    _bExternalLoop = false;
-
     // Read copy QT resource to temp location and later stream that into OSG to use when making labels
     QFile fontFile(":/fonts/NotoSans-Regular.ttf");
     fontFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered);
     QByteArray ba = fontFile.readAll();
-    std::istringstream fontStream(ba.toStdString());
-    OSGLODLabel::SetFont(osgText::readFontStream(fontStream));
+    std::istringstream lodFontStream(ba.toStdString());
+    OSGLODLabel::SetFont(osgText::readFontStream(lodFontStream));
+    std::istringstream widgetFontStream(ba.toStdString());
+    QOSGViewerWidget::SetFont(osgText::readFontStream(widgetFontStream));
     fontFile.close();
+
+    _bLockEnvironment = true;
+    _InitGUI(bCreateStatusBar, bCreateMenu);
+    _bUpdateEnvironment = true;
+    _bExternalLoop = false;
 }
 
 QtOSGViewer::~QtOSGViewer()

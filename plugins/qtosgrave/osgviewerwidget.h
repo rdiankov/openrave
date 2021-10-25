@@ -200,6 +200,8 @@ public:
         _bSwitchMouseLeftMiddleButton = !_bSwitchMouseLeftMiddleButton;
     }
 
+    static void SetFont(osgText::Font *font);
+
 protected:
     /// \brief handles a key press and looks at the modifier keys
     bool HandleOSGKeyDown(const osgGA::GUIEventAdapter &ea, osgGA::GUIActionAdapter &aa);
@@ -339,6 +341,10 @@ protected:
     double _currentOrthoFrustumSize; ///< coordinate for the right vertical clipping plane 
 
     void GetSwitchedButtonValue(unsigned int &button);
+
+    private:
+        /// font for HUD text
+        static osg::ref_ptr<osgText::Font> OSG_FONT;
 };
 
 class QtOSGKeyEventTranslator
