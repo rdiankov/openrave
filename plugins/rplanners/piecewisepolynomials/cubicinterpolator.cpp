@@ -438,14 +438,14 @@ PolynomialCheckReturn CubicInterpolator::ComputeNDTrajectoryArbitraryTimeDerivat
             _cachePWPolynomials[idof]);
         if( ret != PolynomialCheckReturn::PCR_Normal ) {
             RAVELOG_VERBOSE_FORMAT("env=%d, failed to stretch idof=%d; fixedDuration=%.15f; x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15f; a0=%.15f; a1=%.15f; xmin=%.15f; xmax=%.15f; vm=%.15f; am=%.15f; jm=%.15f; ret=%s",
-                                   idof%maxDuration%x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%a0Vect[idof]%a1Vect[idof]
+                                   envid%idof%maxDuration%x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%a0Vect[idof]%a1Vect[idof]
                                    %xminVect[idof]%xmaxVect[idof]%vmVect[idof]%amVect[idof]%jmVect[idof]
                                    %GetPolynomialCheckReturnString(ret));
             return ret;
         }
         if( !FuzzyEquals(maxDuration, _cachePWPolynomials[idof].GetDuration(), g_fPolynomialEpsilon) ) {
             RAVELOG_VERBOSE_FORMAT("env=%d, failed to stretch idof=%d; fixedDuration=%.15f; x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15f; a0=%.15f; a1=%.15f; xmin=%.15f; xmax=%.15f; vm=%.15f; am=%.15f; jm=%.15f; ret=%s",
-                                   idof%maxDuration%x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%a0Vect[idof]%a1Vect[idof]
+                                   envid%idof%maxDuration%x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%a0Vect[idof]%a1Vect[idof]
                                    %xminVect[idof]%xmaxVect[idof]%vmVect[idof]%amVect[idof]%jmVect[idof]
                                    %GetPolynomialCheckReturnString(ret));
             return PolynomialCheckReturn::PCR_DurationDiscrepancy;
