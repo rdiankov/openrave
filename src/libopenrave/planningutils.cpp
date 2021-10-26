@@ -3810,6 +3810,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         } // end if( bComputeNewTimeStep )
 
         // RAVELOG_VERBOSE_FORMAT("env=%d, checking t=%f/%f; bComputeNewTimeStep=%d, earliestindex=%d; tprev=%f; tnext=%f; fMinNextTimeStep=%f;", _environmentid%tcur%timeelapsed%bComputeNewTimeStep%earliestindex%tprev%tnext%fMinNextTimeStep);
+        if( earliestindex == -1 ) {
+            // In this case, all dofs reach the end of this segment before having moved by their resolutions.
+            tnext = timeelapsed;
+        }
 
         _vprevtempconfig = _vtempconfig;
         _vprevtempvelconfig = _vtempvelconfig;
