@@ -121,6 +121,8 @@ public:
                 return PS_Interrupted;
             }
 
+            _DumpPiecewisePolynomialTrajectory(pwptraj, "beforeshortcut", _dumpLevel);
+
             int numShortcuts = 0;
             dReal originalDuration = pwptraj.duration;
             if( !!_parameters->_setstatevaluesfn ) {
@@ -520,36 +522,14 @@ public:
                 dReal fCurDurationMult = 1.0; // greater than or equal to 1.0
                 for( size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown ) {
                     dReal fChunksDuration = 0;
-                    if( iSlowDown == 0 ) {
-                        PiecewisePolynomials::PolynomialCheckReturn polycheckret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration
-                                                                                       (x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect,
-                                                                                       _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit,
-                                                                                       velLimits, accelLimits, jerkLimits, fTryDuration, tempChunks);
-                        if( polycheckret != PolynomialCheckReturn::PCR_Normal ) {
-                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; initial interpolation failed. polycheckret=0x%x", _envId%iter%numIters%t0%t1%polycheckret);
-                            break; // must not slow down any further.
-                        }
-                        // If this slow down iteration fails due to time-based constraints, we will try to generate a slightly longer trajectory segment in the next iteration.
-                        FOREACHC(itchunk, tempChunks) {
-                            fChunksDuration += itchunk->duration;
-                        }
-                        fTryDuration = fChunksDuration;
-                    }
-                    else {
-                        PiecewisePolynomials::PolynomialCheckReturn polycheckret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration
-                                                                                       (x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, fTryDuration*fCurDurationMult,
-                                                                                       _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit,
-                                                                                       velLimits, accelLimits, jerkLimits, tempChunks);
-                        if( polycheckret != PolynomialCheckReturn::PCR_Normal ) {
-                            dReal prevTryDuration = fTryDuration*fCurDurationMult;
-                            fCurDurationMult *= fDurationMult;
-                            if( fTryDuration*fCurDurationMult + minTimeStep > t1 - t0 ) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; iSlowDown=%d; current duration=%.15e; interpolation failed with polycheckret=0x%x. shortcut will not make significant improvement.", _envId%iter%numIters%t0%t1%iSlowDown%(prevTryDuration)%polycheckret);
-                                break; // must not slow down any further
-                            }
-                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; iSlowDown=%d; current duration=%.15e; interpolation failed with polycheckret=0x%x.", _envId%iter%numIters%t0%t1%iSlowDown%(prevTryDuration)%polycheckret);
-                            continue; // maybe incrasing the duration might affect the peaks of vel/accel positively
-                        }
+                    PiecewisePolynomials::PolynomialCheckReturn polycheckret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration
+                                                                                   (x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect,
+                                                                                   _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit,
+                                                                                   velLimits, accelLimits, jerkLimits, /*not used*/ fTryDuration, tempChunks);
+
+                    if( polycheckret != PolynomialCheckReturn::PCR_Normal ) {
+                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; initial interpolation failed. polycheckret=0x%x", _envId%iter%numIters%t0%t1%polycheckret);
+                        break; // must not slow down any further.
                     }
 
                     if( fChunksDuration + minTimeStep > t1 - t0 ) {
@@ -576,11 +556,6 @@ public:
                         if( 0 ) {//( _bManipConstraints && !!_manipConstraintChecker ) {
                             // Scale down accelLimits and/or velLimits based on what constraints are violated.
                         }
-                        else if( 1 ) {
-                            // Experimental: try scaling the duration instead of vel/accel limits
-                            fCurDurationMult *= fDurationMult;
-                            continue;
-                        }
                         else {
                             // No manip constraints. Scale down both velLimits and accelLimits
                             fCurVelMult *= checkret.fTimeBasedSurpassMult;
@@ -595,12 +570,14 @@ public:
                                 break;
                             }
 
+                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; new fCurVelMult=%.15e; fCurAccelMult=%.15e", _envId%iter%numIters%t0%t1%fCurVelMult%fCurAccelMult);
+
                             ++numSlowDowns;
                             for( size_t idof = 0; idof < _ndof; ++idof ) {
                                 dReal fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
                                 dReal fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
-                                velLimits[idof] = std::max(fVelLowerBound, checkret.fTimeBasedSurpassMult*velLimits[idof]);
-                                accelLimits[idof] = std::max(fAccelLowerBound, checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult*velLimits[idof]);
+                                velLimits[idof] = std::max(fVelLowerBound, fCurVelMult*velLimits[idof]);
+                                accelLimits[idof] = std::max(fAccelLowerBound, fCurAccelMult*accelLimits[idof]);
                                 // Scaling down jerk limits likely leads to significantly slower final traj.
                                 // jerkLimits[idof] *= (checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult);
                             }
