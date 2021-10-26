@@ -1325,7 +1325,7 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     if( IS_DEBUGLEVEL(Level_Verbose) ) {
         int ran = RaveRandomInt()%10000;
         string filename = str(boost::format("%s/beforeretime-%d.xml")%RaveGetHomeDirectory()%ran);
-        RAVELOG_VERBOSE_FORMAT("Writing before retime traj to %s", filename);
+        RAVELOG_VERBOSE_FORMAT("env=%d, Writing before retime traj to %s", robot->GetEnv()->GetId()%filename);
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         trajinitial->serialize(f);
@@ -1335,7 +1335,7 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     //RAVELOG_VERBOSE_FORMAT("env=%d, inserting point into %d with planner %s and parameters %s", robot->GetEnv()->GetId()%waypointindex%newplannername%plannerparameters);
     // make sure velocities are set
     if( !(RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")).GetStatusCode() & PS_HasSolution) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("env=%d failed to retime init traj", robot->GetEnv()->GetId(), ORE_Assert);
+        throw OPENRAVE_EXCEPTION_FORMAT("env=%d, failed to retime init traj", robot->GetEnv()->GetId(), ORE_Assert);
     }
 
     // retiming is done, now merge the two trajectories
@@ -3456,6 +3456,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         default:
             throw OPENRAVE_EXCEPTION_FORMAT("Unrecognized interpolation type %d", maskinterpolation, ORE_InvalidArguments);
         } // end switch maskinterpolation
+    }
+    else {
+        OPENRAVE_ASSERT_OP_FORMAT(timeelapsed, ==, 0, "timeelapsed=%f is given but the given velocities/accelerations are invalid.", timeelapsed, ORE_InvalidArguments);
     }
 
     _valldofscriticalpoints.resize(params->GetDOF());
