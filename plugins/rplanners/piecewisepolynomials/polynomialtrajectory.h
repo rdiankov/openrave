@@ -193,6 +193,9 @@ public:
     /// \brief Cut the piecewise polynomial into two halves at time t and keep the left half.
     void TrimBack(dReal t);
 
+    /// \brief Remove from _vpolynomials polynomials that have zero duration.
+    void CleanUp();
+
     /// \brief Return a constant reference to _vpolynomials
     inline const std::vector<Polynomial>& GetPolynomials() const
     {

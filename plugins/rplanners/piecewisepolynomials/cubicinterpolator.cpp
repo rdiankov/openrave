@@ -79,7 +79,7 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryZeroTimeDerivativesO
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("Got unexpected icase=%d", icase, ORE_InvalidArguments);
     }
-    RAVELOG_WARN_FORMAT("PUTTICHAI: icase=%d; tj=%f; ta=%f; tv=%f", icase%tj%ta%tv);
+    RAVELOG_WARN_FORMAT("env=%d, PUTTICHAI: icase=%d; tj=%f; ta=%f; tv=%f", envid%icase%tj%ta%tv);
 
     // Depending on x0 and x1, we may need to start with negative v, a, and j.
     const bool startWithNegativeBounds = x0 > x1;
@@ -209,6 +209,7 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryArbitraryTimeDerivat
     if( ret != PolynomialCheckReturn::PCR_Normal ) {
         return ret;
     }
+    pwpoly.CleanUp();
     ret = checker.CheckPiecewisePolynomial(pwpoly, xmin, xmax, vm, am, jm, x0, x1, v0, v1, a0, a1);
     return ret;
 }
@@ -226,6 +227,7 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryArbitraryTimeDerivat
     if( ret != PolynomialCheckReturn::PCR_Normal ) {
         return ret;
     }
+    pwpoly.CleanUp();
     ret = checker.CheckPiecewisePolynomial(pwpoly, xmin, xmax, vm, am, jm, x0, x1, v0, v1, a0, a1);
     return ret;
 }

@@ -608,6 +608,20 @@ Polynomial PiecewisePolynomial::ExtractPolynomial(const dReal t0, const dReal t1
     return p;
 }
 
+void PiecewisePolynomial::CleanUp()
+{
+    size_t iWriteIndex = 0;
+    for( size_t iReadIndex = 0; iReadIndex < _vpolynomials.size(); ++iReadIndex ) {
+        if( _vpolynomials[iReadIndex].duration > 0 ) {
+            if( iWriteIndex < iReadIndex ) {
+                _vpolynomials[iWriteIndex] = _vpolynomials[iReadIndex];
+            }
+            ++iWriteIndex;
+        }
+    }
+    _vpolynomials.resize(iWriteIndex);
+}
+
 //
 // Chunk
 //
