@@ -457,12 +457,12 @@ public:
         }
         else {
             // Trajectory only has one point. Still need to set interpolation
-            FOREACH(itgroup, newSpec._vgroups) {
+            FOREACH(itgroup, _cachedNewSpec._vgroups) {
                 itgroup->interpolation = _parameters->_interpolation;
             }
         }
 
-        _WriteTrajectory(ptraj, newSpec, _vData);
+        _WriteTrajectory(ptraj, _cachedNewSpec, _vData);
         return PS_HasSolution;
     }
 
