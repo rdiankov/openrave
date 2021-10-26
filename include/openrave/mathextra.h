@@ -1324,12 +1324,15 @@ inline void computecubiccoeffs(T x0, T x1, T dx0, T dx1, T ddx0, T ddx1, T t, T*
     coeffs[2] = dx0;
     coeffs[1] = 0.5*ddx0;
 
-    T t2 = t*t;
-    T t3 = t2*t;
-    // The first coefficient is currently computed using only x1. It can be computed by using either
-    // dx1 or ddx1 too. Is it better to use some kind of weighted averages for this coefficient
-    // instead?
-    coeffs[0] = (x1 - x0 - dx0*t - 0.5*ddx0*t2)/t3;
+    // T candidate1 = (x1 - x0 - dx0*t - 0.5*ddx0*t2)/t3;
+    // T candidate2 = 2*(x0 - x1)/t3 + (dx0 + dx1)/t2;
+    // T candidate3 = (ddx1 - ddx0)/(6*t);
+
+    // Use the following formula to evaluate the first coefficient since it is
+    // using acceleration terms. The accleration terms themselves were evaluated
+    // from the expression 6*a*t + 2*b, which only uses a and b and therefore
+    // least affected by numerical errors from the zero-th and first derivatives.
+    coeffs[0] = (ddx1 - ddx0)/(6*t);
     return;
 }
 
