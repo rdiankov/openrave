@@ -345,17 +345,17 @@ class InverseReachabilityDemo:
         # load inverserechability database
         self.irmodel = databases.inversereachability.InverseReachabilityModel(robot=self.robot)
         starttime = time.time()
-        print 'loading irmodel'
+        print('loading irmodel')
         if not self.irmodel.load():            
-            print 'do you want to generate irmodel for your robot? it might take several hours'
-            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/openrave_database/ to get the database for PR2'
+            print('do you want to generate irmodel for your robot? it might take several hours')
+            print('or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/openrave_database/ to get the database for PR2')
             input = raw_input('[Y/n]')
             if input == 'y' or input == 'Y' or input == '\n' or input == '':
                 self.irmodel.autogenerate()
                 self.irmodel.load()
             else:
                 raise ValueError('')
-        print 'time to load inverse-reachability model: %fs'%(time.time()-starttime)
+        print('time to load inverse-reachability model: %fs'%(time.time()-starttime))
         # make sure the robot and manipulator match the database
         assert self.irmodel.robot == self.robot and self.irmodel.manip == self.robot.GetActiveManipulator()   
         
@@ -371,7 +371,7 @@ class InverseReachabilityDemo:
         v[self.robot.GetJoint('l_gripper_l_finger_joint').GetDOFIndex()] = gripper_angle # l gripper
         self.robot.SetActiveDOFValues(v)
 
-        print 'showing the goal grasp'
+        print('showing the goal grasp')
         self.showGrasp(Tgrasp)
 
         # find the robot base distribution for the grasp specified by Tgrasp
@@ -384,7 +384,7 @@ class InverseReachabilityDemo:
         #      bounds: 2x3 array, bounds of samples, [[min rotation, min x, min y],[max rotation, max x, max y]]
         densityfn,samplerfn,bounds = self.irmodel.computeBaseDistribution(Tgrasp,logllthresh=1.8)
         if densityfn == None:
-            print 'the specified grasp is not reachable!'
+            print('the specified grasp is not reachable!')
             return
         
         # Code fragment from `examples.mobilemanipulation`
@@ -410,7 +410,7 @@ class InverseReachabilityDemo:
                             goals.append((Tgrasp,pose,values))
                         elif self.manip.FindIKSolution(Tgrasp,0) is None:
                             numfailures += 1
-        print 'showing %d results'%N
+        print('showing %d results'%N)
         for ind,goal in enumerate(goals):
             raw_input('press ENTER to show goal %d'%ind)
             Tgrasp,pose,values = goal
@@ -434,7 +434,7 @@ class InverseReachabilityDemo:
                 newrobot.SetTransform(T)
                 newrobot.SetDOFValues(values)
                 newrobots.append(newrobot)
-        print 'overlaying all results, wait for a few seconds for the viewer to update'
+        print('overlaying all results, wait for a few seconds for the viewer to update')
         time.sleep(10)
         pause()
     

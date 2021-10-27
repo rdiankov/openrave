@@ -20,10 +20,6 @@
 #ifndef OPENRAVE_H
 #define OPENRAVE_H
 
-#ifndef OPENRAVE_DISABLE_ASSERT_HANDLER
-#define BOOST_ENABLE_ASSERT_HANDLER
-#endif
-
 #include <cstdio>
 #include <stdarg.h>
 #include <cstring>
@@ -33,9 +29,9 @@
 
 #ifdef _MSC_VER
 
-#pragma warning(disable:4251) // needs to have dll-interface to be used by clients of class
-#pragma warning(disable:4190) // C-linkage specified, but returns UDT 'boost::shared_ptr<T>' which is incompatible with C
-#pragma warning(disable:4819) //The file contains a character that cannot be represented in the current code page (932). Save the file in Unicode format to prevent data loss using native typeof
+#pragma warning(disable:4251)// needs to have dll-interface to be used by clients of class
+#pragma warning(disable:4190)// C-linkage specified, but returns UDT 'boost::shared_ptr<T>' which is incompatible with C
+#pragma warning(disable:4819)//The file contains a character that cannot be represented in the current code page (932). Save the file in Unicode format to prevent data loss using native typeof
 
 // needed to get typeof working
 //#include <boost/typeof/std/string.hpp>
@@ -58,7 +54,6 @@
 #include <map>
 #include <set>
 #include <string>
-#include <exception>
 
 #include <iomanip>
 #include <fstream>
@@ -81,6 +76,7 @@
 #include <boost/format.hpp>
 #include <boost/array.hpp>
 #include <boost/multi_array.hpp>
+#include <boost/make_shared.hpp>
 //#include <boost/cstdint.hpp>
 
 #endif
@@ -91,6 +87,9 @@
 #define RAVE_DEPRECATED
 #endif
 
+#include <openrave/smart_ptr.h>
+#include <openrave/openraveexception.h>
+
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
 
@@ -99,9 +98,7 @@ namespace OpenRAVE {
 
 }
 
-#if OPENRAVE_RAPIDJSON
 #include <rapidjson/document.h>
-#endif // OPENRAVE_RAPIDJSON
 
 #include <openrave/logging.h>
 
@@ -152,71 +149,6 @@ OPENRAVE_API dReal RaveFabs(dReal f);
 OPENRAVE_API dReal RaveCeil(dReal f);
 
 //@}
-
-/// %OpenRAVE error codes
-enum OpenRAVEErrorCode {
-    ORE_Failed=0,
-    ORE_InvalidArguments=1, ///< passed in input arguments are not valid
-    ORE_EnvironmentNotLocked=2,
-    ORE_CommandNotSupported=3, ///< string command could not be parsed or is not supported
-    ORE_Assert=4,
-    ORE_InvalidPlugin=5, ///< shared object is not a valid plugin
-    ORE_InvalidInterfaceHash=6, ///< interface hashes do not match between plugins
-    ORE_NotImplemented=7, ///< function is not implemented by the interface.
-    ORE_InconsistentConstraints=8, ///< returned solutions or trajectories do not follow the constraints of the planner/module. The constraints invalidated here are planning constraints, not programming constraints.
-    ORE_NotInitialized=9, ///< when object is used without it getting fully initialized
-    ORE_InvalidState=10, ///< the state of the object is not consistent with its parameters, or cannot be used. This is usually due to a programming error where a vector is not the correct length, etc.
-    ORE_Timeout=11, ///< process timed out
-};
-
-inline const char* GetErrorCodeString(OpenRAVEErrorCode error)
-{
-    switch(error) {
-    case ORE_Failed: return "Failed";
-    case ORE_InvalidArguments: return "InvalidArguments";
-    case ORE_EnvironmentNotLocked: return "EnvironmentNotLocked";
-    case ORE_CommandNotSupported: return "CommandNotSupported";
-    case ORE_Assert: return "Assert";
-    case ORE_InvalidPlugin: return "InvalidPlugin";
-    case ORE_InvalidInterfaceHash: return "InvalidInterfaceHash";
-    case ORE_NotImplemented: return "NotImplemented";
-    case ORE_InconsistentConstraints: return "InconsistentConstraints";
-    case ORE_NotInitialized: return "NotInitialized";
-    case ORE_InvalidState: return "InvalidState";
-    case ORE_Timeout: return "Timeout";
-    }
-    // should throw an exception?
-    return "";
-}
-
-/// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
-class OPENRAVE_API openrave_exception : public std::exception
-{
-public:
-    openrave_exception() : std::exception(), _s("unknown exception"), _error(ORE_Failed) {
-    }
-    openrave_exception(const std::string& s, OpenRAVEErrorCode error=ORE_Failed) : std::exception() {
-        _error = error;
-        _s = "openrave (";
-        _s += GetErrorCodeString(_error);
-        _s += "): ";
-        _s += s;
-    }
-    virtual ~openrave_exception() throw() {
-    }
-    char const* what() const throw() {
-        return _s.c_str();
-    }
-    const std::string& message() const {
-        return _s;
-    }
-    OpenRAVEErrorCode GetCode() const {
-        return _error;
-    }
-private:
-    std::string _s;
-    OpenRAVEErrorCode _error;
-};
 
 class OPENRAVE_LOCAL CaseInsensitiveCompare
 {
@@ -271,24 +203,6 @@ public:
 typedef boost::shared_ptr<SerializableData> SerializableDataPtr;
 typedef boost::weak_ptr<SerializableData> SerializableDataWeakPtr;
 
-#define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s")%(__PRETTY_FUNCTION__)%(__LINE__)%(s)),errorcode)
-
-/// adds the function name and line number to an openrave exception
-#define OPENRAVE_EXCEPTION_FORMAT(s, args, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] ")%(__PRETTY_FUNCTION__)%(__LINE__)) + boost::str(boost::format(s)%args),errorcode)
-
-#define OPENRAVE_ASSERT_FORMAT(testexpr, s, args, errorcode) { if( !(testexpr) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] (%s) failed ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# testexpr)) + boost::str(boost::format(s)%args),errorcode); } }
-
-#define OPENRAVE_ASSERT_FORMAT0(testexpr, s, errorcode) { if( !(testexpr) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] (%s) failed %s")%(__PRETTY_FUNCTION__)%(__LINE__)%(# testexpr)%(s)),errorcode); } }
-
-// note that expr1 and expr2 will be evaluated twice if not equal
-#define OPENRAVE_ASSERT_OP_FORMAT(expr1,op,expr2,s, args, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)) + boost::str(boost::format(s)%args),errorcode); } }
-
-#define OPENRAVE_ASSERT_OP_FORMAT0(expr1,op,expr2,s, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) %s")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)%(s)),errorcode); } }
-
-#define OPENRAVE_ASSERT_OP(expr1,op,expr2) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),ORE_Assert); } }
-
-#define OPENRAVE_DUMMY_IMPLEMENTATION { throw OPENRAVE_EXCEPTION_FORMAT0("not implemented",ORE_NotImplemented); }
-
 /// \brief Enumeration of all the interfaces.
 enum InterfaceType
 {
@@ -329,6 +243,7 @@ class SpaceSamplerBase;
 class IkParameterization;
 class ConfigurationSpecification;
 class IkReturn;
+class Readable;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
 typedef boost::shared_ptr<CollisionReport const> CollisionReportConstPtr;
@@ -377,7 +292,9 @@ typedef boost::weak_ptr<SpaceSamplerBase> SpaceSamplerBaseWeakPtr;
 typedef boost::shared_ptr<EnvironmentBase> EnvironmentBasePtr;
 typedef boost::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
 typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
-
+typedef boost::shared_ptr<Readable> ReadablePtr;
+typedef boost::shared_ptr<Readable const> ReadableConstPtr;
+typedef boost::weak_ptr<Readable> ReadableWeakPtr;
 typedef boost::shared_ptr<IkReturn> IkReturnPtr;
 typedef boost::shared_ptr<IkReturn const> IkReturnConstPtr;
 typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
@@ -389,6 +306,7 @@ class BaseXMLWriter;
 typedef boost::shared_ptr<BaseXMLWriter> BaseXMLWriterPtr;
 typedef boost::shared_ptr<BaseXMLWriter const> BaseXMLWriterConstPtr;
 
+
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
     Clone_Bodies = 1, ///< clone all the bodies/robots of the environment, exclude attached interfaces like sensors/controllers
@@ -397,30 +315,55 @@ enum CloningOptions {
     Clone_RealControllers = 8, ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
     Clone_Sensors = 0x0010, ///< if specified, will clone the sensors attached to the robot and added to the environment
     Clone_Modules = 0x0020, ///< if specified, will clone the modules attached to the environment
-    Clone_IgnoreAttachedBodies = 0x00010001, ///< if set, then ignore cloning any attached bodies so _listAttachedBodies becomes empty. Usually used to control grabbing states.
+    Clone_PassOnMissingBodyReferences=0x00008000, ///< if specified, then does not throw an exception if a body reference is missing in the environment. For example, the grabbed body in GrabbedInfo
     Clone_All = 0xffffffff,
 };
 
 /// base class for readable interfaces
-class OPENRAVE_API XMLReadable : public UserData
+class OPENRAVE_API Readable : public UserData
 {
 public:
-    XMLReadable(const std::string& xmlid) : __xmlid(xmlid) {
+    Readable() {
     }
-    virtual ~XMLReadable() {
+    virtual ~Readable() {
     }
-    virtual const std::string& GetXMLId() const {
+
+    Readable(const std::string& xmlid) : __xmlid(xmlid) {
+    }
+
+    const std::string& GetXMLId() const {
         return __xmlid;
     }
+
     /// \brief serializes the interface
-    virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const {
+    ///
+    /// \return true if serialized
+    virtual bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const = 0;
+
+    /// \return true if serialized
+    virtual bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const {
+        return false;
     }
+
+    /// \return true if deserialized
+    virtual bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale) {
+        return false;
+    }
+
+    /// \return true if this readable is equivalent to other readable
+    virtual bool operator==(const Readable& other) const = 0;
+
+    /// \return true if this readable is not equivalent to other readable
+    virtual bool operator!=(const Readable& other) const {
+        return !operator==(other);
+    }
+
+    /// \return return a cloned copy of this readable
+    virtual ReadablePtr CloneSelf() const = 0;
+
 private:
     std::string __xmlid;
 };
-
-typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
-typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
 
 /// \brief a list of key-value pairs. It is possible for keys to repeat.
 typedef std::list<std::pair<std::string,std::string> > AttributesList;
@@ -444,8 +387,8 @@ public:
 
     /// a readable interface that stores the information processsed for the current tag
     /// This pointer is used to the InterfaceBase class registered readers
-    virtual XMLReadablePtr GetReadable() {
-        return XMLReadablePtr();
+    virtual ReadablePtr GetReadable() {
+        return ReadablePtr();
     }
 
     /// Gets called in the beginning of each "<type>" expression. In this case, name is "type"
@@ -466,7 +409,6 @@ public:
     /// XML filename/resource used for this class (can be empty)
     std::string _filename;
 };
-
 typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateXMLReaderFn;
 
 /// \brief reads until the tag ends
@@ -511,6 +453,36 @@ public:
     /// \brief returns a writer for child elements
     virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList()) = 0;
 };
+
+/// \brief base class for all json readers. JSONReaders are used to process data from json files.
+///
+/// Custom readers can be registered through \ref RaveRegisterJSONReader.
+class OPENRAVE_API BaseJSONReader : public boost::enable_shared_from_this<BaseJSONReader>
+{
+public:
+
+    BaseJSONReader() {
+    }
+    virtual ~BaseJSONReader() {
+    }
+
+    /// a readable interface that stores the information processsed for the current tag
+    /// This pointer is used to the InterfaceBase class registered readers
+    virtual ReadablePtr GetReadable() {
+        return ReadablePtr();
+    }
+
+    /// by default, json reader will simply call readable's deserialize function
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) {
+        ReadablePtr pReadable = GetReadable();
+        if (!!pReadable) {
+            pReadable->DeserializeJSON(value, fUnitScale);
+        }
+    }
+};
+typedef boost::shared_ptr<BaseJSONReader> BaseJSONReaderPtr;
+typedef boost::shared_ptr<BaseJSONReader const> BaseJSONReaderConstPtr;
+typedef boost::function<BaseJSONReaderPtr(ReadablePtr, const AttributesList&)> CreateJSONReaderFn;
 
 } // end namespace OpenRAVE
 
@@ -630,6 +602,41 @@ enum IkParameterizationType {
     IKP_CustomDataBit = 0x00010000, ///< bit is set if the ikparameterization contains custom data, this is only used when serializing the ik parameterizations
 };
 
+class OPENRAVE_API StringReadable : public Readable
+{
+public:
+    StringReadable(const std::string& id, const std::string& data);
+    virtual ~StringReadable();
+
+    /// \brief sets new string data
+    void SetData(const std::string& newdata);
+
+    /// \brief gets a reference to the saved data;
+    const std::string& GetData() const;
+
+    bool SerializeXML(BaseXMLWriterPtr wirter, int options=0) const override;
+    bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
+    bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
+    bool operator==(const Readable& other) const override {
+        if (GetXMLId() != other.GetXMLId()) {
+            return false;
+        }
+        const StringReadable* pOther = dynamic_cast<const StringReadable*>(&other);
+        if (!pOther) {
+            return false;
+        }
+        return _data == pOther->_data;
+    }
+
+    ReadablePtr CloneSelf() const override {
+        return ReadablePtr(new StringReadable(GetXMLId(), _data));
+    }
+
+private:
+    std::string _data;
+};
+typedef boost::shared_ptr<StringReadable> StringReadablePtr;
+
 /// \brief returns a string of the ik parameterization type names
 ///
 /// \param[in] alllowercase If 1, sets all characters to lower case. Otherwise can include upper case in order to match \ref IkParameterizationType definition.
@@ -673,7 +680,7 @@ public:
         int dof;
         /** \brief semantic information on what part of the environment the group refers to.
 
-            Can be composed of multiple workds; the first word is the group type, and the words following narrow the specifics. Common types are:
+            Can be composed of multiple words; the first word is the group type, and the words following narrow the specifics. Common types are:
 
             - \b joint_values - The joint values of a kinbody/robot. The joint names with the name of the body can follow.
             - \b joint_velocities - The joint velocities (1/second) of a kinbody/robot. The name of the body with the joint names can follow.
@@ -687,9 +694,9 @@ public:
             - \b affine_velocities - The velocity (1/second) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
             - \b affine_accelerations - The acceleration (1/second^2) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
             - \b affine_jerks - The jerk (1/second^3) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
-            - \b ikparam_values - The values of an IkParmeterization. The ikparam type is stored as the second value in name
-            - \b ikparam_velocities - acceleration of an IkParmeterization. The ikparam type is stored as the second value in name
-            - \b ikparam_jerks - jerk of an IkParmeterization. The ikparam type is stored as the second value in name
+            - \b ikparam_values - The values of an IkParameterization. The ikparam type is stored as the second value in name
+            - \b ikparam_velocities - acceleration of an IkParameterization. The ikparam type is stored as the second value in name
+            - \b ikparam_jerks - jerk of an IkParameterization. The ikparam type is stored as the second value in name
             - \b iswaypoint - non-zero if the point represents a major knot point of the trajectory
             - \b grabbody - Grabs the body. The configuration values are 1 for grab and 0 for release. The group name format is: bodyname robotname robotlinkindex [relative_grab_pose]. relative_grab_pose is a 7 value (quaterion + translation) pose of the relative location of the body with respect to the grabbed link. Only 1 DOF is accepted.
          */
@@ -745,6 +752,14 @@ protected:
 
     virtual bool operator==(const ConfigurationSpecification& r) const;
     virtual bool operator!=(const ConfigurationSpecification& r) const;
+
+    /// \brief JSON serializable
+    /// TODO: Ideally we should make it a subclass of openravejson::JsonSerializable, but it requires a lot changes to fix the header files for now.
+    virtual void DeserializeJSON(const rapidjson::Value& rValue);
+    virtual void SerializeJSON(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const;
+    virtual void SerializeJSON(rapidjson::Document& d) const {
+        SerializeJSON(d, d.GetAllocator());
+    }
 
     /// \brief return the group whose name begins with a particular string.
     ///
@@ -832,7 +847,7 @@ protected:
     virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
 
     /** \brief converts all the groups to the corresponding derivative group and returns the specification
-        
+
         The new derivative configuration space will have a one-to-one correspondence with the original configuration.
         The interpolation of each of the groups will correspondingly represent the derivative as returned by \ref GetInterpolationDerivative(deriv).
         Only position specifications will be converted, any other groups will be left untouched.
@@ -1362,6 +1377,167 @@ public:
         return 1e30;
     }
 
+    /// \brief Computes the translational distance squared between two IK parmaeterizations.
+    inline dReal ComputeTransDistanceSqr(const IkParameterization& ikparam) const
+    {
+        BOOST_ASSERT(_type==ikparam.GetType());
+        switch(_type) {
+        case IKP_Transform6D: {
+            return (GetTransform6D().trans-ikparam.GetTransform6D().trans).lengthsqr3();
+        }
+        case IKP_Translation3D:
+            return (GetTranslation3D()-ikparam.GetTranslation3D()).lengthsqr3();
+        case IKP_Ray4D: {
+            Vector pos0 = GetRay4D().pos - GetRay4D().dir*GetRay4D().dir.dot(GetRay4D().pos);
+            Vector pos1 = ikparam.GetRay4D().pos - ikparam.GetRay4D().dir*ikparam.GetRay4D().dir.dot(ikparam.GetRay4D().pos);
+            return (pos0-pos1).lengthsqr3();
+        }
+        case IKP_TranslationDirection5D: {
+            return (GetTranslationDirection5D().pos-ikparam.GetTranslationDirection5D().pos).lengthsqr3();
+        }
+        case IKP_TranslationXY2D: {
+            return (GetTranslationXY2D()-ikparam.GetTranslationXY2D()).lengthsqr2();
+        }
+        case IKP_TranslationXYOrientation3D: {
+            Vector v0 = GetTranslationXYOrientation3D();
+            Vector v1 = ikparam.GetTranslationXYOrientation3D();
+            return (v0-v1).lengthsqr2();
+        }
+        case IKP_TranslationLocalGlobal6D: {
+            std::pair<Vector,Vector> p0 = GetTranslationLocalGlobal6D(), p1 = ikparam.GetTranslationLocalGlobal6D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        case IKP_TranslationXAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationXAxisAngle4D(), p1 = ikparam.GetTranslationXAxisAngle4D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        case IKP_TranslationYAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationYAxisAngle4D(), p1 = ikparam.GetTranslationYAxisAngle4D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        case IKP_TranslationZAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationZAxisAngle4D(), p1 = ikparam.GetTranslationZAxisAngle4D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        case IKP_TranslationXAxisAngleZNorm4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationXAxisAngleZNorm4D(), p1 = ikparam.GetTranslationXAxisAngleZNorm4D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        case IKP_TranslationYAxisAngleXNorm4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationYAxisAngleXNorm4D(), p1 = ikparam.GetTranslationYAxisAngleXNorm4D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        case IKP_TranslationZAxisAngleYNorm4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationZAxisAngleYNorm4D(), p1 = ikparam.GetTranslationZAxisAngleYNorm4D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", _type,ORE_InvalidArguments);
+        }
+        return 1e30;
+    }
+
+    /// \brief Computes the rotational distance squared between two IK parmaeterizations.
+    inline dReal ComputeRotDistanceSqr(const IkParameterization& ikparam) const
+    {
+        BOOST_ASSERT(_type==ikparam.GetType());
+        switch(_type) {
+        case IKP_Transform6D: {
+            Transform t0 = GetTransform6D(), t1 = ikparam.GetTransform6D();
+            dReal fcos = RaveFabs(t0.rot.dot(t1.rot));
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return facos*facos;
+        }
+        case IKP_Rotation3D: {
+            dReal fcos = RaveFabs(GetRotation3D().dot(ikparam.GetRotation3D()));
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return facos*facos;
+        }
+        case IKP_Direction3D: {
+            dReal fcos = GetDirection3D().dot(ikparam.GetDirection3D());
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return facos*facos;
+        }
+        case IKP_Ray4D: {
+            dReal fcos = GetRay4D().dir.dot(ikparam.GetRay4D().dir);
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return facos*facos;
+        }
+        case IKP_Lookat3D: {
+            Vector v = GetLookat3D()-ikparam.GetLookat3D();
+            dReal s = v.dot3(ikparam.GetLookat3DDirection());
+            if( s >= -1 ) {     // ikparam's lookat is always 1 beyond the origin, this is just the convention for testing...
+                v -= s*ikparam.GetLookat3DDirection();
+            }
+            return v.lengthsqr3();
+        }
+        case IKP_TranslationDirection5D: {
+            dReal fcos = GetTranslationDirection5D().dir.dot(ikparam.GetTranslationDirection5D().dir);
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return facos*facos;
+        }
+        case IKP_TranslationXYOrientation3D: {
+            Vector v0 = GetTranslationXYOrientation3D();
+            Vector v1 = ikparam.GetTranslationXYOrientation3D();
+            dReal anglediff = v0.z-v1.z;
+            if (anglediff < dReal(-PI)) {
+                anglediff += dReal(2*PI);
+                while (anglediff < dReal(-PI))
+                    anglediff += dReal(2*PI);
+            }
+            else if (anglediff > dReal(PI)) {
+                anglediff -= dReal(2*PI);
+                while (anglediff > dReal(PI))
+                    anglediff -= dReal(2*PI);
+            }
+            return anglediff*anglediff;
+        }
+        case IKP_TranslationLocalGlobal6D: {
+            std::pair<Vector,Vector> p0 = GetTranslationLocalGlobal6D(), p1 = ikparam.GetTranslationLocalGlobal6D();
+            return (p0.second-p1.second).lengthsqr3();
+        }
+        case IKP_TranslationXAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationXAxisAngle4D(), p1 = ikparam.GetTranslationXAxisAngle4D();
+            // dot product with axis is always in [0,pi]
+            dReal angle0 = RaveFabs(NormalizeCircularAnglePrivate(p0.second, -PI, PI));
+            dReal angle1 = RaveFabs(NormalizeCircularAnglePrivate(p1.second, -PI, PI));
+            return (angle0-angle1)*(angle0-angle1);
+        }
+        case IKP_TranslationYAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationYAxisAngle4D(), p1 = ikparam.GetTranslationYAxisAngle4D();
+            // dot product with axis is always in [0,pi]
+            dReal angle0 = RaveFabs(NormalizeCircularAnglePrivate(p0.second, -PI, PI));
+            dReal angle1 = RaveFabs(NormalizeCircularAnglePrivate(p1.second, -PI, PI));
+            return (angle0-angle1)*(angle0-angle1);
+        }
+        case IKP_TranslationZAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationZAxisAngle4D(), p1 = ikparam.GetTranslationZAxisAngle4D();
+            // dot product with axis is always in [0,pi]
+            dReal angle0 = RaveFabs(NormalizeCircularAnglePrivate(p0.second, -PI, PI));
+            dReal angle1 = RaveFabs(NormalizeCircularAnglePrivate(p1.second, -PI, PI));
+            return (angle0-angle1)*(angle0-angle1);
+        }
+        case IKP_TranslationXAxisAngleZNorm4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationXAxisAngleZNorm4D(), p1 = ikparam.GetTranslationXAxisAngleZNorm4D();
+            dReal anglediff = NormalizeCircularAnglePrivate(p0.second-p1.second, -PI, PI);
+            return anglediff*anglediff;
+        }
+        case IKP_TranslationYAxisAngleXNorm4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationYAxisAngleXNorm4D(), p1 = ikparam.GetTranslationYAxisAngleXNorm4D();
+            dReal anglediff = NormalizeCircularAnglePrivate(p0.second-p1.second, -PI, PI);
+            return anglediff*anglediff;
+        }
+        case IKP_TranslationZAxisAngleYNorm4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationZAxisAngleYNorm4D(), p1 = ikparam.GetTranslationZAxisAngleYNorm4D();
+            dReal anglediff = NormalizeCircularAnglePrivate(p0.second-p1.second, -PI, PI);
+            return anglediff*anglediff;
+        }
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", _type,ORE_InvalidArguments);
+        }
+        return 1e30;
+    }
+
     /// \brief fills the iterator with the serialized values of the ikparameterization.
     ///
     /// The container the iterator points to needs to have \ref GetNumberOfValues() available.
@@ -1570,6 +1746,17 @@ public:
         _mapCustomData[name][0] = value;
     }
 
+    /// \brief sets named custom data in the ik parameterization (\see SetCustomValues)
+    inline void SetCustomValue(const std::string& name, dReal value0, dReal value1, dReal value2)
+    {
+        OPENRAVE_ASSERT_OP_FORMAT0( name.size(), >, 0, "name is empty", ORE_InvalidArguments );
+        OPENRAVE_ASSERT_OP_FORMAT0(std::count_if(name.begin(), name.end(), _IsValidCharInName), ==, (int)name.size(), "name has invalid characters",ORE_InvalidArguments);
+        _mapCustomData[name].resize(3);
+        _mapCustomData[name][0] = value0;
+        _mapCustomData[name][1] = value1;
+        _mapCustomData[name][2] = value2;
+    }
+
     /// \brief gets custom data if it exists, returns false if it doesn't
     inline bool GetCustomValues(const std::string& name, std::vector<dReal>& values) const
     {
@@ -1579,6 +1766,25 @@ public:
         }
         values = it->second;
         return true;
+    }
+
+    /// \brief returns number of entries in the custom value. -1 if custom value is not in the map
+    inline int GetCustomValueNum(const std::string& name) const {
+        std::map<std::string, std::vector<dReal> >::const_iterator it = _mapCustomData.find(name);
+        if( it != _mapCustomData.end() ) {
+            return (int)it->second.size();
+        }
+
+        return -1;
+    }
+
+    /// \brief returns the first element of a custom value. If _mapCustomData does not have 'name' and is not > 0, then will return defaultValue
+    inline dReal GetCustomValue(const std::string& name, dReal defaultValue) const {
+        std::map<std::string, std::vector<dReal> >::const_iterator it = _mapCustomData.find(name);
+        if( it != _mapCustomData.end() && it->second.size() > 0 ) {
+            return it->second[0];
+        }
+        return defaultValue;
     }
 
     /// \brief returns a const reference of the custom data key/value pairs
@@ -1927,7 +2133,33 @@ public:
     inline void Swap(IkParameterization& r) {
         std::swap(_transform, r._transform);
         std::swap(_type, r._type);
+        std::swap(_id, r._id);
         _mapCustomData.swap(r._mapCustomData);
+    }
+
+    void SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& alloc, dReal fUnitScale=1.0) const;
+
+    void DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale=1.0);
+
+    virtual bool operator==(const IkParameterization& other) const {
+        return _id == other._id
+               && _type == other._type
+               && _transform == other._transform
+               && _mapCustomData == other._mapCustomData;
+    }
+
+    virtual bool operator!=(const IkParameterization& other) const {
+        return !operator==(other);
+    }
+
+    /// \brief Gets the id for ikparam
+    const std::string& GetId() const {
+        return _id;
+    }
+
+    /// \brief Sets the id for ikparam, used by scene lodaer
+    void SetId(const std::string& id) {
+        _id = id;
     }
 
 protected:
@@ -2036,6 +2268,8 @@ protected:
 
     Transform _transform;
     IkParameterizationType _type;
+    std::string _id;
+
     std::map<std::string, std::vector<dReal> > _mapCustomData;
 
     friend IkParameterization operator* (const Transform &t, const IkParameterization &ikparam);
@@ -2146,11 +2380,21 @@ public:
     void Append(const TriMesh& mesh);
     void Append(const TriMesh& mesh, const Transform& trans);
 
+    /// clear vertices and indices vector
+    void Clear();
+
     AABB ComputeAABB() const;
     void serialize(std::ostream& o, int options=0) const;
 
     friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh &trimesh);
     friend OPENRAVE_API std::istream& operator>>(std::istream& I, TriMesh& trimesh);
+
+    bool operator==(const TriMesh& other) const {
+        return vertices == other.vertices && indices == other.indices;
+    }
+    bool operator!=(const TriMesh& other) const {
+        return !operator==(other);
+    }
 };
 
 OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh& trimesh);
@@ -2173,6 +2417,10 @@ enum DOFAffine
     DOF_RotationMask=(DOF_RotationAxis|DOF_Rotation3D|DOF_RotationQuat), ///< mask for all bits representing 3D rotations
     DOF_Transform = (DOF_XYZ|DOF_RotationQuat), ///< translate and rotate freely in 3D space
 };
+
+/** \brief returns a string representation of the error code
+ */
+OPENRAVE_API const char* RaveGetErrorCodeString(OpenRAVEErrorCode error);
 
 /** \brief Given a mask of affine dofs and a dof inside that mask, returns the index where the value could be found.
 
@@ -2458,6 +2706,16 @@ OPENRAVE_API UserDataPtr RaveRegisterInterface(InterfaceType type, const std::st
  */
 OPENRAVE_API UserDataPtr RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
 
+/** \brief Registers a custom json reader for a particular interface.
+
+    Once registered, anytime an interface is created through JSON and
+    the id is seen, the function CreateJSONReaderFn will be called to get a reader
+    \param id the id specified is seen in the interface, the the custom reader will be created.
+    \param fn CreateJSONReaderFn(pinterface,atts) - passed in the pointer to the interface where the id was seen along with the list of attributes
+    \return a pointer holding the registration, releasing the pointer will unregister the XML reader
+ */
+OPENRAVE_API UserDataPtr RaveRegisterJSONReader(InterfaceType type, const std::string& id, const CreateJSONReaderFn& fn);
+
 /// \brief return the environment's unique id, returns 0 if environment could not be found or not registered
 OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBaseConstPtr env);
 
@@ -2472,6 +2730,11 @@ OPENRAVE_API void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenviron
 ///
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
 OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts);
+
+/// \brief Returns the current registered json reader for the interface type/id
+///
+/// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
+OPENRAVE_API BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, ReadablePtr pReadable, const AttributesList& atts);
 
 /** \brief Returns the absolute path of the filename on the local filesystem resolving relative paths from OpenRAVE paths.
 
@@ -2503,7 +2766,7 @@ OPENRAVE_API int RaveGetDataAccess();
 
 /// \brief Gets the default viewer type name
 OPENRAVE_API std::string RaveGetDefaultViewerType();
-    
+
 /** \brief Returns the gettext translated string of the given message id
 
     \param domainname translation domain name
@@ -2570,7 +2833,7 @@ typedef void (*PluginExportFn_OnRaveInitialized)();
 /// \brief Called when OpenRAVE global runtime is about to be destroyed. See \ref OnRavePreDestroy.
 /// \ingroup plugin_exports
 typedef void (*PluginExportFn_OnRavePreDestroy)();
-    
+
 /// \deprecated (12/01/01)
 typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr env) RAVE_DEPRECATED;
 
@@ -2584,29 +2847,12 @@ const std::string& IkParameterization::GetName() const
     if( it != RaveGetIkParameterizationMap().end() ) {
         return it->second;
     }
-    throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")));
+    throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")%_type));
 }
+
 
 } // end namespace OpenRAVE
 
-#if !defined(OPENRAVE_DISABLE_ASSERT_HANDLER) && (defined(BOOST_ENABLE_ASSERT_HANDLER))
-/// Modifications controlling %boost library behavior.
-namespace boost
-{
-inline void assertion_failed(char const * expr, char const * function, char const * file, long line)
-{
-    throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] -> %s, expr: %s")%file%line%function%expr),OpenRAVE::ORE_Assert);
-}
-
-#if BOOST_VERSION>104600
-inline void assertion_failed_msg(char const * expr, char const * msg, char const * function, char const * file, long line)
-{
-    throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] -> %s, expr: %s, msg: %s")%file%line%function%expr%msg),OpenRAVE::ORE_Assert);
-}
-#endif
-
-}
-#endif
 
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MAJOR>=0&&OPENRAVE_VERSION_MAJOR<=255);
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MINOR>=0&&OPENRAVE_VERSION_MINOR<=255);
@@ -2662,7 +2908,7 @@ BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::TrajectoryBase::TPOINT)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::TrajectoryBase::TSEGMENT)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::PLUGININFO)
-BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::XMLReadable)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::Readable)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::InterfaceBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::BaseXMLReader)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::BaseXMLWriter)

@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 class TestIkSolver(EnvironmentSetup):
     def test_customfilter(self):
@@ -183,11 +186,11 @@ class TestIkSolver(EnvironmentSetup):
             ikparam.SetCustomValues('myparam0_transform=direction_',d)
             ikparam.SetCustomValues('myparam1_transform=point_',p)
             ikparam.SetCustomValues('myparam2',[5,4])
-            ikparam.SetCustomValues('myparam3_transform=ikparam_',r_[float(ikparam.GetType()),ikparam.GetValues()])
+            ikparam.SetCustomValues('myparam3_transform=ikparam_',r_[float(int(ikparam.GetType())),ikparam.GetValues()])
             assert(transdist(ikparam.GetCustomValues('myparam0_transform=direction_'),d) <= g_epsilon)
             assert(transdist(ikparam.GetCustomValues('myparam1_transform=point_'),p) <= g_epsilon)
             assert(transdist(ikparam.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)
-            assert(transdist(ikparam.GetCustomValues('myparam3_transform=ikparam_'),r_[float(ikparam.GetType()),ikparam.GetValues()]) <= g_epsilon)
+            assert(transdist(ikparam.GetCustomValues('myparam3_transform=ikparam_'),r_[float(int(ikparam.GetType())),ikparam.GetValues()]) <= g_epsilon)
             data=str(ikparam)
             ikparam2 = IkParameterization(data)
             assert(transdist(ikparam2.GetCustomValues('myparam0_transform=direction_'),d) <= g_epsilon)
@@ -195,7 +198,7 @@ class TestIkSolver(EnvironmentSetup):
             assert(transdist(ikparam2.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)
             ikparam2.ClearCustomValues('myparam2')
             assert(ikparam2.GetCustomValues('myparam2') is None)
-            assert(transdist(ikparam2.GetCustomValues('myparam3_transform=ikparam_'),r_[float(ikparam2.GetType()),ikparam2.GetValues()]) <= g_epsilon)
+            assert(transdist(ikparam2.GetCustomValues('myparam3_transform=ikparam_'),r_[float(int(ikparam2.GetType())),ikparam2.GetValues()]) <= g_epsilon)
             ikparam2.ClearCustomValues()
             assert(ikparam2.GetCustomValues('myparam3_transform=ikparam_') is None)
 
@@ -205,7 +208,7 @@ class TestIkSolver(EnvironmentSetup):
             assert(transdist(ikparam3.GetCustomValues('myparam0_transform=direction_'),dot(T[0:3,0:3],d)) <= g_epsilon)
             assert(transdist(ikparam3.GetCustomValues('myparam1_transform=point_'),dot(T[0:3,0:3],p)+T[0:3,3]) <= g_epsilon)
             assert(transdist(ikparam3.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)
-            assert(transdist(ikparam3.GetCustomValues('myparam3_transform=ikparam_'),r_[float(ikparam3.GetType()),ikparam3.GetValues()]) <= g_epsilon)
+            assert(transdist(ikparam3.GetCustomValues('myparam3_transform=ikparam_'),r_[float(int(ikparam3.GetType())),ikparam3.GetValues()]) <= g_epsilon)
 
             T = linalg.inv(manip.GetBase().GetTransform())
             ikparam4 = ikparam.Transform(T)
@@ -214,13 +217,13 @@ class TestIkSolver(EnvironmentSetup):
             assert(transdist(ikparam5.GetCustomValues('myparam0_transform=direction_'),dot(T[0:3,0:3],d)) <= g_epsilon)
             assert(transdist(ikparam5.GetCustomValues('myparam1_transform=point_'),dot(T[0:3,0:3],p)+T[0:3,3]) <= g_epsilon)
             assert(transdist(ikparam5.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)
-            assert(transdist(ikparam5.GetCustomValues('myparam3_transform=ikparam_'),r_[float(ikparam5.GetType()),ikparam5.GetValues()]) <= g_epsilon)
+            assert(transdist(ikparam5.GetCustomValues('myparam3_transform=ikparam_'),r_[float(int(ikparam5.GetType())),ikparam5.GetValues()]) <= g_epsilon)
             
             def filtertest(sol,manip,ikparamint):
                 assert(transdist(ikparamint.GetCustomValues('myparam0_transform=direction_'),dot(T[0:3,0:3],d)) <= g_epsilon)
                 assert(transdist(ikparamint.GetCustomValues('myparam1_transform=point_'),dot(T[0:3,0:3],p)+T[0:3,3]) <= g_epsilon)
                 assert(transdist(ikparamint.GetCustomValues('myparam2'),[5,4]) != g_epsilon)
-                assert(transdist(ikparamint.GetCustomValues('myparam3_transform=ikparam_'),r_[float(ikparamint.GetType()),ikparamint.GetValues()]) != g_epsilon)
+                assert(transdist(ikparamint.GetCustomValues('myparam3_transform=ikparam_'),r_[float(int(ikparamint.GetType())),ikparamint.GetValues()]) != g_epsilon)
                 return IkReturnAction.Success
             
             handle = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,filtertest)

@@ -36,7 +36,7 @@ public:
         virtual ~DualArmManipulation() {
         }
 
-        bool DualArmConstrained(std::vector<dReal>& vprev, const std::vector<dReal>& vdelta)
+        int DualArmConstrained(std::vector<dReal>& vprev, const std::vector<dReal>& vdelta)
         {
             std::vector<dReal> vnew = vprev;
             for(size_t i=0; i<vnew.size(); ++i) {
@@ -46,7 +46,7 @@ public:
             if( _CheckConstraint(vnew) ) {
                 // vprev+vdelta already fulfill the constraints
                 vprev = vnew;
-                return true;
+                return NSS_Reached;
             }
 
             KinBody::KinBodyStateSaver saver(_probot, KinBody::Save_LinkTransformation);
@@ -75,17 +75,17 @@ public:
                         vnew[jointIndicesI.at(i)] =  vcur[jointIndicesI.at(i)] - vdiff[i];
                     }
                     else {
-                        return false;
+                        return NSS_Failed;
                     }
                 }
             }
             else  {
-                return false;
+                return NSS_Failed;
             }
 
             _probot->SetDOFValues(vnew);
             _probot->GetActiveDOFValues(vprev);
-            return _CheckConstraint(vprev);
+            return _CheckConstraint(vprev) ? NSS_SuccessfulWithDeviation : NSS_Failed;
         }
 
         boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;

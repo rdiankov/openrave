@@ -23,8 +23,8 @@ namespace OpenRAVE {
 namespace RampOptimizerInternal {
 
 #define BCHECK_1D_TRAJ false // set this to true to enable checking at the end of functions Compute1DTrajectory and _ImposeJointLimitFixedDuration (for verification and debugging purposes)
-    
-ParabolicInterpolator::ParabolicInterpolator(size_t ndof)
+
+ParabolicInterpolator::ParabolicInterpolator(size_t ndof, int envid)
 {
     OPENRAVE_ASSERT_OP(ndof, >, 0);
     _ndof = ndof;
@@ -35,9 +35,13 @@ ParabolicInterpolator::ParabolicInterpolator(size_t ndof)
     _cacheV1Vect.resize(_ndof);
     _cacheAVect.resize(_ndof);
     _cacheCurvesVect.resize(_ndof);
+    _envid = envid;
+
+    _cacheRampsVect.reserve(5);
+    _cacheRampsVect2.reserve(3);
 }
 
-void ParabolicInterpolator::Initialize(size_t ndof)
+void ParabolicInterpolator::Initialize(size_t ndof, int envid)
 {
     OPENRAVE_ASSERT_OP(ndof, >, 0);
     _ndof = ndof;
@@ -48,6 +52,7 @@ void ParabolicInterpolator::Initialize(size_t ndof)
     _cacheV1Vect.resize(_ndof);
     _cacheAVect.resize(_ndof);
     _cacheCurvesVect.resize(_ndof);
+    _envid = envid;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -80,6 +85,7 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
     if( !(vMin < g_fRampInf && aMin < g_fRampInf) ) {
         // Displacements are zero.
         rampndVectOut.resize(1);
+        rampndVectOut[0].Initialize(_ndof);
         rampndVectOut[0].SetConstant(x0Vect, 0);
         return true;
     }
@@ -192,31 +198,31 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
     // Check inputs
     for (size_t idof = 0; idof < _ndof; ++idof) {
         if( x0Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x0Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
-            RAVELOG_WARN_FORMAT("x0Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", idof%x0Vect[idof]%xminVect[idof]%xmaxVect[idof]);
+            RAVELOG_WARN_FORMAT("env=%d, x0Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", _envid%idof%x0Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
         }
 
         if( x1Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x1Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
-            RAVELOG_WARN_FORMAT("x1Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", idof%x1Vect[idof]%xminVect[idof]%xmaxVect[idof]);
+            RAVELOG_WARN_FORMAT("env=%d, x1Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", _envid%idof%x1Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
         }
 
         if( vmVect[idof] <= 0 ) {
-            RAVELOG_WARN_FORMAT("vmVect[%d] = %.15e is not positive", idof%vmVect[idof]);
+            RAVELOG_WARN_FORMAT("env=%d, vmVect[%d] = %.15e is not positive", _envid%idof%vmVect[idof]);
             return false;
         }
         if( amVect[idof] <= 0 ) {
-            RAVELOG_WARN_FORMAT("amVect[%d] = %.15e is not positive", idof%amVect[idof]);
+            RAVELOG_WARN_FORMAT("env=%d, amVect[%d] = %.15e is not positive", _envid%idof%amVect[idof]);
             return false;
         }
 
         if( v0Vect[idof] > vmVect[idof] + g_fRampEpsilon || v0Vect[idof] < -vmVect[idof] - g_fRampEpsilon ) {
-            RAVELOG_WARN_FORMAT("v0Vect[%d] = %.15e exceeds the bounds; vm = %.15e", idof%v0Vect[idof]%vmVect[idof]);
+            RAVELOG_WARN_FORMAT("env=%d, v0Vect[%d] = %.15e exceeds the bounds; vm = %.15e", _envid%idof%v0Vect[idof]%vmVect[idof]);
             return false;
         }
 
         if( v1Vect[idof] > vmVect[idof] + g_fRampEpsilon || v1Vect[idof] < -vmVect[idof] - g_fRampEpsilon ) {
-            RAVELOG_WARN_FORMAT("v1Vect[%d] = %.15e exceeds the bounds; vm = %.15e", idof%v1Vect[idof]%vmVect[idof]);
+            RAVELOG_WARN_FORMAT("env=%d, v1Vect[%d] = %.15e exceeds the bounds; vm = %.15e", _envid%idof%v1Vect[idof]%vmVect[idof]);
             return false;
         }
     }
@@ -259,8 +265,7 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
         for (size_t idof = 0; idof < _ndof; ++idof) {
             ParabolicCheckReturn ret = CheckRamps(_cacheCurvesVect[idof].GetRamps(), xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof]);
             if( ret != PCR_Normal ) {
-                RAVELOG_WARN("Failed before conversion to RampNDs");
-                RAVELOG_WARN_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%_cacheCurvesVect[idof].GetDuration()%xminVect[idof]%xmaxVect[idof]%vmVect[idof]%amVect[idof]);
+                RAVELOG_WARN_FORMAT("env=%d, Failed before conversion to RampNDs. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", _envid%x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%_cacheCurvesVect[idof].GetDuration()%xminVect[idof]%xmaxVect[idof]%vmVect[idof]%amVect[idof]);
                 OPENRAVE_ASSERT_OP(ret, ==, PCR_Normal);
                 return false;
             }
@@ -283,37 +288,53 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
 bool ParabolicInterpolator::_RecomputeNDTrajectoryFixedDuration(std::vector<ParabolicCurve>& curvesVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, size_t maxIndex, bool tryHarder)
 {
     dReal newDuration = curvesVect[maxIndex].GetDuration();
-    bool isPrevDurationSafe = true;
-    if( tryHarder ) {
-        for (size_t idof = 0; idof < _ndof; ++idof) {
-            dReal tBound;
-            if( !_CalculateLeastUpperBoundInoperavtiveTimeInterval(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], tBound) ) {
-                return false;
-            }
-            if( tBound > newDuration ) {
-                newDuration = tBound;
-                isPrevDurationSafe = false;
-            }
-        }
-    }
-
-    if( !isPrevDurationSafe ) {
-        RAVELOG_VERBOSE_FORMAT("Desired trajectory duration changed: %.15e --> %.15e; diff = %.15e", curvesVect[maxIndex].GetDuration()%newDuration%(newDuration - curvesVect[maxIndex].GetDuration()));
-    }
-
+    bool bSuccess = true;
+    size_t iFailingDOF;
     for (size_t idof = 0; idof < _ndof; ++idof) {
-        if( isPrevDurationSafe && idof == maxIndex ) {
+        if( idof == maxIndex ) {
             //RAVELOG_VERBOSE_FORMAT("joint %d is already the slowest DOF, continue to the next DOF (if any)", idof);
             continue;
         }
         if( !Compute1DTrajectoryFixedDuration(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], newDuration, _cacheCurve) ) {
-            return false;
+            bSuccess = false;
+            iFailingDOF = idof;
+            break;
         }
         // Store the result back in the input curvesVect
         curvesVect[idof] = _cacheCurve;
     }
 
-    return true;
+    if( !bSuccess ) {
+        if( !tryHarder ) {
+            RAVELOG_VERBOSE_FORMAT("env=%d, Failed for joint %d. Info: x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; duration=%.15e; vm=%.15e; am=%.15e", _envid%iFailingDOF%curvesVect[iFailingDOF].GetX0()%curvesVect[iFailingDOF].GetX1()%curvesVect[iFailingDOF].GetV0()%curvesVect[iFailingDOF].GetV1()%newDuration%vmVect[iFailingDOF]%amVect[iFailingDOF]);
+            return bSuccess;
+        }
+
+        for (size_t idof = 0; idof < _ndof; ++idof) {
+            dReal tBound;
+            if( !_CalculateLeastUpperBoundInoperativeTimeInterval(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], tBound) ) {
+                return false;
+            }
+            if( tBound > newDuration ) {
+                newDuration = tBound;
+            }
+        }
+        RAVELOG_VERBOSE_FORMAT("env=%d, Desired trajectory duration changed: %.15e --> %.15e; diff = %.15e", _envid%curvesVect[maxIndex].GetDuration()%newDuration%(newDuration - curvesVect[maxIndex].GetDuration()));
+        bSuccess = true;
+        for (size_t idof = 0; idof < _ndof; ++idof) {
+            if( !Compute1DTrajectoryFixedDuration(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], newDuration, _cacheCurve) ) {
+                bSuccess = false;
+                iFailingDOF = idof;
+                break;
+            }
+            // Store the result back in the input curvesVect
+            curvesVect[idof] = _cacheCurve;
+        }
+        if( !bSuccess ) {
+            RAVELOG_VERBOSE_FORMAT("env=%d, Failed for joint %d. Info: x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; duration=%.15e; vm=%.15e; am=%.15e", _envid%iFailingDOF%curvesVect[iFailingDOF].GetX0()%curvesVect[iFailingDOF].GetX1()%curvesVect[iFailingDOF].GetV0()%curvesVect[iFailingDOF].GetV1()%newDuration%vmVect[iFailingDOF]%amVect[iFailingDOF]);
+        }
+    }
+    return bSuccess;
 }
 
 bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<dReal>&x0Vect, const std::vector<dReal>&x1Vect, const std::vector<dReal>&v0Vect, const std::vector<dReal>&v1Vect, dReal duration, const std::vector<dReal>&xminVect, const std::vector<dReal>&xmaxVect, const std::vector<dReal>&vmVect, const std::vector<dReal>&amVect, std::vector<RampND>&rampndVectOut)
@@ -330,43 +351,43 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
     // Check inputs
     for (size_t idof = 0; idof < _ndof; ++idof) {
         if( x0Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x0Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
-            RAVELOG_WARN_FORMAT("x0Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", idof%x0Vect[idof]%xminVect[idof]%xmaxVect[idof]);
+            RAVELOG_WARN_FORMAT("env=%d, x0Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", _envid%idof%x0Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
         }
 
         if( x1Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x1Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
-            RAVELOG_WARN_FORMAT("x1Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", idof%x1Vect[idof]%xminVect[idof]%xmaxVect[idof]);
+            RAVELOG_WARN_FORMAT("env=%d, x1Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", _envid%idof%x1Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
         }
 
         if( vmVect[idof] <= 0 ) {
-            RAVELOG_WARN_FORMAT("vmVect[%d] = %.15e is not positive", idof%vmVect[idof]);
+            RAVELOG_WARN_FORMAT("env=%d, vmVect[%d] = %.15e is not positive", _envid%idof%vmVect[idof]);
             return false;
         }
         if( amVect[idof] <= 0 ) {
-            RAVELOG_WARN_FORMAT("amVect[%d] = %.15e is not positive", idof%amVect[idof]);
+            RAVELOG_WARN_FORMAT("env=%d, amVect[%d] = %.15e is not positive", _envid%idof%amVect[idof]);
             return false;
         }
 
         if( v0Vect[idof] > vmVect[idof] + g_fRampEpsilon || v0Vect[idof] < -vmVect[idof] - g_fRampEpsilon ) {
-            RAVELOG_WARN_FORMAT("v0Vect[%d] = %.15e exceeds the bounds; vm = %.15e", idof%v0Vect[idof]%vmVect[idof]);
+            RAVELOG_WARN_FORMAT("env=%d, v0Vect[%d] = %.15e exceeds the bounds; vm = %.15e", _envid%idof%v0Vect[idof]%vmVect[idof]);
             return false;
         }
 
         if( v1Vect[idof] > vmVect[idof] + g_fRampEpsilon || v1Vect[idof] < -vmVect[idof] - g_fRampEpsilon ) {
-            RAVELOG_WARN_FORMAT("v1Vect[%d] = %.15e exceeds the bounds; vm = %.15e", idof%v1Vect[idof]%vmVect[idof]);
+            RAVELOG_WARN_FORMAT("env=%d, v1Vect[%d] = %.15e exceeds the bounds; vm = %.15e", _envid%idof%v1Vect[idof]%vmVect[idof]);
             return false;
         }
     }
 
     for (size_t idof = 0; idof < _ndof; ++idof) {
         if( !Compute1DTrajectoryFixedDuration(x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], vmVect[idof], amVect[idof], duration, _cacheCurve) ) {
-            RAVELOG_VERBOSE_FORMAT("Computing 1D Trajectory with fixed duration for idof = %d failed", idof);
+            RAVELOG_VERBOSE_FORMAT("env=%d, Computing 1D Trajectory with fixed duration for idof = %d failed", _envid%idof);
             return false;
         }
 
         if( !_ImposeJointLimitFixedDuration(_cacheCurve, xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], BCHECK_1D_TRAJ) ) {
-            RAVELOG_VERBOSE_FORMAT("Cannot impose joint limit on idof = %d", idof);
+            RAVELOG_VERBOSE_FORMAT("env=%d, Cannot impose joint limit on idof = %d", _envid%idof);
             return false;
         }
 
@@ -402,8 +423,7 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
         for (size_t idof = 0; idof < _ndof; ++idof) {
             ParabolicCheckReturn ret = CheckRamps(_cacheCurvesVect[idof].GetRamps(), xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof]);
             if( ret != PCR_Normal ) {
-                RAVELOG_WARN("Failed before conversion to RampNDs");
-                RAVELOG_WARN_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%duration%xminVect[idof]%xmaxVect[idof]%vmVect[idof]%amVect[idof]);
+                RAVELOG_WARN_FORMAT("env=%d, Failed before conversion to RampNDs. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", _envid%x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%duration%xminVect[idof]%xmaxVect[idof]%vmVect[idof]%amVect[idof]);
                 OPENRAVE_ASSERT_OP(ret, ==, PCR_Normal);
                 return false;
             }
@@ -523,7 +543,7 @@ bool ParabolicInterpolator::Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dR
         // its apex is at vp) by adding a middle ramp
         dReal h = Abs(vp) - vm;
         dReal t = h*Abs(a0inv);
-        
+
         _cacheRampsVect.resize(3);
         _cacheRampsVect[0].Initialize(v0, a0, (vp - v0)*a0inv - t, x0);
         dReal nom = h*h;
@@ -576,13 +596,13 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
         bx1 = xmax;
         ba1 = SolveBrakeAccel(x1, -v1, xmax);
     }
-    else if( v0 < 0 ) {
+    else if( v1 > 0 ) {
         bt1 = SolveBrakeTime(x1, -v1, xmin);
         bx1 = xmin;
         ba1 = SolveBrakeAccel(x1, -v1, xmin);
     }
 
-    _cacheRampsVect.resize(0);
+    bool bSuccess = false;
 
     if( (bt0 < duration) && (Abs(ba0) <= am + g_fRampEpsilon) ) {
         RAVELOG_VERBOSE("Case IIA: checking...");
@@ -591,6 +611,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
                 _cacheCurve.GetPeaks(bmin, bmax);
                 if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
                     RAVELOG_VERBOSE("Case IIA: passed");
+                    bSuccess = true;
                     _cacheRampsVect.resize(1 + _cacheCurve.GetRamps().size());
                     _cacheRampsVect[0].Initialize(v0, ba0, bt0, x0);
                     for (size_t iramp = 0; iramp < _cacheCurve.GetRamps().size(); ++iramp) {
@@ -608,6 +629,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
                 _cacheCurve.GetPeaks(bmin, bmax);
                 if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
                     RAVELOG_VERBOSE("Case IIB: passed");
+                    bSuccess = true;
                     _cacheRampsVect.resize(1 + _cacheCurve.GetRamps().size());
                     for (size_t iramp = 0; iramp < _cacheCurve.GetRamps().size(); ++iramp) {
                         _cacheRampsVect[iramp] = _cacheCurve.GetRamp(iramp);
@@ -621,6 +643,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
     if( bx0 == bx1 ) {
         if( (bt0 + bt1 < duration) && (Max(Abs(ba0), Abs(ba1)) <= am + g_fRampEpsilon) ) {
             RAVELOG_VERBOSE("Case III");
+            bSuccess = true;
             _cacheRampsVect.resize(3);
             _cacheRampsVect[0].Initialize(v0, ba0, bt0, x0);
             _cacheRampsVect[1].Initialize(0, 0, duration - (bt0 + bt1));
@@ -635,6 +658,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
                     _cacheCurve.GetPeaks(bmin, bmax);
                     if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
                         RAVELOG_VERBOSE("Case IV: passed");
+                        bSuccess = true;
                         _cacheRampsVect.resize(2 + _cacheCurve.GetRamps().size());
                         _cacheRampsVect[0].Initialize(v0, ba0, bt0, x0);
                         for (size_t iramp = 0; iramp < _cacheCurve.GetRamps().size(); ++iramp) {
@@ -647,9 +671,8 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
         }
     }
 
-    if( _cacheRampsVect.empty() ) {
-        RAVELOG_VERBOSE("Cannot solve for a bounded trajectory");
-        RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%duration%xmin%xmax%vm%am);
+    if( !bSuccess ) {
+        RAVELOG_VERBOSE_FORMAT("env=%d, Cannot solve for a bounded trajectory. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", _envid%x0%x1%v0%v1%duration%xmin%xmax%vm%am);
         return false;
     }
 
@@ -657,7 +680,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
     if( bCheck ) {// Check curve before returning
         ParabolicCheckReturn ret = CheckRamps(curve.GetRamps(), xmin, xmax, vm, am, x0, x1, v0, v1);
         if( ret != PCR_Normal ) {
-            RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%duration%xmin%xmax%vm%am);
+            RAVELOG_VERBOSE_FORMAT("env=%d, Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", _envid%x0%x1%v0%v1%duration%xmin%xmax%vm%am);
             return false;
         }
     }
@@ -726,7 +749,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
      */
     if( duration < -g_fRampEpsilon ) {
-        RAVELOG_VERBOSE_FORMAT("duration = %.15e is negative", duration);
+        RAVELOG_VERBOSE_FORMAT("env=%d, duration = %.15e is negative", _envid%duration);
         return false;
     }
 
@@ -743,15 +766,14 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
             {// Check curveOut before returing
                 ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
                 if( ret != PCR_Normal ) {
-                    RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                    RAVELOG_VERBOSE_FORMAT("env=%d, Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                     return false;
                 }
             }
             return true;
         }
         else {
-            RAVELOG_VERBOSE("The given duration is too short for any movement to be made");
-            RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+            RAVELOG_VERBOSE_FORMAT("env=%d, The given duration is too short for any movement to be made. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
             return false;
         }
     }
@@ -763,7 +785,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
             v0 = vm;
         }
         else {
-            RAVELOG_WARN_FORMAT("v0 > vm: %.15e > %.15e", v0%vm);
+            RAVELOG_WARN_FORMAT("env=%d, v0 > vm: %.15e > %.15e", _envid%v0%vm);
             return false;
         }
     }
@@ -773,7 +795,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
             v0 = -vm;
         }
         else {
-            RAVELOG_WARN_FORMAT("v0 < -vm: %.15e < %.15e", v0%(-vm));
+            RAVELOG_WARN_FORMAT("env=%d, v0 < -vm: %.15e < %.15e", _envid%v0%(-vm));
             return false;
         }
     }
@@ -784,7 +806,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
             v1 = vm;
         }
         else {
-            RAVELOG_WARN_FORMAT("v1 > vm: %.15e > %.15e", v1%vm);
+            RAVELOG_WARN_FORMAT("env=%d, v1 > vm: %.15e > %.15e", _envid%v1%vm);
             return false;
         }
     }
@@ -794,7 +816,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
             v1 = -vm;
         }
         else {
-            RAVELOG_WARN_FORMAT("v1 < -vm: %.15e < %.15e", v1%(-vm));
+            RAVELOG_WARN_FORMAT("env=%d, v1 < -vm: %.15e < %.15e", _envid%v1%(-vm));
             return false;
         }
     }
@@ -832,7 +854,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         {// Check curveOut before returning
             ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
             if( ret != PCR_Normal ) {
-                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                RAVELOG_VERBOSE_FORMAT("env=%d, Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                 return false;
             }
         }
@@ -846,8 +868,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
     if( IS_DEBUGLEVEL(Level_Verbose) ) {
         if( Abs(A) <= g_fRampEpsilon && Abs(B) <= g_fRampEpsilon ) {
-            RAVELOG_VERBOSE("A and B are zero");
-            RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+            RAVELOG_VERBOSE_FORMAT("env=%d, A and B are zero. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
         }
     }
 
@@ -871,8 +892,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         }
     }
     else if( sum1 > 0 ) {
-        RAVELOG_VERBOSE("sum1 > 0. This implies that duration is too short");
-        RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+        RAVELOG_VERBOSE_FORMAT("env=%d, sum1 > 0. This implies that duration is too short. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
         return false;
     }
     else {
@@ -894,15 +914,13 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         i2l = D;
     }
     else {
-        RAVELOG_VERBOSE("sum2 < 0. This implies that duration is too short");
-        RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+        RAVELOG_VERBOSE_FORMAT("env=%d, sum2 < 0. This implies that duration is too short. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
         return false;
     }
 
     // Find the intersection between interval 1 and interval 2, store it in interval 2.
     if( (i1l > i2u) || (i1u < i2l) ) {
-        RAVELOG_VERBOSE("interval 1 and interval 2 do not have any intersection");
-        RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+        RAVELOG_VERBOSE_FORMAT("env=%d, interval 1 and interval 2 do not have any intersection. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
         return false;
     }
     else {
@@ -921,8 +939,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         }
     }
     else if( sum1 > 0 ) {
-        RAVELOG_VERBOSE("sum1 > 0. This implies that duration is too short");
-        RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+        RAVELOG_VERBOSE_FORMAT("env=%d, sum1 > 0. This implies that duration is too short. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
         return false;
     }
     else {
@@ -944,15 +961,13 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         i4u = duration + D;
     }
     else {
-        RAVELOG_VERBOSE("sum2 < 0. This implies that duration is too short");
-        RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+        RAVELOG_VERBOSE_FORMAT("env=%d, sum2 < 0. This implies that duration is too short. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
         return false;
     }
 
     // Find the intersection between interval 3 and interval 4, store it in interval 4.
     if( (i3l > i4u) || (i3u < i4l) ) {
-        RAVELOG_VERBOSE("interval 3 and interval 4 do not have any intersection");
-        RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+        RAVELOG_VERBOSE_FORMAT("env=%d, interval 3 and interval 4 do not have any intersection. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
         return false;
     }
     else {
@@ -967,8 +982,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         RAVELOG_VERBOSE("interval 2 and interval 4 intersect at a point, most likely because the given endTime is actually its minimum time.");
         // Make sure that the above statement is true.
         if( !Compute1DTrajectory(x0, x1, v0, v1, vm, am, curveOut) ) {
-            RAVELOG_VERBOSE("Compute1DTrajectory failed");
-            RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+            RAVELOG_VERBOSE_FORMAT("env=%d, Compute1DTrajectory failed. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
             return false; // what ?
         }
         else {
@@ -978,15 +992,13 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
                 return true;
             }
             else {
-                RAVELOG_VERBOSE("The hypothesis is wrong. Something else just happened");
-                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                RAVELOG_VERBOSE_FORMAT("env=%d, The hypothesis is wrong. Something else just happened. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                 return false; // what ?
             }
         }
     }
     else if( (i2l > i4u) || (i2u < i4l) ) {
-        RAVELOG_VERBOSE("interval 2 and interval 4 do not have any intersection");
-        RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+        RAVELOG_VERBOSE_FORMAT("env=%d, interval 2 and interval 4 do not have any intersection. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
         return false;
     }
     else {
@@ -996,8 +1008,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
     // Find the intersection between interval 0 and interval 4, store it in interval 4.
     if( (i0l > i4u) || (i0u < i4l) ) {
-        RAVELOG_VERBOSE("interval 0 and interval 4 do not have any intersection");
-        RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+        RAVELOG_VERBOSE_FORMAT("env=%d, interval 0 and interval 4 do not have any intersection. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
         return false;
     }
     else {
@@ -1007,8 +1018,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
     // Check soundness
     if( i4l > i4u ) {
-        RAVELOG_VERBOSE("interval 4 is empty but the algorithm cannot detect this.");
-        RAVELOG_VERBOSE_FORMAT("interval4 = [%.15e, %.15e]", i4l%i4u);
+        RAVELOG_VERBOSE_FORMAT("env=%d, interval 4 is empty but the algorithm cannot detect this; interval4 = [%.15e, %.15e]", _envid%i4l%i4u);
         return false;
     }
 
@@ -1041,7 +1051,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         {// Check curveOut before returning
             ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
             if( ret != PCR_Normal ) {
-                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                RAVELOG_VERBOSE_FORMAT("env=%d, Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                 return false;
             }
         }
@@ -1057,7 +1067,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         {// Check curveOut before returning
             ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
             if( ret != PCR_Normal ) {
-                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                RAVELOG_VERBOSE_FORMAT("env=%d, Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                 return false;
             }
         }
@@ -1070,7 +1080,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
     // Consistency checking
     if( !FuzzyEquals(vp, v1 - (a1*t1), g_fRampEpsilon) ) {
-        RAVELOG_VERBOSE_FORMAT("Verification failed (vp != v1 - a1*d1): %.15e != %.15e", vp%(v1 - (a1*t1)));
+        RAVELOG_VERBOSE_FORMAT("env=%d, Verification failed (vp != v1 - a1*d1): %.15e != %.15e", _envid%vp%(v1 - (a1*t1)));
         RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
         RAVELOG_VERBOSE_FORMAT("Calculated values: A = %.15e; B = %.15e; t0 = %.15e; t1 = %.15e; vp = %.15e; a0 = %.15e; a1 = %.15e", A%B%t0%t1%vp%a0%a1);
         return false;
@@ -1086,7 +1096,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         {// Check curveOut before returning
             ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
             if( ret != PCR_Normal ) {
-                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                RAVELOG_VERBOSE_FORMAT("env=%d, Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                 return false;
             }
         }
@@ -1099,8 +1109,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         // a0 and a1 should not be zero if the velocity limit is violated. The first check is done
         // at the line: FuzzyEquals(vp, v1 - (a1*t1)) above.
         if( (FuzzyZero(a0, g_fRampEpsilon)) || (FuzzyZero(a1, g_fRampEpsilon)) ) {
-            RAVELOG_VERBOSE_FORMAT("Velocity limit is violated but at least one acceleration is zero: a0 = %.15e; a1 = %.15e", a0%a1);
-            RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+            RAVELOG_VERBOSE_FORMAT("env=%d, Velocity limit is violated but at least one acceleration is zero: a0 = %.15e; a1 = %.15e; Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%a0%a1%x0%x1%v0%v1%vm%am%duration);
             return false;
         }
 
@@ -1165,8 +1174,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
             // This means the excessive area is too large such that after we paste it on both sides
             // of the original velocity profile, the whole profile becomes one-ramp with a = 0 and v
             // = vmNew.
-            RAVELOG_VERBOSE("C2 == 0. Unable to fix this case.");
-            RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+            RAVELOG_VERBOSE_FORMAT("env=%d, C2 == 0. Unable to fix this case. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
             return false;
         }
 
@@ -1177,8 +1185,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
                 // The computed a0 is exceeding the bound and its corresponding a1 is
                 // zero. Therefore, we cannot fix this case. This is probably because the given
                 // duration is actually less than the minimum duration that it can get.
-                RAVELOG_VERBOSE("|a0| > am and a1 == 0: Unable to fix this case since the given duration is too short.");
-                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                RAVELOG_VERBOSE_FORMAT("env=%d, |a0| > am and a1 == 0. Unable to fix this case since the given duration is too short. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                 return false;
             }
 
@@ -1197,8 +1204,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
             if( Abs(a1) > am ) {
                 // The computed a1 is exceeding the bound while a0 being zero. This is similar to
                 // the case above when |a0| > am and a1 == 0.
-                RAVELOG_VERBOSE("a0 == 0 and |a1| > am: Unable to fix this case since the given duration is too short.");
-                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                RAVELOG_VERBOSE_FORMAT("env=%d, a0 == 0 and |a1| > am. Unable to fix this case since the given duration is too short. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                 return false;
             }
 
@@ -1222,8 +1228,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
                     // Recalculate the related variable
                     if( C2*a1 - B2 == 0 ) {
                         // this case means a0 == 0 which shuold have been catched from above
-                        RAVELOG_VERBOSE_FORMAT("(C2*a1 - B2 == 0) a0 shuold have been zero but a0 = %.15e", a0);
-                        RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                        RAVELOG_VERBOSE_FORMAT("env=%d, C2*a1 - B2 == 0. a0 should have been zero but a0 = %.15e. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%a0%x0%x1%v0%v1%vm%am%duration);
                         return false;
                     }
                     a0 = A2*a1/(C2*a1 - B2);
@@ -1234,15 +1239,12 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
         // Final check on the accelerations
         if( (Abs(a0) > am + g_fRampEpsilon) || (Abs(a1) > am + g_fRampEpsilon) ) {
-            RAVELOG_VERBOSE("Cannot fix accelration bounds violation");
-            RAVELOG_VERBOSE_FORMAT("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+            RAVELOG_VERBOSE_FORMAT("env=%d, Cannot fix accelration bounds violation. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
             return false;
         }
 
         if( (Abs(a0) <= g_fRampEpsilon) && (Abs(a1) <= g_fRampEpsilon) ) {
-            RAVELOG_VERBOSE("Both accelerations are zero.");
-            RAVELOG_VERBOSE_FORMAT("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
-            RAVELOG_VERBOSE_FORMAT("A2 = %.15e; B2 = %.15e; C2 = %.15e; D2 = %.15e", A2%B2%C2%D2);
+            RAVELOG_VERBOSE_FORMAT("env=%d, Both accelerations are zero. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e; A2 = %.15e; B2 = %.15e; C2 = %.15e; D2 = %.15e", _envid%x0%x1%v0%v1%vm%am%duration%A2%B2%C2%D2);
             return false;
         }
 
@@ -1271,30 +1273,26 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         else {
             t0 = dv2/a0;
             if( t0 < 0 ) {
-                RAVELOG_VERBOSE("t0 < 0. The given duration is not achievable with the given bounds");
-                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                RAVELOG_VERBOSE_FORMAT("env=%d, t0 < 0. The given duration is not achievable with the given bounds. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                 return false;
             }
 
             vp = vmNew;
             dReal tLastRamp = -dv3/a1;
             if( tLastRamp < 0 ) {
-                RAVELOG_VERBOSE("tLastRamp < 0. The given duration is not achievable with the given bounds");
-                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                RAVELOG_VERBOSE_FORMAT("env=%d, tLastRamp < 0. The given duration is not achievable with the given bounds. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                 return false;
             }
 
             if( t0 + tLastRamp > duration ) {
                 // Final fix
                 if( A == 0 ) {
-                    RAVELOG_VERBOSE("(final fix) A = 0. Don't know how to deal with this case.");
-                    RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                    RAVELOG_VERBOSE_FORMAT("env=%d, (final fix) A == 0. No fixing method available. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                     return false;
                 }
                 t0 = (dv2 - B)/A; // note that we use A and B, not A2 and B2.
                 if( t0 < 0 ) {
-                    RAVELOG_VERBOSE("(final fix) t0 < 0. Don't know how to deal with this case.");
-                    RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                    RAVELOG_VERBOSE_FORMAT("env=%d, (final fix) t0 < 0. No fixing method available. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                     return false;
                 }
                 t1 = duration - t0;
@@ -1317,9 +1315,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
                     a0 = dv2/t0;
                     a1 = -dv3/t1;
                     if( (Abs(a0) > am + g_fRampEpsilon) || (Abs(a1) > am + g_fRampEpsilon) ) {
-                        RAVELOG_VERBOSE("Cannot merge into two-ramp because of acceleration limits");
-                        RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
-                        RAVELOG_VERBOSE_FORMAT("Calculated values: t0 = %.15e; t1 = %.15e; vp = %.15e; a0 = %.15e; a1 = %.15e", t0%t1%vp%a0%a1);
+                        RAVELOG_VERBOSE_FORMAT("env=%d, Cannot merge into two-ramp because of acceleration limits. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e; Calculated values: t0 = %.15e; t1 = %.15e; vp = %.15e; a0 = %.15e; a1 = %.15e", _envid%x0%x1%v0%v1%vm%am%duration%t0%t1%vp%a0%a1);
                         return false;
                     }
 
@@ -1342,7 +1338,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         {// Check curveOut before returning
             ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
             if( ret != PCR_Normal ) {
-                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                RAVELOG_VERBOSE_FORMAT("env=%d, Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
                 return false;
             }
         }
@@ -1352,7 +1348,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Utilities
-bool ParabolicInterpolator::_CalculateLeastUpperBoundInoperavtiveTimeInterval(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal& t)
+bool ParabolicInterpolator::_CalculateLeastUpperBoundInoperativeTimeInterval(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal& t)
 {
     /*
        Let t be the total duration of the velocity profile, a0 and a1 be the accelerations of both
@@ -1455,8 +1451,7 @@ bool ParabolicInterpolator::_CalculateLeastUpperBoundInoperavtiveTimeInterval(dR
             return true;
         }
         else {
-            RAVELOG_VERBOSE_FORMAT("Unable to calculate the least upper bound: T0 = %.15e,;T1 = %.15e; T2 = %.15e; T3 = %.15e", T0%T1%T2%T3);
-            RAVELOG_VERBOSE_FORMAT("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%vm%am);
+            RAVELOG_VERBOSE_FORMAT("env=%d, Unable to calculate the least upper bound: T0 = %.15e,;T1 = %.15e; T2 = %.15e; T3 = %.15e; Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e", _envid%T0%T1%T2%T3%x0%x1%v0%v1%vm%am);
             return false;
         }
     }
@@ -1484,10 +1479,10 @@ bool ParabolicInterpolator::_SolveForT0(dReal A, dReal B, dReal t, dReal l, dRea
      */
     if( l < 0 ) {
         if( u < 0 ) {
-            RAVELOG_VERBOSE_FORMAT("The given interval is invalid: l = %.15e; u = %.15e", l% u);
+            RAVELOG_VERBOSE_FORMAT("env=%d, The given interval is invalid: l = %.15e; u = %.15e", _envid%l%u);
             return false;
         }
-        RAVELOG_VERBOSE("Invalid lower bound is given, so reset it to zero.");
+        RAVELOG_VERBOSE_FORMAT("env=%d, Invalid lower bound is given, so reset it to zero.", _envid);
         l = 0;
     }
 
@@ -1564,7 +1559,17 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     }
 
     switchpointsList.push_back(0);
-    switchpointsList.push_back(curvesVectIn[0].GetDuration());
+    // Although functions to recompute trajectories with a fixed duration have been called prior
+    // to this, the duration of each dof can still be a bit different (but within the acceptable
+    // range). Should use the actual max duration as the duration of rampndVectOut.
+    dReal maxDuration = 0;
+    for( size_t idof = 0; idof < _ndof; ++idof ) {
+        if( curvesVectIn[idof].GetDuration() > maxDuration ) {
+            maxDuration = curvesVectIn[idof].GetDuration();
+        }
+    }
+    switchpointsList.push_back(maxDuration);
+
     for (size_t idof = 0; idof < _ndof; ++idof) {
         dReal sw = 0;
         for (std::vector<Ramp>::const_iterator itramp = curvesVectIn[idof].GetRamps().begin(); itramp != curvesVectIn[idof].GetRamps().end(); ++itramp) {

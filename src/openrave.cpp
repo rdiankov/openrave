@@ -148,7 +148,7 @@ int main(int argc, char ** argv)
             i += 2;
         }
         else if((_stricmp(argv[i], "--module") == 0)||(_stricmp(argv[i], "-problem") == 0)) {
-            s_listModules.push_back(pair<string, string>(argv[i+1], ""));
+            s_listModules.emplace_back(argv[i+1], "");
             i += 2;
 
             if((i < argc)&&(argv[i][0] != '-')) {
@@ -327,7 +327,7 @@ void MainOpenRAVEThread()
             if( s_bSetWindowPosition ) {
                 pviewer->Move(s_WindowPosX,s_WindowPosY);
             }
-            penv->AddViewer(pviewer);
+            penv->Add(pviewer, IAM_AllowRenaming, std::string());
         }
     }
 

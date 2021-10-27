@@ -11,6 +11,8 @@ namespace fclrave {
 typedef KinBody::LinkConstPtr LinkConstPtr;
 typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
 typedef boost::weak_ptr<const KinBody> KinBodyConstWeakPtr;
+typedef KinBody::GeometryConstPtr GeometryConstPtr;
+typedef boost::weak_ptr<KinBody::Geometry> GeometryWeakPtr;
 using OpenRAVE::ORE_Assert;
 
 // Warning : this is the only place where we use std::shared_ptr (for compatibility with fcl)
@@ -57,6 +59,17 @@ CollisionGeometryPtr ConvertMeshToFCL(std::vector<fcl::Vec3f> const &points,std:
     return model;
 }
 
+
+/// \brief ensures vector size is at least size
+template <typename T>
+inline void EnsureVectorSize(std::vector<T>& vec, size_t size)
+{
+    if (vec.size() < size) {
+        //RAVELOG_WARN_FORMAT("resizing 0x%x from %d to %d", &vec%(vec.size())%(index + 1));
+        vec.resize(size);
+    }
+}
+
 /// \brief fcl spaces manages the individual collision objects and sets up callbacks to track their changes.
 ///
 /// It does not know or manage the broadphase manager
@@ -68,12 +81,33 @@ public:
     }
 
     // corresponds to FCLUserData
-    class KinBodyInfo : public boost::enable_shared_from_this<KinBodyInfo>, public OpenRAVE::UserData
+    class FCLKinBodyInfo : public boost::enable_shared_from_this<FCLKinBodyInfo>, public OpenRAVE::UserData
     {
 public:
+        class FCLGeometryInfo
+        {
+public:
+            FCLGeometryInfo() : bFromKinBodyGeometry(false) {
+            }
+
+            FCLGeometryInfo(KinBody::GeometryPtr pgeom) : _pgeom(pgeom), bFromKinBodyGeometry(true) {
+            }
+
+            virtual ~FCLGeometryInfo() {
+            }
+
+            inline KinBody::GeometryPtr GetGeometry() {
+                return _pgeom.lock();
+            }
+
+            GeometryWeakPtr _pgeom;
+            std::string bodylinkgeomname; // for debugging purposes
+            bool bFromKinBodyGeometry; ///< if true, then from kinbodygeometry. Otherwise from standalone object that does not have any KinBody associations
+        };
+
         class LinkInfo
         {
-        public:
+public:
             LinkInfo() : bFromKinBodyLink(false) {
             }
             LinkInfo(KinBody::LinkPtr plink) : _plink(plink), bFromKinBodyLink(true) {
@@ -86,7 +120,7 @@ public:
             void Reset() {
                 if( !!linkBV.second ) {
                     if( !!GetLink() ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, resetting link %s:%s col=0x%x", GetLink()->GetParent()->GetEnv()->GetId()%GetLink()->GetParent()->GetName()%GetLink()->GetName()%(uint64_t)linkBV.second.get());
+                        RAVELOG_VERBOSE_FORMAT("env=%s, resetting link %s:%s col=0x%x", GetLink()->GetParent()->GetEnv()->GetNameId()%GetLink()->GetParent()->GetName()%GetLink()->GetName()%(uint64_t)linkBV.second.get());
                     }
                     else {
                         RAVELOG_VERBOSE_FORMAT("resetting unknown link col=0x%x", (uint64_t)linkBV.second.get());
@@ -100,13 +134,17 @@ public:
                     (*itgeompair).second.reset();
                 }
                 vgeoms.resize(0);
+
+                // make sure to clear vgeominfos after vgeoms because the CollisionObject inside each vgeom element has a corresponding vgeominfo as a void pointer.
+                vgeominfos.resize(0);
             }
 
-            KinBody::LinkPtr GetLink() {
+            inline KinBody::LinkPtr GetLink() {
                 return _plink.lock();
             }
 
             KinBody::LinkWeakPtr _plink;
+            vector< boost::shared_ptr<FCLGeometryInfo> > vgeominfos; ///< info for every geometry of the link
 
             //int nLastStamp; ///< Tracks if the collision geometries are up to date wrt the body update stamp. This is for narrow phase collision
             TransformCollisionPair linkBV; ///< pair of the transformation and collision object corresponding to a bounding OBB for the link
@@ -115,11 +153,11 @@ public:
             bool bFromKinBodyLink; ///< if true, then from kinbodylink. Otherwise from standalone object that does not have any KinBody associations
         };
 
-        KinBodyInfo() : nLastStamp(0), nLinkUpdateStamp(0), nGeometryUpdateStamp(0), nAttachedBodiesUpdateStamp(0), nActiveDOFUpdateStamp(0)
+        FCLKinBodyInfo() : nLastStamp(0), nLinkUpdateStamp(0), nGeometryUpdateStamp(0), nAttachedBodiesUpdateStamp(0), nActiveDOFUpdateStamp(0)
         {
         }
 
-        virtual ~KinBodyInfo() {
+        virtual ~FCLKinBodyInfo() {
             Reset();
         }
 
@@ -160,15 +198,18 @@ public:
         std::string _geometrygroup; ///< name of the geometry group tracked by this kinbody info ; if empty, tracks the current geometries
     };
 
-    typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
-    typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
-    typedef boost::weak_ptr<KinBodyInfo> KinBodyInfoWeakPtr;
-    typedef boost::shared_ptr<FCLSpace::KinBodyInfo::LinkInfo> LinkInfoPtr;
-    typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
+    typedef boost::shared_ptr<FCLKinBodyInfo> FCLKinBodyInfoPtr;
+    typedef boost::shared_ptr<FCLKinBodyInfo const> FCLKinBodyInfoConstPtr;
+    typedef boost::weak_ptr<FCLKinBodyInfo> FCLKinBodyInfoWeakPtr;
+    typedef boost::shared_ptr<FCLSpace::FCLKinBodyInfo::LinkInfo> LinkInfoPtr;
+    typedef boost::function<void (FCLKinBodyInfoPtr)> SynchronizeCallbackFn;
 
     FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
-        : _penv(penv), _userdatakey(userdatakey), _bIsSelfCollisionChecker(true)
+        : _penv(penv), _userdatakey(userdatakey),
+        _currentpinfo(1, FCLKinBodyInfoPtr()), // initialize with one null pointer, this is a place holder for null pointer so that we can return by reference. env id 0 means invalid so it's consistent with the definition as well
+        _bIsSelfCollisionChecker(true)
     {
+
         // After many test, OBB seems to be the only real option (followed by kIOS which is needed for distance checking)
         SetBVHRepresentation("OBB");
     }
@@ -181,24 +222,30 @@ public:
     void DestroyEnvironment()
     {
         RAVELOG_VERBOSE_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)", _penv->GetId()%_userdatakey);
-        FOREACH(itbody, _setInitializedBodies) {
-            KinBodyInfoPtr pinfo = GetInfo(*itbody);
+        for (KinBodyConstPtr pbody : _vecInitializedBodies) {
+            if (!pbody) {
+                continue;
+            }
+            FCLKinBodyInfoPtr& pinfo = GetInfo(*pbody);
             if( !!pinfo ) {
                 pinfo->Reset();
             }
         }
-        _currentpinfo.clear();
+        // even after DestroyEnvironment is called, users of this class still try to access _currentpinfo
+        // in that case, null pointer should be returned, instead of range error from _currentpinfo.at(0). for that purpose, keep the first element here.
+        _currentpinfo.erase(_currentpinfo.begin() + 1, _currentpinfo.end());
         _cachedpinfo.clear();
-        _setInitializedBodies.clear();
+        _vecInitializedBodies.clear();
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
+    FCLKinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo = FCLKinBodyInfoPtr(), bool bSetToCurrentPInfo=true)
     {
         if( !pinfo ) {
-            pinfo.reset(new KinBodyInfo());
+            pinfo.reset(new FCLKinBodyInfo());
             pinfo->_geometrygroup = _geometrygroup;
         }
 
+        RAVELOG_VERBOSE_FORMAT("env=%s, self=%d, init body %s (%d)", _penv->GetNameId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentBodyIndex());
         pinfo->Reset();
         pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
         // make sure that synchronization do occur !
@@ -206,97 +253,126 @@ public:
 
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
+            const KinBody::LinkPtr& plink = *itlink;
+            boost::shared_ptr<FCLKinBodyInfo::LinkInfo> linkinfo(new FCLKinBodyInfo::LinkInfo(plink));
 
-            boost::shared_ptr<KinBodyInfo::LinkInfo> link(new KinBodyInfo::LinkInfo(*itlink));
 
-
-            typedef boost::range_detail::any_iterator<KinBody::GeometryInfo, boost::forward_traversal_tag, KinBody::GeometryInfo const&, std::ptrdiff_t> GeometryInfoIterator;
-            GeometryInfoIterator begingeom, endgeom;
+            fcl::AABB enclosingBV;
 
             // Glue code for a unified access to geometries
-            if(pinfo->_geometrygroup.size() > 0 && (*itlink)->GetGroupNumGeometries(pinfo->_geometrygroup) >= 0) {
-                const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = (*itlink)->GetGeometriesFromGroup(pinfo->_geometrygroup);
-                typedef boost::function<KinBody::GeometryInfo const& (KinBody::GeometryInfoPtr const&)> Func;
-                typedef boost::transform_iterator<Func, std::vector<KinBody::GeometryInfoPtr>::const_iterator> PtrGeomInfoIterator;
-                Func deref = boost::mem_fn(&KinBody::GeometryInfoPtr::operator*);
-                begingeom = GeometryInfoIterator(PtrGeomInfoIterator(vgeometryinfos.begin(), deref));
-                endgeom = GeometryInfoIterator(PtrGeomInfoIterator(vgeometryinfos.end(), deref));
+            if(pinfo->_geometrygroup.size() > 0 && plink->GetGroupNumGeometries(pinfo->_geometrygroup) >= 0) {
+                const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = plink->GetGeometriesFromGroup(pinfo->_geometrygroup);
+                FOREACH(itgeominfo, vgeometryinfos) {
+                    const KinBody::GeometryInfoPtr& pgeominfo = *itgeominfo;
+                    if( !pgeominfo ) {
+                        int igeominfo = itgeominfo - vgeometryinfos.begin();
+                        throw OpenRAVE::OpenRAVEException(str(boost::format("Failed to access geometry info %d for link %s:%s with geometrygroup %s")%igeominfo%plink->GetParent()->GetName()%plink->GetName()%pinfo->_geometrygroup), OpenRAVE::ORE_InvalidState);
+                    }
+                    const KinBody::GeometryInfo& geominfo = *pgeominfo;
+                    const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, geominfo);
+
+                    if( !pfclgeom ) {
+                        continue;
+                    }
+                    pfclgeom->setUserData(nullptr);
+
+                    // We do not set the transformation here and leave it to _Synchronize
+                    CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
+                    pfclcoll->setUserData(linkinfo.get());
+                    linkinfo->vgeoms.push_back(TransformCollisionPair(geominfo.GetTransform(), pfclcoll));
+
+                    KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), geominfo);
+                    if( itgeominfo == vgeometryinfos.begin() ) {
+                        enclosingBV = ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
+                    }
+                    else {
+                        enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
+                    }
+                }
             }
             else {
-                std::vector<KinBody::Link::GeometryPtr> const &geoms = (*itlink)->GetGeometries();
-                typedef boost::function<KinBody::GeometryInfo const& (KinBody::Link::GeometryPtr const&)> Func;
-                typedef boost::transform_iterator<Func, std::vector<KinBody::Link::GeometryPtr>::const_iterator> PtrGeomInfoIterator;
-                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom)->KinBody::GeometryInfo const& {
-                    return itgeom->GetInfo();
-                };
-                begingeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.begin(), getInfo));
-                endgeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.end(), getInfo));
+                const std::vector<KinBody::Link::GeometryPtr> & vgeometries = plink->GetGeometries();
+                FOREACH(itgeom, vgeometries) {
+                    const KinBody::GeometryPtr& pgeom = *itgeom;
+                    const KinBody::GeometryInfo& geominfo = pgeom->GetInfo();
+                    const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, geominfo);
+
+                    if( !pfclgeom ) {
+                        continue;
+                    }
+                    boost::shared_ptr<FCLKinBodyInfo::FCLGeometryInfo> pfclgeominfo(new FCLKinBodyInfo::FCLGeometryInfo(pgeom));
+                    pfclgeominfo->bodylinkgeomname = pbody->GetName() + "/" + plink->GetName() + "/" + pgeom->GetName();
+                    pfclgeom->setUserData(pfclgeominfo.get());
+                    // save the pointers
+                    linkinfo->vgeominfos.push_back(pfclgeominfo);
+
+                    // We do not set the transformation here and leave it to _Synchronize
+                    CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
+                    pfclcoll->setUserData(linkinfo.get());
+
+                    linkinfo->vgeoms.push_back(TransformCollisionPair(geominfo.GetTransform(), pfclcoll));
+
+                    KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), geominfo);
+                    if( itgeom == vgeometries.begin() ) {
+                        enclosingBV = ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
+                    }
+                    else {
+                        enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
+                    }
+                }
             }
 
-            for(GeometryInfoIterator itgeominfo = begingeom; itgeominfo != endgeom; ++itgeominfo) {
-                const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, *itgeominfo);
-
-                if( !pfclgeom ) {
-                    continue;
-                }
-
-                // We do not set the transformation here and leave it to _Synchronize
-                CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
-                pfclcoll->setUserData(link.get());
-
-                link->vgeoms.push_back(TransformCollisionPair(itgeominfo->_t, pfclcoll));
+            if( linkinfo->vgeoms.size() == 0 ) {
+                RAVELOG_DEBUG_FORMAT("env=%s, Initializing body '%s' (index=%d) link '%s' with 0 geometries (env %d) (userdatakey %s)", _penv->GetNameId()%pbody->GetName()%pbody->GetEnvironmentBodyIndex()%plink->GetName()%_penv->GetId()%_userdatakey);
             }
-
-            if( link->vgeoms.size() == 0 ) {
-                RAVELOG_WARN_FORMAT("Initializing link %s/%s with 0 geometries (env %d) (userdatakey %s)",pbody->GetName()%(*itlink)->GetName()%_penv->GetId()%_userdatakey);
-            } else {
-                // create the bounding volume for the link
-                KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *begingeom);
-                fcl::AABB enclosingBV = ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
-                for(GeometryInfoIterator it = ++begingeom; it != endgeom; ++it) {
-                    KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *it);
-                    enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
-                }
+            else {
                 CollisionGeometryPtr pfclgeomBV = std::make_shared<fcl::Box>(enclosingBV.max_ - enclosingBV.min_);
+                pfclgeomBV->setUserData(nullptr);
                 CollisionObjectPtr pfclcollBV = boost::make_shared<fcl::CollisionObject>(pfclgeomBV);
                 Transform trans(Vector(1,0,0,0),ConvertVectorFromFCL(0.5 * (enclosingBV.min_ + enclosingBV.max_)));
-                pfclcollBV->setUserData(link.get());
-                link->linkBV = std::make_pair(trans, pfclcollBV);
+                pfclcollBV->setUserData(linkinfo.get());
+                linkinfo->linkBV = std::make_pair(trans, pfclcollBV);
             }
 
             //link->nLastStamp = pinfo->nLastStamp;
-            link->bodylinkname = pbody->GetName() + "/" + (*itlink)->GetName();
-            pinfo->vlinks.push_back(link);
+            linkinfo->bodylinkname = pbody->GetName() + "/" + plink->GetName();
+            pinfo->vlinks.push_back(linkinfo);
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
-            RAVELOG_DEBUG_FORMAT("FCLSPACECOLLISIONOBJECT|%s|%s", link->linkBV.second.get()%link->bodylinkname);
+            RAVELOG_DEBUG_FORMAT("FCLSPACECOLLISIONOBJECT|%s|%s", linkinfo->linkBV.second.get()%linkinfo->bodylinkname);
 #endif
         }
 
-        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetCurrentGeometryCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBodyInfo>(pinfo)));
-        pinfo->_geometrygroupcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometryGroup, boost::bind(&FCLSpace::_ResetGeometryGroupsCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBodyInfo>(pinfo)));
-        pinfo->_linkenablecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ResetLinkEnableCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
-        pinfo->_activeDOFsCallback = pbody->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, boost::bind(&FCLSpace::_ResetActiveDOFsCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
+        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetCurrentGeometryCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
+        pinfo->_geometrygroupcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometryGroup, boost::bind(&FCLSpace::_ResetGeometryGroupsCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
+        pinfo->_linkenablecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ResetLinkEnableCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
+        pinfo->_activeDOFsCallback = pbody->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, boost::bind(&FCLSpace::_ResetActiveDOFsCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
 
-        pinfo->_bodyAttachedCallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyAttached, boost::bind(&FCLSpace::_ResetAttachedBodyCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
+        pinfo->_bodyAttachedCallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyAttached, boost::bind(&FCLSpace::_ResetAttachedBodyCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
         pinfo->_bodyremovedcallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyRemoved, boost::bind(&FCLSpace::RemoveUserData, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::bind(&OpenRAVE::utils::sptr_from<const KinBody>, boost::weak_ptr<const KinBody>(pbody))));
 
-        BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
-        _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
-        //_cachedpinfo[pbody->GetEnvironmentId()] what to do with the cache?
-        _setInitializedBodies.insert(pbody);
+        const int envId = pbody->GetEnvironmentBodyIndex();
+        const int maxEnvId = _penv->GetMaxEnvironmentBodyIndex();
+        BOOST_ASSERT(envId != 0);
+        if( bSetToCurrentPInfo ) {
+            EnsureVectorSize(_currentpinfo, maxEnvId + 1);
+            _currentpinfo.at(envId) = pinfo;
+        }
+        //_cachedpinfo[pbody->GetEnvironmentBodyIndex()] what to do with the cache?
+        EnsureVectorSize(_vecInitializedBodies, maxEnvId + 1);
+        _vecInitializedBodies.at(envId) = pbody;
 
         //Do I really need to synchronize anything at that point ?
-        _Synchronize(pinfo);
+        _Synchronize(*pinfo, *pbody);
 
         return pinfo;
     }
 
-    bool HasNamedGeometry(KinBodyConstPtr pbody, const std::string& groupname) {
+    bool HasNamedGeometry(const KinBody &body, const std::string& groupname) {
         // The empty string corresponds to current geometries so all kinbodies have it
         if( groupname.size() == 0 ) {
             return true;
         }
-        FOREACH(itlink, pbody->GetLinks()) {
+        FOREACH(itlink, body.GetLinks()) {
             if( (*itlink)->GetGroupNumGeometries(groupname) >= 0 ) {
                 return true;
             }
@@ -309,8 +385,11 @@ public:
     {
         // should always do this since bodies can have different geometry groups set
         _geometrygroup = groupname;
-        FOREACHC(itbody, _setInitializedBodies) {
-            SetBodyGeometryGroup(*itbody, groupname);
+        for (const KinBodyConstPtr& pbody : _vecInitializedBodies) {
+            if (!pbody) {
+                continue;
+            }
+            SetBodyGeometryGroup(pbody, groupname);
         }
     }
 
@@ -320,40 +399,52 @@ public:
     }
 
 
-    void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
-        if( HasNamedGeometry(pbody, groupname) ) {
-            // Save the already existing KinBodyInfoPtr for the old geometry group
-            KinBodyInfoPtr poldinfo = GetInfo(pbody);
-            if( poldinfo->_geometrygroup == groupname ) {
-                return;
-            }
+    bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
+        const KinBody& body = *pbody;
 
-            poldinfo->nGeometryUpdateStamp += 1;
-            _cachedpinfo[(pbody)->GetEnvironmentId()][poldinfo->_geometrygroup] = poldinfo;
-
-            BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
-
-            KinBodyInfoPtr pinfo = _cachedpinfo[pbody->GetEnvironmentId()][groupname];
-            if(!pinfo) {
-                RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
-                pinfo.reset(new KinBodyInfo);
-                pinfo->_geometrygroup = groupname;
-                InitKinBody(pbody, pinfo);
-            }
-            else {
-                RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%pbody->GetName()%pbody->GetEnvironmentId());
-                // Set the current info to use the KinBodyInfoPtr associated to groupname
-                _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
-
-                // Revoke the information inside the cache so that a potentially outdated object does not survive
-                _cachedpinfo[(pbody)->GetEnvironmentId()].erase(groupname);
-            }
+        if (!HasNamedGeometry(body, groupname)) {
+            return false;
         }
+
+        // Save the already existing FCLKinBodyInfoPtr for the old geometry group
+        FCLKinBodyInfoPtr& poldinfo = GetInfo(body);
+        if( poldinfo->_geometrygroup == groupname ) {
+            return true;
+        }
+
+        poldinfo->nGeometryUpdateStamp += 1;
+
+        const int maxBodyIndex = _penv->GetMaxEnvironmentBodyIndex();
+        EnsureVectorSize(_cachedpinfo, maxBodyIndex + 1);
+
+        const int bodyIndex = body.GetEnvironmentBodyIndex();
+        OPENRAVE_ASSERT_OP_FORMAT(bodyIndex, !=, 0, "env=%s, body %s", _penv->GetNameId()%body.GetName(), OpenRAVE::ORE_InvalidState);
+        std::map< std::string, FCLKinBodyInfoPtr >& cache = _cachedpinfo.at(bodyIndex);
+        cache[poldinfo->_geometrygroup] = poldinfo;
+
+        FCLKinBodyInfoPtr& pinfo = cache[groupname];
+        if(!pinfo) {
+            RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%body.GetName()%bodyIndex%_penv->GetId());
+            pinfo.reset(new FCLKinBodyInfo);
+            pinfo->_geometrygroup = groupname;
+            InitKinBody(pbody, pinfo);
+        }
+        else {
+            RAVELOG_VERBOSE_FORMAT("env=%s, switching to geometry %s for kinbody %s (id = %d)", _penv->GetNameId()%groupname%body.GetName()%bodyIndex);
+            // Set the current info to use the FCLKinBodyInfoPtr associated to groupname
+            EnsureVectorSize(_currentpinfo, maxBodyIndex + 1);
+            _currentpinfo.at(bodyIndex) = pinfo;
+
+            // Revoke the information inside the cache so that a potentially outdated object does not survive
+            cache.erase(groupname);
+        }
+
+        return true;
     }
 
-    const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const {
+    const std::string& GetBodyGeometryGroup(const KinBody &body) const {
         static const std::string empty;
-        KinBodyInfoPtr pinfo = GetInfo(pbody);
+        const FCLKinBodyInfoPtr& pinfo = GetInfo(body);
         if( !!pinfo ) {
             return pinfo->_geometrygroup;
         } else {
@@ -397,12 +488,16 @@ public:
             return;
         }
 
-        // reinitialize all the KinBodyInfo
+        // reinitialize all the FCLKinBodyInfo
 
-        FOREACH(itbody, _setInitializedBodies) {
-            KinBodyInfoPtr pinfo = GetInfo(*itbody);
+        for (const KinBodyConstPtr& pbody : _vecInitializedBodies) {
+            if (!pbody) {
+                continue;
+            }
+            const KinBody& body = *pbody;
+            FCLKinBodyInfoPtr& pinfo = GetInfo(body);
             pinfo->nGeometryUpdateStamp++;
-            InitKinBody(*itbody, pinfo);
+            InitKinBody(pbody, pinfo);
         }
         _cachedpinfo.clear();
     }
@@ -415,87 +510,127 @@ public:
     void Synchronize()
     {
         // We synchronize only the initialized bodies, which differs from oderave
-        FOREACH(itbody, _setInitializedBodies) {
-            Synchronize(*itbody);
+        for (const KinBodyConstPtr& pbody : _vecInitializedBodies) {
+            if (!pbody) {
+                continue;
+            }
+            Synchronize(*pbody);
         }
     }
 
-    void Synchronize(KinBodyConstPtr pbody)
+    void Synchronize(const KinBody &body)
     {
-        KinBodyInfoPtr pinfo = GetInfo(pbody);
+        FCLKinBodyInfoPtr& pinfo = GetInfo(body);
         if( !pinfo ) {
             return;
         }
-        BOOST_ASSERT( pinfo->GetBody() == pbody);
-        _Synchronize(pinfo);
+        // expensive, comment out for now
+        //BOOST_ASSERT( pinfo->_pbody.lock().get() == &body);
+        _Synchronize(*pinfo, body);
     }
 
-    void SynchronizeWithAttached(KinBodyConstPtr pbody)
+    void SynchronizeWithAttached(const KinBody &body)
     {
-        std::set<KinBodyPtr> setAttachedpBodyTemp;
-        pbody->GetAttached(setAttachedpBodyTemp);
-        FOREACH(itbody, setAttachedpBodyTemp) {
-            Synchronize(*itbody);
+        if( body.HasAttached() ) {
+            std::vector<int>& vecAttachedEnvBodyIndices = _vecAttachedEnvBodyIndicesCache;
+            body.GetAttachedEnvironmentBodyIndices(vecAttachedEnvBodyIndices);
+            std::vector<KinBodyPtr>& attachedBodies = _vecAttachedBodiesCache;
+            _penv->GetBodiesFromEnvironmentBodyIndices(vecAttachedEnvBodyIndices, attachedBodies);
+            for (const KinBodyPtr& pattachedBody : attachedBodies) {
+                if (!!pattachedBody) {
+                    Synchronize(*pattachedBody);
+                }
+            }
+        }
+        else {
+            Synchronize(body);
         }
     }
 
-    KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody) const
+    inline FCLKinBodyInfoPtr& GetInfo(const KinBody &body)
     {
-        int envId = pbody->GetEnvironmentId();
-        if ( envId == 0 ) {
-            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id 0", pbody->GetEnv()->GetId()%pbody->GetName());
-            return KinBodyInfoPtr();
+        int envId = body.GetEnvironmentBodyIndex();
+        if ( envId <= 0 ) {
+            RAVELOG_WARN_FORMAT("env=%s, body %s has invalid environment id %d", _penv->GetNameId()%body.GetName()%envId);
+        }
+        else {
+            if (envId < (int) _currentpinfo.size()) {
+                return _currentpinfo.at(envId);
+            }
         }
 
-        std::map< int, KinBodyInfoPtr >::const_iterator it = _currentpinfo.find(envId);
-        if( it == _currentpinfo.end() ) {
-            return KinBodyInfoPtr();
+        return _currentpinfo.at(0); // invalid
+    }
+
+    inline const FCLKinBodyInfoPtr& GetInfo(const KinBody &body) const
+    {
+        int envId = body.GetEnvironmentBodyIndex();
+        if ( envId <= 0 ) {
+            RAVELOG_WARN_FORMAT("env=%s, body %s has invalid environment id %d", _penv->GetNameId()%body.GetName()%envId);
         }
-        return it->second;
+        else {
+            if (envId < (int) _currentpinfo.size()) {
+                return _currentpinfo.at(envId);
+            }
+        }
+
+        return _currentpinfo.at(0);
     }
 
 
     void RemoveUserData(KinBodyConstPtr pbody) {
         if( !!pbody ) {
             RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d (userdatakey %s) : %s") % _penv->GetId() % _userdatakey % pbody->GetName()));
-            _setInitializedBodies.erase(pbody);
-            KinBodyInfoPtr pinfo = GetInfo(pbody);
+            const int envId = pbody->GetEnvironmentBodyIndex();
+            if (envId < (int) _vecInitializedBodies.size()) {
+                _vecInitializedBodies.at(envId).reset();
+            }
+            FCLKinBodyInfoPtr& pinfo = GetInfo(*pbody);
             if( !!pinfo ) {
                 pinfo->Reset();
             }
-            BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
 
-            _currentpinfo.erase(pbody->GetEnvironmentId());
-            _cachedpinfo.erase(pbody->GetEnvironmentId());
+            if( envId == 0 ) {
+                RAVELOG_WARN_FORMAT("env=%s, body '%s' has bodyIndex=0, so not adding to the environment!", _penv->GetNameId()%pbody->GetName());
+            }
+
+            if (envId < (int) _currentpinfo.size()) {
+                _currentpinfo.at(envId).reset();
+                //RAVELOG_INFO_FORMAT("erased %d but didn't pop back, size is %d", envId%_currentpinfo.size());
+            }
+            if (envId < (int) _cachedpinfo.size()) {
+                _cachedpinfo.at(envId).clear();
+            }
         }
     }
 
 
-    const std::set<KinBodyConstPtr>& GetEnvBodies() const {
-        return _setInitializedBodies;
+    /// \brief returns bodies initialized by this space. Note that some entries are null pointer.
+    const std::vector<KinBodyConstPtr>& GetEnvBodies() const {
+        return _vecInitializedBodies;
     }
 
-    inline CollisionObjectPtr GetLinkBV(LinkConstPtr plink) {
-        return GetLinkBV(plink->GetParent(), plink->GetIndex());
+    inline CollisionObjectPtr GetLinkBV(const KinBody::Link &link) {
+        return GetLinkBV(*link.GetParent(), link.GetIndex());
     }
 
-    inline CollisionObjectPtr GetLinkBV(KinBodyConstPtr pbody, int index) {
-        KinBodyInfoPtr pinfo = GetInfo(pbody);
+    inline CollisionObjectPtr GetLinkBV(const KinBody &body, int index) {
+        FCLKinBodyInfoPtr& pinfo = GetInfo(body);
         if( !!pinfo ) {
-            return GetLinkBV(pinfo, index);
+            return GetLinkBV(*pinfo, index);
         } else {
-            RAVELOG_WARN(str(boost::format("KinBody %s is not initialized in fclspace %s, env %d")%pbody->GetName()%_userdatakey%_penv->GetId()));
+            RAVELOG_WARN(str(boost::format("KinBody %s is not initialized in fclspace %s, env %d")%body.GetName()%_userdatakey%_penv->GetId()));
             return CollisionObjectPtr();
         }
     }
 
-    inline CollisionObjectPtr GetLinkBV(KinBodyInfoPtr pinfo, int index) {
-        return pinfo->vlinks.at(index)->linkBV.second;
+    inline CollisionObjectPtr GetLinkBV(const FCLKinBodyInfo &info, int index) {
+        return info.vlinks.at(index)->linkBV.second;
     }
 
 
-    inline LinkInfoPtr GetLinkInfo(LinkConstPtr plink) {
-        return GetInfo(plink->GetParent())->vlinks.at(plink->GetIndex());
+    inline LinkInfoPtr GetLinkInfo(const KinBody::Link &link) {
+        return GetInfo(*link.GetParent())->vlinks.at(link.GetIndex());
     }
 
     inline void SetIsSelfCollisionChecker(bool bIsSelfCollisionChecker)
@@ -511,7 +646,10 @@ public:
     inline const MeshFactory& GetMeshFactory() const {
         return _meshFactory;
     }
-    
+
+    inline int GetEnvironmentId() const {
+        return _penv->GetId();
+    }
 private:
     static void _AddGeomInfoToBVHSubmodel(fcl::BVHModel<fcl::OBB>& model, KinBody::GeometryInfo const &info)
     {
@@ -526,7 +664,7 @@ private:
 
         std::vector<fcl::Vec3f> fcl_points(num_points);
         for (size_t ipoint = 0; ipoint < num_points; ++ipoint) {
-            Vector v = info._t*mesh.vertices[ipoint];
+            Vector v = info.GetTransform()*mesh.vertices[ipoint];
             fcl_points[ipoint] = fcl::Vec3f(v.x, v.y, v.z);
         }
 
@@ -557,6 +695,7 @@ private:
         case OpenRAVE::GT_None:
             return CollisionGeometryPtr();
 
+        case OpenRAVE::GT_CalibrationBoard:
         case OpenRAVE::GT_Box:
             return make_shared<fcl::Box>(info._vGeomData.x*2.0f,info._vGeomData.y*2.0f,info._vGeomData.z*2.0f);
 
@@ -568,6 +707,7 @@ private:
 
         case OpenRAVE::GT_Container:
         case OpenRAVE::GT_TriMesh:
+        case OpenRAVE::GT_Cage:
         {
             const OpenRAVE::TriMesh& mesh = info._meshcollision;
             if (mesh.vertices.empty() || mesh.indices.empty()) {
@@ -599,21 +739,22 @@ private:
         }
     }
 
-    void _Synchronize(KinBodyInfoPtr pinfo)
+    /// \brief pass in info.GetBody() as a reference to avoid dereferencing the weak pointer in FCLKinBodyInfo
+    void _Synchronize(FCLKinBodyInfo& info, const KinBody& body)
     {
-        KinBodyPtr pbody = pinfo->GetBody();
-        if( pinfo->nLastStamp != pbody->GetUpdateStamp()) {
-            vector<Transform> vtrans;
-            pbody->GetLinkTransformations(vtrans);
-            pinfo->nLastStamp = pbody->GetUpdateStamp();
-            BOOST_ASSERT( pbody->GetLinks().size() == pinfo->vlinks.size() );
-            BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
-            for(size_t i = 0; i < vtrans.size(); ++i) {
-                CollisionObjectPtr pcoll = pinfo->vlinks[i]->linkBV.second;
+        //KinBodyPtr pbody = info.GetBody();
+        if( info.nLastStamp != body.GetUpdateStamp()) {
+            info.nLastStamp = body.GetUpdateStamp();
+            BOOST_ASSERT( body.GetLinks().size() == info.vlinks.size() );
+            CollisionObjectPtr pcoll;
+            for(size_t i = 0; i < body.GetLinks().size(); ++i) {
+                const FCLSpace::FCLKinBodyInfo::LinkInfo& linkInfo = *info.vlinks[i];
+                pcoll = linkInfo.linkBV.second;
                 if( !pcoll ) {
                     continue;
                 }
-                Transform pose = vtrans[i] * pinfo->vlinks[i]->linkBV.first;
+                const Transform& linkTransform = body.GetLinks()[i]->GetTransform();
+                Transform pose = linkTransform * linkInfo.linkBV.first;
                 fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                 fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
@@ -622,35 +763,35 @@ private:
                 // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
                 pcoll->computeAABB();
 
-                //pinfo->vlinks[i]->nLastStamp = pinfo->nLastStamp;
-                FOREACHC(itgeomcoll, pinfo->vlinks[i]->vgeoms) {
-                    CollisionObjectPtr pcoll = (*itgeomcoll).second;
-                    Transform pose = vtrans[i] * (*itgeomcoll).first;
+                //info.vlinks[i]->nLastStamp = info.nLastStamp;
+                for (const TransformCollisionPair& pgeom : linkInfo.vgeoms) {
+                    fcl::CollisionObject& coll = *pgeom.second;
+                    Transform pose = linkTransform * pgeom.first;
                     fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                     fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
-                    pcoll->setTranslation(newPosition);
-                    pcoll->setQuatRotation(newOrientation);
+                    coll.setTranslation(newPosition);
+                    coll.setQuatRotation(newOrientation);
                     // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
-                    pcoll->computeAABB();
+                    coll.computeAABB();
                 }
             }
 
             // Does this have any use ?
-            if( !!_synccallback ) {
-                _synccallback(pinfo);
-            }
+            // if( !!_synccallback ) {
+            //     _synccallback(pinfo);
+            // }
         }
     }
 
     /// \brief controls whether the kinbody info is removed during the destructor
-    class KinBodyInfoRemover
+    class FCLKinBodyInfoRemover
     {
 public:
-        KinBodyInfoRemover(const boost::function<void()>& fn) : _fn(fn) {
+        FCLKinBodyInfoRemover(const boost::function<void()>& fn) : _fn(fn) {
             _bDoRemove = true;
         }
-        ~KinBodyInfoRemover() {
+        ~FCLKinBodyInfoRemover() {
             if( _bDoRemove ) {
                 _fn();
             }
@@ -664,54 +805,63 @@ private:
         boost::function<void()> _fn;
         bool _bDoRemove;
     };
-    void _ResetCurrentGeometryCallback(boost::weak_ptr<KinBodyInfo> _pinfo)
+    void _ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo)
     {
-        KinBodyInfoPtr pinfo = _pinfo.lock();
+        FCLKinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        if( !!pinfo && pinfo->_geometrygroup.size() == 0 ) {
-            //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
-            pinfo->nGeometryUpdateStamp++;
-            KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
-            InitKinBody(pbody, pinfo);
-            remover.ResetRemove(); // succeeded
+        const int bodyIndex = pbody->GetEnvironmentBodyIndex();
+        if (0 < bodyIndex && bodyIndex < (int)_currentpinfo.size()) {
+            const FCLKinBodyInfoPtr& pcurrentinfo = _currentpinfo.at(bodyIndex);
+
+            if( !!pinfo && pinfo == pcurrentinfo ) {//pinfo->_geometrygroup.size() == 0 ) {
+                // pinfo is current set to the current one, so should InitKinBody into _currentpinfo
+                //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
+                pinfo->nGeometryUpdateStamp++;
+                FCLKinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
+                InitKinBody(pbody, pinfo, false);
+                remover.ResetRemove(); // succeeded
+            }
+            //_cachedpinfo[pbody->GetEnvironmentBodyIndex()].erase(std::string());
         }
-        _cachedpinfo[pbody->GetEnvironmentId()].erase(std::string());
     }
 
-    void _ResetGeometryGroupsCallback(boost::weak_ptr<KinBodyInfo> _pinfo)
+    void _ResetGeometryGroupsCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo)
     {
-        KinBodyInfoPtr pinfo = _pinfo.lock();
+        FCLKinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        if( !!pinfo && pinfo->_geometrygroup.size() > 0 ) {
+
+        //FCLKinBodyInfoPtr pcurrentinfo = _currentpinfo.at(pbody->GetEnvironmentBodyIndex());
+
+        if( !!pinfo ) {// && pinfo->_geometrygroup.size() > 0 ) {
             //RAVELOG_VERBOSE_FORMAT("env=%d, resetting geometry groups for kinbody %s, nGeometryUpdateStamp=%d (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
             pinfo->nGeometryUpdateStamp++;
-            KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
-            InitKinBody(pbody, pinfo);
+            FCLKinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
+            InitKinBody(pbody, pinfo, false);
             remover.ResetRemove(); // succeeded
         }
-        KinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentId()][std::string()];
-        _cachedpinfo.erase(pbody->GetEnvironmentId());
-        if( !!pinfoCurrentGeometry ) {
-            _cachedpinfo[pbody->GetEnvironmentId()][std::string()] = pinfoCurrentGeometry;
-        }
+//        FCLKinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentBodyIndex()][std::string()];
+//        _cachedpinfo.erase(pbody->GetEnvironmentBodyIndex());
+//        if( !!pinfoCurrentGeometry ) {
+//            _cachedpinfo[pbody->GetEnvironmentBodyIndex()][std::string()] = pinfoCurrentGeometry;
+//        }
     }
 
-    void _ResetLinkEnableCallback(boost::weak_ptr<KinBodyInfo> _pinfo) {
-        KinBodyInfoPtr pinfo = _pinfo.lock();
+    void _ResetLinkEnableCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo) {
+        FCLKinBodyInfoPtr pinfo = _pinfo.lock();
         if( !!pinfo ) {
             pinfo->nLinkUpdateStamp++;
         }
     }
 
-    void _ResetActiveDOFsCallback(boost::weak_ptr<KinBodyInfo> _pinfo) {
-        KinBodyInfoPtr pinfo = _pinfo.lock();
+    void _ResetActiveDOFsCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo) {
+        FCLKinBodyInfoPtr pinfo = _pinfo.lock();
         if( !!pinfo ) {
             pinfo->nActiveDOFUpdateStamp++;
         }
     }
 
-    void _ResetAttachedBodyCallback(boost::weak_ptr<KinBodyInfo> _pinfo) {
-        KinBodyInfoPtr pinfo = _pinfo.lock();
+    void _ResetAttachedBodyCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo) {
+        FCLKinBodyInfoPtr pinfo = _pinfo.lock();
         if( !!pinfo ) {
             pinfo->nAttachedBodiesUpdateStamp++;
         }
@@ -721,14 +871,17 @@ private:
     EnvironmentBasePtr _penv;
     std::string _userdatakey;
     std::string _geometrygroup;
-    SynchronizeCallbackFn _synccallback;
+    //SynchronizeCallbackFn _synccallback;
 
     std::string _bvhRepresentation;
     MeshFactory _meshFactory;
 
-    std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
-    std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data
-    std::map< int, KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. The key being environment id makes it easier to compare objects without getting a handle to their pointers.
+    std::vector<KinBodyConstPtr> _vecInitializedBodies; ///< vector of the kinbody initialized in this space. index is the environment body index. nullptr means uninitialized.
+    std::vector<std::map< std::string, FCLKinBodyInfoPtr> > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
+    std::vector<FCLKinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. Index of the vector is the environment id (id of the body in the env, not __nUniqueId of env) of the kinbody at that index. The index being environment id makes it easier to compare objects without getting a handle to their pointers. Whenever a FCLKinBodyInfoPtr goes into this map, it is removed from _cachedpinfo. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
+
+    std::vector<int> _vecAttachedEnvBodyIndicesCache; ///< cache
+    std::vector<KinBodyPtr> _vecAttachedBodiesCache; ///< cache
 
     bool _bIsSelfCollisionChecker; // Currently not used
 };
@@ -736,8 +889,8 @@ private:
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_REGISTRATION_GROUP()
 BOOST_TYPEOF_REGISTER_TYPE(FCLSpace)
-BOOST_TYPEOF_REGISTER_TYPE(FCLSpace::KinBodyInfo)
-BOOST_TYPEOF_REGISTER_TYPE(FCLSpace::KinBodyInfo::LinkInfo)
+BOOST_TYPEOF_REGISTER_TYPE(FCLSpace::FCLKinBodyInfo)
+BOOST_TYPEOF_REGISTER_TYPE(FCLSpace::FCLKinBodyInfo::LinkInfo)
 #endif
 
 }

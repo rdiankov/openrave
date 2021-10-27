@@ -522,7 +522,7 @@ public:
                         _samplespec._vgroups.push_back(*itgroup);
                         _samplespec._vgroups.back().offset = dof;
                         for(int idof = 0; idof < _samplespec._vgroups.back().dof; ++idof) {
-                            _vgrablinks.push_back(make_pair(dof+idof,boost::lexical_cast<int>(tokens.at(2+idof))));
+                            _vgrablinks.emplace_back(dof+idof, boost::lexical_cast<int>(tokens.at(2+idof)));
                         }
                         dof += _samplespec._vgroups.back().dof;
                     }
@@ -583,7 +583,7 @@ public:
             FOREACH(itgrabinfo,_vgrablinks) {
                 int bodyid = int(std::floor(sampledata.at(itgrabinfo->first)+0.5));
                 if( bodyid != 0 ) {
-                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(abs(bodyid));
+                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(abs(bodyid));
                     if( !pbody ) {
                         RAVELOG_WARN(str(boost::format("failed to find body id %d")%bodyid));
                         continue;
@@ -598,11 +598,11 @@ public:
                         if( !!pgrabbinglink ) {
                             if( pgrabbinglink->GetIndex() != itgrabinfo->second ) {
                                 listrelease.push_back(pbody);
-                                listgrab.push_back(make_pair(pbody,_probot->GetLinks().at(itgrabinfo->second)));
+                                listgrab.emplace_back(pbody, _probot->GetLinks().at(itgrabinfo->second));
                             }
                         }
                         else {
-                            listgrab.push_back(make_pair(pbody,_probot->GetLinks().at(itgrabinfo->second)));
+                            listgrab.emplace_back(pbody, _probot->GetLinks().at(itgrabinfo->second));
                         }
                     }
                 }
@@ -817,12 +817,12 @@ private:
 
     inline boost::shared_ptr<MobyReplayController> shared_controller()
     {
-        return boost::dynamic_pointer_cast<MobyReplayController>(shared_from_this());
+        return boost::static_pointer_cast<MobyReplayController>(shared_from_this());
     }
 
     inline boost::shared_ptr<MobyReplayController const> shared_controller_const() const
     {
-        return boost::dynamic_pointer_cast<MobyReplayController const>(shared_from_this());
+        return boost::static_pointer_cast<MobyReplayController const>(shared_from_this());
     }
 
     inline boost::weak_ptr<MobyReplayController> weak_controller()

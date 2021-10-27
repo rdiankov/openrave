@@ -21,6 +21,12 @@ namespace RampOptimizerInternal {
 
 struct CheckReturn {
     CheckReturn(int retcode=0, dReal fmult=1.0, dReal fvel=0, dReal faccel=0) : retcode(retcode), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false), fMaxManipSpeed(fvel), fMaxManipAccel(faccel) {
+        vReductionFactors.resize(0);
+        // vVelReductionFactors.resize(0);
+        // vAccelReductionFactors.resize(0);
+    }
+
+    CheckReturn(int retcode, std::vector<dReal> vfactors) : retcode(retcode), fTimeBasedSurpassMult(1.0), bDifferentVelocity(false), fMaxManipSpeed(0), fMaxManipAccel(0), vReductionFactors(vfactors) {
     }
 
     int retcode; // one of CFO_X defined in planner.h
@@ -28,6 +34,9 @@ struct CheckReturn {
     bool bDifferentVelocity; // the segment ends with some velocity other than the desired value (resulting from modifications CheckPathAllConstraints)
     dReal fMaxManipSpeed; // when > 0, the value is the computed max manip speed
     dReal fMaxManipAccel; // when > 0, the value is the computed max manip accel
+    std::vector<dReal> vReductionFactors; // experimental: scaling factors for each DOF
+    // std::vector<dReal> vVelReductionFactors; // experimental: scaling factors for each DOF
+    // std::vector<dReal> vAccelReductionFactors; // experimental: scaling factors for each DOF
 };
 
 class FeasibilityCheckerBase {
@@ -45,7 +54,7 @@ public:
     {
         return CheckReturn(ConfigFeasible(q0, dq0, options));
     }
-    virtual CheckReturn SegmentFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& dq0, const std::vector<dReal>& q1, const std::vector<dReal>& dq1, dReal timeElapsed, int options, std::vector<RampND> &rampndVectOut)
+    virtual CheckReturn SegmentFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& dq0, const std::vector<dReal>& q1, const std::vector<dReal>& dq1, dReal timeElapsed, int options, std::vector<RampND> &rampndVectOut, std::vector<dReal> &vIntermediateConfigurations)
     {
         BOOST_ASSERT(0);
         return 0;

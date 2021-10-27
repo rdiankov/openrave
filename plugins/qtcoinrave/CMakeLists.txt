@@ -12,6 +12,11 @@ if(NOT OPENGL_FOUND)
   message(STATUS "WARNING: OpenGL not found. This library is not necessary, but it is good to link with")
 endif()
 
+find_package(Qt4 COMPONENTS QtCore QtGui QtDeclarative)
+if (NOT QT_FOUND)
+  message(STATUS "WARNING: Qt4 not found, is your QTDIR enviornment variable set?")
+endif()
+
 if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND SOQT_LIBRARY_FOUND AND COIN_LIBRARY_FOUND)
   message(STATUS "Detected SoQt/Coin3D GUI, making plugin")
   include_directories(${OPENGL_INCLUDE_DIR} ${SOQT_INCLUDE_DIRS} ${COIN_INCLUDE_DIRS})
@@ -38,7 +43,8 @@ if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND SOQT_LIBRARY_FOUND AND C
     set(extLIBS ${extLIBS} winmm imm32 ws2_32)
   endif()
 
-  target_link_libraries (qtcoinrave ${extLIBS} libopenrave)
+  target_link_libraries(qtcoinrave ${extLIBS} libopenrave)
+  target_link_libraries(qtcoinrave PRIVATE boost_assertion_failed)
   set_target_properties(qtcoinrave PROPERTIES COMPILE_FLAGS "${QTCOIN_COMPILE_FLAGS} ${SOQT_CXXFLAGS} ${COIN_CXXFLAGS}" LINK_FLAGS "${QTCOIN_LINK_FLAGS}")
   install(TARGETS qtcoinrave DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-qtcoinrave)
   

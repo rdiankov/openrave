@@ -24,12 +24,12 @@ public:
     {
 public:
         ConveyorLink(const std::string& name, Transform tinernal, KinBodyPtr parent) : Link(parent) {
-            _info._t = tinernal;
+            _info.SetTransform(tinernal);
             _info._mass = 0.01; // just an estimate
             _info._vinertiamoments = Vector(1,1,1);
             _info._name = name;
             _info._bStatic = false;
-            _info._bIsEnabled = true;
+            _Enable(true);
         }
     };
 
@@ -45,18 +45,47 @@ public:
             _info._trajfollow = trajfollow;
         }
 
-        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, dReal currentvalue)
+        virtual void _ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, dReal currentvalue)
         {
             std::vector<dReal> vcurrentvalues(1); vcurrentvalues[0] = 0; // current values always 0
-            Joint::_ComputeInternalInformation(plink0, plink1, Vector(), std::vector<Vector>(), vcurrentvalues);
+            Joint::_ComputeJointInternalInformation(plink0, plink1, Vector(), std::vector<Vector>(), vcurrentvalues);
         }
     };
 
-    class ConveyorInfo : public XMLReadable
+    class ConveyorInfo : public Readable
     {
 public:
-        ConveyorInfo() : XMLReadable("conveyorjoint"), _fLinkDensity(10), _bIsCircular(true), _bCreated(false) {
+        ConveyorInfo() : Readable("conveyorjoint"), _fLinkDensity(10), _bIsCircular(true), _bCreated(false) {
         }
+
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override {
+            return false;
+        }
+
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const ConveyorInfo* pOther = dynamic_cast<const ConveyorInfo*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return _mimic == pOther->_mimic &&
+                _linkParent == pOther->_linkParent &&
+                _trajfollow == pOther->_trajfollow &&
+                _fLinkDensity == pOther->_fLinkDensity &&
+                _listGeometries == pOther->_listGeometries &&
+                _namebase == pOther->_namebase &&
+                _bIsCircular == pOther->_bIsCircular &&
+                _bCreated == pOther->_bCreated;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<ConveyorInfo> pNew(new ConveyorInfo());
+            *pNew = *this;
+            return pNew;
+        }
+        
         boost::shared_ptr<KinBody::Mimic> _mimic; // always has to mimic
         KinBody::LinkPtr _linkParent; ///< base link attached
         TrajectoryBasePtr _trajfollow; ///< trajectory to following in base link's coordinate system
@@ -86,7 +115,7 @@ public:
             }
         }
 
-        virtual XMLReadablePtr GetReadable() {
+        virtual ReadablePtr GetReadable() override {
             return _cmdata;
         }
 
@@ -219,7 +248,7 @@ protected:
         }
     }
 
-    virtual void _ComputeInternalInformation()
+    virtual void _ComputeInternalInformation() override
     {
         // create extra joints for each conveyor joint
         ConveyorInfoPtr cmdata = boost::dynamic_pointer_cast<ConveyorInfo>(GetReadableInterface("conveyorjoint"));
@@ -243,7 +272,7 @@ protected:
                 mimic->_equations[0] += str(boost::format(" +%.15e")%curtime); // have to add the offset inside the equations
                 boost::shared_ptr<ConveyorJoint> pchildjoint(new ConveyorJoint(pchildlink->GetName(), cmdata->_trajfollow, mimic, cmdata->_bIsCircular, shared_kinbody()));
                 _vecjoints.push_back(pchildjoint);
-                pchildjoint->_ComputeInternalInformation(cmdata->_linkParent, pchildlink, curtime);
+                pchildjoint->_ComputeJointInternalInformation(cmdata->_linkParent, pchildlink, curtime);
             }
             cmdata->_bCreated = true;
         }

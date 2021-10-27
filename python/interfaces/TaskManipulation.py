@@ -18,7 +18,10 @@ from .. import PlanningError
 
 from numpy import *
 from copy import copy as shallowcopy
-import cStringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 import logging
 log = logging.getLogger('openravepy.interfaces.TaskManipulation')
@@ -82,11 +85,11 @@ class TaskManipulation:
                 grasptranslationstepmult=gmodel.translationstepmult
             if graspfinestep is None:
                 graspfinestep=gmodel.finestep
-        cmd = cStringIO.StringIO()
+        cmd = StringIO()
         cmd.write('graspplanning target %s approachoffset %.15e grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1]))
         for f in grasps.flat:
             cmd.write('%.15e '%f)
-        for name,valuerange in graspindices.iteritems():
+        for name,valuerange in graspindices.items():
             if name[0] == 'i' and len(valuerange) > 0 or name == 'grasptrans_nocol':
                 cmd.write(name)
                 cmd.write(' ')
@@ -143,7 +146,9 @@ class TaskManipulation:
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             trajdata = ' '.join(resvalues)
             if outputtrajobj is not None and outputtrajobj:
-                trajdata = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(trajdata)
+                newtraj = RaveCreateTrajectory(self.prob.GetEnv(),'')
+                newtraj.deserialize(trajdata)
+                trajdata = newtraj
         return goals,graspindex,searchtime,trajdata
     def EvaluateConstraints(self,freedoms,configs,targetframematrix=None,targetframepose=None,errorthresh=None):
         """See :ref:`module-taskmanipulation-evaluateconstraints`
@@ -189,16 +194,19 @@ class TaskManipulation:
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise PlanningError('CloseFingers')
-        resvalues = res.split()
+        resvalues = res
         if outputfinal:
-            final = array([float64(resvalues[i]) for i in range(dof)])
-            resvalues=resvalues[dof:]
+            resvaluesSplit = resvalues.split()
+            final = array([float64(resvaluesSplit[i]) for i in range(dof)])
+            resvalues = resvalues[sum(len(resvaluesSplit[i])+1 for i in range(dof)):]
         else:
             final=None
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
-            traj = ' '.join(resvalues)
+            traj = resvalues
             if outputtrajobj is not None and outputtrajobj:
-                traj = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(traj)
+                newtraj = RaveCreateTrajectory(self.prob.GetEnv(),'')
+                newtraj.deserialize(traj)
+                traj = newtraj
         else:
             traj = None
         return final,traj
@@ -231,16 +239,19 @@ class TaskManipulation:
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise PlanningError('ReleaseFingers')
-        resvalues = res.split()
+        resvalues = res
         if outputfinal:
-            final = array([float64(resvalues[i]) for i in range(dof)])
-            resvalues=resvalues[len(final):]
+            resvaluesSplit = resvalues.split()
+            final = array([float64(resvaluesSplit[i]) for i in range(dof)])
+            resvalues = resvalues[sum(len(resvaluesSplit[i])+1 for i in range(dof)):]
         else:
             final=None
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
-            traj = ' '.join(resvalues)
+            traj = resvalues
             if outputtrajobj is not None and outputtrajobj:
-                traj = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(traj)
+                newtraj = RaveCreateTrajectory(self.prob.GetEnv(),'')
+                newtraj.deserialize(traj)
+                traj = newtraj
         else:
             traj = None
         return final,traj
@@ -268,16 +279,19 @@ class TaskManipulation:
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise PlanningError('ReleaseActive')
-        resvalues = res.split()
+        resvalues = res
         if outputfinal:
-            final = array([float64(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
-            resvalues=resvalues[len(final):]
+            resvaluesSplit = resvalues.split()
+            final = array([float64(resvaluesSplit[i]) for i in range(self.robot.GetActiveDOF())])
+            resvalues = resvalues[sum(len(resvaluesSplit[i])+1 for i in range(self.robot.GetActiveDOF())):]
         else:
             final=None
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
-            traj = ' '.join(resvalues)
+            traj = resvalues
             if outputtrajobj is not None and outputtrajobj:
-                traj = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(traj)
+                newtraj = RaveCreateTrajectory(self.prob.GetEnv(),'')
+                newtraj.deserialize(traj)
+                traj = newtraj
         else:
             traj = None
         return final,traj

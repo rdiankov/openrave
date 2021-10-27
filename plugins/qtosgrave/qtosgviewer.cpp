@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "qtosgviewer.h"
+#include "osglodlabel.h"
 
 #include <boost/lexical_cast.hpp>
 #include <iostream>
 
 #include <osg/ArgumentParser>
-
 #include "osgviewerwidget.h"
 
 namespace qtosgrave {
@@ -80,15 +80,16 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
 
     _qobjectTree = NULL;
     _qdetailsTree = NULL;
-    _focalDistance = 0.0;
     _fTrackAngleToUp = 0.3;
     _pointerTypeGroup = NULL;
     _posgWidget = NULL;
     _nQuitMainLoop = 0;
     _qactPerspectiveView = NULL;
+    _cameraMoveModeButton = NULL;
     _qactChangeViewtoXY = _qactChangeViewtoYZ = _qactChangeViewtoXZ = NULL;
     //osg::setNotifyLevel(osg::DEBUG_FP);
     _userdatakey = std::string("qtosg") + boost::lexical_cast<std::string>(this);
+    debugLevelInfoAct = NULL;
     debugLevelDebugAct = NULL;
     debugLevelVerboseAct = NULL;
 
@@ -149,7 +150,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
                     "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
     RegisterCommand("SetTextureCubeMap", boost::bind(&QtOSGViewer::_SetTextureCubeMap, this, _1, _2),
-                    "Sets the skybox with cubemap");
+                     "Sets the skybox with cubemap");
     RegisterCommand("TrackLink", boost::bind(&QtOSGViewer::_TrackLinkCommand, this, _1, _2),
                     "camera tracks the link maintaining a specific relative transform: robotname, manipname, focalDistance");
     RegisterCommand("TrackManipulator", boost::bind(&QtOSGViewer::_TrackManipulatorCommand, this, _1, _2),
@@ -160,8 +161,38 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
     RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
                     "sets the viewer projection mode, perspective or orthogonal");
-    RegisterCommand("Zoom", boost::bind(&QtOSGViewer::_ZoomCommand, this, _1, _2),
+    RegisterCommand("MoveCameraPointOfView", boost::bind(&QtOSGViewer::_MoveCameraPointOfViewCommand, this, _1, _2),
+                    "Change the camera point of view to be aligned to one of the main world axes, centered at scene bounding box.");
+    RegisterCommand("MoveCameraZoom", boost::bind(&QtOSGViewer::_MoveCameraZoomCommand, this, _1, _2),
                     "Set the zooming factor of the view");
+    RegisterCommand("RotateCameraXDirection", boost::bind(&QtOSGViewer::_RotateCameraXDirectionCommand, this, _1, _2),
+    "Rotates the camera around the current focal point in the direction of the screen x vector (in world coordinates). The argument thetaX is in radians -pi < dx < pi.");
+    RegisterCommand("RotateCameraYDirection", boost::bind(&QtOSGViewer::_RotateCameraYDirectionCommand, this, _1, _2),
+    "Rotates the camera around the current focal point in the direction of the screen y vector (in world coordinates). The argument thetaY is in radians -pi < dy < pi.");
+
+    // Pan commands. This commands will be ignored if currently in TrackLink or TrackManipulator mode (e.g: using osgviewerwidget NodeTrackManipulator or activating TrackLink or TrackManipulator commands)
+    // since pan is not a valid operation during track mode, because when tracking we always keep focus in the tracked object.
+    RegisterCommand("PanCameraXDirection", boost::bind(&QtOSGViewer::_PanCameraXDirectionCommand, this, _1, _2),
+    "Pans the camera in the direction of the screen x vector, parallel to screen plane. The argument dx is in normalized coordinates 0 < dx < 1, where 1 means canvas width.");
+    RegisterCommand("PanCameraYDirection", boost::bind(&QtOSGViewer::_PanCameraYDirectionCommand, this, _1, _2),
+    "Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.");
+
+    // Establish size limits per priority
+    _mapGUIFunctionListLimits[ViewerCommandPriority::VERY_HIGH] = 100000;
+    _mapGUIFunctionListLimits[ViewerCommandPriority::HIGH] = 100000;
+    _mapGUIFunctionListLimits[ViewerCommandPriority::MEDIUM] = 1000;
+    _mapGUIFunctionListLimits[ViewerCommandPriority::LOW] = 1000;
+
+    // Read copy QT resource to temp location and later stream that into OSG to use when making labels
+    QFile fontFile(":/fonts/NotoSans-Regular.ttf");
+    fontFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered);
+    QByteArray ba = fontFile.readAll();
+    std::istringstream lodFontStream(ba.toStdString());
+    OSGLODLabel::SetFont(osgText::readFontStream(lodFontStream));
+    std::istringstream widgetFontStream(ba.toStdString());
+    QOSGViewerWidget::SetFont(osgText::readFontStream(widgetFontStream));
+    fontFile.close();
+
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
@@ -176,24 +207,34 @@ QtOSGViewer::~QtOSGViewer()
     // _notifyGUIFunctionComplete
     SetEnvironmentSync(false);
     {
-        boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
         list<GUIThreadFunctionPtr>::iterator itmsg;
-        FORIT(itmsg, _listGUIFunctions) {
-            try {
-                (*itmsg)->Call();
+        FOREACH(itpriority, _mapGUIFunctionLists) {
+            FORIT(itmsg, itpriority->second) {
+                try {
+                    (*itmsg)->Call();
+                }
+                catch(const boost::bad_weak_ptr& ex) {
+                    // most likely viewer
+                }
+                catch(const std::exception& ex2) {
+                    RAVELOG_WARN_FORMAT("unexpected exception in gui function: %s", ex2.what());
+                }
             }
-            catch(const boost::bad_weak_ptr& ex) {
-                // most likely viewer
-            }
-            catch(const std::exception& ex2) {
-                RAVELOG_WARN_FORMAT("unexpected exception in gui function: %s", ex2.what());
-            }
+            itpriority->second.clear();
         }
-        _listGUIFunctions.clear();
     }
 
     _condUpdateModels.notify_all();
+
+    // have to remove all the _userdatakey set on bodies in the env before we go
+    FOREACH(itbody, _mapbodies) {
+        if( itbody->first->GetUserData(_userdatakey) != itbody->second ) {
+            RAVELOG_WARN_FORMAT("kinbody %s has unexpected %s user data set on it\n", itbody->first->GetName()%_userdatakey);
+        }
+        itbody->first->RemoveUserData(_userdatakey);
+    }
+    _mapbodies.clear();
 }
 
 void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
@@ -206,8 +247,9 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
     else {
         connect(QApplication::instance(), SIGNAL(aboutToQuit()), this, SLOT(_ProcessApplicationQuit()));
     }
-    
-    _posgWidget = new ViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second);
+
+    _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
+
     setCentralWidget(_posgWidget);
 
     _RepaintWidgets();
@@ -226,6 +268,10 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
         _CreateMenus();
         _CreateToolsBar();
         _CreateDockWidgets();
+    }
+
+    if (!bCreateMenu && !bCreateMenu) {
+        _CreateControlButtons();
     }
 
     resize(1024, 768);
@@ -268,7 +314,7 @@ bool QtOSGViewer::_HandleOSGKeyDown(int key)
 //            //RAVELOG_INFO_FORMAT("checked id %d", _pointerTypeGroup->checkedId());
 //            //if( !!_pointerTypeGroup->checkedButton() ) {
 //                //_pointerTypeGroup->checkedButton()->setChecked(false);
-//                _PostToGUIThread(boost::bind(&QAbstractButton::setChecked, _pointerTypeGroup->checkedButton(), false));
+//                _PostToGUIThread(boost::bind(&QAbstractButton::setChecked, _pointerTypeGroup->checkedButton(), false), ViewerCommandPriority::LOW);
 //            }
 //            else {
 //                // check one?
@@ -335,6 +381,9 @@ void QtOSGViewer::_CreateActions()
     viewColAct = new QAction(tr("View Collision Word"), this);
 
     pubilshAct = new QAction(tr("Pubilsh Bodies Anytimes"), this);
+
+    debugLevelInfoAct = new QAction(tr("Debug Level (Info)"), this);
+    connect(debugLevelInfoAct, SIGNAL(triggered()), this, SLOT(_SetDebugLevelInfo()));
 
     debugLevelDebugAct = new QAction(tr("Debug Level (Debug)"), this);
     connect(debugLevelDebugAct, SIGNAL(triggered()), this, SLOT(_SetDebugLevelDebug()));
@@ -418,7 +467,7 @@ void QtOSGViewer::_CreateActions()
 void QtOSGViewer::_UpdateViewerCallback()
 {
     try {
-        _UpdateEnvironment(1.0/60.0);
+        _UpdateEnvironment();
         //UpdateFromModel();
 
         {
@@ -452,7 +501,9 @@ void QtOSGViewer::_Reset()
     _condUpdateModels.notify_all();
 
     FOREACH(itbody, _mapbodies) {
-        BOOST_ASSERT( itbody->first->GetUserData(_userdatakey) == itbody->second );
+        if( itbody->first->GetUserData(_userdatakey) != itbody->second ) {
+            RAVELOG_WARN_FORMAT("kinbody %s has unexpected %s user data set on it\n", itbody->first->GetName()%_userdatakey);
+        }
         itbody->first->RemoveUserData(_userdatakey);
     }
     _mapbodies.clear();
@@ -487,6 +538,7 @@ void QtOSGViewer::_CreateMenus()
 
     viewMenu->addAction(viewColAct);
     viewMenu->addAction(pubilshAct);
+    viewMenu->addAction(debugLevelInfoAct);
     viewMenu->addAction(debugLevelDebugAct);
     viewMenu->addAction(debugLevelVerboseAct);
     viewMenu->addAction(showAct);
@@ -519,7 +571,7 @@ void QtOSGViewer::LoadEnvironment()
         EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
         GetEnv()->Reset();
 
-        GetEnv()->Load(s.toAscii().data());
+        GetEnv()->Load(s.toLatin1().data());
 
         RAVELOG_INFO("\n---------Refresh--------\n");
 
@@ -532,7 +584,7 @@ void QtOSGViewer::LoadEnvironment()
         _posgWidget->SetHome();
     }
     catch(const std::exception& ex) {
-        RAVELOG_WARN_FORMAT("failed to load environment %s: %s", s.toAscii().data()%ex.what());
+        RAVELOG_WARN_FORMAT("failed to load environment %s: %s", s.toLatin1().data()%ex.what());
     }
 
 }
@@ -547,13 +599,13 @@ void QtOSGViewer::ImportEnvironment()
     }
     try {
         EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
-        GetEnv()->Load(s.toAscii().data());
+        GetEnv()->Load(s.toLatin1().data());
 
         //  Refresh the screen.
         UpdateFromModel();
     }
     catch(const std::exception& ex) {
-        RAVELOG_WARN_FORMAT("failed to import model %s: %s", s.toAscii().data()%ex.what());
+        RAVELOG_WARN_FORMAT("failed to import model %s: %s", s.toLatin1().data()%ex.what());
     }
 }
 
@@ -565,10 +617,10 @@ void QtOSGViewer::SaveEnvironment()
     }
     try {
         EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
-        GetEnv()->Save(s.toAscii().data());
+        GetEnv()->Save(s.toLatin1().data());
     }
     catch(const std::exception& ex) {
-        RAVELOG_WARN_FORMAT("failed to save to file %s: %s", s.toAscii().data()%ex.what());
+        RAVELOG_WARN_FORMAT("failed to save to file %s: %s", s.toLatin1().data()%ex.what());
     }
 }
 
@@ -599,6 +651,11 @@ void QtOSGViewer::_ProcessAboutDialog()
     msgBox.exec();
 }
 
+void QtOSGViewer::_SetDebugLevelInfo()
+{
+    RaveSetDebugLevel(Level_Info);
+}
+
 void QtOSGViewer::_SetDebugLevelDebug()
 {
     RaveSetDebugLevel(Level_Debug);
@@ -611,36 +668,18 @@ void QtOSGViewer::_SetDebugLevelVerbose()
 
 void QtOSGViewer::_ChangeViewToXY()
 {
-    _UpdateCameraTransform(0);
-    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
-    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(0));
-    _Tcamera.trans.x = center.x();
-    _Tcamera.trans.y = center.y();
-    _Tcamera.trans.z = center.z()+_focalDistance;
-    _SetCameraTransform();
+    _MoveCameraPointOfView("+z");
 }
 
 void QtOSGViewer::_ChangeViewToXZ()
 {
-    _UpdateCameraTransform(0);
-    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
-    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2));
-    _Tcamera.trans.x = center.x();
-    _Tcamera.trans.y = center.y()-_focalDistance;
-    _Tcamera.trans.z = center.z();
-    _SetCameraTransform();
+    _MoveCameraPointOfView("+y");
 
 }
 
 void QtOSGViewer::_ChangeViewToYZ()
 {
-    _UpdateCameraTransform(0);
-    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
-    _Tcamera.rot = quatMultiply(quatFromAxisAngle(RaveVector<float>(0,0,1), float(M_PI/2)), quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2)));
-    _Tcamera.trans.x = center.x()+_focalDistance;
-    _Tcamera.trans.y = center.y();
-    _Tcamera.trans.z = center.z();
-    _SetCameraTransform();
+    _MoveCameraPointOfView("+x");
 
 }
 
@@ -813,6 +852,41 @@ void QtOSGViewer::_CreateDockWidgets()
     viewMenu->addAction(dock->toggleViewAction());
 }
 
+void QtOSGViewer::_CreateControlButtons()
+{
+
+    QWidget *controlWidget = new QWidget(_posgWidget);
+    controlWidget->setGeometry(10, 10, 50, 150);
+
+    QVBoxLayout *qvBoxLayout = new QVBoxLayout(controlWidget);
+    qvBoxLayout->setSpacing(5);
+    qvBoxLayout->setAlignment(Qt::AlignTop);
+    qvBoxLayout->heightForWidth(40);
+
+    QPushButton *zoomInButton = new QPushButton("+");
+    connect(zoomInButton, &QPushButton::pressed, [=](){
+            this->_posgWidget->Zoom(1.1);
+        });
+
+    QPushButton *zoomOutButton = new QPushButton("-");
+    connect(zoomOutButton, &QPushButton::pressed, [=](){
+            this->_posgWidget->Zoom(0.9);
+        });
+
+    _cameraMoveModeButton = new QPushButton("Rot");
+    _cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
+    connect(_cameraMoveModeButton, &QPushButton::pressed, [=]() {
+            _posgWidget->ToggleCameraMoveMode();
+            _cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
+        });
+
+    qvBoxLayout->addWidget(zoomInButton);
+    qvBoxLayout->addWidget(zoomOutButton);
+    qvBoxLayout->addWidget(_cameraMoveModeButton);
+
+    controlWidget->setLayout(qvBoxLayout);
+}
+
 void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
 {
     KinBodyPtr kinbody;
@@ -826,7 +900,7 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
         while(!!itemKinBody->parent()) {
             itemKinBody = itemKinBody->parent();
         }
-        _posgWidget->SelectItemFromName(itemKinBody->text(0).toAscii().data());
+        _posgWidget->SelectItemFromName(itemKinBody->text(0).toLatin1().data());
     }
 
     //  Clears details
@@ -842,11 +916,11 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
 
             //  Set Title
             if (!!_qdetailsTree) {
-                _qdetailsTree->setHeaderLabel(item->text(0).toAscii().data());
+                _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
             }
 
-            kinbody = GetEnv()->GetKinBody(item->parent()->parent()->text(0).toAscii().data());
-            link  = kinbody->GetLink(item->text(0).toAscii().data());
+            kinbody = GetEnv()->GetKinBody(item->parent()->parent()->text(0).toLatin1().data());
+            link  = kinbody->GetLink(item->text(0).toLatin1().data());
 
             //  Clears output string
             strs.clear();
@@ -860,16 +934,16 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
         else {
             //  Set Title
             if (!!_qdetailsTree) {
-                _qdetailsTree->setHeaderLabel(item->text(0).toAscii().data());
+                _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
             }
         }
     }
     else {
         //  Set Title
         if (!!_qdetailsTree) {
-            _qdetailsTree->setHeaderLabel(item->text(0).toAscii().data());
+            _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
         }
-        kinbody = GetEnv()->GetKinBody(item->text(0).toAscii().data());
+        kinbody = GetEnv()->GetKinBody(item->text(0).toLatin1().data());
         for (size_t i=0; i<kinbody->GetLinks().size(); i++) {
             std::ostringstream strs;
             link = kinbody->GetLinks()[i];
@@ -980,102 +1054,13 @@ void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
     RAVELOG_VERBOSE("End _FillObjectTree....\n");
 }
 
-void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
+void QtOSGViewer::_UpdateViewport()
 {
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
-    // set the viewport size correctly so we can draw stuff on the hud using window coordinates
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
-    _posgWidget->SetViewport(width, height, GetEnv()->GetUnit().second);
-
-    _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getMatrix());
-    osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
-    if( !!ptrackball ) {
-        _focalDistance = ptrackball->getDistance();
-    }
-    else {
-        _focalDistance = 0;
-    }
-
-    if( fTimeElapsed > 0 ) {
-        // animate the camera if necessary
-        bool bTracking=false;
-        Transform tTrack;
-        KinBody::LinkPtr ptrackinglink = _ptrackinglink;
-        if( !!ptrackinglink ) {
-            bTracking = true;
-            tTrack = ptrackinglink->GetTransform()*_tTrackingLinkRelative;
-            //tTrack.trans = ptrackinglink->ComputeAABB().pos;
-        }
-        RobotBase::ManipulatorPtr ptrackingmanip=_ptrackingmanip;
-        if( !!ptrackingmanip ) {
-            bTracking = true;
-            tTrack = ptrackingmanip->GetTransform();
-        }
-
-        if( bTracking ) {
-
-            RaveVector<float> vup(0,0,1); // up vector that camera should always be oriented to
-            if( !!GetEnv()->GetPhysicsEngine() ) {
-                Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
-                if( vgravity.lengthsqr3() > g_fEpsilon ) {
-                    vup = -vgravity*(1.0/RaveSqrt(vgravity.lengthsqr3()));
-                }
-            }
-            RaveVector<float> vlookatdir = _Tcamera.trans - tTrack.trans;
-            vlookatdir -= vup*vup.dot3(vlookatdir);
-            float flookatlen = sqrtf(vlookatdir.lengthsqr3());
-            vlookatdir = vlookatdir*cosf(_fTrackAngleToUp) + flookatlen*sinf(_fTrackAngleToUp)*vup; // flookatlen shouldn't change
-            if( flookatlen > g_fEpsilon ) {
-                vlookatdir *= 1/flookatlen;
-            }
-            else {
-                vlookatdir = Vector(1,0,0);
-            }
-            vup -= vlookatdir*vlookatdir.dot3(vup);
-            vup.normalize3();
-
-            //RaveVector<float> vcameradir = ExtractAxisFromQuat(_Tcamera.rot, 2);
-            //RaveVector<float> vToDesiredQuat = quatRotateDirection(vcameradir, vlookatdir);
-            //RaveVector<float> vDestQuat = quatMultiply(vToDesiredQuat, _Tcamera.rot);
-            //vDestQuat = quatMultiply(quatRotateDirection(ExtractAxisFromQuat(vDestQuat,1), vup), vDestQuat);
-            float angle = normalizeAxisRotation(vup, _Tcamera.rot).first;
-            RaveVector<float> vDestQuat = quatMultiply(quatFromAxisAngle(vup, -angle), quatRotateDirection(RaveVector<float>(0,1,0), vup));
-            //transformLookat(tTrack.trans, _Tcamera.trans, vup);
-
-            // focal distance is the tracking radius. ie how far from the coord system camera shoud be
-            RaveVector<float> vDestPos = tTrack.trans + ExtractAxisFromQuat(vDestQuat,2)*_focalDistance;
-
-            if(1) {
-                // PID animation
-                float pconst = 0.02;
-                float dconst = 0.2;
-                RaveVector<float> newtrans = _Tcamera.trans + fTimeElapsed*_tTrackingCameraVelocity.trans;
-                newtrans += pconst*(vDestPos - _Tcamera.trans); // proportional term
-                newtrans -= dconst*_tTrackingCameraVelocity.trans*fTimeElapsed; // derivative term (target is zero velocity)
-
-                pconst = 0.001;
-                dconst = 0.04;
-                RaveVector<float> newquat = _Tcamera.rot + fTimeElapsed*_tTrackingCameraVelocity.rot;
-                newquat += pconst*(vDestQuat - _Tcamera.rot);
-                newquat -= dconst*_tTrackingCameraVelocity.rot*fTimeElapsed;
-                newquat.normalize4();
-                // have to make sure newquat's y vector aligns with vup
-
-                _tTrackingCameraVelocity.trans = (newtrans-_Tcamera.trans)*(2/fTimeElapsed) - _tTrackingCameraVelocity.trans;
-                _tTrackingCameraVelocity.rot = (newquat-_Tcamera.rot)*(2/fTimeElapsed) - _tTrackingCameraVelocity.rot;
-                _Tcamera.trans = newtrans;
-                _Tcamera.rot = newquat;
-            }
-            else {
-                _Tcamera.trans = vDestPos;
-                _Tcamera.rot = vDestQuat;
-            }
-
-            _SetCameraTransform();
-        }
-    }
+    _posgWidget->SetViewport(width, height); // < need to do this since resizeGL is not properly called when using viewer in embedded apps (other than openrave standalone viewer)
 
     double fovy, aspectRatio, zNear, zFar;
     _posgWidget->GetCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
@@ -1101,12 +1086,17 @@ bool QtOSGViewer::_SetItemVisualizationCommand(ostream& sout, istream& sinput)
     std::string itemname, visualizationmode;
     sinput >> itemname >> visualizationmode;
 
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetItemVisualization, this, itemname, visualizationmode), ViewerCommandPriority::MEDIUM);
+    return !!sinput;
+}
+
+void QtOSGViewer::_SetItemVisualization(std::string& itemname, std::string& visualizationmode)
+{
     FOREACH(it, _mapbodies) {
         if( it->second->GetName() == itemname ) {
             it->second->SetVisualizationMode(visualizationmode);
         }
     }
-    return !!sinput;
 }
 
 bool QtOSGViewer::_ShowWorldAxesCommand(ostream& sout, istream& sinput)
@@ -1147,27 +1137,28 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
     if( focalDistance > 0 ) {
         _SetCameraDistanceToFocus(focalDistance);
     }
-    _ptrackinglink.reset();
-    _ptrackingmanip.reset();
     EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
     KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
     if( !pbody ) {
+        // restore navigation manipulator
+        _StopTrackLink();
         return false;
     }
-    _ptrackinglink = pbody->GetLink(linkname);
-    if( !!_ptrackinglink ) {
-        sinput >> tTrackingLinkRelative;
-        if( !!sinput ) {
-            _tTrackingLinkRelative = tTrackingLinkRelative;
-        }
-        else {
+    KinBody::LinkPtr requestedLink = pbody->GetLink(linkname);
+    RaveTransform<float> requestedLinkRelativeTransform;
+
+    if( !!requestedLink ) {
+        sinput >> requestedLinkRelativeTransform;
+        if( !sinput ) {
             RAVELOG_WARN("failed to get tracking link relative trans\n");
-            _tTrackingLinkRelative = Transform(); // use the identity
+            requestedLinkRelativeTransform = Transform(); // use the identity
         }
     }
-    if( bresetvelocity ) {
-        _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
+
+    if(!_TrackLink(requestedLink, requestedLinkRelativeTransform)) {
+        return false;
     }
+
     return !!_ptrackinglink;
 }
 
@@ -1181,18 +1172,24 @@ bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
         // not sure if this is thread safe...
         _SetCameraDistanceToFocus(focalDistance);
     }
-    _ptrackinglink.reset();
-    _ptrackingmanip.reset();
+
     EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
     RobotBasePtr probot = GetEnv()->GetRobot(robotname);
-    if( !probot ) {
+    RobotBase::ManipulatorPtr requestedManipulator = NULL;
+    if( !!probot ) {
+        requestedManipulator = probot->GetManipulator(manipname);
+    }
+    if( !requestedManipulator ) {
+        _StopTrackLink();
         return false;
     }
-    _ptrackingmanip = probot->GetManipulator(manipname);
-    if( bresetvelocity ) {
-        _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
+
+    RaveTransform<float> relativeTransform = requestedManipulator->GetLocalToolTransform();
+    if( !_TrackLink(requestedManipulator->GetEndEffector(), relativeTransform, str(boost::format("%s manipulator %s")%robotname%manipname)) ) {
+        return false;
     }
-    return !!_ptrackingmanip;
+
+    return !!_ptrackinglink;
 }
 
 bool QtOSGViewer::_SetTrackingAngleToUpCommand(ostream& sout, istream& sinput)
@@ -1205,20 +1202,28 @@ void QtOSGViewer::_ProcessApplicationQuit()
 {
     RAVELOG_VERBOSE("processing viewer application quit\n");
     // remove all messages in order to release the locks
-    boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-    if( _listGUIFunctions.size() > 0 ) {
-        bool bnotify = false;
-        FOREACH(it,_listGUIFunctions) {
-            (*it)->SetFinished();
-            if( (*it)->IsBlocking() ) {
-                bnotify = true;
+    map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> mapGUIFunctionLists;
+    {
+        boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+        mapGUIFunctionLists.swap(_mapGUIFunctionLists);
+    }
+
+    FOREACH(itpriority, mapGUIFunctionLists) {
+        list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
+        if( listGUIFunctions.size() > 0 ) {
+            bool bnotify = false;
+            FOREACH(it,listGUIFunctions) {
+                (*it)->SetFinished();
+                if( (*it)->IsBlocking() ) {
+                    bnotify = true;
+                }
+            }
+            if( bnotify ) {
+                _notifyGUIFunctionComplete.notify_all();
             }
         }
-        if( bnotify ) {
-            _notifyGUIFunctionComplete.notify_all();
-        }
+        listGUIFunctions.clear();
     }
-    _listGUIFunctions.clear();
 
 }
 
@@ -1248,15 +1253,68 @@ bool QtOSGViewer::_SetProjectionModeCommand(ostream& sout, istream& sinput)
 {
     std::string projectionMode = "";
     sinput >> projectionMode;
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetProjectionMode, this, projectionMode));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetProjectionMode, this, projectionMode), ViewerCommandPriority::MEDIUM);
     return true;
 }
 
-bool QtOSGViewer::_ZoomCommand(ostream& sout, istream& sinput)
+bool QtOSGViewer::_MoveCameraPointOfViewCommand(ostream& sout, istream& sinput)
+{
+    std::string axis = "";
+    sinput >> axis;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraPointOfView, this, axis), ViewerCommandPriority::LOW);
+    return true;
+}
+
+bool QtOSGViewer::_MoveCameraZoomCommand(ostream& sout, istream& sinput)
 {
     float factor = 1.0f;
     sinput >> factor;
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Zoom, this, factor));
+
+    int isPan;
+    sinput >> isPan;
+
+    float panDelta = 0;
+    if(isPan) {
+        sinput >> panDelta;
+    }
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, (bool)isPan, panDelta), ViewerCommandPriority::LOW);
+    return true;
+}
+
+bool QtOSGViewer::_RotateCameraXDirectionCommand(ostream& sout, istream& sinput)
+{
+    float thetaX = 0.0f;
+    sinput >> thetaX;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraXDirection, this, thetaX), ViewerCommandPriority::LOW);
+    return true;
+}
+
+bool QtOSGViewer::_RotateCameraYDirectionCommand(ostream& sout, istream& sinput)
+{
+    float thetaY = 0.0f;
+    sinput >> thetaY;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraYDirection, this, thetaY), ViewerCommandPriority::LOW);
+    return true;
+}
+
+bool QtOSGViewer::_PanCameraXDirectionCommand(ostream& sout, istream& sinput)
+{
+    float dx = 0.0f;
+    sinput >> dx;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraXDirection, this, dx), ViewerCommandPriority::LOW);
+    return true;
+}
+
+bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
+{
+    float dy = 0.0f;
+    sinput >> dy;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraYDirection, this, dy), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1314,10 +1372,10 @@ void QtOSGViewer::quitmainloop()
 void QtOSGViewer::Show(int showtype)
 {
     if( showtype ) {
-        _PostToGUIThread(boost::bind(&QtOSGViewer::show, this));
+        _PostToGUIThread(boost::bind(&QtOSGViewer::show, this), ViewerCommandPriority::VERY_HIGH);
     }
     else {
-        _PostToGUIThread(boost::bind(&QtOSGViewer::hide, this));
+        _PostToGUIThread(boost::bind(&QtOSGViewer::hide, this), ViewerCommandPriority::VERY_HIGH);
     }
 //    // have to put this in the message queue
 //    if (showtype ) {
@@ -1343,47 +1401,78 @@ bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<fl
     return false;
 }
 
-void QtOSGViewer::_SetCameraTransform()
+void QtOSGViewer::_SetCameraTransform(const RaveTransform<float>& transform)
 {
-    osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
-    if( !!ptrackball ) {
-        ptrackball->setDistance(_focalDistance);
-    }
-
-    // has to come after setting distance because internally orbit manipulator uses the distance to deduct view center
-    _posgWidget->GetCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
-
-    //osg::Vec3d eye, center, up;
-    //osg::Matrix::inverse(GetMatrixFromRaveTransform(_Tcamera)).getLookAt(eye, center, up, _focalDistance);
-    //_posgWidget->GetCameraManipulator()->setTransformation(eye, center, up);
+    _posgWidget->GetDefaultCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(transform));
 }
 
 void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
 {
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
-    _Tcamera = trans*trot;
-
-    if (focalDistance > 0) {
-        _focalDistance = focalDistance;
-    }
-
-    _SetCameraTransform();
-    _UpdateCameraTransform(0);
+    RaveTransform<float> tcenter;
+    tcenter.trans.z = focalDistance;
+    tcenter = trans * tcenter;
+    _SetCameraTransform(trans*trot);
+    osg::Vec3 center = osg::Vec3(tcenter.trans.x, tcenter.trans.y, tcenter.trans.z);
+    _SetCameraCenter(center);
+    _SetCameraDistanceToFocus(focalDistance);
 }
 
 void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistance)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance), ViewerCommandPriority::LOW);
+}
+
+void QtOSGViewer::_StopTrackLink()
+{
+    _ptrackinglink.reset();
+    _posgWidget->StopTrackNode();
+    if(_cameraMoveModeButton != NULL) {
+        _cameraMoveModeButton->setEnabled(true);
+    }
+}
+
+bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText)
+{
+    if(!!_ptrackinglink && _ptrackinglink == link && !_currentTrackLinkRelTransform.CompareTransform(linkRelativeTranslation, 1e-7)) {
+        // already tracking the requested link, nothing to be done
+        return true;
+    }
+    _ptrackinglink = link;
+    _currentTrackLinkRelTransform = linkRelativeTranslation;
+    if(!link) {
+        RAVELOG_ERROR("Could not set track manipulator to track link");
+        return false;
+    }
+
+    KinBodyPtr parent = link->GetParent();
+    KinBodyItemPtr parentIem = _posgWidget->GetItemFromKinBody(parent);
+    OSGNodePtr osgNode = parentIem->GetOSGLink(link->GetIndex());
+    if(!osgNode) {
+        // something gone seriously wrong...
+        RAVELOG_ERROR(str(boost::format("Corresponding OSG Node is invalid for Link %d of KinBody %s")%link->GetIndex()%parentIem->GetName()));
+        return false;
+    }
+
+    osg::Vec3d linkOffset(linkRelativeTranslation.trans[0], linkRelativeTranslation.trans[1], linkRelativeTranslation.trans[2]);
+    if (infoText.size() == 0) {
+        infoText = str(boost::format("%s/%s")%parentIem->GetName()%link->GetName());
+    }
+    _posgWidget->TrackNode(osgNode, infoText, linkOffset, _posgWidget->GetCameraDistanceToFocus());
+    if(_cameraMoveModeButton != NULL) {
+        _cameraMoveModeButton->setEnabled(false);
+    }
+    return true;
+}
+
+void QtOSGViewer::_SetCameraCenter(osg::Vec3 center)
+{
+    _posgWidget->SetCameraCenter(center);
 }
 
 void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
 {
-    if (focalDistance > 0) {
-        _focalDistance = focalDistance;
-    }
-
-    _SetCameraTransform();
-    _UpdateCameraTransform(0);
+    _posgWidget->SetCameraDistanceToFocus(focalDistance);
 }
 
 RaveTransform<float> QtOSGViewer::GetCameraTransform() const
@@ -1391,13 +1480,13 @@ RaveTransform<float> QtOSGViewer::GetCameraTransform() const
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
     // have to flip Z axis
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
-    return _Tcamera*trot;
+    return GetRaveTransformFromMatrix(_posgWidget->GetCurrentCameraManipulator()->getMatrix()) * trot;
 }
 
 float QtOSGViewer::GetCameraDistanceToFocus() const
 {
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
-    return _focalDistance;
+    return _posgWidget->GetCameraDistanceToFocus();
 }
 
 geometry::RaveCameraIntrinsics<float> QtOSGViewer::GetCameraIntrinsics() const
@@ -1456,7 +1545,7 @@ GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int strid
     }
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize),color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize),color.w<1), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1477,7 +1566,7 @@ GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int strid
         }
     }
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, osg::ref_ptr<osg::Point>(new osg::Point(fPointSize)), bhasalpha)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, osg::ref_ptr<osg::Point>(new osg::Point(fPointSize)), bhasalpha), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1492,7 +1581,7 @@ GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, i
     }
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
@@ -1507,7 +1596,7 @@ GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, i
         (*vcolors)[i] = osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f);
     }
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1521,7 +1610,7 @@ GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, in
     }
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
@@ -1536,7 +1625,7 @@ GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, in
         (*vcolors)[i] = osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f);
     }
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1544,6 +1633,26 @@ GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVec
 {
     RAVELOG_WARN("drawarrow not implemented\n");
     return GraphHandlePtr();
+}
+
+void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition)
+{
+    // Set up offset node for label
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    osg::Matrix offsetMatrix;
+    offsetMatrix.makeTranslate(osg::Vec3(worldPosition.x, worldPosition.y, worldPosition.z));
+    trans->setMatrix(offsetMatrix);
+    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label);
+    trans->addChild(labelTrans);
+    handle->addChild(trans);
+    _posgWidget->GetFigureRoot()->insertChild(0, handle);
+}
+
+GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector<float>& worldPosition)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawLabel, this, handle, label, worldPosition), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency)
@@ -1556,6 +1665,7 @@ void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, c
     box->setCenter(osg::Vec3(vpos.x, vpos.y, vpos.z));
 
     osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
+    sd->setColor(osg::Vec4f(0.33203125f, 0.5f, 0.898437f, 1.0f));
     geode->addDrawable(sd);
 
     // don't do transparent bin since that is too slow for big point clouds...
@@ -1570,8 +1680,40 @@ void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, c
 GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vpos, vextents, false)); // copies ref counts
-    return GraphHandlePtr();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vpos, vextents, false), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+}
+
+void QtOSGViewer::_DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency)
+{
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    osg::ref_ptr<osg::Geode> geode(new osg::Geode());
+
+    for (size_t i = 0; i < vpos.size(); i++) {
+        const RaveVector<float>& pos = vpos[i];
+        osg::ref_ptr<osg::Box> box = new osg::Box();
+        box->setHalfLengths(osg::Vec3(vextents.x, vextents.y, vextents.z));
+        box->setCenter(osg::Vec3(pos.x, pos.y, pos.z));
+
+        osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
+        sd->setColor(osg::Vec4f(0.33203125f, 0.5f, 0.898437f, 1.0f));
+        geode->addDrawable(sd);
+    }
+
+    // don't do transparent bin since that is too slow for big point clouds...
+    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
+    handle->getOrCreateStateSet()->setRenderingHint(bUsingTransparency ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
+
+    trans->addChild(geode);
+    handle->addChild(trans);
+    _posgWidget->GetFigureRoot()->insertChild(0, handle);
+}
+
+GraphHandlePtr QtOSGViewer::drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBoxArray, this, handle, vpos, vextents, false), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 void QtOSGViewer::_DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
@@ -1652,7 +1794,7 @@ void QtOSGViewer::_DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tp
 GraphHandlePtr QtOSGViewer::drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawPlane, this, handle, tplane, vextents, vtexture)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawPlane, this, handle, tplane, vextents, vtexture), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1717,7 +1859,7 @@ GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const 
     osg::ref_ptr<osg::Vec4Array> osgcolors = new osg::Vec4Array(1);
     (*osgcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, color.w<1), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1752,7 +1894,7 @@ GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const 
     }
 
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, bhasalpha)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, bhasalpha), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1768,7 +1910,7 @@ void QtOSGViewer::Reset()
 
 void QtOSGViewer::SetBkgndColor(const RaveVector<float>& color)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetBkgndColor, this, color));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetBkgndColor, this, color), ViewerCommandPriority::MEDIUM);
 }
 
 void QtOSGViewer::_SetBkgndColor(const RaveVector<float>& color)
@@ -1787,26 +1929,46 @@ void QtOSGViewer::StopPlaybackTimer()
 
 void QtOSGViewer::SetSize(int w, int h)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::resize, this, w, h));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::resize, this, w, h), ViewerCommandPriority::HIGH);
 }
 void QtOSGViewer::Move(int x, int y)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y), ViewerCommandPriority::HIGH);
 }
 
-void QtOSGViewer::Zoom(float factor)
+void QtOSGViewer::_RotateCameraXDirection(float thetaX)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Zoom, this, factor));   
+    _posgWidget->RotateCameraXDirection(thetaX);
 }
 
-void QtOSGViewer::_Zoom(float factor)
+void QtOSGViewer::_RotateCameraYDirection(float thetaY)
 {
-    _posgWidget->Zoom(factor);
+    _posgWidget->RotateCameraYDirection(thetaY);
+}
+
+void QtOSGViewer::_PanCameraXDirection(float dx)
+{
+    _posgWidget->PanCameraXDirection(dx);
+}
+
+void QtOSGViewer::_PanCameraYDirection(float dy)
+{
+    _posgWidget->PanCameraYDirection(dy);
+}
+
+void QtOSGViewer::_MoveCameraPointOfView(const std::string& axis)
+{
+    _posgWidget->MoveCameraPointOfView(axis);
+}
+
+void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)
+{
+    _posgWidget->MoveCameraZoom(factor, isPan, panDelta);
 }
 
 void QtOSGViewer::SetName(const string& name)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name), ViewerCommandPriority::LOW);
 }
 
 void QtOSGViewer::_SetName(const string& name)
@@ -1886,7 +2048,7 @@ void QtOSGViewer::UpdateFromModel()
         if( !pitem ) {
             // create a new body
             // make sure pbody is actually present
-            if( GetEnv()->GetBodyFromEnvironmentId(itbody->environmentid) == pbody ) {
+            if( GetEnv()->GetBodyFromEnvironmentBodyIndex(itbody->environmentid) == pbody ) {
 
                 // check to make sure the real GUI data is also NULL
                 if( !pbody->GetUserData(_userdatakey) ) {
@@ -2005,7 +2167,7 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtOSGViewer::LockEnvironmen
             break;
         }
         if( bUpdateEnvironment ) {
-            _UpdateEnvironment(0);
+            _UpdateEnvironment();
         }
     }
 
@@ -2015,47 +2177,59 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtOSGViewer::LockEnvironmen
     return lockenv;
 }
 
-void QtOSGViewer::_UpdateEnvironment(float fTimeElapsed)
+void QtOSGViewer::_UpdateEnvironment()
 {
     boost::mutex::scoped_lock lockupd(_mutexUpdating);
 
     if( _bUpdateEnvironment ) {
         // process all messages
-        list<GUIThreadFunctionPtr> listGUIFunctions;
+        map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> mapGUIFunctionLists;
         {
             boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-            listGUIFunctions.swap(_listGUIFunctions);
+            mapGUIFunctionLists.swap(_mapGUIFunctionLists);
         }
 
-        FOREACH(itmsg, listGUIFunctions) {
-            try {
-                (*itmsg)->Call();
-            }
-            catch(const std::exception& ex) {
-                RAVELOG_WARN_FORMAT("gui thread function failed: %s", ex.what());
+        FOREACH(itpriority, mapGUIFunctionLists) {
+            list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
+            FOREACH(itmsg, listGUIFunctions) {
+                try {
+                    (*itmsg)->Call();
+                }
+                catch(const std::exception& ex) {
+                    RAVELOG_WARN_FORMAT("gui thread function failed: %s", ex.what());
+                }
             }
         }
 
         // have to update model after messages since it can lock the environment
         UpdateFromModel();
-        _UpdateCameraTransform(fTimeElapsed);
+        if (_posgWidget->isVisible()) {
+            _UpdateViewport();
+        }
     }
 }
 
-void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block)
+void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, ViewerCommandPriority priority, bool block)
 {
     if( _nQuitMainLoop != -1 ) {
         // viewer quit, so anything posted won't get processed
         return;
     }
-    
+
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-    if( _listGUIFunctions.size() > 1000 ) {
-        RAVELOG_WARN_FORMAT("too many gui post commands, ignoring %d", _listGUIFunctions.size());
+    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
+    // Block non-essential fucntions if viewer is not processing any messages
+    if (!_bUpdateEnvironment && priority < ViewerCommandPriority::HIGH) {
+        RAVELOG_WARN("New GUI thread function of priority %d dropped due to _bUpdateEnvironment being set to false", priority);
         return;
     }
-    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
-    _listGUIFunctions.push_back(pfn);
+    // GUI thread function queue size limit
+    if (_mapGUIFunctionLists[priority].size() >= _mapGUIFunctionListLimits[priority]) {
+        // Possibly undefined behavior if _mapGUIFunctionListLimits[priority] is ever set to be 0, but that currently never happens
+        _mapGUIFunctionLists[priority].pop_front();
+        RAVELOG_WARN("Old GUI thread function of priority %d dropped due to function queue for given priority exceeding size of %d", priority, _mapGUIFunctionListLimits[priority]);
+    }
+    _mapGUIFunctionLists[priority].push_back(pfn);
     if( block ) {
         while(!pfn->IsFinished()) {
             _notifyGUIFunctionComplete.wait(_mutexGUIFunctions);
@@ -2072,20 +2246,29 @@ void QtOSGViewer::SetEnvironmentSync(bool bUpdate)
 
     if( !bUpdate ) {
         // remove all messages in order to release the locks
-        boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-        if( _listGUIFunctions.size() > 0 ) {
-            bool bnotify = false;
-            FOREACH(it,_listGUIFunctions) {
-                (*it)->SetFinished();
-                if( (*it)->IsBlocking() ) {
-                    bnotify = true;
+        map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> mapGUIFunctionLists;
+        {
+            boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+            mapGUIFunctionLists.swap(_mapGUIFunctionLists);
+        }
+
+        // Clear GUI function lists for all priorities
+        FOREACH(itpriority, mapGUIFunctionLists) {
+            list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
+            if( listGUIFunctions.size() > 0 ) {
+                bool bnotify = false;
+                FOREACH(it,listGUIFunctions) {
+                    (*it)->SetFinished();
+                    if( (*it)->IsBlocking() ) {
+                        bnotify = true;
+                    }
+                }
+                if( bnotify ) {
+                    _notifyGUIFunctionComplete.notify_all();
                 }
             }
-            if( bnotify ) {
-                _notifyGUIFunctionComplete.notify_all();
-            }
+            listGUIFunctions.clear();
         }
-        _listGUIFunctions.clear();
     }
 }
 
@@ -2156,9 +2339,23 @@ UserDataPtr QtOSGViewer::RegisterViewerThreadCallback(const ViewerThreadCallback
     return pdata;
 }
 
+void _ReleaseQtOSGViewer(QCoreApplication* pNewApp, QtOSGViewer* pViewer)
+{
+    delete pViewer;
+    delete pNewApp; // have to release QApplication after QtOSGViewer
+}
+
 ViewerBasePtr CreateQtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ViewerBasePtr(new QtOSGViewer(penv, sinput));
+    QCoreApplication* pNewApp = NULL;
+    if( !QApplication::instance() ) {
+        static int s_QtArgc = 0; // has to be static!
+        pNewApp = new QApplication(s_QtArgc, NULL);
+    } else {
+        //if( widgets.empty() ) {
+        RAVELOG_WARN("application exists?\n");
+    }
+    return ViewerBasePtr(new QtOSGViewer(penv, sinput), boost::bind(_ReleaseQtOSGViewer, pNewApp, _1));
 }
 
 } // end namespace qtosgviewer

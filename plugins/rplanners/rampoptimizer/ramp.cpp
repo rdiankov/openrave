@@ -460,12 +460,18 @@ void ParabolicCurve::SetSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal t)
          We can see that C(a) is a *convex* parabola, i.e., the coefficient of a^2 is strictly
          positive (given that t > 0). Therefore, it always has a minimum and the minimum is at
 
-                 a* = -(2*v0 + t*(x0 - x1) + 2*(v0 - v1)*t^2)/(0.5*t^3 + 2*t).
+                 a* = -(v0*t^2 + t*(x0 - x1) + 2*(v0 - v1))/(0.5*t^3 + 2*t).
 
          >>>> sp.solve(sp.diff(C, a), a)
      */
-    dReal tSqr = t*t;
-    dReal a = -(v0*tSqr + t*(x0 - x1) + 2*(v0 - v1))/(t*(0.5*tSqr + 2));
+    dReal a;
+    if( FuzzyZero(t, g_fRampEpsilon) ) {
+        a = 0;
+    }
+    else {
+        dReal tSqr = t*t;
+        a = -(v0*tSqr + t*(x0 - x1) + 2*(v0 - v1))/(t*(0.5*tSqr + 2));
+    }
 
     if( _ramps.size() != 1) {
         _ramps.resize(1);
@@ -601,7 +607,7 @@ void ParabolicCurve::TrimBack(dReal t)
         _ramps.resize(index);
     }
     else {
-        if( _ramps.size() > index + 1 ) {
+        if( (int)_ramps.size() > index + 1 ) {
             _ramps.resize(index + 1);
         }
         _ramps.back().TrimBack(remainder);
@@ -833,34 +839,53 @@ void RampND::Cut(dReal t, RampND& remRampND)
 
     remRampND.constraintChecked = constraintChecked;
 
-    if( t <= 0 || t >= _duration ) {
-        // Consider the case t >= duration. remRampND will be a zero-duration rampND while there is
-        // no change to this rampnd.
-        // In case t <= 0, we just swap this rampND's and rempRampND's _data.
-        std::copy(IT_X1_BEGIN(_data, _ndof), IT_X1_END(_data, _ndof), IT_X0_BEGIN(remRampND._data, _ndof)); // position
+    if( t <= 0 ) {
+        // Copy _data to remRampND._data
+        std::copy(_data.begin(), _data.end(), remRampND._data.begin());
+        remRampND._duration = _duration;
+
+        // Update x1 of this
+        std::copy(IT_X0_BEGIN(_data, _ndof), IT_X0_END(_data, _ndof), IT_X1_BEGIN(_data, _ndof));
+        // Update v1 of this
+        std::copy(IT_V0_BEGIN(_data, _ndof), IT_V0_END(_data, _ndof), IT_V1_BEGIN(_data, _ndof));
+
+        _duration = 0;
+        return;
+    }
+    else if( t >= _duration ) {
+        // Update x0 of remRampND
+        std::copy(IT_X1_BEGIN(_data, _ndof), IT_X1_END(_data, _ndof), IT_X0_BEGIN(remRampND._data, _ndof));
+        // Update x1 of remRampND
         std::copy(IT_X1_BEGIN(_data, _ndof), IT_X1_END(_data, _ndof), IT_X1_BEGIN(remRampND._data, _ndof));
-
-        std::copy(IT_V1_BEGIN(_data, _ndof), IT_V1_END(_data, _ndof), IT_V0_BEGIN(remRampND._data, _ndof)); // velocity
+        // Update v0 of remRampND
+        std::copy(IT_V1_BEGIN(_data, _ndof), IT_V1_END(_data, _ndof), IT_V0_BEGIN(remRampND._data, _ndof));
+        // Update v1 of remRampND
         std::copy(IT_V1_BEGIN(_data, _ndof), IT_V1_END(_data, _ndof), IT_V1_BEGIN(remRampND._data, _ndof));
-
-        std::copy(IT_A_BEGIN(_data, _ndof), IT_A_END(_data, _ndof), IT_A_BEGIN(remRampND._data, _ndof)); // acceleration
+        // Update a of remRampND
+        std::copy(IT_A_BEGIN(_data, _ndof), IT_A_END(_data, _ndof), IT_A_BEGIN(remRampND._data, _ndof));
 
         remRampND._duration = 0;
-
-        if( t <= 0 ) {
-            _data.swap(remRampND._data);
-        }
         return;
     }
     else {
-        EvalPos(t, IT_X1_BEGIN(_data, _ndof)); // update x1
-        std::copy(IT_X1_BEGIN(_data, _ndof), IT_X1_END(_data, _ndof), IT_X0_BEGIN(remRampND._data, _ndof));
-
-        EvalVel(t, IT_V1_BEGIN(_data, _ndof)); // update v1. Note that the update of x1 does not affect velocity calculation
-        std::copy(IT_V1_BEGIN(_data, _ndof), IT_V1_END(_data, _ndof), IT_V0_BEGIN(remRampND._data, _ndof));
-
+        // Update x1 of remRampND
+        std::copy(IT_X1_BEGIN(_data, _ndof), IT_X1_END(_data, _ndof), IT_X1_BEGIN(remRampND._data, _ndof));
+        // Update v1 of remRampND
+        std::copy(IT_V1_BEGIN(_data, _ndof), IT_V1_END(_data, _ndof), IT_V1_BEGIN(remRampND._data, _ndof));
+        // Update a of remRampND
         std::copy(IT_A_BEGIN(_data, _ndof), IT_A_END(_data, _ndof), IT_A_BEGIN(remRampND._data, _ndof));
 
+        // Update x1 of this
+        EvalPos(t, IT_X1_BEGIN(_data, _ndof));
+        // Update v1 of this. Note that the update of x1 does not affect this velocity calculation.
+        EvalVel(t, IT_V1_BEGIN(_data, _ndof));
+
+        // Update x0 of remRampND
+        std::copy(IT_X1_BEGIN(_data, _ndof), IT_X1_END(_data, _ndof), IT_X0_BEGIN(remRampND._data, _ndof));
+        // Update v0 of remRampND
+        std::copy(IT_V1_BEGIN(_data, _ndof), IT_V1_END(_data, _ndof), IT_V0_BEGIN(remRampND._data, _ndof));
+
+        // Update duration
         remRampND._duration = _duration - t;
         _duration = t;
         return;
@@ -899,7 +924,7 @@ void RampND::TrimBack(dReal t)
     }
     else {
         EvalPos(t, IT_X1_BEGIN(_data, _ndof)); // update x1
-        EvalVel(t, IT_V1_BEGIN(_data, _ndof)); // update x1. Note that the update of x1 does not affect velocity calculation
+        EvalVel(t, IT_V1_BEGIN(_data, _ndof)); // update v1. Note that the update of x1 does not affect velocity calculation
         _duration = t;
         return;
     }

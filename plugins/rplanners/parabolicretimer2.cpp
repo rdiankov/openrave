@@ -41,12 +41,12 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\nSimple parabolic trajectory re-timing while passing through all the waypoints, waypoints will not be modified. This assumes all waypoints have velocity 0 (unless the start and final points are forced). Overwrites the velocities and timestamps of input trajectory.";
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
-        _interpolator.Initialize(_parameters->GetDOF());
-        _translationinterpolator.Initialize(3);
+        _interpolator.Initialize(_parameters->GetDOF(), GetEnv()->GetId());
+        _translationinterpolator.Initialize(3, GetEnv()->GetId());
         _trajxmlid = ptraj->GetXMLId();
-        return TrajectoryRetimer2::PlanPath(ptraj);
+        return TrajectoryRetimer2::PlanPath(ptraj, planningoptions);
     }
 
 protected:
@@ -170,7 +170,7 @@ protected:
                 }
 
                 bSuccess = false;
-                RAVELOG_VERBOSE_FORMAT("env = %d: manip constraints invalidated. iSlowDown = %d/%d, slowing down by %.15e", GetEnv()->GetId()%iSlowDown%maxSlowDownTries%ret.fTimeBasedSurpassMult);
+                RAVELOG_VERBOSE_FORMAT("env=%s, manip constraints invalidated. iSlowDown = %d/%d, slowing down by %.15e", GetEnv()->GetNameId()%iSlowDown%maxSlowDownTries%ret.fTimeBasedSurpassMult);
                 // Slow down by reducing vellimits and accellimits.
                 for (size_t j = 0; j < vellimits.size(); ++j ) {
                     dReal fminvel = max(RaveFabs(_v0vel[j]), RaveFabs(_v1vel[j]));
@@ -270,7 +270,7 @@ protected:
             }
             OPENRAVE_ASSERT_OP(deltatime,>,0);
             if( deltatime < RampOptimizer::g_fRampEpsilon ) {
-                RAVELOG_WARN(str(boost::format("delta time is really ill-conditioned: %e")%deltatime));
+                RAVELOG_WARN_FORMAT("env=%s, delta time is really ill-conditioned: %e", GetEnv()->GetNameId()%deltatime);
             }
 
             bool bSuccess = _interpolator.ComputeNDTrajectoryFixedDuration(_v0pos, _v1pos, _v0vel, _v1vel, deltatime, info->_vConfigLowerLimit, info->_vConfigUpperLimit, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, _cacheRampNDVect);
@@ -361,7 +361,7 @@ protected:
             Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetTransform6D().rot))*2;
             dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
             if( !_interpolator.Compute1DTrajectory(0, angledelta, anglevelprev, anglevel, info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
-                RAVELOG_WARN("Failed solving Interpolate1D for angles\n");
+                RAVELOG_WARN_FORMAT("env=%s, Failed solving Interpolate1D for angles", GetEnv()->GetNameId());
                 return -1;
             }
             // dReal bmin, bmax;
@@ -384,7 +384,7 @@ protected:
             Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetRotation3D()))*2;
             dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
             if( !_interpolator.Compute1DTrajectory(0, angledelta, anglevelprev, anglevel, info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
-                RAVELOG_WARN("Failed solving Interpolate1D for angles\n");
+                RAVELOG_WARN_FORMAT("env=%s, Failed solving Interpolate1D for angles", GetEnv()->GetNameId());
                 return -1;
             }
             // dReal bmin, bmax;
@@ -411,7 +411,7 @@ protected:
                 Vector angularvelocity(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2));
                 dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
                 if( !_interpolator.Compute1DTrajectory(0, angledelta, anglevelprev, anglevel, info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
-                    RAVELOG_WARN("Failed solving Interpolate1D for angles\n");
+                    RAVELOG_WARN_FORMAT("env=%s, Failed solving Interpolate1D for angles", GetEnv()->GetNameId());
                     return -1;
                 }
                 // dReal bmin, bmax;
@@ -434,7 +434,7 @@ protected:
         case IKP_TranslationXAxisAngleZNorm4D: {
             dReal angledelta = utils::SubtractCircularAngle(ikparam.GetTranslationXAxisAngleZNorm4D().second,ikparamprev.GetTranslationXAxisAngleZNorm4D().second);
             if( !_interpolator.Compute1DTrajectory(0, angledelta, *(itdataprev+info->gvel.offset + 0), *(itdata+info->gvel.offset + 0), info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
-                RAVELOG_WARN("Failed solving Interpolate1D for angles\n");
+                RAVELOG_WARN_FORMAT("env=%s, Failed solving Interpolate1D for angles", GetEnv()->GetNameId());
                 return -1;
             }
             // dReal bmin, bmax;
@@ -453,15 +453,9 @@ protected:
         case IKP_TranslationYAxisAngleXNorm4D: {
             dReal angledelta = utils::SubtractCircularAngle(ikparam.GetTranslationYAxisAngleXNorm4D().second,ikparamprev.GetTranslationYAxisAngleXNorm4D().second);
             if( !_interpolator.Compute1DTrajectory(0, angledelta, *(itdataprev+info->gvel.offset + 0), *(itdata+info->gvel.offset + 0), info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
-                RAVELOG_WARN("Failed solving Interpolate1D for angles\n");
+                RAVELOG_WARN_FORMAT("env=%s, Failed solving Interpolate1D for angles", GetEnv()->GetNameId());
                 return -1;
             }
-            // dReal bmin, bmax;
-            // curve.GetPeaks(bmin, bmax);
-            // if( bmin < -1000 || bmax > angledelta + 1000) {
-            //     RAVELOG_WARN("Failed solving Interpolate1D for angles\n");
-            //     return -1;
-            // }
 
             mintime = _curve.GetDuration();
             trans1 = ikparam.GetTranslationYAxisAngleXNorm4D().first;
@@ -469,8 +463,34 @@ protected:
             transoffset = 1;
             break;
         }
+        case IKP_TranslationZAxisAngleYNorm4D: {
+            dReal angledelta = utils::SubtractCircularAngle(ikparam.GetTranslationZAxisAngleYNorm4D().second,ikparamprev.GetTranslationZAxisAngleYNorm4D().second);
+            if( !_interpolator.Compute1DTrajectory(0, angledelta, *(itdataprev+info->gvel.offset + 0), *(itdata+info->gvel.offset + 0), info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
+                RAVELOG_WARN_FORMAT("env=%s, Failed solving Interpolate1D for angles", GetEnv()->GetNameId());
+                return -1;
+            }
+
+            mintime = _curve.GetDuration();
+            trans1 = ikparam.GetTranslationZAxisAngleYNorm4D().first;
+            trans0 = ikparamprev.GetTranslationZAxisAngleYNorm4D().first;
+            transoffset = 1;
+            break;
+        }
+        case IKP_TranslationZAxisAngle4D: {
+            dReal angledelta = RaveFabs(ikparam.GetTranslationZAxisAngle4D().second - ikparamprev.GetTranslationZAxisAngle4D().second);
+            if( !_interpolator.Compute1DTrajectory(0, angledelta, *(itdataprev+info->gvel.offset + 0), *(itdata+info->gvel.offset + 0), info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
+                RAVELOG_WARN_FORMAT("env=%s, Failed solving Interpolate1D for angles", GetEnv()->GetNameId());
+                return -1;
+            }
+
+            mintime = _curve.GetDuration();
+            trans1 = ikparam.GetTranslationZAxisAngle4D().first;
+            trans0 = ikparamprev.GetTranslationZAxisAngle4D().first;
+            transoffset = 1;
+            break;
+        }
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, does not support parameterization 0x%x"), GetEnv()->GetId()%ikparam.GetType(),ORE_InvalidArguments);
         }
         if( transoffset >= 0 ) {
             std::vector<dReal> xyz0(3, 0), xyz1(3), xyzvelprev(3), xyzvel(3), vlowerlimit(3), vupperlimit(3);
@@ -487,7 +507,7 @@ protected:
 
             bool bSuccess = _translationinterpolator.ComputeArbitraryVelNDTrajectory(xyz0, xyz1, xyzvelprev, xyzvel, vlowerlimit, vupperlimit, vvellimit, vaccellimit, _cacheRampNDVect, true);
             if( !bSuccess) {
-                RAVELOG_WARN("Failed to solve InterpolateArbitraryVelND for XYZ\n");
+                RAVELOG_WARN_FORMAT("env=%s, Failed to solve InterpolateArbitraryVelND for XYZ", GetEnv()->GetNameId());
                 return -1;
             }
             dReal duration = 0;
@@ -580,7 +600,7 @@ protected:
             break;
         }
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), iktype,ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, does not support parameterization 0x%x"), GetEnv()->GetId()%iktype,ORE_InvalidArguments);
         }
         if( transoffset >= 0 ) {
             for(int j = 0; j < 3; ++j) {
@@ -614,7 +634,7 @@ protected:
             }
             OPENRAVE_ASSERT_OP(deltatime,>,0);
             if( deltatime < RampOptimizer::g_fRampEpsilon ) {
-                RAVELOG_WARN(str(boost::format("delta time is really ill-conditioned: %e")%deltatime));
+                RAVELOG_WARN_FORMAT("env=%s, delta time is really ill-conditioned: %e", GetEnv()->GetNameId()%deltatime);
             }
 
             IkParameterization ikparamprev, ikparam;
@@ -627,7 +647,7 @@ protected:
 
             switch(iktype) {
             case IKP_Transform6D: {
-                _ikinterpolator.Initialize(4);
+                _ikinterpolator.Initialize(4, GetEnv()->GetId());
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 axisangle = axisAngleFromQuat(quatMultiply(quatInverse(ikparamprev.GetTransform6D().rot), ikparam.GetTransform6D().rot));
                 if( axisangle.lengthsqr3() > g_fEpsilon ) {
@@ -648,7 +668,7 @@ protected:
                 break;
             }
             case IKP_Rotation3D: {
-                _ikinterpolator.Initialize(1);
+                _ikinterpolator.Initialize(1, GetEnv()->GetId());
                 _v0pos.resize(1); _v0vel.resize(1); _v1pos.resize(1); _v1vel.resize(1); vmaxvel.resize(1); vmaxaccel.resize(1);
                 axisangle = axisAngleFromQuat(quatMultiply(quatInverse(ikparamprev.GetRotation3D()), ikparam.GetRotation3D()));
                 if( axisangle.lengthsqr3() > g_fEpsilon ) {
@@ -665,7 +685,7 @@ protected:
                 break;
             }
             case IKP_Translation3D:
-                _ikinterpolator.Initialize(3);
+                _ikinterpolator.Initialize(3, GetEnv()->GetId());
                 _v0pos.resize(3); _v0vel.resize(3); _v1pos.resize(3); _v1vel.resize(3); vmaxvel.resize(3); vmaxaccel.resize(3);
                 trans1 = ikparam.GetTranslation3D();
                 trans0 = ikparamprev.GetTranslation3D();
@@ -673,7 +693,7 @@ protected:
                 transindex = 0;
                 break;
             case IKP_TranslationDirection5D: {
-                _ikinterpolator.Initialize(4);
+                _ikinterpolator.Initialize(4, GetEnv()->GetId());
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 axisangle = ikparamprev.GetTranslationDirection5D().dir.cross(ikparam.GetTranslationDirection5D().dir);
                 if( axisangle.lengthsqr3() > g_fEpsilon ) {
@@ -697,7 +717,7 @@ protected:
                 break;
             }
             case IKP_TranslationXAxisAngleZNorm4D: {
-                _ikinterpolator.Initialize(4);
+                _ikinterpolator.Initialize(4, GetEnv()->GetId());
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 _v0pos[0] = 0;
                 _v1pos[0] = utils::SubtractCircularAngle(ikparam.GetTranslationXAxisAngleZNorm4D().second,ikparamprev.GetTranslationXAxisAngleZNorm4D().second);
@@ -712,7 +732,7 @@ protected:
                 break;
             }
             case IKP_TranslationYAxisAngleXNorm4D: {
-                _ikinterpolator.Initialize(4);
+                _ikinterpolator.Initialize(4, GetEnv()->GetId());
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 _v0pos[0] = 0;
                 _v1pos[0] = utils::SubtractCircularAngle(ikparam.GetTranslationYAxisAngleXNorm4D().second,ikparamprev.GetTranslationYAxisAngleXNorm4D().second);
@@ -726,8 +746,38 @@ protected:
                 transindex = 1;
                 break;
             }
+            case IKP_TranslationZAxisAngleYNorm4D: {
+                _ikinterpolator.Initialize(4, GetEnv()->GetId());
+                _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
+                _v0pos[0] = 0;
+                _v1pos[0] = utils::SubtractCircularAngle(ikparam.GetTranslationZAxisAngleYNorm4D().second,ikparamprev.GetTranslationZAxisAngleYNorm4D().second);
+                _v0vel[0] = *(itdataprev+info->gvel.offset+0);
+                _v1vel[0] = *(itdata+info->gvel.offset+0);
+                vmaxvel[0] = info->_vConfigVelocityLimit.at(0);
+                vmaxaccel[0] = info->_vConfigAccelerationLimit.at(0);
+                trans1 = ikparam.GetTranslationZAxisAngleYNorm4D().first;
+                trans0 = ikparamprev.GetTranslationZAxisAngleYNorm4D().first;
+                transoffset = 1;
+                transindex = 1;
+                break;
+            }
+            case IKP_TranslationZAxisAngle4D: {
+                _ikinterpolator.Initialize(4);
+                _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
+                _v0pos[0] = 0;
+                _v1pos[0] = utils::SubtractCircularAngle(ikparam.GetTranslationZAxisAngle4D().second,ikparamprev.GetTranslationZAxisAngle4D().second);
+                _v0vel[0] = *(itdataprev+info->gvel.offset+0);
+                _v1vel[0] = *(itdata+info->gvel.offset+0);
+                vmaxvel[0] = info->_vConfigVelocityLimit.at(0);
+                vmaxaccel[0] = info->_vConfigAccelerationLimit.at(0);
+                trans1 = ikparam.GetTranslationZAxisAngle4D().first;
+                trans0 = ikparamprev.GetTranslationZAxisAngle4D().first;
+                transoffset = 1;
+                transindex = 1;
+                break;
+            }
             default:
-                throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, does not support parameterization 0x%x"), GetEnv()->GetNameId()%ikparam.GetType(),ORE_InvalidArguments);
             }
 
             if( transoffset >= 0 ) {
@@ -835,8 +885,18 @@ protected:
                     //translation = ikparamprev.GetTranslationYAxisAngleXNorm4D().first;
                     break;
                 }
+                case IKP_TranslationZAxisAngleYNorm4D: {
+                    *(ittargetdata + info->posindex + 0) = ikparamprev.GetTranslationZAxisAngleYNorm4D().second + vpos.at(0);
+                    *(ittargetdata + info->velindex + 0) = vvel.at(0);
+                    break;
+                }
+                case IKP_TranslationZAxisAngle4D: {
+                    *(ittargetdata + info->posindex + 0) = ikparamprev.GetTranslationZAxisAngle4D().second + vpos.at(0);
+                    *(ittargetdata + info->velindex + 0) = vvel.at(0);
+                    break;
+                }
                 default:
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, does not support parameterization 0x%x"), GetEnv()->GetId()%ikparam.GetType(),ORE_InvalidArguments);
                 }
 
                 if( transoffset >= 0 && transindex >= 0 ) {
@@ -916,8 +976,20 @@ protected:
                     //translation = ikparamprev.GetTranslationYAxisAngleXNorm4D().first;
                     break;
                 }
+                case IKP_TranslationZAxisAngleYNorm4D: {
+                    *(ittargetdata + info->posindex + 0) = ikparamprev.GetTranslationZAxisAngleYNorm4D().second + vpos.at(0);
+                    *(ittargetdata + info->velindex + 0) = vvel.at(0);
+                    //translation = ikparamprev.GetTranslationYAxisAngleXNorm4D().first;
+                    break;
+                }
+                case IKP_TranslationZAxisAngle4D: {
+                    *(ittargetdata + info->posindex + 0) = ikparamprev.GetTranslationZAxisAngle4D().second + vpos.at(0);
+                    *(ittargetdata + info->velindex + 0) = vvel.at(0);
+                    //translation = ikparamprev.GetTranslationYAxisAngleXNorm4D().first;
+                    break;
+                }
                 default:
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, does not support parameterization 0x%x"), GetEnv()->GetId()%ikparam.GetType(),ORE_InvalidArguments);
                 }
 
                 if( transoffset >= 0 && transindex >= 0 ) {

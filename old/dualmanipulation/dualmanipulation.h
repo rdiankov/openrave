@@ -94,44 +94,18 @@ public:
 protected:
 
     inline boost::shared_ptr<DualManipulation> shared_problem() {
-        return boost::dynamic_pointer_cast<DualManipulation>(shared_from_this());
+        return boost::static_pointer_cast<DualManipulation>(shared_from_this());
     }
     inline boost::shared_ptr<DualManipulation const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<DualManipulation const>(shared_from_this());
+        return boost::static_pointer_cast<DualManipulation const>(shared_from_this());
     }
 
     bool SetActiveManip(ostream& sout, istream& sinput)
     {
         string manipname;
-        int index = -1;
-
-        if(!sinput.eof()) {
-            sinput >> manipname;
-            if( !sinput )
-                return false;
-
-            // find the manipulator with the right name
-            index = 0;
-            FOREACHC(itmanip, robot->GetManipulators()) {
-                if( manipname == (*itmanip)->GetName() )
-                    break;
-                ++index;
-            }
-
-            if( index >= (int)robot->GetManipulators().size() ) {
-                index = atoi(manipname.c_str());
-            }
-        }
-
-        if(( index >= 0) &&( index < (int)robot->GetManipulators().size()) ) {
-            robot->SetActiveManipulator(index);
-            sout << "1";
-        }
-        else {
-            RAVELOG_ERROR("invaild manip %d\n", index);
-            sout << "0";
-        }
-
+        sinput >> manipname;
+        robot->SetActiveManipulator(manipname);
+        sout << "1";
         return true;
     }
 
@@ -192,8 +166,7 @@ protected:
         // constraint stuff
         double constrainterrorthresh=0;
         RobotBase::ManipulatorPtr pmanipI, pmanipA;
-        int activeManipIndex=robot->GetActiveManipulatorIndex();
-        if (activeManipIndex==0) {
+        if (robot->GetActiveManipulator() == robot->GetManipulators().at(0)) {
             pmanipA=robot->GetManipulators().at(0);    //Active Manipulator
             pmanipI=robot->GetManipulators().at(1);     //Inactive Manipulator
         }
@@ -287,7 +260,7 @@ protected:
             params->_nMaxIterations = 1000;
         }
 
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        boost::shared_ptr<TrajectoryBase> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
 
         boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
@@ -302,7 +275,7 @@ protected:
                 return false;
             }
 
-            if(rrtplanner->PlanPath(ptraj) ) {
+            if(rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
                 bSuccess = true;
                 RAVELOG_INFOA("finished planning\n");
                 break;

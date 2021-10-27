@@ -18,6 +18,7 @@
     \brief All definitions that involve ConfigurationSpecification
  */
 #include "libopenrave.h"
+#include <openrave/xmlreaders.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/once.hpp>
@@ -146,6 +147,51 @@ bool ConfigurationSpecification::operator!=(const ConfigurationSpecification& r)
     return !this->operator==(r);
 }
 
+bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0, int igroup1)
+{
+    return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
+}
+
+void ConfigurationSpecification::DeserializeJSON(const rapidjson::Value& rValue) {
+    if (rValue.HasMember("groups")) {
+        _vgroups.resize(rValue["groups"].Size());
+        size_t iGroup = 0;
+        for (rapidjson::Value::ConstValueIterator it = rValue["groups"].Begin(); it != rValue["groups"].End(); it++, iGroup++) {
+            ConfigurationSpecification::Group& group = _vgroups[iGroup];
+            orjson::LoadJsonValueByKey(*it, "name", group.name);
+            orjson::LoadJsonValueByKey(*it, "offset", group.offset);
+            orjson::LoadJsonValueByKey(*it, "dof", group.dof);
+            orjson::LoadJsonValueByKey(*it, "interpolation", group.interpolation);
+        }
+    }
+}
+
+void ConfigurationSpecification::SerializeJSON(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const {
+    std::vector<int> vgroupindices(_vgroups.size());
+    for (int i = 0; i < (int)vgroupindices.size(); ++i) {
+        vgroupindices[i] = i;
+    }
+    std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(*this), _1, _2));
+
+    rValue.SetObject();
+
+    rapidjson::Value rGroups;
+    rGroups.SetArray();
+    rGroups.Reserve(_vgroups.size(), alloc);
+    for(size_t iGroup = 0; iGroup < vgroupindices.size(); iGroup++) {
+        int iGroupIndex = vgroupindices[iGroup];
+        const ConfigurationSpecification::Group& group = _vgroups[iGroupIndex];
+        rapidjson::Value rGroup;
+        rGroup.SetObject();
+        orjson::SetJsonValueByKey(rGroup, "name", group.name, alloc);
+        orjson::SetJsonValueByKey(rGroup, "offset", group.offset, alloc);
+        orjson::SetJsonValueByKey(rGroup, "dof", group.dof, alloc);
+        orjson::SetJsonValueByKey(rGroup, "interpolation", group.interpolation, alloc);
+        rGroups.PushBack(rGroup, alloc);
+    }
+    orjson::SetJsonValueByKey(rValue, "groups", rGroups, alloc);
+}
+
 const ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(const std::string& name) const
 {
     size_t bestmatch=0xffffffff;
@@ -239,8 +285,13 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
             uint32_t matchscore=1;
             if( curtokens.size() > 1 && tokens.size() > 1 ) {
                 if( curtokens.at(1) != tokens.at(1) ) {
-                    // both names exist and do not match so cannot go any further!
-                    continue;
+                    if( curtokens.at(0) != "outputSignals" ) { // For outputSignals, the second string is already the signal name
+                        // both names exist and do not match so cannot go any further!
+                        continue;
+                    }
+                }
+                else {
+                    matchscore += 1;
                 }
                 if( curtokens.size() > 2 && tokens.size() > 2 ) {
                     for(size_t i = 2; i < tokens.size(); ++i) {
@@ -1445,7 +1496,9 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                     }
                     if( vbodyvalues.size() > 0 ) {
                         for(size_t i = 0; i < vdefaultvalues.size(); ++i) {
-                            vdefaultvalues[i] = vbodyvalues.at(vtargetindices[i]);
+                            if( vtargetindices[i] >= 0 ) { // sometimes index can be -1 to indicate that no robot value is mapped. This is used when trying to preserve an output order of values
+                                vdefaultvalues[i] = vbodyvalues.at(vtargetindices[i]);
+                            }
                         }
                     }
                 }
@@ -1833,11 +1886,6 @@ void ConfigurationSpecification::Reader::characters(const std::string& ch)
     }
 }
 
-bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0, int igroup1)
-{
-    return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
-}
-
 std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec)
 {
     std::vector<int> vgroupindices(spec._vgroups.size());
@@ -1874,7 +1922,7 @@ std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec)
             throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </configuration> in %s"),buf.str(),ORE_InvalidArguments);
         }
         ConfigurationSpecification::Reader reader(spec);
-        LocalXML::ParseXMLData(reader, pbuf.c_str(), ppsize);
+        xmlreaders::ParseXMLData(reader, pbuf.c_str(), ppsize);
         BOOST_ASSERT(spec.IsValid());
     }
 

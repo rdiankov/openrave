@@ -1,5 +1,5 @@
 // -*- coding: utf-8 --*
-// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2020 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@ The sampler needs to return values in the range [0,1]. Default sampler is 'mt199
 If the robot active DOFs change, can use the 'TrackActiveSpace' command to automatically update the sampling configuration space. By default this is true.\n\
 ";
         RegisterCommand("TrackActiveSpace",boost::bind(&RobotConfigurationSampler::TrackActiveSpaceCommand,this,_1,_2),
-                        "Enable/disable the automating updating of the active configuration space.");
+                        "Enable/disable the automating updating of the active configuration space. Disabled by default.");
         string robotname;
         sinput >> robotname;
         _probot = GetEnv()->GetRobot(robotname);
@@ -46,9 +46,10 @@ If the robot active DOFs change, can use the 'TrackActiveSpace' command to autom
                 BOOST_ASSERT(vsamplerlower[i] == 0 && vsamplerupper[i] == 1);
             }
         }
-        if( !!_probot ) {
-            _updatedofscallback = _probot->RegisterChangeCallback(RobotBase::Prop_RobotActiveDOFs,boost::bind(&RobotConfigurationSampler::_UpdateDOFs,this));
-        }
+        // Disable active space tracking by default. When RobotConfigurationSampler is used as a sampler in a planner
+        // parameters' sample function, it should not automatically update robot's lower/upper limits and only use the
+        // lower/upper limits as initialized in the constructor, which are supposed to be the same as parameters'
+        // _vConfigLowerLimit and _vConfigUpperLimit. When parameters' limits change, should recreate a sampler.
     }
 
     void SetSeed(uint32_t seed) {

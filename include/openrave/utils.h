@@ -33,6 +33,7 @@
 #include <boost/weak_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/assert.hpp>
+#include <openrave/smart_ptr.h>
 
 #include <time.h>
 
@@ -81,6 +82,11 @@ inline uint64_t GetNanoTime()
 
 inline static uint64_t GetNanoPerformanceTime() {
     return GetNanoTime();
+}
+
+inline uint64_t GetMonotonicTime()
+{
+    return GetMicroTime();
 }
 
 #else
@@ -139,6 +145,17 @@ inline static uint64_t GetNanoPerformanceTime()
     return (uint64_t)sec*1000000000 + (uint64_t)nsec;
 #else
     return GetNanoTime();
+#endif
+}
+
+inline uint64_t GetMonotonicTime()
+{
+#if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0) && defined(_POSIX_MONOTONIC_CLOCK)
+    struct timespec start;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+    return (uint64_t)start.tv_sec * 1000000 + (uint64_t)start.tv_nsec / 1000;
+#else
+    return GetMicroTime();
 #endif
 }
 

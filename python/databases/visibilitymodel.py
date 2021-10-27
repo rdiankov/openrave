@@ -81,7 +81,8 @@ else:
 
 from ..openravepy_int import RaveGetDefaultViewerType
 from . import DatabaseGenerator
-import inversekinematics, kinematicreachability
+from . import inversekinematics
+from . import kinematicreachability
 from .. import interfaces
 
 import logging
@@ -241,7 +242,7 @@ class VisibilityModel(DatabaseGenerator):
                         if sphere is None:
                             sphere = [3,0.1,0.15,0.2,0.25,0.3]
                         self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(sphere=sphere,conedirangles=conedirangles)
-                print 'total transforms: ',len(self.visibilitytransforms)
+                print('total transforms: %d'%len(self.visibilitytransforms))
                 self.visualprob.SetCameraTransforms(transforms=self.visibilitytransforms)
         finally:
             for b,enable in bodies:
@@ -383,7 +384,7 @@ class VisibilityModel(DatabaseGenerator):
                     validjoints.append((s,i))
                     if not returnall:
                         return validjoints
-                    print 'found',len(validjoints)
+                    print('found %d'%len(validjoints))
             return validjoints
 
     def pruneTransformations(self,thresh=0.04,numminneighs=10,maxdist=None,translationonly=True):

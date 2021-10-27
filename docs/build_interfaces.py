@@ -60,10 +60,10 @@ Interface Types
             info.pluginname = pluginname
             for type,names in info.interfacenames:
                 for name in names:
-                    print name
+                    print(name)
                     interface = RaveCreateInterface(env,type,name)
                     if interface is None:
-                        print 'failed to create ',type,name
+                        print('failed to create %r %s'%(type,name))
                     else:
                         ititle = name + ' - ' + pluginname
                         itext = '.. _%s-%s:\n\n'%(type,name.lower())
@@ -75,8 +75,8 @@ Interface Types
                             commandtext = interface.SendCommand('help label %s-%s-'%(type,name.lower()))
                             if commandtext is not None:
                                 itext +=  commandtext
-                        except (openrave_exception,RuntimeError),e:
-                            print e
+                        except (openrave_exception,RuntimeError) as e:
+                            print(e)
                         interfaceinfo[type].append([name,pluginname,itext])
                         interface = None # destroy
         
@@ -118,7 +118,7 @@ Plugins
         # sort plugins by root name
         plugininfo.sort(key=lambda x: x[1].pluginname)
         for filename,info in plugininfo:
-            print info.pluginname
+            print(info.pluginname)
             text += '.. _plugin-%s:\n\n'%info.pluginname # link
             text += info.pluginname + '\n' + '-'*len(info.pluginname) + '\n\n'
             text += 'Offers: '

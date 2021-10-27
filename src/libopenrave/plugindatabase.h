@@ -441,6 +441,17 @@ protected:
         if( pOPENRAVE_PLUGINS != NULL ) {
             utils::TokenizeString(pOPENRAVE_PLUGINS, delim, vplugindirs);
         }
+        for(int iplugindir=vplugindirs.size()-1;iplugindir>0;iplugindir--){
+            int jplugindir=0;
+            for(;jplugindir<iplugindir;jplugindir++){
+                if(vplugindirs[iplugindir]==vplugindirs[jplugindir]){
+                    break;
+                }
+            }
+            if(jplugindir<iplugindir){
+                vplugindirs.erase(vplugindirs.begin()+iplugindir);
+            }
+        }
         bool bExists=false;
         string installdir = OPENRAVE_PLUGINS_INSTALL_DIR;
 #ifdef HAVE_BOOST_FILESYSTEM
@@ -632,17 +643,17 @@ protected:
             if( type == PT_Robot ) {
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pointer);
                 if( strcmp(probot->GetKinBodyHash(), OPENRAVE_KINBODY_HASH) ) {
-                    RAVELOG_FATAL(str(boost::format("plugin interface Robot, name %s has invalid hash, might be compiled with stale openrave files\n")%name));
+                    RAVELOG_FATAL_FORMAT("plugin interface Robot, name %s has invalid hash, might be compiled with stale openrave files", name);
                     pointer.reset();
                 }
                 if( !probot->IsRobot() ) {
-                    RAVELOG_FATAL(str(boost::format("interface Robot, name %s should have IsRobot() return true\n")%name));
+                    RAVELOG_FATAL_FORMAT("interface Robot, name %s should have IsRobot() return true", name);
                     pointer.reset();
                 }
             }
         }
         if( !pointer ) {
-            RAVELOG_WARN("Failed to create name %s, interface %s\n", name.c_str(), RaveGetInterfaceNamesMap().find(type)->second.c_str());
+            RAVELOG_WARN_FORMAT("env=%d failed to create name %s, interface %s\n", penv->GetId()%name%RaveGetInterfaceNamesMap().find(type)->second);
         }
         return pointer;
     }
@@ -681,7 +692,9 @@ protected:
         if (dp != NULL) {
             while ( (ep = readdir (dp)) != NULL ) {
                 // check for a .so in every file
-                if( strstr(ep->d_name, PLUGIN_EXT) != NULL ) {
+                // check that filename ends with .so
+                if( strlen(ep->d_name) >= strlen(PLUGIN_EXT) &&
+                    strcmp(ep->d_name + strlen(ep->d_name) - strlen(PLUGIN_EXT), PLUGIN_EXT) == 0 ) {
                     string strplugin = pdir;
                     strplugin += "/";
                     strplugin += ep->d_name;
@@ -784,11 +797,11 @@ protected:
         FOREACHC(itplugin, _listplugins) {
             PLUGININFO info;
             if( (*itplugin)->GetInfo(info) ) {
-                plugins.push_back(pair<string,PLUGININFO>((*itplugin)->GetName(),info));
+                plugins.emplace_back((*itplugin)->GetName(),info);
             }
         }
         if( !_listRegisteredInterfaces.empty() ) {
-            plugins.push_back(make_pair(string("__internal__"),PLUGININFO()));
+            plugins.emplace_back("__internal__", PLUGININFO());
             plugins.back().second.version = OPENRAVE_VERSION;
             FOREACHC(it,_listRegisteredInterfaces) {
                 RegisteredInterfacePtr registration = it->lock();

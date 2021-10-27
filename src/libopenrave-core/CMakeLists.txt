@@ -4,7 +4,7 @@ if( HAVE_MKSTEMP )
 endif()
 
 set(OPENRAVE_CORE_LIBRARIES ${openrave_libraries})
-set(openrave_core_SOURCES openrave-core.cpp environment-core.h openrave-core.h ravep.h xmlreaders-core.cpp genericcollisionchecker.cpp genericphysicsengine.cpp genericrobot.cpp multicontroller.cpp generictrajectory.cpp)
+set(openrave_core_SOURCES openrave-core.cpp environment-core.h openrave-core.h ravep.h xmlreaders-core.cpp genericcollisionchecker.cpp genericphysicsengine.cpp genericrobot.cpp multicontroller.cpp generictrajectory.cpp jsonparser/jsoncommon.cpp jsonparser/jsonreader.cpp jsonparser/jsonwriter.cpp)
 
 if( libpcrecpp_FOUND )
   # pcre for url parsing
@@ -77,7 +77,8 @@ set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave${OPENRAVE
                                   COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
 
-target_link_libraries (libopenrave-core libopenrave ${OPENRAVE_CORE_LIBRARIES})
+target_link_libraries(libopenrave-core libopenrave ${OPENRAVE_CORE_LIBRARIES})
+target_link_libraries(libopenrave-core PRIVATE boost_assertion_failed)
 if( MSVC )
   install(TARGETS libopenrave-core RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
 else()
@@ -96,6 +97,7 @@ if( OPT_CBINDINGS )
     COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_C_CORE_DLL_EXPORTS -DOPENRAVE_C_CORE_DLL -DOPENRAVE_CORE_DLL"
     LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
   target_link_libraries (libopenrave-core_c libopenrave-core ${OPENRAVE_CORE_LIBRARIES})
+  target_link_libraries (libopenrave-core_c PRIVATE boost_assertion_failed)
   if( MSVC )
     install(TARGETS libopenrave-core_c RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}cbindings-base)
   else()
@@ -122,6 +124,7 @@ if( OPT_STATIC )
                                                 COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} "
                                                 LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
   
-  target_link_libraries (libopenrave-core_static libopenrave_static ${OPENRAVE_CORE_LIBRARIES})
+  target_link_libraries(libopenrave-core_static libopenrave_static ${OPENRAVE_CORE_LIBRARIES})
+  target_link_libraries(libopenrave-core_static PRIVATE boost_assertion_failed)
   install(TARGETS libopenrave-core_static DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}dev)
 endif()

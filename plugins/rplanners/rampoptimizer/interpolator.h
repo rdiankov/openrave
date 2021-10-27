@@ -29,11 +29,11 @@ public:
      */
     ParabolicInterpolator() {
     }
-    ParabolicInterpolator(size_t ndof);
+    ParabolicInterpolator(size_t ndof, int envid=0);
     ~ParabolicInterpolator() {
     }
 
-    void Initialize(size_t ndof);
+    void Initialize(size_t ndof, int envid=0);
 
     /// ND Trajectory
 
@@ -146,7 +146,7 @@ public:
        than or equal to t will always be feasible (considering only velocity and acceleration
        limits).
      */
-    bool _CalculateLeastUpperBoundInoperavtiveTimeInterval(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal& t);
+    bool _CalculateLeastUpperBoundInoperativeTimeInterval(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal& t);
 
     /**
        \brief Solve for a switch time t0 \in [l, u]. For more detail, see comments in the
@@ -192,6 +192,7 @@ public:
 
 private:
     size_t _ndof;
+    int _envid;
 
     // Caching stuff
     std::vector<dReal> _cacheVect, _cacheSwitchpointsList;

@@ -21,9 +21,7 @@ InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __ty
 {
     RaveInitializeFromState(penv->GlobalState()); // make sure global state is set
     RegisterCommand("help",boost::bind(&InterfaceBase::_GetCommandHelp,this,_1,_2), "display help commands.");
-#if OPENRAVE_RAPIDJSON
     RegisterJSONCommand("help",boost::bind(&InterfaceBase::_GetJSONCommandHelp,this,_1,_2,_3), "display help commands.");
-#endif // OPENRAVE_RAPIDJSON
 }
 
 InterfaceBase::~InterfaceBase()
@@ -33,9 +31,7 @@ InterfaceBase::~InterfaceBase()
     __mapUserData.clear();
     __mapReadableInterfaces.clear();
     __penv.reset();
-#if OPENRAVE_RAPIDJSON
     __mapJSONCommands.clear();
-#endif // OPENRAVE_RAPIDJSON
 }
 
 void InterfaceBase::SetUserData(const std::string& key, UserDataPtr data) const
@@ -126,9 +122,8 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
 void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
     FOREACHC(it, __mapReadableInterfaces) {
-        // sometimes interfaces might be disabled
         if( !!it->second ) {
-            it->second->Serialize(writer,options);
+            it->second->SerializeXML(writer,options);
         }
     }
 }
@@ -210,8 +205,6 @@ bool InterfaceBase::_GetCommandHelp(std::ostream& o, std::istream& sinput) const
     return true;
 }
 
-#if OPENRAVE_RAPIDJSON
-
 bool InterfaceBase::SupportsJSONCommand(const std::string& cmd)
 {
     boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
@@ -258,31 +251,28 @@ void InterfaceBase::_GetJSONCommandHelp(const rapidjson::Value& input, rapidjson
     output.SetObject();
 
     for(JSONCMDMAP::const_iterator it = __mapJSONCommands.begin(); it != __mapJSONCommands.end(); ++it) {
-        output.AddMember(rapidjson::Value().SetString(it->first.c_str(), allocator), rapidjson::Value().SetString(it->second->help.c_str
-            (), allocator), allocator);
+        output.AddMember(rapidjson::Value().SetString(it->first.c_str(), allocator), rapidjson::Value().SetString(it->second->help.c_str(), allocator), allocator);
     }
 }
 
-#endif // OPENRAVE_RAPIDJSON
-
-XMLReadablePtr InterfaceBase::GetReadableInterface(const std::string& xmltag) const
+ReadablePtr InterfaceBase::GetReadableInterface(const std::string& id) const
 {
     boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
-    READERSMAP::const_iterator it = __mapReadableInterfaces.find(xmltag);
-    return it != __mapReadableInterfaces.end() ? it->second : XMLReadablePtr();
+    READERSMAP::const_iterator it = __mapReadableInterfaces.find(id);
+    return it != __mapReadableInterfaces.end() ? it->second : ReadablePtr();
 }
 
-XMLReadablePtr InterfaceBase::SetReadableInterface(const std::string& xmltag, XMLReadablePtr readable)
+ReadablePtr InterfaceBase::SetReadableInterface(const std::string& id, ReadablePtr readable)
 {
     boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
-    READERSMAP::iterator it = __mapReadableInterfaces.find(xmltag);
+    READERSMAP::iterator it = __mapReadableInterfaces.find(id);
     if( it == __mapReadableInterfaces.end() ) {
         if( !!readable ) {
-            __mapReadableInterfaces[xmltag] = readable;
+            __mapReadableInterfaces[id] = readable;
         }
-        return XMLReadablePtr();
+        return ReadablePtr();
     }
-    XMLReadablePtr pprev = it->second;
+    ReadablePtr pprev = it->second;
     if( !!readable ) {
         it->second = readable;
     }
@@ -290,6 +280,83 @@ XMLReadablePtr InterfaceBase::SetReadableInterface(const std::string& xmltag, XM
         __mapReadableInterfaces.erase(it);
     }
     return pprev;
+}
+
+void InterfaceBase::SetReadableInterfaces(const InterfaceBase::READERSMAP& mapReadables, bool bClearAllExisting)
+{
+    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    if( bClearAllExisting ) {
+        __mapReadableInterfaces = mapReadables;
+    }
+    else {
+        __mapReadableInterfaces.insert(mapReadables.begin(), mapReadables.end());
+    }
+}
+
+void InterfaceBase::ClearReadableInterfaces()
+{
+    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    __mapReadableInterfaces.clear();
+}
+
+void InterfaceBase::ClearReadableInterface(const std::string& id) {
+    boost::unique_lock<boost::shared_mutex> lock(_mutexInterface);
+    __mapReadableInterfaces.erase(id);
+}
+
+bool InterfaceBase::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) {
+    boost::unique_lock<boost::shared_mutex> lock(_mutexInterface);
+    bool bChanged = false;
+    bool bNewAllFound = true;
+    FOREACH(it, newReadableInterfaces) {
+        READERSMAP::iterator itExisting = __mapReadableInterfaces.find(it->first);
+        if( itExisting != __mapReadableInterfaces.end() ) {
+            if( !!it->second ) {
+                if( *(itExisting->second) != *(it->second) ) {
+                    itExisting->second = it->second; // should we make a clone?
+                    bChanged = true;
+                    RAVELOG_VERBOSE_FORMAT("readable interface %s changed", it->first);
+                }
+            }
+            else {
+                // remove when null is given
+                __mapReadableInterfaces.erase(itExisting);
+                bChanged = true;
+                bNewAllFound = false;
+                RAVELOG_VERBOSE_FORMAT("readable interface %s removed", it->first);
+            }
+        }
+        else {
+            if( !!it->second ) {
+                __mapReadableInterfaces[it->first] = it->second;
+                bChanged = true;
+                RAVELOG_VERBOSE_FORMAT("readable interface %s added", it->first);
+            }
+            bNewAllFound = false;
+        }
+    }
+
+    if( !bNewAllFound || newReadableInterfaces.size() != __mapReadableInterfaces.size() ) {
+        // delete readableInterface
+        for (READERSMAP::iterator itExisting = __mapReadableInterfaces.begin(); itExisting != __mapReadableInterfaces.end();) {
+            bool bFound = false;
+            FOREACHC(it, newReadableInterfaces) {
+                if( itExisting->first == it->first ) {
+                    bFound = true;
+                    break;
+                }
+            }
+            if( !bFound ) {
+                RAVELOG_VERBOSE_FORMAT("removing readable interface %s", itExisting->first);
+                itExisting = __mapReadableInterfaces.erase(itExisting);
+                bChanged = true;
+            }
+            else {
+                ++itExisting;
+            }
+        }
+    }
+    return bChanged;
 }
 
 }

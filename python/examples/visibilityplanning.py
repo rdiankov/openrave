@@ -134,12 +134,12 @@ class VisibilityGrasping:
     def robotgohome(self,homevalues=None):
         if homevalues is None:
             homevalues = self.homevalues
-        print 'moving arm'
+        print('moving arm')
         self.robotreal.SetActiveManipulator(self.manip)
         trajdata = self.basemanip.MoveManipulator(goal=homevalues[self.manip.GetArmIndices()],execute=False,outputtraj=True)
         self.starttrajectory(trajdata)
 
-        print 'moving hand'
+        print('moving hand')
         values = self.robotreal.GetDOFValues()
         values[self.manip.GetGripperIndices()] = homevalues[self.manip.GetGripperIndices()]
         self.robotreal.GetController().SetDesired(values)
@@ -212,7 +212,7 @@ class VisibilityGrasping:
                     sensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOff)
 
             if self.orenv.CheckCollision(self.robot):
-                print 'robot in collision, trying again...'
+                print('robot in collision, trying again...')
                 time.sleep(0.5)
                 continue
 
@@ -228,17 +228,17 @@ class VisibilityGrasping:
                 trajdata = vmodel.visualprob.MoveToObserveTarget(sampleprob=0.001,maxiter=4000,execute=False,outputtraj=True)
                 self.starttrajectory(trajdata)
             except planning_error:
-                print 'failed to find visual feedback grasp'
+                print('failed to find visual feedback grasp')
                 continue
 
             if not vmodel.visualprob.ComputeVisibility():
-                print 'visibility has not been achieved!'
+                print('visibility has not been achieved!')
                 continue
             T = self.target.GetTransform()
             targetfilename = self.target.GetXMLFilename()
             if usevision:
                 self.orenvreal.Remove(self.orenvreal.GetKinBody(self.target.GetName()))
-                print 'waiting for object to be detected'
+                print('waiting for object to be detected')
             self.orenv.Remove(self.target)
             self.target = None
             while True:
@@ -268,7 +268,7 @@ class VisibilityGrasping:
                         trajdata = basemanip.MoveToHandPosition(matrices=[gmodel.getGlobalGraspTransform(g,collisionfree=True) for g in validgrasps],execute=False,outputtraj=True)
                         break
                     except planning_error:
-                        print 'trying visual feedback grasp again'
+                        print('trying visual feedback grasp again')
             if trajdata is None:
                 continue
             self.starttrajectory(trajdata)
@@ -285,27 +285,27 @@ class VisibilityGrasping:
             Tnewgoals = [dot(Tgoal,Trelative) for Tgoal in self.Tgoals]
             if len(Tnewgoals) > 0:
                 try:
-                    print 'moving up'
+                    print('moving up')
                     trajdata = basemanip.MoveHandStraight(direction=[0,0,1],stepsize=0.001,maxsteps=100,execute=False,outputtraj=True)
                     self.starttrajectory(trajdata)
-                except planning_error, e:
-                    print 'failed to find trajectory',e
+                except planning_error as e:
+                    print('failed to find trajectory %r'%e)
 
                 success = True
                 try:
-                    print 'moving to destination'
+                    print('moving to destination')
                     trajdata = basemanip.MoveToHandPosition(matrices=Tnewgoals, maxiter=1000,maxtries=1, seedik= 4,execute=False,outputtraj=True)
                     self.starttrajectory(trajdata)
-                except planning_error, e:
-                    print 'failed to find trajectory',e
+                except planning_error as e:
+                    print('failed to find trajectory %r'%e)
                     success = False
 
             try:
                 final,trajdata = taskmanip.ReleaseFingers(target=self.target,execute=False,outputtraj=True)
                 self.starttrajectory(trajdata)
-            except planning_error, e:
+            except planning_error as e:
                 self.robot.ReleaseAllGrabbed()
-                print 'failed to release',e
+                print('failed to release %r'%e)
                 success = False
 
             if not success:
@@ -366,7 +366,7 @@ class PA10GraspExample(VisibilityGrasping):
                         iobs = random.randint(len(obstacles))
                         body = self.orenvreal.ReadKinBodyXMLFile(obstacles[iobs])
                         if body is None:
-                            print 'invalid body %s'%obstacles[iobs]
+                            print('invalid body %s'%obstacles[iobs])
                             continue
 
                         body.SetName('obstacle%d'%numcreated)

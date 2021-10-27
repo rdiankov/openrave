@@ -83,6 +83,8 @@ public:
 
     std::vector<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> > vLinkColliding; ///< all link collision pairs. Set when CO_AllCollisions is enabled.
 
+    KinBody::GeometryConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
+
     std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of plink1's surface. Filled if CO_UseContacts option is set.
 
     int options; ///< the options that the CollisionReport was called with. It is overwritten by the options set on the collision checker writing the report
@@ -92,7 +94,6 @@ public:
 
     uint8_t nKeepPrevious; ///< if 1, will keep all previous data when resetting the collision checker. otherwise will reset
 
-    //KinBody::Link::GeomConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
 };
 
 typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
@@ -135,7 +136,8 @@ public:
     ///
     /// \param pbody the body to change the geometry group
     /// \param groupname the geometry group name. If empty, will disable the groups and use the current geometries set on the link.
-    virtual void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) OPENRAVE_DUMMY_IMPLEMENTATION;
+    /// \return true if body geometry group with groupname exists. false otherwise
+    virtual bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \biref Gets the geometry group that a body is currently using
     virtual const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const OPENRAVE_DUMMY_IMPLEMENTATION;
@@ -199,12 +201,33 @@ public:
     /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
-    /// \brief Check collision with a body in the scene and a triangle mesh.
+    /// \brief Check collision with a triangle mesh and a body in the scene.
     ///
     /// \param trimesh Holds a dynamic triangle mesh to check collision with the body.
     /// \param pbody the link to collide with. If CO_ActiveDOFs is set, will only check affected links of the body.
     /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
-    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \brief Check collision with a triangle mesh and the entire scene
+    ///
+    /// \param trimesh Holds a dynamic triangle mesh to check collision with the body.
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    virtual bool CheckCollision(const TriMesh& trimesh, CollisionReportPtr report = CollisionReportPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \brief Check collision with a dummy box and the entire scene
+    ///
+    /// \param ab box to check collision with. The box is transformed by aabbPose
+    /// \param aabbPose the pose of the box
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    virtual bool CheckCollision(const AABB& ab, const Transform& aabbPose, CollisionReportPtr report = CollisionReportPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \brief Check collision with a dummy box and a list of bodies
+    ///
+    /// \param ab box to check collision with. The box is transformed by aabbPose
+    /// \param aabbPose the pose of the box
+    /// \param bodies vector of bodies to check collision with the dummy AABB
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    virtual bool CheckCollision(const AABB& ab, const Transform& aabbPose, const std::vector<KinBodyConstPtr>& vbodies, CollisionReportPtr report = CollisionReportPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Checks self collision only with the links of the passed in body.
     ///

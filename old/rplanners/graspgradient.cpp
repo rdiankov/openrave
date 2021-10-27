@@ -107,11 +107,12 @@ public:
     }
 
     /// \param pOutStream returns which goal was chosen
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         if(!_parameters) {
-            RAVELOG_ERROR("GraspGradientPlanner::PlanPath - Error, planner not initialized\n");
-            return PS_Failed;
+            std::string description = "GraspGradientPlanner::PlanPath - Error, planner not initialized\n";
+            RAVELOG_ERROR(description);
+            return PlannerStatus(description, PS_Failed);
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -126,8 +127,9 @@ public:
 
         // prioritize the grasps and go through each one
         if( _parameters->SetStateValues(_parameters->vinitialconfig) ) {
-            RAVELOG_ERROR("failed to set initial state\n");
-            return PS_Failed;
+            std::string description = "failed to set initial state\n";
+            RAVELOG_ERROR(description);
+            return PlannerStatus(description, PS_Failed);
         }
         Transform tcurgrasp = _pmanip->GetTransform();
 
@@ -145,7 +147,7 @@ public:
         }
 
         if( vgrasps.size() == 0 )
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
 
         sort(vgrasps.begin(),vgrasps.end());
 
@@ -195,7 +197,7 @@ public:
 
         RAVELOG_DEBUG(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess ? "success" : "failure")%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime))));
 
-        return bSuccess ? PS_HasSolution : PS_Failed;
+        return bSuccess ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {

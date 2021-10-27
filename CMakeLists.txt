@@ -4,7 +4,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 9)
+set (OPENRAVE_VERSION_MINOR 85)
 set (OPENRAVE_VERSION_PATCH 0)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
@@ -44,16 +44,18 @@ option(OPT_ODE_COLLISION "Use ODE collision checker if available" ON)
 option(OPT_FCL_COLLISION "Use FCL collision checker if available" ON)
 option(OPT_QTCOIN_VIEWER "Use QT/Coin Viewer if available" ON)
 option(OPT_QTOSG_VIEWER "Use QT/OpenSceneGraph Viewer if available" ON)
-option(OPT_EXTRA_ROBOTS "Install extra robots" ON)
 option(OPT_BUILD_PACKAGES "Set to ON to generate CPack configuration files and packaging targets" OFF)
 option(OPT_BUILD_PACKAGE_DEFAULT "Set to ON to generate a default openrave package that creates symlinks" ON)
 option(OPT_IKFAST_FLOAT32 "Set to ON to allow loading of ikfast shared objects compiled with 32bit float (64bit double is always supported regardless of this option)" ON)
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 option(OPT_CBINDINGS "Build the C-bindings libraries libopenrave_c and libopenrave-core_c" ON)
 option(OPT_LOG4CXX "Use log4cxx for logging" ON)
+option(OPT_MSGPACK "Support msgpack format" ON)
+option(OPT_INSTALL_3DMODELDATA "If ON, then install the 3D model data." ON)
+option(OPT_EXTRA_ROBOTS "If ON, then install extra robots as part of 3D model data" ON)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 
 if(OPT_DOUBLE_PRECISION)
@@ -105,20 +107,20 @@ if( OPT_PYTHON )
     get_filename_component(PYTHON_EXECUTABLE_NAME ${PYTHON_EXECUTABLE} NAME)
     # architecture independent
 #    execute_process(
-#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(0)"
+#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(0))"
 #      OUTPUT_VARIABLE _python_sitepackage OUTPUT_STRIP_TRAILING_WHITESPACE
 #      RESULT_VARIABLE _python_failed0)
 #    # architexture dependent
 #    execute_process(
-#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)"
+#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))"
 #      OUTPUT_VARIABLE _python_distpackage OUTPUT_STRIP_TRAILING_WHITESPACE
 #      RESULT_VARIABLE _python_failed1)
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print numpy.get_include()"
+      COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
       OUTPUT_VARIABLE _python_numpy_include OUTPUT_STRIP_TRAILING_WHITESPACE
       RESULT_VARIABLE _python_failed0)
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; from myrelpath import relpath; print relpath(get_python_lib(1,prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}')"
+      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; from myrelpath import relpath; print(relpath(get_python_lib(1,prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}'))"
       OUTPUT_VARIABLE OPENRAVE_PYTHON_INSTALL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
       RESULT_VARIABLE _python_failed2)
@@ -180,15 +182,26 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}" "${OPENRAVE_P
 #define OPENRAVE_DATA_INSTALL_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVE_DATA_INSTALL_DIR@"
 #define OPENRAVE_PYTHON_INSTALL_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVE_PYTHON_INSTALL_DIR@"
 
-
-message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python exe ${PYTHON_EXECUTABLE}, python subdir is ${OPENRAVE_PYTHON_INSTALL_DIR}, program suffix is '${OPENRAVE_BIN_SUFFIX}'")
-
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
+set(OPENRAVE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(OPENRAVEPY_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_BINARY_DIR}/python/bindings/include ${CMAKE_CURRENT_SOURCE_DIR}/python/bindings/include)
+
+message(STATUS "CMAKE_INSTALL_PREFIX          = ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "PYTHON_EXECUTABLE             = ${PYTHON_EXECUTABLE}")
+message(STATUS "OPENRAVE_PYTHON_INSTALL_DIR   = ${OPENRAVE_PYTHON_INSTALL_DIR}")
+message(STATUS "OPENRAVE_BIN_SUFFIX           = ${OPENRAVE_BIN_SUFFIX}")
+message(STATUS "OPENRAVE_INCLUDE_LOCAL_DIRS   = ${OPENRAVE_INCLUDE_LOCAL_DIRS}")
+message(STATUS "OPENRAVEPY_INCLUDE_LOCAL_DIRS = ${OPENRAVEPY_INCLUDE_LOCAL_DIRS}")
+
+# need this in the very first include, otherwise openrave plugins can accidentaly compile with a system-installed openrave headers.
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+include_directories(${OPENRAVE_INCLUDE_LOCAL_DIRS}) # needed since plugins include openrave/openrave.h
+
 set(REQUIRED_INCLUDES "" CACHE STRING "Includes to always force  when compiling")
 include_directories(${REQUIRED_INCLUDES})
 
 set(COMPILER_IS_CLANG FALSE)
-if( CMAKE_CXX_COMPILER MATCHES "clang[\\+]*" )
+if( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
   set(COMPILER_IS_CLANG TRUE)
 endif()
 
@@ -236,7 +249,6 @@ if( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   add_definitions(-Dfopen64=fopen -Dfseeko64=fseeko -Dfseek64=fseek -Dftell64=ftell -Dftello64=ftello)
 endif()
 
-set(OPENRAVE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(OPENRAVE_CORE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
 set(OPENRAVE_LINK_DIRS "")
 
@@ -306,7 +318,11 @@ if(NOT MSVC71 AND NOT MSVC80)
     set(Boost_LIBRARY_DIRS $ENV{BOOST_LIBRARYDIR})
   endif()
   set(Boost_ADDITIONAL_VERSIONS "1.46.1" "1.45" "1.44" "1.43" "1.42" "1.41" "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33" ${Boost_ADDITIONAL_VERSIONS})
-  find_package(Boost COMPONENTS regex filesystem system python thread iostreams date_time)
+  if(OPT_PYTHON AND NOT USE_PYBIND11_PYTHON_BINDINGS)
+    find_package(Boost COMPONENTS regex filesystem system python thread iostreams date_time)
+  else()
+    find_package(Boost COMPONENTS regex filesystem system thread iostreams date_time)
+  endif()
 else()
   # have to rely on local boost and a hack
   add_definitions(-DTEMP_SPIRIT_HACK)
@@ -378,6 +394,7 @@ foreach(ldir ${Boost_LIBRARY_DIRS})
   endif()
 endforeach()
 
+add_definitions(-std=gnu++14) # with -std=c++14, typeof is not defined, so use gnu++14 for now
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
   add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
   set(EXTRA_COMPILE_FLAGS "-fPIC")
@@ -455,7 +472,7 @@ endif()
 find_package(MPFI)
 
 
-if( OPT_ACCURATEMATH AND NOT MSVC )
+if( OPT_ACCURATEMATH AND NOT MSVC AND NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES aarch64 )
   check_library_exists(crlibm crlibm_init "" CRLIBM_FOUND_LIB)
   check_include_file(crlibm.h HAVE_CRLIBM_H)
   if(NOT CRLIBM_FOUND_LIB OR NOT HAVE_CRLIBM_H)
@@ -530,10 +547,17 @@ endif()
 
 find_package(RapidJSON)
 if( RAPIDJSON_FOUND )
-  set(OPENRAVE_RAPIDJSON 1)
+  include_directories(${RAPIDJSON_INCLUDES})
 else()
-  set(OPENRAVE_RAPIDJSON 0)
-  message(WARNING "rapidjson library not found")
+  message(FATAL_ERROR "rapidjson library not found")
+endif()
+
+set(OPENRAVE_MSGPACK 0)
+if( OPT_MSGPACK )
+pkg_check_modules(msgpack msgpack)
+if( msgpack_FOUND )
+  set(OPENRAVE_MSGPACK 1)
+endif()
 endif()
 
 find_package(LibXml2)
@@ -567,9 +591,9 @@ if( WIN32 )
   endif()
 endif()
 
-find_package(Qt4 COMPONENTS QtCore QtGui QtDeclarative)
-if (NOT QT_FOUND)
-  message(STATUS "WARNING: Qt4 not found, is your QTDIR enviornment variable set?")
+find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
+if (NOT (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND))
+  message(STATUS "WARNING: Qt5 not found, is your QTDIR enviornment variable set?")
   find_package(Qt5Core)
   find_package(Qt5Gui)
   if( Qt5Core_FOUND AND Qt5Gui_FOUND )
@@ -736,8 +760,14 @@ endif()
 #endif()
 
 # function expression parser library
-find_package(FPARSER 4.5 QUIET)
-if( NOT FPARSER_FOUND )
+find_package(fparser 4.5)
+if( fparser_FOUND )
+    message(STATUS "Found fparser, version ${fparser_VERSION}")
+    set(FPARSER_INCLUDE_DIRS "${fparser_INCLUDE_DIR}")
+    set(FPARSER_LIBRARIES "${fparser_LIBRARY}")
+    set(FPARSER_CXX_FLAGS "${fparser_CXX_FLAGS} -DOPENRAVE_FPARSER_SETEPSILON")
+    set(FPARSER_LINK_FLAGS "${fparser_LINK_FLAGS}")
+else()
   if( PKG_CONFIG_FOUND )
     pkg_search_module(FPARSER fparser)
   endif()
@@ -788,8 +818,11 @@ else()
 endif()
 set(CONVEXDECOMPOSITION_FOUND 1)
 
+if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+  add_definitions(-DHAVE_BOOST_FILESYSTEM)
+endif()
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h IMMEDIATE @ONLY)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
 add_subdirectory(src)
 add_subdirectory(octave_matlab)
@@ -800,7 +833,7 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
   if( PYTHON_EXECUTABLE )
     # get the sympy version
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print sympy.__version__"
+      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print(sympy.__version__)"
       OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
       RESULT_VARIABLE _sympy_version_failed)
     if( ${_sympy_version_failed} EQUAL 0 )
@@ -847,6 +880,9 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
     set(OPENRAVEPY_VER_NAME "_openravepy_")
   endif()
   set(OPENRAVEPY_VER_INSTALL_DIR "${OPENRAVEPY_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}") # used by openrave-config.cmake
+
+  # build python bindings, either with pybind11 or Boost.Python
+  set(USE_PYBIND11_PYTHON_BINDINGS OFF CACHE BOOL "Build OpenRAVE's python bindings with pybind11 (ON) or Boost.Python (OFF)")
   add_subdirectory(python)
 endif()
 
@@ -957,7 +993,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   # add once infinite precision computations are enabled:
   # libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy
   # plugins:
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev "assimp-dev|libassimp-dev" libbullet-dev)# libopenscenegraph-dev)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev qtbase5-dev qtbase5-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev "assimp-dev|libassimp-dev" libbullet-dev)# libopenscenegraph-dev)
 
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)

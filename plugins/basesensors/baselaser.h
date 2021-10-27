@@ -225,7 +225,7 @@ public:
                         // store the colliding bodies
                         KinBody::LinkConstPtr plink = !!_report->plink1 ? _report->plink1 : _report->plink2;
                         if( !!plink ) {
-                            _databodyids[index] = plink->GetParent()->GetEnvironmentId();
+                            _databodyids[index] = plink->GetParent()->GetEnvironmentBodyIndex();
                         }
                     }
                     else {
@@ -337,7 +337,7 @@ public:
         _trans = trans;
     }
 
-    virtual Transform GetTransform() {
+    virtual const Transform& GetTransform() {
         return _trans;
     }
 
@@ -363,7 +363,6 @@ public:
     }
 
 protected:
-
     virtual Transform GetLaserPlaneTransform() {
         return _trans;
     }
@@ -507,6 +506,26 @@ private:
 public:
         dReal fSpinSpeed;
         Vector vSpinAxis, vSpinPos;
+
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const SpinningLaserGeomData* pOther = dynamic_cast<const SpinningLaserGeomData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return LaserGeomData::operator==(other)
+                && fSpinSpeed == pOther->fSpinSpeed
+                && vSpinAxis == pOther->vSpinAxis
+                && vSpinPos == pOther->vSpinPos;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<SpinningLaserGeomData> pNew(new SpinningLaserGeomData());
+            *pNew = *this;
+            return pNew;
+        }
     };
 
 public:

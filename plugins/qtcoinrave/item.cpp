@@ -94,7 +94,7 @@ KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry
     _userdata = 0;
     _bReload = false;
     _bDrawStateChanged = false;
-    networkid = pchain->GetEnvironmentId();
+    networkid = pchain->GetEnvironmentBodyIndex();
     _geometrycallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::GeometryChangedCallback,this));
     _drawcallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::DrawChangedCallback,this));
 }
@@ -260,6 +260,7 @@ void KinBodyItem::Load()
                     psep->addChild(cy);
                     break;
                 }
+                case GT_Cage:
                 case GT_Container:
                 case GT_TriMesh: {
                     // actually don't set to dual-sided rendering since flipped triangles can cause problems with collision and user should know about it
@@ -429,7 +430,7 @@ bool KinBodyItem::UpdateFromModel()
             Load();
         }
         // make sure the body is still present!
-        if( _pchain->GetEnv()->GetBodyFromEnvironmentId(networkid) == _pchain ) {
+        if( _pchain->GetEnv()->GetBodyFromEnvironmentBodyIndex(networkid) == _pchain ) {
             _pchain->GetLinkTransformations(_vtrans,_vdofbranches);
             _pchain->GetDOFValues(vjointvalues);
         }
@@ -548,7 +549,7 @@ void RobotItem::Load()
     FOREACHC(itmanip, _probot->GetManipulators()) {
         if( !!(*itmanip)->GetEndEffector() ) {
             _vEndEffectors[index]._index = index;
-            Vector vdirection = (*itmanip)->GetDirection();
+            Vector vdirection = (*itmanip)->GetLocalToolDirection();
             CreateAxis(_vEndEffectors[index],(*itmanip)->GetName(),&vdirection);
         }
         ++index;

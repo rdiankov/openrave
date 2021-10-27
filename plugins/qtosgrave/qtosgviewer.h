@@ -16,14 +16,21 @@
 
 #include "qtosg.h"
 #include "osgrenderitem.h"
-
+#include <QLayout>
+#include <QComboBox>
+#include <QPushButton>
+#include <QAbstractButton>
+#include <QFileDialog>
 #include <QMainWindow>
-
+#include <QMessageBox>
+#include <QToolButton>
+#include <QDockWidget>
+#include <QToolBar>
 #include "qtreemodel.h"
 
 namespace qtosgrave {
 
-class ViewerWidget;
+class QOSGViewerWidget;
 class QtOSGViewer;
 typedef boost::shared_ptr<QtOSGViewer> QtOSGViewerPtr;
 typedef boost::weak_ptr<QtOSGViewer> QtOSGViewerWeakPtr;
@@ -73,9 +80,12 @@ public:
 
     virtual GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
     virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents);
+    virtual GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents);
 
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);
+
+    virtual GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition);
 
     virtual void _Deselect();
 
@@ -94,10 +104,6 @@ public:
 
     virtual void SetSize(int w, int h);
     virtual void Move(int x, int y);
-
-    /// \brief sets the zoom factor. only affects orthogonal view
-    /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
-    virtual void Zoom(float factor);
 
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
@@ -163,6 +169,8 @@ public slots:
     /// \brief show an about dialog
     void _ProcessAboutDialog();
 
+    void _SetDebugLevelInfo();
+
     void _SetDebugLevelDebug();
 
     void _SetDebugLevelVerbose();
@@ -220,7 +228,7 @@ public:
 
         inline void Call() {
             // have to set finished at the end
-            boost::shared_ptr<void> finishfn((void*)0, boost::bind(&GUIThreadFunction::SetFinished, this));
+            boost::shared_ptr<void> finishfn((void*) 0, boost::bind(&GUIThreadFunction::SetFinished, this));
             BOOST_ASSERT(!_bcalled);
             _bcalled = true;
             _fn();
@@ -262,7 +270,7 @@ public:
         virtual ~PrivateGraphHandle() {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_CloseGraphHandle, viewer, _handle)); // _handle is copied, so it will maintain the reference
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_CloseGraphHandle, viewer, _handle), ViewerCommandPriority::HIGH); // _handle is copied, so it will maintain the reference
             }
         }
 
@@ -270,7 +278,7 @@ public:
         {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphTransform, viewer, _handle, t)); // _handle is copied, so it will maintain the reference
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphTransform, viewer, _handle, t), ViewerCommandPriority::HIGH); // _handle is copied, so it will maintain the reference
             }
         }
 
@@ -278,7 +286,7 @@ public:
         {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow)); // _handle is copied, so it will maintain the reference
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow), ViewerCommandPriority::VERY_HIGH); // _handle is copied, so it will maintain the reference
             }
         }
 
@@ -300,15 +308,14 @@ public:
     virtual void _InitGUI(bool bCreateStatusBar, bool bCreateMenu);
 
     /// \brief Update model and camera transform
-    virtual void _UpdateEnvironment(float fTimeElapsed);
+    virtual void _UpdateEnvironment();
     virtual bool _ForceUpdatePublishedBodies();
 
     /// \brief Reset update from model
     virtual void _Reset();
 
     /// \brief reset the camera depending on its mode
-    virtual void _UpdateCameraTransform(float fTimeElapsed);
-    virtual void _SetCameraTransform();
+    virtual void _UpdateViewport();
 
     virtual OSGSwitchPtr _CreateGraphHandle();
     virtual void _CloseGraphHandle(OSGSwitchPtr handle);
@@ -318,23 +325,42 @@ public:
     virtual void _Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::PrimitiveSet::Mode mode, osg::ref_ptr<osg::StateAttribute> attribute, bool bUsingTransparency=false);
     virtual void _DrawTriMesh(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::ref_ptr<osg::DrawElementsUInt> osgindices, bool bUsingTransparency);
     virtual void _SetTriangleMesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, osg::ref_ptr<osg::Vec3Array> osgvertices, osg::ref_ptr<osg::DrawElementsUInt> osgindices);
+    virtual void _DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition);
     virtual void _DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency);
+    virtual void _DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency);
     virtual void _DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
-    
-    virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
-    virtual void _SetCameraDistanceToFocus(float focalDistance);
 
+    virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
+    virtual void _SetCameraTransform(const RaveTransform<float>& transform);
+    virtual void _SetCameraDistanceToFocus(float focalDistance);
+    virtual void _SetCameraCenter(osg::Vec3 center);
+    virtual void _StopTrackLink();
+    virtual bool _TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText="");
+    virtual void _SetItemVisualization(std::string& itemname, std::string& visualizationmode);
     virtual void _SetProjectionMode(const std::string& projectionMode);
     virtual void _SetBkgndColor(const RaveVector<float>& color);
 
     virtual void _SetName(const std::string& name);
-    virtual void _Zoom(float factor);
+    virtual void _MoveCameraPointOfView(const std::string& axis);
+    virtual void _MoveCameraZoom(float factor, bool isPan, float panDelta);
+    virtual void _RotateCameraXDirection(float thetaX);
+    virtual void _RotateCameraYDirection(float thetaY);
+    virtual void _PanCameraXDirection(float dx);
+    virtual void _PanCameraYDirection(float dy);
+
+    /// \brief priority values used to determine how important it is to process certain GUI thread functions over others
+    enum ViewerCommandPriority : uint8_t {
+        VERY_HIGH = 3, //< denotes an critical GUI task that must be processed ASAP regardless of viewer state or queue size
+        HIGH = 2, ///< denotes an important GUI task that must be processed regardless of viewer state or queue size
+        MEDIUM = 1, ///< denotes a GUI task that takes precedence over low-priority tasks but yields to important tasks
+        LOW = 0 ///< denotes a GUI task that presents negligibly adversely effects on the program should it fail to complete execution
+    };
 
     /// \brief posts a function to be executed in the GUI thread
     ///
     /// \param fn the function to execute
     /// \param block if true, will return once the function has been executed.
-    void _PostToGUIThread(const boost::function<void()>& fn, bool block=false);
+    void _PostToGUIThread(const boost::function<void()>& fn, ViewerCommandPriority priority, bool block=false);
 
     /// \brief Actions that achieve buttons and menus
     void _CreateActions();
@@ -357,6 +383,9 @@ public:
     /// \brief Create and set main options of object tree
     QTreeWidget* _CreateObjectTree();
 
+    /// \brief Create viewer control button
+    void _CreateControlButtons();
+
     /// \brief Fills object tree with robot info
     void _FillObjectTree(QTreeWidget *tw);
 
@@ -372,10 +401,16 @@ public:
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
     bool _SetProjectionModeCommand(ostream& sout, istream& sinput);
-    bool _ZoomCommand(ostream& sout, istream& sinput);
+    bool _MoveCameraPointOfViewCommand(ostream& sout, istream& sinput);
+    bool _MoveCameraZoomCommand(ostream& sout, istream& sinput);
+    bool _RotateCameraXDirectionCommand(ostream& sout, istream& sinput);
+    bool _RotateCameraYDirectionCommand(ostream& sout, istream& sinput);
+    bool _PanCameraXDirectionCommand(ostream& sout, istream& sinput);
+    bool _PanCameraYDirectionCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
-    list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
+    std::map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> _mapGUIFunctionLists; ///< map between priority and sublist for given priority level. protected by _mutexGUIFunctions
+    std::map<ViewerCommandPriority, size_t> _mapGUIFunctionListLimits; ///< map between priority and sublist size limit for given priority level
     mutable list<Item*> _listRemoveItems; ///< raw points of items to be deleted in the viewer update thread, triggered from _DeleteItemCallback. proteced by _mutexItems
     boost::mutex _mutexItems; ///< protects _listRemoveItems
     mutable boost::mutex _mutexGUIFunctions;
@@ -391,8 +426,6 @@ public:
     ItemPtr _pSelectedItem;     ///< the currently selected item
 
     //@{ camera
-    RaveTransform<float> _Tcamera; ///< current position of the camera representing the current view, updated periodically, read only.
-    float _focalDistance;  ///< current focal distance of the camera, read-only
     geometry::RaveCameraIntrinsics<float> _camintrinsics; ///< intrinsics of the camera representing the current view, updated periodically, read only.
     //@}
 
@@ -413,7 +446,7 @@ public:
 
     QGridLayout* _qCentralLayout;
     QWidget* _qCentralWidget;
-    ViewerWidget* _posgWidget; // cannot be shared_ptr since QMainWindow takes ownership of it internally
+    QOSGViewerWidget* _posgWidget; // cannot be shared_ptr since QMainWindow takes ownership of it internally
 
     QMenu* fileMenu;
     QMenu* viewMenu;
@@ -426,12 +459,12 @@ public:
     QAction* loadAct;
     QAction* multiAct;
     QAction* simpleAct;
-
     QAction* importAct;
     QAction* saveAct;
     QAction* viewCamAct;
     QAction* viewColAct;
     QAction* pubilshAct;
+    QAction* debugLevelInfoAct;
     QAction* debugLevelDebugAct;
     QAction* debugLevelVerboseAct;
     QAction* showAct;
@@ -465,6 +498,7 @@ public:
     QTreeView* _qtree;
 
     //QActionGroup* shapeGroup;
+    QPushButton* _cameraMoveModeButton;
     QButtonGroup* _pointerTypeGroup;
     QButtonGroup* buttonGroup;
     QButtonGroup* draggerTypeGroup;
@@ -476,8 +510,7 @@ public:
     /// tracking parameters
     //@{
     KinBody::LinkPtr _ptrackinglink; ///< current link tracking
-    Transform _tTrackingLinkRelative; ///< relative transform in the _ptrackinglink coord system  that should be tracking.
-    RobotBase::ManipulatorPtr _ptrackingmanip; ///< current manipulator tracking
+    Transform _currentTrackLinkRelTransform; ///< relative transform in the _ptrackinglink coord system  that should be tracking.
     Transform _tTrackingCameraVelocity; ///< camera velocity
     float _fTrackAngleToUp; ///< tilt a little when looking at the point
     //@}

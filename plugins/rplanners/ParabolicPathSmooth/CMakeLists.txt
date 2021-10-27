@@ -3,6 +3,7 @@ set_target_properties(ParabolicPathSmooth PROPERTIES COMPILE_FLAGS "${PLUGIN_COM
 add_dependencies(ParabolicPathSmooth interfacehashes_target)
 
 target_link_libraries(ParabolicPathSmooth libopenrave)
+target_link_libraries(ParabolicPathSmooth PRIVATE boost_assertion_failed)
 
 add_executable(testparabolicramp testparabolicramp.cpp)
-target_link_libraries(testparabolicramp ParabolicPathSmooth libopenrave ${LOG4CXX_LIBRARIES})
+target_link_libraries(testparabolicramp ParabolicPathSmooth libopenrave ${LOG4CXX_LIBRARIES} ${Boost_SYSTEM_LIBRARY})

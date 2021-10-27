@@ -227,6 +227,150 @@ static bool _AssimpCreateTriMesh(const aiScene* scene, aiNode* node, const Vecto
     return true;
 }
 
+static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Vector& scale, std::list<KinBody::GeometryInfo>& listGeometries)
+{
+    if( !node ) {
+        return false;
+    }
+    aiMatrix4x4 transform = node->mTransformation;
+    aiNode *pnode = node->mParent;
+    while (pnode) {
+        // Don't convert to y-up orientation, which is what the root node is in, Assimp does
+        if (pnode->mParent != NULL) {
+            transform = pnode->mTransformation * transform;
+        }
+        pnode = pnode->mParent;
+    }
+
+    for (size_t i = 0; i < node->mNumMeshes; i++) {
+        listGeometries.push_back(KinBody::GeometryInfo());
+        KinBody::GeometryInfo& g = listGeometries.back();
+        g._type = GT_TriMesh;
+        g._vRenderScale = scale;
+        aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
+        g._meshcollision.vertices.resize(input_mesh->mNumVertices);
+        for (size_t j = 0; j < input_mesh->mNumVertices; j++) {
+            aiVector3D p = input_mesh->mVertices[j];
+            p *= transform;
+            g._meshcollision.vertices[j] = Vector(p.x*scale.x,p.y*scale.y,p.z*scale.z);
+        }
+        size_t indexCount = 0;
+        for (size_t j = 0; j < input_mesh->mNumFaces; j++) {
+            aiFace& face = input_mesh->mFaces[j];
+            indexCount += 3*(face.mNumIndices-2);
+        }
+        g._meshcollision.indices.reserve(indexCount);
+        for (size_t j = 0; j < input_mesh->mNumFaces; j++) {
+            aiFace& face = input_mesh->mFaces[j];
+            if( face.mNumIndices == 3 ) {
+                g._meshcollision.indices.push_back(face.mIndices[0]);
+                g._meshcollision.indices.push_back(face.mIndices[1]);
+                g._meshcollision.indices.push_back(face.mIndices[2]);
+            }
+            else {
+                for (size_t k = 2; k < face.mNumIndices; ++k) {
+                    g._meshcollision.indices.push_back(face.mIndices[0]);
+                    g._meshcollision.indices.push_back(face.mIndices[k-1]);
+                    g._meshcollision.indices.push_back(face.mIndices[k]);
+                }
+            }
+        }
+
+        if( !!scene->mMaterials&& input_mesh->mMaterialIndex<scene->mNumMaterials) {
+            aiMaterial* mtrl = scene->mMaterials[input_mesh->mMaterialIndex];
+            aiColor4D color;
+            aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_DIFFUSE,&color);
+            g._vDiffuseColor = Vector(color.r,color.g,color.b,color.a);
+            aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_AMBIENT,&color);
+            g._vAmbientColor = Vector(color.r,color.g,color.b,color.a);
+        }
+    }
+
+    for (size_t i=0; i < node->mNumChildren; ++i) {
+        _AssimpCreateGeometries(scene, node->mChildren[i], scale, listGeometries);
+    }
+    return true;
+}
+
+static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries)
+{
+    // some formats (screen) has # in the beginning until the STL solid definition.
+    ifstream f(filename.c_str());
+    string strline;
+    if( !!f ) {
+        bool bTransformOffset = false;
+        Transform toffset;
+        Vector vcolor(0.8,0.8,0.8);
+        bool bFound = false;
+        stringstream::streampos pos = f.tellg();
+        while( !!getline(f, strline) ) {
+            boost::trim(strline);
+            if( strline.size() > 0 && strline[0] == '#' ) {
+                size_t indCURRENT_LOCATION = strline.find("<CURRENT_LOCATION>");
+                if( indCURRENT_LOCATION != string::npos ) {
+                    stringstream ss(strline.substr(indCURRENT_LOCATION+18));
+                    dReal rotx, roty, rotz;
+                    ss >> toffset.trans.x >> toffset.trans.y >> toffset.trans.z >> rotx >> roty >> rotz;
+                    if( !!ss ) {
+                        bTransformOffset = true;
+                        toffset.trans *= vscale;
+                        toffset.rot = quatMultiply(quatFromAxisAngle(Vector(0,0,rotz*PI/180)), quatMultiply(quatFromAxisAngle(Vector(rotx*PI/180,0,0)), quatFromAxisAngle(Vector(0,roty*PI/180,0))));
+                    }
+                    else {
+                        RAVELOG_WARN("<CURRENT_LOCATION> bad format\n");
+                        toffset = Transform();
+                    }
+                }
+                size_t indCOLOR_INFORMATION = strline.find("<COLOR_INFORMATION>");
+                if( indCOLOR_INFORMATION != string::npos ) {
+                    stringstream ss(strline.substr(indCOLOR_INFORMATION+19));
+                    ss >> vcolor.x >> vcolor.y >> vcolor.z;
+                    if( !!ss ) {
+                    }
+                    else {
+                        RAVELOG_WARN("<COLOR_INFORMATION> bad format\n");
+                    }
+                }
+                continue;
+            }
+            if( strline.size() >= 5 && strline.substr(0,5) == string("solid") ) {
+                bFound = true;
+                break;
+            }
+            pos = f.tellg();
+        }
+        if( bFound ) {
+            RAVELOG_INFO_FORMAT("STL file %s has screen metadata", filename);
+
+            f.seekg(0, std::ios::end);
+            stringstream::streampos endpos = f.tellg();                
+            f.seekg(pos);
+            string newdata;
+            newdata.reserve(endpos - pos);
+            newdata.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+            boost::shared_ptr<aiSceneManaged> scene(new aiSceneManaged(newdata, false));
+            if( (!scene->_scene || !scene->_scene->mRootNode) && newdata.size() >= 5 && newdata.substr(0,5) == std::string("solid") ) {
+                // most likely a binary STL file with the first 5 words being solid. unfortunately assimp does not handle this well, so
+                newdata[0] = 'x';
+                scene.reset(new aiSceneManaged(newdata, false, "STL"));
+            }
+
+            if( !!scene->_scene && !!scene->_scene->mRootNode && !!scene->_scene->HasMeshes() ) {
+                if( _AssimpCreateGeometries(scene->_scene,scene->_scene->mRootNode, vscale, listGeometries) ) {
+                    FOREACH(itgeom, listGeometries) {
+                        itgeom->_vDiffuseColor = vcolor;
+                        if( bTransformOffset ) {
+                            itgeom->_meshcollision.ApplyTransform(toffset.inverse());
+                        }
+                    }
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 #endif
 
 bool CreateTriMeshFromFile(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, TriMesh& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
@@ -279,6 +423,18 @@ bool CreateTriMeshFromFile(EnvironmentBasePtr penv, const std::string& filename,
                         }
                     }
                 }
+
+#ifdef OPENRAVE_ASSIMP
+                std::list<KinBody::GeometryInfo> listGeometries;
+                if( _ParseSpecialSTLFile(penv, filename, vscale, listGeometries) ) {
+                    trimesh.vertices.clear();
+                    trimesh.indices.clear();
+                    FOREACH(itgeom, listGeometries) {
+                        trimesh.Append(itgeom->_meshcollision, itgeom->GetTransform());
+                    }
+                    return true;
+                }
+#endif
             }
         }
         if( extension == "stl" || extension == "x") {
@@ -346,7 +502,7 @@ static void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xml
     AttributesList listatts;
     if( atts != NULL ) {
         for (int i = 0; (atts[i] != NULL); i+=2) {
-            listatts.push_back(make_pair(string((const char*)atts[i]),string((const char*)atts[i+1])));
+            listatts.emplace_back((const char*)atts[i], (const char*)atts[i+1]);
             std::transform(listatts.back().first.begin(), listatts.back().first.end(), listatts.back().first.begin(), ::tolower);
         }
     }
@@ -611,151 +767,6 @@ protected:
 class LinkXMLReader : public StreamXMLReader
 {
 public:
-#ifdef OPENRAVE_ASSIMP
-    static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Vector& scale, std::list<KinBody::GeometryInfo>& listGeometries)
-    {
-        if( !node ) {
-            return false;
-        }
-        aiMatrix4x4 transform = node->mTransformation;
-        aiNode *pnode = node->mParent;
-        while (pnode) {
-            // Don't convert to y-up orientation, which is what the root node is in, Assimp does
-            if (pnode->mParent != NULL) {
-                transform = pnode->mTransformation * transform;
-            }
-            pnode = pnode->mParent;
-        }
-
-        for (size_t i = 0; i < node->mNumMeshes; i++) {
-            listGeometries.push_back(KinBody::GeometryInfo());
-            KinBody::GeometryInfo& g = listGeometries.back();
-            g._type = GT_TriMesh;
-            g._vRenderScale = scale;
-            aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
-            g._meshcollision.vertices.resize(input_mesh->mNumVertices);
-            for (size_t j = 0; j < input_mesh->mNumVertices; j++) {
-                aiVector3D p = input_mesh->mVertices[j];
-                p *= transform;
-                g._meshcollision.vertices[j] = Vector(p.x*scale.x,p.y*scale.y,p.z*scale.z);
-            }
-            size_t indexCount = 0;
-            for (size_t j = 0; j < input_mesh->mNumFaces; j++) {
-                aiFace& face = input_mesh->mFaces[j];
-                indexCount += 3*(face.mNumIndices-2);
-            }
-            g._meshcollision.indices.reserve(indexCount);
-            for (size_t j = 0; j < input_mesh->mNumFaces; j++) {
-                aiFace& face = input_mesh->mFaces[j];
-                if( face.mNumIndices == 3 ) {
-                    g._meshcollision.indices.push_back(face.mIndices[0]);
-                    g._meshcollision.indices.push_back(face.mIndices[1]);
-                    g._meshcollision.indices.push_back(face.mIndices[2]);
-                }
-                else {
-                    for (size_t k = 2; k < face.mNumIndices; ++k) {
-                        g._meshcollision.indices.push_back(face.mIndices[0]);
-                        g._meshcollision.indices.push_back(face.mIndices[k-1]);
-                        g._meshcollision.indices.push_back(face.mIndices[k]);
-                    }
-                }
-            }
-
-            if( !!scene->mMaterials&& input_mesh->mMaterialIndex<scene->mNumMaterials) {
-                aiMaterial* mtrl = scene->mMaterials[input_mesh->mMaterialIndex];
-                aiColor4D color;
-                aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_DIFFUSE,&color);
-                g._vDiffuseColor = Vector(color.r,color.g,color.b,color.a);
-                aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_AMBIENT,&color);
-                g._vAmbientColor = Vector(color.r,color.g,color.b,color.a);
-            }
-        }
-
-        for (size_t i=0; i < node->mNumChildren; ++i) {
-            _AssimpCreateGeometries(scene, node->mChildren[i], scale, listGeometries);
-        }
-        return true;
-    }
-
-    static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries)
-    {
-        // some formats (screen) has # in the beginning until the STL solid definition.
-        ifstream f(filename.c_str());
-        string strline;
-        if( !!f ) {
-            bool bTransformOffset = false;
-            Transform toffset;
-            Vector vcolor(0.8,0.8,0.8);
-            bool bFound = false;
-            stringstream::streampos pos = f.tellg();
-            while( !!getline(f, strline) ) {
-                boost::trim(strline);
-                if( strline.size() > 0 && strline[0] == '#' ) {
-                    size_t indCURRENT_LOCATION = strline.find("<CURRENT_LOCATION>");
-                    if( indCURRENT_LOCATION != string::npos ) {
-                        stringstream ss(strline.substr(indCURRENT_LOCATION+18));
-                        dReal rotx, roty, rotz;
-                        ss >> toffset.trans.x >> toffset.trans.y >> toffset.trans.z >> rotx >> roty >> rotz;
-                        if( !!ss ) {
-                            bTransformOffset = true;
-                            toffset.trans *= vscale;
-                            toffset.rot = quatMultiply(quatFromAxisAngle(Vector(0,0,rotz*PI/180)), quatMultiply(quatFromAxisAngle(Vector(rotx*PI/180,0,0)), quatFromAxisAngle(Vector(0,roty*PI/180,0))));
-                        }
-                        else {
-                            RAVELOG_WARN("<CURRENT_LOCATION> bad format\n");
-                            toffset = Transform();
-                        }
-                    }
-                    size_t indCOLOR_INFORMATION = strline.find("<COLOR_INFORMATION>");
-                    if( indCOLOR_INFORMATION != string::npos ) {
-                        stringstream ss(strline.substr(indCOLOR_INFORMATION+19));
-                        ss >> vcolor.x >> vcolor.y >> vcolor.z;
-                        if( !!ss ) {
-                        }
-                        else {
-                            RAVELOG_WARN("<COLOR_INFORMATION> bad format\n");
-                        }
-                    }
-                    continue;
-                }
-                if( strline.size() >= 5 && strline.substr(0,5) == string("solid") ) {
-                    bFound = true;
-                    break;
-                }
-                pos = f.tellg();
-            }
-            if( bFound ) {
-                RAVELOG_INFO_FORMAT("STL file %s has screen metadata", filename);
-
-                f.seekg(0, std::ios::end);
-                stringstream::streampos endpos = f.tellg();                
-                f.seekg(pos);
-                string newdata;
-                newdata.reserve(endpos - pos);
-                newdata.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-                boost::shared_ptr<aiSceneManaged> scene(new aiSceneManaged(newdata, false));
-                if( (!scene->_scene || !scene->_scene->mRootNode) && newdata.size() >= 5 && newdata.substr(0,5) == std::string("solid") ) {
-                    // most likely a binary STL file with the first 5 words being solid. unfortunately assimp does not handle this well, so
-                    newdata[0] = 'x';
-                    scene.reset(new aiSceneManaged(newdata, false, "STL"));
-                }
-                
-                if( !!scene->_scene && !!scene->_scene->mRootNode && !!scene->_scene->HasMeshes() ) {
-                    if( _AssimpCreateGeometries(scene->_scene,scene->_scene->mRootNode, vscale, listGeometries) ) {
-                        FOREACH(itgeom, listGeometries) {
-                            itgeom->_vDiffuseColor = vcolor;
-                            if( bTransformOffset ) {
-                                itgeom->_meshcollision.ApplyTransform(toffset.inverse());
-                            }
-                        }
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-#endif
 
     static bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries)
     {
@@ -869,7 +880,7 @@ public:
         if( bStaticSet ) {
             _plink->_info._bStatic = bStatic;
         }
-        _plink->_info._bIsEnabled = bIsEnabled;
+        _plink->_Enable(bIsEnabled);
     }
     virtual ~LinkXMLReader() {
     }
@@ -894,8 +905,8 @@ public:
             _plink->SetTransform(Transform());
             _processingtag = "";
             AttributesList newatts = atts;
-            newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
-            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
+            newatts.emplace_back("skipgeometry", _bSkipGeometry ? "1" : "0");
+            newatts.emplace_back("scalegeometry", str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z));
             _pcurreader.reset(new LinkXMLReader(_plink, _pparent, newatts));
             return PE_Support;
         }
@@ -947,7 +958,7 @@ public:
                     // directly apply transform to all geomteries
                     Transform tnew = _plink->GetTransform();
                     FOREACH(itgeom, _plink->_vGeometries) {
-                        (*itgeom)->_info._t = tnew * (*itgeom)->_info._t;
+                        (*itgeom)->_info.SetTransform(tnew * (*itgeom)->_info.GetTransform());
                     }
                     _plink->_collision.ApplyTransform(tnew);
                     _plink->SetTransform(tOrigTrans);
@@ -965,7 +976,7 @@ public:
                         return false;
                     }
 
-                    TransformMatrix tm(info->_t); tm.trans = Vector();
+                    TransformMatrix tm(info->GetTransform()); tm.trans = Vector();
                     TransformMatrix tminv = tm.inverse();
                     tm.m[0] *= _vScaleGeometry.x; tm.m[1] *= _vScaleGeometry.x; tm.m[2] *= _vScaleGeometry.x;
                     tm.m[4] *= _vScaleGeometry.y; tm.m[5] *= _vScaleGeometry.y; tm.m[6] *= _vScaleGeometry.y;
@@ -984,11 +995,11 @@ public:
                             info->_filenamecollision = _fnGetModelsDir(info->_filenamecollision);
                         }
                     }
-                    std::list<KinBody::GeometryInfo> listGeometries;
+                    std::list<KinBody::GeometryInfo> listGeometryInfos;
                     if( info->_type == GT_TriMesh ) {
                         bool bSuccess = false;
                         if( info->_filenamecollision.size() > 0 ) {
-                            if( !CreateGeometries(_pparent->GetEnv(),info->_filenamecollision, info->_vCollisionScale, listGeometries) ) {
+                            if( !CreateGeometries(_pparent->GetEnv(),info->_filenamecollision, info->_vCollisionScale, listGeometryInfos) ) {
                                 RAVELOG_WARN(str(boost::format("failed to find %s\n")%info->_filenamecollision));
                             }
                             else {
@@ -997,7 +1008,7 @@ public:
                         }
                         if( info->_filenamerender.size() > 0 ) {
                             if( !bSuccess ) {
-                                if( !CreateGeometries(_pparent->GetEnv(), info->_filenamerender, info->_vRenderScale, listGeometries) ) {
+                                if( !CreateGeometries(_pparent->GetEnv(), info->_filenamerender, info->_vRenderScale, listGeometryInfos) ) {
                                     RAVELOG_WARN(str(boost::format("failed to find %s\n")%info->_filenamerender));
                                 }
                                 else {
@@ -1005,16 +1016,15 @@ public:
                                 }
                             }
                         }
-                        if( listGeometries.size() > 0 ) {
+                        if( listGeometryInfos.size() > 0 ) {
                             // append all the geometries to the link. make sure the render filename is specified in only one geometry.
                             string extension;
                             if( info->_filenamerender.find_last_of('.') != string::npos ) {
                                 extension = info->_filenamerender.substr(info->_filenamerender.find_last_of('.')+1);
                             }
-                            FOREACH(itnewgeom,listGeometries) {
+                            FOREACH(itnewgeom,listGeometryInfos) {
                                 itnewgeom->_bVisible = info->_bVisible;
                                 itnewgeom->_bModifiable = info->_bModifiable;
-                                itnewgeom->_t = info->_t;
                                 itnewgeom->_fTransparency = info->_fTransparency;
                                 itnewgeom->_filenamerender = string("__norenderif__:")+extension;
                                 FOREACH(it,itnewgeom->_meshcollision.vertices) {
@@ -1029,15 +1039,18 @@ public:
                                 if( geomreader->IsOverwriteTransparency() ) {
                                     itnewgeom->_fTransparency = info->_fTransparency;
                                 }
-                                itnewgeom->_t.trans *= _vScaleGeometry;
-                                _plink->_collision.Append(itnewgeom->_meshcollision, itnewgeom->_t);
+
+                                Transform t = info->GetTransform();
+                                t.trans *= _vScaleGeometry;
+                                itnewgeom->SetTransform(t);
+                                _plink->_collision.Append(itnewgeom->_meshcollision, itnewgeom->GetTransform());
                             }
-                            listGeometries.front()._vRenderScale = info->_vRenderScale*geomspacescale;
-                            listGeometries.front()._filenamerender = info->_filenamerender;
-                            listGeometries.front()._vCollisionScale = info->_vCollisionScale*geomspacescale;
-                            listGeometries.front()._filenamecollision = info->_filenamecollision;
-                            listGeometries.front()._bVisible = info->_bVisible;
-                            FOREACH(itinfo, listGeometries) {
+                            listGeometryInfos.front()._vRenderScale = info->_vRenderScale*geomspacescale;
+                            listGeometryInfos.front()._filenamerender = info->_filenamerender;
+                            listGeometryInfos.front()._vCollisionScale = info->_vCollisionScale*geomspacescale;
+                            listGeometryInfos.front()._filenamecollision = info->_filenamecollision;
+                            listGeometryInfos.front()._bVisible = info->_bVisible;
+                            FOREACH(itinfo, listGeometryInfos) {
                                 _plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(_plink,*itinfo)));
                             }
                         }
@@ -1046,8 +1059,10 @@ public:
                             FOREACH(it,info->_meshcollision.vertices) {
                                 *it = tmres * *it;
                             }
-                            info->_t.trans *= _vScaleGeometry;
-                            _plink->_collision.Append(info->_meshcollision, info->_t);
+                            Transform t = info->GetTransform();
+                            t.trans  *= _vScaleGeometry;
+                            info->SetTransform(t);
+                            _plink->_collision.Append(info->_meshcollision, info->GetTransform());
                             _plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(_plink,*info)));
                         }
                     }
@@ -1058,7 +1073,10 @@ public:
                             // rotate on x axis by pi/2
                             Transform trot;
                             trot.rot = quatFromAxisAngle(Vector(1, 0, 0), PI/2);
-                            info->_t.rot = (info->_t*trot).rot;
+
+                            Transform t = info->GetTransform();
+                            t.rot = (t*trot).rot;
+                            info->SetTransform(t);
                         }
 
                         // call before attaching the geom
@@ -1067,9 +1085,12 @@ public:
                         FOREACH(it,info->_meshcollision.vertices) {
                             *it = tmres * *it;
                         }
-                        info->_t.trans *= _vScaleGeometry;
+
+                        Transform t = info->GetTransform();
+                        t.trans *= _vScaleGeometry;
+                        info->SetTransform(t);
                         info->_vGeomData *= geomspacescale;
-                        _plink->_collision.Append(geom->GetCollisionMesh(), info->_t);
+                        _plink->_collision.Append(geom->GetCollisionMesh(), info->GetTransform());
                         _plink->_vGeometries.push_back(geom);
                     }
                 }
@@ -1140,8 +1161,12 @@ public:
                     case GT_Sphere:
                         mass = MASS::GetSphericalMassD((*itgeom)->GetSphereRadius(), Vector(),_fMassDensity);
                         break;
+                    case GT_CalibrationBoard:
                     case GT_Box:
                         mass = MASS::GetBoxMassD((*itgeom)->GetBoxExtents(), Vector(), _fMassDensity);
+                        break;
+                    case GT_Cage:
+                        mass = MASS::GetBoxMassD(0.5*(*itgeom)->GetContainerOuterExtents(), Vector(), _fMassDensity);
                         break;
                     case GT_Container:
                         mass = MASS::GetBoxMassD(0.5*(*itgeom)->GetContainerOuterExtents(), Vector(), _fMassDensity);
@@ -1165,6 +1190,7 @@ public:
                     case GT_Sphere:
                         mass = MASS::GetSphericalMassD((*itgeom)->GetSphereRadius(), Vector(),1000);
                         break;
+                    case GT_CalibrationBoard:
                     case GT_Box:
                         mass = MASS::GetBoxMassD((*itgeom)->GetBoxExtents(), Vector(), 1000);
                         break;
@@ -1233,24 +1259,32 @@ public:
         if( xmlname == "translation" ) {
             Vector v;
             _ss >> v.x >> v.y >> v.z;
-            _plink->_info._t.trans += v*_vScaleGeometry;
+            Transform t = _plink->_info.GetTransform();
+            t.trans += v*_vScaleGeometry;
+            _plink->_info.SetTransform(t);
         }
         else if( xmlname == "rotationmat" ) {
             TransformMatrix tnew;
             _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-            _plink->_info._t.rot = (Transform(tnew)*_plink->_info._t).rot;
+            Transform t = _plink->_info.GetTransform();
+            t.rot = (Transform(tnew)*t).rot;
+            _plink->_info.SetTransform(t);
         }
         else if( xmlname == "rotationaxis" ) {
             Vector vaxis; dReal fangle=0;
             _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
             Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
-            _plink->_info._t.rot = (tnew*_plink->_info._t).rot;
+            Transform t = _plink->_info.GetTransform();
+            t.rot = (tnew*t).rot;
+            _plink->_info.SetTransform(t);
         }
         else if( xmlname == "quat" ) {
             Transform tnew;
             _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
             tnew.rot.normalize4();
-            _plink->_info._t.rot = (tnew*_plink->_info._t).rot;
+            Transform t = _plink->_info.GetTransform();
+            t.rot = (tnew*t).rot;
+            _plink->_info.SetTransform(t);
         }
         else if( xmlname == "offsetfrom" ) {
             // figure out which body
@@ -1312,9 +1346,9 @@ private:
     Vector _vMassExtents;                   ///< used only if mass is a box
 };
 
-bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector &vscale, std::list<KinBody::GeometryInfo>& listGeometries)
+bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector &vscale, std::list<KinBody::GeometryInfo>& listGeometryInfos)
 {
-    return LinkXMLReader::CreateGeometries(penv,filename,vscale,listGeometries);
+    return LinkXMLReader::CreateGeometries(penv,filename,vscale,listGeometryInfos);
 }
 
 // Joint Reader
@@ -1505,7 +1539,7 @@ public:
             FOREACH(itaxis,_vAxes) {
                 *itaxis = toffsetfrom.rotate(*itaxis);
             }
-            _pjoint->_ComputeInternalInformation(attachedbodies[0],attachedbodies[1],toffsetfrom*_vanchor,_vAxes,_vinitialvalues);
+            _pjoint->_ComputeJointInternalInformation(attachedbodies[0],attachedbodies[1],toffsetfrom*_vanchor,_vAxes,_vinitialvalues);
             return true;
         }
         else if( xmlname == "weight" ) {
@@ -1951,9 +1985,10 @@ public:
         }
     }
 
-    virtual XMLReadablePtr GetReadable() {
-        return XMLReadablePtr(new InterfaceXMLReadable(_pinterface));
+    ReadablePtr GetReadable() override {
+        return ReadablePtr(new InterfaceXMLReadable(_pinterface));
     }
+
 protected:
     EnvironmentBasePtr _penv;
     InterfaceType _type;
@@ -2088,8 +2123,8 @@ public:
 
         if( xmlname == "kinbody" ) {
             AttributesList newatts = atts;
-            newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
-            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
+            newatts.emplace_back("skipgeometry", _bSkipGeometry ? "1" : "0");
+            newatts.emplace_back("scalegeometry", str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z));
             _pcurreader = CreateInterfaceReader(_penv,PT_KinBody,_pinterface, xmlname, newatts);
             return PE_Support;
         }
@@ -2098,8 +2133,8 @@ public:
         if( xmlname == "body" ) {
             _plink.reset();
             AttributesList newatts = atts;
-            newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
-            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
+            newatts.emplace_back("skipgeometry", _bSkipGeometry ? "1" : "0");
+            newatts.emplace_back("scalegeometry", str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z));
             boost::shared_ptr<LinkXMLReader> plinkreader(new LinkXMLReader(_plink, _pchain, newatts));
             plinkreader->SetMassType(_masstype, _fMassValue, _vMassExtents);
             plinkreader->_fnGetModelsDir = boost::bind(&KinBodyXMLReader::GetModelsDir,this,_1);
@@ -2110,7 +2145,7 @@ public:
         else if( xmlname == "joint" ) {
             _pjoint.reset();
             AttributesList newatts = atts;
-            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
+            newatts.emplace_back("scalegeometry", str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z));
             boost::shared_ptr<JointXMLReader> pjointreader(new JointXMLReader(_pjoint,_pchain, atts));
             pjointreader->_fnGetModelsDir = boost::bind(&KinBodyXMLReader::GetModelsDir,this,_1);
             pjointreader->_fnGetOffsetFrom = boost::bind(&KinBodyXMLReader::GetOffsetFrom,this,_1);
@@ -2248,7 +2283,26 @@ public:
             else if( xmlname == "adjacent" ) {
                 pair<string, string> entry;
                 _ss >> entry.first >> entry.second;
-                _pchain->_vForcedAdjacentLinks.push_back(entry);
+                KinBody::LinkPtr plink0 = _pchain->GetLink(entry.first);
+                if( !plink0 ) {
+                    RAVELOG_WARN(str(boost::format("failed to resolve link0 %s\n")%entry.first));
+                }
+                else {
+                    if( !_pchain->GetLink(entry.second) ) {
+                        RAVELOG_WARN(str(boost::format("failed to resolve link1 %s\n")%entry.second));
+                    }
+                    else {
+                        KinBody::LinkPtr plink1 = _pchain->GetLink(entry.second);
+                        if( !plink1 ) {
+                            RAVELOG_WARN(str(boost::format("failed to resolve link1 %s\n")%entry.second));
+                        }
+                        else {
+                            size_t link1Index = plink1->GetIndex();
+                            plink0->_info.SetNoncollidingLink(plink1->GetName());
+                            _pchain->_SetForcedAdjacentLinks(plink0->GetIndex(), link1Index);
+                        }
+                    }
+                }
             }
             else if( xmlname == "modelsdir" ) {
                 _strModelsDir = _ss.str();
@@ -2499,6 +2553,13 @@ public:
             _probot->_vecManipulators.push_back(RobotBase::ManipulatorPtr(new RobotBase::Manipulator(_probot,_manipinfo)));
             return true;
         }
+        else if( xmlname == "ikchainend" ) {
+            _ss >> _manipinfo._sIkChainEndLinkName;
+            if( !!_probot && !_probot->GetLink(_manipinfo._sIkChainEndLinkName) ) {
+                RAVELOG_WARN(str(boost::format("Failed to find manipulator ikchainend %s")%_manipinfo._sIkChainEndLinkName));
+                GetXMLErrorCount()++;
+            }
+        }
         else if( xmlname == "effector" ) {
             _ss >> _manipinfo._sEffectorLinkName;
             if( !!_probot && !_probot->GetLink(_manipinfo._sEffectorLinkName) ) {
@@ -2688,7 +2749,7 @@ public:
 
             if( !_psensor ) {
                 _psensor.reset(new RobotBase::AttachedSensor(probot));
-                probot->_vecSensors.push_back(_psensor);
+                probot->_vecAttachedSensors.push_back(_psensor);
             }
         }
 
@@ -2749,12 +2810,11 @@ public:
             return true;
         }
         else if( xmlname == "link" ) {
-            string linkname;
-            _ss >> linkname;
-            _psensor->pattachedlink = _probot->GetLink(linkname);
+            _ss >> _psensor->_info._linkname;
+            _psensor->pattachedlink = _probot->GetLink(_psensor->_info._linkname);
 
             if( _psensor->pattachedlink.expired() ) {
-                RAVELOG_WARN("Failed to find attached sensor link %s\n", linkname.c_str());
+                RAVELOG_WARN("Failed to find attached sensor link %s\n", _psensor->_info._linkname.c_str());
                 GetXMLErrorCount()++;
             }
         }
@@ -2875,8 +2935,8 @@ public:
 
         if( xmlname == "robot" ) {
             AttributesList newatts = atts;
-            newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
-            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
+            newatts.emplace_back("skipgeometry", _bSkipGeometry ? "1" : "0");
+            newatts.emplace_back("scalegeometry", str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z));
             _pcurreader = CreateInterfaceReader(_penv, PT_Robot, _pinterface, xmlname, newatts);
             return PE_Support;
         }
@@ -2884,8 +2944,8 @@ public:
         _CheckInterface();
         if( xmlname == "kinbody" ) {
             AttributesList newatts = atts;
-            newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
-            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
+            newatts.emplace_back("skipgeometry", _bSkipGeometry ? "1" : "0");
+            newatts.emplace_back("scalegeometry", str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z));
             _pcurreader = CreateInterfaceReader(_penv,PT_KinBody,_pinterface, xmlname, newatts);
         }
         else if( xmlname == "manipulator" ) {
@@ -2976,7 +3036,7 @@ public:
                         vtemp.push_back(*itsensor);
                     }
                 }
-                _probot->GetAttachedSensors().swap(vtemp);
+                _probot->_vecAttachedSensors.swap(vtemp);
             }
             if( _setInitialManipulators.size() > 0 ) {
                 std::vector<RobotBase::ManipulatorPtr> vtemp; vtemp.reserve(_probot->GetManipulators().size());
@@ -2988,7 +3048,7 @@ public:
                         vtemp.push_back(*itmanip);
                     }
                 }
-                _probot->GetManipulators().swap(vtemp);
+                _probot->_vecManipulators.swap(vtemp);
             }
 
             // add prefix
@@ -3005,7 +3065,7 @@ public:
                 vector<KinBody::JointPtr>::iterator itjoint = _probot->_vecjoints.begin()+rootjoffset;
                 list<KinBody::JointPtr> listjoints;
                 while(itjoint != _probot->_vecjoints.end()) {
-                    jointnamepairs.push_back(make_pair((*itjoint)->_info._name, _prefix +(*itjoint)->_info._name));
+                    jointnamepairs.emplace_back((*itjoint)->_info._name,  _prefix +(*itjoint)->_info._name);
                     (*itjoint)->_info._name = _prefix +(*itjoint)->_info._name;
                     listjoints.push_back(*itjoint);
                     ++itjoint;
@@ -3013,7 +3073,7 @@ public:
                 BOOST_ASSERT(rootjpoffset >= 0 && rootjpoffset<=(int)_probot->_vPassiveJoints.size());
                 itjoint = _probot->_vPassiveJoints.begin()+rootjpoffset;
                 while(itjoint != _probot->_vPassiveJoints.end()) {
-                    jointnamepairs.push_back(make_pair((*itjoint)->_info._name, _prefix +(*itjoint)->_info._name));
+                    jointnamepairs.emplace_back((*itjoint)->_info._name,  _prefix +(*itjoint)->_info._name);
                     (*itjoint)->_info._name = _prefix +(*itjoint)->_info._name;
                     listjoints.push_back(*itjoint);
                     ++itjoint;
@@ -3039,9 +3099,10 @@ public:
                     if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end()) {
                         (*itmanip)->_info._name = _prefix + (*itmanip)->_info._name;
                         (*itmanip)->_info._sBaseLinkName = _prefix + (*itmanip)->_info._sBaseLinkName;
+                        (*itmanip)->_info._sIkChainEndLinkName = _prefix + (*itmanip)->_info._sIkChainEndLinkName;
                         (*itmanip)->_info._sEffectorLinkName = _prefix + (*itmanip)->_info._sEffectorLinkName;
-                        FOREACH(itgrippername,(*itmanip)->_info._vGripperJointNames) {
-                            *itgrippername = _prefix + *itgrippername;
+                        FOREACH(itGripperJointName,(*itmanip)->_info._vGripperJointNames) {
+                            *itGripperJointName = _prefix + *itGripperJointName;
                         }
                     }
                 }
@@ -3331,7 +3392,7 @@ public:
                     boost::shared_ptr<RobotXMLReader> robotreader = boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader);
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Robot);
                     RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_pinterface);
-                    _penv->Add(probot);
+                    _penv->Add(probot, IAM_StrictNameChecking);
                     if( !!robotreader->GetJointValues() ) {
                         if( (int)robotreader->GetJointValues()->size() != probot->GetDOF() ) {
                             RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, robot=%s")%robotreader->GetJointValues()->size()%probot->GetDOF()%probot->GetName()));
@@ -3345,7 +3406,7 @@ public:
                     KinBodyXMLReaderPtr kinbodyreader = boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader);
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_KinBody);
                     KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_pinterface);
-                    _penv->Add(pbody);
+                    _penv->Add(pbody, IAM_StrictNameChecking);
                     if( !!kinbodyreader->GetJointValues() ) {
                         if( (int)kinbodyreader->GetJointValues()->size() != pbody->GetDOF() ) {
                             RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, body=%s")%kinbodyreader->GetJointValues()->size()%pbody->GetDOF()%pbody->GetName()));
@@ -3357,7 +3418,7 @@ public:
                 }
                 else if( !!boost::dynamic_pointer_cast<SensorXMLReader>(_pcurreader) ) {
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Sensor);
-                    _penv->Add(RaveInterfaceCast<SensorBase>(_pinterface));
+                    _penv->Add(RaveInterfaceCast<SensorBase>(_pinterface), IAM_StrictNameChecking);
                 }
                 else if( !!boost::dynamic_pointer_cast< DummyInterfaceXMLReader<PT_PhysicsEngine> >(_pcurreader) ) {
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_PhysicsEngine);
@@ -3550,7 +3611,7 @@ public:
                             boost::shared_ptr<RobotXMLReader> robotreader = boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader);
                             BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Robot);
                             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_pinterface);
-                            _penv->Add(probot);
+                            _penv->Add(probot, IAM_StrictNameChecking);
                             if( !!robotreader->GetJointValues() ) {
                                 if( (int)robotreader->GetJointValues()->size() != probot->GetDOF() ) {
                                     RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, robot=%s")%robotreader->GetJointValues()->size()%probot->GetDOF()%probot->GetName()));
@@ -3564,7 +3625,7 @@ public:
                             KinBodyXMLReaderPtr kinbodyreader = boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader);
                             BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_KinBody);
                             KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_pinterface);
-                            _penv->Add(pbody);
+                            _penv->Add(pbody, IAM_StrictNameChecking);
                             if( !!kinbodyreader->GetJointValues() ) {
                                 if( (int)kinbodyreader->GetJointValues()->size() != pbody->GetDOF() ) {
                                     RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, body=%s")%kinbodyreader->GetJointValues()->size()%pbody->GetDOF()%pbody->GetName()));
@@ -3585,7 +3646,7 @@ public:
                             }
                         }
                         else {
-                            _penv->Add(_pinterface);
+                            _penv->Add(_pinterface, IAM_StrictNameChecking);
                         }
                     }
                     return true;
@@ -3598,8 +3659,8 @@ public:
         return false;
     }
 
-    virtual XMLReadablePtr GetReadable() {
-        return XMLReadablePtr(new InterfaceXMLReadable(_pinterface));
+    ReadablePtr GetReadable() override {
+        return ReadablePtr(new InterfaceXMLReadable(_pinterface));
     }
 protected:
     EnvironmentBasePtr _penv;

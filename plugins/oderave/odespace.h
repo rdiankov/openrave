@@ -641,6 +641,7 @@ private:
             odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
             break;
         case OpenRAVE::GT_Container:
+        case OpenRAVE::GT_Cage:
         case OpenRAVE::GT_TriMesh:
             if( info._meshcollision.indices.size() > 0 ) {
                 dTriIndex* pindices = new dTriIndex[info._meshcollision.indices.size()];
@@ -674,7 +675,7 @@ private:
         //dGeomSetData(odegeom, (void*)geom.get());
 
         // set the transformation
-        RaveTransform<dReal> t = link->tlinkmassinv * info._t;
+        RaveTransform<dReal> t = link->tlinkmassinv * info.GetTransform();
         dGeomSetQuaternion(odegeom,&t.rot[0]);
         dGeomSetPosition(odegeom,t.trans.x, t.trans.y, t.trans.z);
 

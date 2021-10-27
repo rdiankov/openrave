@@ -156,11 +156,12 @@ public:
         dReal friction = 0;
 
         GraspParametersPtr params(new GraspParameters(GetEnv()));
+        params->bavoidcontact = false;
         params->btransformrobot = true;
         params->bonlycontacttarget = true;
         params->btightgrasp = false;
         params->vtargetdirection = Vector(0,0,1);
-        params->vmanipulatordirection =  _robot->GetActiveManipulator()->GetDirection();
+        params->vmanipulatordirection =  _robot->GetActiveManipulator()->GetLocalToolDirection();
 
         std::vector<dReal> vchuckingdir = _robot->GetActiveManipulator()->GetChuckingDirection();
         boost::shared_ptr<CollisionCheckerMngr> pcheckermngr;
@@ -183,8 +184,8 @@ public:
             }
             else if( cmd == "bodyid" ) {
                 // initialization
-                int id = 0; sinput >> id;
-                params->targetbody = GetEnv()->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0; sinput >> bodyIndex;
+                params->targetbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( cmd == "direction" ) {
                 // grasp
@@ -196,6 +197,10 @@ public:
                 string linkname;
                 sinput >> linkname;
                 params->vavoidlinkgeometry.push_back(linkname);
+            }
+            else if( cmd == "avoidcontact" ) {
+                // initialization
+                params->bavoidcontact = true;
             }
             else if( cmd == "notrans" ) {
                 // initialization
@@ -273,6 +278,9 @@ public:
                 // initialization
                 sinput >> params->ftranslationstepmult;
             }
+            else if( cmd == "coarsestep" ) {
+                sinput >> params->fcoarsestep;
+            }
             else if( cmd == "finestep" ) {
                 sinput >> params->ffinestep;
             }
@@ -280,6 +288,12 @@ public:
                 vchuckingdir.resize(_robot->GetActiveManipulator()->GetGripperDOF());
                 for(size_t i = 0; i < vchuckingdir.size(); ++i) {
                     sinput >> vchuckingdir.at(i);
+                }
+            }
+            else if( cmd == "ordereddofindices" ) {
+                params->vordereddofindices.resize(_robot->GetActiveManipulator()->GetGripperDOF());
+                for(size_t idofindex = 0; idofindex < params->vordereddofindices.size(); ++idofindex) {
+                    sinput >> params->vordereddofindices.at(idofindex);
                 }
             }
             else {
@@ -320,7 +334,7 @@ public:
         }
 
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
-        if( !_planner->PlanPath(ptraj) || ptraj->GetNumWaypoints() == 0 ) {
+        if( !_planner->PlanPath(ptraj).GetStatusCode() || ptraj->GetNumWaypoints() == 0 ) {
             return false;
         }
 
@@ -352,7 +366,7 @@ public:
                             itcontact->norm = -itcontact->norm;
                             itcontact->depth = -itcontact->depth;
                         }
-                        contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
+                        contacts.emplace_back(*itcontact, (*itlink)->GetIndex());
                     }
                 }
             }
@@ -976,7 +990,7 @@ public:
                     RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                     continue;
                 }
-                if( !planner->PlanPath(ptraj) ) {
+                if( !planner->PlanPath(ptraj).GetStatusCode() ) {
                     RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                     continue;
                 }
@@ -996,7 +1010,7 @@ public:
                                 itcontact->norm = -itcontact->norm;
                                 itcontact->depth = -itcontact->depth;
                             }
-                            grasp_params->contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
+                            grasp_params->contacts.emplace_back(*itcontact, (*itlink)->GetIndex());
                         }
                     }
                 }
@@ -1060,7 +1074,7 @@ public:
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }
-                        if( !planner->PlanPath(ptraj) ) {
+                        if( !planner->PlanPath(ptraj).GetStatusCode() ) {
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }
@@ -1537,7 +1551,7 @@ protected:
                     dReal fcos = itcontact->norm.dot3(deltaxyz);
                     bool bstable = fcos > 0 && fsin2 <= fcos*fcos*mu*mu;
                     if(bstable) {
-                        contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
+                        contacts.emplace_back(*itcontact, (*itlink)->GetIndex());
                     }
                 }
             }

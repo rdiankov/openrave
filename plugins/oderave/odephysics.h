@@ -59,10 +59,10 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     }
 
     inline boost::shared_ptr<ODEPhysicsEngine> shared_physics() {
-        return boost::dynamic_pointer_cast<ODEPhysicsEngine>(shared_from_this());
+        return boost::static_pointer_cast<ODEPhysicsEngine>(shared_from_this());
     }
     inline boost::shared_ptr<ODEPhysicsEngine const> shared_physics_const() const {
-        return boost::dynamic_pointer_cast<ODEPhysicsEngine const>(shared_from_this());
+        return boost::static_pointer_cast<ODEPhysicsEngine const>(shared_from_this());
     }
 
     class PhysicsPropertiesXMLReader : public BaseXMLReader
@@ -484,7 +484,7 @@ The possible properties that can be set are: ";
         }
     }
 
-    virtual Vector GetGravity()
+    virtual const Vector& GetGravity()
     {
         return _gravity;
     }
@@ -597,7 +597,7 @@ private:
             int minindex = min(pkb1->GetIndex(), pkb2->GetIndex());
             int maxindex = max(pkb1->GetIndex(), pkb2->GetIndex());
 
-            if( pkb1->GetParent()->GetAdjacentLinks().find(minindex|(maxindex<<16)) != pkb1->GetParent()->GetAdjacentLinks().end() )
+            if( pkb1->GetParent()->AreAdjacentLinks(minindex, maxindex))
                 return;
         }
 

@@ -221,7 +221,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         _samplespec._vgroups.push_back(*itgroup);
                         _samplespec._vgroups.back().offset = dof;
                         for(int idof = 0; idof < _samplespec._vgroups.back().dof; ++idof) {
-                            _vgrablinks.push_back(make_pair(dof+idof,boost::lexical_cast<int>(tokens.at(2+idof))));
+                            _vgrablinks.emplace_back(dof+idof, boost::lexical_cast<int>(tokens.at(2+idof)));
                         }
                         dof += _samplespec._vgroups.back().dof;
                     }
@@ -282,26 +282,26 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             FOREACH(itgrabinfo,_vgrablinks) {
                 int bodyid = int(std::floor(sampledata.at(itgrabinfo->first)+0.5));
                 if( bodyid != 0 ) {
-                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(abs(bodyid));
+                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(abs(bodyid));
                     if( !pbody ) {
                         RAVELOG_WARN(str(boost::format("failed to find body id %d")%bodyid));
                         continue;
                     }
                     if( bodyid < 0 ) {
-                        if( !!probot->IsGrabbing(pbody) ) {
+                        if( !!probot->IsGrabbing(*pbody) ) {
                             listrelease.push_back(pbody);
                         }
                     }
                     else {
-                        KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(pbody);
+                        KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*pbody);
                         if( !!pgrabbinglink ) {
                             if( pgrabbinglink->GetIndex() != itgrabinfo->second ) {
                                 listrelease.push_back(pbody);
-                                listgrab.push_back(make_pair(pbody,probot->GetLinks().at(itgrabinfo->second)));
+                                listgrab.emplace_back(pbody, probot->GetLinks().at(itgrabinfo->second));
                             }
                         }
                         else {
-                            listgrab.push_back(make_pair(pbody,probot->GetLinks().at(itgrabinfo->second)));
+                            listgrab.emplace_back(pbody, probot->GetLinks().at(itgrabinfo->second));
                         }
                     }
                 }
@@ -309,12 +309,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             FOREACH(itgrabinfo,_vgrabbodylinks) {
                 int dograb = int(std::floor(sampledata.at(itgrabinfo->offset)+0.5));
                 if( dograb <= 0 ) {
-                    if( !!probot->IsGrabbing(itgrabinfo->pbody) ) {
+                    if( !!probot->IsGrabbing(*itgrabinfo->pbody) ) {
                         listrelease.push_back(itgrabinfo->pbody);
                     }
                 }
                 else {
-                    KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(itgrabinfo->pbody);
+                    KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itgrabinfo->pbody);
                     if( !!pgrabbinglink ) {
                         listrelease.push_back(itgrabinfo->pbody);
                     }
@@ -344,7 +344,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
             // always release after setting dof values
             FOREACH(itbody,listrelease) {
-                probot->Release(*itbody);
+                probot->Release(**itbody);
             }
             FOREACH(itindex,listgrabindices) {
                 const GrabBody& grabinfo = _vgrabbodylinks.at(*itindex);
@@ -414,10 +414,10 @@ private:
     }
 
     inline boost::shared_ptr<IdealController> shared_controller() {
-        return boost::dynamic_pointer_cast<IdealController>(shared_from_this());
+        return boost::static_pointer_cast<IdealController>(shared_from_this());
     }
     inline boost::shared_ptr<IdealController const> shared_controller_const() const {
-        return boost::dynamic_pointer_cast<IdealController const>(shared_from_this());
+        return boost::static_pointer_cast<IdealController const>(shared_from_this());
     }
     inline boost::weak_ptr<IdealController> weak_controller() {
         return shared_controller();

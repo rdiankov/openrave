@@ -125,7 +125,7 @@ public:
         }
     }
 
-    bool NeightState(std::vector<dReal>& v,const std::vector<dReal>& vdelta, int fromgoal)
+    int NeightState(std::vector<dReal>& v,const std::vector<dReal>& vdelta, int fromgoal)
     {
         _vprevsolution = v;
         // the previous solution should already be set on the robot, so do a sanity check
@@ -145,7 +145,7 @@ public:
             v.at(i) += vdelta.at(i);
         }
 
-        return _SetState(v,IKFO_CheckEnvCollisions);
+        return _SetState(v,IKFO_CheckEnvCollisions) ? NSS_Reached : NSS_Failed;
     }
 
     // due to discontinues check that the robot midpoint is also along the door's expected trajectory
@@ -210,6 +210,7 @@ public:
         std::list<KinBodyPtr> listCheckCollisions;
         listCheckCollisions.push_back(_probot);
         _collision.reset(new planningutils::LineCollisionConstraint(listCheckCollisions));
+        // _checkpathconstraintsfn had been deprecated, so this line no longer works
         params->_checkpathconstraintsfn = boost::bind(&planningutils::LineCollisionConstraint::Check,_collision,params, _1, _2, _3, _4);
 
         _ikfilter = _pmanip->GetIkSolver()->RegisterCustomFilter(0, boost::bind(&DoorConfiguration::_CheckContinuityFilter, shared_from_this(), _1, _2, _3));

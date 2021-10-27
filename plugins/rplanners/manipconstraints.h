@@ -20,6 +20,8 @@
 #include "openraveplugindefs.h"
 #include "ParabolicPathSmooth/DynamicPath.h"
 
+//#define PROGRESS_DEBUG
+
 namespace rplanners {
 
 struct ManipConstraintInfo
@@ -136,21 +138,29 @@ public:
                     KinBody::LinkPtr endeffector = pmanip->GetEndEffector();
                     // Insert all child links of endeffector
                     std::list<KinBody::LinkPtr> globallinklist;
-                    std::vector<KinBody::LinkPtr> vchildlinks;
-                    pmanip->GetChildLinks(vchildlinks);
-                    FOREACH(itlink,vchildlinks) {
-                        globallinklist.push_back(*itlink);
-                    }
-                    // Insert all links of all bodies that the endeffector is grabbing
+
                     std::vector<KinBodyPtr> grabbedbodies;
                     probot->GetGrabbed(grabbedbodies);
-                    FOREACH(itbody,grabbedbodies) {
-                        if(pmanip->IsGrabbing(*itbody)) {
-                            FOREACH(itlink,(*itbody)->GetLinks()) {
-                                globallinklist.push_back(*itlink);
+
+                    if( grabbedbodies.size() > 0 ) {
+                        // look at only the grabbed body rather than the links
+                        FOREACH(itbody, grabbedbodies) {
+                            if( pmanip->IsGrabbing(**itbody) ) {
+                                FOREACH(itlink, (*itbody)->GetLinks()) {
+                                    globallinklist.push_back(*itlink);
+                                }
                             }
                         }
                     }
+                    else {
+                        // nothing grabbed, so use the end effector links
+                        std::vector<KinBody::LinkPtr> vchildlinks;
+                        pmanip->GetChildLinks(vchildlinks);
+                        FOREACH(itlink, vchildlinks) {
+                            globallinklist.push_back(*itlink);
+                        }
+                    }
+
                     // Compute the enclosing AABB and add its vertices to the checkpoints
                     AABB enclosingaabb = ComputeEnclosingAABB(globallinklist, endeffector->GetTransform());
                     _listCheckManips.push_back(ManipConstraintInfo());
@@ -174,7 +184,7 @@ public:
                             ss << "[" << itpoint->x << ", " << itpoint->y << ", " << itpoint->z << "], ";
                         }
                         ss << "]";
-                        RAVELOG_VERBOSE_FORMAT("env=%d, fmaxdistfromcenter=%f, checkpoints=%s", pbody->GetEnv()->GetId()%info.fmaxdistfromcenter%ss.str());
+                        RAVELOG_VERBOSE_FORMAT("env=%s, fmaxdistfromcenter=%f, checkpoints=%s", pbody->GetEnv()->GetNameId()%info.fmaxdistfromcenter%ss.str());
                     }
                     setCheckedManips.insert(endeffector);
                 }
@@ -446,18 +456,23 @@ public:
 
         Vector endeffvellin, endeffvelang, endeffacclin, endeffaccang;
         dReal maxactualmanipspeed = 0, maxactualmanipaccel = 0;
-        // int maxviolatedindex = -1;
 
         dReal reductionFactor = 1;
         dReal multiplier = 0.85;
         int retcode = 0;
         dReal maxallowedmult = 0.92;
+        bool bBoundExceeded = false;
 
+        std::vector<dReal>& vDOFValuesAtViolation = _vdofvalues, &vDOFVelAtViolation = _vdofvelocities, &vDOFAccelAtViolation = _vdofaccelerations;
+        vDOFValuesAtViolation.resize(0);
+        vDOFVelAtViolation.resize(0);
+        vDOFAccelAtViolation.resize(0);
 
         std::vector<ParabolicRampInternal::ParabolicRampND>::const_iterator itramp1 = outramps.begin();
         if (itramp1 != outramps.end()) {
             FOREACHC(itmanipinfo, _listCheckManips) {
                 KinBodyPtr probot = itmanipinfo->plink->GetParent();
+                bBoundExceeded = false;
 
                 itramp1->Accel(0, ac);
                 qfillactive.resize(itmanipinfo->vuseddofindices.size());
@@ -490,6 +505,7 @@ public:
                         Vector vpoint = endeffvellin + endeffvelang.cross(point);
                         dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
                         if (actualmanipspeed > maxactualmanipspeed) {
+                            bBoundExceeded = true;
                             maxactualmanipspeed = actualmanipspeed;
                         }
                     }
@@ -498,8 +514,15 @@ public:
                         Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
                         dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
                         if (actualmanipaccel > maxactualmanipaccel) {
+                            bBoundExceeded = true;
                             maxactualmanipaccel = actualmanipaccel;
                         }
+                    }
+
+                    if( bBoundExceeded ) {
+                        vDOFValuesAtViolation = qfillactive;
+                        vDOFVelAtViolation = _vfillactive;
+                        vDOFAccelAtViolation = _afill;
                     }
                 }
                 // Finished iterating through all checkpoints
@@ -510,6 +533,7 @@ public:
         if (itramp2 != itramp1 || itramp1->endTime > g_fEpsilonLinear) {
             FOREACHC(itmanipinfo, _listCheckManips) {
                 KinBodyPtr probot = itmanipinfo->plink->GetParent();
+                bBoundExceeded = false;
 
                 itramp2->Accel(itramp2->endTime, ac);
                 qfillactive.resize(itmanipinfo->vuseddofindices.size());
@@ -543,6 +567,7 @@ public:
                         dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
                         // Keep record of the value only if it violates the bound
                         if (actualmanipspeed > maxactualmanipspeed) {
+                            bBoundExceeded = true;
                             maxactualmanipspeed = actualmanipspeed;
                         }
                     }
@@ -551,14 +576,21 @@ public:
                         Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
                         dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
                         if (actualmanipaccel > maxactualmanipaccel) {
+                            bBoundExceeded = true;
                             maxactualmanipaccel = actualmanipaccel;
                         }
+                    }
+
+                    if( bBoundExceeded ) {
+                        vDOFValuesAtViolation = qfillactive;
+                        vDOFVelAtViolation = _vfillactive;
+                        vDOFAccelAtViolation = _afill;
                     }
                 }
                 // Finished iterating through all checkpoints
             }
         }
-        
+
         // Finished iterating through all manipulators
 
         if (_maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed) {
@@ -573,8 +605,17 @@ public:
             // the bound), the multiplier will be too large (too close to 1) to be useful.
             reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
         }
-        RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
-        // RAVELOG_WARN_FORMAT("maxviolatedindex = %d", maxviolatedindex);
+#ifdef PROGRESS_DEBUG
+        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        ss << "q=[";
+        SerializeValues(ss, vDOFValuesAtViolation);
+        ss << "]; qd=[";
+        SerializeValues(ss, vDOFVelAtViolation);
+        ss << "]; qdd=[";
+        SerializeValues(ss, vDOFAccelAtViolation);
+        ss << "];";
+        RAVELOG_VERBOSE_FORMAT("env=%s, maxmanipspeed=%.15e; maxactualmanipspeed=%.15e; maxmanipaccel=%.15e; maxactualmanipaccel=%.15e; reductionFactor=%.15e; %s", _penv->GetNameId()%_maxmanipspeed%maxactualmanipspeed%_maxmanipaccel%maxactualmanipaccel%reductionFactor%ss.str());
+#endif
         return ParabolicRampInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
     }
 
@@ -591,6 +632,7 @@ private:
     std::vector<dReal> _afill; // full robot DOF
     std::vector<std::pair<Vector,Vector> > endeffvels, endeffaccs;
     std::vector<dReal> _vtransjacobian, _vangularjacobian, _vbestvels2, _vbestaccels2;
+    std::vector<dReal> _vdofvalues, _vdofvelocities, _vdofaccelerations;
 //@}
 };
 

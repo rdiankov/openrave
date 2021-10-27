@@ -147,7 +147,7 @@ public:
 
             // create a new output trajectory
             TrajectoryBasePtr outputtraj = RaveCreateTrajectory(penv,"");
-            if( !planner->PlanPath(outputtraj) ) {
+            if( !planner->PlanPath(outputtraj).HasSolution() ) {
                 throw OPENRAVE_EXCEPTION_FORMAT0("plan failed",ORE_Assert);
             }
             listtrajectories.push_back(outputtraj);

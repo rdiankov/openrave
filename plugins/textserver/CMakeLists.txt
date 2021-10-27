@@ -8,6 +8,7 @@ if( MSVC )
 else()
   target_link_libraries(textserver libopenrave)
 endif()
+target_link_libraries(textserver PRIVATE boost_assertion_failed)
 
 set_target_properties(textserver PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 install(TARGETS textserver DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-textserver)

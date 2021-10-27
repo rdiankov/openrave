@@ -452,14 +452,14 @@ int main(int argc, char** argv)
     def getClassInit(self,node,iktype,userotation=7,usetranslation=7):
         code = "IKFAST_API int GetNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
         if len(node.freejointvars) == 0:
-            code += "IKFAST_API int* GetFreeParameters() { return NULL; }\n"
+            code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
         else:
-            code += "IKFAST_API int* GetFreeParameters() { static int freeparams[] = {"
+            code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
             for i,freejointvar in enumerate(node.freejointvars):
                 code += "%d"%(freejointvar[1])
                 if i < len(node.freejointvars)-1:
                     code += ", "
-            code += "}; return freeparams; }\n"
+            code += "}; return freeindices; }\n"
         code += "IKFAST_API int GetNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int GetIkRealSize() { return sizeof(IkReal); }\n\n"
         code += 'IKFAST_API int GetIkType() { return 0x%x; }\n\n'%iktype
@@ -553,7 +553,7 @@ int main(int argc, char** argv)
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -606,7 +606,7 @@ int main(int argc, char** argv)
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -671,7 +671,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -723,7 +723,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -777,7 +777,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -841,7 +841,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -894,7 +894,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n\n"
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -953,7 +953,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code

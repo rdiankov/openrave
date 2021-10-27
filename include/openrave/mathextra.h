@@ -116,8 +116,8 @@ inline double* inv4(const double* pf, double* pfres);
 
 /// extract eigen values and vectors from a 2x2 matrix and returns true if all values are real
 /// returned eigen vectors are normalized
-template <typename T>
-inline bool eig2(const T* pfmat, T* peigs, T& fv1x, T& fv1y, T& fv2x, T& fv2y);
+OPENRAVE_API bool eig2(const float* pfmat, float* peigs, float& fv1x, float& fv1y, float& fv2x, float& fv2y);
+OPENRAVE_API bool eig2(const double* pfmat, double* peigs, double& fv1x, double& fv1y, double& fv2x, double& fv2y);
 
 // Simple routines for linear algebra algorithms //
 
@@ -208,48 +208,6 @@ template <typename T> inline bool inv2(T* pf, T* pfres);
 ///////////////////////
 // Function Definitions
 ///////////////////////
-template <typename T>
-bool eig2(const T* pfmat, T* peigs, T& fv1x, T& fv1y, T& fv2x, T& fv2y)
-{
-    // x^2 + bx + c
-    T a, b, c, d;
-    b = -(pfmat[0] + pfmat[3]);
-    c = pfmat[0] * pfmat[3] - pfmat[1] * pfmat[2];
-    d = b * b - 4.0f * c + 1e-16f;
-    if( d < 0 ) {
-        return false;
-    }
-    if( d < 1e-16f ) {
-        a = -0.5f * b;
-        peigs[0] = a;
-        peigs[1] = a;
-        fv1x = pfmat[1];
-        fv1y = a - pfmat[0];
-        c = 1 / sqrt(fv1x*fv1x + fv1y*fv1y);
-        fv1x *= c;
-        fv1y *= c;
-        fv2x = -fv1y;
-        fv2y = fv1x;
-        return true;
-    }
-    // two roots
-    d = sqrt(d);
-    a = -0.5f * (b + d);
-    peigs[0] = a;
-    fv1x = pfmat[1];
-    fv1y = a-pfmat[0];
-    c = 1 / sqrt(fv1x*fv1x + fv1y*fv1y);
-    fv1x *= c;
-    fv1y *= c;
-    a += d;
-    peigs[1] = a;
-    fv2x = pfmat[1];
-    fv2y = a-pfmat[0];
-    c = 1 / sqrt(fv2x*fv2x + fv2y*fv2y);
-    fv2x *= c;
-    fv2y *= c;
-    return true;
-}
 
 // returns the number of real roots, fills r1 and r2 with the answers
 template <typename T>
@@ -1170,7 +1128,7 @@ inline void svd3(const T* A, T* U, T* D, T* V)
     multtrans3(VVt, A, A);
     // get eigen values of V: VVt  V = V  D^2
     T afSubDiag[3];
-    std::copy(&VVt,&VVt[9],&V[0]);
+    std::copy(&VVt[0],&VVt[9],&V[0]);
     Tridiagonal3(V,eigenvalues,afSubDiag);
     QLAlgorithm3(V,eigenvalues,afSubDiag);
 
@@ -1186,7 +1144,15 @@ inline void svd3(const T* A, T* U, T* D, T* V)
 
     mult3_s3(U, A, V); // U = A V = U D
     for(int i = 0; i < 3; ++i) {
-        D[i] = sqrt(eigenvalues[i]);
+        if( eigenvalues[i] > 0 ) {
+            D[i] = sqrt(eigenvalues[i]);
+        }
+        else {
+            if( eigenvalues[i] < -std::numeric_limits<T>::epsilon() ) {
+                throw std::runtime_error("eigenvalue should be non-negative");
+            }
+            D[i] = 0; // close to 0
+        }
         T f = 1/D[i];
         U[i] *= f;
         U[i+3] *= f;
@@ -1201,22 +1167,22 @@ inline void svd3(const T* A, T* U, T* D, T* V)
     }
     if( maxval > 0 ) {
         // flip columns
-        swap(U[0], U[maxval]);
-        swap(U[3], U[3+maxval]);
-        swap(U[6], U[6+maxval]);
-        swap(V[0], V[maxval]);
-        swap(V[3], V[3+maxval]);
-        swap(V[6], V[6+maxval]);
-        swap(D[0], D[maxval]);
+        std::swap(U[0], U[maxval]);
+        std::swap(U[3], U[3+maxval]);
+        std::swap(U[6], U[6+maxval]);
+        std::swap(V[0], V[maxval]);
+        std::swap(V[3], V[3+maxval]);
+        std::swap(V[6], V[6+maxval]);
+        std::swap(D[0], D[maxval]);
     }
     if( D[1] < D[2] ) {
-        swap(U[1], U[2]);
-        swap(U[4], U[5]);
-        swap(U[7], U[8]);
-        swap(V[1], V[2]);
-        swap(V[4], V[5]);
-        swap(V[7], V[8]);
-        swap(D[1], D[2]);
+        std::swap(U[1], U[2]);
+        std::swap(U[4], U[5]);
+        std::swap(U[7], U[8]);
+        std::swap(V[1], V[2]);
+        std::swap(V[4], V[5]);
+        std::swap(V[7], V[8]);
+        std::swap(D[1], D[2]);
     }
 }
 

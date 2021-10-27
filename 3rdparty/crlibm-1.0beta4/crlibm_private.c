@@ -101,7 +101,7 @@ unsigned long long crlibm_init() {
 /* An exit function which sets FPU flags to initial value */
 void crlibm_exit(unsigned long long int oldcw) {
 #ifndef CRLIBM_TYPEOS_BSD
-#if (defined(CRLIBM_TYPECPU_X86) || defined(CRLIBM_TYPECPU_AMD64))
+#if defined(CRLIBM_HAS_FPU_CONTROL) && (defined(CRLIBM_TYPECPU_X86) || defined(CRLIBM_TYPECPU_AMD64))
   /* Set FPU flags to use double, not double extended, 
      with rounding to nearest */
   unsigned short t = (unsigned short)oldcw;

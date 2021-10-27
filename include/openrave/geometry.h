@@ -32,12 +32,20 @@
 #ifndef RAVE_DEPRECATED
 #define RAVE_DEPRECATED
 #endif
+
 #ifdef BOOST_ASSERT
 #define MATH_ASSERT BOOST_ASSERT
-#else
+#if defined(BOOST_DISABLE_ASSERTS)||defined(NDEBUG)
+// in case where <boost/assert.hpp> is included and BOOST_DISABLE_ASSERTS is used
+#define MATH_DISABLE_ASSERTS
+#endif // BOOST_DISABLE_ASSERTS
+#else // BOOST_ASSERT
 #include <cassert>
 #define MATH_ASSERT assert
-#endif
+#ifdef NDEBUG
+#define MATH_DISABLE_ASSERTS
+#endif // NDEBUG
+#endif // BOOST_ASSERT
 
 namespace OpenRAVE {
 
@@ -224,6 +232,16 @@ public:
         x = (T)r.x; y = (T)r.y; z = (T)r.z; w = (T)r.w; return *this;
     }
 
+    template <typename U>
+    bool operator==(const RaveVector<U>& r) const{
+        return x == r.x && y == r.y && z == r.z && w == r.w;
+    }
+
+    template <typename U>
+    bool operator!=(const RaveVector<U>& r) const{
+        return x != r.x || y != r.y || z != r.z || w != r.w;
+    }
+
     // SCALAR FUNCTIONS
     template <typename U> inline T dot(const RaveVector<U> &v) const {
         return x*v.x + y*v.y + z*v.z + w*v.w;
@@ -383,11 +401,19 @@ public:
     template <typename U> RaveTransform(const RaveTransform<U>& t) {
         rot = t.rot;
         trans = t.trans;
-        MATH_ASSERT( rot.lengthsqr4() > 0.99f && rot.lengthsqr4() < 1.01f );
+#if !defined(MATH_DISABLE_ASSERTS)
+        const T l = rot.lengthsqr4();
+        MATH_ASSERT( l > 0.99f && l < 1.01f );
+#endif
     }
+
     template <typename U> RaveTransform(const RaveVector<U>& rot, const RaveVector<U>& trans) : rot(rot), trans(trans) {
-        MATH_ASSERT( rot.lengthsqr4() > 0.99f && rot.lengthsqr4() < 1.01f );
+#if !defined(MATH_DISABLE_ASSERTS)
+        const T l = rot.lengthsqr4();
+        MATH_ASSERT( l > 0.99f && l < 1.01f );
+#endif
     }
+
     inline RaveTransform(const RaveTransformMatrix<T>&t);
 
     void identity() {
@@ -427,8 +453,11 @@ public:
         t.rot.y = rot.x*r.rot.y + rot.y*r.rot.x + rot.z*r.rot.w - rot.w*r.rot.z;
         t.rot.z = rot.x*r.rot.z + rot.z*r.rot.x + rot.w*r.rot.y - rot.y*r.rot.w;
         t.rot.w = rot.x*r.rot.w + rot.w*r.rot.x + rot.y*r.rot.z - rot.z*r.rot.y;
+#if !defined(MATH_DISABLE_ASSERTS)
+        const T l = t.rot.lengthsqr4();
+        MATH_ASSERT( l > 0.99f && l < 1.01f );
+#endif
         // normalize the transformation
-        MATH_ASSERT( t.rot.lengthsqr4() > 0.99f && t.rot.lengthsqr4() < 1.01f );
         t.rot.normalize4();
         return t;
     }
@@ -441,8 +470,11 @@ public:
         t.rot.y = rot.x*r.rot.y + rot.y*r.rot.x + rot.z*r.rot.w - rot.w*r.rot.z;
         t.rot.z = rot.x*r.rot.z + rot.z*r.rot.x + rot.w*r.rot.y - rot.y*r.rot.w;
         t.rot.w = rot.x*r.rot.w + rot.w*r.rot.x + rot.y*r.rot.z - rot.z*r.rot.y;
+#if !defined(MATH_DISABLE_ASSERTS)
+        const T l = t.rot.lengthsqr4();
+        MATH_ASSERT( l > 0.99f && l < 1.01f );
+#endif
         // normalize the transformation
-        MATH_ASSERT( t.rot.lengthsqr4() > 0.99f && t.rot.lengthsqr4() < 1.01f );
         t.rot.normalize4();
         return t;
     }
@@ -450,6 +482,19 @@ public:
     inline RaveTransform<T>& operator*= (const RaveTransform<T>&right) {
         *this = operator*(right);
         return *this;
+    }
+
+    inline bool operator== (const RaveTransform<T>& right) const{
+        return trans == right.trans && rot == right.rot;
+    }
+    inline bool operator!= (const RaveTransform<T>& right) const{
+        return !operator==(right);
+    }
+
+    /// \brief return true if any element of transform is different by mor ethan epsilon, otherwise false.
+    inline bool CompareTransform(const RaveTransform<T>& rhs, T epsilon) const {
+        return RaveFabs(trans.x - rhs.trans.x) > epsilon || RaveFabs(trans.y - rhs.trans.y) > epsilon || RaveFabs(trans.z - rhs.trans.z) > epsilon ||
+           RaveFabs(rot.x - rhs.rot.x) > epsilon || RaveFabs(rot.y - rhs.rot.y) > epsilon || RaveFabs(rot.z - rhs.rot.z) > epsilon || RaveFabs(rot.w - rhs.rot.w) > epsilon;
     }
 
     inline RaveTransform<T> inverse() const {
@@ -466,7 +511,10 @@ public:
     template <typename U> inline RaveTransform<T>& operator= (const RaveTransform<U>&r) {
         trans = r.trans;
         rot = r.rot;
-        MATH_ASSERT( rot.lengthsqr4() > 0.99f && rot.lengthsqr4() < 1.01f );
+#if !defined(MATH_DISABLE_ASSERTS)
+        const T l = rot.lengthsqr4();
+        MATH_ASSERT( l > 0.99f && l < 1.01f );
+#endif
         return *this;
     }
 
@@ -651,6 +699,14 @@ class OrientedBox
 public:
     RaveTransform<T> transform;
     RaveVector<T> extents;
+
+    virtual bool operator==(const OrientedBox& other) const {
+        return transform == other.transform && extents == other.extents;
+    }
+
+    virtual bool operator!=(const OrientedBox& other) const {
+        return !operator==(other);
+    }
 };
 
 /// \brief An oriented bounding box.
@@ -713,8 +769,7 @@ public:
     }
 
     template <typename U>
-    RaveCameraIntrinsics<T>& operator=(const RaveCameraIntrinsics<U>&r)
-    {
+    RaveCameraIntrinsics<T>& operator=(const RaveCameraIntrinsics<U>&r) {
         distortion_model = r.distortion_model;
         distortion_coeffs.resize(r.distortion_coeffs.size());
         std::copy(r.distortion_coeffs.begin(),r.distortion_coeffs.end(),distortion_coeffs.begin());
@@ -723,6 +778,22 @@ public:
         fy = r.fy;
         cx = r.cx;
         cy = r.cy;
+    }
+
+    template<typename U>
+    bool operator==(const RaveCameraIntrinsics<U>& r) const {
+        return distortion_model == r.distortion_model
+            && distortion_coeffs == r.distortion_coeffs
+            && focal_length == r.focal_length
+            && fx == r.fx
+            && fy == r.fy
+            && cx == r.cx
+            && cy == r.cy;
+    }
+
+    template<typename U>
+    bool operator!=(const RaveCameraIntrinsics<U>& other) const {
+        return !operator==(other);
     }
 
     T fx,fy, cx,cy;

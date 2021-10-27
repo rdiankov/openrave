@@ -19,6 +19,7 @@ namespace bs = boost::spirit;
 namespace bs = boost::spirit::classic;
 #endif
 
+#include <stdint.h> // uint64_t
 #include <vector>
 #include <iostream>
 
@@ -388,7 +389,7 @@ void PrintToken_class::operator()(Token const& token) const {
     } OutText;
 
     std::cout << token.filePos << ": ";
-    switch(int(token.id & TokenTypeMask)) {
+    switch(uint64_t(token.id & TokenTypeMask)) {
     case IdentifierTokenType:
             if (token.id >= Kwd_last) {
                                   OutText("Identifier: ", token); break;
@@ -406,7 +407,7 @@ void PrintToken_class::operator()(Token const& token) const {
 }
 
 void OutToken_class::operator()(Token const& token) const {
-    switch(int(token.id & TokenTypeMask)) {
+    switch(uint64_t(token.id & TokenTypeMask)) {
         case IdentifierTokenType: std::cout << token.text; break;
         case OperatorTokenType  : std::cout << token.text; break;
         case IntegerTokenType   : std::cout << token.text; break;

@@ -119,7 +119,8 @@ public:
         return _geometrygroup;
     }
 
-    virtual void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
+    virtual bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
+        return false;
     }
 
     virtual const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const {

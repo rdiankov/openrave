@@ -114,7 +114,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
             }
         }
 
-        RAVELOG_DEBUG(str(boost::format("BaseManipulation: using %s planner\n")%_strRRTPlannerName));
+        RAVELOG_DEBUG_FORMAT("env=%d, BaseManipulation: using %s planner", GetEnv()->GetId()%_strRRTPlannerName);
         return 0;
     }
 
@@ -131,10 +131,10 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 protected:
 
     inline boost::shared_ptr<BaseManipulation> shared_problem() {
-        return boost::dynamic_pointer_cast<BaseManipulation>(shared_from_this());
+        return boost::static_pointer_cast<BaseManipulation>(shared_from_this());
     }
     inline boost::shared_ptr<BaseManipulation const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<BaseManipulation const>(shared_from_this());
+        return boost::static_pointer_cast<BaseManipulation const>(shared_from_this());
     }
 
     bool Traj(ostream& sout, istream& sinput)
@@ -328,7 +328,7 @@ protected:
         }
 
         TrajectoryBasePtr poutputtraj = RaveCreateTrajectory(GetEnv(),"");
-        if( !planner->PlanPath(poutputtraj) ) {
+        if( !planner->PlanPath(poutputtraj).GetStatusCode() ) {
             return false;
         }
         if( params->ignorefirstcollision == 0 && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
@@ -453,7 +453,6 @@ protected:
 
         if( usedynamicsconstraints ) {
             // use dynamics constraints, so remove the old path constraint function
-            params->_checkpathconstraintsfn.clear();
             std::list<KinBodyPtr> listCheckBodies;
             listCheckBodies.push_back(robot);
             planningutils::DynamicsCollisionConstraintPtr dynamics(new planningutils::DynamicsCollisionConstraint(params, listCheckBodies, 0xffffffff));
@@ -527,7 +526,7 @@ protected:
                 return false;
             }
 
-            if( !rrtplanner->PlanPath(ptraj) ) {
+            if( !rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
                 RAVELOG_WARN("PlanPath failed\n");
             }
             else {
@@ -600,6 +599,7 @@ protected:
         dReal goalsampleprob = 0.1;
         int nGoalMaxTries=10;
         std::vector<dReal> vinitialconfig;
+        std::vector<dReal> vfreevalues;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -743,6 +743,14 @@ protected:
                     sinput >> *itvalue;
                 }
             }
+            else if (cmd == "freevalues") {
+                size_t num=0;
+                sinput >> num;
+                vfreevalues.resize(num);
+                FOREACH(itvalue, vfreevalues) {
+                    sinput >> *itvalue;
+                }
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -777,7 +785,7 @@ protected:
             params->_sPostProcessingPlanner = "shortcut_linear";
             params->_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
             vector<dReal> vdelta(params->vinitialconfig.size(),0);
-            if( !params->_neighstatefn(params->vinitialconfig,vdelta,0)) {
+            if( params->_neighstatefn(params->vinitialconfig,vdelta,0) == NSS_Failed ) {
                 throw OPENRAVE_EXCEPTION_FORMAT0("initial configuration does not follow constraints",ORE_InconsistentConstraints);
             }
         }
@@ -785,7 +793,8 @@ protected:
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
 
         vector<dReal> vgoal;
-        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals,goalsamples,nGoalMaxTries);
+        const bool searchfreeparameters = vfreevalues.empty();
+        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals,goalsamples,nGoalMaxTries, 1, searchfreeparameters, IKFO_CheckEnvCollisions, vfreevalues);
         goalsampler.SetJitter(jitterikparam);
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
@@ -848,7 +857,7 @@ protected:
                 return false;
             }
 
-            if( rrtplanner->PlanPath(ptraj) ) {
+            if( rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
                 bSuccess = true;
                 RAVELOG_DEBUG("finished planning\n");
                 break;

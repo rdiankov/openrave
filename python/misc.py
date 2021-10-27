@@ -14,7 +14,7 @@
 """Misc openravepy functions. Need to explicitly import to use them.
 """
 from __future__ import with_statement # for python 2.5
-from . import openravepy_int, openravepy_ext
+from . import openravepy_int, openravepy_ext, OpenRAVEException
 import os.path
 from sys import platform as sysplatformname
 from sys import stdout
@@ -22,7 +22,7 @@ import numpy
 try:
     from itertools import izip
 except ImportError:
-    pass
+    izip = zip
 
 try:
     from threading import Thread
@@ -58,8 +58,8 @@ except ImportError:
         return curdir if not rel_list else join(*rel_list)
 
 def LoadTrajectoryFromFile(env,trajfile,trajtype=''):
-    with open(trajfile,'r') as f:
-        traj = openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(f.read())
+    traj = openravepy_int.RaveCreateTrajectory(env,trajtype)
+    traj.LoadFromFile(trajfile)
     return traj
 
 def InitOpenRAVELogging(stream=stdout):
@@ -144,7 +144,7 @@ class OpenRAVEGlobalArguments:
         ogroup.add_option('--module', action="append",type='string',dest='_modules',default=[],nargs=2,
                           help='module to load, can specify multiple modules. Two arguments are required: "name" "args".')
         ogroup.add_option('--level','-l','--log_level', action="store",type='string',dest='_level',default=None,
-                          help='Debug level, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems())))
+                          help='Debug level')#, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.items())))
         if testmode:
             ogroup.add_option('--testmode', action="store_true",dest='testmode',default=False,
                               help='if set, will run the program in a finite amount of time and spend computation time validating results. Used for testing')
@@ -153,7 +153,7 @@ class OpenRAVEGlobalArguments:
     def parseGlobal(options,**kwargs):
         """Parses all global options independent of the environment"""
         if options._level is not None:
-            for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems():
+            for debuglevel,debugname in openravepy_int.DebugLevel.values.items():
                 if (not options._level.isdigit() and options._level.lower() == debugname.name.lower()) or (options._level.isdigit() and int(options._level) == int(debuglevel)):
                     openravepy_int.RaveSetDebugLevel(debugname)
                     break
@@ -168,28 +168,28 @@ class OpenRAVEGlobalArguments:
                 cc = openravepy_int.RaveCreateCollisionChecker(env,options._collision)
                 if cc is not None:
                     env.SetCollisionChecker(cc)
-        except openravepy_ext.openrave_exception, e:
+        except OpenRAVEException as e:
             log.warn(e)
         try:
             if options._physics:
                 ph = openravepy_int.RaveCreatePhysicsEngine(env,options._physics)
                 if ph is not None:
                     env.SetPhysicsEngine(ph)
-        except openravepy_ext.openrave_exception, e:
+        except OpenRAVEException as e:
             log.warn(e)
         try:
             if options._server:
                 sr = openravepy_int.RaveCreateModule(env,options._server)
                 if sr is not None:
                     env.Add(sr,True,'%d'%options._serverport)
-        except openravepy_ext.openrave_exception, e:
+        except OpenRAVEException as e:
             log.warn(e)
         for name,args in options._modules:
             try:
                 module = openravepy_int.RaveCreateModule(env,name)
                 if module is not None:
                     env.Add(module,True,args)
-            except openravepy_ext.openrave_exception, e:
+            except OpenRAVEException as e:
                 log.warn(e)
         try:
             viewername=None
@@ -203,7 +203,7 @@ class OpenRAVEGlobalArguments:
                 return viewername
             elif viewername is not None:
                 env.SetViewer(viewername)
-        except openravepy_ext.openrave_exception, e:
+        except OpenRAVEException as e:
             log.warn(e)
             
     @staticmethod
@@ -236,7 +236,7 @@ class OpenRAVEGlobalArguments:
             openravepy_int.RaveLoadPlugin(plugin)
         OpenRAVEGlobalArguments.parseGlobal(options,**kwargs)
         if createenv is None:
-            raise openravepy_ext.openrave_exception('failed to create environment')
+            raise OpenRAVEException('failed to create environment')
         env = createenv()
         viewername = OpenRAVEGlobalArguments.parseEnvironment(options,env,returnviewer=True,**kwargs)
         SetViewerUserThread(env,viewername,lambda: userfn(env,options))
@@ -313,6 +313,15 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
         colors = numpy.minimum(1.0, numpy.maximum(0.0, colors + numpy.tile(coloradd,(len(colors),1))))
     return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=colors)
 
+def DrawLabel(env,label="Label",worldPosition=numpy.array([0,0,0])):
+    """draws a string label at position specified by worldPosition.
+    
+    :param env: Environment
+    :param label: string to be used in the label
+    :param worldPosition: a 3-element vector for positional offset relative to the root world transform
+    """
+    return env.drawlabel(label, worldPosition)
+
 def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     """draws an IkParameterization
     
@@ -339,6 +348,19 @@ def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
         T = openravepy_int.matrixFromAxisAngle([0,0,angle])
         T[0:3,3] = pos
         return DrawAxes(env,T,dist,linewidth,coloradd)
+
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationYAxisAngleXNorm4D:
+        pos,angle = ikparam.GetTranslationYAxisAngleXNorm4D()
+        #T = numpy.dot([[1,0,0,0],[0,0,1,0],[0,-1,0,0],[0,0,0,1]], openravepy_int.matrixFromAxisAngle([angle, 0,0]))
+        T = openravepy_int.matrixFromAxisAngle([angle, 0,0])
+        T[0:3,3] = pos
+        return [DrawAxes(env,T,dist,linewidth,coloradd)]
+
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationZAxisAngleYNorm4D:
+        pos,angle = ikparam.GetTranslationZAxisAngleYNorm4D()
+        T = openravepy_int.matrixFromAxisAngle([0,angle,0])
+        T[0:3,3] = pos
+        return [DrawAxes(env,T,dist,linewidth,coloradd)]
     
     else:
         raise NotImplemented('iktype %s'%str(ikparam.GetType()))
@@ -384,7 +406,14 @@ def DrawIkparam2(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     
     elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationYAxisAngleXNorm4D:
         pos,angle = ikparam.GetTranslationYAxisAngleXNorm4D()
-        T = numpy.dot([[1,0,0,0],[0,0,1,0],[0,-1,0,0],[0,0,0,1]], openravepy_int.matrixFromAxisAngle([angle, 0,0]))
+        #T = numpy.dot([[1,0,0,0],[0,0,1,0],[0,-1,0,0],[0,0,0,1]], openravepy_int.matrixFromAxisAngle([angle, 0,0]))
+        T = openravepy_int.matrixFromAxisAngle([angle, 0,0])
+        T[0:3,3] = pos
+        return [DrawAxes(env,T,dist,linewidth,coloradd)]
+
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationZAxisAngleYNorm4D:
+        pos,angle = ikparam.GetTranslationZAxisAngleYNorm4D()
+        T = openravepy_int.matrixFromAxisAngle([0,angle,0])
         T[0:3,3] = pos
         return [DrawAxes(env,T,dist,linewidth,coloradd)]
     

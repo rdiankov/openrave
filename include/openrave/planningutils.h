@@ -47,9 +47,10 @@ OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxItera
  */
 OPENRAVE_API int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters, int maxiterations=5000, dReal maxjitter=0.015, dReal perturbation=1e-5);
 
-/** \brief validates a trajectory with respect to the planning constraints. <b>[multi-thread safe]</b>
+/** \brief validates a trajectory with respect to the planning constraints.
 
     checks internal data structures and verifies that all trajectory via points do not violate joint position, velocity, and acceleration limits.
+    Assume that the environment that is used to create parameters is locked. (If the given parameters is not initialized, will attempt to create a new PlannerParameters with trajectory->GetEnv(). In this case, trajectory->GetEnv() should be locked.)
     \param parameters the planner parameters passed to the planner that returned the trajectory. If not initialized, will attempt to create a new PlannerParameters structure from trajectory->GetConfigurationSpecification()
     \param trajectory trajectory of points to be checked
     \param samplingstep If == 0, then will only test the supports points in trajectory->GetPoints(). If > 0, then will sample the trajectory at this time interval and check that smoothness is satisfied along with segment constraints.
@@ -148,11 +149,11 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, int planningoptions=0);
 
 protected:
     void _UpdateParameters();
-    
+
     RobotBasePtr _robot;
     PlannerBasePtr _planner;
     PlannerBase::PlannerParametersPtr _parameters;
@@ -188,11 +189,11 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, bool hastimestamps=false);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, bool hastimestamps=false, int planningoptions=0);
 
 protected:
     void _UpdateParameters();
-    
+
     RobotBasePtr _robot;
     PlannerBasePtr _planner;
     PlannerBase::PlannerParametersPtr _parameters;
@@ -246,7 +247,7 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, int planningoptions=0);
 
 protected:
     std::string _plannername, _extraparameters;
@@ -426,8 +427,8 @@ public:
     /// \brief if using dynamics limiting, choose whether to use the nominal torque or max instantaneous torque.
     ///
     /// \param torquelimitmode 1 if should use instantaneous max torque, 0 if should use nominal torque
-    virtual void SetTorqueLimitMode(int torquelimitmode);
-    
+    virtual void SetTorqueLimitMode(DynamicsConstraintsType torquelimitmode);
+
     /// \brief set user check fucntions
     ///
     /// Two functions can be set, one to be called before check collision and one after.
@@ -456,11 +457,11 @@ protected:
     virtual void _PrintOnFailure(const std::string& prefix);
 
     PlannerBase::PlannerParametersWeakConstPtr _parameters;
-    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vperturbedvalues, _vcoeff2, _vcoeff1, _vprevtempconfig, _vprevtempvelconfig; ///< in configuration space
+    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vperturbedvalues, _vcoeff2, _vcoeff1, _vprevtempconfig, _vprevtempvelconfig, _vtempconfig2, _vdiffconfig, _vdiffvelconfig, _vstepconfig; ///< in configuration space
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckBodies;
     int _filtermask;
-    int _torquelimitmode; ///< 1 if should use instantaneous max torque, 0 if should use nominal torque
+    DynamicsConstraintsType _torquelimitmode; ///< 1 if should use instantaneous max torque, 0 if should use nominal torque
     dReal _perturbation;
     boost::array< boost::function<bool() >, 2> _usercheckfns;
 
@@ -572,7 +573,7 @@ protected:
 class OPENRAVE_API ManipulatorIKGoalSampler
 {
 public:
-    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1, bool searchfreeparameters=true, int ikfilteroptions=IKFO_CheckEnvCollisions);
+    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1, bool searchfreeparameters=true, int ikfilteroptions=IKFO_CheckEnvCollisions, const std::vector<dReal>& freevalues = std::vector<dReal>());
     virtual ~ManipulatorIKGoalSampler() {
     }
 
@@ -623,6 +624,7 @@ protected:
     int _tempikindex; ///< if _vikreturns.size() > 0, points to the original ik index of those solutions
     int _ikfilteroptions;
     bool _searchfreeparameters;
+    std::vector<dReal> _vfreegoalvalues;
 };
 
 typedef boost::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;

@@ -313,7 +313,7 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
                         }
                     }
                 }
-                _vNextLevelNodes.push_back(make_pair(*itchild, curdist2));
+                _vNextLevelNodes.emplace_back(*itchild,  curdist2);
                 if( minchilddist2 > curdist2 ) {
                     minchilddist2 = curdist2;
                 }
@@ -402,7 +402,7 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
                     }
                 }
                 if( curdist2 < comparedist2 ) {
-                    _vNextLevelNodes.push_back(make_pair(*itchild, curdist2));
+                    _vNextLevelNodes.emplace_back(*itchild,  curdist2);
                     if( Sqr(minchilddist) > curdist2 ) {
                         minchilddist = RaveSqrt(curdist2);
                         comparedist2 = Sqr(minchilddist + fLevelBound);
@@ -494,7 +494,7 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
                 FOREACHC(itchild, itcurrentnode->first->_vchildren) {
                     dReal curdist = _ComputeDistance2(nodein->GetConfigurationState(), (*itchild)->GetConfigurationState());
                     if( curdist <= fChildLevelBound2 ) {
-                        _vNextLevelNodes.push_back(make_pair(*itchild, curdist));
+                        _vNextLevelNodes.emplace_back(*itchild,  curdist);
                     }
                 }
             }
@@ -1146,7 +1146,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
 
         _penv->GetBodies(_vnewenvbodies);
         FOREACHC(itbody, _vnewenvbodies) {
-            if( *itbody != pstaterobot && !pstaterobot->IsGrabbing(*itbody) ) {
+            if( *itbody != pstaterobot && !pstaterobot->IsGrabbing(**itbody) ) {
                 KinBodyCachedDataPtr pinfo(new KinBodyCachedData());
                 pinfo->_changehandle = (*itbody)->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, boost::bind(&ConfigurationCache::_UpdateUntrackedBody, this, *itbody));
                 (*itbody)->SetUserData(_userdatakey, pinfo);

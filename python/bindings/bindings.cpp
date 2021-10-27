@@ -13,7 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "bindings.h"
+#include <openravepy/bindings.h>
 
 namespace mydetail {
 template< typename T >
@@ -23,20 +23,38 @@ struct get_dtype
         throw std::logic_error("get_dtype not specialised for this type");
     }
 };
-
-#define DECLARE_DTYPE_FOR( type, dtype ) template<> struct get_dtype<type> { static const char * name() { return dtype; } };
-
-DECLARE_DTYPE_FOR( double, "float64" )
-DECLARE_DTYPE_FOR( float, "float32" )
-DECLARE_DTYPE_FOR( int, "int32" )
-DECLARE_DTYPE_FOR( uint32_t, "uint32" )
-DECLARE_DTYPE_FOR( int64_t, "int64" )
-DECLARE_DTYPE_FOR( uint64_t, "uint64" )
-
-}
+} // namespace mydetail
 
 namespace openravepy {
 
+constexpr char select_dtype<double>::type[];
+constexpr char select_dtype<float>::type[];
+constexpr char select_dtype<int>::type[];
+constexpr char select_dtype<int8_t>::type[];
+constexpr char select_dtype<uint8_t>::type[];
+constexpr char select_dtype<uint16_t>::type[];
+constexpr char select_dtype<uint32_t>::type[];
+constexpr char select_dtype<uint64_t>::type[];
+constexpr char select_dtype<bool>::type[];
+
+using py::object;
+using py::list;
+using py::tuple;
+using py::type_id;
+using py::handle;
+using py::extract;
+using py::class_;
+using py::init;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::borrowed;
+using py::to_python_converter;;
+using py::incref;
+using py::allow_null;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 // namespace impl
 template< typename MultiArrayType >
 struct numpy_multi_array_converter
@@ -57,7 +75,7 @@ struct numpy_multi_array_converter
 
     static void register_from_python()
     {
-        converter::registry::push_back(&convertible,&construct,type_id<multi_array_t>());
+        py::converter::registry::push_back(&convertible,&construct,type_id<multi_array_t>());
     }
 
     static void* convertible( PyObject * obj )
@@ -84,10 +102,10 @@ struct numpy_multi_array_converter
         (c.*pm) = a;
     }
 
-    static void construct(PyObject* obj, converter::rvalue_from_python_stage1_data* data )
+    static void construct(PyObject* obj, py::converter::rvalue_from_python_stage1_data* data )
     {
         //get the storage
-        typedef converter::rvalue_from_python_storage< multi_array_t > storage_t;
+        typedef py::converter::rvalue_from_python_storage< multi_array_t > storage_t;
         storage_t * the_storage = reinterpret_cast< storage_t * >( data );
         void * memory_chunk = the_storage->storage.bytes;
         //new (memory_chunk) multi_array_t(obj);
@@ -101,11 +119,11 @@ struct numpy_multi_array_converter
         //extract each element from numpy array and put in c array
         index i( a->num_dimensions(), 0 );
         do {
-            boost::python::list numpy_index;
+            list numpy_index;
             for( unsigned dim = 0; a->num_dimensions() != dim; ++dim ) {
                 numpy_index.append( i[ dim ] );
             }
-            (*a)(i) = extract<typename multi_array_t::element>(py_obj[ boost::python::tuple( numpy_index ) ]);
+            (*a)(i) = extract<typename multi_array_t::element>(py_obj[ tuple( numpy_index ) ]);
         }
         while( increment_index( i, *a ) );
 
@@ -124,7 +142,7 @@ struct numpy_multi_array_converter
         }
 
         //create a numpy array to put it in
-        boost::python::list extents;
+        list extents;
         for( unsigned dim = 0; c_array.num_dimensions() != dim; ++dim ) {
             extents.append( c_array.shape()[ dim ] );
         }
@@ -133,7 +151,7 @@ struct numpy_multi_array_converter
         //copy the elements
         index i( c_array.num_dimensions(), 0 );
         do {
-            boost::python::list numpy_index;
+            list numpy_index;
             for( unsigned dim = 0; c_array.num_dimensions() != dim; ++dim ) {
                 numpy_index.append(i[dim]);
             }
@@ -170,14 +188,13 @@ protected:
     }
 };
 
-
 /// conversion from unicode objects: http://wiki.python.org/moin/boost.python/EmbeddingPython
 /// eventually we should use an object that holds the encoding
 struct stdstring_from_python_str
 {
     stdstring_from_python_str()
     {
-        boost::python::converter::registry::push_back(&convertible, &construct, boost::python::type_id<std::string>());
+        py::converter::registry::push_back(&convertible, &construct, type_id<std::string>());
     }
 
     static void* convertible(PyObject* obj)
@@ -185,20 +202,28 @@ struct stdstring_from_python_str
         return (PyString_Check(obj) || PyUnicode_Check(obj)) ? obj : 0;
     }
 
-    static void construct(PyObject* obj, boost::python::converter::rvalue_from_python_stage1_data* data)
+    static void construct(PyObject* obj, py::converter::rvalue_from_python_stage1_data* data)
     {
         if(PyString_Check(obj)) {
+#if PY_MAJOR_VERSION >= 3
+            const char* value = PyUnicode_AsUTF8(obj);
+#else
             const char* value = PyString_AsString(obj);
+#endif
             //MY_CHECK(value,translate("Received null string pointer from Python"));
-            void* storage = ((boost::python::converter::rvalue_from_python_storage<std::string>*)data)->storage.bytes;
+            void* storage = ((py::converter::rvalue_from_python_storage<std::string>*)data)->storage.bytes;
             new (storage) std::string(value);
             data->convertible = storage;
         }
         else if(PyUnicode_Check(obj)) {
-            boost::python::handle<> utf8(boost::python::allow_null(PyUnicode_AsUTF8String(obj)));
+            handle<> utf8(allow_null(PyUnicode_AsUTF8String(obj)));
             //MY_CHECK(utf8,translate("Could not convert Python unicode object to UTF8 string"));
-            void* storage = ((boost::python::converter::rvalue_from_python_storage<std::string>*)data)->storage.bytes;
+            void* storage = ((py::converter::rvalue_from_python_storage<std::string>*)data)->storage.bytes;
+#if PY_MAJOR_VERSION >= 3
+            const char* utf8v = PyUnicode_AsUTF8(utf8.get());
+#else
             const char* utf8v = PyString_AsString(utf8.get());
+#endif
             //MY_CHECK(utf8v,translate("Received null string from utf8 string"));
             new (storage) std::string(utf8v);
             data->convertible = storage;
@@ -208,9 +233,19 @@ struct stdstring_from_python_str
         }
     }
 };
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_python_bindings(py::module &m)
+#else
 void init_python_bindings()
+#endif
 {
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals; // "..."_a
+#else
     numpy_multi_array_converter< boost::multi_array<float,1> >::register_to_and_from_python();
     numpy_multi_array_converter< boost::multi_array<float,2> >::register_to_and_from_python();
     numpy_multi_array_converter< boost::multi_array<float,3> >::register_to_and_from_python();
@@ -221,11 +256,19 @@ void init_python_bindings()
     numpy_multi_array_converter< boost::multi_array<int,2> >::register_to_and_from_python();
 
     stdstring_from_python_str();
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
-    class_<PyVoidHandle, boost::shared_ptr<PyVoidHandle> >("VoidHandle")
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyVoidHandle, OPENRAVE_SHARED_PTR<PyVoidHandle> >(m, "VoidHandle")
+    .def(init<>())
+    // error: static assertion failed: Holder classes are only supported for custom types, so cannot do
+    // .def(init<OPENRAVE_SHARED_PTR<void>>(), "handle"_a)
+#else
+    class_<PyVoidHandle, OPENRAVE_SHARED_PTR<PyVoidHandle> >("VoidHandle")
+#endif
     .def("close",&PyVoidHandle::Close,"deprecated")
     .def("Close",&PyVoidHandle::Close)
     ;
 }
 
-}
+} // namespace openravepy
