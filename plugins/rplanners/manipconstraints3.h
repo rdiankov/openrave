@@ -467,14 +467,14 @@ public:
         }
 
         if( 0 ) {
-            std::stringstream ss;
-            ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
-            ss << "criticalpoints=[";
+            _sslog.str(""); _sslog.clear();
+            _sslog << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+            _sslog << "criticalpoints=[";
             FOREACHC(itCoord, vAllCriticalCoords) {
-                ss << itCoord->point << ",";
+                _sslog << itCoord->point << ",";
             }
-            ss << "]";
-            RAVELOG_DEBUG_FORMAT("chunk.duration=%.15e; %s; fTimeWhenInvalid=%.15e; maxActualManipSpeed=%.15e; maxActualManipAccel=%.15e", chunkIn.duration%ss.str()%fTimeWhenInvalid%maxActualManipSpeed%maxActualManipAccel);
+            _sslog << "]";
+            RAVELOG_DEBUG_FORMAT("chunk.duration=%.15e; %s; fTimeWhenInvalid=%.15e; maxActualManipSpeed=%.15e; maxActualManipAccel=%.15e", chunkIn.duration%_sslog.str()%fTimeWhenInvalid%maxActualManipSpeed%maxActualManipAccel);
         }
 
         return PiecewisePolynomialsInternal::CheckReturn(retcode, fReductionFactor, maxActualManipSpeed, maxActualManipAccel);
@@ -501,6 +501,7 @@ private:
     std::vector<PiecewisePolynomialsInternal::Coordinate> _vcoords1, _vcoords2;
     //@}
 
+    std::stringstream _sslog;
 };
 
 } // end namespace rplanners
