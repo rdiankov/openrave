@@ -234,6 +234,12 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
                 bSuccess = true;
                 break; // successful
             }
+            else {
+                if( FuzzyEquals(vmax, vmin, epsilon) ) {
+                    // Cannot do anything more since vmax and vmin are equal.
+                    return PolynomialCheckReturn::PCR_GenericError;
+                }
+            }
         }
     } // end for
 
