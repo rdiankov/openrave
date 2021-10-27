@@ -13,6 +13,8 @@
 // If not, see <http://www.gnu.org/licenses/>.
 #include "generalrecursiveinterpolator.h"
 
+// #define GENERALINTERPOLATOR_PROGRESS_DEBUG
+
 namespace OpenRAVE {
 
 namespace RampOptimizer = RampOptimizerInternal;
@@ -143,6 +145,10 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     dReal v = vmax + 1;
     dReal vHat = vmax + 1;
 
+#ifdef GENERALINTERPOLATOR_PROGRESS_DEBUG
+    RAVELOG_INFO_FORMAT("env=%d, new problem with degree=%d; deltaX=%.15e; vmin=%.15e; vmax=%.15e; fixedDuration=%.15e", envid%degree%deltaX%vmin%vmax%fixedDuration);
+#endif
+
     // Step 4
     const size_t maxIters = 1000; // to prevent infinite loops
     dReal vLast;
@@ -190,6 +196,10 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         dReal delta = deltaX - deltaX1 - deltaX3;
         duration2 = FuzzyZero(v, g_fPolynomialEpsilon) ? 0.0 : delta/v;
 
+#ifdef GENERALINTERPOLATOR_PROGRESS_DEBUG
+        RAVELOG_DEBUG_FORMAT("env=%d, degree=%d; iter=%d; deltaX1=%.15e; deltaX3=%.15e; deltaX=%.15e; delta=%.15e; duration2=%.15e;", envid%degree%iter%deltaX1%deltaX3%deltaX%delta%duration2);
+#endif
+
         // Step 11
         if( duration2 >= 0 ) {
             vHat = v;
@@ -228,6 +238,9 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         else {
             vLast = v;
         }
+#ifdef GENERALINTERPOLATOR_PROGRESS_DEBUG
+        RAVELOG_DEBUG_FORMAT("env=%d, degree=%d; iter=%d; vmin=%.15e; vmax=%.15e; vLast=%.15e; v=%.15e; delta=%.15e", envid%degree%iter%vmin%vmax%vLast%v%delta);
+#endif
 
         if( FuzzyEquals(vLast, v, epsilon) ) {
             if( (fixedDuration == 0) || FuzzyEquals(fixedDuration, totalDuration, g_fEpsilonForTimeInstant) ) {
@@ -235,6 +248,9 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
                 break; // successful
             }
             else {
+#ifdef GENERALINTERPOLATOR_PROGRESS_DEBUG
+                RAVELOG_DEBUG_FORMAT("env=%d, fixedDuration=%.15e; duration diff=%.15e", envid%fixedDuration%(fixedDuration - totalDuration));
+#endif
                 if( FuzzyEquals(vmax, vmin, epsilon) ) {
                     // Cannot do anything more since vmax and vmin are equal.
                     return PolynomialCheckReturn::PCR_GenericError;
@@ -250,11 +266,11 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
 
     // Check soundness
     if( !FuzzyEquals(pwpoly1.Eval(pwpoly1.GetDuration()), v, epsilonFinalValidation) ) {
-        RAVELOG_WARN_FORMAT("env=%d, interpolation successful but v1(%f)=%.15f is different from v=%.15f", envid%pwpoly1.GetDuration()%pwpoly1.Eval(pwpoly1.GetDuration())%v);
+        RAVELOG_WARN_FORMAT("env=%d, interpolation successful but v1(%f)=%.15e is different from v=%.15e", envid%pwpoly1.GetDuration()%pwpoly1.Eval(pwpoly1.GetDuration())%v);
         return PolynomialCheckReturn::PCR_GenericError;
     }
     if( !FuzzyEquals(pwpoly3.Eval(0), v, epsilonFinalValidation) ) {
-        RAVELOG_WARN_FORMAT("env=%d, interpolation successful but v3(0)=%.15f is different from v=%.15f", envid%pwpoly3.Eval(0)%v);
+        RAVELOG_WARN_FORMAT("env=%d, interpolation successful but v3(0)=%.15e is different from v=%.15e", envid%pwpoly3.Eval(0)%v);
         return PolynomialCheckReturn::PCR_GenericError;
     }
 
