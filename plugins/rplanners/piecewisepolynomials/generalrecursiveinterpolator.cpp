@@ -194,7 +194,22 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
 
         // Step 10
         dReal delta = deltaX - deltaX1 - deltaX3;
-        duration2 = FuzzyZero(v, g_fPolynomialEpsilon) ? 0.0 : delta/v;
+
+        // Note: In the paper, there is no explicit consideration for the case when v is zero.
+        bool bFreeDuration2 = false;
+        if( FuzzyZero(v, g_fPolynomialEpsilon) ) {
+            // In this case, v == 0 so we are free to choose the duration of this middle part.
+            if( fixedDuration > 0 ) {
+                bFreeDuration2 = true;
+                duration2 = fixedDuration - (pwpoly1.GetDuration() + pwpoly3.GetDuration());
+            }
+            else {
+                duration2 = 0;
+            }
+        }
+        else {
+            duration2 = delta/v;
+        }
 
 #ifdef GENERALINTERPOLATOR_PROGRESS_DEBUG
         RAVELOG_DEBUG_FORMAT("env=%d, degree=%d; iter=%d; deltaX1=%.15e; deltaX3=%.15e; deltaX=%.15e; delta=%.15e; duration2=%.15e;", envid%degree%iter%deltaX1%deltaX3%deltaX%delta%duration2);
