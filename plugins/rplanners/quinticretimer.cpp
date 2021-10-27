@@ -45,8 +45,9 @@ public:
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
-        _interpolator.Initialize(_parameters->GetDOF(), GetEnv()->GetId());
-        _translationInterpolator.Initialize(3, GetEnv()->GetId());
+        _pinterpolator.reset(new PiecewisePolynomials::QuinticInterpolator(_parameters->GetDOF(), GetEnv()->GetId()));
+        _ptranslationInterpolator.reset(new PiecewisePolynomials::QuinticInterpolator(3, GetEnv()->GetId()));
+        // TODO: _pikInterpolator
         _checker.Initialize(_parameters->GetDOF(), GetEnv()->GetId());
         _trajXmlId = ptraj->GetXMLId();
         return TrajectoryRetimer3::PlanPath(ptraj);
@@ -187,12 +188,12 @@ protected:
             size_t maxSlowDownTries = 10;
             for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
                 if( bZeroVelAccel ) {
-                    _interpolator.ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(_v0pos, _v1pos, vellimits, accellimits, jerklimits, _cacheInterpolatedChunks);
+                    _pinterpolator->ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(_v0pos, _v1pos, vellimits, accellimits, jerklimits, _cacheInterpolatedChunks);
                     bSuccess = true;
                 }
                 else {
                     dReal tryDuration = 100.0; // TODO: this is bad
-                    PiecewisePolynomials::PolynomialCheckReturn ret = _interpolator.ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, info->_vConfigLowerLimit, info->_vConfigUpperLimit, vellimits, accellimits, jerklimits, tryDuration, _cacheInterpolatedChunks);
+                    PiecewisePolynomials::PolynomialCheckReturn ret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, info->_vConfigLowerLimit, info->_vConfigUpperLimit, vellimits, accellimits, jerklimits, tryDuration, _cacheInterpolatedChunks);
                     if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
                         // Stop right away
                         break;
@@ -233,12 +234,12 @@ protected:
         else {
             // No manip constraint.
             if( bZeroVelAccel ) {
-                _interpolator.ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(_v0pos, _v1pos, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit, _cacheInterpolatedChunks);
+                _pinterpolator->ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(_v0pos, _v1pos, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit, _cacheInterpolatedChunks);
                 bSuccess = true;
             }
             else {
                 dReal tryDuration = 100.0; // TODO: this is bad.
-                PiecewisePolynomials::PolynomialCheckReturn ret = _interpolator.ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, info->_vConfigLowerLimit, info->_vConfigUpperLimit, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit, tryDuration, _cacheInterpolatedChunks);
+                PiecewisePolynomials::PolynomialCheckReturn ret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, info->_vConfigLowerLimit, info->_vConfigUpperLimit, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit, tryDuration, _cacheInterpolatedChunks);
                 if( ret == PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
                     bSuccess = true;
                 }
@@ -412,7 +413,7 @@ protected:
                 RAVELOG_WARN_FORMAT("env=%s, delta time is really ill-conditioned: %e", GetEnv()->GetNameId()%deltatime);
             }
 
-            PiecewisePolynomials::PolynomialCheckReturn ret = _interpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration
+            PiecewisePolynomials::PolynomialCheckReturn ret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration
                                                                   (_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, deltatime,
                                                                   info->_vConfigLowerLimit, info->_vConfigUpperLimit,
                                                                   info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit,
@@ -498,7 +499,7 @@ protected:
     // Members
     //
     std::string _trajXmlId;
-    PiecewisePolynomials::QuinticInterpolator _interpolator, _translationInterpolator, _ikInterpolator;
+    PiecewisePolynomials::InterpolatorBasePtr _pinterpolator, _ptranslationInterpolator, _pikInterpolator;
     PiecewisePolynomials::PolynomialChecker _checker;
 
     // cache

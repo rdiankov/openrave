@@ -25,9 +25,6 @@ class CubicInterpolator : public InterpolatorBase {
 public:
     /*
      */
-    CubicInterpolator()
-    {
-    }
     CubicInterpolator(size_t ndof, int envid=0);
     ~CubicInterpolator()
     {

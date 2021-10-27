@@ -25,9 +25,6 @@ class QuinticInterpolator : public InterpolatorBase {
 public:
     /*
      */
-    QuinticInterpolator()
-    {
-    }
     QuinticInterpolator(size_t ndof, int envid=0);
     ~QuinticInterpolator()
     {

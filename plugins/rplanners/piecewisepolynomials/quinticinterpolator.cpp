@@ -19,6 +19,7 @@ namespace PiecewisePolynomialsInternal {
 
 QuinticInterpolator::QuinticInterpolator(size_t ndof, int envid)
 {
+    __description = ":Interface Author: Puttichai Lertkultanon\n\nRoutines for quintic polynomial interpolation with specified boundary conditions.";
     this->Initialize(ndof, envid);
 }
 

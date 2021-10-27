@@ -19,6 +19,7 @@ namespace PiecewisePolynomialsInternal {
 
 CubicInterpolator::CubicInterpolator(size_t ndof, int envid)
 {
+    __description = ":Interface Author: Puttichai Lertkultanon\n\nRoutines for cubic polynomial interpolation with specified boundary conditions.";
     this->Initialize(ndof, envid);
 }
 

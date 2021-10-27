@@ -27,6 +27,7 @@ class CubicSmoother : public JerkLimitedSmootherBase {
 public:
     CubicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : JerkLimitedSmootherBase(penv, sinput)
     {
+        __description = ":Interface Author: Puttichai Lertkultanon\n\nTime-parameterizes the given path using cubic polynomials and performs trajectory smoothing.";
     }
 
     virtual const char* GetPlannerName() const override

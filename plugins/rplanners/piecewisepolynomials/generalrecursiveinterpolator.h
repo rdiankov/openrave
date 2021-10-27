@@ -27,9 +27,6 @@ namespace PiecewisePolynomialsInternal {
 
 class GeneralRecursiveInterpolator {
 public:
-    GeneralRecursiveInterpolator()
-    {
-    }
     GeneralRecursiveInterpolator(int envid=0);
     ~GeneralRecursiveInterpolator()
     {
@@ -91,6 +88,8 @@ public:
     //
     // Members
     //
+    std::string __description;
+
     int envid;
     PolynomialChecker checker;
     RampOptimizer::ParabolicInterpolator parabolicInterpolator;

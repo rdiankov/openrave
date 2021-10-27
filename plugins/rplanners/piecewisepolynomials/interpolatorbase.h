@@ -41,6 +41,10 @@ public:
         return "interpolatorbase";
     }
 
+    virtual const std::string& GetDescription() const {
+        return __description;
+    }
+
     //
     // Functions
     //
@@ -246,6 +250,8 @@ public:
     //
     size_t ndof;
     int envid;
+
+    std::string __description;
 };
 
 } // end namespace PiecewisePolynomialsInternal
