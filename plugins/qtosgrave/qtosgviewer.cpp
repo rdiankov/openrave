@@ -889,14 +889,19 @@ void QtOSGViewer::_CreateControlButtons()
 
 void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
 {
-    RobotBasePtr robot;
     KinBodyPtr kinbody;
     KinBody::LinkPtr link;
 
     std::string mass;
 
-    //  Select robot in Viewers
-    _posgWidget->SelectItemFromName(item->text(0).toLatin1().data());
+    //  Select kinbody in Viewers
+    {
+        QTreeWidgetItem* itemKinBody = item;
+        while(!!itemKinBody->parent()) {
+            itemKinBody = itemKinBody->parent();
+        }
+        _posgWidget->SelectItemFromName(itemKinBody->text(0).toLatin1().data());
+    }
 
     //  Clears details
     if (!!_qdetailsTree) {
@@ -914,8 +919,8 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
                 _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
             }
 
-            robot = GetEnv()->GetRobot(item->parent()->parent()->text(0).toLatin1().data());
-            link  = robot->GetLink(item->text(0).toLatin1().data());
+            kinbody = GetEnv()->GetKinBody(item->parent()->parent()->text(0).toLatin1().data());
+            link  = kinbody->GetLink(item->text(0).toLatin1().data());
 
             //  Clears output string
             strs.clear();
