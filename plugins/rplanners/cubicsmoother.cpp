@@ -522,11 +522,14 @@ public:
                 dReal fDurationMult = 1.1; // how much to increase the duration each time time-based constraints failed.
                 dReal fCurDurationMult = 1.0; // greater than or equal to 1.0
                 for( size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown ) {
-                    dReal fChunksDuration = 0;
                     PiecewisePolynomials::PolynomialCheckReturn polycheckret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration
                                                                                    (x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect,
                                                                                    _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit,
                                                                                    velLimits, accelLimits, jerkLimits, /*not used*/ fTryDuration, tempChunks);
+                    dReal fChunksDuration = 0;
+                    FOREACHC(itchunk, tempChunks) {
+                        fChunksDuration += itchunk->duration;
+                    }
 
                     if( polycheckret != PolynomialCheckReturn::PCR_Normal ) {
                         RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; initial interpolation failed. polycheckret=0x%x", _envId%iter%numIters%t0%t1%polycheckret);
@@ -602,6 +605,17 @@ public:
                     continue;
                 }
 
+                dReal fSegmentTime = 0;
+                FOREACHC(itChunk, vChunksOut) {
+                    fSegmentTime += itChunk->duration;
+                }
+                dReal fDiff = (t1 - t0) - fSegmentTime;
+                // Make sure that the new segment duration is really less than the original segment duration. (The new segment duration may have changed during the checking process due to tool constraints projection, etc.)
+                if( fDiff < 0 ) {
+                    RAVELOG_WARN_FORMAT("env=%d, the new segment time=%.15f becomes larger than the original segment time=%.15f, so discarding it.", _envId%fSegmentTime%(t1 - t0));
+                    continue;
+                }
+
                 // Now this shortcut iteration is really successful.
                 ++numShortcuts;
 
@@ -612,15 +626,10 @@ public:
                 // Update parameters
                 nTimeBasedConstraintsFailed = 0;
                 vVisitedDiscretization.clear();
-                dReal fSegmentTime = 0;
-                FOREACHC(itChunk, vChunksOut) {
-                    fSegmentTime += itChunk->duration;
-                }
-                dReal fDiff = (t1 - t0) - fSegmentTime;
 
                 // Replace the original portion with the shortcut segment.
                 if( iter == 0 ) {
-                    // Since replacing the entire initial trajectory, just initial pwptraj with vChunksOut directly.
+                    // Since replacing the entire initial trajectory, just initialize pwptraj with vChunksOut directly.
                     pwptraj.Initialize(vChunksOut);
                 }
                 else {
@@ -671,25 +680,9 @@ public:
     /// \brief Verify that the input sequence of chunks satisfy all constraints (including collisions, manip speed/accel, and possibly dynamics).
     virtual PiecewisePolynomials::CheckReturn CheckAllChunksAllConstraints(const std::vector<PiecewisePolynomials::Chunk>& vChunksIn, int options, std::vector<PiecewisePolynomials::Chunk>& vChunksOut) override
     {
-        // // For now, just suppose that vChunksIn has only one chunk (which is of course true when
-        // // using the current quinticinterpolator)
-        // const PiecewisePolynomials::Chunk& chunk = vChunksIn.front();
-        // // Make sure the first configuration is safe
-        // std::vector<dReal> &x0Vect = _cacheX0Vect2, &v0Vect = _cacheV0Vect2, &a0Vect = _cacheA0Vect2;
-        // chunk.Eval(0, x0Vect);
-        // chunk.Evald1(0, v0Vect);
-        // chunk.Evald2(0, a0Vect);
-        // PiecewisePolynomials::CheckReturn checkret = CheckConfigAllConstraints(x0Vect, v0Vect, a0Vect, options);
-        // if( checkret.retcode != 0 ) {
-        //     return checkret;
-        // }
-        // // Verify the rest.
-        // return CheckChunkAllConstraints(vChunksIn.front(), options, vChunksOut);
-
-
         // Make sure the first configuration is safe
         std::vector<dReal> &x0Vect = _cacheX0Vect2, &v0Vect = _cacheV0Vect2, &a0Vect = _cacheA0Vect2;
-	const PiecewisePolynomials::Chunk& chunk = vChunksIn.front();
+        const PiecewisePolynomials::Chunk& chunk = vChunksIn.front();
         chunk.Eval(0, x0Vect);
         chunk.Evald1(0, v0Vect);
         chunk.Evald2(0, a0Vect);
