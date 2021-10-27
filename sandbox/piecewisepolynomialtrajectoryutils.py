@@ -67,3 +67,10 @@ def PlotChunks(chunks, stepsize=0.01, derivative=0, fignum=None, **kwargs):
     plt.show(False)
     return fig
     
+def LoadPiecewisePolynomialTrajectoryFromFile(filename):
+    with open(filename, 'r') as f:
+        trajdata = f.read()
+    pwtraj = piecewisepolynomials.PiecewisePolynomialTrajectory()
+    pwtraj.Deserialize(trajdata)
+    return pwtraj
+
