@@ -548,6 +548,24 @@ dReal PiecewisePolynomial::Evaldn(dReal t, size_t n) const
     return _vpolynomials[index].Evaldn(remainder, n);
 }
 
+void PiecewisePolynomial::Serialize(std::ostream& O) const {
+    O << _vpolynomials.size();
+    for( size_t ipoly = 0; ipoly < _vpolynomials.size(); ++ipoly ) {
+        O << "\n";
+        _vpolynomials[ipoly].Serialize(O);
+    }
+}
+
+void PiecewisePolynomial::Deserialize(std::istream& I) {
+    size_t numPolynomials = 0;
+    I >> numPolynomials;
+    std::vector<Polynomial> vPolynomialsIn(numPolynomials);
+    for( size_t ipoly = 0; ipoly < numPolynomials; ++ipoly ) {
+        vPolynomialsIn[ipoly].Deserialize(I);
+    }
+    Initialize(vPolynomialsIn);
+}
+
 PiecewisePolynomial PiecewisePolynomial::Differentiate(const size_t ideriv) const
 {
     std::vector<Polynomial> vNewPolynomials;

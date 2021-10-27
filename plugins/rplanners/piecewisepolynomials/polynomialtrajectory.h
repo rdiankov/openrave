@@ -177,6 +177,12 @@ public:
     /// \brief Evaluate the n-th derivative of this piecewise polynomial at time t.
     dReal Evaldn(dReal t, size_t n) const;
 
+    /// \brief
+    void Serialize(std::ostream& O) const;
+
+    /// \brief
+    void Deserialize(std::istream& I);
+
     /// \brief Return the polynomial d/dt p(t)
     PiecewisePolynomial Differentiate(const size_t ideriv) const;
 

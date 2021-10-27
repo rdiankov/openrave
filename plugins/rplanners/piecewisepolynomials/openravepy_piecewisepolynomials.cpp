@@ -375,6 +375,21 @@ public:
         return _ppwpoly->Evaldn(t, n);
     }
 
+    py::object Serialize() const
+    {
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+        _ppwpoly->Serialize(ss);
+        return py::to_object(ss.str());
+    }
+
+    void Deserialize(const std::string s)
+    {
+        std::stringstream ss(s);
+        _ppwpoly->Deserialize(ss);
+        _PostProcess();
+    }
+
     PyPiecewisePolynomialPtr Differentiate(const size_t ideriv) const
     {
         piecewisepolynomials::PiecewisePolynomial newPWPoly = _ppwpoly->Differentiate(ideriv);
@@ -748,6 +763,11 @@ public:
             throw OPENRAVE_EXCEPTION_FORMAT("Invalid interpolatorname %s", interpolatorname, ORE_InvalidArguments);
         }
         _PostProcess();
+    }
+
+    const std::string GetDescription() const
+    {
+        return _pinterpolator->GetDescription();
     }
 
     PyPiecewisePolynomialPtr Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(dReal x0, dReal x1,
@@ -1125,6 +1145,8 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Evald2", &PyPiecewisePolynomial::Evald2, PY_ARGS("t") "Evaluate the second derivative of this piecewise polynomial at the given parameter t")
     .def("Evald3", &PyPiecewisePolynomial::Evald3, PY_ARGS("t") "Evaluate the third derivative of this piecewise polynomial at the given parameter t")
     .def("Evaldn", &PyPiecewisePolynomial::Evaldn, PY_ARGS("t", "n") "Evaluate the n-th derivative of this piecewise polynomial at the given parameter t")
+    .def("Serialize", &PyPiecewisePolynomial::Serialize, "Serialize this piecewise polynomial into string")
+    .def("Deserialize", &PyPiecewisePolynomial::Deserialize, PY_ARGS("s") "Deserialize a piecewise polynomial from the given string")
     .def("FindPolynomialIndex", &PyPiecewisePolynomial::FindPolynomialIndex, PY_ARGS("t") "Find the index of the polynomial q that t falls into and also compute the remainder so that p(t) = q(remainder)")
     .def("Differentiate", &PyPiecewisePolynomial::Differentiate,PY_ARGS("n") "Return the polynomial d^n/dt^n p(t) where p is this polynomial")
     .def("Integrate", &PyPiecewisePolynomial::Integrate,PY_ARGS("c") "Return polynomial q = integrate x=0 to x=t p(x) where p is this polynomial and q(0) = c.")
