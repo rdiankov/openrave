@@ -188,24 +188,21 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
 
         // Step 9
         pwpoly1Integrated = pwpoly1.Integrate(0);
+        // deltaX1: displacement covered by segment I
         dReal deltaX1 = pwpoly1Integrated.Eval(pwpoly1Integrated.GetDuration());
         pwpoly3Integrated = pwpoly3.Integrate(0);
+        // deltaX3: displacement covered by segment III
         dReal deltaX3 = pwpoly3Integrated.Eval(pwpoly3Integrated.GetDuration());
 
         // Step 10
+        // delta: displacement to be covered by segment II
         dReal delta = deltaX - deltaX1 - deltaX3;
 
         // Note: In the paper, there is no explicit consideration for the case when v is zero.
         bool bFreeDuration2 = false;
         if( FuzzyZero(v, g_fPolynomialEpsilon) ) {
             // In this case, v == 0 so we are free to choose the duration of this middle part.
-            if( fixedDuration > 0 ) {
-                bFreeDuration2 = true;
-                duration2 = fixedDuration - (pwpoly1.GetDuration() + pwpoly3.GetDuration());
-            }
-            else {
-                duration2 = 0;
-            }
+            duration2 = 0; // leave it unchosen first. will compute an appropriate value for duration in the end.
         }
         else {
             duration2 = delta/v;
@@ -258,9 +255,21 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
 #endif
 
         if( FuzzyEquals(vLast, v, epsilon) ) {
-            if( (fixedDuration == 0) || FuzzyEquals(fixedDuration, totalDuration, g_fEpsilonForTimeInstant) ) {
+            if( (fixedDuration == 0) ) {
+                // No constraints on the total duration so can stop here
                 bSuccess = true;
                 break; // successful
+            }
+            else if( FuzzyZero(v, g_fPolynomialEpsilon) && totalDuration <= fixedDuration + g_fEpsilonForTimeInstant ) {
+                // v is zero so we are free to choose duration2. (We have not chosen a value for duration2 yet.)
+                duration2 = Max(0, fixedDuration - totalDuration);
+                bSuccess = true;
+                break;
+            }
+            else if( FuzzyEquals(fixedDuration, totalDuration, g_fEpsilonForTimeInstant) ) {
+                // The computed velocity converges and the total duration meets the given fixed duration.
+                bSuccess = true;
+                break;
             }
             else {
 #ifdef GENERALINTERPOLATOR_PROGRESS_DEBUG
