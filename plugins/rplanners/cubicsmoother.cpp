@@ -532,7 +532,7 @@ public:
                     }
 
                     if( polycheckret != PolynomialCheckReturn::PCR_Normal ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; initial interpolation failed. polycheckret=0x%x", _envId%iter%numIters%t0%t1%polycheckret);
+                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; iSlowDown=%d; initial interpolation failed. polycheckret=%s", _envId%iter%numIters%t0%t1%iSlowDown%PiecewisePolynomials::GetPolynomialCheckReturnString(polycheckret));
                         break; // must not slow down any further.
                     }
 

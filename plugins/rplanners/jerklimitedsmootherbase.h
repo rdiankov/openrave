@@ -583,7 +583,7 @@ protected:
                 ss << "]; jerkLimits=[";
                 SerializeValues(ss, jerkLimits);
                 ss << "]";
-                RAVELOG_WARN_FORMAT("env=%d, Segment (%d, %d)/%d; Initial interpolation failed with interpolatorret=0x%x; %s; giving up.", _envId%(iWaypoint - 1)%iWaypoint%numWaypoints%checkret.retcode%ss.str());
+                RAVELOG_WARN_FORMAT("env=%d, Segment (%d, %d)/%d, itry=%d; Initial interpolation failed with interpolatorret=0x%x; %s; giving up.", _envId%(iWaypoint - 1)%iWaypoint%numWaypoints%itry%checkret.retcode%ss.str());
                 return false;
             }
             checkret = CheckAllChunksAllConstraints(_cacheInterpolatedChunks, options, vChunksOut);
@@ -592,7 +592,7 @@ protected:
             }
             else if( checkret.retcode == CFO_CheckTimeBasedConstraints ) {
                 // Time-based constraints are violated so scale the velocity and acceleration limits down and try again.
-                RAVELOG_DEBUG_FORMAT("env=%d, Segment (%d, %d)/%d violated time-based constraints; fActualManipSpeed=%f; fActualManipAccel=%f; fTimeBasedSurpassMult=%f", _envId%(iWaypoint - 1)%iWaypoint%numWaypoints%checkret.fMaxManipSpeed%checkret.fMaxManipAccel%checkret.fTimeBasedSurpassMult);
+                RAVELOG_DEBUG_FORMAT("env=%d, Segment (%d, %d)/%d, itry=%d violated time-based constraints; fActualManipSpeed=%f; fActualManipAccel=%f; fTimeBasedSurpassMult=%f", _envId%(iWaypoint - 1)%iWaypoint%numWaypoints%itry%checkret.fMaxManipSpeed%checkret.fMaxManipAccel%checkret.fTimeBasedSurpassMult);
                 fCurVelMult *= checkret.fTimeBasedSurpassMult;
                 dReal fMult2 = checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult;
                 for( size_t idof = 0; idof < _ndof; ++idof ) {
@@ -615,7 +615,7 @@ protected:
                 ss << "]; jerkLimits=[";
                 SerializeValues(ss, jerkLimits);
                 ss << "]";
-                RAVELOG_WARN_FORMAT("env=%d, Segment (%d, %d)/%d; CheckChunkAllConstraints failed with ret=0x%x; %s; giving up.", _envId%(iWaypoint - 1)%iWaypoint%numWaypoints%checkret.retcode%ss.str());
+                RAVELOG_WARN_FORMAT("env=%d, Segment (%d, %d)/%d, itry=%d; CheckChunkAllConstraints failed with ret=0x%x; %s; giving up.", _envId%(iWaypoint - 1)%iWaypoint%numWaypoints%itry%checkret.retcode%ss.str());
                 return false;
             }
         }
