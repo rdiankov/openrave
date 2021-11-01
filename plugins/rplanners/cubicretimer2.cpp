@@ -40,7 +40,7 @@ public:
 
     CubicTrajectoryRetimer2(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryRetimer3(penv, sinput)
     {
-        __description = ":Interface Author: Puttichai Lertkultanon and Rosen Diankov\n\nSimple quintic trajectory retiming while passing through all the waypoints. Waypoints will not be modified. This assumes that all waypoints have zero velocity and acceleration (unless the start and final points are forced). Overwrites the velocities, accelerations, and timestamps of the input trajectory.";
+        __description = ":Interface Author: Puttichai Lertkultanon and Rosen Diankov\n\nSimple cubic trajectory retiming while passing through all the waypoints. Waypoints will not be modified. This assumes that all waypoints have zero velocity and acceleration (unless the start and final points are forced). Overwrites the velocities, accelerations, and timestamps of the input trajectory.";
     }
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
@@ -263,6 +263,7 @@ protected:
     // TODO
     dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType ikType, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::const_iterator itData)
     {
+        RAVELOG_WARN_FORMAT("env=%s, _ComputeMinimumTimeIk not implemented yet.", GetEnv()->GetNameId());
         return -1;
     }
 
@@ -360,6 +361,7 @@ protected:
     // TODO
     bool _CheckIk(GroupInfoConstPtr info, IkParameterizationType ikType, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::const_iterator itData, int checkOptions=0xffffffff)
     {
+        RAVELOG_WARN_FORMAT("env=%s, _CheckId not implemented yet.", GetEnv()->GetNameId());
         return false;
     }
 
@@ -461,12 +463,14 @@ protected:
     // TODO
     dReal _WriteAffine(GroupInfoConstPtr info, int affineDofs, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData)
     {
+        RAVELOG_WARN_FORMAT("env=%s, _WriteAffine not implemented yet.", GetEnv()->GetNameId());
         return true;
     }
 
     // TODO
     dReal _WriteIk(GroupInfoConstPtr info, IkParameterizationType ikType, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData)
     {
+        RAVELOG_WARN_FORMAT("env=%s, _WriteIk not implemented yet.", GetEnv()->GetNameId());
         return true;
     }
 
