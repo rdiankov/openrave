@@ -630,7 +630,7 @@ void PiecewisePolynomial::CleanUp()
 {
     size_t iWriteIndex = 0;
     for( size_t iReadIndex = 0; iReadIndex < _vpolynomials.size(); ++iReadIndex ) {
-        if( _vpolynomials[iReadIndex].duration > 0 ) {
+        if( _vpolynomials[iReadIndex].duration > g_fEpsilonForTimeInstant ) {
             if( iWriteIndex < iReadIndex ) {
                 _vpolynomials[iWriteIndex] = _vpolynomials[iReadIndex];
             }

@@ -226,7 +226,7 @@ public:
 
                 // Note also that skipping some switchpoints which are closer to their neighbors than
                 // g_fPolynomialEpsilon may introduce discrepancies greater than g_fPolynomialEpsilon.
-                if( !FuzzyEquals(sw, *itsw, 0.01*g_fPolynomialEpsilon) && !FuzzyEquals(sw, *(itsw - 1), 0.01*g_fPolynomialEpsilon) ) {
+                if( !FuzzyEquals(sw, *itsw, g_fEpsilonForTimeInstant) && !FuzzyEquals(sw, *(itsw - 1), g_fEpsilonForTimeInstant) ) {
                     switchPointsList.insert(itsw, sw);
                 }
             }
