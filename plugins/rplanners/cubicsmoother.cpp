@@ -552,6 +552,13 @@ public:
                     iIterProgress += 0x1000;
 
                     if( checkret.retcode == 0 ) {
+                        {
+                            // TODO:
+                            if( checkret.bDifferentVelocity ) {
+                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; rejecting shortcut since the checked segment ends with different velocities", _envId%iter%numIters%t0%t1);
+                                break; // do not slow down any further.
+                            }
+                        }
                         bSuccess = true;
                         break; // break out of slowdown loop.
                     }
@@ -721,88 +728,95 @@ protected:
     {
         std::vector<PiecewisePolynomials::Chunk>& tempChunks = _cacheInterpolatedChunksDuringCheck;
         dReal curTime = 0;
-        std::vector<dReal>::const_iterator it = _constraintReturn->_configurations.begin();
         if( vChunksOut.capacity() < _constraintReturn->_configurationtimes.size() ) {
             vChunksOut.reserve(_constraintReturn->_configurationtimes.size());
         }
 
-        std::vector<dReal>& lowerPositionLimit = _cacheLowerLimits;
-        std::vector<dReal>& upperPositionLimit = _cacheUpperLimits;
-        std::vector<dReal>& positionAllownace = _cacheResolutions;
-        for( size_t idof = 0; idof < _ndof; ++idof ) {
-            // Allow each dof to go beyond their temporary limit by this much.
-            positionAllownace[idof] = 0.01*_parameters->_vConfigResolution[idof];
-        }
+        PiecewisePolynomials::Polynomial tempPolynomial; // for use in the following loop
 
+        std::vector<dReal>::const_iterator itConfigLowerLimit = _parameters->_vConfigLowerLimit.begin();
+        std::vector<dReal>::const_iterator itConfigUpperLimit = _parameters->_vConfigUpperLimit.begin();
+        std::vector<dReal>::const_iterator itVelocityLimit = _parameters->_vConfigVelocityLimit.begin();
+        std::vector<dReal>::const_iterator itAccelerationLimit = _parameters->_vConfigAccelerationLimit.begin();
+        std::vector<dReal>::const_iterator itJerkLimit = _parameters->_vConfigJerkLimit.begin();
+
+        // x0Vect, v0Vect, a0Vect already carry the initial values of chunkIn
+        std::vector<dReal>::const_iterator it = _constraintReturn->_configurations.begin();
         for( size_t itime = 0; itime < _constraintReturn->_configurationtimes.size(); ++itime, it += _ndof ) {
-            // Retrieve the next config from _constraintReturn. Velocity and acceleration are
-            // evaluated from the original chunk.
             std::copy(it, it + _ndof, x1Vect.begin());
-            chunkIn.Evald1(_constraintReturn->_configurationtimes[itime], v1Vect);
-            chunkIn.Evald2(_constraintReturn->_configurationtimes[itime], a1Vect);
-
-            dReal deltaTime = _constraintReturn->_configurationtimes[itime] - curTime;
+            const dReal deltaTime = _constraintReturn->_configurationtimes[itime] - curTime;
+            const dReal ideltaTime = 1.0/deltaTime;
             if( deltaTime > PiecewisePolynomials::g_fPolynomialEpsilon ) {
-                // Since CheckPathAllConstraints might have modified the configurations on chunkIn due to constraints,
-                // when reconstructing chunks from constraintReturn, should make sure again that the reconstructed
-                // chunks do not have overshooting positions as we may not be checking constraints on these chunks
-                // again.
 
-                // TODO: can actually deduce whether or not there are some extra constraints used in the check
-                // function. If not, then can skip these chunk reconstruction entirely.
+                std::vector<PiecewisePolynomials::Polynomial> vpolynomials(_ndof); // TODO: cache this
 
-                // Set up temporary position limits for chunk reconstruction.
                 for( size_t idof = 0; idof < _ndof; ++idof ) {
-                    if( x0Vect[idof] > x1Vect[idof] ) {
-                        lowerPositionLimit[idof] = x1Vect[idof];
-                        upperPositionLimit[idof] = x0Vect[idof];
-                    }
-                    else {
-                        lowerPositionLimit[idof] = x0Vect[idof];
-                        upperPositionLimit[idof] = x1Vect[idof];
-                    }
-                    if( upperPositionLimit[idof] - lowerPositionLimit[idof] < _parameters->_vConfigResolution[idof] ) {
-                        const dReal midPoint = 0.5*(upperPositionLimit[idof] + lowerPositionLimit[idof]);
-                        const dReal allowance = 0.5*_parameters->_vConfigResolution[idof] + positionAllownace[idof];
-                        lowerPositionLimit[idof] = midPoint - allowance;
-                        upperPositionLimit[idof] = midPoint + allowance;
-                    }
-                    else {
-                        lowerPositionLimit[idof] -= positionAllownace[idof];
-                        upperPositionLimit[idof] += positionAllownace[idof];
-                    }
-                }
-                PiecewisePolynomials::PolynomialCheckReturn interpolatorret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration
-                                                                                  (x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, deltaTime,
-                                                                                  lowerPositionLimit, upperPositionLimit,
-                                                                                  _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit, _parameters->_vConfigJerkLimit,
-                                                                                  tempChunks);
+                    /*
+                       p(t) = a*t^3 + b*t^2 + c*t + d
+                       with a given duration (deltaTime), and boundary conditions:
+                       p(0) = x0,
+                       p'(0) = v0,
+                       p''(0) = a0, and
+                       p(deltaTime) = x1.
 
-                if( interpolatorret != PiecewisePolynomials::PCR_Normal ) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, the output chunk is invalid: t=%f/%f; ret=%d", _envId%curTime%chunkIn.duration%interpolatorret);
-                    return PiecewisePolynomials::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9);
-                }
+                       Coefficients can be computed as
+                       d = x0,
+                       c = v0,
+                       b = a0/2, and
+                       a = (x1 - x0)/deltaTime*^3 - c/deltaTime^2 - b/deltaTime
+                         = (((x1 - x0)/deltaTime - c)/deltaTime - b)/deltaTime
+                     */
+                    const dReal d = x0Vect[idof];
+                    const dReal c = v0Vect[idof];
+                    const dReal b = 0.5*a0Vect[idof];
+                    const dReal a = (((x1Vect[idof] - x0Vect[idof])*ideltaTime - c)*ideltaTime - b)*ideltaTime;
+                    tempPolynomial.Initialize(deltaTime, std::vector<dReal>({d, c, b, a}));
+                    PolynomialCheckReturn limitsret = _limitsChecker.CheckPolynomialLimits(tempPolynomial, *(itConfigLowerLimit + idof), *(itConfigUpperLimit + idof), *(itVelocityLimit + idof), *(itAccelerationLimit + idof), *(itJerkLimit + idof));
+                    if( limitsret != PiecewisePolynomials::PCR_Normal ) {
+                        RAVELOG_VERBOSE_FORMAT("env=%d, the output chunk is invalid: idof=%d; itime=%d/%d; t=%f/%f; ret=%s", _envId%idof%itime%_constraintReturn->_configurationtimes.size()%curTime%chunkIn.duration%PiecewisePolynomials::GetPolynomialCheckReturnString(limitsret));
+#ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
+                        RAVELOG_VERBOSE_FORMAT("env=%d, failedPoint=%.15e; failedValue=%.15e; expectedValue=%.15e", _envId%_limitsChecker._failedPoint%_limitsChecker._failedValue%_limitsChecker._expectedValue);
+#endif
+                        return PiecewisePolynomials::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9);
+                    }
 
-                FOREACH(itchunk, tempChunks) {
-                    vChunksOut.push_back(*itchunk);
-                    vChunksOut.back().constraintChecked = true;
-                }
+                    vpolynomials[idof] = tempPolynomial;
+                } // end for idof
+
+                PiecewisePolynomials::Chunk tempChunk(deltaTime, vpolynomials);
+                vChunksOut.push_back(tempChunk);
+                vChunksOut.back().constraintChecked = true;
+
                 curTime = _constraintReturn->_configurationtimes[itime];
-                x0Vect.swap(x1Vect);
-                v0Vect.swap(v1Vect);
-                a0Vect.swap(a1Vect);
-            }
-        }
+                vChunksOut.back().Eval(deltaTime, x0Vect);
+                vChunksOut.back().Evald1(deltaTime, v0Vect);
+                vChunksOut.back().Evald2(deltaTime, a0Vect);
+            } // end if deltaTime > epsilon
+        } // end for itime
+
         // Make sure that the last configuration is the desired value
         chunkIn.Eval(chunkIn.duration, x1Vect);
         for( size_t idof = 0; idof < _ndof; ++idof ) {
             if( RaveFabs(x0Vect[idof] - x1Vect[idof]) > PiecewisePolynomials::g_fPolynomialEpsilon ) {
-                RAVELOG_WARN_FORMAT("env=%d, Detected discrepancy at the last configuration: idof=%d; (%f != %f)", _envId%idof%x0Vect[idof]%x1Vect[idof]);
+                RAVELOG_WARN_FORMAT("env=%d, Detected discrepancy at the last configuration: idof=%d; (%.15e != %.15e)", _envId%idof%x0Vect[idof]%x1Vect[idof]);
                 return PiecewisePolynomials::CheckReturn(CFO_FinalValuesNotReached);
             }
         }
 
-        return PiecewisePolynomials::CheckReturn(); // successful
+        // Check the final velocities
+        bool bDifferentVelocity = false;
+        chunkIn.Evald1(chunkIn.duration, v1Vect);
+        for( size_t idof = 0; idof < _ndof; ++idof ) {
+            if( RaveFabs(v0Vect[idof] - v1Vect[idof]) > PiecewisePolynomials::g_fPolynomialEpsilon ) {
+                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d does not finish at the desired velocity. diff=%.15e", _envId%idof%(v0Vect[idof] - v1Vect[idof]));
+                bDifferentVelocity = true;
+                break;
+            }
+        }
+
+        PiecewisePolynomials::CheckReturn finalret(0);
+        finalret.bDifferentVelocity = bDifferentVelocity;
+        return finalret;
     } // end ProcessConstraintReturnIntoChunks
 
 private:
