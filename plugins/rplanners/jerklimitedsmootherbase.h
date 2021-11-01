@@ -633,8 +633,14 @@ protected:
             ss << "]; jerkLimits=[";
             SerializeValues(ss, jerkLimits);
             ss << "]";
-            RAVELOG_WARN_FORMAT("env=%d, Segment (%d, %d); numWaypoints=%d; Initialization failed after %d trials. ret=0x%x; %s", _envId%(iWaypoint - 1)%iWaypoint%numWaypoints%itry%checkret.retcode%ss.str());
+            RAVELOG_WARN_FORMAT("env=%d, Segment (%d, %d)/%d; Initialization failed after %d trials. ret=0x%x; %s", _envId%(iWaypoint - 1)%iWaypoint%numWaypoints%itry%checkret.retcode%ss.str());
             return false;
+        }
+        else {
+            if( checkret.bDifferentVelocity ) {
+                RAVELOG_WARN_FORMAT("env=%d, Segment(%d, %d)/%d; Initialization failed after %d trials. bDifferentVelocity=true", _envId%(iWaypoint - 1)%(iWaypoint)%numWaypoints%itry);
+                return false;
+            }
         }
         return true;
     }
