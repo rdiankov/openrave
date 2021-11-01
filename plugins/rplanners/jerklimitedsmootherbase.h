@@ -207,7 +207,15 @@ public:
 
         // When _bExpectedModifiedConfigurations is true, the configurations between q0 and q1 do
         // not lie exactly on the polynomial path any more. So need to reconstruct the trajectory.
-        if( _bExpectedModifiedConfigurations && _constraintReturn->_configurationtimes.size() > 0 ) {
+
+        // TODO: it seems that even though every neighstatefn call in CheckPathAllConstraints
+        // returns NSS_Reached, there are still some discrepancies between checked configurations
+        // (in _constraintReturn->_configurations) and the original configurations (evaluated from
+        // chunkIn). These discrepancies eventually result in failure to reconstruct chunks from the
+        // checked configurations. For now, check _bHasRampDeviatedFromInterpolation. If the flag is
+        // false (i.e. all neighstatefn calls return NSS_Reached), then trust that the original
+        // chunkIn is safe.
+        if( _bExpectedModifiedConfigurations && _constraintReturn->_configurationtimes.size() > 0 && _constraintReturn->_bHasRampDeviatedFromInterpolation ) {
             OPENRAVE_ASSERT_OP(_constraintReturn->_configurations.size(), ==, _constraintReturn->_configurationtimes.size()*_ndof);
             PiecewisePolynomials::CheckReturn processret = _ProcessConstraintReturnIntoChunks(_constraintReturn, chunkIn,
                                                                                               x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect,
