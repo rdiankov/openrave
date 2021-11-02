@@ -100,7 +100,7 @@ public:
     /// \brief Return the polynomial int p(t) dt
     Polynomial Integrate(const dReal c=0) const;
 
-    /// \brief Return
+    /// \brief Return the vector of coordinates of extrema of this polynomial.
     const std::vector<Coordinate>& GetExtrema() const
     {
         if( !_bExtremaComputed ) {
@@ -109,10 +109,10 @@ public:
         return vcextrema;
     }
 
-    /// \brief
+    /// \brief Serialize this polynomial into stringstream.
     void Serialize(std::ostream& O) const;
 
-    /// \brief
+    /// \brief Deserialize polynomial data from the input stream and initialize this polynomial with the data.
     void Deserialize(std::istream& I);
 
     /// \brief Find all local extrema of the ideriv-th derivative of this polynomial. Keep the
@@ -144,6 +144,11 @@ private:
 
 class PiecewisePolynomial {
 public:
+    /*
+       PiecewisePolynomial is a horizontal stack of polynomials.
+
+       \params polynomialsIn vector of polynomials
+     */
     PiecewisePolynomial() {
     }
     PiecewisePolynomial(std::vector<Polynomial>& polynomialsIn);
@@ -177,10 +182,10 @@ public:
     /// \brief Evaluate the n-th derivative of this piecewise polynomial at time t.
     dReal Evaldn(dReal t, size_t n) const;
 
-    /// \brief
+    /// \brief Serialize this piecewise-polynomial into the stringstream.
     void Serialize(std::ostream& O) const;
 
-    /// \brief
+    /// \brief Deserialize piecewise-polynomial data from the input stream and initialize this piecewise-polynomial with the data.
     void Deserialize(std::istream& I);
 
     /// \brief Return the polynomial d/dt p(t)
@@ -249,10 +254,10 @@ public:
     //
     // Functions
     //
-    /// \brief
+    /// \brief Update the initial values of all polynomials according to vinitialvalues.
     void UpdateInitialValues(std::vector<dReal>& vinitialvalues);
 
-    /// \brief
+    /// \brief Update the duration of all polynomials.
     void UpdateDuration(dReal T);
 
     /// \brief Initialize this chunk with the given duration and polynomials vector
@@ -280,10 +285,10 @@ public:
     /// \brief Evaluate the n-th derivatives of all polynomials at time t.
     void Evaldn(dReal t, size_t n, std::vector<dReal>& res) const;
 
-    /// \brief
+    /// \brief Serialize this chunk into stringstream.
     void Serialize(std::ostream& O) const;
 
-    /// \brief
+    /// \brief Deserialize chunk data from the input stream and initialize this chunk with the data.
     void Deserialize(std::istream& I);
 
     /// \brief Initialize this chunk with constant polynomials.
@@ -343,19 +348,22 @@ public:
     /// \brief Initializee this trajectory with the existing chunks
     void Initialize();
 
-    /// \brief
+    /// \brief Process the vector of chunks so that the initial values of each chunk is equal to the
+    ///        final values of the preceding one.
     void _UpdateChunksVector();
 
-    /// \brief
+    /// \brief Serialize this piecewise-polynomial trajectory into stringstream.
     void Serialize(std::ostream& O) const;
 
-    /// \brief
+    /// \brief Deserialize trajectory data from the input stream and initialize this trajectory with the data.
     void Deserialize(std::istream& I);
 
-    /// \brief
+    /// \brief Replace the content of this trajectory starting from t = t0 to t = t1 with the new
+    ///        content given by vchunks.
+    ///        This function does not check continuity at the junctions.
     void ReplaceSegment(dReal t0, dReal t1, const std::vector<Chunk>& vchunks);
 
-    /// \brief
+    /// \brief Reset the trajectory data.
     inline void Reset()
     {
         degree = 0;
