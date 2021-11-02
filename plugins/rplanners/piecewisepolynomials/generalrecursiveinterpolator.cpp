@@ -95,7 +95,8 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::PostProcessParabolic1DTrajec
 void GeneralRecursiveInterpolator::ConvertParabolicCurveToPiecewisePolynomial(const RampOptimizer::ParabolicCurve& curve, PiecewisePolynomial& pwpoly)
 {
     const size_t numRamps = curve.GetRamps().size();
-    std::vector<Polynomial> vpolynomials(numRamps);
+    std::vector<Polynomial>& vpolynomials = _cachePolynomials;
+    vpolynomials.resize(numRamps);
     for( size_t iramp = 0; iramp < numRamps; ++iramp ) {
         const RampOptimizer::Ramp& ramp = curve.GetRamp(iramp);
         vpolynomials[iramp].Initialize(ramp.duration, {ramp.x0, ramp.v0, 0.5*ramp.a});

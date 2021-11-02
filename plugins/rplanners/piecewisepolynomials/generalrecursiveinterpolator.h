@@ -102,6 +102,9 @@ public:
     const dReal epsilon = 1e-5*g_fPolynomialEpsilon;
     const dReal epsilonFinalValidation = 100*epsilon;
 
+private:
+    std::vector<Polynomial> _cachePolynomials; // cached vector of polynomials for use in ConvertParabolicCurveToPiecewisePolynomial
+
 }; // end class GeneralRecursiveInterpolator
 
 typedef boost::shared_ptr<GeneralRecursiveInterpolator> GeneralRecursiveInterpolatorPtr;
