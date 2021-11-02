@@ -119,6 +119,8 @@ public:
     /// results in vcoord in ascending order.
     void FindAllLocalExtrema(size_t ideriv, std::vector<Coordinate>& vcoord) const;
 
+    virtual Polynomial& operator=(const Polynomial& r);
+
     //
     // Members
     //

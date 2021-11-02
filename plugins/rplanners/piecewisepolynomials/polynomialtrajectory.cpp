@@ -275,6 +275,22 @@ Polynomial Polynomial::Integrate(const dReal c) const
     return Polynomial(duration, _vcurcoeffs);
 }
 
+Polynomial& Polynomial::operator=(const Polynomial& r)
+{
+    degree = r.degree;
+    vcoeffs = r.vcoeffs;
+    vcoeffsd = r.vcoeffsd;
+    vcoeffsdd = r.vcoeffsdd;
+    vcoeffsddd = r.vcoeffsddd;
+    displacement = r.displacement;
+    duration = r.duration;
+    _bExtremaComputed = r._bExtremaComputed;
+    if( r._bExtremaComputed ) {
+        vcextrema = r.vcextrema;
+    }
+    // Do not copy _vcurcoeffs since it is only used as cache.
+}
+
 void Polynomial::_FindAllLocalExtrema() const
 {
     _bExtremaComputed = true;
