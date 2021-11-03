@@ -1512,7 +1512,9 @@ inline bool computecubicnextdiscretizedstep(const T* coeffs, const T step, const
         polyroots<T, 2>(&tempcoeffs[1], rawroots, numroots);
     }
     else if( tempcoeffs[2] != 0 ) {
-        polyroots<T, 1>(&tempcoeffs[2], rawroots, numroots);
+        // polyroots<T, 1>(&tempcoeffs[2], rawroots, numroots);
+        numroots = 1;
+        rawroots[0] = -tempcoeffs[3]/tempcoeffs[2];
     }
     bool bFound = false;
     for( int i = 0; i < numroots; ++i ) {
