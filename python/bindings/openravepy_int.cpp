@@ -1855,9 +1855,9 @@ object PyEnvironmentBase::ReadKinBodyURI(const string &filename, object odictatt
     KinBodyPtr pbody;
     {
         openravepy::PythonThreadSaver threadsaver;
-        pbody = _penv->ReadKinBodyURI(filename);
+        pbody = _penv->ReadKinBodyURI(KinBodyPtr(), filename, dictatts);
     }
-    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(KinBodyPtr(), filename, dictatts),shared_from_this()));
+    return py::to_object(openravepy::toPyKinBody(pbody, shared_from_this()));
 }
 object PyEnvironmentBase::ReadKinBodyData(const string &data)
 {
