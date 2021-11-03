@@ -575,7 +575,7 @@ protected:
 #ifdef JERK_LIMITED_SMOOTHER_VALIDATE
         PiecewisePolynomials::PiecewisePolynomialTrajectory testtraj;
         std::vector<dReal> startValues, endValues, intermediateValues;
-        const dReal collinearThresh = 1e-14;
+        const dReal collinearThresh = 1e-12;
 #endif
 
         for( size_t iWaypoint = 1; iWaypoint < numWaypoints; ++iWaypoint ) {
