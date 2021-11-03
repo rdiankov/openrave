@@ -1414,9 +1414,10 @@ inline void computecubiccriticalpoints(const T* coeffs, T* criticalpoints, int& 
 template <typename T>
 inline void computequadraticcriticalpoints(const T* coeffs, T* criticalpoints, int& numpoints)
 {
-    // TODO: there is a closed-form formula
-    const T linearcoeffs[] = {2*coeffs[0], coeffs[1]};
-    polyroots<T, 1>(linearcoeffs, criticalpoints, numpoints);
+    // const T linearcoeffs[] = {2*coeffs[0], coeffs[1]};
+    BOOST_ASSERT(coeffs[0] != 0);
+    numpoints = 1;
+    criticalpoints[0] = -0.5*coeffs[1]/coeffs[0];
 }
 
 // Given a set of coefficients of a quintic p(t) (strongest coefficient first), find smallest tdelta
