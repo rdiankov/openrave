@@ -20,6 +20,7 @@
 #include "manipconstraints3.h"
 
 // #define JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+// #define JERK_LIMITED_SMOOTHER_VALIDATE // for validating correctness of results
 
 namespace rplanners {
 
@@ -178,10 +179,17 @@ public:
         if( _bUsePerturbation ) {
             options |= CFO_CheckWithPerturbation;
         }
+
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+        // Always get the intermediate configurations for validation
+        options |= CFO_FillCheckedConfiguration;
+        _constraintReturn->Clear();
+#else
         if( _bExpectedModifiedConfigurations || _bManipConstraints ) {
             options |= CFO_FillCheckedConfiguration;
             _constraintReturn->Clear();
         }
+#endif
 
         chunkIn.Eval(chunkIn.duration, x1Vect);
         chunkIn.Evald1(0, v0Vect);
@@ -204,6 +212,39 @@ public:
             RAVELOG_WARN_FORMAT("env=%d, CheckPathAllConstraints threw an exception: %s", _envId%ex.what());
             return PiecewisePolynomials::CheckReturn(0xffff);
         }
+
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+        // Check that every pair of consecutive configs returned from the check function are no more than dof resolutions apart
+        OPENRAVE_ASSERT_OP(_constraintReturn->_configurations.size(), ==, _constraintReturn->_configurationtimes.size()*_ndof);
+        if( _constraintReturn->_configurationtimes.size() > 1 ) {
+            std::vector<dReal>::const_iterator itconfig0 = _constraintReturn->_configurations.begin();
+            std::vector<dReal>::const_iterator itconfig1 = _constraintReturn->_configurations.begin() + _ndof;
+            std::vector<dReal>::const_iterator itres = _parameters->_vConfigResolution.begin();
+            for( size_t itime = 1; itime < _constraintReturn->_configurationtimes.size(); ++itime, itconfig0 += _ndof, itconfig1 += _ndof ) {
+                for( size_t idof = 0; idof < _ndof; ++idof ) {
+                    const dReal posdiff = RaveFabs(*(itconfig1 + idof) - *(itconfig0 + idof));
+                    const dReal jres = *(itres + idof);
+                    const dReal fviolation = posdiff - jres;
+                    if( posdiff > 1.01*jres ) {
+                        std::stringstream ss;
+                        ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                        ss << "configurations=[";
+                        SerializeValues(ss, _constraintReturn->_configurations);
+                        ss << "]; configurationtimes=[";
+                        SerializeValues(ss, _constraintReturn->_configurationtimes);
+                        ss << "]; chunkData=\"\"\"";
+                        chunkIn.Serialize(ss);
+                        ss << "\"\"\"";
+                        RAVELOG_WARN_FORMAT("env=%d, bHasRampDeviatedFromInterpolation=%d; %s", _envId%_constraintReturn->_bHasRampDeviatedFromInterpolation%ss.str());
+                        OPENRAVE_ASSERT_OP_FORMAT(posdiff, <=, 1.01*jres,
+                                                  "itime=%d/%d; idof=%d; posdiff=%.15e is larger than dof resolution=%.15e; violation=%.15e; violationratio=%.15e",
+                                                  itime%_constraintReturn->_configurationtimes.size()%idof%posdiff%jres%fviolation%(posdiff/jres),
+                                                  ORE_InconsistentConstraints);
+                    }
+                }
+            }
+        }
+#endif
 
         // When _bExpectedModifiedConfigurations is true, the configurations between q0 and q1 do
         // not lie exactly on the polynomial path any more. So need to reconstruct the trajectory.
@@ -530,6 +571,13 @@ protected:
         OPENRAVE_ASSERT_OP(vNewWaypoints[0].size(), ==, _ndof);
         std::vector<PiecewisePolynomials::Chunk>& vChunksOut = _cacheCheckedChunks;
         size_t numWaypoints = vNewWaypoints.size();
+
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+        PiecewisePolynomials::PiecewisePolynomialTrajectory testtraj;
+        std::vector<dReal> startValues, endValues, intermediateValues;
+        const dReal collinearThresh = 1e-14;
+#endif
+
         for( size_t iWaypoint = 1; iWaypoint < numWaypoints; ++iWaypoint ) {
             OPENRAVE_ASSERT_OP(vNewWaypoints[iWaypoint].size(), ==, _ndof);
             if( !_ComputeSegmentWithZeroVelAccelEndpoints(vNewWaypoints[iWaypoint - 1], vNewWaypoints[iWaypoint], options, vChunksOut, iWaypoint, numWaypoints) ) {
@@ -542,6 +590,46 @@ protected:
                     itchunk->constraintChecked = true;
                 }
             }
+
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+            // Check that all the joint values on the returned chunks are on a straight line in joint space
+            testtraj.Initialize(vChunksOut);
+            const dReal testStepSize = PiecewisePolynomials::Min(_parameters->_fStepLength, testtraj.duration * 0.25);
+            testtraj.Eval(0, startValues);
+            testtraj.Eval(testtraj.duration, endValues);
+            dReal currentTime =  testStepSize;
+            while( currentTime < testtraj.duration ) {
+                testtraj.Eval(currentTime, intermediateValues);
+
+                dReal dotProduct = 0;
+                dReal bwDiffLength2 = 0;
+                dReal fwDiffLength2 = 0;
+                for( size_t idof = 0; idof < _ndof; ++idof ) {
+                    const dReal bwDiff = intermediateValues[idof] - startValues[idof];
+                    const dReal fwDiff = endValues[idof] - intermediateValues[idof];
+                    dotProduct += bwDiff*fwDiff;
+                    bwDiffLength2 += bwDiff*bwDiff;
+                    fwDiffLength2 += fwDiff*fwDiff;
+                }
+                const dReal res = RaveFabs(dotProduct*dotProduct - bwDiffLength2*fwDiffLength2);
+                if( res > collinearThresh ) {
+                    std::stringstream ssdebug;
+                    ssdebug << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                    ssdebug << "vPrevWaypoint=[";
+                    SerializeValues(ssdebug, vNewWaypoints[iWaypoint - 1]);
+                    ssdebug << "]; vWaypoint=[";
+                    SerializeValues(ssdebug, vNewWaypoints[iWaypoint]);
+                    ssdebug << "];";
+                    RAVELOG_WARN_FORMAT("env=%d, %s", _envId%ssdebug.str());
+                    _DumpPiecewisePolynomialTrajectory(testtraj, boost::str(boost::format("collinearCheckFailed_wp%d")%iWaypoint).c_str(), static_cast<DebugLevel>(RaveGetDebugLevel()));
+                    OPENRAVE_ASSERT_OP_FORMAT(res, <=, collinearThresh,
+                                              "iWaypoint=%d; res=%.15e exceeds collinear threshold", iWaypoint%res,
+                                              ORE_InconsistentConstraints);
+                }
+
+                currentTime += testStepSize;
+            }
+#endif
 
             FOREACHC(itChunk, vChunksOut) {
                 pwptraj.vchunks.push_back(*itChunk);
