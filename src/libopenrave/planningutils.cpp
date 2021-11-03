@@ -3701,7 +3701,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     std::vector<size_t> vnextcriticalpointindices;
     vnextcriticalpointindices.resize(ndof, 1); // vnextcriticalpointindices[i] is the index of the next closest critical point for dof i considering that we are at the time instant tcur
 
-    while( istep < numSteps && tcur < timeelapsed ) {
+    // Use totalSteps as an upperbound of the number of steps instead of using numSteps. numSteps can actually be lower than the actual number of steps needed.
+    while( istep < totalSteps && tcur < timeelapsed ) {
         // Check the current state (q, qd, qdd)
         int nstateret = 0;
         if( istep >= start ) {
