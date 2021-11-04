@@ -544,7 +544,7 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
     py::buffer_info bufpos = pypos.request();
     dReal* ppos = (dReal*) bufpos.ptr;
 
-    py::array_t<bool> pycollision({num});
+    py::array_t<bool> pycollision(num);
     py::buffer_info bufcollision = pycollision.request();
     bool* pcollision = (bool*) bufcollision.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
