@@ -33,6 +33,14 @@ public:
     ~ParabolicInterpolator() {
     }
 
+    /**
+       \brief Set the epsilon value for use during interpolation computation as well as during checking.
+     **/
+    inline void SetTolerance(const dReal newEpsilon)
+    {
+        epsilon = newEpsilon;
+    }
+
     void Initialize(size_t ndof, int envid=0);
 
     /// ND Trajectory
@@ -170,7 +178,7 @@ public:
 
     inline dReal SolveBrakeTime(dReal x, dReal v, dReal xbound) {
         dReal bt;
-        bool res = SafeEqSolve(v, 2*(xbound - x), g_fRampEpsilon, 0, g_fRampInf, bt);
+        bool res = SafeEqSolve(v, 2*(xbound - x), epsilon, 0, g_fRampInf, bt);
         if( !res ) {
             RAVELOG_VERBOSE_FORMAT("Cannot solve the brake time equation: %.15e*t - %.15e = 0 with t being in [0, inf)", v%(2*(xbound - x)));
             bt = 0;
@@ -182,7 +190,7 @@ public:
         dReal ba;
         dReal coeff0 = 2*(xbound - x);
         dReal coeff1 = v*v;
-        bool res = SafeEqSolve(coeff0, -coeff1, g_fRampEpsilon, -g_fRampInf, g_fRampInf, ba);
+        bool res = SafeEqSolve(coeff0, -coeff1, epsilon, -g_fRampInf, g_fRampInf, ba);
         if( !res ) {
             RAVELOG_VERBOSE_FORMAT("Cannot solve the brake acceleration equation: %.15e*a + %.15e = 0 with a being in (-inf, inf)", coeff0%coeff1);
             ba = 0;
@@ -193,6 +201,8 @@ public:
 private:
     size_t _ndof;
     int _envid;
+
+    dReal epsilon = g_fRampEpsilon; // epsilon value for interpolation computation and checking.
 
     // Caching stuff
     std::vector<dReal> _cacheVect, _cacheSwitchpointsList;

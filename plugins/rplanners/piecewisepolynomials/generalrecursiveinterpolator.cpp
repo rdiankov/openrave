@@ -33,6 +33,9 @@ void GeneralRecursiveInterpolator::Initialize(int envid)
     this->envid = envid;
     checker.Initialize(1, envid);
     parabolicInterpolator.Initialize(1, envid);
+    // Need to set a new epsilon for parabolic interpolator since its default value (g_fRampEpsilon
+    // = 1e-10) is too loose compared epsilon = 1e-5*g_fPolynomialEpsilon used here.
+    parabolicInterpolator.SetTolerance(epsilonFinalValidation);
 }
 
 PolynomialCheckReturn GeneralRecursiveInterpolator::ComputeParabolic1DTrajectoryOptimizedDuration(
