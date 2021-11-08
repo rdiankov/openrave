@@ -653,6 +653,9 @@ void PiecewisePolynomial::CleanUp()
             ++iWriteIndex;
         }
     }
+    if( iWriteIndex == 0 ) {
+        iWriteIndex = 1;
+    }
     _vpolynomials.resize(iWriteIndex);
 }
 

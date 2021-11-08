@@ -206,7 +206,8 @@ public:
     /// \brief Cut the piecewise polynomial into two halves at time t and keep the left half.
     void TrimBack(dReal t);
 
-    /// \brief Remove from _vpolynomials polynomials that have zero duration.
+    /// \brief Remove from _vpolynomials polynomials that have zero duration. However, if all polynomials have zero
+    ///        durations, will leave one polynomial in _vpolynomials so that _vpolynomials is not empty.
     void CleanUp();
 
     /// \brief Return a constant reference to _vpolynomials
