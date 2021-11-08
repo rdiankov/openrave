@@ -233,7 +233,6 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         // Note: need a tighter bound when checking these velocities vmax, vmin. Otherwise, it might
         // not converge due to totalDuration not equal to fixedDuration.
         if( FuzzyEquals(vmax, vmin, epsilon) ) {
-            v = vHat;
             vmin = vHat;
             vmax = vHat;
             if( FuzzyEquals(vHat, upperBounds.at(velocityIndex) + 1, epsilon) ) {
@@ -259,17 +258,26 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
             if( (fixedDuration == 0) ) {
                 // No constraints on the total duration so can stop here
                 bSuccess = true;
+#ifdef GENERALINTERPOLATOR_PROGRESS_DEBUG
+                RAVELOG_DEBUG_FORMAT("env=%d, successful: no duration constraint, so stopping.", envid);
+#endif
                 break; // successful
             }
             else if( FuzzyZero(v, g_fPolynomialEpsilon) && totalDuration <= fixedDuration + g_fEpsilonForTimeInstant ) {
                 // v is zero so we are free to choose duration2. (We have not chosen a value for duration2 yet.)
                 duration2 = Max(0, fixedDuration - totalDuration);
                 bSuccess = true;
+#ifdef GENERALINTERPOLATOR_PROGRESS_DEBUG
+                RAVELOG_DEBUG_FORMAT("env=%d, successful: fixedDuration=%.15e; selected duration2=%.15e", envid%fixedDuration%duration2);
+#endif
                 break;
             }
             else if( FuzzyEquals(fixedDuration, totalDuration, g_fEpsilonForTimeInstant) ) {
                 // The computed velocity converges and the total duration meets the given fixed duration.
                 bSuccess = true;
+#ifdef GENERALINTERPOLATOR_PROGRESS_DEBUG
+                RAVELOG_DEBUG_FORMAT("env=%d, successful: totalDuration=%.15e converges to fixedDuration=%.15e, so stopping", envid%totalDuration%fixedDuration);
+#endif
                 break;
             }
             else {
@@ -278,6 +286,9 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
 #endif
                 if( FuzzyEquals(vmax, vmin, epsilon) ) {
                     // Cannot do anything more since vmax and vmin are equal.
+#ifdef GENERALINTERPOLATOR_PROGRESS_DEBUG
+                    RAVELOG_DEBUG_FORMAT("env=%d, vmax=%.15e and vmin=%.15e are too close, so stopping", envid%vmax%vmin);
+#endif
                     return PolynomialCheckReturn::PCR_GenericError;
                 }
             }
