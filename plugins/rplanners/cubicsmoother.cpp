@@ -627,14 +627,11 @@ public:
                 // RAVELOG_DEBUG_FORMAT("env=%d, fCurVelMult=%f; fCurAccelMult=%f;", _envId%fCurVelMult%fCurAccelMult);
 
                 bool bSuccess = false;
-                dReal fTryDuration = t1 - t0;
-                dReal fDurationMult = 1.1; // how much to increase the duration each time time-based constraints failed.
-                dReal fCurDurationMult = 1.0; // greater than or equal to 1.0
                 for( size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown ) {
                     PiecewisePolynomials::PolynomialCheckReturn polycheckret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration
                                                                                    (x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect,
                                                                                    _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit,
-                                                                                   velLimits, accelLimits, jerkLimits, /*not used*/ fTryDuration, tempChunks);
+                                                                                   velLimits, accelLimits, jerkLimits, /*not used*/ 0, tempChunks);
                     dReal fChunksDuration = 0;
                     FOREACHC(itchunk, tempChunks) {
                         fChunksDuration += itchunk->duration;
@@ -785,8 +782,7 @@ public:
             ss << "current score falls below threshold (" << fScore/fCurrentBestScore << " < " << fCutoffRatio << ")";
         }
         else if( nItersFromPrevSuccessful + nTimeBasedConstraintsFailed > nCutoffIters ) {
-            ss << "did not make progress in the past " << nItersFromPrevSuccessful << " iterations and";
-            ss << " time-based constraints failed " << nTimeBasedConstraintsFailed << " times";
+            ss << "did not make progress in the past " << nItersFromPrevSuccessful << " iterations and time-based constraints failed " << nTimeBasedConstraintsFailed << " times";
         }
         else {
             ss << "normal exit";
