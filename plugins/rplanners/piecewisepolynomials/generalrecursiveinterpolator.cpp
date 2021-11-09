@@ -23,8 +23,9 @@ namespace PiecewisePolynomialsInternal {
 
 GeneralRecursiveInterpolator::GeneralRecursiveInterpolator(int envid)
 {
-    __description = ":Interface Author: Puttichai Lertkultanon\n\nImplements polynomial interpolation routines. See\n\n\
-Ezair, B., Tassa, T., & Shiller, Z. (2014). Planning high order trajectories with general initial and final conditions and asymmetric bounds. The International Journal of Robotics Research, 33(6), 898-916.";
+    __description = ":Interface Author: Puttichai Lertkultanon\n\nImplements polynomial interpolation routines. The implementation of Compute1DTrajectory function follows\n\n\
+Ezair, B., Tassa, T., & Shiller, Z. (2014). Planning high order trajectories with general initial and final conditions and asymmetric bounds. The International Journal of Robotics Research, 33(6), 898-916.\n\n\
+with some modifications to make the algorithm more robust.";
     this->Initialize(envid);
 }
 
