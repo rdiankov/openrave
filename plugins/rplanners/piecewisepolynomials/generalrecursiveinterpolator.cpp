@@ -119,6 +119,7 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     BOOST_ASSERT(degree == finalState.size());
     BOOST_ASSERT(degree + 1 == lowerBounds.size());
     BOOST_ASSERT(degree + 1 == upperBounds.size());
+    const size_t nStateSize = initialState.size(); // for later use
 
     // Step 1
     if( degree == 2 ) {
@@ -159,7 +160,11 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     PiecewisePolynomial pwpoly1, pwpoly3; // the use of indices 1 and 3 are according to the paper
     PiecewisePolynomial pwpoly1Integrated, pwpoly3Integrated;
     PolynomialCheckReturn ret1, ret3;
-    std::vector<dReal> newInitialState(initialState.size() - 1, 0.0), newFinalState(finalState.size() - 1, 0.0);
+    std::vector<dReal> newInitialState(nStateSize - 1, 0.0), newMidState(nStateSize - 1, 0.0), newFinalState(nStateSize - 1, 0.0); // nStateSize is guaranteed to be greater than 1.
+    // The following newInitialState and newFinalState remain the same throughout, so initializing them here.
+    newInitialState.assign(initialState.begin() + velocityIndex, initialState.end());
+    newFinalState.assign(finalState.begin() + velocityIndex, finalState.end());
+
     std::vector<dReal> newLowerBounds(lowerBounds.size() - 1, 0.0), newUpperBounds(upperBounds.size() - 1, 0.0);
     newLowerBounds.assign(lowerBounds.begin() + velocityIndex, lowerBounds.end());
     newUpperBounds.assign(upperBounds.begin() + velocityIndex, upperBounds.end());
@@ -174,18 +179,14 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         v = 0.5*(vmin + vmax);
 
         // Step 7
-        newInitialState.assign(initialState.begin() + velocityIndex, initialState.end());
-        std::fill(newFinalState.begin(), newFinalState.end(), 0.0);
-        newFinalState[0] = v;
-        ret1 = Compute1DTrajectory(degree - 1, newInitialState, newFinalState, newLowerBounds, newUpperBounds, /*fixedDuration*/ 0.0, pwpoly1);
+        newMidState[0] = v;
+        ret1 = Compute1DTrajectory(degree - 1, newInitialState, newMidState, newLowerBounds, newUpperBounds, /*fixedDuration*/ 0.0, pwpoly1);
         if( ret1 != PolynomialCheckReturn::PCR_Normal ) {
             return ret1;
         }
 
         // Step 8
-        newInitialState.swap(newFinalState);
-        newFinalState.assign(finalState.begin() + velocityIndex, finalState.end());
-        ret3 = Compute1DTrajectory(degree - 1, newInitialState, newFinalState, newLowerBounds, newUpperBounds, /*fixedDuration*/ 0.0, pwpoly3);
+        ret3 = Compute1DTrajectory(degree - 1, newMidState, newFinalState, newLowerBounds, newUpperBounds, /*fixedDuration*/ 0.0, pwpoly3);
         if( ret3 != PolynomialCheckReturn::PCR_Normal ) {
             return ret3;
         }
