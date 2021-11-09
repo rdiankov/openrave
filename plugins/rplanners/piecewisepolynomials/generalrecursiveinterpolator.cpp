@@ -172,6 +172,13 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     dReal totalDuration = 0;
     dReal duration2 = 0;
     bool bSuccess = false;
+
+    // The following values are added for use during the final attempt to solve the problem. See below for more details.
+    dReal vLastPositiveRemainingDuration = vmax + 1; // the latest value of v computed in the loop that results in totalDuration being less than fixedDuration
+    dReal remainingDuration = -1; // the value fixedDuration - totalDuration computed when v = vLastPositiveRemainingDuration
+    dReal cachedDuration1 = -1;
+    dReal cachedDuration3 = -1;
+
     for( size_t iter = 0; iter < maxIters; ++iter ) {
         // Step 5
         vLast = v;
@@ -230,6 +237,16 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
                 if( totalDuration < fixedDuration ) {
                     delta = -delta;
                 }
+            }
+        }
+
+        // Record intermediate values for later use
+        if( fixedDuration > 0 ) {
+            if( totalDuration < fixedDuration ) {
+                vLastPositiveRemainingDuration = v;
+                remainingDuration = fixedDuration - totalDuration; // guaranteed to be positive
+                cachedDuration1 = pwpoly1.GetDuration();
+                cachedDuration3 = pwpoly3.GetDuration();
             }
         }
 
@@ -293,6 +310,61 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
 #ifdef GENERALINTERPOLATOR_PROGRESS_DEBUG
                     RAVELOG_DEBUG_FORMAT("env=%d, vmax=%.15e and vmin=%.15e are too close, so stopping", envid%vmax%vmin);
 #endif
+
+                    // Last attempt to solve the problem
+                    if( fixedDuration > 0 ) {
+                        // In some cases, the value of totalDuration is extremely sensitive to the value v such that in
+                        // order for totalDuration be within the desired tolerance from fixedDuration, we would need to
+                        // adjust v much more finely than epsilon. When this is the case, we will try to solve the
+                        // problem differently.
+
+                        // When the computed totalDuration is less than fixedDuration, instead of trying to adjust v
+                        // further, we will try to increase the duration of Segment I and/or Segment III (while their
+                        // boundary conditions remain untouched) so that the overall duration reaches fixedDuration.
+                        // Currently, we will give 3 attempts (as described below).
+                        if( !FuzzyEquals(vLastPositiveRemainingDuration, upperBounds.at(velocityIndex) + 1, epsilon) && remainingDuration > 0 && cachedDuration1 > 0 && cachedDuration3 > 0 ) {
+                            newMidState[0] = vLastPositiveRemainingDuration;
+                            // Attempt 1: trying to stretch out only Segment I
+                            {
+                                ret1 = Compute1DTrajectory(degree - 1, newInitialState, newMidState, newLowerBounds, newUpperBounds, cachedDuration1 + remainingDuration, pwpoly1);
+                                if( ret1 == PolynomialCheckReturn::PCR_Normal ) {
+                                    ret3 = Compute1DTrajectory(degree - 1, newMidState, newFinalState, newLowerBounds, newUpperBounds, cachedDuration3, pwpoly3);
+                                    if( ret3 == PolynomialCheckReturn::PCR_Normal ) {
+                                        bSuccess = true;
+                                        duration2 = fixedDuration - (pwpoly1.GetDuration() + pwpoly3.GetDuration());
+                                        v = vLastPositiveRemainingDuration;
+                                        break;
+                                    }
+                                }
+                            }
+                            // Attempt 2: trying to stretch out only Segment III
+                            {
+                                ret1 = Compute1DTrajectory(degree - 1, newInitialState, newMidState, newLowerBounds, newUpperBounds, cachedDuration1, pwpoly1);
+                                if( ret1 == PolynomialCheckReturn::PCR_Normal ) {
+                                    ret3 = Compute1DTrajectory(degree - 1, newMidState, newFinalState, newLowerBounds, newUpperBounds, cachedDuration3 + remainingDuration, pwpoly3);
+                                    if( ret3 == PolynomialCheckReturn::PCR_Normal ) {
+                                        bSuccess = true;
+                                        duration2 = fixedDuration - (pwpoly1.GetDuration() + pwpoly3.GetDuration());
+                                        v = vLastPositiveRemainingDuration;
+                                        break;
+                                    }
+                                }
+                            }
+                            // Attempt 3: trying to stretch out Segment I and Segment III equally
+                            {
+                                ret1 = Compute1DTrajectory(degree - 1, newInitialState, newMidState, newLowerBounds, newUpperBounds, cachedDuration1 + remainingDuration*0.5, pwpoly1);
+                                if( ret1 == PolynomialCheckReturn::PCR_Normal ) {
+                                    ret3 = Compute1DTrajectory(degree - 1, newMidState, newFinalState, newLowerBounds, newUpperBounds, cachedDuration3 + remainingDuration*0.5, pwpoly3);
+                                    if( ret3 == PolynomialCheckReturn::PCR_Normal ) {
+                                        bSuccess = true;
+                                        duration2 = fixedDuration - (pwpoly1.GetDuration() + pwpoly3.GetDuration());
+                                        v = vLastPositiveRemainingDuration;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
                     return PolynomialCheckReturn::PCR_GenericError;
                 }
             }
