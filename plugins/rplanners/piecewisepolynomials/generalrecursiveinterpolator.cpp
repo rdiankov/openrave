@@ -387,7 +387,7 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         return PolynomialCheckReturn::PCR_GenericError;
     }
 
-    const bool bHasMiddleSegment = !FuzzyZero(duration2, g_fPolynomialEpsilon);
+    const bool bHasMiddleSegment = !FuzzyZero(duration2, g_fEpsilonForTimeInstant);
     const size_t numPolynomials = pwpoly1.GetPolynomials().size() + pwpoly3.GetPolynomials().size() + (bHasMiddleSegment ? 1 : 0);
     std::vector<Polynomial> vFinalPolynomials;
     vFinalPolynomials.reserve(numPolynomials);
