@@ -20,7 +20,13 @@
 #include "manipconstraints3.h"
 
 // #define JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
-// #define JERK_LIMITED_SMOOTHER_VALIDATE // for validating correctness of results
+#define JERK_LIMITED_SMOOTHER_VALIDATE // for validating correctness of results
+
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+#ifndef JERK_LIMITED_POLY_CHECKER_DEBUG
+#define JERK_LIMITED_POLY_CHECKER_DEBUG
+#endif // #ifndef JERK_LIMITED_POLY_CHECKER_DEBUG
+#endif // #ifdef JERK_LIMITED_SMOOTHER_VALIDATE
 
 namespace rplanners {
 

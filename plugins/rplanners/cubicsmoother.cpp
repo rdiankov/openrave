@@ -39,6 +39,8 @@ public:
     {
         uint32_t startTime = utils::GetMilliTime();
 
+        _limitsChecker.SetEpsilonForAccelerationDiscrepancyChecking(100*PiecewisePolynomials::g_fPolynomialEpsilon); // this follows cubic interpolator (see comments in CubicInterpolator::Initialize).
+
         BOOST_ASSERT(!!_parameters && !!ptraj);
         if( ptraj->GetNumWaypoints() < 2 ) {
             RAVELOG_WARN_FORMAT("env=%d, Input traj has %d waypoints.", _envId%ptraj->GetNumWaypoints());
@@ -197,6 +199,7 @@ public:
 
 #ifdef JERK_LIMITED_SMOOTHER_VALIDATE
             size_t iOriginalChunk = 0;
+            int prevChunkShortcutIter = -1;
             for( std::vector<PiecewisePolynomials::Chunk>::const_iterator itChunk = pwptraj.vchunks.begin(); itChunk != pwptraj.vchunks.end(); ++itChunk, ++iOriginalChunk ) {
 #else
             for( std::vector<PiecewisePolynomials::Chunk>::const_iterator itChunk = pwptraj.vchunks.begin(); itChunk != pwptraj.vchunks.end(); ++itChunk ) {
@@ -317,6 +320,8 @@ public:
 
 #ifdef JERK_LIMITED_SMOOTHER_VALIDATE
                 // Verify that chunks are continuously connected.
+                BOOST_ASSERT(vFinalChunks.size() > 0);
+
                 if( iOriginalChunk > 0 ) {
                     PiecewisePolynomials::Chunk& prevChunk = pwptraj.vchunks[iOriginalChunk - 1];
                     prevChunk.Eval(prevChunk.duration, x0Vect);
@@ -328,95 +333,38 @@ public:
                     itChunk->Evald1(0, v0Vect);
                     itChunk->Evald2(0, a0Vect);
                 }
-                size_t ichunk = 0;
+                size_t isubchunk = 0;
                 FOREACHC(itTestChunk, vFinalChunks) {
-                    itTestChunk->Eval(0, x1Vect);
-                    itTestChunk->Evald1(0, v1Vect);
-                    itTestChunk->Evald2(0, a1Vect);
-
-                    std::vector<dReal>::const_iterator itx0 = x0Vect.begin(), itx1 = x1Vect.begin();
-                    std::vector<dReal>::const_iterator itv0 = v0Vect.begin(), itv1 = v1Vect.begin();
-                    std::vector<dReal>::const_iterator ita0 = a0Vect.begin(), ita1 = a1Vect.begin();
-                    bool bSuccess = true;
-                    std::string errorType;
-                    int ifaileddof = -1;
-                    for( size_t idof = 0; idof < _ndof; ++idof ) {
-                        const dReal x0 = *(itx0 + idof), x1 = *(itx1 + idof);
-                        if( !PiecewisePolynomials::FuzzyEquals(x0, x1, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
-                            bSuccess = false;
-                            errorType = "position";
-                            ifaileddof = idof;
-                            break;
-                        }
-                        const dReal v0 = *(itv0 + idof), v1 = *(itv1 + idof);
-                        if( !PiecewisePolynomials::FuzzyEquals(v0, v1, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
-                            bSuccess = false;
-                            errorType = "velocity";
-                            ifaileddof = idof;
-                            break;
-                        }
-                        const dReal a0 = *(ita0 + idof), a1 = *(ita1 + idof);
-                        if( !PiecewisePolynomials::FuzzyEquals(a0, a1, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
-                            bSuccess = false;
-                            errorType = "acceleration";
-                            ifaileddof = idof;
-                            break;
-                        }
-                    }
-                    if( !bSuccess ) {
+                    PiecewisePolynomials::PolynomialCheckReturn chunkcheckret = _limitsChecker.CheckChunkValues(*itTestChunk, 0, x0Vect, v0Vect, a0Vect);
+                    if( chunkcheckret != PolynomialCheckReturn::PCR_Normal ) {
+#ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
+                        RAVELOG_WARN_FORMAT("env=%d, idof=%d; value=%.15e; expected=%.15e; result=%s", _envId%_limitsChecker._failedDOF%_limitsChecker._failedValue%_limitsChecker._expectedValue%PiecewisePolynomials::GetPolynomialCheckReturnString(chunkcheckret));
+#endif
                         _DumpPiecewisePolynomialTrajectory(pwptraj, "beforconversion", static_cast<DebugLevel>(RaveGetDebugLevel()));
                         PiecewisePolynomials::PiecewisePolynomialTrajectory subtraj(vFinalChunks);
                         _DumpPiecewisePolynomialTrajectory(subtraj, boost::str(boost::format("chunk%d")%(itChunk - pwptraj.vchunks.begin())).c_str(), static_cast<DebugLevel>(RaveGetDebugLevel()));
-                        OPENRAVE_ASSERT_FORMAT(false, "found %s discrepancy idof=%d at the start of isubchunk=%d/%d; ichunk=%d/%d", errorType%ifaileddof%ichunk%vFinalChunks.size()%(itChunk - pwptraj.vchunks.begin())%pwptraj.vchunks.size(), ORE_InconsistentConstraints);
+                        OPENRAVE_ASSERT_FORMAT(chunkcheckret == PolynomialCheckReturn::PCR_Normal, "got checkret=%s when checking the start of isubchunk=%d/%d; ichunk=%d/%d; introduced in shortcut iter=%d; constraintChecked=%d; prev chunk shortcut iter=%d", PiecewisePolynomials::GetPolynomialCheckReturnString(chunkcheckret)%isubchunk%vFinalChunks.size()%iOriginalChunk%pwptraj.vchunks.size()%(itChunk->_iteration)%(itChunk->constraintChecked)%prevChunkShortcutIter, ORE_InconsistentConstraints);
                     }
 
-                    ++ichunk;
-                    x1Vect.swap(x0Vect);
+                    ++isubchunk;
                     itTestChunk->Eval(itTestChunk->duration, x0Vect);
-                    v1Vect.swap(v0Vect);
                     itTestChunk->Evald1(itTestChunk->duration, v0Vect);
-                    a1Vect.swap(a0Vect);
                     itTestChunk->Evald2(itTestChunk->duration, a0Vect);
                 }
 
-                itChunk->Eval(itChunk->duration, x1Vect);
-                itChunk->Evald1(itChunk->duration, v1Vect);
-                itChunk->Evald2(itChunk->duration, a1Vect);
-                std::vector<dReal>::const_iterator itx0 = x0Vect.begin(), itx1 = x1Vect.begin();
-                std::vector<dReal>::const_iterator itv0 = v0Vect.begin(), itv1 = v1Vect.begin();
-                std::vector<dReal>::const_iterator ita0 = a0Vect.begin(), ita1 = a1Vect.begin();
-                bool bSuccess = true;
-                std::string errorType;
-                int ifaileddof = -1;
-                for( size_t idof = 0; idof < _ndof; ++idof ) {
-                    const dReal x0 = *(itx0 + idof), x1 = *(itx1 + idof);
-                    if( !PiecewisePolynomials::FuzzyEquals(x0, x1, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
-                        bSuccess = false;
-                        errorType = "position";
-                        ifaileddof = idof;
-                        break;
-                    }
-                    const dReal v0 = *(itv0 + idof), v1 = *(itv1 + idof);
-                    if( !PiecewisePolynomials::FuzzyEquals(v0, v1, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
-                        bSuccess = false;
-                        errorType = "velocity";
-                        ifaileddof = idof;
-                        break;
-                    }
-                    const dReal a0 = *(ita0 + idof), a1 = *(ita1 + idof);
-                    if( !PiecewisePolynomials::FuzzyEquals(a0, a1, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
-                        bSuccess = false;
-                        errorType = "acceleration";
-                        ifaileddof = idof;
-                        break;
-                    }
-                }
-                if( !bSuccess ) {
+                // Now x0Vect, v0Vect, and a0Vect hold the final values of the last chunk of vFinalChunks
+                PiecewisePolynomials::PolynomialCheckReturn lastchunkcheckret = _limitsChecker.CheckChunkValues(*itChunk, itChunk->duration, x0Vect, v0Vect, a0Vect);
+                if( lastchunkcheckret != PolynomialCheckReturn::PCR_Normal ) {
+#ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
+                    RAVELOG_WARN_FORMAT("env=%d, idof=%d; value=%.15e; expected=%.15e; result=%s", _envId%_limitsChecker._failedDOF%_limitsChecker._failedValue%_limitsChecker._expectedValue%PiecewisePolynomials::GetPolynomialCheckReturnString(lastchunkcheckret));
+#endif
                     _DumpPiecewisePolynomialTrajectory(pwptraj, "beforconversion", static_cast<DebugLevel>(RaveGetDebugLevel()));
                     PiecewisePolynomials::PiecewisePolynomialTrajectory subtraj(vFinalChunks);
                     _DumpPiecewisePolynomialTrajectory(subtraj, boost::str(boost::format("chunk%d")%(itChunk - pwptraj.vchunks.begin())).c_str(), static_cast<DebugLevel>(RaveGetDebugLevel()));
-                    OPENRAVE_ASSERT_FORMAT(false, "found %s discrepancy idof=%d at the start of isubchunk=%d/%d; ichunk=%d/%d", errorType%ifaileddof%ichunk%vFinalChunks.size()%(itChunk - pwptraj.vchunks.begin())%pwptraj.vchunks.size(), ORE_InconsistentConstraints);
+                    OPENRAVE_ASSERT_FORMAT(lastchunkcheckret == PolynomialCheckReturn::PCR_Normal, "got checkret=%s when checking the end of isubchunk=%d/%d; ichunk=%d/%d; introduced in shortcut iter=%d; constraintChecked=%d", PiecewisePolynomials::GetPolynomialCheckReturnString(lastchunkcheckret)%isubchunk%vFinalChunks.size()%iOriginalChunk%pwptraj.vchunks.size()%(itChunk->_iteration)%(itChunk->constraintChecked), ORE_InconsistentConstraints);
                 }
+
+                prevChunkShortcutIter = itChunk->_iteration;
 #endif
 
                 FOREACH(itNewChunk, vFinalChunks) {
@@ -744,8 +692,18 @@ public:
                 if( iter == 0 ) {
                     // Since replacing the entire initial trajectory, just initialize pwptraj with vChunksOut directly.
                     pwptraj.Initialize(vChunksOut);
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+                    FOREACH(itchunk, pwptraj.vchunks) {
+                        itchunk->_iteration = iter;
+                    }
+#endif
                 }
                 else {
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+                    FOREACH(itchunk, vChunksOut) {
+                        itchunk->_iteration = iter;
+                    }
+#endif
                     pwptraj.ReplaceSegment(t0, t1, vChunksOut);
                 }
                 // RAVELOG_DEBUG_FORMAT("env=%d, fSegmentTime=%f; fDiff=%f; prevduration=%f; newduration=%f", _envId%fSegmentTime%fDiff%tTotal%pwptraj.duration);
@@ -818,6 +776,52 @@ public:
 
             vChunksOut.insert(vChunksOut.end(), vIntermediateChunks.begin(), vIntermediateChunks.end());
         }
+
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+        // Check that the boundary conditions of vChunksOut are aligned with those of the input
+        PiecewisePolynomials::PiecewisePolynomialTrajectory temptraj;
+        // Check the beginning
+        {
+            const PiecewisePolynomials::Chunk& inputInitChunk = vChunksIn.front();
+            inputInitChunk.Eval(0, x0Vect);
+            inputInitChunk.Evald1(0, v0Vect);
+            inputInitChunk.Evald2(0, a0Vect);
+            const PiecewisePolynomials::Chunk& outputInitChunk = vChunksOut.front();
+            PiecewisePolynomials::PolynomialCheckReturn chunkcheckret = _limitsChecker.CheckChunkValues(outputInitChunk, 0, x0Vect, v0Vect, a0Vect);
+            if( chunkcheckret != PolynomialCheckReturn::PCR_Normal ) {
+#ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
+                RAVELOG_WARN_FORMAT("env=%d, idof=%d; value=%.15e; expected=%.15e; result=%s", _envId%_limitsChecker._failedDOF%_limitsChecker._failedValue%_limitsChecker._expectedValue%PiecewisePolynomials::GetPolynomialCheckReturnString(chunkcheckret));
+#endif
+                temptraj.Initialize(vChunksIn);
+                _DumpPiecewisePolynomialTrajectory(temptraj, "inputchunks", static_cast<DebugLevel>(RaveGetDebugLevel()));
+                temptraj.Initialize(vChunksOut);
+                _DumpPiecewisePolynomialTrajectory(temptraj, "outputchunks", static_cast<DebugLevel>(RaveGetDebugLevel()));
+                OPENRAVE_ASSERT_FORMAT(false, "got checkret=%s while checking the start of chunks", PiecewisePolynomials::GetPolynomialCheckReturnString(chunkcheckret), ORE_InconsistentConstraints);
+            }
+        } // end checking for the beginning
+
+        // Check the end
+        {
+            std::vector<dReal> &x1Vect = _cacheX1Vect2, &v1Vect = _cacheV1Vect2, &a1Vect = _cacheA1Vect2;
+            const PiecewisePolynomials::Chunk& inputFinalChunk = vChunksIn.back();
+            inputFinalChunk.Eval(inputFinalChunk.duration, x1Vect);
+            inputFinalChunk.Evald1(inputFinalChunk.duration, v1Vect);
+            inputFinalChunk.Evald2(inputFinalChunk.duration, a1Vect);
+            const PiecewisePolynomials::Chunk& outputFinalChunk = vChunksOut.back();
+            PiecewisePolynomials::PolynomialCheckReturn chunkcheckret = _limitsChecker.CheckChunkValues(outputFinalChunk, outputFinalChunk.duration, x1Vect, v1Vect, a1Vect);
+            if( chunkcheckret != PolynomialCheckReturn::PCR_Normal ) {
+#ifdef JERK_LIMITED_POLY_CHECKER_DEBUG
+                RAVELOG_WARN_FORMAT("env=%d, idof=%d; value=%.15e; expected=%.15e; result=%s", _envId%_limitsChecker._failedDOF%_limitsChecker._failedValue%_limitsChecker._expectedValue%PiecewisePolynomials::GetPolynomialCheckReturnString(chunkcheckret));
+#endif
+                temptraj.Initialize(vChunksIn);
+                _DumpPiecewisePolynomialTrajectory(temptraj, "inputchunks", static_cast<DebugLevel>(RaveGetDebugLevel()));
+                temptraj.Initialize(vChunksOut);
+                _DumpPiecewisePolynomialTrajectory(temptraj, "outputchunks", static_cast<DebugLevel>(RaveGetDebugLevel()));
+                OPENRAVE_ASSERT_FORMAT(false, "got checkret=%s while checking the end of chunks", PiecewisePolynomials::GetPolynomialCheckReturnString(chunkcheckret), ORE_InconsistentConstraints);
+            }
+        } // end checking for the end
+#endif
+
         return PiecewisePolynomials::CheckReturn(0);
     }
 

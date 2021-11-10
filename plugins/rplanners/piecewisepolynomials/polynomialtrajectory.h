@@ -306,6 +306,7 @@ public:
     std::vector<Polynomial> vpolynomials;
 
     mutable bool constraintChecked; ///< TODO: write a description for this parameter (similar to that of RampND)
+    mutable int _iteration = -1; /// for debugging only. keeps track of the shortcut iteration from which this chunk is introduced into the final trajectory.
 
 }; // end class Chunk
 
