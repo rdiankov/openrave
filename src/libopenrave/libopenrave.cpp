@@ -2133,16 +2133,16 @@ void CollisionReport::FillBodyNames()
         vBodyColliding.clear();
         vBodyColliding.reserve(vLinkColliding.size());
         FOREACHC(itlinkpair, vLinkColliding) {
-            std::string bodyName1, bodyName2;
+            std::string tempBodyName1, tempBodyName2;
             KinBodyPtr pparent1 = itlinkpair->first->GetParent(true);
             if( !!pparent1 ) {
-                bodyName1 = pparent1->GetName();
+                tempBodyName1 = pparent1->GetName();
             }
             KinBodyPtr pparent2 = itlinkpair->second->GetParent(true);
             if( !!pparent2 ) {
-                bodyName2 = pparent2->GetName();
+                tempBodyName2 = pparent2->GetName();
             }
-            vBodyColliding.emplace_back(bodyName1, bodyName2);
+            vBodyColliding.emplace_back(tempBodyName1, tempBodyName2);
         }
     }
 }
