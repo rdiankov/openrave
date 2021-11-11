@@ -135,11 +135,11 @@ ParabolicCheckReturn CheckRamps(const std::vector<Ramp>& ramps, dReal xmin, dRea
 
     // Check the last ramp
     if( !FuzzyEquals(ramps[ramps.size() - 1].x1, x1, g_fRampEpsilon) ) {
-        RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: ramps[%d].x1 = %.15e; x1 = %.15e; diff = %.15e", (ramps.size() - 1)%ramps[ramps.size() - 1].x0%x0%(ramps[ramps.size() - 1].x1 - x1));
+        RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: ramps[%d].x1 = %.15e; x1 = %.15e; diff = %.15e", (ramps.size() - 1)%ramps[ramps.size() - 1].x1%x1%(ramps[ramps.size() - 1].x1 - x1));
         return PCR_XDiscrepancy;
     }
     if( !FuzzyEquals(ramps[ramps.size() - 1].v1, v1, g_fRampEpsilon) ) {
-        RAVELOG_WARN_FORMAT("PCR_VDiscrepancy: ramps[%d].v1 = %.15e; v1 = %.15e; diff = %.15e", (ramps.size() - 1)%ramps[ramps.size() - 1].v0%v0%(ramps[ramps.size() - 1].v1 - v1));
+        RAVELOG_WARN_FORMAT("PCR_VDiscrepancy: ramps[%d].v1 = %.15e; v1 = %.15e; diff = %.15e", (ramps.size() - 1)%ramps[ramps.size() - 1].v1%v1%(ramps[ramps.size() - 1].v1 - v1));
         return PCR_VDiscrepancy;
     }
     return PCR_Normal;
