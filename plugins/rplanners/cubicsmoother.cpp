@@ -485,6 +485,9 @@ public:
             if( t1 - t0 < minTimeStep ) {
                 // Time instants are too close.
                 RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e and t1=%.15e are too close (minTimeStep=%.15e)", _envId%iter%numIters%t0%t1%minTimeStep);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                ++_vShortcutStats[SS_TimeInstantsTooClose];
+#endif
                 continue;
             }
 
@@ -506,6 +509,9 @@ public:
                     if( vVisitedDiscretization[testPairIndex] ) {
                         // This bin has already been visited.
                         RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; testPairIndex=%d has been visited", _envId%iter%numIters%t0%t1%testPairIndex);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                        ++_vShortcutStats[SS_RedundantShortcut];
+#endif
                         continue;
                     }
                     vVisitedDiscretization[testPairIndex] = 1;
@@ -519,6 +525,9 @@ public:
                 pwptraj.Eval(t0, x0Vect);
                 if( _parameters->SetStateValues(x0Vect) != 0 ) {
                     RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; state setting at x0 failed", _envId%iter%numIters%t0%t1);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                    ++_vShortcutStats[SS_StateSettingFailed];
+#endif
                     continue;
                 }
                 iIterProgress += 0x10000000;
@@ -528,6 +537,9 @@ public:
                 pwptraj.Eval(t1, x1Vect);
                 if( _parameters->SetStateValues(x1Vect) != 0 ) {
                     RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; state setting at x1 failed", _envId%iter%numIters%t0%t1);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                    ++_vShortcutStats[SS_StateSettingFailed];
+#endif
                     continue;
                 }
                 iIterProgress += 0x10000000;
@@ -575,6 +587,9 @@ public:
                 // RAVELOG_DEBUG_FORMAT("env=%d, fCurVelMult=%f; fCurAccelMult=%f;", _envId%fCurVelMult%fCurAccelMult);
 
                 bool bSuccess = false;
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                ShortcutStatus currentStatus = SS_Successful;
+#endif
                 for( size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown ) {
                     PiecewisePolynomials::PolynomialCheckReturn polycheckret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration
                                                                                    (x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect,
@@ -587,12 +602,18 @@ public:
 
                     if( polycheckret != PolynomialCheckReturn::PCR_Normal ) {
                         RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; iSlowDown=%d; initial interpolation failed. polycheckret=%s", _envId%iter%numIters%t0%t1%iSlowDown%PiecewisePolynomials::GetPolynomialCheckReturnString(polycheckret));
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                        currentStatus = SS_InitialInterpolationFailed;
+#endif
                         break; // must not slow down any further.
                     }
 
                     if( fChunksDuration + minTimeStep > t1 - t0 ) {
                         // Segment does not make significant improvement.
                         RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; shortcut does not make significant improvement. prevduration=%.15e; newduration=%.15e; diff=%.15e; minTimeStep=%.15e", _envId%iter%numIters%t0%t1%(t1 - t0)%fChunksDuration%(t1 - t0 - fChunksDuration)%minTimeStep);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                        currentStatus = iSlowDown == 0 ? SS_InterpolatedSegmentTooLong : SS_InterpolatedSegmentTooLongFromSlowDown;
+#endif
                         break; // must not slow down any further.
                     }
 
@@ -610,6 +631,9 @@ public:
                             // TODO:
                             if( checkret.bDifferentVelocity ) {
                                 RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; rejecting shortcut since the checked segment ends with different velocities", _envId%iter%numIters%t0%t1);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                                currentStatus = SS_CheckFailedWithDifferentVelocity;
+#endif
                                 break; // do not slow down any further.
                             }
                         }
@@ -618,6 +642,9 @@ public:
                     }
                     else if( checkret.retcode == CFO_CheckTimeBasedConstraints ) {
                         ++nTimeBasedConstraintsFailed;
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                        currentStatus = SS_CheckFailedTimeBasedConstraints;
+#endif
                         if( 0 ) {//( _bManipConstraints && !!_manipConstraintChecker ) {
                             // Scale down accelLimits and/or velLimits based on what constraints are violated.
                         }
@@ -628,10 +655,16 @@ public:
                             fCurJerkMult *= checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult;
                             if( fCurVelMult < fVelMultCutoff ) {
                                 RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; fCurVelMult goes below threshold (%.15e < %.15e).", _envId%iter%numIters%t0%t1%fCurVelMult%fVelMultCutoff);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                                currentStatus = SS_SlowDownFailed;
+#endif
                                 break;
                             }
                             if( fCurAccelMult < fAccelMultCutoff ) {
                                 RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; fCurAccelMult goes below threshold (%.15e < %.15e).", _envId%iter%numIters%t0%t1%fCurAccelMult%fAccelMultCutoff);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                                currentStatus = SS_SlowDownFailed;
+#endif
                                 break;
                             }
 
@@ -650,6 +683,17 @@ public:
                     }
                     else {
                         RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; rejecting shortcut due to ret=0x%x", _envId%iter%numIters%t0%t1%checkret.retcode);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                        if( (checkret.retcode & CFO_CheckEnvCollisions) == CFO_CheckEnvCollisions  ) {
+                            currentStatus = SS_CheckFailedCollisions;
+                        }
+                        else if( (checkret.retcode & CFO_CheckUserConstraints) == CFO_CheckUserConstraints ) {
+                            currentStatus = SS_CheckFailedUserConstraints;
+                        }
+                        else {
+                            currentStatus = SS_Failed;
+                        }
+#endif
                         break; // do not slow down any further.
                     }
                     iIterProgress += 0x1000;
@@ -658,11 +702,17 @@ public:
 
                 if( !bSuccess ) {
                     // Shortcut failed. Continue to the next iteration.
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                    ++_vShortcutStats[currentStatus];
+#endif
                     continue;
                 }
 
                 if( vChunksOut.size() == 0 ) {
                     RAVELOG_WARN_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; shortcut chunks vector is empty", _envId%iter%numIters%t0%t1);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                    ++_vShortcutStats[SS_Failed];
+#endif
                     continue;
                 }
 
@@ -674,11 +724,17 @@ public:
                 // Make sure that the new segment duration is really less than the original segment duration. (The new segment duration may have changed during the checking process due to tool constraints projection, etc.)
                 if( fDiff < 0 ) {
                     RAVELOG_WARN_FORMAT("env=%d, the new segment time=%.15f becomes larger than the original segment time=%.15f, so discarding it.", _envId%fSegmentTime%(t1 - t0));
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                    ++_vShortcutStats[SS_CheckedSegmentTooLong];
+#endif
                     continue;
                 }
 
                 // Now this shortcut iteration is really successful.
                 ++numShortcuts;
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+                ++_vShortcutStats[SS_Successful];
+#endif
 
                 // Keep track of multipliers
                 fStartTimeVelMult = min(1.0, fCurVelMult*fiSearchVelAccelMult);
@@ -747,6 +803,11 @@ public:
         }
         RAVELOG_DEBUG_FORMAT("env=%d, Finished at shortcut iter=%d/%d (%s), successful=%d; numSlowDowns=%d; duration: %.15e -> %.15e; diff=%.15e", _envId%iter%numIters%ss.str()%numShortcuts%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
         _DumpPiecewisePolynomialTrajectory(pwptraj, "aftershortcut", _dumpLevel);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+        ss.str(""); ss.clear();
+        GetShortcutStatusString(ss);
+        RAVELOG_INFO_FORMAT("env=%d, Shortcut statistics: total iterations=%d\n%s", _envId%iter%ss.str());
+#endif
 
         return numShortcuts;
     }

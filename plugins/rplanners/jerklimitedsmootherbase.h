@@ -49,6 +49,9 @@ public:
         // Pre-allocate in order to keep memory growth predictable.
         _nMaxDiscretizationSize = 0x1000;
         _cacheVVisitedDiscretization.resize(_nMaxDiscretizationSize*_nMaxDiscretizationSize, 0);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+        _vShortcutStats.resize(SS_ENDMARKER, 0);
+#endif
     }
 
     virtual const char* GetPlannerName() const
@@ -90,6 +93,7 @@ public:
         _fileIndexMod = 1000;
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
         _dumpLevel = Level_Debug;
+        std::fill(_vShortcutStats.begin(), _vShortcutStats.end(), 0);
 #else
         _dumpLevel = Level_Verbose;
 #endif
@@ -305,10 +309,43 @@ public:
 
 protected:
 
-    enum ShortcutStatus
+    enum ShortcutStatus : uint8_t
     {
-        SS_Successful = 1,
+        SS_Successful = 0,
+        SS_TimeInstantsTooClose,       // the sampled time instants t0 and t1 are closer than the specified threshold
+        SS_RedundantShortcut,          // the sampled time instants t0 and t1 fall into the same bins as a previously failed shortcut. see vVisitedDiscretization for details.
+        SS_InitialInterpolationFailed, // interpolation fails.
+        SS_InterpolatedSegmentTooLong, // interpolated segment from t0 to t1 is not shorter than t1 - t0 by at least minTimeStep
+        SS_InterpolatedSegmentTooLongFromSlowDown, // interpolated segment from t0 to t1 is not shorter than t1 - t0 by at least minTimeStep because of reduced vel/accel limits
+        SS_CheckedSegmentTooLong,      // the processed segment is not shorter than t1 - t0 by at least minTimeStep
+        SS_CheckFailedWithDifferentVelocity, // interpolated segment passes the check but the newly constructed segments after the checking process ends up with different final velocity
+        SS_CheckFailedCollisions,      // interpolated segment is not collision-free.
+        SS_CheckFailedTimeBasedConstraints, // interpolated segment violates time-based constraints.
+        SS_CheckFailedUserConstraints, // interpolated segment violates some user-defined constraints.
+        SS_SlowDownFailed,             // interpolated segment violates manip speed/accel constraints but cannot slow down further due to speed/accel multipliers getting too low
+        SS_StateSettingFailed,         // error occured when setting a state
+        SS_Failed,                     // other uncategorized failures
+
+        SS_ENDMARKER,                  // marker for the end of ShortcutStatus enum. Do not add more enum after this.
     };
+    std::vector<size_t> _vShortcutStats;
+
+    inline void GetShortcutStatusString(std::stringstream& ss) const
+    {
+        ss << "  Successful = " << _vShortcutStats[SS_Successful];
+        ss << "\n  TimeInstantsTooClose = " << _vShortcutStats[SS_TimeInstantsTooClose];
+        ss << "\n  RedundantShortcut = " << _vShortcutStats[SS_RedundantShortcut];
+        ss << "\n  InitialInterpolationFailed = " << _vShortcutStats[SS_InitialInterpolationFailed];
+        ss << "\n  InterpolatedSegmentTooLong = " << _vShortcutStats[SS_InterpolatedSegmentTooLong];
+        ss << "\n  InterpolatedSegmentTooLongFromSlowDown = " << _vShortcutStats[SS_InterpolatedSegmentTooLongFromSlowDown];
+        ss << "\n  CheckedSegmentTooLong = " << _vShortcutStats[SS_CheckedSegmentTooLong];
+        ss << "\n  CheckFailedWithDifferentVelocity = " << _vShortcutStats[SS_CheckFailedWithDifferentVelocity];
+        ss << "\n  CheckFailedCollisions = " << _vShortcutStats[SS_CheckFailedCollisions];
+        ss << "\n  CheckFailedTimeBasedConstraints = " << _vShortcutStats[SS_CheckFailedTimeBasedConstraints];
+        ss << "\n  CheckFailedUserConstraints = " << _vShortcutStats[SS_CheckFailedUserConstraints];
+        ss << "\n  SlowDownFailed = " << _vShortcutStats[SS_SlowDownFailed];
+        ss << "\n  StateSettingFailed = " << _vShortcutStats[SS_StateSettingFailed];
+    }
 
     /// \brief Initialize _pinterpolator. Also set _maskinterpolation.
     virtual void _InitializeInterpolator()=0;
