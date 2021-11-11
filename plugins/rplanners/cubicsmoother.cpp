@@ -820,7 +820,7 @@ public:
 
                 // Now this shortcut iteration is really successful.
                 ++numShortcuts;
-#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
                 ++_vShortcutStats[SS_Successful];
 #endif
                 lastSuccessfulShortcutIter = iter;
