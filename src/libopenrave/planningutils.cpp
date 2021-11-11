@@ -3635,11 +3635,11 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
     // Prepare filterreturn
     if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-        if( (int)filterreturn->_configurations.capacity() < (1 + numSteps)*params->GetDOF() ) {
-            filterreturn->_configurations.reserve((1 + numSteps)*params->GetDOF());
+        if( (int)filterreturn->_configurations.capacity() < (1 + totalSteps)*params->GetDOF() ) {
+            filterreturn->_configurations.reserve((1 + totalSteps)*params->GetDOF());
         }
-        if( (int)filterreturn->_configurationtimes.capacity() < 1 + numSteps) {
-            filterreturn->_configurationtimes.reserve(1 + numSteps);
+        if( (int)filterreturn->_configurationtimes.capacity() < 1 + totalSteps) {
+            filterreturn->_configurationtimes.reserve(1 + totalSteps);
         }
     }
 
@@ -3960,10 +3960,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             tcur = tnext;
             numRepeating = 0; // reset
             if( tcur > timeelapsed +  1e-7 ) {
-                if( istep + 1 >= numSteps ) {
+                if( istep + 1 >= totalSteps ) {
                     break; // expected
                 }
-                RAVELOG_WARN_FORMAT("env=%d, timestep=%f; timeelapsed=%f; istep=%d; numSteps=%d", _environmentid%tcur%timeelapsed%istep%numSteps);
+                RAVELOG_WARN_FORMAT("env=%d, timestep=%f; timeelapsed=%f; istep=%d; numSteps=%d; totalSteps=%d", _environmentid%tcur%timeelapsed%istep%numSteps%totalSteps);
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
@@ -4021,34 +4021,37 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
             }
             if( numPostNeighSteps > 1 ) {
-                RAVELOG_DEBUG_FORMAT("env=%d, istep=%d; numPostNeighSteps=%d", _environmentid%istep%numPostNeighSteps);
-                std::vector<dReal> vpostdq(ndof), vpostddq(ndof), vpostdddq(ndof); // TODO: cache this
-                dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
-                for( size_t idof = 0; idof < ndof; ++idof ) {
-                    vpostdq[idof] = (_vtempconfig[idof] - _vprevtempconfig[idof]) * fiNumPostNeighSteps;
-                    vpostddq[idof] = (_vtempvelconfig[idof] - _vprevtempvelconfig[idof]) * fiNumPostNeighSteps;
-                    vpostdddq[idof] = (_vtempaccelconfig[idof] - _vprevtempaccelconfig[idof]) * fiNumPostNeighSteps;
-                }
+                // RAVELOG_DEBUG_FORMAT("env=%d, istep=%d; numPostNeighSteps=%d", _environmentid%istep%numPostNeighSteps);
+                // std::vector<dReal> vpostdq(ndof), vpostddq(ndof), vpostdddq(ndof); // TODO: cache this
+                // dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
+                // for( size_t idof = 0; idof < ndof; ++idof ) {
+                //     vpostdq[idof] = (_vtempconfig[idof] - _vprevtempconfig[idof]) * fiNumPostNeighSteps;
+                //     vpostddq[idof] = (_vtempvelconfig[idof] - _vprevtempvelconfig[idof]) * fiNumPostNeighSteps;
+                //     vpostdddq[idof] = (_vtempaccelconfig[idof] - _vprevtempaccelconfig[idof]) * fiNumPostNeighSteps;
+                // }
 
-                // Approximate everything between _vprevtempconfig and _vtempconfig (the projected
-                // configuration) using linear interpolation. TODO: maybe fix this later???
-                for( int ipoststep = 0; ipoststep + 1 < numPostNeighSteps; ++ipoststep ) {
-                    for( size_t idof = 0; idof < ndof; ++idof ) {
-                        _vprevtempconfig[idof] += vpostdq[idof];
-                        _vprevtempvelconfig[idof] += vpostddq[idof];
-                    }
-                    nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, maskoptions, filterreturn);
-                    if( nstateret != 0 ) {
-                        if( !!filterreturn ) {
-                            filterreturn->_returncode = nstateret;
-                        }
-                        return nstateret;
-                    }
-                }
+                // // Approximate everything between _vprevtempconfig and _vtempconfig (the projected
+                // // configuration) using linear interpolation. TODO: maybe fix this later???
+                // for( int ipoststep = 0; ipoststep + 1 < numPostNeighSteps; ++ipoststep ) {
+                //     for( size_t idof = 0; idof < ndof; ++idof ) {
+                //         _vprevtempconfig[idof] += vpostdq[idof];
+                //         _vprevtempvelconfig[idof] += vpostddq[idof];
+                //     }
+                //     nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, maskoptions, filterreturn);
+                //     if( nstateret != 0 ) {
+                //         if( !!filterreturn ) {
+                //             filterreturn->_returncode = nstateret;
+                //         }
+                //         return nstateret;
+                //     }
+                // }
+
+                RAVELOG_DEBUG_FORMAT("env=%d, the projected configuration is too far from the expected one. numPostNeighSteps=%d", _environmentid%numPostNeighSteps);
+                return CFO_FinalValuesNotReached;
             }
         }
 
-        if( !bHasMoved || (istep + 1 < numSteps && numRepeating > 2) || dqscale >= 1 ) {
+        if( !bHasMoved || (istep + 1 < totalSteps && numRepeating > 2) || dqscale >= 1 ) {
             bComputeNewTimeStep = true;
             fMinNextTimeStep = tnext;
             ++istep;
