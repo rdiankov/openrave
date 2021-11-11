@@ -456,6 +456,7 @@ public:
         const dReal tOriginal = pwptraj.duration;
         dReal tTotal = tOriginal;
         int iter = 0;
+        int lastSuccessfulShortcutIter = -1;
         for(; iter < numIters; ++iter ) {
             if( tTotal < minTimeStep ) {
                 RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, tTotal=%.15e is too shortcut to continue (minTimeStep=%.15e)", _envId%iter%numIters%tTotal%minTimeStep);
@@ -782,6 +783,7 @@ public:
 #ifdef JERK_LIMITED_SMOOTHER_VALIDATE
                 ++_vShortcutStats[SS_Successful];
 #endif
+                lastSuccessfulShortcutIter = iter;
 
                 // Keep track of multipliers
                 fStartTimeVelMult = min(1.0, fCurVelMult*fiSearchVelAccelMult);
@@ -853,7 +855,7 @@ public:
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
         ss.str(""); ss.clear();
         GetShortcutStatusString(ss);
-        RAVELOG_INFO_FORMAT("env=%d, Shortcut statistics: total iterations=%d\n%s", _envId%iter%ss.str());
+        RAVELOG_INFO_FORMAT("env=%d, Shortcut statistics: total iterations=%d, last successful iteration=%d\n%s", _envId%iter%lastSuccessfulShortcutIter%ss.str());
 #endif
 
         return numShortcuts;

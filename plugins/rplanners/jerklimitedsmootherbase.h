@@ -286,9 +286,14 @@ public:
         if( _bManipConstraints && (options & CFO_CheckTimeBasedConstraints) ) {
             try {
                 PiecewisePolynomials::CheckReturn manipret;
+                size_t iChunk = 0;
                 FOREACHC(itChunk, vChunksOut) {
-                    manipret = _manipConstraintChecker->CheckChunkManipConstraints(*itChunk);
+                    manipret = _manipConstraintChecker->CheckChunkManipConstraints(*itChunk, IT_OpenStart);
+                    ++iChunk;
                     if( manipret.retcode != 0 ) {
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                        RAVELOG_DEBUG_FORMAT("env=%d, ichunk=%d/%d failed due to manip speed/accel constraints", _envId%(itChunk - vChunksOut.begin())%vChunksOut.size());
+#endif
                         return manipret;
                     }
                 }

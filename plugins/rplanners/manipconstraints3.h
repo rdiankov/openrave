@@ -41,7 +41,7 @@ struct ManipConstraintInfo3
 class ManipConstraintChecker3
 {
 public:
-    ManipConstraintChecker3(EnvironmentBasePtr penv) : _penv(penv), _maxmanipspeed(0), _maxmanipaccel(0) {
+    ManipConstraintChecker3(EnvironmentBasePtr penv) : _penv(penv), _envId(penv->GetId()), _maxmanipspeed(0), _maxmanipaccel(0) {
     }
 
     /// \brief Given a world AABB oriented, return its 8 vertices. All vertices are describted in the parent frame (see ComputeEnclosingAABB).
@@ -474,7 +474,7 @@ public:
                 _sslog << itCoord->point << ",";
             }
             _sslog << "]";
-            RAVELOG_DEBUG_FORMAT("chunk.duration=%.15e; %s; fTimeWhenInvalid=%.15e; maxActualManipSpeed=%.15e; maxActualManipAccel=%.15e", chunkIn.duration%_sslog.str()%fTimeWhenInvalid%maxActualManipSpeed%maxActualManipAccel);
+            RAVELOG_DEBUG_FORMAT("env=%d, chunk.duration=%.15e; %s; fTimeWhenInvalid=%.15e; maxActualManipSpeed=%.15e; maxActualManipAccel=%.15e", _envId%chunkIn.duration%_sslog.str()%fTimeWhenInvalid%maxActualManipSpeed%maxActualManipAccel);
         }
 
         return PiecewisePolynomialsInternal::CheckReturn(retcode, fReductionFactor, maxActualManipSpeed, maxActualManipAccel);
@@ -482,6 +482,7 @@ public:
 
 private:
     EnvironmentBasePtr _penv;
+    int _envId;
     std::string _manipname;
     std::vector<KinBodyPtr> listUsedBodies;
     std::set<KinBody::LinkPtr> setCheckedManips;
