@@ -663,14 +663,26 @@ public:
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
                                     currentStatus = SS_SlowDownFailed;
 #endif
-                                    break;
+                                    break; // break out of slowdown loop
                                 }
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
                                 RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; max manip accel violated. fTimeBasedSurpassMult=%.15e; new fCurVelMult=%.15e; fCurAccelMult=%.15e", _envId%iter%numIters%t0%t1%checkret.fTimeBasedSurpassMult%fCurVelMult%fCurAccelMult);
 #endif
+                                bool bAccelLimitsChanged = false;
                                 for( size_t idof = 0; idof < _ndof; ++idof ) {
                                     dReal fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
-                                    accelLimits[idof] = std::max(fAccelLowerBound, fCurAccelMult*accelLimits[idof]);
+                                    dReal newAccelBound = std::max(fAccelLowerBound, fCurAccelMult*accelLimits[idof]);
+                                    if( newAccelBound < accelLimits[idof] ) {
+                                        accelLimits[idof] = newAccelBound;
+                                        bAccelLimitsChanged = true;
+                                    }
+                                }
+                                if( !bAccelLimitsChanged ) {
+                                    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; cannot scale down accel limits further", _envId%iter%numIters%t0%t1);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                                    currentStatus = SS_SlowDownFailed;
+#endif
+                                    break; // break out of slowdown loop
                                 }
                             }
                             else if( checkret.fMaxManipSpeed > _parameters->maxmanipspeed ) {
@@ -684,14 +696,26 @@ public:
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
                                     currentStatus = SS_SlowDownFailed;
 #endif
-                                    break;
+                                    break; // break out of slowdown loop
                                 }
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
                                 RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; max manip speed violated. fTimeBasedSurpassMult=%.15e; new fCurVelMult=%.15e; fCurAccelMult=%.15e", _envId%iter%numIters%t0%t1%checkret.fTimeBasedSurpassMult%fCurVelMult%fCurAccelMult);
 #endif
+                                bool bVelLimitsChanged = false;
                                 for( size_t idof = 0; idof < _ndof; ++idof ) {
                                     dReal fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
-                                    velLimits[idof] = std::max(fVelLowerBound, fCurVelMult*velLimits[idof]);
+                                    dReal newVelBound = std::max(fVelLowerBound, fCurVelMult*velLimits[idof]);
+                                    if( newVelBound < velLimits[idof] ) {
+                                        velLimits[idof] = newVelBound;
+                                        bVelLimitsChanged = true;
+                                    }
+                                }
+                                if( !bVelLimitsChanged ) {
+                                    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; cannot scale down vel limits further", _envId%iter%numIters%t0%t1);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                                    currentStatus = SS_SlowDownFailed;
+#endif
+                                    break; // break out of slowdown loop
                                 }
                             }
                         }
@@ -706,25 +730,41 @@ public:
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
                                 currentStatus = SS_SlowDownFailed;
 #endif
-                                break;
+                                break; // break out of slowdown loop
                             }
                             if( fCurAccelMult < fAccelMultCutoff ) {
                                 RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; fCurAccelMult goes below threshold (%.15e < %.15e).", _envId%iter%numIters%t0%t1%fCurAccelMult%fAccelMultCutoff);
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
                                 currentStatus = SS_SlowDownFailed;
 #endif
-                                break;
+                                break; // break out of slowdown loop
                             }
 
                             RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; new fCurVelMult=%.15e; fCurAccelMult=%.15e", _envId%iter%numIters%t0%t1%fCurVelMult%fCurAccelMult);
 
+                            bool bLimitsChanged = false;
                             for( size_t idof = 0; idof < _ndof; ++idof ) {
                                 dReal fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
                                 dReal fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
-                                velLimits[idof] = std::max(fVelLowerBound, fCurVelMult*velLimits[idof]);
-                                accelLimits[idof] = std::max(fAccelLowerBound, fCurAccelMult*accelLimits[idof]);
+                                dReal newVelBound = std::max(fVelLowerBound, fCurVelMult*velLimits[idof]);
+                                dReal newAccelBound = std::max(fAccelLowerBound, fCurAccelMult*accelLimits[idof]);
+                                if( newVelBound < velLimits[idof] ) {
+                                    velLimits[idof] = newVelBound;
+                                    bLimitsChanged = true;
+                                }
+                                if( newAccelBound < accelLimits[idof] ) {
+                                    accelLimits[idof] = newAccelBound;
+                                    bLimitsChanged = true;
+                                }
                                 // Scaling down jerk limits likely leads to significantly slower final traj.
                                 // jerkLimits[idof] *= (checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult);
+                            }
+                            if( !bLimitsChanged ) {
+                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; cannot scale down vel/accel limits further", _envId%iter%numIters%t0%t1);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                                currentStatus = SS_SlowDownFailed;
+#endif
+                                break; // break out of slowdown loop
                             }
                         }
                         ++numSlowDowns;
