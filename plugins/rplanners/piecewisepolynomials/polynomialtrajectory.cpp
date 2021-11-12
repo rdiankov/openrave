@@ -627,14 +627,22 @@ Polynomial PiecewisePolynomial::ExtractPolynomial(const dReal t0, const dReal t1
     size_t index0, index1;
     dReal remainder0, remainder1;
     FindPolynomialIndex(t0, index0, remainder0);
-    // TODO: Is the following ok? We need the following check since we allow initializing a polynomial with zero duration.
     while( _vpolynomials[index0].duration == 0 ) {
         ++index0;
     }
     FindPolynomialIndex(t1, index1, remainder1);
     if( index0 != index1 ) {
-        OPENRAVE_ASSERT_OP(index0 + 1, ==, index1);
-        BOOST_ASSERT( FuzzyZero(remainder1, g_fPolynomialEpsilon) );
+        try {
+            OPENRAVE_ASSERT_OP(index0 + 1, ==, index1);
+            BOOST_ASSERT( FuzzyZero(remainder1, g_fPolynomialEpsilon) );
+        }
+        catch( const std::exception& ex ) {
+            std::stringstream ssdebug;
+            ssdebug << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+            this->Serialize(ssdebug);
+            RAVELOG_WARN_FORMAT("exception happened when extracting polynomial: %s\nt0=%.15e; t1=%.15e; index0=%d; remainder0=%.15e; index1=%d; remainder1=%.15e; pwpdata=\"\"\"%s\"\"\"", ex.what()%t0%t1%index0%remainder0%index1%remainder1%ssdebug.str());
+            throw;
+        }
     }
     Polynomial p(_vpolynomials[index0]);
     p.Reparameterize(remainder0);
