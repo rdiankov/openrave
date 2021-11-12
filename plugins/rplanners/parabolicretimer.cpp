@@ -108,7 +108,6 @@ protected:
             OPENRAVE_ASSERT_OP(_parameters->GetDOF(), ==, info->gpos.dof);
             OPENRAVE_ASSERT_OP(_manipconstraintchecker->GetCheckManips().size(),==,1);
             RobotBase::ManipulatorPtr pmanip = _manipconstraintchecker->GetCheckManips().front().pmanip;
-            OPENRAVE_ASSERT_OP(pmanip->GetArmDOF(),==,info->gpos.dof);
 
             // look at the first pose and try to determine proper velocity limits
             std::vector<dReal>& vellimits=_cachevellimits, &accellimits=_cacheaccellimits;
@@ -116,10 +115,10 @@ protected:
             accellimits = info->_vConfigAccelerationLimit;
 
             // cannot use _parameters->SetStateValues...
-            pmanip->GetRobot()->SetDOFValues(_v0pos, KinBody::CLA_CheckLimits, pmanip->GetArmIndices());
+            pmanip->GetRobot()->SetActiveDOFValues(_v0pos, KinBody::CLA_CheckLimits);
             _manipconstraintchecker->GetMaxVelocitiesAccelerations(_v0vel, vellimits, accellimits);
 
-            pmanip->GetRobot()->SetDOFValues(_v1pos, KinBody::CLA_CheckLimits, pmanip->GetArmIndices());
+            pmanip->GetRobot()->SetActiveDOFValues(_v1pos, KinBody::CLA_CheckLimits);
             _manipconstraintchecker->GetMaxVelocitiesAccelerations(_v1vel, vellimits, accellimits);
 
             for(size_t j = 0; j < info->_vConfigVelocityLimit.size(); ++j) {
