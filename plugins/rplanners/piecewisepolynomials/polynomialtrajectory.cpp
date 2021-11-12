@@ -657,6 +657,11 @@ void PiecewisePolynomial::CleanUp()
         iWriteIndex = 1;
     }
     _vpolynomials.resize(iWriteIndex);
+    dReal duration = 0;
+    for( std::vector<Polynomial>::const_iterator itpoly = _vpolynomials.begin(); itpoly != _vpolynomials.end(); ++itpoly ) {
+        duration += itpoly->duration;
+    }
+    _duration = duration;
 }
 
 //
