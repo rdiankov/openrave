@@ -109,62 +109,20 @@ protected:
             OPENRAVE_ASSERT_OP(_parameters->GetDOF(), ==, info->gpos.dof);
             OPENRAVE_ASSERT_OP(_manipconstraintchecker->GetCheckManips().size(), ==, 1);
             RobotBase::ManipulatorPtr pmanip = _manipconstraintchecker->GetCheckManips().front().pmanip;
+            OPENRAVE_ASSERT_OP(pmanip->GetArmDOF(), ==, info->gpos.dof);
 
-            // Look at the state (joint values and velocities) at the start and at the end and try to determine velocity and acceleration limits to do retiming with.
+            // Look at the first pose and try to determine proper velocity limits
             std::vector<dReal> &vellimits = _cachevellimits, &accellimits = _cacheaccellimits;
-            // The following limits are those of active dofs. Note that active dof indices might differ from arm dof indices
             vellimits = info->_vConfigVelocityLimit;
             accellimits = info->_vConfigAccelerationLimit;
 
-            // Determine new velocity and acceleration limits for retiming with tool speed/accel constraints
-            const int armDOF = pmanip->GetArmDOF();
-            // _manipconstraintchecker->GetMaxVelocitiesAccelerations accepts inputs with the same
-            // dimension as the arm dof. If the robot active dof is different from arm dof, we will
-            // need further conversion.
-            if( armDOF != info->gpos.dof ) {
-                RobotBasePtr probot = pmanip->GetRobot();
-                ConfigurationSpecification armSpec = probot->GetActiveConfigurationSpecification();
-                ConfigurationSpecification armVelSpec = armSpec.ConvertToVelocitySpecification();
-                ConfigurationSpecification velSpec = _parameters->_configurationspecification.ConvertToVelocitySpecification();
-                std::vector<dReal> armValues(armDOF), armVelocities(armDOF);
-                std::vector<dReal> armVelocityLimits(armDOF), armAccelerationLimits(armDOF);
-                probot->GetActiveDOFVelocityLimits(armVelocityLimits);
-                probot->GetActiveDOFAccelerationLimits(armAccelerationLimits);
+            // Cannot use _parameters->SetStateValues... Note that here vellimits and accellimtis
+            // are modified according to manipulator constraints
+            pmanip->GetRobot()->SetDOFValues(_v0pos, KinBody::CLA_CheckLimits, pmanip->GetArmIndices());
+            _manipconstraintchecker->GetMaxVelocitiesAccelerations(_v0vel, vellimits, accellimits);
 
-                size_t numpoints = 1;
-                ConfigurationSpecification::ConvertData(armValues.begin(), armSpec, // target data
-                                                        _v0pos.begin(), _parameters->_configurationspecification, // source data
-                                                        numpoints, probot->GetEnv(), /*filluninitialized*/ true);
-                ConfigurationSpecification::ConvertData(armVelocities.begin(), armVelSpec, // target data
-                                                        _v0vel.begin(), velSpec, //source data
-                                                        numpoints, probot->GetEnv(), /*filluninitialized*/ true);
-                probot->SetDOFValues(armValues, KinBody::CLA_CheckLimits, pmanip->GetArmIndices());
-                _manipconstraintchecker->GetMaxVelocitiesAccelerations(armVelocities, armVelocityLimits, armAccelerationLimits);
-
-                ConfigurationSpecification::ConvertData(armValues.begin(), armSpec, // target data
-                                                        _v1pos.begin(), _parameters->_configurationspecification, // source data
-                                                        numpoints, probot->GetEnv(), /*filluninitialized*/ true);
-                ConfigurationSpecification::ConvertData(armVelocities.begin(), armVelSpec, // target data
-                                                        _v1vel.begin(), velSpec, //source data
-                                                        numpoints, probot->GetEnv(), /*filluninitialized*/ true);
-                probot->SetDOFValues(armValues, KinBody::CLA_CheckLimits, pmanip->GetArmIndices());
-                _manipconstraintchecker->GetMaxVelocitiesAccelerations(armVelocities, armVelocityLimits, armAccelerationLimits);
-
-                // Convert active dof data into full configuration specification
-                ConfigurationSpecification::ConvertData(vellimits.begin(), velSpec, // target data
-                                                        armVelocityLimits.begin(), armVelSpec, // source data
-                                                        numpoints, probot->GetEnv(), /*filluninitialized*/ false);
-                ConfigurationSpecification::ConvertData(accellimits.begin(), _parameters->_configurationspecification.ConvertToDerivativeSpecification(2), // target data
-                                                        armAccelerationLimits.begin(), armSpec.ConvertToDerivativeSpecification(2), // source data
-                                                        numpoints, probot->GetEnv(), /*filluninitialized*/ false);
-            }
-            else {
-                pmanip->GetRobot()->SetDOFValues(_v0pos, KinBody::CLA_CheckLimits, pmanip->GetArmIndices());
-                _manipconstraintchecker->GetMaxVelocitiesAccelerations(_v0vel, vellimits, accellimits);
-
-                pmanip->GetRobot()->SetDOFValues(_v1pos, KinBody::CLA_CheckLimits, pmanip->GetArmIndices());
-                _manipconstraintchecker->GetMaxVelocitiesAccelerations(_v1vel, vellimits, accellimits);
-            }
+            pmanip->GetRobot()->SetDOFValues(_v1pos, KinBody::CLA_CheckLimits, pmanip->GetArmIndices());
+            _manipconstraintchecker->GetMaxVelocitiesAccelerations(_v1vel, vellimits, accellimits);
 
             for (size_t j = 0; j < info->_vConfigVelocityLimit.size(); ++j) {
                 // Adjust vellimits and accellimits so that it does not fall below boundary
