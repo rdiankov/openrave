@@ -729,7 +729,7 @@ public:
 
         void Reset() override;
         void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
-        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options);
+        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options) override;
 
         /// \brief Updates the infos depending on the robot at the identity and zero position.
         void InitInfoFromBody(RobotBase& robot);
@@ -924,7 +924,7 @@ public:
         /// \brief release the body state. _pbody will not get restored on destruction
         ///
         /// After this call, it will still be possible to use \ref Restore.
-        virtual void Release();
+        virtual void Release() override;
 
 protected:
         RobotBasePtr _probot;
@@ -953,7 +953,7 @@ private:
         return PT_Robot;
     }
 
-    virtual void Destroy();
+    virtual void Destroy() override;
 
     /// \brief initializes a robot with links, joints, manipulators, and sensors
     ///
@@ -1242,10 +1242,10 @@ private:
     virtual void CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& jacobian) const;
     virtual void CalculateActiveAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& jacobian) const;
 
-    virtual const std::vector<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
+    virtual const std::vector<int>& GetNonAdjacentLinks(int adjacentoptions=0) const override;
 
     /// \brief \ref KinBody::SetNonCollidingConfiguration, also regrabs all bodies
-    virtual void SetNonCollidingConfiguration();
+    virtual void SetNonCollidingConfiguration() override;
 
     //@}
 
@@ -1308,17 +1308,17 @@ private:
 
         Do not call SimulationStep for the attached sensors in this function.
      */
-    virtual void SimulationStep(dReal fElapsedTime);
+    virtual void SimulationStep(dReal fElapsedTime) override;
 
     /// does not clone the grabbed bodies since it requires pointers from other bodies (that might not be initialized yet)
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override;
 
     /// \return true if this body is derived from RobotBase
     bool IsRobot() const override {
         return true;
     }
 
-    virtual void serialize(std::ostream& o, int options) const;
+    virtual void serialize(std::ostream& o, int options) const override;
 
     /// A md5 hash unique to the particular robot structure that involves manipulation and sensing components
     /// The serialization for the attached sensors will not involve any sensor specific properties (since they can change through calibration)
@@ -1363,7 +1363,7 @@ protected:
     /// \brief Called to notify the body that certain groups of parameters have been changed.
     ///
     /// This function in calls every registers calledback that is tracking the changes.
-    virtual void _PostprocessChangedParameters(uint32_t parameters);
+    virtual void _PostprocessChangedParameters(uint32_t parameters) override;
 
     virtual void _UpdateAttachedSensors();
 
@@ -1390,7 +1390,7 @@ protected:
     ConfigurationSpecification _activespec;
 
 private:
-    virtual const char* GetHash() const {
+    virtual const char* GetHash() const override {
         return OPENRAVE_ROBOT_HASH;
     }
     virtual const char* GetKinBodyHash() const {

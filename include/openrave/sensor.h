@@ -213,7 +213,7 @@ public:
         LaserGeomData() : SensorGeometry("Laser"), min_range(0), max_range(0), time_increment(0), time_scan(0) {
             min_angle[0] = min_angle[1] = max_angle[0] = max_angle[1] = resolution[0] = resolution[1] = 0;
         }
-        virtual SensorType GetType() const {
+        virtual SensorType GetType() const override {
             return ST_Laser;
         }
 
@@ -257,7 +257,7 @@ public:
 public:
         CameraGeomData() : SensorGeometry("Camera"), width(0), height(0), measurement_time(1), gain(1), KK(intrinsics) {
         }
-        virtual SensorType GetType() const {
+        virtual SensorType GetType() const override {
             return ST_Camera;
         }
 
@@ -315,7 +315,7 @@ public:
 public:
         JointEncoderGeomData() : SensorGeometry("JointEncoder"), resolution(0) {
         }
-        virtual SensorType GetType() const {
+        virtual SensorType GetType() const override {
             return ST_JointEncoder;
         }
 
@@ -348,7 +348,7 @@ public:
                         0,0,0, 0,1,0,
                         0,0,0, 0,0,1}}) {
         }
-        virtual SensorType GetType() const {
+        virtual SensorType GetType() const override {
             return ST_Force6D;
         }
         bool operator==(const Readable& other) const override {
@@ -384,7 +384,7 @@ public:
 public:
         IMUGeomData() : SensorGeometry("IMU") {
         }
-        virtual SensorType GetType() const {
+        virtual SensorType GetType() const override {
             return ST_IMU;
         }
 
@@ -412,7 +412,7 @@ public:
 public:
         OdometryGeomData() : SensorGeometry("Odometry") {
         }
-        virtual SensorType GetType() const {
+        virtual SensorType GetType() const override {
             return ST_Odometry;
         }
 
@@ -442,7 +442,7 @@ public:
 public:
         TactileGeomData() : SensorGeometry("Tactile") {
         }
-        virtual SensorType GetType() const {
+        virtual SensorType GetType() const override {
             return ST_Tactile;
         }
 
@@ -493,7 +493,7 @@ public:
 public:
         ActuatorGeomData() : SensorGeometry("Actuator") {
         }
-        virtual SensorType GetType() const {
+        virtual SensorType GetType() const override {
             return ST_Actuator;
         }
 
