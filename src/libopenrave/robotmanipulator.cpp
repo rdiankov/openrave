@@ -1648,7 +1648,6 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
             FOREACH(itjoint, vjoints) {
                 tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform() * (*itjoint)->GetInternalHierarchyRightTransform();
             }
-            tcur = tcur;
             // if 6D transform IK, then don't inlucde the local tool transform!
             if( !!(options & SO_Kinematics) || iktype != IKP_Transform6D ) {
                 tcur *= _info._tLocalTool;
