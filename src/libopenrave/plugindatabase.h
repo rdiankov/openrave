@@ -139,7 +139,7 @@ public:
             return !_bShutdown;
         }
 
-        const string& GetName() const {
+        const std::string& GetName() const {
             return ppluginname;
         }
         bool GetInfo(PLUGININFO& info) {
@@ -257,7 +257,7 @@ public:
         }
 
 
-        bool HasInterface(InterfaceType type, const string& name)
+        bool HasInterface(InterfaceType type, const std::string& name)
         {
             if( name.size() == 0 ) {
                 return false;
@@ -275,7 +275,7 @@ public:
         }
 
         InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* interfacehash, EnvironmentBasePtr penv) {
-            pair< InterfaceType, string> p(type,utils::ConvertToLowerCase(name));
+            std::pair<InterfaceType, std::string> p(type,utils::ConvertToLowerCase(name));
             if( _setBadInterfaces.find(p) != _setBadInterfaces.end() ) {
                 return InterfaceBasePtr();
             }
