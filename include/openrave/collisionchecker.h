@@ -75,6 +75,8 @@ public:
         Reset();
     }
 
+    virtual ~CollisionReport() noexcept {}
+
     /// \brief resets the report structure for the next collision call
     ///
     /// depending on nKeepPrevious will keep previous data.
