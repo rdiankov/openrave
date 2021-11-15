@@ -2,8 +2,11 @@ find_package(Eigen3 REQUIRED)
 message(STATUS "Eigen3 version: ${Eigen3_VERSION}")
 include_directories(${EIGEN3_INCLUDE_DIRS})
 
-add_library(piecewisepolynomials STATIC polynomialcommon.h polynomialtrajectory.h polynomialtrajectory.cpp polynomialchecker.h polynomialchecker.cpp interpolatorbase.h cubicinterpolator.h cubicinterpolator.cpp quinticinterpolator.h quinticinterpolator.cpp feasibilitychecker.h generalrecursiveinterpolator.h generalrecursiveinterpolator.cpp)
-set_target_properties(piecewisepolynomials PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")		
+add_library(piecewisepolynomials SHARED polynomialcommon.h polynomialtrajectory.h polynomialtrajectory.cpp polynomialchecker.h polynomialchecker.cpp interpolatorbase.h cubicinterpolator.h cubicinterpolator.cpp quinticinterpolator.h quinticinterpolator.cpp feasibilitychecker.h generalrecursiveinterpolator.h generalrecursiveinterpolator.cpp)
+set_target_properties(piecewisepolynomials PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
+
+install(TARGETS piecewisepolynomials DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${PLUGINS_BASE})
+
 add_dependencies(piecewisepolynomials interfacehashes_target)		
 
 # python bindings
