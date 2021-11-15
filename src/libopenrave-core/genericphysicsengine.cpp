@@ -82,7 +82,7 @@ public:
             pbody->RemoveUserData("_genericphysics_");
 
             const int bodyid = pbody->GetEnvironmentBodyIndex();
-            if (bodyid < _pysicsDataCache.size() && !!_pysicsDataCache.at(bodyid)) {
+            if (bodyid < (int)_pysicsDataCache.size() && !!_pysicsDataCache.at(bodyid)) {
                 _pysicsDataCache.at(bodyid).reset();
             }
             else {
@@ -96,7 +96,7 @@ public:
         // cannot access GetEnv()->GetMaxEnvironmentBodyIndex() because this function can be called while _mutexInterfaces is already locked, and _mutexInterfaces is not recursive mutex
         // so just resize to bodyIndex + 1 for now
         const int bodyIndex = pbody->GetEnvironmentBodyIndex();
-        if (bodyIndex >= _pysicsDataCache.size()) {
+        if (bodyIndex >= (int)_pysicsDataCache.size()) {
             //RAVELOG_INFO_FORMAT("extend _pysicsDataCache of size %d to %d from bodyIndex=%d (name=%s)", (_pysicsDataCache.size())%(bodyIndex + 1)%bodyIndex%(pbody->GetName()));
             _pysicsDataCache.resize(bodyIndex + 1, boost::shared_ptr<PhysicsData>());
         }

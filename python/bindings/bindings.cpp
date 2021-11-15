@@ -34,6 +34,7 @@ constexpr char select_dtype<int8_t>::type[];
 constexpr char select_dtype<uint8_t>::type[];
 constexpr char select_dtype<uint16_t>::type[];
 constexpr char select_dtype<uint32_t>::type[];
+constexpr char select_dtype<uint64_t>::type[];
 constexpr char select_dtype<bool>::type[];
 
 using py::object;
@@ -204,7 +205,11 @@ struct stdstring_from_python_str
     static void construct(PyObject* obj, py::converter::rvalue_from_python_stage1_data* data)
     {
         if(PyString_Check(obj)) {
+#if PY_MAJOR_VERSION >= 3
+            const char* value = PyUnicode_AsUTF8(obj);
+#else
             const char* value = PyString_AsString(obj);
+#endif
             //MY_CHECK(value,translate("Received null string pointer from Python"));
             void* storage = ((py::converter::rvalue_from_python_storage<std::string>*)data)->storage.bytes;
             new (storage) std::string(value);
@@ -214,7 +219,11 @@ struct stdstring_from_python_str
             handle<> utf8(allow_null(PyUnicode_AsUTF8String(obj)));
             //MY_CHECK(utf8,translate("Could not convert Python unicode object to UTF8 string"));
             void* storage = ((py::converter::rvalue_from_python_storage<std::string>*)data)->storage.bytes;
+#if PY_MAJOR_VERSION >= 3
+            const char* utf8v = PyUnicode_AsUTF8(utf8.get());
+#else
             const char* utf8v = PyString_AsString(utf8.get());
+#endif
             //MY_CHECK(utf8v,translate("Received null string from utf8 string"));
             new (storage) std::string(utf8v);
             data->convertible = storage;

@@ -26,6 +26,8 @@ try:
 except NameError:
     __builtins__['__openravepy_build_doc__'] = False
 
+import sys
+
 from .openravepy_int import *
 from .openravepy_int import __version__
 from .openravepy_int import __author__
@@ -42,7 +44,7 @@ Available methods for an exception e are
 if openravepy_int.__pythonbinding__ == 'pybind11':
     from .openravepy_int import _OpenRAVEException as OpenRAVEException
 else:
-    from .openravepy_int import _OpenRAVEException
+    from .openravepy_int import _OpenRAVEException, _std_runtime_error_
     
     class openrave_exception_helper(Exception):
         # wrap up the C++ openrave_exception
@@ -90,6 +92,7 @@ else:
     
     OpenRAVEException = openrave_exception_helper
     _OpenRAVEException.py_err_class = openrave_exception_helper
+    _std_runtime_error_.py_err_class = runtime_error
 
 openrave_exception = OpenRAVEException # for back compat
 
@@ -97,7 +100,10 @@ class PlanningError(Exception):
     def __init__(self,parameter=u'', recoverySuggestions=None):
         """:param recoverySuggestions: list of unicode suggestions to fix or recover from the error
         """
-        self.parameter = unicode(parameter)
+        if sys.version_info[0]>=3:
+            self.parameter = parameter
+        else:
+            self.parameter = unicode(parameter)
         if recoverySuggestions is None:
             self.recoverySuggestions = []
         else:

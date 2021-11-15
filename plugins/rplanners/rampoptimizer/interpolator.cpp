@@ -1559,7 +1559,17 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     }
 
     switchpointsList.push_back(0);
-    switchpointsList.push_back(curvesVectIn[0].GetDuration());
+    // Although functions to recompute trajectories with a fixed duration have been called prior
+    // to this, the duration of each dof can still be a bit different (but within the acceptable
+    // range). Should use the actual max duration as the duration of rampndVectOut.
+    dReal maxDuration = 0;
+    for( size_t idof = 0; idof < _ndof; ++idof ) {
+        if( curvesVectIn[idof].GetDuration() > maxDuration ) {
+            maxDuration = curvesVectIn[idof].GetDuration();
+        }
+    }
+    switchpointsList.push_back(maxDuration);
+
     for (size_t idof = 0; idof < _ndof; ++idof) {
         dReal sw = 0;
         for (std::vector<Ramp>::const_iterator itramp = curvesVectIn[idof].GetRamps().begin(); itramp != curvesVectIn[idof].GetRamps().end(); ++itramp) {

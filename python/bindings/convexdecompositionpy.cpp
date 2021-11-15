@@ -178,7 +178,14 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(computeConvexDecomposition_overloads, computeCon
 
 OPENRAVE_PYTHON_MODULE(convexdecompositionpy)
 {
-    import_array();
+    // expansion of the macro `import_array()` in
+    // numpy/core/include/numpy/__multiarray_api.h
+    if (_import_array() < 0) {
+        PyErr_Print();
+        PyErr_SetString(PyExc_ImportError, "numpy.core.multiarray failed to import");
+        return;
+    }
+
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     numeric::array::set_module_and_type("numpy", "ndarray");
     int_from_number<int>();

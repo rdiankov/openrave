@@ -42,6 +42,7 @@ class OPENRAVE_API EnvironmentBase : public boost::enable_shared_from_this<Envir
 {
 public:
     EnvironmentBase();
+    EnvironmentBase(const std::string& name);
     virtual ~EnvironmentBase();
 
     /// \brief Releases all environment resources, should be always called when environment stops being used.
@@ -83,11 +84,30 @@ public:
     /// \return An environment of the same type as this environment containing the copied information.
     virtual EnvironmentBasePtr CloneSelf(int options) = 0;
 
+    /// \brief Create and return a clone of the current environment.
+    ///
+    /// Clones do not share any memory or resource between each other.
+    /// or their parent making them ideal for performing separte planning experiments while keeping
+    /// the parent environment unchanged.
+    /// By default a clone only copies the collision checkers and physics engine.
+    /// When bodies are cloned, the unique ids are preserved across environments (each body can be referenced with its id in both environments). The attached and grabbed bodies of each body/robot are also copied to the new environment.
+    /// \param clonedEnvName The name of the cloned (and retuned) environment
+    /// \param options A set of \ref CloningOptions describing what is actually cloned.
+    /// \return An environment of the same type as this environment containing the copied information.
+    virtual EnvironmentBasePtr CloneSelf(const std::string& clonedEnvName, int options) = 0;
+
     /// \brief Clones the reference environment into the current environment
     ///
     /// Tries to preserve computation by re-using bodies/interfaces that are already similar between the current and reference environments.
     /// \param[in] cloningoptions The parts of the environment to clone. Parts not specified are left as is.
     virtual void Clone(EnvironmentBaseConstPtr preference, int cloningoptions) = 0;
+
+    /// \brief Clones the reference environment into the current environment
+    ///
+    /// Tries to preserve computation by re-using bodies/interfaces that are already similar between the current and reference environments.
+    /// \param[in] clonedEnvName The name of the cloned environment
+    /// \param[in] cloningoptions The parts of the environment to clone. Parts not specified are left as is.
+    virtual void Clone(EnvironmentBaseConstPtr preference, const std::string& clonedEnvName, int cloningoptions) = 0;
 
     /// \brief Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs. <b>[multi-thread safe]</b>
     ///
@@ -531,6 +551,14 @@ public:
     /// Get the corresponding body from its unique network id
     virtual KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) const = 0;
 
+    /// Get the corresponding bodies from its unique network id
+    ///
+    /// Calling GetBodyFromEnvironmentBodyIndex in loop should be replaced by this function to minimize scoped lock constrution and deconstruction
+    /// \param[in] bodyIndices body indices
+    /// \param[out] bodies vector of bodies in the same order as bodyIndices
+    virtual void GetBodiesFromEnvironmentBodyIndices(const std::vector<int>& bodyIndices,
+                                                     std::vector<KinBodyPtr>& bodies) const = 0;
+
     /// Get the corresponding body from its unique network id
     inline KinBodyPtr GetBodyFromEnvironmentId(int bodyIndex) RAVE_DEPRECATED {
         return GetBodyFromEnvironmentBodyIndex(bodyIndex);
@@ -666,6 +694,12 @@ public:
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual OpenRAVE::GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) = 0;
 
+    /// \brief Draws an array of box. <b>[multi-thread safe]</b>
+    ///
+    /// extents are half the width, height, and depth of the box
+    /// \return handle to plotted boxes, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
+    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents) = 0;
+
     /// \brief Draws a textured plane. <b>[multi-thread safe]</b>
     ///
     /// \param tplane describes the center of the plane. the zaxis of this coordinate is the normal of the plane
@@ -712,6 +746,16 @@ public:
     /// \brief returns the unique id of the environment
     inline int GetId() const {
         return __nUniqueId;
+    }
+
+    /// \brief returns the scene name
+    inline const std::string& GetName() const {
+        return _name;
+    }
+
+    /// \brief returns the scene name and id as formated string
+    inline const std::string& GetNameId() const {
+        return _formatedNameId;
     }
 
     /// \brief sets a named parameter to be tracked by the environment
@@ -764,7 +808,6 @@ public:
         /// \param vInputToBodyInfoMapping maps indices into rEnvInfo["bodies"] into indices of _vBodyInfos: rEnvInfo["bodies"][i] -> _vBodyInfos[vInputToBodyInfoMapping[i]]. This forces certain _vBodyInfos to get updated with specific input. Use -1 for no mapping
         void DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping);
 
-        std::string _name;   ///< environment name
         std::string _description;   ///< environment description
         std::vector<std::string> _keywords;  ///< some string values for describinging the environment
         Vector _gravity = Vector(0,0,-9.797930195020351);  ///< gravity and gravity direction of the environment
@@ -773,18 +816,13 @@ public:
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
         std::map<std::string, uint64_t> _uInt64Parameters; ///< user parameters associated with the environment
         int _revision = 0;  ///< environment revision number
+        std::pair<std::string, dReal> _unit = {"meter", 1.0}; ///< environment unit
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;
 
     /// \brief returns environment revision number
     virtual int GetRevision() const = 0;
-
-    /// \brief sets the scene name
-    virtual void SetName(const std::string& sceneName) = 0;
-
-    /// \brief returns the scene name
-    virtual std::string GetName() const = 0;
 
     /// \brief sets the scene description
     virtual void SetDescription(const std::string& sceneDescription) = 0;
@@ -810,7 +848,6 @@ public:
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, UpdateFromInfoMode updateMode) = 0;
 
     int _revision = 0;  ///< environment current revision
-    std::string _name;   ///< environment name
     std::string _description;   ///< environment description
     std::vector<std::string> _keywords;  ///< some string values for describinging the environment
 
@@ -818,6 +855,11 @@ protected:
     virtual const char* GetHash() const {
         return OPENRAVE_ENVIRONMENT_HASH;
     }
+
+    void _InitializeInternal();
+
+    std::string _name;   ///< environment name. only set during construction and cloning.
+    std::string _formatedNameId; ///< environment name and id. \see GetNameId
 
 private:
     UserDataPtr __pUserData;         ///< \see GetUserData

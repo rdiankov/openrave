@@ -249,7 +249,7 @@ class GraspingModel(DatabaseGenerator):
         # graspikparam_nocol is the serialized IkParameterization. It can hold a max of 8 values, the first being the type
         self.graspindices = dict()
         self.totaldof = 0
-        for name,dof in graspdof.iteritems():
+        for name,dof in graspdof.items():
             self.graspindices[name] = range(self.totaldof,self.totaldof+dof)
             self.totaldof += dof
     def clone(self,envother):
@@ -273,7 +273,7 @@ class GraspingModel(DatabaseGenerator):
         if len(filename) == 0:
             return None
         try:
-            with open(filename, 'r') as f:
+            with open(filename, 'rb') as f:
                 modelversion,params = pickle.load(f)
             if modelversion == self.getversion():
                 self.grasps,self.graspindices,friction,linknames,plannername,self.translationstepmult,self.finestep,self.graspsetname = params

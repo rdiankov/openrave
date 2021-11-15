@@ -30,7 +30,6 @@ bool EnvironmentBase::EnvironmentBaseInfo::operator==(const EnvironmentBaseInfo&
 {
     return _vBodyInfos == other._vBodyInfos
            && _revision == other._revision
-           && _name == other._name
            && _description == other._description
            && _keywords == other._keywords
            && _gravity == other._gravity
@@ -46,7 +45,6 @@ bool EnvironmentBase::EnvironmentBaseInfo::operator!=(const EnvironmentBaseInfo&
 
 void EnvironmentBase::EnvironmentBaseInfo::Reset()
 {
-    _name.clear();
     _description.clear();
     _keywords.clear();
     _gravity = Vector(0,0,-9.797930195020351);
@@ -61,13 +59,11 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
     // for all SerializeJSON, we clear the output
     rEnvInfo.SetObject();
 
-    if( !_name.empty() ) {
-        orjson::SetJsonValueByKey(rEnvInfo, "name", _name, allocator);
-    }
     orjson::SetJsonValueByKey(rEnvInfo, "keywords", _keywords, allocator);
     if( !_description.empty() ) {
         orjson::SetJsonValueByKey(rEnvInfo, "description", _description, allocator);
     }
+    orjson::SetJsonValueByKey(rEnvInfo, "unit", _unit, allocator);
     orjson::SetJsonValueByKey(rEnvInfo, "gravity", _gravity, allocator);
     if( !_referenceUri.empty() ) {
         orjson::SetJsonValueByKey(rEnvInfo, "referenceUri", _referenceUri, allocator);
@@ -111,8 +107,8 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
         orjson::LoadJsonValueByKey(rEnvInfo, "revision", _revision);
     }
 
-    if (rEnvInfo.HasMember("name")) {
-        orjson::LoadJsonValueByKey(rEnvInfo, "name", _name);
+    if (rEnvInfo.HasMember("unit")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "unit", _unit);
     }
 
     if (rEnvInfo.HasMember("keywords")) {
@@ -162,7 +158,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
 
             if( itExistingBodyInfo != _vBodyInfos.end() ) {
                 isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itExistingBodyInfo);
-                RAVELOG_VERBOSE_FORMAT("found existing body with id='%s', isRobot = %d", id%isExistingRobot);
+                RAVELOG_VERBOSE_FORMAT("found existing body '%s' with id='%s', isRobot = %d", (*itExistingBodyInfo)->_name%id%isExistingRobot);
             }
 
             // here we allow body infos with empty id to be created because
@@ -179,8 +175,13 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                     } else if (!isDeleted) {
                         RobotBase::RobotBaseInfoPtr pRobotBaseInfo(new RobotBase::RobotBaseInfo());
                         pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, (options & ~IDO_PartialUpdate));
-                        pRobotBaseInfo->_id = id;
-                        _vBodyInfos.push_back(pRobotBaseInfo);
+                        if (!pRobotBaseInfo->_name.empty()) {
+                            pRobotBaseInfo->_id = id;
+                            _vBodyInfos.push_back(pRobotBaseInfo);
+                            RAVELOG_VERBOSE_FORMAT("created new robot id='%s'", id);
+                        } else {
+                            RAVELOG_WARN_FORMAT("new robot id='%s' does not have a name, so skip creating", id);
+                        }
                     }
                     continue;
                 }
@@ -212,9 +213,13 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                     } else if (!isDeleted) {
                         KinBody::KinBodyInfoPtr pKinBodyInfo(new KinBody::KinBodyInfo());
                         pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, (options & ~IDO_PartialUpdate));
-                        pKinBodyInfo->_id = id;
-                        _vBodyInfos.push_back(pKinBodyInfo);
-                        RAVELOG_VERBOSE_FORMAT("created new body id='%s'", id);
+                        if (!pKinBodyInfo->_name.empty()) {
+                            pKinBodyInfo->_id = id;
+                            _vBodyInfos.push_back(pKinBodyInfo);
+                            RAVELOG_VERBOSE_FORMAT("created new body id='%s'", id);
+                        } else {
+                            RAVELOG_WARN_FORMAT("new body id='%s' does not have a name, so skip creating", id);
+                        }
                     }
                     continue;
                 }

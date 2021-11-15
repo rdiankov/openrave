@@ -187,7 +187,11 @@ __license__ = 'Lesser GPL, Version 3'
 __version__ = '0x1000004b' # hex of the version, has to be prefixed with 0x. also in ikfast.h
 
 import sys, copy, time, math, datetime
-import __builtin__
+if sys.version_info[0]<3:
+    import __builtin__
+else:
+    import builtins as __builtin__
+
 from optparse import OptionParser
 try:
     from openravepy.metaclass import AutoReloader
@@ -223,7 +227,13 @@ except ImportError:
     def isnan(x): return _isnan(float(x))
 
 from operator import itemgetter
-from itertools import izip, chain, product
+from itertools import chain, product
+
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
+
 try:
     from itertools import combinations, permutations
 except ImportError:
@@ -243,8 +253,8 @@ except ImportError:
         r = n if r is None else r
         if r > n:
             return
-        indices = range(n)
-        cycles = range(n, n-r, -1)
+        indices = list(range(n))
+        cycles = list(range(n, n-r, -1))
         yield tuple(pool[i] for i in indices[:r])
         while n:
             for i in reversed(range(r)):
@@ -1249,7 +1259,7 @@ class GinacUtils:
                 gcoeff = geq.coeff(gothersymbol,degree)
                 if i+1 < len(gothersymbols):
                     newterms = GinacUtils.GetPolyTermsFromGinac(gcoeff,gothersymbols[i+1:],othersymbols[i+1:])
-                    for newmonom, newcoeff in newterms.iteritems():
+                    for newmonom, newcoeff in newterms.items():
                         assert(len(newmonom)==len(gothersymbols)-i-1)
                         terms[monomprefix+newmonom] = newcoeff
                 else:
@@ -4221,11 +4231,11 @@ class IKFastSolver(AutoReloader):
                 except IndexError:
                     # not enough equations?
                     continue                
-                if solution is not None and all([self.isValidSolution(value.subs(localsymbols)) for key,value in solution.iteritems()]):
+                if solution is not None and all([self.isValidSolution(value.subs(localsymbols)) for key,value in solution.items()]):
                     # substitute 
                     solsubs = []
                     allvalid = True
-                    for key,value in solution.iteritems():
+                    for key,value in solution.items():
                         valuesub = value.subs(localsymbols)
                         solsubs.append((key,valuesub))
                         reducedeqs.append([key.subs(localsymbols),valuesub])
@@ -4857,7 +4867,7 @@ class IKFastSolver(AutoReloader):
             
             AUdetmat = None
             if self.IsDeterminantNonZeroByEval(AU):
-                rows = range(A.shape[1])
+                rows = list(range(A.shape[1]))
                 AUdetmat = AU
             elif not self.IsDeterminantNonZeroByEval(A.transpose()*A):
                 raise self.CannotSolveError('coefficient matrix is singular')
@@ -4896,7 +4906,7 @@ class IKFastSolver(AutoReloader):
                 if AU.shape[0] != AU.shape[1]:
                     raise self.CannotSolveError('could not find non-singular matrix %r'%(AU.shape,))
                 
-            otherrows = range(A.shape[0])
+            otherrows = list(range(A.shape[0]))
             for i,row in enumerate(rows):
                 BU[i] = B[row]
                 otherrows.remove(row)
@@ -5031,7 +5041,7 @@ class IKFastSolver(AutoReloader):
                         polyterms = GinacUtils.GetPolyTermsFromGinac(gres1[icol],gothersymbols,othersymbols)
                         # create a new symbol for every term
                         eq = S.Zero
-                        for monom, coeff in polyterms.iteritems():
+                        for monom, coeff in polyterms.items():
                             sym = next(self.gsymbolgen)
                             dictequations.append((sym,coeff))
                             localsymbolmap[sym.name] = swiginac.symbol(sym.name)
@@ -5051,7 +5061,7 @@ class IKFastSolver(AutoReloader):
                         polyterms = GinacUtils.GetPolyTermsFromGinac(gres3[icol],gothersymbols,othersymbols)
                         # create a new symbol for every term
                         eq = S.Zero
-                        for monom, coeff in polyterms.iteritems():
+                        for monom, coeff in polyterms.items():
                             sym = next(self.gsymbolgen)
                             dictequations.append((sym,coeff))
                             localsymbolmap[sym.name] = swiginac.symbol(sym.name)
@@ -6725,7 +6735,7 @@ class IKFastSolver(AutoReloader):
         # first substitute everything that doesn't have othersolvedvar or unknownvars
         numberSubstitutions = []
         otherSubstitutions = []
-        for var, value in newsubsdict.iteritems():
+        for var, value in newsubsdict.items():
             if not value.has(*constantSymbols):
                 numberSubstitutions.append((var,value))
             else:
@@ -7802,7 +7812,7 @@ class IKFastSolver(AutoReloader):
                 if degree+1 <= len(newpolyeqs2):
                     # in order to avoid wrong solutions, have to get resultants for all equations
                     possibilities = []
-                    unusedindices = range(len(newpolyeqs2))
+                    unusedindices = list(range(len(newpolyeqs2)))
                     for eqsindices in combinations(range(len(newpolyeqs2)),degree+1):
                         Mall = zeros((degree+1,degree+1))
                         totalcomplexity = 0
@@ -9511,7 +9521,7 @@ class IKFastSolver(AutoReloader):
     def sequence_cross_product(*sequences):
         """iterates through the cross product of all items in the sequences"""
         # visualize an odometer, with "wheels" displaying "digits"...:
-        wheels = map(iter, sequences)
+        wheels = list(map(iter, sequences))
         digits = [next(it) for it in wheels]
         while True:
             yield tuple(digits)
@@ -9589,11 +9599,11 @@ python ikfast.py --robot=robots/barrettwam.robot.xml --baselink=0 --eelink=7 --s
     parser.add_option('--freeindex', action='append', type='int', dest='freeindices',default=[],
                       help='Optional joint index specifying a free parameter of the manipulator. If not specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
     parser.add_option('--iktype', action='store', dest='iktype',default='transform6d',
-                      help='The iktype to generate the ik for. Possible values are: %s'%(', '.join(name for name,fn in IKFastSolver.GetSolvers().iteritems())))
+                      help='The iktype to generate the ik for. Possible values are: %s'%(', '.join(name for name,fn in IKFastSolver.GetSolvers().items())))
     parser.add_option('--maxcasedepth', action='store', type='int', dest='maxcasedepth',default=3,
                       help='The max depth to go into degenerate cases. If ikfast file is too big, try reducing this, (default=%default).')
     parser.add_option('--lang', action='store',type='string',dest='lang',default='cpp',
-                      help='The language to generate the code in (default=%default), available=('+','.join(name for name,value in CodeGenerators.iteritems())+')')
+                      help='The language to generate the code in (default=%default), available=('+','.join(name for name,value in CodeGenerators.items())+')')
     parser.add_option('--debug','-d', action='store', type='int',dest='debug',default=logging.INFO,
                       help='Debug level for python nose (smaller values allow more text).')
     

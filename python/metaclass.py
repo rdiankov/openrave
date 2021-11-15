@@ -1,4 +1,5 @@
 import os, weakref, inspect
+import six
 
 class MetaInstanceTracker(type):
     def __init__(cls, name, bases, ns):
@@ -15,8 +16,8 @@ class MetaInstanceTracker(type):
         cls.__instance_refs__ = validrefs
         return instances
 
+@six.add_metaclass(MetaInstanceTracker)
 class InstanceTracker(object):
-    __metaclass__ = MetaInstanceTracker
     def __new__(*args, **kwargs):
         cls = args[0]
         # deprecation due to python 2.6 cannot specifying arguments
@@ -48,7 +49,7 @@ class MetaAutoReloader(MetaInstanceTracker):
                     subcls.__bases__ = tuple(newbases)
                 break
 
+@six.add_metaclass(MetaAutoReloader)
 class AutoReloader(InstanceTracker):
-    __metaclass__ = MetaAutoReloader
     def change_class(self, new_class):
         self.__class__ = new_class

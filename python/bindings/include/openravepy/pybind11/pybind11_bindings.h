@@ -94,7 +94,11 @@ using array_int = array_t<int>; // py::array_int
 // is_none is not supported by older versions of python
 #define IS_PYTHONOBJECT_NONE(o) (o).is_none()
 
+#if PY_MAJOR_VERSION >= 3
+#define IS_PYTHONOBJECT_STRING(o) (!(o).is_none() && (PyUnicode_Check((o).ptr())))
+#else
 #define IS_PYTHONOBJECT_STRING(o) (!(o).is_none() && (PyString_Check((o).ptr()) || PyUnicode_Check((o).ptr())))
+#endif
 
 namespace openravepy
 {

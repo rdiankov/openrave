@@ -768,6 +768,7 @@ OPENRAVEPY_API PyInterfaceBasePtr toPyKinBody(KinBodyPtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API py::object toPyKinBody(KinBodyPtr, py::object opyenv);
 OPENRAVEPY_API py::object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr);
 OPENRAVEPY_API py::object toPyKinBodyLink(KinBody::LinkPtr plink, py::object opyenv);
+OPENRAVEPY_API py::object toPyKinBodyGeometry(KinBody::GeometryPtr pgeom);
 OPENRAVEPY_API KinBody::LinkPtr GetKinBodyLink(py::object);
 OPENRAVEPY_API KinBody::LinkConstPtr GetKinBodyLinkConst(py::object);
 OPENRAVEPY_API py::object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr);

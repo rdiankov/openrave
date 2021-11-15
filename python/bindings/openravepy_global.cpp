@@ -332,7 +332,7 @@ public:
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 
-    void GetTriMesh(TriMesh& mesh) {
+    void GetTriMesh(TriMesh& mesh) const {
         if( IS_PYTHONOBJECT_NONE(vertices) ) {
             throw OPENRAVE_EXCEPTION_FORMAT0("python TriMesh 'vertices' is not initialized correctly", ORE_InvalidState);
         }
@@ -1400,7 +1400,6 @@ void init_openravepy_global()
     .value("RealControllers",Clone_RealControllers)
     .value("Sensors",Clone_Sensors)
     .value("Modules",Clone_Modules)
-    .value("IgnoreAttachedBodies", Clone_IgnoreAttachedBodies)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     // Cannot export because openravepy_viewer already has "Viewer"
     // .export_values()
@@ -1454,6 +1453,16 @@ void init_openravepy_global()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
+    m.def("GetMicroTime", utils::GetMicroTime, "get microsecond time");
+    m.def("GetNanoTime" , utils::GetNanoTime , "get nanosecond time" );
+#else
+    def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
+    def("GetMicroTime", utils::GetMicroTime, "get microsecond time");
+    def("GetNanoTime" , utils::GetNanoTime , "get nanosecond time" );
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_< OPENRAVE_SHARED_PTR< void > >(m, "VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
 #else
     class_< OPENRAVE_SHARED_PTR< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
@@ -1503,6 +1512,10 @@ void init_openravepy_global()
     .def(init<>())
     .def(init<object, object>(), "pos"_a, "dir"_a)
     .def(init<const RAY&>(), "r"_a)
+    .def("__copy__", [](const PyRay& self){ return self; })
+    .def("__deepcopy__", [](const PyRay& pyray, const py::dict& memo) {
+        return PyRay(pyray.r);
+    })
 #else
     class_<PyRay, OPENRAVE_SHARED_PTR<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
     .def(init<object,object>(py::args("pos","dir")))
@@ -1549,8 +1562,11 @@ void init_openravepy_global()
             return self;
         })
     .def("__deepcopy__", [](const PyAABB& self, const py::dict& memo) {
+            return PyAABB(self.ab);
+            /*
             OPENRAVE_SHARED_PTR<PyAABB> pyaabb(new PyAABB(self.ab));
             return py::to_object(pyaabb);
+            */
         })
 #else
     class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
@@ -1595,6 +1611,12 @@ void init_openravepy_global()
     .def(init<>())
     .def(init<object, object>(), "vertices"_a, "indices"_a)
     .def(init<const TriMesh&>(), "mesh"_a)
+    .def("__copy__", [](const PyTriMesh& self){ return self; })
+    .def("__deepcopy__", [](const PyTriMesh& pymesh, const py::dict& memo) {
+        TriMesh mesh;
+        pymesh.GetTriMesh(mesh);
+        return PyTriMesh(mesh);
+    })
 #else
     class_<PyTriMesh, OPENRAVE_SHARED_PTR<PyTriMesh> >("TriMesh", DOXY_CLASS(TriMesh))
     .def(init<object,object>(py::args("vertices","indices")))
@@ -1643,7 +1665,7 @@ void init_openravepy_global()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("SerializeJSON", &PyReadable::SerializeJSON,
          "unitScale"_a = 1.0,
-         "options"_a = py::none_(),
+         "options"_a = 0,
          DOXY_FN(Readable, SerializeJSON)
          )
     .def("DeserializeJSON", &PyReadable::DeserializeJSON,
@@ -1678,6 +1700,10 @@ void init_openravepy_global()
             .def(init<PyConfigurationSpecificationPtr>(), "pyspec"_a)
             .def(init<const ConfigurationSpecification::Group&>(), "group"_a)
             .def(init<const std::string&>(), "xmldata"_a)
+            .def("__copy__", [](const PyConfigurationSpecification& self){ return self; })
+            .def("__deepcopy__", [](const PyConfigurationSpecification& pyspec, const py::dict& memo) {
+                return PyConfigurationSpecification(pyspec._spec);
+            })
             .def("GetGroupFromName", &PyConfigurationSpecification::GetGroupFromName, DOXY_FN(ConfigurationSpecification,GetGroupFromName))
 #else
             class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))

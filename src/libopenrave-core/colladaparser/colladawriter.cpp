@@ -2757,13 +2757,24 @@ private:
         pextra->setType("collision");
         domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
         ptec->setProfile("OpenRAVE");
-        FOREACHC(itadjacent,pbody->_vForcedAdjacentLinks) {
-            KinBody::LinkPtr plink0 = pbody->GetLink(itadjacent->first);
-            KinBody::LinkPtr plink1 = pbody->GetLink(itadjacent->second);
-            if( !!plink0 && !!plink1 ) {
-                daeElementRef pignore = ptec->add("ignore_link_pair");
-                pignore->setAttribute("link0",vlinksidrefs.at(plink0->GetIndex()).c_str());
-                pignore->setAttribute("link1",vlinksidrefs.at(plink1->GetIndex()).c_str());
+        const std::vector<KinBody::LinkPtr>& links = pbody->GetLinks();
+        for (int linkIndex0 = 0; linkIndex0 < links.size(); ++linkIndex0) {
+            const KinBody::LinkPtr plink0 = links.at(linkIndex0);
+            if (!plink0) {
+                RAVELOG_WARN_FORMAT("env=%d body \"%s\" link %d / %d is null so skip writing ignore link pair.", pbody->GetEnv()->GetId()%pbody->GetName()%linkIndex0%links.size());
+                continue;
+            }
+            for (int linkIndex1 = linkIndex0 + 1; linkIndex1 < links.size(); ++linkIndex1) {
+                if (pbody->AreAdjacentLinks(linkIndex0, linkIndex1)) {
+                    const KinBody::LinkPtr plink1 = links.at(linkIndex1);
+                    if (!plink1) {
+                        RAVELOG_WARN_FORMAT("env=%d body \"%s\" link %d / %d is null so skip writing ignore link pair.", pbody->GetEnv()->GetId()%pbody->GetName()%linkIndex1%links.size());
+                        continue;
+                    }
+                    daeElementRef pignore = ptec->add("ignore_link_pair");
+                    pignore->setAttribute("link0",vlinksidrefs.at(linkIndex0).c_str());
+                    pignore->setAttribute("link1",vlinksidrefs.at(linkIndex1).c_str());
+                }
             }
         }
         std::vector<KinBody::LinkPtr> vConnectedLinks;

@@ -23,6 +23,12 @@ EnvironmentBasePtr RaveCreateEnvironment(int options) {
     return p;
 }
 
+EnvironmentBasePtr RaveCreateEnvironment(const std::string& name, int options) {
+    boost::shared_ptr<Environment> p(new Environment(name));
+    p->Init(!!(options&ECO_StartSimulationThread));
+    return p;
+}
+
 EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins) {
     return RaveCreateEnvironment();
 }

@@ -363,9 +363,15 @@ void KinBody::Link::Enable(bool bEnable)
     if( _info._bIsEnabled != bEnable ) {
         KinBodyPtr parent = GetParent();
         parent->_nNonAdjacentLinkCache &= ~AO_Enabled;
-        _info._bIsEnabled = bEnable;
+        _Enable(bEnable);
         GetParent()->_PostprocessChangedParameters(Prop_LinkEnable);
     }
+}
+
+void KinBody::Link::_Enable(bool bEnable)
+{
+    _info._bIsEnabled = bEnable;
+    GetParent()->NotifyLinkEnabled(GetIndex(), bEnable);
 }
 
 bool KinBody::Link::IsEnabled() const
@@ -781,20 +787,20 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
         // check if similar name exists and throw if it does
         FOREACH(itgeometry, _vGeometries) {
             if( (*itgeometry)->GetName() == ginfo._name ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
             }
         }
 
         FOREACH(itgeometryinfo, _info._vgeometryinfos) {
             if( (*itgeometryinfo)->_name == ginfo._name ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
             }
         }
         if( addToGroups ) {
             FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
                 FOREACH(itgeometryinfo, itgeometrygroup->second) {
                     if( (*itgeometryinfo)->_name == ginfo._name ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s for group %s has conflicting name for link %s"), ginfo._name%itgeometrygroup->first%GetName(), ORE_InvalidArguments);
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s for group %s has conflicting name for link %s"), ginfo._name%itgeometrygroup->first%GetName(), ORE_InvalidArguments);
                     }
                 }
             }
@@ -809,6 +815,30 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
             itgeometrygroup->second.push_back(pginfo);
         }
     }
+    _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
+}
+
+void KinBody::Link::AddGeometryToGroup(KinBody::GeometryInfoPtr pginfo, const std::string& groupname)
+{
+    if( !pginfo ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("tried to add improper geometry to link %s"), GetName(), ORE_InvalidArguments);
+    }
+
+    const KinBody::GeometryInfo& ginfo = *pginfo;
+
+    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.find(groupname);
+    if( it == _info._mapExtraGeometries.end() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("geometry group %s does not exist for link %s"), groupname%GetName(), ORE_InvalidArguments);
+    }
+    if( ginfo._name.size() > 0 ) {
+        FOREACHC(itgeometryinfo, it->second) {
+            if( (*itgeometryinfo)->_name == ginfo._name ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s for group %s has conflicting name for link %s"), ginfo._name%groupname%GetName(), ORE_InvalidArguments);
+            }
+        }
+    }
+
+    it->second.push_back(pginfo);
     _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
@@ -954,7 +984,9 @@ void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
 
 UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info)
 {
-    BOOST_ASSERT(info._id == _info._id);
+    if(_info._id != info._id) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Do not allow updating body %s link %s (id='%s') with a different info id='%s'", GetParent()->GetName()%GetName()%_info._id%info._id, ORE_Assert);
+    }
 
     UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
 

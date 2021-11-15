@@ -602,18 +602,35 @@ public:
         _nDebugLevel = level;
     }
 
+    int GetDebugLevel()
+    {
+        int level = _nDebugLevel;
+        if (_logger != NULL && _logger->getEffectiveLevel() != NULL) {
+            level = _logger->getEffectiveLevel()->toInt();
+            switch (level) {
+            case log4cxx::Level::FATAL_INT: level = Level_Fatal; break;
+            case log4cxx::Level::ERROR_INT: level = Level_Error; break;
+            case log4cxx::Level::WARN_INT:  level = Level_Warn; break;
+            case log4cxx::Level::INFO_INT:  level = Level_Info; break;
+            case log4cxx::Level::DEBUG_INT: level = Level_Debug; break;
+            case log4cxx::Level::TRACE_INT: level = Level_Verbose; break;
+            default: level = Level_Info;
+            }
+        }
+        return level | (_nDebugLevel & ~Level_OutputMask);
+    }
+
 #else
     void SetDebugLevel(int level)
     {
         _nDebugLevel = level;
     }
 
-#endif
-
     int GetDebugLevel()
     {
         return _nDebugLevel;
     }
+#endif
 
     class XMLReaderFunctionData : public UserData
     {
@@ -1995,6 +2012,8 @@ void CollisionReport::Reset(int coloptions)
         vLinkColliding.resize(0);
         plink1.reset();
         plink2.reset();
+        pgeom1.reset();
+        pgeom2.reset();
     }
 }
 
@@ -2042,6 +2061,9 @@ std::string CollisionReport::__str__() const
                 RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink1->GetName());
                 s << "[deleted]:" << plink1->GetName();
             }
+            if( !!pgeom1 ) {
+                s << ":" << pgeom1->GetName();
+            }
         }
         s << ")x(";
         if( !!plink2 ) {
@@ -2052,6 +2074,9 @@ std::string CollisionReport::__str__() const
             else {
                 RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink2->GetName());
                 s << "[deleted]:" << plink2->GetName();
+            }
+            if( !!pgeom2 ) {
+                s << ":" << pgeom2->GetName();
             }
         }
         s << ")";
@@ -2291,7 +2316,7 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
 
     if( pgrabbedbody->IsEnabled() ) {
         FOREACH(itnoncolliding, _mapLinkIsNonColliding) {
-            if( itnoncolliding->second && itnoncolliding->first->IsEnabled() ) {
+            if( itnoncolliding->second ) {
                 //RAVELOG_VERBOSE(str(boost::format("non-colliding link %s for grabbed body %s")%(*itlink)->GetName()%pgrabbedbody->GetName()));
                 _listNonCollidingLinks.push_back(itnoncolliding->first);
             }
@@ -2405,7 +2430,7 @@ void Grabbed::UpdateCollidingLinks()
             }
         }
 
-        if( itnoncolliding->second && itnoncolliding->first->IsEnabled() ) {
+        if( itnoncolliding->second ) {
             _listNonCollidingLinks.push_back(itnoncolliding->first);
         }
         ++itnoncolliding;
@@ -2504,7 +2529,7 @@ void DummyXMLReader::characters(const std::string& ch)
     }
 }
 
-EnvironmentBase::EnvironmentBase()
+void EnvironmentBase::_InitializeInternal()
 {
     if( !RaveGlobalState() ) {
         RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state is not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.", boost::this_thread::get_id());
@@ -2513,6 +2538,26 @@ EnvironmentBase::EnvironmentBase()
         RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state finished initializing in %u[us].", boost::this_thread::get_id()%(utils::GetMicroTime()-starttime));
     }
     __nUniqueId = RaveGlobal::instance()->RegisterEnvironment(this);
+}
+
+EnvironmentBase::EnvironmentBase()
+{
+    _InitializeInternal();
+    // __nUniqueId is assigned in _InitializeInternal
+    _formatedNameId = str(boost::format("%d")%__nUniqueId);
+}
+
+EnvironmentBase::EnvironmentBase(const std::string& name)
+    : _name(name)
+{
+    _InitializeInternal();
+    // __nUniqueId is assigned in _InitializeInternal
+    if (_name.empty()) {
+        _formatedNameId = str(boost::format("%d")%__nUniqueId);
+    }
+    else {
+        _formatedNameId = str(boost::format("%d(%s)")%__nUniqueId%_name);
+    }
 }
 
 EnvironmentBase::~EnvironmentBase()

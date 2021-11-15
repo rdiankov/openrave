@@ -318,7 +318,7 @@ public:
     }
     KinBodyWeakPtr _pgrabbedbody;         ///< the grabbed body
     KinBody::LinkPtr _plinkrobot;         ///< robot link that is grabbing the body
-    std::list<KinBody::LinkConstPtr> _listNonCollidingLinks;         ///< links that are not colliding with the grabbed body at the time of Grab
+    std::list<KinBody::LinkConstPtr> _listNonCollidingLinks;         ///< links that are not colliding with the grabbed body at the time of Grab. Even if a link is disabled, it is considered as non-colliding as long as it is not colliiding with grabbed body
     Transform _troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
     std::set<int> _setRobotLinksToIgnore; ///< original links of the robot to force ignoring
 
@@ -507,13 +507,16 @@ void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<
         }
     }
     else {
+        // sometimes names can be empty, in which case, always create a new object
         std::string name = OpenRAVE::orjson::GetStringJsonValueByKey(value, pNameInJson);
-        // only try to find old info if id is not empty
-        FOREACH(itInfo, vInfos) {
-            if ((*itInfo)->GetName() == name) {
-                itExistingInfo = itInfo;
-                id = (*itInfo)->_id;
-                break;
+        if( !name.empty() ) {
+            // only try to find old info if id is not empty
+            FOREACH(itInfo, vInfos) {
+                if ((*itInfo)->GetName() == name) {
+                    itExistingInfo = itInfo;
+                    id = (*itInfo)->_id;
+                    break;
+                }
             }
         }
     }

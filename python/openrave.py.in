@@ -163,7 +163,7 @@ if __name__ == "__main__":
         RaveInitialize(True,level=level)
         if options.listinterfaces is not None:
             interfaces = RaveGetLoadedInterfaces()
-            for type,names in interfaces.iteritems():
+            for type,names in interfaces.items():
                 if options.listinterfaces.lower() == str(type).lower():
                     for name in names:
                         print(name)
@@ -180,7 +180,7 @@ if __name__ == "__main__":
                 for type,names in info.interfacenames:
                     interfacenames[type] += [(n,pluginname) for n in names]
             print('Number of plugins: %d'%len(plugins))
-            for type,names in interfacenames.iteritems():
+            for type,names in interfacenames.items():
                 print('%s: %d'%(str(type),len(names)))
                 names.sort()
                 for interfacename,pluginname in names:

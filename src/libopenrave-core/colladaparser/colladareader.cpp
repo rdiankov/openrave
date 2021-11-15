@@ -476,9 +476,10 @@ public:
         if (ikscene.getCount() == 0) {
             return false;
         }
-        if (!!ikscene[0]->getName()) {
-            _penv->_name = ikscene[0]->getName();
-        }
+        // name is not settable for now, we can make a special exception by makin cooladareader a friend class if we want to load name from saved scenes
+        // if (!!ikscene[0]->getName()) {
+        //     _penv->_name = ikscene[0]->getName();
+        // }
 
         if( !!_dom->getAsset() ) {
             if( !!_dom->getAsset()->getUp_axis() && !!_penv->GetPhysicsEngine() ) {
@@ -3598,6 +3599,14 @@ public:
                     if( !!preference_attach_sensor ) {
                         pattachedsensor->_info._referenceAttachedSensorName = preference_attach_sensor->getAttribute("name");
                     }
+                    daeElementRef psensor_maker = tec->getChild("sensor_maker");
+                    if (!!psensor_maker) {
+                        pattachedsensor->_info._sensorMaker = psensor_maker->getCharData();
+                    }
+                    daeElementRef psensor_model = tec->getChild("sensor_model");
+                    if (!!psensor_model) {
+                        pattachedsensor->_info._sensorModel = psensor_model->getCharData();
+                    }
                     pattachedsensor->_info._id = str(boost::format("attachedSensor%d")%probot->_vecAttachedSensors.size());
                     probot->_vecAttachedSensors.push_back(pattachedsensor);
                 }
@@ -3630,7 +3639,7 @@ public:
             // migrate <sensor_reference> to _referenceAttachedSensorName
             if( pattachedsensor->_info._referenceAttachedSensorName.size() == 0) {
                 daeTArray<daeElementRef> children;
-                itextract->second->getChildren(children);                
+                itextract->second->getChildren(children);
                 for (size_t i = 0; i < children.getCount(); i++) {
                     std::string xmltag = utils::ConvertToLowerCase(children[i]->getElementName());
                     if (xmltag == "sensor_reference") {
@@ -4967,8 +4976,8 @@ private:
                                 RAVELOG_WARN(str(boost::format("failed to resolve link1 %s\n")%pelt->getAttribute("link1")));
                                 continue;
                             }
-                            pbody->_vForcedAdjacentLinks.emplace_back(plink0->GetName(), plink1->GetName());
-                            plink0->_info._vForcedAdjacentLinks.push_back(plink1->GetName()); // needs to set this as well because json serialization uses this.
+                            pbody->_SetForcedAdjacentLinks(plink0->GetIndex(), plink1->GetIndex());
+                            plink0->_info.SetNoncollidingLink(plink1->GetName()); // needs to set this as well because json serialization uses this.
                         }
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 
@@ -5034,10 +5043,10 @@ private:
                             bool bIsEnabled=true;
                             if( resolveCommon_bool_or_param(pelt, referenceElt, bIsEnabled) ) {
                                 if( bAndWithPrevious ) {
-                                    plink->_info._bIsEnabled &= bIsEnabled;
+                                    plink->_Enable(plink->IsEnabled() & bIsEnabled);
                                 }
                                 else {
-                                    plink->_info._bIsEnabled = bIsEnabled;
+                                    plink->_Enable(bIsEnabled);
                                 }
                             }
                         }

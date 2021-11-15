@@ -72,6 +72,7 @@ protected:
 
 public:
     PyEnvironmentBase(int options=ECO_StartSimulationThread);
+    PyEnvironmentBase(const std::string& name, int options=ECO_StartSimulationThread);
     PyEnvironmentBase(EnvironmentBasePtr penv);
 
     PyEnvironmentBase(const PyEnvironmentBase &pyenv);
@@ -82,8 +83,10 @@ public:
     void Destroy();
 
     PyEnvironmentBasePtr CloneSelf(int options);
+    PyEnvironmentBasePtr CloneSelf(const std::string& clonedEnvName, int options);
 
     void Clone(PyEnvironmentBasePtr pyreference, int options);
+    void Clone(PyEnvironmentBasePtr pyreference, const std::string& clonedEnvName, int options);
 
     bool SetCollisionChecker(PyCollisionCheckerBasePtr pchecker);
     object GetCollisionChecker();
@@ -174,7 +177,8 @@ public:
 
     object GetBodyFromEnvironmentId(int id);
     object GetBodyFromEnvironmentBodyIndex(int id);
-
+    object GetBodiesFromEnvironmentBodyIndices(object bodyIndices);
+    
     int GetMaxEnvironmentBodyIndex();
 
     int AddModule(PyModuleBasePtr prob, const std::string &args);
@@ -231,6 +235,9 @@ public:
     /// returns the number of colors
     static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors);
 
+    /// returns the number of vectors
+    static size_t _getListVector(object odata, std::vector<RaveVector<float>>& vvectors);
+
     static std::pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors);
 
     object plot3(object opoints,float pointsize,object ocolors=py::none_(),int drawstyle=0);
@@ -244,6 +251,7 @@ public:
     object drawlabel(const std::string &label, object worldPosition);
 
     object drawbox(object opos, object oextents, object ocolor=py::none_());
+    object drawboxarray(object opos, object oextents, object ocolor=py::none_());
 
     object drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture);
     object drawplane(object otransform, object oextents, const boost::multi_array<float,3>&vtexture);
@@ -289,9 +297,9 @@ public:
 
     int GetRevision() const;
 
-    void SetName(const std::string& sceneName);
-
     py::object GetName() const;
+
+    py::object GetNameId() const;
 
     void SetDescription(const std::string& sceneDescription);
 

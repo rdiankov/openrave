@@ -183,18 +183,20 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     _mapGUIFunctionListLimits[ViewerCommandPriority::MEDIUM] = 1000;
     _mapGUIFunctionListLimits[ViewerCommandPriority::LOW] = 1000;
 
-    _bLockEnvironment = true;
-    _InitGUI(bCreateStatusBar, bCreateMenu);
-    _bUpdateEnvironment = true;
-    _bExternalLoop = false;
-
     // Read copy QT resource to temp location and later stream that into OSG to use when making labels
     QFile fontFile(":/fonts/NotoSans-Regular.ttf");
     fontFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered);
     QByteArray ba = fontFile.readAll();
-    std::istringstream fontStream(ba.toStdString());
-    OSGLODLabel::SetFont(osgText::readFontStream(fontStream));
+    std::istringstream lodFontStream(ba.toStdString());
+    OSGLODLabel::SetFont(osgText::readFontStream(lodFontStream));
+    std::istringstream widgetFontStream(ba.toStdString());
+    QOSGViewerWidget::SetFont(osgText::readFontStream(widgetFontStream));
     fontFile.close();
+
+    _bLockEnvironment = true;
+    _InitGUI(bCreateStatusBar, bCreateMenu);
+    _bUpdateEnvironment = true;
+    _bExternalLoop = false;
 }
 
 QtOSGViewer::~QtOSGViewer()
@@ -887,14 +889,19 @@ void QtOSGViewer::_CreateControlButtons()
 
 void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
 {
-    RobotBasePtr robot;
     KinBodyPtr kinbody;
     KinBody::LinkPtr link;
 
     std::string mass;
 
-    //  Select robot in Viewers
-    _posgWidget->SelectItemFromName(item->text(0).toLatin1().data());
+    //  Select kinbody in Viewers
+    {
+        QTreeWidgetItem* itemKinBody = item;
+        while(!!itemKinBody->parent()) {
+            itemKinBody = itemKinBody->parent();
+        }
+        _posgWidget->SelectItemFromName(itemKinBody->text(0).toLatin1().data());
+    }
 
     //  Clears details
     if (!!_qdetailsTree) {
@@ -912,8 +919,8 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
                 _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
             }
 
-            robot = GetEnv()->GetRobot(item->parent()->parent()->text(0).toLatin1().data());
-            link  = robot->GetLink(item->text(0).toLatin1().data());
+            kinbody = GetEnv()->GetKinBody(item->parent()->parent()->text(0).toLatin1().data());
+            link  = kinbody->GetLink(item->text(0).toLatin1().data());
 
             //  Clears output string
             strs.clear();
@@ -1658,6 +1665,7 @@ void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, c
     box->setCenter(osg::Vec3(vpos.x, vpos.y, vpos.z));
 
     osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
+    sd->setColor(osg::Vec4f(0.33203125f, 0.5f, 0.898437f, 1.0f));
     geode->addDrawable(sd);
 
     // don't do transparent bin since that is too slow for big point clouds...
@@ -1673,7 +1681,39 @@ GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVec
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
     _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vpos, vextents, false), ViewerCommandPriority::MEDIUM); // copies ref counts
-    return GraphHandlePtr();
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+}
+
+void QtOSGViewer::_DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency)
+{
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    osg::ref_ptr<osg::Geode> geode(new osg::Geode());
+
+    for (size_t i = 0; i < vpos.size(); i++) {
+        const RaveVector<float>& pos = vpos[i];
+        osg::ref_ptr<osg::Box> box = new osg::Box();
+        box->setHalfLengths(osg::Vec3(vextents.x, vextents.y, vextents.z));
+        box->setCenter(osg::Vec3(pos.x, pos.y, pos.z));
+
+        osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
+        sd->setColor(osg::Vec4f(0.33203125f, 0.5f, 0.898437f, 1.0f));
+        geode->addDrawable(sd);
+    }
+
+    // don't do transparent bin since that is too slow for big point clouds...
+    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
+    handle->getOrCreateStateSet()->setRenderingHint(bUsingTransparency ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
+
+    trans->addChild(geode);
+    handle->addChild(trans);
+    _posgWidget->GetFigureRoot()->insertChild(0, handle);
+}
+
+GraphHandlePtr QtOSGViewer::drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBoxArray, this, handle, vpos, vextents, false), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 void QtOSGViewer::_DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)

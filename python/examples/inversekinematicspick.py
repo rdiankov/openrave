@@ -47,7 +47,7 @@ def main(env,options):
     "Main example code."
     if options.iktype is not None:
         # cannot use .names due to python 2.5 (or is it boost version?)
-        for value,type in IkParameterization.Type.values.iteritems():
+        for value,type in IkParameterization.Type.values.items():
             if type.name.lower() == options.iktype.lower():
                 iktype = type
                 break

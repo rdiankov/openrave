@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyCollisionCheckerBase : public PyInterfaceBase
+class OPENRAVEPY_API PyCollisionCheckerBase : public PyInterfaceBase
 {
 protected:
     CollisionCheckerBasePtr _pCollisionChecker;

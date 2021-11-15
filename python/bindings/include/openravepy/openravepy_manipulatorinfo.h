@@ -67,6 +67,8 @@ public:
     object _trelative = py::none_();
     object _sensorname = py::none_();
     object _referenceAttachedSensorName = py::none_();
+    object _sensorMaker = py::none_();
+    object _sensorModel = py::none_();
     PySensorGeometryPtr _sensorgeometry;
 
 private:

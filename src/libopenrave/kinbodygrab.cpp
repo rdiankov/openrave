@@ -50,7 +50,7 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
                     ss << (*itbody)->GetName() << ", ";
                 }
             }
-            RAVELOG_WARN_FORMAT("env=%d, body %s trying to grab body %s with %d attached bodies [%s]", GetEnv()->GetId()%GetName()%pbody->GetName()%setAttached.size()%ss.str());
+            RAVELOG_WARN_FORMAT("env=%s, body %s trying to grab body %s with %d attached bodies [%s]", GetEnv()->GetNameId()%GetName()%pbody->GetName()%setAttached.size()%ss.str());
         }
     }
 
@@ -306,6 +306,108 @@ KinBody::LinkPtr KinBody::IsGrabbing(const KinBody &body) const
     return LinkPtr();
 }
 
+int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const
+{
+    GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
+    for( const UserDataPtr& grabbedDataPtr : _vGrabbedBodies ) {
+        GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(grabbedDataPtr);
+        KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
+
+        // compare grabbing body
+        if( !pgrabbedbody || pgrabbedbody.get() != &body ) {
+            continue;
+        }
+        defaultErrorCode = GICR_GrabbingLinkNotMatch;
+
+        // compare grabbing robot link
+        if( pgrabbed->_plinkrobot.get() != &bodyLinkToGrabWith ) {
+            continue;
+        }
+        return GICR_Identical;
+    }
+    return defaultErrorCode;
+}
+
+int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore) const
+{
+    GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
+    for( const UserDataPtr& grabbedDataPtr : _vGrabbedBodies ) {
+        GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(grabbedDataPtr);
+        KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
+
+        // compare grabbing body
+        if( !pgrabbedbody || pgrabbedbody.get() != &body ) {
+            continue;
+        }
+        defaultErrorCode = std::max(defaultErrorCode, GICR_GrabbingLinkNotMatch);
+
+        // compare grabbing robot link
+        if( pgrabbed->_plinkrobot.get() != &bodyLinkToGrabWith ) {
+            continue;
+        }
+        defaultErrorCode = std::max(defaultErrorCode, GICR_IgnoredLinksNotMatch);
+
+        // compare ignored robot links
+        bool ignoringLinksMatch = true;
+        size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
+        for( const LinkPtr& link : _veclinks ) {
+            const bool isLinkIgnored = find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ||
+                                       find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), link) == pgrabbed->_listNonCollidingLinks.end();
+            if( isLinkIgnored ) {
+                ++numIgnoredLinks;
+            }
+            if( isLinkIgnored != (setBodyLinksToIgnore.count(link->GetIndex()) > 0) ) {
+                ignoringLinksMatch = false;
+                break;
+            }
+        }
+        if( ignoringLinksMatch && numIgnoredLinks == setBodyLinksToIgnore.size() ) {
+            return GICR_Identical;
+        }
+    }
+    return defaultErrorCode;
+}
+
+int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setBodyLinksToIgnore) const
+{
+    GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
+    for( const UserDataPtr& grabbedDataPtr : _vGrabbedBodies ) {
+        GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(grabbedDataPtr);
+        KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
+
+        // compare grabbing body
+        if( !pgrabbedbody || pgrabbedbody.get() != &body ) {
+            continue;
+        }
+        defaultErrorCode = std::max(defaultErrorCode, GICR_GrabbingLinkNotMatch);
+
+        // compare grabbing robot link
+        if( pgrabbed->_plinkrobot.get() != &bodyLinkToGrabWith ) {
+            continue;
+        }
+        defaultErrorCode = std::max(defaultErrorCode, GICR_IgnoredLinksNotMatch);
+
+        // compare ignored robot links
+        bool ignoringLinksMatch = true;
+        size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
+        for( const LinkPtr& link : _veclinks ) {
+            const bool isLinkIgnored = find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ||
+                                       find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), link) == pgrabbed->_listNonCollidingLinks.end();
+            if( isLinkIgnored ) {
+                ++numIgnoredLinks;
+            }
+            if( isLinkIgnored != (setBodyLinksToIgnore.count(link->GetName()) > 0) ) {
+                ignoringLinksMatch = false;
+                break;
+            }
+        }
+        if( ignoringLinksMatch && numIgnoredLinks == setBodyLinksToIgnore.size() ) {
+            return GICR_Identical;
+        }
+    }
+    return defaultErrorCode;
+}
+
 void KinBody::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
 {
     vbodies.clear();
@@ -317,11 +419,6 @@ void KinBody::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
             vbodies.push_back(pbody);
         }
     }
-}
-
-int KinBody::GetNumGrabbed() const
-{
-    return (int)_vGrabbedBodies.size();
 }
 
 KinBodyPtr KinBody::GetGrabbedBody(int iGrabbed) const
@@ -508,6 +605,9 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgra
             pgrabbed->ProcessCollidingLinks(setRobotLinksToIgnore);
             Transform tlink = pBodyLinkToGrabWith->GetTransform();
             Transform tbody = tlink * pgrabbed->_troot;
+            if( pbody->GetLinks().size() == 0 ) {
+                RAVELOG_WARN_FORMAT("env=%d, cannot set transform of body '%s' with no links when grabbing by '%s'", GetEnv()->GetId()%pbody->GetName()%GetName());
+            }
             pbody->SetTransform(tbody);
             // set velocity
             std::pair<Vector, Vector> velocity = pBodyLinkToGrabWith->GetVelocity();

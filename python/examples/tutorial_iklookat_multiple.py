@@ -21,7 +21,11 @@
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 
-from itertools import izip
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
+
 import time
 import random as stdrandom
 import openravepy

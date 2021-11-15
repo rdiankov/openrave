@@ -708,6 +708,9 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             plink->_info = *connectedBodyInfo._vLinkInfos[ilink]; // shallow copy
             plink->_info._name = connectedBody._nameprefix + plink->_info._name;
             plink->_info.SetTransform(tBaseLinkInWorld * plink->_info.GetTransform());
+            for( std::string& forcedAdjacentLink : plink->_info._vForcedAdjacentLinks ) {
+                forcedAdjacentLink = connectedBody._nameprefix + forcedAdjacentLink;
+            }
             _InitAndAddLink(plink);
             connectedBody._vResolvedLinkNames[ilink].first = plink->_info._name;
         }

@@ -29,7 +29,7 @@ public:
             _info._vinertiamoments = Vector(1,1,1);
             _info._name = name;
             _info._bStatic = false;
-            _info._bIsEnabled = true;
+            _Enable(true);
         }
     };
 

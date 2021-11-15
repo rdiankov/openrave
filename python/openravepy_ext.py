@@ -25,7 +25,7 @@ log = logging.getLogger('openravepy')
 # https://github.com/pybind/pybind11/issues/253
 def enum_to_dict(enum):
     import re
-    return {k: v for k, v in enum.__dict__.iteritems() if not re.match("__(.*)__", str(k))}
+    return {k: v for k, v in enum.__dict__.items() if not re.match("__(.*)__", str(k))}
 
 def KinBodyStateSaver(body,options=None):
     log.warn('use body.CreateKinBodyStateSaver instead of KinBodyStateSaver')
@@ -85,8 +85,11 @@ def _tuple2enum(enum, value):
 #def isEnumType(o):
 #    return isinstance(o, type) and issubclass(o,int) and not (o is int)
 
-def _registerEnumPicklers(): 
-    from copy_reg import constructor, pickle
+def _registerEnumPicklers():
+    try:
+        from copy_reg import constructor, pickle
+    except ImportError:
+        from copyreg import constructor, pickle
     def reduce_enum(e):
         enum = type(e).__name__.split('.')[-1]
         return ( _tuple2enum, ( enum, int(e) ) )
