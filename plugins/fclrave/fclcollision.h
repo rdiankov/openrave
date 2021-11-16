@@ -352,8 +352,13 @@ public:
     virtual void RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
     {
         // remove body from all the managers
-        _bodymanagers.erase(std::make_pair(pbody.get(), (int)0));
-        _bodymanagers.erase(std::make_pair(pbody.get(), (int)1));
+        size_t numErased = 0;
+        numErased += _bodymanagers.erase(std::make_pair(pbody.get(), (int)0));
+        numErased += _bodymanagers.erase(std::make_pair(pbody.get(), (int)1));
+        if (numErased > 0) {
+        RAVELOG_DEBUG_FORMAT("env=%d, this=0x%x, there are %d body managers after removing %d. There are %d env managers", GetEnv()->GetId()%this%_bodymanagers.size()%numErased%_envmanagers.size());
+        }
+
         FOREACH(itmanager, _envmanagers) {
             itmanager->second->RemoveBody(*pbody);
         }
@@ -1256,6 +1261,7 @@ private:
             FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
             p->InitBodyManager(pbody, bactiveDOFs);
             it = _bodymanagers.insert(BODYMANAGERSMAP::value_type(std::make_pair(pbody.get(), (int)bactiveDOFs), p)).first;
+            RAVELOG_DEBUG_FORMAT("env=%d, there are %d body managers after inserting 1.", GetEnv()->GetId()%_bodymanagers.size());
         }
 
         it->second->Synchronize();
@@ -1277,6 +1283,7 @@ private:
             uint32_t curtime = OpenRAVE::utils::GetMilliTime();
             _nGetEnvManagerCacheClearCount = 100000;
             std::map<std::set<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.begin();
+            size_t sizeBeforeErase = _envmanagers.size();
             while(it != _envmanagers.end()) {
                 if( (it->second->GetLastSyncTimeStamp() - curtime) > 10000 ) {
                     //RAVELOG_VERBOSE_FORMAT("env=%d erasing manager at %u", GetEnv()->GetId()%it->second->GetLastSyncTimeStamp());
@@ -1286,6 +1293,9 @@ private:
                     ++it;
                 }
             }
+            if (sizeBeforeErase != _envmanagers.size()) {
+                RAVELOG_DEBUG_FORMAT("env=%d, removed %d outdated env managers, %d remaining.", GetEnv()->GetId()%(sizeBeforeErase - _envmanagers.size())%_envmanagers.size());
+            }
         }
 
         std::map<std::set<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.find(setExcludeBodyIds);
@@ -1293,6 +1303,7 @@ private:
             FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
             p->InitEnvironment(excludedbodies);
             it = _envmanagers.insert(std::map<std::set<int>, FCLCollisionManagerInstancePtr>::value_type(setExcludeBodyIds, p)).first;
+            RAVELOG_DEBUG_FORMAT("env=%d, inserted 1 env managers, %d remaining.", GetEnv()->GetId()%_envmanagers.size());
         }
         it->second->EnsureBodies(_fclspace->GetEnvBodies());
         it->second->Synchronize();
