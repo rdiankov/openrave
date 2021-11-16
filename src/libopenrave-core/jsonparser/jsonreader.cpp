@@ -592,7 +592,6 @@ protected:
                         *((KinBody::KinBodyInfo*)pNewRobotInfo.get())  = *pExistingBodyInfo;
                         pExistingBodyInfo = pNewRobotInfo;
                     }
-
                     pExistingBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
                     insertIndex = ibody;
                     break;
@@ -808,7 +807,7 @@ protected:
         if( itBodies != rEnvInfo.MemberEnd() && itBodies->value.IsArray() ) {
             const rapidjson::Value& rBodies = itBodies->value;
             std::string id; // cache
-            envInfo._vBodyInfos.reserve(rBodies.Size());
+            envInfo._vBodyInfos.reserve(rBodies.Size()); // reserve at least this much
             for (rapidjson::Value::ConstValueIterator itBodyInfo = rBodies.Begin(); itBodyInfo != rBodies.End(); ++itBodyInfo) {
                 const rapidjson::Value& rBodyInfo = *itBodyInfo;
 
@@ -871,17 +870,22 @@ protected:
                             _penv->Remove(pbody);
                         }
                         else {
-                            KinBody::KinBodyInfoPtr pKinBodyInfo;
-                            if (pbody->IsRobot()) {
-                                RobotBase::RobotBaseInfoPtr pRobotInfo(new RobotBase::RobotBaseInfo());
-                                RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*pRobotInfo);
-                                pKinBodyInfo = pRobotInfo;
+                            // no need to add an entry if partial is false since all the data will be in rBodyInfo
+                            bool isPartial = orjson::GetJsonValueByKey<bool>(rBodyInfo, "__isPartial__", true);
+                            if( isPartial ) {
+                                KinBody::KinBodyInfoPtr pKinBodyInfo;
+                                if (pbody->IsRobot()) {
+                                    RobotBase::RobotBaseInfoPtr pRobotInfo(new RobotBase::RobotBaseInfo());
+                                    RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*pRobotInfo);
+                                    pKinBodyInfo = pRobotInfo;
+                                }
+                                else {
+                                    pKinBodyInfo.reset(new KinBody::KinBodyInfo());
+                                    pbody->ExtractInfo(*pKinBodyInfo);
+                                }
+
+                                envInfo._vBodyInfos.push_back(pKinBodyInfo);
                             }
-                            else {
-                                pKinBodyInfo.reset(new KinBody::KinBodyInfo());
-                                pbody->ExtractInfo(*pKinBodyInfo);
-                            }
-                            envInfo._vBodyInfos.push_back(pKinBodyInfo);
                         }
                     }
                 }
