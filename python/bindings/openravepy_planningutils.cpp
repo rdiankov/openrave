@@ -244,7 +244,7 @@ public:
         }
     }
 
-    object Check(object oq0, object oq1, object odq0, object odq1, object oddq0, object oddq1, dReal timeelapsed, uint32_t interval=0x3, uint32_t options=0xffff, bool filterreturn=false)
+    object CheckWithAccelerations(object oq0, object oq1, object odq0, object odq1, object oddq0, object oddq1, dReal timeelapsed, uint32_t interval=0x3, uint32_t options=0xffff, bool filterreturn=false)
     {
         std::vector<dReal> q0 = ExtractArray<dReal>(oq0);
         std::vector<dReal> q1 = ExtractArray<dReal>(oq1);
@@ -509,7 +509,7 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(InsertWaypointWithSmoothing_overloads, planningu
 BOOST_PYTHON_FUNCTION_OVERLOADS(VerifyTrajectory_overloads, planningutils::pyVerifyTrajectory, 3, 4)
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Check_overloads, Check, 5, 8)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Check_overloads2, Check, 7, 10)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckWithAccelerations_overloads, CheckWithAccelerations, 7, 10)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads2, PlanPath, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads3, PlanPath, 1, 3)
@@ -898,8 +898,6 @@ void InitPlanningUtils()
 #endif
         ;
 
-        object (planningutils::PyDynamicsCollisionConstraint::*pcheck)(object, object, object, object, dReal, IntervalType, uint32_t, bool) = &planningutils::PyDynamicsCollisionConstraint::Check;
-        object (planningutils::PyDynamicsCollisionConstraint::*pcheckwithaccels)(object, object, object, object, object, object, dReal, uint32_t, uint32_t, bool) = &planningutils::PyDynamicsCollisionConstraint::Check;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >(planningutils, "DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint))
         .def(init<object, object, uint32_t>(),
@@ -912,7 +910,7 @@ void InitPlanningUtils()
         .def(init<object, object, uint32_t>(py::args("plannerparameters", "checkbodies", "filtermask")))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        .def("Check", pcheck,
+        .def("Check", &planningutils::PyDynamicsCollisionConstraint::Check,
              "q0"_a,
              "q1"_a,
              "dq0"_a,
@@ -923,7 +921,7 @@ void InitPlanningUtils()
              "filterreturn"_a = false,
              DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)
              )
-        .def("Check", pcheckwithaccels,
+        .def("CheckWithAccelerations", &planningutils::PyDynamicsCollisionConstraint::CheckWithAccelerations,
              "q0"_a,
              "q1"_a,
              "dq0"_a,
@@ -937,8 +935,8 @@ void InitPlanningUtils()
              DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)
              )
 #else
-        .def("Check", pcheck, Check_overloads(PY_ARGS("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options", "filterreturn") DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
-        .def("Check", pcheckwithaccels, Check_overloads2(PY_ARGS("q0","q1", "dq0", "dq1", "ddq0", "ddq1", "timeelapsed", "interval", "options", "filterreturn") DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
+        .def("Check", &planningutils::PyDynamicsCollisionConstraint::Check, Check_overloads(PY_ARGS("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options", "filterreturn") DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
+        .def("CheckWithAccelerations", &planningutils::PyDynamicsCollisionConstraint::CheckWithAccelerations, CheckWithAccelerations_overloads(PY_ARGS("q0","q1", "dq0", "dq1", "ddq0", "ddq1", "timeelapsed", "interval", "options", "filterreturn") DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
 #endif
         .def("GetReport", &planningutils::PyDynamicsCollisionConstraint::GetReport, DOXY_FN(planningutils::DynamicsCollisionConstraint,GetReport))
         .def("SetPlannerParameters", &planningutils::PyDynamicsCollisionConstraint::SetPlannerParameters, PY_ARGS("parameters") DOXY_FN(planningutils::DynamicsCollisionConstraint,SetPlannerParameters))
