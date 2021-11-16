@@ -146,10 +146,10 @@ public:
     virtual ~FCLCollisionChecker() {
         RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s destroyed in env %d", _userdatakey%GetEnv()->GetId());
         if (_maxNumBodyManagers > 0) {
-            RAVELOG_DEBUG_FORMAT("env=%s FCLCollisionChecker=%s, number of body managers is currently %d, and maximum was %d", GetEnv()->GetNameId()%_userdatakey%_bodymanagers.size()%_maxNumBodyManagers);
+            RAVELOG_DEBUG_FORMAT("env=%s FCLCollisionChecker=%s, number of body managers is current:%d, max:%d", GetEnv()->GetNameId()%_userdatakey%_bodymanagers.size()%_maxNumBodyManagers);
         }
         if (_maxNumEnvManagers > 0) {
-            RAVELOG_DEBUG_FORMAT("env=%s FCLCollisionChecker=%s, number of env managers is currently %d, and maximum was %d", GetEnv()->GetNameId()%_userdatakey%_envmanagers.size()%_maxNumEnvManagers);
+            RAVELOG_DEBUG_FORMAT("env=%s FCLCollisionChecker=%s, number of env managers is current:%d, max:%d", GetEnv()->GetNameId()%_userdatakey%_envmanagers.size()%_maxNumEnvManagers);
         }
 
         DestroyEnvironment();
