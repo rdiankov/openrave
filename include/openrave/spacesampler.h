@@ -37,7 +37,7 @@ enum IntervalType {
     IT_Default=0x00000000,
     IT_AllLinear=0x00010000,
     IT_Cubic=0x00020000,
-    IT_Quintic=0x00030000,
+    IT_Quintic=0x00040000,
     IT_InterpolationMask=0xffff0000,
 };
 
