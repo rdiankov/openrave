@@ -145,6 +145,13 @@ public:
 
     virtual ~FCLCollisionChecker() {
         RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s destroyed in env %d", _userdatakey%GetEnv()->GetId());
+        if (_maxNumBodyManagers > 0) {
+            RAVELOG_DEBUG_FORMAT("env=%s FCLCollisionChecker=%s, number of body managers is currently %d, and maximum was %d", GetEnv()->GetNameId()%_userdatakey%_bodymanagers.size()%_maxNumBodyManagers);
+        }
+        if (_maxNumEnvManagers > 0) {
+            RAVELOG_DEBUG_FORMAT("env=%s FCLCollisionChecker=%s, number of env managers is currently %d, and maximum was %d", GetEnv()->GetNameId()%_userdatakey%_envmanagers.size()%_maxNumEnvManagers);
+        }
+
         DestroyEnvironment();
 
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
@@ -352,14 +359,8 @@ public:
     virtual void RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
     {
         // remove body from all the managers
-        size_t numErased = 0;
-        numErased += _bodymanagers.erase(std::make_pair(pbody.get(), (int)0));
-        numErased += _bodymanagers.erase(std::make_pair(pbody.get(), (int)1));
-        if (numErased > 0 && IS_DEBUGLEVEL(OpenRAVE::Level_Debug)) {
-            const EnvironmentBase& env = *GetEnv();
-            RAVELOG_DEBUG_FORMAT("env=%s, there are %d body managers after removing %d. There are %d env managers", env.GetNameId()%_bodymanagers.size()%numErased%_envmanagers.size());
-        }
-
+        _bodymanagers.erase(std::make_pair(pbody.get(), (int)0));
+        _bodymanagers.erase(std::make_pair(pbody.get(), (int)1));
         FOREACH(itmanager, _envmanagers) {
             itmanager->second->RemoveBody(*pbody);
         }
@@ -1282,9 +1283,9 @@ private:
             p->InitBodyManager(pbody, bactiveDOFs);
             it = _bodymanagers.insert(BODYMANAGERSMAP::value_type(std::make_pair(pbody.get(), (int)bactiveDOFs), p)).first;
             
-            if( IS_DEBUGLEVEL(OpenRAVE::Level_Debug) ) {
-                const EnvironmentBase& env = *GetEnv();
-                RAVELOG_DEBUG_FORMAT("env=%s, there are %d body managers after inserting 1.", env.GetNameId()%_bodymanagers.size());
+            if (_bodymanagers.size() > _maxNumBodyManagers) {
+                RAVELOG_VERBOSE_FORMAT("env=%s, exceeded previous max number of body managers, now %d.", GetEnv()->GetNameId()%_bodymanagers.size());
+                _maxNumBodyManagers = _bodymanagers.size();
             }
         }
 
@@ -1305,7 +1306,6 @@ private:
             uint32_t curtime = OpenRAVE::utils::GetMilliTime();
             _nGetEnvManagerCacheClearCount = 100000;
             std::map<std::vector<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.begin();
-            size_t sizeBeforeErase = _envmanagers.size();
             while(it != _envmanagers.end()) {
                 if( (it->second->GetLastSyncTimeStamp() - curtime) > 10000 ) {
                     //RAVELOG_VERBOSE_FORMAT("env=%d erasing manager at %u", GetEnv()->GetId()%it->second->GetLastSyncTimeStamp());
@@ -1314,9 +1314,6 @@ private:
                 else {
                     ++it;
                 }
-            }
-            if (sizeBeforeErase != _envmanagers.size()) {
-                RAVELOG_DEBUG_FORMAT("env=%s, removed %d outdated env managers, %d in total.", GetEnv()->GetNameId()%(sizeBeforeErase - _envmanagers.size())%_envmanagers.size());
             }
         }
 
@@ -1330,7 +1327,11 @@ private:
 
             p->InitEnvironment(vecExcludedBodyEnvIndices);
             it = _envmanagers.insert(std::map<std::vector<int>, FCLCollisionManagerInstancePtr>::value_type(excludedBodyEnvIndices, p)).first;
-            RAVELOG_DEBUG_FORMAT("env=%s, inserted 1 env managers, %d in total.", GetEnv()->GetNameId()%_envmanagers.size());
+
+            if (_envmanagers.size() > _maxNumEnvManagers) {
+                RAVELOG_VERBOSE_FORMAT("env=%s, exceeded previous max number of env managers, now %d.", GetEnv()->GetNameId()%_envmanagers.size());
+                _maxNumEnvManagers = _envmanagers.size();
+            }
         }
         it->second->EnsureBodies(_fclspace->GetEnvBodies());
         it->second->Synchronize();
@@ -1412,8 +1413,11 @@ private:
 
     typedef std::map< std::pair<const void*, int>, FCLCollisionManagerInstancePtr> BODYMANAGERSMAP; ///< Maps pairs of (body, bactiveDOFs) to oits manager
     BODYMANAGERSMAP _bodymanagers; ///< managers for each of the individual bodies. each manager should be called with InitBodyManager. Cannot use KinBodyPtr here since that will maintain a reference to the body!
+    int _maxNumBodyManagers = 0; ///< for debug, record max size of _bodymanagers.
+
     std::map< std::vector<int>, FCLCollisionManagerInstancePtr> _envmanagers; // key is sorted vector of environment body indices of excluded bodies
     int _nGetEnvManagerCacheClearCount; ///< count down until cache can be cleared
+    int _maxNumEnvManagers = 0; ///< for debug, record max size of _envmanagers.
 
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
     std::map<fcl::CollisionObject*, int> _currentlyused;
