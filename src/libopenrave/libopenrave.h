@@ -647,6 +647,13 @@ bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<
             return false;
         }
 
+        if( !pInfo->_id.empty() && pInfo->_id != pMatchExistingPointer->GetId() ) {
+            // new element, requires re-init
+            RAVELOG_VERBOSE("could not find existing pointer which matches and can update");
+            result = UFIR_RequireReinitialize;
+            return false;
+        }
+
         UpdateFromInfoResult updateFromInfoResult = pMatchExistingPointer->UpdateFromInfo(*pInfo);
         if (updateFromInfoResult == UFIR_NoChange) {
             // no change

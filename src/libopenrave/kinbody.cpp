@@ -197,7 +197,6 @@ void KinBody::KinBodyInfo::Reset()
     _vJointInfos.clear();
     _mReadableInterfaces.clear();
     _isRobot = false;
-    _isPartial = true;
 }
 
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -300,7 +299,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         rKinBodyInfo.AddMember("readableInterfaces", rReadableInterfaces, allocator);
     }
 
-    rKinBodyInfo.AddMember("__isPartial__", _isPartial, allocator);
+    rKinBodyInfo.AddMember("__isPartial__", true, allocator);
 }
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -312,8 +311,6 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         if( !isPartial ) {
             Reset();
         }
-
-        _isPartial = isPartial;
     }
 
     orjson::LoadJsonValueByKey(value, "name", _name);
@@ -6004,7 +6001,6 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     info._name = _name;
     info._referenceUri = _referenceUri;
     info._interfaceType = GetXMLId();
-    info._isPartial = false;
 
     info._dofValues.resize(0);
     std::vector<dReal> vDOFValues;

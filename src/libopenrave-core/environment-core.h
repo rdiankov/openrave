@@ -2840,25 +2840,18 @@ public:
                 // interface should match at this point
                 // update existing body or robot
                 UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
-                if( pKinBodyInfo->_isPartial ) {
-                    if (pKinBodyInfo->_isRobot && pMatchExistingBody->IsRobot()) {
-                        RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pMatchExistingBody);
-                        if( !!pRobotBaseInfo ) {
-                            updateFromInfoResult = pRobot->UpdateFromRobotInfo(*pRobotBaseInfo);
-                        }
-                        else {
-                            updateFromInfoResult = pRobot->UpdateFromKinBodyInfo(*pKinBodyInfo);
-                        }
-                    } else {
-                        updateFromInfoResult = pMatchExistingBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
+                if (pKinBodyInfo->_isRobot && pMatchExistingBody->IsRobot()) {
+                    RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pMatchExistingBody);
+                    if( !!pRobotBaseInfo ) {
+                        updateFromInfoResult = pRobot->UpdateFromRobotInfo(*pRobotBaseInfo);
                     }
-                    RAVELOG_VERBOSE_FORMAT("env=%s, update body %s from info result %d", GetNameId()%pMatchExistingBody->_id%updateFromInfoResult);
+                    else {
+                        updateFromInfoResult = pRobot->UpdateFromKinBodyInfo(*pKinBodyInfo);
+                    }
+                } else {
+                    updateFromInfoResult = pMatchExistingBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                 }
-                else {
-                    // TODO for now, this is not very efficient.. If it becomes commonplace to update with non-partial infos, then have to modify things inside UpdateChildrenFromInfo so that structual changes can be detected correctly.
-                    updateFromInfoResult = UFIR_RequireReinitialize;
-                }
-
+                RAVELOG_VERBOSE_FORMAT("env=%s, update body %s from info result %d", GetNameId()%pMatchExistingBody->_id%updateFromInfoResult);
                 if (updateFromInfoResult == UFIR_NoChange) {
                     continue;
                 }

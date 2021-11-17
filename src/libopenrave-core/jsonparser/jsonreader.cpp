@@ -592,6 +592,7 @@ protected:
                         *((KinBody::KinBodyInfo*)pNewRobotInfo.get())  = *pExistingBodyInfo;
                         pExistingBodyInfo = pNewRobotInfo;
                     }
+
                     pExistingBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
                     insertIndex = ibody;
                     break;
