@@ -155,6 +155,11 @@ PyReadablePtr pyCreateStringReadable(const std::string& id, const std::string& d
     return PyReadablePtr(new PyReadable(ReadablePtr(new OpenRAVE::StringReadable(id, data))));
 }
 
+PyReadablePtr pyCreateJSONReadable(const std::string& id, const std::string& data)
+{
+    return PyReadablePtr(new PyReadable(ReadablePtr(new OpenRAVE::JSONReadable(id, data))));
+}
+
 namespace xmlreaders
 {
 class RAVE_DEPRECATED PyXMLReaderStaticClass
@@ -1847,11 +1852,14 @@ void init_openravepy_global()
         scope_ scope_stringreaders = class_<PyStringReaderStaticClass>("stringreaders")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                     .def_static("CreateStringReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+                                     .def_static("CreateStringReadable", xmlreaders::pyCreateStringReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+                                     .def_static("CreateJSONReadable", xmlreaders::pyCreateJSONReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
 #else
                                      // https://wiki.python.org/moin/boost.python/HowTo
                                      .def("CreateStringReadable", pyCreateStringReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+                                     .def("CreateJSONReadable", pyCreateJSONReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateJSONReadable))
                                      .staticmethod("CreateStringReadable")
+                                     .staticmethod("CreateJSONReadable")
 #endif
         ;
     }

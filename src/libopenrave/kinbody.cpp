@@ -437,12 +437,8 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
         _mReadableInterfaces[id] = pReader->GetReadable();
         return;
     }
-    if (value.IsString()) {
-        StringReadablePtr pReadable(new StringReadable(id, value.GetString()));
-        _mReadableInterfaces[id] = pReadable;
-        return;
-    }
-    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
+    JSONReadablePtr pJSONReadable(new JSONReadable(id, value));
+    _mReadableInterfaces[id] = pJSONReadable;
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)

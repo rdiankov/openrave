@@ -4852,13 +4852,23 @@ private:
             if( !pextra->getType() ) {
                 continue;
             }
-            if( !!pextra->getType() && !!pextra->getName() && strcmp(pextra->getType(), "stringxmlreadable") == 0 ) {
+            if( !!pextra->getName() && strcmp(pextra->getType(), "stringxmlreadable") == 0) {
                 std::string xmlid(pextra->getName());
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
                 if( !!tec ) {
                     daeElementRef pdata = tec->getChild("data");
                     if( !!pdata ) {
                         pbody->SetReadableInterface(xmlid, ReadablePtr(new StringReadable(xmlid, pdata->getCharData())));
+                    }
+                }
+            }
+            else if( !!pextra->getName() && strcmp(pextra->getType(), "jsonreadable") == 0 ) {
+                std::string xmlid(pextra->getName());
+                domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
+                if( !!tec ) {
+                    daeElementRef pdata = tec->getChild("data");
+                    if( !!pdata ) {
+                        pbody->SetReadableInterface(xmlid, ReadablePtr(new JSONReadable(xmlid, pdata->getCharData())));
                     }
                 }
             }

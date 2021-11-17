@@ -3031,6 +3031,49 @@ bool StringReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitS
     return true;
 }
 
+JSONReadable::JSONReadable(const std::string& id, const std::string& data) : Readable(id)
+{
+    orjson::ParseJson(_rDocument, data);
+}
+
+JSONReadable::JSONReadable(const std::string& id, const rapidjson::Value& value) : Readable(id)
+{
+    _rDocument.CopyFrom(value, _rDocument.GetAllocator());
+}
+
+JSONReadable::~JSONReadable()
+{
+}
+
+bool JSONReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
+{
+    if( writer->GetFormat() == "collada" ) {
+        AttributesList atts;
+        atts.emplace_back("type", "jsonreadable");
+        atts.emplace_back("name", GetXMLId());
+        BaseXMLWriterPtr child = writer->AddChild("extra",atts);
+        atts.clear();
+        atts.emplace_back("profile", "OpenRAVE");
+        writer = child->AddChild("technique",atts)->AddChild("data");
+    }
+    std::stringstream sout;
+    orjson::DumpJson(_rDocument, sout);
+    writer->SetCharData(sout.str());
+    return true;
+}
+
+bool JSONReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    value.CopyFrom(_rDocument, allocator);
+    return true;
+}
+
+bool JSONReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    _rDocument.CopyFrom(value, _rDocument.GetAllocator());
+    return true;
+}
+
 } // end namespace OpenRAVE
 
 #if OPENRAVE_LOG4CXX

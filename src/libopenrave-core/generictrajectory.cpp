@@ -18,6 +18,7 @@
 #include <boost/lambda/lambda.hpp>
 #include <boost/lexical_cast.hpp>
 #include <openrave/xmlreaders.h>
+#include <openrave/openravejson.h>
 
 namespace OpenRAVE {
 
@@ -565,8 +566,10 @@ public:
                 if (!!itReadableInterface->second) {
                     rapidjson::Value rReadable;
                     if( itReadableInterface->second->SerializeJSON(rReadable, document.GetAllocator(), fUnitScale, zerooptions) ) {
-                        WriteBinaryString(O, rReadable.GetString());
-                        WriteBinaryString(O, "StringReadable");
+                        std::stringstream sout;
+                        orjson::DumpJson(rReadable, sout);
+                        WriteBinaryString(O, sout.str());
+                        WriteBinaryString(O, "JSONReadable");
                         continue;
                     }
                     else {
@@ -681,6 +684,9 @@ public:
                             else {
                                 readableInterface = xmlreader.GetReadable();
                             }
+                        }
+                        else if( readerType == "JSONReadable" ) {
+                            readableInterface.reset(new JSONReadable(xmlid, serializedReadableInterface));
                         }
                         else {
                             readableInterface.reset(new StringReadable(xmlid, serializedReadableInterface));
