@@ -566,10 +566,16 @@ public:
                 if (!!itReadableInterface->second) {
                     rapidjson::Value rReadable;
                     if( itReadableInterface->second->SerializeJSON(rReadable, document.GetAllocator(), fUnitScale, zerooptions) ) {
-                        std::stringstream sout;
-                        orjson::DumpJson(rReadable, sout);
-                        WriteBinaryString(O, sout.str());
-                        WriteBinaryString(O, "JSONReadable");
+                        if( rReadable.IsString() ) {
+                            WriteBinaryString(O, rReadable.GetString());
+                            WriteBinaryString(O, "StringReadable");
+                        }
+                        else {
+                            std::stringstream sout;
+                            orjson::DumpJson(rReadable, sout);
+                            WriteBinaryString(O, sout.str());
+                            WriteBinaryString(O, "JSONReadable");
+                        }
                         continue;
                     }
                     else {

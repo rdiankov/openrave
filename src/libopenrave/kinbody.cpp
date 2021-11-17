@@ -437,8 +437,14 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
         _mReadableInterfaces[id] = pReader->GetReadable();
         return;
     }
-    JSONReadablePtr pJSONReadable(new JSONReadable(id, value));
-    _mReadableInterfaces[id] = pJSONReadable;
+    if (value.IsString()) {
+        StringReadablePtr pStringReadable(new StringReadable(id, value.GetString()));
+        _mReadableInterfaces[id] = pStringReadable;
+    }
+    else {
+        JSONReadablePtr pJSONReadable(new JSONReadable(id, value));
+        _mReadableInterfaces[id] = pJSONReadable;
+    }
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
