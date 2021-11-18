@@ -5915,7 +5915,7 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
     // check to make sure there are no repeating names in already added links
     FOREACH(itlink, _veclinks) {
         if( (*itlink)->GetName() == info._name ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("link %s is declared more than once in body %s"), info._name%GetName(), ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("link '%s' is declared more than once in body '%s', uri is '%s'"), info._name%GetName()%GetURI(), ORE_InvalidArguments);
         }
     }
 
