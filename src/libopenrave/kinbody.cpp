@@ -388,6 +388,15 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
             UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options);
         }
+
+        // if has conflicting names, should error here
+        for(int ilink0 = 0; ilink0 < (int)_vLinkInfos.size(); ++ilink0 ) {
+            for(int ilink1 = ilink0+1; ilink1 < (int)_vLinkInfos.size(); ++ilink1 ) {
+                if( _vLinkInfos[ilink0]->_name == _vLinkInfos[ilink1]->_name ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("Body '%s' has info with link[%d] and link[%d] having the same linkname '%s', which is not allowed. link[%d].id='%s', link[%d].id='%s'", _name%ilink0%ilink1%_vLinkInfos[ilink0]->_name%ilink0%_vLinkInfos[ilink0]->_id%ilink1%_vLinkInfos[ilink1]->_id, ORE_Assert);
+                }
+            }
+        }
     }
 
     if (value.HasMember("joints")) {
@@ -6092,7 +6101,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
     if(_id != info._id) {
         if( _id.empty() ) {
-            RAVELOG_DEBUG_FORMAT("env=%d, body %s assigning empty id to '%s'", GetEnv()->GetId()%GetName()%info._id);
+            RAVELOG_DEBUG_FORMAT("env=%s, body '%s' assigning empty id to '%s'", GetEnv()->GetNameId()%GetName()%info._id);
             SetId(info._id);
         }
         else if( info._id.empty() ) {
