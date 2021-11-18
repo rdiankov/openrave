@@ -304,15 +304,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
-    if (value.HasMember("__isPartial__") ) {
-        bool isPartial = true;
-        orjson::LoadJsonValue(value["__isPartial__"], isPartial);
-        // if new data is not partial, then it contains everything, so all old data should be removed
-        if( !isPartial ) {
-            Reset();
-        }
-    }
-
+    // even if value["__isPartial__"] is False, do not reset since it could be on top of the already loaded correct struct.
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
 
