@@ -299,7 +299,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         rKinBodyInfo.AddMember("readableInterfaces", rReadableInterfaces, allocator);
     }
 
-    rKinBodyInfo.AddMember("__isPartial__", true, allocator);
+    rKinBodyInfo.AddMember("__isPartial__", false, allocator);
 }
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
