@@ -5608,8 +5608,14 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // links
-    if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
-        return updateFromInfoResult;
+    {
+        KinBody::KinBodyStateSaver saver(shared_kinbody(), Save_LinkTransformation);
+        vector<dReal> vZeros(GetDOF(), 0);
+        SetDOFValues(vZeros, KinBody::CLA_Nothing);
+        SetTransform(Transform());
+        if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
+            return updateFromInfoResult;
+        }
     }
 
     // joints
