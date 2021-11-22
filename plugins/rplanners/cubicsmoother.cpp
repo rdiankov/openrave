@@ -1082,6 +1082,58 @@ protected:
         return finalret;
     } // end ProcessConstraintReturnIntoChunks
 
+    PlannerStatus ConvertOpenRAVETrajectoryToPiecewisePolynomialTrajectorySameInterpolation(TrajectoryBasePtr ptraj,
+                                                                                            ConfigurationSpecification& posSpec, ConfigurationSpecification& velSpec,
+                                                                                            ConfigurationSpecification& accelSpec, ConfigurationSpecification& timeSpec,
+                                                                                            PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj) override
+    {
+        // Cache stuff
+        std::vector<dReal> &x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect, &a0Vect = _cacheA0Vect, &a1Vect = _cacheA1Vect, &tVect = _cacheTVect;
+        std::vector<PiecewisePolynomials::Chunk>& vChunks = _cacheCheckedChunks;
+
+        std::vector<PiecewisePolynomials::Polynomial> vTempPolynomials(_ndof);
+        std::vector<dReal> vCubicCoeffs(4, 0);
+
+        // Convert the OpenRAVE trajectory to a PiecewisePolynomialTrajectory
+        vChunks.resize(0);
+        if( vChunks.capacity() < ptraj->GetNumWaypoints() - 1 ) {
+            vChunks.reserve(ptraj->GetNumWaypoints() - 1);
+        }
+        ptraj->GetWaypoint(0, x0Vect, posSpec);
+        ptraj->GetWaypoint(0, v0Vect, velSpec);
+        ptraj->GetWaypoint(0, a0Vect, accelSpec);
+        // For each segment connecting two consecutive waypoints, compute polynomial coefficients directly from the
+        // given boundary conditions instead of using an interpolation function. Slightly different boundary conditions
+        // might lead to a vastly different interpolated trajectory.
+        for( size_t iWaypoint = 1; iWaypoint < ptraj->GetNumWaypoints(); ++iWaypoint ) {
+            ptraj->GetWaypoint(iWaypoint, tVect, timeSpec);
+            const dReal duration = tVect.at(0);
+            if( duration > g_fEpsilonLinear ) {
+                ptraj->GetWaypoint(iWaypoint, x1Vect, posSpec);
+                ptraj->GetWaypoint(iWaypoint, v1Vect, velSpec);
+                ptraj->GetWaypoint(iWaypoint, a1Vect, accelSpec);
+                for( size_t idof = 0; idof < _ndof; ++idof ) {
+                    mathextra::computecubiccoeffs(x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], a0Vect[idof], a1Vect[idof], duration, &vCubicCoeffs[0]);
+                    std::reverse(vCubicCoeffs.begin(), vCubicCoeffs.end()); // PiecewisePolynomials' polynomial coefficient vector has the weakest term first so need to reverse the vector.
+                    vTempPolynomials[idof].Initialize(duration, vCubicCoeffs);
+                }
+                vChunks.emplace_back(duration, vTempPolynomials);
+                x0Vect.swap(x1Vect);
+                v0Vect.swap(v1Vect);
+                a0Vect.swap(a1Vect);
+            }
+        }
+        pwptraj.Initialize(vChunks);
+
+        if( !_parameters->verifyinitialpath ) {
+            // Since the path is perfectly modeled, we can skip checking at the end.
+            FOREACH(itchunk, pwptraj.vchunks) {
+                itchunk->constraintChecked = true;
+            }
+        }
+        return PS_HasSolution;
+    } // end ConvertOpenRAVETrajectoryToPiecewisePolynomialTrajectorySameInterpolation
+
 private:
 
     std::vector<PiecewisePolynomials::Chunk> _cacheFinalChunks; // for storing chunks before putting them into the final trajcetory

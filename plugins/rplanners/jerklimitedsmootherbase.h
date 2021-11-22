@@ -389,10 +389,10 @@ protected:
     /// \param[in] timeSpec ConfigurationSpecification for deltatime
     /// \param[out] pwptraj
     /// \return true if successulf. false otherwise.
-    PlannerStatus ConvertOpenRAVETrajectoryToPiecewisePolynomialTrajectorySameInterpolation(TrajectoryBasePtr ptraj,
-                                                                                            ConfigurationSpecification& posSpec, ConfigurationSpecification& velSpec,
-                                                                                            ConfigurationSpecification& accelSpec, ConfigurationSpecification& timeSpec,
-                                                                                            PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj)
+    virtual PlannerStatus ConvertOpenRAVETrajectoryToPiecewisePolynomialTrajectorySameInterpolation(TrajectoryBasePtr ptraj,
+                                                                                                    ConfigurationSpecification& posSpec, ConfigurationSpecification& velSpec,
+                                                                                                    ConfigurationSpecification& accelSpec, ConfigurationSpecification& timeSpec,
+                                                                                                    PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj)
     {
         // Cache stuff
         std::vector<dReal> &x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect, &a0Vect = _cacheA0Vect, &a1Vect = _cacheA1Vect, &tVect = _cacheTVect;
