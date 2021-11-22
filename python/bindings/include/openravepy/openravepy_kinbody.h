@@ -158,6 +158,7 @@ public:
 #endif
         py::object _transform = ReturnTransform(Transform());
         bool _isRobot = false;
+        bool _isPartial = true;
         py::object _dofValues = py::none_();
         py::object _readableInterfaces = py::none_();
         virtual std::string __str__();

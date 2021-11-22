@@ -197,6 +197,7 @@ void KinBody::KinBodyInfo::Reset()
     _vJointInfos.clear();
     _mReadableInterfaces.clear();
     _isRobot = false;
+    _isPartial = true;
 }
 
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -299,12 +300,20 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         rKinBodyInfo.AddMember("readableInterfaces", rReadableInterfaces, allocator);
     }
 
-    rKinBodyInfo.AddMember("__isPartial__", false, allocator);
+    rKinBodyInfo.AddMember("__isPartial__", _isPartial, allocator);
 }
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
-    // even if value["__isPartial__"] is False, do not reset since it could be on top of the already loaded correct struct.
+    if (value.HasMember("__isPartial__") ) {
+        bool isPartial = true;
+        orjson::LoadJsonValue(value["__isPartial__"], isPartial);
+        // even if value["__isPartial__"] is False, do not call Reset() since it could be on top of the already loaded correct struct.
+        if( !isPartial ) {
+            // data will be filled so apply to the struct
+            _isPartial = false;
+        }
+    }
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
 

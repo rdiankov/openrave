@@ -2328,6 +2328,7 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     pInfo->_transform = ExtractTransform(_transform);
     pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
     pInfo->_isRobot = _isRobot;
+    pInfo->_isPartial = _isPartial;
 
     pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
     return pInfo;
@@ -2389,6 +2390,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
 #endif
     _transform = ReturnTransform(info._transform);
     _isRobot = info._isRobot;
+    _isPartial = info._isPartial;
     _dofValues = ReturnDOFValues(info._dofValues);
     _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
 }
