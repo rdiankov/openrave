@@ -435,7 +435,7 @@ OPENRAVE_PYTHON_MODULE(pyANN_int)
     class_< pyann_exception >( "_pyann_exception_" )
     .def( init<const std::string&>() )
     .def( init<const pyann_exception&>() )
-    .def( "message", &pyann_exception::message, return_copy_const_ref() )
+    .add_property( "message", make_function(&pyann_exception::message, return_copy_const_ref()) )
     .def( "__str__", &pyann_exception::message, return_copy_const_ref() )
     ;
     OpenRAVEBoostPythonExceptionTranslator<pyann_exception>();
