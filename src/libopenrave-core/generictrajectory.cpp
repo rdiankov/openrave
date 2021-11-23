@@ -567,6 +567,7 @@ public:
                     rapidjson::Value rReadable;
                     if( itReadableInterface->second->SerializeJSON(rReadable, document.GetAllocator(), fUnitScale, zerooptions) ) {
                         WriteBinaryString(O, rReadable.GetString());
+                        WriteBinaryString(O, "StringReadable");
                         continue;
                     }
                     else {
@@ -592,6 +593,7 @@ public:
                                 ss.str(std::string());
                                 writer->Serialize(ss);
                                 WriteBinaryString(O, ss.str());
+                                WriteBinaryString(O, "StringReadable");
                                 continue;
                             }
                         }
@@ -600,7 +602,7 @@ public:
 
                 // if neither json or xml serializable, write an empty string
                 WriteBinaryString(O, "");
-
+                WriteBinaryString(O, "StringReadable");
             }
         }
     }
