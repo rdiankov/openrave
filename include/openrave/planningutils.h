@@ -460,7 +460,7 @@ protected:
     virtual void _PrintOnFailure(const std::string& prefix);
 
     PlannerBase::PlannerParametersWeakConstPtr _parameters;
-    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vtempjerkconfig, _vperturbedvalues, _vcoeff2, _vcoeff1, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, _vtempconfig2, _vdiffconfig, _vdiffvelconfig, _vstepconfig; ///< in configuration space
+    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempacceldelta, _vtempaccelconfig, _vtempjerkconfig, _vperturbedvalues, _vcoeff2, _vcoeff1, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, _vtempconfig2, _vdiffconfig, _vdiffvelconfig, _vdiffaccelconfig, _vstepconfig; ///< in configuration space
     std::vector<dReal> _vrawroots, _vrawcoeffs;
     std::vector<std::vector<dReal> > _valldofscoeffs, _valldofscriticalpoints, _valldofscriticalvalues;
     CollisionReportPtr _report;

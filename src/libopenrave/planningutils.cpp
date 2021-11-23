@@ -3419,7 +3419,14 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
     dReal epsilon = g_fEpsilon; // used as a threshold for various checks to follow
 
-    if( timeelapsed > 0 && dq0.size() == ndof && dq1.size() == ndof && ddq0.size() == ndof && ddq1.size() == ndof ) {
+    const bool bUseAllLinearInterpolation = (maskinterpolation & IT_AllLinear) == IT_AllLinear;
+    OPENRAVE_ASSERT_OP(dq0.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(dq1.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(ddq0.size(), ==, ndof);
+    OPENRAVE_ASSERT_OP(ddq1.size(), ==, ndof);
+
+    // Compute polynomial coefficients
+    if( !bUseAllLinearInterpolation && timeelapsed > 0 ) {
         switch( maskinterpolation ) {
         case IT_Cubic:
             epsilon = g_fEpsilonCubic;
@@ -3458,7 +3465,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         } // end switch maskinterpolation
     }
     else {
-        OPENRAVE_ASSERT_OP_FORMAT(timeelapsed, ==, 0, "timeelapsed=%f is given but the given velocities/accelerations are invalid.", timeelapsed, ORE_InvalidArguments);
     }
 
     _valldofscriticalpoints.resize(params->GetDOF());
@@ -3468,6 +3474,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     // dQ = diff(q1, q0)
     dQ = q1;
     params->_diffstatefn(dQ, q0);
+    // _vtempveldelta = dq1 - dq0 and _vtempacceldelta = ddq1 - ddq0
+    _vtempveldelta = dq1;
+    _vtempacceldelta = ddq1;
+    for( size_t idof = 0; idof < ndof; ++idof ) {
+        _vtempveldelta[idof] -= dq0[idof];
+        _vtempacceldelta[idof] -= ddq0[idof];
+    }
 
     //
     // See which DOF requires the most number of steps to go along this path. The distance that dof
@@ -3480,7 +3493,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     const std::vector<dReal>& vConfigResolution = params->_vConfigResolution;
     std::vector<dReal>::const_iterator itres = vConfigResolution.begin();
     BOOST_ASSERT(vConfigResolution.size() == ndof);
-    if( timeelapsed > 0 && dq0.size() == ndof && dq1.size() == ndof && ddq0.size() == ndof && ddq1.size() == ndof ) {
+    if( !bUseAllLinearInterpolation && timeelapsed > 0 ) {
         for( int idof = 0; idof < (int)ndof; ++idof, ++itres ) {
             dReal fabsdist = 0; // the total distance this DOF travels along this path
             int steps = 0;      // the number of steps this dof needs to travel along the path
@@ -3689,345 +3702,404 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     // Checking the rest of the segment starts here
     bool bHasRampDeviatedFromInterpolation = false; // TODO: write a correct description for this variable later
     bool bHasNewTempConfigToAdd = false; // TODO: write a correct description for this variable later
-    bool bComputeNewTimeStep = true; // TODO: write a correct description for this variable later
-    int numRepeating = 0; // indicates how many times we get dqscale < 1 consecutively
 
-    dReal tcur = 0;  // the current time instant we are checking
-    dReal tprev = 0; // the previous time instant
-    dReal tnext = 0; // the next time instant we are aiming for
-    dReal fMinNextTimeStep = 0; // when computing tnext, it should be such that tnext > fMinNextTimeStep
-    int istep = 0;   // the number of steps we have taken along the path.
+    if( !bUseAllLinearInterpolation && timeelapsed > 0 ) {
+        bool bComputeNewTimeStep = true; // TODO: write a correct description for this variable later
+        int numRepeating = 0; // indicates how many times we get dqscale < 1 consecutively
 
-    std::vector<size_t> vnextcriticalpointindices;
-    vnextcriticalpointindices.resize(ndof, 1); // vnextcriticalpointindices[i] is the index of the next closest critical point for dof i considering that we are at the time instant tcur
+        dReal tcur = 0;  // the current time instant we are checking
+        dReal tprev = 0; // the previous time instant
+        dReal tnext = 0; // the next time instant we are aiming for
+        dReal fMinNextTimeStep = 0; // when computing tnext, it should be such that tnext > fMinNextTimeStep
+        int istep = 0;   // the number of steps we have taken along the path.
 
-    // Use totalSteps as an upperbound of the number of steps instead of using numSteps. numSteps can actually be lower than the actual number of steps needed.
-    while( istep < totalSteps && tcur < timeelapsed ) {
-        // Check the current state (q, qd, qdd)
-        int nstateret = 0;
-        if( istep >= start ) {
-            nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
-            if( !!params->_getstatefn ) {
-                params->_getstatefn(_vtempconfig);
+        std::vector<size_t> vnextcriticalpointindices;
+        vnextcriticalpointindices.resize(ndof, 1); // vnextcriticalpointindices[i] is the index of the next closest critical point for dof i considering that we are at the time instant tcur
+
+        // Use totalSteps as an upperbound of the number of steps instead of using numSteps. numSteps can actually be lower than the actual number of steps needed.
+        while( istep < totalSteps && tcur < timeelapsed ) {
+            // Check the current state (q, qd, qdd)
+            int nstateret = 0;
+            if( istep >= start ) {
+                nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+                if( !!params->_getstatefn ) {
+                    params->_getstatefn(_vtempconfig);
+                }
+                if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                    filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+                    filterreturn->_configurationtimes.push_back(tcur);
+                }
+                bHasNewTempConfigToAdd = false;
             }
-            if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-                filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
-                filterreturn->_configurationtimes.push_back(tcur);
+            if( nstateret != 0 ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = nstateret;
+                }
+                return nstateret;
             }
-            bHasNewTempConfigToAdd = false;
-        }
-        if( nstateret != 0 ) {
-            if( !!filterreturn ) {
-                filterreturn->_returncode = nstateret;
-            }
-            return nstateret;
-        }
 
-        // Compute a time step tdelta such that at tcur + tdelta, no dof has moved more than its resolution.
-        int earliestindex = -1;
-        if( bComputeNewTimeStep ) {
-            dReal tdelta = timeelapsed - tcur;
-            dReal tdeltaonedof;
-            for( size_t idof = 0; idof < ndof; ++idof ) {
-                dReal fcurvalue;
+            // Compute a time step tdelta such that at tcur + tdelta, no dof has moved more than its resolution.
+            int earliestindex = -1;
+            if( bComputeNewTimeStep ) {
+                dReal tdelta = timeelapsed - tcur;
+                dReal tdeltaonedof;
+                for( size_t idof = 0; idof < ndof; ++idof ) {
+                    dReal fcurvalue;
 
-                switch( maskinterpolation ) {
-                case IT_Cubic:
-                    mathextra::evaluatecubic(&_valldofscoeffs[idof][0], tcur, fcurvalue);
-                    break;
-                case IT_Quintic:
-                    mathextra::evaluatequintic(&_valldofscoeffs[idof][0], tcur, fcurvalue);
-                    break;
-                default:
-                    BOOST_ASSERT(0);
-                } // end switch maskinterpolation
-
-                size_t criticalpointindex = vnextcriticalpointindices[idof];
-                dReal fcriticalvalue = _valldofscriticalvalues[idof][criticalpointindex];
-
-                // fdiff is how far between the current joint value and the value at the next critical point.
-                dReal fdiffvalue = fcriticalvalue - fcurvalue;
-                // if( RaveFabs(fdiffvalue) <= epsilon ) {
-                //     // This dof does not move.
-                //     continue;
-                // }
-
-                dReal fdistanceallowance = *(vConfigResolution.begin() + idof); // dof is allowed to move as much as its resolution
-                dReal fnextvalue = fcurvalue; // in the end, we want to solve for tdelta such that p(t + tdelta) = fnextvalue
-
-                // If frem > 0, this dof is reaching the next extrema before having moved for its resolution.
-                dReal frem = fdistanceallowance - RaveFabs(fdiffvalue);
-                bool bFound = true; // false if we cannot find a suitable fnextvalue
-                while( frem > 0 ) {
-                    // In this case, the next critical point is nearer than fdistanceallowance
-                    if( criticalpointindex + 1 == _valldofscriticalpoints[idof].size() ) {
-                        // The end of the segment is reached before having moved for the dof resolution.
-                        bFound = false;
+                    switch( maskinterpolation ) {
+                    case IT_Cubic:
+                        mathextra::evaluatecubic(&_valldofscoeffs[idof][0], tcur, fcurvalue);
                         break;
-                    }
+                    case IT_Quintic:
+                        mathextra::evaluatequintic(&_valldofscoeffs[idof][0], tcur, fcurvalue);
+                        break;
+                    default:
+                        BOOST_ASSERT(0);
+                    } // end switch maskinterpolation
 
-                    // Update fdistanceallowance
-                    fdistanceallowance = fdistanceallowance - RaveFabs(fdiffvalue);
-                    fnextvalue = _valldofscriticalvalues[idof][criticalpointindex];
+                    size_t criticalpointindex = vnextcriticalpointindices[idof];
+                    dReal fcriticalvalue = _valldofscriticalvalues[idof][criticalpointindex];
 
-                    criticalpointindex++;
-                    vnextcriticalpointindices[idof]++;
+                    // fdiff is how far between the current joint value and the value at the next critical point.
+                    dReal fdiffvalue = fcriticalvalue - fcurvalue;
+                    // if( RaveFabs(fdiffvalue) <= epsilon ) {
+                    //     // This dof does not move.
+                    //     continue;
+                    // }
 
-                    fcriticalvalue = _valldofscriticalvalues[idof][criticalpointindex];
-                    fdiffvalue = fcriticalvalue - fnextvalue;
-                    frem = fdistanceallowance - RaveFabs(fdiffvalue);
-                }
-                if( !bFound ) {
-                    continue;
-                }
+                    dReal fdistanceallowance = *(vConfigResolution.begin() + idof); // dof is allowed to move as much as its resolution
+                    dReal fnextvalue = fcurvalue; // in the end, we want to solve for tdelta such that p(t + tdelta) = fnextvalue
 
-                if( fdiffvalue < 0 ) {
-                    fnextvalue -= fdistanceallowance;
-                }
-                else {
-                    fnextvalue += fdistanceallowance;
-                }
-
-                switch( maskinterpolation ) {
-                case IT_Cubic:
-                    bFound = mathextra::computecubicnextdiscretizedstep(&_valldofscoeffs[idof][0], fnextvalue - fcurvalue, tcur, tdeltaonedof);
-                    break;
-                case IT_Quintic:
-                    bFound = mathextra::computequinticnextdiscretizedstep(&_valldofscoeffs[idof][0], fnextvalue - fcurvalue, tcur, tdeltaonedof);
-                    break;
-                default:
-                    BOOST_ASSERT(0);
-                } // end switch maskinterpolation
-
-                if( !bFound ) {
-                    continue;
-                }
-                if( tdeltaonedof < tdelta ) {
-                    tdelta = tdeltaonedof;
-                    tnext = tcur + tdelta;
-                    earliestindex = (int)idof;
-                }
-            } // end iterating through all dofs
-        } // end if( bComputeNewTimeStep )
-
-        // RAVELOG_VERBOSE_FORMAT("env=%d, checking t=%f/%f; bComputeNewTimeStep=%d, earliestindex=%d; tprev=%f; tnext=%f; fMinNextTimeStep=%f;", _environmentid%tcur%timeelapsed%bComputeNewTimeStep%earliestindex%tprev%tnext%fMinNextTimeStep);
-        if( earliestindex == -1 ) {
-            // In this case, all dofs reach the end of this segment before having moved by their resolutions.
-            tnext = timeelapsed;
-        }
-
-        _vprevtempconfig = _vtempconfig;
-        _vprevtempvelconfig = _vtempvelconfig;
-        _vprevtempaccelconfig = _vtempaccelconfig;
-
-        // Compute dQ for use in _neighstatefn. Now we are going to move for dQ within time tnext - tprev.
-        dReal fnextvalue;
-        switch( maskinterpolation ) {
-        case IT_Cubic:
-            for( size_t idof = 0; idof < ndof; ++idof ) {
-                mathextra::evaluatecubic(&_valldofscoeffs[idof][0], tnext, fnextvalue);
-                dQ[idof] = fnextvalue - _vtempconfig[idof];
-            }
-            break;
-        case IT_Quintic:
-            for( size_t idof = 0; idof < ndof; ++idof ) {
-                mathextra::evaluatequintic(&_valldofscoeffs[idof][0], tnext, fnextvalue);
-                dQ[idof] = fnextvalue - _vtempconfig[idof];
-            }
-            break;
-        default:
-            BOOST_ASSERT(0);
-        } // end switch maskinterpolation
-
-        dReal dqscale = 1.0;  // TODO: write a correct description for this variable later
-        int iScaleIndex = -1; // TODO: write a correct description for this variable later
-        dReal fitdiff = 1/(tnext - tprev);
-        for( size_t idof = 0; idof < ndof; ++idof ) {
-            if( RaveFabs(dQ[idof]) > vConfigResolution[idof] * 1.01 ) {
-                // The computed dQ[idof] exceeds the joint resolution. Find the earliest timestep t
-                // > fMinNextTimeStep such that this joint has moved exactly for its
-                // resolution. Then we scale down the time duration that we move. That is, instead
-                // of moving for dQ[idof] within time tnext - tprev, we are going to move for
-                // jointres within time (t - tprev)/(tnext - tprev).
-                dReal fExpectedValue;
-                if( dQ[idof] > 0 ) {
-                    fExpectedValue = _vtempconfig[idof] + vConfigResolution[idof];
-                }
-                else {
-                    fExpectedValue = _vtempconfig[idof] - vConfigResolution[idof];
-                }
-                int numroots = 0;
-                // TODO: maybe need a better way to handle zero leading coeff
-                switch( maskinterpolation ) {
-                case IT_Cubic:
-                    _vrawroots.resize(3); // there are at most 3 roots
-                    _vrawcoeffs = _valldofscoeffs[idof];
-                    _vrawcoeffs[3] -= fExpectedValue;
-                    if( _vrawcoeffs[0] != 0 ) {
-                        mathextra::polyroots<dReal, 3>(&_vrawcoeffs[0], &_vrawroots[0], numroots);
-                    }
-                    else if( _vrawcoeffs[1] != 0 ) {
-                        mathextra::polyroots<dReal, 2>(&_vrawcoeffs[1], &_vrawroots[0], numroots);
-                    }
-                    else if( _vrawcoeffs[2] != 0 ) {
-                        mathextra::polyroots<dReal, 1>(&_vrawcoeffs[2], &_vrawroots[0], numroots);
-                    }
-                    break;
-                case IT_Quintic:
-                    _vrawroots.resize(5); // there are at most 5 roots
-                    _vrawcoeffs = _valldofscoeffs[idof];
-                    _vrawcoeffs[5] -= fExpectedValue;
-                    if( _vrawcoeffs[0] != 0 ) {
-                        mathextra::polyroots<dReal, 5>(&_vrawcoeffs[0], &_vrawroots[0], numroots);
-                    }
-                    else if( _vrawcoeffs[1] != 0 ) {
-                        mathextra::polyroots<dReal, 4>(&_vrawcoeffs[1], &_vrawroots[0], numroots);
-                    }
-                    else if( _vrawcoeffs[2] != 0 ) {
-                        mathextra::polyroots<dReal, 3>(&_vrawcoeffs[2], &_vrawroots[0], numroots);
-                    }
-                    else if( _vrawcoeffs[3] != 0 ) {
-                        mathextra::polyroots<dReal, 2>(&_vrawcoeffs[3], &_vrawroots[0], numroots);
-                    }
-                    else if( _vrawcoeffs[4] != 0 ) {
-                        mathextra::polyroots<dReal, 1>(&_vrawcoeffs[4], &_vrawroots[0], numroots);
-                    }
-                    break;
-                default:
-                    BOOST_ASSERT(0);
-                } // end switch maskinterpolation
-                bool bFoundTimeInstant = false;
-                dReal root;
-                if( numroots > 0 ) {
-                    std::sort(_vrawroots.begin(), _vrawroots.begin() + numroots);
-                    for( int iroot = 0; iroot < numroots; ++iroot ) {
-                        if( _vrawroots.at(iroot) > fMinNextTimeStep ) {
-                            if( !bFoundTimeInstant || _vrawroots[iroot] < root ) {
-                                root = _vrawroots[iroot];
-                                bFoundTimeInstant = true;
-                            }
+                    // If frem > 0, this dof is reaching the next extrema before having moved for its resolution.
+                    dReal frem = fdistanceallowance - RaveFabs(fdiffvalue);
+                    bool bFound = true; // false if we cannot find a suitable fnextvalue
+                    while( frem > 0 ) {
+                        // In this case, the next critical point is nearer than fdistanceallowance
+                        if( criticalpointindex + 1 == _valldofscriticalpoints[idof].size() ) {
+                            // The end of the segment is reached before having moved for the dof resolution.
+                            bFound = false;
+                            break;
                         }
+
+                        // Update fdistanceallowance
+                        fdistanceallowance = fdistanceallowance - RaveFabs(fdiffvalue);
+                        fnextvalue = _valldofscriticalvalues[idof][criticalpointindex];
+
+                        criticalpointindex++;
+                        vnextcriticalpointindices[idof]++;
+
+                        fcriticalvalue = _valldofscriticalvalues[idof][criticalpointindex];
+                        fdiffvalue = fcriticalvalue - fnextvalue;
+                        frem = fdistanceallowance - RaveFabs(fdiffvalue);
                     }
-                }
+                    if( !bFound ) {
+                        continue;
+                    }
 
-                dReal s;
-                if( bFoundTimeInstant ) {
-                    s = (root - tprev)*fitdiff;
-                }
-                else {
-                    s = RaveFabs(vConfigResolution[idof]/dQ[idof]);
-                }
-                if( s < dqscale ) {
-                    dqscale = s;
-                    iScaleIndex = (int)idof;
-                }
-            }
-            else {
-                // In this case, we can go to t = tnext as no dof will have moved for more than its
-                // own resolution.
-            }
-        }
-        // RAVELOG_VERBOSE_FORMAT("env=%d, dqscale=%f", _environmentid%dqscale);
+                    if( fdiffvalue < 0 ) {
+                        fnextvalue -= fdistanceallowance;
+                    }
+                    else {
+                        fnextvalue += fdistanceallowance;
+                    }
 
-        if( dqscale < 1 ) {
-            numRepeating++;
-            if( dqscale < 0.01 ) {
+                    switch( maskinterpolation ) {
+                    case IT_Cubic:
+                        bFound = mathextra::computecubicnextdiscretizedstep(&_valldofscoeffs[idof][0], fnextvalue - fcurvalue, tcur, tdeltaonedof);
+                        break;
+                    case IT_Quintic:
+                        bFound = mathextra::computequinticnextdiscretizedstep(&_valldofscoeffs[idof][0], fnextvalue - fcurvalue, tcur, tdeltaonedof);
+                        break;
+                    default:
+                        BOOST_ASSERT(0);
+                    } // end switch maskinterpolation
+
+                    if( !bFound ) {
+                        continue;
+                    }
+                    if( tdeltaonedof < tdelta ) {
+                        tdelta = tdeltaonedof;
+                        tnext = tcur + tdelta;
+                        earliestindex = (int)idof;
+                    }
+                } // end iterating through all dofs
+            } // end if( bComputeNewTimeStep )
+
+            // RAVELOG_VERBOSE_FORMAT("env=%d, checking t=%f/%f; bComputeNewTimeStep=%d, earliestindex=%d; tprev=%f; tnext=%f; fMinNextTimeStep=%f;", _environmentid%tcur%timeelapsed%bComputeNewTimeStep%earliestindex%tprev%tnext%fMinNextTimeStep);
+            if( earliestindex == -1 ) {
+                // In this case, all dofs reach the end of this segment before having moved by their resolutions.
+                tnext = timeelapsed;
             }
-            if( numRepeating > numSteps * 2 ) {
-            }
-            tcur = tprev + (tnext - tprev)*dqscale;
-            // Recompute dQ based on the newly computed time instant
+
+            _vprevtempconfig = _vtempconfig;
+            _vprevtempvelconfig = _vtempvelconfig;
+            _vprevtempaccelconfig = _vtempaccelconfig;
+
+            // Compute dQ for use in _neighstatefn. Now we are going to move for dQ within time tnext - tprev.
             dReal fnextvalue;
             switch( maskinterpolation ) {
             case IT_Cubic:
                 for( size_t idof = 0; idof < ndof; ++idof ) {
-                    mathextra::evaluatecubic(&_valldofscoeffs[idof][0], tcur, fnextvalue);
+                    mathextra::evaluatecubic(&_valldofscoeffs[idof][0], tnext, fnextvalue);
                     dQ[idof] = fnextvalue - _vtempconfig[idof];
                 }
                 break;
             case IT_Quintic:
                 for( size_t idof = 0; idof < ndof; ++idof ) {
-                    mathextra::evaluatequintic(&_valldofscoeffs[idof][0], tcur, fnextvalue);
+                    mathextra::evaluatequintic(&_valldofscoeffs[idof][0], tnext, fnextvalue);
                     dQ[idof] = fnextvalue - _vtempconfig[idof];
                 }
                 break;
             default:
                 BOOST_ASSERT(0);
             } // end switch maskinterpolation
-        }
-        else {
-            // dqscale >= 1
-            tcur = tnext;
-            numRepeating = 0; // reset
-            if( tcur > timeelapsed +  1e-7 ) {
-                if( istep + 1 >= totalSteps ) {
-                    break; // expected
+
+            dReal dqscale = 1.0;  // TODO: write a correct description for this variable later
+            int iScaleIndex = -1; // TODO: write a correct description for this variable later
+            dReal fitdiff = 1/(tnext - tprev);
+            for( size_t idof = 0; idof < ndof; ++idof ) {
+                if( RaveFabs(dQ[idof]) > vConfigResolution[idof] * 1.01 ) {
+                    // The computed dQ[idof] exceeds the joint resolution. Find the earliest timestep t
+                    // > fMinNextTimeStep such that this joint has moved exactly for its
+                    // resolution. Then we scale down the time duration that we move. That is, instead
+                    // of moving for dQ[idof] within time tnext - tprev, we are going to move for
+                    // jointres within time (t - tprev)/(tnext - tprev).
+                    dReal fExpectedValue;
+                    if( dQ[idof] > 0 ) {
+                        fExpectedValue = _vtempconfig[idof] + vConfigResolution[idof];
+                    }
+                    else {
+                        fExpectedValue = _vtempconfig[idof] - vConfigResolution[idof];
+                    }
+                    int numroots = 0;
+                    // TODO: maybe need a better way to handle zero leading coeff
+                    switch( maskinterpolation ) {
+                    case IT_Cubic:
+                        _vrawroots.resize(3); // there are at most 3 roots
+                        _vrawcoeffs = _valldofscoeffs[idof];
+                        _vrawcoeffs[3] -= fExpectedValue;
+                        if( _vrawcoeffs[0] != 0 ) {
+                            mathextra::polyroots<dReal, 3>(&_vrawcoeffs[0], &_vrawroots[0], numroots);
+                        }
+                        else if( _vrawcoeffs[1] != 0 ) {
+                            mathextra::polyroots<dReal, 2>(&_vrawcoeffs[1], &_vrawroots[0], numroots);
+                        }
+                        else if( _vrawcoeffs[2] != 0 ) {
+                            mathextra::polyroots<dReal, 1>(&_vrawcoeffs[2], &_vrawroots[0], numroots);
+                        }
+                        break;
+                    case IT_Quintic:
+                        _vrawroots.resize(5); // there are at most 5 roots
+                        _vrawcoeffs = _valldofscoeffs[idof];
+                        _vrawcoeffs[5] -= fExpectedValue;
+                        if( _vrawcoeffs[0] != 0 ) {
+                            mathextra::polyroots<dReal, 5>(&_vrawcoeffs[0], &_vrawroots[0], numroots);
+                        }
+                        else if( _vrawcoeffs[1] != 0 ) {
+                            mathextra::polyroots<dReal, 4>(&_vrawcoeffs[1], &_vrawroots[0], numroots);
+                        }
+                        else if( _vrawcoeffs[2] != 0 ) {
+                            mathextra::polyroots<dReal, 3>(&_vrawcoeffs[2], &_vrawroots[0], numroots);
+                        }
+                        else if( _vrawcoeffs[3] != 0 ) {
+                            mathextra::polyroots<dReal, 2>(&_vrawcoeffs[3], &_vrawroots[0], numroots);
+                        }
+                        else if( _vrawcoeffs[4] != 0 ) {
+                            mathextra::polyroots<dReal, 1>(&_vrawcoeffs[4], &_vrawroots[0], numroots);
+                        }
+                        break;
+                    default:
+                        BOOST_ASSERT(0);
+                    } // end switch maskinterpolation
+                    bool bFoundTimeInstant = false;
+                    dReal root;
+                    if( numroots > 0 ) {
+                        std::sort(_vrawroots.begin(), _vrawroots.begin() + numroots);
+                        for( int iroot = 0; iroot < numroots; ++iroot ) {
+                            if( _vrawroots.at(iroot) > fMinNextTimeStep ) {
+                                if( !bFoundTimeInstant || _vrawroots[iroot] < root ) {
+                                    root = _vrawroots[iroot];
+                                    bFoundTimeInstant = true;
+                                }
+                            }
+                        }
+                    }
+
+                    dReal s;
+                    if( bFoundTimeInstant ) {
+                        s = (root - tprev)*fitdiff;
+                    }
+                    else {
+                        s = RaveFabs(vConfigResolution[idof]/dQ[idof]);
+                    }
+                    if( s < dqscale ) {
+                        dqscale = s;
+                        iScaleIndex = (int)idof;
+                    }
                 }
-                RAVELOG_WARN_FORMAT("env=%d, timestep=%f; timeelapsed=%f; istep=%d; numSteps=%d; totalSteps=%d", _environmentid%tcur%timeelapsed%istep%numSteps%totalSteps);
+                else {
+                    // In this case, we can go to t = tnext as no dof will have moved for more than its
+                    // own resolution.
+                }
+            }
+            // RAVELOG_VERBOSE_FORMAT("env=%d, dqscale=%f", _environmentid%dqscale);
+
+            if( dqscale < 1 ) {
+                numRepeating++;
+                if( dqscale < 0.01 ) {
+                }
+                if( numRepeating > numSteps * 2 ) {
+                }
+                tcur = tprev + (tnext - tprev)*dqscale;
+                // Recompute dQ based on the newly computed time instant
+                dReal fnextvalue;
+                switch( maskinterpolation ) {
+                case IT_Cubic:
+                    for( size_t idof = 0; idof < ndof; ++idof ) {
+                        mathextra::evaluatecubic(&_valldofscoeffs[idof][0], tcur, fnextvalue);
+                        dQ[idof] = fnextvalue - _vtempconfig[idof];
+                    }
+                    break;
+                case IT_Quintic:
+                    for( size_t idof = 0; idof < ndof; ++idof ) {
+                        mathextra::evaluatequintic(&_valldofscoeffs[idof][0], tcur, fnextvalue);
+                        dQ[idof] = fnextvalue - _vtempconfig[idof];
+                    }
+                    break;
+                default:
+                    BOOST_ASSERT(0);
+                } // end switch maskinterpolation
+            }
+            else {
+                // dqscale >= 1
+                tcur = tnext;
+                numRepeating = 0; // reset
+                if( tcur > timeelapsed +  1e-7 ) {
+                    if( istep + 1 >= totalSteps ) {
+                        break; // expected
+                    }
+                    RAVELOG_WARN_FORMAT("env=%d, timestep=%f; timeelapsed=%f; istep=%d; numSteps=%d; totalSteps=%d", _environmentid%tcur%timeelapsed%istep%numSteps%totalSteps);
+                    if( !!filterreturn ) {
+                        filterreturn->_returncode = CFO_StateSettingError;
+                    }
+                    return CFO_StateSettingError;
+                }
+                else if( tcur > timeelapsed ) {
+                    tcur = timeelapsed;
+                }
+            }
+
+            int neighstatus = params->_neighstatefn(_vtempconfig, dQ, neighstateoptions);
+            if( neighstatus == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
                 return CFO_StateSettingError;
             }
-            else if( tcur > timeelapsed ) {
-                tcur = timeelapsed;
+            if( neighstatus == NSS_SuccessfulWithDeviation ) {
+                bHasRampDeviatedFromInterpolation = true;
             }
-        }
+            bHasNewTempConfigToAdd = true;
 
-        int neighstatus = params->_neighstatefn(_vtempconfig, dQ, neighstateoptions);
-        if( neighstatus == NSS_Failed ) {
-            if( !!filterreturn ) {
-                filterreturn->_returncode = CFO_StateSettingError;
-            }
-            return CFO_StateSettingError;
-        }
-        if( neighstatus == NSS_SuccessfulWithDeviation ) {
-            bHasRampDeviatedFromInterpolation = true;
-        }
-        bHasNewTempConfigToAdd = true;
+            // Fill in _vtempvelconfig and _vtempaccelconfig
+            switch( maskinterpolation ) {
+            case IT_Cubic:
+                for( size_t idof = 0; idof < ndof; ++idof ) {
+                    mathextra::evaluatecubicderiv1(&_valldofscoeffs[idof][0], tcur, _vtempvelconfig[idof]);
+                    mathextra::evaluatecubicderiv2(&_valldofscoeffs[idof][0], tcur, _vtempaccelconfig[idof]);
+                }
+                break;
+            case IT_Quintic:
+                for( size_t idof = 0; idof < ndof; ++idof ) {
+                    mathextra::evaluatequinticderiv1(&_valldofscoeffs[idof][0], tcur, _vtempvelconfig[idof]);
+                    mathextra::evaluatequinticderiv2(&_valldofscoeffs[idof][0], tcur, _vtempaccelconfig[idof]);
+                }
+                break;
+            default:
+                BOOST_ASSERT(0);
+            } // end switch maskinterpolation
 
-        // Fill in _vtempvelconfig and _vtempaccelconfig
-        switch( maskinterpolation ) {
-        case IT_Cubic:
-            for( size_t idof = 0; idof < ndof; ++idof ) {
-                mathextra::evaluatecubicderiv1(&_valldofscoeffs[idof][0], tcur, _vtempvelconfig[idof]);
-                mathextra::evaluatecubicderiv2(&_valldofscoeffs[idof][0], tcur, _vtempaccelconfig[idof]);
-            }
-            break;
-        case IT_Quintic:
-            for( size_t idof = 0; idof < ndof; ++idof ) {
-                mathextra::evaluatequinticderiv1(&_valldofscoeffs[idof][0], tcur, _vtempvelconfig[idof]);
-                mathextra::evaluatequinticderiv2(&_valldofscoeffs[idof][0], tcur, _vtempaccelconfig[idof]);
-            }
-            break;
-        default:
-            BOOST_ASSERT(0);
-        } // end switch maskinterpolation
+            // Check the config returned from _neighstatefn if it is far from the one we start with
+            bool bHasMoved = false;
+            {
+                int numPostNeighSteps = 1; // the number of steps (in terms of joint resolutions) that a joint needs to move from _vprevtempconfig to _vtempconfig.
+                for( size_t idof = 0; idof < ndof; ++idof ) {
+                    dReal fabsdiffvalue = RaveFabs(_vtempconfig[idof] - _vprevtempconfig[idof]);
+                    if( fabsdiffvalue > 1.01*vConfigResolution[idof] ) {
+                        int postSteps = int( fabsdiffvalue/vConfigResolution[idof] + 0.9999 );
+                        if( postSteps > numPostNeighSteps ) {
+                            numPostNeighSteps = postSteps;
+                        }
+                    }
+                    if( fabsdiffvalue > 0.0001 ) { // TODO: parameter for this 0.0001?
+                        bHasMoved = true;
+                    }
+                }
+                if( numPostNeighSteps > 1 ) {
+                    // RAVELOG_DEBUG_FORMAT("env=%d, istep=%d; numPostNeighSteps=%d", _environmentid%istep%numPostNeighSteps);
+                    // std::vector<dReal> vpostdq(ndof), vpostddq(ndof), vpostdddq(ndof); // TODO: cache this
+                    // dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
+                    // for( size_t idof = 0; idof < ndof; ++idof ) {
+                    //     vpostdq[idof] = (_vtempconfig[idof] - _vprevtempconfig[idof]) * fiNumPostNeighSteps;
+                    //     vpostddq[idof] = (_vtempvelconfig[idof] - _vprevtempvelconfig[idof]) * fiNumPostNeighSteps;
+                    //     vpostdddq[idof] = (_vtempaccelconfig[idof] - _vprevtempaccelconfig[idof]) * fiNumPostNeighSteps;
+                    // }
 
-        // Check the config returned from _neighstatefn if it is far from the one we start with
-        bool bHasMoved = false;
+                    // // Approximate everything between _vprevtempconfig and _vtempconfig (the projected
+                    // // configuration) using linear interpolation. TODO: maybe fix this later???
+                    // for( int ipoststep = 0; ipoststep + 1 < numPostNeighSteps; ++ipoststep ) {
+                    //     for( size_t idof = 0; idof < ndof; ++idof ) {
+                    //         _vprevtempconfig[idof] += vpostdq[idof];
+                    //         _vprevtempvelconfig[idof] += vpostddq[idof];
+                    //     }
+                    //     nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, maskoptions, filterreturn);
+                    //     if( nstateret != 0 ) {
+                    //         if( !!filterreturn ) {
+                    //             filterreturn->_returncode = nstateret;
+                    //         }
+                    //         return nstateret;
+                    //     }
+                    // }
+
+                    RAVELOG_DEBUG_FORMAT("env=%d, the projected configuration is too far from the expected one. numPostNeighSteps=%d", _environmentid%numPostNeighSteps);
+                    return CFO_FinalValuesNotReached;
+                }
+            }
+
+            if( !bHasMoved || (istep + 1 < totalSteps && numRepeating > 2) || dqscale >= 1 ) {
+                bComputeNewTimeStep = true;
+                fMinNextTimeStep = tnext;
+                ++istep;
+            }
+            else {
+                bComputeNewTimeStep = false;
+            }
+
+            tprev = tcur;
+        } // end while tcur < timeelapsed
+
+        // Check if _vtempconfig (which is the last configuration we checked in the loop above) is close to q1
         {
-            int numPostNeighSteps = 1; // the number of steps (in terms of joint resolutions) that a joint needs to move from _vprevtempconfig to _vtempconfig.
+            int numPostNeighSteps = 1;
             for( size_t idof = 0; idof < ndof; ++idof ) {
-                dReal fabsdiffvalue = RaveFabs(_vtempconfig[idof] - _vprevtempconfig[idof]);
+                dReal fabsdiffvalue = RaveFabs(q1[idof] - _vtempconfig[idof]);
                 if( fabsdiffvalue > 1.01*vConfigResolution[idof] ) {
                     int postSteps = int( fabsdiffvalue/vConfigResolution[idof] + 0.9999 );
                     if( postSteps > numPostNeighSteps ) {
                         numPostNeighSteps = postSteps;
                     }
                 }
-                if( fabsdiffvalue > 0.0001 ) { // TODO: parameter for this 0.0001?
-                    bHasMoved = true;
-                }
             }
+
             if( numPostNeighSteps > 1 ) {
-                // RAVELOG_DEBUG_FORMAT("env=%d, istep=%d; numPostNeighSteps=%d", _environmentid%istep%numPostNeighSteps);
-                // std::vector<dReal> vpostdq(ndof), vpostddq(ndof), vpostdddq(ndof); // TODO: cache this
+                // This is not very uncommon, after all, if _neighstatefn is some non-linear projection constraint.
+                RAVELOG_DEBUG_FORMAT("env=%d, have to divide the arc into %d steps even after the original interpolation is done.", _environmentid%numPostNeighSteps);
+                // std::vector<dReal> vpostdq(ndof), vpostddq(ndof), vpostdddq(ndof);
                 // dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
                 // for( size_t idof = 0; idof < ndof; ++idof ) {
-                //     vpostdq[idof] = (_vtempconfig[idof] - _vprevtempconfig[idof]) * fiNumPostNeighSteps;
-                //     vpostddq[idof] = (_vtempvelconfig[idof] - _vprevtempvelconfig[idof]) * fiNumPostNeighSteps;
-                //     vpostdddq[idof] = (_vtempaccelconfig[idof] - _vprevtempaccelconfig[idof]) * fiNumPostNeighSteps;
+                //     vpostdq[idof] = (q1[idof] - _vtempconfig[idof]) * fiNumPostNeighSteps;
+                //     vpostddq[idof] = (dq1[idof] - _vtempvelconfig[idof]) * fiNumPostNeighSteps;
+                //     vpostdddq[idof] = (ddq1[idof] - _vtempaccelconfig[idof]) * fiNumPostNeighSteps;
                 // }
 
                 // // Approximate everything between _vprevtempconfig and _vtempconfig (the projected
@@ -4037,7 +4109,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 //         _vprevtempconfig[idof] += vpostdq[idof];
                 //         _vprevtempvelconfig[idof] += vpostddq[idof];
                 //     }
-                //     nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, maskoptions, filterreturn);
+                //     int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, maskoptions, filterreturn);
                 //     if( nstateret != 0 ) {
                 //         if( !!filterreturn ) {
                 //             filterreturn->_returncode = nstateret;
@@ -4046,93 +4118,273 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 //     }
                 // }
 
-                RAVELOG_DEBUG_FORMAT("env=%d, the projected configuration is too far from the expected one. numPostNeighSteps=%d", _environmentid%numPostNeighSteps);
+                // May be too dangerous to allow it to pass when the final configuration does not reach q1.
                 return CFO_FinalValuesNotReached;
             }
         }
-
-        if( !bHasMoved || (istep + 1 < totalSteps && numRepeating > 2) || dqscale >= 1 ) {
-            bComputeNewTimeStep = true;
-            fMinNextTimeStep = tnext;
-            ++istep;
-        }
-        else {
-            bComputeNewTimeStep = false;
-        }
-
-        tprev = tcur;
-    } // end while tcur < timeelapsed
-
-    // Check if _vtempconfig (which is the last configuration we checked in the loop above) is close to q1
-    {
-        int numPostNeighSteps = 1;
-        for( size_t idof = 0; idof < ndof; ++idof ) {
-            dReal fabsdiffvalue = RaveFabs(q1[idof] - _vtempconfig[idof]);
-            if( fabsdiffvalue > 1.01*vConfigResolution[idof] ) {
-                int postSteps = int( fabsdiffvalue/vConfigResolution[idof] + 0.9999 );
-                if( postSteps > numPostNeighSteps ) {
-                    numPostNeighSteps = postSteps;
-                }
-            }
-        }
-
-        if( numPostNeighSteps > 1 ) {
-            // This is not very uncommon, after all, if _neighstatefn is some non-linear projection constraint.
-            RAVELOG_DEBUG_FORMAT("env=%d, have to divide the arc into %d steps even after the original interpolation is done.", _environmentid%numPostNeighSteps);
-            // std::vector<dReal> vpostdq(ndof), vpostddq(ndof), vpostdddq(ndof);
-            // dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
-            // for( size_t idof = 0; idof < ndof; ++idof ) {
-            //     vpostdq[idof] = (q1[idof] - _vtempconfig[idof]) * fiNumPostNeighSteps;
-            //     vpostddq[idof] = (dq1[idof] - _vtempvelconfig[idof]) * fiNumPostNeighSteps;
-            //     vpostdddq[idof] = (ddq1[idof] - _vtempaccelconfig[idof]) * fiNumPostNeighSteps;
-            // }
-
-            // // Approximate everything between _vprevtempconfig and _vtempconfig (the projected
-            // // configuration) using linear interpolation. TODO: maybe fix this later???
-            // for( int ipoststep = 0; ipoststep + 1 < numPostNeighSteps; ++ipoststep ) {
-            //     for( size_t idof = 0; idof < ndof; ++idof ) {
-            //         _vprevtempconfig[idof] += vpostdq[idof];
-            //         _vprevtempvelconfig[idof] += vpostddq[idof];
-            //     }
-            //     int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, maskoptions, filterreturn);
-            //     if( nstateret != 0 ) {
-            //         if( !!filterreturn ) {
-            //             filterreturn->_returncode = nstateret;
-            //         }
-            //         return nstateret;
-            //     }
-            // }
-
-            // May be too dangerous to allow it to pass when the final configuration does not reach q1.
-            return CFO_FinalValuesNotReached;
-        }
     }
+    else {
+        // Linear interpolation for positions, velocities, and accelerations
+        // Compute the steps
+        const dReal fisteps = dReal(1.0f)/numSteps;
+        for( std::vector<dReal>::iterator it = dQ.begin(); it != dQ.end(); ++it ) {
+            *it *= fisteps;
+        }
+        for( std::vector<dReal>::iterator it = _vtempveldelta.begin(); it != _vtempveldelta.end(); ++it ) {
+            *it *= fisteps;
+        }
+        for( std::vector<dReal>::iterator it = _vtempacceldelta.begin(); it != _vtempacceldelta.end(); ++it ) {
+            *it *= fisteps;
+        }
 
-    if( bCheckEnd && bHasNewTempConfigToAdd && bHasRampDeviatedFromInterpolation ) {
-        dReal fdist = params->_distmetricfn(_vtempconfig, q1);
-        if( fdist > 1e-7 ) {
-            RAVELOG_DEBUG_FORMAT("The final configuration deviated from q1, most likely q1 is not following constraints. fdist=%f", fdist);
-            bCheckEnd = false; // to prevent adding the last configuration to filterreturn
-            // Check _vtempconfig, but only do so if filterreturn is to be filled.
-            if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-                int nstateret = 0;
-                if( istep >= start ) {
-                    nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
-                    if( !!params->_getstatefn ) {
-                        params->_getstatefn(_vtempconfig);
-                    }
-                    filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
-                    filterreturn->_configurationtimes.push_back(tcur);
+        // Set current state to _vtempconfig since neighstatefn expects the state to be set.
+        if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
+            if( !!filterreturn ) {
+                filterreturn->_returncode = CFO_StateSettingError;
+            }
+            return CFO_StateSettingError;
+        }
 
+        _vtempconfig2 = _vtempconfig; // _vtempconfig2 keeps track of _vtempconfig before _vtempconfig is modified by neighstatefn
+        _vdiffconfig.resize(ndof);
+        _vstepconfig.resize(ndof);
+
+        if( start > 0 ) {
+            int neighstatus = params->_neighstatefn(_vtempconfig, dQ, neighstateoptions);
+            if( neighstatus == NSS_Failed ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = CFO_StateSettingError;
                 }
-                if( nstateret != 0 ) {
+                return CFO_StateSettingError;
+            }
+            else if( neighstatus == NSS_SuccessfulWithDeviation ) {
+                bHasRampDeviatedFromInterpolation = true;
+                // Now _vtempconfig is updated but is different from _vtempconfig2 + dQ. Therefore, need to make sure
+                // again that the segment (_vtempconfig2, _vtempconfig) is at least collision-free.
+
+                int maxNumSteps = 0;
+                int currentDOFSteps = 0;
+                itres = vConfigResolution.begin(); // reset itres
+                for( size_t idof = 0; idof < ndof; ++idof, ++itres ) {
+                    _vdiffconfig[idof] = _vtempconfig[idof] - _vtempconfig2[idof];
+                    if( *itres != 0 ) {
+                        currentDOFSteps = (int)(RaveFabs(_vdiffconfig[idof]) / *itres + 0.99);
+                    }
+                    else {
+                        currentDOFSteps = (int)(RaveFabs(_vdiffconfig[idof]) * 100);
+                    }
+                    if( currentDOFSteps > maxNumSteps ) {
+                        maxNumSteps = currentDOFSteps;
+                    }
+                }
+
+                if( maxNumSteps > 1 ) {
+                    // The new configuration returned from neighstatefn is too far from the originally expected one.
+                    const dReal fiMaxNumSteps = dReal(1.0f)/maxNumSteps;
+                    _vdiffvelconfig = _vtempveldelta;
+                    _vdiffaccelconfig = _vtempacceldelta;
+                    for( std::vector<dReal>::iterator itdiff = _vdiffconfig.begin(); itdiff != _vdiffconfig.end(); ++itdiff ) {
+                        *itdiff *= fiMaxNumSteps;
+                    }
+                    for( std::vector<dReal>::iterator itveldiff = _vdiffvelconfig.begin(); itveldiff != _vdiffvelconfig.end(); ++itveldiff ) {
+                        *itveldiff *= fiMaxNumSteps;
+                    }
+                    for( std::vector<dReal>::iterator itacceldiff = _vdiffaccelconfig.begin(); itacceldiff != _vdiffaccelconfig.end(); ++itacceldiff ) {
+                        *itacceldiff *= fiMaxNumSteps;
+                    }
+                    for( int iStep = 1; iStep < maxNumSteps; ++iStep ) {
+                        // Linearly interpolate values
+                        for( size_t idof = 0; idof < ndof; ++idof ) {
+                            _vstepconfig[idof] = _vtempconfig2[idof] + iStep*_vdiffconfig[idof];
+                            _vtempvelconfig[idof] += _vdiffvelconfig[idof];
+                            _vtempaccelconfig[idof] += _vdiffaccelconfig[idof];
+                        }
+                        if( iStep == (maxNumSteps - 1) ) {
+                            break; // break from for iStep
+                        }
+
+                        int ret = _SetAndCheckState(params, _vstepconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+                        if( !!params->_getstatefn ) {
+                            params->_getstatefn(_vstepconfig);
+                        }
+                        if( ret != 0 ) {
+                            if( !!filterreturn ) {
+                                filterreturn->_returncode = ret;
+                                filterreturn->_invalidvalues = _vstepconfig;
+                                filterreturn->_invalidvelocities = _vtempvelconfig;
+                                filterreturn->_fTimeWhenInvalid = (iStep * fiMaxNumSteps) * fisteps;
+                            }
+                            return ret;
+                        }
+                    } // end checking configurations between _vtempconfig2 (original configuration before calling neighstatefn) and _vtempconfig (the configuration returned from neighstatefn).
+                } // end if maxNumSteps > 1
+            }
+            else {
+                // neighstatefn returns _vtempconfig + dQ, so no problem.
+            }
+        } // end if start > 0
+
+        _vprevtempconfig.resize(ndof); // for storing the delta values for neighstatefn
+        for( int iStep = start; iStep < numSteps; ++iStep ) {
+            int nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+            if( !!params->_getstatefn ) {
+                params->_getstatefn(_vtempconfig);
+            }
+            if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+                filterreturn->_configurationtimes.push_back(iStep*fisteps);
+            }
+
+            if( nstateret != 0 ) {
+                if( !!filterreturn ) {
                     filterreturn->_returncode = nstateret;
                     filterreturn->_invalidvalues = _vtempconfig;
                     filterreturn->_invalidvelocities = _vtempvelconfig;
-                    filterreturn->_invalidaccelerations = _vtempaccelconfig;
-                    filterreturn->_fTimeWhenInvalid = tcur;
-                    return nstateret;
+                    filterreturn->_fTimeWhenInvalid = iStep * fisteps;
                 }
+                return nstateret;
+            }
+
+            // _vtempconfig passes the check. Now compute the next config.
+            dReal fNewScale = 1.0; // the scaling factor to apply to _vprevtempconfig in case the computed _vprevtempconfig is too large.
+            for( size_t idof = 0; idof < ndof; ++idof ) {
+                // If there are no deviations from neighstatefn calls, then _vprevtempconfig will be exactly dQ since q0
+                // + iStep*dQ = _vtempconfig.
+                _vprevtempconfig[idof] = q0[idof] + (iStep + 1)*dQ[idof] - _vtempconfig[idof];
+                if( RaveFabs(_vprevtempconfig[idof]) > vConfigResolution[idof] ) {
+                    dReal fDOFScale = vConfigResolution[idof] / RaveFabs(_vprevtempconfig[idof]);
+                    if( fDOFScale < fNewScale ) {
+                        fNewScale = fDOFScale;
+                    }
+                }
+            }
+            for( size_t idof = 0; idof < ndof; ++idof ) {
+                _vprevtempconfig[idof] *= fNewScale;
+            }
+
+            _vtempconfig2 = _vtempconfig; // _vtempconfig2 keeps track of _vtempconfig before _vtempconfig is modified by neighstatefn
+            if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = CFO_StateSettingError;
+                }
+                return CFO_StateSettingError;
+            }
+            int neighstatefn = params->_neighstatefn(_vtempconfig, _vprevtempconfig, neighstateoptions);
+            if( neighstatefn == NSS_Failed ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = CFO_StateSettingError;
+                }
+                return CFO_StateSettingError;
+            }
+            else if( neighstatefn == NSS_SuccessfulWithDeviation ) {
+                bHasRampDeviatedFromInterpolation = true;
+                // Now _vtempconfig is updated but is different from _vtempconfig2 + dQ. Therefore, need to make sure
+                // again that the segment (_vtempconfig2, _vtempconfig) is at least collision-free.
+
+                int maxNumSteps = 0;
+                int currentDOFSteps = 0;
+                itres = vConfigResolution.begin(); // reset itres
+                for( size_t idof = 0; idof < ndof; ++idof, ++itres ) {
+                    _vdiffconfig[idof] = _vtempconfig[idof] - _vtempconfig2[idof];
+                    if( *itres != 0 ) {
+                        currentDOFSteps = (int)(RaveFabs(_vdiffconfig[idof]) / *itres + 0.99);
+                    }
+                    else {
+                        currentDOFSteps = (int)(RaveFabs(_vdiffconfig[idof]) * 100);
+                    }
+                    if( currentDOFSteps > maxNumSteps ) {
+                        maxNumSteps = currentDOFSteps;
+                    }
+                }
+
+                if( maxNumSteps > 1 ) {
+                    // The new configuration returned from neighstatefn is too far from the originally expected one.
+                    const dReal fiMaxNumSteps = dReal(1.0f)/maxNumSteps;
+                    _vdiffvelconfig = _vtempveldelta;
+                    _vdiffaccelconfig = _vtempacceldelta;
+                    for( std::vector<dReal>::iterator itdiff = _vdiffconfig.begin(); itdiff != _vdiffconfig.end(); ++itdiff ) {
+                        *itdiff *= fiMaxNumSteps;
+                    }
+                    for( std::vector<dReal>::iterator itveldiff = _vdiffvelconfig.begin(); itveldiff != _vdiffvelconfig.end(); ++itveldiff ) {
+                        *itveldiff *= fiMaxNumSteps;
+                    }
+                    for( std::vector<dReal>::iterator itacceldiff = _vdiffaccelconfig.begin(); itacceldiff != _vdiffaccelconfig.end(); ++itacceldiff ) {
+                        *itacceldiff *= fiMaxNumSteps;
+                    }
+                    for( int iStep = 1; iStep < maxNumSteps; ++iStep ) {
+                        // Linearly interpolate values
+                        for( size_t idof = 0; idof < ndof; ++idof ) {
+                            _vstepconfig[idof] = _vtempconfig2[idof] + iStep*_vdiffconfig[idof];
+                            _vtempvelconfig[idof] += _vdiffvelconfig[idof];
+                            _vtempaccelconfig[idof] += _vdiffaccelconfig[idof];
+                        }
+                        if( iStep == (maxNumSteps - 1) ) {
+                            break; // break from for iStep
+                        }
+
+                        int ret = _SetAndCheckState(params, _vstepconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+                        if( !!params->_getstatefn ) {
+                            params->_getstatefn(_vstepconfig);
+                        }
+                        if( ret != 0 ) {
+                            if( !!filterreturn ) {
+                                filterreturn->_returncode = ret;
+                                filterreturn->_invalidvalues = _vstepconfig;
+                                filterreturn->_invalidvelocities = _vtempvelconfig;
+                                filterreturn->_fTimeWhenInvalid = (iStep * fiMaxNumSteps) * fisteps;
+                            }
+                            return ret;
+                        }
+                    } // end checking configurations between _vtempconfig2 (original configuration before calling neighstatefn) and _vtempconfig (the configuration returned from neighstatefn).
+                } // end if maxNumSteps > 1
+            }
+            else {
+                // neighstatefn returns _vtempconfig + dQ, so no problem.
+            }
+        } // end for iStep
+
+        // Check if _vtempconfig (which is the last configuration we checked in the loop above) is close to q1
+        {
+            int numPostNeighSteps = 1;
+            for( size_t idof = 0; idof < ndof; ++idof ) {
+                dReal fabsdiffvalue = RaveFabs(q1[idof] - _vtempconfig[idof]);
+                if( fabsdiffvalue > 1.01*vConfigResolution[idof] ) {
+                    int postSteps = int( fabsdiffvalue/vConfigResolution[idof] + 0.9999 );
+                    if( postSteps > numPostNeighSteps ) {
+                        numPostNeighSteps = postSteps;
+                    }
+                }
+            }
+
+            if( numPostNeighSteps > 1 ) {
+                // This is not very uncommon, after all, if _neighstatefn is some non-linear projection constraint.
+                RAVELOG_DEBUG_FORMAT("env=%d, have to divide the arc into %d steps even after the original interpolation is done.", _environmentid%numPostNeighSteps);
+                // std::vector<dReal> vpostdq(ndof), vpostddq(ndof), vpostdddq(ndof);
+                // dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
+                // for( size_t idof = 0; idof < ndof; ++idof ) {
+                //     vpostdq[idof] = (q1[idof] - _vtempconfig[idof]) * fiNumPostNeighSteps;
+                //     vpostddq[idof] = (dq1[idof] - _vtempvelconfig[idof]) * fiNumPostNeighSteps;
+                //     vpostdddq[idof] = (ddq1[idof] - _vtempaccelconfig[idof]) * fiNumPostNeighSteps;
+                // }
+
+                // // Approximate everything between _vprevtempconfig and _vtempconfig (the projected
+                // // configuration) using linear interpolation. TODO: maybe fix this later???
+                // for( int ipoststep = 0; ipoststep + 1 < numPostNeighSteps; ++ipoststep ) {
+                //     for( size_t idof = 0; idof < ndof; ++idof ) {
+                //         _vprevtempconfig[idof] += vpostdq[idof];
+                //         _vprevtempvelconfig[idof] += vpostddq[idof];
+                //     }
+                //     int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, maskoptions, filterreturn);
+                //     if( nstateret != 0 ) {
+                //         if( !!filterreturn ) {
+                //             filterreturn->_returncode = nstateret;
+                //         }
+                //         return nstateret;
+                //     }
+                // }
+
+                // May be too dangerous to allow it to pass when the final configuration does not reach q1.
+                return CFO_FinalValuesNotReached;
             }
         }
     }
