@@ -2327,6 +2327,8 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
 #endif
     pInfo->_transform = ExtractTransform(_transform);
     pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
+    pInfo->_isRobot = _isRobot;
+    pInfo->_isPartial = _isPartial;
 
     pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
     return pInfo;
@@ -2388,6 +2390,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
 #endif
     _transform = ReturnTransform(info._transform);
     _isRobot = info._isRobot;
+    _isPartial = info._isPartial;
     _dofValues = ReturnDOFValues(info._dofValues);
     _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
 }
@@ -3921,7 +3924,7 @@ object PyKinBody::GetAdjacentLinks() const
             }
         }
     }
-                    
+
     return adjacent;
 }
 
@@ -4615,15 +4618,17 @@ void init_openravepy_kinbody()
             return pyinfo;
         }
                                                 ))
-                                       .def("__copy__", [](const PyElectricMotorActuatorInfo& self){ return self; })
+                                       .def("__copy__", [](const PyElectricMotorActuatorInfo& self){
+            return self;
+        })
                                        .def("__deepcopy__",
-                                                [](const PyElectricMotorActuatorInfo& pyinfo, const py::dict& memo) {
+                                            [](const PyElectricMotorActuatorInfo& pyinfo, const py::dict& memo) {
             auto state = ElectricMotorActuatorInfo_pickle_suite::getstate(pyinfo);
             PyElectricMotorActuatorInfo pyinfo_new;
             ElectricMotorActuatorInfo_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
         }
-                                                )
+                                            )
 #else
                                        .def_pickle(ElectricMotorActuatorInfo_pickle_suite())
 #endif // USE_PYBIND11_PYTHON_BINDINGS
@@ -4718,15 +4723,17 @@ void init_openravepy_kinbody()
             return pygeom;
         }
                                    ))
-                          .def("__copy__", [](const PyGeometryInfo& self){ return self; })
+                          .def("__copy__", [](const PyGeometryInfo& self){
+            return self;
+        })
                           .def("__deepcopy__",
-                                   [](const PyGeometryInfo &pygeom, const py::dict& memo) {
+                               [](const PyGeometryInfo &pygeom, const py::dict& memo) {
             auto state = GeometryInfo_pickle_suite::getstate(pygeom);
             PyGeometryInfo pygeom_new;
             GeometryInfo_pickle_suite::setstate(pygeom_new, state);
             return pygeom_new;
         }
-                                   )
+                               )
 #else
                           .def_pickle(GeometryInfo_pickle_suite())
 #endif
@@ -4791,9 +4798,11 @@ void init_openravepy_kinbody()
             LinkInfo_pickle_suite::setstate(pyinfo, state);
             return pyinfo;
         }))
-                      .def("__copy__", [](const PyLinkInfo& self){ return self; })
+                      .def("__copy__", [](const PyLinkInfo& self){
+            return self;
+        })
                       .def("__deepcopy__",
-                               [](const PyLinkInfo &pyinfo, const py::dict& memo) {
+                           [](const PyLinkInfo &pyinfo, const py::dict& memo) {
             auto state = LinkInfo_pickle_suite::getstate(pyinfo);
             PyLinkInfo pyinfo_new;
             LinkInfo_pickle_suite::setstate(pyinfo_new, state);
@@ -4827,15 +4836,17 @@ void init_openravepy_kinbody()
             return pyinfo;
         }
                  ))
-        .def("__copy__", [](const PyJointControlInfo_RobotController& self){ return self; })
+        .def("__copy__", [](const PyJointControlInfo_RobotController& self){
+            return self;
+        })
         .def("__deepcopy__",
-                 [](const PyJointControlInfo_RobotController &pyinfo, const py::dict& memo) {
+             [](const PyJointControlInfo_RobotController &pyinfo, const py::dict& memo) {
             auto state = JointControlInfo_RobotController_pickle_suite::getstate(pyinfo);
             PyJointControlInfo_RobotController pyinfo_new;
             JointControlInfo_RobotController_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
         }
-                 )
+             )
 #else
         .def_pickle(JointControlInfo_RobotController_pickle_suite())
 #endif // USE_PYBIND11_PYTHON_BINDINGS
@@ -4868,15 +4879,17 @@ void init_openravepy_kinbody()
             return pyinfo;
         }
                  ))
-        .def("__copy__", [](const PyJointControlInfo_IO& self){ return self; })
+        .def("__copy__", [](const PyJointControlInfo_IO& self){
+            return self;
+        })
         .def("__deepcopy__",
-                 [](const PyJointControlInfo_IO &pyinfo, const py::dict& memo) {
+             [](const PyJointControlInfo_IO &pyinfo, const py::dict& memo) {
             auto state = JointControlInfo_IO_pickle_suite::getstate(pyinfo);
             PyJointControlInfo_IO pyinfo_new;
             JointControlInfo_IO_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
         }
-                 )
+             )
 #else
         .def_pickle(JointControlInfo_IO_pickle_suite())
 #endif // USE_PYBIND11_PYTHON_BINDINGS
@@ -4904,15 +4917,17 @@ void init_openravepy_kinbody()
             return pyinfo;
         }
                  ))
-        .def("__copy__", [](const PyJointControlInfo_ExternalDevice& self){ return self; })
+        .def("__copy__", [](const PyJointControlInfo_ExternalDevice& self){
+            return self;
+        })
         .def("__deepcopy__",
-                 [](const PyJointControlInfo_ExternalDevice &pyinfo, const py::dict& memo) {
+             [](const PyJointControlInfo_ExternalDevice &pyinfo, const py::dict& memo) {
             auto state = JointControlInfo_ExternalDevice_pickle_suite::getstate(pyinfo);
             PyJointControlInfo_ExternalDevice pyinfo_new;
             JointControlInfo_ExternalDevice_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
         }
-                 )
+             )
 #else
         .def_pickle(JointControlInfo_ExternalDevice_pickle_suite())
 #endif // USE_PYBIND11_PYTHON_BINDINGS
@@ -4986,9 +5001,11 @@ void init_openravepy_kinbody()
             JointInfo_pickle_suite::setstate(pyinfo, state);
             return pyinfo;
         }))
-                       .def("__copy__", [](const PyJointInfo& self){ return self; })
+                       .def("__copy__", [](const PyJointInfo& self){
+            return self;
+        })
                        .def("__deepcopy__",
-                                [](const PyJointInfo &pyinfo, const py::dict& memo) {
+                            [](const PyJointInfo &pyinfo, const py::dict& memo) {
             auto state = JointInfo_pickle_suite::getstate(pyinfo);
             PyJointInfo pyinfo_new;
             JointInfo_pickle_suite::setstate(pyinfo_new, state);
@@ -5048,15 +5065,17 @@ void init_openravepy_kinbody()
             return pyinfo;
         }
                                   ))
-                         .def("__copy__", [](const PyKinBody::PyGrabbedInfo& self){ return self; })
+                         .def("__copy__", [](const PyKinBody::PyGrabbedInfo& self){
+            return self;
+        })
                          .def("__deepcopy__",
-                                  [](const PyKinBody::PyGrabbedInfo &pyinfo, const py::dict& memo) {
+                              [](const PyKinBody::PyGrabbedInfo &pyinfo, const py::dict& memo) {
             auto state = GrabbedInfo_pickle_suite::getstate(pyinfo);
             PyKinBody::PyGrabbedInfo pyinfo_new;
             GrabbedInfo_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
         }
-                                  )
+                              )
 #else
                          .def_pickle(GrabbedInfo_pickle_suite())
 #endif
@@ -5067,10 +5086,10 @@ void init_openravepy_kinbody()
 #else
     object grabbedinfocheckresult = enum_<KinBody::GrabbedInfoCheckResult>("GrabbedInfoCheckResult" DOXY_ENUM(GrabbedInfoCheckResult))
 #endif
-            .value("Identical",KinBody::GICR_Identical)
-            .value("BodyNotGrabbed",KinBody::GICR_BodyNotGrabbed)
-            .value("GrabbingLinkNotMatch",KinBody::GICR_GrabbingLinkNotMatch)
-            .value("IgnoredLinksNotMatch",KinBody::GICR_IgnoredLinksNotMatch);
+                                    .value("Identical",KinBody::GICR_Identical)
+                                    .value("BodyNotGrabbed",KinBody::GICR_BodyNotGrabbed)
+                                    .value("GrabbingLinkNotMatch",KinBody::GICR_GrabbingLinkNotMatch)
+                                    .value("IgnoredLinksNotMatch",KinBody::GICR_IgnoredLinksNotMatch);
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object kinbodyinfo = class_<PyKinBody::PyKinBodyInfo, OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo> >(m, "KinBodyInfo", DOXY_CLASS(KinBody::KinBodyInfo))
