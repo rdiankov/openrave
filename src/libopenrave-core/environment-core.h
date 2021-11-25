@@ -2865,7 +2865,7 @@ public:
                     ExclusiveLock lock(_mutexInterfaces);
                     vector<KinBodyPtr>::iterator itExisting = std::find(_vecbodies.begin(), _vecbodies.end(), pMatchExistingBody);
                     if( itExisting != _vecbodies.end() ) {
-                        _InvalidateKinBodyFromEnvBodyIndex(pMatchExistingBody->GetEnvironmentBodyIndex());
+                        _InvalidateKinBodyFromEnvBodyIndex(pMatchExistingBody->GetEnvironmentBodyIndex()); // essentially removes the entry from the environment
                     }
                 }
 

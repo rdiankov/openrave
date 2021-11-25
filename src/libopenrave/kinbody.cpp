@@ -36,14 +36,14 @@ const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type)
 }
 
 /* given index pair i and j (i < j), convert to a scalar index as in the following table. this way, existing table entries stay valid when table is extended.
-| i\j          | 0   | 1   | 2   | 3   |
-| ------------ | --- | --- | --- | --- |
-| 0            | -   | 0   | 1   | 3   |
-| 1            | -   | -   | 2   | 4   |
-| 2            | -   | -   | -   | 5   |
-| 3            | -   | -   | -   | -   |
-this indexing is used for data structure holding symmetric 2d table information as 1d vector such as _vForcedAdjacentLinks.
-This way, when number of links increases, we do not need to restructure the existing entry.
+ | i\j          | 0   | 1   | 2   | 3   |
+ | ------------ | --- | --- | --- | --- |
+ | 0            | -   | 0   | 1   | 3   |
+ | 1            | -   | -   | 2   | 4   |
+ | 2            | -   | -   | -   | 5   |
+ | 3            | -   | -   | -   | -   |
+   this indexing is used for data structure holding symmetric 2d table information as 1d vector such as _vForcedAdjacentLinks.
+   This way, when number of links increases, we do not need to restructure the existing entry.
  */
 inline int _GetIndex1d(int index0, int index1)
 {
@@ -55,7 +55,7 @@ inline int _GetIndex1d(int index0, int index1)
         return index1 + index0 * (index0 - 1) /2;
     }
 }
-    
+
 inline void _ResizeVectorFor2DTable(std::vector<int8_t>& vec, size_t vectorSize)
 {
     const size_t tableSize = vectorSize * (vectorSize - 1) / 2;
@@ -63,7 +63,7 @@ inline void _ResizeVectorFor2DTable(std::vector<int8_t>& vec, size_t vectorSize)
         vec.resize(tableSize, 0);
     }
 }
-    
+
 class ChangeCallbackData : public UserData
 {
 public:
@@ -186,15 +186,18 @@ bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
 void KinBody::KinBodyInfo::Reset()
 {
     _id.clear();
-    _uri.clear();
     _name.clear();
+    _uri.clear();
     _referenceUri.clear();
+    _interfaceType.clear();
     _transform = Transform();
     _dofValues.clear();
     _vGrabbedInfos.clear();
     _vLinkInfos.clear();
     _vJointInfos.clear();
     _mReadableInterfaces.clear();
+    _isRobot = false;
+    _isPartial = true;
 }
 
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -296,10 +299,21 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         }
         rKinBodyInfo.AddMember("readableInterfaces", rReadableInterfaces, allocator);
     }
+
+    rKinBodyInfo.AddMember("__isPartial__", _isPartial, allocator);
 }
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
+    if (value.HasMember("__isPartial__") ) {
+        bool isPartial = true;
+        orjson::LoadJsonValue(value["__isPartial__"], isPartial);
+        // even if value["__isPartial__"] is False, do not call Reset() since it could be on top of the already loaded correct struct.
+        if( !isPartial ) {
+            // data will be filled so apply to the struct
+            _isPartial = false;
+        }
+    }
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
 
@@ -382,6 +396,15 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
             UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options);
+        }
+
+        // if has conflicting names, should error here
+        for(int ilink0 = 0; ilink0 < (int)_vLinkInfos.size(); ++ilink0 ) {
+            for(int ilink1 = ilink0+1; ilink1 < (int)_vLinkInfos.size(); ++ilink1 ) {
+                if( _vLinkInfos[ilink0]->_name == _vLinkInfos[ilink1]->_name ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("Body '%s' has info with link[%d] and link[%d] having the same linkname '%s', which is not allowed. link[%d].id='%s', link[%d].id='%s'", _name%ilink0%ilink1%_vLinkInfos[ilink0]->_name%ilink0%_vLinkInfos[ilink0]->_id%ilink1%_vLinkInfos[ilink1]->_id, ORE_Assert);
+                }
+            }
         }
     }
 
@@ -4765,7 +4788,7 @@ void KinBody::_ComputeInternalInformation()
     {
         _ResizeVectorFor2DTable(_vForcedAdjacentLinks, numLinks);
         //std::fill(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), 0);
-    
+
         for (const LinkPtr& plink : _veclinks) {
             for (const std::string& forceAdjacentLinkFromInfo : plink->_info._vForcedAdjacentLinks) {
                 LinkPtr pLinkForceAdjacentLinkFromInfo = GetLink(forceAdjacentLinkFromInfo);
@@ -5248,14 +5271,14 @@ void KinBody::Enable(bool bEnable)
             bchanged = true;
         }
     }
-    
+
     if (bEnable) {
         EnableAllLinkStateBitMasks(_vLinkEnableStatesMask, _veclinks.size());
     }
     else {
         DisableAllLinkStateBitMasks(_vLinkEnableStatesMask);
     }
-    
+
     if( bchanged ) {
         _PostprocessChangedParameters(Prop_LinkEnable);
     }
@@ -5459,7 +5482,7 @@ void KinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
 {
     OPENRAVE_ASSERT_OP(linkindex0,!=,linkindex1);
     _SetAdjacentLinksInternal(linkindex0, linkindex1);
-    
+
     _ResetInternalCollisionCache();
 }
 
@@ -5468,7 +5491,7 @@ void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
     const int numLinks = GetLinks().size();
     BOOST_ASSERT(linkindex0 < numLinks);
     BOOST_ASSERT(linkindex1 < numLinks);
-    
+
     const size_t index = _GetIndex1d(linkindex0, linkindex1);
 
     _ResizeVectorFor2DTable(_vAdjacentLinks, numLinks);
@@ -5910,7 +5933,7 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
     // check to make sure there are no repeating names in already added links
     FOREACH(itlink, _veclinks) {
         if( (*itlink)->GetName() == info._name ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("link %s is declared more than once in body %s"), info._name%GetName(), ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("link '%s' is declared more than once in body '%s', uri is '%s'"), info._name%GetName()%GetURI(), ORE_InvalidArguments);
         }
     }
 
@@ -6087,7 +6110,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
     if(_id != info._id) {
         if( _id.empty() ) {
-            RAVELOG_DEBUG_FORMAT("env=%d, body %s assigning empty id to '%s'", GetEnv()->GetId()%GetName()%info._id);
+            RAVELOG_DEBUG_FORMAT("env=%s, body '%s' assigning empty id to '%s'", GetEnv()->GetNameId()%GetName()%info._id);
             SetId(info._id);
         }
         else if( info._id.empty() ) {
