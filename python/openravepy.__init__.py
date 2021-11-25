@@ -43,7 +43,6 @@ Available methods for an exception e are
 """
 if openravepy_int.__pythonbinding__ == 'pybind11':
     from .openravepy_int import _OpenRAVEException as OpenRAVEException
-    OpenRAVEException.message = lambda self: str(self)
 else:
     from .openravepy_int import _OpenRAVEException, _std_runtime_error_
     
