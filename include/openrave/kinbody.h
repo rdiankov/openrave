@@ -2181,6 +2181,7 @@ public:
         std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 
         bool _isRobot = false; ///< true if should create a RobotBasePtr
+        bool _isPartial = true; ///< true if this info contains partial information. false if the info contains the full body information and can ignore anything that is currently saved on the environment when updating.
 
         enum KinBodyInfoField {
             KBIF_Transform = (1 << 0), // _transform field
