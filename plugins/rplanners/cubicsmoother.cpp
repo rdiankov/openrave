@@ -146,7 +146,7 @@ public:
         // Main planning loop
         //
         try {
-            RAVELOG_DEBUG_FORMAT("env=%d, initial segments=%d; duration=%.15e; enablestates={%s}", _envId%pwptraj.vchunks.size()%pwptraj.duration%ssenablestate.str());
+            RAVELOG_DEBUG_FORMAT("env=%d, initial segments=%d; duration=%.15e; verifyinitialpath=%d; enablestates={%s}", _envId%pwptraj.vchunks.size()%pwptraj.duration%_parameters->verifyinitialpath%ssenablestate.str());
             _progress._iteration = 0;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
                 return PS_Interrupted;

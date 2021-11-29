@@ -725,6 +725,7 @@ void Chunk::Initialize()
             this->vpolynomials[i].PadCoefficients(this->degree);
         }
     }
+    this->constraintChecked = false; // always set constraintChecked to false. setting it to true should be done explicitly outside.
 }
 
 void Chunk::Cut(dReal t, Chunk& remChunk)
