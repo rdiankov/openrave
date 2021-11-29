@@ -69,9 +69,30 @@ public:
         if( vusedbodies.size() == 0 ) {
             RAVELOG_WARN_FORMAT("env=%d, There are no used bodies in this spec", _envId);
         }
+        std::stringstream ssenablestate;
+        std::vector<uint8_t> vEnableStates;
+        std::vector<KinBodyPtr> vGrabbedBodies;
         FOREACH(itbody, vusedbodies) {
             KinBody::KinBodyStateSaverPtr statesaver;
             if( (*itbody)->IsRobot() ) {
+                {
+                    ssenablestate << "\"" << (*itbody)->GetName() << "\": [";
+                    (*itbody)->GetLinkEnableStates(vEnableStates);
+                    FOREACHC(it, vEnableStates) {
+                        ssenablestate << (int)*it << ", ";
+                    }
+                    ssenablestate << "], ";
+
+                    (*itbody)->GetGrabbed(vGrabbedBodies);
+                    FOREACHC(itGrabbed, vGrabbedBodies) {
+                        ssenablestate << "\"" << (*itGrabbed)->GetName() << "\": [";
+                        (*itGrabbed)->GetLinkEnableStates(vEnableStates);
+                        FOREACHC(it, vEnableStates) {
+                            ssenablestate << (int)*it << ", ";
+                        }
+                        ssenablestate << "], ";
+                    }
+                }
                 statesaver.reset(new RobotBase::RobotStateSaver(RaveInterfaceCast<RobotBase>(*itbody), KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator|KinBody::Save_LinkVelocities));
             }
             else {
@@ -125,6 +146,7 @@ public:
         // Main planning loop
         //
         try {
+            RAVELOG_DEBUG_FORMAT("env=%d, initial segments=%d; duration=%.15e; enablestates={%s}", _envId%pwptraj.vchunks.size()%pwptraj.duration%ssenablestate.str());
             _progress._iteration = 0;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
                 return PS_Interrupted;
