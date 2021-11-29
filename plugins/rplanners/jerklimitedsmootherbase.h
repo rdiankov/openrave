@@ -26,6 +26,9 @@
 #ifndef JERK_LIMITED_POLY_CHECKER_DEBUG
 #define JERK_LIMITED_POLY_CHECKER_DEBUG
 #endif // #ifndef JERK_LIMITED_POLY_CHECKER_DEBUG
+#ifndef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+#define JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+#endif // # ifndef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
 #endif // #ifdef JERK_LIMITED_SMOOTHER_VALIDATE
 
 namespace rplanners {
@@ -95,7 +98,11 @@ public:
         _dumpLevel = Level_Debug;
         std::fill(_vShortcutStats.begin(), _vShortcutStats.end(), 0);
 #else
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+        _dumpLevel = Level_Debug;
+#else
         _dumpLevel = Level_Verbose;
+#endif
 #endif
         _errorDumpLevel = Level_Info;
 

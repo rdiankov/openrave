@@ -85,6 +85,7 @@ public:
         ConfigurationSpecification accelSpec = posSpec.ConvertToDerivativeSpecification(2);
         ConfigurationSpecification timeSpec;
         timeSpec.AddDeltaTimeGroup();
+        ConfigurationSpecification newSpec; // for the final trajectory
 
         // Get joint values from the passed-in OpenRAVE trajectory
         bool bExactMatch = false;
@@ -98,9 +99,14 @@ public:
         // bool bPathIsPerfectlyModeled = false; // will be true if the initial interpolation is linear or cubic
         RAVELOG_VERBOSE_FORMAT("env=%d, Initial trajectory joint values interpolation is %s", _envId%itcompatposgroup->interpolation);
         PlannerStatus conversionStatus = PS_Failed;
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+        bool bDoFinalValidation = true;
+#endif
         if( _parameters->_hastimestamps && itcompatposgroup->interpolation == "cubic" ) {
             // bPathIsPerfectlyModeled = true;
-
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+            bDoFinalValidation = false;
+#endif
             conversionStatus = ConvertOpenRAVETrajectoryToPiecewisePolynomialTrajectorySameInterpolation(ptraj, posSpec, velSpec, accelSpec, timeSpec, pwptraj);
         }
         // TODO: Maybe we need to handle other cases of interpolation as well
@@ -144,7 +150,7 @@ public:
 
             // Finish shortcutting. Now converting PiecewisePolynomialTrajectory to OpenRAVE trajectory
             // Prepare configuration specification
-            ConfigurationSpecification newSpec = posSpec;
+            newSpec = posSpec;
             bool bAddDeltaTime = true;
             newSpec.AddDerivativeGroups(1, bAddDeltaTime);
             newSpec.AddDerivativeGroups(2, bAddDeltaTime);
@@ -400,6 +406,49 @@ public:
         // Save the final trajectory
         _DumpOpenRAVETrajectory(ptraj, "final", _dumpLevel);
 
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+        if( bDoFinalValidation ) {
+            const int oldDebugLevel = RaveGetDebugLevel();
+            RaveSetDebugLevel(Level_Verbose);
+
+            // Check to really make sure that all waypoints are certainly at least collision-free.
+            std::vector<dReal>& waypoint = _cacheAllWaypoints; // reuse _cacheAllWaypoints
+            std::vector<dReal> &x0Vect = _cacheX0Vect, &v0Vect = _cacheV0Vect, &a0Vect = _cacheA0Vect;
+            for( int iwaypoint = 0; iwaypoint < ptraj->GetNumWaypoints(); ++iwaypoint ) {
+                // Get waypoint data from the trajectory
+                ptraj->GetWaypoint(iwaypoint, waypoint, newSpec);
+
+                // Extract joint values, velocities, and accelerations from the data
+                ConfigurationSpecification::ConvertData(x0Vect.begin(), posSpec, // target data
+                                                        waypoint.begin(), newSpec, // source data
+                                                        /*numWaypoints*/ 1, GetEnv(), /*filluninitialized*/ true);
+                ConfigurationSpecification::ConvertData(v0Vect.begin(), velSpec, // target data
+                                                        waypoint.begin(), newSpec, // source data
+                                                        /*numWaypoints*/ 1, GetEnv(), /*filluninitialized*/ true);
+                ConfigurationSpecification::ConvertData(a0Vect.begin(), accelSpec, // target data
+                                                        waypoint.begin(), newSpec, // source data
+                                                        /*numWaypoints*/ 1, GetEnv(), /*filluninitialized*/ true);
+                PiecewisePolynomials::CheckReturn checkret = CheckConfigAllConstraints(x0Vect, v0Vect, a0Vect, 0xffff);
+                if( checkret.retcode != 0 ) {
+                    std::stringstream ss;
+                    ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                    ss << "xVect=[";
+                    SerializeValues(ss, x0Vect);
+                    ss << "]; vVect=[";
+                    SerializeValues(ss, v0Vect);
+                    ss << "]; aVect=[";
+                    SerializeValues(ss, a0Vect);
+                    ss << "];";
+                    OPENRAVE_ASSERT_OP_FORMAT(checkret.retcode, ==, 0, "got retcode=0x%x at iwaypoint=%d/%d: %s", checkret.retcode%iwaypoint%ptraj->GetNumWaypoints()%ss.str(), ORE_InconsistentConstraints);
+                }
+            }
+            RaveSetDebugLevel(oldDebugLevel);
+            RAVELOG_INFO_FORMAT("env=%d, final validation successful with traj of %d waypoints", _envId%ptraj->GetNumWaypoints());
+        }
+        else {
+            RAVELOG_INFO_FORMAT("env=%d, skipped final validation with traj of %d waypoints", _envId%ptraj->GetNumWaypoints());
+        }
+#endif
         return _ProcessPostPlanners(RobotBasePtr(), ptraj);
     } // end PlanPath
 
