@@ -252,29 +252,40 @@ public:
                     bool bTrimmedFront = false;
                     bool bTrimmedBack = false;
                     bool bCheck = true;
-                    if( itChunk - pwptraj.vchunks.begin() == 0 ) {
-                        if( itChunk->duration <= fTrimEdgesTime + PiecewisePolynomials::g_fPolynomialEpsilon ) {
-                            // This chunk is too short. Skip checking
-                            bCheck = false;
-                        }
-                        else {
-                            remChunk = trimmedChunk;
-                            remChunk.Cut(fTrimEdgesTime, trimmedChunk);
-                            bTrimmedFront = true;
-                        }
-                    }
-                    else if( itChunk + 1 == pwptraj.vchunks.end() ) {
-                        if( itChunk->duration <= fTrimEdgesTime + PiecewisePolynomials::g_fPolynomialEpsilon ) {
-                            // This chunk is too short. Skip checking
-                            bCheck = false;
-                        }
-                        else {
-                            trimmedChunk.Cut(trimmedChunk.duration - fTrimEdgesTime, remChunk);
-                            bTrimmedBack = true;
-                        }
-                    }
+                    // I don't think we need this custom trimming logic anymore.
+                    // if( itChunk - pwptraj.vchunks.begin() == 0 ) {
+                    //     if( itChunk->duration <= fTrimEdgesTime + PiecewisePolynomials::g_fPolynomialEpsilon ) {
+                    //         // This chunk is too short. Skip checking
+                    //         bCheck = false;
+                    //     }
+                    //     else {
+                    //         remChunk = trimmedChunk;
+                    //         remChunk.Cut(fTrimEdgesTime, trimmedChunk);
+                    //         bTrimmedFront = true;
+                    //     }
+                    // }
+                    // else if( itChunk + 1 == pwptraj.vchunks.end() ) {
+                    //     if( itChunk->duration <= fTrimEdgesTime + PiecewisePolynomials::g_fPolynomialEpsilon ) {
+                    //         // This chunk is too short. Skip checking
+                    //         bCheck = false;
+                    //     }
+                    //     else {
+                    //         trimmedChunk.Cut(trimmedChunk.duration - fTrimEdgesTime, remChunk);
+                    //         bTrimmedBack = true;
+                    //     }
+                    // }
 
                     if( bCheck ) {
+                        trimmedChunk.Eval(0, x0Vect);
+                        trimmedChunk.Evald1(0, v0Vect);
+                        trimmedChunk.Evald2(0, a0Vect);
+                        PiecewisePolynomials::CheckReturn initialcheckret = CheckConfigAllConstraints(x0Vect, v0Vect, a0Vect, 0xffff);
+                        if( initialcheckret.retcode != 0 ) {
+                            RAVELOG_WARN_FORMAT("env=%d, Failed checking constraints at initial config of iChunk=%d/%d with retcode=0x%x", _envId%(itChunk - pwptraj.vchunks.begin())%pwptraj.vchunks.size()%initialcheckret.retcode);
+                            _DumpOpenRAVETrajectory(ptraj, "failedfinalcheck", _errorDumpLevel);
+                            return PS_Failed;
+                        }
+
                         PiecewisePolynomials::CheckReturn checkret = CheckChunkAllConstraints(trimmedChunk, 0xffff, tempCheckedChunks);
                         if( checkret.retcode != 0 ) {
                             RAVELOG_DEBUG_FORMAT("env=%d, Final CheckChunkAllConstraints failed iChunk=%d/%d with ret=0x%x. bTrimmedFront=%d; bTrimmedBack=%d", _envId%(itChunk - pwptraj.vchunks.begin())%pwptraj.vchunks.size()%checkret.retcode%bTrimmedBack%bTrimmedBack);
