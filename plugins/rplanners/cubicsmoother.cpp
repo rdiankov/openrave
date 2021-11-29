@@ -225,6 +225,7 @@ public:
             std::vector<PiecewisePolynomials::Chunk>& vFinalChunks = _cacheFinalChunks; // for storing chunks before putting them into the final trajcetory
             PiecewisePolynomials::Chunk &trimmedChunk = _cacheTrimmedChunk, &remChunk = _cacheRemChunk;
 
+            _bUsePerturbation = false; // turn checking with perturbation off here.
 #ifdef JERK_LIMITED_SMOOTHER_VALIDATE
             size_t iOriginalChunk = 0;
             int prevChunkShortcutIter = -1;
@@ -279,7 +280,6 @@ public:
                         }
                     }
 
-                    _bUsePerturbation = false; // turn checking with perturbation off here.
                     if( bCheck ) {
                         PiecewisePolynomials::CheckReturn checkret = CheckChunkAllConstraints(trimmedChunk, 0xffff, tempCheckedChunks);
                         if( checkret.retcode != 0 ) {
