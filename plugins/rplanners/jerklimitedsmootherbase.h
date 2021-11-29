@@ -539,8 +539,16 @@ protected:
 
         int options = CFO_CheckTimeBasedConstraints;
         if( !_parameters->verifyinitialpath ) {
+            // When verifyinitialpath is false, it means we trust the input waypoints are collision-free. Note also that
+            // since these input waypoints are supposedly coming from RRT, it should be guaranteed that for each and
+            // every pair of consecutive input waypoints q0 and q1, we have that dist(q0[idof], q1[idof]) <
+            // resolutions[idof], for idof \in {0, 1, ..., _ndof}. It is possible that during initialization below,
+            // additional waypoints being added to the piecewise polynomial trajectory might be *slightly* in
+            // collision. But since such a waypoint lies on the straight line (in the robot joint space) connecting a
+            // pair of waypoints that are sufficiently close (based on the robot joint resolutions), we assume that such
+            // collisions are negligible.
             options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
-            RAVELOG_VERBOSE_FORMAT("env=%d, Initial path verification is disabled using options=0x%x", _envId%options);
+            RAVELOG_DEBUG_FORMAT("env=%d, Initial path verification is disabled using options=0x%x", _envId%options);
         }
 
         // Prepare waypoints. If _neighstatefn exists, make sure that every pair of consecutive waypoints is good.

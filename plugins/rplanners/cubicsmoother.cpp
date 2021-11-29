@@ -120,14 +120,8 @@ public:
         // bool bPathIsPerfectlyModeled = false; // will be true if the initial interpolation is linear or cubic
         RAVELOG_VERBOSE_FORMAT("env=%d, Initial trajectory joint values interpolation is %s", _envId%itcompatposgroup->interpolation);
         PlannerStatus conversionStatus = PS_Failed;
-#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
-        bool bDoFinalValidation = true;
-#endif
         if( _parameters->_hastimestamps && itcompatposgroup->interpolation == "cubic" ) {
             // bPathIsPerfectlyModeled = true;
-#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
-            bDoFinalValidation = false;
-#endif
             conversionStatus = ConvertOpenRAVETrajectoryToPiecewisePolynomialTrajectorySameInterpolation(ptraj, posSpec, velSpec, accelSpec, timeSpec, pwptraj);
         }
         // TODO: Maybe we need to handle other cases of interpolation as well
@@ -421,7 +415,11 @@ public:
         catch( const std::exception& ex ) {
             _DumpOpenRAVETrajectory(ptraj, "failedexception", _errorDumpLevel);
             RAVELOG_WARN_FORMAT("env=%d, Main planning loop threw an expection: %s", _envId%ex.what());
+#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+            throw;
+#else
             return PS_Failed;
+#endif
         }
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%f", _envId%(0.001f*(dReal)(utils::GetMilliTime() - startTime)));
 
@@ -429,7 +427,8 @@ public:
         _DumpOpenRAVETrajectory(ptraj, "final", _dumpLevel);
 
 #ifdef JERK_LIMITED_SMOOTHER_VALIDATE
-        if( bDoFinalValidation ) {
+        if( _parameters->verifyinitialpath ) {
+            // When verifyinitialpath is true, at this point every single waypoint has to pass constraints checking. So can do the following validation.
             const int oldDebugLevel = RaveGetDebugLevel();
             RaveSetDebugLevel(Level_Verbose);
 
@@ -461,7 +460,7 @@ public:
                     ss << "]; aVect=[";
                     SerializeValues(ss, a0Vect);
                     ss << "];";
-                    OPENRAVE_ASSERT_OP_FORMAT(checkret.retcode, ==, 0, "got retcode=0x%x at iwaypoint=%d/%d: %s", checkret.retcode%iwaypoint%ptraj->GetNumWaypoints()%ss.str(), ORE_InconsistentConstraints);
+                    OPENRAVE_ASSERT_OP_FORMAT(checkret.retcode, ==, 0, "env=%d, got retcode=0x%x at iwaypoint=%d/%d: %s", _envId%checkret.retcode%iwaypoint%ptraj->GetNumWaypoints()%ss.str(), ORE_InconsistentConstraints);
                 }
             }
             RaveSetDebugLevel(oldDebugLevel);
