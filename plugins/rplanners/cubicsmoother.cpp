@@ -1175,6 +1175,9 @@ protected:
         std::vector<PiecewisePolynomials::Polynomial> vTempPolynomials(_ndof);
         std::vector<dReal> vCubicCoeffs(4, 0);
 
+        std::vector<dReal>::const_iterator itVelLimit = _parameters->_vConfigVelocityLimit.begin();
+        std::vector<dReal>::const_iterator itAccelLimit = _parameters->_vConfigAccelerationLimit.begin();
+
         // Convert the OpenRAVE trajectory to a PiecewisePolynomialTrajectory
         vChunks.resize(0);
         if( vChunks.capacity() < ptraj->GetNumWaypoints() - 1 ) {
@@ -1183,6 +1186,15 @@ protected:
         ptraj->GetWaypoint(0, x0Vect, posSpec);
         ptraj->GetWaypoint(0, v0Vect, velSpec);
         ptraj->GetWaypoint(0, a0Vect, accelSpec);
+        // Clamp velocities and accelerations to the actual limits
+        for( size_t idof = 0; idof < _ndof; ++idof ) {
+            if( !PiecewisePolynomials::ClampValueToLimit(v0Vect[idof], *(itVelLimit + idof), PiecewisePolynomials::g_fPolynomialEpsilon) ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("env=%d, iWaypoint=%d/%d; v=%.15e violates vm=%.15e", _envId%0%ptraj->GetNumWaypoints()%v0Vect[idof]%(*(itVelLimit + idof)), ORE_InconsistentConstraints);
+            }
+            if( !PiecewisePolynomials::ClampValueToLimit(a0Vect[idof], *(itAccelLimit + idof), PiecewisePolynomials::g_fPolynomialEpsilon) ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("env=%d, iWaypoint=%d/%d; a=%.15e violates am=%.15e", _envId%0%ptraj->GetNumWaypoints()%a0Vect[idof]%(*(itAccelLimit + idof)), ORE_InconsistentConstraints);
+            }
+        }
         // For each segment connecting two consecutive waypoints, compute polynomial coefficients directly from the
         // given boundary conditions instead of using an interpolation function. Slightly different boundary conditions
         // might lead to a vastly different interpolated trajectory.
@@ -1194,6 +1206,12 @@ protected:
                 ptraj->GetWaypoint(iWaypoint, v1Vect, velSpec);
                 ptraj->GetWaypoint(iWaypoint, a1Vect, accelSpec);
                 for( size_t idof = 0; idof < _ndof; ++idof ) {
+                    if( !PiecewisePolynomials::ClampValueToLimit(v1Vect[idof], *(itVelLimit + idof), PiecewisePolynomials::g_fPolynomialEpsilon) ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("env=%d, iWaypoint=%d/%d; v=%.15e violates vm=%.15e", _envId%iWaypoint%ptraj->GetNumWaypoints()%v1Vect[idof]%(*(itVelLimit + idof)), ORE_InconsistentConstraints);
+                    }
+                    if( !PiecewisePolynomials::ClampValueToLimit(a1Vect[idof], *(itAccelLimit + idof), PiecewisePolynomials::g_fPolynomialEpsilon) ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("env=%d, iWaypoint=%d/%d; a=%.15e violates am=%.15e", _envId%iWaypoint%ptraj->GetNumWaypoints()%a1Vect[idof]%(*(itAccelLimit + idof)), ORE_InconsistentConstraints);
+                    }
                     mathextra::computecubiccoeffs(x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], a0Vect[idof], a1Vect[idof], duration, &vCubicCoeffs[0]);
                     std::reverse(vCubicCoeffs.begin(), vCubicCoeffs.end()); // PiecewisePolynomials' polynomial coefficient vector has the weakest term first so need to reverse the vector.
                     vTempPolynomials[idof].Initialize(duration, vCubicCoeffs);

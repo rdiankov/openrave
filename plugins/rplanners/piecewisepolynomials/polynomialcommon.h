@@ -75,7 +75,7 @@ inline dReal Sqrt(dReal x)
 inline dReal Cbrt(dReal x)
 {
     dReal r0, r1, r2;
-    /* int numroots = */mathextra::CubicRoots(x, 0, 0, &r0, &r1, &r2);
+    /* int numroots = */ mathextra::CubicRoots(x, 0, 0, &r0, &r1, &r2);
     return r0;
 }
 
@@ -129,6 +129,22 @@ inline void SubtractVector(const std::vector<dReal>& v1, const std::vector<dReal
     for( size_t i = 0; i < v1.size(); ++i ) {
         res[i] = v1[i] - v2[i];
     }
+}
+
+/// \brief Clamp the given value x such that -ul <= x <= ul. Return true if successful. Return false
+/// if the given x is such that |x| > ul + epsilon.
+inline bool ClampValueToLimit(dReal& x, const dReal ul, const dReal epsilon)
+{
+    if( OpenRAVE::RaveFabs(x) > ul + epsilon ) {
+        return false;
+    }
+    if( x > ul ) {
+        x = ul;
+    }
+    else if( x < -ul ) {
+        x = -ul;
+    }
+    return true;
 }
 
 #ifdef PIECEWISE_POLY_POLY_COMMON_H_USE_EIGEN
