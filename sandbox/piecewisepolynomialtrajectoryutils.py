@@ -128,3 +128,101 @@ def ConvertPiecewisePolynomialTrajectoryToOpenRAVETrajectory(env, robot, pwptraj
     ortraj.Insert(ortraj.GetNumWaypoints(), vtrajpoint)
 
     return ortraj
+
+def ComputeCubicCoefficients(x0, x1, dx0, dx1, ddx0, ddx1, t):
+    """Compute the cubic coefficients a, b, c, d for
+    
+    p(x) = ax^3 + bx^2 + cx + d
+
+    that satisfies the given boundary conditions
+    
+    Assume that the given boundary conditions are consistent.
+    
+    """
+    d = x0
+    c = dx0
+    b = 0.5*ddx0
+    a = (ddx1 - ddx0)/(6*t)
+    return a, b, c, d
+
+def ConvertOpenRAVETrajectoryToPiecewisePolynomialTrajectory(robot, traj, degree):
+    """
+    
+    Assume that the given openrave trajectory is consistent.
+
+    TODO: maybe can write a helper function to decide what degree the
+    piecewise polynomial traj should be. for now, get it as an input.
+
+    """
+    trajspec = traj.GetConfigurationSpecification()
+    assert(robot in trajspec.ExtractUsedBodies(robot.GetEnv()))
+
+    robotIndices = robot.GetActiveDOFIndices()
+    ndof = len(robotIndices)
+    
+    bExactMatch = False
+    gpos = trajspec.FindCompatibleGroup('joint_values', bExactMatch)
+    gvel = trajspec.FindCompatibleGroup('joint_velocities', bExactMatch)
+    gacc = trajspec.FindCompatibleGroup('joint_accelerations', bExactMatch)
+    
+
+    if degree == 1:
+        assert(gpos is not None)
+        assert(gpos.interpolation == 'linear')
+        raise NotImplementedError
+    
+    elif degree == 2:
+        assert(gpos is not None)
+        assert(gpos.interpolation == 'quadratic')
+        assert(gvel is not None)
+        assert(gvel.interpolation == 'linear')
+        raise NotImplementedError
+
+    elif degree == 3:
+        assert(gpos is not None)
+        assert(gpos.interpolation == 'cubic')
+        assert(gvel is not None)
+        assert(gvel.interpolation == 'quadratic')
+        assert(gacc is not None)
+        assert(gacc.interpolation == 'linear')
+
+        chunks = []
+        
+        waypoint = traj.GetWaypoint(0)
+        x0Vect = trajspec.ExtractJointValues(waypoint, robot, robotIndices, 0)
+        v0Vect = trajspec.ExtractJointValues(waypoint, robot, robotIndices, 1)
+        a0Vect = trajspec.ExtractJointValues(waypoint, robot, robotIndices, 2)
+        # TODO: maybe need some codes to clean up the evaluated value (in case numerical errors result in values
+        # violating their corresponding limits)
+
+        for iwaypoint in range(1, traj.GetNumWaypoints()):
+            nextWaypoint = traj.GetWaypoint(iwaypoint)
+            x1Vect = trajspec.ExtractJointValues(nextWaypoint, robot, robotIndices, 0)
+            v1Vect = trajspec.ExtractJointValues(nextWaypoint, robot, robotIndices, 1)
+            a1Vect = trajspec.ExtractJointValues(nextWaypoint, robot, robotIndices, 2)
+            # TODO: maybe need some codes to clean up the evaluated value (in case numerical errors result in values
+            # violating their corresponding limits)
+
+            deltaTime = trajspec.ExtractDeltaTime(nextWaypoint)
+
+            polynomials = []
+            for idof in range(ndof):
+                a, b, c, d = ComputeCubicCoefficients(x0Vect[idof], x1Vect[idof],
+                                                      v0Vect[idof], v1Vect[idof],
+                                                      a0Vect[idof], a1Vect[idof],
+                                                      deltaTime)
+                poly = piecewisepolynomials.Polynomial(deltaTime, [d, c, b, a])
+                polynomials.append(poly)
+            chunk = piecewisepolynomials.Chunk(deltaTime, polynomials)
+            chunks.append(chunk)
+
+            x0Vect = np.array(x1Vect)
+            v0Vect = np.array(v1Vect)
+            a0Vect = np.array(a1Vect)
+
+        return piecewisepolynomials.PiecewisePolynomialTrajectory(chunks)
+        
+    else:
+        raise NotImplementedError
+        
+
