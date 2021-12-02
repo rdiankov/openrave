@@ -1260,10 +1260,12 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     vector<dReal> v1pos(robot->GetActiveDOF(),0), v1vel(robot->GetActiveDOF(),0);
     ConfigurationSpecification newspec = robot->GetActiveConfigurationSpecification();
 
-    string interpolation = "";
+    ConfigurationSpecification inputtrajspec = traj->GetConfigurationSpecification();
+
+    std::string interpolation = "";
     FOREACH(it,newspec._vgroups) {
-        std::vector<ConfigurationSpecification::Group>::const_iterator itgroup = traj->GetConfigurationSpecification().FindCompatibleGroup(*it, false);
-        if( itgroup == traj->GetConfigurationSpecification()._vgroups.end() ) {
+        std::vector<ConfigurationSpecification::Group>::const_iterator itgroup = inputtrajspec.FindCompatibleGroup(*it, false);
+        if( itgroup == inputtrajspec._vgroups.end() ) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("could not find group %s in trajectory"),newspec._vgroups.at(0).name,ORE_InvalidArguments);
         }
         if( itgroup->interpolation.size() > 0 ) {
@@ -1272,6 +1274,13 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
         }
     }
     newspec.AddDerivativeGroups(1,false);
+
+    std::vector<ConfigurationSpecification::Group>::const_iterator itaccelerationsgroup = inputtrajspec.FindCompatibleGroup("joint_accelerations", false);
+    const bool hasaccelerations = itaccelerationsgroup != inputtrajspec._vgroups.end();
+    if( hasaccelerations ) {
+        newspec.AddDerivativeGroups(2, /*adddeltatime*/ false);
+    }
+    // TODO: For now suppose that the acceleration of the new point is zero
 
     vector<dReal> vwaypointstart, vwaypointend, vtargetvalues;
     if( waypointindex == 0 ) {
@@ -1334,7 +1343,7 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     // This ensures that the beginning and final velocities will be preserved
     //RAVELOG_VERBOSE_FORMAT("env=%d, inserting point into %d with planner %s and parameters %s", robot->GetEnv()->GetId()%waypointindex%newplannername%plannerparameters);
     // make sure velocities are set
-    if( !(RetimeActiveDOFTrajectory(trajinitial, robot, /*hastimestamps*/ false, fmaxvelmult, fmaxaccelmult, newplannername, plannerparameters+std::string("<hasvelocities>1</hasvelocities>")).GetStatusCode() & PS_HasSolution) ) {
+    if( !(RetimeActiveDOFTrajectory(trajinitial, robot, /*hastimestamps*/ false, fmaxvelmult, fmaxaccelmult, newplannername, plannerparameters + boost::str(boost::format("<hasvelocities>1</hasvelocities><hasaccelerations>%d</hasaccelerations>")%hasaccelerations)).GetStatusCode() & PS_HasSolution) ) {
         throw OPENRAVE_EXCEPTION_FORMAT("env=%d, failed to retime init traj", robot->GetEnv()->GetId(), ORE_Assert);
     }
 
