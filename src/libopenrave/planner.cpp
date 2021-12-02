@@ -88,12 +88,20 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
     for(size_t i = 0; i < q.size(); ++i) {
         q[i] += qdelta[i];
         if( q[i] > vUpperLimits.at(i) ) {
+            if( q[i] > vUpperLimits[i] + g_fEpsilonJointLimit ) {
+                // Only report deviation if the difference is not negligible as slight violation
+                // could have been solely due to some numerical error.
+                status |= 0x2;
+            }
             q[i] = vUpperLimits.at(i);
-            status |= 0x2;
         }
         else if( q[i] < vLowerLimits.at(i) ) {
+            if( q[i] < vLowerLimits[i] - g_fEpsilonJointLimit ) {
+                // Only report deviation if the difference is not negligible as slight violation
+                // could have been solely due to some numerical error.
+                status |= 0x2;
+            }
             q[i] = vLowerLimits.at(i);
-            status |= 0x2;
         }
     }
     return status;
