@@ -94,6 +94,10 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
             continue;
         }
         const KinBody& body = *pbody;
+        if( !body.IsEnabled() ) {
+            continue;
+        }
+
         const Grabbed& grabbed = *pgrabbed;
 
         KinBodyPtr pLinkParent;
