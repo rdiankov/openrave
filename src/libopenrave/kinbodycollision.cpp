@@ -85,6 +85,9 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
             RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, ignoring.", GetName());
             continue;
         }
+        if( !pbody->IsEnabled() ) {
+            continue;
+        }
         FOREACH(itrobotlink,pgrabbed->_listNonCollidingLinks) {
             KinBody::LinkConstPtr robotlink = *itrobotlink;
             KinBodyPtr parentlink = (*itrobotlink)->GetParent(true);
@@ -92,7 +95,6 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
                 RAVELOG_WARN_FORMAT("_listNonCollidingLinks has invalid link %s:%d", (*itrobotlink)->GetName()%(*itrobotlink)->GetIndex());
                 robotlink = _veclinks.at((*itrobotlink)->GetIndex());
             }
-            
             // have to use link/link collision since link/body checks attached bodies
             FOREACHC(itbodylink,pbody->GetLinks()) {
                 if( collisionchecker->CheckCollision(robotlink,KinBody::LinkConstPtr(*itbodylink),pusereport) ) {
