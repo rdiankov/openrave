@@ -2353,8 +2353,11 @@ void Grabbed::UpdateCollidingLinks()
     }
     EnvironmentBasePtr penv = pbody->GetEnv();
     KinBodyConstPtr pgrabbedbody(_pgrabbedbody);
-    if( !pgrabbedbody || !pgrabbedbody->IsEnabled() ) {
+    if( !pgrabbedbody ) {
         _listNonCollidingLinks.clear();
+        return;
+    }
+    if( !pgrabbedbody->IsEnabled() ) {
         return;
     }
 
