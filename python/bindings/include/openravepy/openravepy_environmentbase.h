@@ -305,7 +305,7 @@ public:
 
     py::object GetDescription() const;
 
-    void SetKeywords(const std::vector<std::string>& sceneKeywords);
+    void SetKeywords(object oSceneKeywords);
 
     py::list GetKeywords() const;
 
