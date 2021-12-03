@@ -446,12 +446,14 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo)
             poutputinfo->_robotlinkname = pgrabbed->_plinkrobot->GetName();
             poutputinfo->_trelative = pgrabbed->_troot;
             poutputinfo->_setIgnoreRobotLinkNames.clear();
-            FOREACHC(itlink, _veclinks) {
-                if( find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ) {
-                    poutputinfo->_setIgnoreRobotLinkNames.insert((*itlink)->GetName());
-                }
-                else if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
-                    poutputinfo->_setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+            if (pgrabbedbody->IsEnabled()) { // if no link is enabled, do not add all robot links into _setRobotLinksToIgnore
+                FOREACHC(itlink, _veclinks) {
+                    if( find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ) {
+                        poutputinfo->_setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+                    }
+                    else if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
+                        poutputinfo->_setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+                    }
                 }
             }
             vgrabbedinfo.push_back(poutputinfo);
@@ -474,12 +476,14 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const
             outputinfo._robotlinkname = pgrabbed->_plinkrobot->GetName();
             outputinfo._trelative = pgrabbed->_troot;
             outputinfo._setIgnoreRobotLinkNames.clear();
-            FOREACHC(itlink, _veclinks) {
-                if( find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ) {
-                    outputinfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
-                }
-                else if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
-                    outputinfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+            if (pgrabbedbody->IsEnabled()) { // if no link is enabled, do not add all robot links into _setRobotLinksToIgnore
+                FOREACHC(itlink, _veclinks) {
+                    if( find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ) {
+                        outputinfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+                    }
+                    else if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
+                        outputinfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+                    }
                 }
             }
         }
@@ -498,12 +502,14 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
                 grabbedInfo._robotlinkname = pgrabbed->_plinkrobot->GetName();
                 grabbedInfo._trelative = pgrabbed->_troot;
                 grabbedInfo._setIgnoreRobotLinkNames.clear();
-                FOREACHC(itlink, _veclinks) {
-                    if( find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ) {
-                        grabbedInfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
-                    }
-                    else if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
-                        grabbedInfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+                if (pgrabbedbody->IsEnabled()) { // if no link is enabled, do not add all robot links into _setRobotLinksToIgnore
+                    FOREACHC(itlink, _veclinks) {
+                        if( find(pgrabbed->_setRobotLinksToIgnore.begin(), pgrabbed->_setRobotLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setRobotLinksToIgnore.end() ) {
+                            grabbedInfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+                        }
+                        else if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
+                            grabbedInfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+                        }
                     }
                 }
                 return true;
