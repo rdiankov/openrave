@@ -2314,7 +2314,7 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
         //RAVELOG_DEBUG_FORMAT("env=%d, process links %d %fs %fs", probot->GetEnv()->GetId()%numchecked%(1e-6*(starttime1-starttime))%(1e-6*(starttime2-starttime)));
     }
 
-    if( pgrabbedbody->IsEnabled() ) {
+    {
         FOREACH(itnoncolliding, _mapLinkIsNonColliding) {
             if( itnoncolliding->second ) {
                 //RAVELOG_VERBOSE(str(boost::format("non-colliding link %s for grabbed body %s")%(*itlink)->GetName()%pgrabbedbody->GetName()));
