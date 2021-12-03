@@ -2358,6 +2358,7 @@ void Grabbed::UpdateCollidingLinks()
         return;
     }
     if( !pgrabbedbody->IsEnabled() ) {
+        // do not clear _listNonCollidingLinks because _listNonCollidingLinks was computed with the grabbed body all links enabled at the time of grabbing
         return;
     }
 
