@@ -242,7 +242,7 @@ public:
 
                     _bUsePerturbation = false; // turn checking with perturbation off here.
                     if( bCheck ) {
-                        PiecewisePolynomials::CheckReturn checkret = CheckChunkAllConstraints(trimmedChunk, 0xffff, tempCheckedChunks);
+                        PiecewisePolynomials::CheckReturn checkret = CheckChunkAllConstraints(trimmedChunk, defaultCheckOptions, tempCheckedChunks);
                         if( checkret.retcode != 0 ) {
                             RAVELOG_DEBUG_FORMAT("env=%d, Final CheckChunkAllConstraints failed iChunk=%d/%d with ret=0x%x. bTrimmedFront=%d; bTrimmedBack=%d", _envId%(itChunk - pwptraj.vchunks.begin())%pwptraj.vchunks.size()%checkret.retcode%bTrimmedBack%bTrimmedBack);
                             // Try to stretch the duration of the segment in hopes of fixing constraints violation.
@@ -270,7 +270,7 @@ public:
                                 if( interpolatorret == PolynomialCheckReturn::PCR_Normal ) {
                                     // TODO
                                     // For quintic interpolator, tempInterpolatedChunks always has one element.
-                                    PiecewisePolynomials::CheckReturn newcheckret = CheckAllChunksAllConstraints(tempInterpolatedChunks, 0xffff, tempCheckedChunks);
+                                    PiecewisePolynomials::CheckReturn newcheckret = CheckAllChunksAllConstraints(tempInterpolatedChunks, defaultCheckOptions, tempCheckedChunks);
                                     if( newcheckret.retcode == 0 ) {
                                         // The new chunk passes constraints checking.
                                         bDilationSuccessful = true;
@@ -566,7 +566,7 @@ public:
                     iIterProgress += 0x1000;
 
                     // Start checking constraints
-                    PiecewisePolynomials::CheckReturn checkret = CheckAllChunksAllConstraints(tempChunks, 0xffff, vChunksOut);
+                    PiecewisePolynomials::CheckReturn checkret = CheckAllChunksAllConstraints(tempChunks, defaultCheckOptions, vChunksOut);
                     iIterProgress += 0x1000;
 
                     if( checkret.retcode == 0 ) {
@@ -720,6 +720,7 @@ protected:
     }
 
     virtual PiecewisePolynomials::CheckReturn _ProcessConstraintReturnIntoChunks(ConstraintFilterReturnPtr contraintReturn, const PiecewisePolynomials::Chunk chunkIn,
+                                                                                 const bool bMarkConstraintChecked,
                                                                                  std::vector<dReal>& x0Vect, std::vector<dReal>& x1Vect,
                                                                                  std::vector<dReal>& v0Vect, std::vector<dReal>& v1Vect,
                                                                                  std::vector<dReal>& a0Vect, std::vector<dReal>& a1Vect,
@@ -791,7 +792,7 @@ protected:
 
                 FOREACH(itchunk, tempChunks) {
                     vChunksOut.push_back(*itchunk);
-                    vChunksOut.back().constraintChecked = true;
+                    vChunksOut.back().constraintChecked = bMarkConstraintChecked;
                 }
                 curTime = _constraintReturn->_configurationtimes[itime];
                 x0Vect.swap(x1Vect);

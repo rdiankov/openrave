@@ -279,14 +279,14 @@ public:
                         trimmedChunk.Eval(0, x0Vect);
                         trimmedChunk.Evald1(0, v0Vect);
                         trimmedChunk.Evald2(0, a0Vect);
-                        PiecewisePolynomials::CheckReturn initialcheckret = CheckConfigAllConstraints(x0Vect, v0Vect, a0Vect, 0xffff);
+                        PiecewisePolynomials::CheckReturn initialcheckret = CheckConfigAllConstraints(x0Vect, v0Vect, a0Vect, defaultCheckOptions);
                         if( initialcheckret.retcode != 0 ) {
                             RAVELOG_WARN_FORMAT("env=%d, Failed checking constraints at initial config of iChunk=%d/%d with retcode=0x%x", _envId%(itChunk - pwptraj.vchunks.begin())%pwptraj.vchunks.size()%initialcheckret.retcode);
                             _DumpOpenRAVETrajectory(ptraj, "failedfinalcheck", _errorDumpLevel);
                             return PS_Failed;
                         }
 
-                        PiecewisePolynomials::CheckReturn checkret = CheckChunkAllConstraints(trimmedChunk, 0xffff, tempCheckedChunks);
+                        PiecewisePolynomials::CheckReturn checkret = CheckChunkAllConstraints(trimmedChunk, defaultCheckOptions, tempCheckedChunks);
                         if( checkret.retcode != 0 ) {
                             RAVELOG_DEBUG_FORMAT("env=%d, Final CheckChunkAllConstraints failed iChunk=%d/%d with ret=0x%x. bTrimmedFront=%d; bTrimmedBack=%d", _envId%(itChunk - pwptraj.vchunks.begin())%pwptraj.vchunks.size()%checkret.retcode%bTrimmedBack%bTrimmedBack);
                             // Try to stretch the duration of the segment in hopes of fixing constraints violation.
@@ -312,7 +312,7 @@ public:
                                                                             tempInterpolatedChunks);
 
                                 if( interpolatorret == PolynomialCheckReturn::PCR_Normal ) {
-                                    PiecewisePolynomials::CheckReturn newcheckret = CheckAllChunksAllConstraints(tempInterpolatedChunks, 0xffff, tempCheckedChunks);
+                                    PiecewisePolynomials::CheckReturn newcheckret = CheckAllChunksAllConstraints(tempInterpolatedChunks, defaultCheckOptions, tempCheckedChunks);
                                     if( newcheckret.retcode == 0 ) {
                                         // The new chunk passes constraints checking.
                                         bDilationSuccessful = true;
@@ -460,7 +460,7 @@ public:
                 ConfigurationSpecification::ConvertData(a0Vect.begin(), accelSpec, // target data
                                                         waypoint.begin(), newSpec, // source data
                                                         /*numWaypoints*/ 1, GetEnv(), /*filluninitialized*/ true);
-                PiecewisePolynomials::CheckReturn checkret = CheckConfigAllConstraints(x0Vect, v0Vect, a0Vect, 0xffff);
+                PiecewisePolynomials::CheckReturn checkret = CheckConfigAllConstraints(x0Vect, v0Vect, a0Vect, defaultCheckOptions);
                 if( checkret.retcode != 0 ) {
                     std::stringstream ss;
                     ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
@@ -705,7 +705,7 @@ public:
                     iIterProgress += 0x1000;
 
                     // Start checking constraints
-                    PiecewisePolynomials::CheckReturn checkret = CheckAllChunksAllConstraints(tempChunks, 0xffff, vChunksOut);
+                    PiecewisePolynomials::CheckReturn checkret = CheckAllChunksAllConstraints(tempChunks, defaultCheckOptions, vChunksOut);
                     iIterProgress += 0x1000;
 
                     if( checkret.retcode == 0 ) {
@@ -1065,6 +1065,7 @@ protected:
     }
 
     virtual PiecewisePolynomials::CheckReturn _ProcessConstraintReturnIntoChunks(ConstraintFilterReturnPtr contraintReturn, const PiecewisePolynomials::Chunk chunkIn,
+                                                                                 const bool bMarkConstraintChecked,
                                                                                  std::vector<dReal>& x0Vect, std::vector<dReal>& x1Vect,
                                                                                  std::vector<dReal>& v0Vect, std::vector<dReal>& v1Vect,
                                                                                  std::vector<dReal>& a0Vect, std::vector<dReal>& a1Vect,
@@ -1129,7 +1130,7 @@ protected:
 
                 PiecewisePolynomials::Chunk tempChunk(deltaTime, vpolynomials);
                 vChunksOut.push_back(tempChunk);
-                vChunksOut.back().constraintChecked = true;
+                vChunksOut.back().constraintChecked = bMarkConstraintChecked;
 
                 curTime = _constraintReturn->_configurationtimes[itime];
                 vChunksOut.back().Eval(deltaTime, x0Vect);

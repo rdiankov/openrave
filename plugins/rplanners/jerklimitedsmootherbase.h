@@ -183,11 +183,14 @@ public:
         std::vector<dReal> &x0Vect = _cacheX0Vect2, &x1Vect = _cacheX1Vect2, &v0Vect = _cacheV0Vect2, &v1Vect = _cacheV1Vect2, &a0Vect = _cacheA0Vect2, &a1Vect = _cacheA1Vect2;
         chunkIn.Eval(0, x0Vect);
 
+        const bool bMarkConstraintChecked = (options & requiredCheckOptions) == requiredCheckOptions;
+
         if( chunkIn.duration <= g_fEpsilon ) {
             vChunksOut.resize(1);
             vChunksOut[0].SetConstant(x0Vect, 0, 5);
             // TODO: correcrtly handle this case. Should we actually store boundary conditions (v0,
             // v1, a0, a1) directly in Chunk?
+            vChunksOut[0].constraintChecked = bMarkConstraintChecked;
             return PiecewisePolynomials::CheckReturn(0);
         }
 
@@ -276,6 +279,7 @@ public:
         if( _bExpectedModifiedConfigurations && _constraintReturn->_configurationtimes.size() > 0 && _constraintReturn->_bHasRampDeviatedFromInterpolation ) {
             OPENRAVE_ASSERT_OP(_constraintReturn->_configurations.size(), ==, _constraintReturn->_configurationtimes.size()*_ndof);
             PiecewisePolynomials::CheckReturn processret = _ProcessConstraintReturnIntoChunks(_constraintReturn, chunkIn,
+                                                                                              bMarkConstraintChecked,
                                                                                               x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect,
                                                                                               vChunksOut);
             if( processret.retcode != 0 ) {
@@ -285,7 +289,7 @@ public:
         else {
             vChunksOut.resize(1);
             vChunksOut[0] = chunkIn;
-            vChunksOut[0].constraintChecked = true;
+            vChunksOut[0].constraintChecked = bMarkConstraintChecked;
         }
 
         // RAVELOG_DEBUG_FORMAT("env=%d, _bExpectedModifiedConfigurations=%d, _bManipConstraints=%d; options=0x%x; num chunks=%d", _envId%_bExpectedModifiedConfigurations%_bManipConstraints%options%vChunksOut.size());
@@ -377,6 +381,7 @@ protected:
     /// \param[out] vChunksOut the resulting chunks reconstructed from constraintReturn
     /// \return CheckReturn struct containing check result.
     virtual PiecewisePolynomials::CheckReturn _ProcessConstraintReturnIntoChunks(ConstraintFilterReturnPtr contraintReturn, const PiecewisePolynomials::Chunk chunkIn,
+                                                                                 const bool bMarkConstraintChecked,
                                                                                  std::vector<dReal>& x0Vect, std::vector<dReal>& x1Vect,
                                                                                  std::vector<dReal>& v0Vect, std::vector<dReal>& v1Vect,
                                                                                  std::vector<dReal>& a0Vect, std::vector<dReal>& a1Vect,
@@ -908,6 +913,8 @@ protected:
     //
     // Members
     //
+    const int requiredCheckOptions = CFO_CheckEnvCollisions|CFO_CheckSelfCollisions|CFO_CheckTimeBasedConstraints|CFO_CheckUserConstraints; ///< option required each chunk is required to check with before it can be marked with constraintChecked=true.
+    const int defaultCheckOptions = 0xffff; ///< default option for checking
 
     // for planning
     PiecewisePolynomials::InterpolatorBasePtr _pinterpolator;
