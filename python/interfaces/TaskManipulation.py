@@ -168,7 +168,7 @@ class TaskManipulation:
         newconfigs = reshape(array([float64(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
         return iters,newconfigs
     
-    def ChuckFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None):
+    def ChuckFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None,releasegil=False):
         """See :ref:`module-taskmanipulation-closefingers`
         """
         cmd = 'CloseFingers '
@@ -191,7 +191,7 @@ class TaskManipulation:
             cmd += 'translationstepmult %.15e '%translationstepmult
         if finestep is not None:
             cmd += 'finestep %.15e '%finestep
-        res = self.prob.SendCommand(cmd)
+        res = self.prob.SendCommand(cmd,releasegil=releasegil)
         if res is None:
             raise PlanningError('CloseFingers')
         resvalues = res
@@ -214,7 +214,7 @@ class TaskManipulation:
     def CloseFingers(self, *args, **kwargs):
         return self.ChuckFingers(*args, **kwargs)
     
-    def UnchuckFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None):
+    def UnchuckFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None,releasegil=False):
         """See :ref:`module-taskmanipulation-releasefingers`
         """
         cmd = 'ReleaseFingers '
@@ -236,7 +236,7 @@ class TaskManipulation:
             cmd += 'translationstepmult %.15e '%translationstepmult
         if finestep is not None:
             cmd += 'finestep %.15e '%finestep
-        res = self.prob.SendCommand(cmd)
+        res = self.prob.SendCommand(cmd,releasegil=releasegil)
         if res is None:
             raise PlanningError('ReleaseFingers')
         resvalues = res

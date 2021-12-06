@@ -2764,16 +2764,16 @@ py::object PyEnvironmentBase::GetDescription() const
     return ConvertStringToUnicode(_penv->GetDescription());
 }
 
-void PyEnvironmentBase::SetKeywords(const std::vector<std::string>& sceneKeywords)
+void PyEnvironmentBase::SetKeywords(py::object oSceneKeywords)
 {
+    std::vector<std::string> sceneKeywords = ExtractArray<std::string>(oSceneKeywords);
     _penv->SetKeywords(sceneKeywords);
 }
 
 py::list PyEnvironmentBase::GetKeywords() const
 {
     py::list pykeywords;
-    std::vector<std::string> keywords;
-    _penv->GetKeywords();
+    std::vector<std::string> keywords = _penv->GetKeywords();
     for(const std::string& keyword : keywords) {
         pykeywords.append(ConvertStringToUnicode(keyword));
     }
