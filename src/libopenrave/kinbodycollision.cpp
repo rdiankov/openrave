@@ -138,15 +138,12 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
 
         // check attached bodies with each other, this is actually tricky since they are attached "with each other", so regular CheckCollision will not work.
         // Instead, we will compare each of the body's links with every other
-        if( _vGrabbedBodies.size() > 1 ) {
-            for (size_t indexGrabbed2 = 0; indexGrabbed2 < _vGrabbedBodies.size(); indexGrabbed2++) {
+        if( _vGrabbedBodies.size() > 1) {
+            for (size_t indexGrabbed2 = indexGrabbed1 + 1; indexGrabbed2 < _vGrabbedBodies.size(); indexGrabbed2++) {
                 const GrabbedPtr& pgrabbed2 = _vGrabbedBodies[indexGrabbed2];
                 const KinBodyPtr& pbody2 = vLockedGrabbedBodiesCache[indexGrabbed2];
                 if( !pbody2 ) {
                     RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, so ignoring.", GetName());
-                    continue;
-                }
-                if( pbody == pbody2 ) {
                     continue;
                 }
 
