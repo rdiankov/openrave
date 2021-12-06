@@ -148,7 +148,6 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
                 }
 
                 const Grabbed& grabbed2 = *pgrabbed2;
-                const KinBody& body2 = *pbody2;
 
                 for(const KinBody::LinkPtr& plink2 : pbody2->GetLinks()) {
                     // make sure the two bodies were not initially colliding
