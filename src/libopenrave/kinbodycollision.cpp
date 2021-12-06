@@ -85,7 +85,8 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
     }
 
     // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
-    for (size_t indexGrabbed1 = 0; indexGrabbed1 < _vGrabbedBodies.size(); indexGrabbed1++) {
+    const size_t numGrabbed = _vGrabbedBodies.size();
+    for (size_t indexGrabbed1 = 0; indexGrabbed1 < numGrabbed; indexGrabbed1++) {
         const GrabbedPtr& pgrabbed = _vGrabbedBodies[indexGrabbed1];
         const KinBodyPtr& pbody = vLockedGrabbedBodiesCache[indexGrabbed1];
         if( !pbody ) {
@@ -138,8 +139,8 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
 
         // check attached bodies with each other, this is actually tricky since they are attached "with each other", so regular CheckCollision will not work.
         // Instead, we will compare each of the body's links with every other
-        if( _vGrabbedBodies.size() > 1) {
-            for (size_t indexGrabbed2 = indexGrabbed1 + 1; indexGrabbed2 < _vGrabbedBodies.size(); indexGrabbed2++) {
+        if( numGrabbed > 1) {
+            for (size_t indexGrabbed2 = indexGrabbed1 + 1; indexGrabbed2 < numGrabbed; indexGrabbed2++) {
                 const GrabbedPtr& pgrabbed2 = _vGrabbedBodies[indexGrabbed2];
                 const KinBodyPtr& pbody2 = vLockedGrabbedBodiesCache[indexGrabbed2];
                 if( !pbody2 ) {
