@@ -640,7 +640,7 @@ void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::
 
 void KinBody::_UpdateGrabbedBodies()
 {
-    vector<UserDataPtr>::iterator itgrabbed = _vGrabbedBodies.begin();
+    std::vector<GrabbedPtr>::iterator itgrabbed = _vGrabbedBodies.begin();
     std::pair<Vector, Vector> velocity;
     while(itgrabbed != _vGrabbedBodies.end() ) {
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);

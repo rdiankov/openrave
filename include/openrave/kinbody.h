@@ -210,6 +210,11 @@ inline void EnableAllLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMas
     linkEnableStateMasks.back() = (1LU << (numLinks & 0x3f)) - 1;
 }
 
+class Grabbed;
+typedef boost::shared_ptr<Grabbed> GrabbedPtr;
+typedef boost::shared_ptr<Grabbed const> GrabbedConstPtr;
+
+
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
  */
@@ -2240,7 +2245,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::vector<UserDataPtr> _vGrabbedBodies;
+        std::vector<GrabbedPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
@@ -2286,7 +2291,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::vector<UserDataPtr> _vGrabbedBodies;
+        std::vector<GrabbedPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
         bool _bReleased; ///< if true, then body should not be restored
 private:
@@ -3404,7 +3409,7 @@ protected:
 
     std::vector<Transform*> _vLinkTransformPointers; ///< holds a pointers to the Transform Link::_t  in _veclinks. Used for fast access fo the custom kinematics
 
-    std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies
+    std::vector<GrabbedPtr> _vGrabbedBodies; ///< vector of grabbed bodies
 
     mutable std::vector<std::list<UserDataWeakPtr> > _vlistRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. _vlistRegisteredCallbacks[index] is the list of change callbacks where 1<<index is part of KinBodyProperty, this makes it easy to find out if any particular bits have callbacks. The registration/de-registration of the lists can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable.
 
@@ -3469,6 +3474,51 @@ private:
     friend class ChangeCallbackData;
     friend class Grabbed;
 };
+
+/// \brief The information of a currently grabbed body.
+class Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
+{
+public:
+    Grabbed(KinBodyPtr pgrabbedbody, KinBody::LinkPtr plinkrobot) : _pgrabbedbody(pgrabbedbody), _plinkrobot(plinkrobot) {
+        _enablecallback = pgrabbedbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&Grabbed::UpdateCollidingLinks, this));
+        _plinkrobot->GetRigidlyAttachedLinks(_vattachedlinks);
+    }
+    virtual ~Grabbed() {
+    }
+    KinBodyWeakPtr _pgrabbedbody;         ///< the grabbed body
+    KinBody::LinkPtr _plinkrobot;         ///< robot link that is grabbing the body
+    std::list<KinBody::LinkConstPtr> _listNonCollidingLinks;         ///< links that are not colliding with the grabbed body at the time of Grab. Even if a link is disabled, it is considered as non-colliding as long as it is not colliiding with grabbed body
+    Transform _troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
+    std::set<int> _setRobotLinksToIgnore; ///< original links of the robot to force ignoring
+
+    /// \brief check collision with all links to see which are valid.
+    ///
+    /// Use the robot's self-collision checker if possible
+    /// resets all cached data and re-evaluates the collisions
+    /// \param setRobotLinksToIgnore indices of the robot links to always ignore, in other words remove from non-colliding list
+    void ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore);
+
+    inline const std::vector<KinBody::LinkPtr>& GetRigidlyAttachedLinks() const {
+        return _vattachedlinks;
+    }
+
+    void AddMoreIgnoreLinks(const std::set<int>& setRobotLinksToIgnore);
+
+    /// return -1 for unknown, 0 for no, 1 for yes
+    int WasLinkNonColliding(KinBody::LinkConstPtr plink) const;
+
+    /// \brief updates the non-colliding info while reusing the cache data from _ProcessCollidingLinks
+    ///
+    /// note that Regrab here is *very* dangerous since the robot could be a in a bad self-colliding state with the body. therefore, update the non-colliding state based on _mapLinkIsNonColliding
+    void UpdateCollidingLinks();
+
+private:
+    std::vector<KinBody::LinkPtr> _vattachedlinks;
+    UserDataPtr _enablecallback; ///< callback for grabbed body when it is enabled/disabled
+
+    std::map<KinBody::LinkConstPtr, int> _mapLinkIsNonColliding; // the collision state for each link at the time the body was grabbed.
+};
+
 
 } // end namespace OpenRAVE
 
