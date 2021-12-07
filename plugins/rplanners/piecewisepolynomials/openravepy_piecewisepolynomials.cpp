@@ -210,6 +210,11 @@ public:
         return PyPolynomialPtr(new PyPolynomial(newPoly));
     }
 
+    dReal Evali1(dReal t, const dReal c) const
+    {
+        return _ppolynomial->Evali1(t, c);
+    }
+
     PyPolynomialPtr Integrate(const dReal c) const
     {
         piecewisepolynomials::Polynomial newPoly = _ppolynomial->Integrate(c);
@@ -373,6 +378,11 @@ public:
     dReal Evaldn(dReal t, size_t n) const
     {
         return _ppwpoly->Evaldn(t, n);
+    }
+
+    dReal Evali1(dReal t, const dReal c) const
+    {
+        return _ppwpoly->Evali1(t, c);
     }
 
     py::object Serialize() const
@@ -1118,6 +1128,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Evald3", &PyPolynomial::Evald3, PY_ARGS("t") "Evaluate the third derivative of this polynomial at the given parameter t")
     .def("Evaldn", &PyPolynomial::Evaldn, PY_ARGS("t", "n") "Evaluate the n-th derivative of this polynomial at the given parameter t")
     .def("Differentiate", &PyPolynomial::Differentiate,PY_ARGS("n") "Return the polynomial d^n/dt^n p(t) where p is this polynomial")
+    .def("Evali1", &PyPolynomial::Evali1, PY_ARGS("t", "c") "Evaluate the first integral of this polynomial at the given parameter t with integration constant c.")
     .def("Integrate", &PyPolynomial::Integrate,PY_ARGS("c") "Return polynomial q = integrate x=0 to x=t p(x) where p is this polynomial and q(0) = c.")
     .def("GetExtrema", &PyPolynomial::GetExtrema, "Return the list of extrema of this polynomial")
     .def("FindAllLocalExtrema", &PyPolynomial::FindAllLocalExtrema, PY_ARGS("ideriv") "Return the list of extrema of the i-th derivative of this polynomial")
@@ -1145,6 +1156,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Evald2", &PyPiecewisePolynomial::Evald2, PY_ARGS("t") "Evaluate the second derivative of this piecewise polynomial at the given parameter t")
     .def("Evald3", &PyPiecewisePolynomial::Evald3, PY_ARGS("t") "Evaluate the third derivative of this piecewise polynomial at the given parameter t")
     .def("Evaldn", &PyPiecewisePolynomial::Evaldn, PY_ARGS("t", "n") "Evaluate the n-th derivative of this piecewise polynomial at the given parameter t")
+    .def("Evali1", &PyPiecewisePolynomial::Evali1, PY_ARGS("t", "c") "Evaluate the first integral of this piecewise polynomial at the given parameter t with integration constant c")
     .def("Serialize", &PyPiecewisePolynomial::Serialize, "Serialize this piecewise polynomial into string")
     .def("Deserialize", &PyPiecewisePolynomial::Deserialize, PY_ARGS("s") "Deserialize a piecewise polynomial from the given string")
     .def("FindPolynomialIndex", &PyPiecewisePolynomial::FindPolynomialIndex, PY_ARGS("t") "Find the index of the polynomial q that t falls into and also compute the remainder so that p(t) = q(remainder)")

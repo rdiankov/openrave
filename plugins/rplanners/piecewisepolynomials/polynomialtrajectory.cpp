@@ -263,6 +263,26 @@ Polynomial Polynomial::Differentiate(const size_t ideriv) const
     }
 }
 
+dReal Polynomial::Evali1(dReal t, const dReal c) const
+{
+    if( t < 0 ) {
+        t = 0;
+    }
+    if( t > duration ) {
+        t = duration;
+    }
+
+    if( degree == 0 ) {
+        return t*vcoeffs[0] + c;
+    }
+
+    dReal val = (vcoeffs[degree]/(degree + 1)) * t;
+    for( int i = (int)degree - 1; i >= 0; --i ) {
+        val = (val + vcoeffs[i]/(i + 1)) * t;
+    }
+    return val + c;
+}
+
 Polynomial Polynomial::Integrate(const dReal c) const
 {
     // Reusing _vcurcoeffs as a temporary container
@@ -562,6 +582,27 @@ dReal PiecewisePolynomial::Evaldn(dReal t, size_t n) const
     dReal remainder = 0;
     FindPolynomialIndex(t, index, remainder);
     return _vpolynomials[index].Evaldn(remainder, n);
+}
+
+dReal PiecewisePolynomial::Evali1(dReal t, const dReal c) const
+{
+    if( t <= g_fEpsilonForTimeInstant ) {
+        return _vpolynomials.front().Evali1(0, c);
+    }
+
+    if( t >= _duration - g_fEpsilonForTimeInstant ) {
+        t = _duration;
+    }
+
+    size_t index = 0;
+    dReal remainder = 0;
+    FindPolynomialIndex(t, index, remainder);
+
+    dReal newInitialValue = c;
+    for( size_t ipoly = 0; ipoly < index; ++ipoly ) {
+        newInitialValue = _vpolynomials[ipoly].Evali1(_vpolynomials[ipoly].duration, newInitialValue);
+    }
+    return _vpolynomials[index].Evali1(remainder, newInitialValue);
 }
 
 void PiecewisePolynomial::Serialize(std::ostream& O) const {

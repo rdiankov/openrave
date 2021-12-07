@@ -97,6 +97,9 @@ public:
     /// \brief Return the polynomial d/dt p(t)
     Polynomial Differentiate(const size_t ideriv) const;
 
+    /// \brief Evaluate the first integral of this polynomial at time t with integration constant c.
+    dReal Evali1(dReal t, const dReal c=0) const;
+
     /// \brief Return the polynomial int p(t) dt
     Polynomial Integrate(const dReal c=0) const;
 
@@ -183,6 +186,9 @@ public:
 
     /// \brief Evaluate the n-th derivative of this piecewise polynomial at time t.
     dReal Evaldn(dReal t, size_t n) const;
+
+    /// \brief Evaluate the first integral of this piecewise polynomial at time t with integration constant c.
+    dReal Evali1(dReal t, const dReal c=0) const;
 
     /// \brief Serialize this piecewise-polynomial into the stringstream.
     void Serialize(std::ostream& O) const;
