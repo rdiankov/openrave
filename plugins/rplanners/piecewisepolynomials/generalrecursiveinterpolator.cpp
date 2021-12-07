@@ -159,7 +159,6 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     const size_t maxIters = 1000; // to prevent infinite loops
     dReal vLast;
     PiecewisePolynomial pwpoly1, pwpoly3; // the use of indices 1 and 3 are according to the paper
-    PiecewisePolynomial pwpoly1Integrated, pwpoly3Integrated;
     PolynomialCheckReturn ret1, ret3;
     std::vector<dReal> newInitialState(nStateSize - 1, 0.0), newMidState(nStateSize - 1, 0.0), newFinalState(nStateSize - 1, 0.0); // nStateSize is guaranteed to be greater than 1.
     // The following newInitialState and newFinalState remain the same throughout, so initializing them here.
@@ -200,12 +199,10 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         }
 
         // Step 9
-        pwpoly1Integrated = pwpoly1.Integrate(0);
         // deltaX1: displacement covered by segment I
-        dReal deltaX1 = pwpoly1Integrated.Eval(pwpoly1Integrated.GetDuration());
-        pwpoly3Integrated = pwpoly3.Integrate(0);
+        dReal deltaX1 = pwpoly1.Evali1(pwpoly1.GetDuration(), 0);
         // deltaX3: displacement covered by segment III
-        dReal deltaX3 = pwpoly3Integrated.Eval(pwpoly3Integrated.GetDuration());
+        dReal deltaX3 = pwpoly3.Evali1(pwpoly3.GetDuration(), 0);
 
         // Step 10
         // delta: displacement to be covered by segment II
