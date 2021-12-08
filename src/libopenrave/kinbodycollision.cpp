@@ -94,7 +94,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
             continue;
         }
         if( !pbody->IsEnabled() ) {
-            continue;
+            continue; // grabbed body is disabled, so ignoring
         }
         const KinBody& body = *pbody;
         const Grabbed& grabbed = *pgrabbed;
@@ -148,6 +148,9 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
                 if( !pbody2 ) {
                     RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, so ignoring.", GetName());
                     continue;
+                }
+                if( !pbody2->IsEnabled() ) {
+                    continue; // the other grabbed body is disabled, so ignoring
                 }
 
                 const Grabbed& grabbed2 = *pgrabbed2;
