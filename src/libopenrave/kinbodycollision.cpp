@@ -95,17 +95,20 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         }
         const KinBody& body = *pbody;
         const Grabbed& grabbed = *pgrabbed;
-        FOREACH(itrobotlink,grabbed._listNonCollidingLinks) {
-            KinBody::LinkConstPtr robotlink = *itrobotlink;
-            KinBodyPtr parentlink = (*itrobotlink)->GetParent(true);
-            if( !parentlink ) {
-                RAVELOG_WARN_FORMAT("_listNonCollidingLinks has invalid link %s:%d", (*itrobotlink)->GetName()%(*itrobotlink)->GetIndex());
-                robotlink = _veclinks.at((*itrobotlink)->GetIndex());
+
+        KinBodyPtr pLinkParent;
+
+        for (const KinBody::LinkConstPtr& probotlinkFromNonColliding : grabbed._listNonCollidingLinks) {
+            const KinBody::Link& robotlinkFromNonColliding = *probotlinkFromNonColliding;
+            pLinkParent = robotlinkFromNonColliding.GetParent(true);
+            if( !pLinkParent ) {
+                RAVELOG_WARN_FORMAT("_listNonCollidingLinks has invalid link %s:%d", robotlinkFromNonColliding.GetName()%robotlinkFromNonColliding.GetIndex());
             }
+            const KinBody::LinkConstPtr& probotlink = (!!pLinkParent) ? probotlinkFromNonColliding : _veclinks.at(robotlinkFromNonColliding.GetIndex());
             
             // have to use link/link collision since link/body checks attached bodies
-            FOREACHC(itbodylink,body.GetLinks()) {
-                if( collisionchecker->CheckCollision(robotlink,KinBody::LinkConstPtr(*itbodylink),pusereport) ) {
+            for (const KinBody::LinkPtr& plink : body.GetLinks()) {
+                if( collisionchecker->CheckCollision(probotlink, plink, pusereport) ) {
                     bCollision = true;
                     if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                         break;
