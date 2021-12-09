@@ -329,16 +329,20 @@ bool KinBody::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, Co
     // it is important to make sure to add all other attached bodies in the ignored list!
     std::vector<KinBodyConstPtr> vbodyexcluded;
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    for (const GrabbedConstPtr& pgrabbed : _vGrabbedBodies) {
+    FOREACHC(itgrabbed,_vGrabbedBodies) {
+        GrabbedConstPtr pgrabbed = *itgrabbed;
         if( pgrabbed->_plinkrobot == plink ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
             if( !!pgrabbedbody ) {
                 vbodyexcluded.resize(0);
                 vbodyexcluded.push_back(shared_kinbody_const());
-                for (const GrabbedConstPtr& pgrabbed2 : _vGrabbedBodies) {
+                FOREACHC(itgrabbed2,_vGrabbedBodies) {
+                    if( itgrabbed2 != itgrabbed ) {
+                        GrabbedConstPtr pgrabbed2 = *itgrabbed2;
                     KinBodyPtr pgrabbedbody2 = pgrabbed2->_pgrabbedbody.lock();
-                    if( !!pgrabbedbody2 && pgrabbedbody2 !=  pgrabbedbody) {
+                        if( !!pgrabbedbody2 ) {
                         vbodyexcluded.push_back(pgrabbedbody2);
+                        }
                     }
                 }
                 KinBodyStateSaver bodysaver(pgrabbedbody,Save_LinkTransformation);
@@ -379,16 +383,20 @@ bool KinBody::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
     // it is important to make sure to add all other attached bodies in the ignored list!
     std::vector<KinBodyConstPtr> vbodyexcluded;
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    for (const GrabbedConstPtr& pgrabbed : _vGrabbedBodies) {
+    FOREACHC(itgrabbed,_vGrabbedBodies) {
+        GrabbedConstPtr pgrabbed = *itgrabbed;
         if( pgrabbed->_plinkrobot == plink ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
             if( !!pgrabbedbody ) {
                 vbodyexcluded.resize(0);
                 vbodyexcluded.push_back(shared_kinbody_const());
-                for (const GrabbedConstPtr& pgrabbed2 : _vGrabbedBodies) {
+                FOREACHC(itgrabbed2,_vGrabbedBodies) {
+                    if( itgrabbed2 != itgrabbed ) {
+                        GrabbedConstPtr pgrabbed2 = *itgrabbed2;
                     KinBodyPtr pgrabbedbody2 = pgrabbed2->_pgrabbedbody.lock();
-                    if( !!pgrabbedbody2 &&  pgrabbedbody2 != pgrabbedbody) {
+                        if( !!pgrabbedbody2 ) {
                         vbodyexcluded.push_back(pgrabbedbody2);
+                        }
                     }
                 }
                 if( pchecker->CheckCollision(KinBodyConstPtr(pgrabbedbody),vbodyexcluded, vlinkexcluded, report) ) {
