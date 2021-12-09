@@ -77,7 +77,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         pusereport = boost::shared_ptr<CollisionReport>(&tempreport,utils::null_deleter());
     }
 
-    // locking weak pointer is expensive, so do it N times, where N is the number of grabbedBody instead of N^2
+    // locking weak pointer is expensive, so do it N times and cache, where N is the number of grabbedBody instead of N^2
     std::vector<KinBodyPtr> vLockedGrabbedBodiesCache;
     vLockedGrabbedBodiesCache.reserve(_vGrabbedBodies.size());
     for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
@@ -339,9 +339,9 @@ bool KinBody::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, Co
                 FOREACHC(itgrabbed2,_vGrabbedBodies) {
                     if( itgrabbed2 != itgrabbed ) {
                         GrabbedConstPtr pgrabbed2 = *itgrabbed2;
-                    KinBodyPtr pgrabbedbody2 = pgrabbed2->_pgrabbedbody.lock();
+                        KinBodyPtr pgrabbedbody2 = pgrabbed2->_pgrabbedbody.lock();
                         if( !!pgrabbedbody2 ) {
-                        vbodyexcluded.push_back(pgrabbedbody2);
+                            vbodyexcluded.push_back(pgrabbedbody2);
                         }
                     }
                 }
@@ -393,9 +393,9 @@ bool KinBody::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
                 FOREACHC(itgrabbed2,_vGrabbedBodies) {
                     if( itgrabbed2 != itgrabbed ) {
                         GrabbedConstPtr pgrabbed2 = *itgrabbed2;
-                    KinBodyPtr pgrabbedbody2 = pgrabbed2->_pgrabbedbody.lock();
+                        KinBodyPtr pgrabbedbody2 = pgrabbed2->_pgrabbedbody.lock();
                         if( !!pgrabbedbody2 ) {
-                        vbodyexcluded.push_back(pgrabbedbody2);
+                            vbodyexcluded.push_back(pgrabbedbody2);
                         }
                     }
                 }
