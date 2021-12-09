@@ -87,22 +87,21 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
     // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
     const size_t numGrabbed = _vGrabbedBodies.size();
     for (size_t indexGrabbed1 = 0; indexGrabbed1 < numGrabbed; indexGrabbed1++) {
-        const GrabbedPtr& pgrabbed = _vGrabbedBodies[indexGrabbed1];
-        const KinBodyPtr& pbody = vLockedGrabbedBodiesCache[indexGrabbed1];
-        if( !pbody ) {
+        const KinBodyPtr& pGrabbedBody1 = vLockedGrabbedBodiesCache[indexGrabbed1];
+        if( !pGrabbedBody1 ) {
             RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, ignoring.", GetName());
             continue;
         }
-        const KinBody& body = *pbody;
-        if( !body.IsEnabled() ) {
+        const KinBody& grabbedBody1 = *pGrabbedBody1;
+        if( !grabbedBody1.IsEnabled() ) {
             continue;
         }
 
-        const Grabbed& grabbed = *pgrabbed;
+        const std::list<KinBody::LinkConstPtr>& nonCollidingLinks1 = _vGrabbedBodies[indexGrabbed1]->_listNonCollidingLinks;
 
         KinBodyPtr pLinkParent;
 
-        for (const KinBody::LinkConstPtr& probotlinkFromNonColliding : grabbed._listNonCollidingLinks) {
+        for (const KinBody::LinkConstPtr& probotlinkFromNonColliding : nonCollidingLinks1) {
             const KinBody::Link& robotlinkFromNonColliding = *probotlinkFromNonColliding;
             pLinkParent = robotlinkFromNonColliding.GetParent(true);
             if( !pLinkParent ) {
@@ -111,8 +110,8 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
             const KinBody::LinkConstPtr& probotlink = (!!pLinkParent) ? probotlinkFromNonColliding : _veclinks.at(robotlinkFromNonColliding.GetIndex());
             
             // have to use link/link collision since link/body checks attached bodies
-            for (const KinBody::LinkPtr& plink : body.GetLinks()) {
-                if( collisionchecker->CheckCollision(probotlink, plink, pusereport) ) {
+            for (const KinBody::LinkPtr& pGrabbedBodylink : grabbedBody1.GetLinks()) {
+                if( collisionchecker->CheckCollision(probotlink, pGrabbedBodylink, pusereport) ) {
                     bCollision = true;
                     if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                         break;
@@ -134,7 +133,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
             }
         }
 
-        if( body.CheckSelfCollision(pusereport, collisionchecker) ) {
+        if( grabbedBody1.CheckSelfCollision(pusereport, collisionchecker) ) {
             bCollision = true;
             if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                 break;
@@ -147,22 +146,22 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         // check attached bodies with each other, this is actually tricky since they are attached "with each other", so regular CheckCollision will not work.
         // Instead, we will compare each of the body's links with every other
         if( numGrabbed > 1) {
+            // since collision check is symmetric, checking collision once per pair is sufficient (don't need to check obj1 against obj2, and obj2 against obj1)
             for (size_t indexGrabbed2 = indexGrabbed1 + 1; indexGrabbed2 < numGrabbed; indexGrabbed2++) {
-                const GrabbedPtr& pgrabbed2 = _vGrabbedBodies[indexGrabbed2];
-                const KinBodyPtr& pbody2 = vLockedGrabbedBodiesCache[indexGrabbed2];
-                if( !pbody2 ) {
+                const KinBodyPtr& pgrabbedBody2 = vLockedGrabbedBodiesCache[indexGrabbed2];
+                if( !pgrabbedBody2 ) {
                     RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, so ignoring.", GetName());
                     continue;
                 }
 
-                const Grabbed& grabbed2 = *pgrabbed2;
+                const std::list<KinBody::LinkConstPtr>& nonCollidingLinks2 = _vGrabbedBodies[indexGrabbed2]->_listNonCollidingLinks;
 
-                for(const KinBody::LinkPtr& plink2 : pbody2->GetLinks()) {
+                for(const KinBody::LinkPtr& pGrabbedBody2Link : pgrabbedBody2->GetLinks()) {
                     // make sure the two bodies were not initially colliding
-                    if( find(grabbed._listNonCollidingLinks.begin(),grabbed._listNonCollidingLinks.end(),plink2) != grabbed._listNonCollidingLinks.end() ) {
-                        for(const KinBody::LinkPtr& plink : body.GetLinks()) {
-                            if( find(grabbed2._listNonCollidingLinks.begin(),grabbed2._listNonCollidingLinks.end(),plink) != grabbed2._listNonCollidingLinks.end() ) {
-                                if( collisionchecker->CheckCollision(KinBody::LinkConstPtr(plink),KinBody::LinkConstPtr(plink2),pusereport) ) {
+                    if( find(nonCollidingLinks1.begin(),nonCollidingLinks1.end(),pGrabbedBody2Link) != nonCollidingLinks1.end() ) {
+                        for(const KinBody::LinkPtr& pGrabbedBody1Link : grabbedBody1.GetLinks()) {
+                            if( find(nonCollidingLinks2.begin(),nonCollidingLinks2.end(),pGrabbedBody1Link) != nonCollidingLinks2.end() ) {
+                                if( collisionchecker->CheckCollision(KinBody::LinkConstPtr(pGrabbedBody1Link),KinBody::LinkConstPtr(pGrabbedBody2Link),pusereport) ) {
                                     bCollision = true;
                                     if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                                         break;
