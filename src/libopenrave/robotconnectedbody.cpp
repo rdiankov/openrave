@@ -796,7 +796,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
 
             if( bHasSameTool ) {
-                RAVELOG_INFO_FORMAT("When adding ConnectedBody %s for robot %s, got resolved manipulator with same name '%s'. Perhaps trying to overwrite? For now, passing through.", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name);
+                RAVELOG_INFO_FORMAT("env=%s, when adding ConnectedBody %s for robot %s, got resolved manipulator with same name '%s'. Perhaps trying to overwrite? For now, passing through.", GetEnv()->GetNameId()%connectedBody.GetName()%GetName()%pnewmanipulator->_info._name);
                 pnewmanipulator.reset(); // will not be adding it
                 continue;
             }

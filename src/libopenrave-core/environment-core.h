@@ -2814,7 +2814,7 @@ public:
                         // new name will conflict with *itExistingSameName, so should change the names to something temporarily
                         // for now, clear since the body should be processed later again
                         RAVELOG_DEBUG_FORMAT("env=%s, have to clear body name '%s' id=%s for loading body with id=%s", GetNameId()%(*itExistingSameName)->GetName()%(*itExistingSameName)->GetId()%(*itExisting)->GetId());
-                        (*itExistingSameName)->SetName(_GetUniqueName((*itExistingSameName)->GetName()+"_renamedDueToConflict_"));
+                        (*itExistingSameName)->SetName(_GetUniqueName((*itExistingSameName)->GetName()+"_tempRenamedDueToConflict_"));
                         listBodiesTemporarilyRenamed.push_back(*itExistingSameName);
                     }
                     pMatchExistingBody = *itExisting;

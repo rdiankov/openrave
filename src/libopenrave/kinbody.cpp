@@ -6114,7 +6114,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             SetId(info._id);
         }
         else if( info._id.empty() ) {
-            RAVELOG_INFO_FORMAT("env=%d, body %s do not update id since update has empty id", GetEnv()->GetId()%GetName());
+            RAVELOG_INFO_FORMAT("env=%d, body '%s' do not update id '%s' since update has empty id", GetEnv()->GetId()%GetName()%GetId());
         }
         else {
             RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());
@@ -6207,7 +6207,17 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         OPENRAVE_ASSERT_OP(info._name.size(), >, 0);
         SetName(info._name);
         updateFromInfoResult = UFIR_Success;
-        RAVELOG_VERBOSE_FORMAT("body %s updated due to name change", _id);
+        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated due to name change", info._name);
+    }
+
+    if( GetURI() != info._uri && !info._uri.empty()) {
+        __struri = info._uri;
+        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated uri to '%s'", GetEnv()->GetNameId()%info._name%info._uri);
+    }
+
+    if( _referenceUri != info._referenceUri && !info._referenceUri.empty()) {
+        _referenceUri = info._referenceUri;
+        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated referenceUri to '%s'", GetEnv()->GetNameId()%info._name%info._referenceUri);
     }
 
     // transform
