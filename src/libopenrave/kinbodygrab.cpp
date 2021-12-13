@@ -27,10 +27,12 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink)
 
     // if grabbing, check if the transforms are different. If they are, then update the transform
     GrabbedPtr pPreviousGrabbed;
+    std::vector<GrabbedPtr>::iterator itPreviousGrabbed;
     FOREACHC(itgrabbed, _vGrabbedBodies) {
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
         if( pgrabbed->_pGrabbedBody.lock() == pGrabbedBody ) {
             pPreviousGrabbed = pgrabbed;
+            itPreviousGrabbed = itgrabbed;
             break;
         }
     }
@@ -38,7 +40,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink)
     // double check since collision checkers might not support this case
     if( pGrabbedBody->HasAttached() ) {
         if( !!pPreviousGrabbed ) {
-            RAVELOG_INFO_FORMAT("env=%d, body %s is previously grabbed by %s, so", GetEnv()->GetId()%pGrabbedBody->GetName()%GetName());
+            RAVELOG_INFO_FORMAT("env=%s, body '%s' is already grabbing body '%s'", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName());
         }
         else {
             std::set<KinBodyPtr> setAttached;
@@ -49,14 +51,10 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink)
                     ss << (*itbody)->GetName() << ", ";
                 }
             }
-            RAVELOG_WARN_FORMAT("env=%s, body %s trying to grab body %s with %d attached bodies [%s]", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName()%setAttached.size()%ss.str());
+            RAVELOG_WARN_FORMAT("env=%s, body '%s' trying to grab body '%s' with %d attached bodies [%s]", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName()%setAttached.size()%ss.str());
         }
     }
 
-    /*
-       t --> tGrabbingLink
-       tbody --> tGrabbedbody
-     */
     Transform tGrabbingLink = pGrabbingLink->GetTransform();
     Transform tGrabbedBody = pGrabbedBody->GetTransform();
     // new body velocity is measured from body link
@@ -68,14 +66,9 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink)
             // links and transforms are the same, so no worries
             return true;
         }
-        RAVELOG_VERBOSE_FORMAT("Body %s: body %s already grabbed, but transforms differ by %f \n", GetName()%pGrabbedBody->GetName()%disterror);
+        RAVELOG_DEBUG_FORMAT("env=%s, body '%s' is already grabbing body '%s' but grabbed body transform differs. disterror=%.15e", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName()%disterror);
         _RemoveAttachedBody(*pGrabbedBody);
-        // CallOnDestruction destructigonhook(boost::bind(&RobotBase::_AttachBody,this,pbody));
-        // pPreviousGrabbed->_plinkrobot = plink;
-        // pPreviousGrabbed->_troot = t.inverse() * tbody;
-        // pPreviousGrabbed->ProcessCollidingLinks(pPreviousGrabbed->_setRobotLinksToIgnore);
-        // pbody->SetVelocity(velocity.first, velocity.second);
-        // return true;
+        _vGrabbedBodies.erase(itPreviousGrabbed); // need to remove it from _vGrabbedBodies since we'll be adding a new GrabbedPtr to _vGrabbedBodies
     }
 
     GrabbedPtr pGrabbed(new Grabbed(pGrabbedBody, pGrabbingLink));
@@ -100,7 +93,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink)
         _AttachBody(pGrabbedBody);
     }
     catch(...) {
-        RAVELOG_ERROR_FORMAT("env=%s, failed to attach %s to %s when grabbing", GetEnv()->GetNameId()%pGrabbedBody->GetName()%GetName());
+        RAVELOG_ERROR_FORMAT("env=%s, failed to attach body '%s' to body '%s' when grabbing", GetEnv()->GetNameId()%pGrabbedBody->GetName()%GetName());
         BOOST_ASSERT(_vGrabbedBodies.back() == pGrabbed);
         _vGrabbedBodies.pop_back();
         throw;
