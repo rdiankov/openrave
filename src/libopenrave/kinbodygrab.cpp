@@ -175,11 +175,6 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
 
 bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<int>& setGrabberLinksToIgnore)
 {
-    /*
-       pbody --> pGrabbedBody
-       pBodyLinkToGrabWith --> pGrabbingLink
-       setBodyLinksToIgnore -> setGrabberLinksToIgnore
-     */
     OPENRAVE_ASSERT_FORMAT(!!pGrabbedBody, "env=%s, body to be grabbed by body '%s' is invalid", GetEnv()->GetNameId()%GetName(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(!!pGrabbingLink, "env=%s, pGrabbingLink of body '%s' for grabbing body '%s' is invalid", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(pGrabbingLink->GetParent().get() == this, "env=%s, pGrabbingLink name='%s' for grabbing '%s' is not part of body '%s'", GetEnv()->GetNameId()%pGrabbingLink->GetName()%pGrabbedBody->GetName()%GetName(), ORE_InvalidArguments);
@@ -371,7 +366,6 @@ void KinBody::RegrabAll()
         KinBodyPtr pBody = pGrabbed->_pGrabbedBody.lock();
         if( !!pBody ) {
             _RemoveAttachedBody(*pBody);
-            vHooks.push_back(CallOnDestruction(boost::bind(&RobotBase::_AttachBody, this, pBody)));
         }
     }
 
@@ -379,6 +373,7 @@ void KinBody::RegrabAll()
     vOriginalGrabbed.swap(_vGrabbedBodies);
 
     _vGrabbedBodies.reserve(numGrabbed);
+    // Regrab all the objects in the same order.
     for( size_t iGrabbed = 0; iGrabbed < numGrabbed; ++iGrabbed ) {
         GrabbedPtr pGrabbed = vOriginalGrabbed[iGrabbed];
         KinBodyPtr pBody = pGrabbed->_pGrabbedBody.lock();
@@ -390,7 +385,21 @@ void KinBody::RegrabAll()
         GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink));
         pNewGrabbed->_tRelative = pGrabbed->_tRelative;
         pNewGrabbed->_setGrabberLinksToIgnore.swap(pGrabbed->_setGrabberLinksToIgnore);
+
+        std::pair<Vector, Vector> velocity = pNewGrabbed->_pGrabbingLink->GetVelocity();
+        velocity.first += velocity.second.cross(pBody->GetTransform().trans - pNewGrabbed->_pGrabbingLink->GetTransform().trans);
+        pBody->SetVelocity(velocity.first, velocity.second);
+
         _vGrabbedBodies.push_back(pNewGrabbed);
+        try {
+            _AttachBody(pBody);
+        }
+        catch(...) {
+            RAVELOG_ERROR_FORMAT("env=%s, failed to attach body '%s' to body '%s' when grabbing", GetEnv()->GetNameId()%pBody->GetName()%GetName());
+            BOOST_ASSERT(_vGrabbedBodies.back() == pGrabbed);
+            _vGrabbedBodies.pop_back();
+            throw;
+        }
     }
 
 #if 0
