@@ -739,7 +739,9 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
                 pGrabbed->_setGrabberLinksToIgnore.insert(GetLink(*itLinkName)->GetIndex());
             }
 
-            // TODO: do we need to set velocities?
+            std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
+            velocity.first += velocity.second.cross(tBody.trans - tGrabbingLink.trans);
+            pBody->SetVelocity(velocity.first, velocity.second);
 
             _vGrabbedBodies.push_back(pGrabbed);
             _AttachBody(pBody);
@@ -827,7 +829,7 @@ void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::
         }
     }
 #endif
-    RAVELOG_WARN(str(boost::format("body %s is not currently grabbed")%body->GetName()));
+    RAVELOG_WARN_FORMAT("env=%s, body '%s' is not currently grabbing '%s' so cannot get ignoreLinks", GetEnv()->GetNameId()%GetName()%body->GetName());
 }
 
 void KinBody::_UpdateGrabbedBodies()
@@ -838,16 +840,17 @@ void KinBody::_UpdateGrabbedBodies()
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
         KinBodyPtr pGrabbedBody = pgrabbed->_pGrabbedBody.lock();
         if( !!pGrabbedBody ) {
-            Transform t = pgrabbed->_pGrabbingLink->GetTransform();
-            pGrabbedBody->SetTransform(t * pgrabbed->_tRelative);
+            Transform tGrabbingLink = pgrabbed->_pGrabbingLink->GetTransform();
+            Transform tGrabbedBody = tGrabbingLink * pgrabbed->_tRelative;
+            pGrabbedBody->SetTransform(tGrabbedBody);
             // set the correct velocity
             pgrabbed->_pGrabbingLink->GetVelocity(velocity.first, velocity.second);
-            velocity.first += velocity.second.cross(t.rotate(pgrabbed->_tRelative.trans));
+            velocity.first += velocity.second.cross(tGrabbedBody.trans - tGrabbingLink.trans);
             pGrabbedBody->SetVelocity(velocity.first, velocity.second);
             ++itgrabbed;
         }
         else {
-            RAVELOG_DEBUG_FORMAT("env=%d, erasing invaliding grabbed body from %s", GetEnv()->GetId()%GetName());
+            RAVELOG_DEBUG_FORMAT("env=%s, erasing invalid grabbed body from grabbing body '%s'", GetEnv()->GetNameId()%GetName());
             itgrabbed = _vGrabbedBodies.erase(itgrabbed);
         }
     }
