@@ -5643,7 +5643,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
             continue;
         }
 
-        KinBodyPtr pbodyref = pgrabbedref->_pgrabbedbody.lock();
+        KinBodyPtr pbodyref = pgrabbedref->_pGrabbedBody.lock();
         KinBodyPtr pgrabbedbody;
         if( !!pbodyref ) {
             //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodyref->GetEnvironmentBodyIndex());
@@ -5658,12 +5658,14 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
             }
             //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
 
-            GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_plinkrobot)->GetIndex())));
-            pgrabbed->_troot = pgrabbedref->_troot;
-            pgrabbed->_listNonCollidingLinks.clear();
-            FOREACHC(itlinkref, pgrabbedref->_listNonCollidingLinks) {
-                pgrabbed->_listNonCollidingLinks.push_back(_veclinks.at((*itlinkref)->GetIndex()));
+            // PUTTICHAI: TODO: manage pgrabbed->_pGrabedSaver and pgrabbed->_pGrabberSaver
+            GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_pGrabbingLink)->GetIndex())));
+            pgrabbed->_tRelative = pgrabbedref->_tRelative;
+            pgrabbed->_listNonCollidingLinksWhenGrabbed.clear();
+            FOREACHC(itlinkref, pgrabbedref->_listNonCollidingLinksWhenGrabbed) {
+                pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itlinkref)->GetIndex()));
             }
+            pgrabbed->_SetLinkNonCollidingIsValid(true);
             _vGrabbedBodies.push_back(pgrabbed);
             try {
                 // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
@@ -5719,6 +5721,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
     }
 
     if( (parameters&Prop_LinkEnable) == Prop_LinkEnable ) {
+#if 0
         // check if any regrabbed bodies have the link in _listNonCollidingLinks and the link is enabled, or are missing the link in _listNonCollidingLinks and the link is disabled
         std::map<GrabbedPtr, list<KinBody::LinkConstPtr> > mapcheckcollisions;
         FOREACH(itlink,_veclinks) {
@@ -5772,6 +5775,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
 //                }
 //            }
 //        }
+#endif
     }
 
     std::list<UserDataWeakPtr> listRegisteredCallbacks;

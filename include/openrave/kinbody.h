@@ -1172,7 +1172,7 @@ public:
 protected:
         /// \brief enables / disables LinkInfo as well as notifies parent KinBody
         void _Enable(bool enable);
-        
+
         /// \brief Updates the cached information due to changes in the collision data.
         ///
         /// \param parameterschanged if true, will
@@ -2614,7 +2614,7 @@ private:
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
-    
+
     /// \brief get the transformations of all the links at once
     void GetLinkTransformations(std::vector<Transform>& transforms) const;
 
@@ -3045,7 +3045,7 @@ private:
 
     /// \brief return if two links are adjacent links are not.
     bool AreAdjacentLinks(int linkindex0, int linkindex1) const;
-    
+
     /// \brief adds the pair of links to the adjacency list.
     ///
     /// \param linkIndices vector containing pair of link indies. Each pair of is set as adjacent links. For each pair, first and second must be different.
@@ -3475,6 +3475,7 @@ private:
     friend class Grabbed;
 };
 
+#if 0
 /// \brief The information of a currently grabbed body.
 class Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
 {
@@ -3518,6 +3519,49 @@ private:
 
     std::map<KinBody::LinkConstPtr, int> _mapLinkIsNonColliding; // the collision state for each link at the time the body was grabbed.
 };
+#endif
+
+class Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
+{
+public:
+    Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink);
+    virtual ~Grabbed() {
+    }
+
+    /// \brief TODO
+    ///
+    ///
+    void ComputeListNonCollidingLinks();
+
+    inline void InvalidateListNonCollidingLinks()
+    {
+        _listNonCollidingIsValid = false;
+    }
+
+    inline void _SetLinkNonCollidingIsValid(const bool bIsValid)
+    {
+        _listNonCollidingIsValid = bIsValid;
+    }
+
+    /// \brief Add more links to force ignore during grabber's self-collision checking into _setGrabberLinksToIgnore.
+    ///        This function is called when we make the grabber grab the same grabbed body more than once with different
+    ///        input links to ignore.
+    void AddMoreIgnoreLinks(const std::set<int>& setAdditionalGrabberLinksToIgnore);
+
+    // Member Variables
+    KinBodyWeakPtr _pGrabbedBody;
+    KinBody::LinkPtr _pGrabbingLink;
+    std::list<KinBody::LinkConstPtr> _listNonCollidingLinksWhenGrabbed;
+    Transform _tRelative;
+    std::set<int> _setGrabberLinksToIgnore;
+
+private:
+    bool _listNonCollidingIsValid = false; ///<
+    std::vector<KinBody::LinkPtr> _vAttachedToGrabbingLink; ///< vector of all links that are rigidly attached to _pGrabbingLink
+    KinBody::KinBodyStateSaverPtr _pGrabberSaver; ///< statesaver that saves the snapshot of the grabber at the time Grab is called. The saved state will be used (i.e. restored) temporarily when computation of _listNonCollidingLinksWhenGrabbed is necessary.
+    KinBody::KinBodyStateSaverPtr _pGrabbedSaver; ///< statesaver that saves the snapshot of the grabbed at the time Grab is called. The saved state will be used (i.e. restored) temporarily when computation of _listNonCollidingLinksWhenGrabbed is necessary.
+
+}; // end class MyGrabbed
 
 
 } // end namespace OpenRAVE

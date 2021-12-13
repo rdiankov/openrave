@@ -93,13 +93,15 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         OPENRAVE_ASSERT_OP(pbody->_vGrabbedBodies.size(),==,0);
         FOREACH(itgrabbed, _vGrabbedBodies) {
             GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
-            KinBodyPtr pbodygrab = pgrabbed->_pgrabbedbody.lock();
+            KinBodyPtr pbodygrab = pgrabbed->_pGrabbedBody.lock();
             if( !!pbodygrab ) {
                 if( pbody->GetEnv() == _pbody->GetEnv() ) {
                     pbody->_AttachBody(pbodygrab);
                     pbody->_vGrabbedBodies.push_back(*itgrabbed);
                 }
                 else {
+                    RAVELOG_WARN("Not implemented yet");
+#if 0
                     // pgrabbed points to a different environment, so have to re-initialize
                     KinBodyPtr pnewbody = pbody->GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodygrab->GetEnvironmentBodyIndex());
                     if( !!pnewbody ) {
@@ -120,6 +122,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                     else {
                         RAVELOG_WARN_FORMAT("env=%d, could not find body %s with id %d", pbody->GetEnv()->GetId()%pbodygrab->GetName()%pbodygrab->GetEnvironmentBodyIndex());
                     }
+#endif
                 }
             }
         }
@@ -252,13 +255,15 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
         OPENRAVE_ASSERT_OP(body._vGrabbedBodies.size(),==,0);
         FOREACH(itgrabbed, _vGrabbedBodies) {
             GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
-            KinBodyPtr pbodygrab = pgrabbed->_pgrabbedbody.lock();
+            KinBodyPtr pbodygrab = pgrabbed->_pGrabbedBody.lock();
             if( !!pbodygrab ) {
                 if( body.GetEnv() == body.GetEnv() ) {
                     body._AttachBody(pbodygrab);
                     body._vGrabbedBodies.push_back(*itgrabbed);
                 }
                 else {
+                    RAVELOG_WARN("Not implemented yet");
+#if 0
                     // pgrabbed points to a different environment, so have to re-initialize
                     KinBodyPtr pnewbody = body.GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodygrab->GetEnvironmentBodyIndex());
                     if( pbodygrab->GetKinematicsGeometryHash() != pnewbody->GetKinematicsGeometryHash() ) {
@@ -274,6 +279,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                         body._AttachBody(pnewbody);
                         body._vGrabbedBodies.push_back(pnewgrabbed);
                     }
+#endif
                 }
             }
         }
