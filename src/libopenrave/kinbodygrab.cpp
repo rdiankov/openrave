@@ -479,14 +479,14 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_IgnoredLinksNotMatch);
 
-        pgrabbed->ComputeListNonCollidingLinks();
+        // pgrabbed->ComputeListNonCollidingLinks();
 
         // compare ignored robot links
         bool ignoringLinksMatch = true;
         size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
         for( const LinkPtr& link : _veclinks ) {
-            const bool isLinkIgnored = find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end() ||
-                                       find(pgrabbed->_listNonCollidingLinksWhenGrabbed.begin(), pgrabbed->_listNonCollidingLinksWhenGrabbed.end(), link) == pgrabbed->_listNonCollidingLinksWhenGrabbed.end();
+            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end(); // ||
+            // find(pgrabbed->_listNonCollidingLinksWhenGrabbed.begin(), pgrabbed->_listNonCollidingLinksWhenGrabbed.end(), link) == pgrabbed->_listNonCollidingLinksWhenGrabbed.end();
             if( isLinkIgnored ) {
                 ++numIgnoredLinks;
             }
@@ -521,14 +521,14 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_IgnoredLinksNotMatch);
 
-        pgrabbed->ComputeListNonCollidingLinks();
+        // pgrabbed->ComputeListNonCollidingLinks();
 
         // compare ignored robot links
         bool ignoringLinksMatch = true;
         size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
         for( const LinkPtr& link : _veclinks ) {
-            const bool isLinkIgnored = find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end() ||
-                                       find(pgrabbed->_listNonCollidingLinksWhenGrabbed.begin(), pgrabbed->_listNonCollidingLinksWhenGrabbed.end(), link) == pgrabbed->_listNonCollidingLinksWhenGrabbed.end();
+            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end(); // ||
+            // find(pgrabbed->_listNonCollidingLinksWhenGrabbed.begin(), pgrabbed->_listNonCollidingLinksWhenGrabbed.end(), link) == pgrabbed->_listNonCollidingLinksWhenGrabbed.end();
             if( isLinkIgnored ) {
                 ++numIgnoredLinks;
             }
@@ -568,10 +568,10 @@ KinBodyPtr KinBody::GetGrabbedBody(int iGrabbed) const
     return KinBodyPtr(); // whatever is grabbed is not valid.
 }
 
-void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo) const
+void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos) const
 {
-    vgrabbedinfo.reserve(_vGrabbedBodies.size());
-    vgrabbedinfo.clear();
+    vGrabbedInfos.reserve(_vGrabbedBodies.size());
+    vGrabbedInfos.clear();
     for(size_t i = 0; i < _vGrabbedBodies.size(); ++i) {
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(_vGrabbedBodies[i]);
         KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
@@ -583,44 +583,36 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo)
             poutputinfo->_trelative = pgrabbed->_tRelative;
             poutputinfo->_setIgnoreRobotLinkNames.clear();
 
-            // pgrabbed->ComputeListNonCollidingLinks(); /// TODO:
             FOREACHC(itlink, _veclinks) {
                 if( find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end() ) {
                     poutputinfo->_setIgnoreRobotLinkNames.insert((*itlink)->GetName());
                 }
-                // else if( find(pgrabbed->_listNonCollidingLinksWhenGrabbed.begin(), pgrabbed->_listNonCollidingLinksWhenGrabbed.end(), *itlink) == pgrabbed->_listNonCollidingLinksWhenGrabbed.end() ) {
-                //     poutputinfo->_setIgnoreRobotLinkNames.insert((*itlink)->GetName());
-                // }
             }
-            vgrabbedinfo.push_back(poutputinfo);
+            vGrabbedInfos.push_back(poutputinfo);
         }
     }
 }
 
-void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const
+void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vGrabbedInfos) const
 {
-    vgrabbedinfo.resize(_vGrabbedBodies.size());
+    vGrabbedInfos.resize(_vGrabbedBodies.size());
     for(size_t igrabbed = 0; igrabbed < _vGrabbedBodies.size(); ++igrabbed) {
-        vgrabbedinfo[igrabbed].Reset(); /// have to reset everything
+        vGrabbedInfos[igrabbed].Reset(); /// have to reset everything
 
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(_vGrabbedBodies[igrabbed]);
         KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
         // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
         if( !!pgrabbedbody ) {
-            KinBody::GrabbedInfo& outputinfo = vgrabbedinfo[igrabbed];
+            KinBody::GrabbedInfo& outputinfo = vGrabbedInfos[igrabbed];
             outputinfo._grabbedname = pgrabbedbody->GetName();
             outputinfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
             outputinfo._trelative = pgrabbed->_tRelative;
             outputinfo._setIgnoreRobotLinkNames.clear();
 
-            // pgrabbed->ComputeListNonCollidingLinks(); // TODO:
             FOREACHC(itlink, _veclinks) {
                 if( find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end() ) {
                     outputinfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
                 }
-                // else if( find(pgrabbed->_listNonCollidingLinksWhenGrabbed.begin(), pgrabbed->_listNonCollidingLinksWhenGrabbed.end(), *itlink) == pgrabbed->_listNonCollidingLinksWhenGrabbed.end() ) {
-                //     outputinfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
-                // }
             }
         }
     }
@@ -639,14 +631,10 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
                 grabbedInfo._trelative = pgrabbed->_tRelative;
                 grabbedInfo._setIgnoreRobotLinkNames.clear();
 
-                // pgrabbed->ComputeListNonCollidingLinks(); // TODO:
                 FOREACHC(itlink, _veclinks) {
                     if( find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end() ) {
                         grabbedInfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
                     }
-                    // else if( find(pgrabbed->_listNonCollidingLinksWhenGrabbed.begin(), pgrabbed->_listNonCollidingLinksWhenGrabbed.end(), *itlink) == pgrabbed->_listNonCollidingLinksWhenGrabbed.end() ) {
-                    //     grabbedInfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
-                    // }
                 }
                 return true;
             }
