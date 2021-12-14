@@ -2561,7 +2561,6 @@ void Grabbed::ComputeListNonCollidingLinks()
             boost::shared_ptr<Grabbed const> pOtherGrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itGrabbed);
 
             KinBodyPtr pOtherGrabbedBody = pOtherGrabbed->_pGrabbedBody.lock();
-            RAVELOG_INFO_FORMAT("env=%s, PUTTICHAI: current grabbed='%s'; other grabbed(%d/%d)='%s'", penv->GetNameId()%pGrabbedBody->GetName()%iOtherGrabbed%numOtherGrabbed%pOtherGrabbedBody->GetName());
             if( !pOtherGrabbedBody ) {
                 RAVELOG_WARN_FORMAT("env=%s, other grabbed body on %s has already been released. So ignoring it.", penv->GetNameId()%pGrabber->GetName());
                 continue;
@@ -2570,6 +2569,7 @@ void Grabbed::ComputeListNonCollidingLinks()
                 RAVELOG_WARN_FORMAT("env=%s, other grabbed body %s on %s has no links. Perhaps not initialized. So ignoring it.", penv->GetNameId()%pOtherGrabbedBody->GetName()%pGrabber->GetName());
                 continue;
             }
+            RAVELOG_INFO_FORMAT("env=%s, PUTTICHAI: current grabbed='%s'; other grabbed(%d/%d)='%s'", penv->GetNameId()%pGrabbedBody->GetName()%iOtherGrabbed%numOtherGrabbed%pOtherGrabbedBody->GetName());
 
             bool bSameLink = std::find(_vAttachedToGrabbingLink.begin(), _vAttachedToGrabbingLink.end(), pOtherGrabbed->_pGrabbingLink) != _vAttachedToGrabbingLink.end();
 
