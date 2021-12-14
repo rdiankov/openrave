@@ -275,9 +275,8 @@ void KinBody::RegrabAll()
     }
 }
 
-void KinBody::_Regrab(UserDataPtr _pgrabbed)
+void KinBody::_Regrab(GrabbedPtr pgrabbed)
 {
-    GrabbedPtr pgrabbed = _pgrabbed;
     KinBodyPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
     if( !!pgrabbedbody ) {
         // have to re-grab the body, which means temporarily resetting the collision checker and attachment

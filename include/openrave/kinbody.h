@@ -3307,7 +3307,7 @@ protected:
     }
 
     /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
-    void _Regrab(UserDataPtr pgrabbed);
+    void _Regrab(GrabbedPtr pgrabbed);
 
     void SetManageData(ManageDataPtr pdata) {
         _pManageData = pdata;
