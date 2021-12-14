@@ -5636,8 +5636,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _listAttachedBodies.clear(); // will be set in the environment
     _vGrabbedBodies.clear();
     _vGrabbedBodies.reserve(r->_vGrabbedBodies.size());
-    FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
-        GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
+    for (const GrabbedPtr& pgrabbedref : r->_vGrabbedBodies) {
         if( !pgrabbedref ) {
             RAVELOG_WARN_FORMAT("env=%s, have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetNameId());
             continue;
@@ -5723,8 +5722,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
         std::map<GrabbedPtr, list<KinBody::LinkConstPtr> > mapcheckcollisions;
         FOREACH(itlink,_veclinks) {
             if( (*itlink)->IsEnabled() ) {
-                FOREACH(itgrabbed,_vGrabbedBodies) {
-                    GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+                for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
                     if( find(pgrabbed->GetRigidlyAttachedLinks().begin(),pgrabbed->GetRigidlyAttachedLinks().end(), *itlink) == pgrabbed->GetRigidlyAttachedLinks().end() ) {
                         std::list<KinBody::LinkConstPtr>::iterator itnoncolliding = find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink);
                         if( itnoncolliding != pgrabbed->_listNonCollidingLinks.end() ) {
@@ -5744,8 +5742,8 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
             }
             else {
                 // add since it is disabled?
-                for ( const UserDataPtr& pGrabbedUserData : _vGrabbedBodies) {
-                    Grabbed& grabbed = *(boost::dynamic_pointer_cast<Grabbed>(pGrabbedUserData));
+                for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
+                    Grabbed& grabbed = *pgrabbed;
                     const std::vector<KinBody::LinkPtr>& attachedLinks = grabbed.GetRigidlyAttachedLinks();
                     if( find(attachedLinks.begin(),attachedLinks.end(), *itlink) == attachedLinks.end() ) {
                         std::list<KinBody::LinkConstPtr>& nonCollidingLinks = grabbed._listNonCollidingLinks;
