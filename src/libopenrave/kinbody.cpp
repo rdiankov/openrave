@@ -6007,7 +6007,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 {
     info._modifiedFields = 0;
     info._id = _id;
-    info._uri = __struri;
+    info._uri = GetURI();
     info._name = _name;
     info._referenceUri = _referenceUri;
     info._interfaceType = GetXMLId();
@@ -6210,13 +6210,15 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated due to name change", info._name);
     }
 
-    if( GetURI() != info._uri && !info._uri.empty()) {
+    if( GetURI() != info._uri ) {
         __struri = info._uri;
+        updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated uri to '%s'", GetEnv()->GetNameId()%info._name%info._uri);
     }
 
-    if( _referenceUri != info._referenceUri && !info._referenceUri.empty()) {
+    if( _referenceUri != info._referenceUri ) {
         _referenceUri = info._referenceUri;
+        updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated referenceUri to '%s'", GetEnv()->GetNameId()%info._name%info._referenceUri);
     }
 
