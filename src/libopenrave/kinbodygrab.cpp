@@ -619,55 +619,6 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
 
         _PostprocessChangedParameters(Prop_RobotGrabbed);
     } // end if vGrabbedInfos.size() > 0
-#if 0
-    if( vgrabbedinfo.size() > 0 ) {
-        CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
-        CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
-        FOREACHC(itgrabbedinfo, vgrabbedinfo) {
-            GrabbedInfoConstPtr pgrabbedinfo = *itgrabbedinfo;
-            KinBodyPtr pbody = GetEnv()->GetKinBody(pgrabbedinfo->_grabbedname);
-            OPENRAVE_ASSERT_FORMAT(!!pbody, "env=%d, when grabbing with body '%s' invalid grab body '%s'",GetEnv()->GetId()%GetName()%pgrabbedinfo->_grabbedname, ORE_InvalidArguments);
-            KinBody::LinkPtr pBodyLinkToGrabWith = GetLink(pgrabbedinfo->_robotlinkname);
-            if( !pBodyLinkToGrabWith ) {
-                std::stringstream ss;
-                for(const LinkPtr& plink : _veclinks) {
-                    ss << plink->GetName() << ",";
-                }
-                throw OPENRAVE_EXCEPTION_FORMAT("env=%d, when grabbing with body '%s' invalid grab link '%s'. Available links are [%s]",GetEnv()->GetId()%GetName()%pgrabbedinfo->_robotlinkname%ss.str(), ORE_InvalidArguments);
-            }
-            OPENRAVE_ASSERT_FORMAT(pbody.get() != this, "body %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
-            if( IsGrabbing(*pbody) ) {
-                RAVELOG_VERBOSE(str(boost::format("Body %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
-                continue;
-            }
-
-            GrabbedPtr pgrabbed(new Grabbed(pbody,pBodyLinkToGrabWith));
-            pgrabbed->_troot = pgrabbedinfo->_trelative;
-            if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
-                // collision checking will not be automatically updated with environment calls, so need to do this manually
-                _selfcollisionchecker->InitKinBody(pbody);
-            }
-            std::set<int> setRobotLinksToIgnore;
-            FOREACHC(itLinkName, pgrabbedinfo->_setIgnoreRobotLinkNames) {
-                setRobotLinksToIgnore.insert(GetLink(*itLinkName)->GetIndex());
-            }
-            pgrabbed->ProcessCollidingLinks(setRobotLinksToIgnore);
-            Transform tlink = pBodyLinkToGrabWith->GetTransform();
-            Transform tbody = tlink * pgrabbed->_troot;
-            if( pbody->GetLinks().size() == 0 ) {
-                RAVELOG_WARN_FORMAT("env=%d, cannot set transform of body '%s' with no links when grabbing by '%s'", GetEnv()->GetId()%pbody->GetName()%GetName());
-            }
-            pbody->SetTransform(tbody);
-            // set velocity
-            std::pair<Vector, Vector> velocity = pBodyLinkToGrabWith->GetVelocity();
-            velocity.first += velocity.second.cross(tbody.trans - tlink.trans);
-            pbody->SetVelocity(velocity.first, velocity.second);
-            _vGrabbedBodies.push_back(pgrabbed);
-            _AttachBody(pbody);
-        }
-        _PostprocessChangedParameters(Prop_RobotGrabbed);
-    }
-#endif
 }
 
 void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const
@@ -685,20 +636,6 @@ void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::
             return;
         }
     }
-#if 0
-    FOREACHC(itgrabbed, _vGrabbedBodies) {
-        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-        KinBodyPtr grabbedbody = pgrabbed->_pgrabbedbody.lock();
-        if( grabbedbody == body ) {
-            FOREACHC(itbodylink, _veclinks) {
-                if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itbodylink) == pgrabbed->_listNonCollidingLinks.end() ) {
-                    ignorelinks.push_back(*itbodylink);
-                }
-            }
-            return;
-        }
-    }
-#endif
     RAVELOG_WARN_FORMAT("env=%s, body '%s' is not currently grabbing '%s' so cannot get ignoreLinks", GetEnv()->GetNameId()%GetName()%body->GetName());
 }
 
