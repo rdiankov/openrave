@@ -274,20 +274,13 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
             *report = *pusereport;
         }
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            std::vector<OpenRAVE::dReal> v;
-            GetDOFValues(v);
-            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-            ss << "self collision report=" << report->__str__() << " ";
-            for(size_t i = 0; i < v.size(); ++i ) {
-                if( i > 0 ) {
-                    ss << "," << v[i];
-                }
-                else {
-                    ss << "colvalues=[" << v[i];
-                }
+            std::vector<OpenRAVE::dReal> colvalues;
+            GetDOFValues(colvalues);
+            std::stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+            FOREACHC(itval, colvalues) {
+                ss << *itval << ",";
             }
-            ss << "]";
-            RAVELOG_VERBOSE(ss.str());
+            RAVELOG_VERBOSE_FORMAT("env=%s, self collision report=%s; colvalues=[%s]", GetEnv()->GetNameId()%report->__str__()%ss.str());
         }
     }
 
