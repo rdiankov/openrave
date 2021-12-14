@@ -164,10 +164,16 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
                 const std::list<KinBody::LinkConstPtr>& nonCollidingLinks2 = _vGrabbedBodies[indexGrabbed2]->_listNonCollidingLinksWhenGrabbed;
 
                 for( const KinBody::LinkPtr& pGrabbedBody2Link : grabbedBody2.GetLinks() ) {
+                    if( !pGrabbedBody2Link->IsEnabled() ) {
+                        continue;
+                    }
                     // See if these two links were initially colliding. If they are, then no further
                     // check is need (as this link pair should be skipped).
                     if( std::find(nonCollidingLinks1.begin(), nonCollidingLinks1.end(), pGrabbedBody2Link) != nonCollidingLinks1.end() ) {
                         for( const KinBody::LinkPtr& pGrabbedBody1Link : grabbedBody1.GetLinks() ) {
+                            if( !pGrabbedBody1Link->IsEnabled() ) {
+                                continue;
+                            }
                             if( std::find(nonCollidingLinks2.begin(), nonCollidingLinks2.end(), pGrabbedBody1Link) != nonCollidingLinks2.end() ) {
                                 if( collisionchecker->CheckCollision(KinBody::LinkConstPtr(pGrabbedBody1Link),
                                                                      KinBody::LinkConstPtr(pGrabbedBody2Link),
