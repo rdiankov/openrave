@@ -46,20 +46,13 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
     if( collisionchecker->CheckStandaloneSelfCollision(shared_kinbody_const(), report) ) {
         if( !!report ) {
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                std::vector<OpenRAVE::dReal> v;
-                GetDOFValues(v);
-                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                ss << "self collision report=" << report->__str__() << " ";
-                for(size_t i = 0; i < v.size(); ++i ) {
-                    if( i > 0 ) {
-                        ss << "," << v[i];
-                    }
-                    else {
-                        ss << "colvalues=[" << v[i];
-                    }
+                std::vector<OpenRAVE::dReal> colvalues;
+                GetDOFValues(colvalues);
+                std::stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                FOREACHC(itval, colvalues) {
+                    ss << *itval << ",";
                 }
-                ss << "]";
-                RAVELOG_VERBOSE(ss.str());
+                RAVELOG_VERBOSE_FORMAT("env=%s, self collision report=%s; colvalues=[%s]", GetEnv()->GetNameId()%report->__str__()%ss.str());
             }
         }
         if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
@@ -90,7 +83,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
     for (size_t indexGrabbed1 = 0; indexGrabbed1 < numGrabbed; indexGrabbed1++) {
         const KinBodyPtr& pGrabbedBody1 = vLockedGrabbedBodiesCache[indexGrabbed1];
         if( !pGrabbedBody1 ) {
-            RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, ignoring.", GetName());
+            RAVELOG_WARN_FORMAT("env=%s, grabbed body on %s has already been destroyed, ignoring.", GetEnv()->GetNameId()%GetName());
             continue;
         }
         const KinBody& grabbedBody1 = *pGrabbedBody1;
@@ -151,7 +144,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
             for( size_t indexGrabbed2 = indexGrabbed1 + 1; indexGrabbed2 < numGrabbed; ++indexGrabbed2 ) {
                 const KinBodyPtr& pGrabbedBody2 = vLockedGrabbedBodiesCache[indexGrabbed2];
                 if( !pGrabbedBody2 ) {
-                    RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, so ignoring.", GetName());
+                    RAVELOG_WARN_FORMAT("env=%s, grabbed body on %s has already been destroyed, so ignoring.", GetEnv()->GetNameId()%GetName());
                     continue;
                 }
                 const KinBody& grabbedBody2 = *pGrabbedBody2;
@@ -212,61 +205,6 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
                 break;
             }
         }
-#if 0
-        // check attached bodies with each other, this is actually tricky since they are attached "with each other", so regular CheckCollision will not work.
-        // Instead, we will compare each of the body's links with every other
-        if( numGrabbed > 1) {
-            // since collision check is symmetric, checking collision once per pair is sufficient (don't need to check obj1 against obj2, and obj2 against obj1)
-            for (size_t indexGrabbed2 = indexGrabbed1 + 1; indexGrabbed2 < numGrabbed; indexGrabbed2++) {
-                const KinBodyPtr& pgrabbedBody2 = vLockedGrabbedBodiesCache[indexGrabbed2];
-                if( !pgrabbedBody2 ) {
-                    RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, so ignoring.", GetName());
-                    continue;
-                }
-
-                const std::list<KinBody::LinkConstPtr>& nonCollidingLinks2 = _vGrabbedBodies[indexGrabbed2]->_listNonCollidingLinks;
-
-                for(const KinBody::LinkPtr& pGrabbedBody2Link : pgrabbedBody2->GetLinks()) {
-                    // make sure the two bodies were not initially colliding
-                    if( find(nonCollidingLinks1.begin(),nonCollidingLinks1.end(),pGrabbedBody2Link) != nonCollidingLinks1.end() ) {
-                        for(const KinBody::LinkPtr& pGrabbedBody1Link : grabbedBody1.GetLinks()) {
-                            if( find(nonCollidingLinks2.begin(),nonCollidingLinks2.end(),pGrabbedBody1Link) != nonCollidingLinks2.end() ) {
-                                if( collisionchecker->CheckCollision(KinBody::LinkConstPtr(pGrabbedBody1Link),KinBody::LinkConstPtr(pGrabbedBody2Link),pusereport) ) {
-                                    bCollision = true;
-                                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                                        break;
-                                    }
-                                }
-                                if( !!pusereport && pusereport->minDistance < report->minDistance ) {
-                                    *report = *pusereport;
-                                }
-                            }
-                            if( bCollision ) {
-                                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                                    break;
-                                }
-                            }
-                        }
-                        if( bCollision ) {
-                            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                                break;
-                            }
-                        }
-                    }
-                }
-                if( bCollision ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        break;
-                    }
-                }
-            }
-            if( bCollision ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    break;
-                }
-            }
-        } // end if numGrabbed > 1
-#endif
     } // end for indexGrabbed1
 
     if( bCollision && !!report ) {
