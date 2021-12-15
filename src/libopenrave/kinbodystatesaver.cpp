@@ -103,7 +103,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
             OPENRAVE_ASSERT_FORMAT(numExpectedConnectedBodies == vCurrentConnectedBodyActiveStates.size(), "env=%s, body '%s' now has %d connected bodies. expected=%d (env=%s)", pbody->GetEnv()->GetNameId()%pbody->GetName()%vCurrentConnectedBodyActiveStates.size()%numExpectedConnectedBodies%_pbody->GetEnv()->GetNameId(), ORE_InvalidState);
 
             for( size_t iConnectedBody = 0; iConnectedBody < numExpectedConnectedBodies; ++iConnectedBody ) {
-                OPENRAVE_ASSERT_FORMAT(_vConnectedBodyActiveStates[iConnectedBody] == vCurrentConnectedBodyActiveStates[iConnectedBody], "env=%s, body '%s' connected body %d/%d active state=%d not expected", pbody->GetEnv()->GetNameId()%pbody->GetName()%iConnectedBody%numExpectedConnectedBodies%vCurrentConnectedBodyActiveStates[iConnectedBody], ORE_InvalidState);
+                OPENRAVE_ASSERT_FORMAT(_vConnectedBodyActiveStates[iConnectedBody] == vCurrentConnectedBodyActiveStates[iConnectedBody], "env=%s, body '%s' connected body %d/%d active state=%d not expected", pbody->GetEnv()->GetNameId()%pbody->GetName()%iConnectedBody%numExpectedConnectedBodies%int(vCurrentConnectedBodyActiveStates[iConnectedBody]), ORE_InvalidState);
             }
         }
 
@@ -111,7 +111,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         pbody->ReleaseAllGrabbed();
         OPENRAVE_ASSERT_OP(pbody->_vGrabbedBodies.size(),==,0);
         FOREACH(itgrabbed, _vGrabbedBodies) {
-            GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+            GrabbedPtr pgrabbed = *itgrabbed;
             KinBodyPtr pbodygrab = pgrabbed->_pGrabbedBody.lock();
             if( !!pbodygrab ) {
                 if( pbody->GetEnv() == _pbody->GetEnv() ) {
