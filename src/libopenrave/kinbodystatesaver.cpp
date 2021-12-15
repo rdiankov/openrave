@@ -48,8 +48,14 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
     }
     if( _options & Save_GrabbedBodies ) {
         _vGrabbedBodies = _pbody->_vGrabbedBodies;
+        if( _pbody->IsRobot() ) {
+            // For now, do not allow a robot's connected body active states to change while the robot is grabbing
+            // something. The change in connected body active states essentially affect the robot's link indices, which
+            // will then mess up Grabbed's setGrabberLinksToIgnore.
+            RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(_pbody);
+            pRobot->GetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
+        }
     }
-
 }
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
@@ -88,6 +94,19 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     }
     // restoring grabbed bodies has to happen first before link transforms can be restored since _UpdateGrabbedBodies can be called with the old grabbed bodies.
     if( _options & Save_GrabbedBodies ) {
+        if( pbody->IsRobot() ) {
+            RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pbody);
+            std::vector<int8_t> vCurrentConnectedBodyActiveStates;
+            pRobot->GetConnectedBodyActiveStates(vCurrentConnectedBodyActiveStates);
+
+            size_t numExpectedConnectedBodies = _vConnectedBodyActiveStates.size();
+            OPENRAVE_ASSERT_FORMAT(numExpectedConnectedBodies == vCurrentConnectedBodyActiveStates.size(), "env=%s, body '%s' now has %d connected bodies. expected=%d (env=%s)", pbody->GetEnv()->GetNameId()%pbody->GetName()%vCurrentConnectedBodyActiveStates.size()%numExpectedConnectedBodies%_pbody->GetEnv()->GetNameId(), ORE_InvalidState);
+
+            for( size_t iConnectedBody = 0; iConnectedBody < numExpectedConnectedBodies; ++iConnectedBody ) {
+                OPENRAVE_ASSERT_FORMAT(_vConnectedBodyActiveStates[iConnectedBody] == vCurrentConnectedBodyActiveStates[iConnectedBody], "env=%s, body '%s' connected body %d/%d active state=%d not expected", pbody->GetEnv()->GetNameId()%pbody->GetName()%iConnectedBody%numExpectedConnectedBodies%vCurrentConnectedBodyActiveStates[iConnectedBody], ORE_InvalidState);
+            }
+        }
+
         // have to release all grabbed first
         pbody->ReleaseAllGrabbed();
         OPENRAVE_ASSERT_OP(pbody->_vGrabbedBodies.size(),==,0);

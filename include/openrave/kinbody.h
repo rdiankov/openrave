@@ -2246,6 +2246,7 @@ protected:
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
         std::vector<GrabbedPtr> _vGrabbedBodies;
+        std::vector<int8_t> _vConnectedBodyActiveStates;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
