@@ -6155,7 +6155,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         OPENRAVE_ASSERT_OP(info._name.size(), >, 0);
         SetName(info._name);
         updateFromInfoResult = UFIR_Success;
-        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated due to name change", info._name);
+        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated due to name change", GetEnv()->GetNameId()%info._name);
     }
 
     if( GetURI() != info._uri && !info._uri.empty()) {
