@@ -119,7 +119,8 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                     pbody->_vGrabbedBodies.push_back(*itgrabbed);
                 }
                 else {
-                    RAVELOG_WARN("Not implemented yet");
+                    // Is it even safe to allow restoration across different environments when Save_GrabbedBodies is used?
+                    throw OPENRAVE_EXCEPTION_FORMAT("trying to apply grabbed body states across different environment: from env=%s body '%s' to env=%s body '%s'", _pbody->GetEnv()->GetNameId()%_pbody->GetName()%pbody->GetEnv()->GetNameId()%pbody->GetName(), ORE_NotImplemented);
 #if 0
                     // pgrabbed points to a different environment, so have to re-initialize
                     KinBodyPtr pnewbody = pbody->GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodygrab->GetEnvironmentBodyIndex());
