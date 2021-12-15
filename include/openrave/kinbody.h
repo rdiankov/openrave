@@ -3559,6 +3559,11 @@ public:
         _listNonCollidingIsValid = bIsValid;
     }
 
+    inline const bool& IsListNonCollidingLinksValid() const
+    {
+        return _listNonCollidingIsValid;
+    }
+
     /// \brief Add more links to force ignore during grabber's self-collision checking into _setGrabberLinksToIgnore.
     ///        This function is called when we make the grabber grab the same grabbed body more than once with different
     ///        input links to ignore.
