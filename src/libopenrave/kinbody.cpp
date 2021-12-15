@@ -318,8 +318,14 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     orjson::LoadJsonValueByKey(value, "id", _id);
 
     if( !(options & IDO_IgnoreReferenceUri) ) {
-        orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
-        orjson::LoadJsonValueByKey(value, "uri", _uri); // user specifies this in case they want to control how the uri is
+        if (value.HasMember("referenceUri")) {
+            orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+            AddModifiedField(KinBodyInfo::KBIF_ReferenceURI);
+        }
+        if (value.HasMember("uri")) {
+            orjson::LoadJsonValueByKey(value, "uri", _uri); // user specifies this in case they want to control how the uri is
+            AddModifiedField(KinBodyInfo::KBIF_URI);
+        }
     }
 
     orjson::LoadJsonValueByKey(value, "interfaceType", _interfaceType);
@@ -428,7 +434,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 _dofValues.emplace_back(std::make_pair(jointName, jointAxis), dofValue);
             }
         }
-        _modifiedFields |= KinBodyInfo::KBIF_DOFValues;
+        AddModifiedField(KinBodyInfo::KBIF_DOFValues);
     }
 
     if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
@@ -444,7 +450,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _transform);
         _transform.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
-        _modifiedFields |= KinBodyInfo::KBIF_Transform;
+        AddModifiedField(KinBodyInfo::KBIF_Transform);
     }
 }
 
@@ -6210,13 +6216,13 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated due to name change", info._name);
     }
 
-    if( GetURI() != info._uri ) {
+    if( info.IsModifiedField(KinBodyInfo::KBIF_URI) && GetURI() != info._uri ) {
         __struri = info._uri;
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated uri to '%s'", GetEnv()->GetNameId()%info._name%info._uri);
     }
 
-    if( _referenceUri != info._referenceUri ) {
+    if( info.IsModifiedField(KinBodyInfo::KBIF_ReferenceURI) &&_referenceUri != info._referenceUri ) {
         _referenceUri = info._referenceUri;
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated referenceUri to '%s'", GetEnv()->GetNameId()%info._name%info._referenceUri);

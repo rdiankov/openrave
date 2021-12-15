@@ -2191,6 +2191,8 @@ public:
         enum KinBodyInfoField {
             KBIF_Transform = (1 << 0), // _transform field
             KBIF_DOFValues = (1 << 1), // _dofValues field
+            KBIF_URI = (1 << 2), // _uri field
+            KBIF_ReferenceURI = (1 << 3), // _referenceUri field
         };
         inline bool IsModifiedField(KinBodyInfoField field) const {
             return !!(_modifiedFields & field);
