@@ -224,6 +224,10 @@ KinBody::KinBodyStateSaverRef::KinBodyStateSaverRef(KinBody& body, int options) 
     }
     if( _options & Save_GrabbedBodies ) {
         _vGrabbedBodies = body._vGrabbedBodies;
+        if( _body.IsRobot() ) {
+            RobotBase& robot = dynamic_cast<RobotBase&>(_body);
+            robot.GetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
+        }
     }
     if( _options & Save_JointResolutions ) {
         body.GetDOFResolutions(_vDOFResolutions);
@@ -270,6 +274,19 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
     }
     // restoring grabbed bodies has to happen first before link transforms can be restored since _UpdateGrabbedBodies can be called with the old grabbed bodies.
     if( _options & Save_GrabbedBodies ) {
+        if( body.IsRobot() ) {
+            RobotBase& robot = dynamic_cast<RobotBase&>(body);
+            std::vector<int8_t> vCurrentConnectedBodyActiveStates;
+            robot.GetConnectedBodyActiveStates(vCurrentConnectedBodyActiveStates);
+
+            size_t numExpectedConnectedBodies = _vConnectedBodyActiveStates.size();
+            OPENRAVE_ASSERT_FORMAT(numExpectedConnectedBodies == vCurrentConnectedBodyActiveStates.size(), "env=%s, body '%s' now has %d connected bodies. expected=%d (env=%s)", body.GetEnv()->GetNameId()%body.GetName()%vCurrentConnectedBodyActiveStates.size()%numExpectedConnectedBodies%_body.GetEnv()->GetNameId(), ORE_InvalidState);
+
+            for( size_t iConnectedBody = 0; iConnectedBody < numExpectedConnectedBodies; ++iConnectedBody ) {
+                OPENRAVE_ASSERT_FORMAT(_vConnectedBodyActiveStates[iConnectedBody] == vCurrentConnectedBodyActiveStates[iConnectedBody], "env=%s, body '%s' connected body %d/%d active state=%d not expected", body.GetEnv()->GetNameId()%body.GetName()%iConnectedBody%numExpectedConnectedBodies%int(vCurrentConnectedBodyActiveStates[iConnectedBody]), ORE_InvalidState);
+            }
+        }
+
         // have to release all grabbed first
         body.ReleaseAllGrabbed();
         OPENRAVE_ASSERT_OP(body._vGrabbedBodies.size(),==,0);
@@ -282,7 +299,8 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                     body._vGrabbedBodies.push_back(*itgrabbed);
                 }
                 else {
-                    RAVELOG_WARN("Not implemented yet");
+                    // Is it even safe to allow restoration across different environments when Save_GrabbedBodies is used?
+                    throw OPENRAVE_EXCEPTION_FORMAT("trying to apply grabbed body states across different environment: from env=%s body '%s' to env=%s body '%s'", _body.GetEnv()->GetNameId()%_body.GetName()%body.GetEnv()->GetNameId()%body.GetName(), ORE_NotImplemented);
 #if 0
                     // pgrabbed points to a different environment, so have to re-initialize
                     KinBodyPtr pnewbody = body.GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodygrab->GetEnvironmentBodyIndex());
