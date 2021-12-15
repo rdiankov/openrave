@@ -70,7 +70,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         pusereport = boost::shared_ptr<CollisionReport>(&tempreport,utils::null_deleter());
     }
 
-    // locking weak pointer is expensive, so do it N times, where N is the number of grabbedBody instead of N^2
+    // locking weak pointer is expensive, so do it N times and cache, where N is the number of grabbedBody instead of N^2
     std::vector<KinBodyPtr> vLockedGrabbedBodiesCache;
     vLockedGrabbedBodiesCache.reserve(_vGrabbedBodies.size());
     for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {

@@ -2281,8 +2281,7 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
         //uint64_t starttime1 = utils::GetMicroTime();
 
         std::vector<KinBody::LinkPtr > vbodyattachedlinks;
-        FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
-            boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
+        for (const GrabbedPtr& pgrabbed : pbody->_vGrabbedBodies) {
             bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
             KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
             if( !pothergrabbedbody ) {
@@ -2367,8 +2366,7 @@ void Grabbed::UpdateCollidingLinks()
 
     std::map<KinBody::LinkConstPtr, int>::iterator itnoncolliding;
     std::vector<KinBody::LinkPtr > vbodyattachedlinks;
-    FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
-        boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
+    for (const GrabbedPtr& pgrabbed : pbody->_vGrabbedBodies) {
         bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
         KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
         if( !pothergrabbedbody ) {
@@ -2404,8 +2402,7 @@ void Grabbed::UpdateCollidingLinks()
     }
 
     std::set<KinBodyConstPtr> _setgrabbed;
-    FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
-        boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
+    for (const GrabbedPtr& pgrabbed : pbody->_vGrabbedBodies) {
         KinBodyConstPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
         if( !!pothergrabbedbody ) {
             _setgrabbed.insert(pothergrabbedbody);
