@@ -280,7 +280,8 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
     }
     // restoring grabbed bodies has to happen first before link transforms can be restored since _UpdateGrabbedBodies can be called with the old grabbed bodies.
     if( _options & Save_GrabbedBodies ) {
-        if( body.IsRobot() ) {
+        if( body.IsRobot() && _vGrabbedBodies.size() > 0 ) {
+            // If the original robot is not grabbing anything, then don't need to check for discrepancy in connected body active states.
             RobotBase& robot = dynamic_cast<RobotBase&>(body);
             std::vector<int8_t> vCurrentConnectedBodyActiveStates;
             robot.GetConnectedBodyActiveStates(vCurrentConnectedBodyActiveStates);
