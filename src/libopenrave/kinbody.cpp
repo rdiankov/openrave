@@ -5657,14 +5657,15 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
             }
             //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
 
-            // PUTTICHAI: TODO: manage pgrabbed->_pGrabedSaver and pgrabbed->_pGrabberSaver
             GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_pGrabbingLink)->GetIndex())));
             pgrabbed->_tRelative = pgrabbedref->_tRelative;
-            pgrabbed->_listNonCollidingLinksWhenGrabbed.clear();
-            FOREACHC(itlinkref, pgrabbedref->_listNonCollidingLinksWhenGrabbed) {
-                pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itlinkref)->GetIndex()));
+            pgrabbed->_setGrabberLinksToIgnore = pgrabbedref->_setGrabberLinksToIgnore; // can do this since link indices are the same
+            if( pgrabbedref->IsListNonCollidingLinksValid() ) {
+                FOREACHC(itLinkRef, pgrabbedref->_listNonCollidingLinksWhenGrabbed) {
+                    pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
+                }
+                pgrabbed->_SetLinkNonCollidingIsValid(true);
             }
-            pgrabbed->_SetLinkNonCollidingIsValid(true);
             _vGrabbedBodies.push_back(pgrabbed);
             try {
                 // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
