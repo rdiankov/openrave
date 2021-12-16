@@ -260,22 +260,6 @@ void KinBody::RegrabAll()
     }
 }
 
-void KinBody::_Regrab(GrabbedPtr pgrabbed)
-{
-    KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
-    RAVELOG_WARN("Not implemented yet.");
-#if 0
-    if( !!pgrabbedbody ) {
-        // have to re-grab the body, which means temporarily resetting the collision checker and attachment
-        CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
-        CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
-        _RemoveAttachedBody(*pgrabbedbody);
-        CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pgrabbedbody));
-        pgrabbed->ProcessCollidingLinks(pgrabbed->_setRobotLinksToIgnore);
-    }
-#endif
-}
-
 KinBody::LinkPtr KinBody::IsGrabbing(const KinBody &body) const
 {
     for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {

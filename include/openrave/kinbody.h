@@ -3308,9 +3308,6 @@ protected:
         return *_vecjoints.at(_vDOFIndices.at(dofindex));
     }
 
-    /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
-    void _Regrab(GrabbedPtr pgrabbed);
-
     void SetManageData(ManageDataPtr pdata) {
         _pManageData = pdata;
     }
