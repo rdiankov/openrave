@@ -260,18 +260,6 @@ void KinBody::RegrabAll()
             throw;
         }
     }
-
-#if 0
-    FOREACH(itgrabbed, _vGrabbedBodies) {
-        GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
-        KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
-        if( !!pbody ) {
-            _RemoveAttachedBody(*pbody);
-            CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pbody));
-            pgrabbed->ProcessCollidingLinks(pgrabbed->_setRobotLinksToIgnore);
-        }
-    }
-#endif
 }
 
 void KinBody::_Regrab(GrabbedPtr pgrabbed)
