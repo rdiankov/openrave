@@ -5635,50 +5635,52 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     // clone the grabbed bodies, note that this can fail if the new cloned environment hasn't added the bodies yet (check out Environment::Clone)
     _listAttachedBodies.clear(); // will be set in the environment
     _vGrabbedBodies.clear();
-    _vGrabbedBodies.reserve(r->_vGrabbedBodies.size());
-    for (const GrabbedPtr& pgrabbedref : r->_vGrabbedBodies) {
-        if( !pgrabbedref ) {
-            RAVELOG_WARN_FORMAT("env=%s, have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetNameId());
-            continue;
-        }
+    if( (cloningoptions & Clone_IgnoreGrabbedBodies) != Clone_IgnoreGrabbedBodies ) {
+        _vGrabbedBodies.reserve(r->_vGrabbedBodies.size());
+        for (const GrabbedPtr& pgrabbedref : r->_vGrabbedBodies) {
+            if( !pgrabbedref ) {
+                RAVELOG_WARN_FORMAT("env=%s, have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetNameId());
+                continue;
+            }
 
-        KinBodyPtr pbodyref = pgrabbedref->_pGrabbedBody.lock();
-        KinBodyPtr pgrabbedbody;
-        if( !!pbodyref ) {
-            //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodyref->GetEnvironmentBodyIndex());
-            pgrabbedbody = GetEnv()->GetKinBody(pbodyref->GetName());
-            if( !pgrabbedbody ) {
-                if( cloningoptions & Clone_PassOnMissingBodyReferences ) {
-                    continue;
+            KinBodyPtr pbodyref = pgrabbedref->_pGrabbedBody.lock();
+            KinBodyPtr pgrabbedbody;
+            if( !!pbodyref ) {
+                //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodyref->GetEnvironmentBodyIndex());
+                pgrabbedbody = GetEnv()->GetKinBody(pbodyref->GetName());
+                if( !pgrabbedbody ) {
+                    if( cloningoptions & Clone_PassOnMissingBodyReferences ) {
+                        continue;
+                    }
+                    else {
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("When cloning body '%s', could not find grabbed object '%s' in environmentid=%d"), GetName()%pbodyref->GetName()%pbodyref->GetEnv()->GetId(), ORE_InvalidState);
+                    }
                 }
-                else {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("When cloning body '%s', could not find grabbed object '%s' in environmentid=%d"), GetName()%pbodyref->GetName()%pbodyref->GetEnv()->GetId(), ORE_InvalidState);
-                }
-            }
-            //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
+                //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
 
-            GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_pGrabbingLink)->GetIndex())));
-            pgrabbed->_tRelative = pgrabbedref->_tRelative;
-            pgrabbed->_setGrabberLinksToIgnore = pgrabbedref->_setGrabberLinksToIgnore; // can do this since link indices are the same
-            if( pgrabbedref->IsListNonCollidingLinksValid() ) {
-                FOREACHC(itLinkRef, pgrabbedref->_listNonCollidingLinksWhenGrabbed) {
-                    pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
+                GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_pGrabbingLink)->GetIndex())));
+                pgrabbed->_tRelative = pgrabbedref->_tRelative;
+                pgrabbed->_setGrabberLinksToIgnore = pgrabbedref->_setGrabberLinksToIgnore; // can do this since link indices are the same
+                if( pgrabbedref->IsListNonCollidingLinksValid() ) {
+                    FOREACHC(itLinkRef, pgrabbedref->_listNonCollidingLinksWhenGrabbed) {
+                        pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
+                    }
+                    pgrabbed->_SetLinkNonCollidingIsValid(true);
                 }
-                pgrabbed->_SetLinkNonCollidingIsValid(true);
+                _vGrabbedBodies.push_back(pgrabbed);
+                try {
+                    // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
+                    _AttachBody(pgrabbedbody);
+                }
+                catch(...) {
+                    RAVELOG_ERROR_FORMAT("env=%s, failed in attach body", GetEnv()->GetNameId());
+                    BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
+                    _vGrabbedBodies.pop_back();
+                    throw;
+                }
             }
-            _vGrabbedBodies.push_back(pgrabbed);
-            try {
-                // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
-                _AttachBody(pgrabbedbody);
-            }
-            catch(...) {
-                RAVELOG_ERROR_FORMAT("env=%s, failed in attach body", GetEnv()->GetNameId());
-                BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
-                _vGrabbedBodies.pop_back();
-                throw;
-            }
-        }
-    }
+        } // end for pgrabbedref
+    } // end if not Clone_IgnoreGrabbedBodies
 
     // Clone self-collision checker
     _selfcollisionchecker.reset();
