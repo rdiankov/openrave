@@ -634,12 +634,13 @@ void KinBody::_UpdateGrabbedBodies()
 {
     std::vector<GrabbedPtr>::iterator itgrabbed = _vGrabbedBodies.begin();
     std::pair<Vector, Vector> velocity;
+    Transform tGrabbedBody; // cache
     while(itgrabbed != _vGrabbedBodies.end() ) {
         GrabbedPtr pgrabbed = *itgrabbed;
         KinBodyPtr pGrabbedBody = pgrabbed->_pGrabbedBody.lock();
         if( !!pGrabbedBody ) {
-            Transform tGrabbingLink = pgrabbed->_pGrabbingLink->GetTransform();
-            Transform tGrabbedBody = tGrabbingLink * pgrabbed->_tRelative;
+            const Transform& tGrabbingLink = pgrabbed->_pGrabbingLink->GetTransform();
+            tGrabbedBody = tGrabbingLink * pgrabbed->_tRelative;
             pGrabbedBody->SetTransform(tGrabbedBody);
             // set the correct velocity
             pgrabbed->_pGrabbingLink->GetVelocity(velocity.first, velocity.second);
