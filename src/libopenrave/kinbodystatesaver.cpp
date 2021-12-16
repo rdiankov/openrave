@@ -94,7 +94,8 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     }
     // restoring grabbed bodies has to happen first before link transforms can be restored since _UpdateGrabbedBodies can be called with the old grabbed bodies.
     if( _options & Save_GrabbedBodies ) {
-        if( pbody->IsRobot() ) {
+        if( pbody->IsRobot() && _vGrabbedBodies.size() > 0 ) {
+            // If the original robot is not grabbing anything, then don't need to check for discrepancy in connected body active states.
             RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pbody);
             std::vector<int8_t> vCurrentConnectedBodyActiveStates;
             pRobot->GetConnectedBodyActiveStates(vCurrentConnectedBodyActiveStates);
