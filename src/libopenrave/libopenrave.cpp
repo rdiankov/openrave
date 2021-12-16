@@ -2244,23 +2244,25 @@ Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
     _pGrabbingLink = pGrabbingLink;
     _pGrabbingLink->GetRigidlyAttachedLinks(_vAttachedToGrabbingLink);
     _listNonCollidingIsValid = false;
-    int defaultSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_LinkVelocities|KinBody::Save_JointLimits|KinBody::Save_GrabbedBodies;
+    // Need to save link velocities of the grabber since will be used for computing link velocities of the grabbed bodies.
+    int defaultGrabbedSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_GrabbedBodies;
+    int defaultGrabberSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities;
     if( pGrabbedBody->IsRobot() ) {
         RobotBasePtr pGrabbedRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pGrabbedBody);
-        _pGrabbedSaver.reset(new RobotBase::RobotStateSaver(pGrabbedRobot, defaultSaveOptions|KinBody::Save_ConnectedBodies));
+        _pGrabbedSaver.reset(new RobotBase::RobotStateSaver(pGrabbedRobot, defaultGrabbedSaveOptions|KinBody::Save_ConnectedBodies));
     }
     else {
-        _pGrabbedSaver.reset(new KinBody::KinBodyStateSaver(pGrabbedBody, defaultSaveOptions));
+        _pGrabbedSaver.reset(new KinBody::KinBodyStateSaver(pGrabbedBody, defaultGrabbedSaveOptions));
     }
     _pGrabbedSaver->SetRestoreOnDestructor(false); // This is very important!
 
     KinBodyPtr pGrabber = RaveInterfaceCast<KinBody>(_pGrabbingLink->GetParent());
     if( pGrabber->IsRobot() ) {
         RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pGrabber);
-        _pGrabberSaver.reset(new RobotBase::RobotStateSaver(pRobot, defaultSaveOptions|KinBody::Save_ConnectedBodies));
+        _pGrabberSaver.reset(new RobotBase::RobotStateSaver(pRobot, defaultGrabberSaveOptions|KinBody::Save_ConnectedBodies));
     }
     else {
-        _pGrabberSaver.reset(new KinBody::KinBodyStateSaver(pGrabber, defaultSaveOptions));
+        _pGrabberSaver.reset(new KinBody::KinBodyStateSaver(pGrabber, defaultGrabberSaveOptions));
     }
     _pGrabberSaver->SetRestoreOnDestructor(false); // This is very important!
 } // end Grabbed
