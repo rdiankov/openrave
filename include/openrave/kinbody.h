@@ -3493,7 +3493,7 @@ public:
     ///
     ///        1. if a link L is colliding with _pGrabbedBody at the time of grabbing, L will *not* be in
     ///          _listNonCollidingLinksWhenGrabbed regardless of L's enable state. If L is initially collision-disabled
-    ///          when grabbing _pGrabbingBody and later L has becomed enabled, CheckSelfCollision will ignore
+    ///          when grabbing _pGrabbingBody and later L has become enabled, CheckSelfCollision will ignore
     ///          L-_pGrabbedBody collision (if any).
     ///
     ///        2. if a link L is not colliding with _pGrabbedBody at the time of grabbing, L will be in
@@ -3518,16 +3518,16 @@ public:
         return _listNonCollidingIsValid;
     }
 
-    /// \brief Add more links to force ignore during grabber's self-collision checking into _setGrabberLinksToIgnore.
-    ///        This function is called when we make the grabber grab the same grabbed body more than once with different
-    ///        input links to ignore.
+    /// \brief Add more links to force to be ignored during grabber's self-collision checking into
+    ///        _setGrabberLinksToIgnore. This function is called when we make the grabber grab the same grabbed body
+    ///        more than once with different input links to ignore.
     void AddMoreIgnoreLinks(const std::set<int>& setAdditionalGrabberLinksToIgnore);
 
     // Member Variables
     KinBodyWeakPtr _pGrabbedBody; ///< the body being grabbed
-    KinBody::LinkPtr _pGrabbingLink; ///< the link used for grabbing _pGrabbedBody. Its transform (as well as the transforms of other links rigidly attached to _pGrabbingLink) remains constant until the grabbed body is released.
-    std::list<KinBody::LinkConstPtr> _listNonCollidingLinksWhenGrabbed; ///< list of links of the grabber that are not colliding with the grabbed body *at the time of grabbing*. Since these links are not colliding with the grabbed body at the time of grabbing, they should remain non-colliding with the grabbed body throughout. If, while grabbing, they collide with the grabbed body at some point, CheckSelfCollision should return true. It is important to note that the enable state of a link does *not* affect its membership of this list.
-    Transform _tRelative;
+    KinBody::LinkPtr _pGrabbingLink; ///< the link used for grabbing _pGrabbedBody. Its transform (as well as the transforms of other links rigidly attached to _pGrabbingLink) relative to the grabbed body remains constant until the grabbed body is released.
+    std::list<KinBody::LinkConstPtr> _listNonCollidingLinksWhenGrabbed; ///< list of links of the grabber that are not touching the grabbed body *at the time of grabbing*. Since these links are not colliding with the grabbed body at the time of grabbing, they should remain non-colliding with the grabbed body throughout. If, while grabbing, they collide with the grabbed body at some point, CheckSelfCollision should return true. It is important to note that the enable state of a link does *not* affect its membership of this list.
+    Transform _tRelative; ///< the relative transform between the grabbed body and the grabbing link. tGrabbingLink*tRelative = tGrabbedBody.
     std::set<int> _setGrabberLinksToIgnore; ///< indices to the links of the grabber whose collisions with the grabbed bodies should be ignored.
 
 private:

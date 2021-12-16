@@ -218,8 +218,6 @@ void KinBody::RegrabAll()
     size_t numGrabbed = _vGrabbedBodies.size();
     // Remove bodies from _listAttachedBodies first and then will add them back later. Maybe this is for triggering
     // postprocessing with Prop_BodyAttached?
-    std::vector<CallOnDestruction> vHooks;
-    vHooks.reserve(numGrabbed);
     FOREACH(itGrabbed, _vGrabbedBodies) {
         GrabbedPtr pGrabbed = boost::dynamic_pointer_cast<Grabbed>(*itGrabbed);
         KinBodyPtr pBody = pGrabbed->_pGrabbedBody.lock();
