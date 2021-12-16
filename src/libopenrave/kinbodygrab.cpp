@@ -294,9 +294,6 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
 
 int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setGrabberLinksToIgnore) const
 {
-    /*
-       setBodyLinksToIgnore --> setGrabberLinksToIgnore
-     */
     GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
     for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
         KinBodyConstPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
@@ -313,14 +310,11 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_IgnoredLinksNotMatch);
 
-        // pgrabbed->ComputeListNonCollidingLinks();
-
         // compare ignored robot links
         bool ignoringLinksMatch = true;
         size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
         for( const LinkPtr& link : _veclinks ) {
-            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end(); // ||
-            // find(pgrabbed->_listNonCollidingLinksWhenGrabbed.begin(), pgrabbed->_listNonCollidingLinksWhenGrabbed.end(), link) == pgrabbed->_listNonCollidingLinksWhenGrabbed.end();
+            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end();
             if( isLinkIgnored ) {
                 ++numIgnoredLinks;
             }
@@ -354,14 +348,11 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_IgnoredLinksNotMatch);
 
-        // pgrabbed->ComputeListNonCollidingLinks();
-
         // compare ignored robot links
         bool ignoringLinksMatch = true;
         size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
         for( const LinkPtr& link : _veclinks ) {
-            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end(); // ||
-            // find(pgrabbed->_listNonCollidingLinksWhenGrabbed.begin(), pgrabbed->_listNonCollidingLinksWhenGrabbed.end(), link) == pgrabbed->_listNonCollidingLinksWhenGrabbed.end();
+            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end();
             if( isLinkIgnored ) {
                 ++numIgnoredLinks;
             }
