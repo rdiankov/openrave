@@ -37,6 +37,7 @@ void GeneralRecursiveInterpolator::Initialize(int envid)
     // Need to set a new epsilon for parabolic interpolator since its default value (g_fRampEpsilon
     // = 1e-10) is too loose compared epsilon = 1e-5*g_fPolynomialEpsilon used here.
     parabolicInterpolator.SetTolerance(epsilonFinalValidation);
+    _cacheParabolicCoeffs.resize(3);
 }
 
 PolynomialCheckReturn GeneralRecursiveInterpolator::ComputeParabolic1DTrajectoryOptimizedDuration(
@@ -46,14 +47,13 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::ComputeParabolic1DTrajectory
     const dReal vm, const dReal am,
     PiecewisePolynomial& pwpoly)
 {
-    RampOptimizer::ParabolicCurve curve;
-    bool bInterpolationSuccess = parabolicInterpolator.Compute1DTrajectory(x0, x1, v0, v1, vm, am, curve);
+    bool bInterpolationSuccess = parabolicInterpolator.Compute1DTrajectory(x0, x1, v0, v1, vm, am, _cacheParabolicCurve);
     if( !bInterpolationSuccess ) {
         RAVELOG_VERBOSE_FORMAT("env=%d, failed in ComputeParabolic1DTrajectoryOptimizedDuration", envid);
         return PolynomialCheckReturn::PCR_GenericError;
     }
 
-    return PostProcessParabolic1DTrajectory(curve, x0, x1, v0, v1, xmin, xmax, vm, am, pwpoly);
+    return PostProcessParabolic1DTrajectory(_cacheParabolicCurve, x0, x1, v0, v1, xmin, xmax, vm, am, pwpoly);
 }
 
 PolynomialCheckReturn GeneralRecursiveInterpolator::ComputeParabolic1DTrajectoryFixedDuration(
@@ -64,14 +64,13 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::ComputeParabolic1DTrajectory
     const dReal fixedDuration,
     PiecewisePolynomial& pwpoly)
 {
-    RampOptimizer::ParabolicCurve curve;
-    bool bInterpolationSuccess = parabolicInterpolator.Compute1DTrajectoryFixedDuration(x0, x1, v0, v1, vm, am, fixedDuration, curve);
+    bool bInterpolationSuccess = parabolicInterpolator.Compute1DTrajectoryFixedDuration(x0, x1, v0, v1, vm, am, fixedDuration, _cacheParabolicCurve);
     if( !bInterpolationSuccess ) {
         RAVELOG_VERBOSE_FORMAT("env=%d, failed in ComputeParabolic1DTrajectoryFixedDuration", envid);
         return PolynomialCheckReturn::PCR_GenericError;
     }
 
-    return PostProcessParabolic1DTrajectory(curve, x0, x1, v0, v1, xmin, xmax, vm, am, pwpoly);
+    return PostProcessParabolic1DTrajectory(_cacheParabolicCurve, x0, x1, v0, v1, xmin, xmax, vm, am, pwpoly);
 }
 
 PolynomialCheckReturn GeneralRecursiveInterpolator::PostProcessParabolic1DTrajectory(
@@ -103,7 +102,10 @@ void GeneralRecursiveInterpolator::ConvertParabolicCurveToPiecewisePolynomial(co
     vpolynomials.resize(numRamps);
     for( size_t iramp = 0; iramp < numRamps; ++iramp ) {
         const RampOptimizer::Ramp& ramp = curve.GetRamp(iramp);
-        vpolynomials[iramp].Initialize(ramp.duration, {ramp.x0, ramp.v0, 0.5*ramp.a});
+        _cacheParabolicCoeffs[0] = ramp.x0;
+        _cacheParabolicCoeffs[1] = ramp.v0;
+        _cacheParabolicCoeffs[2] = 0.5*ramp.a;
+        vpolynomials[iramp].Initialize(ramp.duration, _cacheParabolicCoeffs);
     }
     pwpoly.Initialize(vpolynomials);
 }

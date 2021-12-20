@@ -104,6 +104,8 @@ public:
 
 private:
     std::vector<Polynomial> _cachePolynomials; // cached vector of polynomials for use in ConvertParabolicCurveToPiecewisePolynomial
+    std::vector<dReal> _cacheParabolicCoeffs; // for use in ConvertParabolicCurveToPiecewisePolynomial only. This is to reduce the number of calls to destructor of std::vector.
+    RampOptimizer::ParabolicCurve _cacheParabolicCurve; // for use in ComputeParabolic1DTrajectoryX only. This is to reduce the number of calls to destructor of ParabolicCurve.
 
 }; // end class GeneralRecursiveInterpolator
 
