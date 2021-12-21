@@ -861,12 +861,15 @@ protected:
                 _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
             }
             else if( interpolation == "linear" ) {
-                if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
+                if( (_spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values") ||
+                    (_spec._vgroups[i].name.size() >= 18 && _spec._vgroups[i].name.substr(0,14) == "ikparam_velocities") ||
+                    (_spec._vgroups[i].name.size() >= 21 && _spec._vgroups[i].name.substr(0,21) == "ikparam_accelerations") ) {
+                    // TODO: check if the computation will be correct for ikparam_velocities and ikparam_accelerations
                     stringstream ss(_spec._vgroups[i].name.substr(14));
                     int niktype=0;
                     ss >> niktype;
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinearIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
-                    // TODO add validation for ikparam until
+                    // TODO add validation for ikparam
                 }
                 else {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
@@ -875,12 +878,14 @@ protected:
                 nNeedNeighboringInfo = 2;
             }
             else if( interpolation == "quadratic" ) {
-                if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
+                if( (_spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values") ||
+                    (_spec._vgroups[i].name.size() >= 18 && _spec._vgroups[i].name.substr(0,18) == "ikparam_velocities") ) {
+                    // TODO: check if the computation will be correct for ikparam_velocities and ikparam_velocities
                     stringstream ss(_spec._vgroups[i].name.substr(14));
                     int niktype=0;
                     ss >> niktype;
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadraticIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
-                    // TODO add validation for ikparam until
+                    // TODO add validation for ikparam
                 }
                 else {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
@@ -889,6 +894,13 @@ protected:
                 nNeedNeighboringInfo = 3;
             }
             else if( interpolation == "cubic" ) {
+                if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0, 14) == "ikparam_values" ) {
+                    std::stringstream ss(_spec._vgroups[i].name.substr(14));
+                    int niktype = 0;
+                    ss >> niktype;
+                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateCubicIk, this, boost::ref(_spec._vgroups[i]), _1, _2, _3, static_cast<IkParameterizationType>(niktype));
+                    // TODO: add ik validator
+                }
                 _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
                 _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                 nNeedNeighboringInfo = 3;
@@ -1263,6 +1275,61 @@ protected:
                 *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i];
             }
         }
+    }
+
+    void _InterpolateCubicIk(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata, IkParameterizationType iktype)
+    {
+        _InterpolateCubic(g, ipoint, deltatime, itdata);
+        if( deltatime > g_fEpsilon ) {
+            int derivoffset = _vderivoffsets[g.offset];
+            int ddoffset = _vddoffsets[g.offset];
+            int integoffset = _vintegraloffsets[g.offset];
+            int iioffset = _viioffsets[g.offset];
+
+            if( derivoffset >= 0 && ddoffset >= 0 ) {
+                size_t offset = ipoint*_spec.GetDOF();
+                size_t nextoffset = offset + _spec.GetDOF();
+                Vector q0, q0vel, q0acc, q1, q1vel, q1acc;
+                switch( iktype ) {
+                case IKP_Rotation3D:
+                case IKP_Transform6D: {
+                    // TODO: verify the following computation
+                    q0.Set4(&_vtrajdata[offset + g.offset]);
+                    q0vel.Set4(&_vtrajdata[offset + derivoffset]);
+                    q0acc.Set4(&_vtrajdata[offset + ddoffset]);
+
+                    q1.Set4(&_vtrajdata[nextoffset + g.offset]);
+                    q1vel.Set4(&_vtrajdata[nextoffset + derivoffset]);
+                    q1acc.Set4(&_vtrajdata[nextoffset + ddoffset]);
+
+                    const Vector angularVelocityPrev = 2.0*quatMultiply(q0vel, quatInverse(q0));
+                    const Vector angularVelocity = 2.0*quatMultiply(q1vel, quatInverse(q1));
+                    const Vector angularAccelerationPrev = 2.0*quatMultiply(q0acc, quatInverse(q0));
+                    const Vector angularAcceleration = 2.0*quatMultiply(q1acc, quatInverse(q1));
+
+                    const Vector j = (angularAcceleration - angularAccelerationPrev)*_vdeltainvtime.at(ipoint + 1);
+                    const Vector totalDelta = deltatime*(angularVelocityPrev + deltatime*(0.5*angularAccelerationPrev + (deltatime/6.0)*j));
+                    const Vector q = quatMultiply(quatFromAxisAngle(Vector(totalDelta.y, totalDelta.z, totalDelta.w)), q0);
+
+                    *(itdata + g.offset + 0) = q[0];
+                    *(itdata + g.offset + 1) = q[1];
+                    *(itdata + g.offset + 2) = q[2];
+                    *(itdata + g.offset + 3) = q[3];
+                    break;
+                }
+                case IKP_TranslationDirection5D: {
+                    // TODO:
+                }
+                default: {
+                    break;
+                }
+                } // end switch
+            } // end if derivoffset >= 0
+            else {
+                // TODO:
+                throw OPENRAVE_EXCEPTION_FORMAT(_("derivoffset=%d; ddoffset=%d; integoffset=%d; iioffset=%d not implemented yet."), derivoffset%ddoffset%integoffset%iioffset, ORE_NotImplemented);
+            }
+        } // end if deltatime > epsilon
     }
 
     void _InterpolateQuartic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata)
