@@ -401,8 +401,8 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
 void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatime)
 {
     static const boost::array<string,4> s_GroupsJointValues = {{"joint_values","joint_velocities", "joint_accelerations", "joint_jerks"}};
-    static const boost::array<string,4> s_GroupsAffine = {{"affine_transform","affine_velocities","ikparam_accelerations", "affine_jerks"}};
-    static const boost::array<string,4> s_GroupsIkparam = {{"ikparam_values","ikparam_velocities","affine_accelerations", "ikparam_jerks"}};
+    static const boost::array<string,4> s_GroupsAffine = {{"affine_transform","affine_velocities","affine_accelerations", "affine_jerks"}};
+    static const boost::array<string,4> s_GroupsIkparam = {{"ikparam_values","ikparam_velocities","ikparam_accelerations", "ikparam_jerks"}};
     if( _vgroups.size() == 0 ) {
         return;
     }
