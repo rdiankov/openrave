@@ -47,7 +47,6 @@ public:
     {
         _pinterpolator.reset(new PiecewisePolynomials::CubicInterpolator(_parameters->GetDOF(), GetEnv()->GetId()));
         _ptranslationInterpolator.reset(new PiecewisePolynomials::CubicInterpolator(3, GetEnv()->GetId()));
-        // TODO: _pikInterpolator
         _checker.Initialize(_parameters->GetDOF(), GetEnv()->GetId());
         _trajXmlId = ptraj->GetXMLId();
         return TrajectoryRetimer3::PlanPath(ptraj);
@@ -260,11 +259,124 @@ protected:
         throw OPENRAVE_EXCEPTION_FORMAT0(_("_ComputeMinimumTimeAffine not implemented"), ORE_NotImplemented);
     }
 
-    // TODO
     dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType ikType, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::const_iterator itData)
     {
-        RAVELOG_WARN_FORMAT("env=%s, _ComputeMinimumTimeIk not implemented yet.", GetEnv()->GetNameId());
-        return -1;
+        IkParameterization ikParamPrev, ikParam; // TODO: cache these
+        ikParamPrev.Set(itDataPrev + info->gPos.offset, ikType);
+        ikParam.Set(itData + info->gPos.offset, ikType);
+
+        Vector trans0, trans1; // TODO: write descriptions
+        int transOffset = -1; // TODO: write descriptions
+        dReal minTime = -1.0; // TODO: write descriptions
+        PiecewisePolynomials::PiecewisePolynomial pwpoly; // TODO: cache this
+
+        switch( ikType ) {
+        case IKP_Transform6D: {
+            dReal cosAngle = RaveFabs(ikParamPrev.GetTransform6D().rot.dot(ikParam.GetTransform6D().rot));
+            if( cosAngle > 1.0 ) {
+                cosAngle = 1.0;
+            }
+            else if( cosAngle < -1.0 ) {
+                cosAngle = -1.0;
+            }
+            // TODO: write descriptions for all derivations of angular velocity/acceleration from quaternions
+            const dReal angleDelta = 2.0*RaveAcos(cosAngle);
+            const Vector angularVelocityPrev = 2.0*quatMultiply(Vector(*(itDataPrev + info->gVel.offset + 0), *(itDataPrev + info->gVel.offset + 1), *(itDataPrev + info->gVel.offset + 2), *(itDataPrev + info->gVel.offset + 3)),
+                                                                quatInverse(ikParamPrev.GetTransform6D().rot));
+            const dReal angleVelPrev = RaveSqrt(utils::Sqr(angularVelocityPrev.y) + utils::Sqr(angularVelocityPrev.z) + utils::Sqr(angularVelocityPrev.w));
+
+            const Vector angularVelocity = 2.0*quatMultiply(Vector(*(itData + info->gVel.offset + 0), *(itData + info->gVel.offset + 1), *(itData + info->gVel.offset + 2), *(itData + info->gVel.offset + 3)),
+                                                            quatInverse(ikParam.GetTransform6D().rot));
+            const dReal angleVel = RaveSqrt(utils::Sqr(angularVelocity.y) + utils::Sqr(angularVelocity.z) + utils::Sqr(angularVelocity.w));
+
+            const Vector angularAccelerationPrev = 2.0*quatMultiply(Vector(*(itDataPrev + info->gAccel.offset + 0), *(itDataPrev + info->gAccel.offset + 1), *(itDataPrev + info->gAccel.offset + 2), *(itDataPrev + info->gAccel.offset + 3)),
+                                                                    quatInverse(ikParamPrev.GetTransform6D().rot));
+            const dReal angleAccelPrev = RaveSqrt(utils::Sqr(angularAccelerationPrev.y) + utils::Sqr(angularAccelerationPrev.z) + utils::Sqr(angularAccelerationPrev.w));
+
+            const Vector angularAcceleration = 2.0*quatMultiply(Vector(*(itData + info->gAccel.offset + 0), *(itData + info->gAccel.offset + 1), *(itData + info->gAccel.offset + 2), *(itData + info->gAccel.offset + 3)),
+                                                                quatInverse(ikParam.GetTransform6D().rot));
+            const dReal angleAccel = RaveSqrt(utils::Sqr(angularAcceleration.y) + utils::Sqr(angularAcceleration.z) + utils::Sqr(angularAcceleration.w));
+            const dReal lowerLimit = -1000, upperLimit = angleDelta + 1000; // arbitrary limit
+            PiecewisePolynomials::PolynomialCheckReturn ret = _pinterpolator->Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(0, angleDelta, angleVelPrev, angleVel, angleAccelPrev, angleAccel, lowerLimit, upperLimit, info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), info->_vConfigJerkLimit.at(0), pwpoly);
+            if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
+                return -1.0;
+            }
+            minTime = pwpoly.GetDuration();
+
+            trans0 = ikParamPrev.GetTransform6D().trans;
+            trans1 = ikParam.GetTransform6D().trans;
+            transOffset = 4;
+            break;
+        }
+        case IKP_Rotation3D: {
+            // TODO:
+        }
+        case IKP_Translation3D: {
+            // TODO:
+        }
+        case IKP_TranslationDirection5D: {
+            // TODO:
+        }
+        case IKP_TranslationXAxisAngleZNorm4D: {
+            // TODO:
+        }
+        case IKP_TranslationYAxisAngleXNorm4D: {
+            // TODO:
+        }
+        case IKP_TranslationZAxisAngleYNorm4D: {
+            // TODO:
+        }
+        case IKP_TranslationZAxisAngle4D: {
+            // TODO:
+        }
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, cubic retimer does not support ikparam type 0x%x"), GetEnv()->GetNameId()%ikParam.GetType(), ORE_InvalidArguments);
+        } // end switch
+
+        if( transOffset >= 0 ) {
+            std::vector<dReal> xyzPrev(3, 0), xyz(3), xyzVelPrev(3), xyzVel(3), xyzAccelPrev(3), xyzAccel(3);
+            std::vector<dReal> vLowerLimits(3), vUpperLimits(3);
+            for( size_t idof = 0; idof < 3; ++idof ) {
+                xyzPrev[idof] = trans0[idof];
+                xyz[idof] = trans1[idof];
+                xyzVelPrev[idof] = *(itDataPrev + info->gVel.offset + transOffset + idof);
+                xyzVel[idof] = *(itData + info->gVel.offset + transOffset + idof);
+                xyzAccelPrev[idof] = *(itDataPrev + info->gAccel.offset + transOffset + idof);
+                xyzAccel[idof] = *(itData + info->gAccel.offset + transOffset + idof);
+
+                dReal fMin, fMax;
+                if( trans0[idof] > trans1[idof] ) {
+                    fMin = trans1[idof];
+                    fMax = trans0[idof];
+                }
+                else {
+                    fMin = trans0[idof];
+                    fMax = trans1[idof];
+                }
+                vLowerLimits[idof] = fMin - 1000;
+                vUpperLimits[idof] = fMax + 1000;
+            }
+            std::vector<dReal> vVelLimits(info->_vConfigVelocityLimit.begin() + transOffset, info->_vConfigVelocityLimit.begin() + transOffset + 3);
+            std::vector<dReal> vAccelLimits(info->_vConfigAccelerationLimit.begin() + transOffset, info->_vConfigAccelerationLimit.begin() + transOffset + 3);
+            std::vector<dReal> vJerkLimits(info->_vConfigJerkLimit.begin() + transOffset, info->_vConfigJerkLimit.begin() + transOffset + 3);
+
+            std::vector<PiecewisePolynomials::Chunk> chunks; // TODO: cache this
+            const dReal tryDuration = 100.0; // not used
+            PiecewisePolynomials::PolynomialCheckReturn ret = _ptranslationInterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(xyzPrev, xyz, xyzVelPrev, xyzVel, xyzAccelPrev, xyzAccel, vLowerLimits, vUpperLimits, vVelLimits, vAccelLimits, vJerkLimits, tryDuration, chunks);
+            if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
+                return -1.0;
+            }
+            dReal duration = 0;
+            FOREACHC(itchunk, chunks) {
+                duration += itchunk->duration;
+            }
+            if( minTime < duration ) {
+                minTime = duration;
+            }
+        } // end if transOffset >= 0
+        RAVELOG_WARN_FORMAT("env=%s, PUTTICHAI: minTime=%.15e", GetEnv()->GetNameId()%minTime);
+
+        return minTime;
     }
 
     void _ComputeVelocitiesAccelerationsJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData)
@@ -358,11 +470,88 @@ protected:
         throw OPENRAVE_EXCEPTION_FORMAT0(_("_CheckAffine not implemented"), ORE_NotImplemented);
     }
 
-    // TODO
     bool _CheckIk(GroupInfoConstPtr info, IkParameterizationType ikType, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::const_iterator itData, int checkOptions=0xffffffff)
     {
-        RAVELOG_WARN_FORMAT("env=%s, _CheckId not implemented yet.", GetEnv()->GetNameId());
-        return false;
+        const dReal deltaTime = *(itData + _timeOffset);
+        int transOffset = -1;
+        IkParameterization ikParamPrev, ikParam;
+        switch( ikType ) {
+        case IKP_Transform6D: {
+            // TODO: verify the following computation
+            ikParamPrev.Set(itDataPrev + info->gPos.offset, ikType);
+            ikParam.Set(itDataPrev + info->gPos.offset, ikType);
+            // const Vector angularVelocityPrev = 2.0*quatMultiply(Vector(*(itDataPrev + info->gVel.offset + 0), *(itDataPrev + info->gVel.offset + 1), *(itDataPrev + info->gVel.offset + 2), *(itDataPrev + info->gVel.offset + 3)),
+            //                                                  quatInverse(ikParamPrev.GetTransform6D().rot));
+            // const dReal fVelPrev2 = utils::Sqr(angularVelocityPrev.y) + utils::Sqr(angularVelocityPrev.z) + utils::Sqr(angularVelocityPrev.w);
+
+            const Vector angularVelocity = 2.0*quatMultiply(Vector(*(itData + info->gVel.offset + 0), *(itData + info->gVel.offset + 1), *(itData + info->gVel.offset + 2), *(itData + info->gVel.offset + 3)),
+                                                            quatInverse(ikParam.GetTransform6D().rot));
+            const dReal fVel2 = utils::Sqr(angularVelocity.y) + utils::Sqr(angularVelocity.z) + utils::Sqr(angularVelocity.w);
+
+            if( fVel2 > utils::Sqr(info->_vConfigVelocityLimit.at(0)) + PiecewisePolynomials::g_fPolynomialEpsilon ) {
+                return false;
+            }
+
+            const Vector angularAccelerationPrev = 2.0*quatMultiply(Vector(*(itDataPrev + info->gAccel.offset + 0), *(itDataPrev + info->gAccel.offset + 1), *(itDataPrev + info->gAccel.offset + 2), *(itDataPrev + info->gAccel.offset + 3)),
+                                                                    quatInverse(ikParamPrev.GetTransform6D().rot));
+            const dReal fAccelPrev2 = utils::Sqr(angularAccelerationPrev.y) + utils::Sqr(angularAccelerationPrev.z) + utils::Sqr(angularAccelerationPrev.w);
+
+            const Vector angularAcceleration = 2.0*quatMultiply(Vector(*(itData + info->gAccel.offset + 0), *(itData + info->gAccel.offset + 1), *(itData + info->gAccel.offset + 2), *(itData + info->gAccel.offset + 3)),
+                                                                quatInverse(ikParam.GetTransform6D().rot));
+            const dReal fAccel2 = utils::Sqr(angularAcceleration.y) + utils::Sqr(angularAcceleration.z) + utils::Sqr(angularAcceleration.w);
+            if( fAccel2 > utils::Sqr(info->_vConfigAccelerationLimit.at(0)) + PiecewisePolynomials::g_fPolynomialEpsilon ) {
+                return false;
+            }
+            if( (fAccel2 + fAccelPrev2 - 2*RaveSqrt(fAccel2*fAccelPrev2)) > utils::Sqr(deltaTime * (info->_vConfigJerkLimit.at(0) + PiecewisePolynomials::g_fPolynomialEpsilon)) ) {
+                return false;
+            }
+            transOffset = 4;
+            break;
+        }
+        case IKP_Rotation3D: {
+            // TODO:
+        }
+        case IKP_Translation3D: {
+            // TODO:
+        }
+        case IKP_TranslationDirection5D: {
+            // TODO:
+        }
+        case IKP_TranslationXAxisAngleZNorm4D: {
+            // TODO:
+        }
+        case IKP_TranslationYAxisAngleXNorm4D: {
+            // TODO:
+        }
+        case IKP_TranslationZAxisAngleYNorm4D: {
+            // TODO:
+        }
+        case IKP_TranslationZAxisAngle4D: {
+            // TODO:
+        }
+        default: {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, cubic retimer does not support ikparam type 0x%x"), GetEnv()->GetNameId()%ikParam.GetType(), ORE_InvalidArguments);
+        }
+        } // end switch
+
+        if( transOffset >= 0 ) {
+            for( size_t idof = 0; idof < 3; ++idof ) {
+                const dReal fVel = *(itData + info->gVel.offset + transOffset + idof);
+                if( RaveFabs(fVel) > info->_vConfigVelocityLimit.at(transOffset + idof) + PiecewisePolynomials::g_fPolynomialEpsilon ) {
+                    return false;
+                }
+
+                const dReal fAccelPrev = *(itDataPrev + info->gAccel.offset + transOffset + idof);
+                const dReal fAccel = *(itData + info->gAccel.offset + transOffset + idof);
+                if( RaveFabs(fAccel) > info->_vConfigAccelerationLimit.at(transOffset + idof) + PiecewisePolynomials::g_fPolynomialEpsilon ) {
+                    return false;
+                }
+                if( RaveFabs(fAccel - fAccelPrev) > deltaTime*(info->_vConfigJerkLimit.at(transOffset + idof) + PiecewisePolynomials::g_fPolynomialEpsilon) ) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     //
@@ -467,10 +656,320 @@ protected:
         return true;
     }
 
-    // TODO
-    dReal _WriteIk(GroupInfoConstPtr info, IkParameterizationType ikType, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData)
+    dReal _WriteIk(GroupInfoConstPtr infoRaw, IkParameterizationType ikType, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData)
     {
-        RAVELOG_WARN_FORMAT("env=%s, _WriteIk not implemented yet.", GetEnv()->GetNameId());
+        CubicGroupInfoConstPtr info = boost::dynamic_pointer_cast<CubicGroupInfo const>(infoRaw);
+        if( _parameters->_outputaccelchanges ) {
+            const dReal deltaTime = *(itData + _timeOffset);
+            if( deltaTime == 0 ) {
+                if( info->ptraj->GetNumWaypoints() == 0 ) {
+                    // Add the first waypoint to the traj. Copy all the data rather than just this ik group
+                    _vtrajpoints.resize(info->ptraj->GetConfigurationSpecification().GetDOF());
+                    std::copy(itData, itData + _vtrajpoints.size(), _vtrajpoints.begin());
+                    _vtrajpoints.at(info->waypointIndex) = 1;
+                    info->ptraj->Insert(info->ptraj->GetNumWaypoints(), _vtrajpoints);
+                }
+                return true;
+            }
+            OPENRAVE_ASSERT_OP(deltaTime, >, 0);
+            if( deltaTime < PiecewisePolynomials::g_fEpsilonForTimeInstant ) {
+                RAVELOG_WARN_FORMAT("env=%s, delta time=%.15e is ill-conditioned", GetEnv()->GetNameId()%deltaTime);
+            }
+
+            IkParameterization ikParamPrev, ikParam;
+            ikParamPrev.Set(itDataPrev + info->gPos.offset, ikType);
+            ikParam.Set(itData + info->gPos.offset, ikType);
+
+            _v0pos.resize(0);
+            _v1pos.resize(0);
+            _v0vel.resize(0);
+            _v1vel.resize(0);
+            _v0acc.resize(0);
+            _v1acc.resize(0);
+            Vector trans0, trans1, axisAngle;
+            int transOffset = -1, transIndex = -1;
+            std::vector<dReal> vmaxvel, vmaxaccel, vmaxjerk, vlower, vupper;
+
+            switch( ikType ) {
+            case IKP_Transform6D: {
+                _pikInterpolator.reset(new PiecewisePolynomials::CubicInterpolator(4, GetEnv()->GetId()));
+
+                _v0pos.resize(4);
+                _v1pos.resize(4);
+                _v0vel.resize(4);
+                _v1vel.resize(4);
+                _v0acc.resize(4);
+                _v1acc.resize(4);
+                vmaxvel.resize(4);
+                vmaxaccel.resize(4);
+                vmaxjerk.resize(4);
+                axisAngle = axisAngleFromQuat(quatMultiply(quatInverse(ikParamPrev.GetTransform6D().rot), ikParam.GetTransform6D().rot));
+                if( axisAngle.lengthsqr3() > g_fEpsilon ) {
+                    axisAngle.normalize3();
+                }
+                _v0pos[0] = 0;
+                dReal cosAngle = RaveFabs(ikParamPrev.GetTransform6D().rot.dot(ikParam.GetTransform6D().rot));
+                if( cosAngle > 1.0 ) {
+                    cosAngle = 1.0;
+                }
+                _v1pos[0] = 2.0*RaveAcos(cosAngle);
+
+                const Vector angularVelocityPrev = 2.0*quatMultiply(Vector(*(itDataPrev + info->gVel.offset + 0), *(itDataPrev + info->gVel.offset + 1), *(itDataPrev + info->gVel.offset + 2), *(itDataPrev + info->gVel.offset + 3)),
+                                                                    quatInverse(ikParamPrev.GetTransform6D().rot));
+                _v0vel[0] = RaveSqrt(utils::Sqr(angularVelocityPrev.y) + utils::Sqr(angularVelocityPrev.z) + utils::Sqr(angularVelocityPrev.w));
+
+                const Vector angularVelocity = 2.0*quatMultiply(Vector(*(itData + info->gVel.offset + 0), *(itData + info->gVel.offset + 1), *(itData + info->gVel.offset + 2), *(itData + info->gVel.offset + 3)),
+                                                                quatInverse(ikParam.GetTransform6D().rot));
+                _v1vel[0] = RaveSqrt(utils::Sqr(angularVelocity.y) + utils::Sqr(angularVelocity.z) + utils::Sqr(angularVelocity.w));
+
+                const Vector angularAccelerationPrev = 2.0*quatMultiply(Vector(*(itDataPrev + info->gAccel.offset + 0), *(itDataPrev + info->gAccel.offset + 1), *(itDataPrev + info->gAccel.offset + 2), *(itDataPrev + info->gAccel.offset + 3)),
+                                                                        quatInverse(ikParamPrev.GetTransform6D().rot));
+                _v0acc[0] = RaveSqrt(utils::Sqr(angularAccelerationPrev.y) + utils::Sqr(angularAccelerationPrev.z) + utils::Sqr(angularAccelerationPrev.w));
+
+                const Vector angularAcceleration = 2.0*quatMultiply(Vector(*(itData + info->gAccel.offset + 0), *(itData + info->gAccel.offset + 1), *(itData + info->gAccel.offset + 2), *(itData + info->gAccel.offset + 3)),
+                                                                    quatInverse(ikParam.GetTransform6D().rot));
+                _v1acc[0] = RaveSqrt(utils::Sqr(angularAcceleration.y) + utils::Sqr(angularAcceleration.z) + utils::Sqr(angularAcceleration.w));
+
+                vmaxvel[0] = info->_vConfigVelocityLimit.at(0);
+                vmaxaccel[0] = info->_vConfigAccelerationLimit.at(0);
+                vmaxjerk[0] = info->_vConfigJerkLimit.at(0);
+
+                trans0 = ikParamPrev.GetTransform6D().trans;
+                trans1 = ikParam.GetTransform6D().trans;
+
+                transOffset = 4;
+                transIndex = 1;
+                break;
+            }
+            case IKP_Rotation3D: {
+                // TODO:
+            }
+            case IKP_Translation3D: {
+                // TODO:
+            }
+            case IKP_TranslationDirection5D: {
+                // TODO:
+            }
+            case IKP_TranslationXAxisAngleZNorm4D: {
+                // TODO:
+            }
+            case IKP_TranslationYAxisAngleXNorm4D: {
+                // TODO:
+            }
+            case IKP_TranslationZAxisAngleYNorm4D: {
+                // TODO:
+            }
+            case IKP_TranslationZAxisAngle4D: {
+                // TODO:
+            }
+            default: {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, cubic retimer does not support ikparam type 0x%x"), GetEnv()->GetNameId()%ikParam.GetType(), ORE_InvalidArguments);
+            }
+            } // end switch
+
+            if( transOffset >= 0 ) {
+                for( size_t idof = 0; idof < 3; ++idof ) {
+                    _v0pos.at(transIndex + idof) = trans0[idof];
+                    _v1pos.at(transIndex + idof) = trans1[idof];
+                    _v0vel.at(transIndex + idof) = *(itDataPrev + info->gVel.offset + transOffset + idof);
+                    _v1vel.at(transIndex + idof) = *(itData + info->gVel.offset + transOffset + idof);
+                    _v0acc.at(transIndex + idof) = *(itDataPrev + info->gAccel.offset + transOffset + idof);
+                    _v1acc.at(transIndex + idof) = *(itData + info->gAccel.offset + transOffset + idof);
+                    vmaxvel.at(transIndex + idof) = info->_vConfigVelocityLimit.at(transOffset + idof);
+                    vmaxaccel.at(transIndex + idof) = info->_vConfigAccelerationLimit.at(transOffset + idof);
+                    vmaxjerk.at(transIndex + idof) = info->_vConfigJerkLimit.at(transOffset + idof);
+                }
+            }
+
+            vlower.resize(_v0pos.size());
+            vupper.resize(_v0pos.size());
+            for( size_t idof = 0; idof < vlower.size(); ++idof ) {
+                dReal fMin, fMax;
+                if( _v0pos[idof] > _v1pos[idof] ) {
+                    fMin = _v1pos[idof];
+                    fMax = _v0pos[idof];
+                }
+                else {
+                    fMin = _v0pos[idof];
+                    fMin = _v1pos[idof];
+                }
+                vlower[idof] = fMin - 1000;
+                vupper[idof] = fMax + 1000;
+            }
+
+            PiecewisePolynomials::PolynomialCheckReturn ret = _pikInterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, deltaTime, vlower, vupper, vmaxvel, vmaxaccel, vmaxjerk, _cacheInterpolatedChunks);
+            {
+                std::stringstream ssdebug;
+                ssdebug << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                ssdebug << "x0Vect=[";
+                SerializeValues(ssdebug, _v0pos);
+                ssdebug << "]; x1Vect=[";
+                SerializeValues(ssdebug, _v1pos);
+                ssdebug << "]; v0Vect=[";
+                SerializeValues(ssdebug, _v0vel);
+                ssdebug << "]; v1Vect=[";
+                SerializeValues(ssdebug, _v1vel);
+                ssdebug << "]; a0Vect=[";
+                SerializeValues(ssdebug, _v0acc);
+                ssdebug << "]; a1Vect=[";
+                SerializeValues(ssdebug, _v1acc);
+                ssdebug << "]; xminVect=[";
+                SerializeValues(ssdebug, vlower);
+                ssdebug << "]; xmaxVect=[";
+                SerializeValues(ssdebug, vupper);
+                ssdebug << "]; vmVect=[";
+                SerializeValues(ssdebug, vmaxvel);
+                ssdebug << "]; amVect=[";
+                SerializeValues(ssdebug, vmaxaccel);
+                ssdebug << "]; jmVect=[";
+                SerializeValues(ssdebug, vmaxjerk);
+                ssdebug << "];";
+                RAVELOG_INFO_FORMAT("env=%s, PUTTICHAI: ret=%s; %s", GetEnv()->GetNameId()%PiecewisePolynomials::GetPolynomialCheckReturnString(ret)%ssdebug.str());
+            }
+            if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
+                return false;
+            }
+
+            bool bIncludeFirstPoint = false;
+            int ndof = info->ptraj->GetConfigurationSpecification().GetDOF();
+            if( info->ptraj->GetNumWaypoints() == 0 ) {
+                bIncludeFirstPoint = true;
+                _vtrajpoints.resize(ndof*(_cacheInterpolatedChunks.size() + 1));
+            }
+            else {
+                _vtrajpoints.resize(ndof*_cacheInterpolatedChunks.size());
+            }
+
+            std::vector<dReal>::iterator ittargetdata = _vtrajpoints.begin();
+            std::vector<dReal> vPos(_v0pos.size()), vVel(_v0vel.size()), vAccel(_v0acc.size()); // TODO: write descriptions
+            if( bIncludeFirstPoint ) {
+                const PiecewisePolynomials::Chunk& firstChunk = _cacheInterpolatedChunks.front();
+                firstChunk.Eval(0, vPos);
+                firstChunk.Evald1(0, vVel);
+                firstChunk.Evald2(0, vAccel);
+
+                switch( ikType ) {
+                case IKP_Transform6D: {
+                    // TODO: verify the following computation
+                    const dReal t = _v1pos.at(0) > 0 ? (vPos.at(0)/_v1pos.at(0)) : 0;
+                    const Vector q = quatSlerp(ikParamPrev.GetTransform6D().rot, ikParam.GetTransform6D().rot, t);
+                    const Vector w = vVel[0] * Vector(0, axisAngle.x, axisAngle.y, axisAngle.z);
+                    const Vector qd = 0.5*quatMultiply(w, q);
+                    const Vector a = vAccel[0] * Vector(0, axisAngle.x, axisAngle.y, axisAngle.z);
+                    const Vector qdd = 0.5*(quatMultiply(a, q) + quatMultiply(w, qd));
+                    for( size_t idof = 0; idof < 4; ++idof ) {
+                        *(ittargetdata + info->posIndex + idof) = q[idof];
+                        *(ittargetdata + info->velIndex + idof) = qd[idof];
+                        *(ittargetdata + info->accelIndex + idof) = qdd[idof];
+                    }
+                    break;
+                }
+                case IKP_Rotation3D: {
+                    // TODO:
+                }
+                case IKP_Translation3D: {
+                    // TODO:
+                }
+                case IKP_TranslationDirection5D: {
+                    // TODO:
+                }
+                case IKP_TranslationXAxisAngleZNorm4D: {
+                    // TODO:
+                }
+                case IKP_TranslationYAxisAngleXNorm4D: {
+                    // TODO:
+                }
+                case IKP_TranslationZAxisAngleYNorm4D: {
+                    // TODO:
+                }
+                case IKP_TranslationZAxisAngle4D: {
+                    // TODO:
+                }
+                default: {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, cubic retimer does not support ikparam type 0x%x"), GetEnv()->GetNameId()%ikParam.GetType(), ORE_InvalidArguments);
+                }
+                } // end switch
+
+                if( transOffset >= 0 && transIndex >= 0 ) {
+                    for( size_t idof = 0; idof < 3; ++idof ) {
+                        *(ittargetdata + info->posIndex + transOffset + idof) = vPos.at(transIndex + idof);
+                        *(ittargetdata + info->velIndex + transOffset + idof) = vVel.at(transIndex + idof);
+                        *(ittargetdata + info->accelIndex + transOffset + idof) = vAccel.at(transIndex + idof);
+                    }
+                }
+
+                *(ittargetdata + info->timeIndex) = 0;
+                *(ittargetdata + info->waypointIndex) = 0;
+                ittargetdata += ndof;
+            } // end if bIncludeFirstPoint
+
+            FOREACHC(itchunk, _cacheInterpolatedChunks) {
+                itchunk->Eval(itchunk->duration, vPos);
+                itchunk->Evald1(itchunk->duration, vVel);
+                itchunk->Evald2(itchunk->duration, vAccel);
+
+                switch( ikType ) {
+                case IKP_Transform6D: {
+                    // TODO: verify the following computation
+                    const dReal t = _v1pos.at(0) > 0 ? (vPos.at(0)/_v1pos.at(0)) : 0;
+                    const Vector q = quatSlerp(ikParamPrev.GetTransform6D().rot, ikParam.GetTransform6D().rot, t);
+                    const Vector w = vVel[0] * Vector(0, axisAngle.x, axisAngle.y, axisAngle.z);
+                    const Vector qd = 0.5*quatMultiply(w, q);
+                    const Vector a = vAccel[0] * Vector(0, axisAngle.x, axisAngle.y, axisAngle.z);
+                    const Vector qdd = 0.5*(quatMultiply(a, q) + quatMultiply(w, qd));
+                    for( size_t idof = 0; idof < 4; ++idof ) {
+                        *(ittargetdata + info->posIndex + idof) = q[idof];
+                        *(ittargetdata + info->velIndex + idof) = qd[idof];
+                        *(ittargetdata + info->accelIndex + idof) = qdd[idof];
+                    }
+                    break;
+                }
+                case IKP_Rotation3D: {
+                    // TODO:
+                }
+                case IKP_Translation3D: {
+                    // TODO:
+                }
+                case IKP_TranslationDirection5D: {
+                    // TODO:
+                }
+                case IKP_TranslationXAxisAngleZNorm4D: {
+                    // TODO:
+                }
+                case IKP_TranslationYAxisAngleXNorm4D: {
+                    // TODO:
+                }
+                case IKP_TranslationZAxisAngleYNorm4D: {
+                    // TODO:
+                }
+                case IKP_TranslationZAxisAngle4D: {
+                    // TODO:
+                }
+                default: {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, cubic retimer does not support ikparam type 0x%x"), GetEnv()->GetNameId()%ikParam.GetType(), ORE_InvalidArguments);
+                }
+                } // end switch
+
+                if( transOffset >= 0 && transIndex >= 0 ) {
+                    for( size_t idof = 0; idof < 3; ++idof ) {
+                        *(ittargetdata + info->posIndex + transOffset + idof) = vPos.at(transIndex + idof);
+                        *(ittargetdata + info->velIndex + transOffset + idof) = vVel.at(transIndex + idof);
+                        *(ittargetdata + info->accelIndex + transOffset + idof) = vAccel.at(transIndex + idof);
+                    }
+                }
+
+                *(ittargetdata + info->timeIndex) = itchunk->duration;
+                *(ittargetdata + info->waypointIndex) = 0;
+                ittargetdata += ndof;
+            } // end for each itChunk
+
+            if( bIncludeFirstPoint ) {
+                _vtrajpoints.at(info->waypointIndex) = 1;
+            }
+
+            _vtrajpoints.at(_vtrajpoints.size() - ndof + info->waypointIndex) = 1;
+            info->ptraj->Insert(info->ptraj->GetNumWaypoints(), _vtrajpoints);
+        } // end if _parameters->_outputaccelchanges
         return true;
     }
 
