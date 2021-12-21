@@ -181,6 +181,10 @@ public:
     virtual ~PyAffineTrajectoryRetimer() {
     }
 
+    std::string GetPlannerName() const {
+        return _retimer.GetPlannerName();
+    }
+
     object PlanPath(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, bool releasegil=true)
     {
         openravepy::PythonThreadSaverPtr statesaver;
@@ -191,6 +195,21 @@ public:
             statesaver.reset(new openravepy::PythonThreadSaver());
         }
         PlannerStatus status = _retimer.PlanPath(ptraj,vmaxvelocities, vmaxaccelerations, hastimestamps);
+        statesaver.reset(); // to re-lock the GIL
+        return openravepy::toPyPlannerStatus(status);
+    }
+
+    object PlanPathWithJerkLimits(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, object omaxjerks, bool hastimestamps=false, bool releasegil=true)
+    {
+        openravepy::PythonThreadSaverPtr statesaver;
+        TrajectoryBasePtr ptraj = openravepy::GetTrajectory(pytraj);
+        std::vector<dReal> vmaxvelocities = ExtractArray<dReal>(omaxvelocities);
+        std::vector<dReal> vmaxaccelerations = ExtractArray<dReal>(omaxaccelerations);
+        std::vector<dReal> vmaxjerks = ExtractArray<dReal>(omaxjerks);
+        if( releasegil ) {
+            statesaver.reset(new openravepy::PythonThreadSaver());
+        }
+        PlannerStatus status = _retimer.PlanPath(ptraj, vmaxvelocities, vmaxaccelerations, vmaxjerks, hastimestamps);
         statesaver.reset(); // to re-lock the GIL
         return openravepy::toPyPlannerStatus(status);
     }
@@ -513,6 +532,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckWithAccelerations_overloads, CheckWi
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads2, PlanPath, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads3, PlanPath, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPathWithJerkLimits_overloads, PlanPathWithJerkLimits, 4, 6)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -858,6 +878,7 @@ void InitPlanningUtils()
         .def("PlanPath",&planningutils::PyActiveDOFTrajectorySmoother::PlanPath,PlanPath_overloads(PY_ARGS("traj","releasegil") DOXY_FN(planningutils::ActiveDOFTrajectorySmoother,PlanPath)))
 #endif
         ;
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         class_<planningutils::PyActiveDOFTrajectoryRetimer, planningutils::PyActiveDOFTrajectoryRetimerPtr >(planningutils, "ActiveDOFTrajectoryRetimer", DOXY_CLASS(planningutils::ActiveDOFTrajectoryRetimer))
         .def(init<PyRobotBasePtr, const std::string&, const std::string&>(), "robot"_a, "plannername"_a, "plannerparameters"_a)
@@ -884,6 +905,8 @@ void InitPlanningUtils()
         class_<planningutils::PyAffineTrajectoryRetimer, planningutils::PyAffineTrajectoryRetimerPtr >("AffineTrajectoryRetimer", DOXY_CLASS(planningutils::AffineTrajectoryRetimer), no_init)
         .def(init<const std::string&, const std::string&>(py::args("plannername", "plannerparameters")))
 #endif
+
+        .def("GetPlannerName", &planningutils::PyAffineTrajectoryRetimer::GetPlannerName, DOXY_FN(planningutils::AffineTrajectoryRetimer, GetPlannerName))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("PlanPath", &planningutils::PyAffineTrajectoryRetimer::PlanPath,
              "traj"_a,
@@ -895,6 +918,20 @@ void InitPlanningUtils()
              )
 #else
         .def("PlanPath",&planningutils::PyAffineTrajectoryRetimer::PlanPath,PlanPath_overloads2(PY_ARGS("traj","maxvelocities", "maxaccelerations", "hastimestamps", "releasegil") DOXY_FN(planningutils::AffineTrajectoryRetimer,PlanPath)))
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def("PlanPath", &planningutils::PyAffineTrajectoryRetimer::PlanPathWithJerkLimits,
+             "traj"_a,
+             "maxvelocities"_a,
+             "maxaccelerations"_a,
+             "maxjerks"_a,
+             "hastimestamps"_a = false,
+             "releasegil"_a = true,
+             DOXY_FN(planningutils::AffineTrajectoryRetimer, PlanPathWithJerkLimits)
+             )
+#else
+        .def("PlanPath", &planningutils::PyAffineTrajectoryRetimer::PlanPathWithJerkLimits, PlanPathWithJerkLimits_overloads(PY_ARGS("traj", "maxvelocities", "maxaccelerations", "maxjerks", "hastimestamps", "releasegil") DOXY_FN(planningutils::AffineTrajectoryRetimer, PlanPathWithJerkLimits)))
 #endif
         ;
 

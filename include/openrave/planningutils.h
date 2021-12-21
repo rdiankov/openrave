@@ -240,6 +240,10 @@ public:
     virtual ~AffineTrajectoryRetimer() {
     }
 
+    const std::string& GetPlannerName() const {
+        return _plannername;
+    }
+
     /// \breif reset the planner info with the following information
     virtual void SetPlanner(const std::string& plannername="", const std::string& plannerparameters="");
 
