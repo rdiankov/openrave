@@ -265,11 +265,12 @@ protected:
         ikParamPrev.Set(itDataPrev + info->gPos.offset, ikType);
         ikParam.Set(itData + info->gPos.offset, ikType);
 
-        Vector trans0, trans1; // TODO: write descriptions
-        int transOffset = -1; // TODO: write descriptions
-        dReal minTime = -1.0; // TODO: write descriptions
+        Vector trans0, trans1; // translation values of the previous and the current points, respectively
+        int transOffset = -1; // offset index of the start of the translation values, which is different depending on the type of ikparam.
+        dReal minTime = -1.0; // the computed minimum time. valid if >= 0.
         PiecewisePolynomials::PiecewisePolynomial pwpoly; // TODO: cache this
 
+        // Compute the minimum time needed for rotational part and translational part separately.
         switch( ikType ) {
         case IKP_Transform6D: {
             dReal cosAngle = RaveFabs(ikParamPrev.GetTransform6D().rot.dot(ikParam.GetTransform6D().rot));
@@ -279,29 +280,35 @@ protected:
             else if( cosAngle < -1.0 ) {
                 cosAngle = -1.0;
             }
-            // TODO: write descriptions for all derivations of angular velocity/acceleration from quaternions
-            const dReal angleDelta = 2.0*RaveAcos(cosAngle);
-            const Vector angularVelocityPrev = 2.0*quatMultiply(Vector(*(itDataPrev + info->gVel.offset + 0), *(itDataPrev + info->gVel.offset + 1), *(itDataPrev + info->gVel.offset + 2), *(itDataPrev + info->gVel.offset + 3)),
-                                                                quatInverse(ikParamPrev.GetTransform6D().rot));
-            const dReal angleVelPrev = RaveSqrt(utils::Sqr(angularVelocityPrev.y) + utils::Sqr(angularVelocityPrev.z) + utils::Sqr(angularVelocityPrev.w));
-
-            const Vector angularVelocity = 2.0*quatMultiply(Vector(*(itData + info->gVel.offset + 0), *(itData + info->gVel.offset + 1), *(itData + info->gVel.offset + 2), *(itData + info->gVel.offset + 3)),
-                                                            quatInverse(ikParam.GetTransform6D().rot));
-            const dReal angleVel = RaveSqrt(utils::Sqr(angularVelocity.y) + utils::Sqr(angularVelocity.z) + utils::Sqr(angularVelocity.w));
-
-            const Vector angularAccelerationPrev = 2.0*quatMultiply(Vector(*(itDataPrev + info->gAccel.offset + 0), *(itDataPrev + info->gAccel.offset + 1), *(itDataPrev + info->gAccel.offset + 2), *(itDataPrev + info->gAccel.offset + 3)),
+            // Skip min-time computation if no movement is required.
+            if( cosAngle < 1.0 - g_fEpsilon ) {
+                // TODO: write descriptions for all derivations of angular velocity/acceleration from quaternions
+                const dReal angleDelta = 2.0*RaveAcos(cosAngle);
+                const Vector angularVelocityPrev = 2.0*quatMultiply(Vector(*(itDataPrev + info->gVel.offset + 0), *(itDataPrev + info->gVel.offset + 1), *(itDataPrev + info->gVel.offset + 2), *(itDataPrev + info->gVel.offset + 3)),
                                                                     quatInverse(ikParamPrev.GetTransform6D().rot));
-            const dReal angleAccelPrev = RaveSqrt(utils::Sqr(angularAccelerationPrev.y) + utils::Sqr(angularAccelerationPrev.z) + utils::Sqr(angularAccelerationPrev.w));
+                const dReal angleVelPrev = RaveSqrt(utils::Sqr(angularVelocityPrev.y) + utils::Sqr(angularVelocityPrev.z) + utils::Sqr(angularVelocityPrev.w));
 
-            const Vector angularAcceleration = 2.0*quatMultiply(Vector(*(itData + info->gAccel.offset + 0), *(itData + info->gAccel.offset + 1), *(itData + info->gAccel.offset + 2), *(itData + info->gAccel.offset + 3)),
+                const Vector angularVelocity = 2.0*quatMultiply(Vector(*(itData + info->gVel.offset + 0), *(itData + info->gVel.offset + 1), *(itData + info->gVel.offset + 2), *(itData + info->gVel.offset + 3)),
                                                                 quatInverse(ikParam.GetTransform6D().rot));
-            const dReal angleAccel = RaveSqrt(utils::Sqr(angularAcceleration.y) + utils::Sqr(angularAcceleration.z) + utils::Sqr(angularAcceleration.w));
-            const dReal lowerLimit = -1000, upperLimit = angleDelta + 1000; // arbitrary limit
-            PiecewisePolynomials::PolynomialCheckReturn ret = _pinterpolator->Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(0, angleDelta, angleVelPrev, angleVel, angleAccelPrev, angleAccel, lowerLimit, upperLimit, info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), info->_vConfigJerkLimit.at(0), pwpoly);
-            if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
-                return -1.0;
+                const dReal angleVel = RaveSqrt(utils::Sqr(angularVelocity.y) + utils::Sqr(angularVelocity.z) + utils::Sqr(angularVelocity.w));
+
+                const Vector angularAccelerationPrev = 2.0*quatMultiply(Vector(*(itDataPrev + info->gAccel.offset + 0), *(itDataPrev + info->gAccel.offset + 1), *(itDataPrev + info->gAccel.offset + 2), *(itDataPrev + info->gAccel.offset + 3)),
+                                                                        quatInverse(ikParamPrev.GetTransform6D().rot));
+                const dReal angleAccelPrev = RaveSqrt(utils::Sqr(angularAccelerationPrev.y) + utils::Sqr(angularAccelerationPrev.z) + utils::Sqr(angularAccelerationPrev.w));
+
+                const Vector angularAcceleration = 2.0*quatMultiply(Vector(*(itData + info->gAccel.offset + 0), *(itData + info->gAccel.offset + 1), *(itData + info->gAccel.offset + 2), *(itData + info->gAccel.offset + 3)),
+                                                                    quatInverse(ikParam.GetTransform6D().rot));
+                const dReal angleAccel = RaveSqrt(utils::Sqr(angularAcceleration.y) + utils::Sqr(angularAcceleration.z) + utils::Sqr(angularAcceleration.w));
+                const dReal lowerLimit = -1000, upperLimit = angleDelta + 1000; // arbitrary limit
+                PiecewisePolynomials::PolynomialCheckReturn ret = _pinterpolator->Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(0, angleDelta, angleVelPrev, angleVel, angleAccelPrev, angleAccel, lowerLimit, upperLimit, info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), info->_vConfigJerkLimit.at(0), pwpoly);
+                if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
+                    return -1.0;
+                }
+                minTime = pwpoly.GetDuration();
             }
-            minTime = pwpoly.GetDuration();
+            else {
+                minTime = 0.0; // no rotational motion required
+            }
 
             trans0 = ikParamPrev.GetTransform6D().trans;
             trans1 = ikParam.GetTransform6D().trans;
@@ -336,6 +343,7 @@ protected:
         if( transOffset >= 0 ) {
             std::vector<dReal> xyzPrev(3, 0), xyz(3), xyzVelPrev(3), xyzVel(3), xyzAccelPrev(3), xyzAccel(3);
             std::vector<dReal> vLowerLimits(3), vUpperLimits(3);
+            dReal totalDisplacement = 0.0;
             for( size_t idof = 0; idof < 3; ++idof ) {
                 xyzPrev[idof] = trans0[idof];
                 xyz[idof] = trans1[idof];
@@ -355,23 +363,32 @@ protected:
                 }
                 vLowerLimits[idof] = fMin - 1000;
                 vUpperLimits[idof] = fMax + 1000;
-            }
-            std::vector<dReal> vVelLimits(info->_vConfigVelocityLimit.begin() + transOffset, info->_vConfigVelocityLimit.begin() + transOffset + 3);
-            std::vector<dReal> vAccelLimits(info->_vConfigAccelerationLimit.begin() + transOffset, info->_vConfigAccelerationLimit.begin() + transOffset + 3);
-            std::vector<dReal> vJerkLimits(info->_vConfigJerkLimit.begin() + transOffset, info->_vConfigJerkLimit.begin() + transOffset + 3);
 
-            std::vector<PiecewisePolynomials::Chunk> chunks; // TODO: cache this
-            const dReal tryDuration = 100.0; // not used
-            PiecewisePolynomials::PolynomialCheckReturn ret = _ptranslationInterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(xyzPrev, xyz, xyzVelPrev, xyzVel, xyzAccelPrev, xyzAccel, vLowerLimits, vUpperLimits, vVelLimits, vAccelLimits, vJerkLimits, tryDuration, chunks);
-            if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
-                return -1.0;
+                totalDisplacement += (fMax - fMin); // this is always non-negative
             }
-            dReal duration = 0;
-            FOREACHC(itchunk, chunks) {
-                duration += itchunk->duration;
+            // Skip min-time computation if no movement is required.
+            if( totalDisplacement > g_fEpsilon ) {
+                std::vector<dReal> vVelLimits(info->_vConfigVelocityLimit.begin() + transOffset, info->_vConfigVelocityLimit.begin() + transOffset + 3);
+                std::vector<dReal> vAccelLimits(info->_vConfigAccelerationLimit.begin() + transOffset, info->_vConfigAccelerationLimit.begin() + transOffset + 3);
+                std::vector<dReal> vJerkLimits(info->_vConfigJerkLimit.begin() + transOffset, info->_vConfigJerkLimit.begin() + transOffset + 3);
+
+                const dReal tryDuration = 100.0; // not used
+                PiecewisePolynomials::PolynomialCheckReturn ret = _ptranslationInterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(xyzPrev, xyz, xyzVelPrev, xyzVel, xyzAccelPrev, xyzAccel, vLowerLimits, vUpperLimits, vVelLimits, vAccelLimits, vJerkLimits, tryDuration, _cacheInterpolatedChunks);
+                if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
+                    return -1.0;
+                }
+                dReal duration = 0;
+                FOREACHC(itchunk, _cacheInterpolatedChunks) {
+                    duration += itchunk->duration;
+                }
+                if( minTime < duration ) {
+                    minTime = duration;
+                }
             }
-            if( minTime < duration ) {
-                minTime = duration;
+            else {
+                if( minTime < 0 ) {
+                    minTime = 0;
+                }
             }
         } // end if transOffset >= 0
         RAVELOG_WARN_FORMAT("env=%s, PUTTICHAI: minTime=%.15e", GetEnv()->GetNameId()%minTime);
