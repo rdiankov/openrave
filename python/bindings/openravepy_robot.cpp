@@ -690,7 +690,7 @@ object PyRobotBase::PyManipulator::GetTransformPose() const {
 object PyRobotBase::PyManipulator::GetVelocity() const {
     const std::pair<Vector, Vector> velocity = _pmanip->GetVelocity();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvalues({6});
+    py::array_t<dReal> pyvalues(6);
     py::buffer_info buf = pyvalues.request();
     dReal* pvalue = (dReal*) buf.ptr;
     pvalue[0] = velocity.first.x;
