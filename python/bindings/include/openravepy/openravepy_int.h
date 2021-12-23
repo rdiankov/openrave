@@ -391,7 +391,7 @@ inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
 inline py::object toPyVector2(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvec({2});
+    py::array_t<dReal> pyvec(2);
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
@@ -406,7 +406,7 @@ inline py::object toPyVector2(Vector v)
 inline py::object toPyVector3(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvec({3});
+    py::array_t<dReal> pyvec(3);
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
@@ -422,7 +422,7 @@ inline py::object toPyVector3(Vector v)
 inline py::object toPyVector4(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvec({4});
+    py::array_t<dReal> pyvec(4);
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
