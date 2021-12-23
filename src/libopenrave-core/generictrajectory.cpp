@@ -901,8 +901,10 @@ protected:
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateCubicIk, this, boost::ref(_spec._vgroups[i]), _1, _2, _3, static_cast<IkParameterizationType>(niktype));
                     // TODO: add ik validator
                 }
-                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+                else {
+                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+                }
                 nNeedNeighboringInfo = 3;
             }
             else if( interpolation == "quartic" ) {
@@ -1293,7 +1295,6 @@ protected:
                 switch( iktype ) {
                 case IKP_Rotation3D:
                 case IKP_Transform6D: {
-                    // TODO: verify the following computation
                     q0.Set4(&_vtrajdata[offset + g.offset]);
                     q0vel.Set4(&_vtrajdata[offset + derivoffset]);
                     q0acc.Set4(&_vtrajdata[offset + ddoffset]);
@@ -1303,7 +1304,7 @@ protected:
                     q1acc.Set4(&_vtrajdata[nextoffset + ddoffset]);
 
                     const Vector angularVelocityPrev = 2.0*quatMultiply(q0vel, quatInverse(q0));
-                    const Vector angularVelocity = 2.0*quatMultiply(q1vel, quatInverse(q1));
+                    // const Vector angularVelocity = 2.0*quatMultiply(q1vel, quatInverse(q1)); // not used
                     const Vector angularAccelerationPrev = 2.0*quatMultiply(q0acc, quatInverse(q0));
                     const Vector angularAcceleration = 2.0*quatMultiply(q1acc, quatInverse(q1));
 
