@@ -335,7 +335,12 @@ public:
         // case, use fMaxAllowedMult instead.
         dReal fMaxAllowedMult = 0.92;
 
-        int retcode = 0;
+        int retcode = 0; // one of CFO_X
+
+        // fReductionFactor is a suggested multiplier for scaling down the robot joint velocity limits. It will be
+        // computed from how much the tool speed/acceleration bounds are violated. Since fReductionFactor is for scaling
+        // down velocity limits, when scaling down the acceleration limits, the multiplier should become
+        // fReductionFactor^2.
         dReal fReductionFactor = 1.0;
 
         // Important note: for all PiecewisePolynomialsInternal::Coordinate, we will be using only
