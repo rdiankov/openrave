@@ -316,10 +316,49 @@ protected:
             break;
         }
         case IKP_Rotation3D: {
-            // TODO:
+            dReal cosAngle = RaveFabs(ikParamPrev.GetRotation3D().dot(ikParam.GetRotation3D()));
+            if( cosAngle > 1.0 ) {
+                cosAngle = 1.0;
+            }
+            else if( cosAngle < -1.0 ) {
+                cosAngle = -1.0;
+            }
+            // Skip min-time computation if no movement is required.
+            if( cosAngle < 1.0 - g_fEpsilon ) {
+                // TODO: write descriptions for all derivations of angular velocity/acceleration from quaternions
+                const dReal angleDelta = 2.0*RaveAcos(cosAngle);
+                const Vector angularVelocityPrev = 2.0*quatMultiply(Vector(*(itDataPrev + info->gVel.offset + 0), *(itDataPrev + info->gVel.offset + 1), *(itDataPrev + info->gVel.offset + 2), *(itDataPrev + info->gVel.offset + 3)),
+                                                                    quatInverse(ikParamPrev.GetRotation3D()));
+                const dReal angleVelPrev = RaveSqrt(utils::Sqr(angularVelocityPrev.y) + utils::Sqr(angularVelocityPrev.z) + utils::Sqr(angularVelocityPrev.w));
+
+                const Vector angularVelocity = 2.0*quatMultiply(Vector(*(itData + info->gVel.offset + 0), *(itData + info->gVel.offset + 1), *(itData + info->gVel.offset + 2), *(itData + info->gVel.offset + 3)),
+                                                                quatInverse(ikParam.GetRotation3D()));
+                const dReal angleVel = RaveSqrt(utils::Sqr(angularVelocity.y) + utils::Sqr(angularVelocity.z) + utils::Sqr(angularVelocity.w));
+
+                const Vector angularAccelerationPrev = 2.0*quatMultiply(Vector(*(itDataPrev + info->gAccel.offset + 0), *(itDataPrev + info->gAccel.offset + 1), *(itDataPrev + info->gAccel.offset + 2), *(itDataPrev + info->gAccel.offset + 3)),
+                                                                        quatInverse(ikParamPrev.GetRotation3D()));
+                const dReal angleAccelPrev = RaveSqrt(utils::Sqr(angularAccelerationPrev.y) + utils::Sqr(angularAccelerationPrev.z) + utils::Sqr(angularAccelerationPrev.w));
+
+                const Vector angularAcceleration = 2.0*quatMultiply(Vector(*(itData + info->gAccel.offset + 0), *(itData + info->gAccel.offset + 1), *(itData + info->gAccel.offset + 2), *(itData + info->gAccel.offset + 3)),
+                                                                    quatInverse(ikParam.GetRotation3D()));
+                const dReal angleAccel = RaveSqrt(utils::Sqr(angularAcceleration.y) + utils::Sqr(angularAcceleration.z) + utils::Sqr(angularAcceleration.w));
+                const dReal lowerLimit = -1000, upperLimit = angleDelta + 1000; // arbitrary limit
+                PiecewisePolynomials::PolynomialCheckReturn ret = _pinterpolator->Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(0, angleDelta, angleVelPrev, angleVel, angleAccelPrev, angleAccel, lowerLimit, upperLimit, info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), info->_vConfigJerkLimit.at(0), pwpoly);
+                if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
+                    return -1.0;
+                }
+                minTime = pwpoly.GetDuration();
+            }
+            else {
+                minTime = 0.0; // no rotational motion required
+            }
+            break;
         }
         case IKP_Translation3D: {
-            // TODO:
+            trans0 = ikParamPrev.GetTranslation3D();
+            trans1 = ikParam.GetTranslation3D();
+            transOffset = 0;
+            break;
         }
         case IKP_TranslationDirection5D: {
             // TODO:
@@ -666,11 +705,9 @@ protected:
         return true;
     }
 
-    // TODO
     dReal _WriteAffine(GroupInfoConstPtr info, int affineDofs, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData)
     {
-        RAVELOG_WARN_FORMAT("env=%s, _WriteAffine not implemented yet.", GetEnv()->GetNameId());
-        return true;
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("_WriteAffine not implemented"), ORE_NotImplemented);
     }
 
     dReal _WriteIk(GroupInfoConstPtr infoRaw, IkParameterizationType ikType, std::vector<dReal>::const_iterator itOrgDiff, std::vector<dReal>::const_iterator itDataPrev, std::vector<dReal>::iterator itData)
