@@ -463,7 +463,7 @@ public:
         }
         if( _maxmanipaccel > 0 && maxActualManipAccel > _maxmanipaccel ) {
             retcode = CFO_CheckTimeBasedConstraints;
-            fReductionFactor = min(multiplier*_maxmanipaccel/maxActualManipAccel, fMaxAllowedMult);
+            fReductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxActualManipAccel, fMaxAllowedMult));
         }
 
         if( 0 ) {
