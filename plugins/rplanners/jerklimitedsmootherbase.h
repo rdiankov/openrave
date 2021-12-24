@@ -296,17 +296,31 @@ public:
         // Check manip speed/accel constraints
         if( _bManipConstraints && (options & CFO_CheckTimeBasedConstraints) ) {
             try {
-                PiecewisePolynomials::CheckReturn manipret;
+                // accumulate the results for all chunks here before returning from this function. for example, if 1st chunk has 2x violation and 2nd chunk has 5x violation, if we quit early, we need to call _ShortCut iteration twice (both for 2x and 5x violation). if we accumulate the results, e.g. take worst like 5x violation, we can reduce the _ShortCut iteration. note that this accumulate is beneficial if computation time of CheckChunkAllConstraints is lighter than that of _ShortCut iteration.
+                PiecewisePolynomials::CheckReturn manipret; // manip constraint check return for the current chunk
+                PiecewisePolynomials::CheckReturn manipRetAccum; // accumulated manipret for all vChunksOut
+                bool bHasConstraintViolation = false; // true if at least one manip constraints is violated.
                 size_t iChunk = 0;
                 FOREACHC(itChunk, vChunksOut) {
                     manipret = _manipConstraintChecker->CheckChunkManipConstraints(*itChunk, IT_OpenStart);
+                    if( iChunk == 0 ) {
+                        manipRetAccum = manipret;
+                    }
                     ++iChunk;
                     if( manipret.retcode != 0 ) {
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
                         RAVELOG_DEBUG_FORMAT("env=%d, ichunk=%d/%d failed due to manip speed/accel constraints", _envId%(itChunk - vChunksOut.begin())%vChunksOut.size());
 #endif
-                        return manipret;
+                        bHasConstraintViolation = true;
+                        // accumulate the results. note that need to use both min and max according to the variables
+                        manipRetAccum.fTimeBasedSurpassMult = std::min(manipRetAccum.fTimeBasedSurpassMult, manipret.fTimeBasedSurpassMult);
+                        manipRetAccum.fMaxManipSpeed = std::max(manipRetAccum.fMaxManipSpeed, manipret.fMaxManipSpeed);
+                        manipRetAccum.fMaxManipAccel = std::max(manipRetAccum.fMaxManipAccel, manipret.fMaxManipAccel);
                     }
+                }
+                // if not all chunks satisfied, return the accumulated results
+                if( bHasConstraintViolation ) {
+                    return manipRetAccum;
                 }
             }
             catch( const std::exception& ex ) {
