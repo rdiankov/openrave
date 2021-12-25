@@ -162,10 +162,10 @@ public:
             options |= CFO_CheckWithPerturbation;
         }
         try {
-            int ret = _parameters->CheckPathAllConstraints(xVect, xVect, vVect, vVect, aVect, aVect, 0, static_cast<IntervalType>(IT_OpenStart|_maskinterpolation), options);
+            int ret = _parameters->CheckPathAllConstraints(xVect, xVect, vVect, vVect, aVect, aVect, 0, static_cast<IntervalType>(IT_OpenStart|_maskinterpolation), options, _constraintReturn);
             PiecewisePolynomials::CheckReturn checkret(ret);
             if( ret == CFO_CheckTimeBasedConstraints ) {
-                checkret.fTimeBasedSurpassMult = 0.98;
+                checkret.fTimeBasedSurpassMult = 0.98 * _constraintReturn->_fTimeBasedSurpassMult;
             }
             return checkret;
         }
@@ -223,7 +223,7 @@ public:
             if( ret != 0 ) {
                 PiecewisePolynomials::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
-                    checkret.fTimeBasedSurpassMult = 0.98;
+                    checkret.fTimeBasedSurpassMult = 0.98 * _constraintReturn->_fTimeBasedSurpassMult;
                 }
                 return checkret;
             }
