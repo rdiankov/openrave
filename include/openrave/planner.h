@@ -100,7 +100,7 @@ enum NeighborStateStatus
 class OPENRAVE_API ConstraintFilterReturn
 {
 public:
-    ConstraintFilterReturn() : _fTimeWhenInvalid(0), _returncode(0), _bHasRampDeviatedFromInterpolation(false) {
+    ConstraintFilterReturn() : _fTimeWhenInvalid(0), _returncode(0), _bHasRampDeviatedFromInterpolation(false), _fTimeBasedSurpassMult(1.0) {
     }
     /// \brief clears the data
     inline void Clear() {
@@ -113,6 +113,7 @@ public:
         _fTimeWhenInvalid = 0;
         _bHasRampDeviatedFromInterpolation = false;
         _report.Reset();
+        _fTimeBasedSurpassMult = 1.0;
     }
 
     std::vector<dReal> _configurations; ///< N*dof vector of the configurations used to check constraints. If the constraints were invalid, they stop at the first invalid constraint
@@ -123,6 +124,7 @@ public:
     int _returncode; ///< if == 0, the constraint is good. If != 0 means constraint was violated and bitmasks in ConstraintFilterOptions can be used to find what constraint was violated.
     CollisionReport _report; ///< if in collision (_returncode&(CFO_CheckEnvCollisions|CFO_CheckSelfCollisions)), then stores the collision report
     bool _bHasRampDeviatedFromInterpolation; ///< if true, then it means that the checked ramp that passed is different from the interpolation expected on the start and end points, and the new points are filled in _configurations
+    dReal _fTimeBasedSurpassMult; ///< if option contains CFO_CheckTimeBasedConstraints, then the multiplier is set to (some factor)*|max|/|actual max|. this is used for the reduction factor in velocity unit. if several constraints should be taken into account, take min.
 };
 
 typedef boost::shared_ptr<ConstraintFilterReturn> ConstraintFilterReturnPtr;
