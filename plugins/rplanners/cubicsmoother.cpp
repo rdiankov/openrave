@@ -907,8 +907,9 @@ public:
                 lastSuccessfulShortcutIter = iter;
 
                 // Keep track of multipliers
-                fStartTimeVelMult = min(1.0, fCurVelMult*fiSearchVelAccelMult);
-                fStartTimeAccelMult = min(1.0, fCurAccelMult*fiSearchVelAccelMult);
+                // HACK : commentout
+                // fStartTimeVelMult = min(1.0, fCurVelMult*fiSearchVelAccelMult);
+                // fStartTimeAccelMult = min(1.0, fCurAccelMult*fiSearchVelAccelMult);
 
                 // Update parameters
                 nTimeBasedConstraintsFailed = 0;

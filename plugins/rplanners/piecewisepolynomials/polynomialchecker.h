@@ -157,7 +157,7 @@ public:
 
 private:
     // Specific tolerance for checking discrepancies.
-    dReal epsilonForPositionDiscrepancyChecking = g_fPolynomialEpsilon;
+    dReal epsilonForPositionDiscrepancyChecking = g_fPolynomialEpsilon*10; // HACK
     dReal epsilonForVelocityDiscrepancyChecking = g_fPolynomialEpsilon;
     dReal epsilonForAccelerationDiscrepancyChecking = g_fPolynomialEpsilon;
 
