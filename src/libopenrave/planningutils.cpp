@@ -3341,13 +3341,7 @@ SimpleDistanceMetric::SimpleDistanceMetric(RobotBasePtr robot) : _robot(robot)
 
 dReal SimpleDistanceMetric::Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
 {
-    std::vector<dReal> c = c0;
-    _robot->SubtractActiveDOFValues(c,c1);
-    dReal dist = 0;
-    for(int i=0; i < _robot->GetActiveDOF(); i++) {
-        dist += weights2.at(i)*c.at(i)*c.at(i);
-    }
-    return RaveSqrt(dist);
+    return RaveSqrt(_robot->ComputeWeightedSquaredDistanceOfActiveDOFValues(c0, c1, weights2));
 }
 
 SimpleNeighborhoodSampler::SimpleNeighborhoodSampler(SpaceSamplerBasePtr psampler, const PlannerBase::PlannerParameters::DistMetricFn& distmetricfn, const PlannerBase::PlannerParameters::DiffStateFn& diffstatefn) : _psampler(psampler), _distmetricfn(distmetricfn), _diffstatefn(diffstatefn)

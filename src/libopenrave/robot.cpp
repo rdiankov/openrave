@@ -1592,6 +1592,82 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
     }
 }
 
+dReal RobotBase::ComputeWeightedSquaredDistanceOfActiveDOFValues(const std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<dReal>& squaredWeights) const
+{
+    dReal dist = 0;
+    if( _nActiveDOF < 0 ) {
+        std::vector<dReal> q = q1;
+        SubtractDOFValues(q,q2);
+        for(int idof=0; idof < GetDOF(); idof++) {
+            dist += squaredWeights.at(idof)*q.at(idof)*q.at(idof);
+        }
+        return dist;
+    }
+
+    OPENRAVE_ASSERT_OP(q1.size(),==,q2.size());
+    OPENRAVE_ASSERT_OP(q1.size(),==,squaredWeights.size());
+    OPENRAVE_ASSERT_OP(q1.size(), >=, _vActiveDOFIndices.size());
+    size_t index = 0;
+    if (_bAreAllJoints1DOFAndNonCircular) {
+        for (; index < _vActiveDOFIndices.size(); ++index) {
+            const dReal dq = q1[index] - q2[index];
+            dist += squaredWeights[index]*dq*dq;
+        }
+    }
+    else {
+        // go through all active joints
+        for(; index < _vActiveDOFIndices.size(); ++index) {
+            // We already did range check above
+            JointConstPtr pjoint = GetJointFromDOFIndex(_vActiveDOFIndices[index]);
+            const dReal dq = pjoint->SubtractValue(q1[index],q2[index],_vActiveDOFIndices[index]-pjoint->GetDOFIndex());
+            dist += squaredWeights[index]*dq*dq;
+        }
+    }
+
+    if( _nAffineDOFs == DOF_NoTransform ) {
+        return dist;
+    }
+
+    if( _nAffineDOFs & DOF_X ) {
+        const dReal dq = q1.at(index) - q2.at(index);
+        dist += squaredWeights.at(index)*dq*dq;
+        index++;
+    }
+    if( _nAffineDOFs & DOF_Y ) {
+        const dReal dq = q1.at(index) - q2.at(index);
+        dist += squaredWeights.at(index)*dq*dq;
+        index++;
+    }
+    if( _nAffineDOFs & DOF_Z ) {
+        const dReal dq = q1.at(index) - q2.at(index);
+        dist += squaredWeights.at(index)*dq*dq;
+        index++;
+    }
+
+    if( _nAffineDOFs & DOF_RotationAxis ) {
+        const dReal dq = utils::SubtractCircularAngle(q1.at(index),q2.at(index));
+        dist += squaredWeights.at(index)*dq*dq;
+        index++;
+    }
+    else if( _nAffineDOFs & DOF_Rotation3D ) {
+        for(int i3d = 0; i3d < 3; ++ i3d) {
+            const dReal dq = q1.at(index) - q2.at(index);
+            dist += squaredWeights.at(index)*dq*dq;
+            index++;
+        }
+    }
+    else if( _nAffineDOFs & DOF_RotationQuat ) {
+        // would like to do q2^-1 q1, but that might break rest of planners...?
+        for(int iquat = 0; iquat < 3; ++ iquat) {
+            const dReal dq = q1.at(index) - q2.at(index);
+            dist += squaredWeights.at(index)*dq*dq;
+            index++;
+        }
+    }
+
+    return dist;
+}
+
 ConfigurationSpecification RobotBase::GetActiveConfigurationSpecification(const std::string& interpolation) const
 {
     if( interpolation.size() == 0 ) {

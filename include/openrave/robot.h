@@ -1171,6 +1171,8 @@ private:
 
     /// computes the configuration difference q1-q2 and stores it in q1. Takes into account joint limits and circular joints
     virtual void SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const;
+    /// returns the weighted configuration difference q1-q2. Takes into account joint limits and circular joints
+    virtual dReal ComputeWeightedSquaredDistanceOfActiveDOFValues(const std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<dReal>& squaredWeights) const;
 
     /// \brief sets the active manipulator of the robot
     ///
