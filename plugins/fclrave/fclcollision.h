@@ -401,7 +401,7 @@ public:
         FCLCollisionManagerInstance& body1Manager = _GetBodyManager(pbody1, !!(_options & OpenRAVE::CO_ActiveDOFs));
         FCLCollisionManagerInstance& body2Manager = _GetBodyManager(pbody2, false); // TODO why are active DOFs not respected for pbody2??
 #ifdef FCLRAVE_CHECKPARENTLESS
-        boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstance, this, boost::ref(*pbody1), boost::ref(body1Manager), boost::ref(*pbody2), boost::ref(body2Manager)));
+        OpenRAVE::utils::CallOnDestruction onexit(boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstance, this, boost::ref(*pbody1), boost::ref(body1Manager), boost::ref(*pbody2), boost::ref(body2Manager)));
 #endif
 
         const std::vector<KinBodyConstPtr> vbodyexcluded;
@@ -516,7 +516,7 @@ public:
         }
         ADD_TIMING(_statistics);
 #ifdef FCLRAVE_CHECKPARENTLESS
-        boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceBL, this, boost::ref(*pbody), boost::ref(bodyManager), boost::ref(*plink)));
+        OpenRAVE::utils::CallOnDestruction onexit(boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceBL, this, boost::ref(*pbody), boost::ref(bodyManager), boost::ref(*plink)));
 #endif
         bodyManager.GetManager()->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         return query._bCollision;
@@ -551,7 +551,7 @@ public:
         }
         ADD_TIMING(_statistics);
 #ifdef FCLRAVE_CHECKPARENTLESS
-        boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceLE, this, boost::ref(*plink), boost::ref(envManager)));
+        OpenRAVE::utils::CallOnDestruction onexit(boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceLE, this, boost::ref(*plink), boost::ref(envManager)));
 #endif
         envManager.GetManager()->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         return query._bCollision;
@@ -583,7 +583,7 @@ public:
         }
         ADD_TIMING(_statistics);
 #ifdef FCLRAVE_CHECKPARENTLESS
-        boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceBE, this, boost::ref(*pbody), boost::ref(bodyManager), boost::ref(envManager)));
+        OpenRAVE::utils::CallOnDestruction onexit(boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceBE, this, boost::ref(*pbody), boost::ref(bodyManager), boost::ref(envManager)));
 #endif
         envManager.GetManager()->collide(bodyManager.GetManager().get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
 
@@ -650,7 +650,7 @@ public:
         //ctriobj.computeAABB(); // necessary?
         ctriobj.setUserData(&objUserData);
 #ifdef FCLRAVE_CHECKPARENTLESS
-        boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceB, this, boost::ref(*pbody), boost::ref(bodyManager)));
+        OpenRAVE::utils::CallOnDestruction onexit(boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceB, this, boost::ref(*pbody), boost::ref(bodyManager)));
 #endif
         bodyManager.GetManager()->collide(&ctriobj, &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         return query._bCollision;
@@ -694,7 +694,7 @@ public:
         //ctriobj.computeAABB(); // necessary?
         ctriobj.setUserData(&objUserData);
 #ifdef FCLRAVE_CHECKPARENTLESS
-        //boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceB, this, boost::ref(*pbody), boost::ref(bodyManager)));
+        //OpenRAVE::utils::CallOnDestruction onexit(boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceB, this, boost::ref(*pbody), boost::ref(bodyManager)));
 #endif
         envManager.GetManager()->collide(&ctriobj, &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         return query._bCollision;
@@ -727,7 +727,7 @@ public:
         cboxobj.computeAABB(); // probably necessary since translation changed
         cboxobj.setUserData(&objUserData);
 #ifdef FCLRAVE_CHECKPARENTLESS
-        //boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceB, this, boost::ref(*pbody), boost::ref(envManager)));
+        //OpenRAVE::utils::CallOnDestruction onexit(boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceB, this, boost::ref(*pbody), boost::ref(envManager)));
 #endif
         envManager.GetManager()->collide(&cboxobj, &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         return query._bCollision;
@@ -768,7 +768,7 @@ public:
         cboxobj.computeAABB(); // probably necessary since translation changed
         cboxobj.setUserData(&objUserData);
 #ifdef FCLRAVE_CHECKPARENTLESS
-        //boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceB, this, boost::ref(*pbody), boost::ref(envManager)));
+        //OpenRAVE::utils::CallOnDestruction onexit(boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceB, this, boost::ref(*pbody), boost::ref(envManager)));
 #endif
         envManager.GetManager()->collide(&cboxobj, &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         return query._bCollision;
@@ -801,7 +801,7 @@ public:
         ADD_TIMING(_statistics);
         query.bselfCollision = true;
 #ifdef FCLRAVE_CHECKPARENTLESS
-        boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceSelf, this, boost::ref(*pbody)));
+        OpenRAVE::utils::CallOnDestruction onexit(boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceSelf, this, boost::ref(*pbody)));
 #endif
         FCLKinBodyInfoPtr pinfo = _fclspace->GetInfo(*pbody);
         FOREACH(itset, nonadjacent) {

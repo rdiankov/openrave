@@ -172,18 +172,6 @@ private:
     bool _bIsEnabled;
 };
 
-class CallOnDestruction
-{
-public:
-    CallOnDestruction(const boost::function<void()>& fn) : _fn(fn) {
-    }
-    ~CallOnDestruction() {
-        _fn();
-    }
-private:
-    boost::function<void()> _fn;
-};
-
 #define SERIALIZATION_PRECISION 4
 template<typename T>
 inline T SerializationValue(T f)

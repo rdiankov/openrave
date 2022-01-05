@@ -5764,7 +5764,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
 //            FOREACH(itgrabbed, mapcheckcollisions) {
 //                KinBodyPtr pgrabbedbody(itgrabbed->first->_pgrabbedbody);
 //                _RemoveAttachedBody(pgrabbedbody);
-//                CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pgrabbedbody));
+//                utils::CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pgrabbedbody));
 //                FOREACH(itlink, itgrabbed->second) {
 //                    if( pchecker->CheckCollision(*itlink, KinBodyConstPtr(pgrabbedbody)) ) {
 //                        itgrabbed->first->_listNonCollidingLinks.remove(*itlink);

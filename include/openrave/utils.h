@@ -184,6 +184,19 @@ struct index_cmp
     const T arr;
 };
 
+/// \brief calls the given function on destructing
+class CallOnDestruction
+{
+public:
+    CallOnDestruction(const boost::function<void()>& fn) : _fn(fn) {
+    }
+    ~CallOnDestruction() {
+        _fn();
+    }
+private:
+    boost::function<void()> _fn;
+};
+
 /// \brief allow to add different custom deleter funtions to a shared_ptr without touching its original custom deleter
 ///
 /// Can specify pre-delete and post-delete functions
