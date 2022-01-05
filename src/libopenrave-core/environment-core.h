@@ -2581,7 +2581,7 @@ public:
         _vPublishedBodies.resize(_GetNumBodies());
         int iwritten = 0;
 
-        std::vector<dReal> vdoflastsetvalues;
+        // std::vector<dReal> vdoflastsetvalues;
         for(const KinBodyPtr& pbody : _vecbodies) {
             if (!pbody || pbody->GetEnvironmentBodyIndex() == 0) {
                 continue;
@@ -2594,9 +2594,9 @@ public:
             KinBody::BodyState& state = _vPublishedBodies.at(iwritten);
             state.Reset();
             state.pbody = pbody;
-            pbody->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
+            pbody->GetLinkTransformations(state.vectrans, state.jointvalues);
             pbody->GetLinkEnableStates(state.vLinkEnableStates);
-            pbody->GetDOFValues(state.jointvalues);
+            // pbody->GetDOFValues(state.jointvalues);
             pbody->GetGrabbedInfo(state.vGrabbedInfos);
             state.strname =pbody->GetName();
             state.uri = pbody->GetURI();
