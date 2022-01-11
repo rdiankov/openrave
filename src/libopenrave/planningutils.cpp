@@ -2393,11 +2393,17 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                             fTimeBasedSurpassMultForTorqueAccum2 = std::min(fTimeBasedSurpassMultForTorqueAccum2, (torquelimits.second-fMidTorque) / (fcurtorque-fMidTorque));
                         }
                         bHasTorqueVioldatedJoint = true;
+                        // if filterreturn does not exist, we cannot return the _fTimeBasedSurpassMult. so, no need to check other joints' violation and break from the for loop.
+                        if( !filterreturn ) {
+                            break;
+                        }
                     }
                 }
                 // if violated, return the accumulated results
                 if( bHasTorqueVioldatedJoint ) {
-                    filterreturn->_fTimeBasedSurpassMult = std::min(filterreturn->_fTimeBasedSurpassMult, RaveSqrt(fTimeBasedSurpassMultForTorqueAccum2)); // take min to respect the worst mult up to now. use sqrt to convert accmult to speedmult.
+                    if( !!filterreturn ) {
+                        filterreturn->_fTimeBasedSurpassMult = std::min(filterreturn->_fTimeBasedSurpassMult, RaveSqrt(fTimeBasedSurpassMultForTorqueAccum2)); // take min to respect the worst mult up to now. use sqrt to convert accmult to speedmult.
+                    }
                     return CFO_CheckTimeBasedConstraints;
                 }
             }
