@@ -17,7 +17,6 @@
 
 #include "piecewisepolynomials/cubicinterpolator.h"
 #include "jerklimitedsmootherbase.h"
-#define CUBIC_SMOOTHER_PROGRESS_DEBUG
 
 namespace rplanners {
 
