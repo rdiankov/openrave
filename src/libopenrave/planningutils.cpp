@@ -3870,6 +3870,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( nstateret != 0 ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = nstateret;
+                    filterreturn->_fTimeWhenInvalid = tcur;
                 }
                 return nstateret;
             }
@@ -4117,6 +4118,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     RAVELOG_WARN_FORMAT("env=%d, timestep=%f; timeelapsed=%f; istep=%d; numSteps=%d; totalSteps=%d", _environmentid%tcur%timeelapsed%istep%numSteps%totalSteps);
                     if( !!filterreturn ) {
                         filterreturn->_returncode = CFO_StateSettingError;
+                        filterreturn->_fTimeWhenInvalid = tcur;
                     }
                     return CFO_StateSettingError;
                 }
@@ -4129,6 +4131,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( neighstatus == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
+                    filterreturn->_fTimeWhenInvalid = tcur;
                 }
                 return CFO_StateSettingError;
             }
@@ -4198,6 +4201,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     // }
 
                     RAVELOG_DEBUG_FORMAT("env=%d, the projected configuration is too far from the expected one. numPostNeighSteps=%d", _environmentid%numPostNeighSteps);
+                    if( !!filterreturn ) {
+                        filterreturn->_returncode = CFO_FinalValuesNotReached;
+                        filterreturn->_fTimeWhenInvalid = tcur;
+                    }
                     return CFO_FinalValuesNotReached;
                 }
             }
@@ -4255,6 +4262,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 // }
 
                 // May be too dangerous to allow it to pass when the final configuration does not reach q1.
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = CFO_FinalValuesNotReached;
+                    filterreturn->_fTimeWhenInvalid = tcur;
+                }
                 return CFO_FinalValuesNotReached;
             }
         }
@@ -4290,6 +4301,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( neighstatus == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
+                    filterreturn->_fTimeWhenInvalid = 0;
                 }
                 return CFO_StateSettingError;
             }
