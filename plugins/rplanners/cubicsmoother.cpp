@@ -672,10 +672,16 @@ public:
                 ShortcutStatus currentStatus = SS_Successful;
 #endif
                 for( size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown ) {
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+                    _StartCaptureInterpolator();
+#endif
                     PiecewisePolynomials::PolynomialCheckReturn polycheckret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration
                                                                                    (x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect,
                                                                                    _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit,
                                                                                    velLimits, accelLimits, jerkLimits, /*not used*/ 0, tempChunks);
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+                    _EndCaptureInterpolator();
+#endif
                     dReal fChunksDuration = 0;
                     FOREACHC(itchunk, tempChunks) {
                         fChunksDuration += itchunk->duration;
@@ -977,7 +983,11 @@ public:
         GetShortcutStatusString(ss);
         RAVELOG_INFO_FORMAT("env=%d, Shortcut statistics: total iterations=%d, last successful iteration=%d\n%s", _envId%iter%lastSuccessfulShortcutIter%ss.str());
 #endif
-
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+        ss.str(""); ss.clear();
+        _GetShortcutSubprocessesTiming(ss);
+        RAVELOG_INFO_FORMAT("env=%d, Shortcut subprocesses timing:\n%s", _envId%ss.str());
+#endif
         return numShortcuts;
     }
 
