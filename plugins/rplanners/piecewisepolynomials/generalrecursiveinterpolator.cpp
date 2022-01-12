@@ -86,11 +86,6 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::PostProcessParabolic1DTrajec
         return PolynomialCheckReturn::PCR_PositionLimitsViolation;
     }
 
-    RampOptimizer::ParabolicCheckReturn parabolicret = RampOptimizer::CheckRamps(curve.GetRamps(), xmin, xmax, vm, am, x0, x1, v0, v1);
-    if( parabolicret != RampOptimizer::ParabolicCheckReturn::PCR_Normal ) {
-        RAVELOG_VERBOSE_FORMAT("env=%d, failed in PostProcessParabolic1DTrajectory", envid);
-        return PolynomialCheckReturn::PCR_GenericError;
-    }
     ConvertParabolicCurveToPiecewisePolynomial(curve, pwpoly);
     return PolynomialCheckReturn::PCR_Normal;
 }
