@@ -140,7 +140,10 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     }
 
     // Step 2
-    const dReal deltaX = finalState.at(positionIndex) - initialState.at(positionIndex);
+    // A very small deltaX could be due to a floating point issue. So if deltaX is smaller than the epsilon, we assume
+    // that it is zero. Use the same epsilon as what is used for piecewise polynomial checking.
+    dReal tempDeltaX = finalState.at(positionIndex) - initialState.at(positionIndex);
+    const dReal deltaX = RaveFabs(tempDeltaX) <= checker.GetEpsilonForPositionDiscrepancyChecking() ? 0 : tempDeltaX;
 
     // Step 3
     dReal vmin = lowerBounds.at(velocityIndex);
