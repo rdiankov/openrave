@@ -200,6 +200,10 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryArbitraryTimeDerivat
                                                                                                       const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm,
                                                                                                       PiecewisePolynomial& pwpoly)
 {
+    if( v0 == 0 && v1 == 0 && a0 == 0 && a1 == 0 ) {
+        // Save some time by using a non-iterative method when possible.
+        return Compute1DTrajectoryZeroTimeDerivativesOptimizedDuration(x0, x1, vm, am, jm, pwpoly);
+    }
     const std::vector<dReal> initialState({x0, v0, a0});
     const std::vector<dReal> finalState({x1, v1, a1});
     const std::vector<dReal> lowerBounds({xmin, -vm, -am, -jm});
