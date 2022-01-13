@@ -64,12 +64,18 @@ public:
                                                                                            const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
                                                                                            std::vector<Chunk>& chunks) override;
 
+    // Note that for cubic interpolator, we modify the argument after jmVect to be *maxAllowedDuration*. During the
+    // first phase of computation where we check which dof is the slowest to reach its goal, if we find that some dof
+    // takes longer than maxAllowedDuration, the problem is regarded as infeasible right away since the final solution
+    // cannot be faster than maxAllowedDuration anyway. This is so that we can terminate the computation early.
+    //
+    // If maxAllowedDuration is 0, then we allow the computed solution to be arbitrarily long.
     virtual PolynomialCheckReturn ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
                                                                                                const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
                                                                                                const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect,
                                                                                                const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
                                                                                                const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
-                                                                                               const dReal T, std::vector<Chunk>& chunks) override;
+                                                                                               const dReal maxAllowedDuration, std::vector<Chunk>& chunks) override;
 
     // Utility functions for 1D zero time derivatives case
     int DetermineZeroTimeDerivativesCaseFromBoundaryConditions(const dReal d, const dReal vm, const dReal am, const dReal jm);

@@ -678,7 +678,7 @@ public:
                     PiecewisePolynomials::PolynomialCheckReturn polycheckret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration
                                                                                    (x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect,
                                                                                    _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit,
-                                                                                   velLimits, accelLimits, jerkLimits, /*not used*/ 0, tempChunks);
+                                                                                   velLimits, accelLimits, jerkLimits, t1 - t0 - minTimeStep, tempChunks);
 #ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
                     _EndCaptureInterpolator();
 #endif
@@ -690,7 +690,12 @@ public:
                     if( polycheckret != PolynomialCheckReturn::PCR_Normal ) {
                         RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; iSlowDown=%d; initial interpolation failed. polycheckret=%s", _envId%iter%numIters%t0%t1%iSlowDown%PiecewisePolynomials::GetPolynomialCheckReturnString(polycheckret));
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
-                        currentStatus = SS_InitialInterpolationFailed;
+                        if( polycheckret == PolynomialCheckReturn::PCR_DurationTooLong ) {
+                            currentStatus = iSlowDown == 0 ? SS_InterpolatedSegmentTooLong : SS_InterpolatedSegmentTooLongFromSlowDown;
+                        }
+                        else {
+                            currentStatus = SS_InitialInterpolationFailed;
+                        }
 #endif
                         break; // must not slow down any further.
                     }

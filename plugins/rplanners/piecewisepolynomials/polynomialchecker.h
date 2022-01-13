@@ -33,6 +33,7 @@ enum PolynomialCheckReturn : uint8_t {
     PCR_VelocityDiscrepancy = 7,         ///< a terminal velocity (initial/final) is different from the given value
     PCR_AccelerationDiscrepancy = 8,     ///< a terminal acceleration (initial/final) is different from the given value
     PCR_DurationDiscrepancy = 9,         ///< polynomial is defined in a range different from the given range
+    PCR_DurationTooLong = 10,            ///< the duration is too long so the polynomial will not be useful as a shortcut
     PCR_GenericError = 0x10,
 };
 

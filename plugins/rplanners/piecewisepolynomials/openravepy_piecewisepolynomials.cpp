@@ -1293,5 +1293,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .value("PCR_VelocityDiscrepancy", piecewisepolynomials::PCR_VelocityDiscrepancy)
     .value("PCR_AccelerationDiscrepancy", piecewisepolynomials::PCR_AccelerationDiscrepancy)
     .value("PCR_DurationDiscrepancy", piecewisepolynomials::PCR_DurationDiscrepancy)
+    .value("PCR_DurationTooLong", piecewisepolynomials::PCR_DurationTooLong)
+    .value("PCR_GenericError", piecewisepolynomials::PCR_GenericError)
     ;
 }

@@ -370,7 +370,7 @@ PolynomialCheckReturn CubicInterpolator::ComputeNDTrajectoryArbitraryTimeDerivat
                                                                                                       const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect,
                                                                                                       const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect,
                                                                                                       const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect,
-                                                                                                      const dReal T, std::vector<Chunk>& chunks)
+                                                                                                      const dReal maxAllowedDuration, std::vector<Chunk>& chunks)
 {
     OPENRAVE_ASSERT_OP(x0Vect.size(), ==, ndof);
     OPENRAVE_ASSERT_OP(x1Vect.size(), ==, ndof);
@@ -409,6 +409,7 @@ PolynomialCheckReturn CubicInterpolator::ComputeNDTrajectoryArbitraryTimeDerivat
 
     // First find out which joint takes the longest to reach the goal
     dReal maxDuration = 0;
+    dReal curDuration; // cache
     size_t maxIndex= 0;
     for( size_t idof = 0; idof < ndof; ++idof ) {
         PolynomialCheckReturn ret = Compute1DTrajectoryArbitraryTimeDerivativesOptimizedDuration(
@@ -422,8 +423,17 @@ PolynomialCheckReturn CubicInterpolator::ComputeNDTrajectoryArbitraryTimeDerivat
                                    %GetPolynomialCheckReturnString(ret));
             return ret;
         }
-        if( _cachePWPolynomials[idof].GetDuration() > maxDuration ) {
-            maxDuration = _cachePWPolynomials[idof].GetDuration();
+        curDuration = _cachePWPolynomials[idof].GetDuration();
+        if( maxAllowedDuration > 0 && curDuration > maxAllowedDuration ) {
+            // Resulting duration too long. Reject it right away.
+            RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d rejected since duration too long: maxAllowedDuration=%.15f; duration=%.15f; x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15f; a0=%.15f; a1=%.15f; xmin=%.15f; xmax=%.15f; vm=%.15f; am=%.15f; jm=%.15f;",
+                                   envid%idof%maxAllowedDuration%curDuration
+                                   %x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%a0Vect[idof]%a1Vect[idof]
+                                   %xminVect[idof]%xmaxVect[idof]%vmVect[idof]%amVect[idof]%jmVect[idof]);
+            return PolynomialCheckReturn::PCR_DurationTooLong;
+        }
+        if( curDuration > maxDuration ) {
+            maxDuration = curDuration;
             maxIndex = idof;
         }
     }
