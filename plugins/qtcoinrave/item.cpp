@@ -94,7 +94,7 @@ KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry
     _userdata = 0;
     _bReload = false;
     _bDrawStateChanged = false;
-    networkid = pchain->GetEnvironmentId();
+    networkid = pchain->GetEnvironmentBodyIndex();
     _geometrycallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::GeometryChangedCallback,this));
     _drawcallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::DrawChangedCallback,this));
 }
@@ -430,7 +430,7 @@ bool KinBodyItem::UpdateFromModel()
             Load();
         }
         // make sure the body is still present!
-        if( _pchain->GetEnv()->GetBodyFromEnvironmentId(networkid) == _pchain ) {
+        if( _pchain->GetEnv()->GetBodyFromEnvironmentBodyIndex(networkid) == _pchain ) {
             _pchain->GetLinkTransformations(_vtrans,_vdofbranches);
             _pchain->GetDOFValues(vjointvalues);
         }

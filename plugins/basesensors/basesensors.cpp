@@ -16,6 +16,7 @@
 #include "baselaser.h"
 #include "baseflashlidar3d.h"
 #include "basecamera.h"
+#include "baseforce6d.h"
 #include <openrave/plugin.h>
 
 static list< UserDataPtr >* s_listRegisteredReaders = NULL; ///< have to make it a pointer in order to prevent static object destruction from taking precedence
@@ -35,6 +36,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if((interfacename == "basecamera")||(interfacename == "base_pinhole_camera")) {
             return InterfaceBasePtr(new BaseCameraSensor(penv));
         }
+        else if((interfacename == "baseforce6d")||(interfacename == "base_force6d")) {
+            return InterfaceBasePtr(new BaseForce6DSensor(penv));
+        }
         break;
     default:
         break;
@@ -53,8 +57,12 @@ void GetPluginAttributesValidated(PLUGININFO& info)
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"base_laser3d",BaseFlashLidar3DSensor::CreateXMLReader));
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateXMLReader));
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"base_pinhole_camera",BaseCameraSensor::CreateXMLReader));
+        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"baseforce6d",BaseForce6DSensor::CreateXMLReader));
+        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"base_force6d",BaseForce6DSensor::CreateXMLReader));
         s_listRegisteredReaders->push_back(RaveRegisterJSONReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateJSONReader));
         s_listRegisteredReaders->push_back(RaveRegisterJSONReader(PT_Sensor,"base_pinhole_camera",BaseCameraSensor::CreateJSONReader));
+        s_listRegisteredReaders->push_back(RaveRegisterJSONReader(PT_Sensor,"baseforce6d",BaseForce6DSensor::CreateJSONReader));
+        s_listRegisteredReaders->push_back(RaveRegisterJSONReader(PT_Sensor,"base_force6d",BaseForce6DSensor::CreateJSONReader));
     }
     info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseLaser2D");
     info.interfacenames[OpenRAVE::PT_Sensor].push_back("base_laser2d");
@@ -63,6 +71,8 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[OpenRAVE::PT_Sensor].push_back("base_laser3d");
     info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseCamera");
     info.interfacenames[OpenRAVE::PT_Sensor].push_back("base_pinhole_camera");
+    info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseForce6D");
+    info.interfacenames[OpenRAVE::PT_Sensor].push_back("base_force6d");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

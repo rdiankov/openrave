@@ -71,6 +71,7 @@ public:
     float _fTransparency = 0.0;
     bool _bVisible = true;
     bool _bModifiable = true;
+    py::dict _calibrationBoardParameters;
 };
 
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
@@ -251,7 +252,7 @@ public:
         object GetTransform();
         object GetTransformPose();
         dReal GetSphereRadius() const;
-        dReal GetCylinderRadius() const ;
+        dReal GetCylinderRadius() const;
         dReal GetCylinderHeight() const;
         object GetBoxExtents() const;
         object GetContainerOuterExtents() const;
@@ -264,6 +265,11 @@ public:
         float GetTransparency() const;
         object GetDiffuseColor() const;
         object GetAmbientColor() const;
+        object GetCalibrationBoardNumDots() const;
+        object GetCalibrationBoardDotsDistances() const;
+        object GetCalibrationBoardDotColor() const;
+        object GetCalibrationBoardPatternName() const;
+        object GetCalibrationBoardDotDiameterDistanceRatios() const;
         object GetInfo();
         object ComputeInnerEmptyVolume() const;
         bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);
@@ -296,6 +302,10 @@ public:
     object ComputeAABB() const;
     object ComputeAABBFromTransform(object otransform) const;
 
+    object ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const;
+    object ComputeAABBForGeometryGroup(const std::string& geomgroupname) const;
+    object ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, object otransform) const;
+
     object GetTransform() const;
     object GetTransformPose() const;
 
@@ -323,6 +333,7 @@ public:
     void InitGeometries(object ogeometryinfos);
 
     void AddGeometry(object ogeometryinfo, bool addToGroups);
+    void AddGeometryToGroup(object ogeometryinfo, const std::string& groupname);
 
     void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
     void SetGeometriesFromGroup(const std::string& name);
@@ -402,6 +413,7 @@ public:
     bool IsCircular(int iaxis) const;
     bool IsRevolute(int iaxis) const;
     bool IsPrismatic(int iaxis) const;
+    bool IsActive() const;
     bool IsStatic() const;
 
     int GetDOF() const;

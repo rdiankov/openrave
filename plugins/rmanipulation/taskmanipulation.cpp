@@ -176,7 +176,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             RAVELOG_WARN("could not find an rrt planner\n");
             return -1;
         }
-        RAVELOG_DEBUG(str(boost::format("using %s planner\n")%plannername));
+        RAVELOG_DEBUG_FORMAT("env=%d, using %s planner", GetEnv()->GetId()%plannername);
 
         if( graspername.size() > 0 ) {
             _pGrasperPlanner = RaveCreatePlanner(GetEnv(),graspername);

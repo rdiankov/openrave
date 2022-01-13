@@ -17,7 +17,7 @@
    -------------------------------------------------------------------- */
 #include "qtosg.h"
 #include "osgrenderitem.h"
-
+#include "osglodlabel.h"
 #include <osgUtil/SmoothingVisitor>
 #include <osg/BlendFunc>
 #include <osg/PolygonOffset>
@@ -230,7 +230,7 @@ KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, Ki
     _userdata = 0;
     _bReload = false;
     _bDrawStateChanged = false;
-    _environmentid = pbody->GetEnvironmentId();
+    _environmentid = pbody->GetEnvironmentBodyIndex();
     _geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::_HandleGeometryChangedCallback,this));
     _drawcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::_HandleDrawChangedCallback,this));
 }
@@ -467,6 +467,54 @@ void KinBodyItem::Load()
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
                     geode->addDrawable(geom);
                     pgeometrydata->addChild(geode);
+                    break;
+                }
+                // Board is a Box, dots are a separate Mesh from the board's collision Mesh
+                case GT_CalibrationBoard: {
+                    // Make board
+                    Vector v;
+                    osg::ref_ptr<osg::Box> board = new osg::Box();
+                    board->setCenter(osg::Vec3f(0, 0, -orgeom->GetBoxExtents().z));
+                    board->setHalfLengths(osg::Vec3f(orgeom->GetBoxExtents().x,orgeom->GetBoxExtents().y,orgeom->GetBoxExtents().z));
+
+                    // Make dot mesh
+                    osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
+
+                    TriMesh mesh = TriMesh();
+                    orgeom->GetCalibrationBoardDotMesh(mesh);
+                    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
+                    vertices->reserveArray(mesh.vertices.size());
+                    for(size_t i = 0; i < mesh.vertices.size(); ++i) {
+                        RaveVector<float> v = mesh.vertices[i];
+                        vertices->push_back(osg::Vec3(v.x, v.y, v.z));
+                    }
+                    geom->setVertexArray(vertices.get());
+
+                    osg::DrawElementsUInt* geom_prim = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, mesh.indices.size());
+                    for(size_t i = 0; i < mesh.indices.size(); ++i) {
+                        (*geom_prim)[i] = mesh.indices[i];
+                    }
+                    geom->addPrimitiveSet(geom_prim);
+                    osgUtil::SmoothingVisitor::smooth(*geom);
+
+                    // Set color of dot grid mesh
+                    RaveVector<float> dotColor = orgeom->GetCalibrationBoardDotColor();
+                    osg::ref_ptr<osg::Material> dotMat = new osg::Material;
+                    dotMat->setDiffuse( osg::Material::FRONT, osg::Vec4(dotColor.x,dotColor.y,dotColor.z,1) );
+                    dotMat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,1) );
+                    dotMat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
+                    
+                    // Place the two parts into the same pgeometrydata
+                    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
+                    osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(board.get());
+                    geode->addDrawable(sd.get());
+                    osg::ref_ptr<osg::Geode> geode2 = new osg::Geode;
+                    geode2->addDrawable(geom);
+                    osg::ref_ptr<osg::StateSet> state = geode2->getOrCreateStateSet();
+                    state->setAttributeAndModes(dotMat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+
+                    pgeometrydata->addChild(geode.get());
+                    pgeometrydata->addChild(geode2.get());
                     break;
                 }
                 default:
@@ -709,7 +757,7 @@ bool KinBodyItem::UpdateFromModel()
         }
 
         // make sure the body is still present!
-        if( _pbody->GetEnv()->GetBodyFromEnvironmentId(_environmentid) == _pbody ) {
+        if( _pbody->GetEnv()->GetBodyFromEnvironmentBodyIndex(_environmentid) == _pbody ) {
             _pbody->GetLinkTransformations(_vtrans, _vjointvalues);
             _pbody->GetDOFValues(vjointvalues);
         }
@@ -917,38 +965,8 @@ void RobotItem::Load()
             peesep->addChild(CreateOSGXYZAxes(0.1, 0.0005));
 
             // add text
-            {
-                OSGGroupPtr ptextsep = new osg::Group();
-                osg::ref_ptr<osg::Geode> textGeode = new osg::Geode;
-                peesep->addChild(ptextsep);
-
-                osg::Matrix matrix;
-                OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
-                ptrans->setReferenceFrame(osg::Transform::RELATIVE_RF);
-                matrix.setTrans(osg::Vec3f(0, 0, 0));//.02f,0.02f,0.02f));
-                ptextsep->addChild(ptrans);
-
-                osg::ref_ptr<osgText::Text> text = new osgText::Text();
-
-                //Set the screen alignment - always face the screen
-                text->setAxisAlignment(osgText::Text::SCREEN);
-                text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
-                text->setCharacterSize(50.0);
-
-                text->setColor(osg::Vec4(0,0,0,1));
-                text->setEnableDepthWrites(false);
-
-                text->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
-                text->setBackdropColor(osg::Vec4(1,1,1,1));
-
-
-                text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
-                //text->setFontResolution(18,18);
-
-                text->setText((*itmanip)->GetName());//str(boost::format("EE%d")%index));
-                textGeode->addDrawable(text);
-                ptextsep->addChild(textGeode);
-            }
+            osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel((*itmanip)->GetName());
+            peesep->addChild(labelTrans);
         }
     }
 

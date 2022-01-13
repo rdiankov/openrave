@@ -50,6 +50,8 @@ public:
     int options;
     object plink1 = py::none_();
     object plink2 = py::none_();
+    object pgeom1 = py::none_();
+    object pgeom2 = py::none_();
     py::list vLinkColliding;
     dReal minDistance;
     int numWithinTol;

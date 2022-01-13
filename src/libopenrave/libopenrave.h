@@ -22,6 +22,7 @@
 #define RAVE_LIBOPENRAVE_H
 
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
+#include <openrave/logging.h>
 #include <openrave/utils.h>
 
 //#include <boost/math/special_functions/round.hpp>
@@ -317,7 +318,7 @@ public:
     }
     KinBodyWeakPtr _pgrabbedbody;         ///< the grabbed body
     KinBody::LinkPtr _plinkrobot;         ///< robot link that is grabbing the body
-    std::list<KinBody::LinkConstPtr> _listNonCollidingLinks;         ///< links that are not colliding with the grabbed body at the time of Grab
+    std::list<KinBody::LinkConstPtr> _listNonCollidingLinks;         ///< links that are not colliding with the grabbed body at the time of Grab. Even if a link is disabled, it is considered as non-colliding as long as it is not colliiding with grabbed body
     Transform _troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
     std::set<int> _setRobotLinksToIgnore; ///< original links of the robot to force ignoring
 
@@ -525,6 +526,57 @@ void UpdateOrCreateInfo(const rapidjson::Value& value, std::vector<boost::shared
     vInfos.push_back(pNewInfo);
 }
 
+template<typename T>
+void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<boost::shared_ptr<T> >& vInfos, const char* pNameInJson, dReal fUnitScale, int options)
+{
+    std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(value, "id");
+    bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
+    typename std::vector<boost::shared_ptr<T> >::iterator itExistingInfo = vInfos.end();
+    if (!id.empty()) {
+        // only try to find old info if id is not empty
+        FOREACH(itInfo, vInfos) {
+            if ((*itInfo)->_id == id) {
+                itExistingInfo = itInfo;
+                break;
+            }
+        }
+    }
+    else {
+        // sometimes names can be empty, in which case, always create a new object
+        std::string name = OpenRAVE::orjson::GetStringJsonValueByKey(value, pNameInJson);
+        if( !name.empty() ) {
+            // only try to find old info if id is not empty
+            FOREACH(itInfo, vInfos) {
+                if ((*itInfo)->GetName() == name) {
+                    itExistingInfo = itInfo;
+                    id = (*itInfo)->_id;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // here we allow items with empty id to be created because
+    // when we load things from json, some id could be missing on file
+    // and for the partial update case, the id should be non-empty
+    if (itExistingInfo != vInfos.end()) {
+        if (isDeleted) {
+            vInfos.erase(itExistingInfo);
+            return;
+        }
+        (*itExistingInfo)->DeserializeJSON(value, fUnitScale, options);
+        (*itExistingInfo)->_id = id;
+        return;
+    }
+    if (isDeleted) {
+        return;
+    }
+    boost::shared_ptr<T> pNewInfo(new T());
+    pNewInfo->DeserializeJSON(value, fUnitScale, options);
+    pNewInfo->_id = id;
+    vInfos.push_back(pNewInfo);
+}
+
 /// \brief Recursively call UpdateFromInfo on children. If children need to be added or removed, require re-init. Returns false if update fails and caller should not continue with other parts of the update.
 template<typename InfoPtrType, typename PtrType>
 bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<PtrType>& vPointers, UpdateFromInfoResult& result)
@@ -590,6 +642,14 @@ bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<
         }
         if (!pMatchExistingPointer) {
             // new element, requires re-init
+            RAVELOG_VERBOSE("could not find existing pointer which matches");
+            result = UFIR_RequireReinitialize;
+            return false;
+        }
+
+        if( !pInfo->_id.empty() && pInfo->_id != pMatchExistingPointer->GetId() ) {
+            // new element, requires re-init
+            RAVELOG_VERBOSE("could not find existing pointer which matches and can update");
             result = UFIR_RequireReinitialize;
             return false;
         }
@@ -613,6 +673,7 @@ bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<
 
     if (vPointers.size() > vInfos.size()) {
         // have to delete extra, require re-init
+        RAVELOG_VERBOSE("current data has more elements than new data");
         result = UFIR_RequireReinitialize;
         return false;
     }

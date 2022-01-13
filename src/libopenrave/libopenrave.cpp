@@ -395,6 +395,11 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapikparameterization[IKP_TranslationYAxisAngleXNorm4D] = "TranslationYAxisAngleXNorm4D";
         _mapikparameterization[IKP_TranslationZAxisAngleYNorm4D] = "TranslationZAxisAngleYNorm4D";
         BOOST_ASSERT(_mapikparameterization.size()==IKP_NumberOfParameterizations);
+
+        // add IKP_None for serialization later.
+        // do this after _mapikparameterization.size()==IKP_NumberOfParameterizations check, IKP_None is not counted in IKP_NumberOfParameterizations
+        _mapikparameterization[IKP_None] = "None";
+
         FOREACH(it,_mapikparameterization) {
             std::string name = it->second;
             std::transform(name.begin(), name.end(), name.begin(), ::tolower);
@@ -438,8 +443,9 @@ public:
             RAVELOG_WARN("failed to set to C locale: %s\n",e.what());
         }
 
-        _pdatabase.reset(new RaveDatabase());
-        if( !_pdatabase->Init(bLoadAllPlugins) ) {
+        // since initialization depends on _pdatabase, have pdatabase be local until it is complete
+        boost::shared_ptr<RaveDatabase> pdatabase(new RaveDatabase());
+        if( !pdatabase->Init(bLoadAllPlugins) ) {
             RAVELOG_FATAL("failed to create the openrave plugin database\n");
         }
 
@@ -479,6 +485,7 @@ public:
         }
 
         _UpdateDataDirs();
+        _pdatabase = pdatabase; // finally initialize!
         return 0;
     }
 
@@ -598,24 +605,16 @@ public:
     int GetDebugLevel()
     {
         int level = _nDebugLevel;
-        if (_logger != NULL) {
-            if (_logger->isEnabledFor(log4cxx::Level::getTrace())) {
-                level = Level_Verbose;
-            }
-            else if (_logger->isEnabledFor(log4cxx::Level::getDebug())) {
-                level = Level_Debug;
-            }
-            else if (_logger->isEnabledFor(log4cxx::Level::getInfo())) {
-                level = Level_Info;
-            }
-            else if (_logger->isEnabledFor(log4cxx::Level::getWarn())) {
-                level = Level_Warn;
-            }
-            else if (_logger->isEnabledFor(log4cxx::Level::getError())) {
-                level = Level_Error;
-            }
-            else {
-                level = Level_Fatal;
+        if (_logger != NULL && _logger->getEffectiveLevel() != NULL) {
+            level = _logger->getEffectiveLevel()->toInt();
+            switch (level) {
+            case log4cxx::Level::FATAL_INT: level = Level_Fatal; break;
+            case log4cxx::Level::ERROR_INT: level = Level_Error; break;
+            case log4cxx::Level::WARN_INT:  level = Level_Warn; break;
+            case log4cxx::Level::INFO_INT:  level = Level_Info; break;
+            case log4cxx::Level::DEBUG_INT: level = Level_Debug; break;
+            case log4cxx::Level::TRACE_INT: level = Level_Verbose; break;
+            default: level = Level_Info;
             }
         }
         return level | (_nDebugLevel & ~Level_OutputMask);
@@ -836,7 +835,7 @@ protected:
             }
         }
 
-        RAVELOG_INFO_FORMAT("could not find file %s", filename);
+        RAVELOG_VERBOSE_FORMAT("could not find file %s", filename);
         return std::string();
 #endif
     }
@@ -905,6 +904,10 @@ protected:
         }
 
         return std::string();
+    }
+
+    boost::mutex& GetInitializationMutex() {
+        return _mutexInitialization;
     }
 
 protected:
@@ -1086,6 +1089,7 @@ private:
     // state that is initialized/destroyed
     boost::shared_ptr<RaveDatabase> _pdatabase;
     int _nDebugLevel;
+    boost::mutex _mutexInitialization; ///< external mutex for initialization only
     boost::mutex _mutexinternal;
     std::map<InterfaceType, XMLREADERSMAP > _mapxmlreaders;
     std::map<InterfaceType, JSONREADERSMAP > _mapjsonreaders;
@@ -1114,6 +1118,7 @@ private:
 #endif
 
     friend void RaveInitializeFromState(UserDataPtr);
+    friend int RaveInitialize(bool bLoadAllPlugins, int level);
     friend UserDataPtr RaveGlobalState();
 };
 
@@ -1174,7 +1179,15 @@ std::string RaveFindDatabaseFile(const std::string& filename, bool bRead)
 
 int RaveInitialize(bool bLoadAllPlugins, int level)
 {
-    return RaveGlobal::instance()->Initialize(bLoadAllPlugins,level);
+    boost::shared_ptr<RaveGlobal>& state = RaveGlobal::instance();
+    boost::mutex::scoped_lock lock(state->GetInitializationMutex());
+    if( state->_IsInitialized() ) {
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE already initialized, so not initializing again", boost::this_thread::get_id());
+        return 0;
+    }
+    else {
+        return state->Initialize(bLoadAllPlugins,level);
+    }
 }
 
 void RaveInitializeFromState(UserDataPtr globalstate)
@@ -1185,9 +1198,18 @@ void RaveInitializeFromState(UserDataPtr globalstate)
 UserDataPtr RaveGlobalState()
 {
     // only return valid pointer if initialized!
-    boost::shared_ptr<RaveGlobal> state = RaveGlobal::_state;
-    if( !!state && state->_IsInitialized() ) {
-        return state;
+    boost::shared_ptr<RaveGlobal>& state = RaveGlobal::instance();
+    if( !!state ) {
+        if( state->_IsInitialized() ) {
+            return state;
+        }
+        else {
+            // make sure another thread is not initializing the state!
+            boost::mutex::scoped_lock lock(state->GetInitializationMutex());
+            if( state->_IsInitialized() ) {
+                return state;
+            }
+        }
     }
     return UserDataPtr();
 }
@@ -1532,6 +1554,9 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
         break;
     }
+    case IKP_None:
+        // no data, that is OK
+        break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
     }
@@ -1639,6 +1664,9 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IKP_TranslationYAxisAngleXNorm4DVelocity:
     case IKP_TranslationZAxisAngleYNorm4DVelocity:
         I >> ikparam._transform.rot.x >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z;
+        break;
+    case IKP_None:
+        // no data, that is OK
         break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
@@ -1965,6 +1993,10 @@ const char* RaveGetErrorCodeString(OpenRAVEErrorCode error)
     case ORE_NotInitialized: return "NotInitialized";
     case ORE_InvalidState: return "InvalidState";
     case ORE_Timeout: return "Timeout";
+    case ORE_InvalidURI: return "InvalidURI";
+    case ORE_BodyNameConflict: return "BodyNameConflict";
+    case ORE_SensorNameConflict: return "SensorNameConflict";
+    case ORE_BodyIdConflict: return "BodyIdConflict";
     }
     // should throw an exception?
     return "";
@@ -1980,6 +2012,8 @@ void CollisionReport::Reset(int coloptions)
         vLinkColliding.resize(0);
         plink1.reset();
         plink2.reset();
+        pgeom1.reset();
+        pgeom2.reset();
     }
 }
 
@@ -2027,6 +2061,9 @@ std::string CollisionReport::__str__() const
                 RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink1->GetName());
                 s << "[deleted]:" << plink1->GetName();
             }
+            if( !!pgeom1 ) {
+                s << ":" << pgeom1->GetName();
+            }
         }
         s << ")x(";
         if( !!plink2 ) {
@@ -2037,6 +2074,9 @@ std::string CollisionReport::__str__() const
             else {
                 RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink2->GetName());
                 s << "[deleted]:" << plink2->GetName();
+            }
+            if( !!pgeom2 ) {
+                s << ":" << pgeom2->GetName();
             }
         }
         s << ")";
@@ -2245,7 +2285,11 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
             bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
             KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
             if( !pothergrabbedbody ) {
-                RAVELOG_WARN_FORMAT("grabbed body on %s has already been released. ignoring.", pbody->GetName());
+                RAVELOG_WARN_FORMAT("env=%d, grabbed body on %s has already been released. ignoring.", penv->GetId()%pbody->GetName());
+                continue;
+            }
+            if( pothergrabbedbody->GetLinks().empty() ) {
+                RAVELOG_WARN_FORMAT("env=%d, grabbed body on %s has no links, perhaps not initialized.", penv->GetId()%pbody->GetName());
                 continue;
             }
             if( bsamelink ) {
@@ -2272,7 +2316,7 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
 
     if( pgrabbedbody->IsEnabled() ) {
         FOREACH(itnoncolliding, _mapLinkIsNonColliding) {
-            if( itnoncolliding->second && itnoncolliding->first->IsEnabled() ) {
+            if( itnoncolliding->second ) {
                 //RAVELOG_VERBOSE(str(boost::format("non-colliding link %s for grabbed body %s")%(*itlink)->GetName()%pgrabbedbody->GetName()));
                 _listNonCollidingLinks.push_back(itnoncolliding->first);
             }
@@ -2386,7 +2430,7 @@ void Grabbed::UpdateCollidingLinks()
             }
         }
 
-        if( itnoncolliding->second && itnoncolliding->first->IsEnabled() ) {
+        if( itnoncolliding->second ) {
             _listNonCollidingLinks.push_back(itnoncolliding->first);
         }
         ++itnoncolliding;
@@ -2485,13 +2529,35 @@ void DummyXMLReader::characters(const std::string& ch)
     }
 }
 
-EnvironmentBase::EnvironmentBase()
+void EnvironmentBase::_InitializeInternal()
 {
     if( !RaveGlobalState() ) {
-        RAVELOG_WARN("OpenRAVE global state not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.\n");
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state is not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.", boost::this_thread::get_id());
+        uint64_t starttime = utils::GetMicroTime();
         RaveInitialize(true);
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state finished initializing in %u[us].", boost::this_thread::get_id()%(utils::GetMicroTime()-starttime));
     }
     __nUniqueId = RaveGlobal::instance()->RegisterEnvironment(this);
+}
+
+EnvironmentBase::EnvironmentBase()
+{
+    _InitializeInternal();
+    // __nUniqueId is assigned in _InitializeInternal
+    _formatedNameId = str(boost::format("%d")%__nUniqueId);
+}
+
+EnvironmentBase::EnvironmentBase(const std::string& name)
+    : _name(name)
+{
+    _InitializeInternal();
+    // __nUniqueId is assigned in _InitializeInternal
+    if (_name.empty()) {
+        _formatedNameId = str(boost::format("%d")%__nUniqueId);
+    }
+    else {
+        _formatedNameId = str(boost::format("%d(%s)")%__nUniqueId%_name);
+    }
 }
 
 EnvironmentBase::~EnvironmentBase()
@@ -2499,6 +2565,11 @@ EnvironmentBase::~EnvironmentBase()
     RaveGlobal::instance()->UnregisterEnvironment(this);
 }
 
+void EnvironmentBase::Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs)
+{
+    RAVELOG_WARN("Cannot Add with bAnonymous anymore, should switch to the new InterfaceAddMode");
+    Add(pinterface, bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking, cmdargs);
+}
 
 bool SensorBase::SensorData::serialize(std::ostream& O) const
 {
@@ -2567,11 +2638,6 @@ bool SensorBase::CameraGeomData::SerializeXML(BaseXMLWriterPtr writer, int optio
     writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(measurement_time));
     writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(gain));
     //writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
-    if( sensor_reference.size() > 0 ) {
-        atts.emplace_back("url",  sensor_reference);
-        writer->AddChild("sensor_reference",atts);
-        atts.clear();
-    }
     if( target_region.size() > 0 ) {
         atts.emplace_back("url",  target_region);
         writer->AddChild("target_region",atts);
@@ -2583,9 +2649,8 @@ bool SensorBase::CameraGeomData::SerializeXML(BaseXMLWriterPtr writer, int optio
 bool SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
-    orjson::SetJsonValueByKey(value, "sensorReference", sensor_reference, allocator);
     orjson::SetJsonValueByKey(value, "targetRegion", target_region, allocator);
-    orjson::SetJsonValueByKey(value, "intrinstics", intrinsics, allocator);
+    orjson::SetJsonValueByKey(value, "intrinsics", intrinsics, allocator);
     orjson::SetJsonValueByKey(value, "width", width, allocator);
     orjson::SetJsonValueByKey(value, "height", height, allocator);
     orjson::SetJsonValueByKey(value, "measurementTime", measurement_time, allocator);
@@ -2596,9 +2661,8 @@ bool SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjso
 bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
-    orjson::LoadJsonValueByKey(value, "sensorReference", sensor_reference);
     orjson::LoadJsonValueByKey(value, "targetRegion", target_region);
-    orjson::LoadJsonValueByKey(value, "intrinstics", intrinsics);
+    orjson::LoadJsonValueByKey(value, "intrinsics", intrinsics);
     orjson::LoadJsonValueByKey(value, "width", width);
     orjson::LoadJsonValueByKey(value, "height", height);
     orjson::LoadJsonValueByKey(value, "measurementTime", measurement_time);
@@ -2606,6 +2670,35 @@ bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, 
     return true;
 }
 
+bool SensorBase::Force6DGeomData::SerializeXML(BaseXMLWriterPtr writer, int options) const
+{
+    SensorGeometry::SerializeXML(writer, options);
+    AttributesList atts;
+    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    writer->AddChild("polarity",atts)->SetCharData(boost::lexical_cast<std::string>(polarity));
+    ss.str("");
+    for (size_t i = 0; i < correction_matrix.size(); ++i) {
+        ss << correction_matrix[i] << " ";
+    }
+    writer->AddChild("correction_matrix",atts)->SetCharData(ss.str());
+    return true;
+}
+
+bool SensorBase::Force6DGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
+    orjson::SetJsonValueByKey(value, "polarity", polarity, allocator);
+    orjson::SetJsonValueByKey(value, "correction_matrix", correction_matrix, allocator, correction_matrix.size());
+    return true;
+}
+
+bool SensorBase::Force6DGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
+    orjson::LoadJsonValueByKey(value, "polarity", polarity);
+    orjson::LoadJsonValueByKey(value, "correction_matrix", correction_matrix);
+    return true;
+}
 
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
@@ -2759,7 +2852,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
         throw OPENRAVE_EXCEPTION_FORMAT0(_("Cannot decode non-object JSON value to IkParameterization"), ORE_InvalidArguments);
     }
     orjson::LoadJsonValueByKey(rIkParameterization, "id", _id);
-    
+
     if( rIkParameterization.HasMember("type") ) {
         const char* ptype =  rIkParameterization["type"].GetString();
         if( !!ptype ) {
@@ -2773,7 +2866,10 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
                 }
             }
             if (!foundType) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization %s"), ptype, ORE_InvalidArguments);
+                if( strlen(ptype) > 0 ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization %s"), ptype, ORE_InvalidArguments);
+                }
+                // no type so just pass through
             }
         }
     }
@@ -2890,12 +2986,22 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     // TODO have to scale _mapCustomData by fUnitScale
 }
 
-StringReadable::StringReadable(const std::string& id, const std::string& data): Readable(id), _data(data)
+StringReadable::StringReadable(const std::string& id, const std::string& data) : Readable(id), _data(data)
 {
 }
 
 StringReadable::~StringReadable()
 {
+}
+
+void StringReadable::SetData(const std::string& newdata)
+{
+    _data = newdata;
+}
+
+const std::string& StringReadable::GetData() const
+{
+    return _data;
 }
 
 bool StringReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
@@ -2911,11 +3017,6 @@ bool StringReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
     }
     writer->SetCharData(_data);
     return true;
-}
-
-const std::string& StringReadable::GetData() const
-{
-    return _data;
 }
 
 bool StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const

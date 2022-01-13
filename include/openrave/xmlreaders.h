@@ -39,6 +39,27 @@ public:
     virtual ~HierarchicalXMLReadable() {
     }
     bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override;
+
+    bool operator==(const Readable& other) const override {
+        if (GetXMLId() != other.GetXMLId()) {
+            return false;
+        }
+        const HierarchicalXMLReadable* pOther = dynamic_cast<const HierarchicalXMLReadable*>(&other);
+        if (!pOther) {
+            return false;
+        }
+        return _data == pOther->_data &&
+            _atts == pOther->_atts &&
+            _listchildren == pOther->_listchildren;
+    }
+
+    ReadablePtr CloneSelf() const override {
+        boost::shared_ptr<HierarchicalXMLReadable> pNew(new HierarchicalXMLReadable(GetXMLId(), _atts));
+        pNew->_data = _data;
+        pNew->_listchildren = _listchildren;
+        return pNew;
+    }
+
     std::string _data;
     AttributesList _atts;
     std::list<boost::shared_ptr<HierarchicalXMLReadable> > _listchildren;

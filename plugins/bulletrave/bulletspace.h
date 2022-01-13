@@ -358,7 +358,7 @@ private:
                     int minindex = min(plink0->GetIndex(), plink1->GetIndex());
                     int maxindex = max(plink0->GetIndex(), plink1->GetIndex());
 
-                    bool bIgnoreCollision = pbody->GetAdjacentLinks().find(minindex|(maxindex<<16)) != pbody->GetAdjacentLinks().end() || plink0->IsRigidlyAttached(plink0);
+                    bool bIgnoreCollision = pbody->AreAdjacentLinks(minindex, maxindex) || plink0->IsRigidlyAttached(plink0);
                     _worlddynamics->addConstraint(joint.get(), bIgnoreCollision);
                     pinfo->_mapjoints[*itjoint] = joint;
                 }

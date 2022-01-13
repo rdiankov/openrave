@@ -42,5 +42,5 @@ if openravepy_currentversion is not None:
 try:
     if __openravepy_import_examples__:
         import openravepy.examples
-except Exception, e:
+except Exception as e:
     pass

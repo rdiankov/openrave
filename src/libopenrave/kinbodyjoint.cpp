@@ -23,20 +23,7 @@
 
 namespace OpenRAVE {
 
-int KinBody::JointInfo::GetDOF() const
-{
-    if(_type & KinBody::JointSpecialBit) {
-        switch(_type) {
-        case KinBody::JointHinge2:
-        case KinBody::JointUniversal: return 2;
-        case KinBody::JointSpherical: return 3;
-        case KinBody::JointTrajectory: return 1;
-        default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("invalid joint type 0x%x"), _type, ORE_Failed);
-        }
-    }
-    return int(_type & 0xf);
-}
+constexpr dReal M_TWO_PI = 2 * M_PI;
 
 void KinBody::JointInfo::Reset()
 {
@@ -533,21 +520,6 @@ KinBody::Joint::~Joint()
 {
 }
 
-int KinBody::Joint::GetDOF() const
-{
-    return _info.GetDOF();
-}
-
-bool KinBody::Joint::IsCircular() const
-{
-    return _info._bIsCircular[0] || _info._bIsCircular[1] || _info._bIsCircular[2];
-}
-
-bool KinBody::Joint::IsCircular(int iaxis) const
-{
-    return static_cast<bool>(_info._bIsCircular.at(iaxis));
-}
-
 bool KinBody::Joint::IsActive() const
 {
     return _info._bIsActive;
@@ -791,8 +763,8 @@ dReal KinBody::Joint::GetValue(int iaxis) const
         return _info._vlowerlimit.at(iaxis);
     }
     dReal f;
-    Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
     if( _info._type & KinBody::JointSpecialBit ) {
+        const Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
         switch(_info._type) {
         case KinBody::JointHinge2: {
             Vector axis1cur = tjoint.rotate(_vaxes[0]), axis2cur = tjoint.rotate(_vaxes[1]);
@@ -888,20 +860,43 @@ dReal KinBody::Joint::GetValue(int iaxis) const
     }
     else {
         if( _info._type == KinBody::JointPrismatic ) {
-            return _info._voffsets[0]+(tjoint.trans.x*_vaxes[0].x+tjoint.trans.y*_vaxes[0].y+tjoint.trans.z*_vaxes[0].z);
+            const Transform tFirstAttachedInv = _attachedbodies[0]->GetTransform().inverse();
+            const Transform& tSecondAttached = _attachedbodies[1]->GetTransform();
+
+            /* the original:
+            const Transform tjoint = _tinvLeft * tFirstAttachedInv * tSecondAttached * _tinvRight;
+            const Vector& trans = tjoint.trans;
+            */
+            const Vector trans = _tinvLeft * (tFirstAttachedInv * (tSecondAttached * _tinvRight.trans));
+            return _info._voffsets[0] + trans.x * _vaxes[0].x + trans.y * _vaxes[0].y + trans.z * _vaxes[0].z;
         }
         else if( _info._type == KinBody::JointRevolute ) {
-            f = 2.0f*RaveAtan2(tjoint.rot.y*_vaxes[0].x+tjoint.rot.z*_vaxes[0].y+tjoint.rot.w*_vaxes[0].z, tjoint.rot.x);
+            const Transform& tFirstAttached = _attachedbodies[0]->GetTransform();
+            const Transform& tSecondAttached = _attachedbodies[1]->GetTransform();
+            const Vector rot =
+            quatMultiply(
+                quatMultiply(
+                    quatMultiply(
+                        _tinvLeft.rot, quatInverse(tFirstAttached.rot)
+                    ), tSecondAttached.rot
+                ), _tinvRight.rot
+            );
+            /* the original:
+            const Transform tjoint = _tinvLeft * tFirstAttached.inverse() * tSecondAttached * _tinvRight;
+            const Vector& rot = tjoint.rot;
+            */
+            f = 2.0f * RaveAtan2(rot.y * _vaxes[0].x + rot.z * _vaxes[0].y + rot.w * _vaxes[0].z, rot.x);
             // expect values to be within -PI to PI range
-            if( f < -PI ) {
-                f += 2*PI;
+            if( f < -M_PI ) {
+                f += M_TWO_PI;
             }
-            else if( f > PI ) {
-                f -= 2*PI;
+            else if( f > M_PI ) {
+                f -= M_TWO_PI;
             }
-            return GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]);
+            return GetClosestValueAlongCircle(_info._voffsets[0] + f, _doflastsetvalues[0]);
         }
 
+        Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
         // chain of revolute and prismatic joints
         for(int i = 0; i < GetDOF(); ++i) {
             Vector vaxis = _vaxes.at(i);
@@ -943,17 +938,29 @@ dReal KinBody::Joint::GetValue(int iaxis) const
     throw OPENRAVE_EXCEPTION_FORMAT(_("unknown joint type 0x%x axis %d\n"), _info._type%iaxis, ORE_Failed);
 }
 
-void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend) const
+void KinBody::Joint::GetVelocities(std::vector<dReal>& vVelocities, bool bAppend) const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     if( !bAppend ) {
-        pVelocities.resize(0);
+        vVelocities.clear();
     }
     if( GetDOF() == 1 ) {
-        pVelocities.push_back(GetVelocity(0));
+        vVelocities.push_back(GetVelocity(0));
         return;
     }
-    _GetVelocities(pVelocities,bAppend,_attachedbodies[0]->GetVelocity(), _attachedbodies[1]->GetVelocity());
+
+    vVelocities.resize(vVelocities.size()+GetDOF());
+    _GetVelocities(&vVelocities[vVelocities.size()], _attachedbodies[0]->GetVelocity(), _attachedbodies[1]->GetVelocity());
+};
+
+void KinBody::Joint::GetVelocities(boost::array<dReal,3>& velocities) const
+{
+    OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
+    if( GetDOF() == 1 ) {
+        velocities[0] = GetVelocity(0);
+        return;
+    }
+    _GetVelocities(&velocities[0],_attachedbodies[0]->GetVelocity(), _attachedbodies[1]->GetVelocity());
 };
 
 dReal KinBody::Joint::GetVelocity(int axis) const
@@ -962,13 +969,10 @@ dReal KinBody::Joint::GetVelocity(int axis) const
     return _GetVelocity(axis,_attachedbodies[0]->GetVelocity(), _attachedbodies[1]->GetVelocity());
 }
 
-void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppend, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const
+void KinBody::Joint::_GetVelocities(dReal* pVelocities, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const
 {
-    if( !bAppend ) {
-        pVelocities.resize(0);
-    }
     if( GetDOF() == 1 ) {
-        pVelocities.push_back(_GetVelocity(0, linkparentvelocity, linkchildvelocity));
+        pVelocities[0] = _GetVelocity(0, linkparentvelocity, linkchildvelocity);
         return;
     }
     const Transform& linkparenttransform = _attachedbodies[0]->_info._t;
@@ -979,9 +983,9 @@ void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppen
         switch(_info._type) {
         case KinBody::JointSpherical: {
             Vector v = quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second);
-            pVelocities.push_back(v.x);
-            pVelocities.push_back(v.y);
-            pVelocities.push_back(v.z);
+            pVelocities[0] = v.x;
+            pVelocities[1] = v.y;
+            pVelocities[2] = v.z;
             break;
         }
         default:
@@ -993,12 +997,12 @@ void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppen
         Vector angvelocitycovered, linvelocitycovered;
         for(int i = 0; i < GetDOF(); ++i) {
             if( IsRevolute(i) ) {
-                pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second-angvelocitycovered)));
-                angvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities.back());
+                pVelocities[i] = _vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second-angvelocitycovered));
+                angvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities[i]);
             }
             else { // prismatic
-                pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-(linkparentvelocity.second-angvelocitycovered).cross(linkchildtransform.trans-linkparenttransform.trans)-linvelocitycovered)));
-                linvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities.back());
+                pVelocities[i] = _vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-(linkparentvelocity.second-angvelocitycovered).cross(linkchildtransform.trans-linkparenttransform.trans)-linvelocitycovered));
+                linvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities[i]);
             }
         }
     }
@@ -1312,11 +1316,6 @@ void KinBody::Joint::GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dRea
         vLowerLimit.push_back(_info._vlowerlimit[i]);
         vUpperLimit.push_back(_info._vupperlimit[i]);
     }
-}
-
-std::pair<dReal, dReal> KinBody::Joint::GetLimit(int iaxis) const
-{
-    return make_pair(_info._vlowerlimit.at(iaxis),_info._vupperlimit.at(iaxis));
 }
 
 void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit)
@@ -2140,29 +2139,36 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         vDependedJointValues.push_back(dependedjoint->GetValue(dofformat.axis));
     }
 
-    if( IS_DEBUGLEVEL(Level_Verbose) ) {
-        std::stringstream ss;
-        ss << "joint \"" << this->GetName() << "\" of jointindex " << thisdofformat.jointindex << " depends on joints ";
-        for(const Mimic::DOFFormat& dofformat : vdofformats) {
-            const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
-            ss << dependedjoint->GetName() << ", ";
-        }
-        RAVELOG_VERBOSE(ss.str());
-    }
+//    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//        std::stringstream ss;
+//        ss << "joint \"" << this->GetName() << "\" of jointindex " << thisdofformat.jointindex << " depends on joints ";
+//        for(const Mimic::DOFFormat& dofformat : vdofformats) {
+//            const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
+//            ss << dependedjoint->GetName() << ", ";
+//        }
+//        RAVELOG_VERBOSE(ss.str());
+//    }
 
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > localmap;
     const size_t nvars = vdofformats.size(); ///< number of joints on which this joint depends on
     std::vector<std::pair<int, dReal> > vLocalIndexPartialPairs;
+    const size_t nvelfns = pmimic->_velfns.size(); // when user did not provide mimic_vel, we had not allocated pmimic->_velfns so it has size 0, and we set fvel=0 below
     for(size_t ivar = 0; ivar < nvars; ++ivar) {
         const Mimic::DOFFormat& dofformat = vdofformats[ivar]; ///< information about the ivar-th depended joint
         const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< a joint on which this joint depends on
         const int jointindex = dofformat.jointindex; ///< index of this depended joint
-        const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
-        const dReal fvel = velfn->Eval(vDependedJointValues.empty() ? NULL : &vDependedJointValues[0]); ///< value of ∂z/∂x
-
-        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            RAVELOG_VERBOSE_FORMAT("∂(J%d)/∂(J%d) = ∂(%s)/∂(%s) = %.8e", thisdofformat.jointindex % jointindex % this->GetName() % dependedjoint->GetName() % fvel);
+        dReal fvel = 0;
+        if(ivar < nvelfns) {
+            const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
+            fvel = velfn->Eval(vDependedJointValues.empty() ? NULL : &vDependedJointValues[0]); ///< value of ∂z/∂x
         }
+        else {
+            RAVELOG_WARN_FORMAT("This mimic joint %s depends on joint %s, but the user did not provide the mimic velocity formula. Now treat the first-order partial derivative as 0", this->GetName() % dependedjoint->GetName());
+        }
+
+//        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//            RAVELOG_VERBOSE_FORMAT("∂(J%d)/∂(J%d) = ∂(%s)/∂(%s) = %.8e", thisdofformat.jointindex % jointindex % this->GetName() % dependedjoint->GetName() % fvel);
+//        }
 
         if(dependedjoint->IsMimic(dofformat.axis)) {
             // depended joint is also mimic; go down the dependency tree and collect partial derivatives by chain rule
@@ -2578,6 +2584,10 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     }
     return updateFromInfoResult;
 }
+
+//void KinBody::Joint::SetDOFLastSetValue(dReal dofvalue, const int iaxis) {
+//    _doflastsetvalues[iaxis] = dofvalue;
+//}
 
 void KinBody::Joint::serialize(std::ostream& o, int options) const
 {

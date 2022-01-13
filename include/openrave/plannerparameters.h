@@ -199,7 +199,7 @@ protected:
             O << *it << " ";
         }
         O << "</grasps>" << std::endl;
-        O << "<target>" << (!!_ptarget ? _ptarget->GetEnvironmentId() : 0) << "</target>" << std::endl;
+        O << "<target>" << (!!_ptarget ? _ptarget->GetEnvironmentBodyIndex() : 0) << "</target>" << std::endl;
         O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << std::endl;
         O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << std::endl;
         O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << std::endl;
@@ -236,9 +236,9 @@ protected:
                 }
             }
             else if( name == "target" ) {
-                int id = 0;
-                _ss >> id;
-                _ptarget = _penv->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0;
+                _ss >> bodyIndex;
+                _ptarget = _penv->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( name == "numgradsamples" ) {
                 _ss >> _nGradientSamples;
@@ -317,7 +317,7 @@ protected:
             return false;
         }
         O << "<fstandoff>" << fstandoff << "</fstandoff>" << std::endl;
-        O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetEnvironmentId()) << "</targetbody>" << std::endl;
+        O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetEnvironmentBodyIndex()) << "</targetbody>" << std::endl;
         O << "<ftargetroll>" << ftargetroll << "</ftargetroll>" << std::endl;
         O << "<vtargetdirection>" << vtargetdirection << "</vtargetdirection>" << std::endl;
         O << "<vtargetposition>" << vtargetposition << "</vtargetposition>" << std::endl;
@@ -383,9 +383,9 @@ protected:
                 _ss >> fstandoff;
             }
             else if( name == "targetbody") {
-                int id = 0;
-                _ss >> id;
-                targetbody = _penv->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0;
+                _ss >> bodyIndex;
+                targetbody = _penv->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( name == "ftargetroll") {
                 _ss >> ftargetroll;

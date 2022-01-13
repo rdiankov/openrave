@@ -72,7 +72,7 @@ log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 try:
     from scipy.optimize import leastsq
 except ImportError:
-    print 'could not import scipy.optimize.leastsq'
+    print('could not import scipy.optimize.leastsq')
 
 class InverseReachabilityModel(DatabaseGenerator):
     """Inverts the reachability and computes probability distributions of the robot's base given an end effector position"""

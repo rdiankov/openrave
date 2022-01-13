@@ -1011,7 +1011,8 @@ void PlannerParameters::Validate() const
         dReal dist = _distmetricfn(vstate,vstate2);
         if( IS_DEBUGLEVEL(Level_Debug) ) {
             if( dist > 1000*g_fEpsilon ) {
-                std::stringstream ss; ss << "vstate=";
+                std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                ss << "vstate=";
                 for(size_t i = 0; i < vstate.size(); ++i) {
                     ss << vstate[i] << ", ";
                 }
@@ -1019,7 +1020,10 @@ void PlannerParameters::Validate() const
                 for(size_t i = 0; i < vstate2.size(); ++i) {
                     ss << vstate2[i] << ", ";
                 }
-                RAVELOG_DEBUG_FORMAT("unequal states: %s",ss.str());
+                RAVELOG_DEBUG_FORMAT("unequal states by %.16e: %s",dist%ss.str());
+                // do it again...
+                //vstate2 = vstate;
+                //_neighstatefn(vstate2,vzeros,NSO_OnlyHardConstraints);
             }
         }
 

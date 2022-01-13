@@ -43,7 +43,7 @@ public:
     std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos;
     std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos;
     std::vector<RobotBase::ConnectedBodyInfoPtr> _vConnectedBodyInfos;
-    std::vector<RobotBase::GripperInfoPtr> _vGripperInfo;
+    std::vector<RobotBase::GripperInfoPtr> _vGripperInfos;
 #else
     py::object _vManipulatorInfos = py::none_();
     py::object _vAttachedSensorInfos = py::none_();
@@ -93,6 +93,7 @@ public:
         bool SetIkSolver(PyIkSolverBasePtr iksolver);
         object GetIkSolver();
         object GetBase();
+        object GetIkChainEndLink();
         object GetEndEffector();
         void ReleaseAllGrabbed();
         object GetGraspTransform();
@@ -447,6 +448,7 @@ public:
 
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_());
     bool InitFromRobotInfo(const py::object pyRobotBaseInfo);
+
     py::object ExtractInfo() const;
 
     virtual std::string __repr__();

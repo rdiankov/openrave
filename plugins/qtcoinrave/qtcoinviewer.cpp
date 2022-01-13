@@ -986,6 +986,10 @@ GraphHandlePtr QtCoinViewer::drawbox(const RaveVector<float>& vpos, const RaveVe
     pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
+GraphHandlePtr QtCoinViewer::drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents) {
+    // not implemented
+    return GraphHandlePtr();
+}
 
 class DrawPlaneMessage : public QtCoinViewer::EnvMessage
 {
@@ -2989,7 +2993,7 @@ void QtCoinViewer::UpdateFromModel()
         }
         if( !pitem ) {
             // make sure pbody is actually present
-            if( GetEnv()->GetBodyFromEnvironmentId(itbody->environmentid) == pbody ) {
+            if( GetEnv()->GetBodyFromEnvironmentBodyIndex(itbody->environmentid) == pbody ) {
 
                 // check to make sure the real GUI data is also NULL
                 if( !pbody->GetUserData("qtcoinviewer") ) {

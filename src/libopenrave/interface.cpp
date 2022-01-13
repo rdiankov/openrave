@@ -122,11 +122,8 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
 void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
     FOREACHC(it, __mapReadableInterfaces) {
-        // sometimes interfaces might be disabled
-        // some readable are not xml readable and does not get serialized here
-        ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(it->second);
-        if( !!pxmlreadable ) {
-            pxmlreadable->SerializeXML(writer,options);
+        if( !!it->second ) {
+            it->second->SerializeXML(writer,options);
         }
     }
 }
@@ -285,6 +282,17 @@ ReadablePtr InterfaceBase::SetReadableInterface(const std::string& id, ReadableP
     return pprev;
 }
 
+void InterfaceBase::SetReadableInterfaces(const InterfaceBase::READERSMAP& mapReadables, bool bClearAllExisting)
+{
+    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    if( bClearAllExisting ) {
+        __mapReadableInterfaces = mapReadables;
+    }
+    else {
+        __mapReadableInterfaces.insert(mapReadables.begin(), mapReadables.end());
+    }
+}
+
 void InterfaceBase::ClearReadableInterfaces()
 {
     boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
@@ -294,6 +302,61 @@ void InterfaceBase::ClearReadableInterfaces()
 void InterfaceBase::ClearReadableInterface(const std::string& id) {
     boost::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     __mapReadableInterfaces.erase(id);
+}
+
+bool InterfaceBase::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) {
+    boost::unique_lock<boost::shared_mutex> lock(_mutexInterface);
+    bool bChanged = false;
+    bool bNewAllFound = true;
+    FOREACH(it, newReadableInterfaces) {
+        READERSMAP::iterator itExisting = __mapReadableInterfaces.find(it->first);
+        if( itExisting != __mapReadableInterfaces.end() ) {
+            if( !!it->second ) {
+                if( *(itExisting->second) != *(it->second) ) {
+                    itExisting->second = it->second; // should we make a clone?
+                    bChanged = true;
+                    RAVELOG_VERBOSE_FORMAT("readable interface %s changed", it->first);
+                }
+            }
+            else {
+                // remove when null is given
+                __mapReadableInterfaces.erase(itExisting);
+                bChanged = true;
+                bNewAllFound = false;
+                RAVELOG_VERBOSE_FORMAT("readable interface %s removed", it->first);
+            }
+        }
+        else {
+            if( !!it->second ) {
+                __mapReadableInterfaces[it->first] = it->second;
+                bChanged = true;
+                RAVELOG_VERBOSE_FORMAT("readable interface %s added", it->first);
+            }
+            bNewAllFound = false;
+        }
+    }
+
+    if( !bNewAllFound || newReadableInterfaces.size() != __mapReadableInterfaces.size() ) {
+        // delete readableInterface
+        for (READERSMAP::iterator itExisting = __mapReadableInterfaces.begin(); itExisting != __mapReadableInterfaces.end();) {
+            bool bFound = false;
+            FOREACHC(it, newReadableInterfaces) {
+                if( itExisting->first == it->first ) {
+                    bFound = true;
+                    break;
+                }
+            }
+            if( !bFound ) {
+                RAVELOG_VERBOSE_FORMAT("removing readable interface %s", itExisting->first);
+                itExisting = __mapReadableInterfaces.erase(itExisting);
+                bChanged = true;
+            }
+            else {
+                ++itExisting;
+            }
+        }
+    }
+    return bChanged;
 }
 
 }

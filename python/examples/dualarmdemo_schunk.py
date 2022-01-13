@@ -162,7 +162,7 @@ def main(env,options):
         try:
             schunk.graspAndMoveObject(jointvalues,obj)
             schunk.WaitForController()
-            print "Path Planning complete...."
+            print("Path Planning complete....")
         except planning_error:
             pass
 

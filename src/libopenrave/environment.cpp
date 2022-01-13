@@ -16,64 +16,125 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo()
+{
+    _gravity = Vector(0,0,-9.797930195020351);
+}
+
+EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo(const EnvironmentBaseInfo& other)
+{
+    *this = other;
+}
+
+bool EnvironmentBase::EnvironmentBaseInfo::operator==(const EnvironmentBaseInfo& other) const
+{
+    return _vBodyInfos == other._vBodyInfos
+           && _revision == other._revision
+           && _description == other._description
+           && _keywords == other._keywords
+           && _gravity == other._gravity
+           && _uri == other._uri
+           && _referenceUri == other._referenceUri;
+    // TODO: deep compare infos
+}
+
+bool EnvironmentBase::EnvironmentBaseInfo::operator!=(const EnvironmentBaseInfo& other) const
+{
+    return !operator==(other);
+}
+
 void EnvironmentBase::EnvironmentBaseInfo::Reset()
 {
+    _description.clear();
+    _keywords.clear();
+    _gravity = Vector(0,0,-9.797930195020351);
+    _uri.clear();
+    _referenceUri.clear();
     _vBodyInfos.clear();
     _revision = 0;
 }
 
-void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     // for all SerializeJSON, we clear the output
-    value.SetObject();
+    rEnvInfo.SetObject();
 
-    orjson::SetJsonValueByKey(value, "name", _name, allocator);
-    orjson::SetJsonValueByKey(value, "keywords", _keywords, allocator);
-    orjson::SetJsonValueByKey(value, "description", _description, allocator);
-    orjson::SetJsonValueByKey(value, "gravity", _gravity, allocator);
+    orjson::SetJsonValueByKey(rEnvInfo, "keywords", _keywords, allocator);
+    if( !_description.empty() ) {
+        orjson::SetJsonValueByKey(rEnvInfo, "description", _description, allocator);
+    }
+    orjson::SetJsonValueByKey(rEnvInfo, "unit", _unit, allocator);
+    orjson::SetJsonValueByKey(rEnvInfo, "gravity", _gravity, allocator);
+    if( !_referenceUri.empty() ) {
+        orjson::SetJsonValueByKey(rEnvInfo, "referenceUri", _referenceUri, allocator);
+    }
+    if( !_uri.empty() ) {
+        orjson::SetJsonValueByKey(rEnvInfo, "uri", _uri, allocator);
+    }
 
     if (_vBodyInfos.size() > 0) {
         rapidjson::Value rBodiesValue;
         rBodiesValue.SetArray();
         rBodiesValue.Reserve(_vBodyInfos.size(), allocator);
-        FOREACHC(it, _vBodyInfos) {
+        for (const KinBody::KinBodyInfoPtr& pinfo : _vBodyInfos) {
+            if (!pinfo) {
+                continue;
+            }
             rapidjson::Value bodyValue;
-            (*it)->SerializeJSON(bodyValue, allocator, fUnitScale, options);
+            pinfo->SerializeJSON(bodyValue, allocator, fUnitScale, options);
             rBodiesValue.PushBack(bodyValue, allocator);
         }
-        value.AddMember("bodies", rBodiesValue, allocator);
+        rEnvInfo.AddMember("bodies", rBodiesValue, allocator);
     }
 }
 
-void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options)
 {
+    std::vector<int> vInputToBodyInfoMapping;
+    DeserializeJSONWithMapping(rEnvInfo, fUnitScale, options, vInputToBodyInfoMapping);
+}
+
+void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping)
+{
+    if( !rEnvInfo.IsObject() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Passed in JSON '%s' is not a valid EnvironmentInfo object", orjson::DumpJson(rEnvInfo), ORE_InvalidArguments);
+    }
+
     // for DeserializeJSON, there are two possibilities: 1. full json passed in 2. diff json passed in
     // for example, do not clear _vBodyInfos.clear(), since we could be dealing with partial json
 
-    if (value.HasMember("revision")) {
-        orjson::LoadJsonValueByKey(value, "revision", _revision);
+    if (rEnvInfo.HasMember("revision")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "revision", _revision);
     }
 
-    if (value.HasMember("name")) {
-        orjson::LoadJsonValueByKey(value, "name", _name);
+    if (rEnvInfo.HasMember("unit")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "unit", _unit);
     }
 
-    if (value.HasMember("keywords")) {
-        orjson::LoadJsonValueByKey(value, "keywords", _keywords);
+    if (rEnvInfo.HasMember("keywords")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "keywords", _keywords);
     }
 
-    if (value.HasMember("description")) {
-        orjson::LoadJsonValueByKey(value, "description", _description);
+    if (rEnvInfo.HasMember("description")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "description", _description);
+    }
+    if( rEnvInfo.HasMember("referenceUri") ) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "referenceUri", _referenceUri);
+    }
+    if( rEnvInfo.HasMember("uri") ) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "uri", _uri);
     }
 
-    if (value.HasMember("gravity")) {
-        orjson::LoadJsonValueByKey(value, "gravity", _gravity);
+    if (rEnvInfo.HasMember("gravity")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "gravity", _gravity);
     }
 
-    if (value.HasMember("bodies")) {
-        _vBodyInfos.reserve(_vBodyInfos.size() + value["bodies"].Size());
-        for (rapidjson::Value::ConstValueIterator it = value["bodies"].Begin(); it != value["bodies"].End(); ++it) {
-            const rapidjson::Value& rKinBodyInfo = *it;
+
+    if (rEnvInfo.HasMember("bodies")) {
+        _vBodyInfos.reserve(_vBodyInfos.size() + rEnvInfo["bodies"].Size());
+        const rapidjson::Value& rBodies = rEnvInfo["bodies"];
+        for(int iInputBodyIndex = 0; iInputBodyIndex < (int)rBodies.Size(); ++iInputBodyIndex) {
+            const rapidjson::Value& rKinBodyInfo = rBodies[iInputBodyIndex];
 
             std::string id = orjson::GetStringJsonValueByKey(rKinBodyInfo, "id");
             bool isDeleted = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "__deleted__", false);
@@ -81,37 +142,50 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
             // then find previous body
             bool isExistingRobot = false;
             std::vector<KinBody::KinBodyInfoPtr>::iterator itExistingBodyInfo = _vBodyInfos.end();
-            if (!id.empty()) {
+
+            if( iInputBodyIndex < (int)vInputToBodyInfoMapping.size() && vInputToBodyInfoMapping[iInputBodyIndex] >= 0 ) {
+                itExistingBodyInfo = _vBodyInfos.begin() + vInputToBodyInfoMapping[iInputBodyIndex];
+            }
+            else if (!id.empty()) {
                 // only try to find old info if id is not empty
                 FOREACH(itBodyInfo, _vBodyInfos) {
                     if ((*itBodyInfo)->_id == id ) {
                         itExistingBodyInfo = itBodyInfo;
-                        isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itBodyInfo);
-                        RAVELOG_VERBOSE_FORMAT("found existing body: %s, isRobot = %d", id%isExistingRobot);
                         break;
                     }
                 }
             }
+
+            if( itExistingBodyInfo != _vBodyInfos.end() ) {
+                isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itExistingBodyInfo);
+                RAVELOG_VERBOSE_FORMAT("found existing body '%s' with id='%s', isRobot = %d", (*itExistingBodyInfo)->_name%id%isExistingRobot);
+            }
+
             // here we allow body infos with empty id to be created because
             // when we load things from json, some id could be missing on file
             // and for the partial update case, the id should be non-empty
 
             bool isRobot = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "isRobot", isExistingRobot);
-            RAVELOG_VERBOSE_FORMAT("body '%s', isRobot=%d", id%isRobot);
+            RAVELOG_VERBOSE_FORMAT("body id='%s', isRobot=%d", id%isRobot);
             if (isRobot) {
                 if (itExistingBodyInfo == _vBodyInfos.end()) {
                     // in case no such id
                     if (!isDeleted) {
                         RobotBase::RobotBaseInfoPtr pRobotBaseInfo(new RobotBase::RobotBaseInfo());
                         pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
-                        pRobotBaseInfo->_id = id;
-                        _vBodyInfos.push_back(pRobotBaseInfo);
+                        if (!pRobotBaseInfo->_name.empty()) {
+                            pRobotBaseInfo->_id = id;
+                            _vBodyInfos.push_back(pRobotBaseInfo);
+                            RAVELOG_VERBOSE_FORMAT("created new robot id='%s'", id);
+                        } else {
+                            RAVELOG_WARN_FORMAT("new robot id='%s' does not have a name, so skip creating", id);
+                        }
                     }
                     continue;
                 }
                 // in case same id exists before
                 if (isDeleted) {
-                    RAVELOG_VERBOSE_FORMAT("deleted robot: %s", id);
+                    RAVELOG_VERBOSE_FORMAT("deleted robot id ='%s'", id);
                     _vBodyInfos.erase(itExistingBodyInfo);
                     continue;
                 }
@@ -123,7 +197,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                     pRobotBaseInfo.reset(new RobotBase::RobotBaseInfo());
                     *itExistingBodyInfo = pRobotBaseInfo;
                     *((KinBody::KinBodyInfo*)pRobotBaseInfo.get()) = *pKinBodyInfo;
-                    RAVELOG_VERBOSE_FORMAT("replaced body as a robot: %s", id);
+                    RAVELOG_VERBOSE_FORMAT("replaced body as a robot id='%s'", id);
                 }
                 pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                 pRobotBaseInfo->_id = id;
@@ -135,14 +209,19 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                     if (!isDeleted) {
                         KinBody::KinBodyInfoPtr pKinBodyInfo(new KinBody::KinBodyInfo());
                         pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
-                        pKinBodyInfo->_id = id;
-                        _vBodyInfos.push_back(pKinBodyInfo);
+                        if (!pKinBodyInfo->_name.empty()) {
+                            pKinBodyInfo->_id = id;
+                            _vBodyInfos.push_back(pKinBodyInfo);
+                            RAVELOG_VERBOSE_FORMAT("created new body id='%s'", id);
+                        } else {
+                            RAVELOG_WARN_FORMAT("new body id='%s' does not have a name, so skip creating", id);
+                        }
                     }
                     continue;
                 }
                 // in case same id exists before
                 if (isDeleted) {
-                    RAVELOG_VERBOSE_FORMAT("deleted body: %s", id);
+                    RAVELOG_VERBOSE_FORMAT("deleted body id='%s'", id);
                     _vBodyInfos.erase(itExistingBodyInfo);
                     continue;
                 }
@@ -154,7 +233,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                     pKinBodyInfo.reset(new KinBody::KinBodyInfo());
                     *itExistingBodyInfo = pKinBodyInfo;
                     *pKinBodyInfo = *((KinBody::KinBodyInfo*)pRobotBaseInfo.get());
-                    RAVELOG_VERBOSE_FORMAT("replaced robot as a body: %s", id);
+                    RAVELOG_VERBOSE_FORMAT("replaced robot as a body id='%s'", id);
                 }
                 pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                 pKinBodyInfo->_id = id;

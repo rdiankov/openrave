@@ -300,7 +300,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
             FOREACH(itmanip, probot->GetManipulators()) {
                 smanipnames << (*itmanip)->GetName() << ", ";
             }
-            throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator '%s' not found in robot '%s' (%d) with manips [%s]"), pmanip->GetName()%probot->GetName()%probot->GetEnvironmentId()%smanipnames.str(), ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator '%s' not found in robot '%s' (%d) with manips [%s]"), pmanip->GetName()%probot->GetName()%probot->GetEnvironmentBodyIndex()%smanipnames.str(), ORE_InvalidArguments);
         }
 
         _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
@@ -1307,7 +1307,12 @@ protected:
     {
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         ikfast::IkSolutionList<IkReal> solutions;
-        if( !_CallIk(param,vfree, pmanip->GetLocalToolTransform(), solutions) ) {
+        Transform tIkChainEndlinkToEE;
+        if (!!pmanip->GetIkChainEndLink()) {
+            tIkChainEndlinkToEE = pmanip->GetIkChainEndLink()->GetTransform().inverse() * pmanip->GetEndEffector()->GetTransform();
+        }
+
+        if( !_CallIk(param,vfree, tIkChainEndlinkToEE * pmanip->GetLocalToolTransform(), solutions) ) {
             return IKRA_RejectKinematics;
         }
 
@@ -1865,7 +1870,12 @@ protected:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         ikfast::IkSolutionList<IkReal> solutions;
-        if( _CallIk(param,vfree, pmanip->GetLocalToolTransform(), solutions) ) {
+        Transform tIkChainEndlinkToEE;
+        if (!!pmanip->GetIkChainEndLink()) {
+            tIkChainEndlinkToEE = pmanip->GetIkChainEndLink()->GetTransform().inverse() * pmanip->GetEndEffector()->GetTransform();
+        }
+
+        if( _CallIk(param,vfree, tIkChainEndlinkToEE * pmanip->GetLocalToolTransform(), solutions) ) {
             vector<IkReal> vsolfree;
             std::vector<IkReal> sol(pmanip->GetArmIndices().size());
             for(size_t isolution = 0; isolution < solutions.GetNumSolutions(); ++isolution) {

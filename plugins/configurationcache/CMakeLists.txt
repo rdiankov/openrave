@@ -1,14 +1,14 @@
 ###########################################
 # configurationcache openrave plugin
 ###########################################
-add_library(configurationcache SHARED cachechecker.cpp configurationcache.cpp configurationcachetree.cpp configurationjitterer.cpp)
+add_library(configurationcache SHARED cachechecker.cpp configurationcache.cpp configurationcachetree.cpp configurationjitterer.cpp workspaceconfigurationjitterer.cpp)
 target_link_libraries(configurationcache libopenrave ${LAPACK_LIBRARIES})
 target_link_libraries(configurationcache PRIVATE boost_assertion_failed)
 set_target_properties(configurationcache PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 install(TARGETS configurationcache DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${PLUGINS_BASE})
 
 # python bindings
-if( HAVE_ALL_PYTHON_HEADERS )
+if( OPT_PYTHON AND HAVE_ALL_PYTHON_HEADERS )
   # include
   include_directories(${PYTHON_INCLUDE_PATH} ${PYTHON_INCLUDE_DIRS}
     ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS} ${OPENRAVEPY_INCLUDE_LOCAL_DIRS}

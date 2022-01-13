@@ -191,8 +191,11 @@ public:
         bool SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
         bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
 
-        bool operator==(const Readable& r) override {
-            const SensorGeometry* pOther = dynamic_cast<const SensorGeometry*>(&r);
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const SensorGeometry* pOther = dynamic_cast<const SensorGeometry*>(&other);
             if (!pOther) {
                 return false;
             }
@@ -214,7 +217,10 @@ public:
             return ST_Laser;
         }
 
-        bool operator==(const Readable& other) override {
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
             const LaserGeomData* pOther = dynamic_cast<const LaserGeomData*>(&other);
             if (!pOther) {
                 return false;
@@ -227,6 +233,12 @@ public:
                    && max_range == pOther->max_range
                    && time_increment == pOther->time_increment
                    && time_scan == pOther->time_scan;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<LaserGeomData> pNew(new LaserGeomData());
+            *pNew = *this;
+            return pNew;
         }
 
         boost::array<dReal,2> min_angle;         ///< Start for the laser scan [rad].
@@ -255,14 +267,16 @@ public:
             intrinsics = r.intrinsics;
             width = r.width;
             height = r.height;
-            sensor_reference = r.sensor_reference;
             target_region = r.target_region;
             measurement_time = r.measurement_time;
             gain = r.gain;
             return *this;
         }
 
-        bool operator==(const Readable& other) override {
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
             const CameraGeomData* pOther = dynamic_cast<const CameraGeomData*>(&other);
             if (!pOther) {
                 return false;
@@ -271,17 +285,21 @@ public:
                    && intrinsics == pOther->intrinsics
                    && width == pOther->width
                    && height == pOther->height
-                   && sensor_reference == pOther->sensor_reference
                    && target_region == pOther->target_region
                    && measurement_time == pOther->measurement_time
                    && gain == pOther->gain;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<CameraGeomData> pNew(new CameraGeomData());
+            *pNew = *this;
+            return pNew;
         }
 
         bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override;
         bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
         bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
 
-        std::string sensor_reference; ///< name of sensor that whose data is referenced. This sensor transforms the data in a particular way.
         std::string target_region; ///< name of the kinbody that describes the region of interest for the camera.
         CameraIntrinsics intrinsics;         ///< intrinsic matrix
         int width, height;         ///< width and height of image
@@ -301,7 +319,10 @@ public:
             return ST_JointEncoder;
         }
 
-        bool operator==(const Readable& other) override {
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
             const JointEncoderGeomData* pOther = dynamic_cast<const JointEncoderGeomData*>(&other);
             if (!pOther) {
                 return false;
@@ -309,24 +330,55 @@ public:
             return SensorGeometry::operator==(other) && resolution == pOther->resolution;
         }
 
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<JointEncoderGeomData> pNew(new JointEncoderGeomData());
+            *pNew = *this;
+            return pNew;
+        }
+
         std::vector<dReal> resolution;         ///< the delta value of one encoder tick
     };
     class OPENRAVE_API Force6DGeomData : public SensorGeometry
     {
 public:
-        Force6DGeomData() : SensorGeometry("Force6D") {
+        Force6DGeomData() : SensorGeometry("Force6D"), polarity(1), correction_matrix({{1,0,0, 0,0,0,
+                        0,1,0, 0,0,0,
+                        0,0,1, 0,0,0,
+                        0,0,0, 1,0,0,
+                        0,0,0, 0,1,0,
+                        0,0,0, 0,0,1}}) {
         }
         virtual SensorType GetType() const {
             return ST_Force6D;
         }
-        bool operator==(const Readable& other) override {
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
             const Force6DGeomData* pOther = dynamic_cast<const Force6DGeomData*>(&other);
             if (!pOther) {
                 return false;
             }
-            return SensorGeometry::operator==(other);
+            return SensorGeometry::operator==(other)
+                   && polarity == pOther->polarity
+                   && correction_matrix == pOther->correction_matrix;
         }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<Force6DGeomData> pNew(new Force6DGeomData());
+            *pNew = *this;
+            return pNew;
+        }
+
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override;
+        bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
+        bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
+
+        int polarity; ///< sensor's polarity. set +1 if load is attached to the side of sensor which sensor's spec explains. set -1 if load is attached to the opposite side.
+        boost::array<dReal,36> correction_matrix; ///< correction matrix. force -> torque order. this matrix will be used to cancel crosstalk by multiplying to measured force/torque. f_without_crosstalk = correction_matrix * f_measured.
     };
+    typedef boost::shared_ptr<Force6DGeomData> Force6DGeomDataPtr;
+    typedef boost::shared_ptr<Force6DGeomData const> Force6DGeomDataConstPtr;
     class OPENRAVE_API IMUGeomData : public SensorGeometry
     {
 public:
@@ -336,12 +388,21 @@ public:
             return ST_IMU;
         }
 
-        bool operator==(const Readable& other) override {
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
             const IMUGeomData* pOther = dynamic_cast<const IMUGeomData*>(&other);
             if (!pOther) {
                 return false;
             }
             return SensorGeometry::operator==(other) && time_measurement == pOther->time_measurement;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<IMUGeomData> pNew(new IMUGeomData());
+            *pNew = *this;
+            return pNew;
         }
 
         dReal time_measurement;         ///< time between measurements
@@ -355,13 +416,22 @@ public:
             return ST_Odometry;
         }
 
-        bool operator==(const Readable& other) override {
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
             const OdometryGeomData* pOther = dynamic_cast<const OdometryGeomData*>(&other);
             if (!pOther) {
                 return false;
             }
             return SensorGeometry::operator==(other)
                    && targetid == pOther->targetid;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<OdometryGeomData> pNew(new OdometryGeomData());
+            *pNew = *this;
+            return pNew;
         }
 
         std::string targetid;         ///< id of the target whose odometry/pose messages are being published for
@@ -376,7 +446,10 @@ public:
             return ST_Tactile;
         }
 
-        bool operator==(const Readable& other) override {
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
             const TactileGeomData* pOther = dynamic_cast<const TactileGeomData*>(&other);
             if (!pOther) {
                 return false;
@@ -385,6 +458,12 @@ public:
                    && positions == pOther->positions
                    && thickness == pOther->thickness;
             // && _mapfriction == pOther->_mapfriction;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<TactileGeomData> pNew(new TactileGeomData());
+            *pNew = *this;
+            return pNew;
         }
 
         /// LuGre friction model?
@@ -418,7 +497,10 @@ public:
             return ST_Actuator;
         }
 
-        bool operator==(const Readable& other) override {
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
             const ActuatorGeomData* pOther = dynamic_cast<const ActuatorGeomData*>(&other);
             if (!pOther) {
                 return false;
@@ -432,6 +514,12 @@ public:
                    && maxjerk == pOther->maxjerk
                    && staticfriction == pOther->staticfriction
                    && viscousfriction == pOther->viscousfriction;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<ActuatorGeomData> pNew(new ActuatorGeomData());
+            *pNew = *this;
+            return pNew;
         }
 
         dReal maxtorque;         ///< Maximum possible torque actuator can apply (on output side). This includes the actuator's rotor, if one exists.

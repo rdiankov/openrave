@@ -152,7 +152,7 @@ public:
         const string g2prefix =  g2.name.substr(0,index2);
         std::map<string,int>::iterator it1 = _maporder.find(g1prefix);
         std::map<string,int>::iterator it2 = _maporder.find(g2prefix);
-        
+
         if( it1 == _maporder.end() && it2 == _maporder.end()) {
             return g1prefix < g2prefix;
         }
@@ -165,7 +165,7 @@ public:
         return it1->second < it2->second;
     }
 
-    void Init(const ConfigurationSpecification& spec)
+    void Init(const ConfigurationSpecification& spec) override
     {
         if( _bInit  && _spec == spec ) {
             // already init
@@ -198,7 +198,7 @@ public:
         _bInit = true;
     }
 
-    void ClearWaypoints()
+    void ClearWaypoints() override
     {
         if( _bInit ) {
             if( _vtrajdata.size() > 0 ) {
@@ -209,7 +209,7 @@ public:
         }
     }
 
-    void Insert(size_t index, const std::vector<dReal>& data, bool bOverwrite)
+    void Insert(size_t index, const std::vector<dReal>& data, bool bOverwrite) override
     {
         BOOST_ASSERT(_bInit);
         if( data.size() == 0 ) {
@@ -231,7 +231,7 @@ public:
         _bChanged = true;
     }
 
-    void Insert(size_t index, const std::vector<dReal>& data, const ConfigurationSpecification& spec, bool bOverwrite)
+    void Insert(size_t index, const std::vector<dReal>& data, const ConfigurationSpecification& spec, bool bOverwrite) override
     {
         BOOST_ASSERT(_bInit);
         if( data.size() == 0 ) {
@@ -272,7 +272,7 @@ public:
         }
     }
 
-    void Remove(size_t startindex, size_t endindex)
+    void Remove(size_t startindex, size_t endindex) override
     {
         BOOST_ASSERT(_bInit);
         if( startindex == endindex ) {
@@ -284,7 +284,7 @@ public:
         _bChanged = true;
     }
 
-    void Sample(std::vector<dReal>& data, dReal time) const
+    void Sample(std::vector<dReal>& data, dReal time) const override
     {
         BOOST_ASSERT(_bInit);
         BOOST_ASSERT(_timeoffset>=0);
@@ -319,7 +319,7 @@ public:
                 }
                 for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
                     if( !!_vgroupinterpolators[i] ) {
-                        _vgroupinterpolators[i](index-1,deltatime,data);
+                        _vgroupinterpolators[i](index-1,deltatime,data.begin());
                     }
                 }
                 // should return the sample time relative to the last endpoint so it is easier to re-insert in the trajectory
@@ -328,7 +328,7 @@ public:
         }
     }
 
-    void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec, bool reintializeData) const
+    void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec, bool reintializeData) const override
     {
         BOOST_ASSERT(_bInit);
         OPENRAVE_ASSERT_OP(_timeoffset,>=,0);
@@ -366,26 +366,115 @@ public:
                 }
                 for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
                     if( !!_vgroupinterpolators[i] ) {
-                        _vgroupinterpolators[i](index-1,deltatime,vinternaldata);
+                        _vgroupinterpolators[i](index-1,deltatime,vinternaldata.begin());
                     }
                 }
+                // should return the sample time relative to the last endpoint so it is easier to re-insert in the trajectory
+                vinternaldata.at(_timeoffset) = deltatime;
+
                 ConfigurationSpecification::ConvertData(data.begin(),spec,vinternaldata.begin(),_spec,1,GetEnv());
             }
         }
     }
 
-    const ConfigurationSpecification& GetConfigurationSpecification() const
+    void SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint) const override
+    {
+        BOOST_ASSERT(_bInit);
+        BOOST_ASSERT(_timeoffset>=0);
+        _ComputeInternal();
+        OPENRAVE_ASSERT_OP_FORMAT0((int)_vtrajdata.size(),>=,_spec.GetDOF(), "trajectory needs at least one point to sample from", ORE_InvalidArguments);
+        if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+            _VerifySampling();
+        }
+
+        const dReal duration = GetDuration();
+        int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
+        if (ensureLastPoint && (numPoints - 1) * deltatime + g_fEpsilon < duration) {
+            numPoints++;
+        }
+
+        int dof = GetConfigurationSpecification().GetDOF();
+        //std::vector<dReal> dataPerTimestep(dof,0);
+        data.resize(dof*numPoints);
+
+        const std::vector<dReal>::const_iterator begin = _vaccumtime.begin();
+        std::vector<dReal>::const_iterator it = begin;
+
+        std::vector<dReal>::iterator itdata = data.begin();
+
+        for(int i = 0; i < numPoints; ++i, itdata += dof) {
+            dReal sampletime = i * deltatime;
+            if( sampletime >= duration ) {
+                std::copy(_vtrajdata.end() - _spec.GetDOF(), _vtrajdata.end(), itdata);
+            }
+            else {
+                // knowing time always increases, it is safe to search in [it, end] instead of [begin, end]
+                it = std::lower_bound(it, _vaccumtime.cend(), sampletime);
+
+                if( it == begin ) {
+                    std::copy(_vtrajdata.begin(),_vtrajdata.begin()+_spec.GetDOF(),itdata);
+                    *(itdata + _timeoffset) = sampletime;
+                }
+                else {
+                    size_t index = it - begin;
+                    dReal timeFromLowerWaypoint = sampletime - _vaccumtime.at(index-1);
+                    dReal waypointdeltatime = _vtrajdata.at(_spec.GetDOF()*index + _timeoffset);
+                    // unfortunately due to floating-point error timeFromLowerWaypoint might not be in the range [0, waypointdeltatime], so double check!
+                    if( timeFromLowerWaypoint < 0 ) {
+                        // most likely small epsilon
+                        timeFromLowerWaypoint = 0;
+                    }
+                    else if( timeFromLowerWaypoint > waypointdeltatime ) {
+                        timeFromLowerWaypoint = waypointdeltatime;
+                    }
+                    for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
+                        if( !!_vgroupinterpolators[i] ) {
+                            _vgroupinterpolators[i](index-1, timeFromLowerWaypoint, itdata);
+                        }
+                    }
+                    // should return the sample time relative to the last endpoint so it is easier to re-insert in the trajectory
+                    *(itdata + _timeoffset) = timeFromLowerWaypoint;
+                }
+            }
+        }
+    }
+
+    void SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const override
+    {
+        // avoid unnecessary computation if spec is same as this->_spec
+        if (spec == _spec) {
+            return SamplePointsSameDeltaTime(data, deltatime, ensureLastPoint);
+        }
+
+        std::vector<dReal> dataInSourceSpec; // TODO perhaps not a good idea to create a separate vector like this...
+        SamplePointsSameDeltaTime(dataInSourceSpec, deltatime, ensureLastPoint);
+
+        int dofSourceSpec = _spec.GetDOF();
+        OPENRAVE_ASSERT_OP(dataInSourceSpec.size() % dofSourceSpec,==, 0);
+        int numPoints = dataInSourceSpec.size() / dofSourceSpec;
+        int dof = spec.GetDOF();
+        data.resize(dof*numPoints);
+
+        ConfigurationSpecification::ConvertData(data.begin(),
+                                                spec,
+                                                dataInSourceSpec.begin(),
+                                                _spec,
+                                                numPoints,
+                                                GetEnv());
+    }
+
+    const ConfigurationSpecification& GetConfigurationSpecification() const override
     {
         return _spec;
     }
 
-    size_t GetNumWaypoints() const
+    size_t GetNumWaypoints() const override
     {
         BOOST_ASSERT(_bInit);
         return _vtrajdata.size()/_spec.GetDOF();
     }
 
-    void GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data) const
+    void GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data) const override
     {
         BOOST_ASSERT(_bInit);
         BOOST_ASSERT(startindex<=endindex && startindex*_spec.GetDOF() <= _vtrajdata.size() && endindex*_spec.GetDOF() <= _vtrajdata.size());
@@ -393,7 +482,7 @@ public:
         std::copy(_vtrajdata.begin()+startindex*_spec.GetDOF(),_vtrajdata.begin()+endindex*_spec.GetDOF(),data.begin());
     }
 
-    void GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data, const ConfigurationSpecification& spec) const
+    void GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data, const ConfigurationSpecification& spec) const override
     {
         BOOST_ASSERT(_bInit);
         BOOST_ASSERT(startindex<=endindex && startindex*_spec.GetDOF() <= _vtrajdata.size() && endindex*_spec.GetDOF() <= _vtrajdata.size());
@@ -403,7 +492,7 @@ public:
         }
     }
 
-    size_t GetFirstWaypointIndexAfterTime(dReal time) const
+    size_t GetFirstWaypointIndexAfterTime(dReal time) const override
     {
         BOOST_ASSERT(_bInit);
         BOOST_ASSERT(_timeoffset>=0);
@@ -421,7 +510,7 @@ public:
         return itaccum-_vaccumtime.begin();
     }
 
-    dReal GetDuration() const
+    dReal GetDuration() const override
     {
         BOOST_ASSERT(_bInit);
         _ComputeInternal();
@@ -473,36 +562,37 @@ public:
                 WriteBinaryString(O, itReadableInterface->first);  // readable interface id
 
                 // try to serialize to json first
-                ReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(itReadableInterface->second);
-                if (!!pReadable) {
+                if (!!itReadableInterface->second) {
                     rapidjson::Value rReadable;
-                    if( pReadable->SerializeJSON(rReadable, document.GetAllocator(), fUnitScale, zerooptions) ) {
+                    if( itReadableInterface->second->SerializeJSON(rReadable, document.GetAllocator(), fUnitScale, zerooptions) ) {
                         WriteBinaryString(O, rReadable.GetString());
+                        WriteBinaryString(O, "StringReadable");
                         continue;
                     }
                     else {
                         // perhaps XML?
                         ss.str(std::string());
                         xmlreaders::StreamXMLWriterPtr writer;
-                        
+
                         // try to serialize to HierarchicalXML
-                        xmlreaders::HierarchicalXMLReadablePtr pHierarchical = OPENRAVE_DYNAMIC_POINTER_CAST<xmlreaders::HierarchicalXMLReadable>(pReadable);
+                        xmlreaders::HierarchicalXMLReadablePtr pHierarchical = OPENRAVE_DYNAMIC_POINTER_CAST<xmlreaders::HierarchicalXMLReadable>(itReadableInterface->second);
                         if( !!pHierarchical ) {
                             writer.reset(new xmlreaders::StreamXMLWriter("root")); // need to parse with xml, so need a root
                             pHierarchical->SerializeXML(writer, options);
                             writer->Serialize(ss);
-                            
+
                             WriteBinaryString(O, ss.str());
                             WriteBinaryString(O, "HierarchicalXMLReadable");
                             continue;
                         }
                         else {
                             writer.reset(new xmlreaders::StreamXMLWriter(std::string()));
-                            if( pReadable->SerializeXML(writer, zerooptions) ) {
+                            if( itReadableInterface->second->SerializeXML(writer, zerooptions) ) {
                                 ss.clear();
                                 ss.str(std::string());
                                 writer->Serialize(ss);
                                 WriteBinaryString(O, ss.str());
+                                WriteBinaryString(O, "StringReadable");
                                 continue;
                             }
                         }
@@ -511,7 +601,7 @@ public:
 
                 // if neither json or xml serializable, write an empty string
                 WriteBinaryString(O, "");
-
+                WriteBinaryString(O, "StringReadable");
             }
         }
     }
@@ -610,7 +700,7 @@ public:
         }
     }
 
-    void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override
     {
         InterfaceBase::Clone(preference,cloningoptions);
         TrajectoryBaseConstPtr r = RaveInterfaceConstCast<TrajectoryBase>(preference);
@@ -619,7 +709,7 @@ public:
         _bChanged = true;
     }
 
-    void Swap(TrajectoryBasePtr rawtraj)
+    void Swap(TrajectoryBasePtr rawtraj) override
     {
         OPENRAVE_ASSERT_OP(GetXMLId(),==,rawtraj->GetXMLId());
         boost::shared_ptr<GenericTrajectory> traj = boost::dynamic_pointer_cast<GenericTrajectory>(rawtraj);
@@ -898,7 +988,7 @@ protected:
         }
     }
 
-    void _InterpolatePrevious(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
+    void _InterpolatePrevious(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata)
     {
         size_t offset = ipoint*_spec.GetDOF()+g.offset;
         if( (ipoint+1)*_spec.GetDOF() < _vtrajdata.size() ) {
@@ -908,10 +998,10 @@ protected:
                 offset += _spec.GetDOF();
             }
         }
-        std::copy(_vtrajdata.begin()+offset,_vtrajdata.begin()+offset+g.dof,data.begin()+g.offset);
+        std::copy(_vtrajdata.begin()+offset,_vtrajdata.begin()+offset+g.dof,itdata+g.offset);
     }
 
-    void _InterpolateNext(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
+    void _InterpolateNext(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata)
     {
         if( (ipoint+1)*_spec.GetDOF() < _vtrajdata.size() ) {
             ipoint += 1;
@@ -921,10 +1011,10 @@ protected:
             // if point is so close the previous, then choose the previous
             offset -= _spec.GetDOF();
         }
-        std::copy(_vtrajdata.begin()+offset,_vtrajdata.begin()+offset+g.dof,data.begin()+g.offset);
+        std::copy(_vtrajdata.begin()+offset,_vtrajdata.begin()+offset+g.dof,itdata+g.offset);
     }
 
-    void _InterpolateLinear(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
+    void _InterpolateLinear(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata)
     {
         size_t offset = ipoint*_spec.GetDOF();
         int derivoffset = _vderivoffsets[g.offset];
@@ -932,20 +1022,20 @@ protected:
             // expected derivative offset, interpolation can be wrong for circular joints
             dReal f = _vdeltainvtime.at(ipoint+1)*deltatime;
             for(int i = 0; i < g.dof; ++i) {
-                data[g.offset+i] = _vtrajdata[offset+g.offset+i]*(1-f) + f*_vtrajdata[_spec.GetDOF()+offset+g.offset+i];
+                *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i]*(1-f) + f*_vtrajdata[_spec.GetDOF()+offset+g.offset+i];
             }
         }
         else {
             for(int i = 0; i < g.dof; ++i) {
                 dReal deriv0 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
-                data[g.offset+i] = _vtrajdata[offset+g.offset+i] + deltatime*deriv0;
+                *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i] + deltatime*deriv0;
             }
         }
     }
 
-    void _InterpolateLinearIk(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data, IkParameterizationType iktype)
+    void _InterpolateLinearIk(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata, IkParameterizationType iktype)
     {
-        _InterpolateLinear(g,ipoint,deltatime,data);
+        _InterpolateLinear(g,ipoint,deltatime,itdata);
         if( deltatime > g_fEpsilon ) {
             size_t offset = ipoint*_spec.GetDOF();
             dReal f = _vdeltainvtime.at(ipoint+1)*deltatime;
@@ -956,10 +1046,10 @@ protected:
                 q0.Set4(&_vtrajdata[offset+g.offset]);
                 q1.Set4(&_vtrajdata[_spec.GetDOF()+offset+g.offset]);
                 Vector q = quatSlerp(q0,q1,f);
-                data[g.offset+0] = q[0];
-                data[g.offset+1] = q[1];
-                data[g.offset+2] = q[2];
-                data[g.offset+3] = q[3];
+                *(itdata + g.offset+0) = q[0];
+                *(itdata + g.offset+1) = q[1];
+                *(itdata + g.offset+2) = q[2];
+                *(itdata + g.offset+3) = q[3];
                 break;
             }
             case IKP_TranslationDirection5D: {
@@ -970,9 +1060,9 @@ protected:
                 if( fsinangle > g_fEpsilon ) {
                     axisangle *= f*RaveAsin(min(dReal(1),fsinangle))/fsinangle;
                     Vector newdir = quatRotate(quatFromAxisAngle(axisangle),dir0);
-                    data[g.offset+0] = newdir[0];
-                    data[g.offset+1] = newdir[1];
-                    data[g.offset+2] = newdir[2];
+                    *(itdata + g.offset+0) = newdir[0];
+                    *(itdata + g.offset+1) = newdir[1];
+                    *(itdata + g.offset+2) = newdir[2];
                 }
                 break;
             }
@@ -982,7 +1072,7 @@ protected:
         }
     }
 
-    void _InterpolateQuadratic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
+    void _InterpolateQuadratic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata)
     {
         size_t offset = ipoint*_spec.GetDOF();
         if( deltatime > g_fEpsilon ) {
@@ -993,7 +1083,7 @@ protected:
                     dReal deriv0 = _vtrajdata[offset+derivoffset+i];
                     dReal deriv1 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
                     dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(deriv1-deriv0);
-                    data[g.offset+i] = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
+                    *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
                 }
             }
             else {
@@ -1014,20 +1104,20 @@ protected:
                     dReal c1TimesDelta = 6*(integral1-integral0)*ideltatime - 4*value0 - 2*value1;
                     dReal c1 = c1TimesDelta*ideltatime;
                     dReal c2 = (value1 - value0 - c1TimesDelta)*ideltatime2;
-                    data[g.offset+i] = value0 + deltatime * (c1 + deltatime*c2);
+                    *(itdata + g.offset+i) = value0 + deltatime * (c1 + deltatime*c2);
                 }
             }
         }
         else {
             for(int i = 0; i < g.dof; ++i) {
-                data[g.offset+i] = _vtrajdata[offset+g.offset+i];
+                *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i];
             }
         }
     }
 
-    void _InterpolateQuadraticIk(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data, IkParameterizationType iktype)
+    void _InterpolateQuadraticIk(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata, IkParameterizationType iktype)
     {
-        _InterpolateQuadratic(g, ipoint, deltatime, data);
+        _InterpolateQuadratic(g, ipoint, deltatime, itdata);
         if( deltatime > g_fEpsilon ) {
             int derivoffset = _vderivoffsets[g.offset];
             size_t offset = ipoint*_spec.GetDOF();
@@ -1044,10 +1134,10 @@ protected:
                 Vector coeff = (angularvelocity1-angularvelocity0)*(0.5*_vdeltainvtime.at(ipoint+1));
                 Vector vtotaldelta = angularvelocity0*deltatime + coeff*(deltatime*deltatime);
                 Vector q = quatMultiply(quatFromAxisAngle(Vector(vtotaldelta.y,vtotaldelta.z,vtotaldelta.w)),q0);
-                data[g.offset+0] = q[0];
-                data[g.offset+1] = q[1];
-                data[g.offset+2] = q[2];
-                data[g.offset+3] = q[3];
+                *(itdata + g.offset+0) = q[0];
+                *(itdata + g.offset+1) = q[1];
+                *(itdata + g.offset+2) = q[2];
+                *(itdata + g.offset+3) = q[3];
                 break;
             }
             case IKP_TranslationDirection5D: {
@@ -1061,9 +1151,9 @@ protected:
                     Vector coeff = (angularvelocity1-angularvelocity0)*(0.5*_vdeltainvtime.at(ipoint+1));
                     Vector vtotaldelta = angularvelocity0*deltatime + coeff*(deltatime*deltatime);
                     Vector newdir = quatRotate(quatFromAxisAngle(vtotaldelta),dir0);
-                    data[g.offset+0] = newdir[0];
-                    data[g.offset+1] = newdir[1];
-                    data[g.offset+2] = newdir[2];
+                    *(itdata + g.offset+0) = newdir[0];
+                    *(itdata + g.offset+1) = newdir[1];
+                    *(itdata + g.offset+2) = newdir[2];
                 }
                 break;
             }
@@ -1073,7 +1163,7 @@ protected:
         }
     }
 
-    void _InterpolateCubic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
+    void _InterpolateCubic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata)
     {
         // p = c3*t**3 + c2*t**2 + c1*t + c0
         // c3 = (v1*dt + v0*dt - 2*px)/(dt**3)
@@ -1094,7 +1184,7 @@ protected:
                     dReal px = _vtrajdata.at(_spec.GetDOF()+offset+g.offset+i) - _vtrajdata[offset+g.offset+i];
                     dReal c3 = (deriv1+deriv0)*ideltatime2 - 2*px*ideltatime3;
                     dReal c2 = 3*px*ideltatime2 - (2*deriv0+deriv1)*ideltatime;
-                    data[g.offset+i] = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*(c2 + deltatime*c3));
+                    *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*(c2 + deltatime*c3));
                 }
             }
             else {
@@ -1103,12 +1193,12 @@ protected:
         }
         else {
             for(int i = 0; i < g.dof; ++i) {
-                data[g.offset+i] = _vtrajdata[offset+g.offset+i];
+                *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i];
             }
         }
     }
 
-    void _InterpolateQuartic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
+    void _InterpolateQuartic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata)
     {
         // p = c4*t**4 + c3*t**3 + c2*t**2 + c1*t + c0
         //
@@ -1135,7 +1225,7 @@ protected:
                     dReal dd1 = _vtrajdata[_spec.GetDOF()+offset+ddoffset+i];
                     dReal c4 = -0.5*(deriv1-deriv0)*ideltatime3 + (dd0 + dd1)*ideltatime2*0.25;
                     dReal c3 = (deriv1-deriv0)*ideltatime2 - (2*dd0+dd1)*ideltatime/3.0;
-                    data[g.offset+i] = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(c3 + deltatime*c4)));
+                    *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(c3 + deltatime*c4)));
                 }
             }
             else {
@@ -1144,12 +1234,12 @@ protected:
         }
         else {
             for(int i = 0; i < g.dof; ++i) {
-                data[g.offset+i] = _vtrajdata[offset+g.offset+i];
+                *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i];
             }
         }
     }
 
-    void _InterpolateQuintic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
+    void _InterpolateQuintic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata)
     {
         // p0, p1, v0, v1, a0, a1, dt, t, c5, c4, c3 = symbols('p0, p1, v0, v1, a0, a1, dt, t, c5, c4, c3')
         // p = c5*t**5 + c4*t**4 + c3*t**3 + c2*t**2 + c1*t + c0
@@ -1186,7 +1276,7 @@ protected:
                     dReal c5 = (-0.5*dd0 + dd1*0.5)*ideltatime3 - (3*deriv0 + 3*deriv1)*ideltatime4 + px*6*ideltatime5;
                     dReal c4 = (1.5*dd0 - dd1)*ideltatime2 + (8*deriv0 + 7*deriv1)*ideltatime3 - px*15*ideltatime4;
                     dReal c3 = (-1.5*dd0 + dd1*0.5)*ideltatime + (-6*deriv0 - 4*deriv1)*ideltatime2 + px*10*ideltatime3;
-                    data[g.offset+i] = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(c3 + deltatime*(c4 + deltatime*c5))));
+                    *(itdata + g.offset+i) = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(c3 + deltatime*(c4 + deltatime*c5))));
                 }
             }
             else {
@@ -1195,12 +1285,12 @@ protected:
         }
         else {
             for(int i = 0; i < g.dof; ++i) {
-                data[g.offset+i] = _vtrajdata[offset+g.offset+i];
+                *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i];
             }
         }
     }
 
-    void _InterpolateSextic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
+    void _InterpolateSextic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata)
     {
         // p = c6*t**6 + c5*t**5 + c4*t**4 + c3*t**3 + c2*t**2 + c1*t + c0
         //
@@ -1256,7 +1346,7 @@ protected:
                     dReal c6 = (-dd0 - dd1)*0.5*ideltatime4 + (-ddd0 + ddd1)/12.0*ideltatime3 + (-deriv0 + deriv1)*ideltatime5;
                     dReal c5 = (1.6*dd0 + 1.4*dd1)*ideltatime3 + (0.3*ddd0 - ddd1*0.2)*ideltatime2 + (3*deriv0 - 3*deriv1)*ideltatime4;
                     dReal c4 = (-1.5*dd0 - dd1)*ideltatime2 + (-0.375*ddd0 + ddd1*0.125)*ideltatime + (-2.5*deriv0 + 2.5*deriv1)*ideltatime3;
-                    data[g.offset+i] = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(ddd0/6.0 + deltatime*(c4 + deltatime*(c5 + deltatime*c6)))));
+                    *(itdata + g.offset+i) = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(ddd0/6.0 + deltatime*(c4 + deltatime*(c5 + deltatime*c6)))));
                 }
             }
             else {
@@ -1265,7 +1355,7 @@ protected:
         }
         else {
             for(int i = 0; i < g.dof; ++i) {
-                data[g.offset+i] = _vtrajdata[offset+g.offset+i];
+                *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i];
             }
         }
     }
@@ -1329,7 +1419,7 @@ protected:
     }
 
     ConfigurationSpecification _spec;
-    std::vector< boost::function<void(size_t,dReal,std::vector<dReal>&)> > _vgroupinterpolators;
+    std::vector< boost::function<void(size_t,dReal,const std::vector<dReal>::iterator&)> > _vgroupinterpolators;
     std::vector< boost::function<void(size_t,dReal)> > _vgroupvalidators;
     std::vector<int> _vderivoffsets, _vddoffsets, _vdddoffsets; ///< for every group that relies on other info to compute its position, this will point to the derivative offset. -1 if invalid and not needed, -2 if invalid and needed
     std::vector<int> _vintegraloffsets; ///< for every group that relies on other info to compute its position, this will point to the integral offset (ie the position for a velocity group). -1 if invalid and not needed, -2 if invalid and needed

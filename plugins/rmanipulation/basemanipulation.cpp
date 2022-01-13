@@ -114,7 +114,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
             }
         }
 
-        RAVELOG_DEBUG(str(boost::format("BaseManipulation: using %s planner\n")%_strRRTPlannerName));
+        RAVELOG_DEBUG_FORMAT("env=%d, BaseManipulation: using %s planner", GetEnv()->GetId()%_strRRTPlannerName);
         return 0;
     }
 

@@ -80,9 +80,12 @@ public:
 
     virtual GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
     virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents);
+    virtual GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents);
 
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);
+
+    virtual GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition);
 
     virtual void _Deselect();
 
@@ -267,7 +270,7 @@ public:
         virtual ~PrivateGraphHandle() {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_CloseGraphHandle, viewer, _handle)); // _handle is copied, so it will maintain the reference
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_CloseGraphHandle, viewer, _handle), ViewerCommandPriority::HIGH); // _handle is copied, so it will maintain the reference
             }
         }
 
@@ -275,7 +278,7 @@ public:
         {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphTransform, viewer, _handle, t)); // _handle is copied, so it will maintain the reference
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphTransform, viewer, _handle, t), ViewerCommandPriority::HIGH); // _handle is copied, so it will maintain the reference
             }
         }
 
@@ -283,7 +286,7 @@ public:
         {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow)); // _handle is copied, so it will maintain the reference
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow), ViewerCommandPriority::VERY_HIGH); // _handle is copied, so it will maintain the reference
             }
         }
 
@@ -322,12 +325,15 @@ public:
     virtual void _Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::PrimitiveSet::Mode mode, osg::ref_ptr<osg::StateAttribute> attribute, bool bUsingTransparency=false);
     virtual void _DrawTriMesh(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::ref_ptr<osg::DrawElementsUInt> osgindices, bool bUsingTransparency);
     virtual void _SetTriangleMesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, osg::ref_ptr<osg::Vec3Array> osgvertices, osg::ref_ptr<osg::DrawElementsUInt> osgindices);
+    virtual void _DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition);
     virtual void _DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency);
+    virtual void _DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency);
     virtual void _DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
 
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraTransform(const RaveTransform<float>& transform);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
+    virtual void _SetCameraCenter(osg::Vec3 center);
     virtual void _StopTrackLink();
     virtual bool _TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText="");
     virtual void _SetItemVisualization(std::string& itemname, std::string& visualizationmode);
@@ -342,11 +348,19 @@ public:
     virtual void _PanCameraXDirection(float dx);
     virtual void _PanCameraYDirection(float dy);
 
+    /// \brief priority values used to determine how important it is to process certain GUI thread functions over others
+    enum ViewerCommandPriority : uint8_t {
+        VERY_HIGH = 3, //< denotes an critical GUI task that must be processed ASAP regardless of viewer state or queue size
+        HIGH = 2, ///< denotes an important GUI task that must be processed regardless of viewer state or queue size
+        MEDIUM = 1, ///< denotes a GUI task that takes precedence over low-priority tasks but yields to important tasks
+        LOW = 0 ///< denotes a GUI task that presents negligibly adversely effects on the program should it fail to complete execution
+    };
+
     /// \brief posts a function to be executed in the GUI thread
     ///
     /// \param fn the function to execute
     /// \param block if true, will return once the function has been executed.
-    void _PostToGUIThread(const boost::function<void()>& fn, bool block=false);
+    void _PostToGUIThread(const boost::function<void()>& fn, ViewerCommandPriority priority, bool block=false);
 
     /// \brief Actions that achieve buttons and menus
     void _CreateActions();
@@ -395,7 +409,8 @@ public:
     bool _PanCameraYDirectionCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
-    list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
+    std::map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> _mapGUIFunctionLists; ///< map between priority and sublist for given priority level. protected by _mutexGUIFunctions
+    std::map<ViewerCommandPriority, size_t> _mapGUIFunctionListLimits; ///< map between priority and sublist size limit for given priority level
     mutable list<Item*> _listRemoveItems; ///< raw points of items to be deleted in the viewer update thread, triggered from _DeleteItemCallback. proteced by _mutexItems
     boost::mutex _mutexItems; ///< protects _listRemoveItems
     mutable boost::mutex _mutexGUIFunctions;

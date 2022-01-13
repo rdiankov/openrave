@@ -436,7 +436,7 @@ public:
             FOREACH(itgrabinfo,_vgrablinks) {
                 int bodyid = int(std::floor(sampledata.at(itgrabinfo->first)+0.5));
                 if( bodyid != 0 ) {
-                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(abs(bodyid));
+                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(abs(bodyid));
                     if( !pbody ) {
                         RAVELOG_WARN(str(boost::format("failed to find body id %d")%bodyid));
                         continue;

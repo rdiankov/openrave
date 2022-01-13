@@ -675,7 +675,7 @@ private:
         //dGeomSetData(odegeom, (void*)geom.get());
 
         // set the transformation
-        RaveTransform<dReal> t = link->tlinkmassinv * info._t;
+        RaveTransform<dReal> t = link->tlinkmassinv * info.GetTransform();
         dGeomSetQuaternion(odegeom,&t.rot[0]);
         dGeomSetPosition(odegeom,t.trans.x, t.trans.y, t.trans.z);
 

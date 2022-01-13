@@ -36,6 +36,7 @@ public:
     object _id = py::none_();
     object _name = py::none_();
     object _sBaseLinkName = py::none_();
+    object _sIkChainEndLinkName = py::none_();
     object _sEffectorLinkName = py::none_();
     object _tLocalTool = py::none_();
     object _vChuckingDirection = py::none_();
@@ -65,6 +66,9 @@ public:
     object _linkname = py::none_();
     object _trelative = py::none_();
     object _sensorname = py::none_();
+    object _referenceAttachedSensorName = py::none_();
+    object _sensorMaker = py::none_();
+    object _sensorModel = py::none_();
     PySensorGeometryPtr _sensorgeometry;
 
 private:

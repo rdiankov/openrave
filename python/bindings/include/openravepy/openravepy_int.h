@@ -40,6 +40,7 @@
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/version.hpp>
+#include <boost/bind.hpp>
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
@@ -388,7 +389,7 @@ inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
 inline py::object toPyVector2(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvec({2});
+    py::array_t<dReal> pyvec(2);
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
@@ -403,7 +404,7 @@ inline py::object toPyVector2(Vector v)
 inline py::object toPyVector3(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvec({3});
+    py::array_t<dReal> pyvec(3);
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
@@ -419,7 +420,7 @@ inline py::object toPyVector3(Vector v)
 inline py::object toPyVector4(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvec({4});
+    py::array_t<dReal> pyvec(4);
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
@@ -767,6 +768,7 @@ OPENRAVEPY_API PyInterfaceBasePtr toPyKinBody(KinBodyPtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API py::object toPyKinBody(KinBodyPtr, py::object opyenv);
 OPENRAVEPY_API py::object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr);
 OPENRAVEPY_API py::object toPyKinBodyLink(KinBody::LinkPtr plink, py::object opyenv);
+OPENRAVEPY_API py::object toPyKinBodyGeometry(KinBody::GeometryPtr pgeom);
 OPENRAVEPY_API KinBody::LinkPtr GetKinBodyLink(py::object);
 OPENRAVEPY_API KinBody::LinkConstPtr GetKinBodyLinkConst(py::object);
 OPENRAVEPY_API py::object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr);
