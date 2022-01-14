@@ -711,8 +711,27 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             for( std::string& forcedAdjacentLink : plink->_info._vForcedAdjacentLinks ) {
                 forcedAdjacentLink = connectedBody._nameprefix + forcedAdjacentLink;
             }
+
             _InitAndAddLink(plink);
             connectedBody._vResolvedLinkNames[ilink].first = plink->_info._name;
+
+            // Set all links from connected bodies with -1 to be adjacent, otherwise, we can detect self collision when in indeterminable state.
+            if (connectedBody.IsActive() == -1) {
+                vector<ConnectedBodyPtr>::iterator itPrevConnectedBody = itconnectedBody;
+                while(itPrevConnectedBody != _vecConnectedBodies.begin()) {
+                    --itPrevConnectedBody;
+                    ConnectedBody& prevConnectedBody = **itPrevConnectedBody;
+                    if (prevConnectedBody.IsActive() == -1) {
+                        for(int prevIlink = 0; prevIlink < (int)prevConnectedBody._info._vLinkInfos.size(); ++prevIlink) {
+                            KinBody::LinkPtr& pPrevBodyLink = prevConnectedBody._vResolvedLinkNames[prevIlink].second;
+                            if( !!pPrevBodyLink ) {
+                                plink->_info.SetNoncollidingLink(pPrevBodyLink->GetName());
+                                _SetForcedAdjacentLinks(plink->GetIndex(), pPrevBodyLink->GetIndex());
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Joints
