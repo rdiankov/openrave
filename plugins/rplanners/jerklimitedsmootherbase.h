@@ -19,6 +19,7 @@
 #include "piecewisepolynomials/feasibilitychecker.h"
 #include "manipconstraints3.h"
 
+// #define JERK_LIMITED_SMOOTHER_TIMING_DEBUG
 // #define JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
 #define JERK_LIMITED_SMOOTHER_VALIDATE // for validating correctness of results
 
@@ -141,6 +142,23 @@ public:
             throw OPENRAVE_EXCEPTION_FORMAT0("interpolation type is not set by the smoother yet.", ORE_InvalidArguments);
         }
 
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+        _nCallsCheckManip = 0;
+        _totalTimeCheckManip = 0;
+        _tStartCheckManip = 0;
+        _tEndCheckManip = 0;
+
+        _nCallsInterpolator = 0;
+        _totalTimeInterpolator = 0;
+        _tStartInterpolator = 0;
+        _tEndInterpolator = 0;
+
+        _nCallsCheckPathAllConstraints = 0;
+        _totalTimeCheckPathAllConstraints = 0;
+        _tStartCheckPathAllConstraints = 0;
+        _tEndCheckPathAllConstraints = 0;
+#endif
+
         return !!_uniformSampler;
     }
 
@@ -162,7 +180,13 @@ public:
             options |= CFO_CheckWithPerturbation;
         }
         try {
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+            _StartCaptureCheckPathAllConstraints();
+#endif
             int ret = _parameters->CheckPathAllConstraints(xVect, xVect, vVect, vVect, aVect, aVect, 0, static_cast<IntervalType>(IT_OpenStart|_maskinterpolation), options, _constraintReturn);
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+            _EndCaptureCheckPathAllConstraints();
+#endif
             PiecewisePolynomials::CheckReturn checkret(ret);
             if( ret == CFO_CheckTimeBasedConstraints ) {
                 checkret.fTimeBasedSurpassMult = 0.98 * _constraintReturn->_fTimeBasedSurpassMult;
@@ -219,7 +243,13 @@ public:
 
         // Check all constraints by the check functtion
         try {
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+            _StartCaptureCheckPathAllConstraints();
+#endif
             int ret = _parameters->CheckPathAllConstraints(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, chunkIn.duration, static_cast<IntervalType>(IT_OpenStart|_maskinterpolation), options, _constraintReturn);
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+            _EndCaptureCheckPathAllConstraints();
+#endif
             if( ret != 0 ) {
                 PiecewisePolynomials::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
@@ -302,10 +332,16 @@ public:
                 bool bHasConstraintViolation = false; // true if at least one manip constraints is violated.
                 size_t iChunk = 0;
                 FOREACHC(itChunk, vChunksOut) {
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+                    _StartCaptureCheckManip();
+#endif
                     manipret = _manipConstraintChecker->CheckChunkManipConstraints(*itChunk, IT_OpenStart);
                     if( iChunk == 0 ) {
                         manipRetAccum = manipret;
                     }
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+                    _EndCaptureCheckManip();
+#endif
                     ++iChunk;
                     if( manipret.retcode != 0 ) {
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
@@ -746,7 +782,13 @@ protected:
         int itry = 0;
         PiecewisePolynomials::CheckReturn checkret(0xffff);
         for(; itry < numTries; ++itry ) {
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+            _StartCaptureInterpolator();
+#endif
             PolynomialCheckReturn interpolatorret = _pinterpolator->ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(x0VectIn, x1VectIn, velLimits, accelLimits, jerkLimits, _cacheInterpolatedChunks);
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+            _EndCaptureInterpolator();
+#endif
             if( interpolatorret != PolynomialCheckReturn::PCR_Normal ) {
                 std::stringstream ss;
                 ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
@@ -970,6 +1012,73 @@ protected:
     std::vector<dReal> _cacheLowerLimits, _cacheUpperLimits, _cacheResolutions; // for use in ProcessConstraintReturnIntoChunks
 
     std::vector<uint8_t> _cacheVVisitedDiscretization;
+
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+    // For measuring timing of various processes during Shortcut.
+    size_t _nCallsCheckManip;
+    dReal _totalTimeCheckManip;
+    uint32_t _tStartCheckManip, _tEndCheckManip;
+    inline void _StartCaptureCheckManip()
+    {
+        _nCallsCheckManip++;
+        _tStartCheckManip = utils::GetMicroTime();
+    }
+    inline void _EndCaptureCheckManip()
+    {
+        // Must be called after _StartCaptureCheckManip has been called.
+        _tEndCheckManip = utils::GetMicroTime();
+        _totalTimeCheckManip += 0.000001f*(dReal)(_tEndCheckManip - _tStartCheckManip);
+    }
+
+    size_t _nCallsInterpolator;
+    dReal _totalTimeInterpolator;
+    uint32_t _tStartInterpolator, _tEndInterpolator;
+    inline void _StartCaptureInterpolator()
+    {
+        _nCallsInterpolator++;
+        _tStartInterpolator = utils::GetMicroTime();
+    }
+    inline void _EndCaptureInterpolator()
+    {
+        // Must be called after _StartCaptureInterpolator has been called
+        _tEndInterpolator = utils::GetMicroTime();
+        _totalTimeInterpolator += 0.000001f*(dReal)(_tEndInterpolator - _tStartInterpolator);
+    }
+
+    size_t _nCallsCheckPathAllConstraints; // how many times CheckPathAllConstraints is called
+    dReal _totalTimeCheckPathAllConstraints;
+    uint32_t _tStartCheckPathAllConstraints, _tEndCheckPathAllConstraints;
+    inline void _StartCaptureCheckPathAllConstraints()
+    {
+        _nCallsCheckPathAllConstraints++;
+        _tStartCheckPathAllConstraints = utils::GetMicroTime();
+    }
+    inline void _EndCaptureCheckPathAllConstraints()
+    {
+        // Must be called after _StartCaptureCheckPathAllConstraints has been called
+        _tEndCheckPathAllConstraints = utils::GetMicroTime();
+        _totalTimeCheckPathAllConstraints += 0.000001f*(dReal)(_tEndCheckPathAllConstraints - _tStartCheckPathAllConstraints);
+    }
+
+    inline void _GetShortcutSubprocessesTiming(std::stringstream& ss) const
+    {
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+        ss << "  measured " << _nCallsInterpolator << " interpolations; totalExecTime=" << _totalTimeInterpolator;
+        if( _nCallsInterpolator > 0 ) {
+            ss << "; timePerIter=" << _totalTimeInterpolator/(dReal)(_nCallsInterpolator);
+        }
+        ss << "\n  measured " << _nCallsCheckPathAllConstraints << " checkpathallconstraints; totalExecTime=" << _totalTimeCheckPathAllConstraints;
+        if( _nCallsCheckPathAllConstraints > 0 ) {
+            ss << "; timePerIter=" << _totalTimeCheckPathAllConstraints/(dReal)(_nCallsCheckPathAllConstraints);
+        }
+        ss << "\n  measured " << _nCallsCheckManip << " checkmanips; totalExecTime=" << _totalTimeCheckManip;
+        if( _nCallsCheckManip > 0 ) {
+            ss << "; timePerIter=" << _totalTimeCheckManip/(dReal)(_nCallsCheckManip);
+        }
+    }
+
+#endif // CUBIC_SMOOTHER_TIMING_DEBUG
+
 }; // end class QuinticSmoother
 
 } // end namespace rplanners

@@ -186,8 +186,8 @@ protected:
                     bSuccess = true;
                 }
                 else {
-                    dReal tryDuration = 100.0; // not used
-                    PiecewisePolynomials::PolynomialCheckReturn ret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, info->_vConfigLowerLimit, info->_vConfigUpperLimit, vellimits, accellimits, jerklimits, tryDuration, _cacheInterpolatedChunks);
+                    dReal maxAllowedDuration = 0; // not constrained
+                    PiecewisePolynomials::PolynomialCheckReturn ret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, info->_vConfigLowerLimit, info->_vConfigUpperLimit, vellimits, accellimits, jerklimits, maxAllowedDuration, _cacheInterpolatedChunks);
                     if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
                         // Stop right away
                         break;
@@ -232,8 +232,8 @@ protected:
                 bSuccess = true;
             }
             else {
-                dReal tryDuration = 100.0; // not used
-                PiecewisePolynomials::PolynomialCheckReturn ret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, info->_vConfigLowerLimit, info->_vConfigUpperLimit, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit, tryDuration, _cacheInterpolatedChunks);
+                dReal maxAllowedDuration = 0; // not constrained
+                PiecewisePolynomials::PolynomialCheckReturn ret = _pinterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, info->_vConfigLowerLimit, info->_vConfigUpperLimit, info->_vConfigVelocityLimit, info->_vConfigAccelerationLimit, info->_vConfigJerkLimit, maxAllowedDuration, _cacheInterpolatedChunks);
                 if( ret == PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
                     bSuccess = true;
                 }
@@ -411,8 +411,8 @@ protected:
                 std::vector<dReal> vAccelLimits(info->_vConfigAccelerationLimit.begin() + transOffset, info->_vConfigAccelerationLimit.begin() + transOffset + 3);
                 std::vector<dReal> vJerkLimits(info->_vConfigJerkLimit.begin() + transOffset, info->_vConfigJerkLimit.begin() + transOffset + 3);
 
-                const dReal tryDuration = 100.0; // not used
-                PiecewisePolynomials::PolynomialCheckReturn ret = _ptranslationInterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(xyzPrev, xyz, xyzVelPrev, xyzVel, xyzAccelPrev, xyzAccel, vLowerLimits, vUpperLimits, vVelLimits, vAccelLimits, vJerkLimits, tryDuration, _cacheInterpolatedChunks);
+                const dReal maxAllowedDuration = 0; // not constrained
+                PiecewisePolynomials::PolynomialCheckReturn ret = _ptranslationInterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(xyzPrev, xyz, xyzVelPrev, xyzVel, xyzAccelPrev, xyzAccel, vLowerLimits, vUpperLimits, vVelLimits, vAccelLimits, vJerkLimits, maxAllowedDuration, _cacheInterpolatedChunks);
                 if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
                     return -1.0;
                 }

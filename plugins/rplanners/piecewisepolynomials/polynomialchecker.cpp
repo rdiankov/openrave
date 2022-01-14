@@ -30,6 +30,7 @@ const char* GetPolynomialCheckReturnString(PolynomialCheckReturn ret)
     case PCR_VelocityDiscrepancy: return "VelocityDiscrepancy";
     case PCR_AccelerationDiscrepancy: return "AccelerationDiscrepancy";
     case PCR_DurationDiscrepancy: return "DurationDiscrepancy";
+    case PCR_DurationTooLong: return "DurationTooLong";
     case PCR_GenericError: return "GenericError";
     }
     return "PCR(Unknown)";

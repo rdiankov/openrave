@@ -86,11 +86,6 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::PostProcessParabolic1DTrajec
         return PolynomialCheckReturn::PCR_PositionLimitsViolation;
     }
 
-    RampOptimizer::ParabolicCheckReturn parabolicret = RampOptimizer::CheckRamps(curve.GetRamps(), xmin, xmax, vm, am, x0, x1, v0, v1);
-    if( parabolicret != RampOptimizer::ParabolicCheckReturn::PCR_Normal ) {
-        RAVELOG_VERBOSE_FORMAT("env=%d, failed in PostProcessParabolic1DTrajectory", envid);
-        return PolynomialCheckReturn::PCR_GenericError;
-    }
     ConvertParabolicCurveToPiecewisePolynomial(curve, pwpoly);
     return PolynomialCheckReturn::PCR_Normal;
 }
@@ -145,7 +140,10 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
     }
 
     // Step 2
-    const dReal deltaX = finalState.at(positionIndex) - initialState.at(positionIndex);
+    // A very small deltaX could be due to a floating point issue. So if deltaX is smaller than the epsilon, we assume
+    // that it is zero. Use the same epsilon as what is used for piecewise polynomial checking.
+    dReal tempDeltaX = finalState.at(positionIndex) - initialState.at(positionIndex);
+    const dReal deltaX = RaveFabs(tempDeltaX) <= checker.GetEpsilonForPositionDiscrepancyChecking() ? 0 : tempDeltaX;
 
     // Step 3
     dReal vmin = lowerBounds.at(velocityIndex);

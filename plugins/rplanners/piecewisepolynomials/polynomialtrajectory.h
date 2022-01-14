@@ -129,14 +129,27 @@ public:
     //
     size_t degree; ///< the degree of this polynomial
     std::vector<dReal> vcoeffs; ///< vector of coefficients of this polynomial (weakest term first)
-    std::vector<dReal> vcoeffsd; ///< vector of coefficients of the first derivative of this polynomial
-    std::vector<dReal> vcoeffsdd; ///< vector of coefficients of the second derivative of this polynomial
-    std::vector<dReal> vcoeffsddd; ///< vector of coefficients of the third derivative of this polynomial
+    // The following coefficient vectors will be computed only when needed
+    mutable std::vector<dReal> vcoeffsd; ///< vector of coefficients of the first derivative of this polynomial
+    mutable std::vector<dReal> vcoeffsdd; ///< vector of coefficients of the second derivative of this polynomial
+    mutable std::vector<dReal> vcoeffsddd; ///< vector of coefficients of the third derivative of this polynomial
 
     dReal displacement; ///< the displacement done by this polynomial
     dReal duration; ///< the duration T of this polynomial. The polynomial p(t) is valid for t \in [0, T].
 
 private:
+    /// \brief Make sure _vcoeffd is initialized. Must be called before _vcoeffsd is used.
+    void _EnsureInitCoeffs1() const;
+    mutable bool _bInitCoeffs1=false; ///< if true, then _vcoeffsd is ready for use
+
+    /// \brief Make sure _vcoeffdd is initialized. Must be called before _vcoeffsdd is used.
+    void _EnsureInitCoeffs2() const;
+    mutable bool _bInitCoeffs2=false; ///< if true, then _vcoeffsdd is ready for use
+
+    /// \brief Make sure _vcoeffddd is initialized. Must be called before _vcoeffsddd is used.
+    void _EnsureInitCoeffs3() const;
+    mutable bool _bInitCoeffs3=false; ///< if true, then _vcoeffsddd is ready for use
+
     /// \brief Find all local extrema of this polynomial. Keep the results in vcextrema in ascending
     /// order.
     void _FindAllLocalExtrema() const;

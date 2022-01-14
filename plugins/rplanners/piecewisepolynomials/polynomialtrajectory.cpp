@@ -38,6 +38,20 @@ void Polynomial::Initialize()
 {
     degree = (vcoeffs.size() - 1);
 
+    // Invalidate derivative coefficients
+    _bInitCoeffs1 = false;
+    _bInitCoeffs2 = false;
+    _bInitCoeffs3 = false;
+
+    displacement = Eval(duration) - Eval(0);
+    _bExtremaComputed = false; // need to invalidate vcextrema
+}
+
+void Polynomial::_EnsureInitCoeffs1() const
+{
+    if( _bInitCoeffs1 ) {
+        return;
+    }
     if( degree >= 1 ) {
         vcoeffsd.resize(degree);
         vcoeffsd.assign(vcoeffs.begin() + 1, vcoeffs.end());
@@ -48,6 +62,15 @@ void Polynomial::Initialize()
     else {
         vcoeffsd.resize(0);
     }
+    _bInitCoeffs1 = true;
+}
+
+void Polynomial::_EnsureInitCoeffs2() const
+{
+    if( _bInitCoeffs2 ) {
+        return;
+    }
+    _EnsureInitCoeffs1();
     if( degree >= 2 ) {
         vcoeffsdd.resize(degree - 1);
         vcoeffsdd.assign(vcoeffsd.begin() + 1, vcoeffsd.end());
@@ -58,6 +81,15 @@ void Polynomial::Initialize()
     else {
         vcoeffsdd.resize(0);
     }
+    _bInitCoeffs2 = true;
+}
+
+void Polynomial::_EnsureInitCoeffs3() const
+{
+    if( _bInitCoeffs3 ) {
+        return;
+    }
+    _EnsureInitCoeffs2();
     if( degree >= 3 ) {
         vcoeffsddd.resize(degree - 2);
         vcoeffsddd.assign(vcoeffsdd.begin() + 1, vcoeffsdd.end());
@@ -68,9 +100,7 @@ void Polynomial::Initialize()
     else {
         vcoeffsddd.resize(0);
     }
-
-    displacement = Eval(duration) - Eval(0);
-    _bExtremaComputed = false; // need to invalidate vcextrema
+    _bInitCoeffs3 = true;
 }
 
 void Polynomial::PadCoefficients(const size_t newdegree)
@@ -78,13 +108,13 @@ void Polynomial::PadCoefficients(const size_t newdegree)
     OPENRAVE_ASSERT_OP(newdegree, >=, degree);
     const size_t numcoeffs = newdegree + 1;
     vcoeffs.resize(numcoeffs, 0); // increase the size to numcoeffs and fill it with 0s.
-    if( vcoeffsd.size() > 0 ) {
+    if( _bInitCoeffs1 && vcoeffsd.size() > 0 ) {
         vcoeffsd.resize(numcoeffs - 1, 0);
     }
-    if( vcoeffsdd.size() > 0 ) {
+    if( _bInitCoeffs2 && vcoeffsdd.size() > 0 ) {
         vcoeffsdd.assign(numcoeffs - 2, 0);
     }
-    if( vcoeffsddd.size() > 0 ) {
+    if( _bInitCoeffs3 && vcoeffsddd.size() > 0 ) {
         vcoeffsddd.assign(numcoeffs - 3, 0);
     }
     degree = newdegree;
@@ -148,6 +178,7 @@ dReal Polynomial::Evald1(dReal t) const
     else if( t > duration ) {
         t = duration;
     }
+    _EnsureInitCoeffs1();
     dReal val = vcoeffsd.back();
     for( int i = (int)degree - 2; i >= 0; --i ) {
         val = val*t + vcoeffsd[i];
@@ -166,6 +197,7 @@ dReal Polynomial::Evald2(dReal t) const
     else if( t > duration ) {
         t = duration;
     }
+    _EnsureInitCoeffs2();
     dReal val = vcoeffsdd.back();
     for( int i = (int)degree - 3; i >= 0; --i ) {
         val = val*t + vcoeffsdd[i];
@@ -184,6 +216,7 @@ dReal Polynomial::Evald3(dReal t) const
     else if( t > duration ) {
         t = duration;
     }
+    _EnsureInitCoeffs3();
     dReal val = vcoeffsddd.back();
     for( int i = (int)degree - 4; i >= 0; --i ) {
         val = val*t + vcoeffsddd[i];
@@ -219,6 +252,7 @@ dReal Polynomial::Evaldn(dReal t, size_t n) const
     _vcurcoeffs.resize(numcoeffs);
 
     n = n - 3;
+    _EnsureInitCoeffs3();
     _vcurcoeffs.assign(vcoeffsddd.begin() + n, vcoeffsddd.end());
     for( size_t i = 0; i < numcoeffs; ++i ) {
         for( size_t jmult = 1; jmult < n + 1; ++jmult ) {
@@ -239,15 +273,19 @@ Polynomial Polynomial::Differentiate(const size_t ideriv) const
         return Polynomial(duration, vcoeffs); // return a copy of itself
     }
     else if( ideriv == 1 ) {
+        _EnsureInitCoeffs1();
         return Polynomial(duration, vcoeffsd);
     }
     else if( ideriv == 2 ) {
+        _EnsureInitCoeffs2();
         return Polynomial(duration, vcoeffsdd);
     }
     else if( ideriv == 3 ) {
+        _EnsureInitCoeffs3();
         return Polynomial(duration, vcoeffsddd);
     }
     else if( ideriv <= degree ) {
+        _EnsureInitCoeffs3();
         size_t inewderiv = ideriv - 3;
         _vcurcoeffs.resize(vcoeffsddd.size() - inewderiv);
         _vcurcoeffs.assign(vcoeffsddd.begin() + inewderiv, vcoeffsddd.end());
@@ -299,9 +337,18 @@ Polynomial& Polynomial::operator=(const Polynomial& r)
 {
     degree = r.degree;
     vcoeffs = r.vcoeffs;
-    vcoeffsd = r.vcoeffsd;
-    vcoeffsdd = r.vcoeffsdd;
-    vcoeffsddd = r.vcoeffsddd;
+    _bInitCoeffs1 = r._bInitCoeffs1;
+    if( r._bInitCoeffs1 ) {
+        vcoeffsd = r.vcoeffsd;
+    }
+    _bInitCoeffs2 = r._bInitCoeffs2;
+    if( r._bInitCoeffs2 ) {
+        vcoeffsdd = r.vcoeffsdd;
+    }
+    _bInitCoeffs3 = r._bInitCoeffs3;
+    if( r._bInitCoeffs3 ) {
+        vcoeffsddd = r.vcoeffsddd;
+    }
     displacement = r.displacement;
     duration = r.duration;
     _bExtremaComputed = r._bExtremaComputed;
@@ -315,6 +362,7 @@ void Polynomial::_FindAllLocalExtrema() const
 {
     _bExtremaComputed = true;
     vcextrema.resize(0);
+    _EnsureInitCoeffs1();
     if( vcoeffsd.size() == 0 ) {
         // No extrema since the function is constant
         return;
