@@ -19,6 +19,7 @@
 #include <openrave/utils.h>
 #include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/filesystem/operations.hpp>
 
 #include <openravepy/openravepy_kinbody.h>
 #include <openravepy/openravepy_collisioncheckerbase.h>
@@ -3058,6 +3059,11 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
             pyerrdata.inc_ref(); // since passing to PyErr_SetObject
             PyErr_SetObject(PyExc_TypeError, pyerrdata.ptr() );
         }
+        catch( const boost::filesystem::filesystem_error& e ) {
+            py::object pyerrdata = ConvertStringToUnicode(std::string(e.what())+" ("+e.path1().native()+")");
+            pyerrdata.inc_ref(); // since passing to PyErr_SetObject
+            PyErr_SetObject(PyExc_RuntimeError, pyerrdata.ptr() );
+        }
         catch( const std::runtime_error& e ) {
             py::object pyerrdata = ConvertStringToUnicode(e.what());
             pyerrdata.inc_ref(); // since passing to PyErr_SetObject
@@ -3094,6 +3100,12 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     //OpenRAVEBoostPythonExceptionTranslator<std::exception>();
     class_< boost::bad_function_call, bases<std::runtime_error> >( "_boost_bad_function_call_");
     OpenRAVEBoostPythonExceptionTranslator<boost::bad_function_call>();
+
+    class_< boost::filesystem::filesystem_error, bases<std::runtime_error> >( "_boost_filesystem_error_")
+    .add_property( "message", [](boost::filesystem::filesystem_error &e){return std::string(e.what())+" ("+e.path1().native()+")"})
+    .def( "__str__", [](py::object o){return py::getattr(o, "message");})
+    ;
+    OpenRAVEBoostPythonExceptionTranslator<boost::filesystem::filesystem_error>();
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
