@@ -2341,7 +2341,7 @@ void Grabbed::ComputeListNonCollidingLinks()
             }
             else {
                 // This link (*itGrabberLink) is *not* rigidly attached to _pGrabbingLink.
-                if( _setGrabberLinksToIgnore.find((*itGrabberLink)->GetIndex()) == _setGrabberLinksToIgnore.end() ) {
+                if( _setGrabberLinkIndicesToIgnore.find((*itGrabberLink)->GetIndex()) == _setGrabberLinkIndicesToIgnore.end() ) {
                     // Not ignoring collisions between this link and the grabber body
                     if( !pchecker->CheckCollision(KinBody::LinkConstPtr(*itGrabberLink), pGrabbedBody) ) {
                         isNonColliding = true;
@@ -2407,7 +2407,7 @@ void Grabbed::AddMoreIgnoreLinks(const std::set<int>& setAdditionalGrabberLinksT
 {
     KinBodyPtr pGrabber = RaveInterfaceCast<KinBody>(_pGrabbingLink->GetParent());
     FOREACHC(itLinkIndexToIgnore, setAdditionalGrabberLinksToIgnore) {
-        _setGrabberLinksToIgnore.insert(*itLinkIndexToIgnore);
+        _setGrabberLinkIndicesToIgnore.insert(*itLinkIndexToIgnore);
 
         if( _listNonCollidingIsValid ) {
             KinBody::LinkPtr pGrabberLink = pGrabber->GetLinks().at(*itLinkIndexToIgnore);

@@ -48,13 +48,6 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
     }
     if( _options & Save_GrabbedBodies ) {
         _vGrabbedBodies = _pbody->_vGrabbedBodies;
-        if( _pbody->IsRobot() ) {
-            // For now, do not allow a robot's connected body active states to change while the robot is grabbing
-            // something. The change in connected body active states essentially affect the robot's link indices, which
-            // will then mess up Grabbed's setGrabberLinksToIgnore.
-            RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(_pbody);
-            pRobot->GetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
-        }
     }
 }
 
@@ -94,20 +87,6 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     }
     // restoring grabbed bodies has to happen first before link transforms can be restored since _UpdateGrabbedBodies can be called with the old grabbed bodies.
     if( _options & Save_GrabbedBodies ) {
-        if( pbody->IsRobot() && _vGrabbedBodies.size() > 0 ) {
-            // If the original robot is not grabbing anything, then don't need to check for discrepancy in connected body active states.
-            RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pbody);
-            std::vector<int8_t> vCurrentConnectedBodyActiveStates;
-            pRobot->GetConnectedBodyActiveStates(vCurrentConnectedBodyActiveStates);
-
-            size_t numExpectedConnectedBodies = _vConnectedBodyActiveStates.size();
-            OPENRAVE_ASSERT_FORMAT(numExpectedConnectedBodies == vCurrentConnectedBodyActiveStates.size(), "env=%s, body '%s' now has %d connected bodies. expected=%d (env=%s)", pbody->GetEnv()->GetNameId()%pbody->GetName()%vCurrentConnectedBodyActiveStates.size()%numExpectedConnectedBodies%_pbody->GetEnv()->GetNameId(), ORE_InvalidState);
-
-            for( size_t iConnectedBody = 0; iConnectedBody < numExpectedConnectedBodies; ++iConnectedBody ) {
-                OPENRAVE_ASSERT_FORMAT(_vConnectedBodyActiveStates[iConnectedBody] == vCurrentConnectedBodyActiveStates[iConnectedBody], "env=%s, body '%s' connected body %d/%d active state=%d not expected", pbody->GetEnv()->GetNameId()%pbody->GetName()%iConnectedBody%numExpectedConnectedBodies%int(vCurrentConnectedBodyActiveStates[iConnectedBody]), ORE_InvalidState);
-            }
-        }
-
         // have to release all grabbed first
         pbody->ReleaseAllGrabbed();
         OPENRAVE_ASSERT_OP(pbody->_vGrabbedBodies.size(),==,0);
@@ -134,7 +113,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                             // _listNonCollidingLinksWhenGrabbed (in case it is not yet computed).
                             GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, pbody->GetLinks().at(KinBody::LinkPtr(pGrabbed->_pGrabbingLink)->GetIndex())));
                             pNewGrabbed->_tRelative = pGrabbed->_tRelative;
-                            pNewGrabbed->_setGrabberLinksToIgnore = pGrabbed->_setGrabberLinksToIgnore;
+                            pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
                             if( pGrabbed->IsListNonCollidingLinksValid() ) {
                                 FOREACHC(itLinkRef, pGrabbed->_listNonCollidingLinksWhenGrabbed) {
                                     pNewGrabbed->_listNonCollidingLinksWhenGrabbed.push_back(pbody->GetLinks().at((*itLinkRef)->GetIndex()));
@@ -230,10 +209,6 @@ KinBody::KinBodyStateSaverRef::KinBodyStateSaverRef(KinBody& body, int options) 
     }
     if( _options & Save_GrabbedBodies ) {
         _vGrabbedBodies = body._vGrabbedBodies;
-        if( _body.IsRobot() ) {
-            RobotBase& robot = dynamic_cast<RobotBase&>(_body);
-            robot.GetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
-        }
     }
     if( _options & Save_JointResolutions ) {
         body.GetDOFResolutions(_vDOFResolutions);
@@ -280,20 +255,6 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
     }
     // restoring grabbed bodies has to happen first before link transforms can be restored since _UpdateGrabbedBodies can be called with the old grabbed bodies.
     if( _options & Save_GrabbedBodies ) {
-        if( body.IsRobot() && _vGrabbedBodies.size() > 0 ) {
-            // If the original robot is not grabbing anything, then don't need to check for discrepancy in connected body active states.
-            RobotBase& robot = dynamic_cast<RobotBase&>(body);
-            std::vector<int8_t> vCurrentConnectedBodyActiveStates;
-            robot.GetConnectedBodyActiveStates(vCurrentConnectedBodyActiveStates);
-
-            size_t numExpectedConnectedBodies = _vConnectedBodyActiveStates.size();
-            OPENRAVE_ASSERT_FORMAT(numExpectedConnectedBodies == vCurrentConnectedBodyActiveStates.size(), "env=%s, body '%s' now has %d connected bodies. expected=%d (env=%s)", body.GetEnv()->GetNameId()%body.GetName()%vCurrentConnectedBodyActiveStates.size()%numExpectedConnectedBodies%_body.GetEnv()->GetNameId(), ORE_InvalidState);
-
-            for( size_t iConnectedBody = 0; iConnectedBody < numExpectedConnectedBodies; ++iConnectedBody ) {
-                OPENRAVE_ASSERT_FORMAT(_vConnectedBodyActiveStates[iConnectedBody] == vCurrentConnectedBodyActiveStates[iConnectedBody], "env=%s, body '%s' connected body %d/%d active state=%d not expected", body.GetEnv()->GetNameId()%body.GetName()%iConnectedBody%numExpectedConnectedBodies%int(vCurrentConnectedBodyActiveStates[iConnectedBody]), ORE_InvalidState);
-            }
-        }
-
         // have to release all grabbed first
         body.ReleaseAllGrabbed();
         OPENRAVE_ASSERT_OP(body._vGrabbedBodies.size(),==,0);
@@ -320,7 +281,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                             // _listNonCollidingLinksWhenGrabbed (in case it is not yet computed).
                             GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, body.GetLinks().at(KinBody::LinkPtr(pGrabbed->_pGrabbingLink)->GetIndex())));
                             pNewGrabbed->_tRelative = pGrabbed->_tRelative;
-                            pNewGrabbed->_setGrabberLinksToIgnore = pGrabbed->_setGrabberLinksToIgnore;
+                            pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
                             if( pGrabbed->IsListNonCollidingLinksValid() ) {
                                 FOREACHC(itLinkRef, pGrabbed->_listNonCollidingLinksWhenGrabbed) {
                                     pNewGrabbed->_listNonCollidingLinksWhenGrabbed.push_back(body.GetLinks().at((*itLinkRef)->GetIndex()));

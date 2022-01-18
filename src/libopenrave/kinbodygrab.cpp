@@ -103,7 +103,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
 
     GrabbedPtr pGrabbed(new Grabbed(pGrabbedBody, pGrabbingLink));
     pGrabbed->_tRelative = tGrabbingLink.inverse() * tGrabbedBody;
-    pGrabbed->_setGrabberLinksToIgnore = setGrabberLinksToIgnore;
+    pGrabbed->_setGrabberLinkIndicesToIgnore = setGrabberLinksToIgnore;
 
     if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
         // collision checking will not be automatically updated with environment calls, so need to do this manually
@@ -241,7 +241,7 @@ void KinBody::RegrabAll()
 
         GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink));
         pNewGrabbed->_tRelative = pGrabbed->_tRelative;
-        pNewGrabbed->_setGrabberLinksToIgnore.swap(pGrabbed->_setGrabberLinksToIgnore);
+        pNewGrabbed->_setGrabberLinkIndicesToIgnore.swap(pGrabbed->_setGrabberLinkIndicesToIgnore);
 
         std::pair<Vector, Vector> velocity = pNewGrabbed->_pGrabbingLink->GetVelocity();
         velocity.first += velocity.second.cross(pBody->GetTransform().trans - pNewGrabbed->_pGrabbingLink->GetTransform().trans);
@@ -314,7 +314,7 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         bool ignoringLinksMatch = true;
         size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
         for( const LinkPtr& link : _veclinks ) {
-            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end();
+            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end();
             if( isLinkIgnored ) {
                 ++numIgnoredLinks;
             }
@@ -352,7 +352,7 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         bool ignoringLinksMatch = true;
         size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
         for( const LinkPtr& link : _veclinks ) {
-            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end();
+            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end();
             if( isLinkIgnored ) {
                 ++numIgnoredLinks;
             }
@@ -407,7 +407,7 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos
             poutputinfo->_setIgnoreRobotLinkNames.clear();
 
             FOREACHC(itlink, _veclinks) {
-                if( find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end() ) {
+                if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
                     poutputinfo->_setIgnoreRobotLinkNames.insert((*itlink)->GetName());
                 }
             }
@@ -433,7 +433,7 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vGrabbedInfos) const
             outputinfo._setIgnoreRobotLinkNames.clear();
 
             FOREACHC(itlink, _veclinks) {
-                if( find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end() ) {
+                if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
                     outputinfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
                 }
             }
@@ -455,7 +455,7 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
                 grabbedInfo._setIgnoreRobotLinkNames.clear();
 
                 FOREACHC(itlink, _veclinks) {
-                    if( find(pgrabbed->_setGrabberLinksToIgnore.begin(), pgrabbed->_setGrabberLinksToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinksToIgnore.end() ) {
+                    if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
                         grabbedInfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
                     }
                 }
@@ -559,7 +559,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
             GrabbedPtr pGrabbed(new Grabbed(pBody, pGrabbingLink));
             pGrabbed->_tRelative = pGrabbedInfo->_trelative;
             FOREACHC(itLinkName, pGrabbedInfo->_setIgnoreRobotLinkNames) {
-                pGrabbed->_setGrabberLinksToIgnore.insert(GetLink(*itLinkName)->GetIndex());
+                pGrabbed->_setGrabberLinkIndicesToIgnore.insert(GetLink(*itLinkName)->GetIndex());
             }
 
             std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
@@ -581,7 +581,7 @@ void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::
         KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
         if( pGrabbedBody == body ) {
             FOREACHC(itGrabberLink, _veclinks) {
-                if( pGrabbed->_setGrabberLinksToIgnore.find((*itGrabberLink)->GetIndex()) != pGrabbed->_setGrabberLinksToIgnore.end() ) {
+                if( pGrabbed->_setGrabberLinkIndicesToIgnore.find((*itGrabberLink)->GetIndex()) != pGrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
                     ignorelinks.push_back(*itGrabberLink);
                 }
             }
