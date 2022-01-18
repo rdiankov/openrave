@@ -18,10 +18,6 @@
 #include "piecewisepolynomials/cubicinterpolator.h"
 #include "jerklimitedsmootherbase.h"
 
-bool REMOVE_STARTTIMEMULT=true; // do not keep track of fStartTimeVelMult and fStartTimeAccelMult of successful shortcut iterations
-bool CORRECT_VELACCELMULT=true; // correct the formula for computing new scaled-down vel/accel limits
-bool SCALE_ALL_WHEN_TOOLACCEL_VIOLATED=true; // scale vel/accel/jerk limits down when max tool accel is violated
-
 namespace rplanners {
 
 namespace PiecewisePolynomials = PiecewisePolynomialsInternal;
@@ -1310,6 +1306,10 @@ private:
 
     // For use during CheckX process
     std::vector<PiecewisePolynomials::Chunk> _cacheInterpolatedChunksDuringCheck;
+
+    const bool REMOVE_STARTTIMEMULT=true; // do not keep track of fStartTimeVelMult and fStartTimeAccelMult of successful shortcut iterations
+    const bool CORRECT_VELACCELMULT=true; // correct the formula for computing new scaled-down vel/accel limits
+    const bool SCALE_ALL_WHEN_TOOLACCEL_VIOLATED=true; // scale vel/accel/jerk limits down when max tool accel is violated
 
 }; // end class CubicSmoother
 

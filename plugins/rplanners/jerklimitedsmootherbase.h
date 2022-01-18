@@ -224,16 +224,69 @@ public:
             options |= CFO_CheckWithPerturbation;
         }
 
-#ifdef JERK_LIMITED_SMOOTHER_VALIDATE
-        // Always get the intermediate configurations for validation
+// #ifdef JERK_LIMITED_SMOOTHER_VALIDATE
+//         // Always get the intermediate configurations for validation
+//         options |= CFO_FillCheckedConfiguration;
+//         _constraintReturn->Clear();
+// #else
+//         if( _bExpectedModifiedConfigurations || _bManipConstraints ) {
+//             options |= CFO_FillCheckedConfiguration;
+//             _constraintReturn->Clear();
+//         }
+// #endif
         options |= CFO_FillCheckedConfiguration;
         _constraintReturn->Clear();
-#else
-        if( _bExpectedModifiedConfigurations || _bManipConstraints ) {
-            options |= CFO_FillCheckedConfiguration;
-            _constraintReturn->Clear();
+
+        bool doLazyCollisionChecking = false;
+        if( LAZY_COLLISION_CHECKING ) {
+            /*
+             |         constraints         |                            behaviors                             |
+             |-----------------------------|------------------------------------------------------------------|
+             | collsion | tool speed/accel |          original             |      lazy collision checking     |
+             |----------|------------------|-------------------------------|----------------------------------|
+             |    /     |        /         | all constraints checked       | same as original                 |
+             |          |                  |                               |                                  |
+             |----------|------------------|-------------------------------|----------------------------------|
+             |    X     |        /         | segment rejected due to       | same as original                 |
+             |          |                  | collisions                    |                                  |
+             |----------|------------------|-------------------------------|----------------------------------|
+             |    /     |        X         | segment rejetced due to tool  | same as original but rejection   |
+             |          |                  | speed/accel violation         | happens earlier (=good)          |
+             |----------|------------------|-------------------------------|----------------------------------|
+             |    X     |        X         | segment rejected due to       | segment rejected due to tool     |
+             |          |                  | collisions                    | speed/accel violation            |
+             |------------------------------------------------------------------------------------------------|
+
+               Lazy collision checking is beneficial when the given segment is collision-free but
+               violates tool speed/accel limits.
+
+               However, when the given segment is both in collision and over tool speed/accel limits,
+               the segment will be rejected due to different reasons.
+
+               In the original implementation, the segment will be rejected due to collision and the
+               current shortcut iteration is therefore terminated. Then we move on to the next
+               shortcut iteration.
+
+               With lazy collision checking, on the other hand, the segment will be rejected due to
+               tool speed/accel violation. Then we will continue the slowing-down process. In this
+               specific case, lazy collision checking will be beneficial only when after the
+               slowing-down process, the newly generated segment passes all the checks.
+
+               Since lazy collision checking can lead to both positive and negative effects, we try
+               not forcing lazy collision checking all the time. Instead, we let lazy collision
+               checking happen with some probability p.
+
+             */
+            const dReal lazyCollisionCheckingProb = 0.5; // this value might need to be adjusted later.
+            if( Rand() <= lazyCollisionCheckingProb ) {
+                doLazyCollisionChecking = true;
+            }
         }
-#endif
+        const bool doCheckEnvCollisionsLater = doLazyCollisionChecking && ((options & CFO_CheckEnvCollisions) == CFO_CheckEnvCollisions);
+        const bool doCheckSelfCollisionsLater = doLazyCollisionChecking && ((options & CFO_CheckSelfCollisions) == CFO_CheckSelfCollisions);
+        if( doLazyCollisionChecking ) {
+            options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions); // disable all collision checking for the first CheckPathAllConstraints call
+        }
 
         chunkIn.Eval(chunkIn.duration, x1Vect);
         chunkIn.Evald1(0, v0Vect);
@@ -350,6 +403,31 @@ public:
                 return PiecewisePolynomials::CheckReturn(0xffff);
             }
         }
+
+        // All checks (except collision constraints) have passed, now check collisions.
+        int checkCollisionOptions = 0;
+        if( doCheckEnvCollisionsLater ) {
+            checkCollisionOptions |= CFO_CheckEnvCollisions;
+        }
+        if( doCheckSelfCollisionsLater ) {
+            checkCollisionOptions |= CFO_CheckSelfCollisions;
+        }
+        if( checkCollisionOptions != 0 ) {
+            try {
+                std::vector<dReal>::const_iterator it = _constraintReturn->_configurations.begin();
+                for( size_t itime = 0; itime < _constraintReturn->_configurationtimes.size(); ++itime, it += _ndof ) {
+                    std::copy(it, it + _ndof, x0Vect.begin());
+                    int ret = _parameters->CheckPathAllConstraints(x0Vect, x0Vect, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, checkCollisionOptions);
+                    if( ret != 0 ) {
+                        return PiecewisePolynomials::CheckReturn(ret);
+                    }
+                }
+            }
+            catch( const std::exception& ex ) {
+                RAVELOG_WARN_FORMAT("env=%d, CheckPathAllConstraints threw an exception: %s", _envId%ex.what());
+                return PiecewisePolynomials::CheckReturn(0xffff);
+            }
+        } // end collision checking
 
         return PiecewisePolynomials::CheckReturn(0);
     }
@@ -1065,7 +1143,9 @@ protected:
 
 #endif // CUBIC_SMOOTHER_TIMING_DEBUG
 
-}; // end class QuinticSmoother
+    const bool LAZY_COLLISION_CHECKING=true;
+
+}; // end class JerkLimitedSmootherBase
 
 } // end namespace rplanners
 
