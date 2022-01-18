@@ -430,7 +430,6 @@ protected:
                 }
             }
         } // end if transOffset >= 0
-        RAVELOG_WARN_FORMAT("env=%s, PUTTICHAI: minTime=%.15e", GetEnv()->GetNameId()%minTime);
 
         return minTime;
     }
@@ -852,7 +851,7 @@ protected:
             }
 
             PiecewisePolynomials::PolynomialCheckReturn ret = _pikInterpolator->ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(_v0pos, _v1pos, _v0vel, _v1vel, _v0acc, _v1acc, deltaTime, vlower, vupper, vmaxvel, vmaxaccel, vmaxjerk, _cacheInterpolatedChunks);
-            {
+            if( 0 ) {
                 std::stringstream ssdebug;
                 ssdebug << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
                 ssdebug << "x0Vect=[";
@@ -878,7 +877,7 @@ protected:
                 ssdebug << "]; jmVect=[";
                 SerializeValues(ssdebug, vmaxjerk);
                 ssdebug << "];";
-                RAVELOG_INFO_FORMAT("env=%s, PUTTICHAI: ret=%s; %s", GetEnv()->GetNameId()%PiecewisePolynomials::GetPolynomialCheckReturnString(ret)%ssdebug.str());
+                RAVELOG_INFO_FORMAT("env=%s, ret=%s; %s", GetEnv()->GetNameId()%PiecewisePolynomials::GetPolynomialCheckReturnString(ret)%ssdebug.str());
             }
             if( ret != PiecewisePolynomials::PolynomialCheckReturn::PCR_Normal ) {
                 return false;
