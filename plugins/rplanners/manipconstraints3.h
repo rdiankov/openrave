@@ -329,7 +329,7 @@ public:
         BOOST_ASSERT(!(interval == IT_Open));
         dReal maxActualManipSpeed = 0, maxActualManipAccel = 0;
 
-        dReal multiplier = 0.85; // a multiplier to the scaling factor computed from the ratio between the violating value and the bound
+        dReal multiplier = 0.7; // a multiplier to the scaling factor computed from the ratio between the violating value and the bound
         // If the actual max value is very close to the bound (i.e., almost not violating the
         // bound), the multiplier will be too large (too close to 1) to be useful. So in that
         // case, use fMaxAllowedMult instead.
