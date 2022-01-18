@@ -153,7 +153,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
                     RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, so ignoring.", GetName());
                     continue;
                 }
-                if( !pbody2->IsEnabled() ) {
+                if( !pgrabbedBody2->IsEnabled() ) {
                     continue; // the other grabbed body is disabled, so ignoring
                 }
 
