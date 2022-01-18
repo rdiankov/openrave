@@ -318,8 +318,14 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     orjson::LoadJsonValueByKey(value, "id", _id);
 
     if( !(options & IDO_IgnoreReferenceUri) ) {
-        orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
-        orjson::LoadJsonValueByKey(value, "uri", _uri); // user specifies this in case they want to control how the uri is
+        if (value.HasMember("referenceUri")) {
+            orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+            AddModifiedField(KinBodyInfo::KBIF_ReferenceURI);
+        }
+        if (value.HasMember("uri")) {
+            orjson::LoadJsonValueByKey(value, "uri", _uri); // user specifies this in case they want to control how the uri is
+            AddModifiedField(KinBodyInfo::KBIF_URI);
+        }
     }
 
     orjson::LoadJsonValueByKey(value, "interfaceType", _interfaceType);
@@ -428,7 +434,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 _dofValues.emplace_back(std::make_pair(jointName, jointAxis), dofValue);
             }
         }
-        _modifiedFields |= KinBodyInfo::KBIF_DOFValues;
+        AddModifiedField(KinBodyInfo::KBIF_DOFValues);
     }
 
     if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
@@ -444,7 +450,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _transform);
         _transform.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
-        _modifiedFields |= KinBodyInfo::KBIF_Transform;
+        AddModifiedField(KinBodyInfo::KBIF_Transform);
     }
 }
 
@@ -4876,7 +4882,7 @@ void KinBody::_ComputeInternalInformation()
         vector<dReal> vcurrentvalues;
         // unfortunately if SetDOFValues is overloaded by the robot, it could call the robot's _UpdateGrabbedBodies, which is a problem during environment cloning since the grabbed bodies might not be initialized. Therefore, call KinBody::SetDOFValues
         GetDOFValues(vcurrentvalues);
-        std::vector<UserDataPtr> vGrabbedBodies; vGrabbedBodies.swap(_vGrabbedBodies); // swap to get rid of _vGrabbedBodies
+        std::vector<GrabbedPtr> vGrabbedBodies; vGrabbedBodies.swap(_vGrabbedBodies); // swap to get rid of _vGrabbedBodies
         KinBody::SetDOFValues(vcurrentvalues,CLA_CheckLimits, std::vector<int>());
         vGrabbedBodies.swap(_vGrabbedBodies); // swap back
         GetLinkTransformations(vnewtrans, vnewdoflastsetvalues);
@@ -5636,8 +5642,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _listAttachedBodies.clear(); // will be set in the environment
     _vGrabbedBodies.clear();
     _vGrabbedBodies.reserve(r->_vGrabbedBodies.size());
-    FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
-        GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
+    for (const GrabbedPtr& pgrabbedref : r->_vGrabbedBodies) {
         if( !pgrabbedref ) {
             RAVELOG_WARN_FORMAT("env=%s, have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetNameId());
             continue;
@@ -5723,8 +5728,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
         std::map<GrabbedPtr, list<KinBody::LinkConstPtr> > mapcheckcollisions;
         FOREACH(itlink,_veclinks) {
             if( (*itlink)->IsEnabled() ) {
-                FOREACH(itgrabbed,_vGrabbedBodies) {
-                    GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+                for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
                     if( find(pgrabbed->GetRigidlyAttachedLinks().begin(),pgrabbed->GetRigidlyAttachedLinks().end(), *itlink) == pgrabbed->GetRigidlyAttachedLinks().end() ) {
                         std::list<KinBody::LinkConstPtr>::iterator itnoncolliding = find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink);
                         if( itnoncolliding != pgrabbed->_listNonCollidingLinks.end() ) {
@@ -5744,8 +5748,8 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
             }
             else {
                 // add since it is disabled?
-                for ( const UserDataPtr& pGrabbedUserData : _vGrabbedBodies) {
-                    Grabbed& grabbed = *(boost::dynamic_pointer_cast<Grabbed>(pGrabbedUserData));
+                for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
+                    Grabbed& grabbed = *pgrabbed;
                     const std::vector<KinBody::LinkPtr>& attachedLinks = grabbed.GetRigidlyAttachedLinks();
                     if( find(attachedLinks.begin(),attachedLinks.end(), *itlink) == attachedLinks.end() ) {
                         std::list<KinBody::LinkConstPtr>& nonCollidingLinks = grabbed._listNonCollidingLinks;
@@ -6007,7 +6011,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 {
     info._modifiedFields = 0;
     info._id = _id;
-    info._uri = __struri;
+    info._uri = GetURI();
     info._name = _name;
     info._referenceUri = _referenceUri;
     info._interfaceType = GetXMLId();
@@ -6114,7 +6118,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             SetId(info._id);
         }
         else if( info._id.empty() ) {
-            RAVELOG_INFO_FORMAT("env=%d, body %s do not update id since update has empty id", GetEnv()->GetId()%GetName());
+            RAVELOG_INFO_FORMAT("env=%d, body '%s' do not update id '%s' since update has empty id", GetEnv()->GetId()%GetName()%GetId());
         }
         else {
             RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());
@@ -6207,7 +6211,19 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         OPENRAVE_ASSERT_OP(info._name.size(), >, 0);
         SetName(info._name);
         updateFromInfoResult = UFIR_Success;
-        RAVELOG_VERBOSE_FORMAT("body %s updated due to name change", _id);
+        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated due to name change", info._name);
+    }
+
+    if( info.IsModifiedField(KinBodyInfo::KBIF_URI) && GetURI() != info._uri ) {
+        __struri = info._uri;
+        updateFromInfoResult = UFIR_Success;
+        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated uri to '%s'", GetEnv()->GetNameId()%info._name%info._uri);
+    }
+
+    if( info.IsModifiedField(KinBodyInfo::KBIF_ReferenceURI) &&_referenceUri != info._referenceUri ) {
+        _referenceUri = info._referenceUri;
+        updateFromInfoResult = UFIR_Success;
+        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated referenceUri to '%s'", GetEnv()->GetNameId()%info._name%info._referenceUri);
     }
 
     // transform

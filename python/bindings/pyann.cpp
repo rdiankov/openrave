@@ -152,12 +152,12 @@ object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = f
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     // distance
-    py::array_t<ANNdist> pydists({k});
+    py::array_t<ANNdist> pydists(k);
     py::buffer_info bufdists = pydists.request();
     ANNdist* pdists = (ANNdist*) bufdists.ptr;
 
     // index
-    py::array_t<ANNidx> pyidx({k});
+    py::array_t<ANNidx> pyidx(k);
     py::buffer_info bufidx = pyidx.request();
     ANNidx* pidx = (ANNidx*) bufidx.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
@@ -269,12 +269,12 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
     const int numel = std::min(k, kball);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     // distance
-    py::array_t<ANNdist> pydists({numel});
+    py::array_t<ANNdist> pydists(numel);
     py::buffer_info bufdists = pydists.request();
     ANNdist* pdists = (ANNdist*) bufdists.ptr;
 
     // index
-    py::array_t<ANNidx> pyidx({numel});
+    py::array_t<ANNidx> pyidx(numel);
     py::buffer_info bufidx = pyidx.request();
     ANNidx* pidx = (ANNidx*) bufidx.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS    
@@ -317,7 +317,7 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
     BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
     ANNpointManaged annq(kdtree.theDim());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<int> pykball({N});
+    py::array_t<int> pykball(N);
     py::buffer_info bufkball = pykball.request();
     int* pkball = (int*) bufkball.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
@@ -435,7 +435,7 @@ OPENRAVE_PYTHON_MODULE(pyANN_int)
     class_< pyann_exception >( "_pyann_exception_" )
     .def( init<const std::string&>() )
     .def( init<const pyann_exception&>() )
-    .def( "message", &pyann_exception::message, return_copy_const_ref() )
+    .add_property( "message", make_function(&pyann_exception::message, return_copy_const_ref()) )
     .def( "__str__", &pyann_exception::message, return_copy_const_ref() )
     ;
     OpenRAVEBoostPythonExceptionTranslator<pyann_exception>();

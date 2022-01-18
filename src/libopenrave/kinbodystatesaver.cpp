@@ -91,13 +91,12 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         // have to release all grabbed first
         pbody->ReleaseAllGrabbed();
         OPENRAVE_ASSERT_OP(pbody->_vGrabbedBodies.size(),==,0);
-        FOREACH(itgrabbed, _vGrabbedBodies) {
-            GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+        for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
             KinBodyPtr pbodygrab = pgrabbed->_pgrabbedbody.lock();
             if( !!pbodygrab ) {
                 if( pbody->GetEnv() == _pbody->GetEnv() ) {
                     pbody->_AttachBody(pbodygrab);
-                    pbody->_vGrabbedBodies.push_back(*itgrabbed);
+                    pbody->_vGrabbedBodies.push_back(pgrabbed);
                 }
                 else {
                     // pgrabbed points to a different environment, so have to re-initialize
@@ -250,13 +249,12 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
         // have to release all grabbed first
         body.ReleaseAllGrabbed();
         OPENRAVE_ASSERT_OP(body._vGrabbedBodies.size(),==,0);
-        FOREACH(itgrabbed, _vGrabbedBodies) {
-            GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+        for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
             KinBodyPtr pbodygrab = pgrabbed->_pgrabbedbody.lock();
             if( !!pbodygrab ) {
                 if( body.GetEnv() == body.GetEnv() ) {
                     body._AttachBody(pbodygrab);
-                    body._vGrabbedBodies.push_back(*itgrabbed);
+                    body._vGrabbedBodies.push_back(pgrabbed);
                 }
                 else {
                     // pgrabbed points to a different environment, so have to re-initialize
