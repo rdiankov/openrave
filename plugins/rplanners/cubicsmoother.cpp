@@ -639,6 +639,14 @@ public:
                 pwptraj.FindChunkIndex(t0, ichunk0, rem0);
                 pwptraj.FindChunkIndex(t1, ichunk1, rem1);
 
+                if( ichunk0 == ichunk1 ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e are on the same chunk", _envId%iter%numIters%t0%t1);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                    ++_vShortcutStats[SS_TimeInstantsTooClose];
+#endif
+                    continue;
+                }
+
                 // Set the limits for this iterations
                 velLimits = _parameters->_vConfigVelocityLimit;
                 accelLimits = _parameters->_vConfigAccelerationLimit;
