@@ -18,6 +18,10 @@
 #include "piecewisepolynomials/cubicinterpolator.h"
 #include "jerklimitedsmootherbase.h"
 
+bool REMOVE_STARTTIMEMULT=true; // do not keep track of fStartTimeVelMult and fStartTimeAccelMult of successful shortcut iterations
+bool CORRECT_VELACCELMULT=true; // correct the formula for computing new scaled-down vel/accel limits
+bool SCALE_ALL_WHEN_TOOLACCEL_VIOLATED=true; // scale vel/accel/jerk limits down when max tool accel is violated
+
 namespace rplanners {
 
 namespace PiecewisePolynomials = PiecewisePolynomialsInternal;
@@ -543,8 +547,11 @@ public:
                 break;
             }
 
-            if( nItersFromPrevSuccessful + nTimeBasedConstraintsFailed > nCutoffIters ) {
-                break;
+            if( !CORRECT_VELACCELMULT ) {
+                // When using correct vel/accel mult, for now expect to get a lot more of slowing down iterations
+                if( nItersFromPrevSuccessful + nTimeBasedConstraintsFailed > nCutoffIters ) {
+                    break;
+                }
             }
             ++nItersFromPrevSuccessful;
 
@@ -675,6 +682,15 @@ public:
                 dReal fCurJerkMult = 1.0; // experimental
                 // RAVELOG_DEBUG_FORMAT("env=%d, fCurVelMult=%f; fCurAccelMult=%f;", _envId%fCurVelMult%fCurAccelMult);
 
+                if( 0 ) {
+                    std::stringstream ssdebug;
+                    _FormatInterpolationConditions(ssdebug, x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect,
+                                                   t1 - t0,
+                                                   _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit,
+                                                   velLimits, accelLimits, jerkLimits);
+                    RAVELOG_INFO_FORMAT("env=%d, PUTTICHAI: shortcut iter=%d/%d:\n%s", _envId%iter%numIters%ssdebug.str());
+                }
+
                 bool bSuccess = false;
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
                 ShortcutStatus currentStatus = SS_Successful;
@@ -749,40 +765,53 @@ public:
                         bool bScaledDown = false;
                         if( _bManipConstraints && !!_manipConstraintChecker ) {
                             // Scale down accelLimits and/or velLimits based on what constraints are violated.
-                            dReal fVelMult, fAccelMult;
+                            dReal fVelMult, fAccelMult, fJerkMult;
                             bool maxManipSpeedViolated = false, maxManipAccelViolated = false;
                             if( checkret.fMaxManipAccel > _parameters->maxmanipaccel ) {
                                 maxManipAccelViolated = true;
-                                bScaledDown = true;
+                                if( SCALE_ALL_WHEN_TOOLACCEL_VIOLATED ) {
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                                    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; max manip accel violated (%.15e > %.15e). fTimeBasedSurpassMult=%.15e", _envId%iter%numIters%t0%t1%checkret.fMaxManipAccel%_parameters->maxmanipaccel%checkret.fTimeBasedSurpassMult);
+#endif
+                                }
+                                else {
+                                    bScaledDown = true;
 
-                                fAccelMult = checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult;
-                                fCurAccelMult *= fAccelMult;
-                                if( fCurAccelMult < fAccelMultCutoff ) {
-                                    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; fCurAccelMult goes below threshold (%.15e < %.15e).", _envId%iter%numIters%t0%t1%fCurAccelMult%fAccelMultCutoff);
+                                    fAccelMult = checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult;
+                                    fJerkMult = fAccelMult*checkret.fTimeBasedSurpassMult;
+                                    fCurAccelMult *= fAccelMult;
+                                    if( fCurAccelMult < fAccelMultCutoff ) {
+                                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; fCurAccelMult goes below threshold (%.15e < %.15e).", _envId%iter%numIters%t0%t1%fCurAccelMult%fAccelMultCutoff);
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
-                                    currentStatus = SS_SlowDownFailed;
+                                        currentStatus = SS_SlowDownFailed;
 #endif
-                                    break; // break out of slowdown loop
-                                }
-#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
-                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; max manip accel violated (%.15e > %.15e). fTimeBasedSurpassMult=%.15e; new fCurVelMult=%.15e; fCurAccelMult=%.15e", _envId%iter%numIters%t0%t1%checkret.fMaxManipAccel%_parameters->maxmanipaccel%checkret.fTimeBasedSurpassMult%fCurVelMult%fCurAccelMult);
-#endif
-                                bool bAccelLimitsChanged = false;
-                                for( size_t idof = 0; idof < _ndof; ++idof ) {
-                                    dReal fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
-                                    dReal newAccelBound = std::max(fAccelLowerBound, fCurAccelMult*accelLimits[idof]);
-                                    if( newAccelBound < accelLimits[idof] ) {
-                                        accelLimits[idof] = newAccelBound;
-                                        bAccelLimitsChanged = true;
+                                        break; // break out of slowdown loop
                                     }
-                                }
-                                if( !bAccelLimitsChanged ) {
-                                    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; cannot scale down accel limits further", _envId%iter%numIters%t0%t1);
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
-                                    currentStatus = SS_SlowDownFailed;
+                                    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; max manip accel violated (%.15e > %.15e). fTimeBasedSurpassMult=%.15e; new fCurVelMult=%.15e; fCurAccelMult=%.15e", _envId%iter%numIters%t0%t1%checkret.fMaxManipAccel%_parameters->maxmanipaccel%checkret.fTimeBasedSurpassMult%fCurVelMult%fCurAccelMult);
 #endif
-                                    break; // break out of slowdown loop
-                                }
+                                    bool bAccelLimitsChanged = false;
+                                    for( size_t idof = 0; idof < _ndof; ++idof ) {
+                                        dReal fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
+                                        if( !PiecewisePolynomials::FuzzyEquals(accelLimits[idof], fAccelLowerBound, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
+                                            if( CORRECT_VELACCELMULT ) {
+                                                accelLimits[idof] = std::max(fAccelLowerBound, fAccelMult*accelLimits[idof]);
+                                                jerkLimits[idof] = fJerkMult*jerkLimits[idof];
+                                            }
+                                            else {
+                                                accelLimits[idof] = std::max(fAccelLowerBound, fCurAccelMult*accelLimits[idof]);
+                                            }
+                                            bAccelLimitsChanged = true;
+                                        }
+                                    }
+                                    if( !bAccelLimitsChanged ) {
+                                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; cannot scale down accel limits further", _envId%iter%numIters%t0%t1);
+#ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
+                                        currentStatus = SS_SlowDownFailed;
+#endif
+                                        break; // break out of slowdown loop
+                                    }
+                                } // end if !SCALE_ALL_WHEN_TOOLACCEL_VIOLATED
                             }
                             else if( checkret.fMaxManipSpeed > _parameters->maxmanipspeed ) {
                                 maxManipSpeedViolated = true;
@@ -803,9 +832,13 @@ public:
                                 bool bVelLimitsChanged = false;
                                 for( size_t idof = 0; idof < _ndof; ++idof ) {
                                     dReal fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
-                                    dReal newVelBound = std::max(fVelLowerBound, fCurVelMult*velLimits[idof]);
-                                    if( newVelBound < velLimits[idof] ) {
-                                        velLimits[idof] = newVelBound;
+                                    if( !PiecewisePolynomials::FuzzyEquals(velLimits[idof], fVelLowerBound, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
+                                        if( CORRECT_VELACCELMULT ) {
+                                            velLimits[idof] = std::max(fVelLowerBound, fVelMult*velLimits[idof]);
+                                        }
+                                        else {
+                                            velLimits[idof] = std::max(fVelLowerBound, fCurVelMult*velLimits[idof]);
+                                        }
                                         bVelLimitsChanged = true;
                                     }
                                 }
@@ -821,9 +854,12 @@ public:
                         if( !bScaledDown ) {
                             // The segment does not fail due to manip speed/accel constraints. Scale down both velLimits
                             // and accelLimits
-                            fCurVelMult *= checkret.fTimeBasedSurpassMult;
-                            fCurAccelMult *= checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult;
-                            fCurJerkMult *= checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult;
+                            dReal fMult1 = checkret.fTimeBasedSurpassMult;
+                            dReal fMult2 = fMult1 * checkret.fTimeBasedSurpassMult;
+                            dReal fMult3 = fMult2 * checkret.fTimeBasedSurpassMult;
+                            fCurVelMult *= fMult1;
+                            fCurAccelMult *= fMult2;
+                            fCurJerkMult *= fMult3;
                             if( fCurVelMult < fVelMultCutoff ) {
                                 RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; fCurVelMult goes below threshold (%.15e < %.15e).", _envId%iter%numIters%t0%t1%fCurVelMult%fVelMultCutoff);
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
@@ -844,19 +880,28 @@ public:
                             bool bLimitsChanged = false;
                             for( size_t idof = 0; idof < _ndof; ++idof ) {
                                 dReal fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
-                                dReal fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
-                                dReal newVelBound = std::max(fVelLowerBound, fCurVelMult*velLimits[idof]);
-                                dReal newAccelBound = std::max(fAccelLowerBound, fCurAccelMult*accelLimits[idof]);
-                                if( newVelBound < velLimits[idof] ) {
-                                    velLimits[idof] = newVelBound;
+                                if( !PiecewisePolynomials::FuzzyEquals(velLimits[idof], fVelLowerBound, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
+                                    if( CORRECT_VELACCELMULT ) {
+                                        velLimits[idof] = std::max(fVelLowerBound, fMult1*velLimits[idof]);
+                                    }
+                                    else {
+                                        velLimits[idof] = std::max(fVelLowerBound, fCurVelMult*velLimits[idof]);
+                                    }
                                     bLimitsChanged = true;
                                 }
-                                if( newAccelBound < accelLimits[idof] ) {
-                                    accelLimits[idof] = newAccelBound;
+
+                                dReal fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
+                                if( !PiecewisePolynomials::FuzzyEquals(accelLimits[idof], fAccelLowerBound, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
+                                    if( CORRECT_VELACCELMULT ) {
+                                        accelLimits[idof] = std::max(fAccelLowerBound, fMult2*accelLimits[idof]);
+                                    }
+                                    else {
+                                        accelLimits[idof] = std::max(fAccelLowerBound, fCurAccelMult*accelLimits[idof]);
+                                    }
                                     bLimitsChanged = true;
                                 }
                                 // Scaling down jerk limits likely leads to significantly slower final traj.
-                                // jerkLimits[idof] *= (checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult);
+                                jerkLimits[idof] *= fMult3;
                             }
                             if( !bLimitsChanged ) {
                                 RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; cannot scale down vel/accel limits further", _envId%iter%numIters%t0%t1);
@@ -924,9 +969,11 @@ public:
 #endif
                 lastSuccessfulShortcutIter = iter;
 
-                // Keep track of multipliers
-                fStartTimeVelMult = min(1.0, fCurVelMult*fiSearchVelAccelMult);
-                fStartTimeAccelMult = min(1.0, fCurAccelMult*fiSearchVelAccelMult);
+                if( !REMOVE_STARTTIMEMULT ) {
+                    // Keep track of multipliers
+                    fStartTimeVelMult = min(1.0, fCurVelMult*fiSearchVelAccelMult);
+                    fStartTimeAccelMult = min(1.0, fCurAccelMult*fiSearchVelAccelMult);
+                }
 
                 // Update parameters
                 nTimeBasedConstraintsFailed = 0;
