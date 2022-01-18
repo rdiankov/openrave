@@ -277,7 +277,7 @@ public:
                checking happen with some probability p.
 
              */
-            const dReal lazyCollisionCheckingProb = 0.5; // this value might need to be adjusted later.
+            const dReal lazyCollisionCheckingProb = 1.0; // this value might need to be adjusted later.
             if( Rand() <= lazyCollisionCheckingProb ) {
                 doLazyCollisionChecking = true;
             }
