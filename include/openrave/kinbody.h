@@ -1172,7 +1172,7 @@ public:
 protected:
         /// \brief enables / disables LinkInfo as well as notifies parent KinBody
         void _Enable(bool enable);
-        
+
         /// \brief Updates the cached information due to changes in the collision data.
         ///
         /// \param parameterschanged if true, will
@@ -2616,7 +2616,7 @@ private:
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
-    
+
     /// \brief get the transformations of all the links at once
     void GetLinkTransformations(std::vector<Transform>& transforms) const;
 
@@ -3047,7 +3047,7 @@ private:
 
     /// \brief return if two links are adjacent links are not.
     bool AreAdjacentLinks(int linkindex0, int linkindex1) const;
-    
+
     /// \brief adds the pair of links to the adjacency list.
     ///
     /// \param linkIndices vector containing pair of link indies. Each pair of is set as adjacent links. For each pair, first and second must be different.
@@ -3238,37 +3238,37 @@ private:
 
     /// \brief return the valid grabbed body. If the grabbed body is not in the environment, will just return empty
     ///
-    /// \param iGrabbed index into the grabbed body. Max is GetNumGrabbed()-1
+    /// \param[in] iGrabbed index into the grabbed bodies. Max is GetNumGrabbed()-1
     KinBodyPtr GetGrabbedBody(int iGrabbed) const;
 
-    /** \brief gets all grabbed bodies of the body
+    /** \brief gets info of all grabbed bodies
 
-        \param[out] vgrabbedinfo filled with the grabbed info for every body. The pointers are newly created.
+        \param[out] vGrabbedInfos filled with the grabbed info for every grabbed body. The pointers are newly created.
      */
     void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
 
-    /** \brief gets all grabbed bodies of the body
+    /** \brief gets info of all grabbed bodies
 
-        \param[out] vgrabbedinfo all the grabbed infos
+        \param[out] vGrabbedInfos vector containing grabbedInfos of all the grabbed bodies
      */
     void GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const;
 
     /** \brief gets the grabbed info of a grabbed object whose name matches grabbedname
 
-        \param[in] the grabbed name to get the info from
-        \param[out] grabbedInfo initialized with the grabbed info
-        \return true if robot is grabbing body with name "grabbedname" and grabbedInfo is initialized
+        \param[in] grabbedname the name to use for checking
+        \param[out] grabbedInfo will be initialized with the grabbed info of the grabbed object specified by "grabbedname"
+        \return true if this body is grabbing body with name "grabbedname" and grabbedInfo is initialized
      */
     bool GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbedInfo) const;
 
-    /** \brief resets the grabbed bodies of the body
+    /** \brief resets the grabbed objects of this body and set them according to the input vGrabbedInfos
 
         Any currently grabbed bodies will be first released.
-        \param[out] vgrabbedinfo filled with the grabbed info for every body
+        \param[in] vGrabbedInfos vector of GrabbedInfo, filled with the grabbed info for every body to be grabbed
      */
-    void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vgrabbedinfo);
+    void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vGrabbedInfos);
 
-    /** \brief returns all the links of the body whose links are being ignored by the grabbed body.
+    /** \brief returns all the links of grabber (this body) that are being ignored (self-collision) by the grabbed body.
 
         \param[in] body the grabbed body
         \param[out] list of the ignored links
@@ -3307,9 +3307,6 @@ protected:
     inline Joint& _GetJointFromDOFIndex(int dofindex) {
         return *_vecjoints.at(_vDOFIndices.at(dofindex));
     }
-
-    /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
-    void _Regrab(GrabbedPtr pgrabbed);
 
     void SetManageData(ManageDataPtr pdata) {
         _pManageData = pdata;
@@ -3368,6 +3365,7 @@ protected:
     /// \return true if body was successfully found and removed
     bool _RemoveAttachedBody(KinBody &body);
 
+    /// \brief Update transforms and velocities of the grabbed bodies
     void _UpdateGrabbedBodies();
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
@@ -3477,50 +3475,65 @@ private:
     friend class Grabbed;
 };
 
-/// \brief The information of a currently grabbed body.
-class Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
+class OPENRAVE_API Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
 {
 public:
-    Grabbed(KinBodyPtr pgrabbedbody, KinBody::LinkPtr plinkrobot) : _pgrabbedbody(pgrabbedbody), _plinkrobot(plinkrobot) {
-        _enablecallback = pgrabbedbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&Grabbed::UpdateCollidingLinks, this));
-        _plinkrobot->GetRigidlyAttachedLinks(_vattachedlinks);
-    }
+    Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink);
     virtual ~Grabbed() {
     }
-    KinBodyWeakPtr _pgrabbedbody;         ///< the grabbed body
-    KinBody::LinkPtr _plinkrobot;         ///< robot link that is grabbing the body
-    std::list<KinBody::LinkConstPtr> _listNonCollidingLinks;         ///< links that are not colliding with the grabbed body at the time of Grab. Even if a link is disabled, it is considered as non-colliding as long as it is not colliiding with grabbed body
-    Transform _troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
-    std::set<int> _setRobotLinksToIgnore; ///< original links of the robot to force ignoring
 
-    /// \brief check collision with all links to see which are valid.
+    /// \brief This function initializes _listNonCollidingLinksWhenGrabbed. First it restores the state of both the
+    ///        grabber and the grabbed body to the snapshot when "Grab" function was called. Then it performs the check
+    ///        and populates the list.
     ///
-    /// Use the robot's self-collision checker if possible
-    /// resets all cached data and re-evaluates the collisions
-    /// \param setRobotLinksToIgnore indices of the robot links to always ignore, in other words remove from non-colliding list
-    void ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore);
+    ///        It is important to note that link enable states do not affect the result of this computation. That is,
+    ///
+    ///        1. if a link L is colliding with _pGrabbedBody at the time of grabbing, L will *not* be in
+    ///          _listNonCollidingLinksWhenGrabbed regardless of L's enable state. If L is initially collision-disabled
+    ///          when grabbing _pGrabbingBody and later L has become enabled, CheckSelfCollision will ignore
+    ///          L-_pGrabbedBody collision (if any).
+    ///
+    ///        2. if a link L is not colliding with _pGrabbedBody at the time of grabbing, L will be in
+    ///           _listNonCollidingLinksWhenGrabbed regardless of L's enable state.
+    ///
+    ///        Therefore, _listNonCollidingLinksWhenGrabbed has to be computed only once. The computation result remains
+    ///        valid until the grabbed body is released.
+    void ComputeListNonCollidingLinks();
 
-    inline const std::vector<KinBody::LinkPtr>& GetRigidlyAttachedLinks() const {
-        return _vattachedlinks;
+    inline void InvalidateListNonCollidingLinks()
+    {
+        _listNonCollidingIsValid = false;
     }
 
-    void AddMoreIgnoreLinks(const std::set<int>& setRobotLinksToIgnore);
+    inline void _SetLinkNonCollidingIsValid(const bool bIsValid)
+    {
+        _listNonCollidingIsValid = bIsValid;
+    }
 
-    /// return -1 for unknown, 0 for no, 1 for yes
-    int WasLinkNonColliding(KinBody::LinkConstPtr plink) const;
+    inline const bool IsListNonCollidingLinksValid() const
+    {
+        return _listNonCollidingIsValid;
+    }
 
-    /// \brief updates the non-colliding info while reusing the cache data from _ProcessCollidingLinks
-    ///
-    /// note that Regrab here is *very* dangerous since the robot could be a in a bad self-colliding state with the body. therefore, update the non-colliding state based on _mapLinkIsNonColliding
-    void UpdateCollidingLinks();
+    /// \brief Add more links to force to be ignored during grabber's self-collision checking into
+    ///        _setGrabberLinkIndicesToIgnore. This function is called when we make the grabber grab the same grabbed body
+    ///        more than once with different input links to ignore.
+    void AddMoreIgnoreLinks(const std::set<int>& setAdditionalGrabberLinksToIgnore);
+
+    // Member Variables
+    KinBodyWeakPtr _pGrabbedBody; ///< the body being grabbed
+    KinBody::LinkPtr _pGrabbingLink; ///< the link used for grabbing _pGrabbedBody. Its transform (as well as the transforms of other links rigidly attached to _pGrabbingLink) relative to the grabbed body remains constant until the grabbed body is released.
+    std::list<KinBody::LinkConstPtr> _listNonCollidingLinksWhenGrabbed; ///< list of links of the grabber that are not touching the grabbed body *at the time of grabbing*. Since these links are not colliding with the grabbed body at the time of grabbing, they should remain non-colliding with the grabbed body throughout. If, while grabbing, they collide with the grabbed body at some point, CheckSelfCollision should return true. It is important to note that the enable state of a link does *not* affect its membership of this list.
+    Transform _tRelative; ///< the relative transform between the grabbed body and the grabbing link. tGrabbingLink*tRelative = tGrabbedBody.
+    std::set<int> _setGrabberLinkIndicesToIgnore; ///< indices to the links of the grabber whose collisions with the grabbed bodies should be ignored.
 
 private:
-    std::vector<KinBody::LinkPtr> _vattachedlinks;
-    UserDataPtr _enablecallback; ///< callback for grabbed body when it is enabled/disabled
+    bool _listNonCollidingIsValid = false; ///< a flag indicating whether the current _listNonCollidingLinksWhenGrabbed is valid or not.
+    std::vector<KinBody::LinkPtr> _vAttachedToGrabbingLink; ///< vector of all links that are rigidly attached to _pGrabbingLink
+    KinBody::KinBodyStateSaverPtr _pGrabberSaver; ///< statesaver that saves the snapshot of the grabber at the time Grab is called. The saved state will be used (i.e. restored) temporarily when computation of _listNonCollidingLinksWhenGrabbed is necessary.
+    KinBody::KinBodyStateSaverPtr _pGrabbedSaver; ///< statesaver that saves the snapshot of the grabbed at the time Grab is called. The saved state will be used (i.e. restored) temporarily when computation of _listNonCollidingLinksWhenGrabbed is necessary.
 
-    std::map<KinBody::LinkConstPtr, int> _mapLinkIsNonColliding; // the collision state for each link at the time the body was grabbed.
-};
-
+}; // end class Grabbed
 
 } // end namespace OpenRAVE
 

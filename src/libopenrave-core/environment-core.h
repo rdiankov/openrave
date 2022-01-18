@@ -2389,7 +2389,7 @@ public:
         }
         return handles;
     }
-    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents)
+    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float> >& vpos, const RaveVector<float>& vextents)
     {
         SharedLock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
@@ -3500,7 +3500,8 @@ protected:
                 try {
                     KinBodyPtr pnewbody = _vecbodies.at(envBodyIndex);
                     if( !!pnewbody ) {
-                        pnewbody->Clone(pbody,options);
+                        // Should ignore grabbed bodies since the grabbed states will be updated later (via state saver's Restore) below.
+                        pnewbody->Clone(pbody, options|Clone_IgnoreGrabbedBodies);
                     }
                 }
                 catch(const std::exception &ex) {
