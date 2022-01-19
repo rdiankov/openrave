@@ -883,9 +883,11 @@ protected:
                 RAVELOG_DEBUG_FORMAT("env=%d, Segment (%d, %d)/%d, itry=%d violated time-based constraints; fActualManipSpeed=%f; fActualManipAccel=%f; fTimeBasedSurpassMult=%f", _envId%(iWaypoint - 1)%iWaypoint%numWaypoints%itry%checkret.fMaxManipSpeed%checkret.fMaxManipAccel%checkret.fTimeBasedSurpassMult);
                 fCurVelMult *= checkret.fTimeBasedSurpassMult;
                 dReal fMult2 = checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult;
+                dReal fMult3 = fMult2*checkret.fTimeBasedSurpassMult;
                 for( size_t idof = 0; idof < _ndof; ++idof ) {
                     velLimits[idof] *= checkret.fTimeBasedSurpassMult;
                     accelLimits[idof] *= fMult2;
+                    jerkLimits[idof] *= fMult3;
                 }
                 continue;
             }
