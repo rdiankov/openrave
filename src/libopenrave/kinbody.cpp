@@ -793,13 +793,20 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
 {
     std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info._vLinkInfos.begin(), info._vLinkInfos.end());
     std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info._vJointInfos.begin(), info._vJointInfos.end());
-    if( !KinBody::Init(vLinkInfosConst, vJointInfosConst, info._uri) ) {
+    const std::string& uri = info.IsModifiedField(KinBodyInfo::KBIF_URI) ? info._uri : GetURI();
+    if( !KinBody::Init(vLinkInfosConst, vJointInfosConst, uri) ) {
         return false;
     }
 
-    _id = info._id;
-    _name = info._name;
-    _referenceUri = info._referenceUri;
+    if( !info._id.empty() ) {
+        _id = info._id;
+    }
+    if( !info._name.empty() ) {
+        _name = info._name;
+    }
+    if( info.IsModifiedField(KinBodyInfo::KBIF_ReferenceURI) ) {
+        _referenceUri = info._referenceUri;
+    }
 
     FOREACH(it, info._mReadableInterfaces) {
         SetReadableInterface(it->first, it->second);

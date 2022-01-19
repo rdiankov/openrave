@@ -807,7 +807,8 @@ bool RobotBase::InitFromRobotInfo(const RobotBaseInfo& info)
     std::vector<RobotBase::ManipulatorInfoConstPtr> vManipulatorInfosConst(info._vManipulatorInfos.begin(), info._vManipulatorInfos.end());
     std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(info._vAttachedSensorInfos.begin(), info._vAttachedSensorInfos.end());
 
-    if( !RobotBase::Init(vLinkInfosConst, vJointInfosConst, vManipulatorInfosConst, vAttachedSensorInfosConst, info._uri) ) {
+    const std::string& uri = info.IsModifiedField(KinBodyInfo::KBIF_URI) ? info._uri : GetURI();
+    if( !RobotBase::Init(vLinkInfosConst, vJointInfosConst, vManipulatorInfosConst, vAttachedSensorInfosConst, uri) ) {
         return false;
     }
 
@@ -823,9 +824,15 @@ bool RobotBase::InitFromRobotInfo(const RobotBaseInfo& info)
         _vecGripperInfos.push_back(newGripperInfo);
     }
 
-    _id = info._id;
-    _name = info._name;
-    _referenceUri = info._referenceUri;
+    if( !info._id.empty() ) {
+        _id = info._id;
+    }
+    if( !info._name.empty() ) {
+        _name = info._name;
+    }
+    if( info.IsModifiedField(KinBodyInfo::KBIF_ReferenceURI) ) {
+        _referenceUri = info._referenceUri;
+    }
 
     FOREACH(it, info._mReadableInterfaces) {
         SetReadableInterface(it->first, it->second);
