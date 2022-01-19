@@ -819,6 +819,10 @@ protected:
 
             // TODO: Maybe keeping track of zero velocity points as well.
         }
+
+        fEstimatedVelMult = fEstimatedVelMult / (numWaypoints - 1); // compute the average of vel mult needed for each segment
+        RAVELOG_INFO_FORMAT("env=%d, fEstimatedVelMult=%.15e", _envId%fEstimatedVelMult);
+
         pwptraj.Initialize();
         return true;
     }
@@ -926,6 +930,7 @@ protected:
                 return false;
             }
         }
+        fEstimatedVelMult += fCurVelMult;
         return true;
     }
 
@@ -1144,6 +1149,7 @@ protected:
 #endif // CUBIC_SMOOTHER_TIMING_DEBUG
 
     const bool LAZY_COLLISION_CHECKING=true;
+    dReal fEstimatedVelMult=0.0; // when computing initial retiming, record the average value of fTimeBasedSurpassMult needed for all successful computation. can use this value as a starting multiplier during shortcutting.
 
 }; // end class JerkLimitedSmootherBase
 

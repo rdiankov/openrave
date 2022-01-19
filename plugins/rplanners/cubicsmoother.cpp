@@ -121,6 +121,7 @@ public:
         PlannerStatus conversionStatus = PS_Failed;
         if( _parameters->_hastimestamps && itcompatposgroup->interpolation == "cubic" ) {
             // bPathIsPerfectlyModeled = true;
+            fEstimatedVelMult = 1.0;
             conversionStatus = ConvertOpenRAVETrajectoryToPiecewisePolynomialTrajectorySameInterpolation(ptraj, posSpec, velSpec, accelSpec, timeSpec, pwptraj);
         }
         // TODO: Maybe we need to handle other cases of interpolation as well
@@ -128,6 +129,7 @@ public:
             if( itcompatposgroup->interpolation.size() == 0 || itcompatposgroup->interpolation == "linear" ) {
                 // bPathIsPerfectlyModeled = true;
             }
+            fEstimatedVelMult = 0.0; // will be computed as the average of vel mults computed in the following function
             conversionStatus = ConvertOpenRAVEPathToPiecewisePolynomialTrajectory(ptraj, posSpec, pwptraj);
         }
         if( conversionStatus.statusCode != PS_HasSolution ) {
@@ -672,11 +674,40 @@ public:
                 //         }
                 //     }
                 // }
-                // These parameters keep track of multiplier for the current shortcut iteration.
-                dReal fCurVelMult = fStartTimeVelMult;
-                dReal fCurAccelMult = fStartTimeAccelMult;
-                dReal fCurJerkMult = 1.0; // experimental
+                // // These parameters keep track of multiplier for the current shortcut iteration.
+                // dReal fCurVelMult = fStartTimeVelMult;
+                // dReal fCurAccelMult = fStartTimeAccelMult;
+                // dReal fCurJerkMult = 1.0; // experimental
                 // RAVELOG_DEBUG_FORMAT("env=%d, fCurVelMult=%f; fCurAccelMult=%f;", _envId%fCurVelMult%fCurAccelMult);
+
+                // These parameters keep track of multiplier for the current shortcut iteration.
+                dReal fCurVelMult;
+                dReal fCurAccelMult;
+                dReal fCurJerkMult;
+                if( USE_ESTIMATED_VELMULT && fEstimatedVelMult > 0 ) {
+                    fCurVelMult = fEstimatedVelMult;
+                    fCurAccelMult = fCurVelMult * fEstimatedVelMult;
+                    fCurJerkMult = fCurAccelMult * fEstimatedVelMult;
+                    if( fCurVelMult < 1.0 - PiecewisePolynomials::g_fPolynomialEpsilon ) {
+                        dReal fVelLowerBound, fAccelLowerBound;
+                        for( size_t idof = 0; idof < _ndof; ++idof ) {
+                            fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
+                            if( !PiecewisePolynomials::FuzzyEquals(fVelLowerBound, velLimits[idof], PiecewisePolynomials::g_fPolynomialEpsilon) ) {
+                                velLimits[idof] = std::max(fVelLowerBound, fCurVelMult*velLimits[idof]);
+                            }
+                            fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
+                            if( !PiecewisePolynomials::FuzzyEquals(fAccelLowerBound, accelLimits[idof], PiecewisePolynomials::g_fPolynomialEpsilon) ) {
+                                accelLimits[idof] = std::max(fAccelLowerBound, fCurAccelMult*accelLimits[idof]);
+                            }
+                            jerkLimits[idof] *= fCurJerkMult;
+                        }
+                    }
+                }
+                else {
+                    fCurVelMult = fStartTimeVelMult;
+                    fCurAccelMult = fStartTimeAccelMult;
+                    fCurJerkMult = 1.0; // experimental
+                }
 
                 if( 0 ) {
                     std::stringstream ssdebug;
@@ -1310,6 +1341,7 @@ private:
     const bool REMOVE_STARTTIMEMULT=true; // do not keep track of fStartTimeVelMult and fStartTimeAccelMult of successful shortcut iterations
     const bool CORRECT_VELACCELMULT=true; // correct the formula for computing new scaled-down vel/accel limits
     const bool SCALE_ALL_WHEN_TOOLACCEL_VIOLATED=true; // scale vel/accel/jerk limits down when max tool accel is violated
+    const bool USE_ESTIMATED_VELMULT=true; // use the average fTimeBasedSurpassMult from initial timing computation as the starting multiplier.
 
 }; // end class CubicSmoother
 
