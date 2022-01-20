@@ -386,7 +386,8 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
 
     const bool bHasMiddleSegment = !FuzzyZero(duration2, g_fEpsilonForTimeInstant);
     const size_t numPolynomials = pwpoly1.GetPolynomials().size() + pwpoly3.GetPolynomials().size() + (bHasMiddleSegment ? 1 : 0);
-    std::vector<Polynomial> vFinalPolynomials;
+    std::vector<Polynomial>& vFinalPolynomials = _cacheFinalPolynomials;
+    vFinalPolynomials.resize(0);
     vFinalPolynomials.reserve(numPolynomials);
     vFinalPolynomials.insert(vFinalPolynomials.end(), pwpoly1.GetPolynomials().begin(), pwpoly1.GetPolynomials().end());
     if( bHasMiddleSegment ) {
@@ -395,7 +396,8 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         vFinalPolynomials.emplace_back(poly);
     }
     vFinalPolynomials.insert(vFinalPolynomials.end(), pwpoly3.GetPolynomials().begin(), pwpoly3.GetPolynomials().end());
-    PiecewisePolynomial pwpolyFinal(vFinalPolynomials);
+    PiecewisePolynomial& pwpolyFinal = _cacheFinalPWPoly;
+    pwpolyFinal.Initialize(vFinalPolynomials);
     pwpoly = pwpolyFinal.Integrate(initialState[positionIndex]);
     return PolynomialCheckReturn::PCR_Normal; // Final piecewise polynomial is to be checked outside.
 } // end Compute1DTrajectory
