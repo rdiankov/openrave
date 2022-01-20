@@ -158,6 +158,7 @@ public:
 #endif
         py::object _transform = ReturnTransform(Transform());
         bool _isRobot = false;
+        bool _isPartial = true;
         py::object _dofValues = py::none_();
         py::object _readableInterfaces = py::none_();
         virtual std::string __str__();
@@ -312,6 +313,8 @@ public:
     void ReleaseAllGrabbedWithLink(py::object pylink);
     void RegrabAll();
     py::object IsGrabbing(PyKinBodyPtr pbody) const;
+    int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink) const;
+    int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore) const;
     int GetNumGrabbed() const;
     py::object GetGrabbed() const;
     py::object GetGrabbedInfo(py::object ograbbedname=py::none_()) const;

@@ -720,6 +720,12 @@ void InitPlanningUtils()
         class_<planningutils::PyDHParameter, OPENRAVE_SHARED_PTR<planningutils::PyDHParameter> >(planningutils, "DHParameter", DOXY_CLASS(planningutils::DHParameter))
         .def(init<>())
         .def(init<object, int, object, dReal, dReal, dReal, dReal>(), "joint"_a, "parentindex"_a, "transform"_a, "d"_a, "a"_a, "theta"_a, "alpha"_a)
+        .def("__copy__", [](const planningutils::PyDHParameter& self){ return self; })
+        .def("__deepcopy__", [](const planningutils::PyDHParameter& self, const py::dict& memo) {
+            return planningutils::PyDHParameter(
+                /*self.joint*/py::none_(), self.parentindex, self.transform, self.d, self.a, self.theta, self.alpha
+            );
+        })
 #else
         class_<planningutils::PyDHParameter, OPENRAVE_SHARED_PTR<planningutils::PyDHParameter> >("DHParameter", DOXY_CLASS(planningutils::DHParameter))
         .def(init<>())

@@ -235,6 +235,9 @@ public:
     /// returns the number of colors
     static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors);
 
+    /// returns the number of vectors
+    static size_t _getListVector(object odata, std::vector<RaveVector<float>>& vvectors);
+
     static std::pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors);
 
     object plot3(object opoints,float pointsize,object ocolors=py::none_(),int drawstyle=0);
@@ -248,6 +251,7 @@ public:
     object drawlabel(const std::string &label, object worldPosition);
 
     object drawbox(object opos, object oextents, object ocolor=py::none_());
+    object drawboxarray(object opos, object oextents, object ocolor=py::none_());
 
     object drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture);
     object drawplane(object otransform, object oextents, const boost::multi_array<float,3>&vtexture);
@@ -301,7 +305,7 @@ public:
 
     py::object GetDescription() const;
 
-    void SetKeywords(const std::vector<std::string>& sceneKeywords);
+    void SetKeywords(object oSceneKeywords);
 
     py::list GetKeywords() const;
 

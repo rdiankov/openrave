@@ -477,8 +477,11 @@ void init_openravepy_ikparameterization()
                                    .def(init<IkParameterization>(), "ikparam"_a)
                                    .def("__copy__", [](const PyIkParameterization& self){ return self; })
                                    .def("__deepcopy__", [](const PyIkParameterization& self, const py::dict& memo) {
+                                        return PyIkParameterization(self._param);
+                                        /*
                                         PyIkParameterizationPtr pyikparam(new PyIkParameterization(self._param));
                                         return py::to_object(pyikparam);
+                                        */
                                     })
 #else
         scope_ ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >("IkParameterization", DOXY_CLASS(IkParameterization))

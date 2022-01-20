@@ -19,6 +19,7 @@
 #include <openrave/utils.h>
 #include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/filesystem/operations.hpp>
 
 #include <openravepy/openravepy_kinbody.h>
 #include <openravepy/openravepy_collisioncheckerbase.h>
@@ -466,7 +467,7 @@ object toPyArray(const TransformMatrix& t)
 object toPyArray(const Transform& t)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvalues({7});
+    py::array_t<dReal> pyvalues(7);
     py::buffer_info buf = pyvalues.request();
     dReal* pvalue = (dReal*) buf.ptr;
     pvalue[0] = t.rot.x;
@@ -1011,7 +1012,6 @@ EnvironmentBase::EnvironmentBaseInfoPtr PyEnvironmentBase::PyEnvironmentBaseInfo
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     pInfo->_vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(_vBodyInfos), end(_vBodyInfos));
     pInfo->_revision = _revision;
-    pInfo->_name = _name;
     pInfo->_keywords = _keywords;
     pInfo->_description = _description;
 #else
@@ -1049,7 +1049,6 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     _vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(info._vBodyInfos), end(info._vBodyInfos));
     _revision = info._revision;
-    _name = info._name;
     _keywords = std::vector<std::string>(begin(info._keywords), end(info._keywords));
     _description = info._description;
 #else
@@ -1114,7 +1113,7 @@ CollisionAction PyEnvironmentBase::_CollisionCallback(object fncallback, Collisi
         PyErr_Print();
     }
     CollisionAction ret = CA_DefaultAction;
-    if( IS_PYTHONOBJECT_NONE(res) || !res ) {
+    if( IS_PYTHONOBJECT_NONE(res) ) {
         ret = CA_DefaultAction;
         RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
     }
@@ -1605,9 +1604,12 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
     dReal* ppos = (dReal*) bufpos.ptr;
 
     // collision
-    py::array_t<bool> pycollision({nRays});
+    py::array_t<bool> pycollision(nRays);
     py::buffer_info bufcollision = pycollision.request();
     bool* pcollision = (bool*) bufcollision.ptr;
+    if( nRays > 0 ) {
+        memset(pcollision, 0, sizeof(bool)*nRays);
+    }
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { nRays,6};
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal) == sizeof(double) ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -1854,9 +1856,9 @@ object PyEnvironmentBase::ReadKinBodyURI(const string &filename, object odictatt
     KinBodyPtr pbody;
     {
         openravepy::PythonThreadSaver threadsaver;
-        pbody = _penv->ReadKinBodyURI(filename);
+        pbody = _penv->ReadKinBodyURI(KinBodyPtr(), filename, dictatts);
     }
-    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(KinBodyPtr(), filename, dictatts),shared_from_this()));
+    return py::to_object(openravepy::toPyKinBody(pbody, shared_from_this()));
 }
 object PyEnvironmentBase::ReadKinBodyData(const string &data)
 {
@@ -2346,6 +2348,51 @@ size_t PyEnvironmentBase::_getGraphColors(object ocolors, std::vector<float>&vco
     return 1;
 }
 
+size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<float>>& vvectors) {
+    std::vector<float> vpoints;
+    if( PyObject_HasAttrString(odata.ptr(),"shape") ) {
+        object datashape = odata.attr("shape");
+        switch(len(datashape)) {
+        case 1: {
+            const size_t n = len(odata);
+            if (n%3) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %d"), n,ORE_InvalidArguments);
+            }
+            for(size_t i = 0; i < n/3; ++i) {
+                vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[3*i]),
+                            py::extract<float>(odata[3*i+1]), py::extract<float>(odata[3*i+2])));
+            }
+            return n/3;
+        }
+        case 2: {
+            const int num = py::extract<int>(datashape[0]);
+            const int dim = py::extract<int>(datashape[1]);
+            if(dim != 3) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %dx%d"), num%dim,ORE_InvalidArguments);
+            }
+            const object& o = odata.attr("flat");
+            for(size_t i = 0; i < num; ++i) {
+                vvectors.emplace_back(RaveVector<float>(py::extract<float>(o[3*i]),
+                            py::extract<float>(o[3*i+1]), py::extract<float>(o[3*i+2])));
+            }
+            return num;
+        }
+        default:
+            throw OpenRAVEException(_("data have bad dimension"));
+        }
+    }
+    // assume it is a regular 1D list
+    const size_t n = len(odata);
+    if (n%3) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %d"), n,ORE_InvalidArguments);
+    }
+    for(size_t i = 0; i < n/3; ++i) {
+        vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[3*i]),
+                    py::extract<float>(odata[3*i+1]), py::extract<float>(odata[3*i+2])));
+    }
+    return vvectors.size();
+}
+
 std::pair<size_t,size_t> PyEnvironmentBase::_getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors)
 {
     size_t numpoints = _getGraphPoints(opoints,vpoints);
@@ -2429,6 +2476,21 @@ object PyEnvironmentBase::drawbox(object opos, object oextents, object ocolor)
     }
     return toPyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents)));
 }
+
+object PyEnvironmentBase::drawboxarray(object opos, object oextents, object ocolor)
+{
+    RaveVector<float> vcolor(1,0.5,0.5,1);
+    if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
+        vcolor = ExtractVector34(ocolor,1.0f);
+    }
+    std::vector<RaveVector<float>> vvectors;
+    const size_t numpos = _getListVector(opos, vvectors);
+    if (numpos <= 0) {
+        throw OpenRAVEException("a list of positions is empty" ,ORE_InvalidArguments);
+    }
+    return toPyGraphHandle(_penv->drawboxarray(vvectors,ExtractVector3(oextents)));
+}
+
 
 object PyEnvironmentBase::drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture)
 {
@@ -2703,16 +2765,16 @@ py::object PyEnvironmentBase::GetDescription() const
     return ConvertStringToUnicode(_penv->GetDescription());
 }
 
-void PyEnvironmentBase::SetKeywords(const std::vector<std::string>& sceneKeywords)
+void PyEnvironmentBase::SetKeywords(py::object oSceneKeywords)
 {
+    std::vector<std::string> sceneKeywords = ExtractArray<std::string>(oSceneKeywords);
     _penv->SetKeywords(sceneKeywords);
 }
 
 py::list PyEnvironmentBase::GetKeywords() const
 {
     py::list pykeywords;
-    std::vector<std::string> keywords;
-    _penv->GetKeywords();
+    std::vector<std::string> keywords = _penv->GetKeywords();
     for(const std::string& keyword : keywords) {
         pykeywords.append(ConvertStringToUnicode(keyword));
     }
@@ -2881,6 +2943,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlinelist_overloads, drawlinelist, 2, 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawarrow_overloads, drawarrow, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlabel_overloads, drawlabel, 2, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawbox_overloads, drawbox, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawboxarray_overloads, drawboxarray, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendJSONCommand_overloads, SendJSONCommand, 2, 4)
@@ -2915,7 +2978,22 @@ object get_std_runtime_error_unicode(std::runtime_error* p)
 
 std::string get_std_runtime_error_repr(std::runtime_error* p)
 {
-    return boost::str(boost::format("<std_exception('%s')>")%p->what());
+    return boost::str(boost::format("<std::runtime_error('%s')>")%p->what());
+}
+
+std::string get_boost_filesystem_error_message(boost::filesystem::filesystem_error* p)
+{
+    return std::string(p->what())+" ("+p->path1().native()+")";
+}
+
+object get_boost_filesystem_error_unicode(boost::filesystem::filesystem_error* p)
+{
+    return ConvertStringToUnicode(get_boost_filesystem_error_message(p));
+}
+
+std::string get_boost_filesystem_error_repr(boost::filesystem::filesystem_error* p)
+{
+    return boost::str(boost::format("<boost::filesystem::filesystem_error('%s')>")%get_boost_filesystem_error_message(p));
 }
 
 py::object GetCodeStringOpenRAVEException(OpenRAVEException* p)
@@ -2996,6 +3074,11 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
             pyerrdata.inc_ref(); // since passing to PyErr_SetObject
             PyErr_SetObject(PyExc_TypeError, pyerrdata.ptr() );
         }
+        catch( const boost::filesystem::filesystem_error& e ) {
+            py::object pyerrdata = ConvertStringToUnicode(std::string(e.what())+" ("+e.path1().native()+")");
+            pyerrdata.inc_ref(); // since passing to PyErr_SetObject
+            PyErr_SetObject(PyExc_RuntimeError, pyerrdata.ptr() );
+        }
         catch( const std::runtime_error& e ) {
             py::object pyerrdata = ConvertStringToUnicode(e.what());
             pyerrdata.inc_ref(); // since passing to PyErr_SetObject
@@ -3011,7 +3094,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     class_< OpenRAVEException >( OPENRAVE_EXCEPTION_CLASS_NAME, DOXY_CLASS(OpenRAVEException) )
     .def( init<const std::string&>() )
     .def( init<const OpenRAVEException&>() )
-    .def( "message", &OpenRAVEException::message, return_copy_const_ref() )
+    .add_property( "message", make_function(&OpenRAVEException::message, return_copy_const_ref()) )
     .def("GetCode", GetCodeStringOpenRAVEException)
     .def( "__str__", &OpenRAVEException::message, return_copy_const_ref() )
     .def( "__unicode__", get_openrave_exception_unicode)
@@ -3022,7 +3105,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     class_< std::runtime_error >( "_std_runtime_error_", no_init)
     .def( init<const std::string&>() )
     .def( init<const std::runtime_error&>() )
-    .def( "message", &std::runtime_error::what)
+    .add_property( "message", &std::runtime_error::what)
     .def( "__str__", &std::runtime_error::what)
     .def( "__unicode__", get_std_runtime_error_unicode)
     .def( "__repr__", get_std_runtime_error_repr)
@@ -3030,8 +3113,16 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     OpenRAVEBoostPythonExceptionTranslator<std::runtime_error>();
 
     //OpenRAVEBoostPythonExceptionTranslator<std::exception>();
-    class_< boost::bad_function_call, bases<std::runtime_error> >( "_boost_bad_function_call_");
+    class_< boost::bad_function_call, bases<std::runtime_error> >( "_boost_bad_function_call_", no_init);
     OpenRAVEBoostPythonExceptionTranslator<boost::bad_function_call>();
+
+    class_< boost::filesystem::filesystem_error, bases<std::runtime_error> >( "_boost_filesystem_error_", no_init)
+    .add_property( "message", &get_boost_filesystem_error_message)
+    .def( "__str__", &get_boost_filesystem_error_message)
+    .def( "__unicode__", &get_boost_filesystem_error_unicode)
+    .def( "__repr__", &get_boost_filesystem_error_repr)
+    ;
+    OpenRAVEBoostPythonExceptionTranslator<boost::filesystem::filesystem_error>();
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -3462,6 +3553,16 @@ Because race conditions can pop up when trying to lock the openrave environment 
                           )
 #else
                      .def("drawbox",&PyEnvironmentBase::drawbox,drawbox_overloads(PY_ARGS("pos","extents","color") DOXY_FN(EnvironmentBase,drawbox)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                     .def("drawboxarray", &PyEnvironmentBase::drawboxarray,
+                          "pos"_a,
+                          "extents"_a,
+                          "color"_a = py::none_(),
+                          DOXY_FN(EnvironmentBase,drawboxarray)
+                          )
+#else
+                     .def("drawboxarray",&PyEnvironmentBase::drawboxarray,drawboxarray_overloads(PY_ARGS("pos","extents","color") DOXY_FN(EnvironmentBase,drawboxarray)))
 #endif
                      .def("drawplane",drawplane1, PY_ARGS("transform","extents","texture") DOXY_FN(EnvironmentBase,drawplane))
                      .def("drawplane",drawplane2, PY_ARGS("transform","extents","texture") DOXY_FN(EnvironmentBase,drawplane))

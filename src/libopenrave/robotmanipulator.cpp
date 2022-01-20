@@ -238,6 +238,9 @@ void RobotBase::Manipulator::SetName(const std::string& name)
 
 Transform RobotBase::Manipulator::GetTransform() const
 {
+    if( !__pEffector ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, robot '%s' manipulator '%s' has no end effector with name '%s'"), __probot.lock()->GetEnv()->GetNameId()%__probot.lock()->GetName()%_info._name%_info._sEffectorLinkName, ORE_InvalidArguments);
+    }
     return __pEffector->GetTransform() * _info._tLocalTool;
 }
 
@@ -800,28 +803,20 @@ bool RobotBase::Manipulator::IsChildLink(const KinBody::Link &link) const
     }
 
     RobotBasePtr probot(__probot);
-    // get all child links of the manipualtor
     int iattlink = __pEffector->GetIndex();
-    FOREACHC(itlink, probot->GetLinks()) {
-        int ilink = (*itlink)->GetIndex();
-        if( ilink == iattlink ) {
-            continue;
+    int ilink = link.GetIndex();
+    if( ilink == iattlink ) {
+        return true;
+    }
+    // gripper needs to be affected by all joints
+    FOREACHC(itarmdof,__varmdofindices) {
+        if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
+            return false;
         }
-        // gripper needs to be affected by all joints
-        bool bGripperLink = true;
-        FOREACHC(itarmdof,__varmdofindices) {
-            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
-                bGripperLink = false;
-                break;
-            }
-        }
-        if( !bGripperLink ) {
-            continue;
-        }
-        for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
-            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
-                return true;
-            }
+    }
+    for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
+        if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+            return true;
         }
     }
     return false;
@@ -1497,13 +1492,12 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
             }
 
             // check if any grabbed bodies are attached to this link
-            FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
-                GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-                if( pgrabbed->_plinkrobot == *itlink ) {
+            for (const GrabbedPtr& pgrabbed : probot->_vGrabbedBodies) {
+                if( pgrabbed->_pGrabbingLink == *itlink ) {
                     if( vbodyexcluded.empty() ) {
                         vbodyexcluded.push_back(KinBodyConstPtr(probot));
                     }
-                    KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
+                    KinBodyPtr pbody = pgrabbed->_pGrabbedBody.lock();
                     if( !!pbody && probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) ) {
                         return true;
                     }
@@ -1627,7 +1621,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
         if(!!__pIkChainEndLink) {
             probot->GetChain(__pBase->GetIndex(),__pIkChainEndLink->GetIndex(), vjoints);
         }
-        
+
         if( vjoints.size() > 0 || probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
             // due to back compat issues, have to compute the end effector transform first
             FOREACH(itjoint, vjoints) {
@@ -1760,7 +1754,7 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
         if(!!__pIkChainEndLink) {
             probot->GetChain(__pBase->GetIndex(),__pIkChainEndLink->GetIndex(), vjoints);
         }
-            
+
         if( vjoints.size() > 0 || probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
             FOREACH(it,vjoints) {
                 if( (*it)->IsStatic() ) {
@@ -1798,8 +1792,29 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
         }
     }
 
-    // init the gripper dof indices
     std::vector<dReal> vChuckingDirection;
+
+    GripperInfoPtr pGripperInfo;
+    if( !_info._grippername.empty() ) {
+        pGripperInfo = probot->GetGripperInfo(_info._grippername);
+        if( !!pGripperInfo ) {
+
+            if( _info._vGripperJointNames.empty() ) {
+                _info._vGripperJointNames = pGripperInfo->gripperJointNames;
+                if( !_info._vGripperJointNames.empty() ) {
+                    RAVELOG_VERBOSE_FORMAT("For manipulator '%s', using %d gripperJointNames from gripperInfo '%s'", _info._name%_info._vGripperJointNames.size()%_info._grippername);
+                }
+            }
+
+            if( _info._vChuckingDirection.empty() ) {
+                if( pGripperInfo->_docGripperInfo.IsObject() ) {
+                    orjson::LoadJsonValueByKey(pGripperInfo->_docGripperInfo, "chuckingDirection", _info._vChuckingDirection);
+                }
+            }
+        }
+    }
+
+    // init the gripper dof indices
     size_t ichuckingdirection = 0;
     FOREACHC(itjointname,_info._vGripperJointNames) {
         JointPtr pjoint = probot->GetJoint(*itjointname);
