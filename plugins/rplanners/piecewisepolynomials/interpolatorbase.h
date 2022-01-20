@@ -203,7 +203,8 @@ public:
 
     void ConvertPiecewisePolynomialsToChunks(const std::vector<PiecewisePolynomial>& pwpolynomialsIn, std::vector<Chunk>& chunksOut)
     {
-        std::vector<dReal> switchPointsList; // store the time instants where any dofs switches polynomials
+        std::vector<dReal>& switchPointsList = _switchPointsList; // store the time instants where any dofs switches polynomials
+        switchPointsList.resize(0);
 
         switchPointsList.push_back(0);
         dReal maxDuration = 0;
@@ -232,11 +233,14 @@ public:
             }
         }
 
+        std::vector<Polynomial>& vpolynomials = _vpolynomials; // used for Chunk initialization
+
         chunksOut.resize(switchPointsList.size() - 1);
         for( size_t iswitch = 1; iswitch < switchPointsList.size(); ++iswitch ) {
             dReal t1 = switchPointsList[iswitch], t0 = switchPointsList[iswitch - 1];
             dReal duration = t1 - t0;
-            std::vector<Polynomial> vpolynomials;
+
+            vpolynomials.resize(0);
             vpolynomials.reserve(ndof);
             for( std::vector<PiecewisePolynomial>::const_iterator itpwpoly = pwpolynomialsIn.begin(); itpwpoly != pwpolynomialsIn.end(); ++itpwpoly ) {
                 vpolynomials.push_back( itpwpoly->ExtractPolynomial(t0, t1) );
@@ -252,6 +256,11 @@ public:
     int envid;
 
     std::string __description;
+
+private:
+    // For use in ConvertPiecewisePolynomialsToChunks
+    std::vector<dReal> _switchPointsList; // store the time instants where any dofs switches polynomials
+    std::vector<Polynomial> _vpolynomials;
 };
 
 } // end namespace PiecewisePolynomialsInternal
