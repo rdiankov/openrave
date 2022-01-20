@@ -149,7 +149,6 @@ void Grabbed::ComputeListNonCollidingLinks()
         // Check grabbed body vs other existing grabbed bodies
         std::vector<KinBody::LinkPtr> vAttachedToOtherGrabbed;
         // int iOtherGrabbed = -1;
-        int numOtherGrabbed = pGrabber->_vGrabbedBodies.size();
         for( const GrabbedPtr& pOtherGrabbed : pGrabber->_vGrabbedBodies ) {
             // ++iOtherGrabbed;
             KinBodyPtr pOtherGrabbedBody = pOtherGrabbed->_pGrabbedBody.lock();
