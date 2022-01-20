@@ -154,8 +154,8 @@ void Polynomial::Reparameterize(const dReal t0)
 
 dReal Polynomial::Eval(dReal t) const
 {
-    if( t < 0 ) {
-        t = 0;
+    if( t <= 0 ) {
+        return vcoeffs[0];
     }
     else if( t > duration ) {
         t = duration;
@@ -172,13 +172,13 @@ dReal Polynomial::Evald1(dReal t) const
     if( degree < 1 ) {
         return 0;
     }
-    if( t < 0 ) {
-        t = 0;
+    _EnsureInitCoeffs1();
+    if( t <= 0 ) {
+        return vcoeffsd[0];
     }
     else if( t > duration ) {
         t = duration;
     }
-    _EnsureInitCoeffs1();
     dReal val = vcoeffsd.back();
     for( int i = (int)degree - 2; i >= 0; --i ) {
         val = val*t + vcoeffsd[i];
@@ -191,13 +191,13 @@ dReal Polynomial::Evald2(dReal t) const
     if( degree < 2 ) {
         return 0;
     }
-    if( t < 0 ) {
-        t = 0;
+    _EnsureInitCoeffs2();
+    if( t <= 0 ) {
+        return vcoeffsdd[0];
     }
     else if( t > duration ) {
         t = duration;
     }
-    _EnsureInitCoeffs2();
     dReal val = vcoeffsdd.back();
     for( int i = (int)degree - 3; i >= 0; --i ) {
         val = val*t + vcoeffsdd[i];
@@ -210,13 +210,13 @@ dReal Polynomial::Evald3(dReal t) const
     if( degree < 3 ) {
         return 0;
     }
-    if( t < 0 ) {
-        t = 0;
+    _EnsureInitCoeffs3();
+    if( t <= 0 ) {
+        return vcoeffsddd[0];
     }
     else if( t > duration ) {
         t = duration;
     }
-    _EnsureInitCoeffs3();
     dReal val = vcoeffsddd.back();
     for( int i = (int)degree - 4; i >= 0; --i ) {
         val = val*t + vcoeffsddd[i];
