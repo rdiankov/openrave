@@ -335,6 +335,10 @@ Polynomial Polynomial::Integrate(const dReal c) const
 
 Polynomial& Polynomial::operator=(const Polynomial& r)
 {
+    if( this == &r ) {
+        return *this;
+    }
+
     degree = r.degree;
     vcoeffs = r.vcoeffs;
     _bInitCoeffs1 = r._bInitCoeffs1;
@@ -356,6 +360,7 @@ Polynomial& Polynomial::operator=(const Polynomial& r)
         vcextrema = r.vcextrema;
     }
     // Do not copy _vcurcoeffs since it is only used as cache.
+    return *this;
 }
 
 void Polynomial::_FindAllLocalExtrema() const
