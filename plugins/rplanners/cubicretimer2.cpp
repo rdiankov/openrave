@@ -844,7 +844,7 @@ protected:
                 }
                 else {
                     fMin = _v0pos[idof];
-                    fMin = _v1pos[idof];
+                    fMax = _v1pos[idof];
                 }
                 vlower[idof] = fMin - 1000;
                 vupper[idof] = fMax + 1000;
