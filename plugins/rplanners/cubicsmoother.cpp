@@ -757,7 +757,7 @@ public:
                                     break; // break out of slowdown loop
                                 }
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
-                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; max manip accel violated. fTimeBasedSurpassMult=%.15e; new fCurVelMult=%.15e; fCurAccelMult=%.15e", _envId%iter%numIters%t0%t1%checkret.fTimeBasedSurpassMult%fCurVelMult%fCurAccelMult);
+                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; max manip accel violated (%.15e > %.15e). fTimeBasedSurpassMult=%.15e; new fCurVelMult=%.15e; fCurAccelMult=%.15e", _envId%iter%numIters%t0%t1%checkret.fMaxManipAccel%_parameters->maxmanipaccel%checkret.fTimeBasedSurpassMult%fCurVelMult%fCurAccelMult);
 #endif
                                 bool bAccelLimitsChanged = false;
                                 for( size_t idof = 0; idof < _ndof; ++idof ) {
@@ -790,7 +790,7 @@ public:
                                     break; // break out of slowdown loop
                                 }
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
-                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; max manip speed violated. fTimeBasedSurpassMult=%.15e; new fCurVelMult=%.15e; fCurAccelMult=%.15e", _envId%iter%numIters%t0%t1%checkret.fTimeBasedSurpassMult%fCurVelMult%fCurAccelMult);
+                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; max manip speed violated (%.15e > %.15e). fTimeBasedSurpassMult=%.15e; new fCurVelMult=%.15e; fCurAccelMult=%.15e", _envId%iter%numIters%t0%t1%checkret.fMaxManipSpeed%_parameters->maxmanipspeed%checkret.fTimeBasedSurpassMult%fCurVelMult%fCurAccelMult);
 #endif
                                 bool bVelLimitsChanged = false;
                                 for( size_t idof = 0; idof < _ndof; ++idof ) {
