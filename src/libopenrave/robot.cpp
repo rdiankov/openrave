@@ -823,7 +823,10 @@ bool RobotBase::InitFromRobotInfo(const RobotBaseInfo& info)
         _vecGripperInfos.push_back(newGripperInfo);
     }
 
-    _id = info._id;
+    if( !info._id.empty() ) {
+        // preserve id if KinBodyInfo has empty id
+        _id = info._id;
+    }
     _name = info._name;
     _referenceUri = info._referenceUri;
 

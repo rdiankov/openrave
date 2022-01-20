@@ -797,7 +797,10 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
         return false;
     }
 
-    _id = info._id;
+    if( !info._id.empty() ) {
+        // preserve id if KinBodyInfo has empty id
+        _id = info._id;
+    }
     _name = info._name;
     _referenceUri = info._referenceUri;
 
