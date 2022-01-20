@@ -3505,12 +3505,12 @@ public:
         _listNonCollidingIsValid = false;
     }
 
-    inline void _SetLinkNonCollidingIsValid(const bool bIsValid)
+    inline void _SetLinkNonCollidingIsValid(bool bIsValid)
     {
         _listNonCollidingIsValid = bIsValid;
     }
 
-    inline const bool IsListNonCollidingLinksValid() const
+    inline bool IsListNonCollidingLinksValid() const
     {
         return _listNonCollidingIsValid;
     }
