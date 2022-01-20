@@ -91,10 +91,10 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryZeroTimeDerivativesO
     Polynomial poly; // for temporarily holding the polynomial for each segment
 
     dReal prevPosition, prevVelocity, prevAcceleration;
-    std::vector<dReal> vcoeffs(4, 0);
+    const dReal constantJerk = j/6.0; // segments that have non-zero jerk use this value.
 
     // Segment1
-    poly.Initialize(tj, std::vector<dReal>({x0, 0, 0, j/6.0}));
+    poly.Initialize(tj, std::vector<dReal>({x0, 0, 0, constantJerk}));
     vpolynomials.push_back(poly);
     prevPosition = poly.Eval(poly.duration);
     prevVelocity = poly.Evald1(poly.duration);
@@ -110,7 +110,7 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryZeroTimeDerivativesO
     }
 
     // Segment3
-    poly.Initialize(tj, std::vector<dReal>({prevPosition, prevVelocity, 0.5*prevAcceleration, -j/6.0}));
+    poly.Initialize(tj, std::vector<dReal>({prevPosition, prevVelocity, 0.5*prevAcceleration, -constantJerk}));
     vpolynomials.push_back(poly);
     prevPosition = poly.Eval(poly.duration);
     prevVelocity = poly.Evald1(poly.duration);
@@ -126,7 +126,7 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryZeroTimeDerivativesO
     }
 
     // Segment5
-    poly.Initialize(tj, std::vector<dReal>({prevPosition, prevVelocity, 0.0, -j/6.0}));
+    poly.Initialize(tj, std::vector<dReal>({prevPosition, prevVelocity, 0.0, -constantJerk}));
     vpolynomials.push_back(poly);
     prevPosition = poly.Eval(poly.duration);
     prevVelocity = poly.Evald1(poly.duration);
@@ -142,7 +142,7 @@ PolynomialCheckReturn CubicInterpolator::Compute1DTrajectoryZeroTimeDerivativesO
     }
 
     // Segment7
-    poly.Initialize(tj, std::vector<dReal>({prevPosition, prevVelocity, 0.5*prevAcceleration, j/6.0}));
+    poly.Initialize(tj, std::vector<dReal>({prevPosition, prevVelocity, 0.5*prevAcceleration, constantJerk}));
     vpolynomials.push_back(poly);
 
     pwpoly.Initialize(vpolynomials);
