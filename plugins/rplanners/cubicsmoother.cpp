@@ -214,7 +214,7 @@ public:
             // For consistency checking
             dReal fExpectedDuration = 0;
             dReal fDurationDiscrepancyThresh = 1e-2;
-            dReal fTrimEdgesTime = _parameters->_fStepLength*2; // we ignore constraints during [0, fTrimEdgesTime] and [duration - fTrimEdgesTime, duration]
+            // dReal fTrimEdgesTime = _parameters->_fStepLength*2; // we ignore constraints during [0, fTrimEdgesTime] and [duration - fTrimEdgesTime, duration]
             std::vector<PiecewisePolynomials::Chunk>& tempInterpolatedChunks = _cacheInterpolatedChunks; // for storing interpolation results
             std::vector<PiecewisePolynomials::Chunk>& tempCheckedChunks = _cacheCheckedChunks; // for storing results from CheckChunkAllConstraints
             std::vector<PiecewisePolynomials::Chunk>& vFinalChunks = _cacheFinalChunks; // for storing chunks before putting them into the final trajcetory
@@ -1094,7 +1094,7 @@ public:
 
         vChunksOut.resize(0);
 
-        std::vector<PiecewisePolynomials::Chunk> vIntermediateChunks;
+        std::vector<PiecewisePolynomials::Chunk>& vIntermediateChunks = _vIntermediateChunks; // will be resized in CheckChunkAllConstraints
         for( std::vector<PiecewisePolynomials::Chunk>::const_iterator itchunk = vChunksIn.begin(); itchunk != vChunksIn.end(); ++itchunk ) {
             checkret = CheckChunkAllConstraints(*itchunk, options, vIntermediateChunks);
             if( checkret.retcode != 0 ) {
@@ -1167,7 +1167,6 @@ protected:
                                                                                  std::vector<dReal>& a0Vect, std::vector<dReal>& a1Vect,
                                                                                  std::vector<PiecewisePolynomials::Chunk>& vChunksOut) override
     {
-        std::vector<PiecewisePolynomials::Chunk>& tempChunks = _cacheInterpolatedChunksDuringCheck;
         dReal curTime = 0;
         if( vChunksOut.capacity() < _constraintReturn->_configurationtimes.size() ) {
             vChunksOut.reserve(_constraintReturn->_configurationtimes.size());
@@ -1336,7 +1335,7 @@ private:
     PiecewisePolynomials::Chunk _cacheTrimmedChunk, _cacheRemChunk; ///< for constraints checking at the very end
 
     // For use during CheckX process
-    std::vector<PiecewisePolynomials::Chunk> _cacheInterpolatedChunksDuringCheck;
+    std::vector<PiecewisePolynomials::Chunk> _vIntermediateChunks;
 
     const bool REMOVE_STARTTIMEMULT=true; // do not keep track of fStartTimeVelMult and fStartTimeAccelMult of successful shortcut iterations
     const bool CORRECT_VELACCELMULT=true; // correct the formula for computing new scaled-down vel/accel limits
