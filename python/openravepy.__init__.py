@@ -39,7 +39,7 @@ __docformat__ = 'restructuredtext'
 When building with Boost.Python, this wraps up the C++ class openravepy::openrave_exception.
 Available methods for an exception e are
 - e.GetCode()
-- e.message()
+- e.message
 """
 if openravepy_int.__pythonbinding__ == 'pybind11':
     from .openravepy_int import _OpenRAVEException as OpenRAVEException
@@ -68,7 +68,7 @@ else:
             Exception.__init__( self )
             self._pimpl = app_error
         def __str__( self ):
-            return self._pimpl.message()
+            return self._pimpl.message
         def __getattribute__(self, attr):
             my_pimpl = super(std_exception, self).__getattribute__("_pimpl")
             try:
@@ -82,7 +82,7 @@ else:
             Exception.__init__( self )
             self._pimpl = app_error
         def __str__( self ):
-            return self._pimpl.message()
+            return self._pimpl.message
         def __getattribute__(self, attr):
             my_pimpl = super(runtime_error, self).__getattribute__("_pimpl")
             try:

@@ -200,7 +200,7 @@ OPENRAVE_PYTHON_MODULE(convexdecompositionpy)
     class_< cdpy_exception >( "_cdpy_exception_" )
     .def( init<const std::string&>() )
     .def( init<const cdpy_exception&>() )
-    .def( "message", &cdpy_exception::message, return_copy_const_ref() )
+    .add_property( "message", make_function(&cdpy_exception::message, return_copy_const_ref()) )
     .def( "__str__", &cdpy_exception::message, return_copy_const_ref() )
     ;
     OpenRAVEBoostPythonExceptionTranslator<cdpy_exception>();
