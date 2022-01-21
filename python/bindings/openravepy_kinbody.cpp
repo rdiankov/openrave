@@ -3664,6 +3664,23 @@ object PyKinBody::ComputeInverseDynamics(object odofaccelerations, object oexter
     }
 }
 
+object PyKinBody::ComputeDynamicLimits(py::object oDOFPositions, py::object oDOFVelocities) const
+{
+    if( IS_PYTHONOBJECT_NONE(oDOFPositions) || IS_PYTHONOBJECT_NONE(oDOFVelocities) ) {
+        return py::make_tuple(py::none_(), py::none_());
+    }
+    const std::vector<dReal> vDOFPositions = ExtractArray<dReal>(oDOFPositions);
+    const std::vector<dReal> vDOFVelocities = ExtractArray<dReal>(oDOFVelocities);
+    std::vector<dReal> vDynamicAccelerationLimits, vDynamicJerkLimits;
+    _pbody->ComputeDynamicLimits(vDynamicAccelerationLimits, vDynamicJerkLimits, vDOFPositions, vDOFVelocities);
+    return py::make_tuple(toPyArray(vDynamicAccelerationLimits), toPyArray(vDynamicJerkLimits));
+}
+
+int PyKinBody::GetDynamicLimitsDOF() const
+{
+    return _pbody->GetDynamicLimitsDOF();
+}
+
 void PyKinBody::SetSelfCollisionChecker(PyCollisionCheckerBasePtr pycollisionchecker)
 {
     _pbody->SetSelfCollisionChecker(openravepy::GetCollisionChecker(pycollisionchecker));
@@ -5521,6 +5538,8 @@ void init_openravepy_kinbody()
 #else
                          .def("ComputeInverseDynamics",&PyKinBody::ComputeInverseDynamics, ComputeInverseDynamics_overloads(PY_ARGS("dofaccelerations","externalforcetorque","returncomponents") sComputeInverseDynamicsDoc.c_str()))
 #endif
+                         .def("ComputeDynamicLimits",&PyKinBody::ComputeDynamicLimits, PY_ARGS("dofPositions","dofVelocities") DOXY_FN(KinBody,ComputeDynamicLimits))
+                         .def("GetDynamicLimitsDOF",&PyKinBody::GetDynamicLimitsDOF, DOXY_FN(KinBody,GetDynamicLimitsDOF))
                          .def("SetSelfCollisionChecker",&PyKinBody::SetSelfCollisionChecker,PY_ARGS("collisionchecker") DOXY_FN(KinBody,SetSelfCollisionChecker))
                          .def("GetSelfCollisionChecker", &PyKinBody::GetSelfCollisionChecker, /*PY_ARGS("collisionchecker")*/ DOXY_FN(KinBody,GetSelfCollisionChecker))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
