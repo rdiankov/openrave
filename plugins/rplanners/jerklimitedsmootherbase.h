@@ -417,7 +417,13 @@ public:
                 std::vector<dReal>::const_iterator it = _constraintReturn->_configurations.begin();
                 for( size_t itime = 0; itime < _constraintReturn->_configurationtimes.size(); ++itime, it += _ndof ) {
                     std::copy(it, it + _ndof, x0Vect.begin());
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+                    _StartCaptureCheckPathAllConstraints(/*incrementNumCalls*/ false);
+#endif
                     int ret = _parameters->CheckPathAllConstraints(x0Vect, x0Vect, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, checkCollisionOptions);
+#ifdef JERK_LIMITED_SMOOTHER_TIMING_DEBUG
+                    _EndCaptureCheckPathAllConstraints();
+#endif
                     if( ret != 0 ) {
                         return PiecewisePolynomials::CheckReturn(ret);
                     }
@@ -1119,9 +1125,11 @@ protected:
     size_t _nCallsCheckPathAllConstraints; // how many times CheckPathAllConstraints is called
     dReal _totalTimeCheckPathAllConstraints;
     uint32_t _tStartCheckPathAllConstraints, _tEndCheckPathAllConstraints;
-    inline void _StartCaptureCheckPathAllConstraints()
+    inline void _StartCaptureCheckPathAllConstraints(const bool incrementNumCalls=true)
     {
-        _nCallsCheckPathAllConstraints++;
+        if( incrementNumCalls ) {
+            _nCallsCheckPathAllConstraints++;
+        }
         _tStartCheckPathAllConstraints = utils::GetMicroTime();
     }
     inline void _EndCaptureCheckPathAllConstraints()
