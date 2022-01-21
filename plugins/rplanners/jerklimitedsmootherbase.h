@@ -137,6 +137,9 @@ public:
         _cacheUpperLimits.resize(_ndof);
         _cacheResolutions.resize(_ndof);
 
+        _cacheVelLowerBound.resize(_ndof);
+        _cacheAccelLowerBound.resize(_ndof);
+
         _InitializeInterpolator();
         if( _maskinterpolation == IT_Default ) {
             throw OPENRAVE_EXCEPTION_FORMAT0("interpolation type is not set by the smoother yet.", ORE_InvalidArguments);
@@ -1080,6 +1083,7 @@ protected:
     std::vector<dReal> _cacheAllWaypoints; ///< stores the concatenation of all waypoints from the initial trajectory
     std::vector<std::vector<dReal> > _cacheWaypoints, _cacheNewWaypoints;
     std::vector<dReal> _cacheVellimits, _cacheAccelLimits, _cacheJerkLimits;
+    std::vector<dReal> _cacheVelLowerBound, _cacheAccelLowerBound;
 
     std::vector<PiecewisePolynomials::Chunk> _cacheInterpolatedChunks; ///< for storing interpolation results
     std::vector<PiecewisePolynomials::Chunk> _cacheCheckedChunks; ///< for storing results from CheckChunkAllConstraints

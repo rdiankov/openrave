@@ -531,6 +531,7 @@ public:
         std::vector<dReal> &velLimits = _cacheVellimits, &accelLimits = _cacheAccelLimits, &jerkLimits = _cacheJerkLimits;
         std::vector<PiecewisePolynomials::Chunk>& tempChunks = _cacheInterpolatedChunks; // for storing interpolation result
         std::vector<PiecewisePolynomials::Chunk>& vChunksOut = _cacheCheckedChunks; // for storing chunks from CheckAllChunksAllConstraints results
+        std::vector<dReal> &vVelLowerBound = _cacheVelLowerBound, &vAccelLowerBound = _cacheAccelLowerBound; // lower bounds of how much we can scale down velocity/acceleration limits in a certain shortcutting iteration
 
         //
         // Main shortcut loop
@@ -680,6 +681,14 @@ public:
                 // dReal fCurJerkMult = 1.0; // experimental
                 // RAVELOG_DEBUG_FORMAT("env=%d, fCurVelMult=%f; fCurAccelMult=%f;", _envId%fCurVelMult%fCurAccelMult);
 
+                {
+                    // Precompute the velocity/acceleration lower bounds from the boundary conditions.
+                    for( size_t idof = 0; idof < _ndof; ++idof ) {
+                        vVelLowerBound[idof] = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
+                        vAccelLowerBound[idof] = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
+                    }
+                }
+
                 // These parameters keep track of multiplier for the current shortcut iteration.
                 dReal fCurVelMult;
                 dReal fCurAccelMult;
@@ -691,11 +700,11 @@ public:
                     if( fCurVelMult < 1.0 - PiecewisePolynomials::g_fPolynomialEpsilon ) {
                         dReal fVelLowerBound, fAccelLowerBound;
                         for( size_t idof = 0; idof < _ndof; ++idof ) {
-                            fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
+                            fVelLowerBound = vVelLowerBound[idof];
                             if( !PiecewisePolynomials::FuzzyEquals(fVelLowerBound, velLimits[idof], PiecewisePolynomials::g_fPolynomialEpsilon) ) {
                                 velLimits[idof] = std::max(fVelLowerBound, fCurVelMult*velLimits[idof]);
                             }
-                            fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
+                            fAccelLowerBound = vAccelLowerBound[idof];
                             if( !PiecewisePolynomials::FuzzyEquals(fAccelLowerBound, accelLimits[idof], PiecewisePolynomials::g_fPolynomialEpsilon) ) {
                                 accelLimits[idof] = std::max(fAccelLowerBound, fCurAccelMult*accelLimits[idof]);
                             }
@@ -819,7 +828,7 @@ public:
 #endif
                                     bool bAccelLimitsChanged = false;
                                     for( size_t idof = 0; idof < _ndof; ++idof ) {
-                                        dReal fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
+                                        dReal fAccelLowerBound = vAccelLowerBound[idof];
                                         if( !PiecewisePolynomials::FuzzyEquals(accelLimits[idof], fAccelLowerBound, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
                                             if( CORRECT_VELACCELMULT ) {
                                                 accelLimits[idof] = std::max(fAccelLowerBound, fAccelMult*accelLimits[idof]);
@@ -858,7 +867,7 @@ public:
 #endif
                                 bool bVelLimitsChanged = false;
                                 for( size_t idof = 0; idof < _ndof; ++idof ) {
-                                    dReal fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
+                                    dReal fVelLowerBound = vVelLowerBound[idof];
                                     if( !PiecewisePolynomials::FuzzyEquals(velLimits[idof], fVelLowerBound, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
                                         if( CORRECT_VELACCELMULT ) {
                                             velLimits[idof] = std::max(fVelLowerBound, fVelMult*velLimits[idof]);
@@ -906,7 +915,7 @@ public:
 
                             bool bLimitsChanged = false;
                             for( size_t idof = 0; idof < _ndof; ++idof ) {
-                                dReal fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
+                                dReal fVelLowerBound = vVelLowerBound[idof];
                                 if( !PiecewisePolynomials::FuzzyEquals(velLimits[idof], fVelLowerBound, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
                                     if( CORRECT_VELACCELMULT ) {
                                         velLimits[idof] = std::max(fVelLowerBound, fMult1*velLimits[idof]);
@@ -917,7 +926,7 @@ public:
                                     bLimitsChanged = true;
                                 }
 
-                                dReal fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
+                                dReal fAccelLowerBound = vAccelLowerBound[idof];
                                 if( !PiecewisePolynomials::FuzzyEquals(accelLimits[idof], fAccelLowerBound, PiecewisePolynomials::g_fPolynomialEpsilon) ) {
                                     if( CORRECT_VELACCELMULT ) {
                                         accelLimits[idof] = std::max(fAccelLowerBound, fMult2*accelLimits[idof]);
