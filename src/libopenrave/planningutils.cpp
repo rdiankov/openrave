@@ -2374,11 +2374,17 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                     // TODO use the ElectricMotorActuatorInfo if present to get the real torque with friction
                     if( fcurtorque < torquelimits.first || fcurtorque > torquelimits.second ) {
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            stringstream ssvel; ssvel << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                            std::stringstream sslog; sslog << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                            sslog << "dofvel=[";
                             FOREACHC(itvel, vdofvelocities) {
-                                ssvel << *itvel << ",";
+                                sslog << *itvel << ",";
                             }
-                            _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e !< %e !< %e. vel=[%s]")%pbody->GetJointFromDOFIndex(index)->GetName()%index%torquelimits.first%fcurtorque%torquelimits.second%ssvel.str()));
+                            sslog << "]; doffullaccel=[";
+                            FOREACHC(itaccel, _dofaccelerations) {
+                                sslog << *itaccel << ",";
+                            }
+                            sslog << "]";
+                            _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e !< %e !< %e. %s")%pbody->GetJointFromDOFIndex(index)->GetName()%index%torquelimits.first%fcurtorque%torquelimits.second%sslog.str()));
                         }
 
                         // compute the fTimeBasedSurpassMult for torque violation : TODO : this might not be correct in general inverse dynamics cases.
@@ -2450,17 +2456,12 @@ void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
         if( _listCheckBodies.size() > 0 ) {
             ss << "env=" << _listCheckBodies.front()->GetEnv()->GetId() << ", ";
         }
-        ss << prefix << ", ";
-        for(size_t i = 0; i < vcurrentvalues.size(); ++i ) {
-            if( i > 0 ) {
-                ss << "," << vcurrentvalues[i];
-            }
-            else {
-                ss << "colvalues=[" << vcurrentvalues[i];
-            }
+        ss << prefix << "; colvalues=[";
+        FOREACHC(itval, vcurrentvalues) {
+            ss << *itval << ",";
+            ss << "]";
+            RAVELOG_VERBOSE(ss.str());
         }
-        ss << "]";
-        RAVELOG_VERBOSE(ss.str());
     }
 }
 
