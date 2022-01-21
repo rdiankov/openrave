@@ -189,7 +189,7 @@ public:
 #endif
             PiecewisePolynomials::CheckReturn checkret(ret);
             if( ret == CFO_CheckTimeBasedConstraints ) {
-                checkret.fTimeBasedSurpassMult = 0.98 * _constraintReturn->_fTimeBasedSurpassMult;
+                checkret.fTimeBasedSurpassMult = fTimeBasedReductionFactor * _constraintReturn->_fTimeBasedSurpassMult;
             }
             return checkret;
         }
@@ -306,7 +306,7 @@ public:
             if( ret != 0 ) {
                 PiecewisePolynomials::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
-                    checkret.fTimeBasedSurpassMult = 0.98 * _constraintReturn->_fTimeBasedSurpassMult;
+                    checkret.fTimeBasedSurpassMult = fTimeBasedReductionFactor * _constraintReturn->_fTimeBasedSurpassMult;
                 }
                 return checkret;
             }
@@ -1152,6 +1152,8 @@ protected:
 
     const bool LAZY_COLLISION_CHECKING=true;
     dReal fEstimatedVelMult=0.0; // when computing initial retiming, record the average value of fTimeBasedSurpassMult needed for all successful computation. can use this value as a starting multiplier during shortcutting.
+
+    const dReal fTimeBasedReductionFactor = 0.98; // a number to be multiplied to fTimeBasedSurpassMult returned from CheckPathAllConstraints due to some time-based constraints violation
 
 }; // end class JerkLimitedSmootherBase
 
