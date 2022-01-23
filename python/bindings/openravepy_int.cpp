@@ -19,6 +19,7 @@
 #include <openrave/utils.h>
 #include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/filesystem/operations.hpp>
 
 #include <openravepy/openravepy_kinbody.h>
 #include <openravepy/openravepy_collisioncheckerbase.h>
@@ -466,7 +467,7 @@ object toPyArray(const TransformMatrix& t)
 object toPyArray(const Transform& t)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvalues({7});
+    py::array_t<dReal> pyvalues(7);
     py::buffer_info buf = pyvalues.request();
     dReal* pvalue = (dReal*) buf.ptr;
     pvalue[0] = t.rot.x;
@@ -1112,7 +1113,7 @@ CollisionAction PyEnvironmentBase::_CollisionCallback(object fncallback, Collisi
         PyErr_Print();
     }
     CollisionAction ret = CA_DefaultAction;
-    if( IS_PYTHONOBJECT_NONE(res) || !res ) {
+    if( IS_PYTHONOBJECT_NONE(res) ) {
         ret = CA_DefaultAction;
         RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
     }
@@ -1603,7 +1604,7 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
     dReal* ppos = (dReal*) bufpos.ptr;
 
     // collision
-    py::array_t<bool> pycollision({nRays});
+    py::array_t<bool> pycollision(nRays);
     py::buffer_info bufcollision = pycollision.request();
     bool* pcollision = (bool*) bufcollision.ptr;
     if( nRays > 0 ) {
@@ -1855,9 +1856,9 @@ object PyEnvironmentBase::ReadKinBodyURI(const string &filename, object odictatt
     KinBodyPtr pbody;
     {
         openravepy::PythonThreadSaver threadsaver;
-        pbody = _penv->ReadKinBodyURI(filename);
+        pbody = _penv->ReadKinBodyURI(KinBodyPtr(), filename, dictatts);
     }
-    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(KinBodyPtr(), filename, dictatts),shared_from_this()));
+    return py::to_object(openravepy::toPyKinBody(pbody, shared_from_this()));
 }
 object PyEnvironmentBase::ReadKinBodyData(const string &data)
 {
@@ -2764,16 +2765,16 @@ py::object PyEnvironmentBase::GetDescription() const
     return ConvertStringToUnicode(_penv->GetDescription());
 }
 
-void PyEnvironmentBase::SetKeywords(const std::vector<std::string>& sceneKeywords)
+void PyEnvironmentBase::SetKeywords(py::object oSceneKeywords)
 {
+    std::vector<std::string> sceneKeywords = ExtractArray<std::string>(oSceneKeywords);
     _penv->SetKeywords(sceneKeywords);
 }
 
 py::list PyEnvironmentBase::GetKeywords() const
 {
     py::list pykeywords;
-    std::vector<std::string> keywords;
-    _penv->GetKeywords();
+    std::vector<std::string> keywords = _penv->GetKeywords();
     for(const std::string& keyword : keywords) {
         pykeywords.append(ConvertStringToUnicode(keyword));
     }
@@ -2977,7 +2978,22 @@ object get_std_runtime_error_unicode(std::runtime_error* p)
 
 std::string get_std_runtime_error_repr(std::runtime_error* p)
 {
-    return boost::str(boost::format("<std_exception('%s')>")%p->what());
+    return boost::str(boost::format("<std::runtime_error('%s')>")%p->what());
+}
+
+std::string get_boost_filesystem_error_message(boost::filesystem::filesystem_error* p)
+{
+    return std::string(p->what())+" ("+p->path1().native()+")";
+}
+
+object get_boost_filesystem_error_unicode(boost::filesystem::filesystem_error* p)
+{
+    return ConvertStringToUnicode(get_boost_filesystem_error_message(p));
+}
+
+std::string get_boost_filesystem_error_repr(boost::filesystem::filesystem_error* p)
+{
+    return boost::str(boost::format("<boost::filesystem::filesystem_error('%s')>")%get_boost_filesystem_error_message(p));
 }
 
 py::object GetCodeStringOpenRAVEException(OpenRAVEException* p)
@@ -3058,6 +3074,11 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
             pyerrdata.inc_ref(); // since passing to PyErr_SetObject
             PyErr_SetObject(PyExc_TypeError, pyerrdata.ptr() );
         }
+        catch( const boost::filesystem::filesystem_error& e ) {
+            py::object pyerrdata = ConvertStringToUnicode(std::string(e.what())+" ("+e.path1().native()+")");
+            pyerrdata.inc_ref(); // since passing to PyErr_SetObject
+            PyErr_SetObject(PyExc_RuntimeError, pyerrdata.ptr() );
+        }
         catch( const std::runtime_error& e ) {
             py::object pyerrdata = ConvertStringToUnicode(e.what());
             pyerrdata.inc_ref(); // since passing to PyErr_SetObject
@@ -3073,7 +3094,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     class_< OpenRAVEException >( OPENRAVE_EXCEPTION_CLASS_NAME, DOXY_CLASS(OpenRAVEException) )
     .def( init<const std::string&>() )
     .def( init<const OpenRAVEException&>() )
-    .def( "message", &OpenRAVEException::message, return_copy_const_ref() )
+    .add_property( "message", make_function(&OpenRAVEException::message, return_copy_const_ref()) )
     .def("GetCode", GetCodeStringOpenRAVEException)
     .def( "__str__", &OpenRAVEException::message, return_copy_const_ref() )
     .def( "__unicode__", get_openrave_exception_unicode)
@@ -3084,7 +3105,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     class_< std::runtime_error >( "_std_runtime_error_", no_init)
     .def( init<const std::string&>() )
     .def( init<const std::runtime_error&>() )
-    .def( "message", &std::runtime_error::what)
+    .add_property( "message", &std::runtime_error::what)
     .def( "__str__", &std::runtime_error::what)
     .def( "__unicode__", get_std_runtime_error_unicode)
     .def( "__repr__", get_std_runtime_error_repr)
@@ -3092,8 +3113,16 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     OpenRAVEBoostPythonExceptionTranslator<std::runtime_error>();
 
     //OpenRAVEBoostPythonExceptionTranslator<std::exception>();
-    class_< boost::bad_function_call, bases<std::runtime_error> >( "_boost_bad_function_call_");
+    class_< boost::bad_function_call, bases<std::runtime_error> >( "_boost_bad_function_call_", no_init);
     OpenRAVEBoostPythonExceptionTranslator<boost::bad_function_call>();
+
+    class_< boost::filesystem::filesystem_error, bases<std::runtime_error> >( "_boost_filesystem_error_", no_init)
+    .add_property( "message", &get_boost_filesystem_error_message)
+    .def( "__str__", &get_boost_filesystem_error_message)
+    .def( "__unicode__", &get_boost_filesystem_error_unicode)
+    .def( "__repr__", &get_boost_filesystem_error_repr)
+    ;
+    OpenRAVEBoostPythonExceptionTranslator<boost::filesystem::filesystem_error>();
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

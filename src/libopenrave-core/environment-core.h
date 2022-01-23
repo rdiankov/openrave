@@ -2389,7 +2389,7 @@ public:
         }
         return handles;
     }
-    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents)
+    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float> >& vpos, const RaveVector<float>& vextents)
     {
         SharedLock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
@@ -2814,7 +2814,7 @@ public:
                         // new name will conflict with *itExistingSameName, so should change the names to something temporarily
                         // for now, clear since the body should be processed later again
                         RAVELOG_DEBUG_FORMAT("env=%s, have to clear body name '%s' id=%s for loading body with id=%s", GetNameId()%(*itExistingSameName)->GetName()%(*itExistingSameName)->GetId()%(*itExisting)->GetId());
-                        (*itExistingSameName)->SetName(_GetUniqueName((*itExistingSameName)->GetName()+"_renamedDueToConflict_"));
+                        (*itExistingSameName)->SetName(_GetUniqueName((*itExistingSameName)->GetName()+"_tempRenamedDueToConflict_"));
                         listBodiesTemporarilyRenamed.push_back(*itExistingSameName);
                     }
                     pMatchExistingBody = *itExisting;
@@ -2865,7 +2865,7 @@ public:
                     ExclusiveLock lock(_mutexInterfaces);
                     vector<KinBodyPtr>::iterator itExisting = std::find(_vecbodies.begin(), _vecbodies.end(), pMatchExistingBody);
                     if( itExisting != _vecbodies.end() ) {
-                        _InvalidateKinBodyFromEnvBodyIndex(pMatchExistingBody->GetEnvironmentBodyIndex());
+                        _InvalidateKinBodyFromEnvBodyIndex(pMatchExistingBody->GetEnvironmentBodyIndex()); // essentially removes the entry from the environment
                     }
                 }
 
@@ -3500,7 +3500,8 @@ protected:
                 try {
                     KinBodyPtr pnewbody = _vecbodies.at(envBodyIndex);
                     if( !!pnewbody ) {
-                        pnewbody->Clone(pbody,options);
+                        // Should ignore grabbed bodies since the grabbed states will be updated later (via state saver's Restore) below.
+                        pnewbody->Clone(pbody, options|Clone_IgnoreGrabbedBodies);
                     }
                 }
                 catch(const std::exception &ex) {
