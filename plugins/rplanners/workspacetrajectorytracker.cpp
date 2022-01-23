@@ -46,13 +46,12 @@ Planner Parameters\n\
     virtual ~WorkspaceTrajectoryTracker() {
     }
 
-    virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params, const std::string& extraParameters) override
+    virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
         boost::shared_ptr<WorkspaceTrajectoryParameters> parameters(new WorkspaceTrajectoryParameters(GetEnv()));
         parameters->copy(params);
-        parameters->LoadExtraParameters(extraParameters);
         _robot = probot;
         _manip = _robot->GetActiveManipulator();
 
@@ -286,7 +285,7 @@ Planner Parameters\n\
             return PlannerStatus("bPrevInCollision" ,PS_Failed);
         }
 
-        if( !_retimerplanner->InitPlan(RobotBasePtr(),_parameters,_parameters->_sExtraParameters) || !_retimerplanner->PlanPath(poutputtraj).GetStatusCode() ) {
+        if( !_retimerplanner->InitPlan(RobotBasePtr(),_parameters) || !_retimerplanner->PlanPath(poutputtraj).GetStatusCode() ) {
             return PlannerStatus(PS_Failed);
         }
 

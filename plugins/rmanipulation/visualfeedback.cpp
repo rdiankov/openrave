@@ -1379,7 +1379,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         RAVELOG_INFOA("starting planning\n");
         uint64_t starttime = utils::GetMicroTime();
         for(int iter = 0; iter < 1; ++iter) {
-            if( !planner->InitPlan(_robot, params, params->_sExtraParameters) ) {
+            if( !planner->InitPlan(_robot, params) ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
@@ -1497,7 +1497,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         bool bSuccess = false;
         RAVELOG_INFOA("starting planning\n");
         uint64_t starttime = utils::GetMicroTime();
-        if( !planner->InitPlan(_robot, params, params->_sExtraParameters) ) {
+        if( !planner->InitPlan(_robot, params) ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }

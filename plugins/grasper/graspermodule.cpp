@@ -328,7 +328,7 @@ public:
         params->SetRobotActiveJoints(_robot);
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
-        if( !_planner->InitPlan(_robot, params, params->_sExtraParameters) ) {
+        if( !_planner->InitPlan(_robot, params) ) {
             RAVELOG_WARN("InitPlan failed\n");
             return false;
         }
@@ -986,7 +986,7 @@ public:
                 ptraj->Init(probot->GetActiveConfigurationSpecification());
 
                 // InitPlan/PlanPath
-                if( !planner->InitPlan(probot, params, params->_sExtraParameters) ) {
+                if( !planner->InitPlan(probot, params) ) {
                     RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                     continue;
                 }
@@ -1070,7 +1070,7 @@ public:
                         probot->SetActiveDOFs(worker_params->vactiveindices,worker_params->affinedofs,worker_params->affineaxis);
                         params->vinitialconfig.resize(0);
                         ptraj->Init(probot->GetActiveConfigurationSpecification());
-                        if( !planner->InitPlan(probot, params, params->_sExtraParameters) ) {
+                        if( !planner->InitPlan(probot, params) ) {
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }

@@ -376,12 +376,13 @@ bool PlannerParameters::_Copy(const PlannerParameters& other)
     _nRandomGeneratorSeed = other._nRandomGeneratorSeed;
     _plannerparametersdepth = other._plannerparametersdepth;
 
+    LoadXMLParameterData(_sExtraParameters);
     return true;
 }
 
-void PlannerParameters::LoadExtraParameters(const std::string& extraParameters)
+void PlannerParameters::LoadXMLParameterData(const std::string& extraXMLParameterData)
 {
-    if (extraParameters.empty()) {
+    if (extraXMLParameterData.empty()) {
         // nothing to load
         return;
     }
@@ -389,7 +390,7 @@ void PlannerParameters::LoadExtraParameters(const std::string& extraParameters)
     std::stringstream ss;
 
     ss << "<" << GetXMLId() << ">" << endl;
-    ss << extraParameters << endl;
+    ss << extraXMLParameterData << endl;
     ss << "</" << GetXMLId() << ">" << endl;
 
     ss >> *this;
@@ -1089,7 +1090,7 @@ bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
     boost::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
     isParameters >> *localparams;
     localparams->Validate();
-    return InitPlan(pbase,localparams, "");
+    return InitPlan(pbase,localparams);
 }
 
 UserDataPtr PlannerBase::RegisterPlanCallback(const PlanCallbackFn& callbackfn)
@@ -1126,15 +1127,12 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
 
     PlannerParametersPtr params(new PlannerParameters());
     params->copy(GetParameters());
-    //params->_sExtraParameters += GetParameters()->_sPostProcessingParameters;
+    params->_sExtraParameters += GetParameters()->_sPostProcessingParameters;
     params->_sPostProcessingPlanner = "";
     params->_sPostProcessingParameters = "";
-
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
     //params->_nMaxPlanningTime = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters??
-
-    // post processing parameters is nested, here we pop one level of GetParameters()->_sPostProcessingParameters and parse into _sPostProcessingParameters and _sPostProcessingPlanner of __cachePostProcessPlanner
-    if( __cachePostProcessPlanner->InitPlan(probot, params, params->_sExtraParameters + GetParameters()->_sPostProcessingParameters) ) {
+    if( __cachePostProcessPlanner->InitPlan(probot, params) ) {
         return __cachePostProcessPlanner->PlanPath(ptraj);
     }
 

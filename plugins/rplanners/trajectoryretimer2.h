@@ -48,14 +48,12 @@ public:
         _bmanipconstraints = false;
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params, const std::string& extraParameters) override
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         params->Validate();
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
-        _parameters->LoadExtraParameters(extraParameters);
-
         // reset the cache
         _cachedoldspec = ConfigurationSpecification();
         _cachednewspec = ConfigurationSpecification();

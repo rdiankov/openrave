@@ -222,12 +222,12 @@ public:
         if (!PlannerParameters::_Copy(r)) {
             return false;
         }
-        
+
         const GraspSetParameters* pother = dynamic_cast<const GraspSetParameters*>(&r);
         if (!pother) {
             return false;
         }
-        
+
         const GraspSetParameters& other = *pother;
         _vgrasps = other._vgrasps;
         if (!!other._ptarget) {
@@ -388,7 +388,7 @@ public:
 
         return true;
     }
-    
+
     dReal fstandoff;     ///< start closing fingers when at this distance
     KinBodyPtr targetbody;     ///< the target that will be grasped, all parameters will be in this coordinate system. if not present, then below transformations are in absolute coordinate system.
     dReal ftargetroll;     ///< rotate the hand about the palm normal (if one exists) by this many radians
@@ -861,7 +861,7 @@ public:
     }
 
     virtual bool _Copy(const PlannerParameters& r) override;
-    
+
     dReal maxdeviationangle;     ///< the maximum angle the next iksolution can deviate from the expected direction computed by the jacobian
     bool maintaintiming;     ///< maintain timing with input trajectory
     bool greedysearch;     ///< if true, will greeidly choose solutions (can possibly fail even a solution exists)
@@ -902,7 +902,7 @@ public:
         if (!pother) {
             return false;
         }
-        
+
         const RRTParameters& other = *pother;
         _minimumgoalpaths = other._minimumgoalpaths;
 
@@ -986,7 +986,7 @@ public:
         _nMinIterations = other._nMinIterations;
 
         return true;
-    }    
+    }
 
     dReal _fGoalBiasProb;
     int _nRRTExtentType; ///< the rrt extent type. if 0 then extend all the way to the sampled position. if 1, then just extend one step length before sampling again.

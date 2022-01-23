@@ -141,7 +141,7 @@ public:
                 return false;
             }
 
-            if( !planner->InitPlan(robot, params, params->_sExtraParameters) ) {
+            if( !planner->InitPlan(robot, params) ) {
                 return false;
             }
             if( !planner->PlanPath(ptraj).GetStatusCode() ) {

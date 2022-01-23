@@ -418,7 +418,7 @@ private:
     /// For example: std::stringstream(_sPostProcessingParameters) >> _parameters;
     std::string _sPostProcessingParameters;
 
-    /// \brief Extra parameters data that does not fit within this planner parameters structure, but is still important not to lose all the information.
+    /// \brief Extra parameters in XML format that does not fit within this planner parameters structure, but is still important not to lose all the information.
     std::string _sExtraParameters;
 
     /// \brief Random generator seed for all the random numbers a planner needs.
@@ -438,7 +438,7 @@ private:
     std::list<SpaceSamplerBasePtr> _listInternalSamplers;
 
     /// loads extra parameters xml string into this, used when setting parameters from _sPostProcessingParameters
-    virtual void LoadExtraParameters(const std::string& extraParameters);
+    virtual void LoadXMLParameterData(const std::string& extraXMLParameters);
 
 protected:
     /// \brief copies other into this
@@ -613,7 +613,7 @@ public:
         \param robot main robot to be used for planning
         \param params The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.
      */
-    virtual bool InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params, const std::string& extraParameters) = 0;
+    virtual bool InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params) = 0;
 
     /** \brief Setup scene, robot, and properties of the plan, and reset all structures with pparams.
 

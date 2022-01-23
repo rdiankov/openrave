@@ -240,7 +240,7 @@ bool PyPlannerBase::InitPlan(PyRobotBasePtr pyrobot, PyPlannerParametersPtr ppar
     if( releasegil ) {
         statesaver.reset(new openravepy::PythonThreadSaver());
     }
-    return _pplanner->InitPlan(probot,parameters,parameters->_sExtraParameters);
+    return _pplanner->InitPlan(probot,parameters);
 }
 
 bool PyPlannerBase::InitPlan(PyRobotBasePtr pbase, const string& params)
