@@ -40,7 +40,7 @@ public:
     virtual ~GraspGradientPlanner() {
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset();

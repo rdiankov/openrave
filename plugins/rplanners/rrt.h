@@ -294,7 +294,7 @@ Some python code to display data::\n\
         dReal length;
     };
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new RRTParameters());
@@ -691,7 +691,7 @@ public:
     virtual ~BasicRrtPlanner() {
     }
 
-    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new BasicRRTParameters());
@@ -953,7 +953,7 @@ public:
     virtual ~ExplorationPlanner() {
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new ExplorationParameters());

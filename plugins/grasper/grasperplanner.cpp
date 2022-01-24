@@ -36,7 +36,7 @@ public:
     GrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv), _report(new CollisionReport()) {
         __description = ":Interface Authors: Rosen Diankov, Dmitry Berenson\n\nSimple planner that performs a follow and squeeze operation of a robotic hand.";
     }
-    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _robot = pbase;

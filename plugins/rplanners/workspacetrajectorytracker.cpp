@@ -46,7 +46,7 @@ Planner Parameters\n\
     virtual ~WorkspaceTrajectoryTracker() {
     }
 
-    virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params)
+    virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params) override
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 

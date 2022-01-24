@@ -37,6 +37,38 @@ typedef bai::base64_from_binary<    // convert binary values to base64 character
             >
         > base64_text;
 
+bool WorkspaceTrajectoryParameters::_Copy(const PlannerParameters& r)
+{
+    if (!PlannerParameters::_Copy(r)) {
+        return false;
+    }
+    
+    const WorkspaceTrajectoryParameters* pother = dynamic_cast<const WorkspaceTrajectoryParameters*>(&r);
+    if (!pother) {
+        return false;
+    }
+
+    const WorkspaceTrajectoryParameters& other = *pother;
+    maxdeviationangle = other.maxdeviationangle;
+    maintaintiming = other.maintaintiming;
+    greedysearch = other.greedysearch;
+    ignorefirstcollision = other.ignorefirstcollision;
+    ignorefirstcollisionee = other.ignorefirstcollisionee;
+    ignorelastcollisionee = other.ignorelastcollisionee;
+    minimumcompletetime = other.minimumcompletetime;
+    if (!!other.workspacetraj) {
+        if( !workspacetraj ) {
+            workspacetraj = RaveCreateTrajectory(_penv,"");
+        }
+        workspacetraj->Clone(other.workspacetraj, 0);
+    }
+    else {
+        workspacetraj.reset();
+    }
+
+    return true;
+}
+
 WorkspaceTrajectoryParameters::WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), ignorefirstcollisionee(0), ignorelastcollisionee(0), minimumcompletetime(0), _penv(penv), _bProcessing(false) {
     _vXMLParameters.push_back("maxdeviationangle");
     _vXMLParameters.push_back("maintaintiming");
