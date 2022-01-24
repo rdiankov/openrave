@@ -2892,6 +2892,23 @@ private:
      */
     virtual void ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& doftorquecomponents, const std::vector<dReal>& dofaccelerations, const ForceTorqueMap& externalforcetorque=ForceTorqueMap()) const;
 
+    /** \brief Number of DOFs supported for ComputesDynamicLimits function. this might be different from GetDOF or arm dofs.
+
+        Since not all robots supports dynamic limits, so this function should be overriden in the subclass.
+        If the robot supports the dynamic limits, GetDynamicLimitsDOF should be larger than 0.
+        \return number of DOFs.
+     */
+    virtual int GetDynamicLimitsDOF() const;
+
+    /** \brief Computes dynamic limits for acceleration and jerks, which are dynamically changing based on the given positions and velocities.
+
+        Since not all robots supports dynamic limits, so this function should be overriden in the subclass.
+        \param[out] vDynamicAccelerationLimits, vDynamicJerkLimits : dynamically changing acceleration limits and jerk limits. the sizes of vectors are GetDynamicLimitsDOF.
+        \param[in] vDOFPositions, vDOFPositions : DOF positions and velocities to compute dynamic limits. note that if these are related to finite difference, need to input [k-1] timestamp and the returned limits are at [k] timestamp. the sizes of the vectors should be >= GetDynamicLimitsDOF. the elements i=0,..., GetDynamicLimitsDOF()-1 is used for dynamic limits computation. other elements are ignored.
+     */
+    virtual void ComputeDynamicLimits(std::vector<dReal>& vDynamicAccelerationLimits, std::vector<dReal>& vDynamicJerkLimits,
+                                      const std::vector<dReal>& vDOFPositions, const std::vector<dReal>& vDOFVelocities) const;
+
     /// \brief sets a self-collision checker to be used whenever \ref CheckSelfCollision is called
     ///
     /// This function allows self-collisions to use a different, un-padded geometry for self-collisions
@@ -3505,12 +3522,12 @@ public:
         _listNonCollidingIsValid = false;
     }
 
-    inline void _SetLinkNonCollidingIsValid(const bool bIsValid)
+    inline void _SetLinkNonCollidingIsValid(bool bIsValid)
     {
         _listNonCollidingIsValid = bIsValid;
     }
 
-    inline const bool IsListNonCollidingLinksValid() const
+    inline bool IsListNonCollidingLinksValid() const
     {
         return _listNonCollidingIsValid;
     }

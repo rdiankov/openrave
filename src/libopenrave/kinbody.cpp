@@ -3730,6 +3730,20 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
     }
 }
 
+void KinBody::ComputeDynamicLimits(std::vector<dReal>& vDynamicAccelerationLimits, std::vector<dReal>& vDynamicJerkLimits,
+                                   const std::vector<dReal>& vDOFPositions, const std::vector<dReal>& vDOFVelocities) const
+{
+    // by default, almost do nothing about ComputeDynamicLimits, just make vector length 0, e.g. GetDynamicLimitsDOF. if subclass supports the dynamic limits, needs to override in the subclass.
+    vDynamicAccelerationLimits.clear();
+    vDynamicJerkLimits.clear();
+}
+
+int KinBody::GetDynamicLimitsDOF() const
+{
+    // by default, do nothing about ComputeDynamicLimits, thus, zero supported dofs. if subclass supports the dynamic limits, needs to override in the subclass.
+    return 0;
+}
+
 void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, std::vector<std::pair<Vector,Vector> >&vLinkAccelerations, AccelerationMapConstPtr externalaccelerations) const
 {
     CHECK_INTERNAL_COMPUTATION;
