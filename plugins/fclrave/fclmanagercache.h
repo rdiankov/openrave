@@ -85,10 +85,20 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
 
             if (!vcolobjs.empty()) {
                 std::stringstream ss;
-                ss << "env=" << pbody->GetEnv()->GetNameId() << ", FCLCollisionManagerInstance 0x" << hex << this;
-                ss << " has " << dec << vcolobjs.size() << " collion objects (";
+                ss << "env=" << pbody->GetEnv()->GetNameId() << ", "
+                   << "body=" << pbody->GetName() << ", "
+                   << "geom group=\"" << geometrygroup << "\", "
+                   << "FCLCollisionManagerInstance 0x" << hex << this
+                   << " has " << dec << vcolobjs.size() << " collision objects (";
                 for (const CollisionObjectPtr& obj : vcolobjs) {
                     ss << "0x" << hex << obj << ", ";
+                    if (!!obj) {
+                        const fcl::Quaternion3f& q = obj->getQuatRotation();
+                        const fcl::Vec3f& t = obj->getTranslation();
+                        ss << "pose=["
+                           << q[0] << "," << q[1] << "," << q[2] << "," << q[3] << ","
+                           << t[0] << "," << t[1] << "," << t[2] << "]";
+                    }
                 }
                 ss << "), but leaving untouched.";
                 RAVELOG_WARN_FORMAT("%s", ss.str());
