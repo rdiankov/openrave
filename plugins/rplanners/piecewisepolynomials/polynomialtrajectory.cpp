@@ -390,8 +390,29 @@ void Polynomial::_FindAllLocalExtrema() const
         return;
     }
     int numroots = 0;
-    polyroots((int)degree - 1 - iNonZeroLeadCoeff, &rawcoeffs[iNonZeroLeadCoeff], &rawroots[0], numroots);
-    rawroots.resize(numroots);
+    if( degree - 1 - iNonZeroLeadCoeff == 2 ) {
+        // Use a closed-form formula for quadratic equations to speed up.
+        dReal a = rawcoeffs[iNonZeroLeadCoeff], b = rawcoeffs[iNonZeroLeadCoeff + 1], c = rawcoeffs[iNonZeroLeadCoeff + 2];
+        dReal det = b*b - 4*a*c;
+        const dReal tol = 64.0*std::numeric_limits<dReal>::epsilon();
+        if( det >= -tol ) {
+            if( det <= tol ) {
+                numroots = 1;
+                rawroots[0] = -0.5*b/a;
+            }
+            else {
+                numroots = 2;
+                dReal temp = RaveSqrt(det);
+                rawroots[0] = 0.5*(-b + temp)/a;
+                rawroots[1] = 0.5*(-b - temp)/a;
+            }
+        }
+        rawroots.resize(numroots);
+    }
+    else {
+        polyroots((int)degree - 1 - iNonZeroLeadCoeff, &rawcoeffs[iNonZeroLeadCoeff], &rawroots[0], numroots);
+        rawroots.resize(numroots);
+    }
 
     if( numroots == 0 ) {
         return;
