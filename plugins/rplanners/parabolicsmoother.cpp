@@ -312,6 +312,19 @@ public:
                     ssinitial << (int)*it << ", ";
                 }
                 ssinitial << "]; ";
+                {
+                    std::vector<KinBodyPtr> grabbedbodies;
+                    (*itbody)->GetGrabbed(grabbedbodies);
+                    std::vector<uint8_t> vgrabbedenablestates;
+                    for (const KinBodyPtr& grabbedbody : grabbedbodies) {
+                        ssinitial << grabbedbody->GetName() << " enablestates=[";
+                        grabbedbody->GetLinkEnableStates(vgrabbedenablestates);
+                        FOREACH(it, vgrabbedenablestates) {
+                            ssinitial << (int)*it << ", ";
+                        }
+                        ssinitial << "]; ";
+                    }
+                }
                 statesaver.reset(new RobotBase::RobotStateSaver(RaveInterfaceCast<RobotBase>(*itbody), KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator|KinBody::Save_LinkVelocities));
             }
             else {
