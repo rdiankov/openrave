@@ -1,4 +1,5 @@
 from openravepy import openravepy_piecewisepolynomials as piecewisepolynomials
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from pylab import ion
@@ -6,9 +7,12 @@ ion()
 import logging
 log = logging.getLogger(__name__)
 
+COLOR_CYCLE = ['green', 'red', 'blue', 'yellowgreen', 'darkorange', 'cornflowerblue', 'gold', 'hotpink', 'darkturquoise']
 
 def PlotPolynomial(polynomial, tstart=None, tend=None, stepsize=0.01, derivative=0, fignum=None, timeoffset=0, reusefig=False, **kwargs):
-    """
+    """Plot the values of the given polynomial.
+    
+    :param reusefig: bool. If False, will create a new Figure for plotting.
     
     """
     if tstart is None and tend is None:
@@ -23,13 +27,21 @@ def PlotPolynomial(polynomial, tstart=None, tend=None, stepsize=0.01, derivative
     fig = None
     if not reusefig:
         fig = plt.figure(fignum)
-    
-    plt.plot(tVect + timeoffset, xVect, **kwargs)
+
+    icolor = kwargs.pop('icolor', None)
+    if icolor is not None:
+        color = COLOR_CYCLE[icolor % len(COLOR_CYCLE)]
+        plt.plot(tVect + timeoffset, xVect, color=color, **kwargs)
+    else:
+        plt.plot(tVect + timeoffset, xVect, **kwargs)
     plt.show(False)
     return fig
 
 def PlotPiecewisePolynomial(pwpoly, stepsize=0.01, derivative=0, fignum=None, **kwargs):
-    """
+    """Plot the values of the given piecewise polynomial.
+    
+    :param icolor:
+    
     """
     fig = plt.figure(fignum)
     
@@ -40,33 +52,44 @@ def PlotPiecewisePolynomial(pwpoly, stepsize=0.01, derivative=0, fignum=None, **
     plt.show(False)
     return fig
 
-def PlotChunk(chunk, stepsize=0.01, derivative=0, fignum=None, timeoffset=0, reusefig=False, **kwargs):
+def PlotChunk(chunk, stepsize=0.01, derivative=0, fignum=None, timeoffset=0, reusefig=False, addlegend=True, **kwargs):
     """
     
     """
-    tVect = np.arange(0, chunk.duration, stepsize)
-    if tVect[-1] < chunk.duration:
-        tVect = np.append(tVect, chunk.duration)
-    xVect = [chunk.Evaldn(t, derivative) for t in tVect]
+    polynomials = chunk.GetPolynomials()
+    npolys = len(polynomials)
 
     fig = None
     if not reusefig:
         fig = plt.figure(fignum)
-    
-    plt.plot(tVect + timeoffset, xVect, **kwargs)
+
+    for ipoly, poly in enumerate(polynomials):
+        PlotPolynomial(poly, stepsize=stepsize, derivative=derivative, timeoffset=timeoffset, reusefig=True, icolor=ipoly, **kwargs)
+
+    if addlegend:
+        plt.legend(['dof %d'%idof for idof in range(npolys)])
     plt.show(False)
+    
     return fig
     
-def PlotChunks(chunks, stepsize=0.01, derivative=0, fignum=None, **kwargs):
+def PlotChunks(chunks, stepsize=0.01, derivative=0, fignum=None, legends=None, **kwargs):
     """
+
+    :param legends: list of strings. If given, will be use as legends.
     
     """
     fig = plt.figure(fignum)
 
     tstart = 0
     for chunk in chunks:
-        PlotChunk(chunk, stepsize=stepsize, derivative=derivative, timeoffset=tstart, reusefig=True, **kwargs)
+        PlotChunk(chunk, stepsize=stepsize, derivative=derivative, timeoffset=tstart, reusefig=True, addlegend=False, **kwargs)
         tstart += chunk.duration
+
+    ndof = chunks[0].dof
+    if legends is None or len(legends) != ndof:
+        legends = ['dof %d'%idof for idof in range(ndof)]
+    plt.legend(legends)
+    
     plt.show(False)
     return fig
     
