@@ -86,9 +86,12 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
                     if (!!obj) {
                         const fcl::Quaternion3f& q = obj->getQuatRotation();
                         const fcl::Vec3f& t = obj->getTranslation();
+                        const fcl::AABB& aabb = obj->getAABB();
                         ss << "pose=["
                            << q[0] << "," << q[1] << "," << q[2] << "," << q[3] << ","
-                           << t[0] << "," << t[1] << "," << t[2] << "]";
+                           << t[0] << "," << t[1] << "," << t[2] << "]; "
+                           << "aabb_min=[" << aabb.min_[0] << "," << aabb.min_[1] << "," << aabb.min_[2] << "]; "
+                           << "aabb_max=[" << aabb.max_[0] << "," << aabb.max_[1] << "," << aabb.max_[2] << "]; ";
                     }
                 }
                 ss << "), but leaving untouched.";
