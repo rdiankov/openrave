@@ -73,21 +73,12 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             nLastStamp = pinfo->nLastStamp;
             nLinkUpdateStamp = pinfo->nLinkUpdateStamp;
             nGeometryUpdateStamp = pinfo->nGeometryUpdateStamp;
-            geometrygroup = pinfo->_geometrygroup;
-            nAttachedBodiesUpdateStamp = pinfo->nAttachedBodiesUpdateStamp;
-            nActiveDOFUpdateStamp = pinfo->nActiveDOFUpdateStamp;
-            if (linkEnableStateCache.empty()) {
-                linkEnableStatesBitmasks = pbody->GetLinkEnableStatesMasks();
-            }
-            else {
-                linkEnableStatesBitmasks = linkEnableStateCache;
-            }
 
             if (!vcolobjs.empty()) {
                 std::stringstream ss;
                 ss << "env=" << pbody->GetEnv()->GetNameId() << ", "
                    << "body=" << pbody->GetName() << ", "
-                   << "geom group=\"" << geometrygroup << "\", "
+                   << "geomgroup changes from \"" << geometrygroup << "\" to \"" << pinfo->_geometrygroup << "\", "
                    << "FCLCollisionManagerInstance 0x" << hex << this
                    << " has " << dec << vcolobjs.size() << " collision objects (";
                 for (const CollisionObjectPtr& obj : vcolobjs) {
@@ -102,6 +93,16 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
                 }
                 ss << "), but leaving untouched.";
                 RAVELOG_WARN_FORMAT("%s", ss.str());
+            }
+
+            geometrygroup = pinfo->_geometrygroup;
+            nAttachedBodiesUpdateStamp = pinfo->nAttachedBodiesUpdateStamp;
+            nActiveDOFUpdateStamp = pinfo->nActiveDOFUpdateStamp;
+            if (linkEnableStateCache.empty()) {
+                linkEnableStatesBitmasks = pbody->GetLinkEnableStatesMasks();
+            }
+            else {
+                linkEnableStatesBitmasks = linkEnableStateCache;
             }
         }
 
