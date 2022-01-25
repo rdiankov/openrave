@@ -402,9 +402,15 @@ void Polynomial::_FindAllLocalExtrema() const
             }
             else {
                 numroots = 2;
-                dReal temp = RaveSqrt(det);
-                rawroots[0] = 0.5*(-b + temp)/a;
-                rawroots[1] = 0.5*(-b - temp)/a;
+                dReal temp;
+                if( b >= 0 ) {
+                    temp = -0.5*(b + RaveSqrt(det));
+                }
+                else {
+                    temp = -0.5*(b - RaveSqrt(det));
+                }
+                rawroots[0] = temp/a;
+                rawroots[1] = c/temp;
             }
         }
         rawroots.resize(numroots);
