@@ -391,7 +391,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
 {
     {
         rapidjson::Value::ConstMemberIterator itType = value.FindMember("type");
-        if( itType->value.IsString() ) {
+        if( itType != value.MemberEnd() && itType->value.IsString() ) {
             if( strcmp(itType->value.GetString(), "revolute") == 0 ) {
                 _type = JointType::JointRevolute;
             }
@@ -575,7 +575,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
 
     {
         rapidjson::Value::ConstMemberIterator itControlMode = value.FindMember("controlMode");
-        if( itControlMode->value.IsString() ) {
+        if( itControlMode != value.MemberEnd() && itControlMode->value.IsString() ) {
             if( strcmp(itControlMode->value.GetString(), GetJointControlModeString(JCM_None)) == 0 ) {
                 _controlMode = JCM_None;
             }
