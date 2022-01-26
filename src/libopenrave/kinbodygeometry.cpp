@@ -974,6 +974,9 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         else if (typestr == "calibrationboard") {
             type = GT_CalibrationBoard;
         }
+        else if (typestr.empty()) {
+            type = GT_None;
+        }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
         }
