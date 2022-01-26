@@ -44,7 +44,7 @@ Available methods for an exception e are
 if openravepy_int.__pythonbinding__ == 'pybind11':
     from .openravepy_int import _OpenRAVEException as OpenRAVEException
 else:
-    from .openravepy_int import _OpenRAVEException, _std_runtime_error_
+    from .openravepy_int import _OpenRAVEException, _std_runtime_error_, _boost_filesystem_error_
     
     class openrave_exception_helper(Exception):
         # wrap up the C++ openrave_exception
@@ -89,10 +89,25 @@ else:
                 return getattr(my_pimpl, attr)
             except AttributeError:
                 return super(runtime_error,self).__getattribute__(attr)
+
+    class boost_filesystem_error(Exception):
+        """wrap up the C++ boost_filesystem_error"""
+        def __init__( self, app_error ):
+            Exception.__init__( self )
+            self._pimpl = app_error
+        def __str__( self ):
+            return self._pimpl.message
+        def __getattribute__(self, attr):
+            my_pimpl = super(runtime_error, self).__getattribute__("_pimpl")
+            try:
+                return getattr(my_pimpl, attr)
+            except AttributeError:
+                return super(runtime_error,self).__getattribute__(attr)
     
     OpenRAVEException = openrave_exception_helper
     _OpenRAVEException.py_err_class = openrave_exception_helper
     _std_runtime_error_.py_err_class = runtime_error
+    _boost_filesystem_error_.py_err_class = boost_filesystem_error
 
 openrave_exception = OpenRAVEException # for back compat
 
