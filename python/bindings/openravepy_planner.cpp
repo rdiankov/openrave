@@ -166,6 +166,11 @@ void PyPlannerBase::PyPlannerParameters::SetConfigAccelerationLimit(object o)
     _paramswrite->_vConfigAccelerationLimit = ExtractArray<dReal>(o);
 }
 
+void PyPlannerBase::PyPlannerParameters::SetConfigJerkLimit(object o)
+{
+    _paramswrite->_vConfigJerkLimit = ExtractArray<dReal>(o);
+}
+
 void PyPlannerBase::PyPlannerParameters::SetConfigResolution(object o)
 {
     _paramswrite->_vConfigResolution = ExtractArray<dReal>(o);
@@ -202,6 +207,60 @@ void PyPlannerBase::PyPlannerParameters::SetPostProcessing(const std::string& pl
 {
     _paramswrite->_sPostProcessingPlanner = plannername;
     _paramswrite->_sPostProcessingParameters = plannerparameters;
+}
+
+object PyPlannerBase::PyPlannerParameters::GetConfigVelocityLimit()
+{
+    return toPyArray(_paramswrite->_vConfigVelocityLimit);
+}
+
+object PyPlannerBase::PyPlannerParameters::GetConfigAccelerationLimit()
+{
+    return toPyArray(_paramswrite->_vConfigAccelerationLimit);
+}
+
+object PyPlannerBase::PyPlannerParameters::GetConfigJerkLimit()
+{
+    return toPyArray(_paramswrite->_vConfigJerkLimit);
+}
+
+object PyPlannerBase::PyPlannerParameters::GetConfigResolution()
+{
+    return toPyArray(_paramswrite->_vConfigResolution);
+}
+
+bool PyPlannerBase::PyPlannerParameters::HasNeighStateFn()
+{
+    return !!_paramsread->_neighstatefn;
+}
+
+object PyPlannerBase::PyPlannerParameters::NeighStateFn(object oq, object odq, int options)
+{
+    std::vector<dReal> q0 = ExtractArray<dReal>(oq);
+    std::vector<dReal> dq = ExtractArray<dReal>(odq);
+    int ret = _paramswrite->_neighstatefn(q0, dq, options);
+
+    boost::python::dict oneighstateret;
+    oneighstateret["configuration"] = toPyArray(q0);
+    oneighstateret["returncode"] = ret;
+    return oneighstateret;
+}
+
+dReal PyPlannerBase::PyPlannerParameters::DistMetricFn(object oq0, object oq1)
+{
+    return _paramswrite->_distmetricfn(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1));
+}
+
+int PyPlannerBase::PyPlannerParameters::SetStateValues(object oq, int options)
+{
+    return _paramswrite->SetStateValues(ExtractArray<dReal>(oq), options);
+}
+
+object PyPlannerBase::PyPlannerParameters::GetStateFn()
+{
+    std::vector<dReal> q;
+    _paramswrite->_getstatefn(q);
+    return toPyArray(q);
 }
 
 std::string PyPlannerBase::PyPlannerParameters::__repr__() {
@@ -367,6 +426,7 @@ PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitPlan_overloads, InitPlan, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckPathAllConstraints_overloads, CheckPathAllConstraints, 6, 8)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetStateValues_overloads, SetStateValues, 1, 2)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -470,6 +530,7 @@ void init_openravepy_planner()
         .def("SetGoalConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetGoalConfigVelocities, PY_ARGS("velocities") "sets PlannerParameters::_vGoalConfigVelocities")
         .def("SetConfigVelocityLimit",&PyPlannerBase::PyPlannerParameters::SetConfigVelocityLimit, PY_ARGS("velocities") "sets PlannerParameters::_vConfigVelocityLimit")
         .def("SetConfigAccelerationLimit",&PyPlannerBase::PyPlannerParameters::SetConfigAccelerationLimit, PY_ARGS("accelerations") "sets PlannerParameters::_vConfigAccelerationLimit")
+        .def("SetConfigJerkLimit",&PyPlannerBase::PyPlannerParameters::SetConfigJerkLimit, PY_ARGS("jerks") "sets PlannerParameters::_vConfigJerkLimit")
         .def("SetConfigResolution",&PyPlannerBase::PyPlannerParameters::SetConfigResolution, PY_ARGS("resolutions") "sets PlannerParameters::_vConfigResolution")
         .def("SetMaxIterations",&PyPlannerBase::PyPlannerParameters::SetMaxIterations, PY_ARGS("maxiterations") "sets PlannerParameters::_nMaxIterations")
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -488,6 +549,22 @@ void init_openravepy_planner()
         .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(PY_ARGS("q0","q1","dq0","dq1","timeelapsed","interval","options", "filterreturn") DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
 #endif
         .def("SetPostProcessing", &PyPlannerBase::PyPlannerParameters::SetPostProcessing, PY_ARGS("plannername", "plannerparameters") "sets the post processing parameters")
+        .def("GetConfigVelocityLimit",&PyPlannerBase::PyPlannerParameters::GetConfigVelocityLimit, "gets PlannerParameters::_vConfigVelocityLimit")
+        .def("GetConfigAccelerationLimit",&PyPlannerBase::PyPlannerParameters::GetConfigAccelerationLimit, "gets PlannerParameters::_vConfigAccelerationLimit")
+        .def("GetConfigJerkLimit",&PyPlannerBase::PyPlannerParameters::GetConfigJerkLimit, "gets PlannerParameters::_vConfigJerkLimit")
+        .def("GetConfigResolution",&PyPlannerBase::PyPlannerParameters::GetConfigResolution, "gets PlannerParameters::_vConfigResolution")
+        .def("HasNeighStateFn", &PyPlannerBase::PyPlannerParameters::HasNeighStateFn, "returns True if params' _neighstatefn exists")
+        .def("NeighStateFn", &PyPlannerBase::PyPlannerParameters::NeighStateFn, args("q", "dq", "options"), "calls params' _neighstatefn")
+        .def("DistMetricFn", &PyPlannerBase::PyPlannerParameters::DistMetricFn, args("q0", "q1"), "returns the distance between q0 and q1 according to the specified metric")
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def("SetStateValues", &PyPlannerBase::PyPlannerParameters::SetStateValues,
+             "q"_a,
+             "options"_a,
+             "sets the current state to the given values"))
+#else
+        .def("SetStateValues", &PyPlannerBase::PyPlannerParameters::SetStateValues, SetStateValues_overloads(args("q", "options"), "sets the current state to the given values"))
+#endif
+        .def("GetStateFn", &PyPlannerBase::PyPlannerParameters::NeighStateFn, "gets the current state")
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
         .def("__unicode__",&PyPlannerBase::PyPlannerParameters::__unicode__)
         .def("__repr__",&PyPlannerBase::PyPlannerParameters::__repr__)
