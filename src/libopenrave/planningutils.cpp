@@ -2459,9 +2459,9 @@ void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
         ss << prefix << "; colvalues=[";
         FOREACHC(itval, vcurrentvalues) {
             ss << *itval << ",";
-            ss << "]";
-            RAVELOG_VERBOSE(ss.str());
         }
+        ss << "]";
+        RAVELOG_VERBOSE(ss.str());
     }
 }
 
