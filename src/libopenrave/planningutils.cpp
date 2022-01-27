@@ -2352,7 +2352,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                     }
                 }
             }
-            if( _vtorquevalues.size() > 0 && vdofaccels.size() > 0 ) {
+            if( _vtorquevalues.size() > 0 ) {
                 _doftorques.resize(pbody->GetDOF(),0);
                 _dofaccelerations.resize(pbody->GetDOF(),0);
                 _vdofindices.resize(pbody->GetDOF());
