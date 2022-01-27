@@ -2365,8 +2365,6 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
 
                 // compute inverse dynamics and check
                 pbody->ComputeInverseDynamics(_doftorques, _dofaccelerations);
-                bool bHasTorqueVioldatedJoint = false; // true if at least one joint torque violated.
-                dReal fTimeBasedSurpassMultForTorqueAccum2 = 1.0; // accumulated square of fTimeBasedSurpassMult to suppress torque violation. square of speed mult, thus accel mult.
                 FOREACH(it, _vtorquevalues) {
                     int index = it->first;
                     const std::pair<dReal, dReal>& torquelimits = it->second;
@@ -2386,31 +2384,8 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                             sslog << "]";
                             _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e !< %e !< %e. %s")%pbody->GetJointFromDOFIndex(index)->GetName()%index%torquelimits.first%fcurtorque%torquelimits.second%sslog.str()));
                         }
-
-                        // compute the fTimeBasedSurpassMult for torque violation : TODO : this might not be correct in general inverse dynamics cases.
-                        // in the above, torquelimits.first < torquelimits.second is guaranteed. so, first < fMidTorque < second holds.
-                        const dReal fMidTorque = (torquelimits.first+torquelimits.second)*0.5;
-                        if( fcurtorque < torquelimits.first ) {
-                            // fcurtorque < first < fMidTorque holds. then, (MidTorque-fcurtorque)>0 and (fMidTorque-first)>0
-                            fTimeBasedSurpassMultForTorqueAccum2 = std::min(fTimeBasedSurpassMultForTorqueAccum2, (fMidTorque-torquelimits.first) / (fMidTorque-fcurtorque));
-                        }
-                        else { // fcurtorque > torquelimits.second
-                            // fMidTorque < second < fcurtorque holds. then, (fcurtorque-fMidTorque)>0 and (second-fMidTorque)>0
-                            fTimeBasedSurpassMultForTorqueAccum2 = std::min(fTimeBasedSurpassMultForTorqueAccum2, (torquelimits.second-fMidTorque) / (fcurtorque-fMidTorque));
-                        }
-                        bHasTorqueVioldatedJoint = true;
-                        // if filterreturn does not exist, we cannot return the _fTimeBasedSurpassMult. so, no need to check other joints' violation and break from the for loop.
-                        if( !filterreturn ) {
-                            break;
-                        }
+                        return CFO_CheckTimeBasedConstraints;
                     }
-                }
-                // if violated, return the accumulated results
-                if( bHasTorqueVioldatedJoint ) {
-                    if( !!filterreturn ) {
-                        filterreturn->_fTimeBasedSurpassMult = std::min(filterreturn->_fTimeBasedSurpassMult, RaveSqrt(fTimeBasedSurpassMultForTorqueAccum2)); // take min to respect the worst mult up to now. use sqrt to convert accmult to speedmult.
-                    }
-                    return CFO_CheckTimeBasedConstraints;
                 }
             }
         }
