@@ -2335,6 +2335,79 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
         // check dynamics only when velocities and accelerations are given
         FOREACHC(itbody, _listCheckBodies) {
             KinBodyPtr pbody = *itbody;
+
+            pbody->GetDOFValues(_vfulldofvalues);
+            pbody->GetDOFVelocities(_vfulldofvelocities);
+            if( pbody->GetDOFDynamicAccelerationJerkLimits(_vfulldofdynamicaccelerationlimits, _vfulldofdynamicjerklimits, _vfulldofvalues, _vfulldofvelocities) ) {
+                // if dynamic limits are supported for this body, check it. for now, only check dynamic acceleration limits.
+
+                _dofaccelerations.resize(pbody->GetDOF(),0);
+                _vdofindices.resize(pbody->GetDOF());
+                for(int i = 0; i < pbody->GetDOF(); ++i) {
+                    _vdofindices[i] = i;
+                }
+
+                // have to extract the correct accelerations from vdofaccels use specvel and timederivative=1
+                _specvel.ExtractJointValues(_dofaccelerations.begin(), vdofaccels.begin(), pbody, _vdofindices, 1);
+
+                dReal fAccumulatedTimeBasedSurpassMult = 1.0; // accumulated square of fTimeBasedSurpassMult to suppress dynamic limits violation. square of speed mult, thus accel mult.
+                bool bHasDynamicLimitsVioldatedJoint = false;
+                for(int iDOF = 0; iDOF < pbody->GetDOF(); ++iDOF) {
+                    // check if each dof supports the dynamic limits. even if the body supports dynamic limits, there might be unsupported dofs among full dofs. for example, the arm supports dynamic limits but gripper does not.
+                    if( _vfulldofdynamicaccelerationlimits.at(iDOF) < g_fEpsilon ) { // if dynamic limits are close to zero, this dof is not supported. so, skip.
+                        continue;
+                    }
+
+                    // check the dynamic acceleration limits
+                    const dReal fDynamicAccLimit = _vfulldofdynamicaccelerationlimits.at(iDOF);
+                    const dReal fAccelAbs = RaveFabs(_dofaccelerations.at(iDOF));
+                    if( fDynamicAccLimit < fAccelAbs ) {
+                        bHasDynamicLimitsVioldatedJoint = true;
+                        fAccumulatedTimeBasedSurpassMult = std::min(fAccumulatedTimeBasedSurpassMult, fDynamicAccLimit / fAccelAbs); // here, we can assume that fDynamicAccLimit >= g_fEpsilon. thus, fAccelAbs > fDynamicAccLimit >= g_fEpsilon. so, no zero division
+
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            std::stringstream sslog; sslog << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                            sslog << "doffullvalues=[";
+                            FOREACHC(itval, _vfulldofvalues) {
+                                sslog << *itval << ",";
+                            }
+                            sslog << "]; doffullvels=[";
+                            FOREACHC(itvel, _vfulldofvelocities) {
+                                sslog << *itvel << ",";
+                            }
+                            sslog << "]; doffullaccel=[";
+                            FOREACHC(itaccel, _dofaccelerations) {
+                                sslog << *itaccel << ",";
+                            }
+                            sslog << "]; dynacclim=[";
+                            FOREACHC(itaccel, _vfulldofdynamicaccelerationlimits) {
+                                sslog << *itaccel << ",";
+                            }
+                            sslog << "]; dynjerklim=[";
+                            FOREACHC(itjerk, _vfulldofdynamicjerklimits) {
+                                sslog << *itjerk << ",";
+                            }
+                            sslog << "]";
+                            _PrintOnFailure(str(boost::format("rejected dynamic acceleration limits due to joint %s (%d): |%e| !< %e. %s")%pbody->GetJointFromDOFIndex(iDOF)->GetName()%iDOF%fAccelAbs%fDynamicAccLimit%sslog.str()));
+                        }
+
+                        // if filterreturn does not exist, we cannot return the _fTimeBasedSurpassMult. so, no need to check other joints' violation and break from the for loop.
+                        if( !filterreturn ) {
+                            break;
+                        }
+                    }
+                }
+
+                // if violated, return the accumulated results
+                if( bHasDynamicLimitsVioldatedJoint ) {
+                    if( !!filterreturn ) {
+                        filterreturn->_fTimeBasedSurpassMult = std::min(filterreturn->_fTimeBasedSurpassMult, RaveSqrt(fAccumulatedTimeBasedSurpassMult)); // take min to respect the worst mult up to now. use sqrt to convert accmult to speedmult.
+                    }
+                    return CFO_CheckTimeBasedConstraints;
+                }
+            }
+            else {
+                // if no support for dynamic limits, try ComputeInverseDynamics
             _vtorquevalues.resize(0);
             FOREACHC(itjoint, pbody->GetJoints()) {
                 for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
@@ -2387,6 +2460,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                         return CFO_CheckTimeBasedConstraints;
                     }
                 }
+            }
             }
         }
     }
