@@ -2336,6 +2336,11 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
         FOREACHC(itbody, _listCheckBodies) {
             KinBodyPtr pbody = *itbody;
 
+            // if zero dof, do not check dynamic limits nor torque limits.
+            if( pbody->GetDOF() == 0 ) {
+                continue;
+            }
+
             pbody->GetDOFValues(_vfulldofvalues);
             pbody->GetDOFVelocities(_vfulldofvelocities);
             if( pbody->GetDOFDynamicAccelerationJerkLimits(_vfulldofdynamicaccelerationlimits, _vfulldofdynamicjerklimits, _vfulldofvalues, _vfulldofvelocities) ) {
