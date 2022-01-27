@@ -2331,8 +2331,8 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
             return CFO_CheckUserConstraints;
         }
     }
-    if( options & CFO_CheckTimeBasedConstraints ) {
-        // check dynamics
+    if( options & CFO_CheckTimeBasedConstraints && vdofvelocities.size() > 0 && vdofaccels.size() > 0 ) {
+        // check dynamics only when velocities and accelerations are given
         FOREACHC(itbody, _listCheckBodies) {
             KinBodyPtr pbody = *itbody;
             _vtorquevalues.resize(0);
