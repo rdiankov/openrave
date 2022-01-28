@@ -240,7 +240,7 @@ object PyPlannerBase::PyPlannerParameters::NeighStateFn(object oq, object odq, i
     std::vector<dReal> dq = ExtractArray<dReal>(odq);
     int ret = _paramswrite->_neighstatefn(q0, dq, options);
 
-    boost::python::dict oneighstateret;
+    py::dict oneighstateret;
     oneighstateret["configuration"] = toPyArray(q0);
     oneighstateret["returncode"] = ret;
     return oneighstateret;
@@ -554,13 +554,13 @@ void init_openravepy_planner()
         .def("GetConfigJerkLimit",&PyPlannerBase::PyPlannerParameters::GetConfigJerkLimit, "gets PlannerParameters::_vConfigJerkLimit")
         .def("GetConfigResolution",&PyPlannerBase::PyPlannerParameters::GetConfigResolution, "gets PlannerParameters::_vConfigResolution")
         .def("HasNeighStateFn", &PyPlannerBase::PyPlannerParameters::HasNeighStateFn, "returns True if params' _neighstatefn exists")
-        .def("NeighStateFn", &PyPlannerBase::PyPlannerParameters::NeighStateFn, args("q", "dq", "options"), "calls params' _neighstatefn")
-        .def("DistMetricFn", &PyPlannerBase::PyPlannerParameters::DistMetricFn, args("q0", "q1"), "returns the distance between q0 and q1 according to the specified metric")
+        .def("NeighStateFn", &PyPlannerBase::PyPlannerParameters::NeighStateFn, PY_ARGS("q", "dq", "options") "calls params' _neighstatefn")
+        .def("DistMetricFn", &PyPlannerBase::PyPlannerParameters::DistMetricFn, PY_ARGS("q0", "q1") "returns the distance between q0 and q1 according to the specified metric")
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("SetStateValues", &PyPlannerBase::PyPlannerParameters::SetStateValues,
              "q"_a,
              "options"_a,
-             "sets the current state to the given values"))
+             "sets the current state to the given values")
 #else
         .def("SetStateValues", &PyPlannerBase::PyPlannerParameters::SetStateValues, SetStateValues_overloads(args("q", "options"), "sets the current state to the given values"))
 #endif

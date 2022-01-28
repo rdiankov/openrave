@@ -31,6 +31,8 @@ namespace py = pybind11;
 namespace py = boost::python;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
+#include <openravepy/openravepy_int.h>
+#include <openravepy/openravepy_module.h>
 using py::extract;
 using py::handle;
 using py::dict;

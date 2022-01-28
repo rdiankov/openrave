@@ -275,7 +275,7 @@ public:
         if( filterreturn ) {
             ConstraintFilterReturnPtr pfilterreturn(new ConstraintFilterReturn());
             _pconstraints->Check(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, intervalType, options, pfilterreturn);
-            boost::python::dict ofilterreturn;
+            py::dict ofilterreturn;
             ofilterreturn["configurations"] = toPyArray(pfilterreturn->_configurations);
             ofilterreturn["configurationtimes"] = toPyArray(pfilterreturn->_configurationtimes);
             ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
@@ -286,7 +286,7 @@ public:
             return ofilterreturn;
         }
         else {
-            return object(_pconstraints->Check(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, intervalType, options));
+            return py::to_object(_pconstraints->Check(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, intervalType, options));
         }
     }
 
