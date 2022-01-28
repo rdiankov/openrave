@@ -900,8 +900,7 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
 
     if (TransformDistanceFast(GetTransform(), info._t) > g_fEpsilonLinear) {
         RAVELOG_VERBOSE_FORMAT("link %s transform changed", _info._id);
-        SetTransform(info._t);
-        updateFromInfoResult = UFIR_Success;
+        return UFIR_RequireReinitialize;
     }
 
     // name
