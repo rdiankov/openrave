@@ -1,4 +1,5 @@
 add_library(rampoptimizer SHARED paraboliccommon.h paraboliccommon.cpp ramp.h ramp.cpp interpolator.h interpolator.cpp feasibilitychecker.h feasibilitychecker.cpp parabolicchecker.h parabolicchecker.cpp)
+target_link_libraries(rampoptimizer libopenrave)
 target_link_libraries(rampoptimizer PRIVATE boost_assertion_failed)
 set_target_properties(rampoptimizer PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 
