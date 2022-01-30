@@ -35,6 +35,8 @@ namespace py = pybind11;
 namespace py = boost::python;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
+#include <openravepy/openravepy_int.h>
+#include <openravepy/openravepy_module.h>
 using py::extract;
 using py::handle;
 using py::dict;
@@ -1213,7 +1215,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     .def("Evald1", &PyPiecewisePolynomialTrajectory::Evald1, PY_ARGS("t") "Evaluate the first derivative of this trajectory at the given parameter t")
     .def("Evald2", &PyPiecewisePolynomialTrajectory::Evald2, PY_ARGS("t") "Evaluate the second derivative of this trajectory at the given parameter t")
     .def("Evald3", &PyPiecewisePolynomialTrajectory::Evald3, PY_ARGS("t") "Evaluate the third derivative of this trajectory at the given parameter t")
-    .def("Evaldn", &PyPiecewisePolynomialTrajectory::Evald3, PY_ARGS("t", "n") "Evaluate the n-th derivative of this trajectory at the given parameter t")
+    .def("Evaldn", &PyPiecewisePolynomialTrajectory::Evaldn, PY_ARGS("t", "n") "Evaluate the n-th derivative of this trajectory at the given parameter t")
     .def("FindChunkIndex", &PyPiecewisePolynomialTrajectory::FindChunkIndex, PY_ARGS("t") "Find the index of the chunk in which the given time t falls into. Also compute the remainder of that chunk.")
     .def("Serialize", &PyPiecewisePolynomialTrajectory::Serialize, "Serialize this trajectory into string")
     .def("Deserialize", &PyPiecewisePolynomialTrajectory::Deserialize, PY_ARGS("s") "Deserialize a trajectory from the given string")
@@ -1279,7 +1281,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_piecewisepolynomials)
     ; // end class_ PyPolynomialChecker
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<piecewisepolynomials::PolynomialCheckReturn>(m, "PolynomialCheckReturn", py::arithmatic() DOXY_ENUM(piecewisepolynomials::PolynomialCheckReturn))
+    enum_<piecewisepolynomials::PolynomialCheckReturn>(m, "PolynomialCheckReturn", py::arithmetic() DOXY_ENUM(piecewisepolynomials::PolynomialCheckReturn))
 #else
     enum_<piecewisepolynomials::PolynomialCheckReturn>("PolynomialCheckReturn" DOXY_ENUM(piecewisepolynomials::PolynomialCheckReturn))
 #endif

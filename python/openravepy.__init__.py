@@ -53,6 +53,8 @@ else:
             self._pimpl = app_error
         def __str__( self ):
             return str(self._pimpl)
+        def __repr__( self ):
+            return self._pimpl.__repr__()
         def __unicode__( self ):
             return unicode(self._pimpl)
         def __getattribute__(self, attr):
@@ -69,6 +71,8 @@ else:
             self._pimpl = app_error
         def __str__( self ):
             return self._pimpl.message
+        def __repr__( self ):
+            return self._pimpl.__repr__()
         def __getattribute__(self, attr):
             my_pimpl = super(std_exception, self).__getattribute__("_pimpl")
             try:
@@ -83,6 +87,8 @@ else:
             self._pimpl = app_error
         def __str__( self ):
             return self._pimpl.message
+        def __repr__( self ):
+            return self._pimpl.__repr__()
         def __getattribute__(self, attr):
             my_pimpl = super(runtime_error, self).__getattribute__("_pimpl")
             try:
