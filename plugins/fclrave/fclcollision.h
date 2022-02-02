@@ -1326,6 +1326,7 @@ private:
         _bParentlessCollisionObject = false;
 
         // check the cache and cleanup any unused environments
+        // TODO come up with cleaner way of capping num of entries, maybe based on least-recently-used cache approach.
         if( --_nGetEnvManagerCacheClearCount < 0 ) {
             uint32_t curtime = OpenRAVE::utils::GetMilliTime();
             _nGetEnvManagerCacheClearCount = 100000;
