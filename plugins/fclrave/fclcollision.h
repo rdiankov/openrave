@@ -1307,7 +1307,7 @@ private:
             p->InitBodyManager(pbody, bactiveDOFs);
             it = _bodymanagers.insert(BODYMANAGERSMAP::value_type(std::make_pair(pbody.get(), (int)bactiveDOFs), p)).first;
             
-            if (_bodymanagers.size() > _maxNumBodyManagers) {
+            if ((int) _bodymanagers.size() > _maxNumBodyManagers) {
                 RAVELOG_VERBOSE_FORMAT("env=%s, exceeded previous max number of body managers, now %d.", GetEnv()->GetNameId()%_bodymanagers.size());
                 _maxNumBodyManagers = _bodymanagers.size();
             }
@@ -1352,7 +1352,7 @@ private:
             p->InitEnvironment(vecExcludedBodyEnvIndices);
             it = _envmanagers.insert(EnvManagersMap::value_type(excludedBodyEnvIndices, p)).first;
 
-            if (_envmanagers.size() > _maxNumEnvManagers) {
+            if ((int) _envmanagers.size() > _maxNumEnvManagers) {
                 RAVELOG_VERBOSE_FORMAT("env=%s, exceeded previous max number of env managers, now %d.", GetEnv()->GetNameId()%_envmanagers.size());
                 _maxNumEnvManagers = _envmanagers.size();
             }
