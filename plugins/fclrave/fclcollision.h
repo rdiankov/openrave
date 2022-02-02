@@ -367,6 +367,26 @@ public:
              it != _bodymanagers.end(); ++it) {
             it->second->RemoveBody(body);
         }
+
+        const int envBodyIndex = body.GetEnvironmentBodyIndex();
+        EnvManagersMap::iterator it = _envmanagers.begin();
+        int numErased = 0;
+        while (it != _envmanagers.end()) {
+            const vector<int>& excludedBodyIndices = it->first;
+            const vector<int>::const_iterator itExcluded = lower_bound(excludedBodyIndices.begin(), excludedBodyIndices.end(), envBodyIndex);
+            
+            const bool bFound = itExcluded != excludedBodyIndices.end() && *itExcluded == envBodyIndex;
+            if (bFound) {
+                numErased++;
+                it = _envmanagers.erase(it);
+            }
+            else {
+                it->second->RemoveBody(body);
+                ++it;
+            }
+        }
+        if (numErased > 0) {
+            RAVELOG_INFO_FORMAT("evn=%s, erased %d element(s) from _envmanagers containing env body index=%d(\"%s\"), now %d remaining", GetEnv()->GetNameId()%numErased%envBodyIndex%body.GetName()%_envmanagers.size());
         }
         _fclspace->RemoveUserData(pbody);
     }
