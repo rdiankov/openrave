@@ -74,30 +74,6 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             nLinkUpdateStamp = pinfo->nLinkUpdateStamp;
             nGeometryUpdateStamp = pinfo->nGeometryUpdateStamp;
 
-            if (!vcolobjs.empty()) {
-                std::stringstream ss;
-                ss << "env=" << pbody->GetEnv()->GetNameId() << ", "
-                   << "body=" << pbody->GetName() << ", "
-                   << "geomgroup changes from \"" << geometrygroup << "\" to \"" << pinfo->_geometrygroup << "\", "
-                   << "FCLCollisionManagerInstance 0x" << hex << this
-                   << " has " << dec << vcolobjs.size() << " collision objects (";
-                for (const CollisionObjectPtr& obj : vcolobjs) {
-                    ss << "0x" << hex << obj << ", ";
-                    if (!!obj) {
-                        const fcl::Quaternion3f& q = obj->getQuatRotation();
-                        const fcl::Vec3f& t = obj->getTranslation();
-                        const fcl::AABB& aabb = obj->getAABB();
-                        ss << "pose=["
-                           << q[0] << "," << q[1] << "," << q[2] << "," << q[3] << ","
-                           << t[0] << "," << t[1] << "," << t[2] << "]; "
-                           << "aabb_min=[" << aabb.min_[0] << "," << aabb.min_[1] << "," << aabb.min_[2] << "]; "
-                           << "aabb_max=[" << aabb.max_[0] << "," << aabb.max_[1] << "," << aabb.max_[2] << "]; ";
-                    }
-                }
-                ss << "), but leaving untouched.";
-                RAVELOG_WARN_FORMAT("%s", ss.str());
-            }
-
             geometrygroup = pinfo->_geometrygroup;
             nAttachedBodiesUpdateStamp = pinfo->nAttachedBodiesUpdateStamp;
             nActiveDOFUpdateStamp = pinfo->nActiveDOFUpdateStamp;
@@ -119,14 +95,40 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
                 //RAVELOG_INFO_FORMAT("0x%x is previously invalidated, or was never valid.", this);
                 return;
             }
-            if( vcolobjs.size() > 0 ) { // should never happen
+            if (!vcolobjs.empty()) { // should never happen
+                std::stringstream ss;
                 KinBodyConstPtr pbody = pwbody.lock();
-                std::string bodyName, envNameId;
+                std::string bodyName("unknown_body");
+                std::string envNameId("unknown_env");;
                 if( !!pbody ) {
                     bodyName = pbody->GetName();
                     envNameId = pbody->GetEnv()->GetNameId();
                 }
-                RAVELOG_WARN_FORMAT("env=%s, there are %d fcl collision objects left for body %s", envNameId%vcolobjs.size()%bodyName);
+                std::string geometrygroup("unknown_geomgroup");
+                const FCLSpace::FCLKinBodyInfoPtr pinfo = pwinfo.lock();
+                if (!!pinfo) {
+                    geometrygroup = pinfo->_geometrygroup;
+                }
+                ss << "env=" << envNameId << ", "
+                   << "body=" << bodyName << ", "
+                   << "geomgroup=\"" << geometrygroup << "\", "
+                   << "FCLCollisionManagerInstance 0x" << hex << this
+                   << " has " << dec << vcolobjs.size() << " collision objects (";
+                for (const CollisionObjectPtr& obj : vcolobjs) {
+                    ss << "0x" << hex << obj << ", ";
+                    if (!!obj) {
+                        const fcl::Quaternion3f& q = obj->getQuatRotation();
+                        const fcl::Vec3f& t = obj->getTranslation();
+                        const fcl::AABB& aabb = obj->getAABB();
+                        ss << "pose=["
+                           << q[0] << "," << q[1] << "," << q[2] << "," << q[3] << ","
+                           << t[0] << "," << t[1] << "," << t[2] << "]; "
+                           << "aabb_min=[" << aabb.min_[0] << "," << aabb.min_[1] << "," << aabb.min_[2] << "]; "
+                           << "aabb_max=[" << aabb.max_[0] << "," << aabb.max_[1] << "," << aabb.max_[2] << "]; ";
+                    }
+                }
+                ss << "), but leaving untouched.";
+                RAVELOG_WARN_FORMAT("%s", ss.str());
             }
 
             pwbody.reset();
@@ -803,7 +805,7 @@ public:
                 }
                 if( isInvalid ) {
                     if( !!pbody && IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%cachedBodyIndex);
+                        RAVELOG_VERBOSE_FORMAT("env=%s, %x, %u removing old cache %d", pbody->GetEnv()->GetNameId()%this%_lastSyncTimeStamp%cachedBodyIndex);
                     }
                     // not in attached bodies so should remove
                     FOREACH(itcol, cache.vcolobjs) {
