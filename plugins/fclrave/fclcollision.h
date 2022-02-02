@@ -358,11 +358,15 @@ public:
 
     virtual void RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
     {
+        const OpenRAVE::KinBody& body = *pbody;
+
         // remove body from all the managers
         _bodymanagers.erase(std::make_pair(pbody.get(), (int)0));
         _bodymanagers.erase(std::make_pair(pbody.get(), (int)1));
-        FOREACH(itmanager, _envmanagers) {
-            itmanager->second->RemoveBody(*pbody);
+        for (BODYMANAGERSMAP::iterator it = _bodymanagers.begin();
+             it != _bodymanagers.end(); ++it) {
+            it->second->RemoveBody(body);
+        }
         }
         _fclspace->RemoveUserData(pbody);
     }
@@ -1305,7 +1309,7 @@ private:
         if( --_nGetEnvManagerCacheClearCount < 0 ) {
             uint32_t curtime = OpenRAVE::utils::GetMilliTime();
             _nGetEnvManagerCacheClearCount = 100000;
-            std::map<std::vector<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.begin();
+            EnvManagersMap::iterator it = _envmanagers.begin();
             while(it != _envmanagers.end()) {
                 if( (it->second->GetLastSyncTimeStamp() - curtime) > 10000 ) {
                     //RAVELOG_VERBOSE_FORMAT("env=%d erasing manager at %u", GetEnv()->GetId()%it->second->GetLastSyncTimeStamp());
@@ -1317,7 +1321,7 @@ private:
             }
         }
 
-        std::map<std::vector<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.find(excludedBodyEnvIndices);
+        EnvManagersMap::iterator it = _envmanagers.find(excludedBodyEnvIndices);
         if( it == _envmanagers.end() ) {
             FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
             vector<int8_t> vecExcludedBodyEnvIndices(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
@@ -1326,7 +1330,7 @@ private:
             }
 
             p->InitEnvironment(vecExcludedBodyEnvIndices);
-            it = _envmanagers.insert(std::map<std::vector<int>, FCLCollisionManagerInstancePtr>::value_type(excludedBodyEnvIndices, p)).first;
+            it = _envmanagers.insert(EnvManagersMap::value_type(excludedBodyEnvIndices, p)).first;
 
             if (_envmanagers.size() > _maxNumEnvManagers) {
                 RAVELOG_VERBOSE_FORMAT("env=%s, exceeded previous max number of env managers, now %d.", GetEnv()->GetNameId()%_envmanagers.size());
@@ -1415,7 +1419,8 @@ private:
     BODYMANAGERSMAP _bodymanagers; ///< managers for each of the individual bodies. each manager should be called with InitBodyManager. Cannot use KinBodyPtr here since that will maintain a reference to the body!
     int _maxNumBodyManagers = 0; ///< for debug, record max size of _bodymanagers.
 
-    std::map< std::vector<int>, FCLCollisionManagerInstancePtr> _envmanagers; // key is sorted vector of environment body indices of excluded bodies
+    typedef std::map<std::vector<int>, FCLCollisionManagerInstancePtr> EnvManagersMap; ///< Maps vector of excluded body indices to FCLCollisionManagerInstancePtr
+    EnvManagersMap _envmanagers; // key is sorted vector of environment body indices of excluded bodies
     int _nGetEnvManagerCacheClearCount; ///< count down until cache can be cleared
     int _maxNumEnvManagers = 0; ///< for debug, record max size of _envmanagers.
 
