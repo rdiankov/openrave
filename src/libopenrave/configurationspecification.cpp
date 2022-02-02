@@ -401,8 +401,8 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
 void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatime)
 {
     static const boost::array<string,4> s_GroupsJointValues = {{"joint_values","joint_velocities", "joint_accelerations", "joint_jerks"}};
-    static const boost::array<string,4> s_GroupsAffine = {{"affine_transform","affine_velocities","ikparam_accelerations", "affine_jerks"}};
-    static const boost::array<string,4> s_GroupsIkparam = {{"ikparam_values","ikparam_velocities","affine_accelerations", "ikparam_jerks"}};
+    static const boost::array<string,4> s_GroupsAffine = {{"affine_transform","affine_velocities","affine_accelerations", "affine_jerks"}};
+    static const boost::array<string,4> s_GroupsIkparam = {{"ikparam_values","ikparam_velocities","ikparam_accelerations", "ikparam_jerks"}};
     if( _vgroups.size() == 0 ) {
         return;
     }
@@ -902,6 +902,8 @@ bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
     case 0: searchname = "affine_transform"; break;
     case 1: searchname = "affine_velocities"; break;
     case 2: searchname = "affine_accelerations"; break;
+    case 3: searchname = "affine_jerks"; break;
+    case 4: searchname = "affine_snaps"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("bad time derivative %d"),timederivative,ORE_InvalidArguments);
     }
@@ -1058,6 +1060,7 @@ bool ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator
     case 1: searchname = "joint_velocities"; break;
     case 2: searchname = "joint_accelerations"; break;
     case 3: searchname = "joint_jerks"; break;
+    case 4: searchname = "joint_snaps"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT0(_("bad time derivative"),ORE_InvalidArguments);
     };
@@ -1107,6 +1110,7 @@ bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator 
     case 1: searchname = "joint_velocities"; break;
     case 2: searchname = "joint_accelerations"; break;
     case 3: searchname = "joint_jerks"; break;
+    case 4: searchname = "joint_snaps"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT0(_("bad time derivative"),ORE_InvalidArguments);
     };
@@ -1816,6 +1820,22 @@ std::string ConfigurationSpecification::GetInterpolationDerivative(const std::st
             }
             else {
                 return s_InterpolationOrder.at(i-deriv);
+            }
+        }
+    }
+    return "";
+}
+
+std::string ConfigurationSpecification::GetInterpolationIntegral(const std::string& interpolation, int integ)
+{
+    const static boost::array<std::string,7> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quartic","quintic","sextic"}};
+    for(int i = 0; i < (int)s_InterpolationOrder.size(); ++i) {
+        if( interpolation == s_InterpolationOrder[i] ) {
+            if( i + integ > (int)s_InterpolationOrder.size() ) {
+                return s_InterpolationOrder.at(s_InterpolationOrder.size() - 1);
+            }
+            else {
+                return s_InterpolationOrder.at(i+integ);
             }
         }
     }

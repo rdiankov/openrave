@@ -294,6 +294,7 @@ public:
     py::object ComputeHessianTranslation(int index, py::object oposition, py::object oindices=py::none_());
     py::object ComputeHessianAxisAngle(int index, py::object oindices=py::none_());
     py::object ComputeInverseDynamics(py::object odofaccelerations, py::object oexternalforcetorque=py::none_(), bool returncomponents=false);
+    py::object GetDOFDynamicAccelerationJerkLimits(py::object oDOFPositions, py::object oDOFVelocities) const;
     void SetSelfCollisionChecker(PyCollisionCheckerBasePtr pycollisionchecker);
     PyInterfaceBasePtr GetSelfCollisionChecker();
     bool CheckSelfCollision(PyCollisionReportPtr pReport=PyCollisionReportPtr(), PyCollisionCheckerBasePtr pycollisionchecker=PyCollisionCheckerBasePtr());

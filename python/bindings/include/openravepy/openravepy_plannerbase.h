@@ -90,6 +90,8 @@ public:
 
         void SetConfigAccelerationLimit(object o);
 
+        void SetConfigJerkLimit(object o);
+
         void SetConfigResolution(object o);
 
         void SetMaxIterations(int nMaxIterations);
@@ -97,6 +99,24 @@ public:
         object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, uint32_t options=0xffff, bool filterreturn=false);
 
         void SetPostProcessing(const std::string& plannername, const std::string& plannerparameters);
+
+        object GetConfigVelocityLimit();
+
+        object GetConfigAccelerationLimit();
+
+        object GetConfigJerkLimit();
+
+        object GetConfigResolution();
+
+        bool HasNeighStateFn();
+
+        object NeighStateFn(object oq, object odq, int options);
+
+        dReal DistMetricFn(object oq0, object oq1);
+
+        int SetStateValues(object oq, int options=0);
+
+        object GetStateFn();
 
         std::string __repr__();
         std::string __str__();
