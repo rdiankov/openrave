@@ -180,9 +180,9 @@ public:
                 const KinBody& body = *pbody;
                 bodyName = body.GetName();
                 envNameId = body.GetEnv()->GetNameId();
-                envBodyIndex = body.GetEnvBodyIndex();
+                envBodyIndex = body.GetEnvironmentBodyIndex();
             }
-            RAVELOG_INFO_FORMAT("env=%s, body=%s(env body index=%d) _tmpSortedBuffer has left over objects %d, maybe EnsureBodies was never called", envNameId%bodyName%envBodyIndex%_tmpSortedBuffer.size());
+            RAVELOG_INFO_FORMAT("env=%s, body=%s(envBodyIndex=%d) _tmpSortedBuffer has left over objects %d, maybe EnsureBodies was never called", envNameId%bodyName%envBodyIndex%_tmpSortedBuffer.size());
         }
         _tmpSortedBuffer.resize(0);
 
@@ -401,11 +401,11 @@ public:
                 return true;
             }
             else {
-                RAVELOG_VERBOSE_FORMAT("env=%s 0x%x body %s(env body index=%d) is invalidated in cache, maybe previously removed or never added", body.GetEnv()->GetNameId()%this%body.GetName()%bodyIndex);
+                RAVELOG_VERBOSE_FORMAT("env=%s 0x%x body %s(envBodyIndex=%d) is invalidated in cache, maybe previously removed or never added", body.GetEnv()->GetNameId()%this%body.GetName()%bodyIndex);
             }
         }
         else {
-            RAVELOG_VERBOSE_FORMAT("env=%s body %s has invalid env body index=%d, cache size is %d", body.GetEnv()->GetNameId()%body.GetName()%bodyIndex%_vecCachedBodies.size());
+            RAVELOG_VERBOSE_FORMAT("env=%s body %s has invalid envBodyIndex=%d, cache size is %d", body.GetEnv()->GetNameId()%body.GetName()%bodyIndex%_vecCachedBodies.size());
         }
         return false;
     }
@@ -549,7 +549,7 @@ public:
             {
                 const int bodyIndex = body.GetEnvironmentBodyIndex();
                 if (bodyIndexCached != bodyIndex) {
-                    RAVELOG_WARN_FORMAT("env=%s body %s has env body index=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%body.GetName()%bodyIndex%bodyIndexCached);
+                    RAVELOG_WARN_FORMAT("env=%s body %s has envBodyIndex=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%body.GetName()%bodyIndex%bodyIndexCached);
                 }
             }
 
@@ -826,7 +826,7 @@ public:
                     const KinBody& body = *pbody;
                     const int currentBodyEnvBodyIndex = body.GetEnvironmentBodyIndex();
                     if (currentBodyEnvBodyIndex != cachedBodyIndex) {
-                        RAVELOG_WARN_FORMAT("env=%s body %s has env body index=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%body.GetName()%currentBodyEnvBodyIndex%cachedBodyIndex);
+                        RAVELOG_WARN_FORMAT("env=%s body %s has envBodyIndex=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%body.GetName()%currentBodyEnvBodyIndex%cachedBodyIndex);
                     }
                     const vector<int>::const_iterator it = lower_bound(vecAttachedEnvBodyIndices.begin(), vecAttachedEnvBodyIndices.end(), currentBodyEnvBodyIndex);
                     isInvalid =  (it == vecAttachedEnvBodyIndices.end() || *it != currentBodyEnvBodyIndex) || currentBodyEnvBodyIndex != cachedBodyIndex;
