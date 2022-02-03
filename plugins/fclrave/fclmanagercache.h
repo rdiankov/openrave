@@ -377,7 +377,7 @@ public:
         RAVELOG_VERBOSE_FORMAT("%u removing body %s", _lastSyncTimeStamp% body.GetName());
 
         const int bodyIndex = body.GetEnvironmentBodyIndex();
-        if( (int)_vecCachedBodies.size() > bodyIndex) {
+        if( (int)_vecCachedBodies.size() > bodyIndex && bodyIndex > 0) {
             KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
             if (cache.IsValid()) {
                 for (CollisionObjectPtr& col : cache.vcolobjs) {
@@ -390,8 +390,13 @@ public:
 
                 return true;
             }
+            else {
+                RAVELOG_DEBUG_FORMAT("env=%s 0x%x body %s(env body index=%d) is invalidated in cache, maybe previously removed or never added", body.GetEnv()->GetNameId()%this%body.GetName()%bodyIndex);
+            }
         }
-
+        else {
+            RAVELOG_DEBUG_FORMAT("env=%s body %s has invalid env body index=%d, cache size is %d", body.GetEnv()->GetNameId()%body.GetName()%bodyIndex%_vecCachedBodies.size());
+        }
         return false;
     }
 
@@ -514,7 +519,8 @@ public:
 
         FCLSpace::FCLKinBodyInfoPtr pinfo;
         KinBodyConstPtr pbody;
-        for (KinBodyCache& cache : _vecCachedBodies) {
+        for(int bodyIndexCached = 1; bodyIndexCached < (int)_vecCachedBodies.size(); ++bodyIndexCached) {
+            KinBodyCache& cache = _vecCachedBodies[bodyIndexCached];
             pbody = cache.pwbody.lock();
             if( !pbody || pbody->GetEnvironmentBodyIndex() == 0 ) {
                 // should happen when parts are removed
@@ -529,8 +535,15 @@ public:
                 continue;
             }
 
-            pinfo = cache.pwinfo.lock();
             const KinBody& body = *pbody;
+            {
+                const int bodyIndex = body.GetEnvironmentBodyIndex();
+                if (bodyIndexCached != bodyIndex) {
+                    RAVELOG_WARN_FORMAT("env=%s body %s has env body index=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%body.GetName()%bodyIndex%bodyIndexCached);
+                }
+            }
+
+            pinfo = cache.pwinfo.lock();
             const FCLSpace::FCLKinBodyInfoPtr& pnewinfo = _fclspace.GetInfo(body); // necessary in case pinfos were swapped!
             if( pinfo != pnewinfo ) {
                 // everything changed!
@@ -800,7 +813,11 @@ public:
                 // make sure we don't need to make this asusmption of body id change when bodies are removed and re-added
                 bool isInvalid = !pbody;
                 if (!isInvalid) {
-                    const int currentBodyEnvBodyIndex = pbody->GetEnvironmentBodyIndex();
+                    const KinBody& body = *pbody;
+                    const int currentBodyEnvBodyIndex = body.GetEnvironmentBodyIndex();
+                    if (currentBodyEnvBodyIndex != cachedBodyIndex) {
+                        RAVELOG_WARN_FORMAT("env=%s body %s has env body index=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%body.GetName()%currentBodyEnvBodyIndex%cachedBodyIndex);
+                    }
                     const vector<int>::const_iterator it = lower_bound(vecAttachedEnvBodyIndices.begin(), vecAttachedEnvBodyIndices.end(), currentBodyEnvBodyIndex);
                     isInvalid =  (it == vecAttachedEnvBodyIndices.end() || *it != currentBodyEnvBodyIndex) || currentBodyEnvBodyIndex != cachedBodyIndex;
                 }
