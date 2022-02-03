@@ -172,17 +172,7 @@ public:
     }
     ~FCLCollisionManagerInstance() {
         if( _tmpSortedBuffer.size() > 0 ) {
-            std::string envNameId("unknown_env");
-            std::string bodyName("unknown_body");
-            int envBodyIndex = -1;
-            KinBodyConstPtr pbody = cache.pwbody.lock();
-            if( !!pbody ) {
-                const KinBody& body = *pbody;
-                bodyName = body.GetName();
-                envNameId = body.GetEnv()->GetNameId();
-                envBodyIndex = body.GetEnvironmentBodyIndex();
-            }
-            RAVELOG_INFO_FORMAT("env=%s, body=%s(envBodyIndex=%d) _tmpSortedBuffer has left over objects %d, maybe EnsureBodies was never called", envNameId%bodyName%envBodyIndex%_tmpSortedBuffer.size());
+            RAVELOG_INFO_FORMAT("env=%s 0x%x: _tmpSortedBuffer has left over objects %d, maybe EnsureBodies was never called", _fclspace.GetEnvironmentId()%this%_tmpSortedBuffer.size());
         }
         _tmpSortedBuffer.resize(0);
 
