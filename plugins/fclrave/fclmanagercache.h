@@ -100,7 +100,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
                 std::stringstream ss;
                 KinBodyConstPtr pbody = pwbody.lock();
                 std::string bodyName("unknown_body");
-                std::string envNameId("unknown_env");;
+                std::string envNameId("unknown_env");
                 if( !!pbody ) {
                     bodyName = pbody->GetName();
                     envNameId = pbody->GetEnv()->GetNameId();
@@ -172,7 +172,17 @@ public:
     }
     ~FCLCollisionManagerInstance() {
         if( _tmpSortedBuffer.size() > 0 ) {
-            RAVELOG_WARN_FORMAT("_tmpSortedBuffer has left over objects %d", _tmpSortedBuffer.size());
+            std::string envNameId("unknown_env");
+            std::string bodyName("unknown_body");
+            int envBodyIndex = -1;
+            KinBodyConstPtr pbody = cache.pwbody.lock();
+            if( !!pbody ) {
+                const KinBody& body = *pbody;
+                bodyName = body.GetName();
+                envNameId = body.GetEnv()->GetNameId();
+                envBodyIndex = body.GetEnvBodyIndex();
+            }
+            RAVELOG_INFO_FORMAT("env=%s, body=%s(env body index=%d) _tmpSortedBuffer has left over objects %d, maybe EnsureBodies was never called", envNameId%bodyName%envBodyIndex%_tmpSortedBuffer.size());
         }
         _tmpSortedBuffer.resize(0);
 
@@ -391,11 +401,11 @@ public:
                 return true;
             }
             else {
-                RAVELOG_DEBUG_FORMAT("env=%s 0x%x body %s(env body index=%d) is invalidated in cache, maybe previously removed or never added", body.GetEnv()->GetNameId()%this%body.GetName()%bodyIndex);
+                RAVELOG_VERBOSE_FORMAT("env=%s 0x%x body %s(env body index=%d) is invalidated in cache, maybe previously removed or never added", body.GetEnv()->GetNameId()%this%body.GetName()%bodyIndex);
             }
         }
         else {
-            RAVELOG_DEBUG_FORMAT("env=%s body %s has invalid env body index=%d, cache size is %d", body.GetEnv()->GetNameId()%body.GetName()%bodyIndex%_vecCachedBodies.size());
+            RAVELOG_VERBOSE_FORMAT("env=%s body %s has invalid env body index=%d, cache size is %d", body.GetEnv()->GetNameId()%body.GetName()%bodyIndex%_vecCachedBodies.size());
         }
         return false;
     }
