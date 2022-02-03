@@ -86,16 +86,17 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
         }
 
         ~KinBodyCache() {
-            Invalidate();
+            // KinBodyCache is stored in vector, and resizing it causes destructor be called, but do not want warning on vcolobjs being non-empty.
+            Invalidate(false);
         }
 
-        inline void Invalidate()
+        inline void Invalidate(bool warnOnNonEmptyColObjs = true)
         {
             if (!IsValid()) {
                 //RAVELOG_INFO_FORMAT("0x%x is previously invalidated, or was never valid.", this);
                 return;
             }
-            if (!vcolobjs.empty()) { // should never happen
+            if (!vcolobjs.empty() && warnOnNonEmptyColObjs) { // should never happen
                 std::stringstream ss;
                 KinBodyConstPtr pbody = pwbody.lock();
                 std::string bodyName("unknown_body");
