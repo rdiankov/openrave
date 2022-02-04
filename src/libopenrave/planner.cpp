@@ -88,12 +88,20 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
     for(size_t i = 0; i < q.size(); ++i) {
         q[i] += qdelta[i];
         if( q[i] > vUpperLimits.at(i) ) {
+            if( q[i] > vUpperLimits[i] + g_fEpsilonJointLimit ) {
+                // Only report deviation if the difference is not negligible as slight violation
+                // could have been solely due to some numerical error.
+                status |= 0x2;
+            }
             q[i] = vUpperLimits.at(i);
-            status |= 0x2;
         }
         else if( q[i] < vLowerLimits.at(i) ) {
+            if( q[i] < vLowerLimits[i] - g_fEpsilonJointLimit ) {
+                // Only report deviation if the difference is not negligible as slight violation
+                // could have been solely due to some numerical error.
+                status |= 0x2;
+            }
             q[i] = vLowerLimits.at(i);
-            status |= 0x2;
         }
     }
     return status;
@@ -323,6 +331,7 @@ PlannerParameters::PlannerParameters() : Readable("plannerparameters"), _fStepLe
     _vXMLParameters.push_back("_vconfigupperlimit");
     _vXMLParameters.push_back("_vconfigvelocitylimit");
     _vXMLParameters.push_back("_vconfigaccelerationlimit");
+    _vXMLParameters.push_back("_vconfigjerklimit");
     _vXMLParameters.push_back("_vconfigresolution");
     _vXMLParameters.push_back("_nmaxiterations");
     _vXMLParameters.push_back("_nmaxplanningtime");
@@ -346,6 +355,7 @@ PlannerParameters& PlannerParameters::operator=(const PlannerParameters& r)
     _goalfn = r._goalfn;
     _distmetricfn = r._distmetricfn;
     _checkpathvelocityconstraintsfn = r._checkpathvelocityconstraintsfn;
+    _checkpathvelocityaccelerationconstraintsfn = r._checkpathvelocityaccelerationconstraintsfn;
     _samplefn = r._samplefn;
     _sampleneighfn = r._sampleneighfn;
     _samplegoalfn = r._samplegoalfn;
@@ -366,6 +376,7 @@ PlannerParameters& PlannerParameters::operator=(const PlannerParameters& r)
     _vConfigResolution.resize(0);
     _vConfigVelocityLimit.resize(0);
     _vConfigAccelerationLimit.resize(0);
+    _vConfigJerkLimit.resize(0);
     _sPostProcessingPlanner = "";
     _sPostProcessingParameters.resize(0);
     _sExtraParameters.resize(0);
@@ -439,6 +450,11 @@ bool PlannerParameters::serialize(std::ostream& O, int options) const
         O << *it << " ";
     }
     O << "</_vconfigaccelerationlimit>" << endl;
+    O << "<_vconfigjerklimit>";
+    FOREACHC(it, _vConfigJerkLimit) {
+        O << *it << " ";
+    }
+    O << "</_vconfigjerklimit>" << endl;
     O << "<_vconfigresolution>";
     FOREACHC(it, _vConfigResolution) {
         O << *it << " ";
@@ -503,7 +519,7 @@ BaseXMLReader::ProcessElement PlannerParameters::startElement(const std::string&
         return PE_Support;
     }
 
-    static const boost::array<std::string,14> names = {{"_vinitialconfig","_vgoalconfig","_vconfiglowerlimit","_vconfigupperlimit","_vconfigvelocitylimit","_vconfigaccelerationlimit","_vconfigresolution","_nmaxiterations","_nmaxplanningtime","_fsteplength","_postprocessing", "_nrandomgeneratorseed", "_vinitialconfigvelocities", "_vgoalconfigvelocities"}};
+    static const boost::array<std::string,15> names = {{"_vinitialconfig","_vgoalconfig","_vconfiglowerlimit","_vconfigupperlimit","_vconfigvelocitylimit","_vconfigaccelerationlimit","_vconfigjerklimit","_vconfigresolution","_nmaxiterations","_nmaxplanningtime","_fsteplength","_postprocessing", "_nrandomgeneratorseed", "_vinitialconfigvelocities", "_vgoalconfigvelocities"}};
     if( find(names.begin(),names.end(),name) != names.end() ) {
         __processingtag = name;
         return PE_Support;
@@ -560,6 +576,9 @@ bool PlannerParameters::endElement(const std::string& name)
         }
         else if( name == "_vconfigaccelerationlimit") {
             _vConfigAccelerationLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+        }
+        else if( name == "_vconfigjerklimit") {
+            _vConfigJerkLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
         }
         else if( name == "_nmaxiterations") {
             _ss >> _nMaxIterations;
@@ -660,6 +679,7 @@ void PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFVelocityLimits(_vConfigVelocityLimit);
     robot->GetActiveDOFAccelerationLimits(_vConfigAccelerationLimit);
+    robot->GetActiveDOFJerkLimits(_vConfigJerkLimit);
     robot->GetActiveDOFResolutions(_vConfigResolution);
     robot->GetActiveDOFValues(vinitialconfig);
     robot->GetActiveDOFVelocities(_vInitialConfigVelocities); // necessary?
@@ -672,6 +692,8 @@ void PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
     _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 
+    int (DynamicsCollisionConstraint::*CheckWithAccelerations)(const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr) = &DynamicsCollisionConstraint::Check;
+    _checkpathvelocityaccelerationconstraintsfn = std::bind(CheckWithAccelerations, pcollision, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9, std::placeholders::_10);
 }
 
 void _CallDiffStateFns(const std::vector< std::pair<PlannerParameters::DiffStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v0, const std::vector<dReal>& v1)
@@ -869,7 +891,7 @@ void PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, c
     std::vector< std::pair<SetStateValuesFn, int> > setstatevaluesfns(spec._vgroups.size());
     std::vector< std::pair<GetStateFn, int> > getstatefns(spec._vgroups.size());
     std::vector< std::pair<NeighStateFn, int> > neighstatefns(spec._vgroups.size());
-    std::vector<dReal> vConfigLowerLimit(spec.GetDOF()), vConfigUpperLimit(spec.GetDOF()), vConfigVelocityLimit(spec.GetDOF()), vConfigAccelerationLimit(spec.GetDOF()), vConfigResolution(spec.GetDOF()), v0, v1;
+    std::vector<dReal> vConfigLowerLimit(spec.GetDOF()), vConfigUpperLimit(spec.GetDOF()), vConfigVelocityLimit(spec.GetDOF()), vConfigAccelerationLimit(spec.GetDOF()), vConfigJerkLimit(spec.GetDOF()), vConfigResolution(spec.GetDOF()), v0, v1;
     std::list<KinBodyPtr> listCheckCollisions;
     string bodyname;
     stringstream ss, ssout;
@@ -937,6 +959,8 @@ void PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, c
             std::copy(v0.begin(),v0.end(), vConfigVelocityLimit.begin()+g.offset);
             pbody->GetDOFAccelerationLimits(v0,dofindices);
             std::copy(v0.begin(),v0.end(), vConfigAccelerationLimit.begin()+g.offset);
+            pbody->GetDOFJerkLimits(v0,dofindices);
+            std::copy(v0.begin(),v0.end(), vConfigJerkLimit.begin()+g.offset);
             pbody->GetDOFResolutions(v0,dofindices);
             std::copy(v0.begin(),v0.end(),vConfigResolution.begin()+g.offset);
             if( find(listCheckCollisions.begin(),listCheckCollisions.end(),pbody) == listCheckCollisions.end() ) {
@@ -966,12 +990,16 @@ void PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, c
     _vConfigUpperLimit.swap(vConfigUpperLimit);
     _vConfigVelocityLimit.swap(vConfigVelocityLimit);
     _vConfigAccelerationLimit.swap(vConfigAccelerationLimit);
+    _vConfigJerkLimit.swap(vConfigJerkLimit);
     _vConfigResolution.swap(vConfigResolution);
     _configurationspecification = spec;
     _getstatefn(vinitialconfig);
     // have to do this last, disable timed constraints for default
     boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
     _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
+
+    int (DynamicsCollisionConstraint::*CheckWithAccelerations)(const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr) = &DynamicsCollisionConstraint::Check;
+    _checkpathvelocityaccelerationconstraintsfn = std::bind(CheckWithAccelerations, pcollision, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9, std::placeholders::_10);
 }
 
 void PlannerParameters::Validate() const
@@ -988,6 +1016,9 @@ void PlannerParameters::Validate() const
     }
     if( _vConfigAccelerationLimit.size() > 0 ) {
         OPENRAVE_ASSERT_OP(_vConfigAccelerationLimit.size(),==,(size_t)GetDOF());
+    }
+    if( _vConfigJerkLimit.size() > 0 ) {
+        OPENRAVE_ASSERT_OP(_vConfigJerkLimit.size(),==,(size_t)GetDOF());
     }
     OPENRAVE_ASSERT_OP(_vConfigResolution.size(),==,(size_t)GetDOF());
     OPENRAVE_ASSERT_OP(_fStepLength,>=,0); // == 0 is valid for auto-steps

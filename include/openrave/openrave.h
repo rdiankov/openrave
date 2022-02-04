@@ -1042,6 +1042,13 @@ protected:
     /// \param deriv the number of derivatives to take, should be > 0
     static std::string GetInterpolationDerivative(const std::string& interpolation, int deriv=1);
 
+    /// \brief gets the name of the interpolation that represents the integral of the passed in interpolation.
+    ///
+    /// For example GetInterpolationIntegral("linear") -> "quadratic"
+    /// \param interpolation the interpolation to start at
+    /// \param integ the number of integral to take, should be > 0
+    static std::string GetInterpolationIntegral(const std::string& interpolation, int integ=1);
+
     std::vector<Group> _vgroups;
 };
 

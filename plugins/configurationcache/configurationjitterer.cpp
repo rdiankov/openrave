@@ -509,17 +509,12 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( GetEnv()->CheckCollision(_probot, _report) ) {
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                        ss << "original env collision failed, ";
-                        for(size_t i = 0; i < vnewdof.size(); ++i ) {
-                            if( i > 0 ) {
-                                ss << "," << vnewdof[i];
-                            }
-                            else {
-                                ss << "colvalues=[" << vnewdof[i];
-                            }
+                        ss << "colvalues=[";
+                        FOREACHC(itval, vnewdof) {
+                            ss << *itval << ",";
                         }
-                        ss << "], report=" << _report->__str__();
-                        RAVELOG_VERBOSE(ss.str());
+                        ss << "]";
+                        RAVELOG_VERBOSE_FORMAT("env=%d, original env collision failed. report=%s; %s", GetEnv()->GetId()%_report->__str__()%ss.str());
                     }
                     _counter.nEnvCollisionFailure++;
                     bCollision = true;
@@ -529,17 +524,12 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( _probot->CheckSelfCollision(_report) ) {
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                        ss << "original self collision failed, ";
-                        for(size_t i = 0; i < vnewdof.size(); ++i ) {
-                            if( i > 0 ) {
-                                ss << "," << vnewdof[i];
-                            }
-                            else {
-                                ss << "colvalues=[" << vnewdof[i];
-                            }
+                        ss << "colvalues=[";
+                        FOREACHC(itval, vnewdof) {
+                            ss << *itval << ",";
                         }
-                        ss << "], report=" << _report->__str__();
-                        RAVELOG_VERBOSE(ss.str());
+                        ss << "]";
+                        RAVELOG_VERBOSE_FORMAT("env=%d, original self collision failed. report=%s; %s", GetEnv()->GetId()%_report->__str__()%ss.str());
                     }
                     _counter.nSelfCollisionFailure++;
                     bCollision = true;
@@ -549,7 +539,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
             if( (!bCollision && !bConstraintFailed) || _maxjitter <= 0 ) {
                 if( _counter.nNeighStateFailure > 0 ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d jitterer returning initial point is good, but neigh state failed %d times", GetEnv()->GetId()%_counter.nNeighStateFailure);
+                    RAVELOG_DEBUG_FORMAT("env=%d, jitterer returning initial point is good, but neigh state failed %d times", GetEnv()->GetId()%_counter.nNeighStateFailure);
                 }
                 return -1;
             }
@@ -557,7 +547,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             _nNumIterations++;
         }
         else {
-            RAVELOG_VERBOSE_FORMAT("env=%d skipping orig pos check", GetEnv()->GetId());
+            RAVELOG_VERBOSE_FORMAT("env=%d, skipping orig pos check", GetEnv()->GetId());
         }
 
         if( !!_cache ) {

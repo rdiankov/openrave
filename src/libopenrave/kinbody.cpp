@@ -101,73 +101,6 @@ protected:
 
 typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 
-void ElectricMotorActuatorInfo::Reset()
-{
-    model_type.clear();
-    assigned_power_rating = 0;
-    max_speed = 0;
-    no_load_speed = 0;
-    stall_torque = 0;
-    max_instantaneous_torque = 0;
-    nominal_speed_torque_points.clear();
-    max_speed_torque_points.clear();
-    nominal_torque = 0;
-    rotor_inertia = 0;
-    torque_constant = 0;
-    nominal_voltage = 0;
-    speed_constant = 0;
-    starting_current = 0;
-    terminal_resistance = 0;
-    gear_ratio = 0;
-    coloumb_friction = 0;
-    viscous_friction = 0;
-}
-
-void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
-{
-    orjson::SetJsonValueByKey(value, "modelType", model_type, allocator);
-    orjson::SetJsonValueByKey(value, "assignedPowerRating", assigned_power_rating, allocator);
-    orjson::SetJsonValueByKey(value, "maxSpeed", max_speed, allocator);
-    orjson::SetJsonValueByKey(value, "noLoadSpeed", no_load_speed, allocator);
-    orjson::SetJsonValueByKey(value, "stallTorque", stall_torque, allocator);
-    orjson::SetJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque, allocator);
-    orjson::SetJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points, allocator);
-    orjson::SetJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points, allocator);
-    orjson::SetJsonValueByKey(value, "nominalTorque", nominal_torque, allocator);
-    orjson::SetJsonValueByKey(value, "rotorInertia", rotor_inertia, allocator);
-    orjson::SetJsonValueByKey(value, "torqueConstant", torque_constant, allocator);
-    orjson::SetJsonValueByKey(value, "nominalVoltage", nominal_voltage, allocator);
-    orjson::SetJsonValueByKey(value, "speedConstant", speed_constant, allocator);
-    orjson::SetJsonValueByKey(value, "startingCurrent", starting_current, allocator);
-    orjson::SetJsonValueByKey(value, "terminalResistance", terminal_resistance, allocator);
-    orjson::SetJsonValueByKey(value, "gearRatio", gear_ratio, allocator);
-    orjson::SetJsonValueByKey(value, "coloumbFriction", coloumb_friction, allocator);
-    orjson::SetJsonValueByKey(value, "viscousFriction", viscous_friction, allocator);
-}
-
-void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
-{
-    orjson::LoadJsonValueByKey(value, "modelType", model_type);
-    orjson::LoadJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);
-    orjson::LoadJsonValueByKey(value, "maxSpeed", max_speed);
-    orjson::LoadJsonValueByKey(value, "noLoadSpeed", no_load_speed);
-    orjson::LoadJsonValueByKey(value, "stallTorque", stall_torque);
-    orjson::LoadJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque);
-    orjson::LoadJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points);
-    orjson::LoadJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points);
-    orjson::LoadJsonValueByKey(value, "nominalTorque", nominal_torque);
-    orjson::LoadJsonValueByKey(value, "rotorInertia", rotor_inertia);
-    orjson::LoadJsonValueByKey(value, "torqueConstant", torque_constant);
-    orjson::LoadJsonValueByKey(value, "nominalVoltage", nominal_voltage);
-    orjson::LoadJsonValueByKey(value, "speedConstant", speed_constant);
-    orjson::LoadJsonValueByKey(value, "startingCurrent", starting_current);
-    orjson::LoadJsonValueByKey(value, "terminalResistance", terminal_resistance);
-    orjson::LoadJsonValueByKey(value, "gearRatio", gear_ratio);
-    orjson::LoadJsonValueByKey(value, "coloumbFriction", coloumb_friction);
-    orjson::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
-}
-
-
 bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
     return _id == other._id
            && _uri == other._uri
@@ -3728,6 +3661,12 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
             }
         }
     }
+}
+
+bool KinBody::GetDOFDynamicAccelerationJerkLimits(std::vector<dReal>& vDynamicAccelerationLimits, std::vector<dReal>& vDynamicJerkLimits,
+                                                  const std::vector<dReal>& vDOFPositions, const std::vector<dReal>& vDOFVelocities) const
+{
+    return false;
 }
 
 void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, std::vector<std::pair<Vector,Vector> >&vLinkAccelerations, AccelerationMapConstPtr externalaccelerations) const

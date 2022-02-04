@@ -1360,8 +1360,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object o2, PyCollisionReportPt
                 throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
             }
         }
-    }
-    {
+    } else {
         KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
         if( !!pbody ) {
             KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
