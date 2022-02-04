@@ -721,10 +721,10 @@ protected:
             if( !pRobot ) {
                 return false;
             }
-            pRobot->SetId(pRobotBaseInfo->_id);
             if (!pRobot->InitFromRobotInfo(*pRobotBaseInfo)) {
                 return false;
             }
+
             pBody = pRobot;
         }
         else {
@@ -735,7 +735,6 @@ protected:
             if( !pBody ) {
                 return false;
             }
-            pBody->SetId(pKinBodyInfo->_id);
             if (!pBody->InitFromKinBodyInfo(*pKinBodyInfo)) {
                 return false;
             }

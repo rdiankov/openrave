@@ -823,6 +823,7 @@ bool RobotBase::InitFromRobotInfo(const RobotBaseInfo& info)
         _vecGripperInfos.push_back(newGripperInfo);
     }
 
+    _id = info._id;
     _name = info._name;
     _referenceUri = info._referenceUri;
 

@@ -730,6 +730,7 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
         return false;
     }
 
+    _id = info._id;
     _name = info._name;
     _referenceUri = info._referenceUri;
 
@@ -775,10 +776,6 @@ void KinBody::SetId(const std::string& newid)
 {
     // allow empty id to be set
     if( _id != newid ) {
-        if( !_id.empty() ) {
-            // warn if body id has been set before and is now changing again
-            RAVELOG_WARN_FORMAT("changing body '%s' id from '%s' -> '%s'", _name%_id%newid);
-        }
         if (GetEnvironmentBodyIndex() > 0) {
             if( !GetEnv()->NotifyKinBodyIdChanged(_id, newid) ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("env=%d, cannot change body '%s' id from '%s' -> '%s' since it conflicts with another body", GetEnv()->GetId()%_name%_id%newid, ORE_BodyIdConflict);
@@ -6198,6 +6195,17 @@ void KinBody::SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator)
             RAVELOG_DEBUG_FORMAT("env=%d, resetting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
             _pCurrentKinematicsFunctions.reset();
         }
+    }
+}
+
+KinBody::KinBodyIdSaver::KinBodyIdSaver(KinBodyPtr pbody) : _pbody(pbody), _id(pbody->GetId())
+{
+}
+
+KinBody::KinBodyIdSaver::~KinBodyIdSaver()
+{
+    if ( !!_pbody ) {
+        _pbody->SetId(_id);
     }
 }
 

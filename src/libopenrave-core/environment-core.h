@@ -2881,7 +2881,8 @@ public:
                         }
                     }
                     if (updateFromInfoResult != UFIR_NoChange && updateFromInfoResult != UFIR_Success) {
-                        // have to reinit, but do not SetId, keep id unchanged
+                        // have to reinit, but preserves body id
+                        KinBody::KinBodyIdSaver bodyIdSaver(pRobot);
                         if( !!pRobotBaseInfo ) {
                             pRobot->InitFromRobotInfo(*pRobotBaseInfo);
                         }
@@ -2899,7 +2900,8 @@ public:
                         updateFromInfoResult = pMatchExistingBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                     }
                     if (updateFromInfoResult != UFIR_NoChange && updateFromInfoResult != UFIR_Success) {
-                        // have to reinit, but do not SetId, keep id unchanged
+                        // have to reinit, but preserves body id
+                        KinBody::KinBodyIdSaver bodyIdSaver(pMatchExistingBody);
                         pMatchExistingBody->InitFromKinBodyInfo(*pKinBodyInfo);
                     }
 
@@ -2918,11 +2920,9 @@ public:
                     }
 
                     if( !!pRobotBaseInfo ) {
-                        pRobot->SetId(pRobotBaseInfo->_id);
                         pRobot->InitFromRobotInfo(*pRobotBaseInfo);
                     }
                     else {
-                        pRobot->SetId(pKinBodyInfo->_id);
                         pRobot->InitFromKinBodyInfo(*pKinBodyInfo);
                     }
                     pInitBody = pRobot;
@@ -2935,7 +2935,6 @@ public:
                     if( !pNewBody ) {
                         pNewBody = RaveCreateKinBody(shared_from_this(), "");
                     }
-                    pNewBody->SetId(pKinBodyInfo->_id);
                     pNewBody->InitFromKinBodyInfo(*pKinBodyInfo);
                     pInitBody = pNewBody;
                     _AddKinBody(pNewBody, IAM_AllowRenaming);
