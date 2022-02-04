@@ -6198,15 +6198,4 @@ void KinBody::SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator)
     }
 }
 
-KinBody::KinBodyIdSaver::KinBodyIdSaver(KinBodyPtr pbody) : _pbody(pbody), _id(pbody->GetId())
-{
-}
-
-KinBody::KinBodyIdSaver::~KinBodyIdSaver()
-{
-    if ( !!_pbody ) {
-        _pbody->SetId(_id);
-    }
-}
-
 } // end namespace OpenRAVE

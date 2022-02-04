@@ -133,6 +133,27 @@ protected:
     bool _lockAquired;
 };
 
+/// \biref Helper class to save and restore the kinbody id
+class KinBodyIdSaver
+{
+public:
+    KinBodyIdSaver(KinBodyPtr pbody) : _pbody(pbody) {
+        if( !!_pbody ) {
+            _id = pbody->GetId();
+        }
+    }
+    virtual ~KinBodyIdSaver() {
+        if ( !!_pbody ) {
+            _pbody->SetId(_id);
+        }
+    }
+
+protected:
+    KinBodyPtr _pbody; ///< pointer to kinbody
+    std::string _id; ///< original body id
+};
+typedef boost::shared_ptr<KinBodyIdSaver> KinBodyIdSaverPtr;
+
 class Environment : public EnvironmentBase
 {
     class GraphHandleMulti : public GraphHandle
@@ -2881,8 +2902,8 @@ public:
                         }
                     }
                     if (updateFromInfoResult != UFIR_NoChange && updateFromInfoResult != UFIR_Success) {
-                        // have to reinit, but preserves body id
-                        KinBody::KinBodyIdSaver bodyIdSaver(pRobot);
+                        // have to reinit, but preserves the current body id since it could potentially clash with what pKinBodyInfo/pRobotBaseInfo has
+                        KinBodyIdSaver bodyIdSaver(pRobot);
                         if( !!pRobotBaseInfo ) {
                             pRobot->InitFromRobotInfo(*pRobotBaseInfo);
                         }
@@ -2900,8 +2921,8 @@ public:
                         updateFromInfoResult = pMatchExistingBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                     }
                     if (updateFromInfoResult != UFIR_NoChange && updateFromInfoResult != UFIR_Success) {
-                        // have to reinit, but preserves body id
-                        KinBody::KinBodyIdSaver bodyIdSaver(pMatchExistingBody);
+                        // have to reinit, but preserves the current body id since it could potentially clash with what pKinBodyInfo has
+                        KinBodyIdSaver bodyIdSaver(pMatchExistingBody);
                         pMatchExistingBody->InitFromKinBodyInfo(*pKinBodyInfo);
                     }
 

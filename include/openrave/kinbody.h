@@ -2236,18 +2236,6 @@ protected:
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
 
-    /// \biref Helper class to save and restore the kinbody id
-    class OPENRAVE_API KinBodyIdSaver
-    {
-public:
-        KinBodyIdSaver(KinBodyPtr pbody);
-        virtual ~KinBodyIdSaver();
-protected:
-        KinBodyPtr _pbody; ///< pointer to kinbody
-        std::string _id; ///< original body id
-    };
-    typedef boost::shared_ptr<KinBodyIdSaver> KinBodyIdSaverPtr;
-
     /// \brief Helper class to save and restore the entire kinbody state.
     ///
     /// Options can be passed to the constructor in order to choose which parameters to save (see \ref SaveParameters)
