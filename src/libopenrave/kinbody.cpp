@@ -730,10 +730,7 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
         return false;
     }
 
-    if( !info._id.empty() ) {
-        // preserve id if KinBodyInfo has empty id
-        _id = info._id;
-    }
+    _id = info._id;
     _name = info._name;
     _referenceUri = info._referenceUri;
 
@@ -6198,6 +6195,17 @@ void KinBody::SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator)
             RAVELOG_DEBUG_FORMAT("env=%d, resetting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
             _pCurrentKinematicsFunctions.reset();
         }
+    }
+}
+
+KinBody::KinBodyIdSaver::KinBodyIdSaver(KinBodyPtr pbody) : _pbody(pbody), _id(pbody->GetId())
+{
+}
+
+KinBody::KinBodyIdSaver::~KinBodyIdSaver()
+{
+    if ( !!_pbody ) {
+        _pbody->SetId(_id);
     }
 }
 

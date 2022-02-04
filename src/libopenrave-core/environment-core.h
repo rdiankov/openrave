@@ -2881,7 +2881,8 @@ public:
                         }
                     }
                     if (updateFromInfoResult != UFIR_NoChange && updateFromInfoResult != UFIR_Success) {
-                        // have to reinit
+                        // have to reinit, but preserves body id
+                        KinBody::KinBodyIdSaver bodyIdSaver(pRobot);
                         if( !!pRobotBaseInfo ) {
                             pRobot->InitFromRobotInfo(*pRobotBaseInfo);
                         }
@@ -2899,7 +2900,8 @@ public:
                         updateFromInfoResult = pMatchExistingBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                     }
                     if (updateFromInfoResult != UFIR_NoChange && updateFromInfoResult != UFIR_Success) {
-                        // have to reinit
+                        // have to reinit, but preserves body id
+                        KinBody::KinBodyIdSaver bodyIdSaver(pMatchExistingBody);
                         pMatchExistingBody->InitFromKinBodyInfo(*pKinBodyInfo);
                     }
 
