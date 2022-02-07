@@ -352,34 +352,41 @@ public:
     virtual void RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
     {
         const OpenRAVE::KinBody& body = *pbody;
+        const int envBodyIndex = body.GetEnvironmentBodyIndex();
 
         // remove body from all the managers
         _bodymanagers.erase(std::make_pair(pbody.get(), (int)0));
         _bodymanagers.erase(std::make_pair(pbody.get(), (int)1));
-        for (BODYMANAGERSMAP::iterator it = _bodymanagers.begin();
-             it != _bodymanagers.end(); ++it) {
-            it->second->RemoveBody(body);
+        {
+            int numErased = 0;
+            for (BODYMANAGERSMAP::iterator it = _bodymanagers.begin();
+                 it != _bodymanagers.end(); ++it) {
+                numErased += it->second->RemoveBody(body);
+            }
+            if (numErased > 0) {
+                RAVELOG_INFO_FORMAT("env=%s, erased \"%s\" (envBodyIndex=%d) from %d / %d _bodymanagers", GetEnv()->GetNameId()%body.GetName()%envBodyIndex%numErased%_bodymanagers.size());
+            }
         }
 
-        const int envBodyIndex = body.GetEnvironmentBodyIndex();
         EnvManagersMap::iterator it = _envmanagers.begin();
-        int numErased = 0;
+        int numErasedEnvManagers = 0;
+        int numErasedBodies = 0;
         while (it != _envmanagers.end()) {
             const vector<int>& excludedBodyIndices = it->first;
             const vector<int>::const_iterator itExcluded = lower_bound(excludedBodyIndices.begin(), excludedBodyIndices.end(), envBodyIndex);
             
             const bool bFound = itExcluded != excludedBodyIndices.end() && *itExcluded == envBodyIndex;
             if (bFound) {
-                numErased++;
+                numErasedEnvManagers++;
                 it = _envmanagers.erase(it);
             }
             else {
-                it->second->RemoveBody(body);
+                numErasedBodies += it->second->RemoveBody(body);
                 ++it;
             }
         }
-        if (numErased > 0) {
-            RAVELOG_INFO_FORMAT("evn=%s, erased %d element(s) from _envmanagers containing envBodyIndex=%d(\"%s\"), now %d remaining", GetEnv()->GetNameId()%numErased%envBodyIndex%body.GetName()%_envmanagers.size());
+        if (numErasedEnvManagers > 0 || numErasedBodies > 0) {
+            RAVELOG_INFO_FORMAT("env=%s, erased %d env manager(s) from _envmanagers and %d bodies containing envBodyIndex=%d(\"%s\"), now %d remaining", GetEnv()->GetNameId()%numErasedEnvManagers%numErasedEnvManagers%envBodyIndex%body.GetName()%_envmanagers.size());
         }
         _fclspace->RemoveUserData(pbody);
     }
