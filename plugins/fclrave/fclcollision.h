@@ -386,7 +386,7 @@ public:
             }
         }
         if (numErasedEnvManagers > 0 || numErasedBodies > 0) {
-            RAVELOG_INFO_FORMAT("env=%s, erased %d env manager(s) from _envmanagers and %d bodies containing envBodyIndex=%d(\"%s\"), now %d remaining", GetEnv()->GetNameId()%numErasedEnvManagers%numErasedEnvManagers%envBodyIndex%body.GetName()%_envmanagers.size());
+            RAVELOG_INFO_FORMAT("env=%s, erased %d env manager(s) from _envmanagers and %d bodies from body managers containing envBodyIndex=%d(\"%s\"), now %d remaining", GetEnv()->GetNameId()%numErasedEnvManagers%numErasedBodies%envBodyIndex%body.GetName()%_envmanagers.size());
         }
         _fclspace->RemoveUserData(pbody);
     }
