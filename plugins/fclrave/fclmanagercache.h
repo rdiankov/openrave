@@ -539,7 +539,11 @@ public:
             {
                 const int bodyIndex = body.GetEnvironmentBodyIndex();
                 if (bodyIndexCached != bodyIndex) {
-                    RAVELOG_WARN_FORMAT("env=%s body %s has envBodyIndex=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%body.GetName()%bodyIndex%bodyIndexCached);
+                    string trackingBodyName;
+                    if (!!ptrackingbody) {
+                        trackingBodyName = ptrackingbody->GetName();
+                    }
+                    RAVELOG_WARN_FORMAT("env=%s, this=%x trackingBody=\"%s\", body=\"%s\" has envBodyIndex=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%this%trackingBodyName%body.GetName()%bodyIndex%bodyIndexCached);
                 }
             }
 
@@ -816,7 +820,7 @@ public:
                     const KinBody& body = *pbody;
                     const int currentBodyEnvBodyIndex = body.GetEnvironmentBodyIndex();
                     if (currentBodyEnvBodyIndex != cachedBodyIndex) {
-                        RAVELOG_WARN_FORMAT("env=%s body %s has envBodyIndex=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%body.GetName()%currentBodyEnvBodyIndex%cachedBodyIndex);
+                        RAVELOG_WARN_FORMAT("env=%s, this=%x trackingBody=\"%s\", body=\"%s\" has envBodyIndex=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%this%ptrackingbody->GetName()%body.GetName()%currentBodyEnvBodyIndex%cachedBodyIndex);
                     }
                     const vector<int>::const_iterator it = lower_bound(vecAttachedEnvBodyIndices.begin(), vecAttachedEnvBodyIndices.end(), currentBodyEnvBodyIndex);
                     isInvalid =  (it == vecAttachedEnvBodyIndices.end() || *it != currentBodyEnvBodyIndex) || currentBodyEnvBodyIndex != cachedBodyIndex;
