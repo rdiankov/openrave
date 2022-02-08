@@ -355,13 +355,26 @@ public:
         const int envBodyIndex = body.GetEnvironmentBodyIndex();
 
         // remove body from all the managers
-        _bodymanagers.erase(std::make_pair(pbody.get(), (int)0));
-        _bodymanagers.erase(std::make_pair(pbody.get(), (int)1));
+        {
+            uint8_t removedBits = 0;
+            for (int activeFlag = 0; activeFlag < 2; ++activeFlag) {
+                if (_bodymanagers.erase(std::make_pair(pbody.get(), (int)activeFlag)) > 0) {
+                    removedBits |= (activeFlag + 1);
+                }
+            }
+            if (removedBits < 3) {
+                RAVELOG_DEBUG_FORMAT("env=%s, this=%x, key=%x for body=\"%s\"(envBodyIndex=%d) was not found in bodymanagers (removedBits=%d)", GetEnv()->GetNameId()%this%pbody.get()%body.GetName()%body.GetEnvironmentBodyIndex()%((int) removedBits));
+            }
+        }
+
         {
             int numErased = 0;
             for (BODYMANAGERSMAP::iterator it = _bodymanagers.begin();
                  it != _bodymanagers.end(); ++it) {
-                numErased += it->second->RemoveBody(body);
+                if (it->second->RemoveBody(body)) {
+                    ++numErased;
+                    RAVELOG_DEBUG_FORMAT("env=%s, this=%x, removed body=\"%s\"(envBodyIndex=%d, %x) from bodymanagers=%x", GetEnv()->GetNameId()%this%body.GetName()%body.GetEnvironmentBodyIndex()%pbody.get()%it->second);
+                }
             }
             if (numErased > 0) {
                 RAVELOG_INFO_FORMAT("env=%s, erased \"%s\" (envBodyIndex=%d) from %d / %d _bodymanagers", GetEnv()->GetNameId()%body.GetName()%envBodyIndex%numErased%_bodymanagers.size());
@@ -377,11 +390,24 @@ public:
             
             const bool bFound = itExcluded != excludedBodyIndices.end() && *itExcluded == envBodyIndex;
             if (bFound) {
-                numErasedEnvManagers++;
+                {
+                    stringstream ss;
+                    ss << "[";
+                    for (int excludeBodyIndex : excludedBodyIndices) {
+                        ss << excludeBodyIndex << ",";
+                    }
+                    ss << "]";
+                    RAVELOG_DEBUG_FORMAT("env=%s, this=%x, removed %x from envmanagers by key=%s from body=\"%s\"(envBodyIndex=%d, %x)", GetEnv()->GetNameId()%this%it->second%ss.str()%body.GetName()%body.GetEnvironmentBodyIndex()%pbody.get());
+
+                }
                 it = _envmanagers.erase(it);
+                numErasedEnvManagers++;
             }
             else {
-                numErasedBodies += it->second->RemoveBody(body);
+                if (it->second->RemoveBody(body)) {
+                    numErasedBodies++;
+                    RAVELOG_DEBUG_FORMAT("env=%s, this=%x, removed body=\"%s\"(envBodyIndex=%d, %x) from envmanagers=%x", GetEnv()->GetNameId()%this%body.GetName()%body.GetEnvironmentBodyIndex()%pbody.get()%it->second);
+                }
                 ++it;
             }
         }
@@ -1306,6 +1332,8 @@ private:
             FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
             p->InitBodyManager(pbody, bactiveDOFs);
             it = _bodymanagers.insert(BODYMANAGERSMAP::value_type(std::make_pair(pbody.get(), (int)bactiveDOFs), p)).first;
+            const OpenRAVE::KinBody& body = *pbody;
+            RAVELOG_DEBUG_FORMAT("env=%s, this=%x, added key=(%x, %d) for body=\"%s\"(envBodyIndex=%d) to bodymanagers=%x", GetEnv()->GetNameId()%this%pbody.get()%bactiveDOFs%body.GetName()%body.GetEnvironmentBodyIndex()%p);
         }
 
         it->second->Synchronize();
@@ -1347,6 +1375,17 @@ private:
 
             p->InitEnvironment(vecExcludedBodyEnvIndices);
             it = _envmanagers.insert(EnvManagersMap::value_type(excludedBodyEnvIndices, p)).first;
+
+            {
+                stringstream ss;
+                ss << "[";
+                for (int excludeBodyIndex : excludedBodyEnvIndices) {
+                    ss << excludeBodyIndex << ",";
+                }
+                ss << "]";
+                RAVELOG_DEBUG_FORMAT("env=%s, this=%x, added %x to envmanagers with key=%s", GetEnv()->GetNameId()%this%p%ss.str());
+
+            }            
         }
         it->second->EnsureBodies(_fclspace->GetEnvBodies());
         it->second->Synchronize();
