@@ -2290,9 +2290,6 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     pInfo->_name = _name;
     pInfo->_uri = _uri;
     pInfo->_referenceUri = _referenceUri;
-    pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
-    pInfo->_vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(_vJointInfos), end(_vJointInfos));
-    pInfo->_vGrabbedInfos = std::vector<KinBody::GrabbedInfoPtr>(begin(_vGrabbedInfos), end(_vGrabbedInfos));
 #else
     if (!IS_PYTHONOBJECT_NONE(_id)) {
         pInfo->_id = py::extract<std::string>(_id);
@@ -2306,6 +2303,7 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     if (!IS_PYTHONOBJECT_NONE(_referenceUri)) {
         pInfo->_referenceUri = py::extract<std::string>(_referenceUri);
     }
+#endif
     std::vector<KinBody::LinkInfoPtr> vLinkInfo = ExtractLinkInfoArray(_vLinkInfos);
     pInfo->_vLinkInfos.clear();
     pInfo->_vLinkInfos.reserve(vLinkInfo.size());
@@ -2324,7 +2322,6 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     FOREACHC(it, vGrabbedInfos) {
         pInfo->_vGrabbedInfos.push_back(*it);
     }
-#endif
     pInfo->_transform = ExtractTransform(_transform);
     pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
     pInfo->_isRobot = _isRobot;
@@ -2358,15 +2355,13 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _uri = info._uri;
     _interfaceType = info._interfaceType;
     _referenceUri = info._referenceUri;
-    _vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(info._vLinkInfos), end(info._vLinkInfos));
-    _vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(info._vJointInfos), end(info._vJointInfos));
-    _vGrabbedInfos = std::vector<KinBody::GrabbedInfoPtr>(begin(info._vGrabbedInfos), end(info._vGrabbedInfos));
 #else
     _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _uri = ConvertStringToUnicode(info._uri);
     _referenceUri = ConvertStringToUnicode(info._referenceUri);
     _interfaceType = ConvertStringToUnicode(info._interfaceType);
+#endif
     py::list vLinkInfos;
     FOREACHC(itLinkInfo, info._vLinkInfos) {
         PyLinkInfo info = PyLinkInfo(**itLinkInfo);
@@ -2387,7 +2382,6 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
         vGrabbedInfos.append(info);
     }
     _vGrabbedInfos = vGrabbedInfos;
-#endif
     _transform = ReturnTransform(info._transform);
     _isRobot = info._isRobot;
     _isPartial = info._isPartial;

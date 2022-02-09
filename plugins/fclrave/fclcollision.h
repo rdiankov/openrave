@@ -386,7 +386,7 @@ public:
             }
         }
         if (numErased > 0) {
-            RAVELOG_INFO_FORMAT("evn=%s, erased %d element(s) from _envmanagers containing envBodyIndex=%d(\"%s\"), now %d remaining", GetEnv()->GetNameId()%numErased%envBodyIndex%body.GetName()%_envmanagers.size());
+            RAVELOG_INFO_FORMAT("env=%s, erased %d element(s) from _envmanagers containing envBodyIndex=%d(\"%s\"), now %d remaining", GetEnv()->GetNameId()%numErased%envBodyIndex%body.GetName()%_envmanagers.size());
         }
         _fclspace->RemoveUserData(pbody);
     }
@@ -877,7 +877,7 @@ public:
         }
 
         const std::vector<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
-        // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
+        // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody env if it is const
         _fclspace->SynchronizeWithAttached(*pbody);
 
         const std::vector<KinBodyConstPtr> vbodyexcluded;
