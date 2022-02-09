@@ -3223,6 +3223,12 @@ protected:
         if( !!_pCurrentChecker ) {
             _pCurrentChecker->RemoveKinBody(pbodyref);
         }
+        {
+            CollisionCheckerBasePtr pSelfColChecker = body.GetSelfCollisionChecker();
+            if (!!pSelfColChecker && pSelfColChecker != _pCurrentChecker) {
+                pSelfColChecker->RemoveKinBody(pbodyref);
+            }
+        }
         if( !!_pPhysicsEngine ) {
             _pPhysicsEngine->RemoveKinBody(pbodyref);
         }
