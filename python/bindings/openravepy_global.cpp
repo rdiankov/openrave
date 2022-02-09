@@ -1417,6 +1417,12 @@ void init_openravepy_global()
     .value("OpenStart",IT_OpenStart)
     .value("OpenEnd",IT_OpenEnd)
     .value("Closed",IT_Closed)
+    .value("IntervalMask",IT_IntervalMask)
+    .value("Default",IT_Default)
+    .value("AllLinear",IT_AllLinear)
+    .value("Cubic",IT_Cubic)
+    .value("Quintic",IT_Quintic)
+    .value("InterpolationMask",IT_InterpolationMask)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     enum_<SampleDataType>(m, "SampleDataType", py::arithmetic() DOXY_ENUM(SampleDataType))
@@ -1435,15 +1441,35 @@ void init_openravepy_global()
 //     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
 // #endif
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<ConstraintFilterOptions>(m, "ConstraintFilterOptions", py::arithmetic() DOXY_ENUM(ConstraintFilterOptions))
+#else
+    enum_<ConstraintFilterOptions>("ConstraintFilterOptions" DOXY_ENUM(ConstraintFilterOptions))
+#endif
+    .value("CheckEnvCollisions", CFO_CheckEnvCollisions)
+    .value("CheckSelfCollisions", CFO_CheckSelfCollisions)
+    .value("CheckTimeBasedConstraints", CFO_CheckTimeBasedConstraints)
+    .value("BreakOnFirstValidation", CFO_BreakOnFirstValidation)
+    .value("CheckUserConstraints", CFO_CheckUserConstraints)
+    .value("CheckWithPerturbation", CFO_CheckWithPerturbation)
+    .value("FillCheckedConfiguration", CFO_FillCheckedConfiguration)
+    .value("FillCollisionReport", CFO_FillCollisionReport)
+    .value("FromPathSampling", CFO_FromPathSampling)
+    .value("FromPathShortcutting", CFO_FromPathShortcutting)
+    .value("FromTrajectorySmoother", CFO_FromTrajectorySmoother)
+    .value("FinalValuesNotReached", CFO_FinalValuesNotReached)
+    .value("StateSettingError", CFO_StateSettingError)
+    .value("RecommendedOptions", CFO_RecommendedOptions)
+    ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
     m.def("GetMicroTime", utils::GetMicroTime, "get microsecond time");
-    m.def("GetNanoTime" , utils::GetNanoTime , "get nanosecond time" );
+    m.def("GetNanoTime", utils::GetNanoTime, "get nanosecond time" );
 #else
     def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
     def("GetMicroTime", utils::GetMicroTime, "get microsecond time");
-    def("GetNanoTime" , utils::GetNanoTime , "get nanosecond time" );
+    def("GetNanoTime", utils::GetNanoTime, "get nanosecond time" );
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1496,10 +1522,12 @@ void init_openravepy_global()
     .def(init<>())
     .def(init<object, object>(), "pos"_a, "dir"_a)
     .def(init<const RAY&>(), "r"_a)
-    .def("__copy__", [](const PyRay& self){ return self; })
-    .def("__deepcopy__", [](const PyRay& pyray, const py::dict& memo) {
-        return PyRay(pyray.r);
-    })
+    .def("__copy__", [](const PyRay& self){
+            return self;
+        })
+    .def("__deepcopy__", [] (const PyRay &pyray, const py::dict& memo) {
+            return PyRay(pyray.r);
+        })
 #else
     class_<PyRay, OPENRAVE_SHARED_PTR<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
     .def(init<object,object>(py::args("pos","dir")))
@@ -1548,9 +1576,9 @@ void init_openravepy_global()
     .def("__deepcopy__", [](const PyAABB& self, const py::dict& memo) {
             return PyAABB(self.ab);
             /*
-            OPENRAVE_SHARED_PTR<PyAABB> pyaabb(new PyAABB(self.ab));
-            return py::to_object(pyaabb);
-            */
+               OPENRAVE_SHARED_PTR<PyAABB> pyaabb(new PyAABB(self.ab));
+               return py::to_object(pyaabb);
+             */
         })
 #else
     class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
@@ -1595,12 +1623,14 @@ void init_openravepy_global()
     .def(init<>())
     .def(init<object, object>(), "vertices"_a, "indices"_a)
     .def(init<const TriMesh&>(), "mesh"_a)
-    .def("__copy__", [](const PyTriMesh& self){ return self; })
+    .def("__copy__", [](const PyTriMesh& self){
+            return self;
+        })
     .def("__deepcopy__", [](const PyTriMesh& pymesh, const py::dict& memo) {
-        TriMesh mesh;
-        pymesh.GetTriMesh(mesh);
-        return PyTriMesh(mesh);
-    })
+            TriMesh mesh;
+            pymesh.GetTriMesh(mesh);
+            return PyTriMesh(mesh);
+        })
 #else
     class_<PyTriMesh, OPENRAVE_SHARED_PTR<PyTriMesh> >("TriMesh", DOXY_CLASS(TriMesh))
     .def(init<object,object>(py::args("vertices","indices")))
@@ -1684,7 +1714,9 @@ void init_openravepy_global()
             .def(init<PyConfigurationSpecificationPtr>(), "pyspec"_a)
             .def(init<const ConfigurationSpecification::Group&>(), "group"_a)
             .def(init<const std::string&>(), "xmldata"_a)
-            .def("__copy__", [](const PyConfigurationSpecification& self){ return self; })
+            .def("__copy__", [](const PyConfigurationSpecification& self){
+                return self;
+            })
             .def("__deepcopy__", [](const PyConfigurationSpecification& pyspec, const py::dict& memo) {
                 return PyConfigurationSpecification(pyspec._spec);
             })

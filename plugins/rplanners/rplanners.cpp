@@ -33,6 +33,10 @@ PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istre
 PlannerBasePtr CreateParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateParabolicTrajectoryRetimer2(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateCubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateCubicTrajectoryRetimer2(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateCubicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateQuinticSmoother(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateQuinticTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 }
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
@@ -73,6 +77,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if( interfacename == "cubictrajectoryretimer" ) {
             return rplanners::CreateCubicTrajectoryRetimer(penv,sinput);
         }
+        else if( interfacename == "cubictrajectoryretimer2" ) {
+            return rplanners::CreateCubicTrajectoryRetimer2(penv,sinput);
+        }
         else if( interfacename == "workspacetrajectorytracker" ) {
             return CreateWorkspaceTrajectoryTracker(penv,sinput);
         }
@@ -87,6 +94,15 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         }
         else if( interfacename == "constraintparabolicsmoother" ) {
             return CreateConstraintParabolicSmoother(penv,sinput);
+        }
+        else if( interfacename == "cubicsmoother" ) {
+            return rplanners::CreateCubicSmoother(penv, sinput);
+        }
+        else if( interfacename == "quinticsmoother" ) {
+            return rplanners::CreateQuinticSmoother(penv, sinput);
+        }
+        else if( interfacename == "quintictrajectoryretimer" ) {
+            return rplanners::CreateQuinticTrajectoryRetimer(penv, sinput);
         }
         break;
     default:
@@ -107,11 +123,15 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Planner].push_back("ParabolicTrajectoryRetimer");
     info.interfacenames[PT_Planner].push_back("ParabolicTrajectoryRetimer2");
     info.interfacenames[PT_Planner].push_back("CubicTrajectoryRetimer");
+    info.interfacenames[PT_Planner].push_back("CubicTrajectoryRetimer2");
     info.interfacenames[PT_Planner].push_back("WorkspaceTrajectoryTracker");
     info.interfacenames[PT_Planner].push_back("LinearSmoother");
     info.interfacenames[PT_Planner].push_back("ParabolicSmoother");
     info.interfacenames[PT_Planner].push_back("ParabolicSmoother2");
     info.interfacenames[PT_Planner].push_back("ConstraintParabolicSmoother");
+    info.interfacenames[PT_Planner].push_back("CubicSmoother");
+    info.interfacenames[PT_Planner].push_back("QuinticSmoother");
+    info.interfacenames[PT_Planner].push_back("QuinticTrajectoryRetimer");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

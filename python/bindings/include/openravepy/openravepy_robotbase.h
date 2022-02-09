@@ -39,17 +39,10 @@ public:
     py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
     void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos;
-    std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos;
-    std::vector<RobotBase::ConnectedBodyInfoPtr> _vConnectedBodyInfos;
-    std::vector<RobotBase::GripperInfoPtr> _vGripperInfos;
-#else
     py::object _vManipulatorInfos = py::none_();
     py::object _vAttachedSensorInfos = py::none_();
     py::object _vConnectedBodyInfos = py::none_();
     py::object _vGripperInfos = py::none_();
-#endif
     virtual std::string __str__();
     virtual py::object __unicode__();
 
