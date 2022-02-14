@@ -302,7 +302,7 @@ static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& fil
         Transform toffset;
         Vector vcolor(0.8,0.8,0.8);
         bool bFound = false;
-        stringstream::streampos pos = f.tellg();
+        stringstream::pos_type pos = f.tellg();
         while( !!getline(f, strline) ) {
             boost::trim(strline);
             if( strline.size() > 0 && strline[0] == '#' ) {
@@ -343,7 +343,7 @@ static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& fil
             RAVELOG_INFO_FORMAT("STL file %s has screen metadata", filename);
 
             f.seekg(0, std::ios::end);
-            stringstream::streampos endpos = f.tellg();                
+            stringstream::pos_type endpos = f.tellg();
             f.seekg(pos);
             string newdata;
             newdata.reserve(endpos - pos);
@@ -398,7 +398,7 @@ bool CreateTriMeshFromFile(EnvironmentBasePtr penv, const std::string& filename,
             string strline;
             if( !!f ) {
                 bool bFound = false;
-                stringstream::streampos pos = f.tellg();
+                stringstream::pos_type pos = f.tellg();
                 while( !!getline(f, strline) ) {
                     boost::trim(strline);
                     if( strline.size() > 0 && strline[0] == '#' ) {
