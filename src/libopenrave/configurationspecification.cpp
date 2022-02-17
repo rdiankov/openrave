@@ -1927,7 +1927,7 @@ std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec)
 {
     if( !!I) {
         stringbuf buf;
-        stringstream::streampos pos = I.tellg();
+        stringstream::pos_type pos = I.tellg();
         I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
 
         string pbuf = buf.str();
