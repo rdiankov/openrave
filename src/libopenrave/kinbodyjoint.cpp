@@ -2705,6 +2705,8 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     GetLimits(vLowerLimit, vUpperLimit, false);
     for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
         if (vUpperLimit[iaxis] != info._vupperlimit[iaxis] || vLowerLimit[iaxis] != info._vlowerlimit[iaxis]) {
+            vUpperLimit.assign(info._vupperlimit.begin(), info._vupperlimit.end());
+            vLowerLimit.assign(info._vlowerlimit.begin(), info._vlowerlimit.end());
             SetLimits(vLowerLimit, vUpperLimit);
             RAVELOG_VERBOSE_FORMAT("joint %s limits changed", _info._id);
             updateFromInfoResult = UFIR_Success;

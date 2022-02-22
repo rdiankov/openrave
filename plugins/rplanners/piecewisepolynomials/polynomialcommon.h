@@ -231,7 +231,10 @@ inline void polyroots(const int degree, const dReal* rawcoeffs, dReal* rawroots,
     }
 
     numroots = 0;
-    bool visited[degree] = {false};
+    bool visited[degree];
+    for(int i = 0; i < degree; ++i) {
+        visited[i] = false;
+    }
     for(int i = 0; i < degree; ++i) {
         if( !visited[i] ) {
             // might be a multiple root, in which case it will have more error than the other roots
