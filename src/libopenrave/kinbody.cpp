@@ -5907,6 +5907,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     info._name = _name;
     info._referenceUri = _referenceUri;
     info._interfaceType = GetXMLId();
+    info._isPartial = false; // extracting everything
 
     info._dofValues.resize(0);
     std::vector<dReal> vDOFValues;
