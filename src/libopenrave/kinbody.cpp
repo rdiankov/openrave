@@ -2017,17 +2017,23 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transfo
 
 void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits, const std::vector<int>& dofindices)
 {
+    if( vJointValues.size() == 0 ) {
+        return;
+    }
+    SetDOFValues(&vJointValues[0], vJointValues.size(), checklimits, dofindices);
+}
+
+void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits, const std::vector<int>& dofindices)
+{
     CHECK_INTERNAL_COMPUTATION;
-    if( vJointValues.size() == 0 || _veclinks.size() == 0) {
+    if( dof == 0 || _veclinks.size() == 0) {
         return;
     }
     int expecteddof = dofindices.size() > 0 ? (int)dofindices.size() : GetDOF();
-    OPENRAVE_ASSERT_OP_FORMAT((int)vJointValues.size(),>=,expecteddof, "env=%s, not enough values %d<%d", GetEnv()->GetNameId()%vJointValues.size()%GetDOF(),ORE_InvalidArguments);
-
-    const dReal* pJointValues = &vJointValues[0];
+    OPENRAVE_ASSERT_OP_FORMAT((int)dof,>=,expecteddof, "env=%s, not enough values %d<%d", GetEnv()->GetNameId()%dof%GetDOF(),ORE_InvalidArguments);
 
     if(checklimits == CLA_Nothing && dofindices.empty()) {
-        _vTempJoints = vJointValues;
+        _vTempJoints.assign(pJointValues, pJointValues + dof);
     }
     else {
         _vTempJoints.resize(GetDOF());
