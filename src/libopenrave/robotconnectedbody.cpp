@@ -712,7 +712,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 forcedAdjacentLink = connectedBody._nameprefix + forcedAdjacentLink;
             }
             _InitAndAddLink(plink);
-            connectedBody._vResolvedLinkNames(ilink).first = plink->_info._name;
+            connectedBody._vResolvedLinkNames.at(ilink).first = plink->_info._name;
         }
 
         // Joints
