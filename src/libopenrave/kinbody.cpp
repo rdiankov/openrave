@@ -5345,27 +5345,17 @@ private:
 
     CHECK_INTERNAL_COMPUTATION;
     if( _nNonAdjacentLinkCache & 0x80000000 ) {
-        // Check for colliding link pairs given the initial pose _vInitialLinkTransformations
-        // this is actually weird, we need to call the individual link collisions on a const body. in order to pull this off, we need to be very careful with the body state.
-        TransformsSaver saver(shared_kinbody_const());
-        CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
-        CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
-        for(size_t i = 0; i < _veclinks.size(); ++i) {
-            boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
-        }
-        _nUpdateStampId++; // because transforms were modified
         _vNonAdjacentLinks[0].resize(0);
-
         for(size_t ind0 = 0; ind0 < _veclinks.size(); ++ind0) {
             for(size_t ind1 = ind0+1; ind1 < _veclinks.size(); ++ind1) {
                 const bool bAdjacent = AreAdjacentLinks(ind0, ind1);
-                if(!bAdjacent && !collisionchecker->CheckCollision(LinkConstPtr(_veclinks[ind0]), LinkConstPtr(_veclinks[ind1])) ) {
+                //if(!bAdjacent && !collisionchecker->CheckCollision(LinkConstPtr(_veclinks[ind0]), LinkConstPtr(_veclinks[ind1])) ) {
+                if( !bAdjacent ) {
                     _vNonAdjacentLinks[0].push_back(ind0|(ind1<<16));
                 }
             }
         }
         std::sort(_vNonAdjacentLinks[0].begin(), _vNonAdjacentLinks[0].end(), CompareNonAdjacentFarthest);
-        _nUpdateStampId++; // because transforms were modified
         _nNonAdjacentLinkCache = 0;
     }
     if( (_nNonAdjacentLinkCache&adjacentoptions) != adjacentoptions ) {
