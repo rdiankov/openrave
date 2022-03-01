@@ -900,7 +900,7 @@ public:
         }
 
 private:
-        Transform _t; ///< the current transformation of the link with respect to the body coordinate system
+        Transform _t; ///< the current transformation of the link with respect to the world coordinate system
 
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
