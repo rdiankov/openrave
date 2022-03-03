@@ -3282,6 +3282,11 @@ object PyKinBody::ComputeAABBFromTransform(object otransform, bool bEnabledOnlyL
     return toPyAABB(_pbody->ComputeAABBFromTransform(ExtractTransform(otransform), bEnabledOnlyLinks));
 }
 
+object PyKinBody::ComputeAABBOnTransform(object otransform, bool bEnabledOnlyLinks)
+{
+    return toPyAABB(_pbody->ComputeAABBOnTransform(ExtractTransform(otransform), bEnabledOnlyLinks));
+}
+
 object PyKinBody::ComputeLocalAABB(bool bEnabledOnlyLinks)
 {
     return toPyAABB(_pbody->ComputeLocalAABB(bEnabledOnlyLinks));
@@ -4510,6 +4515,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyKinBodyInfo_DeserializeJSON_overloads, 
 // end of JSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABB_overloads, ComputeAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBFromTransform_overloads, ComputeAABBFromTransform, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBOnTransform_overloads, ComputeAABBOnTransform, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABB_overloads, ComputeLocalAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBForGeometryGroup_overloads, ComputeAABBForGeometryGroup, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBForGeometryGroupFromTransform_overloads, ComputeAABBForGeometryGroupFromTransform, 2, 3)
@@ -5394,6 +5400,15 @@ void init_openravepy_kinbody()
                               )
 #else
                          .def("ComputeAABBFromTransform",&PyKinBody::ComputeAABBFromTransform, ComputeAABBFromTransform_overloads(PY_ARGS("transform", "enabledOnlyLinks") DOXY_FN(KinBody,ComputeAABBFromTransform)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("ComputeAABBOnTransform", &PyKinBody::ComputeAABBOnTransform,
+                              "transform"_a,
+                              "enabledOnlyLinks"_a = false,
+                              DOXY_FN(KinBody,ComputeAABBOnTransform)
+                              )
+#else
+                         .def("ComputeAABBOnTransform",&PyKinBody::ComputeAABBOnTransform, ComputeAABBOnTransform_overloads(PY_ARGS("transform", "enabledOnlyLinks") DOXY_FN(KinBody,ComputeAABBOnTransform)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("ComputeLocalAABB", &PyKinBody::ComputeLocalAABB,

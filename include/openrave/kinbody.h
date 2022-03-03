@@ -2736,6 +2736,12 @@ private:
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
     AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
+    /// \brief returns an axis-aligned bounding box On transform tWorld.
+    ///
+    /// \brief tBody the transform to be aligned in when computing the AABB
+    /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
+    AABB ComputeAABBOnTransform(const Transform& tReference, bool bEnabledOnlyLinks=false) const;
+
     /// \brief returns an axis-aligned bounding box when body has identity transform
     ///
     /// Internally equivalent to ComputeAABBFromTransform(Transform(), ...)

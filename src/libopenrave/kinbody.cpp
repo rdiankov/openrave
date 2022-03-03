@@ -1795,6 +1795,61 @@ AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnly
     return ab;
 }
 
+AABB KinBody::ComputeAABBOnTransform(const Transform& tReference, bool bEnabledOnlyLinks) const
+{
+    Vector vmin, vmax;
+    bool binitialized = false;
+    AABB ablocal;
+    FOREACHC(itlink, _veclinks) {
+        if( bEnabledOnlyLinks && !(*itlink)->IsEnabled() ) {
+            continue;
+        }
+        ablocal = (*itlink)->ComputeAABBFromTransform(tReference.inverse() * (*itlink)->GetTransform()); // link transform w.r.t. tReference
+        if( ablocal.extents.x == 0 && ablocal.extents.y == 0 && ablocal.extents.z == 0 ) {
+            continue;
+        }
+
+        Vector vnmin = ablocal.pos - ablocal.extents;
+        Vector vnmax = ablocal.pos + ablocal.extents;
+        if( !binitialized ) {
+            vmin = vnmin;
+            vmax = vnmax;
+            binitialized = true;
+        }
+        else {
+            if( vmin.x > vnmin.x ) {
+                vmin.x = vnmin.x;
+            }
+            if( vmin.y > vnmin.y ) {
+                vmin.y = vnmin.y;
+            }
+            if( vmin.z > vnmin.z ) {
+                vmin.z = vnmin.z;
+            }
+            if( vmax.x < vnmax.x ) {
+                vmax.x = vnmax.x;
+            }
+            if( vmax.y < vnmax.y ) {
+                vmax.y = vnmax.y;
+            }
+            if( vmax.z < vnmax.z ) {
+                vmax.z = vnmax.z;
+            }
+        }
+    }
+
+    AABB ab;
+    if( !binitialized ) {
+        ab.pos = tReference.trans;
+        ab.extents = Vector(0,0,0);
+    }
+    else {
+        ab.pos = (dReal)0.5 * (vmin + vmax);
+        ab.extents = vmax - ab.pos;
+    }
+    return ab;
+}
+
 AABB KinBody::ComputeLocalAABB(bool bEnabledOnlyLinks) const
 {
     return ComputeAABBFromTransform(Transform(), bEnabledOnlyLinks);
