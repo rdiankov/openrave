@@ -315,7 +315,8 @@ enum CloningOptions {
     Clone_RealControllers = 8, ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
     Clone_Sensors = 0x0010, ///< if specified, will clone the sensors attached to the robot and added to the environment
     Clone_Modules = 0x0020, ///< if specified, will clone the modules attached to the environment
-    Clone_PassOnMissingBodyReferences=0x00008000, ///< if specified, then does not throw an exception if a body reference is missing in the environment. For example, the grabbed body in GrabbedInfo
+    Clone_PassOnMissingBodyReferences=0x00008000, ///< if specified, then will not throw an exception if a body reference is missing in the environment. For example, the grabbed body in GrabbedInfo
+    Clone_IgnoreGrabbedBodies = 0x00010000, ///< if specified, then will not clone _vGrabbedBodies when cloning a KinBody/Robot.
     Clone_All = 0xffffffff,
 };
 
@@ -1036,6 +1037,13 @@ protected:
     /// \param interpolation the interpolation to start at
     /// \param deriv the number of derivatives to take, should be > 0
     static std::string GetInterpolationDerivative(const std::string& interpolation, int deriv=1);
+
+    /// \brief gets the name of the interpolation that represents the integral of the passed in interpolation.
+    ///
+    /// For example GetInterpolationIntegral("linear") -> "quadratic"
+    /// \param interpolation the interpolation to start at
+    /// \param integ the number of integral to take, should be > 0
+    static std::string GetInterpolationIntegral(const std::string& interpolation, int integ=1);
 
     std::vector<Group> _vgroups;
 };

@@ -279,9 +279,9 @@ char* ORCInterfaceSendCommand(void* pinterface, const char* command)
     if( !bSuccess ) {
         return NULL;
     }
-    stringstream::streampos posstart = sout.tellg();
+    stringstream::pos_type posstart = sout.tellg();
     sout.seekg(0, ios_base::end);
-    stringstream::streampos posend = sout.tellg();
+    stringstream::pos_type posend = sout.tellg();
     sout.seekg(posstart);
     BOOST_ASSERT(posstart<=posend);
     char* poutput = (char*)malloc(posend-posstart+1);

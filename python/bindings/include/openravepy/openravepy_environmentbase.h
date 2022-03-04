@@ -253,8 +253,13 @@ public:
     object drawbox(object opos, object oextents, object ocolor=py::none_());
     object drawboxarray(object opos, object oextents, object ocolor=py::none_());
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object drawplane(object otransform, object oextents, const std::vector<std::vector<dReal> >&_vtexture);
+    object drawplane(object otransform, object oextents, const std::vector<std::vector<std::vector<dReal> > >&vtexture);
+#else
     object drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture);
     object drawplane(object otransform, object oextents, const boost::multi_array<float,3>&vtexture);
+#endif
 
     object drawtrimesh(object opoints, object oindices=py::none_(), object ocolors=py::none_());
 

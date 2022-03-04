@@ -141,11 +141,11 @@ class PyJointControlInfo_RobotController
 {
 public:
     PyJointControlInfo_RobotController();
-    PyJointControlInfo_RobotController(const KinBody::JointInfo::JointControlInfo_RobotController& jci);
-    KinBody::JointInfo::JointControlInfo_RobotControllerPtr GetJointControlInfo();
+    PyJointControlInfo_RobotController(const JointControlInfo_RobotController& jci);
+    JointControlInfo_RobotControllerPtr GetJointControlInfo();
 
-    int robotId = -1;
-    object robotControllerDOFIndex = toPyVector3(Vector(-1, -1, -1));
+    std::string controllerType;
+    object robotControllerAxisIndex = toPyVector3(Vector(-1, -1, -1));
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> PyJointControlInfo_RobotControllerPtr;
 
@@ -153,15 +153,15 @@ class PyJointControlInfo_IO
 {
 public:
     PyJointControlInfo_IO();
-    PyJointControlInfo_IO(const KinBody::JointInfo::JointControlInfo_IO& jci);
-    KinBody::JointInfo::JointControlInfo_IOPtr GetJointControlInfo();
+    PyJointControlInfo_IO(const JointControlInfo_IO& jci);
+    JointControlInfo_IOPtr GetJointControlInfo();
 
-    int deviceId = -1;
-    object vMoveIONames = py::list();
-    object vUpperLimitIONames = py::list();
-    object vUpperLimitSensorIsOn = py::list();
-    object vLowerLimitIONames = py::list();
-    object vLowerLimitSensorIsOn = py::list();
+    std::string deviceType;
+    object moveIONames = py::list();
+    object upperLimitIONames = py::list();
+    object upperLimitSensorIsOn = py::list();
+    object lowerLimitIONames = py::list();
+    object lowerLimitSensorIsOn = py::list();
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_IO> PyJointControlInfo_IOPtr;
 
@@ -169,9 +169,9 @@ class PyJointControlInfo_ExternalDevice
 {
 public:
     PyJointControlInfo_ExternalDevice();
-    PyJointControlInfo_ExternalDevice(const KinBody::JointInfo::JointControlInfo_ExternalDevice &jci);
-    KinBody::JointInfo::JointControlInfo_ExternalDevicePtr GetJointControlInfo();
-    std::string externalDeviceId;
+    PyJointControlInfo_ExternalDevice(const JointControlInfo_ExternalDevice &jci);
+    JointControlInfo_ExternalDevicePtr GetJointControlInfo();
+    std::string externalDeviceType;
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_ExternalDevice> PyJointControlInfo_ExternalDevicePtr;
 
@@ -211,7 +211,7 @@ public:
     py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _bIsCircular = py::list();
     bool _bIsActive = true;
-    KinBody::JointControlMode _controlMode = KinBody::JointControlMode::JCM_None;
+    JointControlMode _controlMode = JCM_None;
     PyJointControlInfo_RobotControllerPtr _jci_robotcontroller;
     PyJointControlInfo_IOPtr _jci_io;
     PyJointControlInfo_ExternalDevicePtr _jci_externaldevice;
@@ -477,7 +477,7 @@ public:
 
     void SetStringParameters(const std::string& key, object ovalue);
 
-    KinBody::JointControlMode GetControlMode() const;
+    JointControlMode GetControlMode() const;
     void UpdateInfo();
     object GetInfo();
     object UpdateAndGetInfo();

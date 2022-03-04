@@ -55,7 +55,7 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
 void TrajectoryBase::deserialize(std::istream& I)
 {
     stringbuf buf;
-    stringstream::streampos pos = I.tellg();
+    stringstream::pos_type pos = I.tellg();
     I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
     BOOST_ASSERT(!!I);
 

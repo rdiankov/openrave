@@ -1040,14 +1040,14 @@ public:
             _nCallsCheckPathAllConstraints_SegmentFeasible2 += 1;
             _tStartCheckPathAllConstraints = utils::GetMicroTime();
 #endif
-            int ret = _parameters->CheckPathAllConstraints(q0, q0, dq0, dq0, 0, IT_OpenStart, options);
+            int ret = _parameters->CheckPathAllConstraints(q0, q0, dq0, dq0, 0, IT_OpenStart, options, _constraintreturn);
 #ifdef SMOOTHER2_TIMING_DEBUG
             _tEndCheckPathAllConstraints = utils::GetMicroTime();
             _totalTimeCheckPathAllConstraints_SegmentFeasible2 += 0.000001f*(float)(_tEndCheckPathAllConstraints - _tStartCheckPathAllConstraints);
 #endif
             RampOptimizer::CheckReturn checkret(ret);
             if( ret == CFO_CheckTimeBasedConstraints ) {
-                checkret.fTimeBasedSurpassMult = 0.98;
+                checkret.fTimeBasedSurpassMult = 0.98 * _constraintreturn->_fTimeBasedSurpassMult;
             }
             return checkret;
         }
@@ -1137,7 +1137,7 @@ public:
 #endif
                 RampOptimizer::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
-                    checkret.fTimeBasedSurpassMult = 0.98;
+                    checkret.fTimeBasedSurpassMult = 0.98 * _constraintreturn->_fTimeBasedSurpassMult;
                 }
                 return checkret;
             }

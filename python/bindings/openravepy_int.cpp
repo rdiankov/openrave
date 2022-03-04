@@ -1360,8 +1360,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object o2, PyCollisionReportPt
                 throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
             }
         }
-    }
-    {
+    } else {
         KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
         if( !!pbody ) {
             KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
@@ -2491,7 +2490,58 @@ object PyEnvironmentBase::drawboxarray(object opos, object oextents, object ocol
     return toPyGraphHandle(_penv->drawboxarray(vvectors,ExtractVector3(oextents)));
 }
 
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+object PyEnvironmentBase::drawplane(object otransform, object oextents, const std::vector<std::vector<dReal> >&_vtexture)
+{
+    size_t x = _vtexture.size();
+    if(x<1){
+        throw OpenRAVEException(_("_vtexture is empty"), ORE_InvalidArguments);
+    }
+    size_t y = _vtexture[0].size();
+    if(y<1){
+        throw OpenRAVEException(_("_vtexture[0] is empty"), ORE_InvalidArguments);
+    }
+    boost::multi_array<float,3> vtexture(boost::extents[x][y][1]);
+    for(int i=0; i<x; i++){
+        if(_vtexture[i].size() != y){
+            throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d] size is different"))%i), ORE_InvalidArguments);
+        }
+        for(int j=0; j<y; j++){
+            vtexture[i][j][0] = _vtexture[i][j];
+        }
+    }
+    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
+}
+object PyEnvironmentBase::drawplane(object otransform, object oextents, const std::vector<std::vector<std::vector<dReal> > >&_vtexture){
+    size_t x = _vtexture.size();
+    if(x<1){
+        throw OpenRAVEException(_("_vtexture is empty"), ORE_InvalidArguments);
+    }
+    size_t y = _vtexture[0].size();
+    if(y<1){
+        throw OpenRAVEException(_("_vtexture[0] is empty"), ORE_InvalidArguments);
+    }
+    size_t z = _vtexture[0][0].size();
+    if(z<1){
+        throw OpenRAVEException(_("_vtexture[0][0] is empty"), ORE_InvalidArguments);
+    }
+    boost::multi_array<float,3> vtexture(boost::extents[x][y][1]);
+    for(int i=0; i<x; i++){
+        if(_vtexture[i].size() != y){
+            throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d] size is different"))%i), ORE_InvalidArguments);
+        }
+        for(int j=0; j<y; j++){
+            if(_vtexture[i][j].size() != z){
+                throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d][%d] size is different"))%i%j), ORE_InvalidArguments);
+            }
+            for(int k=0; k<z; k++){
+                vtexture[i][j][k] = _vtexture[i][j][k];
+            }
+        }
+    }
+    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
+}
+#else
 object PyEnvironmentBase::drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture)
 {
     boost::multi_array<float,3> vtexture(boost::extents[1][_vtexture.shape()[0]][_vtexture.shape()[1]]);
@@ -2504,6 +2554,7 @@ object PyEnvironmentBase::drawplane(object otransform, object oextents, const bo
 {
     return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
 }
+#endif
 
 object PyEnvironmentBase::drawtrimesh(object opoints, object oindices, object ocolors)
 {
@@ -3264,9 +3315,13 @@ Because race conditions can pop up when trying to lock the openrave environment 
         void (PyEnvironmentBase::*Lock1)() = &PyEnvironmentBase::Lock;
         bool (PyEnvironmentBase::*Lock2)(float) = &PyEnvironmentBase::Lock;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        object (PyEnvironmentBase::*drawplane1)(object, object, const std::vector<std::vector<dReal> >&) = &PyEnvironmentBase::drawplane;
+        object (PyEnvironmentBase::*drawplane2)(object, object, const std::vector<std::vector<std::vector<dReal> > >&) = &PyEnvironmentBase::drawplane;
+#else
         object (PyEnvironmentBase::*drawplane1)(object, object, const boost::multi_array<float,2>&) = &PyEnvironmentBase::drawplane;
         object (PyEnvironmentBase::*drawplane2)(object, object, const boost::multi_array<float,3>&) = &PyEnvironmentBase::drawplane;
-
+#endif
         void (PyEnvironmentBase::*addkinbody1)(PyKinBodyPtr) = &PyEnvironmentBase::AddKinBody;
         void (PyEnvironmentBase::*addkinbody2)(PyKinBodyPtr,bool) = &PyEnvironmentBase::AddKinBody;
         void (PyEnvironmentBase::*addrobot1)(PyRobotBasePtr) = &PyEnvironmentBase::AddRobot;
