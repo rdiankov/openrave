@@ -246,6 +246,41 @@ public:
         return d;
     }
 
+    PyAABB GetCombined(const PyAABB& rhs) {
+        OpenRAVE::Vector lower = ab.pos - ab.extents;
+        Vector rhslower = rhs.ab.pos - rhs.ab.extents;
+        if( lower.x > rhslower.x ) {
+            lower.x = rhslower.x;
+        }
+        if( lower.y > rhslower.y ) {
+            lower.y = rhslower.y;
+        }
+        if( lower.z > rhslower.z ) {
+            lower.z = rhslower.z;
+        }
+        OpenRAVE::Vector upper = ab.pos + ab.extents;
+        Vector rhsupper = rhs.ab.pos + rhs.ab.extents;
+        if( upper.x < rhsupper.x ) {
+            upper.x = rhsupper.x;
+        }
+        if( upper.y < rhsupper.y ) {
+            upper.y = rhsupper.y;
+        }
+        if( upper.z < rhsupper.z ) {
+            upper.z = rhsupper.z;
+        }
+        return PyAABB(AABB(0.5*(upper+lower), 0.5*(upper-lower)));
+    }
+
+    PyAABB GetTransformed(object otrans) {
+        OpenRAVE::Transform tpose = ExtractTransform(otrans);
+        OpenRAVE::TransformMatrix matrix = tpose;
+        OpenRAVE::Vector projectedExtents(RaveFabs(matrix.m[0]*ab.extents[0]) + RaveFabs(matrix.m[1]*ab.extents[1]) + RaveFabs(matrix.m[2]*ab.extents[2]),
+                                          RaveFabs(matrix.m[4]*ab.extents[0]) + RaveFabs(matrix.m[5]*ab.extents[1]) + RaveFabs(matrix.m[6]*ab.extents[2]),
+                                          RaveFabs(matrix.m[8]*ab.extents[0]) + RaveFabs(matrix.m[9]*ab.extents[1]) + RaveFabs(matrix.m[10]*ab.extents[2]));
+        return PyAABB(AABB(tpose * ab.pos, projectedExtents));
+    }
+
     virtual std::string __repr__() {
         return boost::str(boost::format("AABB([%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
     }
@@ -1590,6 +1625,8 @@ void init_openravepy_global()
     .def("__unicode__",&PyAABB::__unicode__)
     .def("__repr__",&PyAABB::__repr__)
     .def("toDict", &PyAABB::toDict)
+    .def("GetCombined", &PyAABB::GetCombined, PY_ARGS("aabb") DOXY_FN(AABB, GetCombined))
+    .def("GetTransformed", &PyAABB::GetTransformed, PY_ARGS("pose") DOXY_FN(AABB, GetTransformed))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def(py::pickle(
              [](const PyAABB &pyab) {

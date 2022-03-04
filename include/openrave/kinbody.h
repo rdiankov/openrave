@@ -2765,15 +2765,23 @@ private:
 
     /// \brief Sets the joint values of the robot.
     ///
-    /// \param values the values to set the joint angles (ordered by the dof indices)
+    /// \param[in] values the values to set the joint angles (ordered by the dof indices)
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
-    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    /// \param[in] dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
+
+    /// \brief Sets the joint values of the robot.
+    ///
+    /// \param[in] pJointValues pointer to head of array that holds joint angles (ordered by the dof indices)
+    /// \param[in] dof number of dof described by array of pJointValues.
+    /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
+    /// \param[in] dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief Sets the joint values and transformation of the body.
     ///
-    /// \param values the values to set the joint angles (ordered by the dof indices)
-    /// \param transform represents the transformation of the first body.
+    /// \param[in] values the values to set the joint angles (ordered by the dof indices)
+    /// \param[in] transform represents the transformation of the first body.
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     virtual void SetDOFValues(const std::vector<dReal>& values, const Transform& transform, uint32_t checklimits = CLA_CheckLimits);
 

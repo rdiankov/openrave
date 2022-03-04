@@ -1011,8 +1011,9 @@ private:
 
     void SetName(const std::string& name) override;
 
-    void SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits = 1, const std::vector<int>& dofindices = std::vector<int>()) override;
-    void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, uint32_t checklimits = 1) override;
+    void SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>()) override;
+    void SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>()) override;
+    void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, uint32_t checklimits = CLA_CheckLimits) override;
 
     void SetLinkTransformations(const std::vector<Transform>& transforms) override;
     void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues) override;
