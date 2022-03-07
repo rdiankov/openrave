@@ -1795,7 +1795,7 @@ OrientedBox KinBody::ComputeOBBOnAxes(const Vector& quat, bool bEnabledOnlyLinks
     AABB ab = ComputeAABBFromTransform(tinv, bEnabledOnlyLinks);
     OrientedBox obb;
     obb.extents = ab.extents;
-    obb.transform.rot = quat;
+    obb.transform.rot = quatMultiply(quatInverse(GetTransform().rot), quat);
     obb.transform.trans = quatRotate(quat, ab.pos);
     return obb;
 }
