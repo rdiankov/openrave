@@ -602,6 +602,7 @@ void init_openravepy_ikparameterization(py::module& m);
 void init_openravepy_ikparameterization();
 #endif
 OPENRAVEPY_API py::object toPyAABB(const AABB& ab);
+OPENRAVEPY_API py::object toPyOrientedBox(const OrientedBox& obb);
 OPENRAVEPY_API py::object toPyRay(const RAY& r);
 OPENRAVEPY_API RAY ExtractRay(py::object o);
 

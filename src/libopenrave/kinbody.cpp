@@ -1736,26 +1736,20 @@ AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnly
 {
     Vector vmin, vmax;
     bool binitialized=false;
-    AABB ablocal;
     Transform tConvertToNewFrame = tBody*GetTransform().inverse();
     FOREACHC(itlink,_veclinks) {
         if( bEnabledOnlyLinks && !(*itlink)->IsEnabled() ) {
             continue;
         }
-        ablocal = (*itlink)->ComputeLocalAABB();
-        if( ablocal.extents.x == 0 && ablocal.extents.y == 0 && ablocal.extents.z == 0 ) {
+
+        Transform tlink = tConvertToNewFrame*(*itlink)->GetTransform();
+        AABB ablink = (*itlink)->ComputeAABBFromTransform(tlink);
+        if( ablink.extents.x == 0 && ablink.extents.y == 0 && ablink.extents.z == 0 ) {
             continue;
         }
 
-        Transform tlink = tConvertToNewFrame*(*itlink)->GetTransform();
-        TransformMatrix mlink(tlink);
-        Vector projectedExtents(RaveFabs(mlink.m[0]*ablocal.extents[0]) + RaveFabs(mlink.m[1]*ablocal.extents[1]) + RaveFabs(mlink.m[2]*ablocal.extents[2]),
-                                RaveFabs(mlink.m[4]*ablocal.extents[0]) + RaveFabs(mlink.m[5]*ablocal.extents[1]) + RaveFabs(mlink.m[6]*ablocal.extents[2]),
-                                RaveFabs(mlink.m[8]*ablocal.extents[0]) + RaveFabs(mlink.m[9]*ablocal.extents[1]) + RaveFabs(mlink.m[10]*ablocal.extents[2]));
-        Vector vWorldPos = tlink * ablocal.pos;
-
-        Vector vnmin = vWorldPos - projectedExtents;
-        Vector vnmax = vWorldPos + projectedExtents;
+        Vector vnmin = ablink.pos - ablink.extents;
+        Vector vnmax = ablink.pos + ablink.extents;
         if( !binitialized ) {
             vmin = vnmin;
             vmax = vnmax;
@@ -1785,7 +1779,7 @@ AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnly
 
     AABB ab;
     if( !binitialized ) {
-        ab.pos = GetTransform().trans;
+        ab.pos = tBody.trans;
         ab.extents = Vector(0,0,0);
     }
     else {
@@ -1793,6 +1787,17 @@ AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnly
         ab.extents = vmax - ab.pos;
     }
     return ab;
+}
+
+OrientedBox KinBody::ComputeOBBOnAxes(const Vector& quat, bool bEnabledOnlyLinks) const
+{
+    Transform tinv; tinv.rot = quatInverse(quat);
+    AABB ab = ComputeAABBFromTransform(tinv, bEnabledOnlyLinks);
+    OrientedBox obb;
+    obb.extents = ab.extents;
+    obb.transform.rot = quat;
+    obb.transform.trans = quatRotate(quat, ab.pos);
+    return obb;
 }
 
 AABB KinBody::ComputeLocalAABB(bool bEnabledOnlyLinks) const
