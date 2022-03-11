@@ -82,37 +82,53 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             else {
                 linkEnableStatesBitmasks = linkEnableStateCache;
             }
-
-            if (!vcolobjs.empty()) {
-                std::stringstream ss;
-                ss << "env=" << pbody->GetEnv()->GetNameId() << ", FCLCollisionManagerInstance 0x" << hex << this;
-                ss << " has " << dec << vcolobjs.size() << " collion objects (";
-                for (const CollisionObjectPtr& obj : vcolobjs) {
-                    ss << "0x" << hex << obj << ", ";
-                }
-                ss << "), but leaving untouched.";
-                RAVELOG_WARN_FORMAT("%s", ss.str());
-            }
         }
 
         ~KinBodyCache() {
-            Invalidate();
+            // KinBodyCache is stored in vector, and resizing it causes destructor be called, but do not want warning on vcolobjs being non-empty.
+            Invalidate(false);
         }
 
-        inline void Invalidate()
+        inline void Invalidate(bool warnOnNonEmptyColObjs = true)
         {
             if (!IsValid()) {
                 //RAVELOG_INFO_FORMAT("0x%x is previously invalidated, or was never valid.", this);
                 return;
             }
-            if( vcolobjs.size() > 0 ) { // should never happen
+            if (!vcolobjs.empty() && warnOnNonEmptyColObjs) { // should never happen
+                std::stringstream ss;
                 KinBodyConstPtr pbody = pwbody.lock();
-                std::string bodyName, envNameId;
+                std::string bodyName("unknown_body");
+                std::string envNameId("unknown_env");
                 if( !!pbody ) {
                     bodyName = pbody->GetName();
                     envNameId = pbody->GetEnv()->GetNameId();
                 }
-                RAVELOG_WARN_FORMAT("env=%s, there are %d fcl collision objects left for body %s", envNameId%vcolobjs.size()%bodyName);
+                std::string geometrygroup("unknown_geomgroup");
+                const FCLSpace::FCLKinBodyInfoPtr pinfo = pwinfo.lock();
+                if (!!pinfo) {
+                    geometrygroup = pinfo->_geometrygroup;
+                }
+                ss << "env=" << envNameId << ", "
+                   << "body=" << bodyName << ", "
+                   << "geomgroup=\"" << geometrygroup << "\", "
+                   << "FCLCollisionManagerInstance 0x" << hex << this
+                   << " has " << dec << vcolobjs.size() << " collision objects (";
+                for (const CollisionObjectPtr& obj : vcolobjs) {
+                    ss << "0x" << hex << obj << ", ";
+                    if (!!obj) {
+                        const fcl::Quaternion3f& q = obj->getQuatRotation();
+                        const fcl::Vec3f& t = obj->getTranslation();
+                        const fcl::AABB& aabb = obj->getAABB();
+                        ss << "pose=["
+                           << q[0] << "," << q[1] << "," << q[2] << "," << q[3] << ","
+                           << t[0] << "," << t[1] << "," << t[2] << "]; "
+                           << "aabb_min=[" << aabb.min_[0] << "," << aabb.min_[1] << "," << aabb.min_[2] << "]; "
+                           << "aabb_max=[" << aabb.max_[0] << "," << aabb.max_[1] << "," << aabb.max_[2] << "]; ";
+                    }
+                }
+                ss << "), but leaving untouched.";
+                RAVELOG_WARN_FORMAT("%s", ss.str());
             }
 
             pwbody.reset();
@@ -155,7 +171,7 @@ public:
     }
     ~FCLCollisionManagerInstance() {
         if( _tmpSortedBuffer.size() > 0 ) {
-            RAVELOG_WARN_FORMAT("_tmpSortedBuffer has left over objects %d", _tmpSortedBuffer.size());
+            RAVELOG_INFO_FORMAT("env=%s 0x%x: _tmpSortedBuffer has left over objects %d, maybe EnsureBodies was never called", _fclspace.GetEnvironmentId()%this%_tmpSortedBuffer.size());
         }
         _tmpSortedBuffer.resize(0);
 
@@ -360,7 +376,7 @@ public:
         RAVELOG_VERBOSE_FORMAT("%u removing body %s", _lastSyncTimeStamp% body.GetName());
 
         const int bodyIndex = body.GetEnvironmentBodyIndex();
-        if( (int)_vecCachedBodies.size() > bodyIndex) {
+        if( (int)_vecCachedBodies.size() > bodyIndex && bodyIndex > 0) {
             KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
             if (cache.IsValid()) {
                 for (CollisionObjectPtr& col : cache.vcolobjs) {
@@ -373,6 +389,12 @@ public:
 
                 return true;
             }
+            else {
+                RAVELOG_VERBOSE_FORMAT("env=%s 0x%x body %s(envBodyIndex=%d) is invalidated in cache, maybe previously removed or never added", body.GetEnv()->GetNameId()%this%body.GetName()%bodyIndex);
+            }
+        }
+        else {
+            RAVELOG_VERBOSE_FORMAT("env=%s body %s has invalid envBodyIndex=%d, cache size is %d", body.GetEnv()->GetNameId()%body.GetName()%bodyIndex%_vecCachedBodies.size());
         }
 
         return false;
@@ -497,7 +519,8 @@ public:
 
         FCLSpace::FCLKinBodyInfoPtr pinfo;
         KinBodyConstPtr pbody;
-        for (KinBodyCache& cache : _vecCachedBodies) {
+        for(int bodyIndexCached = 1; bodyIndexCached < (int)_vecCachedBodies.size(); ++bodyIndexCached) {
+            KinBodyCache& cache = _vecCachedBodies[bodyIndexCached];
             pbody = cache.pwbody.lock();
             if( !pbody || pbody->GetEnvironmentBodyIndex() == 0 ) {
                 // should happen when parts are removed
@@ -512,8 +535,15 @@ public:
                 continue;
             }
 
-            pinfo = cache.pwinfo.lock();
             const KinBody& body = *pbody;
+            {
+                const int bodyIndex = body.GetEnvironmentBodyIndex();
+                if (bodyIndexCached != bodyIndex) {
+                    RAVELOG_WARN_FORMAT("env=%s body %s has envBodyIndex=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%body.GetName()%bodyIndex%bodyIndexCached);
+                }
+            }
+
+            pinfo = cache.pwinfo.lock();
             const FCLSpace::FCLKinBodyInfoPtr& pnewinfo = _fclspace.GetInfo(body); // necessary in case pinfos were swapped!
             if( pinfo != pnewinfo ) {
                 // everything changed!
@@ -783,13 +813,17 @@ public:
                 // make sure we don't need to make this asusmption of body id change when bodies are removed and re-added
                 bool isInvalid = !pbody;
                 if (!isInvalid) {
-                    const int currentBodyEnvBodyIndex = pbody->GetEnvironmentBodyIndex();
+                    const KinBody& body = *pbody;
+                    const int currentBodyEnvBodyIndex = body.GetEnvironmentBodyIndex();
+                    if (currentBodyEnvBodyIndex != cachedBodyIndex) {
+                        RAVELOG_WARN_FORMAT("env=%s body %s has envBodyIndex=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%body.GetName()%currentBodyEnvBodyIndex%cachedBodyIndex);
+                    }
                     const vector<int>::const_iterator it = lower_bound(vecAttachedEnvBodyIndices.begin(), vecAttachedEnvBodyIndices.end(), currentBodyEnvBodyIndex);
                     isInvalid =  (it == vecAttachedEnvBodyIndices.end() || *it != currentBodyEnvBodyIndex) || currentBodyEnvBodyIndex != cachedBodyIndex;
                 }
                 if( isInvalid ) {
                     if( !!pbody && IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%cachedBodyIndex);
+                        RAVELOG_VERBOSE_FORMAT("env=%s, %x, %u removing old cache %d", pbody->GetEnv()->GetNameId()%this%_lastSyncTimeStamp%cachedBodyIndex);
                     }
                     // not in attached bodies so should remove
                     FOREACH(itcol, cache.vcolobjs) {
