@@ -243,12 +243,6 @@ public:
         if( !_pCurrentChecker ) {
             _pCurrentChecker = RaveCreateCollisionChecker(shared_from_this(), "GenericCollisionChecker");
         }
-        {
-            CollisionCheckerBasePtr pSelfColChecker = body.GetSelfCollisionChecker();
-            if (!!pSelfColChecker && pSelfColChecker != _pCurrentChecker) {
-                pSelfColChecker->RemoveKinBody(pbodyref);
-            }
-        }
         if( !_pPhysicsEngine ) {
             _pPhysicsEngine = RaveCreatePhysicsEngine(shared_from_this(), "GenericPhysicsEngine");
             _SetDefaultGravity();
@@ -3176,6 +3170,12 @@ protected:
         body.ReleaseAllGrabbed();
         if( !!_pCurrentChecker ) {
             _pCurrentChecker->RemoveKinBody(pbodyref);
+        }
+        {
+            CollisionCheckerBasePtr pSelfColChecker = body.GetSelfCollisionChecker();
+            if (!!pSelfColChecker && pSelfColChecker != _pCurrentChecker) {
+                pSelfColChecker->RemoveKinBody(pbodyref);
+            }
         }
         if( !!_pPhysicsEngine ) {
             _pPhysicsEngine->RemoveKinBody(pbodyref);
