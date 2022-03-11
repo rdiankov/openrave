@@ -1317,7 +1317,7 @@ private:
         if( --_nGetEnvManagerCacheClearCount < 0 ) {
             uint32_t curtime = OpenRAVE::utils::GetMilliTime();
             _nGetEnvManagerCacheClearCount = 100000;
-            std::map<std::vector<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.begin();
+            EnvManagersMap::iterator it = _envmanagers.begin();
             while(it != _envmanagers.end()) {
                 if( (it->second->GetLastSyncTimeStamp() - curtime) > 10000 ) {
                     //RAVELOG_VERBOSE_FORMAT("env=%d erasing manager at %u", GetEnv()->GetId()%it->second->GetLastSyncTimeStamp());
@@ -1329,7 +1329,7 @@ private:
             }
         }
 
-        std::map<std::vector<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.find(excludedBodyEnvIndices);
+        EnvManagersMap::iterator it = _envmanagers.find(excludedBodyEnvIndices);
         if( it == _envmanagers.end() ) {
             FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
             vector<int8_t> vecExcludedBodyEnvIndices(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
@@ -1338,7 +1338,7 @@ private:
             }
 
             p->InitEnvironment(vecExcludedBodyEnvIndices);
-            it = _envmanagers.insert(std::map<std::vector<int>, FCLCollisionManagerInstancePtr>::value_type(excludedBodyEnvIndices, p)).first;
+            it = _envmanagers.insert(EnvManagersMap::value_type(excludedBodyEnvIndices, p)).first;
         }
         it->second->EnsureBodies(_fclspace->GetEnvBodies());
         it->second->Synchronize();
@@ -1420,7 +1420,8 @@ private:
 
     typedef std::map< std::pair<const void*, int>, FCLCollisionManagerInstancePtr> BODYMANAGERSMAP; ///< Maps pairs of (body, bactiveDOFs) to oits manager
     BODYMANAGERSMAP _bodymanagers; ///< managers for each of the individual bodies. each manager should be called with InitBodyManager. Cannot use KinBodyPtr here since that will maintain a reference to the body!
-    std::map< std::vector<int>, FCLCollisionManagerInstancePtr> _envmanagers; // key is sorted vector of environment body indices of excluded bodies
+    typedef std::map<std::vector<int>, FCLCollisionManagerInstancePtr> EnvManagersMap; ///< Maps vector of excluded body indices to FCLCollisionManagerInstancePtr
+    EnvManagersMap _envmanagers; // key is sorted vector of environment body indices of excluded bodies
     int _nGetEnvManagerCacheClearCount; ///< count down until cache can be cleared
 
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
