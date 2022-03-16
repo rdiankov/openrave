@@ -900,7 +900,7 @@ public:
         }
 
 private:
-        Transform _t; ///< the current transformation of the link with respect to the body coordinate system
+        Transform _t; ///< the current transformation of the link with respect to the world coordinate system
 
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
@@ -2736,6 +2736,12 @@ private:
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
     AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
+    /// \brief returns an axis-aligned bounding box On transform tWorld.
+    ///
+    /// \brief quaterion of the orientation of the box in the world coordinate system.
+    /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
+    OrientedBox ComputeOBBOnAxes(const Vector& quat, bool bEnabledOnlyLinks=false) const;
+
     /// \brief returns an axis-aligned bounding box when body has identity transform
     ///
     /// Internally equivalent to ComputeAABBFromTransform(Transform(), ...)
@@ -2765,15 +2771,23 @@ private:
 
     /// \brief Sets the joint values of the robot.
     ///
-    /// \param values the values to set the joint angles (ordered by the dof indices)
+    /// \param[in] values the values to set the joint angles (ordered by the dof indices)
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
-    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    /// \param[in] dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
+
+    /// \brief Sets the joint values of the robot.
+    ///
+    /// \param[in] pJointValues pointer to head of array that holds joint angles (ordered by the dof indices)
+    /// \param[in] dof number of dof described by array of pJointValues.
+    /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
+    /// \param[in] dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief Sets the joint values and transformation of the body.
     ///
-    /// \param values the values to set the joint angles (ordered by the dof indices)
-    /// \param transform represents the transformation of the first body.
+    /// \param[in] values the values to set the joint angles (ordered by the dof indices)
+    /// \param[in] transform represents the transformation of the first body.
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     virtual void SetDOFValues(const std::vector<dReal>& values, const Transform& transform, uint32_t checklimits = CLA_CheckLimits);
 

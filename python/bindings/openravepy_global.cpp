@@ -246,6 +246,14 @@ public:
         return d;
     }
 
+    PyAABB GetCombined(const PyAABB& rhs) {
+        return PyAABB(ab.GetCombined(rhs.ab));
+    }
+
+    PyAABB GetTransformed(object otrans) {
+        return PyAABB(ab.GetTransformed(ExtractTransform(otrans)));
+    }
+
     virtual std::string __repr__() {
         return boost::str(boost::format("AABB([%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
     }
@@ -259,6 +267,18 @@ public:
     AABB ab;
 };
 
+class AABB_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getinitargs(const PyAABB& ab)
+    {
+        return py::make_tuple(toPyVector3(ab.ab.pos),toPyVector3(ab.ab.extents));
+    }
+};
+
 AABB ExtractAABB(object o)
 {
     extract_<OPENRAVE_SHARED_PTR<PyAABB> > pyaabb(o);
@@ -270,15 +290,63 @@ object toPyAABB(const AABB& ab)
     return py::to_object(OPENRAVE_SHARED_PTR<PyAABB>(new PyAABB(ab)));
 }
 
-class AABB_pickle_suite
+class PyOrientedBox
+{
+public:
+    PyOrientedBox() {
+    }
+    PyOrientedBox(object otransform, object newextents) {
+        obb.transform = ExtractTransform(otransform);
+        obb.extents = ExtractVector3(newextents);
+    }
+    PyOrientedBox(const OrientedBox& newobb) : obb(newobb) {
+    }
+
+    object extents() {
+        return toPyVector3(obb.extents);
+    }
+    object transform() {
+        return ReturnTransform(obb.transform);
+    }
+    object pose() {
+        return toPyArray(obb.transform);
+    }
+
+    dict toDict() {
+        // for ujson serialization
+        dict d;
+        d["transform"] = transform();
+        d["extents"] = extents();
+        return d;
+    }
+
+    virtual std::string __repr__() {
+        return boost::str(boost::format("OrientedBox([%.15e,%.15e,%.15e,%.15e,%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])")%obb.transform.rot[0]%obb.transform.rot[1]%obb.transform.rot[2]%obb.transform.rot[3]%obb.transform.trans[0]%obb.transform.trans[1]%obb.transform.trans[2]%obb.extents[0]%obb.extents[1]%obb.extents[2]);
+    }
+    virtual std::string __str__() {
+        return boost::str(boost::format("<%s>")%__repr__());
+    }
+    virtual object __unicode__() {
+        return ConvertStringToUnicode(__str__());
+    }
+
+    OrientedBox obb;
+};
+
+object toPyOrientedBox(const OrientedBox& obb)
+{
+    return py::to_object(OPENRAVE_SHARED_PTR<PyOrientedBox>(new PyOrientedBox(obb)));
+}
+
+class OrientedBox_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     : public pickle_suite
 #endif
 {
 public:
-    static py::tuple getinitargs(const PyAABB& ab)
+    static py::tuple getinitargs(const PyOrientedBox& pyobb)
     {
-        return py::make_tuple(toPyVector3(ab.ab.pos),toPyVector3(ab.ab.extents));
+        return py::make_tuple(ReturnTransform(pyobb.obb.transform), toPyVector3(pyobb.obb.extents));
     }
 };
 
@@ -1590,6 +1658,8 @@ void init_openravepy_global()
     .def("__unicode__",&PyAABB::__unicode__)
     .def("__repr__",&PyAABB::__repr__)
     .def("toDict", &PyAABB::toDict)
+    .def("GetCombined", &PyAABB::GetCombined, PY_ARGS("aabb") DOXY_FN(AABB, GetCombined))
+    .def("GetTransformed", &PyAABB::GetTransformed, PY_ARGS("pose") DOXY_FN(AABB, GetTransformed))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def(py::pickle(
              [](const PyAABB &pyab) {
@@ -1618,6 +1688,62 @@ void init_openravepy_global()
     .def_pickle(AABB_pickle_suite())
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyOrientedBox, OPENRAVE_SHARED_PTR<PyOrientedBox> >(m, "OrientedBox", DOXY_CLASS(geometry::OrientedBox))
+    .def(init<>())
+    .def(init<object, object>(), "pose"_a, "extents"_a)
+    .def(init<const OrientedBox&>(), "obb"_a)
+    .def("__copy__", [](const PyOrientedBox& self){
+            return self;
+        })
+    .def("__deepcopy__", [](const PyOrientedBox& self, const py::dict& memo) {
+            return PyOrientedBox(self.ab);
+            /*
+               OPENRAVE_SHARED_PTR<PyOrientedBox> pyOrientedBox(new PyOrientedBox(self.ab));
+               return py::to_object(pyOrientedBox);
+             */
+        })
+#else
+    class_<PyOrientedBox, OPENRAVE_SHARED_PTR<PyOrientedBox> >("OrientedBox", DOXY_CLASS(geometry::OrientedBox))
+    .def(init<object,object>(py::args("pose","extents")))
+#endif
+    .def("extents",&PyOrientedBox::extents)
+    .def("transform",&PyOrientedBox::transform)
+    .def("pose",&PyOrientedBox::pose)
+    .def("__str__",&PyOrientedBox::__str__)
+    .def("__unicode__",&PyOrientedBox::__unicode__)
+    .def("__repr__",&PyOrientedBox::__repr__)
+    .def("toDict", &PyOrientedBox::toDict)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def(py::pickle(
+             [](const PyOrientedBox &pyab) {
+            // __getstate__
+            return OrientedBox_pickle_suite::getinitargs(pyab);
+        },
+             [](py::tuple state) {
+            // __setstate__
+            if (state.size() != 2) {
+                throw std::runtime_error("Invalid state!");
+            }
+            /* Create a new C++ instance */
+            PyOrientedBox pyab;
+            /* Assign any additional state */
+            py::array_t<dReal> pos = state[0].cast<py::array_t<dReal> >();
+            py::array_t<dReal> extents = state[1].cast<py::array_t<dReal> >();
+            for(size_t i = 0; i < 3; ++i) {
+                pyab.ab.pos[i] = *pos.data(i);
+                pyab.ab.extents[i] = *extents.data(i);
+            }
+            pyab.ab.pos[3] = pyab.ab.extents[3] = 0;
+            return pyab;
+        }
+             ))
+#else
+    .def_pickle(OrientedBox_pickle_suite())
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    ;
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyTriMesh, OPENRAVE_SHARED_PTR<PyTriMesh> >(m, "TriMesh", DOXY_CLASS(TriMesh))
     .def(init<>())

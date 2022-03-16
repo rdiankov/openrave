@@ -665,6 +665,159 @@ public:
     RaveVector<T> trans;     ///< translation component
 };
 
+/// \brief Converts an axis-angle rotation into a quaternion.
+///
+/// \ingroup affine_math
+/// \param axis unit axis, 3 values
+/// \param angle rotation angle (radians)
+template <typename T> inline RaveVector<T> quatFromAxisAngle(const RaveVector<T>& axis, T angle)
+{
+    T axislen = MATH_SQRT(axis.lengthsqr3());
+    if( axislen == 0 ) {
+        return RaveVector<T>(T(1),T(0),T(0),T(0));
+    }
+    angle *= T(0.5);
+    T sang = MATH_SIN(angle)/axislen;
+    return RaveVector<T>(MATH_COS(angle),axis.x*sang,axis.y*sang,axis.z*sang);
+}
+
+/// \brief Converts an axis-angle rotation into a quaternion.
+///
+/// \ingroup affine_math
+/// \param axisangle unit axis * rotation angle (radians), 3 values
+template <typename T> inline RaveVector<T> quatFromAxisAngle(const RaveVector<T>& axisangle)
+{
+    T axislen = MATH_SQRT(axisangle.lengthsqr3());
+    if( axislen == 0 ) {
+        return RaveVector<T>(T(1),T(0),T(0),T(0));
+    }
+    T sang = MATH_SIN(axislen*T(0.5))/axislen;
+    return RaveVector<T>(MATH_COS(axislen*T(0.5)),axisangle.x*sang,axisangle.y*sang,axisangle.z*sang);
+}
+
+/// \brief Converts the rotation of a matrix into a quaternion.
+///
+/// \ingroup affine_math
+/// \param t transform for extracting the 3x3 rotation.
+template <typename T> inline RaveVector<T> quatFromMatrix(const RaveTransformMatrix<T>& rotation)
+{
+    RaveVector<T> rot;
+    T tr = rotation.m[4*0+0] + rotation.m[4*1+1] + rotation.m[4*2+2];
+    if (tr >= 0) {
+        rot[0] = tr + 1;
+        rot[1] = (rotation.m[4*2+1] - rotation.m[4*1+2]);
+        rot[2] = (rotation.m[4*0+2] - rotation.m[4*2+0]);
+        rot[3] = (rotation.m[4*1+0] - rotation.m[4*0+1]);
+    }
+    else {
+        // find the largest diagonal element and jump to the appropriate case
+        if (rotation.m[4*1+1] > rotation.m[4*0+0]) {
+            if (rotation.m[4*2+2] > rotation.m[4*1+1]) {
+                rot[3] = (rotation.m[4*2+2] - (rotation.m[4*0+0] + rotation.m[4*1+1])) + 1;
+                rot[1] = (rotation.m[4*2+0] + rotation.m[4*0+2]);
+                rot[2] = (rotation.m[4*1+2] + rotation.m[4*2+1]);
+                rot[0] = (rotation.m[4*1+0] - rotation.m[4*0+1]);
+            }
+            else {
+                rot[2] = (rotation.m[4*1+1] - (rotation.m[4*2+2] + rotation.m[4*0+0])) + 1;
+                rot[3] = (rotation.m[4*1+2] + rotation.m[4*2+1]);
+                rot[1] = (rotation.m[4*0+1] + rotation.m[4*1+0]);
+                rot[0] = (rotation.m[4*0+2] - rotation.m[4*2+0]);
+            }
+        }
+        else if (rotation.m[4*2+2] > rotation.m[4*0+0]) {
+            rot[3] = (rotation.m[4*2+2] - (rotation.m[4*0+0] + rotation.m[4*1+1])) + 1;
+            rot[1] = (rotation.m[4*2+0] + rotation.m[4*0+2]);
+            rot[2] = (rotation.m[4*1+2] + rotation.m[4*2+1]);
+            rot[0] = (rotation.m[4*1+0] - rotation.m[4*0+1]);
+        }
+        else {
+            rot[1] = (rotation.m[4*0+0] - (rotation.m[4*1+1] + rotation.m[4*2+2])) + 1;
+            rot[2] = (rotation.m[4*0+1] + rotation.m[4*1+0]);
+            rot[3] = (rotation.m[4*2+0] + rotation.m[4*0+2]);
+            rot[0] = (rotation.m[4*2+1] - rotation.m[4*1+2]);
+        }
+    }
+    rot.normalize4();
+    return rot;
+}
+
+/// \brief Converts a quaternion to a 3x3 matrix
+///
+/// \ingroup affine_math
+/// \param[in] quat quaternion, (s,vx,vy,vz)
+template <typename T> inline RaveTransformMatrix<T> matrixFromQuat(const RaveVector<T>& quat)
+{
+    // should normalize the quaternion first
+    T length2 = quat.lengthsqr4();
+    MATH_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
+    T ilength2 = 2/length2;
+    RaveTransformMatrix<T> t;
+    T qq1 = ilength2*quat[1]*quat[1];
+    T qq2 = ilength2*quat[2]*quat[2];
+    T qq3 = ilength2*quat[3]*quat[3];
+    t.m[4*0+0] = 1 - qq2 - qq3;
+    t.m[4*0+1] = ilength2*(quat[1]*quat[2] - quat[0]*quat[3]);
+    t.m[4*0+2] = ilength2*(quat[1]*quat[3] + quat[0]*quat[2]);
+    t.m[4*0+3] = 0;
+    t.m[4*1+0] = ilength2*(quat[1]*quat[2] + quat[0]*quat[3]);
+    t.m[4*1+1] = 1 - qq1 - qq3;
+    t.m[4*1+2] = ilength2*(quat[2]*quat[3] - quat[0]*quat[1]);
+    t.m[4*1+3] = 0;
+    t.m[4*2+0] = ilength2*(quat[1]*quat[3] - quat[0]*quat[2]);
+    t.m[4*2+1] = ilength2*(quat[2]*quat[3] + quat[0]*quat[1]);
+    t.m[4*2+2] = 1 - qq1 - qq2;
+    t.m[4*2+3] = 0;
+    return t;
+}
+
+/// \brief Converts a quaternion to a 3x3 matrix
+///
+/// \ingroup affine_math
+/// \param[out] rotation
+/// \param[in] quat quaternion, (s,vx,vy,vz)
+template <typename T> void matrixFromQuat(RaveTransformMatrix<T>& rotation, const RaveVector<T>& quat)
+{
+    // should normalize the quaternion first
+    T length2 = quat.lengthsqr4();
+    MATH_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
+    T ilength2 = 2/length2;
+    T qq1 = ilength2*quat[1]*quat[1];
+    T qq2 = ilength2*quat[2]*quat[2];
+    T qq3 = ilength2*quat[3]*quat[3];
+    rotation.m[4*0+0] = 1 - qq2 - qq3;
+    rotation.m[4*0+1] = ilength2*(quat[1]*quat[2] - quat[0]*quat[3]);
+    rotation.m[4*0+2] = ilength2*(quat[1]*quat[3] + quat[0]*quat[2]);
+    rotation.m[4*0+3] = 0;
+    rotation.m[4*1+0] = ilength2*(quat[1]*quat[2] + quat[0]*quat[3]);
+    rotation.m[4*1+1] = 1 - qq1 - qq3;
+    rotation.m[4*1+2] = ilength2*(quat[2]*quat[3] - quat[0]*quat[1]);
+    rotation.m[4*1+3] = 0;
+    rotation.m[4*2+0] = ilength2*(quat[1]*quat[3] - quat[0]*quat[2]);
+    rotation.m[4*2+1] = ilength2*(quat[2]*quat[3] + quat[0]*quat[1]);
+    rotation.m[4*2+2] = 1 - qq1 - qq2;
+    rotation.m[4*2+3] = 0;
+}
+
+/// \brief Converts an axis-angle rotation to a 3x3 matrix.
+///
+/// \ingroup affine_math
+/// \param axis unit axis, 3 values
+/// \param angle rotation angle (radians)
+template <typename T> inline RaveTransformMatrix<T> matrixFromAxisAngle(const RaveVector<T>& axis, T angle)
+{
+    return matrixFromQuat(quatFromAxisAngle(axis,angle));
+}
+
+/// \brief Converts an axis-angle rotation to a 3x3 matrix.
+///
+/// \ingroup affine_math
+/// \param axis unit axis * rotation angle (radians), 3 values
+template <typename T> inline RaveTransformMatrix<T> matrixFromAxisAngle(const RaveVector<T>& axisangle)
+{
+    return matrixFromQuat(quatFromAxisAngle(axisangle));
+}
+
 /// \brief A ray defined by an origin and a direction.
 /// \ingroup geometric_primitives
 template <typename T>
@@ -681,30 +834,74 @@ public:
 /// \brief An axis aligned bounding box.
 /// \ingroup geometric_primitives
 template <typename T>
-class aabb
+class RaveAxisAlignedBox
 {
 public:
-    aabb() {
+    RaveAxisAlignedBox() {
     }
-    aabb(const RaveVector<T>&vpos, const RaveVector<T>&vextents) : pos(vpos), extents(vextents) {
+    RaveAxisAlignedBox(const RaveVector<T>&vpos, const RaveVector<T>&vextents) : pos(vpos), extents(vextents) {
     }
+
+    template <typename U>
+    inline RaveAxisAlignedBox<T> GetCombined(const RaveAxisAlignedBox<U>& rhs) const
+    {
+        RaveVector<T> lower = pos - extents;
+        RaveVector<T> rhslower = rhs.pos - rhs.extents;
+        if( lower.x > rhslower.x ) {
+            lower.x = rhslower.x;
+        }
+        if( lower.y > rhslower.y ) {
+            lower.y = rhslower.y;
+        }
+        if( lower.z > rhslower.z ) {
+            lower.z = rhslower.z;
+        }
+        RaveVector<T> upper = pos + extents;
+        RaveVector<T> rhsupper = rhs.pos + rhs.extents;
+        if( upper.x < rhsupper.x ) {
+            upper.x = rhsupper.x;
+        }
+        if( upper.y < rhsupper.y ) {
+            upper.y = rhsupper.y;
+        }
+        if( upper.z < rhsupper.z ) {
+            upper.z = rhsupper.z;
+        }
+        RaveVector<T> newpos = 0.5*(upper+lower);
+        return RaveAxisAlignedBox<T>(newpos, upper-newpos);
+    }
+
+    template <typename U>
+    inline RaveAxisAlignedBox<T> GetTransformed(const RaveTransform<U>& transform) const
+    {
+        RaveTransformMatrix<T> matrix = matrixFromQuat<T>(transform.rot);
+        RaveAxisAlignedBox<T> newab;
+        newab.pos = transform * pos;
+        newab.extents[0] = RaveFabs(matrix.m[0]*extents[0]) + RaveFabs(matrix.m[1]*extents[1]) + RaveFabs(matrix.m[2]*extents[2]);
+        newab.extents[1] = RaveFabs(matrix.m[4]*extents[0]) + RaveFabs(matrix.m[5]*extents[1]) + RaveFabs(matrix.m[6]*extents[2]);
+        newab.extents[2] = RaveFabs(matrix.m[8]*extents[0]) + RaveFabs(matrix.m[9]*extents[1]) + RaveFabs(matrix.m[10]*extents[2]);
+        return newab;
+    }
+
     RaveVector<T> pos, extents;
 };
 
 /// \brief An oriented bounding box.
 /// \ingroup geometric_primitives
 template <typename T>
-class OrientedBox
+class RaveOrientedBox
 {
 public:
     RaveTransform<T> transform;
     RaveVector<T> extents;
 
-    virtual bool operator==(const OrientedBox& other) const {
+    template<typename U> 
+    inline bool operator==(const RaveOrientedBox<U>& other) const {
         return transform == other.transform && extents == other.extents;
     }
 
-    virtual bool operator!=(const OrientedBox& other) const {
+    template<typename U> 
+    inline bool operator!=(const RaveOrientedBox<U>& other) const {
         return !operator==(other);
     }
 };
@@ -864,159 +1061,6 @@ std::istream& operator>>(std::istream& I, RaveTransformMatrix<U>&v)
 }
 
 //@}
-
-/// \brief Converts an axis-angle rotation into a quaternion.
-///
-/// \ingroup affine_math
-/// \param axis unit axis, 3 values
-/// \param angle rotation angle (radians)
-template <typename T> inline RaveVector<T> quatFromAxisAngle(const RaveVector<T>& axis, T angle)
-{
-    T axislen = MATH_SQRT(axis.lengthsqr3());
-    if( axislen == 0 ) {
-        return RaveVector<T>(T(1),T(0),T(0),T(0));
-    }
-    angle *= T(0.5);
-    T sang = MATH_SIN(angle)/axislen;
-    return RaveVector<T>(MATH_COS(angle),axis.x*sang,axis.y*sang,axis.z*sang);
-}
-
-/// \brief Converts an axis-angle rotation into a quaternion.
-///
-/// \ingroup affine_math
-/// \param axisangle unit axis * rotation angle (radians), 3 values
-template <typename T> inline RaveVector<T> quatFromAxisAngle(const RaveVector<T>& axisangle)
-{
-    T axislen = MATH_SQRT(axisangle.lengthsqr3());
-    if( axislen == 0 ) {
-        return RaveVector<T>(T(1),T(0),T(0),T(0));
-    }
-    T sang = MATH_SIN(axislen*T(0.5))/axislen;
-    return RaveVector<T>(MATH_COS(axislen*T(0.5)),axisangle.x*sang,axisangle.y*sang,axisangle.z*sang);
-}
-
-/// \brief Converts the rotation of a matrix into a quaternion.
-///
-/// \ingroup affine_math
-/// \param t transform for extracting the 3x3 rotation.
-template <typename T> inline RaveVector<T> quatFromMatrix(const RaveTransformMatrix<T>& rotation)
-{
-    RaveVector<T> rot;
-    T tr = rotation.m[4*0+0] + rotation.m[4*1+1] + rotation.m[4*2+2];
-    if (tr >= 0) {
-        rot[0] = tr + 1;
-        rot[1] = (rotation.m[4*2+1] - rotation.m[4*1+2]);
-        rot[2] = (rotation.m[4*0+2] - rotation.m[4*2+0]);
-        rot[3] = (rotation.m[4*1+0] - rotation.m[4*0+1]);
-    }
-    else {
-        // find the largest diagonal element and jump to the appropriate case
-        if (rotation.m[4*1+1] > rotation.m[4*0+0]) {
-            if (rotation.m[4*2+2] > rotation.m[4*1+1]) {
-                rot[3] = (rotation.m[4*2+2] - (rotation.m[4*0+0] + rotation.m[4*1+1])) + 1;
-                rot[1] = (rotation.m[4*2+0] + rotation.m[4*0+2]);
-                rot[2] = (rotation.m[4*1+2] + rotation.m[4*2+1]);
-                rot[0] = (rotation.m[4*1+0] - rotation.m[4*0+1]);
-            }
-            else {
-                rot[2] = (rotation.m[4*1+1] - (rotation.m[4*2+2] + rotation.m[4*0+0])) + 1;
-                rot[3] = (rotation.m[4*1+2] + rotation.m[4*2+1]);
-                rot[1] = (rotation.m[4*0+1] + rotation.m[4*1+0]);
-                rot[0] = (rotation.m[4*0+2] - rotation.m[4*2+0]);
-            }
-        }
-        else if (rotation.m[4*2+2] > rotation.m[4*0+0]) {
-            rot[3] = (rotation.m[4*2+2] - (rotation.m[4*0+0] + rotation.m[4*1+1])) + 1;
-            rot[1] = (rotation.m[4*2+0] + rotation.m[4*0+2]);
-            rot[2] = (rotation.m[4*1+2] + rotation.m[4*2+1]);
-            rot[0] = (rotation.m[4*1+0] - rotation.m[4*0+1]);
-        }
-        else {
-            rot[1] = (rotation.m[4*0+0] - (rotation.m[4*1+1] + rotation.m[4*2+2])) + 1;
-            rot[2] = (rotation.m[4*0+1] + rotation.m[4*1+0]);
-            rot[3] = (rotation.m[4*2+0] + rotation.m[4*0+2]);
-            rot[0] = (rotation.m[4*2+1] - rotation.m[4*1+2]);
-        }
-    }
-    rot.normalize4();
-    return rot;
-}
-
-/// \brief Converts a quaternion to a 3x3 matrix
-///
-/// \ingroup affine_math
-/// \param[in] quat quaternion, (s,vx,vy,vz)
-template <typename T> inline RaveTransformMatrix<T> matrixFromQuat(const RaveVector<T>& quat)
-{
-    // should normalize the quaternion first
-    T length2 = quat.lengthsqr4();
-    MATH_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
-    T ilength2 = 2/length2;
-    RaveTransformMatrix<T> t;
-    T qq1 = ilength2*quat[1]*quat[1];
-    T qq2 = ilength2*quat[2]*quat[2];
-    T qq3 = ilength2*quat[3]*quat[3];
-    t.m[4*0+0] = 1 - qq2 - qq3;
-    t.m[4*0+1] = ilength2*(quat[1]*quat[2] - quat[0]*quat[3]);
-    t.m[4*0+2] = ilength2*(quat[1]*quat[3] + quat[0]*quat[2]);
-    t.m[4*0+3] = 0;
-    t.m[4*1+0] = ilength2*(quat[1]*quat[2] + quat[0]*quat[3]);
-    t.m[4*1+1] = 1 - qq1 - qq3;
-    t.m[4*1+2] = ilength2*(quat[2]*quat[3] - quat[0]*quat[1]);
-    t.m[4*1+3] = 0;
-    t.m[4*2+0] = ilength2*(quat[1]*quat[3] - quat[0]*quat[2]);
-    t.m[4*2+1] = ilength2*(quat[2]*quat[3] + quat[0]*quat[1]);
-    t.m[4*2+2] = 1 - qq1 - qq2;
-    t.m[4*2+3] = 0;
-    return t;
-}
-
-/// \brief Converts a quaternion to a 3x3 matrix
-///
-/// \ingroup affine_math
-/// \param[out] rotation
-/// \param[in] quat quaternion, (s,vx,vy,vz)
-template <typename T> void matrixFromQuat(RaveTransformMatrix<T>& rotation, const RaveVector<T>& quat)
-{
-    // should normalize the quaternion first
-    T length2 = quat.lengthsqr4();
-    MATH_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
-    T ilength2 = 2/length2;
-    T qq1 = ilength2*quat[1]*quat[1];
-    T qq2 = ilength2*quat[2]*quat[2];
-    T qq3 = ilength2*quat[3]*quat[3];
-    rotation.m[4*0+0] = 1 - qq2 - qq3;
-    rotation.m[4*0+1] = ilength2*(quat[1]*quat[2] - quat[0]*quat[3]);
-    rotation.m[4*0+2] = ilength2*(quat[1]*quat[3] + quat[0]*quat[2]);
-    rotation.m[4*0+3] = 0;
-    rotation.m[4*1+0] = ilength2*(quat[1]*quat[2] + quat[0]*quat[3]);
-    rotation.m[4*1+1] = 1 - qq1 - qq3;
-    rotation.m[4*1+2] = ilength2*(quat[2]*quat[3] - quat[0]*quat[1]);
-    rotation.m[4*1+3] = 0;
-    rotation.m[4*2+0] = ilength2*(quat[1]*quat[3] - quat[0]*quat[2]);
-    rotation.m[4*2+1] = ilength2*(quat[2]*quat[3] + quat[0]*quat[1]);
-    rotation.m[4*2+2] = 1 - qq1 - qq2;
-    rotation.m[4*2+3] = 0;
-}
-
-/// \brief Converts an axis-angle rotation to a 3x3 matrix.
-///
-/// \ingroup affine_math
-/// \param axis unit axis, 3 values
-/// \param angle rotation angle (radians)
-template <typename T> inline RaveTransformMatrix<T> matrixFromAxisAngle(const RaveVector<T>& axis, T angle)
-{
-    return matrixFromQuat(quatFromAxisAngle(axis,angle));
-}
-
-/// \brief Converts an axis-angle rotation to a 3x3 matrix.
-///
-/// \ingroup affine_math
-/// \param axis unit axis * rotation angle (radians), 3 values
-template <typename T> inline RaveTransformMatrix<T> matrixFromAxisAngle(const RaveVector<T>& axisangle)
-{
-    return matrixFromQuat(quatFromAxisAngle(axisangle));
-}
 
 /// \brief Multiply two quaternions
 ///
@@ -1373,22 +1417,28 @@ inline int insideTriangle(const RaveVector<T> v, const triangle<T>& tri)
 /// \brief Test collision of a ray with an axis aligned bounding box.
 /// \ingroup geometric_primitives
 template <typename T>
-inline bool RayAABBTest(const ray<T>& r, const aabb<T>& ab)
+inline bool RayAABBTest(const ray<T>& r, const RaveAxisAlignedBox<T>& ab)
 {
     RaveVector<T> vd, vpos = r.pos - ab.pos;
-    if((MATH_FABS(vpos.x) > ab.extents.x)&&(r.dir.x* vpos.x > 0.0f))
+    if((MATH_FABS(vpos.x) > ab.extents.x)&&(r.dir.x* vpos.x > 0.0f)) {
         return false;
-    if((MATH_FABS(vpos.y) > ab.extents.y)&&(r.dir.y * vpos.y > 0.0f))
+    }
+    if((MATH_FABS(vpos.y) > ab.extents.y)&&(r.dir.y * vpos.y > 0.0f)) {
         return false;
-    if((MATH_FABS(vpos.z) > ab.extents.z)&&(r.dir.z * vpos.z > 0.0f))
+    }
+    if((MATH_FABS(vpos.z) > ab.extents.z)&&(r.dir.z * vpos.z > 0.0f)) {
         return false;
+    }
     vd = r.dir.cross(vpos);
-    if( MATH_FABS(vd.x) > ab.extents.y * MATH_FABS(r.dir.z) + ab.extents.z * MATH_FABS(r.dir.y) )
+    if( MATH_FABS(vd.x) > ab.extents.y * MATH_FABS(r.dir.z) + ab.extents.z * MATH_FABS(r.dir.y) ) {
         return false;
-    if( MATH_FABS(vd.y) > ab.extents.x * MATH_FABS(r.dir.z) + ab.extents.z * MATH_FABS(r.dir.x) )
+    }
+    if( MATH_FABS(vd.y) > ab.extents.x * MATH_FABS(r.dir.z) + ab.extents.z * MATH_FABS(r.dir.x) ) {
         return false;
-    if( MATH_FABS(vd.z) > ab.extents.x * MATH_FABS(r.dir.y) + ab.extents.y * MATH_FABS(r.dir.x) )
+    }
+    if( MATH_FABS(vd.z) > ab.extents.x * MATH_FABS(r.dir.y) + ab.extents.y * MATH_FABS(r.dir.x) ) {
         return false;
+    }
     return true;
 }
 
@@ -1836,7 +1886,7 @@ inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, co
 /// \ingroup geometric_primitives
 /// \param[in] t transformation used to set the coordinate system of ab.
 template <typename T>
-inline obb<T> OBBFromAABB(const aabb<T>& ab, const RaveTransformMatrix<T>& t)
+inline obb<T> OBBFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransformMatrix<T>& t)
 {
     obb<T> o;
     o.right = RaveVector<T>(t.m[0],t.m[4],t.m[8]);
@@ -1852,7 +1902,7 @@ inline obb<T> OBBFromAABB(const aabb<T>& ab, const RaveTransformMatrix<T>& t)
 /// \ingroup geometric_primitives
 /// \param[in] t transformation used to set the coordinate system of ab.
 template <typename T>
-inline obb<T> OBBFromAABB(const aabb<T>& ab, const RaveTransform<T>& t)
+inline obb<T> OBBFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransform<T>& t)
 {
     return OBBFromAABB(ab,RaveTransformMatrix<T>(t));
 }
@@ -1904,7 +1954,7 @@ inline obb<T> TransformOBB(const RaveTransformMatrix<T>& t, const obb<T>& o)
 ///
 /// \ingroup geometric_primitives
 template <typename T>
-inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
+inline bool AABBCollision(const RaveAxisAlignedBox<T>& ab1, const RaveAxisAlignedBox<T>& ab2)
 {
     RaveVector<T> v = ab1.pos-ab2.pos;
     return MATH_FABS(v.x) <= ab1.extents.x+ab2.extents.x && MATH_FABS(v.y) <= ab1.extents.y+ab2.extents.y && MATH_FABS(v.z) <= ab1.extents.z+ab2.extents.z;

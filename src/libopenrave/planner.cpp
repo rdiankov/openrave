@@ -29,9 +29,9 @@ std::istream& operator>>(std::istream& I, PlannerParameters& pp)
         stringbuf buf;
 
         //std::istream::sentry sentry(I); // necessary?!
-        stringstream::streampos pos = I.tellg();
+        stringstream::pos_type pos = I.tellg();
         I.seekg(0, ios::end);
-        stringstream::streampos endpos = I.tellg();
+        stringstream::pos_type endpos = I.tellg();
         I.seekg(pos);
 
         std::vector<char> vstrbuf; vstrbuf.reserve((size_t)(endpos-pos)); // make sure there are at least this many bytes

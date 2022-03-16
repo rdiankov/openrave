@@ -873,6 +873,12 @@ void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t bC
     _UpdateAttachedSensors();
 }
 
+void RobotBase::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits, const std::vector<int>& dofindices)
+{
+    KinBody::SetDOFValues(pJointValues, dof, checklimits, dofindices);
+    _UpdateAttachedSensors();
+}
+
 void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, uint32_t bCheckLimits)
 {
     KinBody::SetDOFValues(vJointValues, transbase, bCheckLimits); // should call RobotBase::SetDOFValues, so no need to upgrade grabbed bodies, attached sensors
