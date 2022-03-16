@@ -91,7 +91,7 @@ public:
                     for(dReal ftime = 0; ftime <= ptraj->GetDuration(); ftime += 0.01) {
                         ptraj->Sample(vtrajdata,ftime,manip->GetArmConfigurationSpecification());
                         (*itrobot)->SetDOFValues(vtrajdata,true,manip->GetArmIndices());
-                        vpoints.push_back(manip->GetEndEffectorTransform().trans);
+                        vpoints.push_back(manip->GetTransform().trans);
                     }
                     listgraphs.push_back(penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f));
                 }

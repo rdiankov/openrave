@@ -169,10 +169,6 @@ public:
         /// \brief return the linear/angular velocity of the manipulator coordinate system
         std::pair<Vector,Vector> GetVelocity() const;
 
-        inline Transform GetEndEffectorTransform() const {
-            return GetTransform();
-        }
-
         inline const std::string& GetId() const {
             return _info._id;
         }
