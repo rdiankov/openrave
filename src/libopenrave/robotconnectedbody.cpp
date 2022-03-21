@@ -839,6 +839,22 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 }
             }
 
+            if( !pnewmanipulator->_info._toolChangerLinkName.empty() ) {
+                // search for the correct resolved _toolChangerLinkName
+                bool bFoundToolChangerLink = false;
+                for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
+                    if( pnewmanipulator->_info._toolChangerLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
+                        pnewmanipulator->_info._toolChangerLinkName = connectedBody._vResolvedLinkNames.at(ilink).first;
+                        bFoundToolChangerLink = true;
+                    }
+                }
+
+                if( !bFoundToolChangerLink ) {
+                    // it is OK if the toolChangerLinkName is pointing to another link name not in the connected body!
+                    //throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find toolChangerLinkName '%s' in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._toolChangerLinkName, ORE_InvalidArguments);
+                }
+            }
+
             // search for the correct resolved joint name
             for(size_t iGripperJoint = 0; iGripperJoint < pnewmanipulator->_info._vGripperJointNames.size(); ++iGripperJoint) {
                 std::string& gripperJointName = pnewmanipulator->_info._vGripperJointNames[iGripperJoint];
