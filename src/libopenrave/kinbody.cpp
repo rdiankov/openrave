@@ -1791,12 +1791,13 @@ AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnly
 
 OrientedBox KinBody::ComputeOBBOnAxes(const Vector& quat, bool bEnabledOnlyLinks) const
 {
-    Transform tinv; tinv.rot = quatInverse(quat);
-    AABB ab = ComputeAABBFromTransform(tinv, bEnabledOnlyLinks);
+    const Vector relativeQuat = quatMultiply(quatInverse(GetTransform().rot), quat); // relative quat from this kinbody to the given quat w.r.t. world
+    Transform tinv; tinv.rot = quatInverse(relativeQuat);
+    AABB ab = ComputeAABBFromTransform(tinv, bEnabledOnlyLinks); // align world orientation to the given quat
     OrientedBox obb;
     obb.extents = ab.extents;
-    obb.transform.rot = quatMultiply(quatInverse(GetTransform().rot), quat);
-    obb.transform.trans = quatRotate(quat, ab.pos);
+    obb.transform.rot = relativeQuat; // w.r.t. this kinbody
+    obb.transform.trans = quatRotate(relativeQuat, ab.pos); // w.r.t. this kinbody
     return obb;
 }
 
