@@ -227,9 +227,17 @@ public:
             return _info._toolChangerConnectedBodyToolName;
         }
 
-        /// \brief returns the tool changer link name. If empty, return the end effector link name
+        /// \brief If the current manipulator is also a tool changer, then returns the tool changer link name. If empty, return the end effector link name
+        ///
+        /// A manipulator is a tool changer if toolChangerConnectedBodyToolName is not empty.
         inline const std::string& GetToolChangerLinkName() const {
-            return _info._toolChangerLinkName.empty() ? _info._sEffectorLinkName : _info._toolChangerLinkName;
+            if( _info._toolChangerConnectedBodyToolName.empty() ) {
+                // toolname is empty, so not a tool changer, just return an empty string
+                return _info._toolChangerConnectedBodyToolName;
+            }
+            else {
+                return _info._toolChangerLinkName.empty() ? _info._sEffectorLinkName : _info._toolChangerLinkName;
+            }
         }
 
         inline const std::vector<std::string>& GetRestrictGraspSetNames() const {
