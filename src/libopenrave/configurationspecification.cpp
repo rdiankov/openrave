@@ -412,7 +412,7 @@ void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatim
     bool hasdeltatime = false;
     FOREACH(itgroup,_vgroups) {
         string replacename;
-        int offset = -1;
+        offset = -1; // we have just set `offset` to `GetDOF()`, shall it be reset to -1?
         if( itgroup->name.size() >= 12 && itgroup->name.substr(0,12) == "joint_values" ) {
             replacename = s_GroupsJointValues.at(deriv);
             offset = 12;

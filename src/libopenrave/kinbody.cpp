@@ -859,12 +859,12 @@ void KinBody::GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofind
             else if( toadd < 0 ) {
                 std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 ss << "values=[";
-                FOREACH(itvalue, v) {
-                    ss << *itvalue << ", ";
+                for( const auto value : v) {
+                    ss << value << ", ";
                 }
                 ss << "]; jointorder=[";
-                FOREACH(itj, _vDOFOrderedJoints) {
-                    ss << (*itj)->GetName() << ", ";
+                for( const auto itj : _vDOFOrderedJoints) {
+                    ss << itj->GetName() << ", ";
                 }
                 ss << "];";
                 throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s (dofindex=%d), toadd=%d, v.size()=%d in call GetDOFValues with %s"), (*it)->GetName()%(*it)->GetDOFIndex()%toadd%v.size()%ss.str(), ORE_InvalidState);
@@ -1195,14 +1195,14 @@ void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dR
                     bChanged = true;
                     std::copy(itlower,itlower+(*it)->GetDOF(), (*it)->_info._vlowerlimit.begin());
                     std::copy(itupper,itupper+(*it)->GetDOF(), (*it)->_info._vupperlimit.begin());
-                    for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                        if( (*it)->IsRevolute(i) && !(*it)->IsCircular(i) ) {
+                    for(int j = 0; j < (*it)->GetDOF(); ++j) {
+                        if( (*it)->IsRevolute(j) && !(*it)->IsCircular(j) ) {
                             // TODO, necessary to set wrap?
-                            if( (*it)->_info._vlowerlimit.at(i) < -PI || (*it)->_info._vupperlimit.at(i) > PI) {
-                                (*it)->SetWrapOffset(0.5f * ((*it)->_info._vlowerlimit.at(i) + (*it)->_info._vupperlimit.at(i)),i);
+                            if( (*it)->_info._vlowerlimit.at(j) < -PI || (*it)->_info._vupperlimit.at(j) > PI) {
+                                (*it)->SetWrapOffset(0.5f * ((*it)->_info._vlowerlimit.at(j) + (*it)->_info._vupperlimit.at(j)),j);
                             }
                             else {
-                                (*it)->SetWrapOffset(0,i);
+                                (*it)->SetWrapOffset(0,j);
                             }
                         }
                     }

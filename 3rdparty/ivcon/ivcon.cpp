@@ -150,7 +150,7 @@ float cor3_tex_uv[3][COR3_MAX];
 
 bool debug;
 
-int dup_num;
+//int dup_num;
 
 int face[ORDER_MAX][FACE_MAX];
 float  face_area[FACE_MAX];
@@ -168,9 +168,9 @@ char* fileout_name = NULL;
 
 int    group_num;
 
-int    i;
+//int    i;
 char   input[LINE_MAX_LEN];
-int    k;
+//int    k;
 char   level_name[LEVEL_MAX][LINE_MAX_LEN];
 
 int    line_dex[LINES_MAX];
@@ -199,7 +199,7 @@ float  pivot[3];
 float  rgbcolor[3][COLOR_MAX];
 char   temp_name[81];
 
-int    text_num;
+//int    text_num;
 
 char texture_binding[80];
 char texture_name[TEXTURE_MAX][LINE_MAX_LEN];
