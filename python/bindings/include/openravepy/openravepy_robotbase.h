@@ -78,6 +78,7 @@ public:
         object GetGripperName() const;
 
         object GetToolChangerConnectedBodyToolName() const;
+        object GetToolChangerLinkName() const;
 
         object GetRestrictGraspSetNames() const;
 
