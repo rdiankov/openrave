@@ -53,8 +53,12 @@
 #include <algorithm>
 #include <complex>
 
-#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(), __itend__=(v).end(); it != __itend__; (it)++)
-#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(), __itend__=(v).end(); it != __itend__; )
+#define _MAKEDATA(n) __itend__##n
+#define MAKEDATA(n) _MAKEDATA(n)
+#define MAKEVAR MAKEDATA(__LINE__)
+
+#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(), MAKEVAR=(v).end(); it != MAKEVAR; (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(), MAKEVAR=(v).end(); it != MAKEVAR; )
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
