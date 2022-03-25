@@ -438,8 +438,8 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
         return;
     }
     if (value.IsString()) {
-        StringReadablePtr pReadable(new StringReadable(id, value.GetString()));
-        _mReadableInterfaces[id] = pReadable;
+        StringReadablePtr pStringReadable(new StringReadable(id, value.GetString()));
+        _mReadableInterfaces[id] = pStringReadable;
         return;
     }
     RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
@@ -1682,16 +1682,16 @@ void KinBody::GetLinkTransformations(std::vector<Transform>& transforms, std::ve
     if( (int)doflastsetvalues.capacity() < GetDOF() ) {
         doflastsetvalues.reserve(GetDOF());
     }
-    FOREACHC(it, _vDOFOrderedJoints) {
-        int toadd = (*it)->GetDOFIndex()-(int)doflastsetvalues.size();
+    for( const auto joint : _vDOFOrderedJoints) {
+        int toadd = joint->GetDOFIndex()-(int)doflastsetvalues.size();
         if( toadd > 0 ) {
             doflastsetvalues.insert(doflastsetvalues.end(),toadd,0);
         }
         else if( toadd < 0 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s, toadd=%d"), (*it)->GetName()%toadd, ORE_InvalidState);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s, toadd=%d"), joint->GetName()%toadd, ORE_InvalidState);
         }
-        for(int i = 0; i < (*it)->GetDOF(); ++i) {
-            doflastsetvalues.push_back((*it)->_doflastsetvalues[i]);
+        for(int i = 0; i < joint->GetDOF(); ++i) {
+            doflastsetvalues.push_back(joint->_doflastsetvalues[i]);
         }
     }
 }
@@ -3061,8 +3061,8 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
                     if( vinsertedindices[j] < 0 ) {
                         //RAVELOG_WARN("hessian unhandled condition with mimic\n");
                         PartialInfo& partialinfo2 = mappartialsinserted[j];
-                        FOREACH(itpartial2,partialinfo2.second) {
-                            int index2 = itpartial2->first;
+                        for( const auto itpartial2 : partialinfo2.second) {
+                            int index2 = itpartial2.first;
                             if( dofindices.size() > 0 ) {
                                 std::vector<int>::const_iterator itindex = find(dofindices.begin(),dofindices.end(),itpartial->first);
                                 if( itindex == dofindices.end() ) {
@@ -3071,7 +3071,7 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
                                 index2 = itindex-dofindices.begin();
                             }
 
-                            Vector v2 = v*itpartial2->second;
+                            Vector v2 = v*itpartial2.second;
                             size_t indexoffset = 3*dofstride*index2+index;
                             hessian[indexoffset+0] += v2.x;
                             hessian[indexoffset+dofstride] += v2.y;
@@ -3276,8 +3276,8 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
                     if( vinsertedindices[j] < 0 ) {
                         //RAVELOG_WARN("hessian unhandled condition with mimic\n");
                         PartialInfo& partialinfo2 = mappartialsinserted[j];
-                        FOREACH(itpartial2,partialinfo2.second) {
-                            int index2 = itpartial2->first;
+                        for( const auto itpartial2 : partialinfo2.second) {
+                            int index2 = itpartial2.first;
                             if( dofindices.size() > 0 ) {
                                 std::vector<int>::const_iterator itindex = find(dofindices.begin(),dofindices.end(),itpartial->first);
                                 if( itindex == dofindices.end() ) {
@@ -3286,7 +3286,7 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
                                 index2 = itindex-dofindices.begin();
                             }
 
-                            Vector v2 = v*itpartial2->second;
+                            Vector v2 = v*itpartial2.second;
                             size_t indexoffset = 3*dofstride*index2+index;
                             hessian[indexoffset+0] += v2.x;
                             hessian[indexoffset+dofstride] += v2.y;
@@ -4015,10 +4015,10 @@ void KinBody::_ComputeInternalInformation()
     }
 
     int lindex=0;
-    FOREACH(itlink,_veclinks) {
-        (*itlink)->_index = lindex; // always reset, necessary since index cannot be initialized by custom links
-        (*itlink)->_vParentLinks.clear();
-        if((_veclinks.size() > 1)&&((*itlink)->GetName().size() == 0)) {
+    for( const auto link : _veclinks) {
+        link->_index = lindex; // always reset, necessary since index cannot be initialized by custom links
+        link->_vParentLinks.clear();
+        if((_veclinks.size() > 1)&&(link->GetName().size() == 0)) {
             RAVELOG_WARN(str(boost::format("%s link index %d has no name")%GetName()%lindex));
         }
         lindex++;
@@ -4062,16 +4062,16 @@ void KinBody::_ComputeInternalInformation()
         }
         int jointindex=0;
         int dofindex=0;
-        FOREACH(itjoint,_vecjoints) {
-            (*itjoint)->jointindex = jointindex++;
-            (*itjoint)->dofindex = dofindex;
-            (*itjoint)->_info._bIsActive = true;
-            dofindex += (*itjoint)->GetDOF();
+        for( const auto vjoint : _vecjoints) {
+            vjoint->jointindex = jointindex++;
+            vjoint->dofindex = dofindex;
+            vjoint->_info._bIsActive = true;
+            dofindex += vjoint->GetDOF();
         }
-        FOREACH(itjoint,_vPassiveJoints) {
-            (*itjoint)->jointindex = -1;
-            (*itjoint)->dofindex = -1;
-            (*itjoint)->_info._bIsActive = false;
+        for( const auto pjoint : _vPassiveJoints) {
+            pjoint->jointindex = -1;
+            pjoint->dofindex = -1;
+            pjoint->_info._bIsActive = false;
         }
     }
 
@@ -4087,8 +4087,8 @@ void KinBody::_ComputeInternalInformation()
     }
     sort(vorder.begin(), vorder.end(), utils::index_cmp<vector<int>&>(vJointIndices));
     _vDOFOrderedJoints.resize(0);
-    FOREACH(it,vorder) {
-        _vDOFOrderedJoints.push_back(_vecjoints.at(*it));
+    for( const auto index : vorder) {
+        _vDOFOrderedJoints.push_back(_vecjoints.at(index));
     }
 
     try {
@@ -4213,32 +4213,32 @@ void KinBody::_ComputeInternalInformation()
     // compute the all-pairs shortest paths
     {
         _vAllPairsShortestPaths.resize(_veclinks.size()*_veclinks.size());
-        FOREACH(it,_vAllPairsShortestPaths) {
-            it->first = -1;
-            it->second = -1;
+        for( auto &pair : _vAllPairsShortestPaths) {
+            pair.first = -1;
+            pair.second = -1;
         }
         vector<uint32_t> vcosts(_veclinks.size()*_veclinks.size(),0x3fffffff); // initialize to 2^30-1 since we'll be adding
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             vcosts[i*_veclinks.size()+i] = 0;
         }
-        FOREACHC(itjoint,_vecjoints) {
-            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
-                int index = (*itjoint)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetSecondAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetFirstAttached()->GetIndex(),(*itjoint)->GetJointIndex());
+        for( const auto joint : _vecjoints) {
+            if( !!joint->GetFirstAttached() && !!joint->GetSecondAttached() ) {
+                int index = joint->GetFirstAttached()->GetIndex()*_veclinks.size()+joint->GetSecondAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>(joint->GetFirstAttached()->GetIndex(),joint->GetJointIndex());
                 vcosts[index] = 1;
-                index = (*itjoint)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetFirstAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetSecondAttached()->GetIndex(),(*itjoint)->GetJointIndex());
+                index = joint->GetSecondAttached()->GetIndex()*_veclinks.size()+joint->GetFirstAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>(joint->GetSecondAttached()->GetIndex(),joint->GetJointIndex());
                 vcosts[index] = 1;
             }
         }
         int jointindex = (int)_vecjoints.size();
-        FOREACHC(itjoint,_vPassiveJoints) {
-            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
-                int index = (*itjoint)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetSecondAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetFirstAttached()->GetIndex(),jointindex);
+        for( const auto passive : _vPassiveJoints) {
+            if( !!passive->GetFirstAttached() && !!passive->GetSecondAttached() ) {
+                int index = passive->GetFirstAttached()->GetIndex()*_veclinks.size()+passive->GetSecondAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>(passive->GetFirstAttached()->GetIndex(),jointindex);
                 vcosts[index] = 1;
-                index = (*itjoint)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetFirstAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetSecondAttached()->GetIndex(),jointindex);
+                index = passive->GetSecondAttached()->GetIndex()*_veclinks.size()+passive->GetFirstAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>(passive->GetSecondAttached()->GetIndex(),jointindex);
                 vcosts[index] = 1;
             }
             ++jointindex;
@@ -4267,16 +4267,16 @@ void KinBody::_ComputeInternalInformation()
     if((_veclinks.size() > 0)&&(_vecjoints.size() > 0)) {
         std::vector< std::vector<int> > vlinkadjacency(_veclinks.size());
         // joints with only one attachment are attached to a static link, which is attached to link 0
-        FOREACHC(itjoint,_vecjoints) {
-            vlinkadjacency.at((*itjoint)->GetFirstAttached()->GetIndex()).push_back((*itjoint)->GetSecondAttached()->GetIndex());
-            vlinkadjacency.at((*itjoint)->GetSecondAttached()->GetIndex()).push_back((*itjoint)->GetFirstAttached()->GetIndex());
+        for( const auto joint :_vecjoints) {
+            vlinkadjacency.at(joint->GetFirstAttached()->GetIndex()).push_back(joint->GetSecondAttached()->GetIndex());
+            vlinkadjacency.at(joint->GetSecondAttached()->GetIndex()).push_back(joint->GetFirstAttached()->GetIndex());
         }
-        FOREACHC(itjoint,_vPassiveJoints) {
-            vlinkadjacency.at((*itjoint)->GetFirstAttached()->GetIndex()).push_back((*itjoint)->GetSecondAttached()->GetIndex());
-            vlinkadjacency.at((*itjoint)->GetSecondAttached()->GetIndex()).push_back((*itjoint)->GetFirstAttached()->GetIndex());
+        for( const auto passive : _vPassiveJoints) {
+            vlinkadjacency.at(passive->GetFirstAttached()->GetIndex()).push_back(passive->GetSecondAttached()->GetIndex());
+            vlinkadjacency.at(passive->GetSecondAttached()->GetIndex()).push_back(passive->GetFirstAttached()->GetIndex());
         }
-        FOREACH(it,vlinkadjacency) {
-            sort(it->begin(), it->end());
+        for( auto &adj : vlinkadjacency) {
+            sort(adj.begin(), adj.end());
         }
 
         // all unique paths starting at the root link or static links
@@ -4337,15 +4337,15 @@ void KinBody::_ComputeInternalInformation()
             S.pop_front();
         }
         // fill each link's parent links
-        FOREACH(itlink,_veclinks) {
-            if( (*itlink)->GetIndex() > 0 && vuniquepaths.at((*itlink)->GetIndex()).size() == 0 ) {
-                RAVELOG_WARN(str(boost::format("_ComputeInternalInformation: %s has incomplete kinematics! link %s not connected to root %s")%GetName()%(*itlink)->GetName()%_veclinks.at(0)->GetName()));
+        for( const auto link : _veclinks) {
+            if( link->GetIndex() > 0 && vuniquepaths.at(link->GetIndex()).size() == 0 ) {
+                RAVELOG_WARN(str(boost::format("_ComputeInternalInformation: %s has incomplete kinematics! link %s not connected to root %s")%GetName()%link->GetName()%_veclinks.at(0)->GetName()));
             }
-            FOREACH(itpath, vuniquepaths.at((*itlink)->GetIndex())) {
-                OPENRAVE_ASSERT_OP(itpath->back(),==,(*itlink)->GetIndex());
+            FOREACH(itpath, vuniquepaths.at(link->GetIndex())) {
+                OPENRAVE_ASSERT_OP(itpath->back(),==,link->GetIndex());
                 int parentindex = *---- itpath->end();
-                if( find((*itlink)->_vParentLinks.begin(),(*itlink)->_vParentLinks.end(),parentindex) == (*itlink)->_vParentLinks.end() ) {
-                    (*itlink)->_vParentLinks.push_back(parentindex);
+                if( find(link->_vParentLinks.begin(),link->_vParentLinks.end(),parentindex) == link->_vParentLinks.end() ) {
+                    link->_vParentLinks.push_back(parentindex);
                 }
             }
         }
@@ -4360,18 +4360,18 @@ void KinBody::_ComputeInternalInformation()
         bool changed = true;
         while(changed) {
             changed = false;
-            FOREACH(itlink,_veclinks) {
-                if( vlinkdepths[(*itlink)->GetIndex()] == -1 ) {
+            for( const auto link : _veclinks) {
+                if( vlinkdepths[link->GetIndex()] == -1 ) {
                     int bestindex = -1;
-                    FOREACH(itparent, (*itlink)->_vParentLinks) {
-                        if( vlinkdepths[*itparent] >= 0 ) {
-                            if( bestindex == -1 || (bestindex >= 0 && vlinkdepths[*itparent] < bestindex) ) {
-                                bestindex = vlinkdepths[*itparent]+1;
+                    for( const auto itparent : link->_vParentLinks) {
+                        if( vlinkdepths[itparent] >= 0 ) {
+                            if( bestindex == -1 || (bestindex >= 0 && vlinkdepths[itparent] < bestindex) ) {
+                                bestindex = vlinkdepths[itparent]+1;
                             }
                         }
                     }
                     if( bestindex >= 0 ) {
-                        vlinkdepths[(*itlink)->GetIndex()] = bestindex;
+                        vlinkdepths[link->GetIndex()] = bestindex;
                         changed = true;
                     }
                 }
@@ -4380,10 +4380,10 @@ void KinBody::_ComputeInternalInformation()
 
 
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            FOREACH(itlink, _veclinks) {
-                std::stringstream ss; ss << GetName() << ":" << (*itlink)->GetName() << " depth=" << vlinkdepths.at((*itlink)->GetIndex()) << ", parents=[";
-                FOREACHC(itparentlink, (*itlink)->_vParentLinks) {
-                    ss << _veclinks.at(*itparentlink)->GetName() << ", ";
+            for( const auto link : _veclinks) {
+                std::stringstream ss; ss << GetName() << ":" << link->GetName() << " depth=" << vlinkdepths.at(link->GetIndex()) << ", parents=[";
+                for( const auto itparentlink : link->_vParentLinks) {
+                    ss << _veclinks.at(itparentlink)->GetName() << ", ";
                 }
                 ss << "]";
                 RAVELOG_VERBOSE(ss.str());
@@ -4522,9 +4522,9 @@ void KinBody::_ComputeInternalInformation()
             }
         }
         OPENRAVE_ASSERT_OP((int)_vTopologicallySortedJointIndicesAll.size(),==,numjoints);
-        FOREACH(itindex,_vTopologicallySortedJointIndicesAll) {
-            JointPtr pj = *itindex < (int)_vecjoints.size() ? _vecjoints[*itindex] : _vPassiveJoints.at(*itindex-_vecjoints.size());
-            if( *itindex < (int)_vecjoints.size() ) {
+        for( const auto index :_vTopologicallySortedJointIndicesAll) {
+            JointPtr pj = index < (int)_vecjoints.size() ? _vecjoints[index] : _vPassiveJoints.at(index-_vecjoints.size());
+            if( index < (int)_vecjoints.size() ) {
                 _vTopologicallySortedJoints.push_back(pj);
             }
             _vTopologicallySortedJointsAll.push_back(pj);
@@ -4556,13 +4556,13 @@ void KinBody::_ComputeInternalInformation()
                 else {
                     // depths are the same, so check the adjacent joints of each link
                     size_t link0pos=_vTopologicallySortedJointIndicesAll.size(), link1pos=_vTopologicallySortedJointIndicesAll.size();
-                    FOREACHC(itparentlink,plink0->_vParentLinks) {
-                        int jointindex = _vAllPairsShortestPaths[plink0->GetIndex()*_veclinks.size()+*itparentlink].second;
+                    for( const auto parentlink0 : plink0->_vParentLinks) {
+                        int jointindex = _vAllPairsShortestPaths[plink0->GetIndex()*_veclinks.size()+parentlink0].second;
                         size_t pos = find(_vTopologicallySortedJointIndicesAll.begin(),_vTopologicallySortedJointIndicesAll.end(),jointindex) - _vTopologicallySortedJointIndicesAll.begin();
                         link0pos = min(link0pos,pos);
                     }
-                    FOREACHC(itparentlink,plink1->_vParentLinks) {
-                        int jointindex = _vAllPairsShortestPaths[plink1->GetIndex()*_veclinks.size()+*itparentlink].second;
+                    for( const auto parentlink1 : plink1->_vParentLinks) {
+                        int jointindex = _vAllPairsShortestPaths[plink1->GetIndex()*_veclinks.size()+parentlink1].second;
                         size_t pos = find(_vTopologicallySortedJointIndicesAll.begin(),_vTopologicallySortedJointIndicesAll.end(),jointindex) - _vTopologicallySortedJointIndicesAll.end();
                         link1pos = min(link1pos,pos);
                     }
@@ -4606,15 +4606,14 @@ void KinBody::_ComputeInternalInformation()
             joint._ComputeInternalStaticInformation(); // IsStatic should be computable here
         }
         // find out what links are affected by what joints.
-        FOREACH(it,_vJointsAffectingLinks) {
-            *it = 0;
-        }
+        _vJointsAffectingLinks.assign( _vJointsAffectingLinks.size(), 0);
+
         vector<int8_t> vusedlinks;
         for(int i = 0; i < (int)_veclinks.size(); ++i) {
             vusedlinks.resize(0); vusedlinks.resize(_veclinks.size());
-            FOREACH(itpath,vuniquepaths[i]) {
-                FOREACH(itlink,*itpath) {
-                    vusedlinks[*itlink] = 1;
+            for( const auto itpath : vuniquepaths[i]) {
+                for( const auto itlink : itpath) {
+                    vusedlinks[itlink] = 1;
                 }
             }
             for(int j = 0; j < (int)_veclinks.size(); ++j) {
@@ -4628,8 +4627,8 @@ void KinBody::_ComputeInternalInformation()
                     if( pjoint->IsMimic() ) {
                         for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
                             if( pjoint->IsMimic(idof) ) {
-                                FOREACHC(itmimicdof,pjoint->_vmimic[idof]->_vmimicdofs) {
-                                    const Joint& joint2 = _GetJointFromDOFIndex(itmimicdof->dofindex);
+                                for(const auto itmimicdof : pjoint->_vmimic[idof]->_vmimicdofs) {
+                                    const Joint& joint2 = _GetJointFromDOFIndex(itmimicdof.dofindex);
                                     _vJointsAffectingLinks[joint2.GetJointIndex()*_veclinks.size()+i] = joint2.GetHierarchyParentLink()->GetIndex() == i ? -1 : 1;
                                 }
                             }
@@ -4648,9 +4647,9 @@ void KinBody::_ComputeInternalInformation()
             _vClosedLoops.push_back(vector< std::pair<LinkPtr, JointPtr> >());
             _vClosedLoops.back().reserve(itclosedloop->size());
             // fill the links
-            FOREACH(itlinkindex,*itclosedloop) {
-                _vClosedLoopIndices.back().emplace_back(*itlinkindex, 0);
-                _vClosedLoops.back().emplace_back(_veclinks.at(*itlinkindex), JointPtr());
+            for( const auto linkindex : *itclosedloop) {
+                _vClosedLoopIndices.back().emplace_back(linkindex, 0);
+                _vClosedLoops.back().emplace_back(_veclinks.at(linkindex), JointPtr());
             }
             // fill the joints
             for(size_t i = 0; i < _vClosedLoopIndices.back().size(); ++i) {
@@ -4668,8 +4667,8 @@ void KinBody::_ComputeInternalInformation()
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 stringstream ss;
                 ss << GetName() << " closedloop found: ";
-                FOREACH(itlinkindex,*itclosedloop) {
-                    LinkPtr plink = _veclinks.at(*itlinkindex);
+                for( const auto linkindex : *itclosedloop) {
+                    LinkPtr plink = _veclinks.at(linkindex);
                     ss << plink->GetName() << "(" << plink->GetIndex() << ") ";
                 }
                 RAVELOG_VERBOSE(ss.str());
@@ -4683,30 +4682,30 @@ void KinBody::_ComputeInternalInformation()
         vattachedlinks.resize(0);
         vattachedlinks.push_back(ilink);
         if((ilink == 0)|| _veclinks[ilink]->IsStatic() ) {
-            FOREACHC(itlink,_veclinks) {
-                if( (*itlink)->IsStatic() ) {
-                    if( (*itlink)->GetIndex() != (int)ilink ) {
-                        vattachedlinks.push_back((*itlink)->GetIndex());
+            for( const auto link : _veclinks) {
+                if( link->IsStatic() ) {
+                    if( link->GetIndex() != (int)ilink ) {
+                        vattachedlinks.push_back(link->GetIndex());
                     }
                 }
             }
-            FOREACHC(itjoint, GetJoints()) {
-                if( (*itjoint)->IsStatic() ) {
-                    if( !(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() && !(*itjoint)->GetSecondAttached()->IsStatic() ) {
-                        vattachedlinks.push_back((*itjoint)->GetSecondAttached()->GetIndex());
+            for( const auto joint : GetJoints()) {
+                if( joint->IsStatic() ) {
+                    if( !joint->GetFirstAttached() && !!joint->GetSecondAttached() && !joint->GetSecondAttached()->IsStatic() ) {
+                        vattachedlinks.push_back(joint->GetSecondAttached()->GetIndex());
                     }
-                    if( !(*itjoint)->GetSecondAttached() && !!(*itjoint)->GetFirstAttached() && !(*itjoint)->GetFirstAttached()->IsStatic() ) {
-                        vattachedlinks.push_back((*itjoint)->GetFirstAttached()->GetIndex());
+                    if( !joint->GetSecondAttached() && !!joint->GetFirstAttached() && !joint->GetFirstAttached()->IsStatic() ) {
+                        vattachedlinks.push_back(joint->GetFirstAttached()->GetIndex());
                     }
                 }
             }
-            FOREACHC(itpassive, GetPassiveJoints()) {
-                if( (*itpassive)->IsStatic() ) {
-                    if( !(*itpassive)->GetFirstAttached() && !!(*itpassive)->GetSecondAttached() && !(*itpassive)->GetSecondAttached()->IsStatic() ) {
-                        vattachedlinks.push_back((*itpassive)->GetSecondAttached()->GetIndex());
+            for( const auto passive : GetPassiveJoints()) {
+                if( passive->IsStatic() ) {
+                    if( !passive->GetFirstAttached() && !!passive->GetSecondAttached() && !passive->GetSecondAttached()->IsStatic() ) {
+                        vattachedlinks.push_back(passive->GetSecondAttached()->GetIndex());
                     }
-                    if( !(*itpassive)->GetSecondAttached() && !!(*itpassive)->GetFirstAttached() && !(*itpassive)->GetFirstAttached()->IsStatic() ) {
-                        vattachedlinks.push_back((*itpassive)->GetFirstAttached()->GetIndex());
+                    if( !passive->GetSecondAttached() && !!passive->GetFirstAttached() && !passive->GetFirstAttached()->IsStatic() ) {
+                        vattachedlinks.push_back(passive->GetFirstAttached()->GetIndex());
                     }
                 }
             }
@@ -4715,23 +4714,23 @@ void KinBody::_ComputeInternalInformation()
         // breadth first search for rigid links
         for(size_t icurlink = 0; icurlink<vattachedlinks.size(); ++icurlink) {
             LinkPtr plink=_veclinks.at(vattachedlinks[icurlink]);
-            FOREACHC(itjoint, _vecjoints) {
-                if( (*itjoint)->IsStatic() ) {
-                    if(((*itjoint)->GetFirstAttached() == plink)&& !!(*itjoint)->GetSecondAttached() &&(find(vattachedlinks.begin(),vattachedlinks.end(),(*itjoint)->GetSecondAttached()->GetIndex()) == vattachedlinks.end())) {
-                        vattachedlinks.push_back((*itjoint)->GetSecondAttached()->GetIndex());
+            for( const auto joint : _vecjoints) {
+                if( joint->IsStatic() ) {
+                    if((joint->GetFirstAttached() == plink)&& !!joint->GetSecondAttached() &&(find(vattachedlinks.begin(),vattachedlinks.end(),joint->GetSecondAttached()->GetIndex()) == vattachedlinks.end())) {
+                        vattachedlinks.push_back(joint->GetSecondAttached()->GetIndex());
                     }
-                    if(((*itjoint)->GetSecondAttached() == plink)&& !!(*itjoint)->GetFirstAttached() &&(find(vattachedlinks.begin(),vattachedlinks.end(),(*itjoint)->GetFirstAttached()->GetIndex()) == vattachedlinks.end())) {
-                        vattachedlinks.push_back((*itjoint)->GetFirstAttached()->GetIndex());
+                    if((joint->GetSecondAttached() == plink)&& !!joint->GetFirstAttached() &&(find(vattachedlinks.begin(),vattachedlinks.end(),joint->GetFirstAttached()->GetIndex()) == vattachedlinks.end())) {
+                        vattachedlinks.push_back(joint->GetFirstAttached()->GetIndex());
                     }
                 }
             }
-            FOREACHC(itpassive, _vPassiveJoints) {
-                if( (*itpassive)->IsStatic() ) {
-                    if(((*itpassive)->GetFirstAttached() == plink)&& !!(*itpassive)->GetSecondAttached() &&(find(vattachedlinks.begin(),vattachedlinks.end(),(*itpassive)->GetSecondAttached()->GetIndex()) == vattachedlinks.end())) {
-                        vattachedlinks.push_back((*itpassive)->GetSecondAttached()->GetIndex());
+            for( const auto passive : _vPassiveJoints) {
+                if( passive->IsStatic() ) {
+                    if((passive->GetFirstAttached() == plink)&& !!passive->GetSecondAttached() &&(find(vattachedlinks.begin(),vattachedlinks.end(),passive->GetSecondAttached()->GetIndex()) == vattachedlinks.end())) {
+                        vattachedlinks.push_back(passive->GetSecondAttached()->GetIndex());
                     }
-                    if(((*itpassive)->GetSecondAttached() == plink)&& !!(*itpassive)->GetFirstAttached() &&(find(vattachedlinks.begin(),vattachedlinks.end(),(*itpassive)->GetFirstAttached()->GetIndex()) == vattachedlinks.end())) {
-                        vattachedlinks.push_back((*itpassive)->GetFirstAttached()->GetIndex());
+                    if((passive->GetSecondAttached() == plink)&& !!passive->GetFirstAttached() &&(find(vattachedlinks.begin(),vattachedlinks.end(),passive->GetFirstAttached()->GetIndex()) == vattachedlinks.end())) {
+                        vattachedlinks.push_back(passive->GetFirstAttached()->GetIndex());
                     }
                 }
             }
@@ -4897,13 +4896,13 @@ void KinBody::_ComputeInternalInformation()
 
     // set the "self" extra geometry group
     std::string selfgroup("self");
-    FOREACH(itlink, _veclinks) {
-        if( (*itlink)->_info._mapExtraGeometries.find(selfgroup) == (*itlink)->_info._mapExtraGeometries.end() ) {
+    for( const auto link : _veclinks) {
+        if( link->_info._mapExtraGeometries.find(selfgroup) == link->_info._mapExtraGeometries.end() ) {
             std::vector<GeometryInfoPtr> vgeoms;
-            FOREACH(itgeom, (*itlink)->_vGeometries) {
+            FOREACH(itgeom, link->_vGeometries) {
                 vgeoms.push_back(GeometryInfoPtr(new GeometryInfo((*itgeom)->GetInfo())));
             }
-            (*itlink)->_info._mapExtraGeometries.insert(make_pair(selfgroup, vgeoms));
+            link->_info._mapExtraGeometries.insert(make_pair(selfgroup, vgeoms));
         }
     }
 
@@ -5274,8 +5273,8 @@ bool KinBody::IsEnabled() const
 bool KinBody::SetVisible(bool visible)
 {
     bool bchanged = false;
-    FOREACH(it, _veclinks) {
-        FOREACH(itgeom,(*it)->_vGeometries) {
+    for( const auto link : _veclinks) {
+        FOREACH(itgeom,link->_vGeometries) {
             if( (*itgeom)->IsVisible() != visible ) {
                 (*itgeom)->_info._bVisible = visible;
                 bchanged = true;
@@ -5577,9 +5576,9 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vAllPairsShortestPaths = r->_vAllPairsShortestPaths;
     _vClosedLoopIndices = r->_vClosedLoopIndices;
     _vClosedLoops.resize(0); _vClosedLoops.reserve(r->_vClosedLoops.size());
-    FOREACHC(itloop,_vClosedLoops) {
+    for( const auto loop : _vClosedLoops) {
         _vClosedLoops.push_back(std::vector< std::pair<LinkPtr,JointPtr> >());
-        FOREACHC(it,*itloop) {
+        FOREACHC(it,loop) {
             _vClosedLoops.back().emplace_back(_veclinks.at(it->first->GetIndex()), JointPtr());
             // the joint might be in _vPassiveJoints
             std::vector<JointPtr>::const_iterator itjoint = find(r->_vecjoints.begin(),r->_vecjoints.end(),it->second);
@@ -5613,8 +5612,8 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _listAttachedBodies.clear(); // will be set in the environment
     _vGrabbedBodies.clear();
     _vGrabbedBodies.reserve(r->_vGrabbedBodies.size());
-    FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
-        GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
+    for( const auto grabbedref : r->_vGrabbedBodies) {
+        GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(grabbedref);
         if( !pgrabbedref ) {
             RAVELOG_WARN_FORMAT("env=%s, have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetNameId());
             continue;
@@ -5698,22 +5697,22 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
     if( (parameters&Prop_LinkEnable) == Prop_LinkEnable ) {
         // check if any regrabbed bodies have the link in _listNonCollidingLinks and the link is enabled, or are missing the link in _listNonCollidingLinks and the link is disabled
         std::map<GrabbedPtr, list<KinBody::LinkConstPtr> > mapcheckcollisions;
-        FOREACH(itlink,_veclinks) {
-            if( (*itlink)->IsEnabled() ) {
+        for( const auto link : _veclinks) {
+            if( link->IsEnabled() ) {
                 FOREACH(itgrabbed,_vGrabbedBodies) {
                     GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
-                    if( find(pgrabbed->GetRigidlyAttachedLinks().begin(),pgrabbed->GetRigidlyAttachedLinks().end(), *itlink) == pgrabbed->GetRigidlyAttachedLinks().end() ) {
-                        std::list<KinBody::LinkConstPtr>::iterator itnoncolliding = find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink);
+                    if( find(pgrabbed->GetRigidlyAttachedLinks().begin(),pgrabbed->GetRigidlyAttachedLinks().end(), link) == pgrabbed->GetRigidlyAttachedLinks().end() ) {
+                        std::list<KinBody::LinkConstPtr>::iterator itnoncolliding = find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),link);
                         if( itnoncolliding != pgrabbed->_listNonCollidingLinks.end() ) {
-                            if( pgrabbed->WasLinkNonColliding(*itlink) == 0 ) {
+                            if( pgrabbed->WasLinkNonColliding(link) == 0 ) {
                                 pgrabbed->_listNonCollidingLinks.erase(itnoncolliding);
                             }
-                            mapcheckcollisions[pgrabbed].push_back(*itlink);
+                            mapcheckcollisions[pgrabbed].push_back(link);
                         }
                         else {
                             // try to restore
-                            if( pgrabbed->WasLinkNonColliding(*itlink) == 1 ) {
-                                pgrabbed->_listNonCollidingLinks.push_back(*itlink);
+                            if( pgrabbed->WasLinkNonColliding(link) == 1 ) {
+                                pgrabbed->_listNonCollidingLinks.push_back(link);
                             }
                         }
                     }
@@ -5724,11 +5723,11 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
                 for ( const UserDataPtr& pGrabbedUserData : _vGrabbedBodies) {
                     Grabbed& grabbed = *(boost::dynamic_pointer_cast<Grabbed>(pGrabbedUserData));
                     const std::vector<KinBody::LinkPtr>& attachedLinks = grabbed.GetRigidlyAttachedLinks();
-                    if( find(attachedLinks.begin(),attachedLinks.end(), *itlink) == attachedLinks.end() ) {
+                    if( find(attachedLinks.begin(),attachedLinks.end(), link) == attachedLinks.end() ) {
                         std::list<KinBody::LinkConstPtr>& nonCollidingLinks = grabbed._listNonCollidingLinks;
-                        if( find(nonCollidingLinks.begin(),nonCollidingLinks.end(),*itlink) == nonCollidingLinks.end() ) {
-                            if( grabbed.WasLinkNonColliding(*itlink) != 0 ) {
-                                nonCollidingLinks.push_back(*itlink);
+                        if( find(nonCollidingLinks.begin(),nonCollidingLinks.end(),link) == nonCollidingLinks.end() ) {
+                            if( grabbed.WasLinkNonColliding(link) != 0 ) {
+                                nonCollidingLinks.push_back(link);
                             }
                         }
                     }
@@ -6018,19 +6017,23 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
         RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(shared_from_this());
         std::vector<KinBody::LinkPtr> resolvedLinks;
         std::vector<KinBody::JointPtr> resolvedJoints;
-        FOREACHC(itConnectedBody, pRobot->GetConnectedBodies()) {
-            (*itConnectedBody)->GetResolvedLinks(resolvedLinks);
-            (*itConnectedBody)->GetResolvedJoints(resolvedJoints);
-            KinBody::JointPtr resolvedDummyJoint = (*itConnectedBody)->GetResolvedDummyPassiveJoint();
+        for( const auto connectedBody : pRobot->GetConnectedBodies()) {
+            connectedBody->GetResolvedLinks(resolvedLinks);
+            connectedBody->GetResolvedJoints(resolvedJoints);
+            KinBody::JointPtr resolvedDummyJoint = connectedBody->GetResolvedDummyPassiveJoint();
 
-            FOREACHC(itLink, _veclinks) {
-                if (std::find(resolvedLinks.begin(), resolvedLinks.end(), *itLink) != resolvedLinks.end()) {
-                    isConnectedLink[itLink-_veclinks.begin()] = true;
+            {
+                FOREACHC(itLink, _veclinks) {
+                    if (std::find(resolvedLinks.begin(), resolvedLinks.end(), *itLink) != resolvedLinks.end()) {
+                        isConnectedLink[itLink-_veclinks.begin()] = true;
+                    }
                 }
             }
-            FOREACHC(itJoint, _vecjoints) {
-                if (std::find(resolvedJoints.begin(), resolvedJoints.end(), *itJoint) != resolvedJoints.end()) {
-                    isConnectedJoint[itJoint-_vecjoints.begin()] = true;
+            {
+                FOREACHC(itJoint, _vecjoints) {
+                    if (std::find(resolvedJoints.begin(), resolvedJoints.end(), *itJoint) != resolvedJoints.end()) {
+                        isConnectedJoint[itJoint-_vecjoints.begin()] = true;
+                    }
                 }
             }
             FOREACHC(itPassiveJoint, _vPassiveJoints) {
@@ -6109,19 +6112,23 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(shared_from_this());
         std::vector<KinBody::LinkPtr> resolvedLinks;
         std::vector<KinBody::JointPtr> resolvedJoints;
-        FOREACHC(itConnectedBody, pRobot->GetConnectedBodies()) {
-            (*itConnectedBody)->GetResolvedLinks(resolvedLinks);
-            (*itConnectedBody)->GetResolvedJoints(resolvedJoints);
-            KinBody::JointPtr resolvedDummyJoint = (*itConnectedBody)->GetResolvedDummyPassiveJoint();
+        for( const auto connectedBody : pRobot->GetConnectedBodies()) {
+            connectedBody->GetResolvedLinks(resolvedLinks);
+            connectedBody->GetResolvedJoints(resolvedJoints);
+            KinBody::JointPtr resolvedDummyJoint = connectedBody->GetResolvedDummyPassiveJoint();
 
-            FOREACHC(itLink, _veclinks) {
-                if (std::find(resolvedLinks.begin(), resolvedLinks.end(), *itLink) != resolvedLinks.end()) {
-                    isConnectedLink[itLink-_veclinks.begin()] = true;
+            {
+                FOREACHC(itLink, _veclinks) {
+                    if (std::find(resolvedLinks.begin(), resolvedLinks.end(), *itLink) != resolvedLinks.end()) {
+                        isConnectedLink[itLink-_veclinks.begin()] = true;
+                    }
                 }
             }
-            FOREACHC(itJoint, _vecjoints) {
-                if (std::find(resolvedJoints.begin(), resolvedJoints.end(), *itJoint) != resolvedJoints.end()) {
-                    isConnectedJoint[itJoint-_vecjoints.begin()] = true;
+            {
+                FOREACHC(itJoint, _vecjoints) {
+                    if (std::find(resolvedJoints.begin(), resolvedJoints.end(), *itJoint) != resolvedJoints.end()) {
+                        isConnectedJoint[itJoint-_vecjoints.begin()] = true;
+                    }
                 }
             }
             FOREACHC(itPassiveJoint, _vPassiveJoints) {
