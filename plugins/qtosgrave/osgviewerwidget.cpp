@@ -644,7 +644,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 
     _osgWorldAxis->addChild(CreateOSGXYZAxes(32.0, 2.0));
 
-    _vecTextScreenOffset = new osg::Vec2d(10.0, 0.0);
+    _vecTextScreenOffset = osg::Vec2d(10.0, 0.0);
 
     if( !!_osgCameraHUD ) {
         // in order to get the axes to render without lighting:
@@ -1165,30 +1165,30 @@ void QOSGViewerWidget::SetViewport(int width, int height)
     double textheight = 18*scale;
     _osgHudText->setCharacterSize(textheight);
     _osgHudText->setFontResolution(textheight, textheight);
-    SetHUDTextOffset(_vecTextScreenOffset->x(), _vecTextScreenOffset->y());
+    SetHUDTextOffset(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
     _UpdateHUDAxisTransform(width, height);
 }
 
-osg::Vec2d* QOSGViewerWidget::GetHUDTextOffset()
+osg::Vec2d QOSGViewerWidget::GetHUDTextOffset()
 {
-    return new osg::Vec2d(_vecTextScreenOffset->x(), _vecTextScreenOffset->y());
+    return osg::Vec2d(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
 }
 
 void QOSGViewerWidget::SetHUDTextOffset(double xOffset, double yOffset)
 {
-    _vecTextScreenOffset->set(xOffset, yOffset);
+    _vecTextScreenOffset.set(xOffset, yOffset);
 
     double scale = this->devicePixelRatio();
     double textheight = 18*scale;
     _osgHudText->setPosition(
         osg::Vec3(
-            -_osgview->getCamera()->getViewport()->width() / 2 + _vecTextScreenOffset->x(),
-            _osgview->getCamera()->getViewport()->height() / 2 - textheight - _vecTextScreenOffset->y(),
+            -_osgview->getCamera()->getViewport()->width() / 2 + _vecTextScreenOffset.x(),
+            _osgview->getCamera()->getViewport()->height() / 2 - textheight - _vecTextScreenOffset.y(),
             -50
         )
     );
     // Set maximum width in order to enforce word wrapping
-    _osgHudText->setMaximumWidth(_osgview->getCamera()->getViewport()->width() - 10 - _vecTextScreenOffset->x());
+    _osgHudText->setMaximumWidth(_osgview->getCamera()->getViewport()->width() - 10 - _vecTextScreenOffset.x());
 }
 
 void QOSGViewerWidget::_UpdateHUDAxisTransform(int width, int height)
