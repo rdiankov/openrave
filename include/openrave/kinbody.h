@@ -2045,6 +2045,13 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return name;
+        }
+
         bool operator==(const PositionConfiguration& other) const;
         bool operator!=(const PositionConfiguration& other) const;
 
@@ -2253,6 +2260,8 @@ public:
 
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
+
+        std::vector<PositionConfigurationPtr> _vNonSelfCollidingPositionConfigurations; ///< list of non-self-colliding position configurations
 
         std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 

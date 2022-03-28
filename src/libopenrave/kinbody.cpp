@@ -113,6 +113,7 @@ bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
            && AreVectorsDeepEqual(_vLinkInfos, other._vLinkInfos)
            && AreVectorsDeepEqual(_vJointInfos, other._vJointInfos)
            && AreVectorsDeepEqual(_vGrabbedInfos, other._vGrabbedInfos)
+           && _vNonSelfCollidingPositionConfigurations == other._vNonSelfCollidingPositionConfigurations
            && _mReadableInterfaces == other._mReadableInterfaces;
 }
 
@@ -128,6 +129,7 @@ void KinBody::KinBodyInfo::Reset()
     _vGrabbedInfos.clear();
     _vLinkInfos.clear();
     _vJointInfos.clear();
+    _vNonSelfCollidingPositionConfigurations.clear();
     _mReadableInterfaces.clear();
     _isRobot = false;
     _isPartial = true;
@@ -216,6 +218,18 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
             rJointInfoValues.PushBack(jointInfoValue, allocator);
         }
         rKinBodyInfo.AddMember("joints", rJointInfoValues, allocator);
+    }
+
+    if (_vNonSelfCollidingPositionConfigurations.size() > 0) {
+        rapidjson::Value rNonSelfCollidingPositionConfigurations;
+        rNonSelfCollidingPositionConfigurations.SetArray();
+        rNonSelfCollidingPositionConfigurations.Reserve(_vNonSelfCollidingPositionConfigurations.size(), allocator);
+        FOREACHC(it, _vNonSelfCollidingPositionConfigurations) {
+            rapidjson::Value rNonSelfCollidingPositionConfiguration;
+            (*it)->SerializeJSON(rNonSelfCollidingPositionConfiguration, allocator, fUnitScale, options);
+            rNonSelfCollidingPositionConfigurations.PushBack(rNonSelfCollidingPositionConfiguration, allocator);
+        }
+        rKinBodyInfo.AddMember("nonSelfCollidingPositionConfigurations", rNonSelfCollidingPositionConfigurations, allocator);
     }
 
     if (_mReadableInterfaces.size() > 0) {
@@ -351,6 +365,13 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
             UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options);
+        }
+    }
+
+    if (value.HasMember("nonSelfCollidingPositionConfigurations")) {
+        _vNonSelfCollidingPositionConfigurations.reserve(value["nonSelfCollidingPositionConfigurations"].Size() + _vNonSelfCollidingPositionConfigurations.size());
+        for (rapidjson::Value::ConstValueIterator it = value["nonSelfCollidingPositionConfigurations"].Begin(); it != value["nonSelfCollidingPositionConfigurations"].End(); ++it) {
+            UpdateOrCreateInfoWithNameCheck(*it, _vNonSelfCollidingPositionConfigurations, "name", fUnitScale, options);
         }
     }
 
