@@ -712,7 +712,7 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries,
     // have to reset the self group!
     std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
     vgeometryinfos.resize(_vGeometries.size());
-    for(size_t i = 0; i < vgeometryinfos.size(); ++i) {
+    for(i = 0; i < vgeometryinfos.size(); ++i) {
         vgeometryinfos[i].reset(new KinBody::GeometryInfo());
         *vgeometryinfos[i] = _vGeometries[i]->_info;
     }
