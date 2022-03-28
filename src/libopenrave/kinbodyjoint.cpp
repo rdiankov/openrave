@@ -2929,7 +2929,9 @@ void KinBody::PositionConfiguration::JointConfigurationState::SerializeJSON(rapi
     }
     OpenRAVE::orjson::SetJsonValueByKey(value, "jointName", jointName, allocator);
     OpenRAVE::orjson::SetJsonValueByKey(value, "jointValue", jointValue, allocator);
-    OpenRAVE::orjson::SetJsonValueByKey(value, "connectedBodyName", connectedBodyName, allocator);
+    if( !connectedBodyName.empty() ) {
+        OpenRAVE::orjson::SetJsonValueByKey(value, "connectedBodyName", connectedBodyName, allocator);
+    }
 }
 
 void KinBody::PositionConfiguration::JointConfigurationState::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
