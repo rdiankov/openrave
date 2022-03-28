@@ -4062,11 +4062,11 @@ void KinBody::_ComputeInternalInformation()
         }
         int jointindex=0;
         int dofindex=0;
-        FOREACH(itjoint,_vecjoints) {
-            (*itjoint)->jointindex = jointindex++;
-            (*itjoint)->dofindex = dofindex;
-            (*itjoint)->_info._bIsActive = true;
-            dofindex += (*itjoint)->GetDOF();
+        FOREACH(itvjoint,_vecjoints) {
+            (*itvjoint)->jointindex = jointindex++;
+            (*itvjoint)->dofindex = dofindex;
+            (*itvjoint)->_info._bIsActive = true;
+            dofindex += (*itvjoint)->GetDOF();
         }
         FOREACH(passive,_vPassiveJoints) {
             (*passive)->jointindex = -1;

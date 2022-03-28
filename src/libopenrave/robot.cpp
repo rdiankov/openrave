@@ -73,11 +73,11 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
         docGripperInfo.CopyFrom(_docGripperInfo, docGripperInfo.GetAllocator(), true); // need to copy the const strings
     }
     for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
-        const std::string& name = it->name.GetString();
-        if (name == "id" || name == "name" || name == "grippertype" || name == "gripperJointNames") {
+        const std::string& memberName = it->name.GetString();
+        if (memberName == "id" || memberName == "name" || memberName == "grippertype" || memberName == "gripperJointNames") {
             continue;
         }
-        orjson::SetJsonValueByKey(docGripperInfo, name, it->value);
+        orjson::SetJsonValueByKey(docGripperInfo, memberName, it->value);
     }
     _docGripperInfo.Swap(docGripperInfo);
 }
@@ -182,9 +182,9 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
                 BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, _info._sensorname, pReadable, AttributesList());
                 if (!!pReader) {
                     pReader->DeserializeJSON(_info._docSensorGeometry);
-                    ReadablePtr pReadable = pReader->GetReadable();
-                    if (!!pReadable) {
-                        SensorBase::SensorGeometryPtr sensorGeometry = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
+                    ReadablePtr pReadable1 = pReader->GetReadable();
+                    if (!!pReadable1) {
+                        SensorBase::SensorGeometryPtr sensorGeometry = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable1);
                         _psensor->SetSensorGeometry(sensorGeometry);
                     }
                 } else {
@@ -691,8 +691,8 @@ void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& 
         return;
     }
     if (value.IsString()) {
-        StringReadablePtr pReadable(new StringReadable(id, value.GetString()));
-        _mReadableInterfaces[id] = pReadable;
+        StringReadablePtr pReadableString(new StringReadable(id, value.GetString()));
+        _mReadableInterfaces[id] = pReadableString;
         return;
     }
     RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
