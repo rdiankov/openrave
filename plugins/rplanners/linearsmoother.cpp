@@ -769,7 +769,8 @@ protected:
     {
         SampleInfo() : fabsnodedist(0), fdeltadist(0), inode(0) {
         }
-        SampleInfo(std::list< vector<dReal> >::iterator itnode, const vector<dReal>& vsample, dReal fabsnodedist, dReal fdeltadist, int inode) : itnode(itnode), vsample(vsample), fabsnodedist(fabsnodedist), fdeltadist(fdeltadist), inode(inode) {
+        SampleInfo(std::list< vector<dReal> >::iterator itnode_, const vector<dReal>& vsample_, dReal fabsnodedist_, dReal fdeltadist_, int inode_)
+            : itnode(itnode_), vsample(vsample_), fabsnodedist(fabsnodedist_), fdeltadist(fdeltadist_), inode(inode_) {
         }
         std::list< vector<dReal> >::iterator itnode;
         vector<dReal> vsample; /// the interpolated data

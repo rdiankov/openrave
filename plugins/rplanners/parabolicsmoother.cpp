@@ -34,7 +34,7 @@ class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityC
     class MyRampFeasibilityChecker : public ParabolicRamp::RampFeasibilityChecker
     {
 public:
-        MyRampFeasibilityChecker(ParabolicRamp::FeasibilityCheckerBase* feas) : ParabolicRamp::RampFeasibilityChecker(feas) {
+        MyRampFeasibilityChecker(ParabolicRamp::FeasibilityCheckerBase* feas_) : ParabolicRamp::RampFeasibilityChecker(feas_) {
             _envid = 0;
         }
 
@@ -445,9 +445,9 @@ public:
                     const ParabolicRamp::Vector& x0 = path[path.size()-2];
                     const ParabolicRamp::Vector& x1 = path[path.size()-1];
                     dReal dotproduct=0,x0length2=0,x1length2=0;
-                    for(size_t i = 0; i < q.size(); ++i) {
-                        dReal dx0=x0[i]-q[i];
-                        dReal dx1=x1[i]-q[i];
+                    for(size_t j = 0; j < q.size(); ++j) {
+                        dReal dx0=x0[j]-q[j];
+                        dReal dx1=x1[j]-q[j];
                         dotproduct += dx0*dx1;
                         x0length2 += dx0*dx0;
                         x1length2 += dx1*dx1;
@@ -460,8 +460,8 @@ public:
                 // check if the point is not the same as the previous point
                 if( path.size() > 0 ) {
                     dReal d = 0;
-                    for(size_t i = 0; i < q.size(); ++i) {
-                        d += RaveFabs(q[i]-path.back().at(i));
+                    for(size_t j = 0; j < q.size(); ++j) {
+                        d += RaveFabs(q[j]-path.back().at(j));
                     }
                     if( d <= q.size()*std::numeric_limits<dReal>::epsilon() ) {
                         continue;
