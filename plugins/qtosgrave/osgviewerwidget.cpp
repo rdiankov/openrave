@@ -644,7 +644,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 
     _osgWorldAxis->addChild(CreateOSGXYZAxes(32.0, 2.0));
 
-    _vecTextScreenOffset = osg::Vec2d(10.0, 0.0);
+    _vecTextScreenOffset = osg::Vec2(10.0, 0.0);
 
     if( !!_osgCameraHUD ) {
         // in order to get the axes to render without lighting:
@@ -1169,9 +1169,9 @@ void QOSGViewerWidget::SetViewport(int width, int height)
     _UpdateHUDAxisTransform(width, height);
 }
 
-osg::Vec2d QOSGViewerWidget::GetHUDTextOffset()
+osg::Vec2 QOSGViewerWidget::GetHUDTextOffset()
 {
-    return osg::Vec2d(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
+    return osg::Vec2(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
 }
 
 void QOSGViewerWidget::SetHUDTextOffset(double xOffset, double yOffset)

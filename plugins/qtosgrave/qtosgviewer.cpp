@@ -867,8 +867,8 @@ void QtOSGViewer::_CreateControlButtons()
     qvBoxLayout->heightForWidth(40);
 
     //  Move HUD text out of way of control buttons if needed
-    osg::Vec2d hudTextOffset = _posgWidget->GetHUDTextOffset();
-    _posgWidget->SetHUDTextOffset(std::max(60.0, hudTextOffset.x()), hudTextOffset.y());
+    osg::Vec2 hudTextOffset = _posgWidget->GetHUDTextOffset();
+    _posgWidget->SetHUDTextOffset(std::max(60.0f, hudTextOffset.x()), hudTextOffset.y());
 
     QPushButton *zoomInButton = new QPushButton("+");
     connect(zoomInButton, &QPushButton::pressed, [=](){
