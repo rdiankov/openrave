@@ -485,8 +485,8 @@ void KinBodyItem::Load()
                     osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
                     vertices->reserveArray(mesh.vertices.size());
                     for(size_t i = 0; i < mesh.vertices.size(); ++i) {
-                        RaveVector<float> v = mesh.vertices[i];
-                        vertices->push_back(osg::Vec3(v.x, v.y, v.z));
+                        RaveVector<float> rv = mesh.vertices[i];
+                        vertices->push_back(osg::Vec3(rv.x, rv.y, rv.z));
                     }
                     geom->setVertexArray(vertices.get());
 
@@ -510,8 +510,8 @@ void KinBodyItem::Load()
                     geode->addDrawable(sd.get());
                     osg::ref_ptr<osg::Geode> geode2 = new osg::Geode;
                     geode2->addDrawable(geom);
-                    osg::ref_ptr<osg::StateSet> state = geode2->getOrCreateStateSet();
-                    state->setAttributeAndModes(dotMat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+                    osg::ref_ptr<osg::StateSet> geode2state = geode2->getOrCreateStateSet();
+                    geode2state->setAttributeAndModes(dotMat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
 
                     pgeometrydata->addChild(geode.get());
                     pgeometrydata->addChild(geode2.get());
@@ -995,10 +995,10 @@ void RobotItem::Load()
                 peesep->addChild(ptextsep);
 
                 osg::Matrix matrix;
-                OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
-                ptrans->setReferenceFrame(osg::Transform::RELATIVE_RF);
+                OSGMatrixTransformPtr ptransform = new osg::MatrixTransform();
+                ptranforms->setReferenceFrame(osg::Transform::RELATIVE_RF);
                 matrix.setTrans(osg::Vec3f(0, 0, 0));//.02f,0.02f,0.02f));
-                ptextsep->addChild(ptrans);
+                ptextsep->addChild(ptransform);
 
                 osg::ref_ptr<osgText::Text> text = new osgText::Text();
 
