@@ -2170,6 +2170,7 @@ KinBody::PositionConfiguration::JointConfigurationStatePtr PyPositionConfigurati
     if( !IS_PYTHONOBJECT_NONE(jointName) ) {
         jointConfigurationState->jointName = py::extract<std::string>(jointName);
     }
+    jointConfigurationState->jointAxis = jointAxis;
     jointConfigurationState->jointValue = jointValue;
     if( !IS_PYTHONOBJECT_NONE(connectedBodyName) ) {
         jointConfigurationState->connectedBodyName = py::extract<std::string>(connectedBodyName);
@@ -2201,7 +2202,7 @@ std::string PyPositionConfiguration_JointConfigurationState::__str__()
     if( !IS_PYTHONOBJECT_NONE(jointName) ) {
         ss << (const std::string&) py::extract<std::string>(jointName);
     }
-    ss << "\" jointValue=" << jointValue << " connectedBodyName=\"";
+    ss << "\" jointAxis=" << jointAxis << " jointValue=" << jointValue << " connectedBodyName=\"";
     if( !IS_PYTHONOBJECT_NONE(connectedBodyName) ) {
         ss << (const std::string&) py::extract<std::string>(connectedBodyName);
     }
@@ -2228,6 +2229,7 @@ void PyPositionConfiguration_JointConfigurationState::_Update(const KinBody::Pos
 {
     _id = ConvertStringToUnicode(jointConfigurationState._id);
     jointName = ConvertStringToUnicode(jointConfigurationState.jointName);
+    jointAxis = jointConfigurationState.jointAxis;
     jointValue = jointConfigurationState.jointValue;
     connectedBodyName = ConvertStringToUnicode(jointConfigurationState.connectedBodyName);
 }
@@ -4598,13 +4600,14 @@ class PositionConfiguration_JointConfigurationState_pickle_suite
 public:
     static py::tuple getstate(const PyPositionConfiguration_JointConfigurationState& r)
     {
-        return py::make_tuple(r._id, r.jointName, r.jointValue, r.connectedBodyName);
+        return py::make_tuple(r._id, r.jointName, r.jointAxis, r.jointValue, r.connectedBodyName);
     }
     static void setstate(PyPositionConfiguration_JointConfigurationState& r, py::tuple state) {
         r._id = state[0];
         r.jointName = state[1];
-        r.jointValue = py::extract<double>(state[2]);
-        r.connectedBodyName = state[3];
+        r.jointAxis = py::extract<int>(state[2]);
+        r.jointValue = py::extract<double>(state[3]);
+        r.connectedBodyName = state[4];
     }
 };
 
@@ -5253,6 +5256,7 @@ void init_openravepy_kinbody()
 #endif
         .def_readwrite("_id", &PyPositionConfiguration_JointConfigurationState::_id)
         .def_readwrite("jointName",&PyPositionConfiguration_JointConfigurationState::jointName)
+        .def_readwrite("jointAxis",&PyPositionConfiguration_JointConfigurationState::jointAxis)
         .def_readwrite("jointValue",&PyPositionConfiguration_JointConfigurationState::jointValue)
         .def_readwrite("connectedBodyName",&PyPositionConfiguration_JointConfigurationState::connectedBodyName)
         .def("__str__", &PyPositionConfiguration_JointConfigurationState::__str__)

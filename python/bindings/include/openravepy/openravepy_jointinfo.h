@@ -506,6 +506,7 @@ public:
 
     object _id = py::none_();
     object jointName = py::none_();
+    int jointAxis = 0;
     dReal jointValue = 0.0;
     object connectedBodyName = py::none_();
 

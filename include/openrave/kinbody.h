@@ -2035,8 +2035,6 @@ private:
     typedef boost::weak_ptr<KinBody::Joint> JointWeakPtr;
 
     /// \brief Holds a joint value set representing a KinBody/Robot pose
-    ///
-    /// Currently, this structure supports only joints which have single DoF
     class OPENRAVE_API PositionConfiguration : public InfoBase
     {
 public:
@@ -2071,6 +2069,7 @@ public:
 
             std::string _id; ///< id of joint configuration state, for incremental update
             std::string jointName; ///< name of the joint. If the joint belong to a connectedBody, then it's resolved name is connectedBodyName+"_"+jointName
+            int jointAxis = 0;
             dReal jointValue = 0.0;
             std::string connectedBodyName; ///< the connected body name the jointName comes from
         };

@@ -2918,6 +2918,7 @@ void KinBody::PositionConfiguration::JointConfigurationState::Reset()
 {
     _id.clear();
     jointName.clear();
+    jointAxis = 0;
     jointValue = 0.0;
     connectedBodyName.clear();
 }
@@ -2928,6 +2929,7 @@ void KinBody::PositionConfiguration::JointConfigurationState::SerializeJSON(rapi
         OpenRAVE::orjson::SetJsonValueByKey(value, "id", _id, allocator);
     }
     OpenRAVE::orjson::SetJsonValueByKey(value, "jointName", jointName, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "jointAxis", jointAxis, allocator);
     OpenRAVE::orjson::SetJsonValueByKey(value, "jointValue", jointValue, allocator);
     if( !connectedBodyName.empty() ) {
         OpenRAVE::orjson::SetJsonValueByKey(value, "connectedBodyName", connectedBodyName, allocator);
@@ -2939,6 +2941,7 @@ void KinBody::PositionConfiguration::JointConfigurationState::DeserializeJSON(co
     Reset();
     OpenRAVE::orjson::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::orjson::LoadJsonValueByKey(value, "jointName", jointName);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "jointAxis", jointAxis);
     OpenRAVE::orjson::LoadJsonValueByKey(value, "jointValue", jointValue);
     OpenRAVE::orjson::LoadJsonValueByKey(value, "connectedBodyName", connectedBodyName);
 }
@@ -2947,6 +2950,7 @@ bool KinBody::PositionConfiguration::JointConfigurationState::operator==(const K
 {
     static constexpr dReal jointValueEpsilon = 1.0e-6;
     return jointName == other.jointName
+           && jointAxis == other.jointAxis
            && connectedBodyName == other.connectedBodyName
            && OpenRAVE::RaveFabs(jointValue - other.jointValue) < jointValueEpsilon;
 }
