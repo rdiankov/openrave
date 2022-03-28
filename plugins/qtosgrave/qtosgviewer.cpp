@@ -170,6 +170,9 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     RegisterCommand("RotateCameraYDirection", boost::bind(&QtOSGViewer::_RotateCameraYDirectionCommand, this, _1, _2),
     "Rotates the camera around the current focal point in the direction of the screen y vector (in world coordinates). The argument thetaY is in radians -pi < dy < pi.");
 
+    RegisterCommand("SetHUDTextOffset", boost::bind(&QtOSGViewer::_SetHUDTextOffsetCommand, this, _1, _2),
+    "Sets the screen offset of the HUD's text. Default value when no control buttons are present is (10.0, 0.0).");
+
     // Pan commands. This commands will be ignored if currently in TrackLink or TrackManipulator mode (e.g: using osgviewerwidget NodeTrackManipulator or activating TrackLink or TrackManipulator commands)
     // since pan is not a valid operation during track mode, because when tracking we always keep focus in the tracked object.
     RegisterCommand("PanCameraXDirection", boost::bind(&QtOSGViewer::_PanCameraXDirectionCommand, this, _1, _2),
@@ -863,6 +866,10 @@ void QtOSGViewer::_CreateControlButtons()
     qvBoxLayout->setAlignment(Qt::AlignTop);
     qvBoxLayout->heightForWidth(40);
 
+    //  Move HUD text out of way of control buttons if needed
+    osg::Vec2d* hudTextOffset = _posgWidget->GetHUDTextOffset();
+    _posgWidget->SetHUDTextOffset(std::max(60.0, hudTextOffset->x()), hudTextOffset->y());
+
     QPushButton *zoomInButton = new QPushButton("+");
     connect(zoomInButton, &QPushButton::pressed, [=](){
             this->_posgWidget->Zoom(1.1);
@@ -1073,6 +1080,11 @@ void QtOSGViewer::_UpdateViewport()
     _camintrinsics.cy = (float)camheight/2;
     _camintrinsics.focal_length = zNear;
     _camintrinsics.distortion_model = "";
+}
+
+void QtOSGViewer::_SetHUDTextOffset(double xOffset, double yOffset)
+{
+    _posgWidget->SetHUDTextOffset(xOffset, yOffset);
 }
 
 bool QtOSGViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
@@ -1317,6 +1329,18 @@ bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
     _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraYDirection, this, dy), ViewerCommandPriority::LOW);
     return true;
 }
+
+bool QtOSGViewer::_SetHUDTextOffsetCommand(ostream& sout, istream& sinput)
+{
+    double xOffset = 10.0;
+    sinput >> xOffset;
+
+    double yOffset = 0.0;
+    sinput >> yOffset;
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetHUDTextOffset, this, xOffset, yOffset), ViewerCommandPriority::LOW);
+    return true;
+}
+
 
 void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
 {

@@ -317,6 +317,9 @@ public:
     /// \brief reset the camera depending on its mode
     virtual void _UpdateViewport();
 
+    /// \brief set screen offset of hud text (default is (10, 0))
+    virtual void _SetHUDTextOffset(double xOffset, double yOffset);
+
     virtual OSGSwitchPtr _CreateGraphHandle();
     virtual void _CloseGraphHandle(OSGSwitchPtr handle);
     virtual void _SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t);
@@ -407,6 +410,7 @@ public:
     bool _RotateCameraYDirectionCommand(ostream& sout, istream& sinput);
     bool _PanCameraXDirectionCommand(ostream& sout, istream& sinput);
     bool _PanCameraYDirectionCommand(ostream& sout, istream& sinput);
+    bool _SetHUDTextOffsetCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
     std::map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> _mapGUIFunctionLists; ///< map between priority and sublist for given priority level. protected by _mutexGUIFunctions

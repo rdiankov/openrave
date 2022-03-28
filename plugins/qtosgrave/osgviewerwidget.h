@@ -128,6 +128,12 @@ public:
     /// \brief called when the qt window size changes
     void SetViewport(int width, int height);
 
+    /// \brief gets the screen offset of HUD text (default with no control buttons is (10.0, 0.0))
+    osg::Vec2d* GetHUDTextOffset();
+
+    /// \brief sets the screen offset of HUD text (default with no control buttons is (10.0, 0.0))
+    void SetHUDTextOffset(double xOffset, double yOffset);
+
     /// \brief sets user-controlled hud text
     void SetUserHUDText(const std::string &text);
 
@@ -324,7 +330,8 @@ protected:
     osg::ref_ptr<OpenRAVETracker> _osgTrackModeManipulator; //< manipulator used by TrackLink and TrackManip commands
 
     osg::ref_ptr<osgText::Text> _osgHudText; ///< the HUD text in the upper left corner
-    std::string _strUserText, _strSelectedItemText, _strRayInfoText, _strTrackInfoText;; ///< the user hud text
+    std::string _strUserText, _strSelectedItemText, _strRayInfoText, _strTrackInfoText; ///< the user hud text
+    osg::Vec2d* _vecTextScreenOffset; ///< hud text screen offset
 
     osg::ref_ptr<Skybox> _osgSkybox;  ///< the skybox moving together with camera
 
