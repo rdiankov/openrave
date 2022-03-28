@@ -2014,9 +2014,9 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
                 }
                 if( index >= 0 ) {
                     // search for it in pbody->GetDependencyOrderedJoints()
-                    std::vector<KinBody::JointPtr>::const_iterator itjoint = find(pbody->GetDependencyOrderedJoints().begin(),pbody->GetDependencyOrderedJoints().end(),vparentjoints[index]);
-                    BOOST_ASSERT( itjoint != pbody->GetDependencyOrderedJoints().end() );
-                    itdh->parentindex = itjoint - pbody->GetDependencyOrderedJoints().begin();
+                    std::vector<KinBody::JointPtr>::const_iterator pjoint = find(pbody->GetDependencyOrderedJoints().begin(),pbody->GetDependencyOrderedJoints().end(),vparentjoints[index]);
+                    BOOST_ASSERT( pjoint != pbody->GetDependencyOrderedJoints().end() );
+                    itdh->parentindex = pjoint - pbody->GetDependencyOrderedJoints().begin();
                     tparent = vparameters.at(itdh->parentindex).transform;
                     tparentinv = tparent.inverse();
                 }
@@ -2167,7 +2167,7 @@ int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParameter
             if( params->SetStateValues(_vperturbedvalues, 0) != 0 ) {
                 return CFO_StateSettingError|CFO_CheckWithPerturbation;
             }
-            int nstateret = _CheckState(vdofvelocities, vdofaccels, options, filterreturn);
+            nstateret = _CheckState(vdofvelocities, vdofaccels, options, filterreturn);
             if( nstateret != 0 ) {
                 return nstateret;
             }
@@ -2447,7 +2447,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
     }
 
-    int i, numSteps = 0, nLargestStepIndex = -1;
+    size_t i;
+    int numSteps = 0, nLargestStepIndex = -1;
     const std::vector<dReal>& vConfigResolution = params->_vConfigResolution;
     std::vector<dReal>::const_iterator itres = vConfigResolution.begin();
     BOOST_ASSERT((int)vConfigResolution.size()==params->GetDOF());
@@ -2671,7 +2672,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     }
                 }
                 if( !bfound ) {
-                    for(int i = 0; i < numroots; ++i) {
+                    for( i = 0; i < numroots; ++i) {
                         if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) ) {
                             timestep = timesteproots[i];
                             bfound = true;
@@ -2682,7 +2683,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         // most likely there are two solutions so solve for fStep and get the furthest solution
                         fNewStep = fStep; //-fLargestStepDelta;
                         numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepInitialVelocity, -fNewStep, timesteproots[0], timesteproots[1]);
-                        for(int i = 0; i < numroots; ++i) {
+                        for( i = 0; i < numroots; ++i) {
                             if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) ) {
                                 // going backwards!
                                 timestep = timesteproots[i];
@@ -2720,7 +2721,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
             dReal dqscale = 1.0;
             int iScaledIndex = -1; // index into dQ of the DOF that has changed the most and affected dqscale
-            for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+            for( i = 0; i < _vtempconfig.size(); ++i) {
                 dQ[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i);
                 if( RaveFabs(dQ[i]) > vConfigResolution[i]*1.01 ) { // have to multiply by small mult since quadratic sampling doesn't guarantee exactly...
                     // have to solve for the earliest timestep such that q0.at(i) + t * (dq0.at(i) + t * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i) = vConfigResolution where t >= prevtimestep
@@ -2798,7 +2799,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 // scaled! so have to change dQ and make sure not to increment istep/fStep
                 timestep = prevtimestep + (timestep-prevtimestep)*dqscale;
-                for(size_t i = 0; i < dQ.size(); ++i) {
+                for( i = 0; i < dQ.size(); ++i) {
                     // have to recompute a new dQ based on the new timestep
                     dQ[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i);
 
@@ -2812,7 +2813,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 RAVELOG_VERBOSE_FORMAT("scaled by dqscale=%f, iScaledIndex=%d, timestep=%f, value=%f, dq=%f", dqscale%iScaledIndex%timestep%_vtempconfig.at(iScaledIndex)%dQ.at(iScaledIndex));
             }
             else {
-                for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                for( i = 0; i < _vtempconfig.size(); ++i) {
                     _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
                 }
                 numRepeating = 0;
@@ -2864,7 +2865,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 // the neighbor function could be a constraint function and might move _vtempconfig by more than the specified dQ! so double check the straight light distance between them justin case?
                 // TODO check if acceleration limits are satisfied between _vtempconfig, _vprevtempconfig, and _vprevtempvelconfig
                 int numPostNeighSteps = 1;
-                for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                for( i = 0; i < _vtempconfig.size(); ++i) {
                     dReal f = RaveFabs(_vtempconfig[i] - _vprevtempconfig[i]);
                     if( f > vConfigResolution[i]*1.01 ) {
                         int poststeps = int(f/vConfigResolution[i] + 0.9999);
@@ -2883,19 +2884,19 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     // note that circular constraints would break here
                     std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(_vtempconfig.size());
                     dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
-                    for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                    for( i = 0; i < _vtempconfig.size(); ++i) {
                         vpostdq[i] = (_vtempconfig[i] - _vprevtempconfig[i]) * fiNumPostNeighSteps;
                         vpostddq[i] = (_vtempvelconfig[i] - _vprevtempvelconfig[i]) * fiNumPostNeighSteps;
                     }
 
                     // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
                     for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
-                        for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                        for( i = 0; i < _vtempconfig.size(); ++i) {
                             _vprevtempconfig[i] += vpostdq[i];
                             _vprevtempvelconfig[i] += vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
                         }
 
-                        int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+                        nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
 //                        if( !!params->_getstatefn ) {
 //                            params->_getstatefn(_vprevtempconfig);     // query again in order to get normalizations/joint limits
 //                        }
@@ -2939,7 +2940,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             // the neighbor function could be a constraint function and might move _vtempconfig by more than the specified dQ! so double check the straight light distance between them justin case?
             // TODO check if acceleration limits are satisfied between _vtempconfig, _vprevtempconfig, and _vprevtempvelconfig
             int numPostNeighSteps = 1;
-            for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+            for( i = 0; i < _vtempconfig.size(); ++i) {
                 dReal f = RaveFabs(q1[i] - _vtempconfig[i]);
                 if( f > vConfigResolution[i]*1.01 ) {
                     int poststeps = int(f/vConfigResolution[i] + 0.9999);
@@ -2956,7 +2957,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 // note that circular constraints would break here
                 std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(_vtempconfig.size());
                 dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
-                for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                for( i = 0; i < _vtempconfig.size(); ++i) {
                     vpostdq[i] = (q1[i] - _vtempconfig[i]) * fiNumPostNeighSteps;
                     vpostddq[i] = (dq1[i] - _vtempvelconfig[i]) * fiNumPostNeighSteps;
                 }
@@ -2965,7 +2966,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 _vprevtempvelconfig = _vtempvelconfig;
                 // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
                 for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
-                    for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                    for( i = 0; i < _vtempconfig.size(); ++i) {
                         _vprevtempconfig[i] += vpostdq[i];
                         _vprevtempvelconfig[i] += vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
                     }
@@ -3247,7 +3248,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             // the neighbor function could be a constraint function and might move _vtempconfig by more than the specified dQ! so double check the straight light distance between them justin case?
             // TODO check if acceleration limits are satisfied between _vtempconfig, _vprevtempconfig, and _vprevtempvelconfig
             int numPostNeighSteps = 1;
-            for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+            for( i = 0; i < _vtempconfig.size(); ++i) {
                 dReal f = RaveFabs(q1[i] - _vtempconfig[i]);
                 if( f > vConfigResolution[i]*1.01 ) {
                     // RAVELOG_DEBUG_FORMAT("scale ratio=%f", (f/vConfigResolution[i]));
@@ -3272,7 +3273,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 // note that circular constraints would break here
                 std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(dq1.size());
                 dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
-                for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                for( i = 0; i < _vtempconfig.size(); ++i) {
                     vpostdq[i] = (q1[i] - _vtempconfig[i]) * fiNumPostNeighSteps;
                     if( dq1.size() == _vtempconfig.size() && _vtempvelconfig.size() == _vtempconfig.size() ) {
                         vpostddq[i] = (dq1[i] - _vtempvelconfig[i]) * fiNumPostNeighSteps;
@@ -3283,11 +3284,11 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 _vprevtempvelconfig = _vtempvelconfig;
                 // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
                 for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
-                    for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                    for( i = 0; i < _vtempconfig.size(); ++i) {
                         _vprevtempconfig[i] += vpostdq[i];
                     }
                     if( _vprevtempconfig.size() == _vtempconfig.size() && vpostddq.size() == _vtempconfig.size() ) {
-                        for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                        for( i = 0; i < _vtempconfig.size(); ++i) {
                             _vprevtempvelconfig[i] += vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
                         }
                     }
@@ -3540,10 +3541,10 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                             // try random samples, most likely will fail...
                             int nMaxIterations = 100;
                             std::vector<dReal> xyzsamples(3);
-                            dReal delta = (_fjittermaxdist*2)/nMaxIterations;
+                            dReal tryDelta = (_fjittermaxdist*2)/nMaxIterations;
                             for(int iiter = 1; iiter <= nMaxIterations; ++iiter) {
                                 _pindexsampler->SampleSequence(xyzsamples,3,IT_Closed);
-                                tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (delta*iiter);
+                                tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (tryDelta*iiter);
                                 IkParameterization ikparamjittered = tjitter * ikparam;
                                 try {
                                     if( (!bCheckEndEffector || !_pmanip->CheckEndEffectorCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking)) && (!bCheckEndEffectorSelf || !_pmanip->CheckEndEffectorSelfCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking,true)) ) {

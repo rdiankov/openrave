@@ -106,38 +106,38 @@ PlannerStatus::PlannerStatus()
     elapsedPlanningTimeUS = 0;
 }
 
-PlannerStatus::PlannerStatus(const uint32_t statusCode) : PlannerStatus()
+PlannerStatus::PlannerStatus(const uint32_t statusCode_) : PlannerStatus()
 {
-    this->statusCode = statusCode;
-    if(statusCode & PS_HasSolution) {
+    this->statusCode = statusCode_;
+    if(statusCode_ & PS_HasSolution) {
         description += "Planner succeeded. ";
     }
     else {
         description += "Planner failed with generic error. ";
     }
 
-    if(statusCode & PS_Interrupted) {
+    if(statusCode_ & PS_Interrupted) {
         description += "Planning was interrupted, but can be resumed by calling PlanPath again. ";
     }
-    if(statusCode & PS_InterruptedWithSolution) {
+    if(statusCode_ & PS_InterruptedWithSolution) {
         description += "Planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results. ";
     }
-    if(statusCode & PS_FailedDueToCollision) {
+    if(statusCode_ & PS_FailedDueToCollision) {
         description += "planner failed due to collision constraints. ";
     }
-    if(statusCode & PS_FailedDueToInitial) {
+    if(statusCode_ & PS_FailedDueToInitial) {
         description += "Failed due to initial configurations. ";
     }
-    if(statusCode & PS_FailedDueToGoal) {
+    if(statusCode_ & PS_FailedDueToGoal) {
         description += "Failed due to goal configurations. ";
     }
-    if(statusCode & PS_FailedDueToKinematics) {
+    if(statusCode_ & PS_FailedDueToKinematics) {
         description += "Failed due to kinematics constraints. ";
     }
-    if(statusCode & PS_FailedDueToIK) {
+    if(statusCode_ & PS_FailedDueToIK) {
         description += "Failed due to inverse kinematics (could be due to collisions or velocity constraints, but don't know). ";
     }
-    if(statusCode & PS_FailedDueToVelocityConstraints) {
+    if(statusCode_ & PS_FailedDueToVelocityConstraints) {
         description += "Failed due to velocity constraints. ";
     }
 
@@ -146,8 +146,8 @@ PlannerStatus::PlannerStatus(const uint32_t statusCode) : PlannerStatus()
     }
 }
 
-PlannerStatus::PlannerStatus(const std::string& newdescription, const uint32_t statusCode) :
-    PlannerStatus(statusCode)
+PlannerStatus::PlannerStatus(const std::string& newdescription, const uint32_t statusCode_) :
+    PlannerStatus(statusCode_)
 {
     if( description.empty() ) {
         description = newdescription;
@@ -158,48 +158,48 @@ PlannerStatus::PlannerStatus(const std::string& newdescription, const uint32_t s
 
 }
 
-PlannerStatus::PlannerStatus(const std::string& newdescription, const uint32_t statusCode, CollisionReportPtr& report) :
-    PlannerStatus(newdescription, statusCode)
+PlannerStatus::PlannerStatus(const std::string& newdescription, const uint32_t statusCode_, CollisionReportPtr& report_) :
+    PlannerStatus(newdescription, statusCode_)
 {
-    InitCollisionReport(report);
+    InitCollisionReport(report_);
 }
 
-PlannerStatus::PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam) :
-    PlannerStatus(description, statusCode)
+PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t statusCode_, const IkParameterization& ikparam_) :
+    PlannerStatus(description_, statusCode_)
 {
-    this->ikparam = ikparam;
+    this->ikparam = ikparam_;
 }
 
-PlannerStatus::PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam, CollisionReportPtr& report) :
-    PlannerStatus(description, statusCode, ikparam)
+PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t statusCode_, const IkParameterization& ikparam_, CollisionReportPtr& report_) :
+    PlannerStatus(description_, statusCode_, ikparam_)
 {
-    InitCollisionReport(report);
+    InitCollisionReport(report_);
 }
 
-PlannerStatus::PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues) :
-    PlannerStatus(description, statusCode)
+PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t statusCode_, const std::vector<dReal>& jointValues_) :
+    PlannerStatus(description_, statusCode_)
 {
-    this->jointValues = jointValues;
+    this->jointValues = jointValues_;
 }
 
-PlannerStatus::PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr& report) :
-    PlannerStatus(description, statusCode, jointValues)
+PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t statusCode_, const std::vector<dReal>& jointValues_, CollisionReportPtr& report_) :
+    PlannerStatus(description_, statusCode_, jointValues_)
 {
-    InitCollisionReport(report);
+    InitCollisionReport(report_);
 }
 
 PlannerStatus::~PlannerStatus() {
 }
 
-PlannerStatus& PlannerStatus::SetErrorOrigin(const std::string& errorOrigin)
+PlannerStatus& PlannerStatus::SetErrorOrigin(const std::string& errorOrigin_)
 {
-    this->errorOrigin = errorOrigin;
+    this->errorOrigin = errorOrigin_;
     return *this;
 }
 
-PlannerStatus& PlannerStatus::SetPlannerParameters(PlannerParametersConstPtr parameters)
+PlannerStatus& PlannerStatus::SetPlannerParameters(PlannerParametersConstPtr parameters_)
 {
-    this->parameters = parameters;
+    this->parameters = parameters_;
     return *this;
 }
 
