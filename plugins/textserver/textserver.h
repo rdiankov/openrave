@@ -256,7 +256,7 @@ private:
     {
         RAVENETWORKFN() : bReturnResult(false) {
         }
-        RAVENETWORKFN(const OpenRaveNetworkFn& socket, const OpenRaveWorkerFn& worker, bool bReturnResult) : fnSocketThread(socket), fnWorker(worker), bReturnResult(bReturnResult) {
+        RAVENETWORKFN(const OpenRaveNetworkFn& socket, const OpenRaveWorkerFn& worker, bool bReturnResult_) : fnSocketThread(socket), fnWorker(worker), bReturnResult(bReturnResult_) {
         }
 
         OpenRaveNetworkFn fnSocketThread;

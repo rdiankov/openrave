@@ -996,7 +996,7 @@ void RobotItem::Load()
 
                 osg::Matrix matrix;
                 OSGMatrixTransformPtr ptransform = new osg::MatrixTransform();
-                ptranforms->setReferenceFrame(osg::Transform::RELATIVE_RF);
+                ptransform->setReferenceFrame(osg::Transform::RELATIVE_RF);
                 matrix.setTrans(osg::Vec3f(0, 0, 0));//.02f,0.02f,0.02f));
                 ptextsep->addChild(ptransform);
 

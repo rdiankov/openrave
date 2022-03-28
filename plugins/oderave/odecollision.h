@@ -410,9 +410,9 @@ public:
                             if( listcallbacks.size() == 0 ) {
                                 GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
                             }
-                            CollisionReportPtr preport(&_report,OpenRAVE::utils::null_deleter());
+                            CollisionReportPtr pcollisionreport(&_report,OpenRAVE::utils::null_deleter());
                             FOREACHC(itfn, listcallbacks) {
-                                OpenRAVE::CollisionAction action = (*itfn)(preport,false);
+                                OpenRAVE::CollisionAction action = (*itfn)(pcollisionreport,false);
                                 if( action != OpenRAVE::CA_DefaultAction ) {
                                     return false;
                                 }
