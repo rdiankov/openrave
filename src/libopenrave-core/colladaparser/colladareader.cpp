@@ -14,6 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#pragma GCC diagnostic ignored "-Wshadow"
+
 #include "colladacommon.h"
 #include <boost/algorithm/string.hpp>
 #include <openrave/xmlreaders.h>
@@ -48,7 +50,7 @@ public:
     class daeOpenRAVEURIResolver : public daeURIResolver
     {
 public:
-        daeOpenRAVEURIResolver(DAE& dae, const std::string& scheme, ColladaReader* preader) : daeURIResolver(dae), _scheme(scheme), _preader(preader) {
+        daeOpenRAVEURIResolver(DAE& dae, const std::string& scheme, ColladaReader* preader_) : daeURIResolver(dae), _scheme(scheme), _preader(preader_) {
         }
 
         ~daeOpenRAVEURIResolver() {
@@ -135,7 +137,7 @@ public:
     class InterfaceType
     {
 public:
-        InterfaceType(const std::string& type, const std::string& name) : type(type), name(name) {
+        InterfaceType(const std::string& type_, const std::string& name_) : type(type_), name(name_) {
         }
         std::string type, name;
     };
