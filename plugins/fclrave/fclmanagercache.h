@@ -150,7 +150,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
     };
 
 public:
-    FCLCollisionManagerInstance(FCLSpace& fclspace, BroadPhaseCollisionManagerPtr pmanager) : _fclspace(fclspace), pmanager(pmanager) {
+    FCLCollisionManagerInstance(FCLSpace& fclspace, BroadPhaseCollisionManagerPtr pmanager_) : _fclspace(fclspace), pmanager(pmanager_) {
         _lastSyncTimeStamp = OpenRAVE::utils::GetMilliTime();
     }
     ~FCLCollisionManagerInstance() {
@@ -763,12 +763,12 @@ public:
                     continue;
                 }
 
-                const FCLSpace::FCLKinBodyInfoPtr& pinfo = _fclspace.GetInfo(attached);
-                if( _AddBody(attached, pinfo, cache.vcolobjs, _linkEnableStatesBitmasks, _bTrackActiveDOF&&(pattached == ptrackingbody)) ) {
+                const FCLSpace::FCLKinBodyInfoPtr& pInfo = _fclspace.GetInfo(attached);
+                if( _AddBody(attached, pInfo, cache.vcolobjs, _linkEnableStatesBitmasks, _bTrackActiveDOF&&(pattached == ptrackingbody)) ) {
                     bcallsetup = true;
                 }
                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u adding body %s (%d)", cache.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%cache.GetName()%attachedBodyIndex);
-                cache.SetBodyData(pattached, pinfo, _linkEnableStatesBitmasks);
+                cache.SetBodyData(pattached, pInfo, _linkEnableStatesBitmasks);
                 //cache.vcolobjs.swap(vcolobjs);
                 //                    else {
                 //                        RAVELOG_VERBOSE_FORMAT("env=%d %x could not add attached body %s for tracking body %s", trackingbody.GetEnv()->GetId()%this%cache.GetName()%trackingbody.GetName());
@@ -778,18 +778,18 @@ public:
             // remove bodies not attached anymore
             for(int cachedBodyIndex = 1; cachedBodyIndex < (int)_vecCachedBodies.size(); ++cachedBodyIndex) {
                 KinBodyCache& cache = _vecCachedBodies[cachedBodyIndex];
-                KinBodyConstPtr pbody = cache.pwbody.lock();
+                KinBodyConstPtr pBody = cache.pwbody.lock();
                 // could be the case that the same pointer was re-added to the environment so have to check the environment id
                 // make sure we don't need to make this asusmption of body id change when bodies are removed and re-added
-                bool isInvalid = !pbody;
+                bool isInvalid = !pBody;
                 if (!isInvalid) {
-                    const int currentBodyEnvBodyIndex = pbody->GetEnvironmentBodyIndex();
+                    const int currentBodyEnvBodyIndex = pBody->GetEnvironmentBodyIndex();
                     const vector<int>::const_iterator it = lower_bound(vecAttachedEnvBodyIndices.begin(), vecAttachedEnvBodyIndices.end(), currentBodyEnvBodyIndex);
                     isInvalid =  (it == vecAttachedEnvBodyIndices.end() || *it != currentBodyEnvBodyIndex) || currentBodyEnvBodyIndex != cachedBodyIndex;
                 }
                 if( isInvalid ) {
-                    if( !!pbody && IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%cachedBodyIndex);
+                    if( !!pBody && IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+                        RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pBody->GetEnv()->GetId()%this%_lastSyncTimeStamp%cachedBodyIndex);
                     }
                     // not in attached bodies so should remove
                     FOREACH(itcol, cache.vcolobjs) {
