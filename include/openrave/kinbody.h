@@ -2034,6 +2034,56 @@ private:
     typedef boost::shared_ptr<KinBody::Joint const> JointConstPtr;
     typedef boost::weak_ptr<KinBody::Joint> JointWeakPtr;
 
+    /// \brief Holds a joint value set representing a KinBody/Robot pose
+    ///
+    /// Currently, this structure supports only joints which have single DoF
+    class OPENRAVE_API PositionConfiguration : public InfoBase
+    {
+public:
+        PositionConfiguration() = default;
+        virtual ~PositionConfiguration() = default;
+
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+        bool operator==(const PositionConfiguration& other) const;
+        bool operator!=(const PositionConfiguration& other) const;
+
+        inline void Swap(PositionConfiguration& rhs) {
+            _id.swap(rhs._id);
+            name.swap(rhs.name);
+            jointConfigurationStates.swap(rhs.jointConfigurationStates);
+        }
+
+        class JointConfigurationState : public InfoBase
+        {
+public:
+            JointConfigurationState() = default;
+            virtual ~JointConfigurationState() = default;
+
+            void Reset() override;
+            void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+            void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+            bool operator==(const JointConfigurationState& other) const;
+            bool operator!=(const JointConfigurationState& other) const;
+
+            std::string _id; ///< id of joint configuration state, for incremental update
+            std::string jointName; ///< name of the joint. If the joint belong to a connectedBody, then it's resolved name is connectedBodyName+"_"+jointName
+            dReal jointValue = 0.0;
+            std::string connectedBodyName; ///< the connected body name the jointName comes from
+        };
+        typedef boost::shared_ptr<JointConfigurationState> JointConfigurationStatePtr;
+        typedef boost::shared_ptr<JointConfigurationState const> JointConfigurationStateConstPtr;
+
+        std::string _id; ///< unique id of the configuration used to identify it when changing it.
+        std::string name; ///< name of the configuration
+        std::vector<JointConfigurationState> jointConfigurationStates; ///< joint name to joint values mapping
+    };
+    typedef boost::shared_ptr<PositionConfiguration> PositionConfigurationPtr;
+    typedef boost::shared_ptr<PositionConfiguration const> PositionConfigurationConstPtr;
+
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
     ///
     /// This is serializable and independent of environment.

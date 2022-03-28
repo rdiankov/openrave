@@ -2071,6 +2071,167 @@ PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo& geominfo)
     return PyGeometryInfoPtr(new PyGeometryInfo(geominfo));
 }
 
+PyPositionConfiguration::PyPositionConfiguration(const KinBody::PositionConfiguration& positionConfiguration)
+{
+    _Update(positionConfiguration);
+}
+
+KinBody::PositionConfigurationPtr PyPositionConfiguration::GetPositionConfiguration() const
+{
+    KinBody::PositionConfigurationPtr positionConfiguration(new KinBody::PositionConfiguration());
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        positionConfiguration->_id = py::extract<std::string>(_id);
+    }
+    if( !IS_PYTHONOBJECT_NONE(name) ) {
+        positionConfiguration->name = py::extract<std::string>(name);
+    }
+    positionConfiguration->jointConfigurationStates.resize(len(jointConfigurationStates));
+    for( int jointConfigurationIndex = 0; jointConfigurationIndex < len(jointConfigurationStates); ++jointConfigurationIndex ) {
+        PyPositionConfiguration_JointConfigurationStatePtr pyJointConfigurationState = py::extract<PyPositionConfiguration_JointConfigurationStatePtr>(jointConfigurationStates[jointConfigurationIndex]);
+        positionConfiguration->jointConfigurationStates[jointConfigurationIndex] = *(pyJointConfigurationState->GetJointConfigurationState());
+    }
+    return positionConfiguration;
+}
+
+object PyPositionConfiguration::SerializeJSON(dReal fUnitScale, object options)
+{
+    rapidjson::Document doc;
+    KinBody::PositionConfigurationPtr positionConfiguration = GetPositionConfiguration();
+    positionConfiguration->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
+    return toPyObject(doc);
+}
+
+void PyPositionConfiguration::DeserializeJSON(object obj, dReal fUnitScale, object options)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    KinBody::PositionConfiguration positionConfiguration;
+    positionConfiguration.DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
+    _Update(positionConfiguration);
+}
+
+std::string PyPositionConfiguration::__str__()
+{
+    std::stringstream ss;
+    ss << "<PositionConfiguration";
+    if( !IS_PYTHONOBJECT_NONE(name) ) {
+        ss << " name=\"" << (const std::string&)py::extract<std::string>(name) << "\"";
+    }
+    ss << " jointConfigurationStates=[";
+    for( int jointConfigurationIndex = 0; jointConfigurationIndex < len(jointConfigurationStates); ++jointConfigurationIndex ) {
+        PyPositionConfiguration_JointConfigurationStatePtr pyJointConfigurationState = py::extract<PyPositionConfiguration_JointConfigurationStatePtr>(jointConfigurationStates[jointConfigurationIndex]);
+        if( jointConfigurationIndex > 0 ) {
+            ss << ", ";
+        }
+        ss << pyJointConfigurationState->__str__();
+    }
+    ss << "]>";
+    return ss.str();
+}
+
+bool PyPositionConfiguration::__eq__(OPENRAVE_SHARED_PTR<PyPositionConfiguration> p)
+{
+    if( !p ) {
+        return false;
+    }
+    KinBody::PositionConfigurationConstPtr positionConfiguration0 = GetPositionConfiguration();
+    KinBody::PositionConfigurationConstPtr positionConfiguration1 = p->GetPositionConfiguration();
+    return *positionConfiguration0 == *positionConfiguration1;
+}
+
+bool PyPositionConfiguration::__ne__(OPENRAVE_SHARED_PTR<PyPositionConfiguration> p)
+{
+    return !__eq__(p);
+}
+
+void PyPositionConfiguration::_Update(const KinBody::PositionConfiguration& positionConfiguration)
+{
+    _id = ConvertStringToUnicode(positionConfiguration._id);
+    name = ConvertStringToUnicode(positionConfiguration.name);
+
+    py::list newJointConfigurationStates;
+    for( const KinBody::PositionConfiguration::JointConfigurationState& cppJointConfiguration : positionConfiguration.jointConfigurationStates ) {
+        newJointConfigurationStates.append(PyPositionConfiguration_JointConfigurationStatePtr(new PyPositionConfiguration_JointConfigurationState(cppJointConfiguration)));
+    }
+    jointConfigurationStates = newJointConfigurationStates;
+}
+
+PyPositionConfiguration_JointConfigurationState::PyPositionConfiguration_JointConfigurationState(const KinBody::PositionConfiguration::JointConfigurationState& jointConfigurationState)
+{
+    _Update(jointConfigurationState);
+}
+
+KinBody::PositionConfiguration::JointConfigurationStatePtr PyPositionConfiguration_JointConfigurationState::GetJointConfigurationState() const
+{
+    KinBody::PositionConfiguration::JointConfigurationStatePtr jointConfigurationState(new KinBody::PositionConfiguration::JointConfigurationState());
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        jointConfigurationState->_id = py::extract<std::string>(_id);
+    }
+    if( !IS_PYTHONOBJECT_NONE(jointName) ) {
+        jointConfigurationState->jointName = py::extract<std::string>(jointName);
+    }
+    jointConfigurationState->jointValue = jointValue;
+    if( !IS_PYTHONOBJECT_NONE(connectedBodyName) ) {
+        jointConfigurationState->connectedBodyName = py::extract<std::string>(connectedBodyName);
+    }
+    return jointConfigurationState;
+}
+
+object PyPositionConfiguration_JointConfigurationState::SerializeJSON(dReal fUnitScale, object options)
+{
+    rapidjson::Document doc;
+    KinBody::PositionConfiguration::JointConfigurationStatePtr jointConfigurationState = GetJointConfigurationState();
+    jointConfigurationState->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
+    return toPyObject(doc);
+}
+
+void PyPositionConfiguration_JointConfigurationState::DeserializeJSON(object obj, dReal fUnitScale, object options)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    KinBody::PositionConfiguration::JointConfigurationState jointConfigurationState;
+    jointConfigurationState.DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
+    _Update(jointConfigurationState);
+}
+
+std::string PyPositionConfiguration_JointConfigurationState::__str__()
+{
+    std::stringstream ss;
+    ss << "<JointConfigurationState jointName=\"";
+    if( !IS_PYTHONOBJECT_NONE(jointName) ) {
+        ss << (const std::string&) py::extract<std::string>(jointName);
+    }
+    ss << "\" jointValue=" << jointValue << " connectedBodyName=\"";
+    if( !IS_PYTHONOBJECT_NONE(connectedBodyName) ) {
+        ss << (const std::string&) py::extract<std::string>(connectedBodyName);
+    }
+    ss << "\">";
+    return ss.str();
+}
+
+bool PyPositionConfiguration_JointConfigurationState::__eq__(OPENRAVE_SHARED_PTR<PyPositionConfiguration_JointConfigurationState> p)
+{
+    if( !p ) {
+        return false;
+    }
+    KinBody::PositionConfiguration::JointConfigurationStateConstPtr jointConfigurationState0 = GetJointConfigurationState();
+    KinBody::PositionConfiguration::JointConfigurationStateConstPtr jointConfigurationState1 = p->GetJointConfigurationState();
+    return *jointConfigurationState0 == *jointConfigurationState1;
+}
+
+bool PyPositionConfiguration_JointConfigurationState::__ne__(OPENRAVE_SHARED_PTR<PyPositionConfiguration_JointConfigurationState> p)
+{
+    return !__eq__(p);
+}
+
+void PyPositionConfiguration_JointConfigurationState::_Update(const KinBody::PositionConfiguration::JointConfigurationState& jointConfigurationState)
+{
+    _id = ConvertStringToUnicode(jointConfigurationState._id);
+    jointName = ConvertStringToUnicode(jointConfigurationState.jointName);
+    jointValue = jointConfigurationState.jointValue;
+    connectedBodyName = ConvertStringToUnicode(jointConfigurationState.connectedBodyName);
+}
+
 PyKinBodyStateSaver::PyKinBodyStateSaver(PyKinBodyPtr pybody) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody()) {
     // python should not support restoring on destruction since there's garbage collection
     _state.SetRestoreOnDestructor(false);
@@ -4429,6 +4590,56 @@ public:
     }
 };
 
+class PositionConfiguration_JointConfigurationState_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getstate(const PyPositionConfiguration_JointConfigurationState& r)
+    {
+        return py::make_tuple(r._id, r.jointName, r.jointValue, r.connectedBodyName);
+    }
+    static void setstate(PyPositionConfiguration_JointConfigurationState& r, py::tuple state) {
+        r._id = state[0];
+        r.jointName = state[1];
+        r.jointValue = py::extract<double>(state[2]);
+        r.connectedBodyName = state[3];
+    }
+};
+
+class PositionConfiguration_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getstate(const PyPositionConfiguration& r)
+    {
+        py::list pickledJointConfigurationStates;
+        for( int jointConfigurationIndex = 0; jointConfigurationIndex < len(r.jointConfigurationStates); ++jointConfigurationIndex ) {
+            PyPositionConfiguration_JointConfigurationStatePtr pyJointConfigurationState = py::extract<PyPositionConfiguration_JointConfigurationStatePtr>(r.jointConfigurationStates[jointConfigurationIndex]);
+            pickledJointConfigurationStates.append(PositionConfiguration_JointConfigurationState_pickle_suite::getstate(*pyJointConfigurationState));
+        }
+
+        return py::make_tuple(r._id, r.name, pickledJointConfigurationStates);
+    }
+    static void setstate(PyPositionConfiguration& r, py::tuple state) {
+        r._id = state[0];
+        r.name = state[1];
+
+        py::list pickledJointConfigurationStateList = py::list(state[2]);
+        py::list newJointConfigurationStates;
+        for( int jointConfigurationIndex = 0; jointConfigurationIndex < len(pickledJointConfigurationStateList); ++jointConfigurationIndex ) {
+            PyPositionConfiguration_JointConfigurationStatePtr pyJointConfigurationState(new PyPositionConfiguration_JointConfigurationState());
+            PositionConfiguration_JointConfigurationState_pickle_suite::setstate(*pyJointConfigurationState, py::tuple(pickledJointConfigurationStateList[jointConfigurationIndex]));
+            newJointConfigurationStates.append(pyJointConfigurationState);
+        }
+
+        r.jointConfigurationStates = newJointConfigurationStates;
+    }
+};
+
 class GrabbedInfo_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     : public pickle_suite
@@ -4503,6 +4714,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_SerializeJSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyLinkInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyPositionConfiguration_SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyPositionConfiguration_JointConfigurationState_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGrabbedInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyKinBodyInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 // DeserializeJSON
@@ -4510,6 +4723,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_DeserializeJS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyLinkInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyPositionConfiguration_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyPositionConfiguration_JointConfigurationState_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGrabbedInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyKinBodyInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
 // end of JSON
@@ -5027,6 +5242,117 @@ void init_openravepy_kinbody()
         })
 #else
                        .def_pickle(JointInfo_pickle_suite())
+#endif
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object positionconfiguration_jointconfigurationstate = class_<PyPositionConfiguration_JointConfigurationState, OPENRAVE_SHARED_PTR<PyPositionConfiguration_JointConfigurationState> >(m, "PositionConfiguration_JointConfigurationState", DOXY_CLASS(KinBody::PositionConfiguration::JointConfigurationState))
+        .def(init<>())
+#else
+    object positionconfiguration_jointconfigurationstate = class_<PyPositionConfiguration_JointConfigurationState, OPENRAVE_SHARED_PTR<PyPositionConfiguration_JointConfigurationState> >("PositionConfiguration_JointConfigurationState", DOXY_CLASS(KinBody::PositionConfiguration::JointConfigurationState))
+#endif
+        .def_readwrite("_id", &PyPositionConfiguration_JointConfigurationState::_id)
+        .def_readwrite("jointName",&PyPositionConfiguration_JointConfigurationState::jointName)
+        .def_readwrite("jointValue",&PyPositionConfiguration_JointConfigurationState::jointValue)
+        .def_readwrite("connectedBodyName",&PyPositionConfiguration_JointConfigurationState::connectedBodyName)
+        .def("__str__", &PyPositionConfiguration_JointConfigurationState::__str__)
+        .def("__eq__", &PyPositionConfiguration_JointConfigurationState::__eq__)
+        .def("__ne__", &PyPositionConfiguration_JointConfigurationState::__ne__)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def("SerializeJSON", &PyPositionConfiguration_JointConfigurationState::SerializeJSON,
+             "unitScale"_a = 1.0,
+             "options"_a = py::none_(),
+             DOXY_FN(KinBody::PositionConfiguration::JointConfigurationState, SerializeJSON)
+             )
+        .def("DeserializeJSON", &PyPositionConfiguration_JointConfigurationState::DeserializeJSON,
+             "obj"_a,
+             "unitScale"_a = 1.0,
+             "options"_a = py::none_(),
+             DOXY_FN(KinBody::PositionConfiguration::JointConfigurationState, DeserializeJSON)
+             )
+#else
+        .def("SerializeJSON", &PyPositionConfiguration_JointConfigurationState::SerializeJSON, PyPositionConfiguration_JointConfigurationState_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::PositionConfiguration::JointConfigurationState, SerializeJSON)))
+        .def("DeserializeJSON", &PyPositionConfiguration_JointConfigurationState::DeserializeJSON, PyPositionConfiguration_JointConfigurationState_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(KinBody::PositionConfiguration::JointConfigurationState, DeserializeJSON)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def(py::pickle(
+            [](const PyPositionConfiguration_JointConfigurationState &pyJointConfigurationState) {
+                // __getstate__
+                return PositionConfiguration_JointConfigurationState_pickle_suite::getstate(pyJointConfigurationState);
+            },
+            [](py::tuple state) {
+                PyPositionConfiguration_JointConfigurationState &pyJointConfigurationState;
+                PositionConfiguration_JointConfigurationState_pickle_suite::setstate(pyJointConfigurationState, state);
+                return pyJointConfigurationState;
+            }))
+        .def("__copy__",
+            [](const PyPositionConfiguration_JointConfigurationState& self) {
+                return self;
+            })
+        .def("__deepcopy__",
+            [](const PyPositionConfiguration_JointConfigurationState &pyJointConfigurationState, const py::dict& memo) {
+                auto state = PositionConfiguration_JointConfigurationState_pickle_suite::getstate(pyJointConfigurationState);
+                PyPositionConfiguration_JointConfigurationState pyJointConfigurationState_new;
+                PositionConfiguration_JointConfigurationState_pickle_suite::setstate(pyJointConfigurationState_new, state);
+                return pyJointConfigurationState_new;
+            })
+#else
+        .def_pickle(PositionConfiguration_JointConfigurationState_pickle_suite())
+#endif
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object positionconfiguration = class_<PyPositionConfiguration, OPENRAVE_SHARED_PTR<PyPositionConfiguration> >(m, "PositionConfiguration", DOXY_CLASS(KinBody::PositionConfiguration))
+        .def(init<>())
+#else
+    object positionconfiguration = class_<PyPositionConfiguration, OPENRAVE_SHARED_PTR<PyPositionConfiguration> >("PositionConfiguration", DOXY_CLASS(KinBody::PositionConfiguration))
+#endif
+        .def_readwrite("_id", &PyPositionConfiguration::_id)
+        .def_readwrite("name",&PyPositionConfiguration::name)
+        .def_readwrite("jointConfigurationStates",&PyPositionConfiguration::jointConfigurationStates)
+        .def("__str__", &PyPositionConfiguration::__str__)
+        .def("__eq__", &PyPositionConfiguration::__eq__)
+        .def("__ne__", &PyPositionConfiguration::__ne__)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            .def("SerializeJSON", &PyPositionConfiguration::SerializeJSON,
+             "unitScale"_a = 1.0,
+             "options"_a = py::none_(),
+             DOXY_FN(KinBody::PositionConfiguration, SerializeJSON)
+             )
+        .def("DeserializeJSON", &PyPositionConfiguration::DeserializeJSON,
+             "obj"_a,
+             "unitScale"_a = 1.0,
+             "options"_a = py::none_(),
+             DOXY_FN(KinBody::PositionConfiguration, DeserializeJSON)
+             )
+#else
+        .def("SerializeJSON", &PyPositionConfiguration::SerializeJSON, PyPositionConfiguration_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::PositionConfiguration, SerializeJSON)))
+        .def("DeserializeJSON", &PyPositionConfiguration::DeserializeJSON, PyPositionConfiguration_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(KinBody::PositionConfiguration, DeserializeJSON)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            .def(py::pickle(
+            [](const PyPositionConfiguration &pyPositionConfiguration) {
+                // __getstate__
+                return PositionConfiguration_pickle_suite::getstate(pyPositionConfiguration);
+            },
+            [](py::tuple state) {
+                PyPositionConfiguration &pyPositionConfiguration;
+                PositionConfiguration_pickle_suite::setstate(pyPositionConfiguration, state);
+                return pyPositionConfiguration;
+            }))
+        .def("__copy__",
+            [](const PyPositionConfiguration& self) {
+                return self;
+            })
+        .def("__deepcopy__",
+            [](const PyPositionConfiguration &pyPositionConfiguration, const py::dict& memo) {
+                auto state = PositionConfiguration_pickle_suite::getstate(pyPositionConfiguration);
+                PyPositionConfiguration pyPositionConfiguration_new;
+                PositionConfiguration_pickle_suite::setstate(pyPositionConfiguration_new, state);
+                return pyPositionConfiguration_new;
+            })
+#else
+        .def_pickle(PositionConfiguration_pickle_suite())
 #endif
     ;
 
