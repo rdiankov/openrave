@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ravep.h"
+
+#pragma GCC diagnostic ignored "-Wshadow"   // shadowed vars in /usr/include/collada-dom2.4/dae/daeArray.h
+
 #include "environment-core.h"
 
 namespace OpenRAVE {

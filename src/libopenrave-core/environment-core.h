@@ -3432,11 +3432,11 @@ protected:
                         const std::string& name = body.GetName();
                         const std::unordered_map<std::string, int>::const_iterator it = mapBodyNameIndex.find(name);
                         if (it != mapBodyNameIndex.end()) {
-                            const int envBodyIndex = it->second;
-                            BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) vecbodies.size());
-                            const KinBodyPtr& pNewBodyCandidate = vecbodies.at(envBodyIndex);
+                            const int envBodyIdx = it->second;
+                            BOOST_ASSERT(0 < envBodyIdx && envBodyIdx < (int) vecbodies.size());
+                            const KinBodyPtr& pNewBodyCandidate = vecbodies.at(envBodyIdx);
                             if( !pNewBodyCandidate ) {
-                                RAVELOG_WARN_FORMAT("env=%s, a body (name=%s, envBodyIndex=%d) in vecbodies is not initialized", GetNameId()%name%envBodyIndex);
+                                RAVELOG_WARN_FORMAT("env=%s, a body (name=%s, envBodyIndex=%d) in vecbodies is not initialized", GetNameId()%name%envBodyIdx);
                             }
                             else if (pNewBodyCandidate->GetKinematicsGeometryHash() == body.GetKinematicsGeometryHash() ) {
                                 pnewbody = pNewBodyCandidate;
