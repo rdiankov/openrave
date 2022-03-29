@@ -246,15 +246,15 @@ Planner Parameters\n\
         ftime = 0;
         for(; ittrans != listtransforms.end(); ftime += _parameters->_fStepLength, ++ittrans) {
             _filteroptions = (ftime >= fstarttime) ? IKFO_CheckEnvCollisions : 0;
-            IkParameterization ikparam(*ittrans,IKP_Transform6D);
-            if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
+            IkParameterization ikparam1(*ittrans,IKP_Transform6D);
+            if( !_manip->FindIKSolution(ikparam1,vsolution,_filteroptions) ) {
                 if( _filteroptions == 0 ) {
                     // haven't even checked with environment collisions, so a solution really doesn't exist
                     return PlannerStatus(PS_Failed);
                 }
                 if(( ftime < _parameters->ignorefirstcollision) && bPrevInCollision ) {
                     _filteroptions = 0;
-                    if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
+                    if( !_manip->FindIKSolution(ikparam1,vsolution,_filteroptions) ) {
                         return PlannerStatus(PS_Failed);
                     }
                 }

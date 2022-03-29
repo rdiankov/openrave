@@ -877,7 +877,7 @@ protected:
         const PlannerParameters& parameters = *GetParameters();
         list< vector<dReal> >::iterator itmidnode, itmidnodeprev;
         SampleInfo startInfo, endInfo, midInfo;
-        vector<dReal> vmidvalues(parameters.GetDOF());
+        //vector<dReal> vmidvalues(parameters.GetDOF());    // shadowed anyway
 
         PlannerProgress progress;
 

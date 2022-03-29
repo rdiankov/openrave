@@ -1692,14 +1692,14 @@ protected:
 #ifdef OPENRAVE_TIMING_DEBUGGING
                             tinterpstart = utils::GetMicroTime();
 #endif
-                            bool res=ParabolicRamp::SolveMinTime(outramp.x0, outramp.dx0, intermediate.ramps[iramp].x1, intermediate.ramps[iramp].dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate2, _parameters->_multidofinterp);
+                            bool res1=ParabolicRamp::SolveMinTime(outramp.x0, outramp.dx0, intermediate.ramps[iramp].x1, intermediate.ramps[iramp].dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate2, _parameters->_multidofinterp);
 #ifdef OPENRAVE_TIMING_DEBUGGING
                             tinterpend = utils::GetMicroTime();
                             interpolationtime += 0.000001f*(float)(tinterpend - tinterpstart);
                             ninterpolations += 1;
 #endif
 
-                            if( !res ) {
+                            if( !res1 ) {
                                 RAVELOG_WARN_FORMAT("env=%s, failed to SolveMinTime for different vel ramp", GetEnv()->GetNameId());
                                 retcheck.retcode = CFO_FinalValuesNotReached;
                                 break;
@@ -2351,13 +2351,13 @@ protected:
                             _nCallsInterpolator += 1;
                             _tStartInterpolator = utils::GetMicroTime();
 #endif
-                            bool res = ParabolicRamp::SolveMinTime(outramp.x0, outramp.dx0, intermediate.ramps[irampnd].x1, intermediate.ramps[irampnd].dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate2, _parameters->_multidofinterp);
+                            bool res1 = ParabolicRamp::SolveMinTime(outramp.x0, outramp.dx0, intermediate.ramps[irampnd].x1, intermediate.ramps[irampnd].dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate2, _parameters->_multidofinterp);
 #ifdef SMOOTHER1_TIMING_DEBUG
                             _tEndInterpolator = utils::GetMicroTime();
                             _totalTimeInterpolator += 0.000001f*(float)(_tEndInterpolator - _tStartInterpolator);
 #endif
 
-                            if (!res) {
+                            if (!res1) {
                                 RAVELOG_WARN_FORMAT("env=%s, failed to correct velocity discrepancy at the end of the segment", GetEnv()->GetNameId());
                                 retcheck.retcode = CFO_FinalValuesNotReached;
                                 break;
