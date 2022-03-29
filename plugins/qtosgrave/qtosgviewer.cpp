@@ -275,6 +275,10 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
 
     if (!bCreateMenu && !bCreateMenu) {
         _CreateControlButtons();
+
+        // move HUD text out of way of control buttons if needed
+        osg::Vec2 hudTextOffset = _posgWidget->GetHUDTextOffset();
+        _posgWidget->SetHUDTextOffset(std::max(60.0f, hudTextOffset.x()), hudTextOffset.y());
     }
 
     resize(1024, 768);
@@ -865,10 +869,6 @@ void QtOSGViewer::_CreateControlButtons()
     qvBoxLayout->setSpacing(5);
     qvBoxLayout->setAlignment(Qt::AlignTop);
     qvBoxLayout->heightForWidth(40);
-
-    //  Move HUD text out of way of control buttons if needed
-    osg::Vec2 hudTextOffset = _posgWidget->GetHUDTextOffset();
-    _posgWidget->SetHUDTextOffset(std::max(60.0f, hudTextOffset.x()), hudTextOffset.y());
 
     QPushButton *zoomInButton = new QPushButton("+");
     connect(zoomInButton, &QPushButton::pressed, [=](){
