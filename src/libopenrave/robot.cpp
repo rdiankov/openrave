@@ -830,6 +830,9 @@ bool RobotBase::InitFromRobotInfo(const RobotBaseInfo& info)
     FOREACH(it, info._mReadableInterfaces) {
         SetReadableInterface(it->first, it->second);
     }
+
+    _vNonSelfCollidingPositionConfigurations = info._vNonSelfCollidingPositionConfigurations;  // Shallow copy
+
     return true;
 }
 

@@ -2490,6 +2490,16 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     pInfo->_isRobot = _isRobot;
     pInfo->_isPartial = _isPartial;
 
+    pInfo->_vNonSelfCollidingPositionConfigurations.clear();
+    if (!IS_PYTHONOBJECT_NONE(_vNonSelfCollidingPositionConfigurations)) {
+        for (int positionConfigurationIndex = 0; positionConfigurationIndex < len(_vNonSelfCollidingPositionConfigurations); ++positionConfigurationIndex) {
+            PyPositionConfigurationPtr pyPositionConfiguration = py::extract<PyPositionConfigurationPtr>(_vNonSelfCollidingPositionConfigurations[positionConfigurationIndex]);
+            if (!!pyPositionConfiguration) {
+                pInfo->_vNonSelfCollidingPositionConfigurations.push_back(pyPositionConfiguration->GetPositionConfiguration());
+            }
+        }
+    }
+
     pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
     return pInfo;
 }
@@ -2549,6 +2559,14 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _isRobot = info._isRobot;
     _isPartial = info._isPartial;
     _dofValues = ReturnDOFValues(info._dofValues);
+
+    py::list vNonSelfCollidingPositionConfigurations;
+    for( const KinBody::PositionConfigurationPtr& positionConfiguration : info._vNonSelfCollidingPositionConfigurations ) {
+        PyPositionConfiguration pyPositionConfiguration(*positionConfiguration);
+        vNonSelfCollidingPositionConfigurations.append(pyPositionConfiguration);
+    }
+    _vNonSelfCollidingPositionConfigurations = vNonSelfCollidingPositionConfigurations;
+
     _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
 }
 

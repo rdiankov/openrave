@@ -536,6 +536,7 @@ public:
 private:
     void _Update(const KinBody::PositionConfiguration& positionConfiguration);
 };
+typedef OPENRAVE_SHARED_PTR<PyPositionConfiguration> PyPositionConfigurationPtr;
 
 class PyKinBodyStateSaver
 {

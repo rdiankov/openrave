@@ -2960,4 +2960,14 @@ bool KinBody::PositionConfiguration::JointConfigurationState::operator!=(const K
     return !operator==(other);
 }
 
+std::string KinBody::PositionConfiguration::JointConfigurationState::GetResolvedJointName() const
+{
+    if( connectedBodyName.empty() ) {
+        return jointName;
+    }
+    else {
+        return connectedBodyName + "_" + jointName;
+    }
+}
+
 }

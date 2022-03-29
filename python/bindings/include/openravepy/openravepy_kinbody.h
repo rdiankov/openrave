@@ -157,6 +157,7 @@ public:
         bool _isRobot = false;
         bool _isPartial = true;
         py::object _dofValues = py::none_();
+        py::object _vNonSelfCollidingPositionConfigurations = py::none_();
         py::object _readableInterfaces = py::none_();
         virtual std::string __str__();
         virtual py::object __unicode__();
