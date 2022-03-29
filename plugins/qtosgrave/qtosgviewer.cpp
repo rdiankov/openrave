@@ -170,9 +170,6 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     RegisterCommand("RotateCameraYDirection", boost::bind(&QtOSGViewer::_RotateCameraYDirectionCommand, this, _1, _2),
     "Rotates the camera around the current focal point in the direction of the screen y vector (in world coordinates). The argument thetaY is in radians -pi < dy < pi.");
 
-    RegisterCommand("SetHUDTextOffset", boost::bind(&QtOSGViewer::_SetHUDTextOffsetCommand, this, _1, _2),
-    "Sets the screen offset of the HUD's text. Default value when no control buttons are present is (10.0, 0.0).");
-
     // Pan commands. This commands will be ignored if currently in TrackLink or TrackManipulator mode (e.g: using osgviewerwidget NodeTrackManipulator or activating TrackLink or TrackManipulator commands)
     // since pan is not a valid operation during track mode, because when tracking we always keep focus in the tracked object.
     RegisterCommand("PanCameraXDirection", boost::bind(&QtOSGViewer::_PanCameraXDirectionCommand, this, _1, _2),
@@ -1327,17 +1324,6 @@ bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
     sinput >> dy;
 
     _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraYDirection, this, dy), ViewerCommandPriority::LOW);
-    return true;
-}
-
-bool QtOSGViewer::_SetHUDTextOffsetCommand(ostream& sout, istream& sinput)
-{
-    double xOffset = 10.0;
-    sinput >> xOffset;
-
-    double yOffset = 0.0;
-    sinput >> yOffset;
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetHUDTextOffset, this, xOffset, yOffset), ViewerCommandPriority::LOW);
     return true;
 }
 
