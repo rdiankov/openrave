@@ -13,6 +13,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#pragma GCC diagnostic ignored "-Wshadow"   // 'int nSameStateRepeatCount = 0;' shadowed many times all over about 300-400 lines apart
+
 #include "plugindefs.h"
 
 #include <boost/bind.hpp>
