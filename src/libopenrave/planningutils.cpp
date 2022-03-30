@@ -4170,18 +4170,18 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 tcur = tprev + (tnext - tprev)*dqscale;
                 // Recompute dQ based on the newly computed time instant
-                dReal fnextvalue;
+                dReal fNextValue;
                 switch( maskinterpolation ) {
                 case IT_Cubic:
                     for( size_t idof = 0; idof < ndof; ++idof ) {
-                        mathextra::evaluatecubic(&_valldofscoeffs[idof][0], tcur, fnextvalue);
-                        dQ[idof] = fnextvalue - _vtempconfig[idof];
+                        mathextra::evaluatecubic(&_valldofscoeffs[idof][0], tcur, fNextValue);
+                        dQ[idof] = fNextValue - _vtempconfig[idof];
                     }
                     break;
                 case IT_Quintic:
                     for( size_t idof = 0; idof < ndof; ++idof ) {
-                        mathextra::evaluatequintic(&_valldofscoeffs[idof][0], tcur, fnextvalue);
-                        dQ[idof] = fnextvalue - _vtempconfig[idof];
+                        mathextra::evaluatequintic(&_valldofscoeffs[idof][0], tcur, fNextValue);
+                        dQ[idof] = fNextValue - _vtempconfig[idof];
                     }
                     break;
                 default:
@@ -4540,15 +4540,15 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     for( std::vector<dReal>::iterator itacceldiff = _vdiffaccelconfig.begin(); itacceldiff != _vdiffaccelconfig.end(); ++itacceldiff ) {
                         *itacceldiff *= fiMaxNumSteps;
                     }
-                    for( int iStep = 1; iStep < maxNumSteps; ++iStep ) {
+                    for( int jStep = 1; jStep < maxNumSteps; ++jStep ) {
                         // Linearly interpolate values
                         for( size_t idof = 0; idof < ndof; ++idof ) {
-                            _vstepconfig[idof] = _vtempconfig2[idof] + iStep*_vdiffconfig[idof];
+                            _vstepconfig[idof] = _vtempconfig2[idof] + jStep*_vdiffconfig[idof];
                             _vtempvelconfig[idof] += _vdiffvelconfig[idof];
                             _vtempaccelconfig[idof] += _vdiffaccelconfig[idof];
                         }
-                        if( iStep == (maxNumSteps - 1) ) {
-                            break; // break from for iStep
+                        if( jStep == (maxNumSteps - 1) ) {
+                            break; // break from for jStep
                         }
 
                         int ret = _SetAndCheckState(params, _vstepconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
@@ -4560,7 +4560,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                                 filterreturn->_returncode = ret;
                                 filterreturn->_invalidvalues = _vstepconfig;
                                 filterreturn->_invalidvelocities = _vtempvelconfig;
-                                filterreturn->_fTimeWhenInvalid = (iStep * fiMaxNumSteps) * fisteps;
+                                filterreturn->_fTimeWhenInvalid = (jStep * fiMaxNumSteps) * fisteps;
                             }
                             return ret;
                         }

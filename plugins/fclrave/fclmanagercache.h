@@ -105,14 +105,14 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
                     bodyName = pbody->GetName();
                     envNameId = pbody->GetEnv()->GetNameId();
                 }
-                std::string geometrygroup("unknown_geomgroup");
+                std::string unknown_geomgroup("unknown_geomgroup");
                 const FCLSpace::FCLKinBodyInfoPtr pinfo = pwinfo.lock();
                 if (!!pinfo) {
-                    geometrygroup = pinfo->_geometrygroup;
+                    unknown_geomgroup = pinfo->_geometrygroup;
                 }
                 ss << "env=" << envNameId << ", "
                    << "body=" << bodyName << ", "
-                   << "geomgroup=\"" << geometrygroup << "\", "
+                   << "geomgroup=\"" << unknown_geomgroup << "\", "
                    << "FCLCollisionManagerInstance 0x" << hex << this
                    << " has " << dec << vcolobjs.size() << " collision objects (";
                 for (const CollisionObjectPtr& obj : vcolobjs) {
