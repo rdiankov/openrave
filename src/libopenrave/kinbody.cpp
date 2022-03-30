@@ -4866,32 +4866,6 @@ void KinBody::_ComputeInternalInformation()
     }
 
     _nHierarchyComputed = 2;
-    /*
-    // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
-    {
-        vector<Transform> vprevtrans, vnewtrans;
-        vector<dReal> vprevdoflastsetvalues, vnewdoflastsetvalues;
-        GetLinkTransformations(vprevtrans, vprevdoflastsetvalues);
-        vector<dReal> vcurrentvalues;
-        // unfortunately if SetDOFValues is overloaded by the robot, it could call the robot's _UpdateGrabbedBodies, which is a problem during environment cloning since the grabbed bodies might not be initialized. Therefore, call KinBody::SetDOFValues
-        GetDOFValues(vcurrentvalues);
-        std::vector<GrabbedPtr> vGrabbedBodies; vGrabbedBodies.swap(_vGrabbedBodies); // swap to get rid of _vGrabbedBodies
-        KinBody::SetDOFValues(vcurrentvalues,CLA_CheckLimits, std::vector<int>());
-        vGrabbedBodies.swap(_vGrabbedBodies); // swap back
-        GetLinkTransformations(vnewtrans, vnewdoflastsetvalues);
-        for(size_t i = 0; i < vprevtrans.size(); ++i) {
-            if( TransformDistanceFast(vprevtrans[i],vnewtrans[i]) > 1e-5 ) {
-                RAVELOG_VERBOSE(str(boost::format("link %d has different transformation after SetDOFValues (error=%f), this could be due to mimic joint equations kicking into effect.")%_veclinks.at(i)->GetName()%TransformDistanceFast(vprevtrans[i],vnewtrans[i])));
-            }
-        }
-        for(int i = 0; i < GetDOF(); ++i) {
-            if( vprevdoflastsetvalues.at(i) != vnewdoflastsetvalues.at(i) ) {
-                RAVELOG_VERBOSE(str(boost::format("dof %d has different values after SetDOFValues %d!=%d, this could be due to mimic joint equations kicking into effect.")%i%vprevdoflastsetvalues.at(i)%vnewdoflastsetvalues.at(i)));
-            }
-        }
-        _vInitialLinkTransformations = vnewtrans;
-    }
-    */
     {
         KinBodyStateSaver linkTransformSaver(shared_kinbody(), Save_LinkTransformation);
         vector<dReal> dofValues;
