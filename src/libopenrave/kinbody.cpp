@@ -473,8 +473,7 @@ void KinBody::Destroy()
     _vDOFIndices.clear();
 
     _vAdjacentLinks.clear();
-    _vInitialLinkTransformations.clear();
-    _vNonSelfCollidingPositionConfigurations.clear();
+    _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.clear();
     _vAllPairsShortestPaths.clear();
     _vClosedLoops.clear();
     _vClosedLoopIndices.clear();
@@ -761,7 +760,10 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
         SetReadableInterface(it->first, it->second);
     }
 
-    _vNonSelfCollidingPositionConfigurations = info._vNonSelfCollidingPositionConfigurations;  // Shallow copy
+    _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.clear();
+    for( const PositionConfigurationPtr& positionConfiguration : info._vNonSelfCollidingPositionConfigurations ) {
+        _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.emplace_back(positionConfiguration, std::vector<Transform>());  // Shallow copy
+    }
 
     if( GetXMLId() != info._interfaceType ) {
         RAVELOG_WARN_FORMAT("body '%s' interfaceType does not match %s != %s", GetName()%GetXMLId()%info._interfaceType);
@@ -4849,6 +4851,7 @@ void KinBody::_ComputeInternalInformation()
     }
 
     _nHierarchyComputed = 2;
+    /*
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
         vector<Transform> vprevtrans, vnewtrans;
@@ -4872,6 +4875,29 @@ void KinBody::_ComputeInternalInformation()
             }
         }
         _vInitialLinkTransformations = vnewtrans;
+    }
+    */
+    {
+        KinBodyStateSaver linkTransformSaver(shared_kinbody(), Save_LinkTransformation);
+        vector<dReal> dofValues;
+        vector<dReal> vnewdoflastsetvalues;
+        for( PositionConfigurationAndLinkTransformations& positionConfigurationAndLinkTransformations : _vNonSelfCollidingPositionConfigurationsAndLinkTransformations ) {
+            dofValues.clear();
+            dofValues.resize(GetDOF(), 0);
+            // Applies the position configuration
+            for( const PositionConfiguration::JointConfigurationState& jointConfiguration : positionConfigurationAndLinkTransformations.first->jointConfigurationStates ) {
+                JointPtr joint = GetJoint(jointConfiguration.GetResolvedJointName());
+                if( !!joint && jointConfiguration.jointAxis < joint->GetDOF() ) {
+                    dofValues.at(joint->GetDOFIndex() + jointConfiguration.jointAxis) = jointConfiguration.jointValue;
+                }
+            }
+            // unfortunately if SetDOFValues is overloaded by the robot, it could call the robot's _UpdateGrabbedBodies, which is a problem during environment cloning since the grabbed bodies might not be initialized. Therefore, call KinBody::SetDOFValues
+            std::vector<GrabbedPtr> vGrabbedBodies; vGrabbedBodies.swap(_vGrabbedBodies); // swap to get rid of _vGrabbedBodies
+            KinBody::SetDOFValues(dofValues, CLA_CheckLimitsThrow);  // Original DOF values will be restored by the state saver
+            vGrabbedBodies.swap(_vGrabbedBodies); // swap back
+
+            GetLinkTransformations(positionConfigurationAndLinkTransformations.second, vnewdoflastsetvalues);
+        }
     }
 
     {
@@ -5324,7 +5350,7 @@ void KinBody::SetNonCollidingConfiguration()
 {
     _ResetInternalCollisionCache();
     vector<dReal> vdoflastsetvalues;
-    GetLinkTransformations(_vInitialLinkTransformations, vdoflastsetvalues);
+    //GetLinkTransformations(_vInitialLinkTransformations, vdoflastsetvalues);
 }
 
 void KinBody::_ResetInternalCollisionCache()
@@ -5357,32 +5383,10 @@ bool CompareNonAdjacentFarthest(int pair0, int pair1)
 
 const std::vector<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
 {
-    class TransformsSaver
-    {
-public:
-        TransformsSaver(KinBodyConstPtr pbody) : _pbody(pbody) {
-            _pbody->GetLinkTransformations(vcurtrans, _vdoflastsetvalues);
-        }
-        ~TransformsSaver() {
-            for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
-                boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_info._t = vcurtrans.at(i);
-            }
-            for(size_t i = 0; i < _pbody->_vecjoints.size(); ++i) {
-                for(int j = 0; j < _pbody->_vecjoints[i]->GetDOF(); ++j) {
-                    _pbody->_vecjoints[i]->_doflastsetvalues[j] = _vdoflastsetvalues.at(_pbody->_vecjoints[i]->GetDOFIndex()+j);
-                }
-            }
-        }
-private:
-        KinBodyConstPtr _pbody;
-        std::vector<Transform> vcurtrans;
-        std::vector<dReal> _vdoflastsetvalues;
-    };
     CHECK_INTERNAL_COMPUTATION;
     if( _nNonAdjacentLinkCache & 0x80000000 ) {
         std::vector<bool> adjacentLinkFlags;
-        // FIXME: Avoid const cast
-        const_cast<KinBody*>(this)->_CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(adjacentLinkFlags);
+        _CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(adjacentLinkFlags);
 
         // Constructs _vNonAdjacentLinks[0]
         _vNonAdjacentLinks[0].clear();
@@ -5396,32 +5400,6 @@ private:
         std::sort(_vNonAdjacentLinks[0].begin(), _vNonAdjacentLinks[0].end(), CompareNonAdjacentFarthest);
         _nNonAdjacentLinkCache = 0;
     }
-    /*
-    if( _nNonAdjacentLinkCache & 0x80000000 ) {
-        // Check for colliding link pairs given the initial pose _vInitialLinkTransformations
-        // this is actually weird, we need to call the individual link collisions on a const body. in order to pull this off, we need to be very careful with the body state.
-        TransformsSaver saver(shared_kinbody_const());
-        CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
-        CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
-        for(size_t i = 0; i < _veclinks.size(); ++i) {
-            boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
-        }
-        _nUpdateStampId++; // because transforms were modified
-        _vNonAdjacentLinks[0].resize(0);
-
-        for(size_t ind0 = 0; ind0 < _veclinks.size(); ++ind0) {
-            for(size_t ind1 = ind0+1; ind1 < _veclinks.size(); ++ind1) {
-                const bool bAdjacent = AreAdjacentLinks(ind0, ind1);
-                if(!bAdjacent && !collisionchecker->CheckCollision(LinkConstPtr(_veclinks[ind0]), LinkConstPtr(_veclinks[ind1])) ) {
-                    _vNonAdjacentLinks[0].push_back(ind0|(ind1<<16));
-                }
-            }
-        }
-        std::sort(_vNonAdjacentLinks[0].begin(), _vNonAdjacentLinks[0].end(), CompareNonAdjacentFarthest);
-        _nUpdateStampId++; // because transforms were modified
-        _nNonAdjacentLinkCache = 0;
-    }
-    */
     if( (_nNonAdjacentLinkCache&adjacentoptions) != adjacentoptions ) {
         int requestedoptions = (~_nNonAdjacentLinkCache)&adjacentoptions;
         // find out what needs to computed
@@ -5443,39 +5421,60 @@ private:
     return _vNonAdjacentLinks.at(adjacentoptions);
 }
 
-void KinBody::_CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(std::vector<bool>& adjacentLinkFlags)
+void KinBody::_CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(std::vector<bool>& adjacentLinkFlags) const
 {
+    class TransformsSaver
+    {
+    public:
+        TransformsSaver(KinBodyConstPtr pbody) : _pbody(pbody) {
+            _pbody->GetLinkTransformations(vcurtrans, _vdoflastsetvalues);
+        }
+        ~TransformsSaver() {
+            for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
+                boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_info._t = vcurtrans.at(i);
+            }
+            for(size_t i = 0; i < _pbody->_vecjoints.size(); ++i) {
+                for(int j = 0; j < _pbody->_vecjoints[i]->GetDOF(); ++j) {
+                    _pbody->_vecjoints[i]->_doflastsetvalues[j] = _vdoflastsetvalues.at(_pbody->_vecjoints[i]->GetDOFIndex()+j);
+                }
+            }
+        }
+    private:
+        KinBodyConstPtr _pbody;
+        std::vector<Transform> vcurtrans;
+        std::vector<dReal> _vdoflastsetvalues;
+    };
+
     _ResizeVectorFor2DTable(adjacentLinkFlags, _veclinks.size());  // Fills with 0
-    if( _vNonSelfCollidingPositionConfigurations.empty() ) {
+    if( _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.empty() ) {
         return;
     }
 
-    KinBodyStateSaver saver(shared_kinbody(), Save_LinkTransformation);
+    // Check for colliding link pairs given _vNonSelfCollidingPositionConfigurationsAndLinkTransformations
+    // this is actually weird, we need to call the individual link collisions on a const body. in order to pull this off, we need to be very careful with the body state.
+    TransformsSaver saver(shared_kinbody_const());
     CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
     CollisionOptionsStateSaver colsaver(collisionchecker, 0); // have to reset the collision options
 
-    std::vector<dReal> dofValues;
-    std::vector<bool> dofValueIsSetFlags;  // Used to determine which link pairs can be evaluated for adjacency
-    std::vector<bool> dofValueIsDeterminableFlags;
-    for( const PositionConfigurationPtr& nonSelfCollidingPositionConfiguration : _vNonSelfCollidingPositionConfigurations ){
-        dofValues.clear();
-        dofValues.resize(GetDOF(), 0);
-        dofValueIsSetFlags.clear();
-        dofValueIsSetFlags.resize(GetDOF(), false);
+    std::vector<bool> dofValueIsDeterminableFlags(GetDOF());  // Used to determine which link pairs can be evaluated for adjacency
+    for( const PositionConfigurationAndLinkTransformations& positionConfigurationAndLinkTransformations : _vNonSelfCollidingPositionConfigurationsAndLinkTransformations ){
+        // Applies the non-self-colliding position configuration
+        OPENRAVE_ASSERT_OP(_veclinks.size(), ==, positionConfigurationAndLinkTransformations.second.size());
+        for(size_t i = 0; i < _veclinks.size(); ++i) {
+            boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = positionConfigurationAndLinkTransformations.second.at(i);
+        }
+        _nUpdateStampId++; // because transforms were modified
 
-        // Applies the position configuration
-        for( const PositionConfiguration::JointConfigurationState& jointConfiguration : nonSelfCollidingPositionConfiguration->jointConfigurationStates ) {
+        // Constructs initial dofValueIsDeterminableFlags
+        std::fill(dofValueIsDeterminableFlags.begin(), dofValueIsDeterminableFlags.end(), false);
+        for( const PositionConfiguration::JointConfigurationState& jointConfiguration : positionConfigurationAndLinkTransformations.first->jointConfigurationStates ) {
             JointPtr joint = GetJoint(jointConfiguration.GetResolvedJointName());
             if( !!joint && jointConfiguration.jointAxis < joint->GetDOF() ) {
-                const int dofIndex = joint->GetDOFIndex() + jointConfiguration.jointAxis;
-                dofValues.at(dofIndex) = jointConfiguration.jointValue;
-                dofValueIsSetFlags.at(dofIndex) = true;
+                dofValueIsDeterminableFlags.at(joint->GetDOFIndex() + jointConfiguration.jointAxis) = true;
             }
         }
-        SetDOFValues(dofValues, CLA_CheckLimitsThrow);  // Original DOF values will be restored by the state saver
 
         // Looks up which DOF values are determinable given the position configuration
-        dofValueIsDeterminableFlags = dofValueIsSetFlags;  // Determinable if a value is explicitly given
         static constexpr int maxNumIterations = 5;
         if( !_ResolveDOFValueDeterminableFlags(dofValueIsDeterminableFlags, maxNumIterations) ) {
             RAVELOG_WARN_FORMAT("Failed to calculate a converged list of value-determinable DOFs within %d attempts."
@@ -5728,10 +5727,12 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vDOFIndices = r->_vDOFIndices;
 
     _vAdjacentLinks = r->_vAdjacentLinks;
-    _vInitialLinkTransformations = r->_vInitialLinkTransformations;
-    _vNonSelfCollidingPositionConfigurations.reserve(r->_vNonSelfCollidingPositionConfigurations.size());
-    for( const PositionConfigurationPtr& positionConfiguration : r->_vNonSelfCollidingPositionConfigurations ){
-        _vNonSelfCollidingPositionConfigurations.push_back(PositionConfigurationPtr(new PositionConfiguration(*positionConfiguration)));  // Deep copy
+    _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.reserve(r->_vNonSelfCollidingPositionConfigurationsAndLinkTransformations.size());
+    for( const PositionConfigurationAndLinkTransformations& positionConfigurationAndLinkTransformations : r->_vNonSelfCollidingPositionConfigurationsAndLinkTransformations ){
+        _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.push_back(
+            std::make_pair(PositionConfigurationPtr(new PositionConfiguration(*positionConfigurationAndLinkTransformations.first)),
+                           positionConfigurationAndLinkTransformations.second
+            ));  // Deep copy
     }
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
     _vAllPairsShortestPaths = r->_vAllPairsShortestPaths;
@@ -6193,7 +6194,10 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
         }
     }
 
-    info._vNonSelfCollidingPositionConfigurations = _vNonSelfCollidingPositionConfigurations;  // Shallow copy
+    info._vNonSelfCollidingPositionConfigurations.clear();
+    for( const PositionConfigurationAndLinkTransformations& positionConfigurationAndLinkTransformations : _vNonSelfCollidingPositionConfigurationsAndLinkTransformations ) {
+        info._vNonSelfCollidingPositionConfigurations.push_back(positionConfigurationAndLinkTransformations.first);  // Shallow copy
+    }
 }
 
 UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
@@ -6360,7 +6364,10 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface change", _id);
     }
 
-    _vNonSelfCollidingPositionConfigurations = info._vNonSelfCollidingPositionConfigurations;  // Shallow copy
+    _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.clear();
+    for( const PositionConfigurationPtr& positionConfiguration : info._vNonSelfCollidingPositionConfigurations ) {
+        _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.emplace_back(positionConfiguration, std::vector<Transform>());  // Shallow copy
+    }
 
     return updateFromInfoResult;
 }

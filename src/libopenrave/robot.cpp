@@ -831,7 +831,10 @@ bool RobotBase::InitFromRobotInfo(const RobotBaseInfo& info)
         SetReadableInterface(it->first, it->second);
     }
 
-    _vNonSelfCollidingPositionConfigurations = info._vNonSelfCollidingPositionConfigurations;  // Shallow copy
+    _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.clear();
+    for( const PositionConfigurationPtr& positionConfiguration : info._vNonSelfCollidingPositionConfigurations ) {
+        _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.emplace_back(positionConfiguration, std::vector<Transform>());  // Shallow copy
+    }
 
     return true;
 }

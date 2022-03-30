@@ -3493,7 +3493,7 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
-    void _CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(std::vector<bool>& adjacentLinkFlags);
+    void _CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(std::vector<bool>& adjacentLinkFlags) const;
 
     /// \brief Returns a full list of DOFs which values are determinable given an initial list of such DOFs
     /// \param[in,out] isDOFValueDeterminableList List of flags which indicate whether DOF values are determinable. Takes an initial list as input, and returns a full list as output. Size must match GetDOF().
@@ -3529,8 +3529,8 @@ protected:
     mutable boost::array<std::vector<int>, 4> _vNonAdjacentLinks; ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
     mutable boost::array<std::set<int>, 4> _cacheSetNonAdjacentLinks; ///< used for caching return value of GetNonAdjacentLinks.
     mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].
-    std::vector<Transform> _vInitialLinkTransformations; ///< the initial transformations of each link specifying at least one pose where the robot is collision free
-    std::vector<PositionConfigurationPtr> _vNonSelfCollidingPositionConfigurations; ///< list of non-self-colliding position configurations
+    typedef std::pair<PositionConfigurationPtr, std::vector<Transform> > PositionConfigurationAndLinkTransformations;
+    std::vector<PositionConfigurationAndLinkTransformations> _vNonSelfCollidingPositionConfigurationsAndLinkTransformations; ///< list of non-self-colliding position configurations and corresponding link transformations
 
     mutable std::vector<int8_t> _vAttachedVisitedCache; ///< cache
     mutable std::vector<std::pair<Vector,Vector> > _vVelocitiesCache;
