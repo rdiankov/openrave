@@ -513,9 +513,11 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
         }
 
         if( bConnectedBodyStatesChanged ) {
-            RAVELOG_WARN_FORMAT("env=%s, robot '%s' connected body states changed while grabbing %d bodies, so invalidating", probot->GetEnv()->GetNameId()%probot->GetName()%_vGrabbedBodies.size());
-            for(GrabbedPtr& grabbed : _vGrabbedBodies) {
-                grabbed->InvalidateListNonCollidingLinks();
+            if( !_vGrabbedBodies.empty() ) {
+                RAVELOG_WARN_FORMAT("env=%s, robot '%s' connected body states changed while grabbing %d bodies, so invalidating", probot->GetEnv()->GetNameId()%probot->GetName()%_vGrabbedBodies.size());
+                for(GrabbedPtr& grabbed : _vGrabbedBodies) {
+                    grabbed->InvalidateListNonCollidingLinks();
+                }
             }
         }
     }
