@@ -2374,15 +2374,15 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
 
     py::list vJointInfos;
     FOREACHC(itJointInfo, info._vJointInfos) {
-        PyJointInfo info = PyJointInfo(**itJointInfo);
-        vJointInfos.append(info);
+        PyJointInfo jointInfo = PyJointInfo(**itJointInfo);
+        vJointInfos.append(jointInfo);
     }
     _vJointInfos = vJointInfos;
 
     py::list vGrabbedInfos;
     FOREACHC(itGrabbedInfo, info._vGrabbedInfos) {
-        PyKinBody::PyGrabbedInfo info = PyKinBody::PyGrabbedInfo(**itGrabbedInfo);
-        vGrabbedInfos.append(info);
+        PyKinBody::PyGrabbedInfo grabbedInfo = PyKinBody::PyGrabbedInfo(**itGrabbedInfo);
+        vGrabbedInfos.append(grabbedInfo);
     }
     _vGrabbedInfos = vGrabbedInfos;
 #endif
