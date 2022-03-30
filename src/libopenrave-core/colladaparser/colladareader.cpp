@@ -14,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #pragma GCC diagnostic ignored "-Wshadow"
 
 #include "colladacommon.h"
@@ -50,7 +51,7 @@ public:
     class daeOpenRAVEURIResolver : public daeURIResolver
     {
 public:
-        daeOpenRAVEURIResolver(DAE& dae, const std::string& scheme, ColladaReader* preader_) : daeURIResolver(dae), _scheme(scheme), _preader(preader_) {
+        daeOpenRAVEURIResolver(DAE& dae_, const std::string& scheme, ColladaReader* preader_) : daeURIResolver(dae_), _scheme(scheme), _preader(preader_) {
         }
 
         ~daeOpenRAVEURIResolver() {
@@ -163,7 +164,7 @@ public:
     class JointAxisBinding
     {
 public:
-        JointAxisBinding(const boost::function<domNodeRef(daeElementRef)>& instantiatenodefn, daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info),_iaxis(0) {
+        JointAxisBinding(const boost::function<domNodeRef(daeElementRef)>& instantiatenodefn, daeElementRef pvisualtrans_, domAxis_constraintRef pkinematicaxis_, dReal jointvalue_, domKinematics_axis_infoRef kinematics_axis_info_, domMotion_axis_infoRef motion_axis_info_, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : pvisualtrans(pvisualtrans_), pkinematicaxis(pkinematicaxis_), jointvalue(jointvalue_), kinematics_axis_info(kinematics_axis_info_), motion_axis_info(motion_axis_info_),_iaxis(0) {
             _listInstanceScopeAxis = listInstanceScope;
             BOOST_ASSERT( !!pkinematicaxis );
             if( !!pvisualtrans ) {
@@ -672,8 +673,8 @@ public:
                                                 if( !!pchildtec ) {
                                                     daeTArray<daeElementRef> children;
                                                     pchildtec->getChildren(children);
-                                                    for(size_t ic = 0; ic < children.getCount(); ++ic) {
-                                                        daeElementRef pchildchild = children[ic];
+                                                    for(size_t icc = 0; icc < children.getCount(); ++icc) {
+                                                        daeElementRef pchildchild = children[icc];
                                                         if( std::string(pchildchild->getElementName()) == "ignore_link" ) {
                                                             KinBody::LinkPtr pignore_link;
                                                             string ignore_link_sid = pchildchild->getAttribute("link");
@@ -4243,9 +4244,9 @@ public:
         }
         if( !!ias ) {
             // resolve the articulated_system, is this necessary?
-            domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
-            if( !!articulated_system ) {
-                return searchBinding(ref, articulated_system, bLogWarning, listInstanceScope);
+            domArticulated_systemRef articulated_system_ref = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
+            if( !!articulated_system_ref ) {
+                return searchBinding(ref, articulated_system_ref, bLogWarning, listInstanceScope);
             }
         }
         if( bLogWarning ) {
@@ -4751,8 +4752,8 @@ private:
             domFloat jointvalue=0;
             if( !!bindjoint->getValue() ) {
                 if (!!bindjoint->getValue()->getParam()) {
-                    std::list<daeElementRef> listInstanceScope;
-                    pelt = searchBinding(bindjoint->getValue()->getParam()->getValue(),kscene, true, listInstanceScope);
+                    std::list<daeElementRef> listInstanceScopeTmp;
+                    pelt = searchBinding(bindjoint->getValue()->getParam()->getValue(),kscene, true, listInstanceScopeTmp);
                 }
                 else {
                     pelt = bindjoint->getValue();
@@ -5520,8 +5521,8 @@ private:
                         // search for the formula in library_formulas
                         string formulaurl = children[0]->getAttribute("definitionURL");
                         if( formulaurl.size() > 0 ) {
-                            daeElementRef pelt = daeURI(*children[0],formulaurl).getElement();
-                            pformula = daeSafeCast<domFormula>(pelt);
+                            daeElementRef pelt0 = daeURI(*children[0],formulaurl).getElement();
+                            pformula = daeSafeCast<domFormula>(pelt0);
                             if( !pformula ) {
                                 RAVELOG_WARN(str(boost::format("could not find csymbol %s formula\n")%children[0]->getAttribute("definitionURL")));
                             }

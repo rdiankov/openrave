@@ -1278,11 +1278,11 @@ private:
             return;
         }
 
-        dGeomID geomray = o2;
+        dGeomID geomray1 = o2;
         dBodyID b = dGeomGetBody(o1);
         if( b == NULL ) {
             BOOST_ASSERT( dGeomGetClass(o1) == dRayClass );
-            geomray = o1;
+            geomray1 = o1;
             b = dGeomGetBody(o2);
         }
         BOOST_ASSERT( b != NULL );
@@ -1331,7 +1331,7 @@ private:
                 //if( _options & OpenRAVE::CO_Contacts) {
                 Vector vnorm(contact[index].geom.normal);
                 dReal distance = contact[index].geom.depth;
-                if( contact[index].geom.g1 != geomray ) {
+                if( contact[index].geom.g1 != geomray1 ) {
                     vnorm = -vnorm;
                     distance = -distance;
                 }

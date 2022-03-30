@@ -249,7 +249,7 @@ public:
     {
         axis_sids() : dofvalue(0) {
         }
-        axis_sids(const string& axissid, const string& valuesid, const string& jointnodesid) : axissid(axissid), valuesid(valuesid), jointnodesid(jointnodesid), dofvalue(0) {
+        axis_sids(const string& axissid_, const string& valuesid_, const string& jointnodesid_) : axissid(axissid_), valuesid(valuesid_), jointnodesid(jointnodesid_), dofvalue(0) {
         }
         string axissid, valuesid, jointnodesid;
         dReal dofvalue; // if valuesid is empty, use this float value. This is in degrees or meters
