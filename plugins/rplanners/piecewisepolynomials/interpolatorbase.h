@@ -49,7 +49,7 @@ public:
     // Functions
     //
     /// \brief Initialize this interpolator
-    virtual void Initialize(size_t ndof, int envid=0)
+    virtual void Initialize(size_t ndof_, int envid_=0)
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("Initialize not implemented", ORE_NotImplemented);
     }

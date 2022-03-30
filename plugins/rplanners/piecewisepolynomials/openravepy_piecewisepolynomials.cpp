@@ -133,15 +133,15 @@ public:
     {
         _ppolynomial.reset(new piecewisepolynomials::Polynomial());
     }
-    PyPolynomial(const dReal duration, const py::object ocoeffs)
+    PyPolynomial(const dReal duration_, const py::object ocoeffs_)
     {
-        std::vector<dReal> inputCoeffs = openravepy::ExtractArray<dReal>(ocoeffs);
-        _ppolynomial.reset(new piecewisepolynomials::Polynomial(duration, inputCoeffs));
+        std::vector<dReal> inputCoeffs = openravepy::ExtractArray<dReal>(ocoeffs_);
+        _ppolynomial.reset(new piecewisepolynomials::Polynomial(duration_, inputCoeffs));
         _PostProcess();
     }
-    PyPolynomial(const dReal duration, const std::vector<dReal>& coeffs)
+    PyPolynomial(const dReal duration_, const std::vector<dReal>& coeffs_)
     {
-        _ppolynomial.reset(new piecewisepolynomials::Polynomial(duration, coeffs));
+        _ppolynomial.reset(new piecewisepolynomials::Polynomial(duration_, coeffs_));
         _PostProcess();
     }
     PyPolynomial(const piecewisepolynomials::Polynomial& polynomial)
@@ -150,10 +150,10 @@ public:
         _PostProcess();
     }
 
-    void Initialize(const dReal duration, const py::object ocoeffs)
+    void Initialize(const dReal duration_, const py::object ocoeffs_)
     {
-        std::vector<dReal> inputCoeffs = openravepy::ExtractArray<dReal>(ocoeffs);
-        _ppolynomial->Initialize(duration, inputCoeffs);
+        std::vector<dReal> inputCoeffs = openravepy::ExtractArray<dReal>(ocoeffs_);
+        _ppolynomial->Initialize(duration_, inputCoeffs);
         _PostProcess();
     }
 
@@ -169,9 +169,9 @@ public:
         _PostProcess();
     }
 
-    void UpdateDuration(dReal duration)
+    void UpdateDuration(dReal duration_)
     {
-        _ppolynomial->UpdateDuration(duration);
+        _ppolynomial->UpdateDuration(duration_);
         _PostProcess();
     }
 
@@ -469,22 +469,22 @@ public:
         _pchunk.reset(new piecewisepolynomials::Chunk());
         _PostProcess();
     }
-    PyChunk(const dReal duration, const py::object ovpolynomials)
+    PyChunk(const dReal duration_, const py::object ovpolynomials)
     {
         std::vector<piecewisepolynomials::Polynomial> vpolynomials = ExtractArrayPolynomials(ovpolynomials);
-        _pchunk.reset(new piecewisepolynomials::Chunk(duration, vpolynomials));
+        _pchunk.reset(new piecewisepolynomials::Chunk(duration_, vpolynomials));
         _PostProcess();
     }
-    PyChunk(const dReal duration, const std::vector<piecewisepolynomials::Polynomial>& vpolynomials)
+    PyChunk(const dReal duration_, const std::vector<piecewisepolynomials::Polynomial>& vpolynomials)
     {
-        _pchunk.reset(new piecewisepolynomials::Chunk(duration, vpolynomials));
+        _pchunk.reset(new piecewisepolynomials::Chunk(duration_, vpolynomials));
         _PostProcess();
     }
 
-    void Initialize(const dReal duration, const py::object ovpolynomials)
+    void Initialize(const dReal duration_, const py::object ovpolynomials)
     {
         std::vector<piecewisepolynomials::Polynomial> vpolynomials = ExtractArrayPolynomials(ovpolynomials);
-        _pchunk->Initialize(duration, vpolynomials);
+        _pchunk->Initialize(duration_, vpolynomials);
         _PostProcess();
     }
 
@@ -495,9 +495,9 @@ public:
         _PostProcess();
     }
 
-    void UpdateDuration(const dReal duration)
+    void UpdateDuration(const dReal duration_)
     {
-        _pchunk->UpdateDuration(duration);
+        _pchunk->UpdateDuration(duration_);
         _PostProcess();
     }
 
@@ -547,10 +547,10 @@ public:
         return openravepy::toPyArray(res);
     }
 
-    void SetConstant(const py::object ox0Vect, const dReal duration, const size_t degree)
+    void SetConstant(const py::object ox0Vect, const dReal duration_, const size_t degree_)
     {
         std::vector<dReal> x0Vect = openravepy::ExtractArray<dReal>(ox0Vect);
-        _pchunk->SetConstant(x0Vect, duration, degree);
+        _pchunk->SetConstant(x0Vect, duration_, degree_);
         _PostProcess();
     }
 
