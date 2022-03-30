@@ -2367,8 +2367,8 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _interfaceType = ConvertStringToUnicode(info._interfaceType);
     py::list vLinkInfos;
     FOREACHC(itLinkInfo, info._vLinkInfos) {
-        PyLinkInfo info = PyLinkInfo(**itLinkInfo);
-        vLinkInfos.append(info);
+        PyLinkInfo linkInfo = PyLinkInfo(**itLinkInfo);
+        vLinkInfos.append(linkInfo);
     }
     _vLinkInfos = vLinkInfos;
 
