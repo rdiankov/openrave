@@ -328,6 +328,7 @@ public:
     py::object GetURI() const;
     py::object GetNonAdjacentLinks() const;
     py::object GetNonAdjacentLinks(int adjacentoptions) const;
+    bool AreAdjacentLinks(int linkindex0, int linkindex1) const;
     void SetAdjacentLinks(int linkindex0, int linkindex1);
     void SetAdjacentLinksCombinations(py::object olinkIndices);
     py::object GetAdjacentLinks() const;

@@ -4103,6 +4103,11 @@ object PyKinBody::GetNonAdjacentLinks(int adjacentoptions) const
     return ononadjacent;
 }
 
+bool PyKinBody::AreAdjacentLinks(int linkindex0, int linkindex1) const
+{
+    return _pbody->AreAdjacentLinks(linkindex0, linkindex1);
+}
+
 void PyKinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
 {
     _pbody->SetAdjacentLinks(linkindex0, linkindex1);
@@ -5953,6 +5958,7 @@ void init_openravepy_kinbody()
                          .def("GetXMLFilename",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
                          .def("GetNonAdjacentLinks",GetNonAdjacentLinks1, DOXY_FN(KinBody,GetNonAdjacentLinks))
                          .def("GetNonAdjacentLinks",GetNonAdjacentLinks2, PY_ARGS("adjacentoptions") DOXY_FN(KinBody,GetNonAdjacentLinks))
+                         .def("AreAdjacentLinks",&PyKinBody::AreAdjacentLinks, PY_ARGS("linkindex0", "linkindex1") DOXY_FN(KinBody,AreAdjacentLinks))
                          .def("SetAdjacentLinks",&PyKinBody::SetAdjacentLinks, PY_ARGS("linkindex0", "linkindex1") DOXY_FN(KinBody,SetAdjacentLinks))
                          .def("SetAdjacentLinksCombinations",&PyKinBody::SetAdjacentLinksCombinations, PY_ARGS("linkIndices") DOXY_FN(KinBody,SetAdjacentLinksCombinations))
                          .def("GetAdjacentLinks",&PyKinBody::GetAdjacentLinks, DOXY_FN(KinBody,GetAdjacentLinks))
