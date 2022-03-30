@@ -1058,11 +1058,11 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
         }
         RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pinfo);
         if (!!pRobotBaseInfo) {
-            PyRobotBase::PyRobotBaseInfo info = PyRobotBase::PyRobotBaseInfo(*pRobotBaseInfo);
-            vBodyInfos.append(info);
+            PyRobotBase::PyRobotBaseInfo baseInfo = PyRobotBase::PyRobotBaseInfo(*pRobotBaseInfo);
+            vBodyInfos.append(baseInfo);
         } else {
-            PyKinBody::PyKinBodyInfo info = PyKinBody::PyKinBodyInfo(*pinfo);
-            vBodyInfos.append(info);
+            PyKinBody::PyKinBodyInfo bodyInfo = PyKinBody::PyKinBodyInfo(*pinfo);
+            vBodyInfos.append(bodyInfo);
         }
     }
     _vBodyInfos = vBodyInfos;
