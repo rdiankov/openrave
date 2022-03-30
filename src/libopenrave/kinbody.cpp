@@ -5364,8 +5364,26 @@ int8_t KinBody::DoesDOFAffectLink(int dofindex, int linkindex ) const
 void KinBody::SetNonCollidingConfiguration()
 {
     _ResetInternalCollisionCache();
+
+    PositionConfigurationPtr positionConfiguration(new PositionConfiguration());
+    GetPositionConfiguration(*positionConfiguration);
+    positionConfiguration->name = "_configuration_added_by_SetNonCollidingConfiguration_";
+
+    std::vector<Transform> linkTransforms;
     vector<dReal> vdoflastsetvalues;
-    //GetLinkTransformations(_vInitialLinkTransformations, vdoflastsetvalues);
+    GetLinkTransformations(linkTransforms, vdoflastsetvalues);
+
+    // Overwrites an entry in _vNonSelfCollidingPositionConfigurationsAndLinkTransformations if already exists under the same name
+    for( PositionConfigurationAndLinkTransformations& positionConfigurationAndLinkTransformations : _vNonSelfCollidingPositionConfigurationsAndLinkTransformations ) {
+        if( positionConfigurationAndLinkTransformations.first->name == positionConfiguration->name ) {
+            positionConfigurationAndLinkTransformations.first.swap(positionConfiguration);
+            positionConfigurationAndLinkTransformations.second.swap(linkTransforms);
+            return;
+        }
+    }
+
+    // Adds a new entry
+    _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.emplace_back(positionConfiguration, linkTransforms);
 }
 
 void KinBody::_ResetInternalCollisionCache()
