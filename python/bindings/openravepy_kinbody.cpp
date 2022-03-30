@@ -2825,6 +2825,13 @@ object PyKinBody::GetDOFVelocities(object oindices) const
     return toPyArray(values);
 }
 
+object PyKinBody::GetPositionConfiguration() const
+{
+    KinBody::PositionConfiguration positionConfiguration;
+    _pbody->GetPositionConfiguration(positionConfiguration);
+    return object(PyPositionConfigurationPtr(new PyPositionConfiguration(positionConfiguration)));
+}
+
 object PyKinBody::GetDOFLimits() const
 {
     std::vector<dReal> vlower, vupper;
@@ -5618,6 +5625,7 @@ void init_openravepy_kinbody()
                          .def("GetDOFValues",getdofvalues2,PY_ARGS("indices") DOXY_FN(KinBody,GetDOFValues))
                          .def("GetDOFVelocities",getdofvelocities1, DOXY_FN(KinBody,GetDOFVelocities))
                          .def("GetDOFVelocities",getdofvelocities2, PY_ARGS("indices") DOXY_FN(KinBody,GetDOFVelocities))
+                         .def("GetPositionConfiguration",&PyKinBody::GetPositionConfiguration,DOXY_FN(KinBody,GetPositionConfiguration))
                          .def("GetDOFLimits",getdoflimits1, DOXY_FN(KinBody,GetDOFLimits))
                          .def("GetDOFLimits",getdoflimits2, PY_ARGS("indices") DOXY_FN(KinBody,GetDOFLimits))
                          .def("GetDOFVelocityLimits",getdofvelocitylimits1, DOXY_FN(KinBody,GetDOFVelocityLimits))

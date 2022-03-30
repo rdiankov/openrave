@@ -890,6 +890,21 @@ void KinBody::GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& do
     }
 }
 
+void KinBody::GetPositionConfiguration(PositionConfiguration& positionConfiguration) const
+{
+    positionConfiguration.jointConfigurationStates.clear();
+    positionConfiguration.jointConfigurationStates.reserve(GetDOF());
+    for( JointPtr joint : _vDOFOrderedJoints ) {
+        for( int jointAxis = 0; jointAxis < joint->GetDOF(); ++jointAxis ) {
+            PositionConfiguration::JointConfigurationState jointConfigurationState;
+            jointConfigurationState.jointName = joint->GetName();
+            jointConfigurationState.jointAxis = jointAxis;
+            jointConfigurationState.jointValue = joint->GetValue(jointAxis);
+            positionConfiguration.jointConfigurationStates.push_back(jointConfigurationState);
+        }
+    }
+}
+
 void KinBody::GetDOFLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, const std::vector<int>& dofindices) const
 {
     if( dofindices.size() == 0 ) {

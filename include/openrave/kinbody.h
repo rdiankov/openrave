@@ -2496,6 +2496,9 @@ private:
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     void GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
 
+    /// \brief Returns the current position configuration
+    virtual void GetPositionConfiguration(PositionConfiguration& positionConfiguration) const;
+
     /// \brief Returns all the joint limits as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs

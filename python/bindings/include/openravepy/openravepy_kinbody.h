@@ -202,6 +202,7 @@ public:
     py::object GetDOFValues(py::object oindices) const;
     py::object GetDOFVelocities() const;
     py::object GetDOFVelocities(py::object oindices) const;
+    py::object GetPositionConfiguration() const;
     py::object GetDOFLimits() const;
     py::object GetDOFVelocityLimits() const;
     py::object GetDOFAccelerationLimits() const;
