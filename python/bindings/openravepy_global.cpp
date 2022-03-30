@@ -1698,9 +1698,9 @@ void init_openravepy_global()
             return self;
         })
     .def("__deepcopy__", [](const PyOrientedBox& self, const py::dict& memo) {
-            return PyOrientedBox(self.ab);
+            return PyOrientedBox(self.obb);
             /*
-               OPENRAVE_SHARED_PTR<PyOrientedBox> pyOrientedBox(new PyOrientedBox(self.ab));
+               OPENRAVE_SHARED_PTR<PyOrientedBox> pyOrientedBox(new PyOrientedBox(self.obb));
                return py::to_object(pyOrientedBox);
              */
         })
@@ -1729,13 +1729,12 @@ void init_openravepy_global()
             /* Create a new C++ instance */
             PyOrientedBox pyab;
             /* Assign any additional state */
-            py::array_t<dReal> pos = state[0].cast<py::array_t<dReal> >();
+            pyab.obb.transform = ExtractTransform(state[0]);
             py::array_t<dReal> extents = state[1].cast<py::array_t<dReal> >();
             for(size_t i = 0; i < 3; ++i) {
-                pyab.ab.pos[i] = *pos.data(i);
-                pyab.ab.extents[i] = *extents.data(i);
+                pyab.obb.extents[i] = *extents.data(i);
             }
-            pyab.ab.pos[3] = pyab.ab.extents[3] = 0;
+            pyab.obb.extents[3] = 0;
             return pyab;
         }
              ))
