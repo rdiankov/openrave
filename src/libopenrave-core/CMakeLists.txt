@@ -24,7 +24,7 @@ if( COLLADA_DOM_FOUND )
   
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COLLADA_DOM_LDFLAGS_OTHER}")
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
-  include_directories(${COLLADA_DOM_INCLUDE_DIRS})
+  include_directories(SYSTEM ${COLLADA_DOM_INCLUDE_DIRS})
   set (OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${COLLADA_DOM_LIBRARIES})
   message(STATUS "Geometry Parsing: Collada DOM ${COLLADA_DOM_VERSION}")
   set(openrave_core_SOURCES ${openrave_core_SOURCES} colladaparser/colladareader.cpp colladaparser/colladawriter.cpp colladaparser/colladacommon.cpp)
