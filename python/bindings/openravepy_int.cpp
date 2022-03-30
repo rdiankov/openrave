@@ -1510,9 +1510,9 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-        if( !!pbody ) {
-            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pkinbody ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pkinbody));
         }
         else {
             RAVELOG_ERROR("failed to get excluded body\n");
@@ -1535,9 +1535,9 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-        if( !!pbody ) {
-            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pkinbody ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pkinbody));
         }
         else {
             RAVELOG_ERROR("failed to get excluded body\n");

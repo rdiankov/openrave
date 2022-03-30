@@ -341,7 +341,7 @@ public:
     }
     PyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironmentBasePtr pyenv) : joint(toPyKinBodyJoint(OPENRAVE_CONST_POINTER_CAST<KinBody::Joint>(p.joint), pyenv)), parentindex(p.parentindex), transform(ReturnTransform(p.transform)), d(p.d), a(p.a), theta(p.theta), alpha(p.alpha) {
     }
-    PyDHParameter(object joint, int parentindex, object transform, dReal d, dReal a, dReal theta, dReal alpha) : joint(joint), parentindex(parentindex), transform(transform), d(d), a(a), theta(theta), alpha(alpha) {
+    PyDHParameter(object joint_, int parentindex_, object transform_, dReal d_, dReal a_, dReal theta_, dReal alpha_) : joint(joint_), parentindex(parentindex_), transform(transform_), d(d_), a(a_), theta(theta_), alpha(alpha_) {
     }
     virtual ~PyDHParameter() {
     }
