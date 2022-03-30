@@ -57,6 +57,15 @@ enum DynamicsConstraintsType {
 
 OPENRAVE_API const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type);
 
+enum JointControlMode {
+    JCM_None = 0, ///< unspecified
+    JCM_RobotController = 1, ///< joint controlled by the robot controller
+    JCM_IO = 2,              ///< joint controlled by I/O signals
+    JCM_ExternalDevice = 3,  ///< joint controlled by an external device
+};
+
+OPENRAVE_API const char* GetJointControlModeString(JointControlMode jcm);
+
 /// \brief holds parameters for an electric motor
 ///
 /// all speed is in revolutions/second
@@ -122,6 +131,56 @@ public:
 };
 
 typedef boost::shared_ptr<ElectricMotorActuatorInfo> ElectricMotorActuatorInfoPtr;
+
+class OPENRAVE_API JointControlInfo_RobotController : public InfoBase
+{
+public:
+    JointControlInfo_RobotController() {
+    };
+
+    void Reset() override;
+    void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+    void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+    std::string controllerType; ///< the type of the controller used to control this joint
+    //int robotId = -1; ///< index of the robot within that controller?
+    boost::array<int16_t, 3> robotControllerAxisIndex = {-1, -1, -1}; ///< indicates which DOF in the robot controller controls which joint axis (up to the DOF of the joint). -1 if not specified/not valid.
+};
+typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
+
+class OPENRAVE_API JointControlInfo_IO : public InfoBase
+{
+public:
+    JointControlInfo_IO() {
+    };
+
+    void Reset() override;
+    void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+    void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+    std::string deviceType; ///< type of device this joint is for
+    boost::array< std::vector<std::string>, 3 > moveIONames;       ///< io names for controlling positions of this joint.
+    boost::array< std::vector<std::string>, 3 > upperLimitIONames; ///< io names for detecting if the joint is at its upper limit
+    boost::array< std::vector<uint8_t>, 3 > upperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+    boost::array< std::vector<std::string>, 3 > lowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
+    boost::array< std::vector<uint8_t>, 3 > lowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+};
+typedef boost::shared_ptr<JointControlInfo_IO> JointControlInfo_IOPtr;
+
+class OPENRAVE_API JointControlInfo_ExternalDevice : public InfoBase
+{
+public:
+    JointControlInfo_ExternalDevice() {
+    };
+
+    void Reset() override;
+    void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+    void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+    std::string externalDeviceType; ///< id for the external device
+};
+
+typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
 
 ///< New kinematics functions to be used by KinBody
 class OPENRAVE_API KinematicsFunctions
@@ -209,6 +268,11 @@ inline void EnableAllLinkStateBitMasks(std::vector<uint64_t>& linkEnableStateMas
 
     linkEnableStateMasks.back() = (1LU << (numLinks & 0x3f)) - 1;
 }
+
+class Grabbed;
+typedef boost::shared_ptr<Grabbed> GrabbedPtr;
+typedef boost::shared_ptr<Grabbed const> GrabbedConstPtr;
+
 
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
@@ -836,7 +900,7 @@ public:
         }
 
 private:
-        Transform _t; ///< the current transformation of the link with respect to the body coordinate system
+        Transform _t; ///< the current transformation of the link with respect to the world coordinate system
 
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
@@ -1167,7 +1231,7 @@ public:
 protected:
         /// \brief enables / disables LinkInfo as well as notifies parent KinBody
         void _Enable(bool enable);
-        
+
         /// \brief Updates the cached information due to changes in the collision data.
         ///
         /// \param parameterschanged if true, will
@@ -1233,13 +1297,6 @@ private:
         JointHinge2 = 0x80000002,
         JointSpherical = 0x80000003,
         JointTrajectory = 0x80000004, ///< there is no axis defined, instead the relative transformation is directly output from the trajectory affine_transform structure
-    };
-
-    enum JointControlMode {
-        JCM_None = 0, ///< unspecified
-        JCM_RobotController = 1, ///< joint controlled by the robot controller
-        JCM_IO = 2,              ///< joint controlled by I/O signals
-        JCM_ExternalDevice = 3,  ///< joint controlled by an external device
     };
 
     class Joint;
@@ -1312,36 +1369,6 @@ public:
     class OPENRAVE_API JointInfo : public InfoBase
     {
 public:
-        struct JointControlInfo_RobotController
-        {
-            JointControlInfo_RobotController() {
-            };
-            int robotId = -1;
-            boost::array<int16_t, 3> robotControllerDOFIndex = {-1, -1, -1}; ///< indicates which DOF in the robot controller controls which joint axis. -1 if not specified/not valid.
-        };
-        typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
-
-        struct JointControlInfo_IO
-        {
-            JointControlInfo_IO() {
-            };
-            int deviceId = -1;
-            boost::array< std::vector<std::string>, 3 > vMoveIONames;       ///< io names for controlling positions of this joint.
-            boost::array< std::vector<std::string>, 3 > vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
-            boost::array< std::vector<uint8_t>, 3 > vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
-            boost::array< std::vector<std::string>, 3 > vLowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
-            boost::array< std::vector<uint8_t>, 3 > vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
-        };
-        typedef boost::shared_ptr<JointControlInfo_IO> JointControlInfo_IOPtr;
-
-        struct JointControlInfo_ExternalDevice
-        {
-            JointControlInfo_ExternalDevice() {
-            };
-            std::string externalDeviceId; ///< id for the external device
-        };
-        typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
-
         JointInfo() {
         }
         JointInfo(const JointInfo& other) {
@@ -1429,9 +1456,9 @@ public:
 
         /// \brief _controlMode specifies how this joint is controlled. For possible control modes, see enum JointControlMode.
         JointControlMode _controlMode = JCM_None;
-        JointControlInfo_RobotControllerPtr _jci_robotcontroller;
-        JointControlInfo_IOPtr _jci_io;
-        JointControlInfo_ExternalDevicePtr _jci_externaldevice;
+        JointControlInfo_RobotControllerPtr _jci_robotcontroller; ///< valid if controlMode==JCM_RobotController
+        JointControlInfo_IOPtr _jci_io; ///< valid if controlMode==JCM_IO
+        JointControlInfo_ExternalDevicePtr _jci_externaldevice; ///< valid if controlMode==JCM_ExternalDevice
     };
 
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
@@ -2181,10 +2208,13 @@ public:
         std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 
         bool _isRobot = false; ///< true if should create a RobotBasePtr
+        bool _isPartial = true; ///< true if this info contains partial information. false if the info contains the full body information and can ignore anything that is currently saved on the environment when updating.
 
         enum KinBodyInfoField {
             KBIF_Transform = (1 << 0), // _transform field
             KBIF_DOFValues = (1 << 1), // _dofValues field
+            KBIF_URI = (1 << 2), // _uri field
+            KBIF_ReferenceURI = (1 << 3), // _referenceUri field
         };
         inline bool IsModifiedField(KinBodyInfoField field) const {
             return !!(_modifiedFields & field);
@@ -2239,7 +2269,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::vector<UserDataPtr> _vGrabbedBodies;
+        std::vector<GrabbedPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
@@ -2285,7 +2315,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::vector<UserDataPtr> _vGrabbedBodies;
+        std::vector<GrabbedPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
         bool _bReleased; ///< if true, then body should not be restored
 private:
@@ -2608,7 +2638,7 @@ private:
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
-    
+
     /// \brief get the transformations of all the links at once
     void GetLinkTransformations(std::vector<Transform>& transforms) const;
 
@@ -2706,6 +2736,12 @@ private:
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
     AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
+    /// \brief returns an axis-aligned bounding box On transform tWorld.
+    ///
+    /// \brief quaterion of the orientation of the box in the world coordinate system.
+    /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
+    OrientedBox ComputeOBBOnAxes(const Vector& quat, bool bEnabledOnlyLinks=false) const;
+
     /// \brief returns an axis-aligned bounding box when body has identity transform
     ///
     /// Internally equivalent to ComputeAABBFromTransform(Transform(), ...)
@@ -2735,15 +2771,23 @@ private:
 
     /// \brief Sets the joint values of the robot.
     ///
-    /// \param values the values to set the joint angles (ordered by the dof indices)
+    /// \param[in] values the values to set the joint angles (ordered by the dof indices)
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
-    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    /// \param[in] dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
+
+    /// \brief Sets the joint values of the robot.
+    ///
+    /// \param[in] pJointValues pointer to head of array that holds joint angles (ordered by the dof indices)
+    /// \param[in] dof number of dof described by array of pJointValues.
+    /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
+    /// \param[in] dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief Sets the joint values and transformation of the body.
     ///
-    /// \param values the values to set the joint angles (ordered by the dof indices)
-    /// \param transform represents the transformation of the first body.
+    /// \param[in] values the values to set the joint angles (ordered by the dof indices)
+    /// \param[in] transform represents the transformation of the first body.
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     virtual void SetDOFValues(const std::vector<dReal>& values, const Transform& transform, uint32_t checklimits = CLA_CheckLimits);
 
@@ -2883,6 +2927,16 @@ private:
         \param[in] externalforcetorque [optional] Specifies all the external forces/torques acting on the links at their center of mass.
      */
     virtual void ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& doftorquecomponents, const std::vector<dReal>& dofaccelerations, const ForceTorqueMap& externalforcetorque=ForceTorqueMap()) const;
+
+    /** \brief Computes dynamic limits for acceleration and jerks, which are dynamically changing based on the given positions and velocities of the robot.
+
+        Since not all robots supports dynamic limits, so this function should be overriden in the subclass.
+        \param[out] vDynamicAccelerationLimits, vDynamicJerkLimits : dynamically changing acceleration limits and jerk limits. the sizes of vectors are in the DOF order. 0 means there is no dynamic limit
+        \param[in] vDOFValues, vDOFPositions : DOF positions and velocities to compute dynamic limits. note that if these are related to finite difference, need to input [k-1] timestamp and the returned limits are at [k] timestamp. the sizes of the vectors are the DOF the robot.
+        \return true if the robot has dynamic limits.
+     */
+    virtual bool GetDOFDynamicAccelerationJerkLimits(std::vector<dReal>& vDynamicAccelerationLimits, std::vector<dReal>& vDynamicJerkLimits,
+                                                     const std::vector<dReal>& vDOFValues, const std::vector<dReal>& vDOFVelocities) const;
 
     /// \brief sets a self-collision checker to be used whenever \ref CheckSelfCollision is called
     ///
@@ -3039,7 +3093,7 @@ private:
 
     /// \brief return if two links are adjacent links are not.
     bool AreAdjacentLinks(int linkindex0, int linkindex1) const;
-    
+
     /// \brief adds the pair of links to the adjacency list.
     ///
     /// \param linkIndices vector containing pair of link indies. Each pair of is set as adjacent links. For each pair, first and second must be different.
@@ -3193,6 +3247,30 @@ private:
     }
     LinkPtr IsGrabbing(const KinBody &body) const;
 
+    /// \brief Result of CheckGrabbedInfo() call
+    enum GrabbedInfoCheckResult
+    {
+        GICR_Identical = 0, ///< Specified body is grabbed with specified grabbing link (and optionally, specified ignored links)
+        GICR_BodyNotGrabbed = 1,  //< Specified body is not grabbed
+        GICR_GrabbingLinkNotMatch = 2, ///< Specified body is grabbed, but grabbing link does not match
+        GICR_IgnoredLinksNotMatch = 3, ///< Specified body is grabbed and grabbing link matches, but ignored links do not match
+    };
+
+    /** \brief Checks whether a body is grabbed with the given robot link.
+     *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
+     */
+    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const;
+
+    /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
+     *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
+     */
+    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore) const;
+
+    /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
+     *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
+     */
+    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setBodyLinksToIgnore) const;
+
     /** \brief gets all grabbed bodies of the body
 
         \param[out] vbodies filled with the grabbed bodies
@@ -3206,37 +3284,37 @@ private:
 
     /// \brief return the valid grabbed body. If the grabbed body is not in the environment, will just return empty
     ///
-    /// \param iGrabbed index into the grabbed body. Max is GetNumGrabbed()-1
+    /// \param[in] iGrabbed index into the grabbed bodies. Max is GetNumGrabbed()-1
     KinBodyPtr GetGrabbedBody(int iGrabbed) const;
 
-    /** \brief gets all grabbed bodies of the body
+    /** \brief gets info of all grabbed bodies
 
-        \param[out] vgrabbedinfo filled with the grabbed info for every body. The pointers are newly created.
+        \param[out] vGrabbedInfos filled with the grabbed info for every grabbed body. The pointers are newly created.
      */
     void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
 
-    /** \brief gets all grabbed bodies of the body
+    /** \brief gets info of all grabbed bodies
 
-        \param[out] vgrabbedinfo all the grabbed infos
+        \param[out] vGrabbedInfos vector containing grabbedInfos of all the grabbed bodies
      */
     void GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const;
 
     /** \brief gets the grabbed info of a grabbed object whose name matches grabbedname
 
-        \param[in] the grabbed name to get the info from
-        \param[out] grabbedInfo initialized with the grabbed info
-        \return true if robot is grabbing body with name "grabbedname" and grabbedInfo is initialized
+        \param[in] grabbedname the name to use for checking
+        \param[out] grabbedInfo will be initialized with the grabbed info of the grabbed object specified by "grabbedname"
+        \return true if this body is grabbing body with name "grabbedname" and grabbedInfo is initialized
      */
     bool GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbedInfo) const;
 
-    /** \brief resets the grabbed bodies of the body
+    /** \brief resets the grabbed objects of this body and set them according to the input vGrabbedInfos
 
         Any currently grabbed bodies will be first released.
-        \param[out] vgrabbedinfo filled with the grabbed info for every body
+        \param[in] vGrabbedInfos vector of GrabbedInfo, filled with the grabbed info for every body to be grabbed
      */
-    void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vgrabbedinfo);
+    void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vGrabbedInfos);
 
-    /** \brief returns all the links of the body whose links are being ignored by the grabbed body.
+    /** \brief returns all the links of grabber (this body) that are being ignored (self-collision) by the grabbed body.
 
         \param[in] body the grabbed body
         \param[out] list of the ignored links
@@ -3275,9 +3353,6 @@ protected:
     inline Joint& _GetJointFromDOFIndex(int dofindex) {
         return *_vecjoints.at(_vDOFIndices.at(dofindex));
     }
-
-    /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
-    void _Regrab(UserDataPtr pgrabbed);
 
     void SetManageData(ManageDataPtr pdata) {
         _pManageData = pdata;
@@ -3336,6 +3411,7 @@ protected:
     /// \return true if body was successfully found and removed
     bool _RemoveAttachedBody(KinBody &body);
 
+    /// \brief Update transforms and velocities of the grabbed bodies
     void _UpdateGrabbedBodies();
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
@@ -3379,7 +3455,7 @@ protected:
 
     std::vector<Transform*> _vLinkTransformPointers; ///< holds a pointers to the Transform Link::_t  in _veclinks. Used for fast access fo the custom kinematics
 
-    std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies
+    std::vector<GrabbedPtr> _vGrabbedBodies; ///< vector of grabbed bodies
 
     mutable std::vector<std::list<UserDataWeakPtr> > _vlistRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. _vlistRegisteredCallbacks[index] is the list of change callbacks where 1<<index is part of KinBodyProperty, this makes it easy to find out if any particular bits have callbacks. The registration/de-registration of the lists can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable.
 
@@ -3444,6 +3520,66 @@ private:
     friend class ChangeCallbackData;
     friend class Grabbed;
 };
+
+class OPENRAVE_API Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
+{
+public:
+    Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink);
+    virtual ~Grabbed() {
+    }
+
+    /// \brief This function initializes _listNonCollidingLinksWhenGrabbed. First it restores the state of both the
+    ///        grabber and the grabbed body to the snapshot when "Grab" function was called. Then it performs the check
+    ///        and populates the list.
+    ///
+    ///        It is important to note that link enable states do not affect the result of this computation. That is,
+    ///
+    ///        1. if a link L is colliding with _pGrabbedBody at the time of grabbing, L will *not* be in
+    ///          _listNonCollidingLinksWhenGrabbed regardless of L's enable state. If L is initially collision-disabled
+    ///          when grabbing _pGrabbingBody and later L has become enabled, CheckSelfCollision will ignore
+    ///          L-_pGrabbedBody collision (if any).
+    ///
+    ///        2. if a link L is not colliding with _pGrabbedBody at the time of grabbing, L will be in
+    ///           _listNonCollidingLinksWhenGrabbed regardless of L's enable state.
+    ///
+    ///        Therefore, _listNonCollidingLinksWhenGrabbed has to be computed only once. The computation result remains
+    ///        valid until the grabbed body is released.
+    void ComputeListNonCollidingLinks();
+
+    inline void InvalidateListNonCollidingLinks()
+    {
+        _listNonCollidingIsValid = false;
+    }
+
+    inline void _SetLinkNonCollidingIsValid(bool bIsValid)
+    {
+        _listNonCollidingIsValid = bIsValid;
+    }
+
+    inline bool IsListNonCollidingLinksValid() const
+    {
+        return _listNonCollidingIsValid;
+    }
+
+    /// \brief Add more links to force to be ignored during grabber's self-collision checking into
+    ///        _setGrabberLinkIndicesToIgnore. This function is called when we make the grabber grab the same grabbed body
+    ///        more than once with different input links to ignore.
+    void AddMoreIgnoreLinks(const std::set<int>& setAdditionalGrabberLinksToIgnore);
+
+    // Member Variables
+    KinBodyWeakPtr _pGrabbedBody; ///< the body being grabbed
+    KinBody::LinkPtr _pGrabbingLink; ///< the link used for grabbing _pGrabbedBody. Its transform (as well as the transforms of other links rigidly attached to _pGrabbingLink) relative to the grabbed body remains constant until the grabbed body is released.
+    std::list<KinBody::LinkConstPtr> _listNonCollidingLinksWhenGrabbed; ///< list of links of the grabber that are not touching the grabbed body *at the time of grabbing*. Since these links are not colliding with the grabbed body at the time of grabbing, they should remain non-colliding with the grabbed body throughout. If, while grabbing, they collide with the grabbed body at some point, CheckSelfCollision should return true. It is important to note that the enable state of a link does *not* affect its membership of this list.
+    Transform _tRelative; ///< the relative transform between the grabbed body and the grabbing link. tGrabbingLink*tRelative = tGrabbedBody.
+    std::set<int> _setGrabberLinkIndicesToIgnore; ///< indices to the links of the grabber whose collisions with the grabbed bodies should be ignored.
+
+private:
+    bool _listNonCollidingIsValid = false; ///< a flag indicating whether the current _listNonCollidingLinksWhenGrabbed is valid or not.
+    std::vector<KinBody::LinkPtr> _vAttachedToGrabbingLink; ///< vector of all links that are rigidly attached to _pGrabbingLink
+    KinBody::KinBodyStateSaverPtr _pGrabberSaver; ///< statesaver that saves the snapshot of the grabber at the time Grab is called. The saved state will be used (i.e. restored) temporarily when computation of _listNonCollidingLinksWhenGrabbed is necessary.
+    KinBody::KinBodyStateSaverPtr _pGrabbedSaver; ///< statesaver that saves the snapshot of the grabbed at the time Grab is called. The saved state will be used (i.e. restored) temporarily when computation of _listNonCollidingLinksWhenGrabbed is necessary.
+
+}; // end class Grabbed
 
 } // end namespace OpenRAVE
 

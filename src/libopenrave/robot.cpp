@@ -405,7 +405,9 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         }
     }
 
-    if( _options & Save_ConnectedBodies ) {
+    if( (_options & Save_ConnectedBodies) || (_options & Save_GrabbedBodies) ) {
+        // The change in connected body active states essentially affect the robot's link indices, which
+        // will then mess up Grabbed's _setGrabberLinkIndicesToIgnore
         _probot->GetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
     }
 }
@@ -495,6 +497,26 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
         }
         else {
             RAVELOG_WARN_FORMAT("env=%d, connected body states changed, so cannot save. saved num is %s, new robot num is %s", probot->GetEnv()->GetId()%_vConnectedBodyActiveStates.size()%probot->_vecConnectedBodies.size());
+        }
+    }
+
+    if( _options & Save_GrabbedBodies ) {
+        // For now, if a robot's connected body active states change, have to reset _setGrabberLinkIndicesToIgnore
+        bool bConnectedBodyStatesChanged = _vConnectedBodyActiveStates.size() != probot->_vecConnectedBodies.size();
+        if( !bConnectedBodyStatesChanged ) {
+            for( size_t iConnectedBody = 0; iConnectedBody < _vConnectedBodyActiveStates.size(); ++iConnectedBody ) {
+                if(_vConnectedBodyActiveStates[iConnectedBody] != probot->_vecConnectedBodies[iConnectedBody]->IsActive() ) {
+                    bConnectedBodyStatesChanged = true;
+                    break;
+                }
+            }
+        }
+
+        if( bConnectedBodyStatesChanged ) {
+            RAVELOG_WARN_FORMAT("env=%s, robot '%s' connected body states changed while grabbing %d bodies, so invalidating", probot->GetEnv()->GetNameId()%probot->GetName()%_vGrabbedBodies.size());
+            for(GrabbedPtr& grabbed : _vGrabbedBodies) {
+                grabbed->InvalidateListNonCollidingLinks();
+            }
         }
     }
 
@@ -848,6 +870,12 @@ void RobotBase::SetName(const std::string& newname)
 void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t bCheckLimits, const std::vector<int>& dofindices)
 {
     KinBody::SetDOFValues(vJointValues, bCheckLimits,dofindices);
+    _UpdateAttachedSensors();
+}
+
+void RobotBase::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits, const std::vector<int>& dofindices)
+{
+    KinBody::SetDOFValues(pJointValues, dof, checklimits, dofindices);
     _UpdateAttachedSensors();
 }
 

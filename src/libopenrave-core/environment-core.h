@@ -33,7 +33,7 @@
 
 #define CHECK_INTERFACE(pinterface) { \
         if( (pinterface)->GetEnv() != shared_from_this() ) \
-            throw openrave_exception(str(boost::format(_("env=%s, Interface %s:%s is from a different environment (env=%s) than the current one."))%GetNameId()%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()%(pinterface)->GetEnv()->GetId()%(pinterface)->GetEnv()->GetName()),ORE_InvalidArguments); \
+            throw openrave_exception(str(boost::format(_("env=%s, Interface %s:%s is from a different environment (env=%s) than the current one."))%GetNameId()%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()%(pinterface)->GetEnv()->GetNameId()),ORE_InvalidArguments); \
 } \
 
 #define CHECK_COLLISION_BODY(body) { \
@@ -132,6 +132,27 @@ protected:
     std::shared_timed_mutex& _mutex;
     bool _lockAquired;
 };
+
+/// \biref Helper class to save and restore the kinbody id
+class KinBodyIdSaver
+{
+public:
+    KinBodyIdSaver(KinBodyPtr pbody) : _pbody(pbody) {
+        if( !!_pbody ) {
+            _id = pbody->GetId();
+        }
+    }
+    virtual ~KinBodyIdSaver() {
+        if ( !!_pbody ) {
+            _pbody->SetId(_id);
+        }
+    }
+
+protected:
+    KinBodyPtr _pbody; ///< pointer to kinbody
+    std::string _id; ///< original body id
+};
+typedef boost::shared_ptr<KinBodyIdSaver> KinBodyIdSaverPtr;
 
 class Environment : public EnvironmentBase
 {
@@ -2389,7 +2410,7 @@ public:
         }
         return handles;
     }
-    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents)
+    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float> >& vpos, const RaveVector<float>& vextents)
     {
         SharedLock lock103(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
@@ -2814,7 +2835,7 @@ public:
                         // new name will conflict with *itExistingSameName, so should change the names to something temporarily
                         // for now, clear since the body should be processed later again
                         RAVELOG_DEBUG_FORMAT("env=%s, have to clear body name '%s' id=%s for loading body with id=%s", GetNameId()%(*itExistingSameName)->GetName()%(*itExistingSameName)->GetId()%(*itExisting)->GetId());
-                        (*itExistingSameName)->SetName(_GetUniqueName((*itExistingSameName)->GetName()+"_renamedDueToConflict_"));
+                        (*itExistingSameName)->SetName(_GetUniqueName((*itExistingSameName)->GetName()+"_tempRenamedDueToConflict_"));
                         listBodiesTemporarilyRenamed.push_back(*itExistingSameName);
                     }
                     pMatchExistingBody = *itExisting;
@@ -2865,7 +2886,7 @@ public:
                     ExclusiveLock lock253(_mutexInterfaces);
                     vector<KinBodyPtr>::iterator itExisting = std::find(_vecbodies.begin(), _vecbodies.end(), pMatchExistingBody);
                     if( itExisting != _vecbodies.end() ) {
-                        _InvalidateKinBodyFromEnvBodyIndex(pMatchExistingBody->GetEnvironmentBodyIndex());
+                        _InvalidateKinBodyFromEnvBodyIndex(pMatchExistingBody->GetEnvironmentBodyIndex()); // essentially removes the entry from the environment
                     }
                 }
 
@@ -2881,7 +2902,8 @@ public:
                         }
                     }
                     if (updateFromInfoResult != UFIR_NoChange && updateFromInfoResult != UFIR_Success) {
-                        // have to reinit
+                        // have to reinit, but preserves the current body id since it could potentially clash with what pKinBodyInfo/pRobotBaseInfo has
+                        KinBodyIdSaver bodyIdSaver(pRobot);
                         if( !!pRobotBaseInfo ) {
                             pRobot->InitFromRobotInfo(*pRobotBaseInfo);
                         }
@@ -2899,7 +2921,8 @@ public:
                         updateFromInfoResult = pMatchExistingBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                     }
                     if (updateFromInfoResult != UFIR_NoChange && updateFromInfoResult != UFIR_Success) {
-                        // have to reinit
+                        // have to reinit, but preserves the current body id since it could potentially clash with what pKinBodyInfo has
+                        KinBodyIdSaver bodyIdSaver(pMatchExistingBody);
                         pMatchExistingBody->InitFromKinBodyInfo(*pKinBodyInfo);
                     }
 
@@ -3199,6 +3222,12 @@ protected:
         body.ReleaseAllGrabbed();
         if( !!_pCurrentChecker ) {
             _pCurrentChecker->RemoveKinBody(pbodyref);
+        }
+        {
+            CollisionCheckerBasePtr pSelfColChecker = body.GetSelfCollisionChecker();
+            if (!!pSelfColChecker && pSelfColChecker != _pCurrentChecker) {
+                pSelfColChecker->RemoveKinBody(pbodyref);
+            }
         }
         if( !!_pPhysicsEngine ) {
             _pPhysicsEngine->RemoveKinBody(pbodyref);
@@ -3500,7 +3529,8 @@ protected:
                 try {
                     KinBodyPtr pnewbody = _vecbodies.at(envBodyIndex);
                     if( !!pnewbody ) {
-                        pnewbody->Clone(pbody,options);
+                        // Should ignore grabbed bodies since the grabbed states will be updated later (via state saver's Restore) below.
+                        pnewbody->Clone(pbody, options|Clone_IgnoreGrabbedBodies);
                     }
                 }
                 catch(const std::exception &ex) {

@@ -31,6 +31,7 @@ void RobotBase::ManipulatorInfo::Reset()
     _vGripperJointNames.clear();
     _grippername.clear();
     _toolChangerConnectedBodyToolName.clear();
+    _toolChangerLinkName.clear();
     _vRestrictGraspSetNames.clear();
 }
 
@@ -48,6 +49,7 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
     orjson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
     orjson::SetJsonValueByKey(value, "grippername", _grippername, allocator);
     orjson::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
+    orjson::SetJsonValueByKey(value, "toolChangerLinkName", _toolChangerLinkName, allocator);
     orjson::SetJsonValueByKey(value, "restrictGraspSetNames", _vRestrictGraspSetNames, allocator);
 }
 
@@ -65,6 +67,7 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
     orjson::LoadJsonValueByKey(value, "grippername", _grippername);
     orjson::LoadJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName);
+    orjson::LoadJsonValueByKey(value, "toolChangerLinkName", _toolChangerLinkName);
     orjson::LoadJsonValueByKey(value, "restrictGraspSetNames", _vRestrictGraspSetNames);
 }
 
@@ -803,28 +806,20 @@ bool RobotBase::Manipulator::IsChildLink(const KinBody::Link &link) const
     }
 
     RobotBasePtr probot(__probot);
-    // get all child links of the manipualtor
     int iattlink = __pEffector->GetIndex();
-    FOREACHC(itlink, probot->GetLinks()) {
-        int ilink = (*itlink)->GetIndex();
-        if( ilink == iattlink ) {
-            continue;
+    int ilink = link.GetIndex();
+    if( ilink == iattlink ) {
+        return true;
+    }
+    // gripper needs to be affected by all joints
+    FOREACHC(itarmdof,__varmdofindices) {
+        if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
+            return false;
         }
-        // gripper needs to be affected by all joints
-        bool bGripperLink = true;
-        FOREACHC(itarmdof,__varmdofindices) {
-            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
-                bGripperLink = false;
-                break;
-            }
-        }
-        if( !bGripperLink ) {
-            continue;
-        }
-        for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
-            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
-                return true;
-            }
+    }
+    for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
+        if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+            return true;
         }
     }
     return false;
@@ -1500,13 +1495,12 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
             }
 
             // check if any grabbed bodies are attached to this link
-            FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
-                GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-                if( pgrabbed->_plinkrobot == *itlink ) {
+            for (const GrabbedPtr& pgrabbed : probot->_vGrabbedBodies) {
+                if( pgrabbed->_pGrabbingLink == *itlink ) {
                     if( vbodyexcluded.empty() ) {
                         vbodyexcluded.push_back(KinBodyConstPtr(probot));
                     }
-                    KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
+                    KinBodyPtr pbody = pgrabbed->_pGrabbedBody.lock();
                     if( !!pbody && probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) ) {
                         return true;
                     }

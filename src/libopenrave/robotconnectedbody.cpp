@@ -796,7 +796,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
 
             if( bHasSameTool ) {
-                RAVELOG_INFO_FORMAT("When adding ConnectedBody %s for robot %s, got resolved manipulator with same name '%s'. Perhaps trying to overwrite? For now, passing through.", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name);
+                RAVELOG_INFO_FORMAT("env=%s, when adding ConnectedBody %s for robot %s, got resolved manipulator with same name '%s'. Perhaps trying to overwrite? For now, passing through.", GetEnv()->GetNameId()%connectedBody.GetName()%GetName()%pnewmanipulator->_info._name);
                 pnewmanipulator.reset(); // will not be adding it
                 continue;
             }
@@ -836,6 +836,22 @@ void RobotBase::_ComputeConnectedBodiesInformation()
 
                 if( !bFoundEffectorLink ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find endEffectorLink '%s' in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._sEffectorLinkName, ORE_InvalidArguments);
+                }
+            }
+
+            if( !pnewmanipulator->_info._toolChangerLinkName.empty() ) {
+                // search for the correct resolved _toolChangerLinkName
+                bool bFoundToolChangerLink = false;
+                for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
+                    if( pnewmanipulator->_info._toolChangerLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
+                        pnewmanipulator->_info._toolChangerLinkName = connectedBody._vResolvedLinkNames.at(ilink).first;
+                        bFoundToolChangerLink = true;
+                    }
+                }
+
+                if( !bFoundToolChangerLink ) {
+                    // it is OK if the toolChangerLinkName is pointing to another link name not in the connected body!
+                    //throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find toolChangerLinkName '%s' in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._toolChangerLinkName, ORE_InvalidArguments);
                 }
             }
 

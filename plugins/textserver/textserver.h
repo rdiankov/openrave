@@ -574,7 +574,7 @@ private:
                     continue;
                 }
                 std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-                stringstream::streampos inputpos = is->tellg();
+                stringstream::pos_type inputpos = is->tellg();
 
                 map<string, RAVENETWORKFN>::iterator itfn = mapNetworkFns.find(cmd);
                 if( itfn != mapNetworkFns.end() ) {
@@ -2276,7 +2276,7 @@ protected:
             it->second->SendCommand(os,is);
         }
         else {
-            stringstream::streampos inputpos = is.tellg();
+            stringstream::pos_type inputpos = is.tellg();
             list<ModuleBasePtr> listProblems;
             GetEnv()->GetLoadedProblems(listProblems);
             FOREACHC(itprob, listProblems) {

@@ -984,8 +984,8 @@ void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
 
 UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info)
 {
-    if(_info._id != info._id) {
-        throw OPENRAVE_EXCEPTION_FORMAT("Do not allow updating body %s link %s (id='%s') with a different info id='%s'", GetParent()->GetName()%GetName()%_info._id%info._id, ORE_Assert);
+    if(!info._id.empty() && _info._id != info._id) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Do not allow updating body '%s' link '%s' (id='%s') with a different info id='%s'", GetParent()->GetName()%GetName()%_info._id%info._id, ORE_Assert);
     }
 
     UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;

@@ -714,7 +714,7 @@ public:
         int num=1000;
         dReal maxtime = 1200;
         while(!sinput.eof()) {
-            istream::streampos pos = sinput.tellg();
+            istream::pos_type pos = sinput.tellg();
             sinput >> cmd;
             if( !sinput ) {
                 break;

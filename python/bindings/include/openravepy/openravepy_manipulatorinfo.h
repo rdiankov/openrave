@@ -45,6 +45,7 @@ public:
     object _vGripperJointNames = py::none_();
     object _grippername = py::none_();
     object _toolChangerConnectedBodyToolName = py::none_();
+    object _toolChangerLinkName = py::none_();
     object _vRestrictGraspSetNames = py::none_();
 
 private:
