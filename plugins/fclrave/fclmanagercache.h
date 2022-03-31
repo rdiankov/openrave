@@ -813,7 +813,7 @@ public:
                 // make sure we don't need to make this asusmption of body id change when bodies are removed and re-added
                 bool isInvalid = !pBody;
                 if (!isInvalid) {
-                    const KinBody& body = *pbody;
+                    const KinBody& body = *pBody;
                     const int currentBodyEnvBodyIndex = body.GetEnvironmentBodyIndex();
                     if (currentBodyEnvBodyIndex != cachedBodyIndex) {
                         RAVELOG_WARN_FORMAT("env=%s body %s has envBodyIndex=%d, but stored at wrong index=%d", body.GetEnv()->GetNameId()%body.GetName()%currentBodyEnvBodyIndex%cachedBodyIndex);
@@ -822,8 +822,8 @@ public:
                     isInvalid =  (it == vecAttachedEnvBodyIndices.end() || *it != currentBodyEnvBodyIndex) || currentBodyEnvBodyIndex != cachedBodyIndex;
                 }
                 if( isInvalid ) {
-                    if( !!pbody && IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%s, %x, %u removing old cache %d", pbody->GetEnv()->GetNameId()%this%_lastSyncTimeStamp%cachedBodyIndex);
+                    if( !!pBody && IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+                        RAVELOG_VERBOSE_FORMAT("env=%s, %x, %u removing old cache %d", pBody->GetEnv()->GetNameId()%this%_lastSyncTimeStamp%cachedBodyIndex);
                     }
                     // not in attached bodies so should remove
                     FOREACH(itcol, cache.vcolobjs) {
