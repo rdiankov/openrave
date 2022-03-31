@@ -408,11 +408,10 @@ void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatim
     }
     std::list<std::vector<ConfigurationSpecification::Group>::iterator> listtoremove;
     std::list<ConfigurationSpecification::Group> listadd;
-    int offset = GetDOF();
     bool hasdeltatime = false;
     FOREACH(itgroup,_vgroups) {
         string replacename;
-        offset = -1; // we have just set `offset` to `GetDOF()`, shall it be reset to -1?
+        int offset = -1;
         if( itgroup->name.size() >= 12 && itgroup->name.substr(0,12) == "joint_values" ) {
             replacename = s_GroupsJointValues.at(deriv);
             offset = 12;
@@ -452,6 +451,7 @@ void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatim
             }
         }
     }
+    int offset = GetDOF();
     if( listtoremove.size() > 0 ) {
         FOREACH(it,listtoremove) {
             _vgroups.erase(*it);
