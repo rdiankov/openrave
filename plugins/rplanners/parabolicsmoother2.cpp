@@ -3000,7 +3000,7 @@ protected:
                                         for( size_t j = 0; j < vellimits.size(); ++j ) {
                                             dReal fMinVelLimit = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
                                             dReal fVelMult1 = RaveSqrt(retcheck.vReductionFactors[j]);
-                                            if( vellimits[j] * fVelMult < fMinVelLimit ) {
+                                            if( vellimits[j] * fVelMult1 < fMinVelLimit ) {
                                                 // In this case, we cannot use the recommended scaling factor since
                                                 // after scaling, the vellimits will fall below max(v0, v1). So we set
                                                 // vellimits to be max(v0, v1) instead.
