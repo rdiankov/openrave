@@ -5472,7 +5472,8 @@ void KinBody::_CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurati
         }
         _nUpdateStampId++; // because transforms were modified
 
-        // Constructs initial dofValueIsDeterminableFlags
+        // Constructs initial dofValueIsDeterminableFlags (static/mimic joints are not reflected at this stage)
+        // This bit mask will be used to determine which link transforms are determinable and which link pair collisions are evaluatable.
         std::fill(dofValueIsDeterminableFlags.begin(), dofValueIsDeterminableFlags.end(), false);
         for( const PositionConfiguration::JointConfigurationState& jointConfiguration : positionConfigurationAndLinkTransformations.first->jointConfigurationStates ) {
             JointPtr joint = GetJoint(jointConfiguration.GetResolvedJointName());
@@ -5481,7 +5482,7 @@ void KinBody::_CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurati
             }
         }
 
-        // Looks up which DOF values are determinable given the position configuration
+        // Updates dofValueIsDeterminableFlags to include DOF which values are determinable due to static/mimic joints
         static constexpr int maxNumIterations = 5;
         if( !_ResolveDOFValueDeterminableFlags(dofValueIsDeterminableFlags, maxNumIterations) ) {
             RAVELOG_WARN_FORMAT("Failed to calculate a converged list of value-determinable DOFs within %d attempts."

@@ -3497,6 +3497,8 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
+    /// \brief Returns adjacent link pair flags calculated from non-self-colliding position configurations
+    /// \param[out] adjacentLinkFlags List of flags indicating whether link pairs can be treated as adjacent. Indexed in the same order as _vAdjacentLinks.
     void _CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(std::vector<bool>& adjacentLinkFlags) const;
 
     /// \brief Returns a full list of DOFs which values are determinable given an initial list of such DOFs
