@@ -5392,14 +5392,14 @@ const std::vector<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
 {
     CHECK_INTERNAL_COMPUTATION;
     if( _nNonAdjacentLinkCache & NonAdjacentLinkCache_Uninitialized ) {
-        std::vector<bool> adjacentLinkFlags;
+        std::vector<int8_t> adjacentLinkFlags = _vAdjacentLinks;  // To reduce computation cost, initialises with already known adjacent link pairs
         _CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(adjacentLinkFlags);
 
         // Constructs _vNonAdjacentLinks[0]
         _vNonAdjacentLinks[0].clear();
         for( size_t ind0 = 0; ind0 < _veclinks.size(); ++ind0 ) {
             for( size_t ind1 = ind0 + 1; ind1 < _veclinks.size(); ++ind1 ) {
-                if( !adjacentLinkFlags.at(_GetIndex1d(ind0, ind1)) && !AreAdjacentLinks(ind0, ind1) ) {
+                if( !adjacentLinkFlags.at(_GetIndex1d(ind0, ind1)) ) {
                     _vNonAdjacentLinks[0].push_back(ind0|(ind1<<16));
                 }
             }
@@ -5428,7 +5428,7 @@ const std::vector<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
     return _vNonAdjacentLinks.at(adjacentoptions);
 }
 
-void KinBody::_CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(std::vector<bool>& adjacentLinkFlags) const
+void KinBody::_CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(std::vector<int8_t>& adjacentLinkFlags) const
 {
     class TransformsSaver
     {
@@ -5452,7 +5452,6 @@ void KinBody::_CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurati
         std::vector<dReal> _vdoflastsetvalues;
     };
 
-    _ResizeVectorFor2DTable(adjacentLinkFlags, _veclinks.size());  // Fills with 0
     if( _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.empty() ) {
         return;
     }
@@ -5499,10 +5498,6 @@ void KinBody::_CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurati
                 if( adjacentLinkFlags.at(adjacentLinkFlagIndex) ) {
                     continue;  // Already marked as adjacent, no need to check again
                 }
-                if( AreAdjacentLinks(ind0, ind1) ) {
-                    adjacentLinkFlags.at(adjacentLinkFlagIndex) = true;  // Optimisation; allows skipping the check next time
-                    continue;
-                }
 
                 bool areAllDependencyDOFValuesDeterminable = areAllDOFValuesDeterminable;
                 if( !areAllDependencyDOFValuesDeterminable ) {
@@ -5530,7 +5525,7 @@ void KinBody::_CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurati
                 }
 
                 if( collisionchecker->CheckCollision(LinkConstPtr(_veclinks[ind0]), LinkConstPtr(_veclinks[ind1])) ) {
-                    adjacentLinkFlags.at(adjacentLinkFlagIndex) = true;
+                    adjacentLinkFlags.at(adjacentLinkFlagIndex) = 1;
                 }
             }
         }

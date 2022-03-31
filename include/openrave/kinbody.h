@@ -3498,8 +3498,9 @@ protected:
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
     /// \brief Returns adjacent link pair flags calculated from non-self-colliding position configurations
-    /// \param[out] adjacentLinkFlags List of flags indicating whether link pairs can be treated as adjacent. Indexed in the same order as _vAdjacentLinks.
-    void _CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(std::vector<bool>& adjacentLinkFlags) const;
+    /// \note Computation cost can be reduced by giving adjacentLinkFlags in which already known adjacent link pairs are marked as input
+    /// \param[in,out] adjacentLinkFlags List of flags indicating whether link pairs can be treated as adjacent. Indexed in the same order as _vAdjacentLinks. Size needs to match that of _vAdjacentLinks.
+    void _CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(std::vector<int8_t>& adjacentLinkFlags) const;
 
     /// \brief Returns a full list of DOFs which values are determinable given an initial list of such DOFs
     /// \param[in,out] isDOFValueDeterminableList List of flags which indicate whether DOF values are determinable. Takes an initial list as input, and returns a full list as output. Size must match GetDOF().
