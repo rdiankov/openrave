@@ -850,6 +850,9 @@ void RobotBase::GetPositionConfiguration(PositionConfiguration& positionConfigur
         // Looks up whether the joint belongs to a connected body
         bool isInConnectedBody = false;
         for( const ConnectedBodyPtr& connectedBody : _vecConnectedBodies ) {
+            if( !connectedBody->IsActive() ) {
+                continue;
+            }
             OPENRAVE_ASSERT_OP(connectedBody->_vResolvedJointNames.size(), ==, connectedBody->_info._vJointInfos.size());
             for( int jointIndex = 0; jointIndex < (int)connectedBody->_vResolvedJointNames.size(); ++jointIndex ) {
                 if( joint->GetName() == connectedBody->_vResolvedJointNames.at(jointIndex).first ) {
