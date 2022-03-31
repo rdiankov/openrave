@@ -114,7 +114,7 @@ bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
            && AreVectorsDeepEqual(_vLinkInfos, other._vLinkInfos)
            && AreVectorsDeepEqual(_vJointInfos, other._vJointInfos)
            && AreVectorsDeepEqual(_vGrabbedInfos, other._vGrabbedInfos)
-           && _vNonSelfCollidingPositionConfigurations == other._vNonSelfCollidingPositionConfigurations
+           && AreVectorsDeepEqual(_vNonSelfCollidingPositionConfigurations, other._vNonSelfCollidingPositionConfigurations)
            && _mReadableInterfaces == other._mReadableInterfaces;
 }
 
