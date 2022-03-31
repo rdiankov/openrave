@@ -2061,6 +2061,7 @@ public:
             jointConfigurationStates.swap(rhs.jointConfigurationStates);
         }
 
+        /// name and value of one joint
         class JointConfigurationState : public InfoBase
         {
 public:
