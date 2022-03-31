@@ -2077,10 +2077,10 @@ public:
             std::string GetResolvedJointName() const;
 
             std::string _id; ///< id of joint configuration state, for incremental update
-            std::string jointName; ///< name of the joint. If the joint belong to a connectedBody, then it's resolved name is connectedBodyName+"_"+jointName
+            std::string jointName; ///< name of the joint. If the joint belong to a connectedBody, then its resolved name is connectedBodyName+"_"+jointName
             int jointAxis = 0;
             dReal jointValue = 0.0;
-            std::string connectedBodyName; ///< the connected body name the jointName comes from
+            std::string connectedBodyName; ///< Name of the connected body the joint comes from. Set to empty if the joint belongs to a robot, not a connected body.
         };
         typedef boost::shared_ptr<JointConfigurationState> JointConfigurationStatePtr;
         typedef boost::shared_ptr<JointConfigurationState const> JointConfigurationStateConstPtr;
