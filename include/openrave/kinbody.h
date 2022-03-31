@@ -3532,7 +3532,8 @@ protected:
 
     mutable boost::array<std::vector<int>, 4> _vNonAdjacentLinks; ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
     mutable boost::array<std::set<int>, 4> _cacheSetNonAdjacentLinks; ///< used for caching return value of GetNonAdjacentLinks.
-    mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].
+    static constexpr int NonAdjacentLinkCache_Uninitialized = 0x80000000; ///< A constant for _nNonAdjacentLinkCache, which indicates everything needs to be recomputed including _setNonAdjacentLinks[0].
+    mutable int _nNonAdjacentLinkCache = NonAdjacentLinkCache_Uninitialized; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If NonAdjacentLinkCache_Uninitialized, then everything needs to be recomputed including _setNonAdjacentLinks[0].
     typedef std::pair<PositionConfigurationPtr, std::vector<Transform> > PositionConfigurationAndLinkTransformations;
     std::vector<PositionConfigurationAndLinkTransformations> _vNonSelfCollidingPositionConfigurationsAndLinkTransformations; ///< list of non-self-colliding position configurations and corresponding link transformations
 

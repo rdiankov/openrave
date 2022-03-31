@@ -435,7 +435,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
     _nParametersChanged = 0;
     _bMakeJoinedLinksAdjacent = true;
     _environmentBodyIndex = 0;
-    _nNonAdjacentLinkCache = 0x80000000;
+    _nNonAdjacentLinkCache = NonAdjacentLinkCache_Uninitialized;
     _nUpdateStampId = 0;
     _bAreAllJoints1DOFAndNonCircular = false;
 }
@@ -5362,7 +5362,7 @@ void KinBody::SetNonCollidingConfiguration()
 
 void KinBody::_ResetInternalCollisionCache()
 {
-    _nNonAdjacentLinkCache = 0x80000000;
+    _nNonAdjacentLinkCache = NonAdjacentLinkCache_Uninitialized;
     FOREACH(it,_vNonAdjacentLinks) {
         it->resize(0);
     }
@@ -5391,7 +5391,7 @@ bool CompareNonAdjacentFarthest(int pair0, int pair1)
 const std::vector<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    if( _nNonAdjacentLinkCache & 0x80000000 ) {
+    if( _nNonAdjacentLinkCache & NonAdjacentLinkCache_Uninitialized ) {
         std::vector<bool> adjacentLinkFlags;
         _CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(adjacentLinkFlags);
 
