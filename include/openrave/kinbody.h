@@ -2077,7 +2077,7 @@ public:
 
             std::string GetResolvedJointName() const;
 
-            std::string _id; ///< id of joint configuration state, for incremental update
+            std::string _id; ///< id of the joint configuration state, for incremental update. Unique among JointConfigurationStates.
             std::string jointName; ///< name of the joint. If the joint belong to a connectedBody, then its resolved name is connectedBodyName+"_"+jointName
             int jointAxis = 0;
             dReal jointValue = 0.0;
