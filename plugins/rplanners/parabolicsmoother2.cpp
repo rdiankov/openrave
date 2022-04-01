@@ -2999,8 +2999,8 @@ protected:
 #endif
                                         for( size_t j = 0; j < vellimits.size(); ++j ) {
                                             dReal fMinVelLimit = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                                            dReal fVelMult1 = RaveSqrt(retcheck.vReductionFactors[j]);
-                                            if( vellimits[j] * fVelMult1 < fMinVelLimit ) {
+                                            fVelMult = RaveSqrt(retcheck.vReductionFactors[j]);
+                                            if( vellimits[j] * fVelMult < fMinVelLimit ) {
                                                 // In this case, we cannot use the recommended scaling factor since
                                                 // after scaling, the vellimits will fall below max(v0, v1). So we set
                                                 // vellimits to be max(v0, v1) instead.
@@ -3008,8 +3008,8 @@ protected:
                                                 vellimits[j] = fMinVelLimit + RampOptimizer::g_fRampEpsilon;
                                             }
                                             else {
-                                                vellimits[j] *= fVelMult1;
-                                                velReductionFactors[j] *= fVelMult1;
+                                                vellimits[j] *= fVelMult;
+                                                velReductionFactors[j] *= fVelMult;
                                             }
                                             accellimits[j] *= retcheck.vReductionFactors[j];
                                             accelReductionFactors[j] *= retcheck.vReductionFactors[j];
