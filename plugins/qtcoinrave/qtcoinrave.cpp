@@ -13,13 +13,15 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "qtcoin.h"
+
+#include <QApplication>
+#include <QLabel>
+
 #include "qtcameraviewer.h"
 #include <openrave/plugin.h>
 #if defined(HAVE_X11_XLIB_H) && defined(Q_WS_X11)
 #include <X11/Xlib.h>
 #endif
-
-#include <QApplication>
 
 ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv);
 
