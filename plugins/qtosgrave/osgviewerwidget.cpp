@@ -644,6 +644,8 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 
     _osgWorldAxis->addChild(CreateOSGXYZAxes(32.0, 2.0));
 
+    _vecTextScreenOffset = osg::Vec2(10.0, 0.0);
+
     if( !!_osgCameraHUD ) {
         // in order to get the axes to render without lighting:
 
@@ -1161,12 +1163,32 @@ void QOSGViewerWidget::SetViewport(int width, int height)
     hudcamera->setViewport(0, 0, width * scale, height * scale);
 
     double textheight = 18*scale;
-    _osgHudText->setPosition(osg::Vec3(-width * scale / 2 + 10, height * scale / 2 - textheight, -50));
     _osgHudText->setCharacterSize(textheight);
     _osgHudText->setFontResolution(textheight, textheight);
-    // Set maximum width in order to enforce word wrapping
-    _osgHudText->setMaximumWidth(width * scale - 20);
+    SetHUDTextOffset(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
     _UpdateHUDAxisTransform(width, height);
+}
+
+osg::Vec2 QOSGViewerWidget::GetHUDTextOffset()
+{
+    return osg::Vec2(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
+}
+
+void QOSGViewerWidget::SetHUDTextOffset(double xOffset, double yOffset)
+{
+    _vecTextScreenOffset.set(xOffset, yOffset);
+
+    double scale = this->devicePixelRatio();
+    double textheight = 18*scale;
+    _osgHudText->setPosition(
+        osg::Vec3(
+            -_osgview->getCamera()->getViewport()->width() / 2 + _vecTextScreenOffset.x(),
+            _osgview->getCamera()->getViewport()->height() / 2 - textheight - _vecTextScreenOffset.y(),
+            -50
+        )
+    );
+    // Set maximum width in order to enforce word wrapping
+    _osgHudText->setMaximumWidth(_osgview->getCamera()->getViewport()->width() - 10 - _vecTextScreenOffset.x());
 }
 
 void QOSGViewerWidget::_UpdateHUDAxisTransform(int width, int height)
