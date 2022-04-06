@@ -2525,7 +2525,7 @@ object PyEnvironmentBase::drawplane(object otransform, object oextents, const st
     if(z<1){
         throw OpenRAVEException(_("_vtexture[0][0] is empty"), ORE_InvalidArguments);
     }
-    boost::multi_array<float,3> vtexture(boost::extents[x][y][1]);
+    boost::multi_array<float,3> vtexture(boost::extents[x][y][z]);
     for(int i=0; i<x; i++){
         if(_vtexture[i].size() != y){
             throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d] size is different"))%i), ORE_InvalidArguments);
