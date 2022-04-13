@@ -2191,6 +2191,11 @@ void CollisionReport::SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::
 
                 orjson::SetJsonValueByKey(rPair, "geomName1", !!itgeompair->first ? itgeompair->first->GetName() : "", alloc);
             }
+            else if( bHasCollidingBodyNames ) {
+                // At least can fill in the name if available
+                orjson::SetJsonValueByKey(rPair, "bodyName1", vBodyColliding[iBodyPair].first, alloc);
+            }
+
             if( !!itlinkpair->second ) {
                 orjson::SetJsonValueByKey(rPair, "linkName2", itlinkpair->second->GetName(), alloc);
 
@@ -2207,6 +2212,10 @@ void CollisionReport::SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::
                 }
 
                 orjson::SetJsonValueByKey(rPair, "geomName2", !!itgeompair->second ? itgeompair->second->GetName() : "", alloc);
+            }
+            else if( bHasCollidingBodyNames ) {
+                // At least can fill in the name if available
+                orjson::SetJsonValueByKey(rPair, "bodyName2", vBodyColliding[iBodyPair].second, alloc);
             }
 
             rCollidingLinkPairs.PushBack(rPair, alloc);
@@ -2230,6 +2239,11 @@ void CollisionReport::SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::
             orjson::SetJsonValueByKey(rPair, "linkName1", plink1->GetName(), alloc);
             orjson::SetJsonValueByKey(rPair, "geomName1", !!pgeom1 ? pgeom1->GetName() : "", alloc);
         }
+        else if( !bodyName1.empty() ) {
+            // At least can fill in the name if available
+            orjson::SetJsonValueByKey(rPair, "bodyName1", bodyName1, alloc);
+        }
+
         if( !!plink2 ) {
             KinBodyPtr pparent2 = plink2->GetParent(true);
             if( !!pparent2 ) {
@@ -2244,6 +2258,10 @@ void CollisionReport::SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::
             }
             orjson::SetJsonValueByKey(rPair, "linkName2", plink2->GetName(), alloc);
             orjson::SetJsonValueByKey(rPair, "geomName2", !!pgeom2 ? pgeom2->GetName() : "", alloc);
+        }
+        else if( !bodyName2.empty() ) {
+            // At least can fill in the name if available
+            orjson::SetJsonValueByKey(rPair, "bodyName2", bodyName2, alloc);
         }
         rCollidingLinkPairs.PushBack(rPair, alloc);
     }
