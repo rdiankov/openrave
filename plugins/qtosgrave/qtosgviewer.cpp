@@ -272,6 +272,10 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
 
     if (!bCreateMenu && !bCreateMenu) {
         _CreateControlButtons();
+
+        // move HUD text out of way of control buttons if needed
+        osg::Vec2 hudTextOffset = _posgWidget->GetHUDTextOffset();
+        _posgWidget->SetHUDTextOffset(std::max(60.0f, hudTextOffset.x()), hudTextOffset.y());
     }
 
     resize(1024, 768);
@@ -1073,6 +1077,11 @@ void QtOSGViewer::_UpdateViewport()
     _camintrinsics.cy = (float)camheight/2;
     _camintrinsics.focal_length = zNear;
     _camintrinsics.distortion_model = "";
+}
+
+void QtOSGViewer::_SetHUDTextOffset(double xOffset, double yOffset)
+{
+    _posgWidget->SetHUDTextOffset(xOffset, yOffset);
 }
 
 bool QtOSGViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
