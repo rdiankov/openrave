@@ -1194,6 +1194,9 @@ public:
     }
     inline void SetTranslationDirection5D(const RAY& ray) {
         _type = IKP_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir;
+        dReal length2 = _transform.rot.lengthsqr3();
+        MATH_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
+        _transform.rot.normalize4();
     }
     inline void SetTranslationXY2D(const Vector& trans) {
         _type = IKP_TranslationXY2D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = 0; _transform.trans.w = 0;
