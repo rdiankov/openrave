@@ -408,7 +408,6 @@ void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatim
     }
     std::list<std::vector<ConfigurationSpecification::Group>::iterator> listtoremove;
     std::list<ConfigurationSpecification::Group> listadd;
-    int offset = GetDOF();
     bool hasdeltatime = false;
     FOREACH(itgroup,_vgroups) {
         string replacename;
@@ -452,6 +451,7 @@ void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatim
             }
         }
     }
+    int offset = GetDOF();
     if( listtoremove.size() > 0 ) {
         FOREACH(it,listtoremove) {
             _vgroups.erase(*it);

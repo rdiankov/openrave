@@ -428,9 +428,9 @@ public:
                     else if( timeFromLowerWaypoint > waypointdeltatime ) {
                         timeFromLowerWaypoint = waypointdeltatime;
                     }
-                    for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
-                        if( !!_vgroupinterpolators[i] ) {
-                            _vgroupinterpolators[i](index-1, timeFromLowerWaypoint, itdata);
+                    for(size_t j = 0; j < _vgroupinterpolators.size(); ++j) {
+                        if( !!_vgroupinterpolators[j] ) {
+                            _vgroupinterpolators[j](index-1, timeFromLowerWaypoint, itdata);
                         }
                     }
                     // should return the sample time relative to the last endpoint so it is easier to re-insert in the trajectory

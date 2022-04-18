@@ -20,13 +20,13 @@ namespace OpenRAVE {
 namespace RampOptimizerInternal {
 
 struct CheckReturn {
-    CheckReturn(int retcode=0, dReal fmult=1.0, dReal fvel=0, dReal faccel=0) : retcode(retcode), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false), fMaxManipSpeed(fvel), fMaxManipAccel(faccel) {
+    CheckReturn(int retcode_=0, dReal fmult=1.0, dReal fvel=0, dReal faccel=0) : retcode(retcode_), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false), fMaxManipSpeed(fvel), fMaxManipAccel(faccel) {
         vReductionFactors.resize(0);
         // vVelReductionFactors.resize(0);
         // vAccelReductionFactors.resize(0);
     }
 
-    CheckReturn(int retcode, std::vector<dReal> vfactors) : retcode(retcode), fTimeBasedSurpassMult(1.0), bDifferentVelocity(false), fMaxManipSpeed(0), fMaxManipAccel(0), vReductionFactors(vfactors) {
+    CheckReturn(int retcode_, std::vector<dReal> vfactors) : retcode(retcode_), fTimeBasedSurpassMult(1.0), bDifferentVelocity(false), fMaxManipSpeed(0), fMaxManipAccel(0), vReductionFactors(vfactors) {
     }
 
     int retcode; // one of CFO_X defined in planner.h
