@@ -534,12 +534,12 @@ RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry vi
 
 void RobotItem::Load()
 {
-    FOREACH(it,_vEndEffectors) {
-        _ivGeom->removeChild(it->_pswitch);
+    FOREACH(itve,_vEndEffectors) {
+        _ivGeom->removeChild(itve->_pswitch);
     }
     _vEndEffectors.resize(0);
-    FOREACH(it,_vAttachedSensors) {
-        _ivGeom->removeChild(it->_pswitch);
+    FOREACH(itas,_vAttachedSensors) {
+        _ivGeom->removeChild(itas->_pswitch);
     }
     _vAttachedSensors.resize(0);
     KinBodyItem::Load();
@@ -717,9 +717,9 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
             itee->_pswitch->whichChild = bGrab ? SO_SWITCH_ALL : SO_SWITCH_NONE;
         }
     }
-    FOREACH(itee, _vAttachedSensors) {
-        if( !!itee->_pswitch ) {
-            itee->_pswitch->whichChild = bGrab ? SO_SWITCH_ALL : SO_SWITCH_NONE;
+    FOREACH(itas, _vAttachedSensors) {
+        if( !!itas->_pswitch ) {
+            itas->_pswitch->whichChild = bGrab ? SO_SWITCH_ALL : SO_SWITCH_NONE;
         }
     }
 
@@ -753,12 +753,12 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
             }
         }
 
-        FOREACH(itee, _vAttachedSensors) {
-            if((itee->_index >= 0)&&(itee->_index < (int)_probot->GetAttachedSensors().size())) {
-                RobotBase::AttachedSensorConstPtr sensor = _probot->GetAttachedSensors().at(itee->_index);
+        FOREACH(itas, _vAttachedSensors) {
+            if((itas->_index >= 0)&&(itas->_index < (int)_probot->GetAttachedSensors().size())) {
+                RobotBase::AttachedSensorConstPtr sensor = _probot->GetAttachedSensors().at(itas->_index);
                 if( !!sensor->GetAttachingLink() ) {
                     RaveTransform<float> tgrasp = vtrans.at(sensor->GetAttachingLink()->GetIndex())*sensor->GetRelativeTransform();
-                    SetSoTransform(itee->_ptrans, transInvRoot * tgrasp);
+                    SetSoTransform(itas->_ptrans, transInvRoot * tgrasp);
                 }
             }
         }
