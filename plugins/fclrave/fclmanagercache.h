@@ -167,7 +167,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
     };
 
 public:
-    FCLCollisionManagerInstance(FCLSpace& fclspace, BroadPhaseCollisionManagerPtr pmanager) : _fclspace(fclspace), pmanager(pmanager) {
+    FCLCollisionManagerInstance(FCLSpace& fclspace, BroadPhaseCollisionManagerPtr pmanager) : _fclspace(fclspace), pmanager(pmanager), _bTrackActiveDOF(false) {
         _lastSyncTimeStamp = OpenRAVE::utils::GetMilliTime();
     }
     ~FCLCollisionManagerInstance() {
