@@ -355,7 +355,7 @@ class PyTriMesh
 public:
     PyTriMesh() {
     }
-    PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {
+    PyTriMesh(object vertices_, object indices_) : vertices(vertices_), indices(indices_) {
     }
     PyTriMesh(const TriMesh& mesh) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

@@ -185,9 +185,9 @@ public:
                         // Insert all links of all bodies that the endeffector is grabbing
                         std::vector<KinBodyPtr> grabbedbodies;
                         probot->GetGrabbed(grabbedbodies);
-                        FOREACH(itbody,grabbedbodies){
-                            if((*itmanip)->IsGrabbing(**itbody)) {
-                                FOREACH(itlink,(*itbody)->GetLinks()){
+                        FOREACH(itgrabbed,grabbedbodies){
+                            if((*itmanip)->IsGrabbing(**itgrabbed)) {
+                                FOREACH(itlink,(*itgrabbed)->GetLinks()){
                                     globallinklist.push_back(*itlink);
                                 }
                             }
@@ -337,9 +337,9 @@ public:
                         const ParabolicRamp::Vector& x0 = path[path.size()-2];
                         const ParabolicRamp::Vector& x1 = path[path.size()-1];
                         dReal dotproduct=0,x0length2=0,x1length2=0;
-                        for(size_t i = 0; i < q.size(); ++i) {
-                            dReal dx0=x0[i]-q[i];
-                            dReal dx1=x1[i]-q[i];
+                        for(size_t j = 0; j < q.size(); ++j) {
+                            dReal dx0=x0[j]-q[j];
+                            dReal dx1=x1[j]-q[j];
                             dotproduct += dx0*dx1;
                             x0length2 += dx0*dx0;
                             x1length2 += dx1*dx1;
@@ -353,8 +353,8 @@ public:
                     // check if the point is not the same as the previous point
                     if( path.size() > 0 ) {
                         bool bIsClose = true;
-                        for(size_t i = 0; i < q.size(); ++i) {
-                            if( RaveFabs(q[i]-path.back().at(i)) > ParabolicRamp::EpsilonX ) {
+                        for(size_t j = 0; j < q.size(); ++j) {
+                            if( RaveFabs(q[j]-path.back().at(j)) > ParabolicRamp::EpsilonX ) {
                                 bIsClose = false;
                             }
                         }
@@ -854,7 +854,7 @@ public:
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
                 dReal upperbound = (durationbeforeshortcut-fimprovetimethresh)/mergewaypoints::ComputeRampsDuration(ramps);
                 // Do not check collision during merge, check later
-                int options = (0xffff|CFO_FromTrajectorySmoother) & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+                options = (0xffff|CFO_FromTrajectorySmoother) & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
 
 
                 bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,check,options);

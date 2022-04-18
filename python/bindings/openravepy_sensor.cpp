@@ -328,7 +328,7 @@ SensorBase::SensorGeometryPtr PyActuatorGeomData::GetGeometry() {
 }
 
 
-PySensorBase::PySensorData::PySensorData(SensorBase::SensorType type) : type(type), stamp(0) {
+PySensorBase::PySensorData::PySensorData(SensorBase::SensorType type_) : type(type_), stamp(0) {
 }
 PySensorBase::PySensorData::PySensorData(SensorBase::SensorDataPtr pdata)
 {

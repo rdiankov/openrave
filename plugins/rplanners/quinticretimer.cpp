@@ -26,7 +26,7 @@ public:
     class QuinticGroupInfo : public GroupInfo
     {
 public:
-        QuinticGroupInfo(int degree, const ConfigurationSpecification::Group& gPos, const ConfigurationSpecification::Group& gVel, const ConfigurationSpecification::Group& gAccel) : GroupInfo(degree, gPos, gVel, gAccel)
+        QuinticGroupInfo(int degree_, const ConfigurationSpecification::Group& gPos_, const ConfigurationSpecification::Group& gVel_, const ConfigurationSpecification::Group& gAccel_) : GroupInfo(degree_, gPos_, gVel_, gAccel_)
         {
         }
 
