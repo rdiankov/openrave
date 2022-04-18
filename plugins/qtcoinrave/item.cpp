@@ -291,8 +291,8 @@ void KinBodyItem::Load()
                     SoFaceSet* faceset = new SoFaceSet();
                     // this makes it crash!
                     //faceset->numVertices.set1Value(mesh.indices.size()/3-1,3);
-                    for(size_t i = 0; i < mesh.indices.size()/3; ++i) {
-                        faceset->numVertices.set1Value(i,3);
+                    for(size_t k = 0; k < mesh.indices.size()/3; ++k) {
+                        faceset->numVertices.set1Value(k,3);
                     }
                     psep->addChild(faceset);
                     break;
@@ -370,8 +370,8 @@ SoSeparator *KinBodyItem::RenderTrimesh(SoSeparator *psep, TriMesh const &mesh, 
     SoFaceSet* faceset = new SoFaceSet();
     // this makes it crash!
     //faceset->numVertices.set1Value(mesh.indices.size()/3-1,3);
-    for(size_t i = 0; i < mesh.indices.size()/3; ++i) {
-        faceset->numVertices.set1Value(i,3);
+    for(size_t k = 0; k < mesh.indices.size()/3; ++k) {
+        faceset->numVertices.set1Value(k,3);
     }
     psep->addChild(faceset);
     return psep;
@@ -677,9 +677,9 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name, const Vector* 
 
         //Transform t = GetRaveTransform(_selectedItem->GetIvTransform());
 
-        SoTranslation* ptrans = new SoTranslation();
-        ptrans->translation.setValue(SbVec3f(0.02f,0.02f,0.02f));
-        ptextsep->addChild(ptrans);
+        SoTranslation* pTrans = new SoTranslation();
+        pTrans->translation.setValue(SbVec3f(0.02f,0.02f,0.02f));
+        ptextsep->addChild(pTrans);
 
         SoTransparencyType* ptype = new SoTransparencyType();
         ptype->value = SoGLRenderAction::NONE;
