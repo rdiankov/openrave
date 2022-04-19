@@ -2004,7 +2004,7 @@ void init_openravepy_global()
         scope_ scope_stringreaders = class_<PyStringReaderStaticClass>("stringreaders")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                     .def_static("CreateStringReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+                                     .def_static("CreateStringReadable", pyCreateStringReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
 #else
                                      // https://wiki.python.org/moin/boost.python/HowTo
                                      .def("CreateStringReadable", pyCreateStringReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
