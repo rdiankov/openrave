@@ -183,10 +183,10 @@ void KinBodyItem::Load()
                     if (mesh) {
                         // apply render scale to the mesh
                         Vector render_scale = geom->GetRenderScale();
-                        FOREACH(vertice, mesh->vertices) {
-                            vertice->x *= render_scale.x;
-                            vertice->y *= render_scale.y;
-                            vertice->z *= render_scale.z;
+                        FOREACH(vertex, mesh->vertices) {
+                            vertex->x *= render_scale.x;
+                            vertex->y *= render_scale.y;
+                            vertex->z *= render_scale.z;
                         }
 
                         psep = RenderTrimesh(psep, *mesh, geom);
