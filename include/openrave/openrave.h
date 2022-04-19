@@ -2303,6 +2303,8 @@ protected:
         }
     }
 
+    ///< for IKP_Direction3D, IKP_Ray4D, IKP_TranslationDirection5D rot is a unit length 3d direction vector
+    ///< for IKP_Transform6D, rot is a unit length quaternion
     Transform _transform;
     IkParameterizationType _type;
     std::string _id;
