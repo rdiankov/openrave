@@ -272,17 +272,17 @@ private:
         void* SysLoadLibrary(const char* lib)
         {
 #ifdef _WIN32
-            void* plib = LoadLibraryA(lib);
-            if( plib == NULL ) {
+            void* plibrary = LoadLibraryA(lib);
+            if( plibrary == NULL ) {
                 RAVELOG_WARN("Failed to load %s\n", lib);
             }
 #else
-            void* plib = dlopen(lib, RTLD_NOW);
-            if( plib == NULL ) {
+            void* plibrary = dlopen(lib, RTLD_NOW);
+            if( plibrary == NULL ) {
                 RAVELOG_WARN("%s\n", dlerror());
             }
 #endif
-            return plib;
+            return plibrary;
         }
 
         void* SysLoadSym(void* lib, const char* sym)

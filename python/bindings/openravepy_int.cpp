@@ -1059,11 +1059,11 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
         }
         RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pinfo);
         if (!!pRobotBaseInfo) {
-            PyRobotBase::PyRobotBaseInfo info = PyRobotBase::PyRobotBaseInfo(*pRobotBaseInfo);
-            vBodyInfos.append(info);
+            PyRobotBase::PyRobotBaseInfo baseInfo = PyRobotBase::PyRobotBaseInfo(*pRobotBaseInfo);
+            vBodyInfos.append(baseInfo);
         } else {
-            PyKinBody::PyKinBodyInfo info = PyKinBody::PyKinBodyInfo(*pinfo);
-            vBodyInfos.append(info);
+            PyKinBody::PyKinBodyInfo bodyInfo = PyKinBody::PyKinBodyInfo(*pinfo);
+            vBodyInfos.append(bodyInfo);
         }
     }
     _vBodyInfos = vBodyInfos;
@@ -1510,9 +1510,9 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-        if( !!pbody ) {
-            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pkinbody ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pkinbody));
         }
         else {
             RAVELOG_ERROR("failed to get excluded body\n");
@@ -1535,9 +1535,9 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-        if( !!pbody ) {
-            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pkinbody ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pkinbody));
         }
         else {
             RAVELOG_ERROR("failed to get excluded body\n");

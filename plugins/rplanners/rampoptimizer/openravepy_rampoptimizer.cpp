@@ -65,6 +65,8 @@ typedef boost::shared_ptr<rampoptimizer::Ramp> RampPtr;
 class PyRamp;
 typedef boost::shared_ptr<PyRamp> PyRampPtr;
 
+#pragma GCC diagnostic ignored "-Wshadow"   // parameters seems to intentionally overlap w/ class members, no reason to fix that
+
 class PyRamp {
 public:
     PyRamp()

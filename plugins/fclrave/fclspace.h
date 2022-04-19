@@ -768,12 +768,12 @@ private:
                 //info.vlinks[i]->nLastStamp = info.nLastStamp;
                 for (const TransformCollisionPair& pgeom : linkInfo.vgeoms) {
                     fcl::CollisionObject& coll = *pgeom.second;
-                    Transform pose = linkTransform * pgeom.first;
-                    fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
-                    fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
+                    Transform pose1 = linkTransform * pgeom.first;
+                    fcl::Vec3f newPosition1 = ConvertVectorToFCL(pose1.trans);
+                    fcl::Quaternion3f newOrientation1 = ConvertQuaternionToFCL(pose1.rot);
 
-                    coll.setTranslation(newPosition);
-                    coll.setQuatRotation(newOrientation);
+                    coll.setTranslation(newPosition1);
+                    coll.setQuatRotation(newOrientation1);
                     // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
                     coll.computeAABB();
                 }

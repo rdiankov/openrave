@@ -2162,15 +2162,15 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         }
     }
 
-    int index = nActiveJoints; ///< generalized joint index
+    int jointIndex = nActiveJoints; ///< generalized joint index
     const std::vector<JointPtr>& vPassiveJoints = parent->GetPassiveJoints();
     for(const JointPtr& pjoint : vPassiveJoints) {
         const std::string& jointname = pjoint->GetName();
         if( !jointname.empty() ) {
-            const std::string newname = str(boost::format("joint%d") % index);
+            const std::string newname = str(boost::format("joint%d") % jointIndex);
             jointnamepairs.emplace_back(jointname, newname);
         }
-        ++index;
+        ++jointIndex;
     }
 
     std::map<std::string, std::string> mapinvnames;
@@ -2372,7 +2372,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
     for(size_t ivar = 0; ivar < nvars; ++ivar) {
         const Mimic::DOFFormat& dofformat = vdofformats[ivar]; ///< information about the ivar-th depended joint
         const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< a joint on which this joint depends on
-        const int jointindex = dofformat.jointindex; ///< index of this depended joint
+        const int jointIndex = dofformat.jointindex; ///< index of this depended joint
         dReal fvel = 0;
         if(ivar < nvelfns) {
             const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
@@ -2383,7 +2383,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         }
 
 //        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-//            RAVELOG_VERBOSE_FORMAT("∂(J%d)/∂(J%d) = ∂(%s)/∂(%s) = %.8e", thisdofformat.jointindex % jointindex % this->GetName() % dependedjoint->GetName() % fvel);
+//            RAVELOG_VERBOSE_FORMAT("∂(J%d)/∂(J%d) = ∂(%s)/∂(%s) = %.8e", thisdofformat.jointindex % jointIndex % this->GetName() % dependedjoint->GetName() % fvel);
 //        }
 
         if(dependedjoint->IsMimic(dofformat.axis)) {
@@ -2406,7 +2406,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         }
         else if (!dependedjoint->IsStatic()) {
             // depended joint is active
-            std::pair<Mimic::DOFFormat, int> key = {thisdofformat, jointindex};
+            std::pair<Mimic::DOFFormat, int> key = {thisdofformat, jointIndex};
             ///< dz/dx += ∂z/∂x, as z may depend on others who depend on x
             if( localmap.count(key) ) {
                 localmap[key] += fvel;

@@ -920,13 +920,13 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptio
     EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ExtractIkParameterization(oparam,ikparam) ) {
         if( ikreturn ) {
-            IkReturn ikreturn(IKRA_Reject);
+            IkReturn ikreject(IKRA_Reject);
             IkFailureAccumulatorPtr paccumulator;
             if( !!pyaccumulator ) {
                 paccumulator = boost::make_shared<IkFailureAccumulator>(pyaccumulator->_ikFailureAccumulator);
             }
-            _FindIKSolution(ikparam,filteroptions,ikreturn,releasegil,paccumulator);
-            return openravepy::toPyIkReturn(ikreturn);
+            _FindIKSolution(ikparam,filteroptions,ikreject,releasegil,paccumulator);
+            return openravepy::toPyIkReturn(ikreject);
         }
         else {
             std::vector<dReal> solution;
@@ -939,13 +939,13 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptio
     // assume transformation matrix
     else {
         if( ikreturn ) {
-            IkReturn ikreturn(IKRA_Reject);
+            IkReturn ikreject(IKRA_Reject);
             IkFailureAccumulatorPtr paccumulator;
             if( !!pyaccumulator ) {
                 paccumulator = boost::make_shared<IkFailureAccumulator>(pyaccumulator->_ikFailureAccumulator);
             }
-            _FindIKSolution(ExtractTransform(oparam),filteroptions,ikreturn,releasegil,paccumulator);
-            return openravepy::toPyIkReturn(ikreturn);
+            _FindIKSolution(ExtractTransform(oparam),filteroptions,ikreject,releasegil,paccumulator);
+            return openravepy::toPyIkReturn(ikreject);
         }
         else {
             std::vector<dReal> solution;
@@ -964,13 +964,13 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
     EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ExtractIkParameterization(oparam,ikparam) ) {
         if( ikreturn ) {
-            IkReturn ikreturn(IKRA_Reject);
+            IkReturn ikreject(IKRA_Reject);
             IkFailureAccumulatorPtr paccumulator;
             if( !!pyaccumulator ) {
                 paccumulator = boost::make_shared<IkFailureAccumulator>(pyaccumulator->_ikFailureAccumulator);
             }
-            _FindIKSolution(ikparam,vfreeparams,filteroptions,ikreturn,releasegil,paccumulator);
-            return openravepy::toPyIkReturn(ikreturn);
+            _FindIKSolution(ikparam,vfreeparams,filteroptions,ikreject,releasegil,paccumulator);
+            return openravepy::toPyIkReturn(ikreject);
         }
         else {
             std::vector<dReal> solution;
@@ -983,13 +983,13 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
     // assume transformation matrix
     else {
         if( ikreturn ) {
-            IkReturn ikreturn(IKRA_Reject);
+            IkReturn ikreject(IKRA_Reject);
             IkFailureAccumulatorPtr paccumulator;
             if( !!pyaccumulator ) {
                 paccumulator = boost::make_shared<IkFailureAccumulator>(pyaccumulator->_ikFailureAccumulator);
             }
-            _FindIKSolution(ExtractTransform(oparam),vfreeparams,filteroptions,ikreturn,releasegil,paccumulator);
-            return openravepy::toPyIkReturn(ikreturn);
+            _FindIKSolution(ExtractTransform(oparam),vfreeparams,filteroptions,ikreject,releasegil,paccumulator);
+            return openravepy::toPyIkReturn(ikreject);
         }
         else {
             std::vector<dReal> solution;

@@ -536,7 +536,7 @@ private:
     {
         GrabBody() : offset(0), robotlinkindex(0) {
         }
-        GrabBody(int offset, int robotlinkindex, KinBodyPtr pbody) : offset(offset), robotlinkindex(robotlinkindex), pbody(pbody) {
+        GrabBody(int offset_, int robotlinkindex_, KinBodyPtr pbody_) : offset(offset_), robotlinkindex(robotlinkindex_), pbody(pbody_) {
         }
         int offset;
         int robotlinkindex;
