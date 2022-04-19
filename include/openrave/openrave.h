@@ -1076,14 +1076,23 @@ inline T NormalizeCircularAnglePrivate(T theta, T min, T max)
     }
     return theta;
 }
+
 /// \brief ensures first three elements of vector forms a unit length vector
 /// first checks if input direction vector is close to unit length, and raise if not because it is most likely a bug on application side
 /// \param direction[inout] direction vector to be checked, if far from being unit length, most likely a bug on application side so assert. Otherwise, normalize and return.
-inline void Ensure3DVecUnitLength(Vector& direction)
-{
-    const dReal length2 = direction.lengthsqr3();
-    MATH_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
-    direction.normalize3();
+#define ENSURE_3DVEC_UNIT_LENGTH(direction) { \
+        const dReal length2 = direction.lengthsqr3(); \
+        MATH_ASSERT(length2 > 0.99 && length2 < 1.01); \
+        direction.normalize3(); \
+}
+
+/// \brief ensures quaternion forms a unit length vector
+/// first checks if input quaternion is close to unit length, and raise if not because it is most likely a bug on application side
+/// \param quaternion[inout] quaternion vector to be checked, if far from being unit length, most likely a bug on application side so assert. Otherwise, normalize and return.
+#define ENSURE_4DVEC_UNIT_LENGTH(quaternion) { \
+        const dReal length2 = quaternion.lengthsqr4(); \
+        MATH_ASSERT(length2 > 0.99 && length2 < 1.01); \
+        quaternion.normalize4(); \
 }
 
 /** \brief Parameterization of basic primitives for querying inverse-kinematics solutions.
@@ -1168,6 +1177,7 @@ public:
 
     inline void SetTransform6D(const Transform& t) {
         _type = IKP_Transform6D; _transform = t;
+        ENSURE_4DVEC_UNIT_LENGTH(_transform.rot);
     }
     inline void SetTransform6DVelocity(const Transform& t) {
         _type = IKP_Transform6DVelocity; _transform = t;
@@ -1180,11 +1190,11 @@ public:
     }
     inline void SetDirection3D(const Vector& dir) {
         _type = IKP_Direction3D; _transform.rot = dir;
-        Ensure3DVecUnitLength(_transform.rot);
+        ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
      }
     inline void SetRay4D(const RAY& ray) {
         _type = IKP_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir;
-        Ensure3DVecUnitLength(_transform.rot);
+        ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
      }
     inline void SetLookat3D(const Vector& trans) {
         _type = IKP_Lookat3D; _transform.trans = trans;
@@ -1192,11 +1202,11 @@ public:
     /// \brief the ray direction is not used for IK, however it is needed in order to compute the error
     inline void SetLookat3D(const RAY& ray) {
         _type = IKP_Lookat3D; _transform.trans = ray.pos; _transform.rot = ray.dir;
-        Ensure3DVecUnitLength(_transform.rot);
+        ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
      }
     inline void SetTranslationDirection5D(const RAY& ray) {
         _type = IKP_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir;
-        Ensure3DVecUnitLength(_transform.rot);
+        ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
      }
     inline void SetTranslationXY2D(const Vector& trans) {
         _type = IKP_TranslationXY2D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = 0; _transform.trans.w = 0;
@@ -1663,6 +1673,7 @@ public:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
+            ENSURE_4DVEC_UNIT_LENGTH(_transform.rot);
             break;
         case IKP_Rotation3D:
             _transform.rot.x = *itvalues++;
@@ -1679,7 +1690,7 @@ public:
             _transform.rot.x = *itvalues++;
             _transform.rot.y = *itvalues++;
             _transform.rot.z = *itvalues++;
-            Ensure3DVecUnitLength(_transform.rot);
+            ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
             break;
         case IKP_Ray4D:
             _transform.rot.x = *itvalues++;
@@ -1688,7 +1699,7 @@ public:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
-            Ensure3DVecUnitLength(_transform.rot);
+            ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
             break;
         case IKP_Lookat3D:
             _transform.trans.x = *itvalues++;
@@ -1702,7 +1713,7 @@ public:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
-            Ensure3DVecUnitLength(_transform.rot);
+            ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
             break;
         case IKP_TranslationXY2D:
             _transform.trans.x = *itvalues++;
