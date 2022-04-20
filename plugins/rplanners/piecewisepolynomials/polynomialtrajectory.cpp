@@ -822,7 +822,7 @@ void Chunk::Initialize(const dReal duration_, const std::vector<Polynomial>& vpo
 {
     for( std::vector<Polynomial>::const_iterator itpoly = vpolynomials_.begin(); itpoly != vpolynomials_.end(); ++itpoly ) {
         if( !FuzzyEquals(itpoly->duration, duration_, g_fPolynomialEpsilon) ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("Polynomial index=%d has duration=%f (expected %f)", (itpoly - vpolynomials_.begin())%(itpoly->duration)%duration, ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("Polynomial index=%d has duration=%f (expected %f)", (itpoly - vpolynomials_.begin())%(itpoly->duration)%duration_, ORE_InvalidArguments);
         }
     }
     this->duration = duration_;
