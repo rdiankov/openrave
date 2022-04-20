@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PySpaceSamplerBase : public PyInterfaceBase
+class OPENRAVEPY_API PySpaceSamplerBase : public PyInterfaceBase
 {
 protected:
     SpaceSamplerBasePtr _pspacesampler;
