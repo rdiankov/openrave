@@ -686,7 +686,7 @@ void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& 
     }
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, pReadable, AttributesList());
     if (!!pReader) {
-        pReader->DeserializeJSON(value);
+        pReader->DeserializeJSON(value, fUnitScale);
         _mReadableInterfaces[id] = pReader->GetReadable();
         return;
     }
