@@ -930,7 +930,7 @@ public:
         std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
         std::vector<GripperInfoPtr> _vGripperInfos; ///< list of pointers to GripperInfo
 protected:
-        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value);
+        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale);
 
     };
     typedef boost::shared_ptr<RobotBaseInfo> RobotBaseInfoPtr;
