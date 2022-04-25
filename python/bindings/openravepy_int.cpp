@@ -2697,8 +2697,8 @@ object PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix(const string 
     _penv->GetPublishedBodyTransformsMatchingPrefix(prefix, nameTransfPairs, timeout);
 
     py::dict otransforms;
-    FOREACH(itpair, nameTransfPairs) {
-        otransforms[itpair->first] = ReturnTransform(itpair->second);
+    for(const std::pair<std::string, Transform>& itpair : nameTransfPairs) {
+        otransforms[itpair.first] = ReturnTransform(itpair.second);
     }
 
     return otransforms;

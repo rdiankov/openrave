@@ -443,7 +443,7 @@ AttributesList toAttributesList(py::object oattributes);
 bool GetReturnTransformQuaternions();
 
 template <typename T>
-inline py::object ReturnTransform(T t)
+inline py::object ReturnTransform(const T& t)
 {
     if( GetReturnTransformQuaternions() ) {
         return toPyArray(Transform(t));
