@@ -411,15 +411,6 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
     }
 }
 
-/// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
-static bool s_bReturnTransformQuaternions = false;
-bool GetReturnTransformQuaternions() {
-    return s_bReturnTransformQuaternions;
-}
-void SetReturnTransformQuaternions(bool bset) {
-    s_bReturnTransformQuaternions = bset;
-}
-
 Transform ExtractTransform(const object& oraw)
 {
     return ExtractTransformType<dReal>(oraw);
@@ -2697,8 +2688,8 @@ object PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix(const string 
     _penv->GetPublishedBodyTransformsMatchingPrefix(prefix, nameTransfPairs, timeout);
 
     py::dict otransforms;
-    FOREACH(itpair, nameTransfPairs) {
-        otransforms[itpair->first] = ReturnTransform(itpair->second);
+    for(const std::pair<std::string, Transform>& itpair : nameTransfPairs) {
+        otransforms[itpair.first] = ReturnTransform(itpair.second);
     }
 
     return otransforms;
@@ -3706,17 +3697,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
         ;
         env.attr("TriangulateOptions") = selectionoptions;
-    }
-
-    {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ options = class_<DummyStruct>(m, "options").def_readwrite_static
-                             ("returnTransformQuaternion", &s_bReturnTransformQuaternions);
-#else
-        scope_ options = class_<DummyStruct>("options").add_static_property
-                             ("returnTransformQuaternion",GetReturnTransformQuaternions,SetReturnTransformQuaternions);
-#endif
-
     }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
