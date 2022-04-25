@@ -655,27 +655,27 @@ PyJointControlInfo_RobotController::PyJointControlInfo_RobotController()
 {
 }
 
-PyJointControlInfo_RobotController::PyJointControlInfo_RobotController(const KinBody::JointInfo::JointControlInfo_RobotController& jci)
+PyJointControlInfo_RobotController::PyJointControlInfo_RobotController(const JointControlInfo_RobotController& jci)
 {
-    robotId = jci.robotId;
+    controllerType = jci.controllerType;
 
-    py::list _robotControllerDOFIndex;
-    FOREACHC(itdofindex, jci.robotControllerDOFIndex) {
-        _robotControllerDOFIndex.append(*itdofindex);
+    py::list _robotControllerAxisIndex;
+    FOREACHC(itdofindex, jci.robotControllerAxisIndex) {
+        _robotControllerAxisIndex.append(*itdofindex);
     }
-    robotControllerDOFIndex = _robotControllerDOFIndex;
+    robotControllerAxisIndex = _robotControllerAxisIndex;
 }
 
-KinBody::JointInfo::JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJointControlInfo()
+JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJointControlInfo()
 {
-    KinBody::JointInfo::JointControlInfo_RobotControllerPtr pinfo(new KinBody::JointInfo::JointControlInfo_RobotController());
-    KinBody::JointInfo::JointControlInfo_RobotController& info = *pinfo;
-    info.robotId = robotId;
-    if( !IS_PYTHONOBJECT_NONE(robotControllerDOFIndex) ) {
-        size_t num = len(robotControllerDOFIndex);
-        OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerDOFIndex.size(), ORE_InvalidState);
+    JointControlInfo_RobotControllerPtr pinfo(new JointControlInfo_RobotController());
+    JointControlInfo_RobotController& info = *pinfo;
+    info.controllerType = controllerType;
+    if( !IS_PYTHONOBJECT_NONE(robotControllerAxisIndex) ) {
+        size_t num = len(robotControllerAxisIndex);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisIndex.size(), ORE_InvalidState);
         for( size_t i = 0; i < num; ++i ) {
-            info.robotControllerDOFIndex[i] = py::extract<int>(robotControllerDOFIndex[i]);
+            info.robotControllerAxisIndex[i] = py::extract<int>(robotControllerAxisIndex[i]);
         }
     }
     return pinfo;
@@ -685,169 +685,169 @@ PyJointControlInfo_IO::PyJointControlInfo_IO()
 {
 }
 
-PyJointControlInfo_IO::PyJointControlInfo_IO(const KinBody::JointInfo::JointControlInfo_IO& jci)
+PyJointControlInfo_IO::PyJointControlInfo_IO(const JointControlInfo_IO& jci)
 {
-    deviceId = jci.deviceId;
+    deviceType = jci.deviceType;
 
-    py::list _vMoveIONames;
-    FOREACHC(itmoveionamelist, jci.vMoveIONames) {
+    py::list _moveIONames;
+    FOREACHC(itmoveionamelist, jci.moveIONames) {
         if( itmoveionamelist->size() == 0 ) {
-            _vMoveIONames.append(py::list());
+            _moveIONames.append(py::list());
         }
         else {
             py::list ionames;
             FOREACHC(itioname, *itmoveionamelist) {
                 ionames.append(ConvertStringToUnicode(*itioname));
             }
-            _vMoveIONames.append(ionames);
+            _moveIONames.append(ionames);
         }
     }
-    vMoveIONames = _vMoveIONames;
+    moveIONames = _moveIONames;
 
-    py::list _vUpperLimitIONames;
-    FOREACHC(itupperlimitionamelist, jci.vUpperLimitIONames) {
+    py::list _upperLimitIONames;
+    FOREACHC(itupperlimitionamelist, jci.upperLimitIONames) {
         if( itupperlimitionamelist->size() == 0 ) {
-            _vUpperLimitIONames.append(py::list());
+            _upperLimitIONames.append(py::list());
         }
         else {
             py::list ionames;
             FOREACHC(itioname, *itupperlimitionamelist) {
                 ionames.append(ConvertStringToUnicode(*itioname));
             }
-            _vUpperLimitIONames.append(ionames);
+            _upperLimitIONames.append(ionames);
         }
     }
-    vUpperLimitIONames = _vUpperLimitIONames;
+    upperLimitIONames = _upperLimitIONames;
 
-    py::list _vUpperLimitSensorIsOn;
-    FOREACHC(itiovaluelist, jci.vUpperLimitSensorIsOn) {
+    py::list _upperLimitSensorIsOn;
+    FOREACHC(itiovaluelist, jci.upperLimitSensorIsOn) {
         if( itiovaluelist->size() == 0 ) {
-            _vUpperLimitSensorIsOn.append(py::list());
+            _upperLimitSensorIsOn.append(py::list());
         }
         else {
             py::list iovalues;
             FOREACHC(itiovalue, *itiovaluelist) {
                 iovalues.append(*itiovalue);
             }
-            _vUpperLimitSensorIsOn.append(iovalues);
+            _upperLimitSensorIsOn.append(iovalues);
         }
     }
-    vUpperLimitSensorIsOn = _vUpperLimitSensorIsOn;
+    upperLimitSensorIsOn = _upperLimitSensorIsOn;
 
-    py::list _vLowerLimitIONames;
-    FOREACHC(itlowerlimitionamelist, jci.vLowerLimitIONames) {
+    py::list _lowerLimitIONames;
+    FOREACHC(itlowerlimitionamelist, jci.lowerLimitIONames) {
         if( itlowerlimitionamelist->size() == 0 ) {
-            _vLowerLimitIONames.append(py::list());
+            _lowerLimitIONames.append(py::list());
         }
         else {
             py::list ionames;
             FOREACHC(itioname, *itlowerlimitionamelist) {
                 ionames.append(ConvertStringToUnicode(*itioname));
             }
-            _vLowerLimitIONames.append(ionames);
+            _lowerLimitIONames.append(ionames);
         }
     }
-    vLowerLimitIONames = _vLowerLimitIONames;
+    lowerLimitIONames = _lowerLimitIONames;
 
-    py::list _vLowerLimitSensorIsOn;
-    FOREACHC(itiovaluelist, jci.vLowerLimitSensorIsOn) {
+    py::list _lowerLimitSensorIsOn;
+    FOREACHC(itiovaluelist, jci.lowerLimitSensorIsOn) {
         if( itiovaluelist->size() == 0 ) {
-            _vLowerLimitSensorIsOn.append(py::list());
+            _lowerLimitSensorIsOn.append(py::list());
         }
         else {
             py::list iovalues;
             FOREACHC(itiovalue, *itiovaluelist) {
                 iovalues.append(*itiovalue);
             }
-            _vLowerLimitSensorIsOn.append(iovalues);
+            _lowerLimitSensorIsOn.append(iovalues);
         }
     }
-    vLowerLimitSensorIsOn = _vLowerLimitSensorIsOn;
+    lowerLimitSensorIsOn = _lowerLimitSensorIsOn;
 }
 
-KinBody::JointInfo::JointControlInfo_IOPtr PyJointControlInfo_IO::GetJointControlInfo()
+JointControlInfo_IOPtr PyJointControlInfo_IO::GetJointControlInfo()
 {
-    KinBody::JointInfo::JointControlInfo_IOPtr pinfo(new KinBody::JointInfo::JointControlInfo_IO());
-    KinBody::JointInfo::JointControlInfo_IO& info = *pinfo;
-    info.deviceId = deviceId;
+    JointControlInfo_IOPtr pinfo(new JointControlInfo_IO());
+    JointControlInfo_IO& info = *pinfo;
+    info.deviceType = deviceType;
 
     size_t num1, num2;
-    if( !IS_PYTHONOBJECT_NONE(vMoveIONames) ) {
-        num1 = len(vMoveIONames);
-        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vMoveIONames.size(), ORE_InvalidState);
+    if( !IS_PYTHONOBJECT_NONE(moveIONames) ) {
+        num1 = len(moveIONames);
+        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.moveIONames.size(), ORE_InvalidState);
         for( size_t i1 = 0; i1 < num1; ++i1 ) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            num2 = len(extract<py::object>(vMoveIONames[i1]));
+            num2 = len(extract<py::object>(moveIONames[i1]));
 #else
-            num2 = len(vMoveIONames[i1]);
+            num2 = len(moveIONames[i1]);
 #endif
-            info.vMoveIONames[i1].resize(num2);
+            info.moveIONames[i1].resize(num2);
             for( size_t i2 = 0; i2 < num2; ++i2 ) {
-                info.vMoveIONames[i1].at(i2) = py::extract<std::string>(vMoveIONames[i1][i2]);
+                info.moveIONames[i1].at(i2) = py::extract<std::string>(moveIONames[i1][i2]);
             }
         }
     }
 
-    if( !IS_PYTHONOBJECT_NONE(vUpperLimitIONames) ) {
-        num1 = len(vUpperLimitIONames);
-        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vUpperLimitIONames.size(), ORE_InvalidState);
+    if( !IS_PYTHONOBJECT_NONE(upperLimitIONames) ) {
+        num1 = len(upperLimitIONames);
+        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.upperLimitIONames.size(), ORE_InvalidState);
         for( size_t i1 = 0; i1 < num1; ++i1 ) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            num2 = len(extract<py::object>(vUpperLimitIONames[i1]));
+            num2 = len(extract<py::object>(upperLimitIONames[i1]));
 #else
-            num2 = len(vUpperLimitIONames[i1]);
+            num2 = len(upperLimitIONames[i1]);
 #endif
-            info.vUpperLimitIONames[i1].resize(num2);
+            info.upperLimitIONames[i1].resize(num2);
             for( size_t i2 = 0; i2 < num2; ++i2 ) {
-                info.vUpperLimitIONames[i1].at(i2) = py::extract<std::string>(vUpperLimitIONames[i1][i2]);
+                info.upperLimitIONames[i1].at(i2) = py::extract<std::string>(upperLimitIONames[i1][i2]);
             }
         }
     }
 
-    if( !IS_PYTHONOBJECT_NONE(vUpperLimitSensorIsOn) ) {
-        num1 = len(vUpperLimitSensorIsOn);
-        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vUpperLimitSensorIsOn.size(), ORE_InvalidState);
+    if( !IS_PYTHONOBJECT_NONE(upperLimitSensorIsOn) ) {
+        num1 = len(upperLimitSensorIsOn);
+        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.upperLimitSensorIsOn.size(), ORE_InvalidState);
         for( size_t i1 = 0; i1 < num1; ++i1 ) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            num2 = len(extract<py::object>(vUpperLimitSensorIsOn[i1]));
+            num2 = len(extract<py::object>(upperLimitSensorIsOn[i1]));
 #else
-            num2 = len(vUpperLimitSensorIsOn[i1]);
+            num2 = len(upperLimitSensorIsOn[i1]);
 #endif
-            info.vUpperLimitSensorIsOn[i1].resize(num2);
+            info.upperLimitSensorIsOn[i1].resize(num2);
             for( size_t i2 = 0; i2 < num2; ++i2 ) {
-                info.vUpperLimitSensorIsOn[i1].at(i2) = py::extract<uint8_t>(vUpperLimitSensorIsOn[i1][i2]);
+                info.upperLimitSensorIsOn[i1].at(i2) = py::extract<uint8_t>(upperLimitSensorIsOn[i1][i2]);
             }
         }
     }
 
-    if( !IS_PYTHONOBJECT_NONE(vLowerLimitIONames) ) {
-        num1 = len(vLowerLimitIONames);
-        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vLowerLimitIONames.size(), ORE_InvalidState);
+    if( !IS_PYTHONOBJECT_NONE(lowerLimitIONames) ) {
+        num1 = len(lowerLimitIONames);
+        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.lowerLimitIONames.size(), ORE_InvalidState);
         for( size_t i1 = 0; i1 < num1; ++i1 ) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            num2 = len(extract<py::object>(vLowerLimitIONames[i1]));
+            num2 = len(extract<py::object>(lowerLimitIONames[i1]));
 #else
-            num2 = len(vLowerLimitIONames[i1]);
+            num2 = len(lowerLimitIONames[i1]);
 #endif
-            info.vLowerLimitIONames[i1].resize(num2);
+            info.lowerLimitIONames[i1].resize(num2);
             for( size_t i2 = 0; i2 < num2; ++i2 ) {
-                info.vLowerLimitIONames[i1].at(i2) = py::extract<std::string>(vLowerLimitIONames[i1][i2]);
+                info.lowerLimitIONames[i1].at(i2) = py::extract<std::string>(lowerLimitIONames[i1][i2]);
             }
         }
     }
 
-    if( !IS_PYTHONOBJECT_NONE(vLowerLimitSensorIsOn) ) {
-        num1 = len(vLowerLimitSensorIsOn);
-        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vLowerLimitSensorIsOn.size(), ORE_InvalidState);
+    if( !IS_PYTHONOBJECT_NONE(lowerLimitSensorIsOn) ) {
+        num1 = len(lowerLimitSensorIsOn);
+        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.lowerLimitSensorIsOn.size(), ORE_InvalidState);
         for( size_t i1 = 0; i1 < num1; ++i1 ) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            num2 = len(extract<py::object>(vLowerLimitSensorIsOn[i1]));
+            num2 = len(extract<py::object>(lowerLimitSensorIsOn[i1]));
 #else
-            num2 = len(vLowerLimitSensorIsOn[i1]);
+            num2 = len(lowerLimitSensorIsOn[i1]);
 #endif
-            info.vLowerLimitSensorIsOn[i1].resize(num2);
+            info.lowerLimitSensorIsOn[i1].resize(num2);
             for( size_t i2 = 0; i2 < num2; ++i2 ) {
-                info.vLowerLimitSensorIsOn[i1].at(i2) = py::extract<uint8_t>(vLowerLimitSensorIsOn[i1][i2]);
+                info.lowerLimitSensorIsOn[i1].at(i2) = py::extract<uint8_t>(lowerLimitSensorIsOn[i1][i2]);
             }
         }
     }
@@ -858,16 +858,16 @@ PyJointControlInfo_ExternalDevice::PyJointControlInfo_ExternalDevice()
 {
 }
 
-PyJointControlInfo_ExternalDevice::PyJointControlInfo_ExternalDevice(const KinBody::JointInfo::JointControlInfo_ExternalDevice &jci)
+PyJointControlInfo_ExternalDevice::PyJointControlInfo_ExternalDevice(const JointControlInfo_ExternalDevice &jci)
 {
-    externalDeviceId = jci.externalDeviceId;
+    externalDeviceType = jci.externalDeviceType;
 }
 
-KinBody::JointInfo::JointControlInfo_ExternalDevicePtr PyJointControlInfo_ExternalDevice::GetJointControlInfo()
+JointControlInfo_ExternalDevicePtr PyJointControlInfo_ExternalDevice::GetJointControlInfo()
 {
-    KinBody::JointInfo::JointControlInfo_ExternalDevicePtr pinfo(new KinBody::JointInfo::JointControlInfo_ExternalDevice());
-    KinBody::JointInfo::JointControlInfo_ExternalDevice& info = *pinfo;
-    info.externalDeviceId = externalDeviceId;
+    JointControlInfo_ExternalDevicePtr pinfo(new JointControlInfo_ExternalDevice());
+    JointControlInfo_ExternalDevice& info = *pinfo;
+    info.externalDeviceType = externalDeviceType;
     return pinfo;
 }
 
@@ -939,17 +939,17 @@ void PyJointInfo::_Update(const KinBody::JointInfo& info) {
 
     // joint control
     _controlMode = info._controlMode;
-    if( _controlMode == KinBody::JCM_RobotController ) {
+    if( _controlMode == JCM_RobotController ) {
         if( !!info._jci_robotcontroller ) {
             _jci_robotcontroller = PyJointControlInfo_RobotControllerPtr(new PyJointControlInfo_RobotController(*info._jci_robotcontroller));
         }
     }
-    else if( _controlMode == KinBody::JCM_IO ) {
+    else if( _controlMode == JCM_IO ) {
         if( !!info._jci_io ) {
             _jci_io = PyJointControlInfo_IOPtr(new PyJointControlInfo_IO(*info._jci_io));
         }
     }
-    else if( _controlMode == KinBody::JCM_ExternalDevice ) {
+    else if( _controlMode == JCM_ExternalDevice ) {
         if( !!info._jci_externaldevice ) {
             _jci_externaldevice = PyJointControlInfo_ExternalDevicePtr(new PyJointControlInfo_ExternalDevice(*info._jci_externaldevice));
         }
@@ -1157,13 +1157,13 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
 
     // joint control
     info._controlMode = _controlMode;
-    if( _controlMode == KinBody::JCM_RobotController ) {
+    if( _controlMode == JCM_RobotController ) {
         info._jci_robotcontroller = _jci_robotcontroller->GetJointControlInfo();
     }
-    else if( _controlMode == KinBody::JCM_IO ) {
+    else if( _controlMode == JCM_IO ) {
         info._jci_io = _jci_io->GetJointControlInfo();
     }
-    else if( _controlMode == KinBody::JCM_ExternalDevice ) {
+    else if( _controlMode == JCM_ExternalDevice ) {
         info._jci_externaldevice = _jci_externaldevice->GetJointControlInfo();
     }
 
@@ -2024,7 +2024,7 @@ void PyJoint::SetStringParameters(const std::string& key, object ovalue)
     _pjoint->SetStringParameters(key,extract<std::string>(ovalue));
 }
 
-KinBody::JointControlMode PyJoint::GetControlMode() const {
+JointControlMode PyJoint::GetControlMode() const {
     return _pjoint->GetControlMode();
 }
 
@@ -2290,9 +2290,6 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     pInfo->_name = _name;
     pInfo->_uri = _uri;
     pInfo->_referenceUri = _referenceUri;
-    pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
-    pInfo->_vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(_vJointInfos), end(_vJointInfos));
-    pInfo->_vGrabbedInfos = std::vector<KinBody::GrabbedInfoPtr>(begin(_vGrabbedInfos), end(_vGrabbedInfos));
 #else
     if (!IS_PYTHONOBJECT_NONE(_id)) {
         pInfo->_id = py::extract<std::string>(_id);
@@ -2306,6 +2303,7 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     if (!IS_PYTHONOBJECT_NONE(_referenceUri)) {
         pInfo->_referenceUri = py::extract<std::string>(_referenceUri);
     }
+#endif
     std::vector<KinBody::LinkInfoPtr> vLinkInfo = ExtractLinkInfoArray(_vLinkInfos);
     pInfo->_vLinkInfos.clear();
     pInfo->_vLinkInfos.reserve(vLinkInfo.size());
@@ -2324,7 +2322,6 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     FOREACHC(it, vGrabbedInfos) {
         pInfo->_vGrabbedInfos.push_back(*it);
     }
-#endif
     pInfo->_transform = ExtractTransform(_transform);
     pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
     pInfo->_isRobot = _isRobot;
@@ -2358,36 +2355,33 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _uri = info._uri;
     _interfaceType = info._interfaceType;
     _referenceUri = info._referenceUri;
-    _vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(info._vLinkInfos), end(info._vLinkInfos));
-    _vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(info._vJointInfos), end(info._vJointInfos));
-    _vGrabbedInfos = std::vector<KinBody::GrabbedInfoPtr>(begin(info._vGrabbedInfos), end(info._vGrabbedInfos));
 #else
     _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _uri = ConvertStringToUnicode(info._uri);
     _referenceUri = ConvertStringToUnicode(info._referenceUri);
     _interfaceType = ConvertStringToUnicode(info._interfaceType);
+#endif
     py::list vLinkInfos;
     FOREACHC(itLinkInfo, info._vLinkInfos) {
-        PyLinkInfo info = PyLinkInfo(**itLinkInfo);
-        vLinkInfos.append(info);
+        PyLinkInfo linkInfo = PyLinkInfo(**itLinkInfo);
+        vLinkInfos.append(linkInfo);
     }
     _vLinkInfos = vLinkInfos;
 
     py::list vJointInfos;
     FOREACHC(itJointInfo, info._vJointInfos) {
-        PyJointInfo info = PyJointInfo(**itJointInfo);
-        vJointInfos.append(info);
+        PyJointInfo jointInfo = PyJointInfo(**itJointInfo);
+        vJointInfos.append(jointInfo);
     }
     _vJointInfos = vJointInfos;
 
     py::list vGrabbedInfos;
     FOREACHC(itGrabbedInfo, info._vGrabbedInfos) {
-        PyKinBody::PyGrabbedInfo info = PyKinBody::PyGrabbedInfo(**itGrabbedInfo);
-        vGrabbedInfos.append(info);
+        PyKinBody::PyGrabbedInfo grabbedInfo = PyKinBody::PyGrabbedInfo(**itGrabbedInfo);
+        vGrabbedInfos.append(grabbedInfo);
     }
     _vGrabbedInfos = vGrabbedInfos;
-#endif
     _transform = ReturnTransform(info._transform);
     _isRobot = info._isRobot;
     _isPartial = info._isPartial;
@@ -3288,6 +3282,11 @@ object PyKinBody::ComputeAABBFromTransform(object otransform, bool bEnabledOnlyL
     return toPyAABB(_pbody->ComputeAABBFromTransform(ExtractTransform(otransform), bEnabledOnlyLinks));
 }
 
+py::object PyKinBody::ComputeOBBOnAxes(py::object oquat, bool bEnabledOnlyLinks)
+{
+    return toPyOrientedBox(_pbody->ComputeOBBOnAxes(ExtractVector4(oquat), bEnabledOnlyLinks));
+}
+
 object PyKinBody::ComputeLocalAABB(bool bEnabledOnlyLinks)
 {
     return toPyAABB(_pbody->ComputeLocalAABB(bEnabledOnlyLinks));
@@ -3662,6 +3661,20 @@ object PyKinBody::ComputeInverseDynamics(object odofaccelerations, object oexter
         _pbody->ComputeInverseDynamics(vDOFTorques,vDOFAccelerations,mapExternalForceTorque);
         return toPyArray(vDOFTorques);
     }
+}
+
+object PyKinBody::GetDOFDynamicAccelerationJerkLimits(py::object oDOFPositions, py::object oDOFVelocities) const
+{
+    if( IS_PYTHONOBJECT_NONE(oDOFPositions) || IS_PYTHONOBJECT_NONE(oDOFVelocities) ) {
+        return py::make_tuple(py::none_(), py::none_());
+    }
+    const std::vector<dReal> vDOFPositions = ExtractArray<dReal>(oDOFPositions);
+    const std::vector<dReal> vDOFVelocities = ExtractArray<dReal>(oDOFVelocities);
+    std::vector<dReal> vDynamicAccelerationLimits, vDynamicJerkLimits;
+    if( _pbody->GetDOFDynamicAccelerationJerkLimits(vDynamicAccelerationLimits, vDynamicJerkLimits, vDOFPositions, vDOFVelocities) ) {
+        return py::make_tuple(toPyArray(vDynamicAccelerationLimits), toPyArray(vDynamicJerkLimits));
+    }
+    return py::make_tuple(py::none_(), py::none_());
 }
 
 void PyKinBody::SetSelfCollisionChecker(PyCollisionCheckerBasePtr pycollisionchecker)
@@ -4308,11 +4321,11 @@ class JointControlInfo_RobotController_pickle_suite
 public:
     static py::tuple getstate(const PyJointControlInfo_RobotController& r)
     {
-        return py::make_tuple(r.robotId, r.robotControllerDOFIndex);
+        return py::make_tuple(r.controllerType, r.robotControllerAxisIndex);
     }
     static void setstate(PyJointControlInfo_RobotController& r, py::tuple state) {
-        r.robotId = py::extract<int>(state[0]);
-        r.robotControllerDOFIndex = state[1];
+        r.controllerType = py::extract<int>(state[0]);
+        r.robotControllerAxisIndex = state[1];
     }
 };
 
@@ -4324,15 +4337,15 @@ class JointControlInfo_IO_pickle_suite
 public:
     static py::tuple getstate(const PyJointControlInfo_IO& r)
     {
-        return py::make_tuple(r.deviceId, r.vMoveIONames, r.vUpperLimitIONames, r.vUpperLimitSensorIsOn, r.vLowerLimitIONames, r.vLowerLimitSensorIsOn);
+        return py::make_tuple(r.deviceType, r.moveIONames, r.upperLimitIONames, r.upperLimitSensorIsOn, r.lowerLimitIONames, r.lowerLimitSensorIsOn);
     }
     static void setstate(PyJointControlInfo_IO& r, py::tuple state) {
-        r.deviceId = py::extract<int>(state[0]);
-        r.vMoveIONames = state[1];
-        r.vUpperLimitIONames = state[2];
-        r.vUpperLimitSensorIsOn = state[3];
-        r.vLowerLimitIONames = state[4];
-        r.vLowerLimitSensorIsOn = state[5];
+        r.deviceType = py::extract<int>(state[0]);
+        r.moveIONames = state[1];
+        r.upperLimitIONames = state[2];
+        r.upperLimitSensorIsOn = state[3];
+        r.lowerLimitIONames = state[4];
+        r.lowerLimitSensorIsOn = state[5];
     }
 };
 
@@ -4344,10 +4357,10 @@ class JointControlInfo_ExternalDevice_pickle_suite
 public:
     static py::tuple getstate(const PyJointControlInfo_ExternalDevice& r)
     {
-        return py::make_tuple(r.externalDeviceId);
+        return py::make_tuple(r.externalDeviceType);
     }
     static void setstate(PyJointControlInfo_ExternalDevice& r, py::tuple state) {
-        r.externalDeviceId = py::extract<int>(state[0]);
+        r.externalDeviceType = py::extract<int>(state[0]);
     }
 };
 
@@ -4408,7 +4421,7 @@ public:
             }
         }
         if( len(state) > 3 ) {
-            r._controlMode = (KinBody::JointControlMode)(int)py::extract<int>(state[3][0]);
+            r._controlMode = (JointControlMode)(int)py::extract<int>(state[3][0]);
             r._jci_robotcontroller = py::extract<PyJointControlInfo_RobotControllerPtr>(state[3][1]);
             r._jci_io = py::extract<PyJointControlInfo_IOPtr>(state[3][2]);
             r._jci_externaldevice = py::extract<PyJointControlInfo_ExternalDevicePtr>(state[3][3]);
@@ -4502,6 +4515,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyKinBodyInfo_DeserializeJSON_overloads, 
 // end of JSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABB_overloads, ComputeAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBFromTransform_overloads, ComputeAABBFromTransform, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeOBBOnAxes_overloads, ComputeOBBOnAxes, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABB_overloads, ComputeLocalAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBForGeometryGroup_overloads, ComputeAABBForGeometryGroup, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBForGeometryGroupFromTransform_overloads, ComputeAABBForGeometryGroupFromTransform, 2, 3)
@@ -4655,14 +4669,14 @@ void init_openravepy_kinbody()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    object jointcontrolmode = enum_<KinBody::JointControlMode>(m, "JointControlMode" DOXY_ENUM(JointControlMode))
+    object jointcontrolmode = enum_<JointControlMode>(m, "JointControlMode" DOXY_ENUM(JointControlMode))
 #else
-    object jointcontrolmode = enum_<KinBody::JointControlMode>("JointControlMode" DOXY_ENUM(JointControlMode))
+    object jointcontrolmode = enum_<JointControlMode>("JointControlMode" DOXY_ENUM(JointControlMode))
 #endif
-                              .value("JCM_None",KinBody::JCM_None)
-                              .value("JCM_RobotController",KinBody::JCM_RobotController)
-                              .value("JCM_IO",KinBody::JCM_IO)
-                              .value("JCM_ExternalDevice",KinBody::JCM_ExternalDevice);
+                              .value("JCM_None",JCM_None)
+                              .value("JCM_RobotController",JCM_RobotController)
+                              .value("JCM_IO",JCM_IO)
+                              .value("JCM_ExternalDevice",JCM_ExternalDevice);
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object geometryinfo = class_<PyGeometryInfo, OPENRAVE_SHARED_PTR<PyGeometryInfo> >(m, "GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
@@ -4820,8 +4834,8 @@ void init_openravepy_kinbody()
 #else
         class_<PyJointControlInfo_RobotController, OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> >("JointControlInfo_RobotController", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_RobotController))
 #endif
-        .def_readwrite("robotId", &PyJointControlInfo_RobotController::robotId)
-        .def_readwrite("robotControllerDOFIndex", &PyJointControlInfo_RobotController::robotControllerDOFIndex)
+        .def_readwrite("controllerType", &PyJointControlInfo_RobotController::controllerType)
+        .def_readwrite("robotControllerAxisIndex", &PyJointControlInfo_RobotController::robotControllerAxisIndex)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def(py::pickle(
                  [](const PyJointControlInfo_RobotController &pyinfo) {
@@ -4859,12 +4873,12 @@ void init_openravepy_kinbody()
 #else
         class_<PyJointControlInfo_IO, OPENRAVE_SHARED_PTR<PyJointControlInfo_IO> >("JointControlInfo_IO", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_IO))
 #endif
-        .def_readwrite("deviceId", &PyJointControlInfo_IO::deviceId)
-        .def_readwrite("vMoveIONames", &PyJointControlInfo_IO::vMoveIONames)
-        .def_readwrite("vUpperLimitIONames", &PyJointControlInfo_IO::vUpperLimitIONames)
-        .def_readwrite("vUpperLimitSensorIsOn", &PyJointControlInfo_IO::vUpperLimitSensorIsOn)
-        .def_readwrite("vLowerLimitIONames", &PyJointControlInfo_IO::vLowerLimitIONames)
-        .def_readwrite("vLowerLimitSensorIsOn", &PyJointControlInfo_IO::vLowerLimitSensorIsOn)
+        .def_readwrite("deviceType", &PyJointControlInfo_IO::deviceType)
+        .def_readwrite("moveIONames", &PyJointControlInfo_IO::moveIONames)
+        .def_readwrite("upperLimitIONames", &PyJointControlInfo_IO::upperLimitIONames)
+        .def_readwrite("upperLimitSensorIsOn", &PyJointControlInfo_IO::upperLimitSensorIsOn)
+        .def_readwrite("lowerLimitIONames", &PyJointControlInfo_IO::lowerLimitIONames)
+        .def_readwrite("lowerLimitSensorIsOn", &PyJointControlInfo_IO::lowerLimitSensorIsOn)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def(py::pickle(
                  [](const PyJointControlInfo_IO &pyinfo) {
@@ -4902,7 +4916,7 @@ void init_openravepy_kinbody()
 #else
         class_<PyJointControlInfo_ExternalDevice, OPENRAVE_SHARED_PTR<PyJointControlInfo_ExternalDevice> >("JointControlInfo_ExternalDevice", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_ExternalDevice))
 #endif
-        .def_readwrite("externalDeviceId", &PyJointControlInfo_ExternalDevice::externalDeviceId)
+        .def_readwrite("externalDeviceType", &PyJointControlInfo_ExternalDevice::externalDeviceType)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def(py::pickle(
                  [](const PyJointControlInfo_ExternalDevice &pyinfo) {
@@ -5388,6 +5402,15 @@ void init_openravepy_kinbody()
                          .def("ComputeAABBFromTransform",&PyKinBody::ComputeAABBFromTransform, ComputeAABBFromTransform_overloads(PY_ARGS("transform", "enabledOnlyLinks") DOXY_FN(KinBody,ComputeAABBFromTransform)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("ComputeOBBOnAxes", &PyKinBody::ComputeOBBOnAxes,
+                              "transform"_a,
+                              "enabledOnlyLinks"_a = false,
+                              DOXY_FN(KinBody,ComputeOBBOnAxes)
+                              )
+#else
+                         .def("ComputeOBBOnAxes",&PyKinBody::ComputeOBBOnAxes, ComputeOBBOnAxes_overloads(PY_ARGS("transform", "enabledOnlyLinks") DOXY_FN(KinBody,ComputeOBBOnAxes)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("ComputeLocalAABB", &PyKinBody::ComputeLocalAABB,
                               "enabledOnlyLinks"_a = false,
                               DOXY_FN(KinBody,ComputeLocalAABB)
@@ -5521,6 +5544,7 @@ void init_openravepy_kinbody()
 #else
                          .def("ComputeInverseDynamics",&PyKinBody::ComputeInverseDynamics, ComputeInverseDynamics_overloads(PY_ARGS("dofaccelerations","externalforcetorque","returncomponents") sComputeInverseDynamicsDoc.c_str()))
 #endif
+                         .def("GetDOFDynamicAccelerationJerkLimits",&PyKinBody::GetDOFDynamicAccelerationJerkLimits, PY_ARGS("dofPositions","dofVelocities") DOXY_FN(KinBody,ComputeDynamicLimits))
                          .def("SetSelfCollisionChecker",&PyKinBody::SetSelfCollisionChecker,PY_ARGS("collisionchecker") DOXY_FN(KinBody,SetSelfCollisionChecker))
                          .def("GetSelfCollisionChecker", &PyKinBody::GetSelfCollisionChecker, /*PY_ARGS("collisionchecker")*/ DOXY_FN(KinBody,GetSelfCollisionChecker))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

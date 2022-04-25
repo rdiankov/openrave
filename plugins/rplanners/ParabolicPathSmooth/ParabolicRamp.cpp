@@ -54,22 +54,23 @@ void TestRamps(const char* fn)
     Real a,v,t;
     int numRamps=0;
     while(LoadRamp(f,ramp.x0,ramp.dx0,ramp.x1,ramp.dx1,a,v,t)) {
+        bool res(false);
         if(t < 0) {
             PARABOLIC_RAMP_ASSERT( a >= 0 && v >= 0);
-            bool res=ramp.SolveMinTime(a,v);
+            res=ramp.SolveMinTime(a,v);
             PARABOLIC_RAMP_PLOG("Result %d: t=%.15e\n",(int)res,ramp.ttotal);
         }
         else if(a < 0) {
             PARABOLIC_RAMP_ASSERT( t >= 0 && v >= 0);
-            bool res=ramp.SolveMinAccel(t,v);
+            res=ramp.SolveMinAccel(t,v);
             PARABOLIC_RAMP_PLOG("Result %d: a=%.15e\n",(int)res,ramp.a1);
         }
         else {
-            bool res=ramp.SolveMinTime2(a,v,t);
+            res=ramp.SolveMinTime2(a,v,t);
             PARABOLIC_RAMP_PLOG("Result %d: t=%.15e\n",(int)res,ramp.ttotal);
 
             if(!res) {
-                bool res=ramp.SolveMinAccel(t,v);
+                res=ramp.SolveMinAccel(t,v);
                 PARABOLIC_RAMP_PLOG("SolveMinAccel result %d: a=%.15e\n",(int)res,ramp.a1);
             }
         }

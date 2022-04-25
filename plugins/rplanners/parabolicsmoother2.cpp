@@ -35,7 +35,7 @@ class ParabolicSmoother2 : public PlannerBase, public RampOptimizer::Feasibility
 
     class MyRampNDFeasibilityChecker : public RampOptimizer::RampNDFeasibilityChecker {
 public:
-        MyRampNDFeasibilityChecker(RampOptimizer::FeasibilityCheckerBase* feas) : RampOptimizer::RampNDFeasibilityChecker(feas) {
+        MyRampNDFeasibilityChecker(RampOptimizer::FeasibilityCheckerBase* feas_) : RampOptimizer::RampNDFeasibilityChecker(feas_) {
             _bHasParameters = false;
             _cacheRampNDVectIn.resize(1);
             _envid = 0;
@@ -240,46 +240,46 @@ public:
                     vsearchsegments[j] = j;
                 }
                 do {
-                    size_t index, index2 = 0;
+                    size_t index1, index2 = 0;
 
-                    index = vsearchsegments.size() * (4/8);
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    index1 = vsearchsegments.size() * (4/8);
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
 
-                    index = vsearchsegments.size() * (2/8);
-                    if( index <= index2 ) {
+                    index1 = vsearchsegments.size() * (2/8);
+                    if( index1 <= index2 ) {
                         break;
                     }
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
 
-                    index = vsearchsegments.size() * (6/8);
-                    if( index <= index2 ) {
+                    index1 = vsearchsegments.size() * (6/8);
+                    if( index1 <= index2 ) {
                         break;
                     }
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
 
-                    index = vsearchsegments.size() * (1/8);
-                    if( index <= index2 ) {
+                    index1 = vsearchsegments.size() * (1/8);
+                    if( index1 <= index2 ) {
                         break;
                     }
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
 
-                    index = vsearchsegments.size() * (5/8);
-                    if( index <= index2 ) {
+                    index1 = vsearchsegments.size() * (5/8);
+                    if( index1 <= index2 ) {
                         break;
                     }
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
 
-                    index = vsearchsegments.size() * (3/8);
-                    if( index <= index2 ) {
+                    index1 = vsearchsegments.size() * (3/8);
+                    if( index1 <= index2 ) {
                         break;
                     }
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
 
-                    index = vsearchsegments.size() * (7/8);
-                    if( index <= index2 ) {
+                    index1 = vsearchsegments.size() * (7/8);
+                    if( index1 <= index2 ) {
                         break;
                     }
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
                 } while (0);
 
 #ifdef SMOOTHER2_TIMING_DEBUG
@@ -1040,14 +1040,14 @@ public:
             _nCallsCheckPathAllConstraints_SegmentFeasible2 += 1;
             _tStartCheckPathAllConstraints = utils::GetMicroTime();
 #endif
-            int ret = _parameters->CheckPathAllConstraints(q0, q0, dq0, dq0, 0, IT_OpenStart, options);
+            int ret = _parameters->CheckPathAllConstraints(q0, q0, dq0, dq0, 0, IT_OpenStart, options, _constraintreturn);
 #ifdef SMOOTHER2_TIMING_DEBUG
             _tEndCheckPathAllConstraints = utils::GetMicroTime();
             _totalTimeCheckPathAllConstraints_SegmentFeasible2 += 0.000001f*(float)(_tEndCheckPathAllConstraints - _tStartCheckPathAllConstraints);
 #endif
             RampOptimizer::CheckReturn checkret(ret);
             if( ret == CFO_CheckTimeBasedConstraints ) {
-                checkret.fTimeBasedSurpassMult = 0.98;
+                checkret.fTimeBasedSurpassMult = 0.98 * _constraintreturn->_fTimeBasedSurpassMult;
             }
             return checkret;
         }
@@ -1137,7 +1137,7 @@ public:
 #endif
                 RampOptimizer::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
-                    checkret.fTimeBasedSurpassMult = 0.98;
+                    checkret.fTimeBasedSurpassMult = 0.98 * _constraintreturn->_fTimeBasedSurpassMult;
                 }
                 return checkret;
             }
@@ -2999,7 +2999,7 @@ protected:
 #endif
                                         for( size_t j = 0; j < vellimits.size(); ++j ) {
                                             dReal fMinVelLimit = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                                            dReal fVelMult = RaveSqrt(retcheck.vReductionFactors[j]);
+                                            fVelMult = RaveSqrt(retcheck.vReductionFactors[j]);
                                             if( vellimits[j] * fVelMult < fMinVelLimit ) {
                                                 // In this case, we cannot use the recommended scaling factor since
                                                 // after scaling, the vellimits will fall below max(v0, v1). So we set

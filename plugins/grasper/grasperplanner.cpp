@@ -148,7 +148,7 @@ public:
                 AABB ab;
                 {
                     // have to compute in the target's coordinate system since aabb extents change
-                    KinBody::KinBodyStateSaver saver(_parameters->targetbody);
+                    KinBody::KinBodyStateSaver saver756(_parameters->targetbody);
                     _parameters->targetbody->SetTransform(Transform());
                     ab = _parameters->targetbody->ComputeAABB();
                 }

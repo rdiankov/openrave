@@ -57,6 +57,15 @@ enum DynamicsConstraintsType {
 
 OPENRAVE_API const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type);
 
+enum JointControlMode {
+    JCM_None = 0, ///< unspecified
+    JCM_RobotController = 1, ///< joint controlled by the robot controller
+    JCM_IO = 2,              ///< joint controlled by I/O signals
+    JCM_ExternalDevice = 3,  ///< joint controlled by an external device
+};
+
+OPENRAVE_API const char* GetJointControlModeString(JointControlMode jcm);
+
 /// \brief holds parameters for an electric motor
 ///
 /// all speed is in revolutions/second
@@ -65,9 +74,6 @@ class OPENRAVE_API ElectricMotorActuatorInfo : public InfoBase
 public:
     ElectricMotorActuatorInfo() {
     };
-    ElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& other) {
-        *this = other;
-    }
     bool operator==(const ElectricMotorActuatorInfo& other) const {
         return model_type == other.model_type
                && assigned_power_rating == other.assigned_power_rating
@@ -122,6 +128,56 @@ public:
 };
 
 typedef boost::shared_ptr<ElectricMotorActuatorInfo> ElectricMotorActuatorInfoPtr;
+
+class OPENRAVE_API JointControlInfo_RobotController : public InfoBase
+{
+public:
+    JointControlInfo_RobotController() {
+    };
+
+    void Reset() override;
+    void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+    void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+    std::string controllerType; ///< the type of the controller used to control this joint
+    //int robotId = -1; ///< index of the robot within that controller?
+    boost::array<int16_t, 3> robotControllerAxisIndex = {-1, -1, -1}; ///< indicates which DOF in the robot controller controls which joint axis (up to the DOF of the joint). -1 if not specified/not valid.
+};
+typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
+
+class OPENRAVE_API JointControlInfo_IO : public InfoBase
+{
+public:
+    JointControlInfo_IO() {
+    };
+
+    void Reset() override;
+    void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+    void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+    std::string deviceType; ///< type of device this joint is for
+    boost::array< std::vector<std::string>, 3 > moveIONames;       ///< io names for controlling positions of this joint.
+    boost::array< std::vector<std::string>, 3 > upperLimitIONames; ///< io names for detecting if the joint is at its upper limit
+    boost::array< std::vector<uint8_t>, 3 > upperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+    boost::array< std::vector<std::string>, 3 > lowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
+    boost::array< std::vector<uint8_t>, 3 > lowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+};
+typedef boost::shared_ptr<JointControlInfo_IO> JointControlInfo_IOPtr;
+
+class OPENRAVE_API JointControlInfo_ExternalDevice : public InfoBase
+{
+public:
+    JointControlInfo_ExternalDevice() {
+    };
+
+    void Reset() override;
+    void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+    void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+    std::string externalDeviceType; ///< id for the external device
+};
+
+typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
 
 ///< New kinematics functions to be used by KinBody
 class OPENRAVE_API KinematicsFunctions
@@ -279,9 +335,6 @@ public:
     {
 public:
         GeometryInfo() {
-        }
-        GeometryInfo(const GeometryInfo& other) {
-            *this = other;
         }
         bool operator==(const GeometryInfo& other) const {
             return _t == other._t
@@ -750,9 +803,6 @@ protected:
 public:
         LinkInfo() {
         };
-        LinkInfo(const LinkInfo& other) {
-            *this = other;
-        }
         bool operator==(const LinkInfo& other) const;
         bool operator!=(const LinkInfo& other) const {
             return !operator==(other);
@@ -841,7 +891,7 @@ public:
         }
 
 private:
-        Transform _t; ///< the current transformation of the link with respect to the body coordinate system
+        Transform _t; ///< the current transformation of the link with respect to the world coordinate system
 
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
@@ -1240,13 +1290,6 @@ private:
         JointTrajectory = 0x80000004, ///< there is no axis defined, instead the relative transformation is directly output from the trajectory affine_transform structure
     };
 
-    enum JointControlMode {
-        JCM_None = 0, ///< unspecified
-        JCM_RobotController = 1, ///< joint controlled by the robot controller
-        JCM_IO = 2,              ///< joint controlled by I/O signals
-        JCM_ExternalDevice = 3,  ///< joint controlled by an external device
-    };
-
     class Joint;
 
     /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
@@ -1257,9 +1300,6 @@ private:
 public:
         MimicInfo() {
         };
-        MimicInfo(const MimicInfo& other) {
-            *this = other;
-        }
 
         void Reset() override;
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
@@ -1317,40 +1357,7 @@ public:
     class OPENRAVE_API JointInfo : public InfoBase
     {
 public:
-        struct JointControlInfo_RobotController
-        {
-            JointControlInfo_RobotController() {
-            };
-            int robotId = -1;
-            boost::array<int16_t, 3> robotControllerDOFIndex = {-1, -1, -1}; ///< indicates which DOF in the robot controller controls which joint axis. -1 if not specified/not valid.
-        };
-        typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
-
-        struct JointControlInfo_IO
-        {
-            JointControlInfo_IO() {
-            };
-            int deviceId = -1;
-            boost::array< std::vector<std::string>, 3 > vMoveIONames;       ///< io names for controlling positions of this joint.
-            boost::array< std::vector<std::string>, 3 > vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
-            boost::array< std::vector<uint8_t>, 3 > vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
-            boost::array< std::vector<std::string>, 3 > vLowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
-            boost::array< std::vector<uint8_t>, 3 > vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
-        };
-        typedef boost::shared_ptr<JointControlInfo_IO> JointControlInfo_IOPtr;
-
-        struct JointControlInfo_ExternalDevice
-        {
-            JointControlInfo_ExternalDevice() {
-            };
-            std::string externalDeviceId; ///< id for the external device
-        };
-        typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
-
         JointInfo() {
-        }
-        JointInfo(const JointInfo& other) {
-            *this = other;
         }
         bool operator==(const JointInfo& other) const;
         bool operator!=(const JointInfo& other) const {
@@ -1434,9 +1441,9 @@ public:
 
         /// \brief _controlMode specifies how this joint is controlled. For possible control modes, see enum JointControlMode.
         JointControlMode _controlMode = JCM_None;
-        JointControlInfo_RobotControllerPtr _jci_robotcontroller;
-        JointControlInfo_IOPtr _jci_io;
-        JointControlInfo_ExternalDevicePtr _jci_externaldevice;
+        JointControlInfo_RobotControllerPtr _jci_robotcontroller; ///< valid if controlMode==JCM_RobotController
+        JointControlInfo_IOPtr _jci_io; ///< valid if controlMode==JCM_IO
+        JointControlInfo_ExternalDevicePtr _jci_externaldevice; ///< valid if controlMode==JCM_ExternalDevice
     };
 
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
@@ -2020,9 +2027,6 @@ private:
 public:
         GrabbedInfo() {
         }
-        GrabbedInfo(const GrabbedInfo& other) {
-            *this = other;
-        }
         bool operator==(const GrabbedInfo& other) const {
             return _id == other._id
                    && _grabbedname == other._grabbedname
@@ -2158,9 +2162,6 @@ private:
 public:
         KinBodyInfo() {
         }
-        KinBodyInfo(const KinBodyInfo& other) {
-            *this = other;
-        }
         bool operator==(const KinBodyInfo& other) const;
         bool operator!=(const KinBodyInfo& other) const {
             return !operator==(other);
@@ -2206,7 +2207,7 @@ private:
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of KinBodyInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
 protected:
-        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value);
+        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale);
 
         friend class KinBody; ///< for changing _modifiedFields
 
@@ -2714,6 +2715,13 @@ private:
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
     AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
+    /// \brief returns an axis-aligned bounding box of the current body transform with respect to a rotation quatWorld.
+    ///
+    /// \brief quaterion of the orientation of the box in the world coordinate system.
+    /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
+    /// \return an oriented bounding box whose orientation is quatWorld
+    OrientedBox ComputeOBBOnAxes(const Vector& quatWorld, bool bEnabledOnlyLinks=false) const;
+
     /// \brief returns an axis-aligned bounding box when body has identity transform
     ///
     /// Internally equivalent to ComputeAABBFromTransform(Transform(), ...)
@@ -2743,15 +2751,23 @@ private:
 
     /// \brief Sets the joint values of the robot.
     ///
-    /// \param values the values to set the joint angles (ordered by the dof indices)
+    /// \param[in] values the values to set the joint angles (ordered by the dof indices)
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
-    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    /// \param[in] dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
+
+    /// \brief Sets the joint values of the robot.
+    ///
+    /// \param[in] pJointValues pointer to head of array that holds joint angles (ordered by the dof indices)
+    /// \param[in] dof number of dof described by array of pJointValues.
+    /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
+    /// \param[in] dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief Sets the joint values and transformation of the body.
     ///
-    /// \param values the values to set the joint angles (ordered by the dof indices)
-    /// \param transform represents the transformation of the first body.
+    /// \param[in] values the values to set the joint angles (ordered by the dof indices)
+    /// \param[in] transform represents the transformation of the first body.
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     virtual void SetDOFValues(const std::vector<dReal>& values, const Transform& transform, uint32_t checklimits = CLA_CheckLimits);
 
@@ -2891,6 +2907,16 @@ private:
         \param[in] externalforcetorque [optional] Specifies all the external forces/torques acting on the links at their center of mass.
      */
     virtual void ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& doftorquecomponents, const std::vector<dReal>& dofaccelerations, const ForceTorqueMap& externalforcetorque=ForceTorqueMap()) const;
+
+    /** \brief Computes dynamic limits for acceleration and jerks, which are dynamically changing based on the given positions and velocities of the robot.
+
+        Since not all robots supports dynamic limits, so this function should be overriden in the subclass.
+        \param[out] vDynamicAccelerationLimits, vDynamicJerkLimits : dynamically changing acceleration limits and jerk limits. the sizes of vectors are in the DOF order. 0 means there is no dynamic limit
+        \param[in] vDOFValues, vDOFPositions : DOF positions and velocities to compute dynamic limits. note that if these are related to finite difference, need to input [k-1] timestamp and the returned limits are at [k] timestamp. the sizes of the vectors are the DOF the robot.
+        \return true if the robot has dynamic limits.
+     */
+    virtual bool GetDOFDynamicAccelerationJerkLimits(std::vector<dReal>& vDynamicAccelerationLimits, std::vector<dReal>& vDynamicJerkLimits,
+                                                     const std::vector<dReal>& vDOFValues, const std::vector<dReal>& vDOFVelocities) const;
 
     /// \brief sets a self-collision checker to be used whenever \ref CheckSelfCollision is called
     ///
@@ -3505,12 +3531,12 @@ public:
         _listNonCollidingIsValid = false;
     }
 
-    inline void _SetLinkNonCollidingIsValid(const bool bIsValid)
+    inline void _SetLinkNonCollidingIsValid(bool bIsValid)
     {
         _listNonCollidingIsValid = bIsValid;
     }
 
-    inline const bool IsListNonCollidingLinksValid() const
+    inline bool IsListNonCollidingLinksValid() const
     {
         return _listNonCollidingIsValid;
     }

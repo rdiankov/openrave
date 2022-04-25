@@ -133,6 +133,7 @@ elseif( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
   # but that version is not compatible with boost::python anyway.
   set(CMAKE_REQUIRED_LIBRARIES ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY})
   set(CMAKE_REQUIRED_FLAGS ${Boost_CFLAGS} "-DCMAKE_BUILD_TYPE:STRING=Release")
+  message(STATUS "Checking compilation for Boost Python with CMAKE_REQUIRED_LIBRARIES=${CMAKE_REQUIRED_LIBRARIES}")
 
   # check if all header files can be included
   check_cxx_source_runs("

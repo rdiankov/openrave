@@ -302,7 +302,7 @@ static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& fil
         Transform toffset;
         Vector vcolor(0.8,0.8,0.8);
         bool bFound = false;
-        stringstream::streampos pos = f.tellg();
+        stringstream::pos_type pos = f.tellg();
         while( !!getline(f, strline) ) {
             boost::trim(strline);
             if( strline.size() > 0 && strline[0] == '#' ) {
@@ -343,7 +343,7 @@ static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& fil
             RAVELOG_INFO_FORMAT("STL file %s has screen metadata", filename);
 
             f.seekg(0, std::ios::end);
-            stringstream::streampos endpos = f.tellg();                
+            stringstream::pos_type endpos = f.tellg();
             f.seekg(pos);
             string newdata;
             newdata.reserve(endpos - pos);
@@ -398,7 +398,7 @@ bool CreateTriMeshFromFile(EnvironmentBasePtr penv, const std::string& filename,
             string strline;
             if( !!f ) {
                 bool bFound = false;
-                stringstream::streampos pos = f.tellg();
+                stringstream::pos_type pos = f.tellg();
                 while( !!getline(f, strline) ) {
                     boost::trim(strline);
                     if( strline.size() > 0 && strline[0] == '#' ) {
@@ -2004,7 +2004,7 @@ protected:
 class KinBodyXMLReader : public InterfaceXMLReader
 {
 public:
-    KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList &atts, int roottransoffset) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), roottransoffset(roottransoffset) {
+    KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList &atts, int roottransoffset_) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), roottransoffset(roottransoffset_) {
         _bSkipGeometry = false;
         _vScaleGeometry = Vector(1,1,1);
         _masstype = MT_None;
@@ -2636,13 +2636,11 @@ public:
                         if( !ifstream(ikonly.c_str()) || !pIKFastLoader->SendCommand(sout, scmd)) {
                             string fullname = GetParseDirectory(); fullname.push_back(s_filesep); fullname += ikonly;
                             scmd.str(string("AddIkLibrary ") + fullname + string(" ") + fullname);
-                            if( !ifstream(fullname.c_str()) || !pIKFastLoader->SendCommand(sout, scmd)) {
-                            }
-                            else {
+                            if( ifstream(fullname.c_str()) && pIKFastLoader->SendCommand(sout, scmd)) {
                                 // need to use the original iklibrary string due to parameters being passed in
-                                string fullname = "ikfast ";
-                                fullname += GetParseDirectory(); fullname.push_back(s_filesep); fullname += iklibraryname;
-                                piksolver = RaveCreateIkSolver(_probot->GetEnv(), fullname);
+                                string fullname0 = "ikfast ";
+                                fullname0 += GetParseDirectory(); fullname0.push_back(s_filesep); fullname0 += iklibraryname;
+                                piksolver = RaveCreateIkSolver(_probot->GetEnv(), fullname0);
                             }
                         }
                         else {
@@ -2870,7 +2868,7 @@ protected:
 class RobotXMLReader : public InterfaceXMLReader
 {
 public:
-    RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const AttributesList &atts, int roottransoffset) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), roottransoffset(roottransoffset) {
+    RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const AttributesList &atts, int roottransoffset_) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), roottransoffset(roottransoffset_) {
         _bSkipGeometry = false;
         _vScaleGeometry = Vector(1,1,1);
         rootoffset = rootjoffset = rootjpoffset = -1;

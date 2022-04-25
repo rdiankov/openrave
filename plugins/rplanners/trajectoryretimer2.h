@@ -27,7 +27,7 @@ protected:
     class GroupInfo
     {
 public:
-        GroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) : degree(degree), gpos(gpos), gvel(gvel), orgposoffset(-1), orgveloffset(-1) {
+        GroupInfo(int degree_, const ConfigurationSpecification::Group& gpos_, const ConfigurationSpecification::Group &gvel_) : degree(degree_), gpos(gpos_), gvel(gvel_), orgposoffset(-1), orgveloffset(-1) {
         }
         virtual ~GroupInfo() {
         }

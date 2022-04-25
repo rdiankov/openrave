@@ -676,10 +676,8 @@ class TestKinematics(EnvironmentSetup):
 
             # test returning quaternions
             Tmassframe = body.GetLinks()[-1].GetGlobalMassFrame()
-            with TransformQuaternionsSaver():
-                openravepy_int.options.returnTransformQuaternion = True
-                assert(ComputePoseDistance(body.GetTransform(),poseFromMatrix(T)) <= g_epsilon)
-                assert(ComputePoseDistance(body.GetLinks()[-1].GetGlobalMassFrame(), poseFromMatrix(Tmassframe)) <= g_epsilon)
+            assert(ComputePoseDistance(body.GetTransformPose(),poseFromMatrix(T)) <= g_epsilon)
+            assert(poseFromMatrix(ComputePoseDistance(body.GetLinks()[-1].GetGlobalMassFrame()), poseFromMatrix(Tmassframe)) <= g_epsilon)
             assert(transdist(body.GetTransform(),T) <= g_epsilon)
                 
             # try again except without 'with'

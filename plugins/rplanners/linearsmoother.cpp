@@ -128,17 +128,21 @@ public:
             dReal totaldist = 0;
 
             bool isBranching = false;
-            if(!!_probot && _nUseSingleDOFSmoothing == 1) {
-                std::set<KinBody::LinkConstPtr> setJoints;
-                FOREACHC(it, _probot->GetActiveDOFIndices()) {
-                    KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
-                    bool canInsert = setJoints.insert(pjoint->GetHierarchyParentLink()).second;
-                    if(!canInsert) {
-                        isBranching = true;
-                        break;
-                    }
-                }
-            }
+            // The following code is commented out because _OptimizePathSingleGroupShift only works
+            // with some specific kinds of robots, as it assumes certain kinematics structures, and
+            // isBranching is not a sufficient condition to detect such robots.
+
+            // if(!!_probot && _nUseSingleDOFSmoothing == 1) {
+            //     std::set<KinBody::LinkConstPtr> setJoints;
+            //     FOREACHC(it, _probot->GetActiveDOFIndices()) {
+            //         KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
+            //         bool canInsert = setJoints.insert(pjoint->GetHierarchyParentLink()).second;
+            //         if(!canInsert) {
+            //             isBranching = true;
+            //             break;
+            //         }
+            //     }
+            // }
 
             if( _nUseSingleDOFSmoothing == 3 or (isBranching and _nUseSingleDOFSmoothing == 1)) {
                 uint32_t basetime1 = utils::GetMilliTime();
@@ -769,7 +773,8 @@ protected:
     {
         SampleInfo() : fabsnodedist(0), fdeltadist(0), inode(0) {
         }
-        SampleInfo(std::list< vector<dReal> >::iterator itnode, const vector<dReal>& vsample, dReal fabsnodedist, dReal fdeltadist, int inode) : itnode(itnode), vsample(vsample), fabsnodedist(fabsnodedist), fdeltadist(fdeltadist), inode(inode) {
+        SampleInfo(std::list< vector<dReal> >::iterator itnode_, const vector<dReal>& vsample_, dReal fabsnodedist_, dReal fdeltadist_, int inode_)
+            : itnode(itnode_), vsample(vsample_), fabsnodedist(fabsnodedist_), fdeltadist(fdeltadist_), inode(inode_) {
         }
         std::list< vector<dReal> >::iterator itnode;
         vector<dReal> vsample; /// the interpolated data
@@ -876,7 +881,7 @@ protected:
         const PlannerParameters& parameters = *GetParameters();
         list< vector<dReal> >::iterator itmidnode, itmidnodeprev;
         SampleInfo startInfo, endInfo, midInfo;
-        vector<dReal> vmidvalues(parameters.GetDOF());
+        //vector<dReal> vmidvalues(parameters.GetDOF());    // shadowed anyway
 
         PlannerProgress progress;
 

@@ -13,6 +13,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#pragma GCC diagnostic ignored "-Wshadow"   // 'int nSameStateRepeatCount = 0;' shadowed many times all over about 300-400 lines apart
+
 #include "plugindefs.h"
 
 #include <boost/bind.hpp>
@@ -1194,28 +1197,28 @@ protected:
                             eerot[0] = r.dir.x-0.01;
                             eerot[1] = r.dir.y-0.01;
                             eerot[2] = r.dir.z-0.01;
-                            dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
-                            eerot[0] /= fnorm;
-                            eerot[1] /= fnorm;
-                            eerot[2] /= fnorm;
+                            dReal fnorm1 = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                            eerot[0] /= fnorm1;
+                            eerot[1] /= fnorm1;
+                            eerot[2] /= fnorm1;
                             bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                             if( !bret ) {
                                 eerot[0] = r.dir.x-0.04;
                                 eerot[1] = r.dir.y-0.04;
                                 eerot[2] = r.dir.z;
-                                dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
-                                eerot[0] /= fnorm;
-                                eerot[1] /= fnorm;
-                                eerot[2] /= fnorm;
+                                dReal fnorm2 = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                                eerot[0] /= fnorm2;
+                                eerot[1] /= fnorm2;
+                                eerot[2] /= fnorm2;
                                 bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                                 if( !bret ) {
                                     eerot[0] = r.dir.x+0.04;
                                     eerot[1] = r.dir.y+0.04;
                                     eerot[2] = r.dir.z;
-                                    dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
-                                    eerot[0] /= fnorm;
-                                    eerot[1] /= fnorm;
-                                    eerot[2] /= fnorm;
+                                    dReal fnorm3 = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                                    eerot[0] /= fnorm3;
+                                    eerot[1] /= fnorm3;
+                                    eerot[2] /= fnorm3;
                                     bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                                 }
                             }
@@ -2316,7 +2319,7 @@ protected:
                     for(size_t j = 0; j < vravesols[0].first.size(); ++j) {
                         vravesols[i].first[j] = vravesols[0].first[j];
                     }
-                    for(size_t k = 0; k < _qbigrangeindices.size(); ++k) {
+                    for( k = 0; k < _qbigrangeindices.size(); ++k) {
                         if( vextravalues[k].size() > 1 ) {
                             size_t repeat = vcumproduct.at(k);
                             int j = _qbigrangeindices[k];

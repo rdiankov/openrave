@@ -137,19 +137,16 @@ public:
         py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
         void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
         KinBody::KinBodyInfoPtr GetKinBodyInfo() const;
+        py::object _vLinkInfos = py::none_();
+        py::object _vJointInfos = py::none_();
+        py::object _vGrabbedInfos = py::none_();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        std::vector<KinBody::LinkInfoPtr> _vLinkInfos;
-        std::vector<KinBody::JointInfoPtr> _vJointInfos;
-        std::vector<KinBody::GrabbedInfoPtr> _vGrabbedInfos;
         std::string _uri;
         std::string _id;
         std::string _name;
         std::string _interfaceType;
         std::string _referenceUri;
 #else
-        py::object _vLinkInfos = py::none_();
-        py::object _vJointInfos = py::none_();
-        py::object _vGrabbedInfos = py::none_();
         py::object _uri = py::none_();
         py::object _referenceUri = py::none_();
         py::object _id = py::none_();
@@ -258,6 +255,7 @@ public:
     py::object GetLinkAccelerations(py::object odofaccelerations, py::object oexternalaccelerations=py::none_()) const;
     py::object ComputeAABB(bool bEnabledOnlyLinks=false);
     py::object ComputeAABBFromTransform(py::object otransform, bool bEnabledOnlyLinks=false);
+    py::object ComputeOBBOnAxes(py::object otransform, bool bEnabledOnlyLinks=false);
     py::object ComputeLocalAABB(bool bEnabledOnlyLinks=false);
     py::object ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false);
     py::object ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, py::object otransform, bool bEnabledOnlyLinks=false);
@@ -294,6 +292,7 @@ public:
     py::object ComputeHessianTranslation(int index, py::object oposition, py::object oindices=py::none_());
     py::object ComputeHessianAxisAngle(int index, py::object oindices=py::none_());
     py::object ComputeInverseDynamics(py::object odofaccelerations, py::object oexternalforcetorque=py::none_(), bool returncomponents=false);
+    py::object GetDOFDynamicAccelerationJerkLimits(py::object oDOFPositions, py::object oDOFVelocities) const;
     void SetSelfCollisionChecker(PyCollisionCheckerBasePtr pycollisionchecker);
     PyInterfaceBasePtr GetSelfCollisionChecker();
     bool CheckSelfCollision(PyCollisionReportPtr pReport=PyCollisionReportPtr(), PyCollisionCheckerBasePtr pycollisionchecker=PyCollisionCheckerBasePtr());

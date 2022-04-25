@@ -99,21 +99,35 @@ class VectorWrapper {
 public:
     typedef char Ch;
 
-    VectorWrapper(std::vector<Ch>& v) : _v(v) { }
+    VectorWrapper(std::vector<Ch>& v) : _v(v) {
+    }
 
-    Ch Peek() const { BOOST_ASSERT(0); return '\0'; }
-    Ch Take() { BOOST_ASSERT(0); return '\0'; }
-    size_t Tell() const { return _v.size(); }
- 
-    Ch* PutBegin() { BOOST_ASSERT(0); return 0; }
-    void Put(Ch c) { _v.push_back(c); }
-    void Flush() { }
-    size_t PutEnd(Ch*) { BOOST_ASSERT(0); return 0; }
- 
+    Ch Peek() const {
+        BOOST_ASSERT(0); return '\0';
+    }
+    Ch Take() {
+        BOOST_ASSERT(0); return '\0';
+    }
+    size_t Tell() const {
+        return _v.size();
+    }
+
+    Ch* PutBegin() {
+        BOOST_ASSERT(0); return 0;
+    }
+    void Put(Ch c) {
+        _v.push_back(c);
+    }
+    void Flush() {
+    }
+    size_t PutEnd(Ch*) {
+        BOOST_ASSERT(0); return 0;
+    }
+
 private:
     VectorWrapper(const VectorWrapper&);
     VectorWrapper& operator=(const VectorWrapper&);
- 
+
     std::vector<Ch>& _v;
 };
 
@@ -151,7 +165,7 @@ inline void ParseJson(rapidjson::Document& d, const std::string& str) {
 inline void ParseJson(rapidjson::Document& d, std::istream& is) {
     rapidjson::IStreamWrapper isw(is);
     // see note in: void ParseJson(rapidjson::Document& d, const std::string& str)
-    rapidjson::Document(tempDoc);
+    rapidjson::Document tempDoc;
     tempDoc.ParseStream<rapidjson::kParseFullPrecisionFlag>(isw); // parse float in full precision mode
     if (tempDoc.HasParseError()) {
         throw OPENRAVE_EXCEPTION_FORMAT("JSON stream is invalid (offset %u) %s", ((unsigned)tempDoc.GetErrorOffset())%GetParseError_En(tempDoc.GetParseError()), OpenRAVE::ORE_InvalidArguments);
@@ -169,6 +183,8 @@ public:
 };
 
 template<class T> inline std::string GetJsonString(const T& t);
+
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t); // forward decl
 
 //store a json value to local data structures
 //for compatibility with ptree, type conversion is made. will remove them in the future
@@ -192,6 +208,18 @@ inline void LoadJsonValue(const rapidjson::Value& v, int& t) {
         t = v.GetInt();
     } else if (v.IsString()) {
         t = boost::lexical_cast<int>(v.GetString());
+    } else if (v.IsBool()) {
+        t = v.GetBool() ? 1 : 0;
+    } else {
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Int", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
+    }
+}
+
+inline void LoadJsonValue(const rapidjson::Value& v, int16_t& t) {
+    if (v.IsInt()) {
+        t = v.GetInt();
+    } else if (v.IsString()) {
+        t = boost::lexical_cast<int16_t>(v.GetString());
     } else if (v.IsBool()) {
         t = v.GetBool() ? 1 : 0;
     } else {
@@ -355,7 +383,6 @@ inline void LoadJsonValue(const rapidjson::Value& v, T (&p)[N]) {
     }
 }
 
-template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t);
 template<class T, class U>
 inline void LoadJsonValue(const rapidjson::Value& v, std::pair<T, U>& t) {
     if (v.IsArray()) {

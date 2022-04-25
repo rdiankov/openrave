@@ -4453,7 +4453,7 @@ public:
 
   void tesselate(const NxF32 *p1,const NxF32 *p2,const NxF32 *p3,NxU32 recurse)
   {
-  	bool split = false;
+  	bool needSplit = false;
   	NxF32 l1,l2,l3;
 
     l1 = l2 = l3 = 0;
@@ -4465,11 +4465,11 @@ public:
     	l3 = fm_distanceSquared(p3,p1);
 
   	  if (  l1 > mLongEdge || l2 > mLongEdge || l3 > mLongEdge )
-  	  	split = true;
+  	  	needSplit = true;
 
     }
 
-    if ( split )
+    if ( needSplit )
   	{
   		NxU32 edge;
 
@@ -4524,7 +4524,7 @@ public:
 
   void tesselate(const NxF64 *p1,const NxF64 *p2,const NxF64 *p3,NxU32 recurse)
   {
-  	bool split = false;
+  	bool needSplit = false;
   	NxF64 l1,l2,l3;
 
     l1 = l2 = l3 = 0;
@@ -4536,11 +4536,11 @@ public:
     	l3 = fm_distanceSquared(p3,p1);
 
   	  if (  l1 > mLongEdgeD || l2 > mLongEdgeD || l3 > mLongEdgeD )
-  	  	split = true;
+  	  	needSplit = true;
 
     }
 
-    if ( split )
+    if ( needSplit )
   	{
   		NxU32 edge;
 
@@ -4930,7 +4930,7 @@ REAL  fm_computeBestFitSphere(NxU32 vcount,const REAL *points,NxU32 pstride,REAL
 
   /* SECOND PASS: increment current sphere */
   {
-    const char *scan = (const char *)points;
+    scan = (const char *)points;
 	  for (NxU32 i=0; i<vcount; i++)
 		{
 			const REAL *caller_p = (const REAL *)scan;
@@ -5505,10 +5505,10 @@ public:
     {
       NxU32 fcount = tcount*3*3;
       mPointsFloat = (NxF32 *)MEMALLOC_MALLOC(sizeof(NxF32)*tcount*3*3);
-      NxF32 *dest = mPointsFloat;
+      NxF32 *dest32 = mPointsFloat;
       for (NxU32 i=0; i<fcount; i++)
       {
-        dest[i] = (NxF32) results[i];
+        dest32[i] = (NxF32) results[i];
       }
       MEMALLOC_FREE(mPointsDouble);
       mPointsDouble = 0;

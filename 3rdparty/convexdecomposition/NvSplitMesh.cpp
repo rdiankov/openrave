@@ -108,13 +108,13 @@ public:
 
 		for (NxU32 i=0; i<source.mTcount; i++)
 		{
-			NxU32 i1 = source.mIndices[i*3+0];
-			NxU32 i2 = source.mIndices[i*3+1];
-			NxU32 i3 = source.mIndices[i*3+2];
+			NxU32 k1 = source.mIndices[i*3+0];
+			NxU32 k2 = source.mIndices[i*3+1];
+			NxU32 k3 = source.mIndices[i*3+2];
 
-			const NxF32 *p1 = &source.mVertices[i1*3];
-			const NxF32 *p2 = &source.mVertices[i2*3];
-			const NxF32 *p3 = &source.mVertices[i3*3];
+			const NxF32 *p1 = &source.mVertices[k1*3];
+			const NxF32 *p2 = &source.mVertices[k2*3];
+			const NxF32 *p3 = &source.mVertices[k3*3];
 
 			NxF32 source_tri[3*3];
 
