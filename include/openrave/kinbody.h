@@ -2715,11 +2715,12 @@ private:
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
     AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
-    /// \brief returns an axis-aligned bounding box On transform tWorld.
+    /// \brief returns an axis-aligned bounding box of the current body transform with respect to a rotation quatWorld.
     ///
     /// \brief quaterion of the orientation of the box in the world coordinate system.
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
-    OrientedBox ComputeOBBOnAxes(const Vector& quat, bool bEnabledOnlyLinks=false) const;
+    /// \return an oriented bounding box whose orientation is quatWorld
+    OrientedBox ComputeOBBOnAxes(const Vector& quatWorld, bool bEnabledOnlyLinks=false) const;
 
     /// \brief returns an axis-aligned bounding box when body has identity transform
     ///
