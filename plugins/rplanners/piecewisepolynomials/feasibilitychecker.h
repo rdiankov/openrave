@@ -19,7 +19,7 @@ namespace OpenRAVE {
 namespace PiecewisePolynomialsInternal {
 
 struct CheckReturn {
-    CheckReturn(int retcode=0, dReal fmult=1.0, dReal fvel=0, dReal faccel=0) : retcode(retcode), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false), fMaxManipSpeed(fvel), fMaxManipAccel(faccel) {
+    CheckReturn(int retcode_=0, dReal fmult=1.0, dReal fvel=0, dReal faccel=0) : retcode(retcode_), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false), fMaxManipSpeed(fvel), fMaxManipAccel(faccel) {
     }
 
     int retcode; ///< one of CFO_X defined in planner.h

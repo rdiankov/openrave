@@ -2157,9 +2157,9 @@ NxI32 maxdirsterid(const T *p,NxI32 count,const T &dir,Array<NxI32> &allow)
 				NxI32 mc = ma;
 				for(NxF32 xx = x-40.0f ; xx <= x ; xx+= 5.0f)
 				{
-					NxF32 s = sinf(DEG2RAD*(xx));
-					NxF32 c = cosf(DEG2RAD*(xx));
-					NxI32 md = maxdirfiltered(p,count,dir+(u*s+v*c)*0.025f,allow);
+					NxF32 ss = sinf(DEG2RAD*(xx));
+					NxF32 cc = cosf(DEG2RAD*(xx));
+					NxI32 md = maxdirfiltered(p,count,dir+(u*ss+v*cc)*0.025f,allow);
 					if(mc==m && md==m)
 					{
 						allow[m]=3;
@@ -2783,28 +2783,29 @@ bool ComputeHull(NxU32 vcount,const NxF32 *vertices,PHullResult &result,NxU32 vl
 
 	NxI32 ret = overhullv((float3*)vertices,vcount,35,verts_out,verts_count_out,faces,index_count,inflate,120.0f,vlimit);
 	if(!ret) {
-		tris.SetSize(0); //have to set the size to 0 in order to protect from a "pure virtual function call" problem
+		CONVEX_DECOMPOSITION::tris.SetSize(0); //have to set the size to 0 in order to protect from a "pure virtual function call" problem
 		return false;
 	}
 
-	Array<int3> tris;
+	Array<int3> tris_out;
 	NxI32 n=faces[0];
 	NxI32 k=1;
 	for(NxI32 i=0;i<n;i++)
 	{
 		NxI32 pn = faces[k++];
-		for(NxI32 j=2;j<pn;j++) tris.Add(int3(faces[k],faces[k+j-1],faces[k+j]));
+		for(NxI32 j=2;j<pn;j++) tris_out.Add(int3(faces[k],faces[k+j-1],faces[k+j]));
 		k+=pn;
 	}
-	assert(tris.count == index_count-1-(n*3));
+	assert(tris_out.count == index_count-1-(n*3));
 	MEMALLOC_FREE(faces);	// PT: I added that. Is it ok ?
 
-	result.mIndexCount = (NxU32) (tris.count*3);
-	result.mFaceCount  = (NxU32) tris.count;
+	result.mIndexCount = (NxU32) (tris_out.count*3);
+	result.mFaceCount  = (NxU32) tris_out.count;
 	result.mVertices   = (NxF32*) verts_out;
 	result.mVcount     = (NxU32) verts_count_out;
-	result.mIndices    = (NxU32 *) tris.element;
-	tris.element=NULL; tris.count = tris.array_size=0;
+	result.mIndices    = (NxU32 *) tris_out.element;
+	tris_out.element=NULL;
+    tris_out.count = tris_out.array_size=0;
 	CONVEX_DECOMPOSITION::tris.SetSize(0); //have to set the size to 0 in order to protect from a "pure virtual function call" problem
 
 	return true;
@@ -3154,11 +3155,11 @@ bool  HullLibrary::CleanupVertices(NxU32 svcount,
 				NxF32 y = v[1];
 				NxF32 z = v[2];
 
-				NxF32 dx = fabsf(x - px );
-				NxF32 dy = fabsf(y - py );
-				NxF32 dz = fabsf(z - pz );
+				NxF32 ddx = fabsf(x - px );
+				NxF32 ddy = fabsf(y - py );
+				NxF32 ddz = fabsf(z - pz );
 
-				if ( dx < normalepsilon && dy < normalepsilon && dz < normalepsilon )
+				if ( ddx < normalepsilon && ddy < normalepsilon && ddz < normalepsilon )
 				{
 					// ok, it is close enough to the old one
 					// now let us see if it is further from the center of the point cloud than the one we already recorded.
@@ -3191,8 +3192,10 @@ bool  HullLibrary::CleanupVertices(NxU32 svcount,
 
 	// ok..now make sure we didn't prune so many vertices it is now invalid.
 	{
-		NxF32 bmin[3] = {  FLT_MAX,  FLT_MAX,  FLT_MAX };
-		NxF32 bmax[3] = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+		//NxF32 bmin[3] = {  FLT_MAX,  FLT_MAX,  FLT_MAX };
+		//NxF32 bmax[3] = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+        bmin[0] = bmin[1] = bmin[2] = FLT_MAX;
+        bmax[0] = bmax[1] = bmax[2] = FLT_MIN;
 
 		for (NxU32 i=0; i<vcount; i++)
 		{
@@ -3204,9 +3207,9 @@ bool  HullLibrary::CleanupVertices(NxU32 svcount,
 			}
 		}
 
-		NxF32 dx = bmax[0] - bmin[0];
-		NxF32 dy = bmax[1] - bmin[1];
-		NxF32 dz = bmax[2] - bmin[2];
+		dx = bmax[0] - bmin[0];
+		dy = bmax[1] - bmin[1];
+		dz = bmax[2] - bmin[2];
 
 		if ( dx < EPSILON || dy < EPSILON || dz < EPSILON || vcount < 3)
 		{

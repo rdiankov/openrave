@@ -208,9 +208,9 @@ public:
     RaveVector() : x(0), y(0), z(0), w(0) {
     }
 
-    RaveVector(T x, T y, T z) : x(x), y(y), z(z), w(0) {
+    RaveVector(T x_, T y_, T z_) : x(x_), y(y_), z(z_), w(0) {
     }
-    RaveVector(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {
+    RaveVector(T x_, T y_, T z_, T w_) : x(x_), y(y_), z(z_), w(w_) {
     }
     template<typename U> RaveVector(const RaveVector<U> &vec) : x((T)vec.x), y((T)vec.y), z((T)vec.z), w((T)vec.w) {
     }
@@ -407,7 +407,7 @@ public:
 #endif
     }
 
-    template <typename U> RaveTransform(const RaveVector<U>& rot, const RaveVector<U>& trans) : rot(rot), trans(trans) {
+    template <typename U> RaveTransform(const RaveVector<U>& rot_, const RaveVector<U>& trans_) : rot(rot_), trans(trans_) {
 #if !defined(MATH_DISABLE_ASSERTS)
         const T l = rot.lengthsqr4();
         MATH_ASSERT( l > 0.99f && l < 1.01f );
@@ -827,6 +827,10 @@ public:
     ray() {
     }
     ray(const RaveVector<T>&_pos, const RaveVector<T>&_dir) : pos(_pos), dir(_dir) {
+#if !defined(MATH_DISABLE_ASSERTS)
+        const T l = dir.lengthsqr3();
+        MATH_ASSERT( l > 0.99f && l < 1.01f );
+#endif
     }
     RaveVector<T> pos, dir;
 };
@@ -923,7 +927,7 @@ class triangle
 public:
     triangle() {
     }
-    triangle(const RaveVector<T>&v1, const RaveVector<T>&v2, const RaveVector<T>&v3) : v1(v1), v2(v2), v3(v3) {
+    triangle(const RaveVector<T>&v1_, const RaveVector<T>&v2_, const RaveVector<T>&v3_) : v1(v1_), v2(v2_), v3(v3_) {
     }
     ~triangle() {
     }
@@ -962,7 +966,7 @@ class RaveCameraIntrinsics
 public:
     RaveCameraIntrinsics() : fx(0),fy(0),cx(0),cy(0), focal_length(0.01) {
     }
-    RaveCameraIntrinsics(T fx, T fy, T cx, T cy) : fx(fx), fy(fy), cx(cx), cy(cy), focal_length(0.01) {
+    RaveCameraIntrinsics(T fx_, T fy_, T cx_, T cy_) : fx(fx_), fy(fy_), cx(cx_), cy(cy_), focal_length(0.01) {
     }
 
     template <typename U>
