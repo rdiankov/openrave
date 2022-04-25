@@ -44,7 +44,7 @@ public:
         object _gravity = toPyVector3(Vector(0,0,-9.797930195020351));
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         std::vector<std::string> _keywords;
-        std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos;
+        py::object _vBodyInfos = py::none_();
         std::string _name;
         std::string _description;
 #else
