@@ -165,7 +165,7 @@ inline void ParseJson(rapidjson::Document& d, const std::string& str) {
 inline void ParseJson(rapidjson::Document& d, std::istream& is) {
     rapidjson::IStreamWrapper isw(is);
     // see note in: void ParseJson(rapidjson::Document& d, const std::string& str)
-    rapidjson::Document(tempDoc);
+    rapidjson::Document tempDoc;
     tempDoc.ParseStream<rapidjson::kParseFullPrecisionFlag>(isw); // parse float in full precision mode
     if (tempDoc.HasParseError()) {
         throw OPENRAVE_EXCEPTION_FORMAT("JSON stream is invalid (offset %u) %s", ((unsigned)tempDoc.GetErrorOffset())%GetParseError_En(tempDoc.GetParseError()), OpenRAVE::ORE_InvalidArguments);
