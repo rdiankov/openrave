@@ -1300,7 +1300,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
     }
 
     if( bInitPlan ) {
-        if( !_planner->InitPlan(RobotBasePtr(), parameters) ) {
+        if( !_planner->InitPlan(RobotBasePtr(), parameters).HasSolution() ) {
             std::stringstream ssdebug; ssdebug << trajspec;
             throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, failed to initialize planner %s with affine trajectory spec: %s"), env->GetNameId()%_plannername%ssdebug.str(), ORE_InvalidArguments);
         }
