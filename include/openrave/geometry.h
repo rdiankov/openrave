@@ -827,6 +827,10 @@ public:
     ray() {
     }
     ray(const RaveVector<T>&_pos, const RaveVector<T>&_dir) : pos(_pos), dir(_dir) {
+#if !defined(MATH_DISABLE_ASSERTS)
+        const T l = dir.lengthsqr3();
+        MATH_ASSERT( l > 0.99f && l < 1.01f );
+#endif
     }
     RaveVector<T> pos, dir;
 };
