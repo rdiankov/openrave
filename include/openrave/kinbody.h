@@ -74,9 +74,6 @@ class OPENRAVE_API ElectricMotorActuatorInfo : public InfoBase
 public:
     ElectricMotorActuatorInfo() {
     };
-    ElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& other) {
-        *this = other;
-    }
     bool operator==(const ElectricMotorActuatorInfo& other) const {
         return model_type == other.model_type
                && assigned_power_rating == other.assigned_power_rating
@@ -338,9 +335,6 @@ public:
     {
 public:
         GeometryInfo() {
-        }
-        GeometryInfo(const GeometryInfo& other) {
-            *this = other;
         }
         bool operator==(const GeometryInfo& other) const {
             return _t == other._t
@@ -809,9 +803,6 @@ protected:
 public:
         LinkInfo() {
         };
-        LinkInfo(const LinkInfo& other) {
-            *this = other;
-        }
         bool operator==(const LinkInfo& other) const;
         bool operator!=(const LinkInfo& other) const {
             return !operator==(other);
@@ -1309,9 +1300,6 @@ private:
 public:
         MimicInfo() {
         };
-        MimicInfo(const MimicInfo& other) {
-            *this = other;
-        }
 
         void Reset() override;
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
@@ -1370,9 +1358,6 @@ public:
     {
 public:
         JointInfo() {
-        }
-        JointInfo(const JointInfo& other) {
-            *this = other;
         }
         bool operator==(const JointInfo& other) const;
         bool operator!=(const JointInfo& other) const {
@@ -2042,9 +2027,6 @@ private:
 public:
         GrabbedInfo() {
         }
-        GrabbedInfo(const GrabbedInfo& other) {
-            *this = other;
-        }
         bool operator==(const GrabbedInfo& other) const {
             return _id == other._id
                    && _grabbedname == other._grabbedname
@@ -2179,9 +2161,6 @@ private:
     {
 public:
         KinBodyInfo() {
-        }
-        KinBodyInfo(const KinBodyInfo& other) {
-            *this = other;
         }
         bool operator==(const KinBodyInfo& other) const;
         bool operator!=(const KinBodyInfo& other) const {

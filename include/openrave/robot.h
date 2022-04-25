@@ -38,9 +38,6 @@ public:
 public:
         ManipulatorInfo() {
         }
-        ManipulatorInfo(const ManipulatorInfo& other) {
-            *this = other;
-        };
         bool operator==(const ManipulatorInfo& other) const {
             return _name == other._name
                    && _sBaseLinkName == other._sBaseLinkName
@@ -744,9 +741,6 @@ private:
     {
 public:
         ConnectedBodyInfo();
-        ConnectedBodyInfo(const ConnectedBodyInfo& other) {
-            *this = other;
-        };
         bool operator==(const ConnectedBodyInfo& other) const;
         bool operator!=(const ConnectedBodyInfo& other) const {
             return !operator==(other);
@@ -913,9 +907,6 @@ private:
 public:
         RobotBaseInfo() : KinBodyInfo() {
         }
-        RobotBaseInfo(const RobotBaseInfo& other) : KinBodyInfo(other) {
-            *this = other;
-        };
         bool operator==(const RobotBaseInfo& other) const;
         bool operator!=(const RobotBaseInfo& other) const {
             return !operator==(other);
