@@ -1789,14 +1789,16 @@ AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnly
     return ab;
 }
 
-OrientedBox KinBody::ComputeOBBOnAxes(const Vector& quat, bool bEnabledOnlyLinks) const
+OrientedBox KinBody::ComputeOBBOnAxes(const Vector& quatWorld, bool bEnabledOnlyLinks) const
 {
-    Transform tinv; tinv.rot = quatInverse(quat);
-    AABB ab = ComputeAABBFromTransform(tinv, bEnabledOnlyLinks);
+    // need to get the body's transform with respect to the new world
+    Transform tinv; tinv.rot = quatInverse(quatWorld);
+    Transform tBodyWithRespectToQuatWorld = tinv * GetTransform();
+    AABB abInQuatWorld = ComputeAABBFromTransform(tBodyWithRespectToQuatWorld, bEnabledOnlyLinks);
     OrientedBox obb;
-    obb.extents = ab.extents;
-    obb.transform.rot = quat;
-    obb.transform.trans = quatRotate(quat, ab.pos);
+    obb.extents = abInQuatWorld.extents;
+    obb.transform.rot = quatWorld;
+    obb.transform.trans = quatRotate(quatWorld, abInQuatWorld.pos);
     return obb;
 }
 

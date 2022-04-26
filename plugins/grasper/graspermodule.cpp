@@ -1015,7 +1015,7 @@ public:
 
                 if ( worker_params->bCheckGraspIK ) {
                     CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
-                    Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
+                    Transform Tgoalgrasp = probot->GetActiveManipulator()->GetTransform();
                     RobotBase::RobotStateSaver linksaver(probot);
                     probot->SetTransform(trobotstart);
                     FOREACH(itlink,vlinks) {
@@ -1085,7 +1085,7 @@ public:
                             Transform t = probot->GetTransform();
                             ptraj->GetConfigurationSpecification().ExtractTransform(t,vtrajpoint.begin(),probot);
                             probot->SetTransform(t);
-                            Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
+                            Transform Tgoalgrasp = probot->GetActiveManipulator()->GetTransform();
                             probot->SetTransform(trobotstart);
                             FOREACH(itlink,vlinks) {
                                 (*itlink)->Enable(false);

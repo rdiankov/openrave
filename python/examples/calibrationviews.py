@@ -79,7 +79,7 @@ class CalibrationViews:
         self.Tpatternrobot = None
         if self.vmodel.robot != self.vmodel.sensorrobot and target is not None:
             print('Assuming target \'%s\' is attached to %s'%(target.GetName(),self.vmodel.manip))
-            self.Tpatternrobot = dot(linalg.inv(self.vmodel.target.GetTransform()),self.vmodel.manip.GetEndEffectorTransform())
+            self.Tpatternrobot = dot(linalg.inv(self.vmodel.target.GetTransform()),self.vmodel.manip.GetTransform())
 
     def computevisibilityposes(self,dists=arange(0.05,1.5,0.2),orientationdensity=1,num=inf):
         """Computes robot poses using visibility information from the target.
@@ -94,7 +94,7 @@ class CalibrationViews:
                 self.vmodel.preshapes=array([self.robot.GetDOFValues(self.vmodel.manip.GetGripperIndices())])
                 self.vmodel.preprocess()
             if self.Tpatternrobot is not None:
-                self.vmodel.target.SetTransform(dot(self.vmodel.manip.GetEndEffectorTransform(),linalg.inv(self.Tpatternrobot)))
+                self.vmodel.target.SetTransform(dot(self.vmodel.manip.GetTransform(),linalg.inv(self.Tpatternrobot)))
             with RobotStateSaver(self.robot,KinBody.SaveParameters.GrabbedBodies):
                 with self.vmodel.target.CreateKinBodyStateSaver(KinBody.SaveParameters.LinkTransformation):
                     self.vmodel.target.SetTransform(eye(4))
@@ -142,9 +142,9 @@ class CalibrationViews:
             manip = self.vmodel.manip
             self.robot.SetActiveManipulator(manip)
             positions = transformPoints(Tsensor, localpositions)
-            Tcameratogripper = dot(linalg.inv(Tsensor),manip.GetEndEffectorTransform())
+            Tcameratogripper = dot(linalg.inv(Tsensor),manip.GetTransform())
             configs = [self.robot.GetDOFValues(manip.GetArmIndices())]
-            poses = [poseFromMatrix(manip.GetEndEffectorTransform())]
+            poses = [poseFromMatrix(manip.GetTransform())]
             Trotations = [eye(4),matrixFromAxisAngle([angledelta,0,0]),matrixFromAxisAngle([-angledelta,0,0]),matrixFromAxisAngle([0,angledelta,0]),matrixFromAxisAngle([0,-angledelta,0])]
             for position in positions:
                 Tsensor[0:3,3] = position

@@ -38,9 +38,6 @@ public:
 public:
         ManipulatorInfo() {
         }
-        ManipulatorInfo(const ManipulatorInfo& other) {
-            *this = other;
-        };
         bool operator==(const ManipulatorInfo& other) const {
             return _name == other._name
                    && _sBaseLinkName == other._sBaseLinkName
@@ -170,10 +167,6 @@ public:
 
         /// \brief return the linear/angular velocity of the manipulator coordinate system
         std::pair<Vector,Vector> GetVelocity() const;
-
-        inline Transform GetEndEffectorTransform() const {
-            return GetTransform();
-        }
 
         inline const std::string& GetId() const {
             return _info._id;
@@ -746,9 +739,6 @@ private:
     {
 public:
         ConnectedBodyInfo();
-        ConnectedBodyInfo(const ConnectedBodyInfo& other) {
-            *this = other;
-        };
         bool operator==(const ConnectedBodyInfo& other) const;
         bool operator!=(const ConnectedBodyInfo& other) const {
             return !operator==(other);
@@ -915,9 +905,6 @@ private:
 public:
         RobotBaseInfo() : KinBodyInfo() {
         }
-        RobotBaseInfo(const RobotBaseInfo& other) : KinBodyInfo(other) {
-            *this = other;
-        };
         bool operator==(const RobotBaseInfo& other) const;
         bool operator!=(const RobotBaseInfo& other) const {
             return !operator==(other);
@@ -932,7 +919,7 @@ public:
         std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
         std::vector<GripperInfoPtr> _vGripperInfos; ///< list of pointers to GripperInfo
 protected:
-        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value);
+        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale);
 
     };
     typedef boost::shared_ptr<RobotBaseInfo> RobotBaseInfoPtr;

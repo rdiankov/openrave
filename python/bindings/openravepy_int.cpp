@@ -411,15 +411,6 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
     }
 }
 
-/// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
-static bool s_bReturnTransformQuaternions = false;
-bool GetReturnTransformQuaternions() {
-    return s_bReturnTransformQuaternions;
-}
-void SetReturnTransformQuaternions(bool bset) {
-    s_bReturnTransformQuaternions = bset;
-}
-
 Transform ExtractTransform(const object& oraw)
 {
     return ExtractTransformType<dReal>(oraw);
@@ -1009,13 +1000,12 @@ PyEnvironmentBase::PyEnvironmentBaseInfo::PyEnvironmentBaseInfo(const Environmen
 
 EnvironmentBase::EnvironmentBaseInfoPtr PyEnvironmentBase::PyEnvironmentBaseInfo::GetEnvironmentBaseInfo() const {
     EnvironmentBase::EnvironmentBaseInfoPtr pInfo(new EnvironmentBase::EnvironmentBaseInfo());
+    pInfo->_vBodyInfos = _ExtractBodyInfoArray(_vBodyInfos);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    pInfo->_vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(_vBodyInfos), end(_vBodyInfos));
     pInfo->_revision = _revision;
     pInfo->_keywords = _keywords;
     pInfo->_description = _description;
 #else
-    pInfo->_vBodyInfos = _ExtractBodyInfoArray(_vBodyInfos);
     size_t numkeywords = (size_t)py::len(_keywords);
     for(size_t i=0; i < numkeywords; i++) {
         pInfo->_keywords.push_back(py::extract<std::string>(_keywords[i]));
@@ -1046,12 +1036,6 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON(py::object obj, d
 }
 
 void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::EnvironmentBaseInfo& info) {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    _vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(info._vBodyInfos), end(info._vBodyInfos));
-    _revision = info._revision;
-    _keywords = std::vector<std::string>(begin(info._keywords), end(info._keywords));
-    _description = info._description;
-#else
     py::list vBodyInfos;
     for (const KinBody::KinBodyInfoPtr& pinfo : info._vBodyInfos) {
         if (!pinfo) {
@@ -1067,6 +1051,11 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
         }
     }
     _vBodyInfos = vBodyInfos;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    _revision = info._revision;
+    _keywords = std::vector<std::string>(begin(info._keywords), end(info._keywords));
+    _description = info._description;
+#else
     py::list vKeywords;
     FOREACHC(itKeyword, info._keywords) {
         py::object keyword = ConvertStringToUnicode(*itKeyword);
@@ -2525,7 +2514,7 @@ object PyEnvironmentBase::drawplane(object otransform, object oextents, const st
     if(z<1){
         throw OpenRAVEException(_("_vtexture[0][0] is empty"), ORE_InvalidArguments);
     }
-    boost::multi_array<float,3> vtexture(boost::extents[x][y][1]);
+    boost::multi_array<float,3> vtexture(boost::extents[x][y][z]);
     for(int i=0; i<x; i++){
         if(_vtexture[i].size() != y){
             throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d] size is different"))%i), ORE_InvalidArguments);
@@ -2697,8 +2686,8 @@ object PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix(const string 
     _penv->GetPublishedBodyTransformsMatchingPrefix(prefix, nameTransfPairs, timeout);
 
     py::dict otransforms;
-    FOREACH(itpair, nameTransfPairs) {
-        otransforms[itpair->first] = ReturnTransform(itpair->second);
+    for(const std::pair<std::string, Transform>& itpair : nameTransfPairs) {
+        otransforms[itpair.first] = ReturnTransform(itpair.second);
     }
 
     return otransforms;
@@ -3352,6 +3341,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
         scope_ env = classenv
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                      .def(init<int>(), "options"_a = (int) ECO_StartSimulationThread)
+                     .def(init<std::string, int>(), "name"_a, "options"_a = (int) ECO_StartSimulationThread)
                      .def(init<EnvironmentBasePtr>(), "penv"_a)
                      .def(init<const PyEnvironmentBase&>(), "penv"_a)
 #else
@@ -3706,17 +3696,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
         ;
         env.attr("TriangulateOptions") = selectionoptions;
-    }
-
-    {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ options = class_<DummyStruct>(m, "options").def_readwrite_static
-                             ("returnTransformQuaternion", &s_bReturnTransformQuaternions);
-#else
-        scope_ options = class_<DummyStruct>("options").add_static_property
-                             ("returnTransformQuaternion",GetReturnTransformQuaternions,SetReturnTransformQuaternions);
-#endif
-
     }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
