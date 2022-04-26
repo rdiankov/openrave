@@ -77,7 +77,7 @@ bool RobotBase::ManipulatorInfo::operator==(const ManipulatorInfo& other) const
         && _sBaseLinkName == other._sBaseLinkName
         && _sIkChainEndLinkName == other._sIkChainEndLinkName
         && _sEffectorLinkName == other._sEffectorLinkName
-        && TransformDistanceFast(_tLocalTool, other._tLocalTool) < g_fEpsilonLinear        
+        && TransformDistanceFast(_tLocalTool, other._tLocalTool) <= g_fEpsilonLinear
         && _vChuckingDirection == other._vChuckingDirection
         && _vdirection == other._vdirection
         && _sIkSolverXMLId == other._sIkSolverXMLId
