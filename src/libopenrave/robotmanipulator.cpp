@@ -71,6 +71,24 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "restrictGraspSetNames", _vRestrictGraspSetNames);
 }
 
+bool RobotBase::ManipulatorInfo::operator==(const ManipulatorInfo& other) const
+{
+    return _name == other._name
+        && _sBaseLinkName == other._sBaseLinkName
+        && _sIkChainEndLinkName == other._sIkChainEndLinkName
+        && _sEffectorLinkName == other._sEffectorLinkName
+        && _tLocalTool == other._tLocalTool
+        && _vChuckingDirection == other._vChuckingDirection
+        && _vdirection == other._vdirection
+        && _sIkSolverXMLId == other._sIkSolverXMLId
+        && _vGripperJointNames == other._vGripperJointNames
+        && _grippername == other._grippername
+        && _toolChangerConnectedBodyToolName == other._toolChangerConnectedBodyToolName
+        && _toolChangerLinkName == other._toolChangerLinkName
+        && _vRestrictGraspSetNames == other._vRestrictGraspSetNames
+        && _id == other._id;
+}
+
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
 }
 RobotBase::Manipulator::~Manipulator() {
