@@ -321,4 +321,4 @@ if __name__ == "__main__":
             stat.append(None)
         stats.append(stat)
     with open('ikfaststats.pp','wb') as f:
-        pickle.dump([stats,options], f)
+        pickle.dump([stats,options], f, 2)

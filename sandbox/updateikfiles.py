@@ -28,7 +28,12 @@ import time,platform,os,sys
 import multiprocessing
 from optparse import OptionParser
 import logging
-import pickle
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 from openravepy import *
 from openravepy import ikfast
 
@@ -225,7 +230,7 @@ if __name__ == "__main__":
 
     saveresults = [[args[i], finalresults[i]] for i in range(len(finalresults)) if finalresults[i] is not None]
     with open(os.path.join(options.destdir, 'results.pp'),'w') as f:
-        pickle.dump(saveresults, f)
+        pickle.dump(saveresults, f, 2)
     print 'results: ',saveresults
 
     # select max success rate one in all free indies combinations.
@@ -251,4 +256,3 @@ if __name__ == "__main__":
         except Exception,e:
             print e
             print 'error occured in writing file %s.'%args[i]
-
