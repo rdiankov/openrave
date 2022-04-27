@@ -44,7 +44,7 @@
 
 /// should be the same as ikfast.__version__
 /// if 0x10000000 bit is set, then the iksolver assumes 6D transforms are done without the manipulator offset taken into account (allows to reuse IK when manipulator offset changes)
-#define IKFAST_VERSION 0x1000004b
+#define IKFAST_VERSION 0x1000004c
 
 #define IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE 5
 
