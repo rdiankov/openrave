@@ -1660,7 +1660,7 @@ protected:
         boost::mutex::scoped_lock lock(s_QhullMutex);
 
         if( !outfile ) {
-            outfile = tmpfile();        // stdout from qhull code
+            // outfile = tmpfile();        // stdout from qhull code
         }
         if( !errfile ) {
             errfile = tmpfile();        // stderr, error messages from qhull code
