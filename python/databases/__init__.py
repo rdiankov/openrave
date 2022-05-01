@@ -110,7 +110,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
         except OSError:
             pass
         with open(filename, 'wb') as f:
-            pickle.dump((self.getversion(),params), f)
+            pickle.dump((self.getversion(),params), f, 2)
     def generate(self):
         raise NotImplementedError()
     def show(self,options=None):
