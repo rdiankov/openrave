@@ -248,7 +248,7 @@ class TestIkSolver(EnvironmentSetup):
             assert(transdist(newtransvelocity, dot(T[0:3,0:3],transvelocity)) <= g_epsilon)
 
             # test pickling
-            ikparam3pickled = pickle.loads(pickle.dumps(ikparam3))
+            ikparam3pickled = pickle.loads(pickle.dumps(ikparam3), 2)
             assert(str(ikparam3pickled) == str(ikparam3))
 
     def test_ikfastrobotsolutions(self):

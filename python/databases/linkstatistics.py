@@ -98,7 +98,7 @@ class LinkStatisticsModel(DatabaseGenerator):
             return value
 
     def getversion(self):
-        return 6
+        return 7
     
     def save(self):
         self.SavePickle()
