@@ -126,6 +126,21 @@ OPENRAVE_API PlannerStatus SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxve
  */
 OPENRAVE_API PlannerStatus RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
+/** \brief Retime the trajectory points by extracting and using the passed in robot dof indices. <b>[multi-thread safe]</b>
+
+   Collision is not checked. Every waypoint in the trajectory is guaranteed to be hit.
+   The velocities for the current trajectory are overwritten.
+   The returned trajectory will contain data only for the currenstly set active dofs of the robot.
+   \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+   \param robot use the robot's active dofs to initialize the trajectory space
+   \param vRobotDOFIndices robot dof indices to use for retiming
+   \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
+   \param hastimestamps if true, use the already initialized timestamps of the trajectory
+   \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
+   \return PlannerStatus of the status of the retiming planner
+ */
+OPENRAVE_API PlannerStatus RetimeRobotDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, const std::vector<int>& vRobotDOFIndices, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+
 /** \brief Smoother planner for the trajectory points to avoiding collisions by extracting and using the currently set active dofs of the robot.
 
     Caches all the planners and parameters so PlanPath can be called multiple times without creating new objects.
