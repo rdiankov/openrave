@@ -134,7 +134,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         return self.linkgeometry is not None and len(self.linkgeometry)==len(self.robot.GetLinks())
     
     def getversion(self):
-        return 2
+        return 3
     
     def save(self):
         try:

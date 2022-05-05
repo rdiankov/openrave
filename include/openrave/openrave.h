@@ -997,7 +997,7 @@ protected:
         \param[out] useddofindices a vector of unique DOF indices targetted for the body
         \param[out] usedconfigindices for every used index, returns the first configuration space index it came from
      */
-    virtual void ExtractUsedIndices(KinBodyPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const;
+    virtual void ExtractUsedIndices(KinBodyConstPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const;
 
     /// \brief swaps the data between the two configuration specifications as efficiently as possible
     virtual void Swap(ConfigurationSpecification& spec);

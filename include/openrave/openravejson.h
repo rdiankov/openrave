@@ -23,6 +23,7 @@
 
 #include <array>
 #include <boost/shared_ptr.hpp>
+#include <boost/smart_ptr/make_shared.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <stdint.h>
@@ -342,8 +343,8 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveVector<T>& t)
 
 template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, boost::shared_ptr<T>& ptr) {
-    // this way prevents copy constructor from getting called
-    ptr = boost::shared_ptr<T>(new T());
+    static_assert(std::is_default_constructible<T>::value, "Shared pointer of type must be default-constructible.");
+    ptr = boost::make_shared<T>();
     LoadJsonValue(v, *ptr);
 }
 

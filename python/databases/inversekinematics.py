@@ -305,7 +305,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 pass
 
             with open(statsfilename, 'wb') as f:
-                pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f)
+                pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f, 2)
             log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
 
             if filepermissions is not None and filepermissions >= 0:

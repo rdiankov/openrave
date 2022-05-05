@@ -711,7 +711,7 @@ static void _CreateSetBodyGroupNames()
     }
 }
 
-void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
+void ConfigurationSpecification::ExtractUsedIndices(KinBodyConstPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
 {
     boost::call_once(_CreateSetBodyGroupNames,_onceSetBodyGroupNames);
 
