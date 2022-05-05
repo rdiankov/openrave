@@ -183,6 +183,9 @@ public:
     /// \brief initialize the trajectory
     virtual void deserialize(std::istream& I);
 
+    /// \brief initialize the trajectory via a raw pointer to memory
+    virtual void DeserializeFromRawData(const uint8_t* pdata, size_t nDataSize);
+    
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /// \brief swap the contents of the data between the two trajectories.
