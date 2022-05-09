@@ -25,6 +25,27 @@
 
 namespace OpenRAVE {
 
+static boost::array<std::string,5> s_vTimeDerivativeJoints = {{"joint_values", "joint_velocities", "joint_accelerations", "joint_jerks", "joint_snaps"}};
+static boost::array<std::string,5> s_vTimeDerivativeAffine = {{"affine_transform", "affine_velocities", "affine_accelerations", "affine_jerks", "affine_snaps"}};
+
+static std::set<std::string> s_setBodyGroupNames;
+static boost::once_flag _onceSetBodyGroupNames = BOOST_ONCE_INIT;
+
+static void _CreateSetBodyGroupNames()
+{
+    if( s_setBodyGroupNames.size() == 0 ) {
+        s_setBodyGroupNames.insert("joint_values");
+        s_setBodyGroupNames.insert("joint_velocities");
+        s_setBodyGroupNames.insert("joint_accelerations");
+        s_setBodyGroupNames.insert("joint_jerks");
+        s_setBodyGroupNames.insert("joint_torques");
+        s_setBodyGroupNames.insert("affine_transform");
+        s_setBodyGroupNames.insert("affine_velocities");
+        s_setBodyGroupNames.insert("affine_accelerations");
+        s_setBodyGroupNames.insert("affine_jerks");
+    }
+}
+
 ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody,const std::string& interpolation)
 {
     ConfigurationSpecification spec;
@@ -692,25 +713,6 @@ void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::
     }
 }
 
-
-static std::set<std::string> s_setBodyGroupNames;
-static boost::once_flag _onceSetBodyGroupNames = BOOST_ONCE_INIT;
-
-static void _CreateSetBodyGroupNames()
-{
-    if( s_setBodyGroupNames.size() == 0 ) {
-        s_setBodyGroupNames.insert("joint_values");
-        s_setBodyGroupNames.insert("joint_velocities");
-        s_setBodyGroupNames.insert("joint_accelerations");
-        s_setBodyGroupNames.insert("joint_jerks");
-        s_setBodyGroupNames.insert("joint_torques");
-        s_setBodyGroupNames.insert("affine_transform");
-        s_setBodyGroupNames.insert("affine_velocities");
-        s_setBodyGroupNames.insert("affine_accelerations");
-        s_setBodyGroupNames.insert("affine_jerks");
-    }
-}
-
 void ConfigurationSpecification::ExtractUsedIndices(KinBodyConstPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
 {
     boost::call_once(_CreateSetBodyGroupNames,_onceSetBodyGroupNames);
@@ -725,6 +727,51 @@ void ConfigurationSpecification::ExtractUsedIndices(KinBodyConstPtr body, std::v
         ss.str(itgroup->name);
         std::vector<std::string> curtokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
         if( curtokens.size() > 2 && s_setBodyGroupNames.find(curtokens.at(0)) != s_setBodyGroupNames.end() && curtokens.at(1) == bodyname) {
+            for(size_t i = 2; i < curtokens.size(); ++i) {
+                int index = boost::lexical_cast<int>(curtokens.at(i));
+                if( find(useddofindices.begin(), useddofindices.end(), index) == useddofindices.end() ) {
+                    useddofindices.push_back(index);
+                    usedconfigindices.push_back(itgroup->offset + (i-2));
+                }
+            }
+        }
+    }
+}
+
+void ConfigurationSpecification::ExtractUsedIndices(const char* pBodyName, int nBodyNameLength, int timederivative, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
+{
+    boost::call_once(_CreateSetBodyGroupNames,_onceSetBodyGroupNames);
+
+    // have to look through all groups since groups can contain the same body
+    std::stringstream ss;
+    useddofindices.resize(0);
+    usedconfigindices.resize(0);
+    FOREACHC(itgroup,_vgroups) {
+        ss.clear();
+        ss.str(itgroup->name);
+        std::vector<std::string> curtokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+        if( curtokens.size() <= 2 ) {
+            // no indices
+            continue;
+        }
+
+        if( timederivative >= 0 ) {
+            bool bMatchJoints = timederivative < (int)s_vTimeDerivativeJoints.size() && s_vTimeDerivativeJoints[timederivative] == curtokens[0];
+            if( !bMatchJoints ) {
+                bool bMatchAffine = timederivative < (int)s_vTimeDerivativeAffine.size() && s_vTimeDerivativeAffine[timederivative] == curtokens[0];
+                if( !bMatchAffine ) {
+                    continue;
+                }
+            }
+        }
+        else {
+            if( s_setBodyGroupNames.find(curtokens.at(0)) == s_setBodyGroupNames.end() ) {
+                // not part of body
+                continue;
+            }
+        }
+
+        if( curtokens.at(1).size() == nBodyNameLength && strncmp(curtokens.at(1).c_str(), pBodyName, nBodyNameLength) == 0 ) {
             for(size_t i = 2; i < curtokens.size(); ++i) {
                 int index = boost::lexical_cast<int>(curtokens.at(i));
                 if( find(useddofindices.begin(), useddofindices.end(), index) == useddofindices.end() ) {
