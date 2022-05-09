@@ -371,19 +371,19 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         rapidjson::Value rRobotController;
         rRobotController.SetObject();
         _jci_robotcontroller->SerializeJSON(rRobotController, allocator, fUnitScale, options);
-        value.AddMember("jci_robotController", rRobotController, allocator);
+        value.AddMember("jointControlInfoRobotController", rRobotController, allocator);
     }
     if( !!_jci_io ) {
         rapidjson::Value rIo;
         rIo.SetObject();
         _jci_io->SerializeJSON(rIo, allocator, fUnitScale, options);
-        value.AddMember("jci_io", rIo, allocator);
+        value.AddMember("jointControlInfoIO", rIo, allocator);
     }
     if( !!_jci_externaldevice ) {
         rapidjson::Value rExternaldevice;
         rExternaldevice.SetObject();
         _jci_externaldevice->SerializeJSON(rExternaldevice, allocator, fUnitScale, options);
-        value.AddMember("jci_externaldevice", rExternaldevice, allocator);
+        value.AddMember("jointControlInfoExternalDevice", rExternaldevice, allocator);
     }
 }
 
@@ -594,23 +594,23 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
         }
     }
 
-    if (value.HasMember("jci_robotController")) {
+    if (value.HasMember("jointControlInfoRobotController")) {
         if (!_jci_robotcontroller) {
             _jci_robotcontroller.reset(new JointControlInfo_RobotController());
         }
-        _jci_robotcontroller->DeserializeJSON(value["jci_robotController"], fUnitScale, options);
+        _jci_robotcontroller->DeserializeJSON(value["jointControlInfoRobotController"], fUnitScale, options);
     }
-    if (value.HasMember("jci_io")) {
+    if (value.HasMember("jointControlInfoIO")) {
         if (!_jci_io) {
             _jci_io.reset(new JointControlInfo_IO());
         }
-        _jci_io->DeserializeJSON(value["jci_io"], fUnitScale, options);
+        _jci_io->DeserializeJSON(value["jointControlInfoIO"], fUnitScale, options);
     }
-    if (value.HasMember("jci_externaldevice")) {
+    if (value.HasMember("jointControlInfoExternalDevice")) {
         if (!_jci_externaldevice) {
             _jci_externaldevice.reset(new JointControlInfo_ExternalDevice());
         }
-        _jci_externaldevice->DeserializeJSON(value["jci_externaldevice"], fUnitScale, options);
+        _jci_externaldevice->DeserializeJSON(value["jointControlInfoExternalDevice"], fUnitScale, options);
     }
 }
 
