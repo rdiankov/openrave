@@ -1674,6 +1674,7 @@ public:
     inline void SetValues(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype)
     {
         _type = iktype;
+        const bool isVelocity = _type & IKP_VelocityDataBit;
         switch(_type & ~IKP_VelocityDataBit) {
         case IKP_Transform6D:
             _transform.rot.x = *itvalues++;
@@ -1683,7 +1684,9 @@ public:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
-            ENSURE_4DVEC_UNIT_LENGTH(_transform.rot);
+            if (!isVelocity) {
+                ENSURE_4DVEC_UNIT_LENGTH(_transform.rot);
+            }
             break;
         case IKP_Rotation3D:
             _transform.rot.x = *itvalues++;
@@ -1700,7 +1703,9 @@ public:
             _transform.rot.x = *itvalues++;
             _transform.rot.y = *itvalues++;
             _transform.rot.z = *itvalues++;
-            ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+            if (!isVelocity) {
+                ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+            }
             break;
         case IKP_Ray4D:
             _transform.rot.x = *itvalues++;
@@ -1709,7 +1714,9 @@ public:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
-            ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+            if (!isVelocity) {
+                ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+            }
             break;
         case IKP_Lookat3D:
             _transform.trans.x = *itvalues++;
@@ -1723,7 +1730,9 @@ public:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
-            ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+            if (!isVelocity) {
+                ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+            }
             break;
         case IKP_TranslationXY2D:
             _transform.trans.x = *itvalues++;
