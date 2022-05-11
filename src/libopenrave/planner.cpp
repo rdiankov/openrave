@@ -634,7 +634,7 @@ int SetDOFVelocitiesIndicesParameters(KinBodyPtr pbody, const std::vector<dReal>
     return 0;
 }
 
-void PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
+void PlannerParameters::SetRobotActiveJoints(RobotBasePtr& robot)
 {
     // check if any of the links affected by the dofs beside the base link are static
     FOREACHC(itlink, robot->GetLinks()) {
@@ -681,6 +681,54 @@ void PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 
     // have to do this last, disable timed constraints for default
     std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
+    boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
+    _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
+
+    int (DynamicsCollisionConstraint::*CheckWithAccelerations)(const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr) = &DynamicsCollisionConstraint::Check;
+    _checkpathvelocityaccelerationconstraintsfn = std::bind(CheckWithAccelerations, pcollision, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9, std::placeholders::_10);
+}
+
+void PlannerParameters::SetRobotDOFIndices(RobotBasePtr& probot, const std::vector<int>& dofindices)
+{
+    const RobotBase& robot = *probot;
+    // check if any of the links affected by the dofs beside the base link are static
+    for(const KinBody::LinkPtr& plink : robot.GetLinks()) {
+        if( plink->IsStatic() ) {
+            for(const int dofindex : dofindices ) {
+                KinBody::JointPtr pjoint = robot.GetJointFromDOFIndex(dofindex);
+                OPENRAVE_ASSERT_FORMAT(!robot.DoesAffect(pjoint->GetJointIndex(),plink->GetIndex()),"robot %s link %s is static when it is affected by active joint %s", robot.GetName()%plink->GetName()%pjoint->GetName(), ORE_InvalidState);
+            }
+        }
+    }
+
+    using namespace planningutils;
+    _distmetricfn = boost::bind(&SimpleDistanceMetric::Eval,boost::shared_ptr<SimpleDistanceMetric>(new SimpleDistanceMetric(probot)),_1,_2);
+    // only roobt joint indices, so use a more resiliant function
+    _getstatefn = boost::bind(&RobotBase::GetDOFValues,probot,_1,dofindices);
+    _setstatevaluesfn = boost::bind(SetDOFValuesIndicesParameters,probot, _1, dofindices, _2);
+    _diffstatefn = boost::bind(&RobotBase::SubtractDOFValues,probot,_1,_2, dofindices);
+
+    SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot.GetEnv(),str(boost::format("robotconfiguration %s")%robot.GetName()));
+    _listInternalSamplers.clear();
+    _listInternalSamplers.push_back(pconfigsampler);
+
+    boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn, _diffstatefn));
+    _samplefn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
+    _sampleneighfn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
+
+    robot.GetDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit, dofindices);
+    robot.GetDOFVelocityLimits(_vConfigVelocityLimit, dofindices);
+    robot.GetDOFAccelerationLimits(_vConfigAccelerationLimit, dofindices);
+    robot.GetDOFJerkLimits(_vConfigJerkLimit, dofindices);
+    robot.GetDOFResolutions(_vConfigResolution, dofindices);
+    robot.GetDOFValues(vinitialconfig, dofindices);
+    robot.GetDOFVelocities(_vInitialConfigVelocities, dofindices); // necessary?
+    _configurationspecification = robot.GetConfigurationSpecificationIndices(dofindices);
+
+    _neighstatefn = boost::bind(AddStatesWithLimitCheck, _1, _2, _3, boost::ref(_vConfigLowerLimit), boost::ref(_vConfigUpperLimit)); // probably ok... do we need to clamp limits?
+
+    // have to do this last, disable timed constraints for default
+    std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(probot);
     boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
     _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 

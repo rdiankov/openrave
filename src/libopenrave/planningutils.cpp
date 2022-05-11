@@ -1360,6 +1360,13 @@ PlannerStatus RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr rob
     return _PlanActiveDOFTrajectory(traj, robot, hastimestamps, fmaxvelmult, fmaxaccelmult, GetPlannerFromInterpolation(traj, plannername), /*bsmooth*/ false, plannerparameters);
 }
 
+PlannerStatus RetimeRobotDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, const std::vector<int>& vRobotDOFIndices, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+{
+    RobotBase::RobotStateSaver activesaver(robot, RobotBase::Save_ActiveDOF);
+    robot->SetActiveDOFs(vRobotDOFIndices);
+    return _PlanActiveDOFTrajectory(traj, robot, hastimestamps, fmaxvelmult, fmaxaccelmult, GetPlannerFromInterpolation(traj, plannername), /*bsmooth*/ false, plannerparameters);
+}
+
 PlannerStatus RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, GetPlannerFromInterpolation(traj, plannername), /*bsmooth*/ false, plannerparameters);

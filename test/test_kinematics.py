@@ -879,7 +879,7 @@ class TestKinematics(EnvironmentSetup):
         self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
         spec=robot.GetConfigurationSpecification()
-        s=pickle.dumps(spec)
+        s=pickle.dumps(spec, 2)
         newspec=pickle.loads(s)
         assert(newspec==spec)
 
