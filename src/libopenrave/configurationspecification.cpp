@@ -20,8 +20,12 @@
 #include "libopenrave.h"
 #include <openrave/xmlreaders.h>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/once.hpp>
+
+using boost::placeholders::_1;
+using boost::placeholders::_2;
 
 namespace OpenRAVE {
 

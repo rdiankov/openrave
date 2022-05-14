@@ -112,7 +112,6 @@
 
 #endif
 
-#include <boost/bind.hpp>
 #include <boost/version.hpp>
 
 #ifdef HAVE_BOOST_FILESYSTEM

@@ -15,9 +15,12 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ravep.h"
+#include <boost/bind/bind.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <boost/lexical_cast.hpp>
 #include <openrave/xmlreaders.h>
+
+using namespace boost::placeholders;
 
 namespace OpenRAVE {
 

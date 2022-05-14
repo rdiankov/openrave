@@ -23,6 +23,10 @@
 //#include <boost/iostreams/stream.hpp>
 //#include <boost/version.hpp>
 
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
+
 namespace OpenRAVE {
 namespace planningutils {
 
