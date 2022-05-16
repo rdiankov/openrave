@@ -721,9 +721,11 @@ public:
                 _tShortcutStart = utils::GetMicroTime();
 #endif
 #ifdef SMOOTHER2_ENABLE_MERGING
-                nummerges = _MergeConsecutiveSegments(parabolicpath, parameters->_fStepLength*0.99);
-                if( nummerges < 0 ) {
-                    return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%_environmentid), PS_Interrupted);
+                if( parameters->maxmergeiterations > 0 ) {
+                    nummerges = _MergeConsecutiveSegments(parabolicpath, parameters->_fStepLength*0.99);
+                    if( nummerges < 0 ) {
+                        return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%_environmentid), PS_Interrupted);
+                    }
                 }
 #endif
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
