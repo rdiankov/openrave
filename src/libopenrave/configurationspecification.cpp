@@ -733,7 +733,7 @@ void ConfigurationSpecification::ExtractUsedIndices(KinBodyConstPtr body, std::v
     }
 }
 
-void ConfigurationSpecification::ExtractUsedIndices(const char* pBodyName, int nBodyNameLength, int timederivative, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
+void ConfigurationSpecification::ExtractUsedIndices(const char* pBodyName, size_t nBodyNameLength, int timederivative, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
 {
     // have to look through all groups since groups can contain the same body
     std::stringstream ss;

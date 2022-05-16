@@ -1003,7 +1003,7 @@ protected:
         \param[out] useddofindices a vector of unique DOF indices targetted for the body
         \param[out] usedconfigindices for every used index, returns the first configuration space index it came from
      */
-    void ExtractUsedIndices(const char* pBodyName, int nBodyNameLength, int timederivative, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const;
+    void ExtractUsedIndices(const char* pBodyName, size_t nBodyNameLength, int timederivative, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const;
 
     /// \brief swaps the data between the two configuration specifications as efficiently as possible
     void Swap(ConfigurationSpecification& spec);

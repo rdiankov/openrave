@@ -3675,7 +3675,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
                     // p''(t) = 6*a*t + 2*b. Check |p''(timeelapsed) - a1|.
                     dReal accelerationError = RaveFabs( (2*temp1 + temp2) - ddq1.at(idof) );
-                    OPENRAVE_ASSERT_OP_FORMAT(velocityError, <=, 100*g_fEpsilonCubic, "dof %d final acceleration is not consistent", idof, ORE_InvalidArguments);
+                    OPENRAVE_ASSERT_OP_FORMAT(accelerationError, <=, 100*g_fEpsilonCubic, "dof %d final acceleration is not consistent", idof, ORE_InvalidArguments);
                 }
             }
             break;
@@ -4084,7 +4084,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             } // end switch maskinterpolation
 
             dReal dqscale = 1.0;  // TODO: write a correct description for this variable later
-            int iScaleIndex = -1; // TODO: write a correct description for this variable later
             dReal fitdiff = 1/(tnext - tprev);
             for( size_t idof = 0; idof < ndof; ++idof ) {
                 if( RaveFabs(dQ[idof]) > vConfigResolution[idof] * 1.01 ) {
@@ -4163,7 +4162,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     }
                     if( s < dqscale ) {
                         dqscale = s;
-                        iScaleIndex = (int)idof;
                     }
                 }
                 else {
