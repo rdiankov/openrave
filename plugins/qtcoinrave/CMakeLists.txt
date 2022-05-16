@@ -1,17 +1,18 @@
 ############################
 # qtcoinrave openrave plugin
 ############################
-find_package(Coin)
-find_package(SoQt)
+find_package(Coin QUIET)
+find_package(SoQt QUIET)
 
+set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL)
 if(NOT OPENGL_FOUND)
-  message(STATUS "WARNING: OpenGL not found. This library is not necessary, but it is good to link with")
+  message(WARNING "OpenGL not found. This library is not necessary, but it is good to link with")
 endif()
 
 find_package(Qt5 COMPONENTS Core Gui) # Declarative)
 if (NOT Qt5Gui_FOUND)
-  message(STATUS "WARNING: Qt5 not found, is your QTDIR enviornment variable set?")
+  message(WARNING "Qt5 not found, is your QTDIR enviornment variable set?")
 endif()
 
 if (Qt5Core_FOUND AND Qt5Gui_FOUND AND SoQt_FOUND AND Coin_FOUND)
@@ -40,8 +41,7 @@ if (Qt5Core_FOUND AND Qt5Gui_FOUND AND SoQt_FOUND AND Coin_FOUND)
     set(extLIBS ${extLIBS} winmm imm32 ws2_32)
   endif()
 
-  target_link_libraries(qtcoinrave ${extLIBS} libopenrave)
-  target_link_libraries(qtcoinrave PRIVATE boost_assertion_failed)
+  target_link_libraries(qtcoinrave PUBLIC libopenrave ${extLIBS} PRIVATE boost_assertion_failed)
   set_target_properties(qtcoinrave PROPERTIES COMPILE_FLAGS "${QTCOIN_COMPILE_FLAGS} ${SOQT_CXXFLAGS} ${COIN_CXXFLAGS}" LINK_FLAGS "${QTCOIN_LINK_FLAGS}")
   install(TARGETS qtcoinrave DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-qtcoinrave)
   
@@ -54,5 +54,5 @@ if (Qt5Core_FOUND AND Qt5Gui_FOUND AND SoQt_FOUND AND Coin_FOUND)
   set(PLUGIN_COMPONENT ${COMPONENT_PREFIX}plugin-qtcoinrave PARENT_SCOPE)
   
 else()
-  message(STATUS "WARNING: Could not find Coin3D/SoQt/Qt libraries, will not compile qtcoinrave viewer.")
+  message(WARNING "Could not find Coin3D/SoQt/Qt libraries, will not compile qtcoinrave viewer.")
 endif()
