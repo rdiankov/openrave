@@ -1,7 +1,7 @@
 ###########################################
 # basesamplers openrave plugin
 ###########################################
-add_library(basesamplers SHARED basesamplers.cpp halton.cpp)
+add_library(basesamplers SHARED basesamplers.cpp halton.cpp robotconfiguration.cpp bodyconfiguration.cpp)
 target_link_libraries(basesamplers libopenrave)
 target_link_libraries(basesamplers PRIVATE boost_assertion_failed)
 set_target_properties(basesamplers PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
