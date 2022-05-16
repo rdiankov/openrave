@@ -3,12 +3,7 @@
 ###########################################
 add_library(textserver SHARED textserver.cpp textserver.h plugindefs.h)
 
-if( MSVC )
-  target_link_libraries(textserver libopenrave imm32 winmm ws2_32)
-else()
-  target_link_libraries(textserver libopenrave)
-endif()
-target_link_libraries(textserver PRIVATE boost_assertion_failed)
+target_link_libraries(textserver PUBLIC libopenrave $<$<CXX_COMPILER_ID:MSVC>:imm32> $<$<CXX_COMPILER_ID:MSVC>:winmm> $<$<CXX_COMPILER_ID:MSVC>:ws2_32> PRIVATE boost_assertion_failed)
 
 set_target_properties(textserver PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 install(TARGETS textserver DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-textserver)
