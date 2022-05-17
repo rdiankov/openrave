@@ -149,29 +149,30 @@ inline void ParseJson(rapidjson::Document& d, const std::string& str) {
     // repeatedly calling Parse on the same rapidjson::Document will not release previsouly allocated memory, memory will accumulate until the object is destroyed
     // we use a new temporary Document to parse, and swap content with the original one, so that memory in original Document will be released when this function ends
     // see: https://github.com/Tencent/rapidjson/issues/1333
-    rapidjson::Document tempDoc;
-    tempDoc.Parse<rapidjson::kParseFullPrecisionFlag>(str.c_str()); // parse float in full precision mode
-    if (tempDoc.HasParseError()) {
+    // a newer solution that allows reuse of allocated memory is to clear the previous document first
+    d.SetNull();
+    d.GetAllocator().Clear();
+    d.Parse<rapidjson::kParseFullPrecisionFlag>(str.c_str()); // parse float in full precision mode
+    if (d.HasParseError()) {
         std::string substr;
         if (str.length()> 200) {
             substr = str.substr(0, 200);
         } else {
             substr = str;
         }
-        throw OPENRAVE_EXCEPTION_FORMAT("JSON string is invalid (offset %u) %s str=%s", ((unsigned)tempDoc.GetErrorOffset())%GetParseError_En(tempDoc.GetParseError())%substr, OpenRAVE::ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("JSON string is invalid (offset %u) %s str=%s", ((unsigned)d.GetErrorOffset())%GetParseError_En(d.GetParseError())%substr, OpenRAVE::ORE_InvalidArguments);
     }
-    tempDoc.Swap(d);
 }
 
 inline void ParseJson(rapidjson::Document& d, std::istream& is) {
     rapidjson::IStreamWrapper isw(is);
     // see note in: void ParseJson(rapidjson::Document& d, const std::string& str)
-    rapidjson::Document tempDoc;
-    tempDoc.ParseStream<rapidjson::kParseFullPrecisionFlag>(isw); // parse float in full precision mode
-    if (tempDoc.HasParseError()) {
-        throw OPENRAVE_EXCEPTION_FORMAT("JSON stream is invalid (offset %u) %s", ((unsigned)tempDoc.GetErrorOffset())%GetParseError_En(tempDoc.GetParseError()), OpenRAVE::ORE_InvalidArguments);
+    d.SetNull();
+    d.GetAllocator().Clear();
+    d.ParseStream<rapidjson::kParseFullPrecisionFlag>(isw); // parse float in full precision mode
+    if (d.HasParseError()) {
+        throw OPENRAVE_EXCEPTION_FORMAT("JSON stream is invalid (offset %u) %s", ((unsigned)d.GetErrorOffset())%GetParseError_En(d.GetParseError()), OpenRAVE::ORE_InvalidArguments);
     }
-    tempDoc.Swap(d);
 }
 
 class JsonSerializable {
@@ -732,9 +733,9 @@ template<class T>
 inline void SaveJsonValue(rapidjson::Document& v, const T& t) {
     // rapidjson::Value::CopyFrom also doesn't free up memory, need to clear memory
     // see note in: void ParseJson(rapidjson::Document& d, const std::string& str)
-    rapidjson::Document tempDoc;
-    SaveJsonValue(tempDoc, t, tempDoc.GetAllocator());
-    v.Swap(tempDoc);
+    v.SetNull();
+    v.GetAllocator().Clear();
+    SaveJsonValue(v, t, v.GetAllocator());
 }
 template<class T> void inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t);
 inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::SensorBase::CameraIntrinsics& t) {
