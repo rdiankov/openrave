@@ -41,7 +41,7 @@ if (Qt5Core_FOUND AND Qt5Gui_FOUND AND SoQt_FOUND AND Coin_FOUND)
     set(extLIBS ${extLIBS} winmm imm32 ws2_32)
   endif()
 
-  target_link_libraries(qtcoinrave PUBLIC libopenrave ${extLIBS} PRIVATE boost_assertion_failed)
+  target_link_libraries(qtcoinrave PRIVATE boost_assertion_failed PUBLIC libopenrave ${extLIBS})
   set_target_properties(qtcoinrave PROPERTIES COMPILE_FLAGS "${QTCOIN_COMPILE_FLAGS} ${SOQT_CXXFLAGS} ${COIN_CXXFLAGS}" LINK_FLAGS "${QTCOIN_LINK_FLAGS}")
   install(TARGETS qtcoinrave DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-qtcoinrave)
   

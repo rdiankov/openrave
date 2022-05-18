@@ -50,7 +50,7 @@ if(ODE_LIBRARY_FOUND)
 
   message(STATUS "ODE found, building oderave plugin, precision=${ODE_PRECISION}")
 
-  target_link_libraries(oderave PUBLIC libopenrave ${ODE_LIBRARY} PRIVATE boost_assertion_failed)
+  target_link_libraries(oderave PRIVATE boost_assertion_failed PUBLIC libopenrave ${ODE_LIBRARY})
   set_target_properties(oderave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} ${ODE_CXXFLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
   install(TARGETS oderave DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-oderave)
   

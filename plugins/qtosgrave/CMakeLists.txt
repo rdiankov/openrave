@@ -57,7 +57,7 @@ if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND 
   # build sources, moc'd sources, and rcc'd sources
 
   add_library(qtosgrave SHARED ${QTOSG_SRCS} ${QTOSG_MOC_SRCS} ${QTOSG_RCC_SRCS})
-  target_link_libraries(qtosgrave PUBLIC libopenrave ${extLIBS} PRIVATE boost_assertion_failed)
+  target_link_libraries(qtosgrave PRIVATE boost_assertion_failed PUBLIC libopenrave ${extLIBS})
 
   #if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
   #  # have to turn off optimizations or else qtcoin crashes!!
