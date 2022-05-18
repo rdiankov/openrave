@@ -319,7 +319,6 @@ bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, cons
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); ++(it))
 
-#include <boost/bind.hpp>
 #include <boost/format.hpp>
 #include <boost/array.hpp>
 #include <boost/thread/thread.hpp>

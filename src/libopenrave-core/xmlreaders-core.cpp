@@ -40,6 +40,7 @@
 #include <boost/thread/once.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/bind/bind.hpp>
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
@@ -59,6 +60,8 @@ BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 #ifdef OPENRAVE_IVCON
 #include <ivcon.h>
 #endif
+
+using boost::placeholders::_1;
 
 namespace OpenRAVEXMLParser
 {
