@@ -17,19 +17,19 @@ namespace OpenRAVE {
 
 namespace PiecewisePolynomialsInternal {
 
-CubicInterpolator::CubicInterpolator(size_t ndof, int envid)
+CubicInterpolator::CubicInterpolator(size_t ndof_, int envid_)
 {
     __description = ":Interface Author: Puttichai Lertkultanon\n\nRoutines for cubic polynomial interpolation with specified boundary conditions.";
-    this->Initialize(ndof, envid);
+    this->Initialize(ndof_, envid_);
 }
 
-void CubicInterpolator::Initialize(size_t ndof, int envid)
+void CubicInterpolator::Initialize(size_t ndof_, int envid_)
 {
-    OPENRAVE_ASSERT_OP(ndof, >, 0);
-    this->ndof = ndof;
-    this->envid = envid;
-    _pGeneralInterpolator.reset(new GeneralRecursiveInterpolator(envid));
-    checker.Initialize(ndof, envid);
+    OPENRAVE_ASSERT_OP(ndof_, >, 0);
+    this->ndof = ndof_;
+    this->envid = envid_;
+    _pGeneralInterpolator.reset(new GeneralRecursiveInterpolator(envid_));
+    checker.Initialize(ndof_, envid_);
 
     // Jerk limits might be a few order of magnitude larger than velocity/acceleration
     // limits. Subsequently, when evaluating a value of acceleration (which is linear in the jerk
@@ -38,10 +38,10 @@ void CubicInterpolator::Initialize(size_t ndof, int envid)
     checker.SetEpsilonForAccelerationDiscrepancyChecking(100*g_fPolynomialEpsilon);
 
     _cache1DCoeffs.resize(4); // 4 coefficients for a cubic polynomial
-    _cacheDVect.resize(ndof);
-    _cachePolynomials.resize(ndof);
-    _cacheXVect.resize(ndof);
-    _cachePWPolynomials.resize(ndof);
+    _cacheDVect.resize(ndof_);
+    _cachePolynomials.resize(ndof_);
+    _cacheXVect.resize(ndof_);
+    _cachePWPolynomials.resize(ndof_);
 }
 
 //

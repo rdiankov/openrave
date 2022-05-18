@@ -17,7 +17,7 @@ with env: # lock environment
     sol = manip.FindIKSolution(Tgoal, IkFilterOptions.CheckEnvCollisions) # get collision-free solution
     with robot: # save robot state
         robot.SetDOFValues(sol,manip.GetArmIndices()) # set the current solution
-        Tee = manip.GetEndEffectorTransform()
+        Tee = manip.GetEndEffector().GetTransform()
         env.UpdatePublishedBodies() # allow viewer to update new robot
         time.sleep(10)
     

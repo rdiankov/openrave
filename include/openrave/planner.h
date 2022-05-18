@@ -193,7 +193,10 @@ private:
     }
 
     /// \brief sets up the planner parameters to use the active joints of the robot
-    virtual void SetRobotActiveJoints(RobotBasePtr robot);
+    virtual void SetRobotActiveJoints(RobotBasePtr& probot);
+
+    /// \brief sets up the planner to use specific DOF indices of the robot.
+    virtual void SetRobotDOFIndices(RobotBasePtr& probot, const std::vector<int>& dofindices);
 
     /** \brief sets up the planner parameters to use the configuration specification space
 

@@ -142,9 +142,9 @@ public:
                     probot->GetGrabbed(grabbedbodies);
 
                     if( grabbedbodies.size() > 0 ) {
-                        FOREACH(itbody, grabbedbodies) {
-                            if( pmanip->IsGrabbing(**itbody) ) {
-                                FOREACH(itlink, (*itbody)->GetLinks()) {
+                        FOREACH(itgrabbed, grabbedbodies) {
+                            if( pmanip->IsGrabbing(**itgrabbed) ) {
+                                FOREACH(itlink, (*itgrabbed)->GetLinks()) {
                                     globallinklist.push_back(*itlink);
                                 }
                             }

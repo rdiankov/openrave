@@ -66,7 +66,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fpconfig.hh.in ${CMAKE_CURRENT_SOURCE
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 link_directories(${fparser_LIBRARIES_DIR})
 add_library(fparser STATIC ${fparser_SOURCES})
-set_target_properties(fparser PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")
 target_link_libraries(fparser ${fparser_LIBRARIES})
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/fpconfig.hh DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/include/fparser)

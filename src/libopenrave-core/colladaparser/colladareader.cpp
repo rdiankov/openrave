@@ -48,7 +48,7 @@ public:
     class daeOpenRAVEURIResolver : public daeURIResolver
     {
 public:
-        daeOpenRAVEURIResolver(DAE& dae, const std::string& scheme, ColladaReader* preader) : daeURIResolver(dae), _scheme(scheme), _preader(preader) {
+        daeOpenRAVEURIResolver(DAE& dae_, const std::string& scheme, ColladaReader* preader_) : daeURIResolver(dae_), _scheme(scheme), _preader(preader_) {
         }
 
         ~daeOpenRAVEURIResolver() {
@@ -135,7 +135,7 @@ public:
     class InterfaceType
     {
 public:
-        InterfaceType(const std::string& type, const std::string& name) : type(type), name(name) {
+        InterfaceType(const std::string& type_, const std::string& name_) : type(type_), name(name_) {
         }
         std::string type, name;
     };
@@ -161,7 +161,7 @@ public:
     class JointAxisBinding
     {
 public:
-        JointAxisBinding(const boost::function<domNodeRef(daeElementRef)>& instantiatenodefn, daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info),_iaxis(0) {
+        JointAxisBinding(const boost::function<domNodeRef(daeElementRef)>& instantiatenodefn, daeElementRef pvisualtrans_, domAxis_constraintRef pkinematicaxis_, dReal jointvalue_, domKinematics_axis_infoRef kinematics_axis_info_, domMotion_axis_infoRef motion_axis_info_, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : pvisualtrans(pvisualtrans_), pkinematicaxis(pkinematicaxis_), jointvalue(jointvalue_), kinematics_axis_info(kinematics_axis_info_), motion_axis_info(motion_axis_info_),_iaxis(0) {
             _listInstanceScopeAxis = listInstanceScope;
             BOOST_ASSERT( !!pkinematicaxis );
             if( !!pvisualtrans ) {
@@ -670,8 +670,8 @@ public:
                                                 if( !!pchildtec ) {
                                                     daeTArray<daeElementRef> children;
                                                     pchildtec->getChildren(children);
-                                                    for(size_t ic = 0; ic < children.getCount(); ++ic) {
-                                                        daeElementRef pchildchild = children[ic];
+                                                    for(size_t icc = 0; icc < children.getCount(); ++icc) {
+                                                        daeElementRef pchildchild = children[icc];
                                                         if( std::string(pchildchild->getElementName()) == "ignore_link" ) {
                                                             KinBody::LinkPtr pignore_link;
                                                             string ignore_link_sid = pchildchild->getAttribute("link");
@@ -3430,6 +3430,14 @@ public:
                         manipinfo._toolChangerConnectedBodyToolName.clear();
                     }
 
+                    daeElementRef pToolChangerLinkName = tec->getChild("toolChangerLinkName");
+                    if( !!pToolChangerLinkName ) {
+                        manipinfo._toolChangerLinkName = pToolChangerLinkName->getCharData();
+                    }
+                    else{
+                        manipinfo._toolChangerLinkName.clear();
+                    }
+
                     daeElementRef pframe_endlink = tec->getChild("frame_endlink");
                     if( !!pframe_endlink ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_endlink->getAttribute("link"), as).resolve().elt);
@@ -3524,7 +3532,7 @@ public:
                         else if( pmanipchild->getElementName() == string("restrict_graspset_name") ) {
                             manipinfo._vRestrictGraspSetNames.push_back(pmanipchild->getCharData());
                         }
-                        else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_endlink") && pmanipchild->getElementName() != string("frame_tip") && pmanipchild->getElementName() != string("grippername") && pmanipchild->getElementName() != string("toolChangerConnectedBodyToolName") ) {
+                        else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_endlink") && pmanipchild->getElementName() != string("frame_tip") && pmanipchild->getElementName() != string("grippername") && pmanipchild->getElementName() != string("toolChangerConnectedBodyToolName") && pmanipchild->getElementName() != string("toolChangerLinkName") ) {
                             RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%manipinfo._name));
                         }
                     }
@@ -4241,9 +4249,9 @@ public:
         }
         if( !!ias ) {
             // resolve the articulated_system, is this necessary?
-            domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
-            if( !!articulated_system ) {
-                return searchBinding(ref, articulated_system, bLogWarning, listInstanceScope);
+            domArticulated_systemRef articulated_system_ref = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
+            if( !!articulated_system_ref ) {
+                return searchBinding(ref, articulated_system_ref, bLogWarning, listInstanceScope);
             }
         }
         if( bLogWarning ) {
@@ -4749,8 +4757,8 @@ private:
             domFloat jointvalue=0;
             if( !!bindjoint->getValue() ) {
                 if (!!bindjoint->getValue()->getParam()) {
-                    std::list<daeElementRef> listInstanceScope;
-                    pelt = searchBinding(bindjoint->getValue()->getParam()->getValue(),kscene, true, listInstanceScope);
+                    std::list<daeElementRef> listInstanceScopeTmp;
+                    pelt = searchBinding(bindjoint->getValue()->getParam()->getValue(),kscene, true, listInstanceScopeTmp);
                 }
                 else {
                     pelt = bindjoint->getValue();
@@ -4758,7 +4766,7 @@ private:
             }
 
             resolveCommon_float_or_param(pelt,kscene, jointvalue);
-            bindings.listAxisBindings.push_back(JointAxisBinding(boost::bind(&ColladaReader::_InstantiateNode, this, _1), pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
+            bindings.listAxisBindings.push_back(JointAxisBinding(boost::bind(&ColladaReader::_InstantiateNode, this, boost::placeholders::_1), pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
         }
     }
 
@@ -5518,8 +5526,8 @@ private:
                         // search for the formula in library_formulas
                         string formulaurl = children[0]->getAttribute("definitionURL");
                         if( formulaurl.size() > 0 ) {
-                            daeElementRef pelt = daeURI(*children[0],formulaurl).getElement();
-                            pformula = daeSafeCast<domFormula>(pelt);
+                            daeElementRef pelt0 = daeURI(*children[0],formulaurl).getElement();
+                            pformula = daeSafeCast<domFormula>(pelt0);
                             if( !pformula ) {
                                 RAVELOG_WARN(str(boost::format("could not find csymbol %s formula\n")%children[0]->getAttribute("definitionURL")));
                             }

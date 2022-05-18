@@ -415,11 +415,11 @@ public:
    	    	NxU32 icount = mi->islandGenerate(desc.mTcountOut,desc.mIndicesOut,desc.mVertices);
    	    	for (NxU32 i=0; i<icount && !mCancel; i++)
    	    	{
-				NxU32 tcount;
-   	    		NxU32 *indices = mi->getIsland(i,tcount);
+				NxU32 tcountIsland;
+   	    		NxU32 *indicesIsland = mi->getIsland(i,tcountIsland);
 
    	    		baseConvexDecomposition(desc.mVcount,desc.mVertices,
-											tcount,indices,
+											tcountIsland,indicesIsland,
    	    									skinWidth,
    	    									decompositionDepth,
    	    									maxHullVertices,

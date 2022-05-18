@@ -2364,22 +2364,22 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
 #endif
     py::list vLinkInfos;
     FOREACHC(itLinkInfo, info._vLinkInfos) {
-        PyLinkInfo info = PyLinkInfo(**itLinkInfo);
-        vLinkInfos.append(info);
+        PyLinkInfo linkInfo = PyLinkInfo(**itLinkInfo);
+        vLinkInfos.append(linkInfo);
     }
     _vLinkInfos = vLinkInfos;
 
     py::list vJointInfos;
     FOREACHC(itJointInfo, info._vJointInfos) {
-        PyJointInfo info = PyJointInfo(**itJointInfo);
-        vJointInfos.append(info);
+        PyJointInfo jointInfo = PyJointInfo(**itJointInfo);
+        vJointInfos.append(jointInfo);
     }
     _vJointInfos = vJointInfos;
 
     py::list vGrabbedInfos;
     FOREACHC(itGrabbedInfo, info._vGrabbedInfos) {
-        PyKinBody::PyGrabbedInfo info = PyKinBody::PyGrabbedInfo(**itGrabbedInfo);
-        vGrabbedInfos.append(info);
+        PyKinBody::PyGrabbedInfo grabbedInfo = PyKinBody::PyGrabbedInfo(**itGrabbedInfo);
+        vGrabbedInfos.append(grabbedInfo);
     }
     _vGrabbedInfos = vGrabbedInfos;
     _transform = ReturnTransform(info._transform);
@@ -3280,6 +3280,11 @@ object PyKinBody::ComputeAABB(bool bEnabledOnlyLinks)
 object PyKinBody::ComputeAABBFromTransform(object otransform, bool bEnabledOnlyLinks)
 {
     return toPyAABB(_pbody->ComputeAABBFromTransform(ExtractTransform(otransform), bEnabledOnlyLinks));
+}
+
+py::object PyKinBody::ComputeOBBOnAxes(py::object oquat, bool bEnabledOnlyLinks)
+{
+    return toPyOrientedBox(_pbody->ComputeOBBOnAxes(ExtractVector4(oquat), bEnabledOnlyLinks));
 }
 
 object PyKinBody::ComputeLocalAABB(bool bEnabledOnlyLinks)
@@ -4510,6 +4515,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyKinBodyInfo_DeserializeJSON_overloads, 
 // end of JSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABB_overloads, ComputeAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBFromTransform_overloads, ComputeAABBFromTransform, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeOBBOnAxes_overloads, ComputeOBBOnAxes, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABB_overloads, ComputeLocalAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBForGeometryGroup_overloads, ComputeAABBForGeometryGroup, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBForGeometryGroupFromTransform_overloads, ComputeAABBForGeometryGroupFromTransform, 2, 3)
@@ -5394,6 +5400,15 @@ void init_openravepy_kinbody()
                               )
 #else
                          .def("ComputeAABBFromTransform",&PyKinBody::ComputeAABBFromTransform, ComputeAABBFromTransform_overloads(PY_ARGS("transform", "enabledOnlyLinks") DOXY_FN(KinBody,ComputeAABBFromTransform)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("ComputeOBBOnAxes", &PyKinBody::ComputeOBBOnAxes,
+                              "transform"_a,
+                              "enabledOnlyLinks"_a = false,
+                              DOXY_FN(KinBody,ComputeOBBOnAxes)
+                              )
+#else
+                         .def("ComputeOBBOnAxes",&PyKinBody::ComputeOBBOnAxes, ComputeOBBOnAxes_overloads(PY_ARGS("transform", "enabledOnlyLinks") DOXY_FN(KinBody,ComputeOBBOnAxes)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("ComputeLocalAABB", &PyKinBody::ComputeLocalAABB,

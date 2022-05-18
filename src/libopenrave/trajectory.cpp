@@ -74,6 +74,12 @@ void TrajectoryBase::deserialize(std::istream& I)
     xmlreaders::ParseXMLData(readerdata, pbuf.c_str(), ppsize);
 }
 
+void TrajectoryBase::DeserializeFromRawData(const uint8_t* pdata, size_t nDataSize)
+{
+    xmlreaders::TrajectoryReader readerdata(GetEnv(),shared_trajectory());
+    xmlreaders::ParseXMLData(readerdata, (const char*)pdata, nDataSize);
+}
+    
 void TrajectoryBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     InterfaceBase::Clone(preference,cloningoptions);

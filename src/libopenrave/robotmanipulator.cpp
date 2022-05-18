@@ -31,6 +31,7 @@ void RobotBase::ManipulatorInfo::Reset()
     _vGripperJointNames.clear();
     _grippername.clear();
     _toolChangerConnectedBodyToolName.clear();
+    _toolChangerLinkName.clear();
     _vRestrictGraspSetNames.clear();
 }
 
@@ -48,6 +49,7 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
     orjson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
     orjson::SetJsonValueByKey(value, "grippername", _grippername, allocator);
     orjson::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
+    orjson::SetJsonValueByKey(value, "toolChangerLinkName", _toolChangerLinkName, allocator);
     orjson::SetJsonValueByKey(value, "restrictGraspSetNames", _vRestrictGraspSetNames, allocator);
 }
 
@@ -65,7 +67,26 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
     orjson::LoadJsonValueByKey(value, "grippername", _grippername);
     orjson::LoadJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName);
+    orjson::LoadJsonValueByKey(value, "toolChangerLinkName", _toolChangerLinkName);
     orjson::LoadJsonValueByKey(value, "restrictGraspSetNames", _vRestrictGraspSetNames);
+}
+
+bool RobotBase::ManipulatorInfo::operator==(const ManipulatorInfo& other) const
+{
+    return _name == other._name
+        && _sBaseLinkName == other._sBaseLinkName
+        && _sIkChainEndLinkName == other._sIkChainEndLinkName
+        && _sEffectorLinkName == other._sEffectorLinkName
+        && TransformDistanceFast(_tLocalTool, other._tLocalTool) <= g_fEpsilonLinear
+        && _vChuckingDirection == other._vChuckingDirection
+        && _vdirection == other._vdirection
+        && _sIkSolverXMLId == other._sIkSolverXMLId
+        && _vGripperJointNames == other._vGripperJointNames
+        && _grippername == other._grippername
+        && _toolChangerConnectedBodyToolName == other._toolChangerConnectedBodyToolName
+        && _toolChangerLinkName == other._toolChangerLinkName
+        && _vRestrictGraspSetNames == other._vRestrictGraspSetNames
+        && _id == other._id;
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {

@@ -427,8 +427,8 @@ private:
             //            _vf->_robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
             if( !(!!_report->plink1 &&( _report->plink1->GetParent() == _ptargetbox) ) ) {
                 if( _report->contacts.size() > 0 ) {
-                    Vector v = _report->contacts.at(0).pos;
-                    RAVELOG_VERBOSE_FORMAT("bad collision: %s: %f %f %f", _report->__str__()%v.x%v.y%v.z);
+                    Vector vv = _report->contacts.at(0).pos;
+                    RAVELOG_VERBOSE_FORMAT("bad collision: %s: %f %f %f", _report->__str__()%vv.x%vv.y%vv.z);
                 }
                 else {
                     RAVELOG_VERBOSE_FORMAT("bad collision: %s", _report->__str__());

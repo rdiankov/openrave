@@ -40,6 +40,7 @@
 #include <boost/thread/once.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/bind/bind.hpp>
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
@@ -59,6 +60,8 @@ BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 #ifdef OPENRAVE_IVCON
 #include <ivcon.h>
 #endif
+
+using boost::placeholders::_1;
 
 namespace OpenRAVEXMLParser
 {
@@ -2004,7 +2007,7 @@ protected:
 class KinBodyXMLReader : public InterfaceXMLReader
 {
 public:
-    KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList &atts, int roottransoffset) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), roottransoffset(roottransoffset) {
+    KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList &atts, int roottransoffset_) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), roottransoffset(roottransoffset_) {
         _bSkipGeometry = false;
         _vScaleGeometry = Vector(1,1,1);
         _masstype = MT_None;
@@ -2636,13 +2639,11 @@ public:
                         if( !ifstream(ikonly.c_str()) || !pIKFastLoader->SendCommand(sout, scmd)) {
                             string fullname = GetParseDirectory(); fullname.push_back(s_filesep); fullname += ikonly;
                             scmd.str(string("AddIkLibrary ") + fullname + string(" ") + fullname);
-                            if( !ifstream(fullname.c_str()) || !pIKFastLoader->SendCommand(sout, scmd)) {
-                            }
-                            else {
+                            if( ifstream(fullname.c_str()) && pIKFastLoader->SendCommand(sout, scmd)) {
                                 // need to use the original iklibrary string due to parameters being passed in
-                                string fullname = "ikfast ";
-                                fullname += GetParseDirectory(); fullname.push_back(s_filesep); fullname += iklibraryname;
-                                piksolver = RaveCreateIkSolver(_probot->GetEnv(), fullname);
+                                string fullname0 = "ikfast ";
+                                fullname0 += GetParseDirectory(); fullname0.push_back(s_filesep); fullname0 += iklibraryname;
+                                piksolver = RaveCreateIkSolver(_probot->GetEnv(), fullname0);
                             }
                         }
                         else {
@@ -2870,7 +2871,7 @@ protected:
 class RobotXMLReader : public InterfaceXMLReader
 {
 public:
-    RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const AttributesList &atts, int roottransoffset) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), roottransoffset(roottransoffset) {
+    RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const AttributesList &atts, int roottransoffset_) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), roottransoffset(roottransoffset_) {
         _bSkipGeometry = false;
         _vScaleGeometry = Vector(1,1,1);
         rootoffset = rootjoffset = rootjpoffset = -1;

@@ -796,9 +796,9 @@ void PiecewisePolynomial::CleanUp()
 //
 // Chunk
 //
-Chunk::Chunk(const dReal duration, const std::vector<Polynomial>& vpolynomials)
+Chunk::Chunk(const dReal duration_, const std::vector<Polynomial>& vpolynomials_)
 {
-    Initialize(duration, vpolynomials);
+    Initialize(duration_, vpolynomials_);
 }
 
 void Chunk::UpdateInitialValues(std::vector<dReal>&vinitialvalues)
@@ -818,15 +818,15 @@ void Chunk::UpdateDuration(dReal T)
     }
 }
 
-void Chunk::Initialize(const dReal duration, const std::vector<Polynomial>& vpolynomials)
+void Chunk::Initialize(const dReal duration_, const std::vector<Polynomial>& vpolynomials_)
 {
-    for( std::vector<Polynomial>::const_iterator itpoly = vpolynomials.begin(); itpoly != vpolynomials.end(); ++itpoly ) {
-        if( !FuzzyEquals(itpoly->duration, duration, g_fPolynomialEpsilon) ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("Polynomial index=%d has duration=%f (expected %f)", (itpoly - vpolynomials.begin())%(itpoly->duration)%duration, ORE_InvalidArguments);
+    for( std::vector<Polynomial>::const_iterator itpoly = vpolynomials_.begin(); itpoly != vpolynomials_.end(); ++itpoly ) {
+        if( !FuzzyEquals(itpoly->duration, duration_, g_fPolynomialEpsilon) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("Polynomial index=%d has duration=%f (expected %f)", (itpoly - vpolynomials_.begin())%(itpoly->duration)%duration_, ORE_InvalidArguments);
         }
     }
-    this->duration = duration;
-    this->vpolynomials = vpolynomials;
+    this->duration = duration_;
+    this->vpolynomials = vpolynomials_;
     Initialize();
 }
 
@@ -929,31 +929,31 @@ void Chunk::Deserialize(std::istream& I)
     Initialize();
 }
 
-void Chunk::SetConstant(const std::vector<dReal>& x0Vect, const dReal duration, const size_t degree)
+void Chunk::SetConstant(const std::vector<dReal>& x0Vect, const dReal duration_, const size_t degree_)
 {
     this->dof = x0Vect.size();
-    this->degree = degree;
-    this->duration = duration;
+    this->degree = degree_;
+    this->duration = duration_;
     vpolynomials.resize(this->dof);
     std::vector<dReal> vcoeffs(this->degree + 1, 0);
     for( size_t idof = 0; idof < this->dof; ++idof ) {
         // All other coefficients are zero.
         vcoeffs[0] = x0Vect[idof];
-        vpolynomials[idof].Initialize(duration, vcoeffs);
+        vpolynomials[idof].Initialize(duration_, vcoeffs);
     }
 }
 
 //
 // Piecewise Polynomial Trajectory
 //
-PiecewisePolynomialTrajectory::PiecewisePolynomialTrajectory(const std::vector<Chunk>& vchunks)
+PiecewisePolynomialTrajectory::PiecewisePolynomialTrajectory(const std::vector<Chunk>& vchunks_)
 {
-    Initialize(vchunks);
+    Initialize(vchunks_);
 }
 
-void PiecewisePolynomialTrajectory::Initialize(const std::vector<Chunk>& vchunks)
+void PiecewisePolynomialTrajectory::Initialize(const std::vector<Chunk>& vchunks_)
 {
-    this->vchunks = vchunks;
+    this->vchunks = vchunks_;
     Initialize();
 }
 
@@ -1064,7 +1064,7 @@ void PiecewisePolynomialTrajectory::Deserialize(std::istream& I)
     Initialize();
 }
 
-void PiecewisePolynomialTrajectory::ReplaceSegment(dReal t0, dReal t1, const std::vector<Chunk>& vchunks)
+void PiecewisePolynomialTrajectory::ReplaceSegment(dReal t0, dReal t1, const std::vector<Chunk>& vchunks_)
 {
     OPENRAVE_ASSERT_OP(t0, <=, t1);
     size_t index0, index1;
@@ -1076,7 +1076,7 @@ void PiecewisePolynomialTrajectory::ReplaceSegment(dReal t0, dReal t1, const std
         this->vchunks[index0].Cut(rem1, tempChunk); // now tempChunk stores the portion from rem1 to duration
         this->vchunks.insert(this->vchunks.begin() + index0 + 1, tempChunk); // tempChunk is copied into the traj
         this->vchunks[index0].Cut(rem0, tempChunk); // now chunk index0 stores the portion from 0 to rem0
-        this->vchunks.insert(this->vchunks.begin() + index0 + 1, vchunks.begin(), vchunks.end()); // insert vchunks after index0
+        this->vchunks.insert(this->vchunks.begin() + index0 + 1, vchunks_.begin(), vchunks_.end()); // insert vchunks after index0
     }
     else {
         Chunk tempChunk;
@@ -1088,7 +1088,7 @@ void PiecewisePolynomialTrajectory::ReplaceSegment(dReal t0, dReal t1, const std
         this->vchunks[index0].Cut(rem0, tempChunk); // TODO: maybe define TrimBack function is better
 
         // Insert the input chunks before index1
-        this->vchunks.insert(this->vchunks.begin() + index1, vchunks.begin(), vchunks.end());
+        this->vchunks.insert(this->vchunks.begin() + index1, vchunks_.begin(), vchunks_.end());
 
         // Remove the previous segment from index0 to index1
         this->vchunks.erase(this->vchunks.begin() + index0 + 1, this->vchunks.begin() + index1);
