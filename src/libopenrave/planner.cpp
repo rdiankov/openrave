@@ -19,6 +19,10 @@
 #include <openrave/planningutils.h>
 #include <openrave/xmlreaders.h>
 
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
+
 namespace OpenRAVE {
 
 static std::string s_linearsmoother = "linearsmoother"; //"shortcut_linear";

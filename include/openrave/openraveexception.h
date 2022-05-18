@@ -21,6 +21,7 @@
 #include <openrave/config.h>
 
 #include <exception>
+#include <string>
 
 namespace OpenRAVE {
 

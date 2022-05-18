@@ -15,9 +15,12 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ravep.h"
+#include <boost/bind/bind.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <boost/lexical_cast.hpp>
 #include <openrave/xmlreaders.h>
+
+using namespace boost::placeholders;
 
 namespace OpenRAVE {
 
@@ -130,13 +133,13 @@ inline void ReadBinaryUInt32(const uint8_t*& f, uint32_t& value)
     f += sizeof(uint32_t);
 }
 
-inline bool ReadBinaryInt(const uint8_t*& f, int& value)
+inline void ReadBinaryInt(const uint8_t*& f, int& value)
 {
     value = *(int*)f;
     f += sizeof(int);
 }
 
-inline bool ReadBinaryString(const uint8_t*& f, std::string& s)
+inline void ReadBinaryString(const uint8_t*& f, std::string& s)
 {
     uint16_t length = 0;
     ReadBinaryUInt16(f, length);
@@ -151,7 +154,7 @@ inline bool ReadBinaryString(const uint8_t*& f, std::string& s)
     }
 }
 
-inline bool ReadBinaryVector(const uint8_t*& f, std::vector<dReal>& v)
+inline void ReadBinaryVector(const uint8_t*& f, std::vector<dReal>& v)
 {
     // Get number of data points
     uint32_t numDataPoints = 0;

@@ -16,6 +16,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
+
 namespace OpenRAVE {
 InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv)
 {

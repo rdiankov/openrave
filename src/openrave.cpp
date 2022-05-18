@@ -30,7 +30,6 @@ using namespace std;
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/array.hpp>
-#include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <signal.h>
