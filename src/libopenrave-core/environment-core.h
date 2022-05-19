@@ -2680,6 +2680,7 @@ public:
             ++validBodyItr;
         }
         BOOST_ASSERT(validBodyItr == numBodies);
+        info._name = _name;
         info._keywords = _keywords;
         info._description = _description;
         if (!!_pPhysicsEngine) {

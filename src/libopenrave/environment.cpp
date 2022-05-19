@@ -30,6 +30,7 @@ bool EnvironmentBase::EnvironmentBaseInfo::operator==(const EnvironmentBaseInfo&
 {
     return _vBodyInfos == other._vBodyInfos
            && _revision == other._revision
+           && _name == other._name
            && _description == other._description
            && _keywords == other._keywords
            && _gravity == other._gravity
@@ -45,6 +46,7 @@ bool EnvironmentBase::EnvironmentBaseInfo::operator!=(const EnvironmentBaseInfo&
 
 void EnvironmentBase::EnvironmentBaseInfo::Reset()
 {
+    _name.clear();
     _description.clear();
     _keywords.clear();
     _gravity = Vector(0,0,-9.797930195020351);
@@ -59,6 +61,9 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
     // for all SerializeJSON, we clear the output
     rEnvInfo.SetObject();
 
+    if( !_name.empty() ) {
+        orjson::SetJsonValueByKey(rEnvInfo, "name", _name, allocator);
+    }
     orjson::SetJsonValueByKey(rEnvInfo, "keywords", _keywords, allocator);
     if( !_description.empty() ) {
         orjson::SetJsonValueByKey(rEnvInfo, "description", _description, allocator);
@@ -102,6 +107,10 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
 
     // for DeserializeJSON, there are two possibilities: 1. full json passed in 2. diff json passed in
     // for example, do not clear _vBodyInfos.clear(), since we could be dealing with partial json
+
+    if (rEnvInfo.HasMember("name")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "name", _name);
+    }
 
     if (rEnvInfo.HasMember("revision")) {
         orjson::LoadJsonValueByKey(rEnvInfo, "revision", _revision);
