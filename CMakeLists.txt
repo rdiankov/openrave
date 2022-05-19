@@ -16,7 +16,9 @@ cmake_policy(SET CMP0002 NEW)
 # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
 cmake_policy(SET CMP0003 NEW)
 
-set(CMAKE_CXX_STANDARD 14) # C++14 for std::shared_timed_mutex
+if (NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14) # C++14 for std::shared_timed_mutex
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # Standard is required
 set(CMAKE_POSITION_INDEPENDENT_CODE ON) # fPIC is required in many libraries now
 
@@ -57,7 +59,6 @@ option(OPT_LOG4CXX "Use log4cxx for logging" ON)
 option(OPT_MSGPACK "Support msgpack format" ON)
 option(OPT_INSTALL_3DMODELDATA "If ON, then install the 3D model data." ON)
 option(OPT_EXTRA_ROBOTS "If ON, then install extra robots as part of 3D model data" ON)
-option(OPT_NATIVE "Optimize with -march=native or compiler equivalent." ON)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
@@ -248,18 +249,6 @@ if( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   add_definitions(-Dfopen64=fopen -Dfseeko64=fseeko -Dfseek64=fseek -Dftell64=ftell -Dftello64=ftello)
 endif()
 
-if( NATIVE_COMPILE_FLAGS )
-  set(OPT_NATIVE ON)
-endif()
-if ( OPT_NATIVE )
-  if(CXX_COMPILER_ID STREQUAL "MSVC")
-    # MSVC does not have an equivalent flag.
-  else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-  endif()
-endif()
-
 set(OPENRAVE_CORE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
 set(OPENRAVE_LINK_DIRS "")
 
@@ -404,6 +393,12 @@ foreach(ldir ${Boost_LIBRARY_DIRS})
     set(OPENRAVE_BOOST_LIB_DIRS "${OPENRAVE_BOOST_LIB_DIRS} -L${ldir}")
   endif()
 endforeach()
+
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
+  set(NATIVE_COMPILE_FLAGS "" CACHE STRING "compilation flags to pass to tools that are executed at build-time. For example '-march=native -mtune=native'. By default this is empty.")
+else()
+  set(NATIVE_COMPILE_FLAGS "")
+endif()
 
 # generate the md5 sum for all OpenRAVE interfaces
 add_subdirectory(cpp-gen-md5)

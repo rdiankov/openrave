@@ -123,3 +123,6 @@ add_library(crlibm STATIC ${crlibm_SOURCES})
 
 # also build a native version for checking libm on the host machine at build-time
 add_library(crlibm-native STATIC ${crlibm_SOURCES})
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
+  set_target_properties(crlibm-native PROPERTIES COMPILE_FLAGS "${NATIVE_COMPILE_FLAGS}")
+endif()
