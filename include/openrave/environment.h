@@ -808,6 +808,7 @@ public:
         /// \param vInputToBodyInfoMapping maps indices into rEnvInfo["bodies"] into indices of _vBodyInfos: rEnvInfo["bodies"][i] -> _vBodyInfos[vInputToBodyInfoMapping[i]]. This forces certain _vBodyInfos to get updated with specific input. Use -1 for no mapping
         void DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping);
 
+        std::string _name; ///< environment name, serialized to JSON
         std::string _description;   ///< environment description
         std::vector<std::string> _keywords;  ///< some string values for describinging the environment
         Vector _gravity = Vector(0,0,-9.797930195020351);  ///< gravity and gravity direction of the environment
