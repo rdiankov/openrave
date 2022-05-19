@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyConfigurationSpecification : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyConfigurationSpecification>
+class OPENRAVEPY_API PyConfigurationSpecification : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyConfigurationSpecification>
 {
 public:
     PyConfigurationSpecification();
@@ -32,6 +32,9 @@ public:
     PyConfigurationSpecification(const ConfigurationSpecification::Group& g);
     PyConfigurationSpecification(PyConfigurationSpecificationPtr pyspec);
     virtual ~PyConfigurationSpecification();
+
+    void DeserializeJSON(py::object obj);
+    py::object SerializeJSON();
 
     int GetDOF() const;
 
@@ -106,6 +109,9 @@ public:
 
     // members
     ConfigurationSpecification _spec;
+
+private:
+    void _Update(const ConfigurationSpecification& spec);
 };
 
 } // namespace openravepy

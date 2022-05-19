@@ -144,9 +144,9 @@ public:
 
                     if( grabbedbodies.size() > 0 ) {
                         // look at only the grabbed body rather than the links
-                        FOREACH(itbody, grabbedbodies) {
-                            if( pmanip->IsGrabbing(**itbody) ) {
-                                FOREACH(itlink, (*itbody)->GetLinks()) {
+                        FOREACH(itgrabbed, grabbedbodies) {
+                            if( pmanip->IsGrabbing(**itgrabbed) ) {
+                                FOREACH(itlink, (*itgrabbed)->GetLinks()) {
                                     globallinklist.push_back(*itlink);
                                 }
                             }
@@ -184,7 +184,7 @@ public:
                             ss << "[" << itpoint->x << ", " << itpoint->y << ", " << itpoint->z << "], ";
                         }
                         ss << "]";
-                        RAVELOG_VERBOSE_FORMAT("env=%d, fmaxdistfromcenter=%f, checkpoints=%s", pbody->GetEnv()->GetId()%info.fmaxdistfromcenter%ss.str());
+                        RAVELOG_VERBOSE_FORMAT("env=%s, fmaxdistfromcenter=%f, checkpoints=%s", pbody->GetEnv()->GetNameId()%info.fmaxdistfromcenter%ss.str());
                     }
                     setCheckedManips.insert(endeffector);
                 }
@@ -614,7 +614,7 @@ public:
         ss << "]; qdd=[";
         SerializeValues(ss, vDOFAccelAtViolation);
         ss << "];";
-        RAVELOG_VERBOSE_FORMAT("env=%d, maxmanipspeed=%.15e; maxactualmanipspeed=%.15e; maxmanipaccel=%.15e; maxactualmanipaccel=%.15e; reductionFactor=%.15e; %s", _penv->GetId()%_maxmanipspeed%maxactualmanipspeed%_maxmanipaccel%maxactualmanipaccel%reductionFactor%ss.str());
+        RAVELOG_VERBOSE_FORMAT("env=%s, maxmanipspeed=%.15e; maxactualmanipspeed=%.15e; maxmanipaccel=%.15e; maxactualmanipaccel=%.15e; reductionFactor=%.15e; %s", _penv->GetNameId()%_maxmanipspeed%maxactualmanipspeed%_maxmanipaccel%maxactualmanipaccel%reductionFactor%ss.str());
 #endif
         return ParabolicRampInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
     }

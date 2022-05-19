@@ -184,8 +184,8 @@ public:
             }
             else if( cmd == "bodyid" ) {
                 // initialization
-                int id = 0; sinput >> id;
-                params->targetbody = GetEnv()->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0; sinput >> bodyIndex;
+                params->targetbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( cmd == "direction" ) {
                 // grasp
@@ -711,7 +711,7 @@ public:
 
     virtual bool _GraspThreadedCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentMutex::scoped_lock lock543(GetEnv()->GetMutex());
 
         WorkerParametersPtr worker_params(new WorkerParameters());
         int numthreads = 2;
@@ -859,7 +859,7 @@ public:
             size_t iapproachray = (id / (rolls.size() * preshapes.size() * standoffs.size()))%approachrays.size();
             size_t imanipulatordirection = (id / (rolls.size() * preshapes.size() * standoffs.size()*approachrays.size()));
 
-            boost::mutex::scoped_lock lock(_mutexGrasp);
+            boost::mutex::scoped_lock lock123(_mutexGrasp);
             if( _listGraspResults.size() >= maxgrasps ) {
                 break;
             }
@@ -875,7 +875,7 @@ public:
             _graspParamsWork->fstandoff = standoffs.at(istandoff);
             _graspParamsWork->preshape = preshapes.at(ipreshape);
             _condGraspHasWork.notify_one();     // notify there is work
-            _condGraspReceivedWork.wait(lock);     // wait for more work
+            _condGraspReceivedWork.wait(lock123);     // wait for more work
         }
 
         // wait for workers
@@ -915,7 +915,7 @@ public:
         // clone environment
         EnvironmentBasePtr pcloneenv = penv->CloneSelf(Clone_Bodies|Clone_Simulation);
         {
-            EnvironmentMutex::scoped_lock lock(pcloneenv->GetMutex());
+            EnvironmentMutex::scoped_lock lock765(pcloneenv->GetMutex());
             boost::shared_ptr<CollisionCheckerMngr> pcheckermngr(new CollisionCheckerMngr(pcloneenv, worker_params->collisionchecker));
             PlannerBasePtr planner = RaveCreatePlanner(pcloneenv,"Grasper");
             RobotBasePtr probot = pcloneenv->GetRobot(_robot->GetName());
@@ -943,8 +943,6 @@ public:
             probot->GetActiveManipulator()->GetIndependentLinks(vindependentlinks);
             Transform trobotstart = probot->GetTransform();
 
-            vector<dReal> vtrajpoint;
-
             // use CO_ActiveDOFs since might be calling FindIKSolution
             int coloptions = GetEnv()->GetCollisionChecker()->GetCollisionOptions()|(worker_params->bCheckGraspIK ? CO_ActiveDOFs : 0);
             coloptions &= ~CO_Contacts;
@@ -953,9 +951,9 @@ public:
             while(_bContinueWorker) {
                 {
                     // wait for work
-                    boost::mutex::scoped_lock lock(_mutexGrasp);
+                    boost::mutex::scoped_lock lock653(_mutexGrasp);
                     if( !_graspParamsWork ) {
-                        _condGraspHasWork.wait(lock);
+                        _condGraspHasWork.wait(lock653);
                         // after signal
                         if( !_graspParamsWork ) {
                             continue;
@@ -1017,7 +1015,7 @@ public:
 
                 if ( worker_params->bCheckGraspIK ) {
                     CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
-                    Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
+                    Transform Tgoalgrasp = probot->GetActiveManipulator()->GetTransform();
                     RobotBase::RobotStateSaver linksaver(probot);
                     probot->SetTransform(trobotstart);
                     FOREACH(itlink,vlinks) {
@@ -1087,7 +1085,7 @@ public:
                             Transform t = probot->GetTransform();
                             ptraj->GetConfigurationSpecification().ExtractTransform(t,vtrajpoint.begin(),probot);
                             probot->SetTransform(t);
-                            Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
+                            Transform Tgoalgrasp = probot->GetActiveManipulator()->GetTransform();
                             probot->SetTransform(trobotstart);
                             FOREACH(itlink,vlinks) {
                                 (*itlink)->Enable(false);
@@ -1662,7 +1660,7 @@ protected:
         boost::mutex::scoped_lock lock(s_QhullMutex);
 
         if( !outfile ) {
-            outfile = tmpfile();        // stdout from qhull code
+            // outfile = tmpfile();        // stdout from qhull code
         }
         if( !errfile ) {
             errfile = tmpfile();        // stderr, error messages from qhull code

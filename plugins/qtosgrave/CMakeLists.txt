@@ -5,9 +5,10 @@ if(APPLE)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
 endif(APPLE)
 
+set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL)
 if(NOT OPENGL_FOUND)
-  message(STATUS "WARNING: OpenGL not found")
+  message(WARNING "OpenGL not found")
 endif()
 
 #include(${CMAKE_SOURCE_DIR}/modules-cmake/FindOSG.cmake)
@@ -21,7 +22,7 @@ if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND 
   
   link_directories(${OPENRAVE_LINK_DIRS})
 
-  set(QTOSG_SRCS objecttree.cpp osgcartoon.cpp osgviewerwidget.cpp osgviewerwidget.h osgpick.cpp osgpick.h qtreemodel.cpp qtreemodel.h osgrenderitem.cpp osgrenderitem.h qtreeitem.cpp qtreeitem.h qtosgviewer.cpp qtosgrave.cpp osgskybox.cpp osgskybox.h)
+  set(QTOSG_SRCS objecttree.cpp osgcartoon.cpp osgviewerwidget.cpp osgviewerwidget.h osgpick.cpp osgpick.h qtreemodel.cpp qtreemodel.h osgrenderitem.cpp osgrenderitem.h qtreeitem.cpp qtreeitem.h qtosgviewer.cpp qtosgrave.cpp osgskybox.cpp osgskybox.h osglodlabel.cpp osglodlabel.h)
   set(QTOSG_MOCS qtosgviewer.h qtreemodel.h)
   set(QTOSG_RCCS qtosgviewer.qrc)
 
@@ -37,7 +38,7 @@ if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND 
     set(QTOSG_COMPILE_FLAGS "${QTOSG_COMPILE_FLAGS} -DHAVE_X11_XLIB_H")
   endif()
 
-  set (extLIBS ${LIBXML2_LIBRARIES} ${PTHREADS_LIBRARY} ${OPENGL_LIBRARIES} Qt5::Core Qt5::Gui Qt5::Widgets Qt5::OpenGL)
+  set (extLIBS ${LIBXML2_LIBRARIES} ${PTHREADS_LIBRARY} OpenGL::OpenGL Qt5::Core Qt5::Gui Qt5::Widgets Qt5::OpenGL)
   set (extLIBS ${extLIBS} ${OPENSCENEGRAPH_LIBRARIES})
   #set (extLIBS ${extLIBS} ${OSGDB_LIBRARY_DEBUG} ${OSGQT_LIBRARY_DEBUG} ${OSGGA_LIBRARY_DEBUG} ${OSGFX_LIBRARY_DEBUG} ${OSGTEXT_LIBRARY_DEBUG} ${OSGVIEWER_LIBRARY_DEBUG} ${OSGMANIPULATOR_LIBRARY_DEBUG})
   
@@ -56,8 +57,7 @@ if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND 
   # build sources, moc'd sources, and rcc'd sources
 
   add_library(qtosgrave SHARED ${QTOSG_SRCS} ${QTOSG_MOC_SRCS} ${QTOSG_RCC_SRCS})
-  target_link_libraries (qtosgrave ${extLIBS} libopenrave)
-  target_link_libraries(qtosgrave PRIVATE boost_assertion_failed)
+  target_link_libraries(qtosgrave PRIVATE boost_assertion_failed PUBLIC libopenrave ${extLIBS})
 
   #if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
   #  # have to turn off optimizations or else qtcoin crashes!!

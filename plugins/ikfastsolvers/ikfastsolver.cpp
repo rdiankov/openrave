@@ -13,6 +13,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#pragma GCC diagnostic ignored "-Wshadow"   // 'int nSameStateRepeatCount = 0;' shadowed many times all over about 300-400 lines apart
+
 #include "plugindefs.h"
 
 #include <boost/bind.hpp>
@@ -211,7 +214,11 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
 
     virtual IkReturnAction CallFilters(const IkParameterization& param, IkReturnPtr ikreturn, int minpriority, int maxpriority) {
         // have to convert to the manipulator's base coordinate system
-        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        RobotBase::ManipulatorPtr pmanip = _pmanip.lock();
+        if( !pmanip ) {
+            RAVELOG_WARN_FORMAT("env=%d iksolver points to removed manip '%s', passing through", GetEnv()->GetId()%_manipname);
+            return IKRA_Success; // pass through
+        }
         std::vector<dReal> vsolution;
         pmanip->GetRobot()->GetDOFValues(vsolution, pmanip->GetArmIndices());
         // do sanity check to make sure that current robot manip is consistent with param
@@ -231,11 +238,14 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
 
     virtual void SetJointLimits()
     {
-        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        RobotBase::ManipulatorPtr pmanip = _pmanip.lock();
+        if( !pmanip ) {
+            RAVELOG_WARN_FORMAT("env=%d iksolver points to removed manip '%s'", GetEnv()->GetId()%_manipname);
+            return;
+        }
+
         RobotBasePtr probot = pmanip->GetRobot();
-        RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmIndices());
-        probot->GetActiveDOFLimits(_qlower,_qupper);
+        probot->GetDOFLimits(_qlower,_qupper,pmanip->GetArmIndices());
         _qmid.resize(_qlower.size());
         _qbigrangeindices.resize(0);
         _qbigrangemaxsols.resize(0);
@@ -280,14 +290,20 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         RobotBasePtr probot = pmanip->GetRobot();
         bool bfound = false;
         _pmanip.reset();
+        _manipname.clear();
         FOREACHC(itmanip,probot->GetManipulators()) {
             if( *itmanip == pmanip ) {
                 _pmanip = *itmanip;
+                _manipname = (*itmanip)->GetName();
                 bfound = true;
             }
         }
         if( !bfound ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator %s not found in robot"), pmanip->GetName(), ORE_InvalidArguments);
+            std::stringstream smanipnames;
+            FOREACH(itmanip, probot->GetManipulators()) {
+                smanipnames << (*itmanip)->GetName() << ", ";
+            }
+            throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator '%s' not found in robot '%s' (%d) with manips [%s]"), pmanip->GetName()%probot->GetName()%probot->GetEnvironmentBodyIndex()%smanipnames.str(), ORE_InvalidArguments);
         }
 
         _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
@@ -385,9 +401,6 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         }
 #endif
 
-        // get the joint limits
-        RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmIndices());
         SetJointLimits();
         return true;
     }
@@ -782,7 +795,7 @@ protected:
     }
 
     virtual RobotBase::ManipulatorPtr GetManipulator() const {
-        return RobotBase::ManipulatorPtr(_pmanip);
+        return _pmanip.lock();
     }
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -791,6 +804,7 @@ protected:
         boost::shared_ptr< IkFastSolver<IkReal> const > r = boost::dynamic_pointer_cast<IkFastSolver<IkReal> const>(preference);
 
         _pmanip.reset();
+        _manipname.clear();
         _cblimits.reset();
         _vchildlinks.resize(0);
         _vchildlinkindices.resize(0);
@@ -801,6 +815,9 @@ protected:
             if( !!probot ) {
                 RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(rmanip->GetName());
                 _pmanip = pmanip;
+                if( !!pmanip ) {
+                    _manipname = pmanip->GetName();
+                }
                 _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
 
                 if( !!pmanip ) {
@@ -1180,28 +1197,28 @@ protected:
                             eerot[0] = r.dir.x-0.01;
                             eerot[1] = r.dir.y-0.01;
                             eerot[2] = r.dir.z-0.01;
-                            dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
-                            eerot[0] /= fnorm;
-                            eerot[1] /= fnorm;
-                            eerot[2] /= fnorm;
+                            dReal fnorm1 = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                            eerot[0] /= fnorm1;
+                            eerot[1] /= fnorm1;
+                            eerot[2] /= fnorm1;
                             bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                             if( !bret ) {
                                 eerot[0] = r.dir.x-0.04;
                                 eerot[1] = r.dir.y-0.04;
                                 eerot[2] = r.dir.z;
-                                dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
-                                eerot[0] /= fnorm;
-                                eerot[1] /= fnorm;
-                                eerot[2] /= fnorm;
+                                dReal fnorm2 = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                                eerot[0] /= fnorm2;
+                                eerot[1] /= fnorm2;
+                                eerot[2] /= fnorm2;
                                 bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                                 if( !bret ) {
                                     eerot[0] = r.dir.x+0.04;
                                     eerot[1] = r.dir.y+0.04;
                                     eerot[2] = r.dir.z;
-                                    dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
-                                    eerot[0] /= fnorm;
-                                    eerot[1] /= fnorm;
-                                    eerot[2] /= fnorm;
+                                    dReal fnorm3 = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                                    eerot[0] /= fnorm3;
+                                    eerot[1] /= fnorm3;
+                                    eerot[2] /= fnorm3;
                                     bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                                 }
                             }
@@ -1293,7 +1310,12 @@ protected:
     {
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         ikfast::IkSolutionList<IkReal> solutions;
-        if( !_CallIk(param,vfree, pmanip->GetLocalToolTransform(), solutions) ) {
+        Transform tIkChainEndlinkToEE;
+        if (!!pmanip->GetIkChainEndLink()) {
+            tIkChainEndlinkToEE = pmanip->GetIkChainEndLink()->GetTransform().inverse() * pmanip->GetEndEffector()->GetTransform();
+        }
+
+        if( !_CallIk(param,vfree, tIkChainEndlinkToEE * pmanip->GetLocalToolTransform(), solutions) ) {
             return IKRA_RejectKinematics;
         }
 
@@ -1630,7 +1652,7 @@ protected:
                 if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     // if gripper is colliding, solutions will always fail, so completely stop solution process
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
-                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        if( !!ptempreport ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                             ss << "ikfast collision " << report.__str__() << " colvalues=[";
                             std::vector<dReal> vallvalues;
@@ -1688,7 +1710,7 @@ protected:
                     }
                 }
 
-                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                if( !!ptempreport ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "env=" << GetEnv()->GetId() << ", ikfast collision " << probot->GetName() << ":" << pmanip->GetName() << " " << report.__str__() << " colvalues=[";
                     std::vector<dReal> vallvalues;
@@ -1851,7 +1873,12 @@ protected:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         ikfast::IkSolutionList<IkReal> solutions;
-        if( _CallIk(param,vfree, pmanip->GetLocalToolTransform(), solutions) ) {
+        Transform tIkChainEndlinkToEE;
+        if (!!pmanip->GetIkChainEndLink()) {
+            tIkChainEndlinkToEE = pmanip->GetIkChainEndLink()->GetTransform().inverse() * pmanip->GetEndEffector()->GetTransform();
+        }
+
+        if( _CallIk(param,vfree, tIkChainEndlinkToEE * pmanip->GetLocalToolTransform(), solutions) ) {
             vector<IkReal> vsolfree;
             std::vector<IkReal> sol(pmanip->GetArmIndices().size());
             for(size_t isolution = 0; isolution < solutions.GetNumSolutions(); ++isolution) {
@@ -2064,7 +2091,7 @@ protected:
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
-                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        if( !!ptempreport ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                             ss << "env=" << GetEnv()->GetId() << ", ikfast collision " << ptempreport->__str__() << " ";
                             if( !!ptempreport->plink1 ) {
@@ -2104,7 +2131,7 @@ protected:
                 }
             }
             if( GetEnv()->CheckCollision(KinBodyConstPtr(probot), ptempreport) ) {
-                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                if( !!ptempreport ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "ikfast collision " << report.__str__() << " colvalues=[";
                     std::vector<dReal> vallvalues;
@@ -2292,7 +2319,7 @@ protected:
                     for(size_t j = 0; j < vravesols[0].first.size(); ++j) {
                         vravesols[i].first[j] = vravesols[0].first[j];
                     }
-                    for(size_t k = 0; k < _qbigrangeindices.size(); ++k) {
+                    for( k = 0; k < _qbigrangeindices.size(); ++k) {
                         if( vextravalues[k].size() > 1 ) {
                             size_t repeat = vcumproduct.at(k);
                             int j = _qbigrangeindices[k];
@@ -2407,6 +2434,7 @@ protected:
     }
 
     RobotBase::ManipulatorWeakPtr _pmanip;
+    std::string _manipname; ///< name of the manipluator being set, this is for book keeping purposes
     std::vector<int> _vfreeparams; ///< the indices into _pmanip->GetArmIndices() for the free indices of this IK
     std::vector<uint8_t> _vfreerevolute, _vjointrevolute; // 0 if not revolute, 1 if revolute and not circular, 2 if circular
     std::vector<dReal> _vfreeparamscales;

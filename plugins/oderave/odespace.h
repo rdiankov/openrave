@@ -200,6 +200,7 @@ public:
 
             _geometrycallback.reset();
             _staticcallback.reset();
+            _bodyremovedcallback.reset();
         }
 
         KinBodyPtr GetBody() {
@@ -215,7 +216,7 @@ public:
         ///< the pointer to this Link is the userdata
         vector<dJointID> vjoints;
         vector<dJointFeedback> vjointfeedback;
-        OpenRAVE::UserDataPtr _geometrycallback, _staticcallback;
+        OpenRAVE::UserDataPtr _geometrycallback, _staticcallback, _bodyremovedcallback;
         boost::weak_ptr<ODESpace> _odespace;
 
         dSpaceID space;                             ///< space that contanis all the collision objects of this chain
@@ -482,6 +483,7 @@ private:
         if( _bUsingPhysics ) {
             pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic|KinBody::Prop_LinkDynamics, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
         }
+        pinfo->_bodyremovedcallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyRemoved, boost::bind(&ODESpace::RemoveUserData, boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()), boost::bind(&OpenRAVE::utils::sptr_from<const KinBody>, boost::weak_ptr<const KinBody>(pbody))));
 
         pbody->SetUserData(_userdatakey, pinfo);
         _setInitializedBodies.insert(pbody);
@@ -511,7 +513,7 @@ private:
         return _geometrygroup;
     }
 
-    void RemoveUserData(KinBodyPtr pbody)
+    void RemoveUserData(KinBodyConstPtr pbody)
     {
         if( !!pbody ) {
             bool bremoved = pbody->RemoveUserData(_userdatakey);
@@ -675,7 +677,7 @@ private:
         //dGeomSetData(odegeom, (void*)geom.get());
 
         // set the transformation
-        RaveTransform<dReal> t = link->tlinkmassinv * info._t;
+        RaveTransform<dReal> t = link->tlinkmassinv * info.GetTransform();
         dGeomSetQuaternion(odegeom,&t.rot[0]);
         dGeomSetPosition(odegeom,t.trans.x, t.trans.y, t.trans.z);
 

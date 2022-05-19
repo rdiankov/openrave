@@ -31,10 +31,12 @@ public:
     RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const;
 
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
+    object _id = py::none_();
     object _name = py::none_();
     object _sBaseLinkName = py::none_();
+    object _sIkChainEndLinkName = py::none_();
     object _sEffectorLinkName = py::none_();
     object _tLocalTool = py::none_();
     object _vChuckingDirection = py::none_();
@@ -42,6 +44,9 @@ public:
     std::string _sIkSolverXMLId;
     object _vGripperJointNames = py::none_();
     object _grippername = py::none_();
+    object _toolChangerConnectedBodyToolName = py::none_();
+    object _toolChangerLinkName = py::none_();
+    object _vRestrictGraspSetNames = py::none_();
 
 private:
     void _Update(const RobotBase::ManipulatorInfo& info);
@@ -55,12 +60,16 @@ public:
     RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const;
 
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
+    object _id = py::none_();
     object _name = py::none_();
     object _linkname = py::none_();
     object _trelative = py::none_();
     object _sensorname = py::none_();
+    object _referenceAttachedSensorName = py::none_();
+    object _sensorMaker = py::none_();
+    object _sensorModel = py::none_();
     PySensorGeometryPtr _sensorgeometry;
 
 private:
@@ -75,18 +84,19 @@ public:
     RobotBase::ConnectedBodyInfoPtr GetConnectedBodyInfo() const;
 
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
+    object _id = py::none_();
     object _name = py::none_();
     object _linkname = py::none_();
     object _trelative = py::none_();
-    object _url = py::none_();
+    object _uri = py::none_();
     object _linkInfos = py::none_();
     object _jointInfos = py::none_();
     object _manipulatorInfos = py::none_();
     object _attachedSensorInfos = py::none_();
     object _gripperInfos = py::none_();
-    bool _bIsActive = false;
+    int _bIsActive = 0;
 
 private:
     void _Update(const RobotBase::ConnectedBodyInfo& info);

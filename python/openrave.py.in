@@ -17,7 +17,9 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-import sys,time
+import sys
+import time
+import readline
 from types import ModuleType
 from numpy import *
 from OpenGL import GL
@@ -28,7 +30,7 @@ __builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
 try:
     import openravepy
 except ImportError:
-    print "openravepy is not set into PYTHONPATH env variable, attempting to add"
+    print("openravepy is not set into PYTHONPATH env variable, attempting to add")
     # use openrave-config to get the correct install path
     from subprocess import Popen, PIPE
     try:
@@ -90,9 +92,9 @@ if __name__ == "__main__":
                     try:
                         m=__import__('openravepy.databases.'+name)
                         if type(m) is ModuleType:
-                            print name
-                    except ImportError, e:
-                        print e
+                            print(name)
+                    except ImportError as e:
+                        print(e)
             
             RaveDestroy()        
             sys.exit(0)
@@ -103,9 +105,9 @@ if __name__ == "__main__":
                     try:
                         m=__import__('openravepy.examples.'+name)
                         if type(m) is ModuleType:
-                            print name
-                    except ImportError, e:
-                        print e
+                            print(name)
+                    except ImportError as e:
+                        print(e)
             
             RaveDestroy()        
             sys.exit(0)
@@ -115,13 +117,13 @@ if __name__ == "__main__":
             try:
                 database=getattr(databases,args[0])
             except (AttributeError,IndexError):
-                print 'bad database generator, current list of executable generators are:'
+                print('bad database generator, current list of executable generators are:')
                 for name in dir(databases):
                     if not name.startswith('__'):
                         try:
                             m=__import__('openravepy.databases.'+name)
                             if type(m) is ModuleType:
-                                print name
+                                print(name)
                         except ImportError:
                             pass
 
@@ -138,13 +140,13 @@ if __name__ == "__main__":
                 import openravepy.examples
                 example = getattr(openravepy.examples,args[0])
             except (AttributeError,IndexError):
-                print 'bad example, current list of executable examples are:'
+                print('bad example, current list of executable examples are:')
                 for name in dir(openravepy.examples):
                     if not name.startswith('__'):
                         try:
                             m=__import__('openravepy.examples.'+name)
                             if type(m) is ModuleType:
-                                print name
+                                print(name)
                         except ImportError:
                             pass
 
@@ -161,10 +163,10 @@ if __name__ == "__main__":
         RaveInitialize(True,level=level)
         if options.listinterfaces is not None:
             interfaces = RaveGetLoadedInterfaces()
-            for type,names in interfaces.iteritems():
+            for type,names in interfaces.items():
                 if options.listinterfaces.lower() == str(type).lower():
                     for name in names:
-                        print name
+                        print(name)
                     break
 
             RaveDestroy()
@@ -177,12 +179,12 @@ if __name__ == "__main__":
             for pluginname,info in plugins:
                 for type,names in info.interfacenames:
                     interfacenames[type] += [(n,pluginname) for n in names]
-            print 'Number of plugins: %d'%len(plugins)
-            for type,names in interfacenames.iteritems():
-                print '%s: %d'%(str(type),len(names))
+            print('Number of plugins: %d'%len(plugins))
+            for type,names in interfacenames.items():
+                print('%s: %d'%(str(type),len(names)))
                 names.sort()
                 for interfacename,pluginname in names:
-                    print '  %s - %s'%(interfacename,pluginname)
+                    print('  %s - %s'%(interfacename,pluginname))
             RaveDestroy()
             sys.exit(0)
         env,viewername = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True,returnviewer=True)
@@ -245,7 +247,7 @@ if __name__ == "__main__":
                             from IPython import embed
                             embed()
                         else: # later versions of ipython 1.1+
-                            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+                            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed.instance(config=embed.load_default_config())(local_ns=locals())
                     finally:
                         # ipython exited. if viewer is valid, then exit the viewer also
                         if viewer is not None:

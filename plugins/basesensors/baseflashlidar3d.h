@@ -116,6 +116,26 @@ protected:
     class BaseFlashLidar3DGeom : public LaserGeomData
     {
 public:
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const BaseFlashLidar3DGeom* pOther = dynamic_cast<const BaseFlashLidar3DGeom*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return LaserGeomData::operator==(other) &&
+                width == pOther->width &&
+                height == pOther->height &&
+                KK == pOther->KK;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<BaseFlashLidar3DGeom> pNew(new BaseFlashLidar3DGeom());
+            *pNew = *this;
+            return pNew;
+        }
+
         CameraIntrinsics KK;         // intrinsic matrix expanding to [ KK[0] 0 KK[2]; 0 KK[1] KK[3] ]
         int width, height;         // dimensions in number of lasers
     };
@@ -237,7 +257,7 @@ public:
                             // store the colliding bodies
                             KinBody::LinkConstPtr plink = !!_report->plink1 ? _report->plink1 : _report->plink2;
                             if( !!plink ) {
-                                _databodyids[index] = plink->GetParent()->GetEnvironmentId();
+                                _databodyids[index] = plink->GetParent()->GetEnvironmentBodyIndex();
                             }
                         }
                         else {

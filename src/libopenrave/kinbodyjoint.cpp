@@ -21,61 +21,190 @@
 
 #include "fparsermulti.h"
 
-
 namespace OpenRAVE {
 
+constexpr dReal M_TWO_PI = 2 * M_PI;
 
-KinBody::JointInfo::JointControlInfo_RobotController::JointControlInfo_RobotController() : robotId(-1)
+const char* GetJointControlModeString(JointControlMode jcm)
 {
-    robotControllerDOFIndex[0] = robotControllerDOFIndex[1] = robotControllerDOFIndex[2] = -1;
-}
-
-KinBody::JointInfo::JointControlInfo_IO::JointControlInfo_IO() : deviceId(-1)
-{
-}
-
-KinBody::JointInfo::JointControlInfo_ExternalDevice::JointControlInfo_ExternalDevice()
-{
-}
-
-KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true), _controlMode(JCM_None) {
-    for(size_t i = 0; i < _vaxes.size(); ++i) {
-        _vaxes[i] = Vector(0,0,1);
+    switch(jcm) {
+    case JCM_None: return "None";
+    case JCM_RobotController: return "RobotController";
+    case JCM_IO: return "IO";
+    case JCM_ExternalDevice: return "ExternalDevice";
     }
-    std::fill(_vresolution.begin(), _vresolution.end(), 0.02);
-    std::fill(_vmaxvel.begin(), _vmaxvel.end(), 10);
-    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 0); // Default hard limits is 0. if 0, the user should not use the hard limit value.
-    std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
-    std::fill(_vhardmaxaccel.begin(), _vhardmaxaccel.end(), 0); // Default hard limits is 0. if 0, the user should not use the hard limit value.
-    std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 50*1000); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step.
-    std::fill(_vhardmaxjerk.begin(), _vhardmaxjerk.end(), 0); // Default hard limits is 0. if 0, the user should not use the hard limit value.
-    std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
-    std::fill(_vmaxinertia.begin(), _vmaxinertia.end(), 0);
-    std::fill(_vweights.begin(), _vweights.end(), 1);
-    std::fill(_voffsets.begin(), _voffsets.end(), 0);
-    std::fill(_vlowerlimit.begin(), _vlowerlimit.end(), 0);
-    std::fill(_vupperlimit.begin(), _vupperlimit.end(), 0);
-    std::fill(_bIsCircular.begin(), _bIsCircular.end(), 0);
+    return "(unknown)";
 }
 
-KinBody::JointInfo::JointInfo(const JointInfo& other) : XMLReadable("joint")
+void ElectricMotorActuatorInfo::Reset()
 {
-    *this = other;
+    model_type.clear();
+    assigned_power_rating = 0;
+    max_speed = 0;
+    no_load_speed = 0;
+    stall_torque = 0;
+    max_instantaneous_torque = 0;
+    nominal_speed_torque_points.clear();
+    max_speed_torque_points.clear();
+    nominal_torque = 0;
+    rotor_inertia = 0;
+    torque_constant = 0;
+    nominal_voltage = 0;
+    speed_constant = 0;
+    starting_current = 0;
+    terminal_resistance = 0;
+    gear_ratio = 0;
+    coloumb_friction = 0;
+    viscous_friction = 0;
 }
 
-int KinBody::JointInfo::GetDOF() const
+void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    if(_type & KinBody::JointSpecialBit) {
-        switch(_type) {
-        case KinBody::JointHinge2:
-        case KinBody::JointUniversal: return 2;
-        case KinBody::JointSpherical: return 3;
-        case KinBody::JointTrajectory: return 1;
-        default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("invalid joint type 0x%x"), _type, ORE_Failed);
-        }
+    orjson::SetJsonValueByKey(value, "modelType", model_type, allocator);
+    orjson::SetJsonValueByKey(value, "assignedPowerRating", assigned_power_rating, allocator);
+    orjson::SetJsonValueByKey(value, "maxSpeed", max_speed, allocator);
+    orjson::SetJsonValueByKey(value, "noLoadSpeed", no_load_speed, allocator);
+    orjson::SetJsonValueByKey(value, "stallTorque", stall_torque, allocator);
+    orjson::SetJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque, allocator);
+    orjson::SetJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points, allocator);
+    orjson::SetJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points, allocator);
+    orjson::SetJsonValueByKey(value, "nominalTorque", nominal_torque, allocator);
+    orjson::SetJsonValueByKey(value, "rotorInertia", rotor_inertia, allocator);
+    orjson::SetJsonValueByKey(value, "torqueConstant", torque_constant, allocator);
+    orjson::SetJsonValueByKey(value, "nominalVoltage", nominal_voltage, allocator);
+    orjson::SetJsonValueByKey(value, "speedConstant", speed_constant, allocator);
+    orjson::SetJsonValueByKey(value, "startingCurrent", starting_current, allocator);
+    orjson::SetJsonValueByKey(value, "terminalResistance", terminal_resistance, allocator);
+    orjson::SetJsonValueByKey(value, "gearRatio", gear_ratio, allocator);
+    orjson::SetJsonValueByKey(value, "coloumbFriction", coloumb_friction, allocator);
+    orjson::SetJsonValueByKey(value, "viscousFriction", viscous_friction, allocator);
+}
+
+void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+{
+    orjson::LoadJsonValueByKey(value, "modelType", model_type);
+    orjson::LoadJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);
+    orjson::LoadJsonValueByKey(value, "maxSpeed", max_speed);
+    orjson::LoadJsonValueByKey(value, "noLoadSpeed", no_load_speed);
+    orjson::LoadJsonValueByKey(value, "stallTorque", stall_torque);
+    orjson::LoadJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque);
+    orjson::LoadJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points);
+    orjson::LoadJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points);
+    orjson::LoadJsonValueByKey(value, "nominalTorque", nominal_torque);
+    orjson::LoadJsonValueByKey(value, "rotorInertia", rotor_inertia);
+    orjson::LoadJsonValueByKey(value, "torqueConstant", torque_constant);
+    orjson::LoadJsonValueByKey(value, "nominalVoltage", nominal_voltage);
+    orjson::LoadJsonValueByKey(value, "speedConstant", speed_constant);
+    orjson::LoadJsonValueByKey(value, "startingCurrent", starting_current);
+    orjson::LoadJsonValueByKey(value, "terminalResistance", terminal_resistance);
+    orjson::LoadJsonValueByKey(value, "gearRatio", gear_ratio);
+    orjson::LoadJsonValueByKey(value, "coloumbFriction", coloumb_friction);
+    orjson::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
+}
+
+void JointControlInfo_RobotController::Reset()
+{
+    controllerType.clear();
+    robotControllerAxisIndex[0] = robotControllerAxisIndex[1] = robotControllerAxisIndex[2] = -1;
+}
+
+void JointControlInfo_RobotController::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    orjson::SetJsonValueByKey(value, "controllerType", controllerType, allocator);
+    orjson::SetJsonValueByKey(value, "robotControllerAxisIndex", robotControllerAxisIndex, allocator);
+}
+
+void JointControlInfo_RobotController::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+{
+    orjson::LoadJsonValueByKey(value, "controllerType", controllerType);
+    orjson::LoadJsonValueByKey(value, "robotControllerAxisIndex", robotControllerAxisIndex);
+}
+
+void JointControlInfo_IO::Reset()
+{
+    deviceType.clear();
+    for(int index = 0; index < 3; ++index) {
+        moveIONames[index].clear();
+        upperLimitIONames[index].clear();
+        upperLimitSensorIsOn[index].clear();
+        lowerLimitIONames[index].clear();
+        lowerLimitSensorIsOn[index].clear();
     }
-    return int(_type & 0xf);
+}
+
+void JointControlInfo_IO::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    orjson::SetJsonValueByKey(value, "deviceType", deviceType, allocator);
+    orjson::SetJsonValueByKey(value, "moveIONames", moveIONames, allocator);
+    orjson::SetJsonValueByKey(value, "upperLimitIONames", upperLimitIONames, allocator);
+    orjson::SetJsonValueByKey(value, "upperLimitSensorIsOn", upperLimitSensorIsOn, allocator);
+    orjson::SetJsonValueByKey(value, "lowerLimitIONames", lowerLimitIONames, allocator);
+    orjson::SetJsonValueByKey(value, "lowerLimitSensorIsOn", lowerLimitSensorIsOn, allocator);
+}
+
+void JointControlInfo_IO::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+{
+    orjson::LoadJsonValueByKey(value, "deviceType", deviceType);
+    orjson::LoadJsonValueByKey(value, "moveIONames", moveIONames);
+    orjson::LoadJsonValueByKey(value, "upperLimitIONames", upperLimitIONames);
+    orjson::LoadJsonValueByKey(value, "upperLimitSensorIsOn", upperLimitSensorIsOn);
+    orjson::LoadJsonValueByKey(value, "lowerLimitIONames", lowerLimitIONames);
+    orjson::LoadJsonValueByKey(value, "lowerLimitSensorIsOn", lowerLimitSensorIsOn);
+}
+
+void JointControlInfo_ExternalDevice::Reset()
+{
+    externalDeviceType.clear();
+}
+
+void JointControlInfo_ExternalDevice::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    orjson::SetJsonValueByKey(value, "externalDeviceType", externalDeviceType, allocator);
+}
+
+void JointControlInfo_ExternalDevice::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+{
+    orjson::LoadJsonValueByKey(value, "externalDeviceType", externalDeviceType);
+}
+
+void KinBody::JointInfo::Reset()
+{
+    _type = JointNone;
+    _id.clear();
+    _name.clear();
+    _linkname0.clear();
+    _linkname1.clear();
+    _vanchor = Vector();
+    _vaxes = {Vector(0,0,1), Vector(0,0,1), Vector(0,0,1)};
+    _vcurrentvalues.clear();
+    _vresolution = {0.02, 0.02, 0.02};
+    _vmaxvel = {10, 10, 10};
+    _vhardmaxvel = {0, 0, 0};
+    _vmaxaccel = {50, 50, 50};
+    _vhardmaxaccel = {0, 0, 0};
+    _vmaxjerk = {50*1000, 50*1000, 50*1000};
+    _vhardmaxjerk = {0, 0, 0};
+    _vmaxtorque = {0, 0, 0};
+    _vmaxinertia = {0, 0, 0};
+    _vweights = {1, 1, 1};
+    _voffsets = {0, 0, 0};
+    _vlowerlimit = {0, 0, 0};
+    _vupperlimit = {0, 0, 0};
+    _trajfollow.reset();
+    FOREACH(itmimic, _vmimic) {
+        itmimic->reset();
+    }
+
+    _mapFloatParameters.clear();
+    _mapIntParameters.clear();
+    _mapStringParameters.clear();
+    _infoElectricMotor.reset();
+    _bIsCircular = {0, 0, 0};
+    _bIsActive = true;
+    _controlMode = JCM_None;
+    _jci_robotcontroller.reset();
+    _jci_io.reset();
+    _jci_externaldevice.reset();
 }
 
 void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -83,16 +212,44 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     int dof = GetDOF();
 
     switch (_type) {
-    case JointRevolute:
-        openravejson::SetJsonValueByKey(value, "type", "revolute", allocator);
+    case JointRevolute: // jointHinge and jointRevolute have same value
+        orjson::SetJsonValueByKey(value, "type", "revolute", allocator);
         break;
-    case JointPrismatic:
-        openravejson::SetJsonValueByKey(value, "type", "prismatic", allocator);
+    case JointPrismatic: // jointSlider and jointPrismatic have same value
+        orjson::SetJsonValueByKey(value, "type", "prismatic", allocator);
+        break;
+    case JointRR:
+        orjson::SetJsonValueByKey(value, "type", "rr", allocator);
+        break;
+    case JointRP:
+        orjson::SetJsonValueByKey(value, "type", "rp", allocator);
+        break;
+    case JointPR:
+        orjson::SetJsonValueByKey(value, "type", "pr", allocator);
+        break;
+    case JointPP:
+        orjson::SetJsonValueByKey(value, "type", "pp", allocator);
+        break;
+    case JointSpecialBit:
+        orjson::SetJsonValueByKey(value, "type", "specialbit", allocator);
+        break;
+    case JointUniversal:
+        orjson::SetJsonValueByKey(value, "type", "universal", allocator);
+        break;
+    case JointHinge2:
+        orjson::SetJsonValueByKey(value, "type", "hinge2", allocator);
+        break;
+    case JointSpherical:
+        orjson::SetJsonValueByKey(value, "type", "spherical", allocator);
+        break;
+    case JointTrajectory:
+        orjson::SetJsonValueByKey(value, "type", "trajectory", allocator);
         break;
     case JointNone:
         break;
     default:
-        openravejson::SetJsonValueByKey(value, "type", static_cast<int>(_type), allocator);
+        RAVELOG_WARN(str(boost::format("Unknow JointType %d")%static_cast<int>(_type)));
+        orjson::SetJsonValueByKey(value, "type", static_cast<int>(_type), allocator);  // TODO: should we raise error here ?
         break;
     }
 
@@ -106,13 +263,14 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         fjointmult = fUnitScale;
     }
 
-    openravejson::SetJsonValueByKey(value, "name", _name, allocator);
-    openravejson::SetJsonValueByKey(value, "anchors", _vanchor, allocator);
-    openravejson::SetJsonValueByKey(value, "parentLinkName", _linkname0, allocator);
-    openravejson::SetJsonValueByKey(value, "childLinkName", _linkname1, allocator);
-    openravejson::SetJsonValueByKey(value, "axes", _vaxes, allocator);
-    openravejson::SetJsonValueByKey(value, "currentValues", _vcurrentvalues, allocator);
-    openravejson::SetJsonValueByKey(value, "resolutions", _vresolution, allocator, dof);
+    orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    orjson::SetJsonValueByKey(value, "name", _name, allocator);
+    orjson::SetJsonValueByKey(value, "anchors", _vanchor, allocator);
+    orjson::SetJsonValueByKey(value, "parentLinkName", _linkname0, allocator);
+    orjson::SetJsonValueByKey(value, "childLinkName", _linkname1, allocator);
+    orjson::SetJsonValueByKey(value, "axes", _vaxes, allocator);
+    orjson::SetJsonValueByKey(value, "currentValues", _vcurrentvalues, allocator);
+    orjson::SetJsonValueByKey(value, "resolutions", _vresolution, allocator, dof);
 
     boost::array<dReal, 3> newvmaxvel = _vmaxvel;
     boost::array<dReal, 3> newvmaxaccel = _vmaxaccel;
@@ -124,19 +282,19 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         newvlowerlimit[i] *= fjointmult;
         newvupperlimit[i] *= fjointmult;
     }
-    openravejson::SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator, dof);
-    openravejson::SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator, dof);
-    openravejson::SetJsonValueByKey(value, "maxAccel", newvmaxaccel, allocator, dof);
-    openravejson::SetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel, allocator, dof);
-    openravejson::SetJsonValueByKey(value, "maxJerk", _vmaxjerk, allocator, dof);
-    openravejson::SetJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk, allocator, dof);
-    openravejson::SetJsonValueByKey(value, "maxTorque", _vmaxtorque, allocator, dof);
-    openravejson::SetJsonValueByKey(value, "maxInertia", _vmaxinertia, allocator, dof);
-    openravejson::SetJsonValueByKey(value, "weights", _vweights, allocator, dof);
-    openravejson::SetJsonValueByKey(value, "offsets", _voffsets, allocator, dof);
-    openravejson::SetJsonValueByKey(value, "lowerLimit", newvlowerlimit, allocator, dof);
-    openravejson::SetJsonValueByKey(value, "upperLimit", newvupperlimit, allocator, dof);
-    // TODO: openravejson::SetJsonValueByKey(value, allocator, "trajfollow", _trajfollow);
+    orjson::SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator, dof);
+    orjson::SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator, dof);
+    orjson::SetJsonValueByKey(value, "maxAccel", newvmaxaccel, allocator, dof);
+    orjson::SetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel, allocator, dof);
+    orjson::SetJsonValueByKey(value, "maxJerk", _vmaxjerk, allocator, dof);
+    orjson::SetJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk, allocator, dof);
+    orjson::SetJsonValueByKey(value, "maxTorque", _vmaxtorque, allocator, dof);
+    orjson::SetJsonValueByKey(value, "maxInertia", _vmaxinertia, allocator, dof);
+    orjson::SetJsonValueByKey(value, "weights", _vweights, allocator, dof);
+    orjson::SetJsonValueByKey(value, "offsets", _voffsets, allocator, dof);
+    orjson::SetJsonValueByKey(value, "lowerLimit", newvlowerlimit, allocator, dof);
+    orjson::SetJsonValueByKey(value, "upperLimit", newvupperlimit, allocator, dof);
+    // TODO: orjson::SetJsonValueByKey(value, allocator, "trajfollow", _trajfollow);
 
     if (_vmimic.size() > 0) {
         bool bfound = false;
@@ -151,7 +309,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
             mimics.SetArray();
             for (size_t i = 0; i < _vmimic.size() && i < (size_t)dof; ++i) {
                 rapidjson::Value mimicValue;
-                _vmimic[i]->SerializeJSON(mimicValue, allocator, fUnitScale);
+                _vmimic[i]->SerializeJSON(mimicValue, allocator, fUnitScale, options);
                 mimics.PushBack(mimicValue, allocator);
             }
             value.AddMember("mimics", mimics, allocator);
@@ -160,15 +318,42 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
 
     if(_mapFloatParameters.size() > 0)
     {
-        openravejson::SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
+        rapidjson::Value parameters;
+        parameters.SetArray();
+        FOREACHC(it, _mapFloatParameters) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        value.AddMember("floatParameters", parameters, allocator);
     }
     if(_mapIntParameters.size() > 0)
     {
-        openravejson::SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
+        rapidjson::Value parameters;
+        parameters.SetArray();
+        FOREACHC(it, _mapIntParameters) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        value.AddMember("intParameters", parameters, allocator);
     }
     if(_mapStringParameters.size() > 0)
     {
-        openravejson::SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
+        rapidjson::Value parameters;
+        parameters.SetArray();
+        FOREACHC(it, _mapStringParameters) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
+            orjson::SetJsonValueByKey(parameter, "value", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        value.AddMember("stringParameters", parameters, allocator);
     }
 
     if (!!_infoElectricMotor) {
@@ -178,174 +363,293 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         value.AddMember("electricMotorActuator", electricMotorInfoValue, allocator);
     }
 
-    openravejson::SetJsonValueByKey(value, "isCircular", _bIsCircular, allocator, dof);
-    openravejson::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
+    orjson::SetJsonValueByKey(value, "isCircular", _bIsCircular, allocator, dof);
+    orjson::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 
+    orjson::SetJsonValueByKey(value, "controlMode", GetJointControlModeString(_controlMode), allocator);
+    if( !!_jci_robotcontroller ) {
+        rapidjson::Value rRobotController;
+        rRobotController.SetObject();
+        _jci_robotcontroller->SerializeJSON(rRobotController, allocator, fUnitScale, options);
+        value.AddMember("jointControlInfoRobotController", rRobotController, allocator);
+    }
+    if( !!_jci_io ) {
+        rapidjson::Value rIo;
+        rIo.SetObject();
+        _jci_io->SerializeJSON(rIo, allocator, fUnitScale, options);
+        value.AddMember("jointControlInfoIO", rIo, allocator);
+    }
+    if( !!_jci_externaldevice ) {
+        rapidjson::Value rExternaldevice;
+        rExternaldevice.SetObject();
+        _jci_externaldevice->SerializeJSON(rExternaldevice, allocator, fUnitScale, options);
+        value.AddMember("jointControlInfoExternalDevice", rExternaldevice, allocator);
+    }
 }
 
-void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
-    std::string typestr;
-    openravejson::LoadJsonValueByKey(value, "type", typestr);
-
-    if (typestr == "revolute")
     {
-        _type = JointType::JointRevolute;
-    }
-    else if (typestr == "prismatic")
-    {
-        _type = JointType::JointPrismatic;
-    }
-    else
-    {
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
+        rapidjson::Value::ConstMemberIterator itType = value.FindMember("type");
+        if( itType != value.MemberEnd() && itType->value.IsString() ) {
+            if( strcmp(itType->value.GetString(), "revolute") == 0 ) {
+                _type = JointType::JointRevolute;
+            }
+            else if( strcmp(itType->value.GetString(), "prismatic") == 0 ) {
+                _type = JointType::JointPrismatic;
+            }
+            else if( strcmp(itType->value.GetString(), "rr") == 0 ) {
+                _type = JointType::JointRR;
+            }
+            else if( strcmp(itType->value.GetString(), "rp") == 0 ) {
+                _type = JointType::JointRP;
+            }
+            else if( strcmp(itType->value.GetString(), "pr") == 0 ) {
+                _type = JointType::JointPR;
+            }
+            else if( strcmp(itType->value.GetString(), "pp") == 0 ) {
+                _type = JointType::JointPP;
+            }
+            else if( strcmp(itType->value.GetString(), "specialbit") == 0 ) {
+                _type = JointType::JointSpecialBit;
+            }
+            else if( strcmp(itType->value.GetString(), "universal") == 0 ) {
+                _type = JointType::JointUniversal;
+            }
+            else if( strcmp(itType->value.GetString(), "hinge2") == 0 ) {
+                _type = JointType::JointHinge2;
+            }
+            else if( strcmp(itType->value.GetString(), "spherical") == 0 ) {
+                _type = JointType::JointSpecialBit;
+            }
+            else if( strcmp(itType->value.GetString(), "trajectory") == 0 ) {
+                _type = JointType::JointTrajectory;
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", itType->value.GetString(), ORE_InvalidArguments);
+            }
+        }
     }
 
-    openravejson::LoadJsonValueByKey(value, "name", _name);
-    openravejson::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
-    openravejson::LoadJsonValueByKey(value, "anchors", _vanchor);
-    openravejson::LoadJsonValueByKey(value, "childLinkName", _linkname1);
-    openravejson::LoadJsonValueByKey(value, "axes", _vaxes);
-    openravejson::LoadJsonValueByKey(value, "currentValues", _vcurrentvalues);
-    openravejson::LoadJsonValueByKey(value, "resolutions", _vresolution);
-    openravejson::LoadJsonValueByKey(value, "maxVel", _vmaxvel);
-    openravejson::LoadJsonValueByKey(value, "hardMaxVel", _vhardmaxvel);
-    openravejson::LoadJsonValueByKey(value, "maxAccel", _vmaxaccel);
-    openravejson::LoadJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel);
-    openravejson::LoadJsonValueByKey(value, "maxJerk", _vmaxjerk);
-    openravejson::LoadJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk);
-    openravejson::LoadJsonValueByKey(value, "maxTorque", _vmaxtorque);
-    openravejson::LoadJsonValueByKey(value, "maxInertia", _vmaxinertia);
-    openravejson::LoadJsonValueByKey(value, "weights", _vweights);
-    openravejson::LoadJsonValueByKey(value, "offsets", _voffsets);
-    openravejson::LoadJsonValueByKey(value, "lowerLimit", _vlowerlimit);
-    openravejson::LoadJsonValueByKey(value, "upperLimit", _vupperlimit);
-    openravejson::LoadJsonValueByKey(value, "isCircular", _bIsCircular);
-    openravejson::LoadJsonValueByKey(value, "isActive", _bIsActive);
-
+    // deserializing partial json only multply fUnitScale if value exists
     // multiply fUnitScale on maxVel, maxAccel, lowerLimit, upperLimit
     dReal fjointmult = fUnitScale;
-    if(_type == JointRevolute)
-    {
+    if(_type == JointRevolute) {
         fjointmult = 1;
     }
-    else if(_type == JointPrismatic)
-    {
+    else if(_type == JointPrismatic) {
         fjointmult = fUnitScale;
     }
-    for(size_t ic = 0; ic < _vaxes.size(); ic++)
-    {
-        _vmaxvel[ic] *= fjointmult;
-        _vmaxaccel[ic] *= fjointmult;
-        _vlowerlimit[ic] *= fjointmult;
-        _vupperlimit[ic] *= fjointmult;
+
+    orjson::LoadJsonValueByKey(value, "name", _name);
+    orjson::LoadJsonValueByKey(value, "id", _id);
+
+    orjson::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
+    orjson::LoadJsonValueByKey(value, "anchors", _vanchor);
+    orjson::LoadJsonValueByKey(value, "childLinkName", _linkname1);
+    orjson::LoadJsonValueByKey(value, "axes", _vaxes);
+    orjson::LoadJsonValueByKey(value, "currentValues", _vcurrentvalues);
+    orjson::LoadJsonValueByKey(value, "resolutions", _vresolution);
+
+    if (value.HasMember("maxVel")) {
+        orjson::LoadJsonValueByKey(value, "maxVel", _vmaxvel);
+        for(size_t ic = 0; ic < _vaxes.size(); ic++) {
+            _vmaxvel[ic] *= fjointmult;
+        }
+    }
+    orjson::LoadJsonValueByKey(value, "hardMaxVel", _vhardmaxvel);
+    if (value.HasMember("maxAccel")) {
+        orjson::LoadJsonValueByKey(value, "maxAccel", _vmaxaccel);
+        for(size_t ic = 0; ic < _vaxes.size(); ic++) {
+            _vmaxaccel[ic] *= fjointmult;
+        }
+    }
+    orjson::LoadJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel);
+    orjson::LoadJsonValueByKey(value, "maxJerk", _vmaxjerk);
+    orjson::LoadJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk);
+    orjson::LoadJsonValueByKey(value, "maxTorque", _vmaxtorque);
+    orjson::LoadJsonValueByKey(value, "maxInertia", _vmaxinertia);
+    orjson::LoadJsonValueByKey(value, "weights", _vweights);
+    orjson::LoadJsonValueByKey(value, "offsets", _voffsets);
+
+    if (value.HasMember("lowerLimit")) {
+        orjson::LoadJsonValueByKey(value, "lowerLimit", _vlowerlimit);
+        for(size_t ic = 0; ic < _vaxes.size(); ic++) {
+            _vlowerlimit[ic] *= fjointmult;
+        }
+    }
+    if (value.HasMember("upperLimit")) {
+        orjson::LoadJsonValueByKey(value, "upperLimit", _vupperlimit);
+        for(size_t ic = 0; ic < _vaxes.size(); ic++) {
+            _vupperlimit[ic] *= fjointmult;
+        }
     }
 
-    boost::array<MimicInfoPtr, 3> newmimic;
-    if (value.HasMember("mimics"))
+    if (value.HasMember("mimics") && value["mimics"].IsArray())
     {
+        boost::array<MimicInfoPtr, 3> newmimic;
         for (rapidjson::SizeType i = 0; i < value["mimics"].Size(); ++i) {
             MimicInfoPtr mimicinfo(new MimicInfo());
-            mimicinfo->DeserializeJSON(value["mimics"][i], fUnitScale);
+            mimicinfo->DeserializeJSON(value["mimics"][i], fUnitScale, options);
             newmimic[i] = mimicinfo;
         }
+        _vmimic = newmimic;
     }
-    _vmimic = newmimic;
 
-    openravejson::LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
-    openravejson::LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
-    openravejson::LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
+    if (value.HasMember("floatParameters") && value["floatParameters"].IsArray()) {
+        for (rapidjson::Value::ConstValueIterator it = value["floatParameters"].Begin(); it != value["floatParameters"].End(); ++it) {
+            std::string key;
+            if( it->HasMember("id") ) {
+                orjson::LoadJsonValueByKey(*it, "id", key);
+            }
+            else if( it->HasMember("key") ) {
+                // backward compatibility
+                orjson::LoadJsonValueByKey(*it, "key", key);
+            }
+            if (key.empty()) {
+                RAVELOG_WARN_FORMAT("ignored an entry in floatParameters in joint %s due to missing or empty id", _id);
+                continue;
+            }
+            // delete
+            if (OpenRAVE::orjson::GetJsonValueByKey<bool>(*it, "__deleted__", false)) {
+                _mapFloatParameters.erase(key);
+                continue;
+            }
+            orjson::LoadJsonValueByKey(*it, "values", _mapFloatParameters[key]);
+        }
+    }
+    if (value.HasMember("intParameters") && value["intParameters"].IsArray()) {
+        for (rapidjson::Value::ConstValueIterator it = value["intParameters"].Begin(); it != value["intParameters"].End(); ++it) {
+            std::string key;
+            if( it->HasMember("id") ) {
+                orjson::LoadJsonValueByKey(*it, "id", key);
+            }
+            else if( it->HasMember("key") ) {
+                // backward compatibility
+                orjson::LoadJsonValueByKey(*it, "key", key);
+            }
+            if (key.empty()) {
+                RAVELOG_WARN_FORMAT("ignored an entry in intParameters in joint %s due to missing or empty id", _id);
+                continue;
+            }
+            // delete
+            if (OpenRAVE::orjson::GetJsonValueByKey<bool>(*it, "__deleted__", false)) {
+                _mapIntParameters.erase(key);
+                continue;
+            }
+            orjson::LoadJsonValueByKey(*it, "values", _mapIntParameters[key]);
+        }
+    }
+    if (value.HasMember("stringParameters") && value["stringParameters"].IsArray()) {
+        for (rapidjson::Value::ConstValueIterator it = value["stringParameters"].Begin(); it != value["stringParameters"].End(); ++it) {
+            std::string key;
+            if( it->HasMember("id") ) {
+                orjson::LoadJsonValueByKey(*it, "id", key);
+            }
+            else if( it->HasMember("key") ) {
+                // backward compatibility
+                orjson::LoadJsonValueByKey(*it, "key", key);
+            }
+            if (key.empty()) {
+                RAVELOG_WARN_FORMAT("ignored an entry in stringParameters in joint %s due to missing or empty id", _id);
+                continue;
+            }
+            // delete
+            if (OpenRAVE::orjson::GetJsonValueByKey<bool>(*it, "__deleted__", false)) {
+                _mapStringParameters.erase(key);
+                continue;
+            }
+            orjson::LoadJsonValueByKey(*it, "value", _mapStringParameters[key]);
+        }
+    }
 
     if (value.HasMember("electricMotorActuator")) {
-        ElectricMotorActuatorInfoPtr info(new ElectricMotorActuatorInfo());
-        info->DeserializeJSON(value["electricMotorActuator"], fUnitScale);
-        _infoElectricMotor = info;
+        if (!_infoElectricMotor) {
+            _infoElectricMotor.reset(new ElectricMotorActuatorInfo());
+        }
+        _infoElectricMotor->DeserializeJSON(value["electricMotorActuator"], fUnitScale, options);
+    }
+
+    orjson::LoadJsonValueByKey(value, "isCircular", _bIsCircular);
+    orjson::LoadJsonValueByKey(value, "isActive", _bIsActive);
+
+    {
+        rapidjson::Value::ConstMemberIterator itControlMode = value.FindMember("controlMode");
+        if( itControlMode != value.MemberEnd() && itControlMode->value.IsString() ) {
+            if( strcmp(itControlMode->value.GetString(), GetJointControlModeString(JCM_None)) == 0 ) {
+                _controlMode = JCM_None;
+            }
+            else if( strcmp(itControlMode->value.GetString(), GetJointControlModeString(JCM_RobotController)) == 0 ) {
+                _controlMode = JCM_RobotController;
+            }
+            else if( strcmp(itControlMode->value.GetString(), GetJointControlModeString(JCM_IO)) == 0 ) {
+                _controlMode = JCM_IO;
+            }
+            else if( strcmp(itControlMode->value.GetString(), GetJointControlModeString(JCM_ExternalDevice)) == 0 ) {
+                _controlMode = JCM_ExternalDevice;
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported controlMode \"%s\"", itControlMode->value.GetString(), ORE_InvalidArguments);
+            }
+        }
+    }
+
+    if (value.HasMember("jointControlInfoRobotController")) {
+        if (!_jci_robotcontroller) {
+            _jci_robotcontroller.reset(new JointControlInfo_RobotController());
+        }
+        _jci_robotcontroller->DeserializeJSON(value["jointControlInfoRobotController"], fUnitScale, options);
+    }
+    if (value.HasMember("jointControlInfoIO")) {
+        if (!_jci_io) {
+            _jci_io.reset(new JointControlInfo_IO());
+        }
+        _jci_io->DeserializeJSON(value["jointControlInfoIO"], fUnitScale, options);
+    }
+    if (value.HasMember("jointControlInfoExternalDevice")) {
+        if (!_jci_externaldevice) {
+            _jci_externaldevice.reset(new JointControlInfo_ExternalDevice());
+        }
+        _jci_externaldevice->DeserializeJSON(value["jointControlInfoExternalDevice"], fUnitScale, options);
     }
 }
 
-KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
+bool KinBody::JointInfo::operator==(const KinBody::JointInfo& other) const
 {
-    _type = other._type;
-    _name = other._name;
-    _linkname0 = other._linkname0;
-    _linkname1 = other._linkname1;
-    _vanchor = other._vanchor;
-    _vaxes = other._vaxes;
-    _vcurrentvalues = other._vcurrentvalues;
-    _vresolution = other._vresolution;
-    _vmaxvel = other._vmaxvel;
-    _vhardmaxvel = other._vhardmaxvel;
-    _vmaxaccel = other._vmaxaccel;
-    _vhardmaxaccel = other._vhardmaxaccel;
-    _vmaxjerk = other._vmaxjerk;
-    _vhardmaxjerk = other._vhardmaxjerk;
-    _vmaxtorque = other._vmaxtorque;
-    _vmaxinertia = other._vmaxinertia;
-    _vweights = other._vweights;
-    _voffsets = other._voffsets;
-    _vlowerlimit = other._vlowerlimit;
-    _vupperlimit = other._vupperlimit;
-
-    if( !other._trajfollow ) {
-        _trajfollow.reset();
-    }
-    else {
-        _trajfollow = RaveClone<TrajectoryBase>(other._trajfollow, Clone_All);
-    }
-
-    for( size_t i = 0; i < _vmimic.size(); ++i ) {
-        if( !other._vmimic[i] ) {
-            _vmimic[i].reset();
-        }
-        else {
-            _vmimic[i].reset(new MimicInfo(*(other._vmimic[i])));
-        }
-    }
-
-    _mapFloatParameters = other._mapFloatParameters;
-    _mapIntParameters = other._mapIntParameters;
-    _mapStringParameters = other._mapStringParameters;
-
-    if( !other._infoElectricMotor ) {
-        _infoElectricMotor.reset();
-    }
-    else {
-        _infoElectricMotor.reset(new ElectricMotorActuatorInfo(*other._infoElectricMotor));
-    }
-
-    _bIsCircular = other._bIsCircular;
-    _bIsActive = other._bIsActive;
-
-    _controlMode = other._controlMode;
-    if( _controlMode == KinBody::JCM_RobotController ) {
-        if( !other._jci_robotcontroller ) {
-            _jci_robotcontroller.reset();
-        }
-        else {
-            _jci_robotcontroller.reset(new JointControlInfo_RobotController(*other._jci_robotcontroller));
-        }
-    }
-    else if( _controlMode == KinBody::JCM_IO ) {
-        if( !other._jci_io ) {
-            _jci_io.reset();
-        }
-        else {
-            _jci_io.reset(new JointControlInfo_IO(*other._jci_io));
-        }
-    }
-    else if( _controlMode == KinBody::JCM_ExternalDevice ) {
-        if( !other._jci_externaldevice ) {
-            _jci_externaldevice.reset();
-        }
-        else {
-            _jci_externaldevice.reset(new JointControlInfo_ExternalDevice(*other._jci_externaldevice));
-        }
-    }
-    return *this;
+    return _type == other._type
+           && _id == other._id
+           && _name == other._name
+           && _linkname0 == other._linkname0
+           && _linkname1 == other._linkname1
+           && _vanchor == other._vanchor
+           && _vaxes == other._vaxes
+           && _vcurrentvalues == other._vcurrentvalues
+           && _vresolution == other._vresolution
+           && _vmaxvel == other._vmaxvel
+           && _vhardmaxvel == other._vhardmaxvel
+           && _vmaxaccel == other._vmaxaccel
+           && _vhardmaxaccel == other._vhardmaxaccel
+           && _vmaxjerk == other._vmaxjerk
+           && _vhardmaxjerk == other._vhardmaxjerk
+           && _vmaxtorque == other._vmaxtorque
+           && _vmaxinertia == other._vmaxinertia
+           && _vweights == other._vweights
+           && _voffsets == other._voffsets
+           && _vlowerlimit == other._vlowerlimit
+           && _vupperlimit == other._vupperlimit
+           && _trajfollow == other._trajfollow
+           && AreArraysDeepEqual(_vmimic, other._vmimic)
+           && _mapFloatParameters == other._mapFloatParameters
+           && _mapIntParameters == other._mapIntParameters
+           && _mapStringParameters == other._mapStringParameters
+           && _infoElectricMotor == other._infoElectricMotor
+           && _bIsCircular == other._bIsCircular
+           && _bIsActive == other._bIsActive
+           && _controlMode == other._controlMode
+           && _jci_robotcontroller == other._jci_robotcontroller
+           && _jci_io == other._jci_io
+           && _jci_externaldevice == other._jci_externaldevice;
 }
-
-
-
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
 {
@@ -423,6 +727,7 @@ KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
     jointindex=-1;
     dofindex = -1; // invalid index
     _bInitialized = false;
+    _nIsStatic = -1;
     _info._type = type;
     _info._controlMode = JCM_None;
 }
@@ -431,19 +736,9 @@ KinBody::Joint::~Joint()
 {
 }
 
-int KinBody::Joint::GetDOF() const
+bool KinBody::Joint::IsActive() const
 {
-    return _info.GetDOF();
-}
-
-bool KinBody::Joint::IsCircular() const
-{
-    return _info._bIsCircular[0] || _info._bIsCircular[1] || _info._bIsCircular[2];
-}
-
-bool KinBody::Joint::IsCircular(int iaxis) const
-{
-    return static_cast<bool>(_info._bIsCircular.at(iaxis));
+    return _info._bIsActive;
 }
 
 bool KinBody::Joint::IsRevolute(int iaxis) const
@@ -464,8 +759,12 @@ bool KinBody::Joint::IsPrismatic(int iaxis) const
 
 bool KinBody::Joint::IsStatic() const
 {
+    if(_nIsStatic != -1) {
+        return _nIsStatic==1;
+    }
+
     if( IsMimic() ) {
-        bool bstatic = true;
+        bool bstatic = _bInitialized && _nIsStatic != -1; // if not _bInitialized, then most likely do not know if dependent joints are static, so always return false
         KinBodyConstPtr parent(_parent);
         for(int i = 0; i < GetDOF(); ++i) {
             if( !!_vmimic.at(i) ) {
@@ -495,11 +794,11 @@ bool KinBody::Joint::IsStatic() const
     return true;
 }
 
-void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
+void KinBody::Joint::GetValues(std::vector<dReal>& pValues, bool bAppend) const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     if( !bAppend ) {
-        pValues.resize(0);
+        pValues.clear();
     }
     if( GetDOF() == 1 ) {
         pValues.push_back(GetValue(0));
@@ -587,12 +886,101 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
     }
 }
 
-dReal KinBody::Joint::GetValue(int iaxis) const
+void KinBody::Joint::GetValues(boost::array<dReal, 3>& pValues) const
 {
-    OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
+    OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized", ORE_NotInitialized);
+    if( this->GetDOF() == 1 ) {
+        pValues[0] = this->GetValue(0);
+        return;
+    }
+
     dReal f;
     Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
     if( _info._type & KinBody::JointSpecialBit ) {
+        switch(_info._type) {
+        case KinBody::JointHinge2: {
+            Vector axis1cur = tjoint.rotate(_vaxes[0]), axis2cur = tjoint.rotate(_vaxes[1]);
+            Vector vec1, vec2, vec3;
+            vec1 = (_vaxes[1] - _vaxes[0].dot3(_vaxes[1])*_vaxes[0]).normalize();
+            vec2 = (axis2cur - _vaxes[0].dot3(axis2cur)*_vaxes[0]).normalize();
+            vec3 = _vaxes[0].cross(vec1);
+            f = 2.0*RaveAtan2(vec3.dot3(vec2), vec1.dot3(vec2));
+            pValues[0] = GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]);
+            vec1 = (_vaxes[0] - axis2cur.dot(_vaxes[0])*axis2cur).normalize();
+            vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
+            vec3 = axis2cur.cross(vec1);
+            f = 2.0*RaveAtan2(vec3.dot(vec2), vec1.dot(vec2));
+            if( f < -PI ) {
+                f += 2*PI;
+            }
+            else if( f > PI ) {
+                f -= 2*PI;
+            }
+            pValues[1] = GetClosestValueAlongCircle(_info._voffsets[1]+f, _doflastsetvalues[1]);
+            break;
+        }
+        case KinBody::JointSpherical: {
+            dReal fsinang2 = tjoint.rot.y*tjoint.rot.y+tjoint.rot.z*tjoint.rot.z+tjoint.rot.w*tjoint.rot.w;
+            if( fsinang2 > 1e-10f ) {
+                dReal fsinang = RaveSqrt(fsinang2);
+                dReal fmult = 2*RaveAtan2(fsinang,tjoint.rot.x)/fsinang;
+                pValues = {tjoint.rot.y*fmult, tjoint.rot.z*fmult, tjoint.rot.w*fmult};
+            }
+            else {
+                pValues = {0, 0, 0};
+            }
+            break;
+        }
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unknown joint type 0x%x"), _info._type, ORE_Failed);
+        }
+    }
+    else {
+        // chain of revolute and prismatic joints
+        for(int i = 0; i < GetDOF(); ++i) {
+            Vector vaxis = _vaxes.at(i);
+            if( IsRevolute(i) ) {
+                if( i+1 < GetDOF() ) {
+                    std::pair<dReal, Vector > res = normalizeAxisRotation(vaxis,tjoint.rot);
+                    tjoint.rot = res.second;
+                    if( res.first != 0 ) {
+                        // could speed up by checking if trans is ever needed after this
+                        tjoint.trans = quatRotate(quatFromAxisAngle(vaxis,res.first),tjoint.trans);
+                    }
+                    f = -res.first;
+                }
+                else {
+                    f = 2.0f*RaveAtan2(tjoint.rot.y*vaxis.x+tjoint.rot.z*vaxis.y+tjoint.rot.w*vaxis.z, tjoint.rot.x);
+                }
+                // expect values to be within -PI to PI range
+                if( f < -PI ) {
+                    f += 2*PI;
+                }
+                else if( f > PI ) {
+                    f -= 2*PI;
+                }
+                pValues[0] = GetClosestValueAlongCircle(_info._voffsets[i]+f, _doflastsetvalues[i]);
+            }
+            else { // prismatic
+                f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
+                pValues[0] = _info._voffsets[i]+f;
+                if( i+1 < GetDOF() ) {
+                    tjoint.trans -= vaxis*f;
+                }
+            }
+        }
+    }
+}
+
+dReal KinBody::Joint::GetValue(int iaxis) const
+{
+    OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
+    if(this->IsStatic()) {
+        return _info._vlowerlimit.at(iaxis);
+    }
+    dReal f;
+    if( _info._type & KinBody::JointSpecialBit ) {
+        const Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
         switch(_info._type) {
         case KinBody::JointHinge2: {
             Vector axis1cur = tjoint.rotate(_vaxes[0]), axis2cur = tjoint.rotate(_vaxes[1]);
@@ -688,20 +1076,43 @@ dReal KinBody::Joint::GetValue(int iaxis) const
     }
     else {
         if( _info._type == KinBody::JointPrismatic ) {
-            return _info._voffsets[0]+(tjoint.trans.x*_vaxes[0].x+tjoint.trans.y*_vaxes[0].y+tjoint.trans.z*_vaxes[0].z);
+            const Transform tFirstAttachedInv = _attachedbodies[0]->GetTransform().inverse();
+            const Transform& tSecondAttached = _attachedbodies[1]->GetTransform();
+
+            /* the original:
+               const Transform tjoint = _tinvLeft * tFirstAttachedInv * tSecondAttached * _tinvRight;
+               const Vector& trans = tjoint.trans;
+             */
+            const Vector trans = _tinvLeft * (tFirstAttachedInv * (tSecondAttached * _tinvRight.trans));
+            return _info._voffsets[0] + trans.x * _vaxes[0].x + trans.y * _vaxes[0].y + trans.z * _vaxes[0].z;
         }
         else if( _info._type == KinBody::JointRevolute ) {
-            f = 2.0f*RaveAtan2(tjoint.rot.y*_vaxes[0].x+tjoint.rot.z*_vaxes[0].y+tjoint.rot.w*_vaxes[0].z, tjoint.rot.x);
+            const Transform& tFirstAttached = _attachedbodies[0]->GetTransform();
+            const Transform& tSecondAttached = _attachedbodies[1]->GetTransform();
+            const Vector rot =
+                quatMultiply(
+                    quatMultiply(
+                        quatMultiply(
+                            _tinvLeft.rot, quatInverse(tFirstAttached.rot)
+                            ), tSecondAttached.rot
+                        ), _tinvRight.rot
+                    );
+            /* the original:
+               const Transform tjoint = _tinvLeft * tFirstAttached.inverse() * tSecondAttached * _tinvRight;
+               const Vector& rot = tjoint.rot;
+             */
+            f = 2.0f * RaveAtan2(rot.y * _vaxes[0].x + rot.z * _vaxes[0].y + rot.w * _vaxes[0].z, rot.x);
             // expect values to be within -PI to PI range
-            if( f < -PI ) {
-                f += 2*PI;
+            if( f < -M_PI ) {
+                f += M_TWO_PI;
             }
-            else if( f > PI ) {
-                f -= 2*PI;
+            else if( f > M_PI ) {
+                f -= M_TWO_PI;
             }
-            return GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]);
+            return GetClosestValueAlongCircle(_info._voffsets[0] + f, _doflastsetvalues[0]);
         }
 
+        Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
         // chain of revolute and prismatic joints
         for(int i = 0; i < GetDOF(); ++i) {
             Vector vaxis = _vaxes.at(i);
@@ -743,17 +1154,29 @@ dReal KinBody::Joint::GetValue(int iaxis) const
     throw OPENRAVE_EXCEPTION_FORMAT(_("unknown joint type 0x%x axis %d\n"), _info._type%iaxis, ORE_Failed);
 }
 
-void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend) const
+void KinBody::Joint::GetVelocities(std::vector<dReal>& vVelocities, bool bAppend) const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     if( !bAppend ) {
-        pVelocities.resize(0);
+        vVelocities.clear();
     }
     if( GetDOF() == 1 ) {
-        pVelocities.push_back(GetVelocity(0));
+        vVelocities.push_back(GetVelocity(0));
         return;
     }
-    _GetVelocities(pVelocities,bAppend,_attachedbodies[0]->GetVelocity(), _attachedbodies[1]->GetVelocity());
+
+    vVelocities.resize(vVelocities.size()+GetDOF());
+    _GetVelocities(&vVelocities[vVelocities.size()], _attachedbodies[0]->GetVelocity(), _attachedbodies[1]->GetVelocity());
+};
+
+void KinBody::Joint::GetVelocities(boost::array<dReal,3>& velocities) const
+{
+    OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
+    if( GetDOF() == 1 ) {
+        velocities[0] = GetVelocity(0);
+        return;
+    }
+    _GetVelocities(&velocities[0],_attachedbodies[0]->GetVelocity(), _attachedbodies[1]->GetVelocity());
 };
 
 dReal KinBody::Joint::GetVelocity(int axis) const
@@ -762,13 +1185,10 @@ dReal KinBody::Joint::GetVelocity(int axis) const
     return _GetVelocity(axis,_attachedbodies[0]->GetVelocity(), _attachedbodies[1]->GetVelocity());
 }
 
-void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppend, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const
+void KinBody::Joint::_GetVelocities(dReal* pVelocities, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const
 {
-    if( !bAppend ) {
-        pVelocities.resize(0);
-    }
     if( GetDOF() == 1 ) {
-        pVelocities.push_back(GetVelocity(0));
+        pVelocities[0] = _GetVelocity(0, linkparentvelocity, linkchildvelocity);
         return;
     }
     const Transform& linkparenttransform = _attachedbodies[0]->_info._t;
@@ -779,9 +1199,9 @@ void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppen
         switch(_info._type) {
         case KinBody::JointSpherical: {
             Vector v = quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second);
-            pVelocities.push_back(v.x);
-            pVelocities.push_back(v.y);
-            pVelocities.push_back(v.z);
+            pVelocities[0] = v.x;
+            pVelocities[1] = v.y;
+            pVelocities[2] = v.z;
             break;
         }
         default:
@@ -793,12 +1213,12 @@ void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppen
         Vector angvelocitycovered, linvelocitycovered;
         for(int i = 0; i < GetDOF(); ++i) {
             if( IsRevolute(i) ) {
-                pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second-angvelocitycovered)));
-                angvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities.back());
+                pVelocities[i] = _vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second-angvelocitycovered));
+                angvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities[i]);
             }
             else { // prismatic
-                pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-(linkparentvelocity.second-angvelocitycovered).cross(linkchildtransform.trans-linkparenttransform.trans)-linvelocitycovered)));
-                linvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities.back());
+                pVelocities[i] = _vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-(linkparentvelocity.second-angvelocitycovered).cross(linkchildtransform.trans-linkparenttransform.trans)-linvelocitycovered));
+                linvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities[i]);
             }
         }
     }
@@ -861,7 +1281,7 @@ Vector KinBody::Joint::GetAxis(int iaxis) const
     return _attachedbodies[0]->GetTransform().rotate(_tLeft.rotate(_vaxes.at(iaxis)));
 }
 
-void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchorraw, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues)
+void KinBody::Joint::_ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchorraw, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues)
 {
     OPENRAVE_ASSERT_OP_FORMAT(!!plink0,&&,!!plink1, "one or more attached _attachedbodies are invalid for joint %s", GetName(),ORE_InvalidArguments);
     for(int i = 0; i < GetDOF(); ++i) {
@@ -943,7 +1363,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
         _tLeftNoOffset.trans = vanchor;
         _tRightNoOffset.trans = -vanchor;
         _tRightNoOffset = _tRightNoOffset * trel;
-        if( GetDOF() == 1 ) {
+        if( GetDOF() == 1 && IsRevolute(0) ) {
             // in the case of one axis, create a new coordinate system such that the axis rotates about (0,0,1)
             // this is necessary in order to simplify the rotation matrices (for future symbolic computation)
             // and suppress any floating-point error. The data structures are only setup for this to work in 1 DOF.
@@ -955,7 +1375,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
 
         Transform toffset;
         if( IsRevolute(0) ) {
-            toffset.rot = quatFromAxisAngle(_vaxes[0], _info._voffsets[0]);
+            toffset.rot = quatFromAxisAngle(_vaxes[0], _info._voffsets[0]); // rotate about (0,0,1) by offset angle
         }
         else {
             toffset.trans = _vaxes[0]*_info._voffsets[0];
@@ -1037,10 +1457,41 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     }
     _info._vcurrentvalues = vcurrentvalues;
 
-    _bInitialized = true;
-
     if( _attachedbodies[1]->IsStatic() && !IsStatic() ) {
         RAVELOG_WARN(str(boost::format("joint %s: all attached links are static, but joint is not!\n")%GetName()));
+    }
+
+    // set _bInitialized at the end
+    _bInitialized = true;
+}
+
+void KinBody::Joint::_ComputeInternalStaticInformation()
+{
+    if(this->IsStatic()) {
+        for(int idof = 0; idof < GetDOF(); ++idof) {
+            if( _info._vlowerlimit[idof] != 0 ) {
+                if( RaveFabs(_info._vlowerlimit[idof]) > g_fEpsilon ) {
+                    RAVELOG_WARN_FORMAT("static joint %s has non-zero lower limit %e, setting to 0", _info._name%_info._vlowerlimit[idof]);
+                }
+                _info._vlowerlimit[idof] = 0;
+            }
+            if( _info._vupperlimit[idof] != 0 ) {
+                if( RaveFabs(_info._vupperlimit[idof]) > g_fEpsilon ) {
+                    RAVELOG_WARN_FORMAT("static joint %s has non-zero upper limit %e, setting to 0", _info._name%_info._vupperlimit[idof]);
+                }
+                _info._vupperlimit[idof] = 0;
+            }
+        }
+        _nIsStatic = 1;
+        _tLeftNoOffset *= _tRightNoOffset;
+        _tRightNoOffset = Transform();
+        _tLeft *= _tRight;
+        _tRight = Transform();
+        _tinvLeft = _tLeft.inverse();
+        _tinvRight = Transform();
+    }
+    else {
+        _nIsStatic = 0;
     }
 }
 
@@ -1081,11 +1532,6 @@ void KinBody::Joint::GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dRea
         vLowerLimit.push_back(_info._vlowerlimit[i]);
         vUpperLimit.push_back(_info._vupperlimit[i]);
     }
-}
-
-std::pair<dReal, dReal> KinBody::Joint::GetLimit(int iaxis) const
-{
-    return make_pair(_info._vlowerlimit.at(iaxis),_info._vupperlimit.at(iaxis));
 }
 
 void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit)
@@ -1331,7 +1777,7 @@ void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
 void KinBody::Joint::GetResolutions(std::vector<dReal>& resolutions, bool bAppend) const
 {
     if( !bAppend ) {
-        resolutions.resize(GetDOF());
+        resolutions.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
         resolutions.push_back(_info._vresolution[i]);
@@ -1352,7 +1798,7 @@ void KinBody::Joint::SetResolution(dReal resolution, int iaxis)
 void KinBody::Joint::GetWeights(std::vector<dReal>& weights, bool bAppend) const
 {
     if( !bAppend ) {
-        weights.resize(GetDOF());
+        weights.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
         weights.push_back(_info._vweights[i]);
@@ -1686,128 +2132,158 @@ void KinBody::Joint::GetMimicDOFIndices(std::vector<int>& vmimicdofs, int iaxis)
 void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, const std::string& veleq, const std::string& acceleq)
 {
     _vmimic.at(iaxis).reset();
-    if( poseq.size() == 0 ) {
+    if( poseq.empty() ) {
         return;
     }
-    KinBodyPtr parent(_parent);
-    std::vector<std::string> resultVars;
-    MimicPtr mimic(new Mimic());
-    mimic->_equations.at(0) = poseq;
-    mimic->_equations.at(1) = veleq;
-    mimic->_equations.at(2) = acceleq;
+
+    const MimicPtr pmimic(new Mimic());
+    pmimic->_equations.at(0) = poseq; ///< joint value
+    pmimic->_equations.at(1) = veleq; ///< partial derivatives w.r.t depended joints
+    pmimic->_equations.at(2) = acceleq; ///< second-order derivatives (?)
 
     // copy equations into the info
     if( !_info._vmimic.at(iaxis) ) {
         _info._vmimic.at(iaxis).reset(new MimicInfo());
     }
-    _info._vmimic.at(iaxis)->_equations = mimic->_equations;
+    _info._vmimic.at(iaxis)->_equations = pmimic->_equations;
 
-    OpenRAVEFunctionParserRealPtr posfn = CreateJointFunctionParser();
-    mimic->_posfn = posfn;
     // because openrave joint names can hold symbols like '-' and '.' can affect the equation, so first do a search and replace
-    std::vector< std::pair<std::string, std::string> > jointnamepairs; jointnamepairs.reserve(parent->GetJoints().size());
-    FOREACHC(itjoint,parent->GetJoints()) {
-        if( (*itjoint)->GetName().size() > 0 ) {
-            std::string newname = str(boost::format("joint%d")%(*itjoint)->GetJointIndex());
-            jointnamepairs.emplace_back((*itjoint)->GetName(), newname);
+    const KinBodyPtr parent(_parent);
+    const std::vector<JointPtr>& vActiveJoints = parent->GetJoints();
+    const int nActiveJoints = vActiveJoints.size();
+    std::vector< std::pair<std::string, std::string> > jointnamepairs; ///< map an active/mimic joint's name to a string "joint%d"
+    jointnamepairs.reserve(nActiveJoints);
+
+    for(const JointPtr& pjoint : vActiveJoints) {
+        const std::string& jointname = pjoint->GetName();
+        if( !jointname.empty() ) {
+            const std::string newname = str(boost::format("joint%d") % pjoint->GetJointIndex());
+            jointnamepairs.emplace_back(jointname, newname);
         }
     }
-    size_t index = parent->GetJoints().size();
-    FOREACHC(itjoint,parent->GetPassiveJoints()) {
-        if( (*itjoint)->GetName().size() > 0 ) {
-            std::string newname = str(boost::format("joint%d")%index);
-            jointnamepairs.emplace_back((*itjoint)->GetName(), newname);
+
+    int jointIndex = nActiveJoints; ///< generalized joint index
+    const std::vector<JointPtr>& vPassiveJoints = parent->GetPassiveJoints();
+    for(const JointPtr& pjoint : vPassiveJoints) {
+        const std::string& jointname = pjoint->GetName();
+        if( !jointname.empty() ) {
+            const std::string newname = str(boost::format("joint%d") % jointIndex);
+            jointnamepairs.emplace_back(jointname, newname);
         }
-        ++index;
+        ++jointIndex;
     }
 
-    std::map<std::string,std::string> mapinvnames;
-    FOREACH(itpair,jointnamepairs) {
-        mapinvnames[itpair->second] = itpair->first;
+    std::map<std::string, std::string> mapinvnames;
+    for(const std::pair<std::string, std::string>& p : jointnamepairs) {
+        mapinvnames[p.second] = p.first;
     }
 
-    std::string eq;
-    int ret = posfn->ParseAndDeduceVariables(utils::SearchAndReplace(eq,mimic->_equations[0],jointnamepairs),resultVars);
+    /* ========== Create evaluation function pointers from mimic equations ========== */
+    std::string eq; ///< converted from poseq into formulas in "joint%d"
+    std::vector<std::string> resultVars; ///< joint variables (in form "joint%d") that this joint depends on
+    pmimic->_posfn = CreateJointFunctionParser();
+    int ret = pmimic->_posfn->ParseAndDeduceVariables(utils::SearchAndReplace(eq, poseq, jointnamepairs), resultVars);
+    const size_t nVars = resultVars.size();
+    RAVELOG_DEBUG_FORMAT("Input mimic_pos = %s\nConverted into eq = %s", poseq % eq);
     if( ret >= 0 ) {
-        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set equation '%s' on %s:%s, at %d. Error is %s\n"), mimic->_equations[0]%parent->GetName()%GetName()%ret%posfn->ErrorMsg(),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set equation '%s' on %s:%s, at %d. Error is %s\n"), poseq % parent->GetName() % GetName() % ret % pmimic->_posfn->ErrorMsg(), ORE_InvalidArguments);
     }
-    // process the variables
-    FOREACH(itvar,resultVars) {
-        OPENRAVE_ASSERT_FORMAT(itvar->find("joint") == 0, "equation '%s' uses unknown variable", mimic->_equations[0], ORE_InvalidArguments);
-        MIMIC::DOFFormat dofformat;
-        size_t axisindex = itvar->find('_');
+
+    // process the depended joint variables
+    for(const std::string& var : resultVars) {
+        OPENRAVE_ASSERT_FORMAT(var.find("joint") == 0, "equation '%s' uses unknown variable", poseq, ORE_InvalidArguments);
+
+        Mimic::DOFFormat dofformat;
+        const size_t axisindex = var.find('_'); // joint1_1 means axis 1 for joint1
         if( axisindex != std::string::npos ) {
-            dofformat.jointindex = boost::lexical_cast<uint16_t>(itvar->substr(5,axisindex-5));
-            dofformat.axis = boost::lexical_cast<uint8_t>(itvar->substr(axisindex+1));
+            dofformat.jointindex = boost::lexical_cast<uint16_t>(var.substr(5, axisindex-5));
+            dofformat.axis = boost::lexical_cast<uint8_t>(var.substr(axisindex+1));
         }
         else {
-            dofformat.jointindex = boost::lexical_cast<uint16_t>(itvar->substr(5));
+            dofformat.jointindex = boost::lexical_cast<uint16_t>(var.substr(5));
             dofformat.axis = 0;
         }
         dofformat.dofindex = -1;
-        JointPtr pjoint = dofformat.GetJoint(*parent);
-        if((pjoint->GetDOFIndex() >= 0)&& !pjoint->IsMimic(dofformat.axis) ) {
-            dofformat.dofindex = pjoint->GetDOFIndex()+dofformat.axis;
-            MIMIC::DOFHierarchy h;
-            h.dofindex = dofformat.dofindex;
-            h.dofformatindex = mimic->_vdofformat.size();
-            mimic->_vmimicdofs.push_back(h);
+        const JointPtr pjointDepended = dofformat.GetJoint(*parent); ///< the joint on which `*this` joint depends
+        if( pjointDepended->GetDOFIndex() >= 0 && !pjointDepended->IsMimic(dofformat.axis) ) {
+            // pjointDepended is active, non-mimic
+            Mimic::DOFHierarchy h;
+            h.dofindex = dofformat.dofindex = pjointDepended->GetDOFIndex() + dofformat.axis;
+            h.dofformatindex = pmimic->_vdofformat.size();
+            pmimic->_vmimicdofs.push_back(h);
         }
-        mimic->_vdofformat.push_back(dofformat);
+        pmimic->_vdofformat.push_back(dofformat);
     }
 
     // need to set sVars to resultVars since that's what the user will be feeding with the input
-    stringstream sVars;
-    if( !resultVars.empty() ) {
-        sVars << resultVars.at(0);
-        for(size_t i = 1; i < resultVars.size(); ++i) {
-            sVars << "," << resultVars[i];
+    std::stringstream sVars;
+    for(size_t ivar = 0; ivar < resultVars.size(); ++ivar) {
+        if( ivar != 0 ) {
+            sVars << ",";
         }
+        sVars << resultVars[ivar];
     }
 
     for(int itype = 1; itype < 3; ++itype) {
-        if((itype == 2)&&(mimic->_equations[itype].size() == 0)) {
+        if(itype != 0 && pmimic->_equations[itype].empty()) {
             continue;
         }
 
-        std::vector<OpenRAVEFunctionParserRealPtr> vfns(resultVars.size());
-        // extract the equations
-        utils::SearchAndReplace(eq,mimic->_equations[itype],jointnamepairs);
+        std::vector<OpenRAVEFunctionParserRealPtr> vfns(nVars);
+        /*
+            extract from `eq` the partial derivative formulas ∂z/∂xi for joint z:=z(x1,x2,...xn) defined in `poseq`.
+            `eq` takes form
+
+            c0:=......; c1:=......; ......;
+         |x0 formula_∂z_∂x1
+         |x1 formula_∂z_∂x2
+            ......
+
+            where xi's are joints on which z depends, and ci are common subexpressions in formulas ∂z/∂xi.
+
+         */
+        utils::SearchAndReplace(eq, pmimic->_equations[itype], jointnamepairs);
         size_t index = eq.find('|');
+        const std::string sCommonSubexpressions = (index != std::string::npos) ? eq.substr(0, index) : ""; ///< common subexpressions
+
         while(index != std::string::npos) {
-            size_t startindex = index+1;
-            index = eq.find('|',startindex);
-            string sequation;
+            size_t startindex = index + 1;
+            index = eq.find('|', startindex); // check if we specify another partial derivative
+            std::string sequation; ///< takes form "|xi formula_∂z_∂xi"
             if( index != std::string::npos) {
-                sequation = eq.substr(startindex,index-startindex);
+                sequation = eq.substr(startindex, index - startindex); // extract up to the next '|'
             }
             else {
-                sequation = eq.substr(startindex);
+                sequation = eq.substr(startindex); // extract till the end
             }
+
             boost::trim(sequation);
-            size_t nameendindex = sequation.find(' ');
-            string varname;
+            size_t nameendindex = sequation.find(' '); // a space right after "|xi"
+            std::string varname;
             if( nameendindex == std::string::npos ) {
                 RAVELOG_WARN(str(boost::format("invalid equation syntax '%s' for joint %s")%sequation%_info._name));
                 varname = sequation;
                 sequation = "0";
             }
             else {
-                varname = sequation.substr(0,nameendindex);
+                varname = sequation.substr(0, nameendindex); // variable for the depended joint xi
                 sequation = sequation.substr(nameendindex);
             }
-            vector<string>::iterator itnameindex = find(resultVars.begin(),resultVars.end(),varname);
+
+            // ensure varname is indeed in the variable list
+            std::vector<string>::iterator itnameindex = std::find(resultVars.begin(), resultVars.end(), varname);
             OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(), "variable %s from velocity equation is not referenced in the position, skipping...", mapinvnames[varname],ORE_InvalidArguments);
 
             OpenRAVEFunctionParserRealPtr fn = CreateJointFunctionParser();
-            ret = fn->Parse(sequation,sVars.str());
+            sequation = sCommonSubexpressions + sequation; ///< compute common subexpressions
+            ret = fn->Parse(sequation, sVars.str());
             if( ret >= 0 ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set equation '%s' on %s:%s, at %d. Error is %s"), sequation%parent->GetName()%GetName()%ret%fn->ErrorMsg(),ORE_InvalidArguments);
             }
             vfns.at(itnameindex-resultVars.begin()) = fn;
         }
         // check if anything is missing
-        for(size_t j = 0; j < resultVars.size(); ++j) {
+        for(size_t j = 0; j < nVars; ++j) {
             if( !vfns[j] ) {
                 // print a message instead of throwing an exception since it might be common for only position equations to be specified
                 RAVELOG_WARN(str(boost::format("SetMimicEquations: missing variable %s from partial derivatives of joint %s!")%mapinvnames[resultVars[j]]%_info._name));
@@ -1817,86 +2293,144 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         }
 
         if( itype == 1 ) {
-            mimic->_velfns.swap(vfns);
+            pmimic->_velfns.swap(vfns);
         }
         else {
-            mimic->_accelfns.swap(vfns);
+            pmimic->_accelfns.swap(vfns);
         }
     }
-    _vmimic.at(iaxis) = mimic;
+    _vmimic.at(iaxis) = pmimic;
     parent->_PostprocessChangedParameters(Prop_JointMimic);
 }
 
-void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, int iaxis, std::map< std::pair<MIMIC::DOFFormat, int>, dReal >& mapcachedpartials) const
+void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
+                                               const int iaxis,
+                                               std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue) const
 {
-    vpartials.resize(0);
-    if( dofindex >= 0 ) {
-        vpartials.emplace_back(dofindex+iaxis, 1.0);
+    vDofindexDerivativePairs.clear();
+    if( this->dofindex >= 0 ) {
+        vDofindexDerivativePairs.emplace_back(this->dofindex + iaxis, 1.0); // this joint is active; return immediately
         return;
     }
-    OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis), "cannot compute partial velocities of joint %s", _info._name, ORE_Failed);
-    KinBodyConstPtr parent(_parent);
-    MIMIC::DOFFormat thisdofformat;
-    thisdofformat.dofindex = -1; // always -1 since it is mimiced
-    thisdofformat.axis = iaxis;
-    thisdofformat.jointindex = jointindex;
+
+    OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis), "Cannot compute partial velocities of joint %s because its axis %d is not mimic",
+                           this->GetName() % iaxis, ORE_Failed
+                           );
+
+    /* ========== Set up information about this mimic joint, call it z ========== */
+    Mimic::DOFFormat thisdofformat;
+    thisdofformat.dofindex = -1; ///< dofindex being -1 means it is a mimic joint
+    thisdofformat.axis = iaxis;  ///< from input
+    thisdofformat.jointindex = this->GetJointIndex(); ///< mimic joint has jointindex < 0, because it does not belong to _vecjoints
+    const KinBodyConstPtr parent(_parent); // body to count the "generalized" joint index of a mimic joint in _vecjoints and _vPassiveJoints
     if( jointindex < 0 ) {
-        // this is a weird computation... have to figure out the passive joint index given where it is in parent->GetPassiveJoints()
-        thisdofformat.jointindex = parent->GetJoints().size() + (find(parent->GetPassiveJoints().begin(),parent->GetPassiveJoints().end(),shared_from_this()) - parent->GetPassiveJoints().begin());
+        const std::vector<JointPtr>& vActiveJoints = parent->GetJoints();
+        const size_t nActiveJoints = vActiveJoints.size();
+        const std::vector<JointPtr>& vPassiveJoints = parent->GetPassiveJoints();
+        // this is the *generalized* joint index for a mimic joint
+        thisdofformat.jointindex = nActiveJoints + (std::find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
-    std::vector<std::pair<int,dReal> > vtemppartials;
-    vector<dReal> vtempvalues;
-    FOREACHC(itmimicdof, _vmimic[iaxis]->_vmimicdofs) {
-        std::pair<MIMIC::DOFFormat, int> key = make_pair(thisdofformat,itmimicdof->dofindex);
-        std::map< std::pair<MIMIC::DOFFormat, int>, dReal >::iterator it = mapcachedpartials.find(key);
-        if( it == mapcachedpartials.end() ) {
-            // not in the cache so compute using the chain rule
-            if( vtempvalues.empty() ) {
-                FOREACHC(itdofformat, _vmimic[iaxis]->_vdofformat) {
-                    vtempvalues.push_back(itdofformat->GetJoint(*parent)->GetValue(itdofformat->axis));
-                }
+
+    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : mTotalderivativepairValue) {
+        if( keyvalue.first.first == thisdofformat ) {
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                RAVELOG_VERBOSE_FORMAT("Found cached derivatives of jointindex %d with respect to others", thisdofformat.jointindex);
             }
-            dReal fvel = _vmimic[iaxis]->_velfns.at(itmimicdof->dofformatindex)->Eval(vtempvalues.empty() ? NULL : &vtempvalues[0]);
-            const MIMIC::DOFFormat& dofformat = _vmimic[iaxis]->_vdofformat.at(itmimicdof->dofformatindex);
-            if( dofformat.GetJoint(*parent)->IsMimic(dofformat.axis) ) {
-                dofformat.GetJoint(*parent)->_ComputePartialVelocities(vtemppartials,dofformat.axis,mapcachedpartials);
-                dReal fpartial = 0;
-                FOREACHC(itpartial,vtemppartials) {
-                    if( itpartial->first == itmimicdof->dofindex ) {
-                        fpartial += itpartial->second;
-                    }
-                }
-                fvel *= fpartial;
-            }
-            // before pushing back, check for repetition
-            bool badd = true;
-            FOREACH(itpartial,vpartials) {
-                if( itpartial->first == itmimicdof->dofindex ) {
-                    itpartial->second += fvel;
-                    badd = false;
-                    break;
-                }
-            }
-            if( badd ) {
-                vpartials.emplace_back(itmimicdof->dofindex,  fvel);
-            }
+            const int dependedJointIndex = keyvalue.first.second;
+            const dReal partialDerivative = keyvalue.second;
+            vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
+        }
+    }
+    if(!vDofindexDerivativePairs.empty()) {
+        return;
+    }
+
+    /* ========== Collect values of joints on which joint z depends ========== */
+    const MimicPtr& pmimic = _vmimic[iaxis];
+    const std::vector<Mimic::DOFFormat>& vdofformats = pmimic->_vdofformat; ///< collection of information of joints
+
+    std::vector<dReal> vDependedJointValues; ///< collect values of joints on which this joint *directly* depends on
+    for(const Mimic::DOFFormat& dofformat : vdofformats) {
+        const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
+        vDependedJointValues.push_back(dependedjoint->GetValue(dofformat.axis));
+    }
+
+//    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//        std::stringstream ss;
+//        ss << "joint \"" << this->GetName() << "\" of jointindex " << thisdofformat.jointindex << " depends on joints ";
+//        for(const Mimic::DOFFormat& dofformat : vdofformats) {
+//            const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
+//            ss << dependedjoint->GetName() << ", ";
+//        }
+//        RAVELOG_VERBOSE(ss.str());
+//    }
+
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > localmap;
+    const size_t nvars = vdofformats.size(); ///< number of joints on which this joint depends on
+    std::vector<std::pair<int, dReal> > vLocalIndexPartialPairs;
+    const size_t nvelfns = pmimic->_velfns.size(); // when user did not provide mimic_vel, we had not allocated pmimic->_velfns so it has size 0, and we set fvel=0 below
+    for(size_t ivar = 0; ivar < nvars; ++ivar) {
+        const Mimic::DOFFormat& dofformat = vdofformats[ivar]; ///< information about the ivar-th depended joint
+        const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< a joint on which this joint depends on
+        const int jointIndex = dofformat.jointindex; ///< index of this depended joint
+        dReal fvel = 0;
+        if(ivar < nvelfns) {
+            const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
+            fvel = velfn->Eval(vDependedJointValues.empty() ? NULL : &vDependedJointValues[0]); ///< value of ∂z/∂x
         }
         else {
-            bool badd = true;
-            FOREACH(itpartial,vpartials) {
-                if( itpartial->first == itmimicdof->dofindex ) {
-                    badd = false;
-                    break;
+            RAVELOG_WARN_FORMAT("This mimic joint %s depends on joint %s, but the user did not provide the mimic velocity formula. Now treat the first-order partial derivative as 0", this->GetName() % dependedjoint->GetName());
+        }
+
+//        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//            RAVELOG_VERBOSE_FORMAT("∂(J%d)/∂(J%d) = ∂(%s)/∂(%s) = %.8e", thisdofformat.jointindex % jointIndex % this->GetName() % dependedjoint->GetName() % fvel);
+//        }
+
+        if(dependedjoint->IsMimic(dofformat.axis)) {
+            // depended joint is also mimic; go down the dependency tree and collect partial derivatives by chain rule
+            if( IS_DEBUGLEVEL(Level_Verbose) )  {
+                RAVELOG_VERBOSE_FORMAT("Joint \"%s\" calls recursion _ComputePartialVelocities on joint \"%s\"", this->GetName() % dependedjoint->GetName());
+            }
+            vLocalIndexPartialPairs.clear();
+            dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mTotalderivativepairValue); ///< recursion: computes ∂y/∂x
+            for(const std::pair<int, dReal>& pIndexPartial : vLocalIndexPartialPairs) {
+                std::pair<Mimic::DOFFormat, int> key = {thisdofformat, pIndexPartial.first};
+                ///< dz/dx += ∂z/∂y * ∂y/∂x
+                if( localmap.count(key) ) {
+                    localmap[key] += fvel * pIndexPartial.second;
+                }
+                else {
+                    localmap[key] = fvel * pIndexPartial.second;
                 }
             }
-            if( badd ) {
-                vpartials.emplace_back(itmimicdof->dofindex,  it->second);
+        }
+        else if (!dependedjoint->IsStatic()) {
+            // depended joint is active
+            std::pair<Mimic::DOFFormat, int> key = {thisdofformat, jointIndex};
+            ///< dz/dx += ∂z/∂x, as z may depend on others who depend on x
+            if( localmap.count(key) ) {
+                localmap[key] += fvel;
+            }
+            else {
+                localmap[key] = fvel;
             }
         }
     }
+
+    // collect results in vDofindexDerivativePairs
+    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : localmap) {
+        const int dependedJointIndex = keyvalue.first.second;
+        const dReal partialDerivative = keyvalue.second;
+        vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all total derivatives dz/dx
+    }
+
+    mTotalderivativepairValue.insert(
+        std::make_move_iterator(begin(localmap)),
+        std::make_move_iterator(end(localmap))
+        );
 }
 
-int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput)
+int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput) const
 {
     if( timederiv == 0 ) {
         _vmimic.at(axis)->_posfn->EvalMulti(voutput, vdependentvalues.empty() ? NULL : &vdependentvalues[0]);
@@ -1989,6 +2523,290 @@ void KinBody::Joint::UpdateInfo()
     GetValues(_info._vcurrentvalues);
 }
 
+void KinBody::Joint::ExtractInfo(KinBody::JointInfo& info) const
+{
+    info = _info;
+    info._vcurrentvalues.resize(0);
+    GetValues(info._vcurrentvalues);
+}
+
+UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& info)
+{
+    BOOST_ASSERT(info._id == _info._id);
+    bool isDiff = false;
+    UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
+
+    // _name
+    if (GetName() != info._name) {
+        RAVELOG_VERBOSE_FORMAT("joint %s name changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // _type
+    if (GetType() != info._type) {
+        RAVELOG_VERBOSE_FORMAT("joint %s type changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // _linkname0
+    // _linkname1
+    if (GetFirstAttached()->GetName() != info._linkname0 || GetSecondAttached()->GetName() != info._linkname1) {
+        RAVELOG_VERBOSE_FORMAT("joint %s link hierachy changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // TODO: maybe only need to call _ComputeInternalInformation?
+    // _vanchor
+    if (_info._vanchor != info._vanchor) {
+        RAVELOG_VERBOSE_FORMAT("joint %s anchor changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // _vaxes
+    if (_info._vaxes != info._vaxes) {
+        RAVELOG_VERBOSE_FORMAT("joint %s axes changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // _vcurrentvalues(not needed)
+
+    // _vresolution
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (GetResolution(iaxis) != info._vresolution[iaxis]) {
+            RAVELOG_VERBOSE_FORMAT("joint %s resolution changed", _info._id);
+            return UFIR_RequireReinitialize;
+        }
+    }
+
+    // _vmaxvel
+    if (_info._vmaxvel != info._vmaxvel) {
+        RAVELOG_VERBOSE_FORMAT("joint %s max velocity changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // _vhardmaxvel
+    std::vector<dReal> vHardVelocityLimits;
+    GetHardVelocityLimits(vHardVelocityLimits);
+    isDiff = false;
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vHardVelocityLimits[iaxis] != info._vhardmaxvel[iaxis]) {
+            vHardVelocityLimits[iaxis] = info._vhardmaxvel[iaxis];
+            isDiff = true;
+        }
+    }
+    if (isDiff) {
+        SetHardVelocityLimits(vHardVelocityLimits);
+        RAVELOG_VERBOSE_FORMAT("joint %s hard velocity limits changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+    // _vmaxaccel
+    if (_info._vmaxaccel != info._vmaxaccel) {
+        RAVELOG_VERBOSE_FORMAT("joint %s max acceleration changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // _vhardmaxaccel
+    std::vector<dReal> vHardAccelerationLimits;
+    GetHardAccelerationLimits(vHardAccelerationLimits);
+    isDiff = false;
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vHardAccelerationLimits[iaxis] != info._vhardmaxaccel[iaxis]) {
+            vHardAccelerationLimits[iaxis] = info._vhardmaxaccel[iaxis];
+            isDiff = true;
+        }
+    }
+    if (isDiff) {
+        SetHardAccelerationLimits(vHardAccelerationLimits);
+        RAVELOG_VERBOSE_FORMAT("joint %s hard acceleration limits changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // _vmaxjerk
+    if (_info._vmaxjerk != info._vmaxjerk) {
+        RAVELOG_VERBOSE_FORMAT("joint %s max jerk changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // _vhardmaxjerk
+    std::vector<dReal> vHardJerkLimits;
+    GetHardJerkLimits(vHardJerkLimits);
+    isDiff = false;
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vHardJerkLimits[iaxis] != info._vhardmaxjerk[iaxis]) {
+            vHardJerkLimits[iaxis] = info._vhardmaxjerk[iaxis];
+            isDiff = true;
+        }
+    }
+    if (isDiff) {
+        SetHardJerkLimits(vHardJerkLimits);
+        RAVELOG_VERBOSE_FORMAT("joint %s hard jerk limits changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // _vmaxtorque
+    std::vector<dReal> vMaxTorque;
+
+    GetTorqueLimits(vMaxTorque);
+    isDiff = false;
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vMaxTorque[iaxis] != info._vmaxtorque[iaxis]) {
+            vMaxTorque[iaxis] = info._vmaxtorque[iaxis];
+            isDiff = true;
+        }
+    }
+    if (isDiff) {
+        SetTorqueLimits(vMaxTorque);
+        RAVELOG_VERBOSE_FORMAT("joint %s max torque changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // _vmaxinertia
+    std::vector<dReal> vMaxInertialLimits;
+    GetInertiaLimits(vMaxInertialLimits);
+    isDiff = false;
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vMaxInertialLimits[iaxis] != info._vmaxinertia[iaxis]) {
+            vMaxInertialLimits[iaxis] = info._vmaxinertia[iaxis];
+            isDiff = true;
+        }
+    }
+    if (isDiff) {
+        SetInertiaLimits(vMaxInertialLimits);
+        RAVELOG_VERBOSE_FORMAT("joint %s inertia limits changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // _vweights
+    std::vector<dReal> vWeights;
+    GetWeights(vWeights);
+    isDiff = false;
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vWeights[iaxis] != info._vweights[iaxis]) {
+            vWeights[iaxis] = info._vweights[iaxis];
+            isDiff = true;
+        }
+    }
+    if (isDiff) {
+        SetWeights(vWeights);
+        RAVELOG_VERBOSE_FORMAT("joint %s weights changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // _voffsets
+    if (_info._voffsets != info._voffsets) {
+        RAVELOG_VERBOSE_FORMAT("joint %s offset changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // _vlowerlimit
+    // _vupperlimit
+    std::vector<dReal> vUpperLimit;
+    std::vector<dReal> vLowerLimit;
+    GetLimits(vLowerLimit, vUpperLimit, false);
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vUpperLimit[iaxis] != info._vupperlimit[iaxis] || vLowerLimit[iaxis] != info._vlowerlimit[iaxis]) {
+            vUpperLimit.assign(info._vupperlimit.begin(), info._vupperlimit.end());
+            vLowerLimit.assign(info._vlowerlimit.begin(), info._vlowerlimit.end());
+            SetLimits(vLowerLimit, vUpperLimit);
+            RAVELOG_VERBOSE_FORMAT("joint %s limits changed", _info._id);
+            updateFromInfoResult = UFIR_Success;
+            break;
+        }
+    }
+
+    // TODO: _trajfollow (not needed?)
+
+    // _vmimic
+    if (!AreArraysDeepEqual(_info._vmimic, info._vmimic)) {
+        RAVELOG_VERBOSE_FORMAT("joint %s mimic changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // _mapFloatParameters
+    const std::map<std::string, std::vector<dReal> > floatParameters = GetFloatParameters();
+    if (floatParameters != info._mapFloatParameters) {
+        FOREACH(itParam, floatParameters) {
+            SetFloatParameters(itParam->first, {}); // erase current parameters
+        }
+        FOREACH(itParam, info._mapFloatParameters) {
+            SetFloatParameters(itParam->first, itParam->second);  // update with new info
+        }
+        RAVELOG_VERBOSE_FORMAT("joint %s float parameters changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // _mapIntParameters
+    const std::map<std::string, std::vector<int> > intParameters = GetIntParameters();
+    if (intParameters != info._mapIntParameters) {
+        FOREACH(itParam, intParameters) {
+            SetIntParameters(itParam->first, {});
+        }
+        FOREACH(itParam, info._mapIntParameters) {
+            SetIntParameters(itParam->first, itParam->second);
+        }
+        RAVELOG_VERBOSE_FORMAT("joint %s int parameters changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // _mapStringParameters
+    const std::map<std::string, std::string> stringParameters = GetStringParameters();
+    if (stringParameters != info._mapStringParameters) {
+        FOREACH(itParam, stringParameters) {
+            SetStringParameters(itParam->first, {});
+        }
+        FOREACH(itParam, info._mapStringParameters) {
+            SetStringParameters(itParam->first, itParam->second);
+        }
+        RAVELOG_VERBOSE_FORMAT("joint %s string parameters changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // _infoElectricMotor
+    if (!!_info._infoElectricMotor) {
+        if (!!info._infoElectricMotor) {
+            // both are not empty, compare the content
+            if (*(_info._infoElectricMotor) != *(info._infoElectricMotor)) {
+                *_info._infoElectricMotor = *info._infoElectricMotor;
+                RAVELOG_VERBOSE_FORMAT("joint %s electric motor changed", _info._id);
+                updateFromInfoResult = UFIR_Success;
+            }
+        }
+        else {
+            _info._infoElectricMotor.reset();
+            RAVELOG_VERBOSE_FORMAT("joint %s electric motor removed", _info._id);
+            updateFromInfoResult = UFIR_Success;
+        }
+    }
+    else if (!!info._infoElectricMotor) {
+        _info._infoElectricMotor.reset(new ElectricMotorActuatorInfo(*info._infoElectricMotor));
+        RAVELOG_VERBOSE_FORMAT("joint %s electric motor added", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // _bIsCircular
+    if (_info._bIsCircular != info._bIsCircular) {
+        RAVELOG_VERBOSE_FORMAT("joint %s is circular changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // _bIsActive
+    if (_info._bIsActive != info._bIsActive) {
+        RAVELOG_VERBOSE_FORMAT("joint %s is active changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // _controlMode, it will reset _jci_robotcontroller, _jci_io, _jci_externaldevice
+    if (GetControlMode() != _info._controlMode) {
+        RAVELOG_VERBOSE_FORMAT("joint %s control mode changed", _info._id);
+        return UFIR_RequireReinitialize;
+    }
+    return updateFromInfoResult;
+}
+
+//void KinBody::Joint::SetDOFLastSetValue(dReal dofvalue, const int iaxis) {
+//    _doflastsetvalues[iaxis] = dofvalue;
+//}
+
 void KinBody::Joint::serialize(std::ostream& o, int options) const
 {
     if( options & SO_Kinematics ) {
@@ -2019,14 +2837,22 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
     }
 }
 
-void KinBody::MimicInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+void KinBody::MimicInfo::Reset()
 {
-    openravejson::SetJsonValueByKey(value, "equations", _equations, allocator);
+    FOREACH(iteq, _equations) {
+        iteq->clear();
+    }
 }
 
-void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+void KinBody::MimicInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    openravejson::LoadJsonValueByKey(value, "equations", _equations);
+    orjson::SetJsonValueByKey(value, "equations", _equations, allocator);
 }
+
+void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+{
+    orjson::LoadJsonValueByKey(value, "equations", _equations);
+}
+
 
 }

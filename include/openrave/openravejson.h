@@ -19,9 +19,11 @@
 #define OPENRAVE_JSON_H
 
 #include <openrave/config.h>
+#include <openrave/openraveexception.h>
 
 #include <array>
 #include <boost/shared_ptr.hpp>
+#include <boost/smart_ptr/make_shared.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <stdint.h>
@@ -40,64 +42,9 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/prettywriter.h>
 
-using namespace OpenRAVE;
-namespace openravejson {
-enum OpenRAVEJSONErrorCode
-{
-    ORJE_Failed=0,
-    ORJE_InvalidArguments=1  ///< passed in input arguments are not valid
-};
+namespace OpenRAVE {
 
-inline const char* GetErrorCodeString(OpenRAVEJSONErrorCode error)
-{
-    switch(error) {
-    case ORJE_Failed: return "Failed";
-    case ORJE_InvalidArguments: return "Invalid arguments";
-    }
-    // throw an exception?
-    return "";
-}
-
-/// \brief Exception that OpenRAVEJSON internal methods throw; the error codes are held in \ref OpenRAVEJSONErrorCode.
-class OpenRAVEJSONException : public std::exception
-{
-public:
-    OpenRAVEJSONException() : std::exception(), _s(""), _error(ORJE_Failed) {
-    }
-    OpenRAVEJSONException(const std::string& s, OpenRAVEJSONErrorCode error=ORJE_Failed ) : std::exception() {
-        _error = error;
-        _s = "openrave (";
-        _s += "): ";
-        _s += s;
-        _ssub = s;
-    }
-    virtual ~OpenRAVEJSONException() throw() {
-    }
-
-    /// \brief outputs everything
-    char const* what() const throw() {
-        return _s.c_str();
-    }
-
-    /// \brief outputs everything
-    const std::string& message() const {
-        return _s;
-    }
-
-    /// \briefs just the sub-message
-    const std::string& GetSubMessage() const {
-        return _ssub;
-    }
-
-    OpenRAVEJSONErrorCode GetCode() const {
-        return _error;
-    }
-
-private:
-    std::string _s, _ssub;
-    OpenRAVEJSONErrorCode _error;
-};
-
+namespace orjson {
 
 /// \brief gets a string of the Value type for debugging purposes
 inline std::string GetJsonTypeName(const rapidjson::Value& v) {
@@ -122,7 +69,7 @@ inline std::string GetJsonTypeName(const rapidjson::Value& v) {
     }
 }
 
-template<class T> inline std::string GetJsonString(const T& t);
+/// \brief dump json to a std::string
 inline std::string DumpJson(const rapidjson::Value& value, const unsigned int indent=0) {
     rapidjson::StringBuffer stringbuffer;
     if (indent == 0) {
@@ -136,6 +83,7 @@ inline std::string DumpJson(const rapidjson::Value& value, const unsigned int in
     return std::string(stringbuffer.GetString(), stringbuffer.GetSize());
 }
 
+/// \brief dump json to ostream
 inline void DumpJson(const rapidjson::Value& value, std::ostream& os, const unsigned int indent=0) {
     rapidjson::OStreamWrapper osw(os);
     if (indent == 0) {
@@ -148,33 +96,83 @@ inline void DumpJson(const rapidjson::Value& value, std::ostream& os, const unsi
     }
 }
 
+class VectorWrapper {
+public:
+    typedef char Ch;
+
+    VectorWrapper(std::vector<Ch>& v) : _v(v) {
+    }
+
+    Ch Peek() const {
+        BOOST_ASSERT(0); return '\0';
+    }
+    Ch Take() {
+        BOOST_ASSERT(0); return '\0';
+    }
+    size_t Tell() const {
+        return _v.size();
+    }
+
+    Ch* PutBegin() {
+        BOOST_ASSERT(0); return 0;
+    }
+    void Put(Ch c) {
+        _v.push_back(c);
+    }
+    void Flush() {
+    }
+    size_t PutEnd(Ch*) {
+        BOOST_ASSERT(0); return 0;
+    }
+
+private:
+    VectorWrapper(const VectorWrapper&);
+    VectorWrapper& operator=(const VectorWrapper&);
+
+    std::vector<Ch>& _v;
+};
+
+/// \brief dump json to vector buffer
+inline void DumpJson(const rapidjson::Value& value, std::vector<char>& output, const unsigned int indent=0) {
+    VectorWrapper wrapper(output);
+    if (indent == 0) {
+        rapidjson::Writer<VectorWrapper> writer(wrapper);
+        value.Accept(writer);
+    } else {
+        rapidjson::PrettyWriter<VectorWrapper> writer(wrapper);
+        writer.SetIndent(' ', indent);
+        value.Accept(writer);
+    }
+}
+
 inline void ParseJson(rapidjson::Document& d, const std::string& str) {
     // repeatedly calling Parse on the same rapidjson::Document will not release previsouly allocated memory, memory will accumulate until the object is destroyed
     // we use a new temporary Document to parse, and swap content with the original one, so that memory in original Document will be released when this function ends
     // see: https://github.com/Tencent/rapidjson/issues/1333
-    rapidjson::Document tempDoc;
-    tempDoc.Parse<rapidjson::kParseFullPrecisionFlag>(str.c_str()); // parse float in full precision mode
-    if (tempDoc.HasParseError()) {
+    // a newer solution that allows reuse of allocated memory is to clear the previous document first
+    d.SetNull();
+    d.GetAllocator().Clear();
+    d.Parse<rapidjson::kParseFullPrecisionFlag>(str.c_str()); // parse float in full precision mode
+    if (d.HasParseError()) {
         std::string substr;
         if (str.length()> 200) {
             substr = str.substr(0, 200);
         } else {
             substr = str;
         }
-        throw openravejson::OpenRAVEJSONException((boost::format("Json string is invalid (offset %u) %s str=%s")%((unsigned)d.GetErrorOffset())%GetParseError_En(d.GetParseError())%substr).str(), openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("JSON string is invalid (offset %u) %s str=%s", ((unsigned)d.GetErrorOffset())%GetParseError_En(d.GetParseError())%substr, OpenRAVE::ORE_InvalidArguments);
     }
-    tempDoc.Swap(d);
 }
 
 inline void ParseJson(rapidjson::Document& d, std::istream& is) {
     rapidjson::IStreamWrapper isw(is);
     // see note in: void ParseJson(rapidjson::Document& d, const std::string& str)
-    rapidjson::Document(tempDoc);
-    tempDoc.ParseStream<rapidjson::kParseFullPrecisionFlag>(isw); // parse float in full precision mode
-    if (tempDoc.HasParseError()) {
-        throw openravejson::OpenRAVEJSONException((boost::format("Json stream is invalid (offset %u) %s")%((unsigned)tempDoc.GetErrorOffset())%GetParseError_En(tempDoc.GetParseError())).str(), openravejson::ORJE_InvalidArguments);
+    d.SetNull();
+    d.GetAllocator().Clear();
+    d.ParseStream<rapidjson::kParseFullPrecisionFlag>(isw); // parse float in full precision mode
+    if (d.HasParseError()) {
+        throw OPENRAVE_EXCEPTION_FORMAT("JSON stream is invalid (offset %u) %s", ((unsigned)d.GetErrorOffset())%GetParseError_En(d.GetParseError()), OpenRAVE::ORE_InvalidArguments);
     }
-    tempDoc.Swap(d);
 }
 
 class JsonSerializable {
@@ -185,6 +183,10 @@ public:
         SaveToJson(d, d.GetAllocator());
     }
 };
+
+template<class T> inline std::string GetJsonString(const T& t);
+
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t); // forward decl
 
 //store a json value to local data structures
 //for compatibility with ptree, type conversion is made. will remove them in the future
@@ -199,7 +201,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::string& t) {
         //TODO: add warnings on all usages of lexical_cast
         t = boost::lexical_cast<std::string>(v.GetInt64());
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonString(v) + " to String", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to String", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
@@ -211,7 +213,36 @@ inline void LoadJsonValue(const rapidjson::Value& v, int& t) {
     } else if (v.IsBool()) {
         t = v.GetBool() ? 1 : 0;
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonString(v) + " to Int", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Int", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
+    }
+}
+
+inline void LoadJsonValue(const rapidjson::Value& v, int16_t& t) {
+    if (v.IsInt()) {
+        t = v.GetInt();
+    } else if (v.IsString()) {
+        t = boost::lexical_cast<int16_t>(v.GetString());
+    } else if (v.IsBool()) {
+        t = v.GetBool() ? 1 : 0;
+    } else {
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Int", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
+    }
+}
+
+inline void LoadJsonValue(const rapidjson::Value& v, int8_t& t) {
+    if (v.IsInt()) {
+        t = v.GetInt();
+    }
+    else if (v.IsUint()) {
+        t = v.GetUint();
+    }
+    else if (v.IsString()) {
+        t = boost::lexical_cast<unsigned int>(v.GetString());
+    }
+    else if (v.IsBool()) {
+        t = v.GetBool() ? 1 : 0;
+    } else {
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert json type %s to Int", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
@@ -223,7 +254,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, uint8_t& t) {
     } else if (v.IsBool()) {
         t = v.GetBool() ? 1 : 0;
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonString(v) + " to Int", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Int", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
@@ -235,7 +266,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, unsigned long long& t) {
     } else if (v.IsBool()) {
         t = v.GetBool() ? 1 : 0;
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonString(v) + " to Int64", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Int64", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
@@ -247,7 +278,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, uint64_t& t) {
     } else if (v.IsBool()) {
         t = v.GetBool() ? 1 : 0;
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonString(v) + " to UInt64", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to UInt64", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
@@ -259,7 +290,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, int64_t& t) {
     } else if (v.IsBool()) {
         t = v.GetBool() ? 1 : 0;
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonString(v) + " to Int64", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Int64", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
@@ -269,7 +300,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, double& t) {
     } else if (v.IsString()) {
         t = boost::lexical_cast<double>(v.GetString());
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonString(v) + " to Double", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert json JSON %s to Double", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
@@ -279,7 +310,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, float& t) {
     } else if (v.IsString()) {
         t = boost::lexical_cast<double>(v.GetString());
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonString(v) + " to Double", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Double", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
@@ -289,14 +320,14 @@ inline void LoadJsonValue(const rapidjson::Value& v, bool& t) {
     else if (v.IsString())  {
         t = boost::lexical_cast<bool>(v.GetString());
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonString(v) + " to Bool", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Bool", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
 template<class T>
-inline void LoadJsonValue(const rapidjson::Value& v, RaveVector<T>& t) {
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveVector<T>& t) {
     if(!v.IsArray() || (v.Size() != 3 && v.Size() != 4)) {
-        throw openravejson::OpenRAVEJSONException("failed to deserialize json, value cannot be decoded as a RaveVector", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveVector", OpenRAVE::ORE_InvalidArguments);
     }
 
     LoadJsonValue(v[0], t[0]);
@@ -313,17 +344,17 @@ inline void LoadJsonValue(const rapidjson::Value& v, RaveVector<T>& t) {
 
 template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, boost::shared_ptr<T>& ptr) {
-    // this way prevents copy constructor from getting called
-    ptr = boost::shared_ptr<T>(new T());
+    static_assert(std::is_default_constructible<T>::value, "Shared pointer of type must be default-constructible.");
+    ptr = boost::make_shared<T>();
     LoadJsonValue(v, *ptr);
 }
 
-inline void LoadJsonValue(const rapidjson::Value& v, IkParameterization& t) {
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::IkParameterization& t) {
     t.DeserializeJSON(v);
 }
 
 /// \brief serialize an OpenRAVE IkParameterization as json
-inline void SaveJsonValue(rapidjson::Value &v, const IkParameterization& t, rapidjson::Document::AllocatorType& alloc) {
+inline void SaveJsonValue(rapidjson::Value &v, const OpenRAVE::IkParameterization& t, rapidjson::Document::AllocatorType& alloc) {
     t.SerializeJSON(v, alloc);
 }
 
@@ -334,7 +365,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, boost::array<T, N>& t) {
             LoadJsonValue(v[ivalue], t[ivalue]);
         }
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to Array", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Array", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
@@ -342,7 +373,7 @@ template<class T, size_t N>
 inline void LoadJsonValue(const rapidjson::Value& v, T (&p)[N]) {
     if (v.IsArray()) {
         if (v.GetArray().Size() != N) {
-            throw openravejson::OpenRAVEJSONException("Json array size doesn't match", openravejson::ORJE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0("JSON array size doesn't match", OpenRAVE::ORE_InvalidArguments);
         }
         size_t i = 0;
         for (rapidjson::Value::ConstValueIterator it = v.Begin(); it != v.End(); ++it) {
@@ -350,11 +381,10 @@ inline void LoadJsonValue(const rapidjson::Value& v, T (&p)[N]) {
             i++;
         }
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to Array", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Array", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
-template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t);
 template<class T, class U>
 inline void LoadJsonValue(const rapidjson::Value& v, std::pair<T, U>& t) {
     if (v.IsArray()) {
@@ -362,17 +392,16 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::pair<T, U>& t) {
             LoadJsonValue(v[0], t.first);
             LoadJsonValue(v[1], t.second);
         } else {
-            throw openravejson::OpenRAVEJSONException("List-based map has entry with size != 2", openravejson::ORJE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0("List-based map has entry with size != 2", OpenRAVE::ORE_InvalidArguments);
         }
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to Pair", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Pair", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
 template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t) {
     if (v.IsArray()) {
-        t.clear();
         t.resize(v.GetArray().Size());
         size_t i = 0;
         for (rapidjson::Value::ConstValueIterator it = v.Begin(); it != v.End(); ++it) {
@@ -380,7 +409,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t) {
             i++;
         }
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to Array", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Array", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
@@ -393,7 +422,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::array<T, N>& t) {
             i++;
         }
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to Array", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Array", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
@@ -401,7 +430,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::array<T, N>& t) {
 template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, std::set<T>& t) {
     if (!v.IsArray()) {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to std::set");
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to std::set", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }
     for(rapidjson::Value::ConstValueIterator it = v.Begin(); it != v.End(); ++it) {
         T temp;
@@ -422,21 +451,21 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::map<std::string, T>& t
         }
     } else if (v.IsObject()) {
         t.clear();
-        T value;
         for (rapidjson::Value::ConstMemberIterator it = v.MemberBegin(); it != v.MemberEnd(); ++it) {
+            T value;
             LoadJsonValue(it->value, value);
             t[it->name.GetString()] = value;
         }
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to Map", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Map", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
 template<class T>
-inline void LoadJsonValue(const rapidjson::Value& v, RaveTransform<T>& t) {
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveTransform<T>& t) {
     if (v.IsArray()) {
         if(v.Size() != 7) {
-            throw openravejson::OpenRAVEJSONException((boost::format("Cannot convert json type " + GetJsonTypeName(v) + " to Transform. " + "Array length does not match (%d != %d)") % v.Size()% 7).str(), openravejson::ORJE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Transform. Array length does not match (%d != 7)", GetJsonTypeName(v)%v.Size(), OpenRAVE::ORE_InvalidArguments);
         }
         LoadJsonValue(v[0], t.rot.x);
         LoadJsonValue(v[1], t.rot.y);
@@ -446,25 +475,25 @@ inline void LoadJsonValue(const rapidjson::Value& v, RaveTransform<T>& t) {
         LoadJsonValue(v[5], t.trans.y);
         LoadJsonValue(v[6], t.trans.z);
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to RaveTransform", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to RaveTransform", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
-inline void LoadJsonValue(const rapidjson::Value& v, TriMesh& t)
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t)
 {
     if (!v.IsObject()) {
-        throw openravejson::OpenRAVEJSONException("Cannot load value of non-object.", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
     }
 
     if (!v.HasMember("vertices") || !v["vertices"].IsArray() || v["vertices"].Size() % 3 != 0) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a TriMesh, \"vertices\" malformatted", ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a TriMesh, \"vertices\" malformatted", OpenRAVE::ORE_InvalidArguments);
     }
 
     t.vertices.clear();
     t.vertices.reserve(v["vertices"].Size() / 3);
 
     for (rapidjson::Value::ConstValueIterator it = v["vertices"].Begin(); it != v["vertices"].End(); ) {
-        Vector vertex;
+        OpenRAVE::Vector vertex;
         LoadJsonValue(*(it++), vertex.x);
         LoadJsonValue(*(it++), vertex.y);
         LoadJsonValue(*(it++), vertex.z);
@@ -562,7 +591,7 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::set<T>& t, rapidjson::
 }
 
 template<class T>
-inline void SaveJsonValue(rapidjson::Value& rTransform, const RaveTransform<T>& t, rapidjson::Document::AllocatorType& alloc) {
+inline void SaveJsonValue(rapidjson::Value& rTransform, const OpenRAVE::RaveTransform<T>& t, rapidjson::Document::AllocatorType& alloc) {
     rTransform.SetArray();
     rTransform.Reserve(7, alloc);
     rTransform.PushBack(t.rot[0], alloc);
@@ -597,7 +626,7 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjso
 }
 
 template<class T>
-inline void SaveJsonValue(rapidjson::Value& v, const RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
+inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetArray();
     // TODO, what's a better way to serialize?
     bool bHas4Values = t[3] != 0;
@@ -704,14 +733,14 @@ template<class T>
 inline void SaveJsonValue(rapidjson::Document& v, const T& t) {
     // rapidjson::Value::CopyFrom also doesn't free up memory, need to clear memory
     // see note in: void ParseJson(rapidjson::Document& d, const std::string& str)
-    rapidjson::Document tempDoc;
-    SaveJsonValue(tempDoc, t, tempDoc.GetAllocator());
-    v.Swap(tempDoc);
+    v.SetNull();
+    v.GetAllocator().Clear();
+    SaveJsonValue(v, t, v.GetAllocator());
 }
 template<class T> void inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t);
-inline void LoadJsonValue(const rapidjson::Value& v, SensorBase::CameraIntrinsics& t) {
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::SensorBase::CameraIntrinsics& t) {
     if (!v.IsObject()) {
-        throw openravejson::OpenRAVEJSONException("Cannot load value of non-object to SensorBase::CameraIntrinsics.", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object to SensorBase::CameraIntrinsics.", OpenRAVE::ORE_InvalidArguments);
     }
     LoadJsonValueByKey(v, "fx", t.fx);
     LoadJsonValueByKey(v, "fy", t.fy);
@@ -726,7 +755,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, SensorBase::CameraIntrinsic
 template<class T>
 void inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t) {
     if (!v.IsObject()) {
-        throw openravejson::OpenRAVEJSONException("Cannot load value of non-object.", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
     }
     if (v.HasMember(key)) {
         LoadJsonValue(v[key], t);
@@ -736,7 +765,7 @@ void inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t)
 template<class T, class U>
 inline void LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t, const U& d) {
     if (!v.IsObject()) {
-        throw openravejson::OpenRAVEJSONException("Cannot load value of non-object.", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
     }
     if (v.HasMember(key)) {
         LoadJsonValue(v[key], t);
@@ -750,7 +779,7 @@ inline void LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t,
 template<class T, class U>
 T GetJsonValueByKey(const rapidjson::Value& v, const char* key, const U& t) {
     if (!v.IsObject()) {
-        throw openravejson::OpenRAVEJSONException("Cannot get value of non-object.", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot get value of non-object.", OpenRAVE::ORE_InvalidArguments);
     }
     if (v.HasMember(key)) {
         const rapidjson::Value& child = v[key];
@@ -766,7 +795,7 @@ T GetJsonValueByKey(const rapidjson::Value& v, const char* key, const U& t) {
 template<class T>
 inline T GetJsonValueByKey(const rapidjson::Value& v, const char* key) {
     if (!v.IsObject()) {
-        throw openravejson::OpenRAVEJSONException("Cannot load value of non-object.", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
     }
     T r = T();
     if (v.HasMember(key)) {
@@ -808,7 +837,7 @@ T GetJsonValueByPath(const rapidjson::Value& v, const char* key, const U& t) {
 template<class T, class U>
 inline void SetJsonValueByKey(rapidjson::Value& v, const U& key, const T& t, rapidjson::Document::AllocatorType& alloc);
 /// \brief serialize an OpenRAVE CameraIntrinsics as json
-inline void SaveJsonValue(rapidjson::Value& v, const SensorBase::CameraIntrinsics& t, rapidjson::Document::AllocatorType& alloc) {
+inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::SensorBase::CameraIntrinsics& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetObject();
     SetJsonValueByKey(v, "fx", t.fx, alloc);
     SetJsonValueByKey(v, "fy", t.fy, alloc);
@@ -819,8 +848,7 @@ inline void SaveJsonValue(rapidjson::Value& v, const SensorBase::CameraIntrinsic
     SetJsonValueByKey(v, "distortionCoeffs", t.distortion_coeffs, alloc);
 }
 
-
-inline void SaveJsonValue(rapidjson::Value &rTriMesh, const TriMesh& t, rapidjson::Document::AllocatorType& alloc) {
+inline void SaveJsonValue(rapidjson::Value &rTriMesh, const OpenRAVE::TriMesh& t, rapidjson::Document::AllocatorType& alloc) {
     rTriMesh.SetObject();
     rapidjson::Value rVertices;
     rVertices.SetArray();
@@ -870,17 +898,13 @@ inline void SetJsonValueByKey(rapidjson::Value& v, const U& key, const T& t, rap
 template<class T>
 inline void SetJsonValueByKey(rapidjson::Document& d, const char* key, const T& t)
 {
-    rapidjson::Value v;
-    SetJsonValueByKey(v, key, t, d.GetAllocator());
-    v.Swap(d);
+    SetJsonValueByKey(d, key, t, d.GetAllocator());
 }
 
 template<class T>
 inline void SetJsonValueByKey(rapidjson::Document& d, const std::string& key, const T& t)
 {
-    rapidjson::Value v;
-    SetJsonValueByKey(v, key.c_str(), t, d.GetAllocator());
-    v.Swap(d);
+    SetJsonValueByKey(d, key.c_str(), t, d.GetAllocator());
 }
 
 template<class T>
@@ -893,30 +917,32 @@ inline void SetJsonValueByPath(rapidjson::Document& d, const char* path, const T
 inline void ValidateJsonString(const std::string& str) {
     rapidjson::Document d;
     if (d.Parse(str.c_str()).HasParseError()) {
-        throw openravejson::OpenRAVEJSONException("json string " + str + " is invalid." + GetParseError_En(d.GetParseError()), openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("JSON string %s is invalid: %s", str%GetParseError_En(d.GetParseError()), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
 template<class T> inline std::string GetJsonString(const T& t) {
     rapidjson::Document d;
     SaveJsonValue(d, t);
-    return openravejson::DumpJson(d);
+    return OpenRAVE::orjson::DumpJson(d);
 }
 
 /** update a json object with another one, new key-value pair will be added, existing ones will be overwritten
  */
 inline void UpdateJson(rapidjson::Document& a, const rapidjson::Value& b) {
     if (!a.IsObject()) {
-        throw openravejson::OpenRAVEJSONException("json object should be a dict to be updated: " + GetJsonString(a), openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("json object should be a dict to be updated: %s", GetJsonString(a), OpenRAVE::ORE_InvalidArguments);
     }
     if (!b.IsObject()) {
-        throw openravejson::OpenRAVEJSONException("json object should be a dict to update another dict: " + GetJsonString(b), openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("json object should be a dict to update another dict: %s", GetJsonString(b), OpenRAVE::ORE_InvalidArguments);
     }
     for (rapidjson::Value::ConstMemberIterator it = b.MemberBegin(); it != b.MemberEnd(); ++it) {
         SetJsonValueByKey(a, it->name.GetString(), it->value);
     }
 }
 
-} // namespace openravejson
+} // namespace JSON
+
+} // namespace OpenRAVE
 
 #endif // OPENRAVE_JSON_H

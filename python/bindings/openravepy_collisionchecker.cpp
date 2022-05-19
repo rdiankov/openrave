@@ -49,7 +49,7 @@ namespace numeric = py::numeric;
 
 PyCollisionReport::PyCollisionReport() : report(new CollisionReport()) {
 }
-PyCollisionReport::PyCollisionReport(CollisionReportPtr report) : report(report) {
+PyCollisionReport::PyCollisionReport(CollisionReportPtr report_) : report(report_) {
 }
 PyCollisionReport::~PyCollisionReport() {
 }
@@ -92,6 +92,18 @@ void PyCollisionReport::init(PyEnvironmentBasePtr pyenv)
     }
     else {
         plink2 = py::none_();
+    }
+    if( !!report->pgeom1 ) {
+        pgeom1 = openravepy::toPyKinBodyGeometry(OPENRAVE_CONST_POINTER_CAST<KinBody::Geometry>(report->pgeom1));
+    }
+    else {
+        pgeom1 = py::none_();
+    }
+    if( !!report->pgeom2 ) {
+        pgeom2 = openravepy::toPyKinBodyGeometry(OPENRAVE_CONST_POINTER_CAST<KinBody::Geometry>(report->pgeom2));
+    }
+    else {
+        pgeom2 = py::none_();
     }
     py::list newcontacts;
     FOREACH(itc, report->contacts) {
@@ -374,7 +386,8 @@ bool PyCollisionCheckerBase::CheckCollision(object o1, object bodyexcluded, obje
     KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
 
     std::vector<KinBodyConstPtr> vbodyexcluded;
-    for(size_t i = 0; i < len(bodyexcluded); ++i) {
+    size_t numBodyExcluded = len(bodyexcluded);
+    for(size_t i = 0; i < numBodyExcluded; ++i) {
         PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
         if( !!pbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
@@ -384,7 +397,8 @@ bool PyCollisionCheckerBase::CheckCollision(object o1, object bodyexcluded, obje
         }
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    for(size_t i = 0; i < len(linkexcluded); ++i) {
+    size_t numLinkExcluded = len(linkexcluded);
+    for(size_t i = 0; i < numLinkExcluded; ++i) {
         KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
@@ -449,9 +463,9 @@ bool PyCollisionCheckerBase::CheckCollision(PyKinBodyPtr pbody, object bodyexclu
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-        if( !!pbody ) {
-            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        PyKinBodyPtr pbodyex = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pbodyex ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pbodyex));
         }
         else {
             RAVELOG_ERROR("failed to get excluded body\n");
@@ -473,10 +487,11 @@ bool PyCollisionCheckerBase::CheckCollision(PyKinBodyPtr pbody, object bodyexclu
 bool PyCollisionCheckerBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
-    for(size_t i = 0; i < len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-        if( !!pbody ) {
-            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+    size_t numBodyExcluded = len(bodyexcluded);
+    for(size_t i = 0; i < numBodyExcluded; ++i) {
+        PyKinBodyPtr pbodyex = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pbodyex ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pbodyex));
         }
         else {
             RAVELOG_ERROR("failed to get excluded body\n");
@@ -529,7 +544,7 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
     py::buffer_info bufpos = pypos.request();
     dReal* ppos = (dReal*) bufpos.ptr;
 
-    py::array_t<bool> pycollision({num});
+    py::array_t<bool> pycollision(num);
     py::buffer_info bufcollision = pycollision.request();
     bool* pcollision = (bool*) bufcollision.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
@@ -761,6 +776,8 @@ void init_openravepy_collisionchecker()
     .def_readonly("options",&PyCollisionReport::options)
     .def_readonly("plink1",&PyCollisionReport::plink1)
     .def_readonly("plink2",&PyCollisionReport::plink2)
+    .def_readonly("pgeom1",&PyCollisionReport::pgeom1)
+    .def_readonly("pgeom2",&PyCollisionReport::pgeom2)
     .def_readonly("minDistance",&PyCollisionReport::minDistance)
     .def_readonly("numWithinTol",&PyCollisionReport::numWithinTol)
     .def_readonly("contacts",&PyCollisionReport::contacts)

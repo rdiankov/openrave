@@ -4,7 +4,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 34)
+set (OPENRAVE_VERSION_MINOR 97)
 set (OPENRAVE_VERSION_PATCH 0)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
@@ -16,7 +16,10 @@ cmake_policy(SET CMP0002 NEW)
 # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
 cmake_policy(SET CMP0003 NEW)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14) # C++14 for std::shared_timed_mutex
+set(CMAKE_CXX_STANDARD_REQUIRED ON) # Standard is required
+set(CMAKE_POSITION_INDEPENDENT_CODE ON) # fPIC is required in many libraries now
+
 # Use, i.e. don't skip the full RPATH for the build tree
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 
@@ -45,16 +48,19 @@ option(OPT_ODE_COLLISION "Use ODE collision checker if available" ON)
 option(OPT_FCL_COLLISION "Use FCL collision checker if available" ON)
 option(OPT_QTCOIN_VIEWER "Use QT/Coin Viewer if available" ON)
 option(OPT_QTOSG_VIEWER "Use QT/OpenSceneGraph Viewer if available" ON)
-option(OPT_EXTRA_ROBOTS "Install extra robots" ON)
 option(OPT_BUILD_PACKAGES "Set to ON to generate CPack configuration files and packaging targets" OFF)
 option(OPT_BUILD_PACKAGE_DEFAULT "Set to ON to generate a default openrave package that creates symlinks" ON)
 option(OPT_IKFAST_FLOAT32 "Set to ON to allow loading of ikfast shared objects compiled with 32bit float (64bit double is always supported regardless of this option)" ON)
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 option(OPT_CBINDINGS "Build the C-bindings libraries libopenrave_c and libopenrave-core_c" ON)
 option(OPT_LOG4CXX "Use log4cxx for logging" ON)
+option(OPT_MSGPACK "Support msgpack format" ON)
+option(OPT_INSTALL_3DMODELDATA "If ON, then install the 3D model data." ON)
+option(OPT_EXTRA_ROBOTS "If ON, then install extra robots as part of 3D model data" ON)
+option(OPT_NATIVE "Optimize with -march=native or compiler equivalent." ON)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 
 if(OPT_DOUBLE_PRECISION)
@@ -106,20 +112,20 @@ if( OPT_PYTHON )
     get_filename_component(PYTHON_EXECUTABLE_NAME ${PYTHON_EXECUTABLE} NAME)
     # architecture independent
 #    execute_process(
-#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(0)"
+#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(0))"
 #      OUTPUT_VARIABLE _python_sitepackage OUTPUT_STRIP_TRAILING_WHITESPACE
 #      RESULT_VARIABLE _python_failed0)
 #    # architexture dependent
 #    execute_process(
-#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)"
+#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))"
 #      OUTPUT_VARIABLE _python_distpackage OUTPUT_STRIP_TRAILING_WHITESPACE
 #      RESULT_VARIABLE _python_failed1)
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print numpy.get_include()"
+      COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
       OUTPUT_VARIABLE _python_numpy_include OUTPUT_STRIP_TRAILING_WHITESPACE
       RESULT_VARIABLE _python_failed0)
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; from myrelpath import relpath; print relpath(get_python_lib(1,prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}')"
+      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; from myrelpath import relpath; print(relpath(get_python_lib(1,prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}'))"
       OUTPUT_VARIABLE OPENRAVE_PYTHON_INSTALL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
       RESULT_VARIABLE _python_failed2)
@@ -205,7 +211,7 @@ if( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
 endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
-  add_definitions("-fno-strict-aliasing -Wall")
+  add_definitions("-fno-strict-aliasing -Wall -Werror=shadow")
 endif()
 
 set(OPENRAVE_EXPORT_CXXFLAGS)
@@ -237,15 +243,21 @@ else()
   check_cxx_compiler_flag("-fvisibility-inlines-hidden" LINKER_HAS_VISIBILITY_INLINES_HIDDEN)
 endif()
 
-if( UNIX OR CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
-  set(STDC_LIBRARY stdc++)
-else()
-  set(STDC_LIBRARY)
-endif()
-
 if( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   # apple doesn't have 64bit versions of file opening functions, so add them
   add_definitions(-Dfopen64=fopen -Dfseeko64=fseeko -Dfseek64=fseek -Dftell64=ftell -Dftello64=ftello)
+endif()
+
+if( NATIVE_COMPILE_FLAGS )
+  set(OPT_NATIVE ON)
+endif()
+if ( OPT_NATIVE )
+  if(CXX_COMPILER_ID STREQUAL "MSVC")
+    # MSVC does not have an equivalent flag.
+  else()
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+  endif()
 endif()
 
 set(OPENRAVE_CORE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
@@ -317,7 +329,11 @@ if(NOT MSVC71 AND NOT MSVC80)
     set(Boost_LIBRARY_DIRS $ENV{BOOST_LIBRARYDIR})
   endif()
   set(Boost_ADDITIONAL_VERSIONS "1.46.1" "1.45" "1.44" "1.43" "1.42" "1.41" "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33" ${Boost_ADDITIONAL_VERSIONS})
-  find_package(Boost COMPONENTS regex filesystem system python thread iostreams date_time)
+  if(OPT_PYTHON AND NOT USE_PYBIND11_PYTHON_BINDINGS)
+    find_package(Boost COMPONENTS regex filesystem system python thread iostreams date_time)
+  else()
+    find_package(Boost COMPONENTS regex filesystem system thread iostreams date_time)
+  endif()
 else()
   # have to rely on local boost and a hack
   add_definitions(-DTEMP_SPIRIT_HACK)
@@ -388,15 +404,6 @@ foreach(ldir ${Boost_LIBRARY_DIRS})
     set(OPENRAVE_BOOST_LIB_DIRS "${OPENRAVE_BOOST_LIB_DIRS} -L${ldir}")
   endif()
 endforeach()
-
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
-  add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
-  set(EXTRA_COMPILE_FLAGS "-fPIC")
-  set(NATIVE_COMPILE_FLAGS "" CACHE STRING "compilation flags to pass to tools that are executed at build-time. For example '-march=native -mtune=native'. By default this is empty.")
-else()
-  set(EXTRA_COMPILE_FLAGS "")
-  set(NATIVE_COMPILE_FLAGS "")
-endif()
 
 # generate the md5 sum for all OpenRAVE interfaces
 add_subdirectory(cpp-gen-md5)
@@ -541,8 +548,17 @@ endif()
 
 find_package(RapidJSON)
 if( RAPIDJSON_FOUND )
+  include_directories(${RAPIDJSON_INCLUDES})
 else()
   message(FATAL_ERROR "rapidjson library not found")
+endif()
+
+set(OPENRAVE_MSGPACK 0)
+if( OPT_MSGPACK )
+pkg_check_modules(msgpack msgpack)
+if( msgpack_FOUND )
+  set(OPENRAVE_MSGPACK 1)
+endif()
 endif()
 
 find_package(LibXml2)
@@ -576,8 +592,8 @@ if( WIN32 )
   endif()
 endif()
 
-find_package(Qt5 COMPONENTS Core Gui Qml Widgets OpenGL)
-if (NOT (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Qml_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND))
+find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
+if (NOT (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND))
   message(STATUS "WARNING: Qt5 not found, is your QTDIR enviornment variable set?")
   find_package(Qt5Core)
   find_package(Qt5Gui)
@@ -745,8 +761,14 @@ endif()
 #endif()
 
 # function expression parser library
-find_package(FPARSER 4.5 QUIET)
-if( NOT FPARSER_FOUND )
+find_package(fparser 4.5)
+if( fparser_FOUND )
+    message(STATUS "Found fparser, version ${fparser_VERSION}")
+    set(FPARSER_INCLUDE_DIRS "${fparser_INCLUDE_DIR}")
+    set(FPARSER_LIBRARIES "${fparser_LIBRARY}")
+    set(FPARSER_CXX_FLAGS "${fparser_CXX_FLAGS} -DOPENRAVE_FPARSER_SETEPSILON")
+    set(FPARSER_LINK_FLAGS "${fparser_LINK_FLAGS}")
+else()
   if( PKG_CONFIG_FOUND )
     pkg_search_module(FPARSER fparser)
   endif()
@@ -812,7 +834,7 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
   if( PYTHON_EXECUTABLE )
     # get the sympy version
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print sympy.__version__"
+      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print(sympy.__version__)"
       OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
       RESULT_VARIABLE _sympy_version_failed)
     if( ${_sympy_version_failed} EQUAL 0 )

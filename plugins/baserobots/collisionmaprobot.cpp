@@ -19,7 +19,7 @@
 class CollisionMapRobot : public RobotBase
 {
 public:
-    class XMLData : public XMLReadable
+    class XMLData : public Readable
     {
 public:
         /// specifies the free space of two joints
@@ -30,10 +30,42 @@ public:
             boost::array<dReal,N> fmin, fmax, fidelta;
             boost::array<string,N> jointnames;
             boost::array<int,N> jointindices;
+
+            bool operator==(const COLLISIONMAP<N>& other) const {
+                return vfreespace == other.vfreespace && 
+                    fmin == other.fmin && 
+                    fmax == other.fmax && 
+                    fidelta == other.fidelta && 
+                    jointnames == other.jointnames && 
+                    jointindices == other.jointindices;
+            };
         };
         typedef COLLISIONMAP<2> COLLISIONPAIR;
-        XMLData() : XMLReadable("collisionmap") {
+
+        XMLData() : Readable("collisionmap") {
         }
+
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override {
+            return false;
+        }
+
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const XMLData* pOther = dynamic_cast<const XMLData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return listmaps == pOther->listmaps;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<XMLData> pNew(new XMLData());
+            *pNew = *this;
+            return pNew;
+        }
+
         list<COLLISIONPAIR> listmaps;
     };
 
@@ -47,7 +79,7 @@ public:
             }
         }
 
-        virtual XMLReadablePtr GetReadable() {
+        ReadablePtr GetReadable() override {
             return _cmdata;
         }
 

@@ -20,10 +20,35 @@
 #include "libopenrave.h"
 #include <openrave/xmlreaders.h>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/once.hpp>
 
+using boost::placeholders::_1;
+using boost::placeholders::_2;
+
 namespace OpenRAVE {
+
+static boost::array<std::string,5> s_vTimeDerivativeJoints = {{"joint_values", "joint_velocities", "joint_accelerations", "joint_jerks", "joint_snaps"}};
+static boost::array<std::string,5> s_vTimeDerivativeAffine = {{"affine_transform", "affine_velocities", "affine_accelerations", "affine_jerks", "affine_snaps"}};
+
+static std::set<std::string> s_setBodyGroupNames;
+static boost::once_flag _onceSetBodyGroupNames = BOOST_ONCE_INIT;
+
+static void _CreateSetBodyGroupNames()
+{
+    if( s_setBodyGroupNames.size() == 0 ) {
+        s_setBodyGroupNames.insert("joint_values");
+        s_setBodyGroupNames.insert("joint_velocities");
+        s_setBodyGroupNames.insert("joint_accelerations");
+        s_setBodyGroupNames.insert("joint_jerks");
+        s_setBodyGroupNames.insert("joint_torques");
+        s_setBodyGroupNames.insert("affine_transform");
+        s_setBodyGroupNames.insert("affine_velocities");
+        s_setBodyGroupNames.insert("affine_accelerations");
+        s_setBodyGroupNames.insert("affine_jerks");
+    }
+}
 
 ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody,const std::string& interpolation)
 {
@@ -145,6 +170,51 @@ bool ConfigurationSpecification::operator==(const ConfigurationSpecification& r)
 bool ConfigurationSpecification::operator!=(const ConfigurationSpecification& r) const
 {
     return !this->operator==(r);
+}
+
+bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0, int igroup1)
+{
+    return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
+}
+
+void ConfigurationSpecification::DeserializeJSON(const rapidjson::Value& rValue) {
+    if (rValue.HasMember("groups")) {
+        _vgroups.resize(rValue["groups"].Size());
+        size_t iGroup = 0;
+        for (rapidjson::Value::ConstValueIterator it = rValue["groups"].Begin(); it != rValue["groups"].End(); it++, iGroup++) {
+            ConfigurationSpecification::Group& group = _vgroups[iGroup];
+            orjson::LoadJsonValueByKey(*it, "name", group.name);
+            orjson::LoadJsonValueByKey(*it, "offset", group.offset);
+            orjson::LoadJsonValueByKey(*it, "dof", group.dof);
+            orjson::LoadJsonValueByKey(*it, "interpolation", group.interpolation);
+        }
+    }
+}
+
+void ConfigurationSpecification::SerializeJSON(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const {
+    std::vector<int> vgroupindices(_vgroups.size());
+    for (int i = 0; i < (int)vgroupindices.size(); ++i) {
+        vgroupindices[i] = i;
+    }
+    std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(*this), _1, _2));
+
+    rValue.SetObject();
+
+    rapidjson::Value rGroups;
+    rGroups.SetArray();
+    rGroups.Reserve(_vgroups.size(), alloc);
+    for(size_t iGroup = 0; iGroup < vgroupindices.size(); iGroup++) {
+        int iGroupIndex = vgroupindices[iGroup];
+        const ConfigurationSpecification::Group& group = _vgroups[iGroupIndex];
+        rapidjson::Value rGroup;
+        rGroup.SetObject();
+        orjson::SetJsonValueByKey(rGroup, "name", group.name, alloc);
+        orjson::SetJsonValueByKey(rGroup, "offset", group.offset, alloc);
+        orjson::SetJsonValueByKey(rGroup, "dof", group.dof, alloc);
+        orjson::SetJsonValueByKey(rGroup, "interpolation", group.interpolation, alloc);
+        rGroups.PushBack(rGroup, alloc);
+    }
+    orjson::SetJsonValueByKey(rValue, "groups", rGroups, alloc);
 }
 
 const ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(const std::string& name) const
@@ -356,14 +426,13 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
 void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatime)
 {
     static const boost::array<string,4> s_GroupsJointValues = {{"joint_values","joint_velocities", "joint_accelerations", "joint_jerks"}};
-    static const boost::array<string,4> s_GroupsAffine = {{"affine_transform","affine_velocities","ikparam_accelerations", "affine_jerks"}};
-    static const boost::array<string,4> s_GroupsIkparam = {{"ikparam_values","ikparam_velocities","affine_accelerations", "ikparam_jerks"}};
+    static const boost::array<string,4> s_GroupsAffine = {{"affine_transform","affine_velocities","affine_accelerations", "affine_jerks"}};
+    static const boost::array<string,4> s_GroupsIkparam = {{"ikparam_values","ikparam_velocities","ikparam_accelerations", "ikparam_jerks"}};
     if( _vgroups.size() == 0 ) {
         return;
     }
     std::list<std::vector<ConfigurationSpecification::Group>::iterator> listtoremove;
     std::list<ConfigurationSpecification::Group> listadd;
-    int offset = GetDOF();
     bool hasdeltatime = false;
     FOREACH(itgroup,_vgroups) {
         string replacename;
@@ -407,6 +476,7 @@ void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatim
             }
         }
     }
+    int offset = GetDOF();
     if( listtoremove.size() > 0 ) {
         FOREACH(it,listtoremove) {
             _vgroups.erase(*it);
@@ -647,26 +717,7 @@ void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::
     }
 }
 
-
-static std::set<std::string> s_setBodyGroupNames;
-static boost::once_flag _onceSetBodyGroupNames = BOOST_ONCE_INIT;
-
-static void _CreateSetBodyGroupNames()
-{
-    if( s_setBodyGroupNames.size() == 0 ) {
-        s_setBodyGroupNames.insert("joint_values");
-        s_setBodyGroupNames.insert("joint_velocities");
-        s_setBodyGroupNames.insert("joint_accelerations");
-        s_setBodyGroupNames.insert("joint_jerks");
-        s_setBodyGroupNames.insert("joint_torques");
-        s_setBodyGroupNames.insert("affine_transform");
-        s_setBodyGroupNames.insert("affine_velocities");
-        s_setBodyGroupNames.insert("affine_accelerations");
-        s_setBodyGroupNames.insert("affine_jerks");
-    }
-}
-
-void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
+void ConfigurationSpecification::ExtractUsedIndices(KinBodyConstPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
 {
     boost::call_once(_CreateSetBodyGroupNames,_onceSetBodyGroupNames);
 
@@ -680,6 +731,51 @@ void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector
         ss.str(itgroup->name);
         std::vector<std::string> curtokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
         if( curtokens.size() > 2 && s_setBodyGroupNames.find(curtokens.at(0)) != s_setBodyGroupNames.end() && curtokens.at(1) == bodyname) {
+            for(size_t i = 2; i < curtokens.size(); ++i) {
+                int index = boost::lexical_cast<int>(curtokens.at(i));
+                if( find(useddofindices.begin(), useddofindices.end(), index) == useddofindices.end() ) {
+                    useddofindices.push_back(index);
+                    usedconfigindices.push_back(itgroup->offset + (i-2));
+                }
+            }
+        }
+    }
+}
+
+void ConfigurationSpecification::ExtractUsedIndices(const char* pBodyName, int nBodyNameLength, int timederivative, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
+{
+    boost::call_once(_CreateSetBodyGroupNames,_onceSetBodyGroupNames);
+
+    // have to look through all groups since groups can contain the same body
+    std::stringstream ss;
+    useddofindices.resize(0);
+    usedconfigindices.resize(0);
+    FOREACHC(itgroup,_vgroups) {
+        ss.clear();
+        ss.str(itgroup->name);
+        std::vector<std::string> curtokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+        if( curtokens.size() <= 2 ) {
+            // no indices
+            continue;
+        }
+
+        if( timederivative >= 0 ) {
+            bool bMatchJoints = timederivative < (int)s_vTimeDerivativeJoints.size() && s_vTimeDerivativeJoints[timederivative] == curtokens[0];
+            if( !bMatchJoints ) {
+                bool bMatchAffine = timederivative < (int)s_vTimeDerivativeAffine.size() && s_vTimeDerivativeAffine[timederivative] == curtokens[0];
+                if( !bMatchAffine ) {
+                    continue;
+                }
+            }
+        }
+        else {
+            if( s_setBodyGroupNames.find(curtokens.at(0)) == s_setBodyGroupNames.end() ) {
+                // not part of body
+                continue;
+            }
+        }
+
+        if( curtokens.at(1).size() == nBodyNameLength && strncmp(curtokens.at(1).c_str(), pBodyName, nBodyNameLength) == 0 ) {
             for(size_t i = 2; i < curtokens.size(); ++i) {
                 int index = boost::lexical_cast<int>(curtokens.at(i));
                 if( find(useddofindices.begin(), useddofindices.end(), index) == useddofindices.end() ) {
@@ -857,6 +953,8 @@ bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
     case 0: searchname = "affine_transform"; break;
     case 1: searchname = "affine_velocities"; break;
     case 2: searchname = "affine_accelerations"; break;
+    case 3: searchname = "affine_jerks"; break;
+    case 4: searchname = "affine_snaps"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("bad time derivative %d"),timederivative,ORE_InvalidArguments);
     }
@@ -1013,6 +1111,7 @@ bool ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator
     case 1: searchname = "joint_velocities"; break;
     case 2: searchname = "joint_accelerations"; break;
     case 3: searchname = "joint_jerks"; break;
+    case 4: searchname = "joint_snaps"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT0(_("bad time derivative"),ORE_InvalidArguments);
     };
@@ -1062,6 +1161,7 @@ bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator 
     case 1: searchname = "joint_velocities"; break;
     case 2: searchname = "joint_accelerations"; break;
     case 3: searchname = "joint_jerks"; break;
+    case 4: searchname = "joint_snaps"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT0(_("bad time derivative"),ORE_InvalidArguments);
     };
@@ -1777,6 +1877,22 @@ std::string ConfigurationSpecification::GetInterpolationDerivative(const std::st
     return "";
 }
 
+std::string ConfigurationSpecification::GetInterpolationIntegral(const std::string& interpolation, int integ)
+{
+    const static boost::array<std::string,7> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quartic","quintic","sextic"}};
+    for(int i = 0; i < (int)s_InterpolationOrder.size(); ++i) {
+        if( interpolation == s_InterpolationOrder[i] ) {
+            if( i + integ > (int)s_InterpolationOrder.size() ) {
+                return s_InterpolationOrder.at(s_InterpolationOrder.size() - 1);
+            }
+            else {
+                return s_InterpolationOrder.at(i+integ);
+            }
+        }
+    }
+    return "";
+}
+
 ConfigurationSpecification::Reader::Reader(ConfigurationSpecification& spec) : _spec(spec)
 {
     _spec = ConfigurationSpecification(); // reset
@@ -1841,11 +1957,6 @@ void ConfigurationSpecification::Reader::characters(const std::string& ch)
     }
 }
 
-bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0, int igroup1)
-{
-    return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
-}
-
 std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec)
 {
     std::vector<int> vgroupindices(spec._vgroups.size());
@@ -1867,7 +1978,7 @@ std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec)
 {
     if( !!I) {
         stringbuf buf;
-        stringstream::streampos pos = I.tellg();
+        stringstream::pos_type pos = I.tellg();
         I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
 
         string pbuf = buf.str();

@@ -132,7 +132,10 @@ public:
         _DumpTrajectory(ptraj, Level_Verbose, 1);
 #endif
 
-        _OptimizePath(listpath);
+        int numshortcuts = _OptimizePath(listpath);
+        if( numshortcuts < 0 ) {
+            return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
+        }
 
 #ifdef SHORTCUT_ONEDOF_DEBUG
         TrajectoryBasePtr ptrajbefore = RaveCreateTrajectory(GetEnv(), "");
@@ -145,7 +148,10 @@ public:
         _DumpTrajectory(ptrajbefore, Level_Debug, 1);
 #endif
 
-        _OptimizePathOneDOF(listpath);
+        int numshortcutsonedof = _OptimizePathOneDOF(listpath);
+        if( numshortcutsonedof < 0 ) {
+            return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
+        }
 
 #ifdef SHORTCUT_ONEDOF_DEBUG
         FOREACH(it, listpath) {
@@ -164,14 +170,14 @@ public:
         _DumpTrajectory(ptraj, Level_Verbose, 2);
 #endif
 
-        RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs\n", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+        RAVELOG_DEBUG_FORMAT("env=%s, path optimizing - computation time=%fs\n", GetEnv()->GetNameId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         if( parameters->_sPostProcessingPlanner.size() == 0 ) {
             // no other planner so at least retime
             PlannerStatus status = _linearretimer->PlanPath(ptraj, planningoptions);
             if( status.GetStatusCode() != PS_HasSolution ) {
                 return status;
             }
-            return PlannerStatus(PS_HasSolution);
+            return OPENRAVE_PLANNER_STATUS(PS_HasSolution);
         }
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
     }
@@ -179,7 +185,7 @@ public:
 protected:
     /// \brief Iteratively pick two nodes in the path then iterpolate a linear path between them. Note that the
     /// interpolated path might not be stirctly linear due to _neighstatefn.
-    void _OptimizePath(list< std::pair< vector<dReal>, dReal> >& listpath)
+    int _OptimizePath(list< std::pair< vector<dReal>, dReal> >& listpath)
     {
         PlannerParametersConstPtr parameters = GetParameters();
         list< std::pair< vector<dReal>, dReal> >::iterator itstartnode, itendnode;
@@ -204,11 +210,16 @@ protected:
             --iiter;
             ++itercount;
 
+            _progress._iteration = itercount;
+            if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                return -1;
+            }
+
             // pick a random node on the listpath, and a random jump ahead
             uint32_t endIndex = 2+(_puniformsampler->SampleSequenceOneUInt32()%((uint32_t)listpath.size()-2));
             uint32_t startIndex = _puniformsampler->SampleSequenceOneUInt32()%(endIndex-1);
 #ifdef PROGRESS_DEBUG
-            RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, start shortcutting with i0=%d; i1=%d", GetEnv()->GetId()%itercount%numiters%startIndex%endIndex);
+            RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, start shortcutting with i0=%d; i1=%d", GetEnv()->GetNameId()%itercount%numiters%startIndex%endIndex);
 #endif
 
             itstartnode = listpath.begin();
@@ -226,14 +237,14 @@ protected:
                 // The shortest possible distance between the start and the end of the shortcut (according to
                 // _distmetricfn) is not really short so reject it.
 #ifdef PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it may not make significant improvement. originalSegmentDistance=%.15e, expectedNewDistance=%.15e, diff=%.15e, fStepLength=%.15e", GetEnv()->GetId()%itercount%numiters%totaldistance%expectedtotaldistance%(totaldistance - expectedtotaldistance)%parameters->_fStepLength);
+                RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, rejecting since it may not make significant improvement. originalSegmentDistance=%.15e, expectedNewDistance=%.15e, diff=%.15e, fStepLength=%.15e", GetEnv()->GetNameId()%itercount%numiters%totaldistance%expectedtotaldistance%(totaldistance - expectedtotaldistance)%parameters->_fStepLength);
 #endif
                 continue;
             }
 
             // check if the nodes can be connected by a straight line
             _filterreturn->Clear();
-            int ret = parameters->CheckPathAllConstraints(itstartnode->first, itendnode->first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn);
+            int ret = parameters->CheckPathAllConstraints(itstartnode->first, itendnode->first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration|CFO_FromPathShortcutting, _filterreturn);
             if ( ret != 0 ) {
 #ifdef PROGRESS_DEBUG
                 ss.str(""); ss.clear();
@@ -242,12 +253,12 @@ protected:
                     ss << *itval << ", ";
                 }
                 ss << "]";
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints failed, retcode=0x%x. %s", GetEnv()->GetId()%itercount%numiters%ret%ss.str());
+                RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, CheckPathAllConstraints failed, retcode=0x%x. %s", GetEnv()->GetNameId()%itercount%numiters%ret%ss.str());
 #endif
                 // if( nrejected++ > (int)listpath.size()+8 ) {
                 if( false ) {
 #ifdef PROGRESS_DEBUG
-                    RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, breaking due to too many consecutive rejection. nrejected=%d, listpath.size()=%d", GetEnv()->GetId()%itercount%numiters%nrejected%listpath.size());
+                    RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, breaking due to too many consecutive rejection. nrejected=%d, listpath.size()=%d", GetEnv()->GetNameId()%itercount%numiters%nrejected%listpath.size());
 #endif
                     break;
                 }
@@ -255,7 +266,7 @@ protected:
             }
             if(_filterreturn->_configurations.size() == 0 ) {
 #ifdef PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints succeeded but did not fill in _filterreturn->_configurations so rejecting.", GetEnv()->GetId()%itercount%numiters);
+                RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, CheckPathAllConstraints succeeded but did not fill in _filterreturn->_configurations so rejecting.", GetEnv()->GetNameId()%itercount%numiters);
 #endif
                 continue;
             }
@@ -285,7 +296,7 @@ protected:
                 // new path is not that good, so reject
                 nrejected++;
 #ifdef PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it does not make significant improvement. originalSegmentDistance=%.15e, newSegmentDistance=%.15e, diff=%.15e, fStepLength=%.15e", GetEnv()->GetId()%itercount%numiters%totaldistance%newtotaldistance%(totaldistance - newtotaldistance)%parameters->_fStepLength);
+                RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, rejecting since it does not make significant improvement. originalSegmentDistance=%.15e, newSegmentDistance=%.15e, diff=%.15e, fStepLength=%.15e", GetEnv()->GetNameId()%itercount%numiters%totaldistance%newtotaldistance%(totaldistance - newtotaldistance)%parameters->_fStepLength);
 #endif
                 continue;
             }
@@ -313,27 +324,27 @@ protected:
             FOREACH(ittempnode, listpath) {
                 newdistance += ittempnode->second;
             }
-            RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d successful, listpath.size()=%d, totaldistance=%.15e", GetEnv()->GetId()%itercount%numiters%listpath.size()%newdistance);
+            RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d successful, listpath.size()=%d, totaldistance=%.15e", GetEnv()->GetNameId()%itercount%numiters%listpath.size()%newdistance);
 #endif
 
             if( listpath.size() <= 2 ) {
 #ifdef PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, breaking since listpath.size()=%d", GetEnv()->GetId()%itercount%numiters%listpath.size());
+                RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, breaking since listpath.size()=%d", GetEnv()->GetNameId()%itercount%numiters%listpath.size());
 #endif
                 break;
             }
         }
-        RAVELOG_DEBUG_FORMAT("env=%d, linear shortcut finished at iter=%d, successful=%d", GetEnv()->GetId()%itercount%numshortcuts);
+        RAVELOG_DEBUG_FORMAT("env=%s, linear shortcut finished at iter=%d, successful=%d", GetEnv()->GetNameId()%itercount%numshortcuts);
+        return numshortcuts;
     }
 
     // Experimental function: shortcut only one DOF at a time. Although some non-default
     // distmetric/neighstatefn/diffstatefn might be used here, we still compute the distance of the
     // shortcut dof simply by taking the difference between two configs.
-    void _OptimizePathOneDOF(list< std::pair< vector<dReal>, dReal> >& listpath)
+    int _OptimizePathOneDOF(list< std::pair< vector<dReal>, dReal> >& listpath)
     {
         int numshortcuts = 0;
         PlannerParametersConstPtr parameters = GetParameters();
-        PlannerProgress progress;
         int ndof = parameters->GetDOF();
         int itercount = 0;
         int nrejected = 0;
@@ -354,7 +365,7 @@ protected:
         for( int iiter = 0; iiter < numiters; ++iiter ) {
             ++itercount;
             if( listpath.size() <= 2 ) {
-                return;
+                return numshortcuts;
             }
             // Sample a DOF to shortcut. Give the last DOF twice as much chance.
             uint32_t idof = _puniformsampler->SampleSequenceOneUInt32()%(ndof + 1);
@@ -369,7 +380,7 @@ protected:
                 continue;
             }
 #ifdef PROGRESS_DEBUG
-            RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, start shortcutting idof=%d with i0=%d; i1=%d", GetEnv()->GetId()%iiter%numiters%idof%startIndex%endIndex);
+            RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, start shortcutting idof=%d with i0=%d; i1=%d", GetEnv()->GetNameId()%iiter%numiters%idof%startIndex%endIndex);
 #endif
 
             itstartnode = listpath.begin();
@@ -391,14 +402,14 @@ protected:
             if( RaveFabs(fExpectedDOFDistance) > fTotalDOFDistance - 0.1*parameters->_vConfigResolution.at(idof) ) {
                 // Even after a successful shortcut, the resulting path wouldn't be that much shorter. So skipping.
 #ifdef PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it may not make significant improvement. originalDOFDistance=%.15e, expectedDOFDistance=%.15e, diff=%.15e, dofresolution=%.15e", GetEnv()->GetId()%iiter%numiters%fTotalDOFDistance%fExpectedDOFDistance%(fTotalDOFDistance - fExpectedDOFDistance)%parameters->_vConfigResolution.at(idof));
+                RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, rejecting since it may not make significant improvement. originalDOFDistance=%.15e, expectedDOFDistance=%.15e, diff=%.15e, dofresolution=%.15e", GetEnv()->GetNameId()%iiter%numiters%fTotalDOFDistance%fExpectedDOFDistance%(fTotalDOFDistance - fExpectedDOFDistance)%parameters->_vConfigResolution.at(idof));
 #endif
                 continue;
             }
 
-            progress._iteration = iiter;
-            if( _CallCallbacks(progress) == PA_Interrupt ) {
-                return;
+            _progress._iteration = iiter;
+            if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                return -1;
             }
 
             // Main shortcut procedure
@@ -443,14 +454,14 @@ protected:
 
                     // Need to set state to vnextconfig since _neighstatefn expects the starting values to be set
                     if( parameters->SetStateValues(vnextconfig, 0) != 0 ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, failed to set state", GetEnv()->GetId()%itercount%numiters);
+                        RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, failed to set state", GetEnv()->GetNameId()%itercount%numiters);
                         bSuccess = false;
                         break;
                     }
 
-                    int neighstatus = parameters->_neighstatefn(vnextconfig, vdeltaconfig, NSO_OnlyHardConstraints);
+                    int neighstatus = parameters->_neighstatefn(vnextconfig, vdeltaconfig, NSO_FromPathShortcutting);
                     if( neighstatus == NSS_Failed ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, failed neighstatus %d", GetEnv()->GetId()%itercount%numiters%neighstatus);
+                        RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, failed neighstatus %d", GetEnv()->GetNameId()%itercount%numiters%neighstatus);
                         bSuccess = false;
                         break;
                     }
@@ -458,7 +469,7 @@ protected:
                     if( itnode == itendnode ) {
                         // last point, should be NSS_Reached (not NSS_SuccessfulWithDeviation)
                         if( neighstatus != NSS_Reached ) {
-                            RAVELOG_WARN_FORMAT("env=%d, iter=%d/%d, expecting last point to be within constraints, but was not, cannot shortcut, unreached neighstatus=%d.", GetEnv()->GetId()%itercount%numiters%neighstatus);
+                            RAVELOG_WARN_FORMAT("env=%s, iter=%d/%d, expecting last point to be within constraints, but was not, cannot shortcut, unreached neighstatus=%d.", GetEnv()->GetNameId()%itercount%numiters%neighstatus);
                             bSuccess = false;
                             break;
                         }
@@ -466,7 +477,7 @@ protected:
                 }
 
                 _filterreturn->Clear();
-                int ret = parameters->CheckPathAllConstraints(vcurconfig, vnextconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration, _filterreturn);
+                int ret = parameters->CheckPathAllConstraints(vcurconfig, vnextconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration|CFO_FromPathShortcutting, _filterreturn);
                 if ( ret != 0 ) {
 #ifdef PROGRESS_DEBUG
                     ss.str(""); ss.clear();
@@ -475,14 +486,14 @@ protected:
                         ss << *itval << ", ";
                     }
                     ss << "]";
-                    RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints failed, retcode=0x%x. %s", GetEnv()->GetId()%itercount%numiters%ret%ss.str());
+                    RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, CheckPathAllConstraints failed, retcode=0x%x. %s", GetEnv()->GetNameId()%itercount%numiters%ret%ss.str());
 #endif
                     bSuccess = false;
                     break;
                 }
                 if(_filterreturn->_configurations.size() == 0 ) {
 #ifdef PROGRESS_DEBUG
-                    RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints succeeded but did not fill in _filterreturn->_configurations so rejecting.", GetEnv()->GetId()%itercount%numiters);
+                    RAVELOG_DEBUG_FORMAT("env=%s, iter=%d/%d, CheckPathAllConstraints succeeded but did not fill in _filterreturn->_configurations so rejecting.", GetEnv()->GetNameId()%itercount%numiters);
 #endif
                     bSuccess = false;
                     break;
@@ -522,8 +533,8 @@ protected:
 
             } while( itnode != itendnode );
 
-            if( _CallCallbacks(progress) == PA_Interrupt ) {
-                return;
+            if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                return -1;
             }
 
             if( !bSuccess || listshortcutpath.size() == 0 ) {
@@ -544,8 +555,8 @@ protected:
             }
             listpath.erase(itstartnode, itendnode);
         }
-        RAVELOG_DEBUG_FORMAT("env=%d, shortcut one dof; numshortcuts=%d", GetEnv()->GetId()%numshortcuts);
-        return;
+        RAVELOG_DEBUG_FORMAT("env=%s, shortcut one dof; numshortcuts=%d", GetEnv()->GetNameId()%numshortcuts);
+        return numshortcuts;
     }
 
     /// \brief Subsample the given linear trajectory according to robot config resolution. Subsampling on each linear
@@ -595,7 +606,7 @@ protected:
             for( int f = 1; f < numSteps; f++ ) {
                 // Need to set state to vnextconfig since _neighstatefn expects the starting values to be set
                 if( parameters->SetStateValues(qcur, 0) != 0 ) {
-                    RAVELOG_WARN_FORMAT("env=%d, failed to set state values, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetId()%(ipoint - 1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());
+                    RAVELOG_WARN_FORMAT("env=%s, failed to set state values, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetNameId()%(ipoint - 1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());
                     qcur = listpath.back().first; // restore qcur
                     break;
                 }
@@ -606,18 +617,18 @@ protected:
                     FOREACHC(it, dq2) {
                         *it *= mult;
                     }
-                    neighstatus = parameters->_neighstatefn(qcur, dq2, NSO_OnlyHardConstraints);
+                    neighstatus = parameters->_neighstatefn(qcur, dq2, NSO_FromPathShortcutting);
                 }
                 else {
-                    neighstatus = parameters->_neighstatefn(qcur, dq, NSO_OnlyHardConstraints);
+                    neighstatus = parameters->_neighstatefn(qcur, dq, NSO_FromPathShortcutting);
                 }
                 if( neighstatus == NSS_SuccessfulWithDeviation ) {
-                    RAVELOG_WARN_FORMAT("env=%d, neighstatefn returned different configuration than qcur, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetId()%(ipoint - 1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());
+                    RAVELOG_WARN_FORMAT("env=%s, neighstatefn returned different configuration than qcur, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetNameId()%(ipoint - 1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());
                     qcur = listpath.back().first; // restore qcur
                     break;
                 }
                 else if( neighstatus == NSS_Failed ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, neighstatefn failed mult=%d, perhaps non-linear constraints are used?", GetEnv()->GetId()%mult);
+                    RAVELOG_DEBUG_FORMAT("env=%s, neighstatefn failed mult=%d, perhaps non-linear constraints are used?", GetEnv()->GetNameId()%mult);
                     mult++;
                     continue;
                 }
@@ -676,6 +687,7 @@ protected:
     PlannerBasePtr _linearretimer;
     ConstraintFilterReturnPtr _filterreturn;
     std::vector<dReal> _vtempdists;
+    PlannerProgress _progress;
 };
 
 PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) {

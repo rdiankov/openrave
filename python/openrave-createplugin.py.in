@@ -23,7 +23,7 @@ __builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
 try:
     import openravepy
 except ImportError:
-    print "openravepy is not set into PYTHONPATH env variable, attempting to add"
+    print("openravepy is not set into PYTHONPATH env variable, attempting to add")
     # use openrave-config to get the correct install path
     from subprocess import Popen, PIPE
     try:

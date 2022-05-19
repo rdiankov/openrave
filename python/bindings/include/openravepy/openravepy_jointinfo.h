@@ -47,7 +47,7 @@ public:
     object ComputeAABB(object otransform);
 
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
     KinBody::GeometryInfoPtr GetGeometryInfo();
 
     object _t = ReturnTransform(Transform());
@@ -59,6 +59,7 @@ public:
     object _vAmbientColor = toPyVector3(Vector(0,0,0));
     object _meshcollision = py::none_();
     GeometryType _type = GT_None;
+    object _id = py::none_();
     object _name = py::none_();
     object _filenamerender = py::none_();
     object _filenamecollision = py::none_();
@@ -70,6 +71,7 @@ public:
     float _fTransparency = 0.0;
     bool _bVisible = true;
     bool _bModifiable = true;
+    py::dict _calibrationBoardParameters;
 };
 
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
@@ -82,13 +84,14 @@ public:
     KinBody::LinkInfoPtr GetLinkInfo();
 
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     py::list _vgeometryinfos;
+    object _id = py::none_();
     object _name = py::none_();
     object _t = ReturnTransform(Transform());
     object _tMassFrame = ReturnTransform(Transform());
-    dReal _mass = 0.0;
+    dReal _mass = 1e-10;
     object _vinertiamoments = toPyVector3(Vector(1,1,1));
     py::dict _mapFloatParameters;
     py::dict _mapIntParameters;
@@ -110,7 +113,7 @@ public:
     PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info);
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo();
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     std::string model_type;
     dReal gear_ratio = 0.0;
@@ -138,11 +141,11 @@ class PyJointControlInfo_RobotController
 {
 public:
     PyJointControlInfo_RobotController();
-    PyJointControlInfo_RobotController(const KinBody::JointInfo::JointControlInfo_RobotController& jci);
-    KinBody::JointInfo::JointControlInfo_RobotControllerPtr GetJointControlInfo();
+    PyJointControlInfo_RobotController(const JointControlInfo_RobotController& jci);
+    JointControlInfo_RobotControllerPtr GetJointControlInfo();
 
-    int robotId = -1;
-    object robotControllerDOFIndex = toPyVector3(Vector(-1, -1, -1));
+    std::string controllerType;
+    object robotControllerAxisIndex = toPyVector3(Vector(-1, -1, -1));
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> PyJointControlInfo_RobotControllerPtr;
 
@@ -150,15 +153,15 @@ class PyJointControlInfo_IO
 {
 public:
     PyJointControlInfo_IO();
-    PyJointControlInfo_IO(const KinBody::JointInfo::JointControlInfo_IO& jci);
-    KinBody::JointInfo::JointControlInfo_IOPtr GetJointControlInfo();
+    PyJointControlInfo_IO(const JointControlInfo_IO& jci);
+    JointControlInfo_IOPtr GetJointControlInfo();
 
-    int deviceId = -1;
-    object vMoveIONames = py::list();
-    object vUpperLimitIONames = py::list();
-    object vUpperLimitSensorIsOn = py::list();
-    object vLowerLimitIONames = py::list();
-    object vLowerLimitSensorIsOn = py::list();
+    std::string deviceType;
+    object moveIONames = py::list();
+    object upperLimitIONames = py::list();
+    object upperLimitSensorIsOn = py::list();
+    object lowerLimitIONames = py::list();
+    object lowerLimitSensorIsOn = py::list();
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_IO> PyJointControlInfo_IOPtr;
 
@@ -166,9 +169,9 @@ class PyJointControlInfo_ExternalDevice
 {
 public:
     PyJointControlInfo_ExternalDevice();
-    PyJointControlInfo_ExternalDevice(const KinBody::JointInfo::JointControlInfo_ExternalDevice &jci);
-    KinBody::JointInfo::JointControlInfo_ExternalDevicePtr GetJointControlInfo();
-    std::string externalDeviceId;
+    PyJointControlInfo_ExternalDevice(const JointControlInfo_ExternalDevice &jci);
+    JointControlInfo_ExternalDevicePtr GetJointControlInfo();
+    std::string externalDeviceType;
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_ExternalDevice> PyJointControlInfo_ExternalDevicePtr;
 
@@ -180,9 +183,10 @@ public:
     KinBody::JointInfoPtr GetJointInfo();
     object GetDOF();
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
-    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     KinBody::JointType _type = KinBody::JointNone;
+    object _id = py::none_();
     object _name = py::none_();
     object _linkname0 = py::none_(), _linkname1 = py::none_();
     object _vanchor = toPyVector3(Vector());
@@ -193,10 +197,10 @@ public:
     object _vhardmaxvel = toPyVector3(Vector(0,0,0));
     object _vmaxaccel = toPyVector3(Vector(50,50,50));
     object _vhardmaxaccel = toPyVector3(Vector(0,0,0));
-    object _vmaxjerk = toPyVector3(Vector(2e6,2e6,2e6));
+    object _vmaxjerk = toPyVector3(Vector(5e4, 5e4, 5e4));  // default value should keep the same as Joint in cpp
     object _vhardmaxjerk= toPyVector3(Vector(0, 0, 0));
-    object _vmaxtorque = toPyVector3(Vector(1e5,1e5,1e5));
-    object _vmaxinertia = toPyVector3(Vector(1e5,1e5,1e5));
+    object _vmaxtorque = toPyVector3(Vector(0, 0, 0)); // default value should keep the same as Joint in cpp
+    object _vmaxinertia = toPyVector3(Vector(0, 0, 0)); // default value should keep the same as Joint in cpp
     object _vweights = toPyVector3(Vector(1,1,1));
     object _voffsets = toPyVector3(Vector(0,0,0));
     object _vlowerlimit = toPyVector3(Vector(0,0,0));
@@ -207,7 +211,7 @@ public:
     py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _bIsCircular = py::list();
     bool _bIsActive = true;
-    KinBody::JointControlMode _controlMode = KinBody::JointControlMode::JCM_None;
+    JointControlMode _controlMode = JCM_None;
     PyJointControlInfo_RobotControllerPtr _jci_robotcontroller;
     PyJointControlInfo_IOPtr _jci_io;
     PyJointControlInfo_ExternalDevicePtr _jci_externaldevice;
@@ -248,7 +252,7 @@ public:
         object GetTransform();
         object GetTransformPose();
         dReal GetSphereRadius() const;
-        dReal GetCylinderRadius() const ;
+        dReal GetCylinderRadius() const;
         dReal GetCylinderHeight() const;
         object GetBoxExtents() const;
         object GetContainerOuterExtents() const;
@@ -261,6 +265,11 @@ public:
         float GetTransparency() const;
         object GetDiffuseColor() const;
         object GetAmbientColor() const;
+        object GetCalibrationBoardNumDots() const;
+        object GetCalibrationBoardDotsDistances() const;
+        object GetCalibrationBoardDotColor() const;
+        object GetCalibrationBoardPatternName() const;
+        object GetCalibrationBoardDotDiameterDistanceRatios() const;
         object GetInfo();
         object ComputeInnerEmptyVolume() const;
         bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);
@@ -293,6 +302,10 @@ public:
     object ComputeAABB() const;
     object ComputeAABBFromTransform(object otransform) const;
 
+    object ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const;
+    object ComputeAABBForGeometryGroup(const std::string& geomgroupname) const;
+    object ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, object otransform) const;
+
     object GetTransform() const;
     object GetTransformPose() const;
 
@@ -320,6 +333,7 @@ public:
     void InitGeometries(object ogeometryinfos);
 
     void AddGeometry(object ogeometryinfo, bool addToGroups);
+    void AddGeometryToGroup(object ogeometryinfo, const std::string& groupname);
 
     void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
     void SetGeometriesFromGroup(const std::string& name);
@@ -399,6 +413,7 @@ public:
     bool IsCircular(int iaxis) const;
     bool IsRevolute(int iaxis) const;
     bool IsPrismatic(int iaxis) const;
+    bool IsActive() const;
     bool IsStatic() const;
 
     int GetDOF() const;
@@ -462,7 +477,7 @@ public:
 
     void SetStringParameters(const std::string& key, object ovalue);
 
-    KinBody::JointControlMode GetControlMode() const;
+    JointControlMode GetControlMode() const;
     void UpdateInfo();
     object GetInfo();
     object UpdateAndGetInfo();

@@ -114,7 +114,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
             }
         }
 
-        RAVELOG_DEBUG(str(boost::format("BaseManipulation: using %s planner\n")%_strRRTPlannerName));
+        RAVELOG_DEBUG_FORMAT("env=%d, BaseManipulation: using %s planner", GetEnv()->GetId()%_strRRTPlannerName);
         return 0;
     }
 
@@ -549,12 +549,12 @@ protected:
         if( jitter > 0 ) {
             // could have returned a jittered goal different from the original goals
             try {
-                stringstream soutput, sinput;
-                sinput << "GetGoalIndex";
-                rrtplanner->SendCommand(soutput,sinput);
+                stringstream ssoutput, ssinput;
+                ssinput << "GetGoalIndex";
+                rrtplanner->SendCommand(ssoutput,ssinput);
 
                 int goalindex = -1;
-                soutput >> goalindex;
+                ssoutput >> goalindex;
                 if( goalindex >= 0 && goalindex < (int)vgoalchanged.size() && vgoalchanged.at(goalindex) ) {
                     std::copy(voriggoalconfig.begin()+goalindex*robot->GetActiveDOF(),voriggoalconfig.begin()+(goalindex+1)*robot->GetActiveDOF(),vonegoal.begin());
                     planningutils::InsertActiveDOFWaypointWithRetiming(ptraj->GetNumWaypoints(),vonegoal,vector<dReal>(), ptraj, robot, _fMaxVelMult);
@@ -881,9 +881,9 @@ protected:
         if( jitterikparam > 0 ) {
             // could have returned a jittered goal different from the original goals
             try {
-                stringstream soutput, sinput;
-                sinput << "GetGoalIndex";
-                rrtplanner->SendCommand(soutput,sinput);
+                stringstream ssoutput, ssinput;
+                ssinput << "GetGoalIndex";
+                rrtplanner->SendCommand(ssoutput,ssinput);
             }
             catch(const std::exception& ex) {
                 RAVELOG_WARN(str(boost::format("planner %s does not support GetGoalIndex command necessary for determining what goal it chose! %s")%rrtplanner->GetXMLId()%ex.what()));

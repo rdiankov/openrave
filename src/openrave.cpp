@@ -30,7 +30,6 @@ using namespace std;
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/array.hpp>
-#include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <signal.h>
@@ -327,7 +326,7 @@ void MainOpenRAVEThread()
             if( s_bSetWindowPosition ) {
                 pviewer->Move(s_WindowPosX,s_WindowPosY);
             }
-            penv->AddViewer(pviewer);
+            penv->Add(pviewer, IAM_AllowRenaming, std::string());
         }
     }
 

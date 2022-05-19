@@ -29,6 +29,38 @@ class PyEnvironmentBase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyEnvironmentB
     boost::mutex _envmutex;
     std::list<OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock> > _listenvlocks, _listfreelocks;
 #endif
+
+public:
+    class PyEnvironmentBaseInfo
+    {
+public:
+        PyEnvironmentBaseInfo();
+        PyEnvironmentBaseInfo(const EnvironmentBase::EnvironmentBaseInfo& info);
+        py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+        void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
+        EnvironmentBase::EnvironmentBaseInfoPtr GetEnvironmentBaseInfo() const;
+        int _revision = 0;
+
+        object _gravity = toPyVector3(Vector(0,0,-9.797930195020351));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        std::vector<std::string> _keywords;
+        py::object _vBodyInfos = py::none_();
+        std::string _name;
+        std::string _description;
+#else
+        py::list _keywords;
+        py::object _vBodyInfos = py::none_();
+        py::object _name = py::none_();
+        py::object _description = py::none_();
+#endif
+        virtual std::string __str__();
+        virtual py::object __unicode__();
+
+protected:
+        void _Update(const EnvironmentBase::EnvironmentBaseInfo& info);
+    }; // class PyEnvironmentBaseInfo
+    typedef OPENRAVE_SHARED_PTR<PyEnvironmentBaseInfo> PyEnvironmentBaseInfoPtr;
+
 protected:
     EnvironmentBasePtr _penv;
 
@@ -40,6 +72,7 @@ protected:
 
 public:
     PyEnvironmentBase(int options=ECO_StartSimulationThread);
+    PyEnvironmentBase(const std::string& name, int options=ECO_StartSimulationThread);
     PyEnvironmentBase(EnvironmentBasePtr penv);
 
     PyEnvironmentBase(const PyEnvironmentBase &pyenv);
@@ -50,8 +83,10 @@ public:
     void Destroy();
 
     PyEnvironmentBasePtr CloneSelf(int options);
+    PyEnvironmentBasePtr CloneSelf(const std::string& clonedEnvName, int options);
 
     void Clone(PyEnvironmentBasePtr pyreference, int options);
+    void Clone(PyEnvironmentBasePtr pyreference, const std::string& clonedEnvName, int options);
 
     bool SetCollisionChecker(PyCollisionCheckerBasePtr pchecker);
     object GetCollisionChecker();
@@ -94,6 +129,7 @@ public:
     bool Load(const std::string &filename);
     bool Load(const std::string &filename, object odictatts);
     bool LoadURI(const std::string &filename, object odictatts=py::none_());
+    py::object LoadJSON(py::object oEnvInfo, UpdateFromInfoMode updateMode, object odictatts=py::none_());
     bool LoadData(const std::string &data);
     bool LoadData(const std::string &data, object odictatts);
 
@@ -101,6 +137,8 @@ public:
 
     object WriteToMemory(const std::string &filetype, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_());
 
+    /// will be unlocking GIL since doing FS or memory-intensive operations
+    //@{
     object ReadRobotURI(const std::string &filename);
     object ReadRobotURI(const std::string &filename, object odictatts);
     object ReadRobotData(const std::string &data);
@@ -111,13 +149,15 @@ public:
     object ReadKinBodyData(const std::string &data, object odictatts);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, object odictatts);
+    //@}
+
     object ReadTrimeshURI(const std::string& filename);
     object ReadTrimeshURI(const std::string& filename, object odictatts);
 
     object ReadTrimeshData(const std::string& data, const std::string& formathint);
     object ReadTrimeshData(const std::string& data, const std::string& formathint, object odictatts);
 
-    void Add(PyInterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="");
+    void Add(PyInterfaceBasePtr pinterface, py::object addMode=py::none_(), const std::string& cmdargs="");
 
     void AddKinBody(PyKinBodyPtr pbody);
     void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous);
@@ -136,6 +176,10 @@ public:
     object GetSensor(const std::string &name);
 
     object GetBodyFromEnvironmentId(int id);
+    object GetBodyFromEnvironmentBodyIndex(int id);
+    object GetBodiesFromEnvironmentBodyIndices(object bodyIndices);
+    
+    int GetMaxEnvironmentBodyIndex();
 
     int AddModule(PyModuleBasePtr prob, const std::string &args);
     bool RemoveProblem(PyModuleBasePtr prob);
@@ -191,6 +235,9 @@ public:
     /// returns the number of colors
     static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors);
 
+    /// returns the number of vectors
+    static size_t _getListVector(object odata, std::vector<RaveVector<float>>& vvectors);
+
     static std::pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors);
 
     object plot3(object opoints,float pointsize,object ocolors=py::none_(),int drawstyle=0);
@@ -201,10 +248,18 @@ public:
 
     object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=py::none_());
 
-    object drawbox(object opos, object oextents, object ocolor=py::none_());
+    object drawlabel(const std::string &label, object worldPosition);
 
+    object drawbox(object opos, object oextents, object ocolor=py::none_());
+    object drawboxarray(object opos, object oextents, object ocolor=py::none_());
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object drawplane(object otransform, object oextents, const std::vector<std::vector<dReal> >&_vtexture);
+    object drawplane(object otransform, object oextents, const std::vector<std::vector<std::vector<dReal> > >&vtexture);
+#else
     object drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture);
     object drawplane(object otransform, object oextents, const boost::multi_array<float,3>&vtexture);
+#endif
 
     object drawtrimesh(object opoints, object oindices=py::none_(), object ocolors=py::none_());
 
@@ -240,6 +295,40 @@ public:
     void SetUnit(std::string unitname, dReal unitmult);
 
     object GetUnit() const;
+    int GetId() const;
+
+    object ExtractInfo() const;
+    object UpdateFromInfo(PyEnvironmentBaseInfoPtr info, UpdateFromInfoMode updateMode);
+
+    int GetRevision() const;
+
+    py::object GetName() const;
+
+    py::object GetNameId() const;
+
+    void SetDescription(const std::string& sceneDescription);
+
+    py::object GetDescription() const;
+
+    void SetKeywords(object oSceneKeywords);
+
+    py::list GetKeywords() const;
+
+    void SetUInt64Parameter(const std::string& parameterName, uint64_t value);
+
+    bool RemoveUInt64Parameter(const std::string& parameterName);
+
+    uint64_t GetUInt64Parameter(const std::string& parameterName, uint64_t defaultValue) const;
+
+    int _revision = 0;
+    py::list _keywords;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::string _name;
+    std::string _description;
+#else
+    object _name = py::none_();
+    object _description = py::none_();
+#endif
 
     bool __eq__(PyEnvironmentBasePtr p);
     bool __ne__(PyEnvironmentBasePtr p);

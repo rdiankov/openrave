@@ -79,7 +79,8 @@ PyIkParameterization::PyIkParameterization(object o, IkParameterizationType type
 PyIkParameterization::PyIkParameterization(OPENRAVE_SHARED_PTR<PyIkParameterization> pyikparam) {
     _param = pyikparam->_param;
 }
-PyIkParameterization::PyIkParameterization(const IkParameterization &ikparam) : _param(ikparam) {
+PyIkParameterization::PyIkParameterization(const IkParameterization &ikparam) {
+    _Update(ikparam);
 }
 PyIkParameterization::~PyIkParameterization() {
 }
@@ -317,6 +318,26 @@ void PyIkParameterization::MultiplyTransformRight(object otrans)
     _param.MultiplyTransformRight(ExtractTransform(otrans));
 }
 
+py::object PyIkParameterization::SerializeJSON(dReal fUnitScale)
+{
+    rapidjson::Document doc;
+    _param.SerializeJSON(doc, doc.GetAllocator(), fUnitScale);
+    return toPyObject(doc);
+}
+void PyIkParameterization::DeserializeJSON(py::object obj, dReal fUnitScale)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    IkParameterization ikparam;
+    ikparam.DeserializeJSON(doc, fUnitScale);
+    _Update(ikparam);
+}
+
+void PyIkParameterization::_Update(const IkParameterization &ikparam)
+{
+    _param = ikparam;
+}
+
 std::string PyIkParameterization::__repr__() {
     std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
@@ -332,7 +353,6 @@ std::string PyIkParameterization::__str__() {
 object PyIkParameterization::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
-
 PyIkParameterizationPtr PyIkParameterization::__mul__(object otrans)
 {
     return PyIkParameterizationPtr(new PyIkParameterization(_param * ExtractTransform(otrans)));
@@ -381,6 +401,8 @@ public:
 BOOST_PYTHON_FUNCTION_OVERLOADS(GetConfigurationSpecificationFromType_overloads, PyIkParameterization::GetConfigurationSpecificationFromType, 1, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetConfigurationSpecification_overloads, GetConfigurationSpecification, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ClearCustomValues_overloads, ClearCustomValues, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyIkParameterization_SerializeJSON_overloads, SerializeJSON, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyIkParameterization_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -455,8 +477,11 @@ void init_openravepy_ikparameterization()
                                    .def(init<IkParameterization>(), "ikparam"_a)
                                    .def("__copy__", [](const PyIkParameterization& self){ return self; })
                                    .def("__deepcopy__", [](const PyIkParameterization& self, const py::dict& memo) {
+                                        return PyIkParameterization(self._param);
+                                        /*
                                         PyIkParameterizationPtr pyikparam(new PyIkParameterization(self._param));
                                         return py::to_object(pyikparam);
+                                        */
                                     })
 #else
         scope_ ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >("IkParameterization", DOXY_CLASS(IkParameterization))
@@ -554,6 +579,20 @@ void init_openravepy_ikparameterization()
                                     )
 #else
                                    .def("ClearCustomValues",&PyIkParameterization::ClearCustomValues,ClearCustomValues_overloads(PY_ARGS("name") DOXY_FN(IkParameterization,ClearCustomValues)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                   .def("SerializeJSON", &PyIkParameterization::SerializeJSON,
+                                        "unitScale"_a = 1.0,
+                                        DOXY_FN(IkParameterization, SerializeJSON)
+                                   )
+                                   .def("DeserializeJSON", &PyIkParameterization::DeserializeJSON,
+                                       "obj"_a,
+                                       "unitScale"_a = 1.0,
+                                       DOXY_FN(IkParameterization, DeserializeJSON)
+                                   )
+#else
+                                   .def("SerializeJSON", &PyIkParameterization::SerializeJSON, PyIkParameterization_SerializeJSON_overloads(PY_ARGS("options") DOXY_FN(IkParameterization, SerializeJSON)))
+                                   .def("DeserializeJSON", &PyIkParameterization::DeserializeJSON, PyIkParameterization_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(IkParameterization, DeserializeJSON)))
 #endif
                                    .def("__str__",&PyIkParameterization::__str__)
                                    .def("__unicode__",&PyIkParameterization::__unicode__)

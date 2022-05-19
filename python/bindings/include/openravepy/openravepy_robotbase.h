@@ -28,6 +28,29 @@ using py::object;
 
 class PyRobotBase : public PyKinBody
 {
+public:
+    class PyRobotBaseInfo : public PyKinBodyInfo
+    {
+public:
+        PyRobotBaseInfo();
+        PyRobotBaseInfo(const RobotBase::RobotBaseInfo& info);
+        RobotBase::RobotBaseInfoPtr GetRobotBaseInfo() const;
+
+        py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+        void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
+
+        py::object _vManipulatorInfos = py::none_();
+        py::object _vAttachedSensorInfos = py::none_();
+        py::object _vConnectedBodyInfos = py::none_();
+        py::object _vGripperInfos = py::none_();
+        virtual std::string __str__();
+        virtual py::object __unicode__();
+
+protected:
+        void _Update(const RobotBase::RobotBaseInfo& info);
+    }; // class PyKinBodyInfo
+    typedef OPENRAVE_SHARED_PTR<PyRobotBaseInfo> PyRobotBaseInfoPtr;
+
 protected:
     RobotBasePtr _probot;
 public:
@@ -53,12 +76,18 @@ public:
         void SetName(const std::string& s);
 
         object GetGripperName() const;
-        
+
+        object GetToolChangerConnectedBodyToolName() const;
+        object GetToolChangerLinkName() const;
+
+        object GetRestrictGraspSetNames() const;
+
         PyRobotBasePtr GetRobot();
 
         bool SetIkSolver(PyIkSolverBasePtr iksolver);
         object GetIkSolver();
         object GetBase();
+        object GetIkChainEndLink();
         object GetEndEffector();
         void ReleaseAllGrabbed();
         object GetGraspTransform();
@@ -198,9 +227,9 @@ public:
 
         object GetInfo();
 
-        bool SetActive(bool active);
+        bool SetActive(int active);
 
-        bool IsActive();
+        int IsActive();
         object GetTransform() const;
         object GetTransformPose() const;
 
@@ -220,6 +249,10 @@ public:
         object GetResolvedAttachedSensors();
 
         object GetResolvedGripperInfos();
+
+        bool CanProvideManipulator(const std::string& resolvedManipulatorName);
+
+        std::string GetInfoHash();
 
         std::string __repr__();
 
@@ -407,6 +440,9 @@ public:
     virtual PyStateRestoreContextBase* CreateStateSaver(object options);
 
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_());
+    bool InitFromRobotInfo(const py::object pyRobotBaseInfo);
+
+    py::object ExtractInfo() const;
 
     virtual std::string __repr__();
     virtual std::string __str__();

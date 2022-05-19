@@ -18,8 +18,18 @@
 
 #ifndef _WIN32 // not a necessary define
 
-#if QT_VERSION >= 0x040000 // check for qt4
+#if QT_VERSION >= 0x050000 // check for qt5
 #include <QtCore/QObject>
+#include <QMainWindow>
+#include <QVBoxLayout>
+#include <QGroupBox>
+#include <QAction>
+#include <QActionGroup>
+#include <QMessageBox>
+#include <QFileDialog>
+#include <QMenu>
+#include <QMenuBar>
+#include <QStatusBar>
 #else
 #include <qobject.h>
 #include <qaction.h>
@@ -158,6 +168,7 @@ public:
 
     virtual GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color);
     virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents);
+    virtual GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents);
     virtual GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);

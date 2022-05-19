@@ -16,8 +16,7 @@ if( CRLIBM_FOUND )
 
   # check the accuracy of the current math library with crlibm
   add_executable(check_libm_accuracy-native check_libm_accuracy_main.cpp)
-  set_target_properties(check_libm_accuracy-native PROPERTIES COMPILE_FLAGS "${NATIVE_COMPILE_FLAGS}")
-  target_link_libraries(check_libm_accuracy-native ${NATIVE_CRLIBM_LIBRARY} ${STDC_LIBRARY})
+  target_link_libraries(check_libm_accuracy-native ${NATIVE_CRLIBM_LIBRARY})
   set(libm_accuracy_results_h "${CMAKE_CURRENT_BINARY_DIR}/libm_accuracy_results.h")
   add_custom_command(TARGET check_libm_accuracy-native POST_BUILD
     COMMAND check_libm_accuracy-native ARGS ${libm_accuracy_results_h}
@@ -99,8 +98,7 @@ else()
   set(SOCKET_LIBS)
 endif()
 
-target_link_libraries(openrave ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} ${openrave_libraries} libopenrave libopenrave-core)
-target_link_libraries(openrave PRIVATE boost_assertion_failed)
+target_link_libraries(openrave PRIVATE boost_assertion_failed PUBLIC ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} ${openrave_libraries} libopenrave libopenrave-core)
 
 install(TARGETS openrave DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
 if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
@@ -119,11 +117,15 @@ if( MSVC )
 endif()
 
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cppexamples/FindOpenRAVE.cmake" DESTINATION ${OPENRAVE_SHARE_DIR}/cppexamples COMPONENT ${COMPONENT_PREFIX}dev)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/models DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/robots DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
-if( OPT_EXTRA_ROBOTS )
-  file(GLOB collada_robot_files ${CMAKE_CURRENT_SOURCE_DIR}/collada_robots/*.zae)
-  install(FILES ${collada_robot_files} DESTINATION ${OPENRAVE_SHARE_DIR}/robots COMPONENT ${COMPONENT_PREFIX}data)
+
+if( OPT_INSTALL_3DMODELDATA )
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/models DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/robots DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
+  if( OPT_EXTRA_ROBOTS )
+    file(GLOB collada_robot_files ${CMAKE_CURRENT_SOURCE_DIR}/collada_robots/*.zae)
+    install(FILES ${collada_robot_files} DESTINATION ${OPENRAVE_SHARE_DIR}/robots COMPONENT ${COMPONENT_PREFIX}data)
+  endif()
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
 endif()
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
+
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cppexamples  DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}dev FILES_MATCHING PATTERN "*.cpp" PATTERN "*.xml" PATTERN "*.h" PATTERN "*.txt" PATTERN ".svn" EXCLUDE)

@@ -41,6 +41,9 @@ public:
 
     virtual void Init(const ConfigurationSpecification& spec) = 0;
 
+    /// \brief clears the waypoint data from the trajectory
+    virtual void ClearWaypoints() = 0;
+
     /** \brief Sets/inserts new waypoints in the same configuration specification as the trajectory.
 
         \param index The index where to start modifying the trajectory.
@@ -93,6 +96,24 @@ public:
         \param spec[in] the specification format to return the data in
      */
     virtual void SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times, const ConfigurationSpecification& spec) const;
+
+    /** \brief bulk samples the trajectory evenly given a delta time using the trajectory's specification.
+
+        \param data[out] the sampled points depending on the times
+        \param deltatime[in] the delta time to sample
+        \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
+     */
+    virtual void SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint) const;
+
+    /** \brief bulk samples the trajectory evenly given a delta time and a specific configuration specification.
+
+        The default implementation is slow, so interface developers should override it.
+        \param data[out] the sampled points for every time entry.
+        \param deltatime[in] the delta time to sample
+        \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
+        \param spec[in] the specification format to return the data in
+     */
+    virtual void SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const;
 
     virtual const ConfigurationSpecification& GetConfigurationSpecification() const = 0;
 
@@ -162,6 +183,9 @@ public:
     /// \brief initialize the trajectory
     virtual void deserialize(std::istream& I);
 
+    /// \brief initialize the trajectory via a raw pointer to memory
+    virtual void DeserializeFromRawData(const uint8_t* pdata, size_t nDataSize);
+    
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /// \brief swap the contents of the data between the two trajectories.
