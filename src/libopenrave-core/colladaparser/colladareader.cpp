@@ -4766,7 +4766,7 @@ private:
             }
 
             resolveCommon_float_or_param(pelt,kscene, jointvalue);
-            bindings.listAxisBindings.push_back(JointAxisBinding(boost::bind(&ColladaReader::_InstantiateNode, this, _1), pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
+            bindings.listAxisBindings.push_back(JointAxisBinding(boost::bind(&ColladaReader::_InstantiateNode, this, boost::placeholders::_1), pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
         }
     }
 

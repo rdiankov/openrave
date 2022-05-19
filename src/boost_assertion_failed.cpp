@@ -3,7 +3,7 @@
 #if !defined(OPENRAVE_DISABLE_ASSERT_HANDLER) && (defined(BOOST_ENABLE_ASSERT_HANDLER))
 
 #define BOOST_SYSTEM_NO_DEPRECATED
-#include <openrave/openrave.h>
+#include <openrave/openraveexception.h>
 #include <boost/format.hpp>
 
 // Derived from https://gcc.gnu.org/wiki/Visibility

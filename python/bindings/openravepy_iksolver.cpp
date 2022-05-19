@@ -395,7 +395,7 @@ void init_openravepy_iksolver()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<IkReturnAction>(m, "IkReturnAction" DOXY_ENUM(IkReturnAction))
+    enum_<IkReturnAction>(m, "IkReturnAction", py::arithmetic() DOXY_ENUM(IkReturnAction))
 #else
     enum_<IkReturnAction>("IkReturnAction" DOXY_ENUM(IkReturnAction))
 #endif
