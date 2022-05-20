@@ -2656,6 +2656,7 @@ public:
     virtual void ExtractInfo(EnvironmentBaseInfo& info) override
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        info = _info; // copy info out
         std::vector<KinBodyPtr> vBodies;
         int numBodies = 0;
         {
@@ -2680,13 +2681,9 @@ public:
             ++validBodyItr;
         }
         BOOST_ASSERT(validBodyItr == numBodies);
-        info._name = _name;
-        info._keywords = _keywords;
-        info._description = _description;
         if (!!_pPhysicsEngine) {
             info._gravity = _pPhysicsEngine->GetGravity();
         }
-        info._uInt64Parameters = _mapUInt64Parameters;
         info._unit = _unit;
     }
 
@@ -2703,12 +2700,14 @@ public:
         std::vector<dReal> vDOFValues;
 
         if( updateMode != UFIM_OnlySpecifiedBodiesExact ) {
+            // copy info struct partially
+            _info._revision = info._revision;
+            _info._keywords = info._keywords;
+            _info._name = info._name;
+            _info._description = info._description;
+            _info._uInt64Parameters = info._uInt64Parameters;
+            
             // copy basic info into EnvironmentBase
-            _revision = info._revision;
-            //_name = info._name; not copying name, just like __nUniqueId, it is not updated from info
-            _keywords = info._keywords;
-            _description = info._description;
-            _mapUInt64Parameters = info._uInt64Parameters;
             _unit = info._unit;
 
             // set gravity
@@ -3076,44 +3075,44 @@ public:
 
     int GetRevision() const override {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return _revision;
+        return _info._revision;
     }
 
     void SetDescription(const std::string& sceneDescription) override {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        _description = sceneDescription;
+        _info._description = sceneDescription;
     }
 
     std::string GetDescription() const override {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return _description;
+        return _info._description;
     }
 
     void SetKeywords(const std::vector<std::string>& sceneKeywords) override {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        _keywords = sceneKeywords;
+        _info._keywords = sceneKeywords;
     }
 
     std::vector<std::string> GetKeywords() const override {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return _keywords;
+        return _info._keywords;
     }
 
     void SetUInt64Parameter(const std::string& parameterName, uint64_t value) override {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        _mapUInt64Parameters[parameterName] = value;
+        _info._uInt64Parameters[parameterName] = value;
     }
 
     bool RemoveUInt64Parameter(const std::string& parameterName) override
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return _mapUInt64Parameters.erase(parameterName) > 0;
+        return _info._uInt64Parameters.erase(parameterName) > 0;
     }
 
     uint64_t GetUInt64Parameter(const std::string& parameterName, uint64_t defaultValue) const override {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        std::map<std::string, uint64_t>::const_iterator it = _mapUInt64Parameters.find(parameterName);
-        if( it != _mapUInt64Parameters.end() ) {
+        std::map<std::string, uint64_t>::const_iterator it = _info._uInt64Parameters.find(parameterName);
+        if( it != _info._uInt64Parameters.end() ) {
             return it->second;
         }
 
@@ -3294,9 +3293,7 @@ protected:
         _nSimStartTime = utils::GetMicroTime();
         _bRealTime = r->_bRealTime;
 
-        _description = r->_description;
-        _keywords = r->_keywords;
-        _mapUInt64Parameters = r->_mapUInt64Parameters;
+        _info = r->_info;
 
         _assignedBodySensorNameIdSuffix = r->_assignedBodySensorNameIdSuffix;
 
@@ -4233,7 +4230,6 @@ protected:
     std::list<UserDataWeakPtr> _listRegisteredCollisionCallbacks;     ///< see EnvironmentBase::RegisterCollisionCallback
     std::list<UserDataWeakPtr> _listRegisteredBodyCallbacks;     ///< see EnvironmentBase::RegisterBodyCallback
 
-    std::map<std::string, uint64_t> _mapUInt64Parameters; ///< a custom user-driven parameters
     std::vector<uint8_t> _vRapidJsonLoadBuffer;
     boost::shared_ptr<rapidjson::MemoryPoolAllocator<> > _prLoadEnvAlloc; ///< allocator used for loading environments
 

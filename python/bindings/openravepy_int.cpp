@@ -1004,11 +1004,15 @@ EnvironmentBase::EnvironmentBaseInfoPtr PyEnvironmentBase::PyEnvironmentBaseInfo
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     pInfo->_revision = _revision;
     pInfo->_keywords = _keywords;
+    pInfo->_name = _name;
     pInfo->_description = _description;
 #else
     size_t numkeywords = (size_t)py::len(_keywords);
     for(size_t i=0; i < numkeywords; i++) {
         pInfo->_keywords.push_back(py::extract<std::string>(_keywords[i]));
+    }
+    if (!_name.is_none()) {
+        pInfo->_name = py::extract<std::string>(_name);
     }
     if (!_description.is_none()) {
         pInfo->_description = py::extract<std::string>(_description);
@@ -1054,6 +1058,7 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     _revision = info._revision;
     _keywords = std::vector<std::string>(begin(info._keywords), end(info._keywords));
+    _name = info._name;
     _description = info._description;
 #else
     py::list vKeywords;
@@ -1062,6 +1067,7 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
         vKeywords.append(keyword);
     }
     _keywords = vKeywords;
+    _name = ConvertStringToUnicode(info._name);
     _description = ConvertStringToUnicode(info._description);
     _revision = info._revision;
 #endif

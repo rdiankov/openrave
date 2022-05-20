@@ -476,10 +476,9 @@ public:
         if (ikscene.getCount() == 0) {
             return false;
         }
-        // name is not settable for now, we can make a special exception by makin cooladareader a friend class if we want to load name from saved scenes
-        // if (!!ikscene[0]->getName()) {
-        //     _penv->_name = ikscene[0]->getName();
-        // }
+        if (!!ikscene[0]->getName()) {
+            _penv->_info._name = ikscene[0]->getName();
+        }
 
         if( !!_dom->getAsset() ) {
             if( !!_dom->getAsset()->getUp_axis() && !!_penv->GetPhysicsEngine() ) {
@@ -498,12 +497,12 @@ public:
             // set keywords
             if(!!_dom->getAsset()->getKeywords() && !!_dom->getAsset()->getKeywords()->getValue()) {
                 std::string keywords = _dom->getAsset()->getKeywords()->getValue();
-                boost::split(_penv->_keywords, keywords, boost::is_any_of(","));
+                boost::split(_penv->_info._keywords, keywords, boost::is_any_of(","));
             }
 
             // set description
             if (!!_dom->getAsset()->getSubject() && !!_dom->getAsset()->getSubject()->getValue()) {
-                _penv->_description = _dom->getAsset()->getSubject()->getValue();
+                _penv->_info._description = _dom->getAsset()->getSubject()->getValue();
             }
         }
 

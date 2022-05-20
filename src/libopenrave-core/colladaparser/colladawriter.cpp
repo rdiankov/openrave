@@ -3237,7 +3237,7 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
 
     if( scenename.size() == 0 ) {
         // if scene name is not provided via atts, use the environment scene name
-        scenename = penv->GetName();
+        scenename = penv->_info._name;
     }
 
     if( scenename.size() == 0 ) {
@@ -3324,7 +3324,7 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
 
         if( scenename.size() == 0 ) {
             // if scene name is not provided via atts, use the environment scene name
-            scenename = penv->GetName();
+            scenename = penv->_info._name;
         }
 
         if( scenename.size() == 0 ) {
@@ -3385,7 +3385,7 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
 
     if( scenename.size() == 0 ) {
         // if scene name is not provided via atts, use the environment scene name
-        scenename = penv->GetName();
+        scenename = penv->_info._name;
     }
 
     if( scenename.size() == 0 ) {
@@ -3460,7 +3460,7 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
 
         if( scenename.size() == 0 ) {
             // if scene name is not provided via atts, use the environment scene name
-            scenename = penv->GetName();
+            scenename = penv->_info._name;
         }
 
         if( scenename.size() == 0 ) {

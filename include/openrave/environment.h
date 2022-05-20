@@ -795,11 +795,6 @@ public:
     class OPENRAVE_API EnvironmentBaseInfo : public InfoBase
     {
 public:
-        EnvironmentBaseInfo();
-        EnvironmentBaseInfo(const EnvironmentBaseInfo& other);
-        bool operator==(const EnvironmentBaseInfo& other) const;
-        bool operator!=(const EnvironmentBaseInfo& other) const;
-
         void Reset() override;
         void SerializeJSON(rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
 
@@ -808,15 +803,19 @@ public:
         /// \param vInputToBodyInfoMapping maps indices into rEnvInfo["bodies"] into indices of _vBodyInfos: rEnvInfo["bodies"][i] -> _vBodyInfos[vInputToBodyInfoMapping[i]]. This forces certain _vBodyInfos to get updated with specific input. Use -1 for no mapping
         void DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping);
 
+        /// \name Properties loaded from environment file and will be kept as-is
+        //@{
         std::string _name; ///< environment name, serialized to JSON
         std::string _description;   ///< environment description
         std::vector<std::string> _keywords;  ///< some string values for describinging the environment
+        int _revision = 0;  ///< environment revision number
+        std::map<std::string, uint64_t> _uInt64Parameters; ///< user parameters associated with the environment
+        //@}
+
         Vector _gravity = Vector(0,0,-9.797930195020351);  ///< gravity and gravity direction of the environment
         std::string _uri; ///< optional, the URI this environment comes from
         std::string _referenceUri; ///< optional, if the environment was opened by referencing another environment file, then this is the URI for that file.
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
-        std::map<std::string, uint64_t> _uInt64Parameters; ///< user parameters associated with the environment
-        int _revision = 0;  ///< environment revision number
         std::pair<std::string, dReal> _unit = {"meter", 1.0}; ///< environment unit
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
@@ -848,9 +847,7 @@ public:
     /// \param updateMode one of UFIM_X
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, UpdateFromInfoMode updateMode) = 0;
 
-    int _revision = 0;  ///< environment current revision
-    std::string _description;   ///< environment description
-    std::vector<std::string> _keywords;  ///< some string values for describinging the environment
+    EnvironmentBaseInfo _info; ///< basic environment info loaded from file and saved to file
 
 protected:
     virtual const char* GetHash() const {

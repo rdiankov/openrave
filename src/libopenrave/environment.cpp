@@ -16,34 +16,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
-EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo()
-{
-    _gravity = Vector(0,0,-9.797930195020351);
-}
-
-EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo(const EnvironmentBaseInfo& other)
-{
-    *this = other;
-}
-
-bool EnvironmentBase::EnvironmentBaseInfo::operator==(const EnvironmentBaseInfo& other) const
-{
-    return _vBodyInfos == other._vBodyInfos
-           && _revision == other._revision
-           && _name == other._name
-           && _description == other._description
-           && _keywords == other._keywords
-           && _gravity == other._gravity
-           && _uri == other._uri
-           && _referenceUri == other._referenceUri;
-    // TODO: deep compare infos
-}
-
-bool EnvironmentBase::EnvironmentBaseInfo::operator!=(const EnvironmentBaseInfo& other) const
-{
-    return !operator==(other);
-}
-
 void EnvironmentBase::EnvironmentBaseInfo::Reset()
 {
     _name.clear();
@@ -54,6 +26,7 @@ void EnvironmentBase::EnvironmentBaseInfo::Reset()
     _referenceUri.clear();
     _vBodyInfos.clear();
     _revision = 0;
+    _uInt64Parameters.clear();
 }
 
 void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
