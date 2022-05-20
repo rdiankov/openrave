@@ -954,7 +954,7 @@ private:
         uint32_t basetime = utils::GetMilliTime();
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
 
-        if( !planner->PlanPath(ptraj).GetStatusCode() ) {
+        if( !planner->PlanPath(ptraj).HasSolution() ) {
             RAVELOG_WARN("failed to plan\n");
             return false;
         }
@@ -1307,7 +1307,7 @@ private:
                 return false;
 
             RAVELOG_WARN("planning a caging grasp...\n");
-            if( !pra->PlanPath(ptrajtemp).GetStatusCode() ) {
+            if( !pra->PlanPath(ptrajtemp).HasSolution() ) {
                 RAVELOG_WARN("planner failure, time = %dms\n", utils::GetMilliTime()-basetime);
                 return false;
             }
