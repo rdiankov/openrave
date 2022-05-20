@@ -315,7 +315,6 @@ private:
                     (*itjoint)->GetLimits(vlower,vupper);
                     hinge->setLimit(vlower.at(0),vupper.at(0),0.9f,0.9f,1.0f);
                     if( !(*itjoint)->IsCircular(0) ) {
-                        vector<dReal> vlower, vupper;
                         (*itjoint)->GetLimits(vlower,vupper);
                         btScalar orInitialAngle = (*itjoint)->GetValue(0);
                         btScalar btInitialAngle = hinge->getHingeAngle();
