@@ -247,7 +247,7 @@ if __name__ == "__main__":
                             from IPython import embed
                             embed()
                         else: # later versions of ipython 1.1+
-                            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+                            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed.instance(config=embed.load_default_config())(local_ns=locals())
                     finally:
                         # ipython exited. if viewer is valid, then exit the viewer also
                         if viewer is not None:

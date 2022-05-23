@@ -49,7 +49,7 @@ namespace numeric = py::numeric;
 
 PyCollisionReport::PyCollisionReport() : report(new CollisionReport()) {
 }
-PyCollisionReport::PyCollisionReport(CollisionReportPtr report) : report(report) {
+PyCollisionReport::PyCollisionReport(CollisionReportPtr report_) : report(report_) {
 }
 PyCollisionReport::~PyCollisionReport() {
 }
@@ -463,9 +463,9 @@ bool PyCollisionCheckerBase::CheckCollision(PyKinBodyPtr pbody, object bodyexclu
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-        if( !!pbody ) {
-            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        PyKinBodyPtr pbodyex = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pbodyex ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pbodyex));
         }
         else {
             RAVELOG_ERROR("failed to get excluded body\n");
@@ -489,9 +489,9 @@ bool PyCollisionCheckerBase::CheckCollision(PyKinBodyPtr pbody, object bodyexclu
     std::vector<KinBodyConstPtr> vbodyexcluded;
     size_t numBodyExcluded = len(bodyexcluded);
     for(size_t i = 0; i < numBodyExcluded; ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-        if( !!pbody ) {
-            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        PyKinBodyPtr pbodyex = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pbodyex ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pbodyex));
         }
         else {
             RAVELOG_ERROR("failed to get excluded body\n");
@@ -544,7 +544,7 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
     py::buffer_info bufpos = pypos.request();
     dReal* ppos = (dReal*) bufpos.ptr;
 
-    py::array_t<bool> pycollision({num});
+    py::array_t<bool> pycollision(num);
     py::buffer_info bufcollision = pycollision.request();
     bool* pcollision = (bool*) bufcollision.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS

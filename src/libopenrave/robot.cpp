@@ -73,11 +73,11 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
         docGripperInfo.CopyFrom(_docGripperInfo, docGripperInfo.GetAllocator(), true); // need to copy the const strings
     }
     for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
-        const std::string& name = it->name.GetString();
-        if (name == "id" || name == "name" || name == "grippertype" || name == "gripperJointNames") {
+        const std::string& memberName = it->name.GetString();
+        if (memberName == "id" || memberName == "name" || memberName == "grippertype" || memberName == "gripperJointNames") {
             continue;
         }
-        orjson::SetJsonValueByKey(docGripperInfo, name, it->value);
+        orjson::SetJsonValueByKey(docGripperInfo, memberName, it->value);
     }
     _docGripperInfo.Swap(docGripperInfo);
 }
@@ -182,9 +182,9 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
                 BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, _info._sensorname, pReadable, AttributesList());
                 if (!!pReader) {
                     pReader->DeserializeJSON(_info._docSensorGeometry);
-                    ReadablePtr pReadable = pReader->GetReadable();
-                    if (!!pReadable) {
-                        SensorBase::SensorGeometryPtr sensorGeometry = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
+                    ReadablePtr pReadable1 = pReader->GetReadable();
+                    if (!!pReadable1) {
+                        SensorBase::SensorGeometryPtr sensorGeometry = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable1);
                         _psensor->SetSensorGeometry(sensorGeometry);
                     }
                 } else {
@@ -405,7 +405,9 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         }
     }
 
-    if( _options & Save_ConnectedBodies ) {
+    if( (_options & Save_ConnectedBodies) || (_options & Save_GrabbedBodies) ) {
+        // The change in connected body active states essentially affect the robot's link indices, which
+        // will then mess up Grabbed's _setGrabberLinkIndicesToIgnore
         _probot->GetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
     }
 }
@@ -495,6 +497,28 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
         }
         else {
             RAVELOG_WARN_FORMAT("env=%d, connected body states changed, so cannot save. saved num is %s, new robot num is %s", probot->GetEnv()->GetId()%_vConnectedBodyActiveStates.size()%probot->_vecConnectedBodies.size());
+        }
+    }
+
+    if( _options & Save_GrabbedBodies ) {
+        // For now, if a robot's connected body active states change, have to reset _setGrabberLinkIndicesToIgnore
+        bool bConnectedBodyStatesChanged = _vConnectedBodyActiveStates.size() != probot->_vecConnectedBodies.size();
+        if( !bConnectedBodyStatesChanged ) {
+            for( size_t iConnectedBody = 0; iConnectedBody < _vConnectedBodyActiveStates.size(); ++iConnectedBody ) {
+                if(_vConnectedBodyActiveStates[iConnectedBody] != probot->_vecConnectedBodies[iConnectedBody]->IsActive() ) {
+                    bConnectedBodyStatesChanged = true;
+                    break;
+                }
+            }
+        }
+
+        if( bConnectedBodyStatesChanged ) {
+            if( !_vGrabbedBodies.empty() ) {
+                RAVELOG_WARN_FORMAT("env=%s, robot '%s' connected body states changed while grabbing %d bodies, so invalidating", probot->GetEnv()->GetNameId()%probot->GetName()%_vGrabbedBodies.size());
+                for(GrabbedPtr& grabbed : _vGrabbedBodies) {
+                    grabbed->InvalidateListNonCollidingLinks();
+                }
+            }
         }
     }
 
@@ -678,7 +702,7 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
     }
 }
 
-void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value) {
+void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
     std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
     ReadablePtr pReadable;
     if(itReadable != _mReadableInterfaces.end()) {
@@ -686,13 +710,13 @@ void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& 
     }
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, pReadable, AttributesList());
     if (!!pReader) {
-        pReader->DeserializeJSON(value);
+        pReader->DeserializeJSON(value, fUnitScale);
         _mReadableInterfaces[id] = pReader->GetReadable();
         return;
     }
     if (value.IsString()) {
-        StringReadablePtr pReadable(new StringReadable(id, value.GetString()));
-        _mReadableInterfaces[id] = pReadable;
+        StringReadablePtr pReadableString(new StringReadable(id, value.GetString()));
+        _mReadableInterfaces[id] = pReadableString;
         return;
     }
     RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
@@ -848,6 +872,12 @@ void RobotBase::SetName(const std::string& newname)
 void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t bCheckLimits, const std::vector<int>& dofindices)
 {
     KinBody::SetDOFValues(vJointValues, bCheckLimits,dofindices);
+    _UpdateAttachedSensors();
+}
+
+void RobotBase::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits, const std::vector<int>& dofindices)
+{
+    KinBody::SetDOFValues(pJointValues, dof, checklimits, dofindices);
     _UpdateAttachedSensors();
 }
 

@@ -315,7 +315,8 @@ enum CloningOptions {
     Clone_RealControllers = 8, ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
     Clone_Sensors = 0x0010, ///< if specified, will clone the sensors attached to the robot and added to the environment
     Clone_Modules = 0x0020, ///< if specified, will clone the modules attached to the environment
-    Clone_PassOnMissingBodyReferences=0x00008000, ///< if specified, then does not throw an exception if a body reference is missing in the environment. For example, the grabbed body in GrabbedInfo
+    Clone_PassOnMissingBodyReferences=0x00008000, ///< if specified, then will not throw an exception if a body reference is missing in the environment. For example, the grabbed body in GrabbedInfo
+    Clone_IgnoreGrabbedBodies = 0x00010000, ///< if specified, then will not clone _vGrabbedBodies when cloning a KinBody/Robot.
     Clone_All = 0xffffffff,
 };
 
@@ -524,6 +525,7 @@ namespace OpenRAVE {
 using geometry::RaveVector;
 using geometry::RaveTransform;
 using geometry::RaveTransformMatrix;
+using geometry::RaveOrientedBox;
 typedef RaveVector<dReal> Vector;
 typedef RaveTransform<dReal> Transform;
 typedef boost::shared_ptr< RaveTransform<dReal> > TransformPtr;
@@ -532,9 +534,11 @@ typedef RaveTransformMatrix<dReal> TransformMatrix;
 typedef boost::shared_ptr< RaveTransformMatrix<dReal> > TransformMatrixPtr;
 typedef boost::shared_ptr< RaveTransformMatrix<dReal> const > TransformMatrixConstPtr;
 typedef geometry::obb<dReal> OBB;
-typedef geometry::aabb<dReal> AABB;
+typedef geometry::RaveAxisAlignedBox<dReal> AABB;
 typedef geometry::ray<dReal> RAY;
-
+typedef geometry::RaveOrientedBox<dReal> OrientedBox;
+typedef geometry::RaveAxisAlignedBox<dReal> AxisAlignedBox;
+    
 // for compatibility
 //@{
 using mathextra::dot2;
@@ -736,28 +740,28 @@ protected:
     }
 
     /// \brief return the dimension of the configuraiton space (degrees of freedom)
-    virtual int GetDOF() const;
+    int GetDOF() const;
 
     /// \brief check if the groups form a continguous space
     ///
     /// If there are two or more groups with the same semantic names, will fail. Theese groups should be merged into one.
     /// \return true if valid, otherwise false
-    virtual bool IsValid() const;
+    bool IsValid() const;
 
     /// \brief check if the groups form a continguous space
     ///
     /// If there are two or more groups with the same semantic names, will fail. Theese groups should be merged into one.
     /// \throw openrave_exception if not valid
-    virtual void Validate() const;
+    void Validate() const;
 
-    virtual bool operator==(const ConfigurationSpecification& r) const;
-    virtual bool operator!=(const ConfigurationSpecification& r) const;
+    bool operator==(const ConfigurationSpecification& r) const;
+    bool operator!=(const ConfigurationSpecification& r) const;
 
     /// \brief JSON serializable
     /// TODO: Ideally we should make it a subclass of openravejson::JsonSerializable, but it requires a lot changes to fix the header files for now.
-    virtual void DeserializeJSON(const rapidjson::Value& rValue);
-    virtual void SerializeJSON(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const;
-    virtual void SerializeJSON(rapidjson::Document& d) const {
+    void DeserializeJSON(const rapidjson::Value& rValue);
+    void SerializeJSON(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const;
+    void SerializeJSON(rapidjson::Document& d) const {
         SerializeJSON(d, d.GetAllocator());
     }
 
@@ -765,27 +769,27 @@ protected:
     ///
     /// If multiple groups exist that begin with the same string, then the shortest one is returned.
     /// \throw openrave_exception if a group is not found
-    virtual const Group& GetGroupFromName(const std::string& name) const;
+    const Group& GetGroupFromName(const std::string& name) const;
 
     /// \brief return the group whose name begins with a particular string.
     ///
     /// If multiple groups exist that begin with the same string, then the shortest one is returned.
     /// \throw openrave_exception if a group is not found
-    virtual Group& GetGroupFromName(const std::string& name);
+    Group& GetGroupFromName(const std::string& name);
 
     /// \brief finds the most compatible group to the given group
     ///
     /// \param g the group to query, only the Group::name and Group::dof values are used
     /// \param exactmatch if true, will only return groups whose name exactly matches with g.name
     /// \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
-    virtual std::vector<Group>::const_iterator FindCompatibleGroup(const Group& g, bool exactmatch=false) const;
+    std::vector<Group>::const_iterator FindCompatibleGroup(const Group& g, bool exactmatch=false) const;
 
     /// \brief finds the most compatible group to the given group
     ///
     /// \param name the name of the group to query
     /// \param exactmatch if true, will only return groups whose name exactly matches with g.name
     /// \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
-    virtual std::vector<Group>::const_iterator FindCompatibleGroup(const std::string& name, bool exactmatch=false) const;
+    std::vector<Group>::const_iterator FindCompatibleGroup(const std::string& name, bool exactmatch=false) const;
 
     /** \brief Return the most compatible group that represents the time-derivative data of the group.
 
@@ -794,7 +798,7 @@ protected:
         \param exactmatch if true, will only return groups whose name exactly matches with g.name
         \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
      */
-    virtual std::vector<Group>::const_iterator FindTimeDerivativeGroup(const Group& g, bool exactmatch=false) const;
+    std::vector<Group>::const_iterator FindTimeDerivativeGroup(const Group& g, bool exactmatch=false) const;
 
     /** \brief Return the most compatible group that represents the time-derivative data of the group.
 
@@ -803,7 +807,7 @@ protected:
         \param exactmatch if true, will only return groups whose name exactly matches with g.name
         \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
      */
-    virtual std::vector<Group>::const_iterator FindTimeDerivativeGroup(const std::string& name, bool exactmatch=false) const;
+    std::vector<Group>::const_iterator FindTimeDerivativeGroup(const std::string& name, bool exactmatch=false) const;
 
     /** \brief Return the most compatible group that represents the time-integral data of the group.
 
@@ -812,7 +816,7 @@ protected:
         \param exactmatch if true, will only return groups whose name exactly matches with g.name
         \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
      */
-    virtual std::vector<Group>::const_iterator FindTimeIntegralGroup(const Group& g, bool exactmatch=false) const;
+    std::vector<Group>::const_iterator FindTimeIntegralGroup(const Group& g, bool exactmatch=false) const;
 
     /** \brief Return the most compatible group that represents the time-integral data of the group.
 
@@ -821,7 +825,7 @@ protected:
         \param exactmatch if true, will only return groups whose name exactly matches with g.name
         \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
      */
-    virtual std::vector<Group>::const_iterator FindTimeIntegralGroup(const std::string& name, bool exactmatch=false) const;
+    std::vector<Group>::const_iterator FindTimeIntegralGroup(const std::string& name, bool exactmatch=false) const;
 
     /** \brief adds velocity, acceleration, etc groups for every position group.
 
@@ -831,7 +835,7 @@ protected:
         \param deriv The position derivative to add, this must be greater than 0. If 2 is specified, only the acceleration groups of the alread present position groups will be added.
         \param adddeltatime If true will add the 'deltatime' tag, which is necessary for trajectory sampling
      */
-    virtual void AddDerivativeGroups(int deriv, bool adddeltatime=false);
+    void AddDerivativeGroups(int deriv, bool adddeltatime=false);
 
     /// \deprecated (12/07/30)
     inline void AddVelocityGroups(bool adddeltatime) RAVE_DEPRECATED {
@@ -844,7 +848,7 @@ protected:
         The interpolation of each of the groups will correspondingly represent the derivative as returned by \ref GetInterpolationDerivative.
         Only position specifications will be converted, any other groups will be left untouched.
      */
-    virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
+    ConfigurationSpecification ConvertToVelocitySpecification() const;
 
     /** \brief converts all the groups to the corresponding derivative group and returns the specification
 
@@ -853,19 +857,19 @@ protected:
         Only position specifications will be converted, any other groups will be left untouched.
         \param timederivative the number of times to take the time derivative of the position
      */
-    virtual ConfigurationSpecification ConvertToDerivativeSpecification(uint32_t timederivative=1) const;
-
+    ConfigurationSpecification ConvertToDerivativeSpecification(uint32_t timederivative=1) const;
+    
     /// \brief returns a new specification of just particular time-derivative groups.
     ///
     /// \param timederivative the time derivative to query groups from. 0 is positions/joint values, 1 is velocities, 2 is accelerations, etc
-    virtual ConfigurationSpecification GetTimeDerivativeSpecification(int timederivative) const;
+    ConfigurationSpecification GetTimeDerivativeSpecification(int timederivative) const;
 
     /** \brief set the offsets of each group in order to get a contiguous configuration space
      */
-    virtual void ResetGroupOffsets();
+    void ResetGroupOffsets();
 
     /// \brief adds the deltatime tag to the end if one doesn't exist and returns the index into the configuration space
-    virtual int AddDeltaTimeGroup();
+    int AddDeltaTimeGroup();
 
     /** \brief Adds a new group to the specification and returns its new offset.
 
@@ -873,21 +877,21 @@ protected:
         If the new group's semantic name exists in the current specification and it exactly matches, then function returns the old group's index. If the semantic names match, but parameters do not match, then an openrave_exception is thrown.
         This method is not responsible for merging semantic information
      */
-    virtual int AddGroup(const std::string& name, int dof, const std::string& interpolation = "");
+    int AddGroup(const std::string& name, int dof, const std::string& interpolation = "");
 
     /** \brief Merges all the information from the input group into this group
 
         For groups that are merged, the interpolation is overwritten if the source group has an empty string.
         \throw openrave_exception throws if groups do not contain enough information to be merged or interpolations do not match.
      */
-    virtual ConfigurationSpecification& operator+= (const ConfigurationSpecification& r);
+    ConfigurationSpecification& operator+= (const ConfigurationSpecification& r);
 
     /** \brief Return a new specification that holds the merged information from the current and input specification and the input parameter..
 
         For groups that are merged, the interpolation either has to match for both groups, or one of the groups needs an empty interpolation.
         \throw openrave_exception throws if groups do not contain enough information to be merged or interpolations do not match.
      */
-    virtual ConfigurationSpecification operator+ (const ConfigurationSpecification& r) const;
+    ConfigurationSpecification operator+ (const ConfigurationSpecification& r) const;
 
     /** \brief extracts an affine transform given the start of a configuration space point
 
@@ -897,7 +901,7 @@ protected:
         \param[in] timederivative the time derivative of the data to extract
         \return true if at least one group was found for extracting
      */
-    virtual bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int timederivative=0) const;
+    bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int timederivative=0) const;
 
     /** \brief extracts an ikparameterization given the start of a configuration space point
 
@@ -909,7 +913,7 @@ protected:
         \param[in] manipulatorname optional name of manipulator to filter by
         \return true if at least one group was found for extracting
      */
-    virtual bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0, std::string const &robotname="", std::string const &manipulatorname="") const;
+    bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0, std::string const &robotname="", std::string const &manipulatorname="") const;
 
     /** \brief extracts the affine values
 
@@ -920,7 +924,7 @@ protected:
         \param[in] timederivative the time derivative of the data to extract
         \return true if at least one group was found for extracting
      */
-    virtual bool ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative=0) const;
+    bool ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative=0) const;
 
     /** \brief extracts a body's joint values given the start of a configuration space point
 
@@ -931,12 +935,12 @@ protected:
         \param[in] timederivative the time derivative of the data to extract
         \return true if at least one group was found for extracting
      */
-    virtual bool ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
+    bool ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
 
     /// \brief extracts the delta time from the configuration if one exists
     ///
     /// \return true if deltatime exists in the current configuration, otherwise false
-    virtual bool ExtractDeltaTime(dReal& deltatime, std::vector<dReal>::const_iterator itdata) const;
+    bool ExtractDeltaTime(dReal& deltatime, std::vector<dReal>::const_iterator itdata) const;
 
     /** \brief inserts a set of joint values into a configuration space point
 
@@ -947,7 +951,7 @@ protected:
         \param[in] timederivative the time derivative of the data to insert
         \return true if at least one group was found for inserting
      */
-    virtual bool InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
+    bool InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
 
     /** \brief sets the deltatime field of the data if one exists
 
@@ -955,7 +959,7 @@ protected:
         \param[in] deltatime the delta time of the time stamp (from previous point)
         \return true if at least one group was found for inserting
      */
-    virtual bool InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime) const;
+    bool InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime) const;
 
     /** \brief Adds a new group to the specification and returns its new offset.
 
@@ -964,7 +968,7 @@ protected:
         If the new group's semantic name exists in the current specification and it exactly matches, then function returns the old group's index. If the semantic names match, but parameters do not match, then an openrave_exception is thrown.
         This method is not responsible for merging semantic information
      */
-    virtual int AddGroup(const Group& g);
+    int AddGroup(const Group& g);
 
     /** \brief removes all groups that match a name
 
@@ -973,7 +977,7 @@ protected:
         \param exactmatch if true, will remove groups only if the full name matches, otherwise will remove groups that start with groupname
         \return number of groups removed
      */
-    virtual int RemoveGroups(const std::string& groupname, bool exactmatch=true);
+    int RemoveGroups(const std::string& groupname, bool exactmatch=true);
 
     /** \brief extracts all the bodies that are used inside this specification
 
@@ -981,7 +985,8 @@ protected:
         \param[in] env the environment to extract the bodies from
         \param[out] usedbodies a list of the bodies being used
      */
-    virtual void ExtractUsedBodies(EnvironmentBasePtr env, std::vector<KinBodyPtr>& usedbodies) const;
+    void ExtractUsedBodies(EnvironmentBasePtr env, std::vector<KinBodyPtr>& usedbodies) const;
+
 
     /** \brief extracts all the unique dof indices that the configuration holds for a particular body
 
@@ -989,19 +994,28 @@ protected:
         \param[out] useddofindices a vector of unique DOF indices targetted for the body
         \param[out] usedconfigindices for every used index, returns the first configuration space index it came from
      */
-    virtual void ExtractUsedIndices(KinBodyPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const;
+    void ExtractUsedIndices(KinBodyConstPtr pbody, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const;
+    
+    /** \brief extracts all the unique dof indices that the configuration holds for a particular body
+
+        \param[in] pBodyName the name of the body to query for
+        \param[in] timederivative the time derivative of the data to insert. If -1, then target all times
+        \param[out] useddofindices a vector of unique DOF indices targetted for the body
+        \param[out] usedconfigindices for every used index, returns the first configuration space index it came from
+     */
+    void ExtractUsedIndices(const char* pBodyName, int nBodyNameLength, int timederivative, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const;
 
     /// \brief swaps the data between the two configuration specifications as efficiently as possible
-    virtual void Swap(ConfigurationSpecification& spec);
+    void Swap(ConfigurationSpecification& spec);
 
     typedef boost::function<int (const std::vector<dReal>&)> SetConfigurationStateFn;
     typedef boost::function<void (std::vector<dReal>&)> GetConfigurationStateFn;
 
     /// \brief return a function to set the states of the configuration in the environment
-    virtual boost::shared_ptr<SetConfigurationStateFn> GetSetFn(EnvironmentBasePtr env) const;
+    boost::shared_ptr<SetConfigurationStateFn> GetSetFn(EnvironmentBasePtr env) const;
 
     /// \brief return a function to get the states of the configuration in the environment
-    virtual boost::shared_ptr<GetConfigurationStateFn> GetGetFn(EnvironmentBasePtr env) const;
+    boost::shared_ptr<GetConfigurationStateFn> GetGetFn(EnvironmentBasePtr env) const;
 
     /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
 
@@ -1037,6 +1051,13 @@ protected:
     /// \param deriv the number of derivatives to take, should be > 0
     static std::string GetInterpolationDerivative(const std::string& interpolation, int deriv=1);
 
+    /// \brief gets the name of the interpolation that represents the integral of the passed in interpolation.
+    ///
+    /// For example GetInterpolationIntegral("linear") -> "quadratic"
+    /// \param interpolation the interpolation to start at
+    /// \param integ the number of integral to take, should be > 0
+    static std::string GetInterpolationIntegral(const std::string& interpolation, int integ=1);
+
     std::vector<Group> _vgroups;
 };
 
@@ -1066,6 +1087,23 @@ inline T NormalizeCircularAnglePrivate(T theta, T min, T max)
     return theta;
 }
 
+/// \brief ensures first three elements of vector forms a unit length vector
+/// first checks if input direction vector is close to unit length, and raise if not because it is most likely a bug on application side
+/// \param direction[inout] direction vector to be checked, if far from being unit length, most likely a bug on application side so assert. Otherwise, normalize and return.
+#define ENSURE_3DVEC_UNIT_LENGTH(direction) { \
+        const dReal length2 = direction.lengthsqr3(); \
+        MATH_ASSERT(length2 > 0.99 && length2 < 1.01); \
+        direction.normalize3(); \
+}
+
+/// \brief ensures quaternion forms a unit length vector
+/// first checks if input quaternion is close to unit length, and raise if not because it is most likely a bug on application side
+/// \param quaternion[inout] quaternion vector to be checked, if far from being unit length, most likely a bug on application side so assert. Otherwise, normalize and return.
+#define ENSURE_4DVEC_UNIT_LENGTH(quaternion) { \
+        const dReal length2 = quaternion.lengthsqr4(); \
+        MATH_ASSERT(length2 > 0.99 && length2 < 1.01); \
+        quaternion.normalize4(); \
+}
 
 /** \brief Parameterization of basic primitives for querying inverse-kinematics solutions.
 
@@ -1149,6 +1187,7 @@ public:
 
     inline void SetTransform6D(const Transform& t) {
         _type = IKP_Transform6D; _transform = t;
+        ENSURE_4DVEC_UNIT_LENGTH(_transform.rot);
     }
     inline void SetTransform6DVelocity(const Transform& t) {
         _type = IKP_Transform6DVelocity; _transform = t;
@@ -1161,20 +1200,24 @@ public:
     }
     inline void SetDirection3D(const Vector& dir) {
         _type = IKP_Direction3D; _transform.rot = dir;
-    }
+        ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+     }
     inline void SetRay4D(const RAY& ray) {
         _type = IKP_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir;
-    }
+        ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+     }
     inline void SetLookat3D(const Vector& trans) {
         _type = IKP_Lookat3D; _transform.trans = trans;
     }
     /// \brief the ray direction is not used for IK, however it is needed in order to compute the error
     inline void SetLookat3D(const RAY& ray) {
         _type = IKP_Lookat3D; _transform.trans = ray.pos; _transform.rot = ray.dir;
-    }
+        ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+     }
     inline void SetTranslationDirection5D(const RAY& ray) {
         _type = IKP_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir;
-    }
+        ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+     }
     inline void SetTranslationXY2D(const Vector& trans) {
         _type = IKP_TranslationXY2D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = 0; _transform.trans.w = 0;
     }
@@ -1631,6 +1674,7 @@ public:
     inline void SetValues(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype)
     {
         _type = iktype;
+        const bool isVelocity = _type & IKP_VelocityDataBit;
         switch(_type & ~IKP_VelocityDataBit) {
         case IKP_Transform6D:
             _transform.rot.x = *itvalues++;
@@ -1640,6 +1684,9 @@ public:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
+            if (!isVelocity) {
+                ENSURE_4DVEC_UNIT_LENGTH(_transform.rot);
+            }
             break;
         case IKP_Rotation3D:
             _transform.rot.x = *itvalues++;
@@ -1656,6 +1703,9 @@ public:
             _transform.rot.x = *itvalues++;
             _transform.rot.y = *itvalues++;
             _transform.rot.z = *itvalues++;
+            if (!isVelocity) {
+                ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+            }
             break;
         case IKP_Ray4D:
             _transform.rot.x = *itvalues++;
@@ -1664,6 +1714,9 @@ public:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
+            if (!isVelocity) {
+                ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+            }
             break;
         case IKP_Lookat3D:
             _transform.trans.x = *itvalues++;
@@ -1677,6 +1730,9 @@ public:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
+            if (!isVelocity) {
+                ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
+            }
             break;
         case IKP_TranslationXY2D:
             _transform.trans.x = *itvalues++;
@@ -2141,14 +2197,14 @@ public:
 
     void DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale=1.0);
 
-    virtual bool operator==(const IkParameterization& other) const {
+    bool operator==(const IkParameterization& other) const {
         return _id == other._id
                && _type == other._type
                && _transform == other._transform
                && _mapCustomData == other._mapCustomData;
     }
 
-    virtual bool operator!=(const IkParameterization& other) const {
+    bool operator!=(const IkParameterization& other) const {
         return !operator==(other);
     }
 
@@ -2266,6 +2322,8 @@ protected:
         }
     }
 
+    ///< for IKP_Direction3D, IKP_Ray4D, IKP_TranslationDirection5D rot is a unit length 3d direction vector
+    ///< for IKP_Transform6D, rot is a unit length quaternion
     Transform _transform;
     IkParameterizationType _type;
     std::string _id;

@@ -27,7 +27,7 @@ public:
     class ParabolicGroupInfo : public GroupInfo
     {
 public:
-        ParabolicGroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) : GroupInfo(degree, gpos, gvel) {
+        ParabolicGroupInfo(int degree_, const ConfigurationSpecification::Group& gpos_, const ConfigurationSpecification::Group &gvel_) : GroupInfo(degree_, gpos_, gvel_) {
         }
 
         TrajectoryBasePtr ptraj;

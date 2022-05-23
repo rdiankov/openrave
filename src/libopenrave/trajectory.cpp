@@ -55,7 +55,7 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
 void TrajectoryBase::deserialize(std::istream& I)
 {
     stringbuf buf;
-    stringstream::streampos pos = I.tellg();
+    stringstream::pos_type pos = I.tellg();
     I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
     BOOST_ASSERT(!!I);
 
@@ -74,6 +74,12 @@ void TrajectoryBase::deserialize(std::istream& I)
     xmlreaders::ParseXMLData(readerdata, pbuf.c_str(), ppsize);
 }
 
+void TrajectoryBase::DeserializeFromRawData(const uint8_t* pdata, size_t nDataSize)
+{
+    xmlreaders::TrajectoryReader readerdata(GetEnv(),shared_trajectory());
+    xmlreaders::ParseXMLData(readerdata, (const char*)pdata, nDataSize);
+}
+    
 void TrajectoryBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     InterfaceBase::Clone(preference,cloningoptions);

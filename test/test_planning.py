@@ -59,7 +59,7 @@ class RunPlanning(EnvironmentSetup):
             ikmodel.autogenerate()
 
         with env:
-            Tee = ikmodel.manip.GetEndEffectorTransform()
+            Tee = ikmodel.manip.GetTransform()
             Tee[0:3,3] -= 0.4
             solutions = ikmodel.manip.FindIKSolutions(Tee,IkFilterOptions.CheckEnvCollisions)
             assert(len(solutions)>1)
@@ -67,20 +67,20 @@ class RunPlanning(EnvironmentSetup):
             with robot:
                 for sol in solutions:
                     robot.SetDOFValues(sol,ikmodel.manip.GetArmIndices())
-                    assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
+                    assert(transdist(Tee,ikmodel.manip.GetTransform()) <= g_epsilon)
             traj=basemanip.MoveManipulator(goals=solutions,execute=True,outputtrajobj=True)
             # check that last point is accurate
             lastvalues = traj.GetConfigurationSpecification().ExtractJointValues(traj.GetWaypoint(-1), robot, ikmodel.manip.GetArmIndices(), 0)
             with robot:
                 robot.SetDOFValues(lastvalues,ikmodel.manip.GetArmIndices())
                 assert(min([sum(abs(s-lastvalues)) for s in solutions]) <= g_epsilon)
-                assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
+                assert(transdist(Tee,ikmodel.manip.GetTransform()) <= g_epsilon)
             
         env.StartSimulation(0.01,False)
         robot.WaitForController(0)
         with env:
-            self.log.info('Tee dist=%f',transdist(Tee,ikmodel.manip.GetEndEffectorTransform()))
-            assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
+            self.log.info('Tee dist=%f',transdist(Tee,ikmodel.manip.GetTransform()))
+            assert(transdist(Tee,ikmodel.manip.GetTransform()) <= g_epsilon)
             
     def test_constraintpr2(self):
         env = self.env
@@ -341,7 +341,7 @@ class RunPlanning(EnvironmentSetup):
             Tdelta = eye(4)
             Tdelta[0,3] = -0.2
             Tdelta[2,3] = -0.2
-            Tnew = dot(manip.GetEndEffectorTransform(),Tdelta)
+            Tnew = dot(manip.GetTransform(),Tdelta)
 
             ret = basemanip.MoveToHandPosition([Tnew],execute=False)
             assert(ret is not None)

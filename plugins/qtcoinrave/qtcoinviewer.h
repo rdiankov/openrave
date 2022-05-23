@@ -18,8 +18,18 @@
 
 #ifndef _WIN32 // not a necessary define
 
-#if QT_VERSION >= 0x040000 // check for qt4
+#if QT_VERSION >= 0x050000 // check for qt5
 #include <QtCore/QObject>
+#include <QMainWindow>
+#include <QVBoxLayout>
+#include <QGroupBox>
+#include <QAction>
+#include <QActionGroup>
+#include <QMessageBox>
+#include <QFileDialog>
+#include <QMenu>
+#include <QMenuBar>
+#include <QStatusBar>
 #else
 #include <qobject.h>
 #include <qaction.h>
