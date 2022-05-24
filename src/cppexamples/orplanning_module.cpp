@@ -43,7 +43,7 @@ public:
 
         while(IsOk()) {
             {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+                EnvironmentLock lock(penv->GetMutex()); // lock environment
 
                 // find a set of free joint values for the robot
                 {

@@ -261,7 +261,7 @@ public:
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
         Transform trobotorig;
         {
-            EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+            EnvironmentLock lock(penv->GetMutex()); // lock environment
 
             probot->SetActiveDOFs(pmanip->GetGripperIndices());
             probot->SetActiveDOFValues(vpreshape);
@@ -280,7 +280,7 @@ public:
             iter += 1;
             GraphHandlePtr pgraph;
             {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+                EnvironmentLock lock(penv->GetMutex()); // lock environment
 
                 if( (iter%5) == 0 ) {
                     RAVELOG_INFO("find a new position for the robot\n");

@@ -54,7 +54,7 @@ public:
         while(IsOk()) {
             GraphHandlePtr pgraph;
             {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+                EnvironmentLock lock(penv->GetMutex()); // lock environment
 
                 probot->SetActiveDOFs(pmanip->GetArmIndices());
 

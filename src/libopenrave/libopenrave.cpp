@@ -500,7 +500,7 @@ public:
         // environments have to be destroyed carefully since their destructors can be called, which will attempt to unregister the environment
         std::map<int, EnvironmentBase*> mapenvironments;
         {
-            std::scoped_lock lock(_mutexinternal);
+            std::lock_guard<std::mutex> lock(_mutexinternal);
             mapenvironments = _mapenvironments;
         }
         FOREACH(itenv,mapenvironments) {
@@ -517,7 +517,7 @@ public:
         // process the callbacks
         std::list<boost::function<void()> > listDestroyCallbacks;
         {
-            std::scoped_lock lock(_mutexinternal);
+            std::lock_guard<std::mutex> lock(_mutexinternal);
             listDestroyCallbacks.swap(_listDestroyCallbacks);
         }
         FOREACH(itcallback, listDestroyCallbacks) {
@@ -548,7 +548,7 @@ public:
 
     void AddCallbackForDestroy(const boost::function<void()>& fn)
     {
-        std::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         _listDestroyCallbacks.push_back(fn);
     }
 
@@ -637,7 +637,7 @@ public:
 public:
         XMLReaderFunctionData(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn, boost::shared_ptr<RaveGlobal> global) : _global(global), _type(type), _xmltag(xmltag)
         {
-            std::scoped_lock lock(global->_mutexinternal);
+            std::lock_guard<std::mutex> lock(global->_mutexinternal);
             _oldfn = global->_mapxmlreaders[_type][_xmltag];
             global->_mapxmlreaders[_type][_xmltag] = fn;
         }
@@ -645,7 +645,7 @@ public:
         {
             boost::shared_ptr<RaveGlobal> global = _global.lock();
             if( !!global ) {
-                std::scoped_lock lock(global->_mutexinternal);
+                std::lock_guard<std::mutex> lock(global->_mutexinternal);
                 global->_mapxmlreaders[_type][_xmltag] = _oldfn;
             }
         }
@@ -676,7 +676,7 @@ protected:
 public:
         JSONReaderFunctionData(InterfaceType type, const std::string& id, const CreateJSONReaderFn& fn, boost::shared_ptr<RaveGlobal> global) : _global(global), _type(type), _id(id)
         {
-            std::scoped_lock lock(global->_mutexinternal);
+            std::lock_guard<std::mutex> lock(global->_mutexinternal);
             _oldfn = global->_mapjsonreaders[_type][_id];
             global->_mapjsonreaders[_type][_id] = fn;
         }
@@ -684,7 +684,7 @@ public:
         {
             boost::shared_ptr<RaveGlobal> global = _global.lock();
             if( !!global ) {
-                std::scoped_lock lock(global->_mutexinternal);
+                std::lock_guard<std::mutex> lock(global->_mutexinternal);
                 global->_mapjsonreaders[_type][_id] = _oldfn;
             }
         }
@@ -736,14 +736,14 @@ protected:
     int RegisterEnvironment(EnvironmentBase* penv)
     {
         BOOST_ASSERT(!!_pdatabase);
-        std::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         _mapenvironments[++_nGlobalEnvironmentId] = penv;
         return _nGlobalEnvironmentId;
     }
 
     void UnregisterEnvironment(EnvironmentBase* penv)
     {
-        std::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         FOREACH(it, _mapenvironments) {
             if( it->second == penv ) {
                 _mapenvironments.erase(it);
@@ -755,7 +755,7 @@ protected:
     int GetEnvironmentId(EnvironmentBaseConstPtr penv)
     {
         return !!penv ? penv->GetId() : 0;
-//        std::scoped_lock lock(_mutexinternal);
+//        std::lock_guard<std::mutex> lock(_mutexinternal);
 //        FOREACH(it,_mapenvironments) {
 //            if( it->second == penv.get() ) {
 //                return it->first;
@@ -766,7 +766,7 @@ protected:
 
     EnvironmentBasePtr GetEnvironment(int id)
     {
-        std::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         std::map<int, EnvironmentBase*>::iterator it = _mapenvironments.find(id);
         if( it == _mapenvironments.end() ) {
             return EnvironmentBasePtr();
@@ -777,7 +777,7 @@ protected:
     void GetEnvironments(std::list<EnvironmentBasePtr>& listenvironments)
     {
         listenvironments.clear();
-        std::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         FOREACH(it,_mapenvironments) {
             EnvironmentBasePtr penv = it->second->shared_from_this();
             if( !!penv ) {
@@ -789,7 +789,7 @@ protected:
     SpaceSamplerBasePtr GetDefaultSampler()
     {
         if( !_pdefaultsampler ) {
-            std::scoped_lock lock(_mutexinternal);
+            std::lock_guard<std::mutex> lock(_mutexinternal);
             BOOST_ASSERT( _mapenvironments.size() > 0 );
             _pdefaultsampler = GetDatabase()->CreateSpaceSampler(_mapenvironments.begin()->second->shared_from_this(),"MT19937");
         }
@@ -805,7 +805,7 @@ protected:
             return std::string();
         }
 
-        std::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         boost::filesystem::path fullfilename;
         boost::filesystem::path filename(_filename);
 
@@ -870,11 +870,11 @@ protected:
     }
 
     void SetDataAccess(int options) {
-        std::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         _nDataAccessOptions = options;
     }
     int GetDataAccess() {
-        std::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         return _nDataAccessOptions;
     }
     std::string GetDefaultViewerType() {
@@ -1180,7 +1180,7 @@ std::string RaveFindDatabaseFile(const std::string& filename, bool bRead)
 int RaveInitialize(bool bLoadAllPlugins, int level)
 {
     boost::shared_ptr<RaveGlobal>& state = RaveGlobal::instance();
-    std::scoped_lock lock(state->GetInitializationMutex());
+    std::lock_guard<std::mutex> lock(state->GetInitializationMutex());
     if( state->_IsInitialized() ) {
         RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE already initialized, so not initializing again", std::this_thread::get_id());
         return 0;
@@ -1205,7 +1205,7 @@ UserDataPtr RaveGlobalState()
         }
         else {
             // make sure another thread is not initializing the state!
-            std::scoped_lock lock(state->GetInitializationMutex());
+            std::lock_guard<std::mutex> lock(state->GetInitializationMutex());
             if( state->_IsInitialized() ) {
                 return state;
             }

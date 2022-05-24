@@ -61,7 +61,7 @@ public:
 
         while(IsOk()) {
             {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+                EnvironmentLock lock(penv->GetMutex()); // lock environment
 
                 TrajectoryBasePtr traj = RaveCreateTrajectory(penv,"");
                 traj->Init(probot->GetActiveConfigurationSpecification());
