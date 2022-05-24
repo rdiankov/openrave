@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <openravepy/openravepy_int.h>
 
+#include <condition_variable>
+#include <mutex>
 #include <openrave/utils.h>
 #include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -569,7 +571,7 @@ class ViewerManager
         EnvironmentBasePtr _penv;
         std::string _viewername;
         ViewerBasePtr _pviewer; /// the created viewer
-        boost::condition _cond;  ///< notify when viewer thread is done processing and has initialized _pviewer
+        std::condition_variable _cond;  ///< notify when viewer thread is done processing and has initialized _pviewer
         bool _bShowViewer; ///< true if should show the viewer when initially created
     };
     typedef OPENRAVE_SHARED_PTR<ViewerInfo> ViewerInfoPtr;
@@ -577,7 +579,7 @@ public:
     ViewerManager() {
         _bShutdown = false;
         _bInMain = false;
-        _threadviewer.reset(new boost::thread(boost::bind(&ViewerManager::_RunViewerThread, this)));
+        _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
     }
 
     virtual ~ViewerManager() {
@@ -644,12 +646,12 @@ public:
             }
             else {
                 // no viewer has been created yet, so let the viewer thread create it (if using Qt, this initializes the QApplication in the right thread
-                std::lock_guard<std::mutex> lock(_mutexViewer);
+                std::unique_lock<std::mutex> lock(_mutexViewer);
                 _listviewerinfos.push_back(pinfo);
                 _conditionViewer.notify_all();
 
                 /// wait until viewer thread process it
-                pinfo->_cond.wait(_mutexViewer);
+                pinfo->_cond.wait(lock);
                 pviewer = pinfo->_pviewer;
             }
         }
@@ -827,9 +829,9 @@ protected:
 
     }
 
-    OPENRAVE_SHARED_PTR<boost::thread> _threadviewer;
+    OPENRAVE_SHARED_PTR<std::thread> _threadviewer;
     std::mutex _mutexViewer;
-    boost::condition _conditionViewer;
+    std::condition_variable _conditionViewer;
     std::list<ViewerInfoPtr> _listviewerinfos;
 
     bool _bShutdown; ///< if true, shutdown everything
