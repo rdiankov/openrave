@@ -17,6 +17,7 @@
 #ifndef RAVE_PLUGIN_DATABASE_H
 #define RAVE_PLUGIN_DATABASE_H
 
+#include <condition_variable>
 #include <errno.h>
 
 #ifdef HAVE_BOOST_FILESYSTEM
