@@ -24,7 +24,7 @@
 
 namespace OpenRAVE {
 
-typedef boost::recursive_try_mutex EnvironmentMutex;
+typedef std::recursive_mutex EnvironmentMutex;
 typedef EnvironmentMutex::scoped_lock EnvironmentLock;
 
 /// \brief used when adding interfaces to the environment

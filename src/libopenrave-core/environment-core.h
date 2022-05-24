@@ -25,9 +25,11 @@
 #include <boost/filesystem/operations.hpp>
 #endif
 
-#include <unordered_map>
+#include <chrono>
 #include <mutex>
 #include <shared_mutex>
+#include <thread>
+#include <unordered_map>
 
 #include <pcrecpp.h>
 
@@ -3957,7 +3959,7 @@ protected:
                             lockenv.reset();
                             // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
                             int actual_sleep=max((int)sleeptime*6/8,1000);
-                            std::this_thread::sleep (boost::posix_time::microseconds(actual_sleep));
+                            std::this_thread::sleep_for(std::chrono::microseconds(actual_sleep));
                             //RAVELOG_INFO("sleeptime ideal %d, actually slept: %d\n",(int)sleeptime,(int)actual_sleep);
                             nLastSleptTime = utils::GetMicroTime();
                             //Since already slept this cycle, wait till next time to sleep.
@@ -3979,7 +3981,7 @@ protected:
 
             if( utils::GetMicroTime()-nLastSleptTime > 20000 ) {     // 100000 freezes the environment
                 lockenv.reset();
-                std::this_thread::sleep(boost::posix_time::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 bNeedSleep = false;
                 nLastSleptTime = utils::GetMicroTime();
             }
@@ -4003,7 +4005,7 @@ protected:
             //TODO: Verify if this always has to happen even if thread slept in RT if statement above
             lockenv.reset(); // always release at the end of loop to give other threads time
             if( bNeedSleep ) {
-                std::this_thread::sleep(boost::posix_time::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     }

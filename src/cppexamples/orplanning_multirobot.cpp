@@ -106,7 +106,7 @@ public:
                 if( probot1->GetController()->IsDone() || probot2->GetController()->IsDone() ) {
                     break;
                 }
-                std::this_thread::sleep(boost::posix_time::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     }
