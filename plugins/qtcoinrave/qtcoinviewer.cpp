@@ -66,7 +66,7 @@ public:
     virtual ~ItemSelectionCallbackData() {
         boost::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
-            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            std::lock_guard<std::mutex> lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredItemSelectionCallbacks.erase(_iterator);
         }
     }
@@ -86,7 +86,7 @@ public:
     virtual ~ViewerImageCallbackData() {
         boost::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
-            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            std::lock_guard<std::mutex> lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredViewerImageCallbacks.erase(_iterator);
         }
     }
@@ -106,7 +106,7 @@ public:
     virtual ~ViewerThreadCallbackData() {
         boost::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
-            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            std::lock_guard<std::mutex> lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredViewerThreadCallbacks.erase(_iterator);
         }
     }
@@ -376,7 +376,7 @@ QtCoinViewer::~QtCoinViewer()
     RAVELOG_DEBUG("destroying qtcoinviewer\n");
 
     {
-        boost::mutex::scoped_lock lock(_mutexMessages);
+        std::lock_guard<std::mutex> lock(_mutexMessages);
 
         list<EnvMessagePtr>::iterator itmsg;
         FORIT(itmsg, _listMessages) {
@@ -455,7 +455,7 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
         }
 
         if (!!pItem) {
-            boost::mutex::scoped_lock lock(_mutexMessages);
+            std::lock_guard<std::mutex> lock(_mutexMessages);
 
             KinBodyItemPtr pKinBody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
             KinBody::LinkPtr pSelectedLink;
@@ -499,12 +499,12 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
             _strMouseMove = ss.str();
         }
         else {
-            boost::mutex::scoped_lock lock(_mutexMessages);
+            std::lock_guard<std::mutex> lock(_mutexMessages);
             _strMouseMove.resize(0);
         }
     }
     else {
-        boost::mutex::scoped_lock lock(_mutexMessages);
+        std::lock_guard<std::mutex> lock(_mutexMessages);
         _strMouseMove.resize(0);
     }
 }
@@ -658,7 +658,7 @@ void QtCoinViewer::_StopPlaybackTimer()
     if (_timerSensor->isScheduled()) {
         _timerSensor->unschedule();
     }
-    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    std::lock_guard<std::mutex> lock(_mutexUpdateModels);
     _condUpdateModels.notify_all();
 }
 
@@ -1253,7 +1253,7 @@ void QtCoinViewer::Reset()
 
 boost::shared_ptr<void> QtCoinViewer::LockGUI()
 {
-    boost::shared_ptr<boost::mutex::scoped_lock> lock(new boost::mutex::scoped_lock(_mutexGUI));
+    boost::shared_ptr<std::unique_lock<std::mutex>> lock = boost::make_shared<std::unique_lock<std::mutex>>(_mutexGUI);
     while(!_bInIdleThread) {
         boost::this_thread::sleep(boost::posix_time::milliseconds(1));
     }
@@ -1290,14 +1290,14 @@ void QtCoinViewer::SetBkgndColor(const RaveVector<float>& color)
 
 void QtCoinViewer::SetEnvironmentSync(bool bUpdate)
 {
-    boost::mutex::scoped_lock lockupdating(_mutexUpdating);
-    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    std::lock_guard<std::mutex> lockupdating(_mutexUpdating);
+    std::lock_guard<std::mutex> lock(_mutexUpdateModels);
     _bUpdateEnvironment = bUpdate;
     _condUpdateModels.notify_all();
 
     if( !bUpdate ) {
         // remove all messages in order to release the locks
-        boost::mutex::scoped_lock lockmsg(_mutexMessages);
+        std::lock_guard<std::mutex> lockmsg(_mutexMessages);
         FOREACH(it,_listMessages) {
             (*it)->releasemutex();
         }
@@ -1308,14 +1308,14 @@ void QtCoinViewer::SetEnvironmentSync(bool bUpdate)
 void QtCoinViewer::EnvironmentSync()
 {
     {
-        boost::mutex::scoped_lock lockupdating(_mutexUpdating);
+        std::lock_guard<std::mutex> lockupdating(_mutexUpdating);
         if( !_bUpdateEnvironment ) {
             RAVELOG_WARN("cannot update models from environment sync\n");
             return;
         }
     }
 
-    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    std::unique_lock<std::mutex> lock(_mutexUpdateModels);
     _bModelsUpdated = false;
     _condUpdateModels.wait(lock);
     if( !_bModelsUpdated ) {
@@ -1387,7 +1387,7 @@ void QtCoinViewer::PrintCamera()
 
 RaveTransform<float> QtCoinViewer::GetCameraTransform() const
 {
-    boost::mutex::scoped_lock lock(_mutexMessages);
+    std::lock_guard<std::mutex> lock(_mutexMessages);
     // have to flip Z axis
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
     return _Tcamera*trot;
@@ -1395,19 +1395,19 @@ RaveTransform<float> QtCoinViewer::GetCameraTransform() const
 
 float QtCoinViewer::GetCameraDistanceToFocus() const
 {
-    boost::mutex::scoped_lock lock(_mutexMessages);
+    std::lock_guard<std::mutex> lock(_mutexMessages);
     return _focalDistance;
 }
 
 geometry::RaveCameraIntrinsics<float> QtCoinViewer::GetCameraIntrinsics() const
 {
-    boost::mutex::scoped_lock lock(_mutexMessages);
+    std::lock_guard<std::mutex> lock(_mutexMessages);
     return _camintrinsics;
 }
 
 SensorBase::CameraIntrinsics QtCoinViewer::GetCameraIntrinsics2() const
 {
-    boost::mutex::scoped_lock lock(_mutexMessages);
+    std::lock_guard<std::mutex> lock(_mutexMessages);
     SensorBase::CameraIntrinsics intr;
     intr.fx = _camintrinsics.fx;
     intr.fy = _camintrinsics.fy;
@@ -2373,7 +2373,7 @@ bool QtCoinViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
     }
     _ptrackinglink.reset();
     _ptrackingmanip.reset();
-    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    EnvironmentLock lockenv(GetEnv()->GetMutex());
     KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
     if( !pbody ) {
         return false;
@@ -2406,7 +2406,7 @@ bool QtCoinViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
     }
     _ptrackinglink.reset();
     _ptrackingmanip.reset();
-    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    EnvironmentLock lockenv(GetEnv()->GetMutex());
     RobotBasePtr probot = GetEnv()->GetRobot(robotname);
     if( !probot ) {
         return false;
@@ -2531,11 +2531,11 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
 
     // check the callbacks
     if( !!pSelectedLink ) {
-        boost::mutex::scoped_lock lock(_mutexCallbacks);
+        std::lock_guard<std::mutex> lock(_mutexCallbacks);
         FOREACH(it,_listRegisteredItemSelectionCallbacks) {
             bool bSame;
             {
-                boost::mutex::scoped_lock lock(_mutexMessages);
+                std::lock_guard<std::mutex> lock(_mutexMessages);
                 bSame = !_pMouseOverLink.expired() && KinBody::LinkPtr(_pMouseOverLink) == pSelectedLink;
             }
             if( bSame ) {
@@ -2554,7 +2554,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         return false;
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(100000);
+    boost::shared_ptr<EnvironmentLock> lockenv = LockEnvironment(100000);
     if( !lockenv ) {
         _ivRoot->deselectAll();
         RAVELOG_WARN("failed to grab environment lock\n");
@@ -2677,14 +2677,10 @@ void QtCoinViewer::_deselect()
     }
 }
 
-boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
+boost::shared_ptr<EnvironmentLock> QtCoinViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
 {
     // try to acquire the lock
-#if BOOST_VERSION >= 103500
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
-#else
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
-#endif
+    boost::shared_ptr<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(GetEnv()->GetMutex(), std::defer_lock_t());
     uint64_t basetime = utils::GetMicroTime();
     while(utils::GetMicroTime()-basetime<timeout ) {
         if( lockenv->try_lock() ) {
@@ -2759,7 +2755,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
 
     //    {
     //        _bInIdleThread = true;
-    //        boost::mutex::scoped_lock lock(_mutexGUI);
+    //        std::lock_guard<std::mutex> lock(_mutexGUI);
     //        _bInIdleThread = false;
     //    }
 
@@ -2787,7 +2783,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
         }
 
         if( !_pviewer->isViewing() ) {
-            boost::mutex::scoped_lock lock(_mutexMessages);
+            std::lock_guard<std::mutex> lock(_mutexMessages);
             ss << _strMouseMove;
         }
 
@@ -2833,7 +2829,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     {
         std::list<UserDataWeakPtr> listRegisteredViewerThreadCallbacks;
         {
-            boost::mutex::scoped_lock lock(_mutexCallbacks);
+            std::lock_guard<std::mutex> lock(_mutexCallbacks);
             listRegisteredViewerThreadCallbacks = _listRegisteredViewerThreadCallbacks;
         }
         FOREACH(it,listRegisteredViewerThreadCallbacks) {
@@ -2856,13 +2852,13 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
 
 void QtCoinViewer::_UpdateEnvironment(float fTimeElapsed)
 {
-    boost::mutex::scoped_lock lockupd(_mutexUpdating);
+    std::lock_guard<std::mutex> lockupd(_mutexUpdating);
 
     if( _bUpdateEnvironment ) {
         // process all messages
         list<EnvMessagePtr> listmessages;
         {
-            boost::mutex::scoped_lock lockmsg(_mutexMessages);
+            std::lock_guard<std::mutex> lockmsg(_mutexMessages);
             listmessages.swap(_listMessages);
             BOOST_ASSERT( _listMessages.size() == 0 );
         }
@@ -2885,13 +2881,13 @@ void QtCoinViewer::_UpdateEnvironment(float fTimeElapsed)
 bool QtCoinViewer::ForceUpdatePublishedBodies()
 {
     {
-        boost::mutex::scoped_lock lockupdating(_mutexUpdating);
+        std::lock_guard<std::mutex> lockupdating(_mutexUpdating);
         if( !_bUpdateEnvironment )
             return false;
     }
 
-    boost::mutex::scoped_lock lock(_mutexUpdateModels);
-    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    std::unique_lock<std::mutex> lock(_mutexUpdateModels);
+    EnvironmentLock lockenv(GetEnv()->GetMutex());
     GetEnv()->UpdatePublishedBodies();
 
     _bModelsUpdated = false;
@@ -2911,7 +2907,7 @@ void QtCoinViewer::_VideoFrame()
 {
     std::list<UserDataWeakPtr> listRegisteredViewerImageCallbacks;
     {
-        boost::mutex::scoped_lock lock(_mutexCallbacks);
+        std::lock_guard<std::mutex> lock(_mutexCallbacks);
         if( _listRegisteredViewerImageCallbacks.size() == 0 ) {
             return;
         }
@@ -2940,22 +2936,17 @@ void QtCoinViewer::_VideoFrame()
 void QtCoinViewer::UpdateFromModel()
 {
     {
-        boost::mutex::scoped_lock lock(_mutexItems);
+        std::lock_guard<std::mutex> lock(_mutexItems);
         FOREACH(it,_listRemoveItems) {
             delete *it;
         }
         _listRemoveItems.clear();
     }
 
-    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    std::lock_guard<std::mutex> lock(_mutexUpdateModels);
     vector<KinBody::BodyState> vecbodies;
 
-
-#if BOOST_VERSION >= 103500
-    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
-#else
-    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),false);
-#endif
+    EnvironmentLock lockenv(GetEnv()->GetMutex(), std::defer_lock_t());
 
     if( _bLockEnvironment && !lockenv ) {
         uint64_t basetime = utils::GetMicroTime();
@@ -3100,7 +3091,7 @@ void QtCoinViewer::_Reset()
     }
 
     {
-        boost::mutex::scoped_lock lock(_mutexItems);
+        std::lock_guard<std::mutex> lock(_mutexItems);
         FOREACH(it,_listRemoveItems) {
             delete *it;
         }
@@ -3110,7 +3101,7 @@ void QtCoinViewer::_Reset()
 
 void QtCoinViewer::_UpdateCameraTransform(float fTimeElapsed)
 {
-    boost::mutex::scoped_lock lock(_mutexMessages);
+    std::lock_guard<std::mutex> lock(_mutexMessages);
 
     SbVec3f pos = GetCamera()->position.getValue();
     _Tcamera.trans = RaveVector<float>(pos[0], pos[1], pos[2]);
@@ -3278,7 +3269,7 @@ void QtCoinViewer::ViewGeometryChanged(QAction* pact)
     _mapbodies.clear();
 
     {
-        boost::mutex::scoped_lock lock(_mutexItems);
+        std::lock_guard<std::mutex> lock(_mutexItems);
         FOREACH(it,_listRemoveItems) {
             delete *it;
         }
@@ -3329,7 +3320,7 @@ void QtCoinViewer::RecordRealtimeVideo(bool on)
 
 void QtCoinViewer::ToggleSimulation(bool on)
 {
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(200000);
+    boost::shared_ptr<EnvironmentLock> lockenv = LockEnvironment(200000);
     if( !!lockenv ) {
         if( on ) {
             GetEnv()->StartSimulation(0.01f);
@@ -3697,7 +3688,7 @@ QtCoinViewer::EnvMessage::EnvMessage(QtCoinViewerPtr pviewer, void** ppreturn, b
 {
     // get a mutex
     if( bWaitForMutex ) {
-        _plock.reset(new boost::mutex::scoped_lock(_mutex));
+        _plock = boost::make_shared<std::unique_lock<std::mutex>>(_mutex);
     }
 }
 
@@ -3720,13 +3711,13 @@ void QtCoinViewer::EnvMessage::callerexecute(bool bGuiThread)
         {
             QtCoinViewerPtr pviewer = _pviewer.lock();
             if( !!pviewer ) {
-                boost::mutex::scoped_lock lock(pviewer->_mutexMessages);
+                std::lock_guard<std::mutex> lock(pviewer->_mutexMessages);
                 pviewer->_listMessages.push_back(shared_from_this());
             }
         }
 
         if( bWaitForMutex ) {
-            boost::mutex::scoped_lock lock(_mutex);
+            std::lock_guard<std::mutex> lock(_mutex);
         }
     }
 }
@@ -3802,8 +3793,8 @@ bool QtCoinViewer::_SaveBodyLinkToVRMLCommand(ostream& sout, istream& sinput)
         return false;
     }
 
-    boost::mutex::scoped_lock lock(_mutexUpdateModels);
-    boost::mutex::scoped_lock lock2(g_mutexsoqt);
+    std::lock_guard<std::mutex> lock(_mutexUpdateModels);
+    std::lock_guard<std::mutex> lock2(g_mutexsoqt);
 
     if( _mapbodies.find(pbody) == _mapbodies.end() ) {
         RAVELOG_WARN_FORMAT("couldn't find body %s in viewer list", bodyname);

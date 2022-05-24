@@ -431,7 +431,7 @@ protected:
 
     virtual bool Init(bool bLoadAllPlugins)
     {
-        _threadPluginLoader.reset(new std::thread(boost::bind(&RaveDatabase::_PluginLoaderThread, this)));
+        _threadPluginLoader = boost::make_shared<std::thread>(std::bind(&RaveDatabase::_PluginLoaderThread, this));
         std::vector<std::string> vplugindirs;
 #ifdef _WIN32
         const char* delim = ";";

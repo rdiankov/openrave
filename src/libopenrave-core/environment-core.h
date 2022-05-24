@@ -3915,7 +3915,7 @@ protected:
     {
         if( !_threadSimulation ) {
             _bShutdownSimulation = false;
-            _threadSimulation.reset(new std::thread(boost::bind(&Environment::_SimulationThread, this)));
+            _threadSimulation = boost::make_shared<std::thread>(std::bind(&Environment::_SimulationThread, this));
         }
     }
 
