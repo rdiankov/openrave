@@ -97,7 +97,7 @@ public:
         // start worker threads
         vector<boost::shared_ptr<std::thread> > vthreads(numthreads);
         for(size_t i = 0; i < vthreads.size(); ++i) {
-            vthreads[i].reset(new std::thread(boost::bind(&MultithreadedPlanningExample::_PlanningThread,this,probot->GetName())));
+            vthreads[i] = boost::make_shared<std::thread>(std::bind(&MultithreadedPlanningExample::_PlanningThread, this, probot->GetName()));
         }
 
         while(IsOk()) {

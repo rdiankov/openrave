@@ -393,7 +393,7 @@ bool KinBodyItem::UpdateFromIv()
         ++ittrans;
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
+    boost::shared_ptr<EnvironmentLock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
     if( !!lockenv ) {
         _pchain->SetLinkTransformations(vtrans,_vdofbranches);
     }
@@ -422,7 +422,7 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
+        boost::shared_ptr<EnvironmentLock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
         if( !lockenv ) {
             return false;
         }
@@ -443,13 +443,13 @@ bool KinBodyItem::UpdateFromModel()
 
 void KinBodyItem::GetDOFValues(vector<dReal>& vjoints) const
 {
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     vjoints = _vjointvalues;
 }
 
 void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofbranches) const
 {
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     vtrans = _vtrans;
     vdofbranches = _vdofbranches;
 }
@@ -462,7 +462,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     }
 
     if( _bReload || _bDrawStateChanged ) {
-        EnvironmentMutex::scoped_try_lock lockenv(_pchain->GetEnv()->GetMutex());
+        EnvironmentLock lockenv(_pchain->GetEnv()->GetMutex());
         if( !!lockenv ) {
             if( _bReload || _bDrawStateChanged ) {
                 Load();
@@ -470,7 +470,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         }
     }
 
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
 

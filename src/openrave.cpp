@@ -274,7 +274,7 @@ int main(int argc, char ** argv)
 
     // mac osx requires the main thread to be the gui thread...
     //s_bThreadDestroyed = false;
-    //s_mainThread.reset(new std::thread(boost::bind(MainOpenRAVEThread)));
+    //s_mainThread = boost::make_shared<std::thread>(std::bind(MainOpenRAVEThread));
     //s_mainThread->join();
     MainOpenRAVEThread();
     {

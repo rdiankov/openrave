@@ -264,7 +264,7 @@ int ORCEnvironmentSetViewer(void* env, const char* viewername)
 
     if( !!viewername && strlen(viewername) > 0 ) {
         std::unique_lock<std::mutex> lock(s_mutexViewer);
-        boost::shared_ptr<std::thread> threadviewer(new std::thread(boost::bind(CViewerThread, penv, std::string(viewername), true)));
+        boost::shared_ptr<std::thread> threadviewer = boost::make_shared<std::thread>(std::bind(CViewerThread, penv, std::string(viewername), true));
         s_mapEnvironmentThreadViewers[penv] = threadviewer;
         s_conditionViewer.wait(lock);
     }
