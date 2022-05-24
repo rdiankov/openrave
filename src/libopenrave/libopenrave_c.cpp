@@ -17,7 +17,7 @@
 #include "openrave_c/openrave_c.h"
 #include "libopenrave.h"
 
-#include <boost/thread/condition.hpp>
+#include <condition_variable>
 
 namespace OpenRAVE {
 
@@ -232,7 +232,7 @@ void CViewerThread(EnvironmentBasePtr penv, const string &strviewer, int bShowVi
 {
     ViewerBasePtr pviewer;
     {
-        std::scoped_lock lock(s_mutexViewer);
+        std::lock_guard<std::mutex> lock(s_mutexViewer);
         pviewer = RaveCreateViewer(penv, strviewer);
         if( !!pviewer ) {
             penv->Add(pviewer, IAM_AllowRenaming);
@@ -263,7 +263,7 @@ int ORCEnvironmentSetViewer(void* env, const char* viewername)
     }
 
     if( !!viewername && strlen(viewername) > 0 ) {
-        std::scoped_lock lock(s_mutexViewer);
+        std::unique_lock<std::mutex> lock(s_mutexViewer);
         boost::shared_ptr<std::thread> threadviewer(new std::thread(boost::bind(CViewerThread, penv, std::string(viewername), true)));
         s_mapEnvironmentThreadViewers[penv] = threadviewer;
         s_conditionViewer.wait(lock);

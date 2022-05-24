@@ -41,7 +41,7 @@ public:
         ControllerBasePtr wheelcontroller, armcontroller;
         // create the controllers, make sure to lock environment!
         {
-            EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+            EnvironmentLock lock(penv->GetMutex()); // lock environment
 
             MultiControllerBasePtr multi = RaveCreateMultiController(penv);
             vector<int> dofindices(probot->GetDOF());
@@ -79,7 +79,7 @@ public:
 
         while(IsOk()) {
             {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+                EnvironmentLock lock(penv->GetMutex()); // lock environment
 
                 if( !!armcontroller ) {
                     // set a trajectory on the arm and velocity on the wheels

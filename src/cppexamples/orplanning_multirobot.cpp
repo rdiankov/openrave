@@ -49,7 +49,7 @@ public:
         while(IsOk()) {
             list<GraphHandlePtr> listgraphs;
             {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+                EnvironmentLock lock(penv->GetMutex()); // lock environment
 
                 params->_getstatefn(params->vinitialconfig);
                 params->vgoalconfig.resize(params->GetDOF());

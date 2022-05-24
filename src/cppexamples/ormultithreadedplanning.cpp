@@ -40,7 +40,7 @@ public:
 
 
         while(IsOk()) {
-            EnvironmentMutex::scoped_lock lock(pclondedenv->GetMutex()); // lock environment
+            EnvironmentLock lock(pclondedenv->GetMutex()); // lock environment
 
             // find a new manipulator position and feed that into the planner. If valid, robot will move to it safely.
             Transform t = pmanip->GetTransform();

@@ -71,7 +71,7 @@ class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
         virtual ~RegisteredInterface() {
             boost::shared_ptr<RaveDatabase> database = _database.lock();
             if( !!database ) {
-                std::scoped_lock lock(database->_mutex);
+                std::lock_guard<std::mutex> lock(database->_mutex);
                 database->_listRegisteredInterfaces.erase(_iterator);
             }
         }
@@ -111,7 +111,7 @@ public:
                 if( plibrary ) {
                     Load_DestroyPlugin();
                 }
-                std::scoped_lock lock(_mutex);
+                std::lock_guard<std::mutex> lock(_mutex);
                 // do some more checking here, there still might be instances of robots, planners, and sensors out there
                 if (plibrary) {
                     RAVELOG_DEBUG("RaveDatabase: closing plugin %s\n", ppluginname.c_str());        // Sleep(10);
@@ -344,7 +344,7 @@ protected:
         {
             // first test the library before locking
             if( plibrary == NULL ) {
-                std::scoped_lock lock(_mutex);
+                std::unique_lock<std::mutex> lock(_mutex);
                 _pdatabase.lock()->_AddToLoader(shared_from_this());
                 do {
                     if( plibrary ) {
@@ -515,7 +515,7 @@ protected:
     {
         RAVELOG_DEBUG("plugin database shutting down...\n");
         {
-            std::scoped_lock lock(_mutexPluginLoader);
+            std::lock_guard<std::mutex> lock(_mutexPluginLoader);
             _bShutdown = true;
             _condLoaderHasWork.notify_all();
         }
@@ -524,14 +524,14 @@ protected:
             _threadPluginLoader.reset();
         }
         {
-            std::scoped_lock lock(_mutex);
+            std::lock_guard<std::mutex> lock(_mutex);
             _listplugins.clear();
         }
         // cannot lock mutex due to __erase_iterator
         // cannot clear _listRegisteredInterfaces since there are destructors that will remove items from the list
         //_listRegisteredInterfaces.clear();
         {
-            std::scoped_lock lock(_mutex);
+            std::lock_guard<std::mutex> lock(_mutex);
             _CleanupUnusedLibraries();
         }
         _listplugindirs.clear();
@@ -540,7 +540,7 @@ protected:
 
     void GetPlugins(std::list<PluginPtr>& listplugins) const
     {
-        std::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         listplugins = _listplugins;
     }
 
@@ -577,7 +577,7 @@ protected:
             std::list< boost::weak_ptr<RegisteredInterface> > listRegisteredInterfaces;
             list<PluginPtr> listplugins;
             {
-                std::scoped_lock lock(_mutex);
+                std::lock_guard<std::mutex> lock(_mutex);
                 listRegisteredInterfaces = _listRegisteredInterfaces;
                 listplugins = _listplugins;
             }
@@ -632,7 +632,7 @@ protected:
                         }
                     }
                     if( !(*itplugin)->IsValid() ) {
-                        std::scoped_lock lock(_mutex);
+                        std::lock_guard<std::mutex> lock(_mutex);
                         _listplugins.remove(*itplugin);
                     }
                     ++itplugin;
@@ -713,7 +713,7 @@ protected:
 
     void ReloadPlugins()
     {
-        std::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         FOREACH(itplugin,_listplugins) {
             PluginPtr newplugin = _LoadPlugin((*itplugin)->ppluginname);
             if( !!newplugin ) {
@@ -725,7 +725,7 @@ protected:
 
     void OnRaveInitialized()
     {
-        std::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         FOREACH(itplugin, _listplugins) {
             (*itplugin)->OnRaveInitialized();
         }
@@ -733,7 +733,7 @@ protected:
 
     void OnRavePreDestroy()
     {
-        std::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         FOREACH(itplugin, _listplugins) {
             (*itplugin)->OnRavePreDestroy();
         }
@@ -741,7 +741,7 @@ protected:
 
     bool LoadPlugin(const std::string& pluginname)
     {
-        std::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         std::list<PluginPtr>::iterator it = _GetPlugin(pluginname);
         string newpluginname;
         if( it != _listplugins.end() ) {
@@ -762,7 +762,7 @@ protected:
 
     bool RemovePlugin(const std::string& pluginname)
     {
-        std::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         std::list<PluginPtr>::iterator it = _GetPlugin(pluginname);
         if( it == _listplugins.end() ) {
             return false;
@@ -774,7 +774,7 @@ protected:
 
     virtual bool HasInterface(InterfaceType type, const string& interfacename)
     {
-        std::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         FOREACHC(it,_listRegisteredInterfaces) {
             RegisteredInterfacePtr registration = it->lock();
             if( !!registration ) {
@@ -794,7 +794,7 @@ protected:
     void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) const
     {
         plugins.clear();
-        std::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         FOREACHC(itplugin, _listplugins) {
             PLUGININFO info;
             if( (*itplugin)->GetInfo(info) ) {
@@ -816,7 +816,7 @@ protected:
     void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const
     {
         interfacenames.clear();
-        std::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         FOREACHC(it,_listRegisteredInterfaces) {
             RegisteredInterfacePtr registration = it->lock();
             if( !!registration ) {
@@ -848,7 +848,7 @@ protected:
         if( strcmp(interfacehash, RaveGetInterfaceHash(type)) ) {
             throw openrave_exception(str(boost::format(_("interface %s invalid hash %s!=%s\n"))%RaveGetInterfaceName(type)%interfacehash%RaveGetInterfaceHash(type)),ORE_InvalidInterfaceHash);
         }
-        std::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         RegisteredInterfacePtr pdata(new RegisteredInterface(type,name,createfn,shared_from_this()));
         pdata->_iterator = _listRegisteredInterfaces.insert(_listRegisteredInterfaces.end(),pdata);
         return pdata;
@@ -1089,7 +1089,7 @@ protected:
 
     void _AddToLoader(PluginPtr p)
     {
-        std::scoped_lock lock(_mutexPluginLoader);
+        std::lock_guard<std::mutex> lock(_mutexPluginLoader);
         _listPluginsToLoad.push_back(p);
         _condLoaderHasWork.notify_all();
     }
@@ -1099,7 +1099,7 @@ protected:
         while(!_bShutdown) {
             list<PluginPtr> listPluginsToLoad;
             {
-                std::scoped_lock lock(_mutexPluginLoader);
+                std::unique_lock<std::mutex> lock(_mutexPluginLoader);
                 if( _listPluginsToLoad.empty() ) {
                     _condLoaderHasWork.wait(lock);
                     if( _bShutdown ) {
@@ -1112,7 +1112,7 @@ protected:
                 if( _bShutdown ) {
                     break;
                 }
-                std::scoped_lock lockplugin((*itplugin)->_mutex);
+                std::lock_guard<std::mutex> lockplugin((*itplugin)->_mutex);
                 if( _bShutdown ) {
                     break;
                 }

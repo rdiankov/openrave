@@ -331,7 +331,7 @@ void MainOpenRAVEThread()
     }
 
     {
-        EnvironmentMutex::scoped_lock lock(penv->GetMutex());
+        EnvironmentLock lock(penv->GetMutex());
 
         if( s_sceneFile.size() > 0 ) {
             if( !penv->Load(s_sceneFile) ) {
