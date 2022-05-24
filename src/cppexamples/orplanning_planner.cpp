@@ -113,7 +113,7 @@ public:
 
             // unlock the environment and wait for the robot to finish
             while(!probot->GetController()->IsDone() && IsOk()) {
-                std::this_thread::sleep(boost::posix_time::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     }

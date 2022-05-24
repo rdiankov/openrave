@@ -101,7 +101,7 @@ public:
         }
 
         while(IsOk()) {
-            std::this_thread::sleep(boost::posix_time::milliseconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 
         RAVELOG_INFO("wait for threads to finish\n");

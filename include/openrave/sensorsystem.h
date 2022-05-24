@@ -22,6 +22,8 @@
 #ifndef OPENRAVE_SENSORSYSTEM_H
 #define OPENRAVE_SENSORSYSTEM_H
 
+#include <thread>
+
 namespace OpenRAVE {
 
 /** \brief <b>[interface]</b> Used to manage the creation and destruction of bodies. See \ref arch_sensorsystem.
