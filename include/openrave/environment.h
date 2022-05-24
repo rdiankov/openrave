@@ -24,8 +24,13 @@
 
 namespace OpenRAVE {
 
-typedef std::recursive_mutex EnvironmentMutex;
+#if OPENRAVE_USE_STDTHREADS
+typedef std::mutex EnvironmentMutex;
+typedef std::unique_lock<EnvironmentMutex> EnvironmentLock;
+#else
+typedef boost::recursive_try_mutex EnvironmentMutex;
 typedef EnvironmentMutex::scoped_lock EnvironmentLock;
+#endif
 
 /// \brief used when adding interfaces to the environment
 enum InterfaceAddMode

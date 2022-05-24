@@ -51,7 +51,7 @@ public:
 
     bool RegisterBody(ostream& sout, istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         RegisteredBody body;
         sinput >> body.filename >> body.appearanceprobability;
         if( !sinput ) {

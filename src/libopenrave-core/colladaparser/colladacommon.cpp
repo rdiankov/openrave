@@ -35,7 +35,7 @@ void SetGlobalDAE(boost::shared_ptr<DAE> newdae)
 void ResetGlobalDAEWithLock()
 {
     RAVELOG_VERBOSE("resetting global collada DAE\n");
-    std::scoped_lock lock(s_daemutex);
+    std::lock_guard<std::mutex> lock(s_daemutex);
     s_dae.reset();
 }
 

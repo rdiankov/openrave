@@ -57,7 +57,7 @@ int main(int argc, char ** argv)
 
     while(1) {
         {
-            EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+            EnvironmentLock lock(penv->GetMutex()); // lock environment
 
             // move robot randomly
             probot->GetActiveDOFLimits(vlower,vupper);
