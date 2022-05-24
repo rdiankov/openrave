@@ -247,7 +247,7 @@ public:
 
     virtual void Init(bool bStartSimulationThread=true)
     {
-        boost::mutex::scoped_lock lockinit(_mutexInit);
+        std::scoped_lock lockinit(_mutexInit);
         if( _bInit ) {
             RAVELOG_WARN("environment is already initialized, ignoring\n");
             return;
@@ -324,7 +324,7 @@ public:
 
     virtual void Destroy()
     {
-        boost::mutex::scoped_lock lockdestroy(_mutexInit);
+        std::scoped_lock lockdestroy(_mutexInit);
         if( !_bInit ) {
             RAVELOG_VERBOSE_FORMAT("env=%s is already destroyed", GetNameId());
             return;
@@ -3280,7 +3280,7 @@ protected:
             Destroy();
         }
 
-        boost::mutex::scoped_lock lockinit(_mutexInit);
+        std::scoped_lock lockinit(_mutexInit);
         if( !bCheckSharedResources ) {
             SetCollisionChecker(CollisionCheckerBasePtr());
             SetPhysicsEngine(PhysicsEngineBasePtr());
@@ -3913,7 +3913,7 @@ protected:
     {
         if( !_threadSimulation ) {
             _bShutdownSimulation = false;
-            _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread, this)));
+            _threadSimulation.reset(new std::thread(boost::bind(&Environment::_SimulationThread, this)));
         }
     }
 
@@ -3957,7 +3957,7 @@ protected:
                             lockenv.reset();
                             // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
                             int actual_sleep=max((int)sleeptime*6/8,1000);
-                            boost::this_thread::sleep (boost::posix_time::microseconds(actual_sleep));
+                            std::this_thread::sleep (boost::posix_time::microseconds(actual_sleep));
                             //RAVELOG_INFO("sleeptime ideal %d, actually slept: %d\n",(int)sleeptime,(int)actual_sleep);
                             nLastSleptTime = utils::GetMicroTime();
                             //Since already slept this cycle, wait till next time to sleep.
@@ -3979,7 +3979,7 @@ protected:
 
             if( utils::GetMicroTime()-nLastSleptTime > 20000 ) {     // 100000 freezes the environment
                 lockenv.reset();
-                boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+                std::this_thread::sleep(boost::posix_time::milliseconds(1));
                 bNeedSleep = false;
                 nLastSleptTime = utils::GetMicroTime();
             }
@@ -4003,7 +4003,7 @@ protected:
             //TODO: Verify if this always has to happen even if thread slept in RT if statement above
             lockenv.reset(); // always release at the end of loop to give other threads time
             if( bNeedSleep ) {
-                boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+                std::this_thread::sleep(boost::posix_time::milliseconds(1));
             }
         }
     }
@@ -4211,7 +4211,7 @@ protected:
     CollisionCheckerBasePtr _pCurrentChecker;
     PhysicsEngineBasePtr _pPhysicsEngine;
 
-    boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation
+    boost::shared_ptr<std::thread> _threadSimulation;                      ///< main loop for environment simulation
 
     mutable EnvironmentMutex _mutexEnvironment;          ///< protects internal data from multithreading issues
     mutable std::shared_timed_mutex _mutexInterfaces;     ///< lock when managing interfaces like _listOwnedInterfaces, _listModules as well as _vecbodies and supporting data such as _mapBodyNameIndex, _mapBodyIdIndex and _environmentIndexRecyclePool
@@ -4219,7 +4219,7 @@ protected:
     using ExclusiveLock = std::lock_guard< std::shared_timed_mutex >;
     using SharedLock = std::shared_lock< std::shared_timed_mutex >;
 
-    mutable boost::mutex _mutexInit;     ///< lock for destroying the environment
+    mutable std::mutex _mutexInit;     ///< lock for destroying the environment
 
     vector<KinBody::BodyState> _vPublishedBodies; ///< protected by _mutexInterfaces
     string _homedirectory;

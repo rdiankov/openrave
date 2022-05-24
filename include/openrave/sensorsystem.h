@@ -229,10 +229,10 @@ protected:
 
     std::string _xmlid;
     BODIES _mapbodies;
-    boost::mutex _mutex;
+    std::mutex _mutex;
     uint64_t _expirationtime;     ///< expiration time in us
     bool _bShutdown;
-    boost::thread _threadUpdate;
+    std::thread _threadUpdate;
 };
 
 } // end namespace OpenRAVE

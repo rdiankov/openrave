@@ -51,7 +51,7 @@ static bool bDisplayGUI = true, bShowGUI = true;
 static EnvironmentBasePtr s_penv;
 static ViewerBasePtr s_pviewer; ///< static viewer created by the main thread. need to quit from its main loop
 
-//static boost::shared_ptr<boost::thread> s_mainThread;
+//static boost::shared_ptr<std::thread> s_mainThread;
 static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
 static boost::shared_ptr<string> s_viewerName;
@@ -274,7 +274,7 @@ int main(int argc, char ** argv)
 
     // mac osx requires the main thread to be the gui thread...
     //s_bThreadDestroyed = false;
-    //s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
+    //s_mainThread.reset(new std::thread(boost::bind(MainOpenRAVEThread)));
     //s_mainThread->join();
     MainOpenRAVEThread();
     {
