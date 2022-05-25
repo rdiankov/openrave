@@ -22,13 +22,13 @@
 
 #include "libopenrave-core/openrave-core.h"
 #include <set>
+#include <thread>
 
 using namespace OpenRAVE;
 using namespace std;
 
 #include <stdio.h>
 #include <boost/shared_ptr.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/array.hpp>
 #include <boost/algorithm/string.hpp>
 

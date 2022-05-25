@@ -18,6 +18,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <thread>
 #include <openrave/utils.h>
 #include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -2136,7 +2137,7 @@ void PyEnvironmentBase::Lock()
         if( TryLock() ) {
             return;
         }
-        boost::this_thread::sleep(boost::posix_time::microseconds(10));
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
     }
 
     // failed, so must be a python thread blocking it...
@@ -2229,7 +2230,7 @@ bool PyEnvironmentBase::Lock(float timeout)
         if( TryLock() ) {
             return true;
         }
-        boost::this_thread::sleep(boost::posix_time::microseconds(10));
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
     }
     return false;
 }
