@@ -1452,6 +1452,8 @@ void init_openravepy_global()
     .value("RealControllers",Clone_RealControllers)
     .value("Sensors",Clone_Sensors)
     .value("Modules",Clone_Modules)
+    .value("PassOnMissingBodyReferences",Clone_PassOnMissingBodyReferences)
+    .value("IgnoreGrabbedBodies",Clone_IgnoreGrabbedBodies)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     // Cannot export because openravepy_viewer already has "Viewer"
     // .export_values()
