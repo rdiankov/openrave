@@ -5610,7 +5610,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                         continue;
                     }
                     else {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("When cloning body '%s', could not find grabbed object '%s' in environmentid=%d"), GetName()%pbodyref->GetName()%pbodyref->GetEnv()->GetId(), ORE_InvalidState);
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("When cloning body '%s' from env=%s, could not find grabbed object '%s' in env=%s"), GetName()%r->GetEnv()->GetNameId()%pbodyref->GetName()%GetEnv()->GetNameId(), ORE_InvalidState);
                     }
                 }
                 //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
