@@ -20,7 +20,6 @@
 #include <mutex>
 #include <thread>
 #include <openrave/utils.h>
-#include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem/operations.hpp>
 
@@ -588,7 +587,7 @@ public:
     }
 
     static ViewerManager& GetInstance() {
-        boost::call_once(_InitializeSingleton, _onceInitialize);
+        std::call_once(_onceInitialize, _InitializeSingleton);
         // Return reference to object.
         return *_singleton;
     }
@@ -839,12 +838,12 @@ protected:
     bool _bInMain; ///< if true, viewer thread is running a main function
 
     static boost::scoped_ptr<ViewerManager> _singleton; ///< singleton
-    static boost::once_flag _onceInitialize; ///< makes sure initialization is atomic
+    static std::once_flag _onceInitialize; ///< makes sure initialization is atomic
 
 };
 
 boost::scoped_ptr<ViewerManager> ViewerManager::_singleton(0);
-boost::once_flag ViewerManager::_onceInitialize = BOOST_ONCE_INIT;
+std::once_flag ViewerManager::_onceInitialize;
 
 PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
 {

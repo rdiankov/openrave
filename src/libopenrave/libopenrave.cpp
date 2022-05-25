@@ -18,8 +18,8 @@
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/utility.hpp>
-#include <boost/thread/once.hpp>
 
+#include <mutex>
 #include <streambuf>
 
 #ifndef _WIN32
@@ -342,7 +342,7 @@ dReal RaveCeil(dReal f) {
 #endif
 
 static std::set<std::string> _gettextDomainsInitialized;
-static boost::once_flag _onceRaveInitialize = BOOST_ONCE_INIT;
+static std::once_flag _onceRaveInitialize;
 
 /// there is only once global openrave state. It is created when openrave
 /// is first used, and destroyed when the program quits or RaveDestroy is called.
@@ -413,7 +413,7 @@ public:
 
     static boost::shared_ptr<RaveGlobal>& instance()
     {
-        boost::call_once(_create,_onceRaveInitialize);
+        std::call_once(_onceRaveInitialize, _create);
         return _state;
     }
 
