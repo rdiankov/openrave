@@ -18,8 +18,6 @@
 using namespace ColladaDOM150;
 
 #include <locale>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/date_time/time_facet.hpp>
 #include <boost/algorithm/string.hpp>
 #include <ctime>
 
