@@ -117,13 +117,13 @@ public:
     /// \brief Defines a chain of joints for an arm and set of joints for a gripper. Simplifies operating with them.
     class OPENRAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
     {
+public:
         Manipulator(RobotBasePtr probot, const ManipulatorInfo& info);
         Manipulator(const Manipulator &r);
 
         /// \brief can switch the underyling robot
         Manipulator(RobotBasePtr probot, boost::shared_ptr<Manipulator const> r);
 
-public:
         ~Manipulator();
 
         /// \brief return a serializable info holding everything to initialize a manipulator
