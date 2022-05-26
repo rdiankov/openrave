@@ -63,7 +63,7 @@ struct extract_ {
         }
         catch(const std::exception& ex) {
             _bcheck = false;
-            RAVELOG_WARN_FORMAT("Cannot extract type %s from a pybind11::object: %s", std::string(typeid(T).name())%ex.what());
+            // RAVELOG_WARN_FORMAT("Cannot extract type %s from a pybind11::object: %s", std::string(typeid(T).name())%ex.what());
         }
     }
     // user-defined conversion:
