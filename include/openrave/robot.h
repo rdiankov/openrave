@@ -38,24 +38,7 @@ public:
 public:
         ManipulatorInfo() {
         }
-        ManipulatorInfo(const ManipulatorInfo& other) {
-            *this = other;
-        };
-        bool operator==(const ManipulatorInfo& other) const {
-            return _name == other._name
-                   && _sBaseLinkName == other._sBaseLinkName
-                   && _sIkChainEndLinkName == other._sIkChainEndLinkName
-                   && _sEffectorLinkName == other._sEffectorLinkName
-                   && _tLocalTool == other._tLocalTool
-                   && _vChuckingDirection == other._vChuckingDirection
-                   && _vdirection == other._vdirection
-                   && _sIkSolverXMLId == other._sIkSolverXMLId
-                   && _vGripperJointNames == other._vGripperJointNames
-                   && _grippername == other._grippername
-                   && _toolChangerConnectedBodyToolName == other._toolChangerConnectedBodyToolName
-                   && _vRestrictGraspSetNames == other._vRestrictGraspSetNames
-                   && _id == other._id;
-        }
+        bool operator==(const ManipulatorInfo& other) const;
         bool operator!=(const ManipulatorInfo& other) const {
             return !operator==(other);
         }
@@ -81,6 +64,7 @@ public:
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
         std::string _grippername; ///< associates the manipulator with a GripperInfo
         std::string _toolChangerConnectedBodyToolName; ///< When this parameter is non-empty, then this manipulator's end effector points to the mounting link of a tool changer system, then all the connected bodies that are mounted on this link become mutually exclusive in the sense that only one can be connected at a time. The value of the parameter targets a tool (manipulator) name inside those related connected bodies to select when the tool changing is complete.
+        std::string _toolChangerLinkName; ///< When this parameter is non-empty then this is the link name which all connectedBodies part of the tool changer are expected to be connecting to. If empty, then the tool changer link name will be assumed to be the end-effector link name (_sEffectorLinkName).
         std::vector<std::string> _vRestrictGraspSetNames; ///< When this parameter is non-empty, only grasp sets listed here are applicable for this manipulator.
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
@@ -133,13 +117,13 @@ public:
     /// \brief Defines a chain of joints for an arm and set of joints for a gripper. Simplifies operating with them.
     class OPENRAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
     {
+public:
         Manipulator(RobotBasePtr probot, const ManipulatorInfo& info);
         Manipulator(const Manipulator &r);
 
         /// \brief can switch the underyling robot
         Manipulator(RobotBasePtr probot, boost::shared_ptr<Manipulator const> r);
 
-public:
         ~Manipulator();
 
         /// \brief return a serializable info holding everything to initialize a manipulator
@@ -168,10 +152,6 @@ public:
 
         /// \brief return the linear/angular velocity of the manipulator coordinate system
         std::pair<Vector,Vector> GetVelocity() const;
-
-        inline Transform GetEndEffectorTransform() const {
-            return GetTransform();
-        }
 
         inline const std::string& GetId() const {
             return _info._id;
@@ -223,6 +203,19 @@ public:
 
         inline const std::string& GetToolChangerConnectedBodyToolName() const {
             return _info._toolChangerConnectedBodyToolName;
+        }
+
+        /// \brief If the current manipulator is also a tool changer, then returns the tool changer link name. If empty, return the end effector link name
+        ///
+        /// A manipulator is a tool changer if toolChangerConnectedBodyToolName is not empty.
+        inline const std::string& GetToolChangerLinkName() const {
+            if( _info._toolChangerConnectedBodyToolName.empty() ) {
+                // toolname is empty, so not a tool changer, just return an empty string
+                return _info._toolChangerConnectedBodyToolName;
+            }
+            else {
+                return _info._toolChangerLinkName.empty() ? _info._sEffectorLinkName : _info._toolChangerLinkName;
+            }
         }
 
         inline const std::vector<std::string>& GetRestrictGraspSetNames() const {
@@ -737,9 +730,6 @@ private:
     {
 public:
         ConnectedBodyInfo();
-        ConnectedBodyInfo(const ConnectedBodyInfo& other) {
-            *this = other;
-        };
         bool operator==(const ConnectedBodyInfo& other) const;
         bool operator!=(const ConnectedBodyInfo& other) const {
             return !operator==(other);
@@ -906,9 +896,6 @@ private:
 public:
         RobotBaseInfo() : KinBodyInfo() {
         }
-        RobotBaseInfo(const RobotBaseInfo& other) : KinBodyInfo(other) {
-            *this = other;
-        };
         bool operator==(const RobotBaseInfo& other) const;
         bool operator!=(const RobotBaseInfo& other) const {
             return !operator==(other);
@@ -923,7 +910,7 @@ public:
         std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
         std::vector<GripperInfoPtr> _vGripperInfos; ///< list of pointers to GripperInfo
 protected:
-        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value);
+        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale);
 
     };
     typedef boost::shared_ptr<RobotBaseInfo> RobotBaseInfoPtr;
@@ -1017,8 +1004,9 @@ private:
 
     void SetName(const std::string& name) override;
 
-    void SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits = 1, const std::vector<int>& dofindices = std::vector<int>()) override;
-    void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, uint32_t checklimits = 1) override;
+    void SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>()) override;
+    void SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>()) override;
+    void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, uint32_t checklimits = CLA_CheckLimits) override;
 
     void SetLinkTransformations(const std::vector<Transform>& transforms) override;
     void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues) override;

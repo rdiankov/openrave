@@ -373,7 +373,7 @@ class VisibilityModel(DatabaseGenerator):
                 order = xrange(len(self.visibilitytransforms))
             for i in order:
                 pose = self.visibilitytransforms[i]
-                Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetEndEffectorTransform())
+                Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetTransform())
                 Tcamera = dot(self.targetlink.GetParent().GetTransform(),matrixFromPose(pose))
                 Tgrasp = dot(Tcamera,Trelative)
                 s = self.manip.FindIKSolution(Tgrasp,checkcollision)

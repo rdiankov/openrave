@@ -15,7 +15,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+#include <boost/bind/bind.hpp>
 #include <boost/make_shared.hpp>
+
+using namespace boost::placeholders;
 
 namespace OpenRAVE {
 
@@ -711,8 +714,27 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             for( std::string& forcedAdjacentLink : plink->_info._vForcedAdjacentLinks ) {
                 forcedAdjacentLink = connectedBody._nameprefix + forcedAdjacentLink;
             }
+
             _InitAndAddLink(plink);
             connectedBody._vResolvedLinkNames[ilink].first = plink->_info._name;
+
+            // Set all links from connected bodies with -1 to be adjacent, otherwise, we can detect self collision when in indeterminable state.
+            if (connectedBody.IsActive() == -1) {
+                vector<ConnectedBodyPtr>::iterator itPrevConnectedBody = itconnectedBody;
+                while(itPrevConnectedBody != _vecConnectedBodies.begin()) {
+                    --itPrevConnectedBody;
+                    ConnectedBody& prevConnectedBody = **itPrevConnectedBody;
+                    if (prevConnectedBody.IsActive() == -1) {
+                        for(int prevIlink = 0; prevIlink < (int)prevConnectedBody._info._vLinkInfos.size(); ++prevIlink) {
+                            KinBody::LinkPtr& pPrevBodyLink = prevConnectedBody._vResolvedLinkNames[prevIlink].second;
+                            if( !!pPrevBodyLink ) {
+                                plink->_info.SetNoncollidingLink(pPrevBodyLink->GetName());
+                                _SetForcedAdjacentLinks(plink->GetIndex(), pPrevBodyLink->GetIndex());
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Joints
@@ -836,6 +858,22 @@ void RobotBase::_ComputeConnectedBodiesInformation()
 
                 if( !bFoundEffectorLink ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find endEffectorLink '%s' in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._sEffectorLinkName, ORE_InvalidArguments);
+                }
+            }
+
+            if( !pnewmanipulator->_info._toolChangerLinkName.empty() ) {
+                // search for the correct resolved _toolChangerLinkName
+                bool bFoundToolChangerLink = false;
+                for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
+                    if( pnewmanipulator->_info._toolChangerLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
+                        pnewmanipulator->_info._toolChangerLinkName = connectedBody._vResolvedLinkNames.at(ilink).first;
+                        bFoundToolChangerLink = true;
+                    }
+                }
+
+                if( !bFoundToolChangerLink ) {
+                    // it is OK if the toolChangerLinkName is pointing to another link name not in the connected body!
+                    //throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find toolChangerLinkName '%s' in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._toolChangerLinkName, ORE_InvalidArguments);
                 }
             }
 

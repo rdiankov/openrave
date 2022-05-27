@@ -35,7 +35,7 @@ class ParabolicSmoother2 : public PlannerBase, public RampOptimizer::Feasibility
 
     class MyRampNDFeasibilityChecker : public RampOptimizer::RampNDFeasibilityChecker {
 public:
-        MyRampNDFeasibilityChecker(RampOptimizer::FeasibilityCheckerBase* feas) : RampOptimizer::RampNDFeasibilityChecker(feas) {
+        MyRampNDFeasibilityChecker(RampOptimizer::FeasibilityCheckerBase* feas_) : RampOptimizer::RampNDFeasibilityChecker(feas_) {
             _bHasParameters = false;
             _cacheRampNDVectIn.resize(1);
             _envid = 0;
@@ -240,46 +240,46 @@ public:
                     vsearchsegments[j] = j;
                 }
                 do {
-                    size_t index, index2 = 0;
+                    size_t index1, index2 = 0;
 
-                    index = vsearchsegments.size() * (4/8);
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    index1 = vsearchsegments.size() * (4/8);
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
 
-                    index = vsearchsegments.size() * (2/8);
-                    if( index <= index2 ) {
+                    index1 = vsearchsegments.size() * (2/8);
+                    if( index1 <= index2 ) {
                         break;
                     }
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
 
-                    index = vsearchsegments.size() * (6/8);
-                    if( index <= index2 ) {
+                    index1 = vsearchsegments.size() * (6/8);
+                    if( index1 <= index2 ) {
                         break;
                     }
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
 
-                    index = vsearchsegments.size() * (1/8);
-                    if( index <= index2 ) {
+                    index1 = vsearchsegments.size() * (1/8);
+                    if( index1 <= index2 ) {
                         break;
                     }
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
 
-                    index = vsearchsegments.size() * (5/8);
-                    if( index <= index2 ) {
+                    index1 = vsearchsegments.size() * (5/8);
+                    if( index1 <= index2 ) {
                         break;
                     }
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
 
-                    index = vsearchsegments.size() * (3/8);
-                    if( index <= index2 ) {
+                    index1 = vsearchsegments.size() * (3/8);
+                    if( index1 <= index2 ) {
                         break;
                     }
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
 
-                    index = vsearchsegments.size() * (7/8);
-                    if( index <= index2 ) {
+                    index1 = vsearchsegments.size() * (7/8);
+                    if( index1 <= index2 ) {
                         break;
                     }
-                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index1]); index2++;
                 } while (0);
 
 #ifdef SMOOTHER2_TIMING_DEBUG
@@ -721,9 +721,11 @@ public:
                 _tShortcutStart = utils::GetMicroTime();
 #endif
 #ifdef SMOOTHER2_ENABLE_MERGING
-                nummerges = _MergeConsecutiveSegments(parabolicpath, parameters->_fStepLength*0.99);
-                if( nummerges < 0 ) {
-                    return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%_environmentid), PS_Interrupted);
+                if( parameters->maxmergeiterations > 0 ) {
+                    nummerges = _MergeConsecutiveSegments(parabolicpath, parameters->_fStepLength*0.99);
+                    if( nummerges < 0 ) {
+                        return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%_environmentid), PS_Interrupted);
+                    }
                 }
 #endif
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
@@ -2999,7 +3001,7 @@ protected:
 #endif
                                         for( size_t j = 0; j < vellimits.size(); ++j ) {
                                             dReal fMinVelLimit = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                                            dReal fVelMult = RaveSqrt(retcheck.vReductionFactors[j]);
+                                            fVelMult = RaveSqrt(retcheck.vReductionFactors[j]);
                                             if( vellimits[j] * fVelMult < fMinVelLimit ) {
                                                 // In this case, we cannot use the recommended scaling factor since
                                                 // after scaling, the vellimits will fall below max(v0, v1). So we set

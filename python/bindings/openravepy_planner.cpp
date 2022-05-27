@@ -117,7 +117,8 @@ void PyPlannerBase::PyPlannerParameters::SetRobotActiveJoints(PyRobotBasePtr rob
     if( !_paramswrite ) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("PlannerParameters needs to be non-const"),ORE_Failed);
     }
-    _paramswrite->SetRobotActiveJoints(openravepy::GetRobot(robot));
+    RobotBasePtr probot = openravepy::GetRobot(robot);
+    _paramswrite->SetRobotActiveJoints(probot);
 }
 
 void PyPlannerBase::PyPlannerParameters::SetConfigurationSpecification(PyEnvironmentBasePtr pyenv, PyConfigurationSpecificationPtr pyspec) {

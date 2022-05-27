@@ -487,7 +487,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     alltrajdata = None
             if alltrajdata is None:
                 self.robot.SetDOFValues(neutraljointvalues)
-                Tmanips = [dot(linalg.inv(manip.GetBase().GetTransform()),manip.GetEndEffectorTransform()) for manip in manips]
+                Tmanips = [dot(linalg.inv(manip.GetBase().GetTransform()),manip.GetTransform()) for manip in manips]
                 for niter in range(500):
                     self.robot.SetDOFValues(origjointvalues)
                     if bounds is None:
@@ -789,7 +789,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         with self.robot:
             dbounds = goalbounds[1,:]-goalbounds[0,:]
             Trobot = self.robot.GetTransform()
-            Trelative = dot(linalg.inv(gmodel.target.GetTransform()),gmodel.manip.GetEndEffectorTransform())
+            Trelative = dot(linalg.inv(gmodel.target.GetTransform()),gmodel.manip.GetTransform())
             for iter in range(numtries):
                 r = random.rand(3)
                 if iter > 0:
@@ -826,7 +826,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
     def placeObject(self,target,dests):
         assert(len(dests)>0)
         with self.robot:
-            Trelative = dot(linalg.inv(target.GetTransform()),self.robot.GetActiveManipulator().GetEndEffectorTransform())
+            Trelative = dot(linalg.inv(target.GetTransform()),self.robot.GetActiveManipulator().GetTransform())
             I=random.permutation(range(len(dests)))
             num = len(I)/50
             success = False

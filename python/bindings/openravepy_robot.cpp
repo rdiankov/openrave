@@ -81,6 +81,7 @@ void PyManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info) {
     _vGripperJointNames = vGripperJointNames;
     _grippername = ConvertStringToUnicode(info._grippername);
     _toolChangerConnectedBodyToolName = ConvertStringToUnicode(info._toolChangerConnectedBodyToolName);
+    _toolChangerLinkName = ConvertStringToUnicode(info._toolChangerLinkName);
     py::list vRestrictGraspSetNames;
     FOREACHC(itname, info._vRestrictGraspSetNames) {
         vRestrictGraspSetNames.append(ConvertStringToUnicode(*itname));
@@ -135,6 +136,13 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
     else {
         RAVELOG_WARN_FORMAT("python manipulator %s has toolChangerConnectedBodyToolName that is None", pinfo->_name);
         pinfo->_toolChangerConnectedBodyToolName.clear();
+    }
+    if( !IS_PYTHONOBJECT_NONE(_toolChangerLinkName) ) {
+        pinfo->_toolChangerLinkName = py::extract<std::string>(_toolChangerLinkName);
+    }
+    else {
+        RAVELOG_WARN_FORMAT("python manipulator %s has toolChangerLinkName that is None", pinfo->_name);
+        pinfo->_toolChangerLinkName.clear();
     }
     if( !IS_PYTHONOBJECT_NONE(_vRestrictGraspSetNames) ) {
         pinfo->_vRestrictGraspSetNames = ExtractArray<std::string>(_vRestrictGraspSetNames);
@@ -705,6 +713,10 @@ object PyRobotBase::PyManipulator::GetToolChangerConnectedBodyToolName() const {
     return ConvertStringToUnicode(_pmanip->GetToolChangerConnectedBodyToolName());
 }
 
+object PyRobotBase::PyManipulator::GetToolChangerLinkName() const {
+    return ConvertStringToUnicode(_pmanip->GetToolChangerLinkName());
+}
+
 object PyRobotBase::PyManipulator::GetRestrictGraspSetNames() const {
     py::list names;
     FOREACHC(itname, _pmanip->GetRestrictGraspSetNames()) {
@@ -908,9 +920,9 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptio
     EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ExtractIkParameterization(oparam,ikparam) ) {
         if( ikreturn ) {
-            IkReturn ikreturn(IKRA_Reject);
-            _FindIKSolution(ikparam,filteroptions,ikreturn,releasegil);
-            return openravepy::toPyIkReturn(ikreturn);
+            IkReturn ikreject(IKRA_Reject);
+            _FindIKSolution(ikparam,filteroptions,ikreject,releasegil);
+            return openravepy::toPyIkReturn(ikreject);
         }
         else {
             std::vector<dReal> solution;
@@ -923,9 +935,9 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptio
     // assume transformation matrix
     else {
         if( ikreturn ) {
-            IkReturn ikreturn(IKRA_Reject);
-            _FindIKSolution(ExtractTransform(oparam),filteroptions,ikreturn,releasegil);
-            return openravepy::toPyIkReturn(ikreturn);
+            IkReturn ikreject(IKRA_Reject);
+            _FindIKSolution(ExtractTransform(oparam),filteroptions,ikreject,releasegil);
+            return openravepy::toPyIkReturn(ikreject);
         }
         else {
             std::vector<dReal> solution;
@@ -944,9 +956,9 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
     EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ExtractIkParameterization(oparam,ikparam) ) {
         if( ikreturn ) {
-            IkReturn ikreturn(IKRA_Reject);
-            _FindIKSolution(ikparam,vfreeparams,filteroptions,ikreturn,releasegil);
-            return openravepy::toPyIkReturn(ikreturn);
+            IkReturn ikreject(IKRA_Reject);
+            _FindIKSolution(ikparam,vfreeparams,filteroptions,ikreject,releasegil);
+            return openravepy::toPyIkReturn(ikreject);
         }
         else {
             std::vector<dReal> solution;
@@ -959,9 +971,9 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
     // assume transformation matrix
     else {
         if( ikreturn ) {
-            IkReturn ikreturn(IKRA_Reject);
-            _FindIKSolution(ExtractTransform(oparam),vfreeparams,filteroptions,ikreturn,releasegil);
-            return openravepy::toPyIkReturn(ikreturn);
+            IkReturn ikreject(IKRA_Reject);
+            _FindIKSolution(ExtractTransform(oparam),vfreeparams,filteroptions,ikreject,releasegil);
+            return openravepy::toPyIkReturn(ikreject);
         }
         else {
             std::vector<dReal> solution;
@@ -2203,7 +2215,7 @@ class ManipulatorInfo_pickle_suite
 public:
     static py::tuple getstate(const PyManipulatorInfo& r)
     {
-        return py::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames, r._grippername, r._toolChangerConnectedBodyToolName, r._vRestrictGraspSetNames, r._sIkChainEndLinkName);
+        return py::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames, r._grippername, r._toolChangerConnectedBodyToolName, r._vRestrictGraspSetNames, r._sIkChainEndLinkName, r._toolChangerLinkName);
     }
     static void setstate(PyManipulatorInfo& r, py::tuple state) {
         r._name = state[0];
@@ -2237,6 +2249,12 @@ public:
         }
         else {
             r._sIkChainEndLinkName = py::none_();
+        }
+        if( len(state) > 12 ) {
+            r._toolChangerLinkName = state[12];
+        }
+        else {
+            r._toolChangerLinkName = py::none_();
         }
     }
 };
@@ -2392,6 +2410,7 @@ void init_openravepy_robot()
                              .def_readwrite("_vGripperJointNames",&PyManipulatorInfo::_vGripperJointNames)
                              .def_readwrite("_grippername",&PyManipulatorInfo::_grippername)
                              .def_readwrite("_toolChangerConnectedBodyToolName",&PyManipulatorInfo::_toolChangerConnectedBodyToolName)
+                             .def_readwrite("_toolChangerLinkName",&PyManipulatorInfo::_toolChangerLinkName)
                              .def_readwrite("_vRestrictGraspSetNames",&PyManipulatorInfo::_vRestrictGraspSetNames)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                              .def("SerializeJSON", &PyManipulatorInfo::SerializeJSON,
@@ -2424,15 +2443,17 @@ void init_openravepy_robot()
             return pyinfo;
         }
                                       ))
-                             .def("__copy__", [](const PyManipulatorInfo& self){ return self; })
+                             .def("__copy__", [](const PyManipulatorInfo& self){
+            return self;
+        })
                              .def("__deepcopy__",
-                                      [](const PyManipulatorInfo &pyinfo, const py::dict& memo) {
+                                  [](const PyManipulatorInfo &pyinfo, const py::dict& memo) {
             auto state = ManipulatorInfo_pickle_suite::getstate(pyinfo);
             PyManipulatorInfo pyinfo_new;
             ManipulatorInfo_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
         }
-                                      )
+                                  )
 #else
                              .def_pickle(ManipulatorInfo_pickle_suite())
 #endif
@@ -2742,7 +2763,6 @@ void init_openravepy_robot()
 #else
         class_<PyRobotBase::PyManipulator, OPENRAVE_SHARED_PTR<PyRobotBase::PyManipulator> >("Manipulator", DOXY_CLASS(RobotBase::Manipulator), no_init)
 #endif
-        .def("GetEndEffectorTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetTransformPose", &PyRobotBase::PyManipulator::GetTransformPose, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetVelocity", &PyRobotBase::PyManipulator::GetVelocity, DOXY_FN(RobotBase::Manipulator,GetVelocity))
@@ -2750,6 +2770,7 @@ void init_openravepy_robot()
         .def("SetName",&PyRobotBase::PyManipulator::SetName, PY_ARGS("name") DOXY_FN(RobotBase::Manipulator,SetName))
         .def("GetGripperName",&PyRobotBase::PyManipulator::GetGripperName, DOXY_FN(RobotBase::Manipulator,GetGripperName))
         .def("GetToolChangerConnectedBodyToolName",&PyRobotBase::PyManipulator::GetToolChangerConnectedBodyToolName, DOXY_FN(RobotBase::Manipulator,GetToolChangerConnectedBodyToolName))
+        .def("GetToolChangerLinkName",&PyRobotBase::PyManipulator::GetToolChangerLinkName, DOXY_FN(RobotBase::Manipulator,GetToolChangerLinkName))
         .def("GetRestrictGraspSetNames",&PyRobotBase::PyManipulator::GetRestrictGraspSetNames, DOXY_FN(RobotBase::Manipulator,GetRestrictGraspSetNames))
         .def("GetRobot",&PyRobotBase::PyManipulator::GetRobot, DOXY_FN(RobotBase::Manipulator,GetRobot))
         .def("SetIkSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))

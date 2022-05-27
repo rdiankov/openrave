@@ -344,7 +344,7 @@ public:
                     for(dReal ftime = 0; ftime <= ptraj->GetDuration(); ftime += 0.01) {
                         ptraj->Sample(vtrajdata,ftime,probot->GetActiveConfigurationSpecification());
                         probot->SetActiveDOFValues(vtrajdata);
-                        vpoints.push_back(pmanip->GetEndEffectorTransform().trans);
+                        vpoints.push_back(pmanip->GetTransform().trans);
                     }
                     pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
                 }

@@ -49,6 +49,8 @@ using namespace std;
 # define DEG_TO_RAD   ( PI / 180.0 )
 # define RAD_TO_DEG   ( 180.0 / PI )
 
+#pragma GCC diagnostic ignored "-Wshadow"
+
 //****************************************************************************80
 // 
 //  GLOBAL DATA 
@@ -168,9 +170,7 @@ char* fileout_name = NULL;
 
 int    group_num;
 
-int    i;
 char   input[LINE_MAX_LEN];
-int    k;
 char   level_name[LEVEL_MAX][LINE_MAX_LEN];
 
 int    line_dex[LINES_MAX];
@@ -2341,6 +2341,7 @@ void data_check ( void )
 {
   int iface;
   int nfix;
+  int i;
 
   if ( COLOR_MAX < color_num )
   {
@@ -7144,6 +7145,7 @@ int hrc_write ( FILE* fileout )
 {
   int iface;
   int ivert;
+  int i;
   int j;
   int jhi;
   int jlo;
@@ -12348,6 +12350,9 @@ int smf_read ( FILE *filein )
   float xvec[3];
   float y;
   float z;
+
+  int i;
+  int k;
 
   face_count = 0;
   icor3_normal = 0;

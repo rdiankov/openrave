@@ -440,17 +440,10 @@ AttributesList toAttributesList(py::dict odict);
 AttributesList toAttributesList(py::list olist);
 AttributesList toAttributesList(py::object oattributes);
 
-bool GetReturnTransformQuaternions();
-
 template <typename T>
-inline py::object ReturnTransform(T t)
+inline py::object ReturnTransform(const T& t)
 {
-    if( GetReturnTransformQuaternions() ) {
-        return toPyArray(Transform(t));
-    }
-    else {
-        return toPyArray(TransformMatrix(t));
-    }
+    return toPyArray(TransformMatrix(t));
 }
 
 class OPENRAVEPY_API PyPluginInfo
@@ -600,6 +593,7 @@ void init_openravepy_ikparameterization(py::module& m);
 void init_openravepy_ikparameterization();
 #endif
 OPENRAVEPY_API py::object toPyAABB(const AABB& ab);
+OPENRAVEPY_API py::object toPyOrientedBox(const OrientedBox& obb);
 OPENRAVEPY_API py::object toPyRay(const RAY& r);
 OPENRAVEPY_API RAY ExtractRay(py::object o);
 

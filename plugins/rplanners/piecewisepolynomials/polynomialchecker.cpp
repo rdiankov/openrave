@@ -36,27 +36,24 @@ const char* GetPolynomialCheckReturnString(PolynomialCheckReturn ret)
     return "PCR(Unknown)";
 }
 
-PolynomialChecker::PolynomialChecker(size_t ndof, int envid)
+PolynomialChecker::PolynomialChecker(size_t ndof_, int envid_) : ndof(ndof_), envid(envid_)
 {
-    this->ndof = ndof;
-    this->envid = envid;
-
     _cacheCoordsVect.reserve(4); // quintic polynomial has at most 4 extrema
     _cacheXVect.resize(ndof);
     _cacheVVect.resize(ndof);
     _cacheAVect.resize(ndof);
 }
 
-void PolynomialChecker::Initialize(size_t ndof, int envid)
+void PolynomialChecker::Initialize(size_t ndof_, int envid_)
 {
-    this->ndof = ndof;
-    this->envid = envid;
+    this->ndof = ndof_;
+    this->envid = envid_;
     if( _cacheCoordsVect.capacity() < 4 ) {
         _cacheCoordsVect.reserve(4); // quintic polynomial has at most 4 extrema
     }
-    _cacheXVect.resize(ndof);
-    _cacheVVect.resize(ndof);
-    _cacheAVect.resize(ndof);
+    _cacheXVect.resize(ndof_);
+    _cacheVVect.resize(ndof_);
+    _cacheAVect.resize(ndof_);
 }
 
 PolynomialCheckReturn PolynomialChecker::CheckPolynomialValues(const Polynomial& p, const dReal t, const dReal x, const dReal v, const dReal a)

@@ -74,9 +74,6 @@ class OPENRAVE_API ElectricMotorActuatorInfo : public InfoBase
 public:
     ElectricMotorActuatorInfo() {
     };
-    ElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& other) {
-        *this = other;
-    }
     bool operator==(const ElectricMotorActuatorInfo& other) const {
         return model_type == other.model_type
                && assigned_power_rating == other.assigned_power_rating
@@ -338,9 +335,6 @@ public:
     {
 public:
         GeometryInfo() {
-        }
-        GeometryInfo(const GeometryInfo& other) {
-            *this = other;
         }
         bool operator==(const GeometryInfo& other) const {
             return _t == other._t
@@ -809,9 +803,6 @@ protected:
 public:
         LinkInfo() {
         };
-        LinkInfo(const LinkInfo& other) {
-            *this = other;
-        }
         bool operator==(const LinkInfo& other) const;
         bool operator!=(const LinkInfo& other) const {
             return !operator==(other);
@@ -900,7 +891,7 @@ public:
         }
 
 private:
-        Transform _t; ///< the current transformation of the link with respect to the body coordinate system
+        Transform _t; ///< the current transformation of the link with respect to the world coordinate system
 
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
@@ -1309,9 +1300,6 @@ private:
 public:
         MimicInfo() {
         };
-        MimicInfo(const MimicInfo& other) {
-            *this = other;
-        }
 
         void Reset() override;
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
@@ -1370,9 +1358,6 @@ public:
     {
 public:
         JointInfo() {
-        }
-        JointInfo(const JointInfo& other) {
-            *this = other;
         }
         bool operator==(const JointInfo& other) const;
         bool operator!=(const JointInfo& other) const {
@@ -2042,9 +2027,6 @@ private:
 public:
         GrabbedInfo() {
         }
-        GrabbedInfo(const GrabbedInfo& other) {
-            *this = other;
-        }
         bool operator==(const GrabbedInfo& other) const {
             return _id == other._id
                    && _grabbedname == other._grabbedname
@@ -2180,9 +2162,6 @@ private:
 public:
         KinBodyInfo() {
         }
-        KinBodyInfo(const KinBodyInfo& other) {
-            *this = other;
-        }
         bool operator==(const KinBodyInfo& other) const;
         bool operator!=(const KinBodyInfo& other) const {
             return !operator==(other);
@@ -2228,7 +2207,7 @@ private:
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of KinBodyInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
 protected:
-        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value);
+        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale);
 
         friend class KinBody; ///< for changing _modifiedFields
 
@@ -2736,6 +2715,13 @@ private:
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
     AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
+    /// \brief returns an axis-aligned bounding box of the current body transform with respect to a rotation quatWorld.
+    ///
+    /// \brief quaterion of the orientation of the box in the world coordinate system.
+    /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
+    /// \return an oriented bounding box whose orientation is quatWorld
+    OrientedBox ComputeOBBOnAxes(const Vector& quatWorld, bool bEnabledOnlyLinks=false) const;
+
     /// \brief returns an axis-aligned bounding box when body has identity transform
     ///
     /// Internally equivalent to ComputeAABBFromTransform(Transform(), ...)
@@ -2765,15 +2751,23 @@ private:
 
     /// \brief Sets the joint values of the robot.
     ///
-    /// \param values the values to set the joint angles (ordered by the dof indices)
+    /// \param[in] values the values to set the joint angles (ordered by the dof indices)
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
-    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    /// \param[in] dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
+
+    /// \brief Sets the joint values of the robot.
+    ///
+    /// \param[in] pJointValues pointer to head of array that holds joint angles (ordered by the dof indices)
+    /// \param[in] dof number of dof described by array of pJointValues.
+    /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
+    /// \param[in] dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief Sets the joint values and transformation of the body.
     ///
-    /// \param values the values to set the joint angles (ordered by the dof indices)
-    /// \param transform represents the transformation of the first body.
+    /// \param[in] values the values to set the joint angles (ordered by the dof indices)
+    /// \param[in] transform represents the transformation of the first body.
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     virtual void SetDOFValues(const std::vector<dReal>& values, const Transform& transform, uint32_t checklimits = CLA_CheckLimits);
 

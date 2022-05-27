@@ -15,14 +15,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ravep.h"
+#include <boost/bind/bind.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <boost/lexical_cast.hpp>
 #include <openrave/xmlreaders.h>
 
+using namespace boost::placeholders;
+
 namespace OpenRAVE {
 
 // To distinguish between binary and XML trajectory files
-static const uint16_t MAGIC_NUMBER = 0x62ff;
+static const uint16_t BINARY_TRAJECTORY_MAGIC_NUMBER = 0x62ff;
 static const uint16_t BINARY_TRAJECTORY_VERSION_NUMBER = 0x0003;  // Version number for serialization
 
 static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
@@ -67,6 +70,8 @@ inline void WriteBinaryVector(std::ostream&f, const std::vector<dReal>& v)
 }
 
 /* Helper functions for binary trajectory file reading */
+
+// streams
 inline bool ReadBinaryUInt16(std::istream& f, uint16_t& value)
 {
     f.read((char*) &value, sizeof(value));
@@ -113,6 +118,53 @@ inline bool ReadBinaryVector(std::istream& f, std::vector<dReal>& v)
     f.read((char*) &v[0], vectorLengthBytes);
 
     return !!f;
+}
+
+// raw pointers
+inline void ReadBinaryUInt16(const uint8_t*& f, uint16_t& value)
+{
+    value = *(uint16_t*)f;
+    f += sizeof(uint16_t);
+}
+
+inline void ReadBinaryUInt32(const uint8_t*& f, uint32_t& value)
+{
+    value = *(uint32_t*)f;
+    f += sizeof(uint32_t);
+}
+
+inline void ReadBinaryInt(const uint8_t*& f, int& value)
+{
+    value = *(int*)f;
+    f += sizeof(int);
+}
+
+inline void ReadBinaryString(const uint8_t*& f, std::string& s)
+{
+    uint16_t length = 0;
+    ReadBinaryUInt16(f, length);
+    if (length > 0)
+    {
+        s.resize(length);
+        std::copy(f, f+length, &s[0]);
+        f += length;
+    }
+    else {
+        s.clear();
+    }
+}
+
+inline void ReadBinaryVector(const uint8_t*& f, std::vector<dReal>& v)
+{
+    // Get number of data points
+    uint32_t numDataPoints = 0;
+    ReadBinaryUInt32(f, numDataPoints);
+    v.resize(numDataPoints);
+
+    // Load binary directly to vector
+    const uint64_t vectorLengthBytes = numDataPoints*sizeof(dReal);
+    std::copy(f, f+vectorLengthBytes, (char*)&v[0]);
+    f += vectorLengthBytes;
 }
 
 class GenericTrajectory : public TrajectoryBase
@@ -428,9 +480,9 @@ public:
                     else if( timeFromLowerWaypoint > waypointdeltatime ) {
                         timeFromLowerWaypoint = waypointdeltatime;
                     }
-                    for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
-                        if( !!_vgroupinterpolators[i] ) {
-                            _vgroupinterpolators[i](index-1, timeFromLowerWaypoint, itdata);
+                    for(size_t j = 0; j < _vgroupinterpolators.size(); ++j) {
+                        if( !!_vgroupinterpolators[j] ) {
+                            _vgroupinterpolators[j](index-1, timeFromLowerWaypoint, itdata);
                         }
                     }
                     // should return the sample time relative to the last endpoint so it is easier to re-insert in the trajectory
@@ -529,7 +581,7 @@ public:
             // NOTE: Ignore 'options' argument for now
 
             // Write binary file header
-            WriteBinaryUInt16(O, MAGIC_NUMBER);
+            WriteBinaryUInt16(O, BINARY_TRAJECTORY_MAGIC_NUMBER);
             WriteBinaryUInt16(O, BINARY_TRAJECTORY_VERSION_NUMBER);
 
             /* Store meta-data */
@@ -610,14 +662,14 @@ public:
     void deserialize(std::istream& I) override
     {
         // Check whether binary or XML file
-        stringstream::streampos pos = I.tellg();  // Save old position
+        stringstream::pos_type pos = I.tellg();  // Save old position
         uint16_t binaryFileHeader = 0;
         if( !ReadBinaryUInt16(I, binaryFileHeader) ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot read first 2 bytes for deserializing traj, stream might be empty "),ORE_InvalidArguments);
         }
 
         // Read binary trajectory files
-        if (binaryFileHeader == MAGIC_NUMBER)
+        if (binaryFileHeader == BINARY_TRAJECTORY_MAGIC_NUMBER)
         {
             uint16_t versionNumber = 0;
             ReadBinaryUInt16(I, versionNumber);
@@ -698,6 +750,97 @@ public:
             // try XML deserialization
             I.seekg((size_t) pos);                  // Reset to initial positoin
             TrajectoryBase::deserialize(I);
+        }
+    }
+
+    void DeserializeFromRawData(const uint8_t* pdata, size_t nDataSize) override
+    {
+        // Check whether binary or XML file
+        const uint8_t* I = pdata;
+        uint16_t binaryFileHeader = 0;
+        ReadBinaryUInt16(I, binaryFileHeader);
+
+        // Read binary trajectory files
+        if (binaryFileHeader == BINARY_TRAJECTORY_MAGIC_NUMBER)
+        {
+            uint16_t versionNumber = 0;
+            ReadBinaryUInt16(I, versionNumber);
+
+            // currently supported versions: 0x0001, 0x0002
+            if (versionNumber > BINARY_TRAJECTORY_VERSION_NUMBER || versionNumber < 0x0001)
+            {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported trajectory format version %d "),versionNumber,ORE_InvalidArguments);
+            }
+
+            /* Read metadata */
+
+            // Read number of groups
+            uint16_t numGroups = 0;
+            ReadBinaryUInt16(I, numGroups);
+
+            _bInit = false;
+            _spec._vgroups.resize(numGroups);
+            FOREACH(itgroup, _spec._vgroups)
+            {
+                ReadBinaryString(I, itgroup->name);             // Read group name
+                ReadBinaryInt(I, itgroup->offset);              // Read offset
+                ReadBinaryInt(I, itgroup->dof);                 // Read dof
+                ReadBinaryString(I, itgroup->interpolation);    // Read interpolation
+            }
+            this->Init(_spec);
+
+            /* Read trajectory data */
+            ReadBinaryVector(I, this->_vtrajdata);
+            ReadBinaryString(I, __description);
+
+            // clear out existing readable interfaces
+            ClearReadableInterfaces();
+
+            // versions >= 0x0002 have readable interfaces
+            if (versionNumber >= 0x0002) {
+                // read readable interfaces
+                uint16_t numReadableInterfaces = 0;
+                ReadBinaryUInt16(I, numReadableInterfaces);
+                std::string xmlid, readerType;
+                std::string serializedReadableInterface;
+                for (size_t readableInterfaceIndex = 0; readableInterfaceIndex < numReadableInterfaces; ++readableInterfaceIndex) {
+                    ReadBinaryString(I, xmlid);
+                    ReadBinaryString(I, serializedReadableInterface);
+
+                    ReadablePtr readableInterface;
+                    if( versionNumber >= 3 ) {
+                        ReadBinaryString(I, readerType);
+                        if( readerType == "HierarchicalXMLReadable" ) {
+                            xmlreaders::HierarchicalXMLReader xmlreader(xmlid, AttributesList());
+                            xmlreaders::ParseXMLData(xmlreader, serializedReadableInterface.c_str(), serializedReadableInterface.size());
+                            if( !!xmlreader.GetHierarchicalReadable() ) {
+                                // should be one root only
+                                if( xmlreader.GetHierarchicalReadable()->_listchildren.size() == 1 ) {
+                                    readableInterface = xmlreader.GetHierarchicalReadable()->_listchildren.front();
+                                }
+                                else {
+                                    RAVELOG_WARN_FORMAT("tried to parse readable interface %s, but got more than one root", xmlid);
+                                    readableInterface = xmlreader.GetHierarchicalReadable();
+                                }
+                            }
+                            else {
+                                readableInterface = xmlreader.GetReadable();
+                            }
+                        }
+                        else {
+                            readableInterface.reset(new StringReadable(xmlid, serializedReadableInterface));
+                        }
+                    }
+                    else {
+                        readableInterface.reset(new StringReadable(xmlid, serializedReadableInterface));
+                    }
+                    SetReadableInterface(xmlid, readableInterface);
+                }
+            }
+        }
+        else {
+            // try XML deserialization
+            TrajectoryBase::DeserializeFromRawData(pdata, nDataSize);
         }
     }
 

@@ -17,25 +17,25 @@ namespace OpenRAVE {
 
 namespace PiecewisePolynomialsInternal {
 
-QuinticInterpolator::QuinticInterpolator(size_t ndof, int envid)
+QuinticInterpolator::QuinticInterpolator(size_t ndof_, int envid_)
 {
     __description = ":Interface Author: Puttichai Lertkultanon\n\nRoutines for quintic polynomial interpolation with specified boundary conditions.";
-    this->Initialize(ndof, envid);
+    this->Initialize(ndof_, envid_);
 }
 
-void QuinticInterpolator::Initialize(size_t ndof, int envid)
+void QuinticInterpolator::Initialize(size_t ndof_, int envid_)
 {
-    OPENRAVE_ASSERT_OP(ndof, >, 0);
-    this->ndof = ndof;
-    this->envid = envid;
-    _pGeneralInterpolator.reset(new GeneralRecursiveInterpolator(envid));
-    checker.Initialize(ndof, envid);
+    OPENRAVE_ASSERT_OP(ndof_, >, 0);
+    this->ndof = ndof_;
+    this->envid = envid_;
+    _pGeneralInterpolator.reset(new GeneralRecursiveInterpolator(envid_));
+    checker.Initialize(ndof_, envid_);
     checker.SetEpsilonForJerkLimitsChecking(100*g_fPolynomialEpsilon);
 
     _cache1DCoeffs.resize(6);
 
-    _cacheDVect.resize(ndof);
-    _cachePolynomials.resize(ndof);
+    _cacheDVect.resize(ndof_);
+    _cachePolynomials.resize(ndof_);
 }
 
 //
@@ -284,4 +284,3 @@ PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDeriv
 } // end namespace PiecewisePolynomialsInternal
 
 } // end namespace OpenRAVE
-
