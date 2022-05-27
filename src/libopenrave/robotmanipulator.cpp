@@ -581,6 +581,16 @@ IkParameterization RobotBase::Manipulator::ConvertIkParameterization(const IkPar
 {
     IkParameterization ikparam;
     std::vector<dReal> v(7);
+    switch(iktype){
+        // those which check rot length
+        case IKP_Transform6D:
+        case IKP_Direction3D:
+        case IKP_Ray4D:
+        case IKP_TranslationDirection5D:
+            v[0] = 1;
+            break;
+        default:;
+    }
     ikparam.Set(v.begin(), iktype);
     if(iktype == IKP_Lookat3D) {
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: Lookat3D type setting goal a distance of 1 from the origin.\n");
