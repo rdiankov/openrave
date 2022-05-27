@@ -20,9 +20,10 @@
 #include "openrave/openrave.h"
 #include "openrave/plugininfo.h"
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 #include <boost/shared_ptr.hpp>
-#include <boost/thread/condition.hpp>
-#include <boost/thread/mutex.hpp>
 
 namespace OpenRAVE {
 
@@ -30,7 +31,15 @@ class RaveDatabase;
 
 void* _SysLoadLibrary(const std::string& lib, bool bLazy=false);
 void* _SysLoadSym(void* lib, const std::string& sym);
-void _SysCloseLibrary(void* lib);
+void  _SysCloseLibrary(void* lib);
+
+// TODO: Deprecated, remove later
+/// \deprecated (12/01/01)
+typedef InterfaceBasePtr(*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr env) RAVE_DEPRECATED;
+
+// TODO: Deprecated, remove later
+/// \deprecated (12/01/01)
+typedef bool(*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size) RAVE_DEPRECATED;
 
 // Holds information about a plugin.
 class Plugin : public UserData, public boost::enable_shared_from_this<Plugin>
@@ -83,8 +92,8 @@ protected:
     PluginExportFn_OnRaveInitialized pfnOnRaveInitialized;
     PluginExportFn_OnRavePreDestroy pfnOnRavePreDestroy;
     PLUGININFO _infocached;
-    boost::mutex _mutex;         ///< locked when library is getting updated, only used when plibrary==NULL
-    boost::condition _cond;
+    std::mutex _mutex;         ///< locked when library is getting updated, only used when plibrary==NULL
+    std::condition_variable _cond;
     bool _bShutdown;         ///< managed by plugin database
     bool _bInitializing; ///< still in the initialization phase
     bool _bHasCalledOnRaveInitialized; ///< if true, then OnRaveInitialized has been called and does not need to call it again.
@@ -211,7 +220,7 @@ protected:
     void _PluginLoaderThread();
 
     std::list<PluginPtr> _listplugins;
-    mutable boost::mutex _mutex;     ///< changing plugin database
+    mutable std::mutex _mutex;     ///< changing plugin database
     std::list<void*> _listDestroyLibraryQueue;
     std::list< boost::weak_ptr<RegisteredInterface> > _listRegisteredInterfaces;
     std::list<std::string> _listplugindirs;
@@ -234,5 +243,3 @@ BOOST_TYPEOF_REGISTER_TYPE(RaveDatabase::Plugin)
 #endif
 
 #endif
-
-#include "plugindatabase_impl.hpp"

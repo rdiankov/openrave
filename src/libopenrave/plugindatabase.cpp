@@ -14,15 +14,22 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef RAVE_PLUGIN_DATABASE_IMPL_H
-#define RAVE_PLUGIN_DATABASE_IMPL_H
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
 
-#include "libopenrave.h"
-#include "plugindatabase.h"
-
+#include <cstdarg>
+#include <cstring>
+#include <fstream>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+
+#include <openrave/openraveexception.h>
+#include <openrave/logging.h>
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem.hpp>
@@ -49,21 +56,30 @@
 
 #endif
 
+#ifndef INTERFACE_PREDELETER
 #define INTERFACE_PREDELETER boost::function<void(void const*)>()
+#endif
+#ifndef INTERFACE_POSTDELETER
 #define INTERFACE_POSTDELETER(name, plugin) boost::bind(&RaveDatabase::_InterfaceDestroyCallbackSharedPost,shared_from_this(),name,plugin)
+#endif
 
 #ifdef _WIN32
 const char s_filesep = '\\';
+const char* s_delimiter = ";";
 #else
 const char s_filesep = '/';
+const char* s_delimiter = ":";
 #endif
+
+#include "libopenrave.h"
+#include "plugindatabase.h"
 
 namespace OpenRAVE {
 
 void* _SysLoadLibrary(const std::string& lib, bool bLazy)
 {
     // check if file exists first
-    if( !ifstream(lib.c_str()) ) {
+    if( !std::ifstream(lib.c_str()) ) {
         return NULL;
     }
 #ifdef _WIN32
@@ -120,23 +136,6 @@ void _SysCloseLibrary(void* lib)
 #endif
 }
 
-RaveDatabase::RegisteredInterface::RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, boost::shared_ptr<RaveDatabase> database)
-    : _type(type)
-    , _name(name)
-    , _createfn(createfn)
-    , _database(database)
-{
-}
-
-RaveDatabase::RegisteredInterface::~RegisteredInterface()
-{
-    boost::shared_ptr<RaveDatabase> database = _database.lock();
-    if( !!database ) {
-        boost::mutex::scoped_lock lock(database->_mutex);
-        database->_listRegisteredInterfaces.erase(_iterator);
-    }
-}
-
 Plugin::Plugin(boost::shared_ptr<RaveDatabase> pdatabase)
     : _pdatabase(pdatabase)
     , plibrary(NULL)
@@ -175,7 +174,7 @@ void Plugin::Destroy()
         if( plibrary ) {
             Load_DestroyPlugin();
         }
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         // do some more checking here, there still might be instances of robots, planners, and sensors out there
         if (plibrary) {
             RAVELOG_DEBUG("RaveDatabase: closing plugin %s\n", ppluginname.c_str());        // Sleep(10);
@@ -222,18 +221,18 @@ bool Plugin::Load_CreateInterfaceGlobal()
         if (pfnCreateNew == NULL) {
             pfnCreateNew = (PluginExportFn_OpenRAVECreateInterface)_SysLoadSym(plibrary, "OpenRAVECreateInterface");
         }
+    }
 
-        if (pfnCreateNew == NULL) {
+    if (pfnCreateNew == NULL) {
 #ifdef _MSC_VER
-            pfnCreate = (PluginExportFn_CreateInterface)_SysLoadSym(plibrary, "?CreateInterface@@YA?AV?$shared_ptr@VInterfaceBase@OpenRAVE@@@boost@@W4InterfaceType@OpenRAVE@@ABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PBDV?$shared_ptr@VEnvironmentBase@OpenRAVE@@@2@@Z");
+        pfnCreate = (PluginExportFn_CreateInterface)_SysLoadSym(plibrary, "?CreateInterface@@YA?AV?$shared_ptr@VInterfaceBase@OpenRAVE@@@boost@@W4InterfaceType@OpenRAVE@@ABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PBDV?$shared_ptr@VEnvironmentBase@OpenRAVE@@@2@@Z");
 #else
-            pfnCreate = (PluginExportFn_CreateInterface)_SysLoadSym(plibrary, "_Z15CreateInterfaceN8OpenRAVE10InterfaceTypeERKSsPKcN5boost10shared_ptrINS_15EnvironmentBaseEEE");
+        pfnCreate = (PluginExportFn_CreateInterface)_SysLoadSym(plibrary, "_Z15CreateInterfaceN8OpenRAVE10InterfaceTypeERKSsPKcN5boost10shared_ptrINS_15EnvironmentBaseEEE");
 #endif
+        if (pfnCreate == NULL) {
+            pfnCreate = (PluginExportFn_CreateInterface)_SysLoadSym(plibrary, "CreateInterface");
             if (pfnCreate == NULL) {
-                pfnCreate = (PluginExportFn_CreateInterface)_SysLoadSym(plibrary, "CreateInterface");
-                if (pfnCreate == NULL) {
-                    return false;
-                }
+                return false;
             }
         }
     }
@@ -247,17 +246,17 @@ bool Plugin::Load_GetPluginAttributes()
         if (pfnGetPluginAttributesNew == NULL) {
             pfnGetPluginAttributesNew = (PluginExportFn_OpenRAVEGetPluginAttributes)_SysLoadSym(plibrary,"OpenRAVEGetPluginAttributes");
         }
-        if(pfnGetPluginAttributesNew == NULL ) {
+    }
+    if(pfnGetPluginAttributesNew == NULL ) {
 #ifdef _MSC_VER
-            pfnGetPluginAttributes = (PluginExportFn_GetPluginAttributes)_SysLoadSym(plibrary, "?GetPluginAttributes@@YA_NPAUPLUGININFO@OpenRAVE@@H@Z");
+        pfnGetPluginAttributes = (PluginExportFn_GetPluginAttributes)_SysLoadSym(plibrary, "?GetPluginAttributes@@YA_NPAUPLUGININFO@OpenRAVE@@H@Z");
 #else
-            pfnGetPluginAttributes = (PluginExportFn_GetPluginAttributes)_SysLoadSym(plibrary, "_Z19GetPluginAttributesPN8OpenRAVE10PLUGININFOEi");
+        pfnGetPluginAttributes = (PluginExportFn_GetPluginAttributes)_SysLoadSym(plibrary, "_Z19GetPluginAttributesPN8OpenRAVE10PLUGININFOEi");
 #endif
+        if( !pfnGetPluginAttributes ) {
+            pfnGetPluginAttributes = (PluginExportFn_GetPluginAttributes)_SysLoadSym(plibrary, "GetPluginAttributes");
             if( !pfnGetPluginAttributes ) {
-                pfnGetPluginAttributes = (PluginExportFn_GetPluginAttributes)_SysLoadSym(plibrary, "GetPluginAttributes");
-                if( !pfnGetPluginAttributes ) {
-                    return false;
-                }
+                return false;
             }
         }
     }
@@ -409,7 +408,7 @@ void Plugin::_confirmLibrary()
 {
     // first test the library before locking
     if( plibrary == NULL ) {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::unique_lock<std::mutex> lock(_mutex);
         _pdatabase.lock()->_AddToLoader(shared_from_this());
         do {
             if( plibrary ) {
@@ -420,6 +419,23 @@ void Plugin::_confirmLibrary()
             }
             _cond.wait(lock);
         } while(1);
+    }
+}
+
+RaveDatabase::RegisteredInterface::RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, boost::shared_ptr<RaveDatabase> database)
+    : _type(type)
+    , _name(name)
+    , _createfn(createfn)
+    , _database(database)
+{
+}
+
+RaveDatabase::RegisteredInterface::~RegisteredInterface()
+{
+    boost::shared_ptr<RaveDatabase> database = _database.lock();
+    if( !!database ) {
+        std::lock_guard<std::mutex> lock(database->_mutex);
+        database->_listRegisteredInterfaces.erase(_iterator);
     }
 }
 
@@ -434,16 +450,11 @@ RaveDatabase::~RaveDatabase()
 
 bool RaveDatabase::Init(bool bLoadAllPlugins)
 {
-    _threadPluginLoader.reset(new boost::thread(boost::bind(&RaveDatabase::_PluginLoaderThread, this)));
+    _threadPluginLoader.reset(new std::thread(boost::bind(&RaveDatabase::_PluginLoaderThread, this)));
     std::vector<std::string> vplugindirs;
-#ifdef _WIN32
-    const char* delim = ";";
-#else
-    const char* delim = ":";
-#endif
     char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_PLUGINS"); // getenv not thread-safe?
     if( pOPENRAVE_PLUGINS != NULL ) {
-        utils::TokenizeString(pOPENRAVE_PLUGINS, delim, vplugindirs);
+        utils::TokenizeString(pOPENRAVE_PLUGINS, s_delimiter, vplugindirs);
     }
     for (int iplugindir = vplugindirs.size() - 1; iplugindir > 0; iplugindir--) {
         int jplugindir = 0;
@@ -517,7 +528,7 @@ void RaveDatabase::Destroy()
 {
     RAVELOG_DEBUG("plugin database shutting down...\n");
     {
-        boost::mutex::scoped_lock lock(_mutexPluginLoader);
+        std::lock_guard<std::mutex> lock(_mutexPluginLoader);
         _bShutdown = true;
         _condLoaderHasWork.notify_all();
     }
@@ -526,14 +537,14 @@ void RaveDatabase::Destroy()
         _threadPluginLoader.reset();
     }
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         _listplugins.clear();
     }
     // cannot lock mutex due to __erase_iterator
     // cannot clear _listRegisteredInterfaces since there are destructors that will remove items from the list
     //_listRegisteredInterfaces.clear();
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         _CleanupUnusedLibraries();
     }
     _listplugindirs.clear();
@@ -542,7 +553,7 @@ void RaveDatabase::Destroy()
 
 void RaveDatabase::GetPlugins(std::list<PluginPtr>& listplugins) const
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     listplugins = _listplugins;
 }
 
@@ -579,7 +590,7 @@ InterfaceBasePtr RaveDatabase::Create(EnvironmentBasePtr penv, InterfaceType typ
         std::list< boost::weak_ptr<RegisteredInterface> > listRegisteredInterfaces;
         std::list<PluginPtr> listplugins;
         {
-            boost::mutex::scoped_lock lock(_mutex);
+            std::lock_guard<std::mutex> lock(_mutex);
             listRegisteredInterfaces = _listRegisteredInterfaces;
             listplugins = _listplugins;
         }
@@ -634,7 +645,7 @@ InterfaceBasePtr RaveDatabase::Create(EnvironmentBasePtr penv, InterfaceType typ
                     }
                 }
                 if( !(*itplugin)->IsValid() ) {
-                    boost::mutex::scoped_lock lock(_mutex);
+                    std::lock_guard<std::mutex> lock(_mutex);
                     _listplugins.remove(*itplugin);
                 }
                 ++itplugin;
@@ -713,7 +724,7 @@ bool RaveDatabase::AddDirectory(const std::string& pdir)
 
 void RaveDatabase::ReloadPlugins()
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     FOREACH(itplugin,_listplugins) {
         PluginPtr newplugin = _LoadPlugin((*itplugin)->ppluginname);
         if( !!newplugin ) {
@@ -725,7 +736,7 @@ void RaveDatabase::ReloadPlugins()
 
 void RaveDatabase::OnRaveInitialized()
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     FOREACH(itplugin, _listplugins) {
         (*itplugin)->OnRaveInitialized();
     }
@@ -733,7 +744,7 @@ void RaveDatabase::OnRaveInitialized()
 
 void RaveDatabase::OnRavePreDestroy()
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     FOREACH(itplugin, _listplugins) {
         (*itplugin)->OnRavePreDestroy();
     }
@@ -741,7 +752,7 @@ void RaveDatabase::OnRavePreDestroy()
 
 bool RaveDatabase::LoadPlugin(const std::string& pluginname)
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     std::list<PluginPtr>::iterator it = _GetPlugin(pluginname);
     std::string newpluginname;
     if( it != _listplugins.end() ) {
@@ -762,7 +773,7 @@ bool RaveDatabase::LoadPlugin(const std::string& pluginname)
 
 bool RaveDatabase::RemovePlugin(const std::string& pluginname)
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     std::list<PluginPtr>::iterator it = _GetPlugin(pluginname);
     if( it == _listplugins.end() ) {
         return false;
@@ -774,7 +785,7 @@ bool RaveDatabase::RemovePlugin(const std::string& pluginname)
 
 bool RaveDatabase::HasInterface(InterfaceType type, const std::string& interfacename)
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     FOREACHC(it,_listRegisteredInterfaces) {
         RegisteredInterfacePtr registration = it->lock();
         if( !!registration ) {
@@ -794,7 +805,7 @@ bool RaveDatabase::HasInterface(InterfaceType type, const std::string& interface
 void RaveDatabase::GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) const
 {
     plugins.clear();
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     FOREACHC(itplugin, _listplugins) {
         PLUGININFO info;
         if( (*itplugin)->GetInfo(info) ) {
@@ -816,7 +827,7 @@ void RaveDatabase::GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >
 void RaveDatabase::GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const
 {
     interfacenames.clear();
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     FOREACHC(it,_listRegisteredInterfaces) {
         RegisteredInterfacePtr registration = it->lock();
         if( !!registration ) {
@@ -849,7 +860,7 @@ UserDataPtr RaveDatabase::RegisterInterface(InterfaceType type, const std::strin
     if( strcmp(interfacehash, RaveGetInterfaceHash(type)) ) {
         throw openrave_exception(str(boost::format(_("interface %s invalid hash %s!=%s\n"))%RaveGetInterfaceName(type)%interfacehash%RaveGetInterfaceHash(type)),ORE_InvalidInterfaceHash);
     }
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     RegisteredInterfacePtr pdata(new RegisteredInterface(type,name,createfn,shared_from_this()));
     pdata->_iterator = _listRegisteredInterfaces.insert(_listRegisteredInterfaces.end(),pdata);
     return pdata;
@@ -966,12 +977,6 @@ PluginPtr RaveDatabase::_LoadPlugin(const std::string& _libraryname)
         if( p->pfnGetPluginAttributesNew != NULL ) {
             p->pfnGetPluginAttributesNew(&p->_infocached, sizeof(p->_infocached),OPENRAVE_PLUGININFO_HASH);
         }
-        else {
-            if( !p->pfnGetPluginAttributes(&p->_infocached, sizeof(p->_infocached)) ) {
-                RAVELOG_WARN(str(boost::format("%s: GetPluginAttributes failed\n")%libraryname));
-                return PluginPtr();
-            }
-        }
     }
     catch(const std::exception& ex) {
         RAVELOG_WARN(str(boost::format("%s failed to load: %s\n")%libraryname%ex.what()));
@@ -1025,7 +1030,7 @@ void RaveDatabase::_InterfaceDestroyCallbackSharedPost(std::string name, UserDat
 
 void RaveDatabase::_AddToLoader(PluginPtr p)
 {
-    boost::mutex::scoped_lock lock(_mutexPluginLoader);
+    std::lock_guard<std::mutex> lock(_mutexPluginLoader);
     _listPluginsToLoad.push_back(p);
     _condLoaderHasWork.notify_all();
 }
@@ -1035,7 +1040,7 @@ void RaveDatabase::_PluginLoaderThread()
     while(!_bShutdown) {
         std::list<PluginPtr> listPluginsToLoad;
         {
-            boost::mutex::scoped_lock lock(_mutexPluginLoader);
+            std::unique_lock<std::mutex> lock(_mutexPluginLoader);
             if( _listPluginsToLoad.empty() ) {
                 _condLoaderHasWork.wait(lock);
                 if( _bShutdown ) {
@@ -1048,7 +1053,7 @@ void RaveDatabase::_PluginLoaderThread()
             if( _bShutdown ) {
                 break;
             }
-            boost::mutex::scoped_lock lockplugin((*itplugin)->_mutex);
+            std::lock_guard<std::mutex> lockplugin((*itplugin)->_mutex);
             if( _bShutdown ) {
                 break;
             }
@@ -1063,5 +1068,3 @@ void RaveDatabase::_PluginLoaderThread()
 }
 
 } // namespace OpenRAVE
-
-#endif // RAVE_PLUGIN_DATABASE_IMPL_H
