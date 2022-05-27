@@ -26,6 +26,74 @@
 
 namespace OpenRAVE {
 
+class RaveDatabase;
+
+void* _SysLoadLibrary(const std::string& lib, bool bLazy=false);
+void* _SysLoadSym(void* lib, const std::string& sym);
+void _SysCloseLibrary(void* lib);
+
+// Holds information about a plugin.
+class Plugin : public UserData, public boost::enable_shared_from_this<Plugin>
+{
+public:
+    Plugin(boost::shared_ptr<RaveDatabase> pdatabase);
+    virtual ~Plugin();
+
+    virtual void Destroy();
+
+    virtual bool IsValid();
+
+    const std::string& GetName() const;
+
+    bool GetInfo(PLUGININFO& info);
+
+    virtual bool Load_CreateInterfaceGlobal();
+
+    virtual bool Load_GetPluginAttributes();
+
+    virtual bool Load_DestroyPlugin();
+
+    virtual bool Load_OnRaveInitialized();
+
+    virtual bool Load_OnRavePreDestroy();
+
+    bool HasInterface(InterfaceType type, const std::string& name);
+
+    InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* interfacehash, EnvironmentBasePtr penv);
+
+    /// \brief call to initialize the plugin, if initialized already, then ignore the call.
+    void OnRaveInitialized();
+
+    void OnRavePreDestroy();
+
+protected:
+    /// if the library is not loaded yet, wait for it.
+    void _confirmLibrary();
+
+    boost::weak_ptr<RaveDatabase> _pdatabase;
+    std::set<std::pair< InterfaceType, std::string> > _setBadInterfaces;         ///< interfaces whose hash is wrong and shouldn't be tried for this plugin
+    std::string ppluginname;
+
+    void* plibrary;         // loaded library (NULL if not loaded)
+    PluginExportFn_CreateInterface pfnCreate;
+    PluginExportFn_OpenRAVECreateInterface pfnCreateNew;
+    PluginExportFn_GetPluginAttributes pfnGetPluginAttributes;
+    PluginExportFn_OpenRAVEGetPluginAttributes pfnGetPluginAttributesNew;
+    PluginExportFn_DestroyPlugin pfnDestroyPlugin;
+    PluginExportFn_OnRaveInitialized pfnOnRaveInitialized;
+    PluginExportFn_OnRavePreDestroy pfnOnRavePreDestroy;
+    PLUGININFO _infocached;
+    boost::mutex _mutex;         ///< locked when library is getting updated, only used when plibrary==NULL
+    boost::condition _cond;
+    bool _bShutdown;         ///< managed by plugin database
+    bool _bInitializing; ///< still in the initialization phase
+    bool _bHasCalledOnRaveInitialized; ///< if true, then OnRaveInitialized has been called and does not need to call it again.
+
+    friend class RaveDatabase;
+};
+typedef boost::shared_ptr<Plugin> PluginPtr;
+typedef boost::shared_ptr<Plugin const> PluginConstPtr;
+
 /// \brief database of interfaces from plugins
 class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
 {
@@ -44,66 +112,6 @@ class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
     typedef boost::shared_ptr<RegisteredInterface> RegisteredInterfacePtr;
 
 public:
-    class Plugin : public UserData, public boost::enable_shared_from_this<Plugin>
-    {
-    public:
-        Plugin(boost::shared_ptr<RaveDatabase> pdatabase);
-        virtual ~Plugin();
-
-        virtual void Destroy();
-
-        virtual bool IsValid();
-
-        const std::string& GetName() const;
-
-        bool GetInfo(PLUGININFO& info);
-
-        virtual bool Load_CreateInterfaceGlobal();
-
-        virtual bool Load_GetPluginAttributes();
-
-        virtual bool Load_DestroyPlugin();
-
-        virtual bool Load_OnRaveInitialized();
-
-        virtual bool Load_OnRavePreDestroy();
-
-        bool HasInterface(InterfaceType type, const std::string& name);
-
-        InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* interfacehash, EnvironmentBasePtr penv);
-
-        /// \brief call to initialize the plugin, if initialized already, then ignore the call.
-        void OnRaveInitialized();
-
-        void OnRavePreDestroy();
-
-    protected:
-        /// if the library is not loaded yet, wait for it.
-        void _confirmLibrary();
-
-        boost::weak_ptr<RaveDatabase> _pdatabase;
-        std::set<std::pair< InterfaceType, std::string> > _setBadInterfaces;         ///< interfaces whose hash is wrong and shouldn't be tried for this plugin
-        std::string ppluginname;
-
-        void* plibrary;         // loaded library (NULL if not loaded)
-        PluginExportFn_CreateInterface pfnCreate;
-        PluginExportFn_OpenRAVECreateInterface pfnCreateNew;
-        PluginExportFn_GetPluginAttributes pfnGetPluginAttributes;
-        PluginExportFn_OpenRAVEGetPluginAttributes pfnGetPluginAttributesNew;
-        PluginExportFn_DestroyPlugin pfnDestroyPlugin;
-        PluginExportFn_OnRaveInitialized pfnOnRaveInitialized;
-        PluginExportFn_OnRavePreDestroy pfnOnRavePreDestroy;
-        PLUGININFO _infocached;
-        std::mutex _mutex;         ///< locked when library is getting updated, only used when plibrary==NULL
-        std::condition_variable _cond;
-        bool _bShutdown;         ///< managed by plugin database
-        bool _bInitializing; ///< still in the initialization phase
-        bool _bHasCalledOnRaveInitialized; ///< if true, then OnRaveInitialized has been called and does not need to call it again.
-
-        friend class RaveDatabase;
-    };
-    typedef boost::shared_ptr<Plugin> PluginPtr;
-    typedef boost::shared_ptr<Plugin const> PluginConstPtr;
     friend class Plugin;
 
     RaveDatabase();
@@ -190,12 +198,6 @@ protected:
     std::list<PluginPtr>::iterator _GetPlugin(const std::string& pluginname);
 
     PluginPtr _LoadPlugin(const std::string& _libraryname);
-
-    static void* _SysLoadLibrary(const std::string& lib, bool bLazy=false);
-
-    static void* _SysLoadSym(void* lib, const std::string& sym);
-
-    static void _SysCloseLibrary(void* lib);
 
     void _QueueLibraryDestruction(void* lib);
 

@@ -60,6 +60,66 @@ const char s_filesep = '/';
 
 namespace OpenRAVE {
 
+void* _SysLoadLibrary(const std::string& lib, bool bLazy)
+{
+    // check if file exists first
+    if( !ifstream(lib.c_str()) ) {
+        return NULL;
+    }
+#ifdef _WIN32
+    void* plib = LoadLibraryA(lib.c_str());
+    if( plib == NULL ) {
+        RAVELOG_WARN("Failed to load %s\n", lib.c_str());
+    }
+#else
+    dlerror();     // clear error
+    void* plib = dlopen(lib.c_str(), bLazy ? RTLD_LAZY : RTLD_NOW);
+    char* pstr = dlerror();
+    if( pstr != NULL ) {
+        RAVELOG_WARN("%s: %s\n",lib.c_str(),pstr);
+        if( plib != NULL ) {
+            dlclose(plib);     //???
+        }
+        return NULL;
+    }
+#endif
+    return plib;
+}
+
+void* _SysLoadSym(void* lib, const std::string& sym)
+{
+#ifdef _WIN32
+    return GetProcAddress((HINSTANCE)lib, sym.c_str());
+#else
+    dlerror();     // clear existing error
+    void* psym = dlsym(lib, sym.c_str());
+    char* errorstring = dlerror();
+    if( errorstring != NULL ) {
+        return psym;
+    }
+    if( psym != NULL ) {
+        // check for errors if something valid is returned since we'll be executing it
+        if( errorstring != NULL ) {
+            throw openrave_exception(errorstring,ORE_InvalidPlugin);
+        }
+    }
+    return psym;
+#endif
+}
+
+void _SysCloseLibrary(void* lib)
+{
+#ifdef _WIN32
+    FreeLibrary((HINSTANCE)lib);
+#else
+    // can segfault if opened library clashes with other
+    // need to use some combination of setjmp, longjmp to get this to work corectly
+    //sighandler_t tprev = signal(SIGSEGV,fault_handler);
+    dlclose(lib);
+    //signal(SIGSEGV,tprev);
+#endif
+}
+
 RaveDatabase::RegisteredInterface::RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, boost::shared_ptr<RaveDatabase> database)
     : _type(type)
     , _name(name)
@@ -77,7 +137,7 @@ RaveDatabase::RegisteredInterface::~RegisteredInterface()
     }
 }
 
-RaveDatabase::Plugin::Plugin(boost::shared_ptr<RaveDatabase> pdatabase)
+Plugin::Plugin(boost::shared_ptr<RaveDatabase> pdatabase)
     : _pdatabase(pdatabase)
     , plibrary(NULL)
     , pfnCreate(NULL)
@@ -93,12 +153,12 @@ RaveDatabase::Plugin::Plugin(boost::shared_ptr<RaveDatabase> pdatabase)
 {
 }
 
-RaveDatabase::Plugin::~Plugin()
+Plugin::~Plugin()
 {
     Destroy();
 }
 
-void RaveDatabase::Plugin::Destroy()
+void Plugin::Destroy()
 {
     if( _bInitializing ) {
         if( plibrary ) {
@@ -106,7 +166,7 @@ void RaveDatabase::Plugin::Destroy()
                 // NOTE: for some reason, closing the lazy loaded library can make the system crash, so instead keep the memory around, and create a new one with RTLD_NOW if necessary
             }
             else {
-                RaveDatabase::_SysCloseLibrary(plibrary);
+                _SysCloseLibrary(plibrary);
             }
             plibrary = NULL;
         }
@@ -139,23 +199,23 @@ void RaveDatabase::Plugin::Destroy()
     _bShutdown = true;
 }
 
-bool RaveDatabase::Plugin::IsValid()
+bool Plugin::IsValid()
 {
     return !_bShutdown;
 }
 
-const std::string& RaveDatabase::Plugin::GetName() const
+const std::string& Plugin::GetName() const
 {
     return ppluginname;
 }
 
-bool RaveDatabase::Plugin::GetInfo(PLUGININFO& info)
+bool Plugin::GetInfo(PLUGININFO& info)
 {
     info = _infocached;
     return true;
 }
 
-bool RaveDatabase::Plugin::Load_CreateInterfaceGlobal()
+bool Plugin::Load_CreateInterfaceGlobal()
 {
     _confirmLibrary();
     if ((pfnCreateNew == NULL) &&( pfnCreate == NULL)) {
@@ -180,7 +240,7 @@ bool RaveDatabase::Plugin::Load_CreateInterfaceGlobal()
     return pfnCreateNew != NULL || pfnCreate != NULL;
 }
 
-bool RaveDatabase::Plugin::Load_GetPluginAttributes()
+bool Plugin::Load_GetPluginAttributes()
 {
     _confirmLibrary();
     if ((pfnGetPluginAttributesNew == NULL) || (pfnGetPluginAttributes == NULL)) {
@@ -204,7 +264,7 @@ bool RaveDatabase::Plugin::Load_GetPluginAttributes()
     return pfnGetPluginAttributesNew != NULL || pfnGetPluginAttributes != NULL;
 }
 
-bool RaveDatabase::Plugin::Load_DestroyPlugin()
+bool Plugin::Load_DestroyPlugin()
 {
     _confirmLibrary();
     if( pfnDestroyPlugin == NULL ) {
@@ -224,7 +284,7 @@ bool RaveDatabase::Plugin::Load_DestroyPlugin()
     return pfnDestroyPlugin != NULL;
 }
 
-bool RaveDatabase::Plugin::Load_OnRaveInitialized()
+bool Plugin::Load_OnRaveInitialized()
 {
     _confirmLibrary();
     if( pfnOnRaveInitialized == NULL ) {
@@ -244,7 +304,7 @@ bool RaveDatabase::Plugin::Load_OnRaveInitialized()
     return pfnOnRaveInitialized!=NULL;
 }
 
-bool RaveDatabase::Plugin::Load_OnRavePreDestroy()
+bool Plugin::Load_OnRavePreDestroy()
 {
     _confirmLibrary();
     if( pfnOnRavePreDestroy == NULL ) {
@@ -264,7 +324,7 @@ bool RaveDatabase::Plugin::Load_OnRavePreDestroy()
     return pfnOnRavePreDestroy!=NULL;
 }
 
-bool RaveDatabase::Plugin::HasInterface(InterfaceType type, const std::string& name)
+bool Plugin::HasInterface(InterfaceType type, const std::string& name)
 {
     if( name.size() == 0 ) {
         return false;
@@ -281,7 +341,7 @@ bool RaveDatabase::Plugin::HasInterface(InterfaceType type, const std::string& n
     return false;
 }
 
-InterfaceBasePtr RaveDatabase::Plugin::CreateInterface(InterfaceType type, const std::string& name, const char* interfacehash, EnvironmentBasePtr penv)
+InterfaceBasePtr Plugin::CreateInterface(InterfaceType type, const std::string& name, const char* interfacehash, EnvironmentBasePtr penv)
 {
     std::pair<InterfaceType, std::string> p(type, utils::ConvertToLowerCase(name));
     if( _setBadInterfaces.find(p) != _setBadInterfaces.end() ) {
@@ -324,7 +384,7 @@ InterfaceBasePtr RaveDatabase::Plugin::CreateInterface(InterfaceType type, const
     return InterfaceBasePtr();
 }
 
-void RaveDatabase::Plugin::OnRaveInitialized()
+void Plugin::OnRaveInitialized()
 {
     if( Load_OnRaveInitialized() ) {
         if( !!pfnOnRaveInitialized && !_bHasCalledOnRaveInitialized ) {
@@ -334,7 +394,7 @@ void RaveDatabase::Plugin::OnRaveInitialized()
     }
 }
 
-void RaveDatabase::Plugin::OnRavePreDestroy()
+void Plugin::OnRavePreDestroy()
 {
     if( Load_OnRavePreDestroy() ) {
         // always call destroy regardless of initialization state (safest)
@@ -345,7 +405,7 @@ void RaveDatabase::Plugin::OnRavePreDestroy()
     }
 }
 
-void RaveDatabase::Plugin::_confirmLibrary()
+void Plugin::_confirmLibrary()
 {
     // first test the library before locking
     if( plibrary == NULL ) {
@@ -798,7 +858,7 @@ UserDataPtr RaveDatabase::RegisterInterface(InterfaceType type, const std::strin
 void RaveDatabase::_CleanupUnusedLibraries()
 {
     FOREACH(it,_listDestroyLibraryQueue) {
-        RaveDatabase::_SysCloseLibrary(*it);
+        _SysCloseLibrary(*it);
     }
     _listDestroyLibraryQueue.clear();
 }
@@ -807,7 +867,7 @@ void RaveDatabase::_CleanupUnusedLibraries()
 ///
 /// It is safe to delete a plugin even if interfaces currently reference it because this function just decrements
 /// the reference count instead of unloading from memory.
-std::list<RaveDatabase::PluginPtr>::iterator RaveDatabase::_GetPlugin(const std::string& pluginname)
+std::list<PluginPtr>::iterator RaveDatabase::_GetPlugin(const std::string& pluginname)
 {
     FOREACH(it,_listplugins) {
         if( pluginname == (*it)->ppluginname ) {
@@ -837,7 +897,7 @@ std::list<RaveDatabase::PluginPtr>::iterator RaveDatabase::_GetPlugin(const std:
     return _listplugins.end();
 }
 
-RaveDatabase::PluginPtr RaveDatabase::_LoadPlugin(const std::string& _libraryname)
+PluginPtr RaveDatabase::_LoadPlugin(const std::string& _libraryname)
 {
     std::string libraryname = _libraryname;
     void* plibrary = _SysLoadLibrary(libraryname,OPENRAVE_LAZY_LOADING);
@@ -943,66 +1003,6 @@ RaveDatabase::PluginPtr RaveDatabase::_LoadPlugin(const std::string& _librarynam
 
     p->OnRaveInitialized(); // openrave runtime is most likely loaded already, so can safely initialize
     return p;
-}
-
-void* RaveDatabase::_SysLoadLibrary(const std::string& lib, bool bLazy)
-{
-    // check if file exists first
-    if( !ifstream(lib.c_str()) ) {
-        return NULL;
-    }
-#ifdef _WIN32
-    void* plib = LoadLibraryA(lib.c_str());
-    if( plib == NULL ) {
-        RAVELOG_WARN("Failed to load %s\n", lib.c_str());
-    }
-#else
-    dlerror();     // clear error
-    void* plib = dlopen(lib.c_str(), bLazy ? RTLD_LAZY : RTLD_NOW);
-    char* pstr = dlerror();
-    if( pstr != NULL ) {
-        RAVELOG_WARN("%s: %s\n",lib.c_str(),pstr);
-        if( plib != NULL ) {
-            dlclose(plib);     //???
-        }
-        return NULL;
-    }
-#endif
-    return plib;
-}
-
-void* RaveDatabase::_SysLoadSym(void* lib, const std::string& sym)
-{
-#ifdef _WIN32
-    return GetProcAddress((HINSTANCE)lib, sym.c_str());
-#else
-    dlerror();     // clear existing error
-    void* psym = dlsym(lib, sym.c_str());
-    char* errorstring = dlerror();
-    if( errorstring != NULL ) {
-        return psym;
-    }
-    if( psym != NULL ) {
-        // check for errors if something valid is returned since we'll be executing it
-        if( errorstring != NULL ) {
-            throw openrave_exception(errorstring,ORE_InvalidPlugin);
-        }
-    }
-    return psym;
-#endif
-}
-
-void RaveDatabase::_SysCloseLibrary(void* lib)
-{
-#ifdef _WIN32
-    FreeLibrary((HINSTANCE)lib);
-#else
-    // can segfault if opened library clashes with other
-    // need to use some combination of setjmp, longjmp to get this to work corectly
-    //sighandler_t tprev = signal(SIGSEGV,fault_handler);
-    dlclose(lib);
-    //signal(SIGSEGV,tprev);
-#endif
 }
 
 void RaveDatabase::_QueueLibraryDestruction(void* lib)
