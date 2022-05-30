@@ -126,46 +126,6 @@ public:
     RaveDatabase();
     virtual ~RaveDatabase();
 
-    RobotBasePtr CreateRobot(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<RobotBase>(Create(penv, PT_Robot, name));
-    }
-    KinBodyPtr CreateKinBody(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<KinBody>(Create(penv, PT_KinBody, name));
-    }
-    PlannerBasePtr CreatePlanner(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<PlannerBase>(Create(penv, PT_Planner, name));
-    }
-    SensorSystemBasePtr CreateSensorSystem(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<SensorSystemBase>(Create(penv, PT_SensorSystem, name));
-    }
-    ControllerBasePtr CreateController(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<ControllerBase>(Create(penv, PT_Controller, name));
-    }
-    ModuleBasePtr CreateModule(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<ModuleBase>(Create(penv, PT_Module, name));
-    }
-    IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<IkSolverBase>(Create(penv, PT_IkSolver, name));
-    }
-    PhysicsEngineBasePtr CreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<PhysicsEngineBase>(Create(penv, PT_PhysicsEngine, name));
-    }
-    SensorBasePtr CreateSensor(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<SensorBase>(Create(penv, PT_Sensor, name));
-    }
-    CollisionCheckerBasePtr CreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<CollisionCheckerBase>(Create(penv, PT_CollisionChecker, name));
-    }
-    ViewerBasePtr CreateViewer(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<ViewerBase>(Create(penv, PT_Viewer, name));
-    }
-    TrajectoryBasePtr CreateTrajectory(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<TrajectoryBase>(Create(penv, PT_Trajectory, name));
-    }
-    SpaceSamplerBasePtr CreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<SpaceSamplerBase>(Create(penv, PT_SpaceSampler, name));
-    }
-
     virtual bool Init(bool bLoadAllPlugins);
 
     /// Destroy all plugins and directories
