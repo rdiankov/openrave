@@ -2012,7 +2012,7 @@ void QtOSGViewer::UpdateFromModel()
     std::lock_guard<std::mutex> lock(_mutexUpdateModels);
     vector<KinBody::BodyState> vecbodies;
 
-    EnvironmentLock lockenv(GetEnv()->GetMutex(), std::defer_lock_t());
+    EnvironmentLock lockenv(GetEnv()->GetMutex(), OpenRAVE::defer_lock_t());
 
     if( _bLockEnvironment && !lockenv ) {
         uint64_t basetime = utils::GetMicroTime();
@@ -2161,7 +2161,7 @@ void QtOSGViewer::UpdateFromModel()
 boost::shared_ptr<EnvironmentLock> QtOSGViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
 {
     // try to acquire the lock
-    boost::shared_ptr<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(GetEnv()->GetMutex(), std::defer_lock_t());
+    boost::shared_ptr<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(GetEnv()->GetMutex(), OpenRAVE::defer_lock_t());
     uint64_t basetime = utils::GetMicroTime();
     while(utils::GetMicroTime()-basetime<timeout ) {
         if( lockenv->try_lock() ) {

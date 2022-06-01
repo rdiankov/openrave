@@ -223,7 +223,7 @@ protected:
 inline boost::shared_ptr<EnvironmentLock> LockEnvironmentWithTimeout(EnvironmentBasePtr penv, uint64_t timeout)
 {
     // try to acquire the lock
-    boost::shared_ptr<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(penv->GetMutex(), std::defer_lock_t());
+    boost::shared_ptr<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(penv->GetMutex(), OpenRAVE::defer_lock_t());
     uint64_t basetime = utils::GetMicroTime();
     while(utils::GetMicroTime()-basetime<timeout ) {
         if( lockenv->try_lock() ) {
