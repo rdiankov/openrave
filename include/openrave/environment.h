@@ -27,9 +27,11 @@ namespace OpenRAVE {
 #if OPENRAVE_USE_STDTHREADS
 typedef std::mutex EnvironmentMutex;
 typedef std::unique_lock<EnvironmentMutex> EnvironmentLock;
+using defer_lock_t = ::std::defer_lock_t;
 #else
 typedef boost::recursive_try_mutex EnvironmentMutex;
 typedef EnvironmentMutex::scoped_lock EnvironmentLock;
+using defer_lock_t = ::boost::defer_lock_t;
 #endif
 
 /// \brief used when adding interfaces to the environment
