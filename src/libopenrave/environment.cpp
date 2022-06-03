@@ -72,6 +72,19 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
         orjson::SetJsonValueByKey(rEnvInfo, "uri", _uri, allocator);
     }
 
+    if( _uInt64Parameters.size() > 0 ) {
+        rapidjson::Value rIntParameters;
+        rIntParameters.SetArray();
+        FOREACHC(it, _uInt64Parameters) {
+            rapidjson::Value rIntParameter;
+            rIntParameter.SetObject();
+            orjson::SetJsonValueByKey(rIntParameter, "id", it->first, allocator);
+            orjson::SetJsonValueByKey(rIntParameter, "value", it->second, allocator);
+            rIntParameters.PushBack(rIntParameter, allocator);
+        }
+        rEnvInfo.AddMember("intParameters", rIntParameters, allocator);
+    }
+
     if (_vBodyInfos.size() > 0) {
         rapidjson::Value rBodiesValue;
         rBodiesValue.SetArray();
@@ -129,6 +142,24 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
         orjson::LoadJsonValueByKey(rEnvInfo, "gravity", _gravity);
     }
 
+    if (rEnvInfo.HasMember("intParameters") && rEnvInfo["intParameters"].IsArray()) {
+        for (rapidjson::Value::ConstValueIterator it = rEnvInfo["intParameters"].Begin(); it != rEnvInfo["intParameters"].End(); ++it) {
+            std::string id;
+            if( it->HasMember("id") ) {
+                orjson::LoadJsonValueByKey(*it, "id", id);
+            }
+            if (id.empty()) {
+                RAVELOG_WARN_FORMAT("ignored an entry in intParameters in environment \"%s\" due to missing or empty id", _uri);
+                continue;
+            }
+            // delete
+            if (OpenRAVE::orjson::GetJsonValueByKey<bool>(*it, "__deleted__", false)) {
+                _uInt64Parameters.erase(id);
+                continue;
+            }
+            orjson::LoadJsonValueByKey(*it, "value", _uInt64Parameters[id]);
+        }
+    }
 
     if (rEnvInfo.HasMember("bodies")) {
         _vBodyInfos.reserve(_vBodyInfos.size() + rEnvInfo["bodies"].Size());
