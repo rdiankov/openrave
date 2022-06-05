@@ -126,6 +126,21 @@ OPENRAVE_API PlannerStatus SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxve
  */
 OPENRAVE_API PlannerStatus RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
+/** \brief Retime the trajectory points by extracting and using the passed in robot dof indices. <b>[multi-thread safe]</b>
+
+   Collision is not checked. Every waypoint in the trajectory is guaranteed to be hit.
+   The velocities for the current trajectory are overwritten.
+   The returned trajectory will contain data only for the currenstly set active dofs of the robot.
+   \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+   \param robot use the robot's active dofs to initialize the trajectory space
+   \param vRobotDOFIndices robot dof indices to use for retiming
+   \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
+   \param hastimestamps if true, use the already initialized timestamps of the trajectory
+   \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
+   \return PlannerStatus of the status of the retiming planner
+ */
+OPENRAVE_API PlannerStatus RetimeRobotDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, const std::vector<int>& vRobotDOFIndices, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+
 /** \brief Smoother planner for the trajectory points to avoiding collisions by extracting and using the currently set active dofs of the robot.
 
     Caches all the planners and parameters so PlanPath can be called multiple times without creating new objects.
@@ -240,6 +255,10 @@ public:
     virtual ~AffineTrajectoryRetimer() {
     }
 
+    const std::string& GetPlannerName() const {
+        return _plannername;
+    }
+
     /// \breif reset the planner info with the following information
     virtual void SetPlanner(const std::string& plannername="", const std::string& plannerparameters="");
 
@@ -248,6 +267,7 @@ public:
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
     virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, int planningoptions=0);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::vector<dReal>& maxjerks, bool hastimestamps=false, int planningoptions=0);
 
 protected:
     std::string _plannername, _extraparameters;
@@ -438,6 +458,9 @@ public:
     /// \brief checks line collision. Uses the constructor's self-collisions
     virtual int Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options = 0xffff, ConstraintFilterReturnPtr filterreturn = ConstraintFilterReturnPtr());
 
+    /// \brief checks collisions and constraints along a quintic polynomial trajectory connecting (q0, dq0, ddq0) and (q1, dq1, ddq1).
+    virtual int Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, const std::vector<dReal>& ddq0, const std::vector<dReal>& ddq1, dReal timeelapsed, IntervalType interval, int options=0xffff, ConstraintFilterReturnPtr filterreturn=ConstraintFilterReturnPtr());
+
     CollisionReportPtr GetReport() const {
         return _report;
     }
@@ -457,7 +480,9 @@ protected:
     virtual void _PrintOnFailure(const std::string& prefix);
 
     PlannerBase::PlannerParametersWeakConstPtr _parameters;
-    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vperturbedvalues, _vcoeff2, _vcoeff1, _vprevtempconfig, _vprevtempvelconfig, _vtempconfig2, _vdiffconfig, _vdiffvelconfig, _vstepconfig; ///< in configuration space
+    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempacceldelta, _vtempaccelconfig, _vtempjerkconfig, _vperturbedvalues, _vcoeff2, _vcoeff1, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, _vtempconfig2, _vdiffconfig, _vdiffvelconfig, _vdiffaccelconfig, _vstepconfig; ///< in configuration space
+    std::vector<dReal> _vrawroots, _vrawcoeffs;
+    std::vector<std::vector<dReal> > _valldofscoeffs, _valldofscriticalpoints, _valldofscriticalvalues;
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckBodies;
     int _filtermask;
@@ -471,6 +496,7 @@ protected:
     std::vector< int > _vdofindices;
     std::vector<dReal> _doftorques, _dofaccelerations; ///< in body DOF space
     boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setvelstatefn;
+    std::vector<dReal> _vfulldofdynamicaccelerationlimits, _vfulldofdynamicjerklimits, _vfulldofvalues, _vfulldofvelocities; ///< in body full DOF space. the size is GetDOF().
 };
 
 typedef boost::shared_ptr<DynamicsCollisionConstraint> DynamicsCollisionConstraintPtr;

@@ -974,6 +974,9 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         else if (typestr == "calibrationboard") {
             type = GT_CalibrationBoard;
         }
+        else if (typestr.empty()) {
+            type = GT_None;
+        }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
         }
@@ -1585,7 +1588,9 @@ void KinBody::Geometry::ExtractInfo(KinBody::GeometryInfo& info) const
 
 UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryInfo& info)
 {
-    BOOST_ASSERT(info._id == _info._id);
+    if(!info._id.empty() && _info._id != info._id) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Do not allow updating link '%s' geometry '%s' (id='%s') with a different info id='%s'", _parent.lock()->GetName()%GetName()%_info._id%info._id, ORE_Assert);
+    }
     UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
 
     if (GetName() != info._name) {

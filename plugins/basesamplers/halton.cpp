@@ -987,7 +987,7 @@ void HaltonSampler::i4_to_halton ( int dim_num, int step, int seed[], int leap[]
     //
     OPENRAVE_ASSERT_OP(dim_num,>=,1);
     OPENRAVE_ASSERT_OP(step,>=,0);
-    for (int i = 0; i < dim_num; i++ ) {
+    for ( i = 0; i < dim_num; i++ ) {
         OPENRAVE_ASSERT_OP(seed[i], >=, 0 )
         OPENRAVE_ASSERT_OP(leap[i],>=,1);
         OPENRAVE_ASSERT_OP(base[i],>,1);
@@ -1114,7 +1114,7 @@ void HaltonSampler::i4_to_halton_sequence ( int dim_num, int n, int step, int se
     OPENRAVE_ASSERT_OP(dim_num,>=,1);
     OPENRAVE_ASSERT_OP(n,>=,1);
     OPENRAVE_ASSERT_OP(step,>=,0);
-    for (int i = 0; i < dim_num; i++ ) {
+    for ( i = 0; i < dim_num; i++ ) {
         OPENRAVE_ASSERT_OP(seed[i], >=, 0 )
         OPENRAVE_ASSERT_OP(leap[i],>=,1);
         OPENRAVE_ASSERT_OP(base[i],>,1);

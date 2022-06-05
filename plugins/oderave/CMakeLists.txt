@@ -50,8 +50,7 @@ if(ODE_LIBRARY_FOUND)
 
   message(STATUS "ODE found, building oderave plugin, precision=${ODE_PRECISION}")
 
-  target_link_libraries(oderave libopenrave ${ODE_LIBRARY})
-  target_link_libraries(oderave PRIVATE boost_assertion_failed)
+  target_link_libraries(oderave PRIVATE boost_assertion_failed PUBLIC libopenrave ${ODE_LIBRARY})
   set_target_properties(oderave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} ${ODE_CXXFLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
   install(TARGETS oderave DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-oderave)
   
@@ -59,8 +58,6 @@ if(ODE_LIBRARY_FOUND)
     # have to install the DLLs
     install(DIRECTORY "${ODE_LINK_DIRS}/" DESTINATION bin COMPONENT ${COMPONENT_PREFIX}plugin-oderave FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.dll")
   endif()
-else()
-  message(STATUS "Could not find ODE. Please install ODE (http://www.ode.org)")
 endif()
 
 set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PLUGIN-ODERAVE_DISPLAY_NAME "Plugin for Open Dyanmics Engine (ode) Physics/Collision" PARENT_SCOPE)

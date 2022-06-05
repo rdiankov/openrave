@@ -630,11 +630,11 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     //dReal rhs = (b.lengthsqr3()) * linkdistthresh;
                     dReal ellipdist = 0;
                     // now figure out what is the max distance
-                    for( int ix = 0; ix < 2; ++ix ) {
+                    for( ix = 0; ix < 2; ++ix ) {
                         Vector projvx = ix > 0 ? projboxpos + projboxright : projboxpos - projboxright;
-                        for( int iy = 0; iy < 2; ++iy ) {
+                        for( iy = 0; iy < 2; ++iy ) {
                             Vector projvy = iy > 0 ? projvx + projboxup : projvx - projboxup;
-                            for( int iz = 0; iz < 2; ++iz ) {
+                            for( iz = 0; iz < 2; ++iz ) {
                                 Vector projvz = iz > 0 ? projvy + projboxdir : projvy - projboxdir;
                                 Vector v = projvz; // inside link coordinate system
                                 dReal bv = (v.dot3(b));

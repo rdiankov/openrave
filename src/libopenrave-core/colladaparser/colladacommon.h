@@ -58,7 +58,7 @@ public:
     {
         LinkBinding() : index(-1) {
         }
-        LinkBinding(const std::string& kmodel, const std::string& pmodel, const std::string& vmodel) : kmodel(kmodel), pmodel(pmodel), vmodel(vmodel), index(-1) {
+        LinkBinding(const std::string& kmodel_, const std::string& pmodel_, const std::string& vmodel_) : kmodel(kmodel_), pmodel(pmodel_), vmodel(vmodel_), index(-1) {
         }
         bool operator==(const LinkBinding& other) const {
             return kmodel == other.kmodel &&
@@ -76,7 +76,7 @@ public:
     {
         AxisBinding() {
         }
-        AxisBinding(const std::string& kmodelaxissidref, const std::string& nodesid, const std::string& jointsidref) : kmodelaxissidref(kmodelaxissidref), nodesid(nodesid), jointsidref(jointsidref) {
+        AxisBinding(const std::string& kmodelaxissidref_, const std::string& nodesid_, const std::string& jointsidref_) : kmodelaxissidref(kmodelaxissidref_), nodesid(nodesid_), jointsidref(jointsidref_) {
         }
 
         bool operator==(const AxisBinding& other) const {
@@ -95,7 +95,7 @@ public:
     {
         ModelBinding() {
         }
-        ModelBinding(const std::string& kmodel, const std::string& pmodel, const std::string& vmodel) : kmodel(kmodel), pmodel(pmodel), vmodel(vmodel) {
+        ModelBinding(const std::string& kmodel_, const std::string& pmodel_, const std::string& vmodel_) : kmodel(kmodel_), pmodel(pmodel_), vmodel(vmodel_) {
         }
 
         bool operator==(const ModelBinding& other) const {

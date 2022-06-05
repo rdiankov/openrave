@@ -19,6 +19,7 @@
 #include <openrave/utils.h>
 #include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/filesystem/operations.hpp>
 
 #include <openravepy/openravepy_kinbody.h>
 #include <openravepy/openravepy_collisioncheckerbase.h>
@@ -408,15 +409,6 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
         std::string classstr = extract<std::string>(obj.attr("__class__").attr("__name__"));
         throw OPENRAVE_EXCEPTION_FORMAT(_("Unsupported python class '%s' for object %s"), classstr%reprstr, ORE_InvalidArguments);
     }
-}
-
-/// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
-static bool s_bReturnTransformQuaternions = false;
-bool GetReturnTransformQuaternions() {
-    return s_bReturnTransformQuaternions;
-}
-void SetReturnTransformQuaternions(bool bset) {
-    s_bReturnTransformQuaternions = bset;
 }
 
 Transform ExtractTransform(const object& oraw)
@@ -1008,13 +1000,12 @@ PyEnvironmentBase::PyEnvironmentBaseInfo::PyEnvironmentBaseInfo(const Environmen
 
 EnvironmentBase::EnvironmentBaseInfoPtr PyEnvironmentBase::PyEnvironmentBaseInfo::GetEnvironmentBaseInfo() const {
     EnvironmentBase::EnvironmentBaseInfoPtr pInfo(new EnvironmentBase::EnvironmentBaseInfo());
+    pInfo->_vBodyInfos = _ExtractBodyInfoArray(_vBodyInfos);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    pInfo->_vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(_vBodyInfos), end(_vBodyInfos));
     pInfo->_revision = _revision;
     pInfo->_keywords = _keywords;
     pInfo->_description = _description;
 #else
-    pInfo->_vBodyInfos = _ExtractBodyInfoArray(_vBodyInfos);
     size_t numkeywords = (size_t)py::len(_keywords);
     for(size_t i=0; i < numkeywords; i++) {
         pInfo->_keywords.push_back(py::extract<std::string>(_keywords[i]));
@@ -1045,12 +1036,6 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON(py::object obj, d
 }
 
 void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::EnvironmentBaseInfo& info) {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    _vBodyInfos = std::vector<KinBody::KinBodyInfoPtr>(begin(info._vBodyInfos), end(info._vBodyInfos));
-    _revision = info._revision;
-    _keywords = std::vector<std::string>(begin(info._keywords), end(info._keywords));
-    _description = info._description;
-#else
     py::list vBodyInfos;
     for (const KinBody::KinBodyInfoPtr& pinfo : info._vBodyInfos) {
         if (!pinfo) {
@@ -1058,14 +1043,19 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
         }
         RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pinfo);
         if (!!pRobotBaseInfo) {
-            PyRobotBase::PyRobotBaseInfo info = PyRobotBase::PyRobotBaseInfo(*pRobotBaseInfo);
-            vBodyInfos.append(info);
+            PyRobotBase::PyRobotBaseInfo baseInfo = PyRobotBase::PyRobotBaseInfo(*pRobotBaseInfo);
+            vBodyInfos.append(baseInfo);
         } else {
-            PyKinBody::PyKinBodyInfo info = PyKinBody::PyKinBodyInfo(*pinfo);
-            vBodyInfos.append(info);
+            PyKinBody::PyKinBodyInfo bodyInfo = PyKinBody::PyKinBodyInfo(*pinfo);
+            vBodyInfos.append(bodyInfo);
         }
     }
     _vBodyInfos = vBodyInfos;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    _revision = info._revision;
+    _keywords = std::vector<std::string>(begin(info._keywords), end(info._keywords));
+    _description = info._description;
+#else
     py::list vKeywords;
     FOREACHC(itKeyword, info._keywords) {
         py::object keyword = ConvertStringToUnicode(*itKeyword);
@@ -1112,7 +1102,7 @@ CollisionAction PyEnvironmentBase::_CollisionCallback(object fncallback, Collisi
         PyErr_Print();
     }
     CollisionAction ret = CA_DefaultAction;
-    if( IS_PYTHONOBJECT_NONE(res) || !res ) {
+    if( IS_PYTHONOBJECT_NONE(res) ) {
         ret = CA_DefaultAction;
         RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
     }
@@ -1359,8 +1349,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object o2, PyCollisionReportPt
                 throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
             }
         }
-    }
-    {
+    } else {
         KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
         if( !!pbody ) {
             KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
@@ -1510,9 +1499,9 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-        if( !!pbody ) {
-            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pkinbody ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pkinbody));
         }
         else {
             RAVELOG_ERROR("failed to get excluded body\n");
@@ -1535,9 +1524,9 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-        if( !!pbody ) {
-            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pkinbody ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pkinbody));
         }
         else {
             RAVELOG_ERROR("failed to get excluded body\n");
@@ -1855,9 +1844,9 @@ object PyEnvironmentBase::ReadKinBodyURI(const string &filename, object odictatt
     KinBodyPtr pbody;
     {
         openravepy::PythonThreadSaver threadsaver;
-        pbody = _penv->ReadKinBodyURI(filename);
+        pbody = _penv->ReadKinBodyURI(KinBodyPtr(), filename, dictatts);
     }
-    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(KinBodyPtr(), filename, dictatts),shared_from_this()));
+    return py::to_object(openravepy::toPyKinBody(pbody, shared_from_this()));
 }
 object PyEnvironmentBase::ReadKinBodyData(const string &data)
 {
@@ -2490,7 +2479,58 @@ object PyEnvironmentBase::drawboxarray(object opos, object oextents, object ocol
     return toPyGraphHandle(_penv->drawboxarray(vvectors,ExtractVector3(oextents)));
 }
 
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+object PyEnvironmentBase::drawplane(object otransform, object oextents, const std::vector<std::vector<dReal> >&_vtexture)
+{
+    size_t x = _vtexture.size();
+    if(x<1){
+        throw OpenRAVEException(_("_vtexture is empty"), ORE_InvalidArguments);
+    }
+    size_t y = _vtexture[0].size();
+    if(y<1){
+        throw OpenRAVEException(_("_vtexture[0] is empty"), ORE_InvalidArguments);
+    }
+    boost::multi_array<float,3> vtexture(boost::extents[x][y][1]);
+    for(int i=0; i<x; i++){
+        if(_vtexture[i].size() != y){
+            throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d] size is different"))%i), ORE_InvalidArguments);
+        }
+        for(int j=0; j<y; j++){
+            vtexture[i][j][0] = _vtexture[i][j];
+        }
+    }
+    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
+}
+object PyEnvironmentBase::drawplane(object otransform, object oextents, const std::vector<std::vector<std::vector<dReal> > >&_vtexture){
+    size_t x = _vtexture.size();
+    if(x<1){
+        throw OpenRAVEException(_("_vtexture is empty"), ORE_InvalidArguments);
+    }
+    size_t y = _vtexture[0].size();
+    if(y<1){
+        throw OpenRAVEException(_("_vtexture[0] is empty"), ORE_InvalidArguments);
+    }
+    size_t z = _vtexture[0][0].size();
+    if(z<1){
+        throw OpenRAVEException(_("_vtexture[0][0] is empty"), ORE_InvalidArguments);
+    }
+    boost::multi_array<float,3> vtexture(boost::extents[x][y][z]);
+    for(int i=0; i<x; i++){
+        if(_vtexture[i].size() != y){
+            throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d] size is different"))%i), ORE_InvalidArguments);
+        }
+        for(int j=0; j<y; j++){
+            if(_vtexture[i][j].size() != z){
+                throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d][%d] size is different"))%i%j), ORE_InvalidArguments);
+            }
+            for(int k=0; k<z; k++){
+                vtexture[i][j][k] = _vtexture[i][j][k];
+            }
+        }
+    }
+    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
+}
+#else
 object PyEnvironmentBase::drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture)
 {
     boost::multi_array<float,3> vtexture(boost::extents[1][_vtexture.shape()[0]][_vtexture.shape()[1]]);
@@ -2503,6 +2543,7 @@ object PyEnvironmentBase::drawplane(object otransform, object oextents, const bo
 {
     return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
 }
+#endif
 
 object PyEnvironmentBase::drawtrimesh(object opoints, object oindices, object ocolors)
 {
@@ -2645,8 +2686,8 @@ object PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix(const string 
     _penv->GetPublishedBodyTransformsMatchingPrefix(prefix, nameTransfPairs, timeout);
 
     py::dict otransforms;
-    FOREACH(itpair, nameTransfPairs) {
-        otransforms[itpair->first] = ReturnTransform(itpair->second);
+    for(const std::pair<std::string, Transform>& itpair : nameTransfPairs) {
+        otransforms[itpair.first] = ReturnTransform(itpair.second);
     }
 
     return otransforms;
@@ -2764,16 +2805,16 @@ py::object PyEnvironmentBase::GetDescription() const
     return ConvertStringToUnicode(_penv->GetDescription());
 }
 
-void PyEnvironmentBase::SetKeywords(const std::vector<std::string>& sceneKeywords)
+void PyEnvironmentBase::SetKeywords(py::object oSceneKeywords)
 {
+    std::vector<std::string> sceneKeywords = ExtractArray<std::string>(oSceneKeywords);
     _penv->SetKeywords(sceneKeywords);
 }
 
 py::list PyEnvironmentBase::GetKeywords() const
 {
     py::list pykeywords;
-    std::vector<std::string> keywords;
-    _penv->GetKeywords();
+    std::vector<std::string> keywords = _penv->GetKeywords();
     for(const std::string& keyword : keywords) {
         pykeywords.append(ConvertStringToUnicode(keyword));
     }
@@ -2977,7 +3018,22 @@ object get_std_runtime_error_unicode(std::runtime_error* p)
 
 std::string get_std_runtime_error_repr(std::runtime_error* p)
 {
-    return boost::str(boost::format("<std_exception('%s')>")%p->what());
+    return boost::str(boost::format("<std::runtime_error('%s')>")%p->what());
+}
+
+std::string get_boost_filesystem_error_message(boost::filesystem::filesystem_error* p)
+{
+    return std::string(p->what())+" ("+p->path1().native()+")";
+}
+
+object get_boost_filesystem_error_unicode(boost::filesystem::filesystem_error* p)
+{
+    return ConvertStringToUnicode(get_boost_filesystem_error_message(p));
+}
+
+std::string get_boost_filesystem_error_repr(boost::filesystem::filesystem_error* p)
+{
+    return boost::str(boost::format("<boost::filesystem::filesystem_error('%s')>")%get_boost_filesystem_error_message(p));
 }
 
 py::object GetCodeStringOpenRAVEException(OpenRAVEException* p)
@@ -3058,6 +3114,11 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
             pyerrdata.inc_ref(); // since passing to PyErr_SetObject
             PyErr_SetObject(PyExc_TypeError, pyerrdata.ptr() );
         }
+        catch( const boost::filesystem::filesystem_error& e ) {
+            py::object pyerrdata = ConvertStringToUnicode(std::string(e.what())+" ("+e.path1().native()+")");
+            pyerrdata.inc_ref(); // since passing to PyErr_SetObject
+            PyErr_SetObject(PyExc_RuntimeError, pyerrdata.ptr() );
+        }
         catch( const std::runtime_error& e ) {
             py::object pyerrdata = ConvertStringToUnicode(e.what());
             pyerrdata.inc_ref(); // since passing to PyErr_SetObject
@@ -3073,7 +3134,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     class_< OpenRAVEException >( OPENRAVE_EXCEPTION_CLASS_NAME, DOXY_CLASS(OpenRAVEException) )
     .def( init<const std::string&>() )
     .def( init<const OpenRAVEException&>() )
-    .def( "message", &OpenRAVEException::message, return_copy_const_ref() )
+    .add_property( "message", make_function(&OpenRAVEException::message, return_copy_const_ref()) )
     .def("GetCode", GetCodeStringOpenRAVEException)
     .def( "__str__", &OpenRAVEException::message, return_copy_const_ref() )
     .def( "__unicode__", get_openrave_exception_unicode)
@@ -3084,7 +3145,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     class_< std::runtime_error >( "_std_runtime_error_", no_init)
     .def( init<const std::string&>() )
     .def( init<const std::runtime_error&>() )
-    .def( "message", &std::runtime_error::what)
+    .add_property( "message", &std::runtime_error::what)
     .def( "__str__", &std::runtime_error::what)
     .def( "__unicode__", get_std_runtime_error_unicode)
     .def( "__repr__", get_std_runtime_error_repr)
@@ -3092,8 +3153,16 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     OpenRAVEBoostPythonExceptionTranslator<std::runtime_error>();
 
     //OpenRAVEBoostPythonExceptionTranslator<std::exception>();
-    class_< boost::bad_function_call, bases<std::runtime_error> >( "_boost_bad_function_call_");
+    class_< boost::bad_function_call, bases<std::runtime_error> >( "_boost_bad_function_call_", no_init);
     OpenRAVEBoostPythonExceptionTranslator<boost::bad_function_call>();
+
+    class_< boost::filesystem::filesystem_error, bases<std::runtime_error> >( "_boost_filesystem_error_", no_init)
+    .add_property( "message", &get_boost_filesystem_error_message)
+    .def( "__str__", &get_boost_filesystem_error_message)
+    .def( "__unicode__", &get_boost_filesystem_error_unicode)
+    .def( "__repr__", &get_boost_filesystem_error_repr)
+    ;
+    OpenRAVEBoostPythonExceptionTranslator<boost::filesystem::filesystem_error>();
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -3235,9 +3304,13 @@ Because race conditions can pop up when trying to lock the openrave environment 
         void (PyEnvironmentBase::*Lock1)() = &PyEnvironmentBase::Lock;
         bool (PyEnvironmentBase::*Lock2)(float) = &PyEnvironmentBase::Lock;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        object (PyEnvironmentBase::*drawplane1)(object, object, const std::vector<std::vector<dReal> >&) = &PyEnvironmentBase::drawplane;
+        object (PyEnvironmentBase::*drawplane2)(object, object, const std::vector<std::vector<std::vector<dReal> > >&) = &PyEnvironmentBase::drawplane;
+#else
         object (PyEnvironmentBase::*drawplane1)(object, object, const boost::multi_array<float,2>&) = &PyEnvironmentBase::drawplane;
         object (PyEnvironmentBase::*drawplane2)(object, object, const boost::multi_array<float,3>&) = &PyEnvironmentBase::drawplane;
-
+#endif
         void (PyEnvironmentBase::*addkinbody1)(PyKinBodyPtr) = &PyEnvironmentBase::AddKinBody;
         void (PyEnvironmentBase::*addkinbody2)(PyKinBodyPtr,bool) = &PyEnvironmentBase::AddKinBody;
         void (PyEnvironmentBase::*addrobot1)(PyRobotBasePtr) = &PyEnvironmentBase::AddRobot;
@@ -3268,6 +3341,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
         scope_ env = classenv
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                      .def(init<int>(), "options"_a = (int) ECO_StartSimulationThread)
+                     .def(init<std::string, int>(), "name"_a, "options"_a = (int) ECO_StartSimulationThread)
                      .def(init<EnvironmentBasePtr>(), "penv"_a)
                      .def(init<const PyEnvironmentBase&>(), "penv"_a)
 #else
@@ -3622,17 +3696,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
         ;
         env.attr("TriangulateOptions") = selectionoptions;
-    }
-
-    {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ options = class_<DummyStruct>(m, "options").def_readwrite_static
-                             ("returnTransformQuaternion", &s_bReturnTransformQuaternions);
-#else
-        scope_ options = class_<DummyStruct>("options").add_static_property
-                             ("returnTransformQuaternion",GetReturnTransformQuaternions,SetReturnTransformQuaternions);
-#endif
-
     }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

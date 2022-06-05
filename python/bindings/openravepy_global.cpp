@@ -246,6 +246,14 @@ public:
         return d;
     }
 
+    PyAABB GetCombined(const PyAABB& rhs) {
+        return PyAABB(ab.GetCombined(rhs.ab));
+    }
+
+    PyAABB GetTransformed(object otrans) {
+        return PyAABB(ab.GetTransformed(ExtractTransform(otrans)));
+    }
+
     virtual std::string __repr__() {
         return boost::str(boost::format("AABB([%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
     }
@@ -259,17 +267,6 @@ public:
     AABB ab;
 };
 
-AABB ExtractAABB(object o)
-{
-    extract_<OPENRAVE_SHARED_PTR<PyAABB> > pyaabb(o);
-    return ((OPENRAVE_SHARED_PTR<PyAABB>)pyaabb)->ab;
-}
-
-object toPyAABB(const AABB& ab)
-{
-    return py::to_object(OPENRAVE_SHARED_PTR<PyAABB>(new PyAABB(ab)));
-}
-
 class AABB_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     : public pickle_suite
@@ -282,12 +279,83 @@ public:
     }
 };
 
+AABB ExtractAABB(object o)
+{
+    extract_<OPENRAVE_SHARED_PTR<PyAABB> > pyaabb(o);
+    return ((OPENRAVE_SHARED_PTR<PyAABB>)pyaabb)->ab;
+}
+
+object toPyAABB(const AABB& ab)
+{
+    return py::to_object(OPENRAVE_SHARED_PTR<PyAABB>(new PyAABB(ab)));
+}
+
+class PyOrientedBox
+{
+public:
+    PyOrientedBox() {
+    }
+    PyOrientedBox(object otransform, object newextents) {
+        obb.transform = ExtractTransform(otransform);
+        obb.extents = ExtractVector3(newextents);
+    }
+    PyOrientedBox(const OrientedBox& newobb) : obb(newobb) {
+    }
+
+    object extents() {
+        return toPyVector3(obb.extents);
+    }
+    object transform() {
+        return ReturnTransform(obb.transform);
+    }
+    object pose() {
+        return toPyArray(obb.transform);
+    }
+
+    dict toDict() {
+        // for ujson serialization
+        dict d;
+        d["transform"] = transform();
+        d["extents"] = extents();
+        return d;
+    }
+
+    virtual std::string __repr__() {
+        return boost::str(boost::format("OrientedBox([%.15e,%.15e,%.15e,%.15e,%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])")%obb.transform.rot[0]%obb.transform.rot[1]%obb.transform.rot[2]%obb.transform.rot[3]%obb.transform.trans[0]%obb.transform.trans[1]%obb.transform.trans[2]%obb.extents[0]%obb.extents[1]%obb.extents[2]);
+    }
+    virtual std::string __str__() {
+        return boost::str(boost::format("<%s>")%__repr__());
+    }
+    virtual object __unicode__() {
+        return ConvertStringToUnicode(__str__());
+    }
+
+    OrientedBox obb;
+};
+
+object toPyOrientedBox(const OrientedBox& obb)
+{
+    return py::to_object(OPENRAVE_SHARED_PTR<PyOrientedBox>(new PyOrientedBox(obb)));
+}
+
+class OrientedBox_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getinitargs(const PyOrientedBox& pyobb)
+    {
+        return py::make_tuple(ReturnTransform(pyobb.obb.transform), toPyVector3(pyobb.obb.extents));
+    }
+};
+
 class PyTriMesh
 {
 public:
     PyTriMesh() {
     }
-    PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {
+    PyTriMesh(object vertices_, object indices_) : vertices(vertices_), indices(indices_) {
     }
     PyTriMesh(const TriMesh& mesh) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1384,6 +1452,8 @@ void init_openravepy_global()
     .value("RealControllers",Clone_RealControllers)
     .value("Sensors",Clone_Sensors)
     .value("Modules",Clone_Modules)
+    .value("PassOnMissingBodyReferences",Clone_PassOnMissingBodyReferences)
+    .value("IgnoreGrabbedBodies",Clone_IgnoreGrabbedBodies)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     // Cannot export because openravepy_viewer already has "Viewer"
     // .export_values()
@@ -1417,6 +1487,12 @@ void init_openravepy_global()
     .value("OpenStart",IT_OpenStart)
     .value("OpenEnd",IT_OpenEnd)
     .value("Closed",IT_Closed)
+    .value("IntervalMask",IT_IntervalMask)
+    .value("Default",IT_Default)
+    .value("AllLinear",IT_AllLinear)
+    .value("Cubic",IT_Cubic)
+    .value("Quintic",IT_Quintic)
+    .value("InterpolationMask",IT_InterpolationMask)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     enum_<SampleDataType>(m, "SampleDataType", py::arithmetic() DOXY_ENUM(SampleDataType))
@@ -1435,15 +1511,35 @@ void init_openravepy_global()
 //     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
 // #endif
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<ConstraintFilterOptions>(m, "ConstraintFilterOptions", py::arithmetic() DOXY_ENUM(ConstraintFilterOptions))
+#else
+    enum_<ConstraintFilterOptions>("ConstraintFilterOptions" DOXY_ENUM(ConstraintFilterOptions))
+#endif
+    .value("CheckEnvCollisions", CFO_CheckEnvCollisions)
+    .value("CheckSelfCollisions", CFO_CheckSelfCollisions)
+    .value("CheckTimeBasedConstraints", CFO_CheckTimeBasedConstraints)
+    .value("BreakOnFirstValidation", CFO_BreakOnFirstValidation)
+    .value("CheckUserConstraints", CFO_CheckUserConstraints)
+    .value("CheckWithPerturbation", CFO_CheckWithPerturbation)
+    .value("FillCheckedConfiguration", CFO_FillCheckedConfiguration)
+    .value("FillCollisionReport", CFO_FillCollisionReport)
+    .value("FromPathSampling", CFO_FromPathSampling)
+    .value("FromPathShortcutting", CFO_FromPathShortcutting)
+    .value("FromTrajectorySmoother", CFO_FromTrajectorySmoother)
+    .value("FinalValuesNotReached", CFO_FinalValuesNotReached)
+    .value("StateSettingError", CFO_StateSettingError)
+    .value("RecommendedOptions", CFO_RecommendedOptions)
+    ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
     m.def("GetMicroTime", utils::GetMicroTime, "get microsecond time");
-    m.def("GetNanoTime" , utils::GetNanoTime , "get nanosecond time" );
+    m.def("GetNanoTime", utils::GetNanoTime, "get nanosecond time" );
 #else
     def("GetMilliTime", utils::GetMilliTime64, "get millisecond time (64 bits)");
     def("GetMicroTime", utils::GetMicroTime, "get microsecond time");
-    def("GetNanoTime" , utils::GetNanoTime , "get nanosecond time" );
+    def("GetNanoTime", utils::GetNanoTime, "get nanosecond time" );
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1496,10 +1592,12 @@ void init_openravepy_global()
     .def(init<>())
     .def(init<object, object>(), "pos"_a, "dir"_a)
     .def(init<const RAY&>(), "r"_a)
-    .def("__copy__", [](const PyRay& self){ return self; })
-    .def("__deepcopy__", [](const PyRay& pyray, const py::dict& memo) {
-        return PyRay(pyray.r);
-    })
+    .def("__copy__", [](const PyRay& self){
+            return self;
+        })
+    .def("__deepcopy__", [] (const PyRay &pyray, const py::dict& memo) {
+            return PyRay(pyray.r);
+        })
 #else
     class_<PyRay, OPENRAVE_SHARED_PTR<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
     .def(init<object,object>(py::args("pos","dir")))
@@ -1548,9 +1646,9 @@ void init_openravepy_global()
     .def("__deepcopy__", [](const PyAABB& self, const py::dict& memo) {
             return PyAABB(self.ab);
             /*
-            OPENRAVE_SHARED_PTR<PyAABB> pyaabb(new PyAABB(self.ab));
-            return py::to_object(pyaabb);
-            */
+               OPENRAVE_SHARED_PTR<PyAABB> pyaabb(new PyAABB(self.ab));
+               return py::to_object(pyaabb);
+             */
         })
 #else
     class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
@@ -1562,6 +1660,8 @@ void init_openravepy_global()
     .def("__unicode__",&PyAABB::__unicode__)
     .def("__repr__",&PyAABB::__repr__)
     .def("toDict", &PyAABB::toDict)
+    .def("GetCombined", &PyAABB::GetCombined, PY_ARGS("aabb") DOXY_FN(AABB, GetCombined))
+    .def("GetTransformed", &PyAABB::GetTransformed, PY_ARGS("pose") DOXY_FN(AABB, GetTransformed))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def(py::pickle(
              [](const PyAABB &pyab) {
@@ -1590,17 +1690,74 @@ void init_openravepy_global()
     .def_pickle(AABB_pickle_suite())
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyOrientedBox, OPENRAVE_SHARED_PTR<PyOrientedBox> >(m, "OrientedBox", DOXY_CLASS(geometry::OrientedBox))
+    .def(init<>())
+    .def(init<object, object>(), "pose"_a, "extents"_a)
+    .def(init<const OrientedBox&>(), "obb"_a)
+    .def("__copy__", [](const PyOrientedBox& self){
+            return self;
+        })
+    .def("__deepcopy__", [](const PyOrientedBox& self, const py::dict& memo) {
+            return PyOrientedBox(self.obb);
+            /*
+               OPENRAVE_SHARED_PTR<PyOrientedBox> pyOrientedBox(new PyOrientedBox(self.obb));
+               return py::to_object(pyOrientedBox);
+             */
+        })
+#else
+    class_<PyOrientedBox, OPENRAVE_SHARED_PTR<PyOrientedBox> >("OrientedBox", DOXY_CLASS(geometry::OrientedBox))
+    .def(init<object,object>(py::args("pose","extents")))
+#endif
+    .def("extents",&PyOrientedBox::extents)
+    .def("transform",&PyOrientedBox::transform)
+    .def("pose",&PyOrientedBox::pose)
+    .def("__str__",&PyOrientedBox::__str__)
+    .def("__unicode__",&PyOrientedBox::__unicode__)
+    .def("__repr__",&PyOrientedBox::__repr__)
+    .def("toDict", &PyOrientedBox::toDict)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def(py::pickle(
+             [](const PyOrientedBox &pyab) {
+            // __getstate__
+            return OrientedBox_pickle_suite::getinitargs(pyab);
+        },
+             [](py::tuple state) {
+            // __setstate__
+            if (state.size() != 2) {
+                throw std::runtime_error("Invalid state!");
+            }
+            /* Create a new C++ instance */
+            PyOrientedBox pyab;
+            /* Assign any additional state */
+            pyab.obb.transform = ExtractTransform(state[0]);
+            py::array_t<dReal> extents = state[1].cast<py::array_t<dReal> >();
+            for(size_t i = 0; i < 3; ++i) {
+                pyab.obb.extents[i] = *extents.data(i);
+            }
+            pyab.obb.extents[3] = 0;
+            return pyab;
+        }
+             ))
+#else
+    .def_pickle(OrientedBox_pickle_suite())
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    ;
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyTriMesh, OPENRAVE_SHARED_PTR<PyTriMesh> >(m, "TriMesh", DOXY_CLASS(TriMesh))
     .def(init<>())
     .def(init<object, object>(), "vertices"_a, "indices"_a)
     .def(init<const TriMesh&>(), "mesh"_a)
-    .def("__copy__", [](const PyTriMesh& self){ return self; })
+    .def("__copy__", [](const PyTriMesh& self){
+            return self;
+        })
     .def("__deepcopy__", [](const PyTriMesh& pymesh, const py::dict& memo) {
-        TriMesh mesh;
-        pymesh.GetTriMesh(mesh);
-        return PyTriMesh(mesh);
-    })
+            TriMesh mesh;
+            pymesh.GetTriMesh(mesh);
+            return PyTriMesh(mesh);
+        })
 #else
     class_<PyTriMesh, OPENRAVE_SHARED_PTR<PyTriMesh> >("TriMesh", DOXY_CLASS(TriMesh))
     .def(init<object,object>(py::args("vertices","indices")))
@@ -1684,7 +1841,9 @@ void init_openravepy_global()
             .def(init<PyConfigurationSpecificationPtr>(), "pyspec"_a)
             .def(init<const ConfigurationSpecification::Group&>(), "group"_a)
             .def(init<const std::string&>(), "xmldata"_a)
-            .def("__copy__", [](const PyConfigurationSpecification& self){ return self; })
+            .def("__copy__", [](const PyConfigurationSpecification& self){
+                return self;
+            })
             .def("__deepcopy__", [](const PyConfigurationSpecification& pyspec, const py::dict& memo) {
                 return PyConfigurationSpecification(pyspec._spec);
             })
@@ -1847,7 +2006,7 @@ void init_openravepy_global()
         scope_ scope_stringreaders = class_<PyStringReaderStaticClass>("stringreaders")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                     .def_static("CreateStringReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+                                     .def_static("CreateStringReadable", pyCreateStringReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
 #else
                                      // https://wiki.python.org/moin/boost.python/HowTo
                                      .def("CreateStringReadable", pyCreateStringReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))

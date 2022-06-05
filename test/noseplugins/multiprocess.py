@@ -99,7 +99,12 @@ import sys
 import time
 import traceback
 import unittest
-import pickle
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 import signal
 import nose.case
 from nose.core import TextTestRunner
@@ -365,7 +370,7 @@ class MultiProcessTestRunner(TextTestRunner):
                                              keyboardCaught, shouldStop,
                                              self.loaderClass,
                                              result.__class__,
-                                             pickle.dumps(self.config)))
+                                             pickle.dumps(self.config, 2)))
             p.currentaddr = currentaddr
             p.currentargs = currentargs
             p.currentstart = currentstart

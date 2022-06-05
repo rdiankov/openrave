@@ -100,7 +100,7 @@ enum NeighborStateStatus
 class OPENRAVE_API ConstraintFilterReturn
 {
 public:
-    ConstraintFilterReturn() : _fTimeWhenInvalid(0), _returncode(0), _bHasRampDeviatedFromInterpolation(false) {
+    ConstraintFilterReturn() : _fTimeWhenInvalid(0), _returncode(0), _bHasRampDeviatedFromInterpolation(false), _fTimeBasedSurpassMult(1.0) {
     }
     /// \brief clears the data
     inline void Clear() {
@@ -108,20 +108,23 @@ public:
         _configurationtimes.resize(0);
         _invalidvalues.resize(0);
         _invalidvelocities.resize(0);
+        _invalidaccelerations.resize(0);
         _returncode = 0;
         _fTimeWhenInvalid = 0;
         _bHasRampDeviatedFromInterpolation = false;
         _report.Reset();
+        _fTimeBasedSurpassMult = 1.0;
     }
 
     std::vector<dReal> _configurations; ///< N*dof vector of the configurations used to check constraints. If the constraints were invalid, they stop at the first invalid constraint
     std::vector<dReal> _configurationtimes; ///< N vector of the times where each configuration was sampled at. If timeelapsed is set in the check path constraints function, then this is scaled by this time. Otherwise it is a value in [0,1] that describes the interpolation coefficient: 0 is the initial configuration, 1 is the final configuration.
 
-    std::vector<dReal> _invalidvalues, _invalidvelocities; ///< if the constraint returned with an error, contains invalid configuration where it failed
+    std::vector<dReal> _invalidvalues, _invalidvelocities, _invalidaccelerations; ///< if the constraint returned with an error, contains invalid configuration where it failed
     dReal _fTimeWhenInvalid; ///< if the constraint has an elapsed time, will contain the time when invalidated
     int _returncode; ///< if == 0, the constraint is good. If != 0 means constraint was violated and bitmasks in ConstraintFilterOptions can be used to find what constraint was violated.
     CollisionReport _report; ///< if in collision (_returncode&(CFO_CheckEnvCollisions|CFO_CheckSelfCollisions)), then stores the collision report
     bool _bHasRampDeviatedFromInterpolation; ///< if true, then it means that the checked ramp that passed is different from the interpolation expected on the start and end points, and the new points are filled in _configurations
+    dReal _fTimeBasedSurpassMult; ///< if option contains CFO_CheckTimeBasedConstraints, then the multiplier is set to (some factor)*|max|/|actual max|. this is used for the reduction factor in velocity unit. if several constraints should be taken into account, take min.
 };
 
 typedef boost::shared_ptr<ConstraintFilterReturn> ConstraintFilterReturnPtr;
@@ -190,7 +193,10 @@ private:
     }
 
     /// \brief sets up the planner parameters to use the active joints of the robot
-    virtual void SetRobotActiveJoints(RobotBasePtr robot);
+    virtual void SetRobotActiveJoints(RobotBasePtr& probot);
+
+    /// \brief sets up the planner to use specific DOF indices of the robot.
+    virtual void SetRobotDOFIndices(RobotBasePtr& probot, const std::vector<int>& dofindices);
 
     /** \brief sets up the planner parameters to use the configuration specification space
 
@@ -213,6 +219,7 @@ private:
         - _vConfigUpperLimit
         - _vConfigVelocityLimit
         - _vConfigAccelerationLimit
+        - _vConfigJerkLimit
         - _vConfigResolution
         - vinitialconfig
         - _vInitialConfigVelocities - the initial velocities (at vinitialconfig) of the robot when starting to plan
@@ -288,6 +295,39 @@ private:
             return true;
         }
         return _checkpathvelocityconstraintsfn(q0, q1, dq0, dq1, elapsedtime, interval, options, filterreturn);
+    }
+
+    /** \brief Checks that all the constraints are satisfied at each discretized point between the two states (configuration, the first, and the second time derivatives).
+
+       The two states are interpolated using a quintic polynomial
+
+       errorcode = _checkpathvelocityaccelerationconstraintsfn(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, interval, options, configurations)
+
+       When called, q0 and dq0 is guaranteed to be set on the robot.
+       The function returns true if the path to q1 satisfies all the constraints of the planner.
+
+       \param q0 is the configuration the robot is coming from (shouldn't assume that it is currently set).
+       \param q1 is the configuration the robot should move to.
+       \param dq0 is the first time derivative (or velocity) of each DOF at q0.
+       \param dq1 is the first time derivative (or velocity) of each DOF at q1.
+       \param ddq0 is the second time derivative (or acceleration) of each DOF at q0.
+       \param ddq1 is the second time derivative (or acceleration) of each DOF at q1.
+       \param timeelapsed is the estimated time to go from q0 to q1 with the current constraints. Set to 0 if non-applicable.
+       \param interval Specifies whether to check the end points of the interval for constraints
+       \param options a mask of ConstraintFilterOptions
+       \param filterreturn Optional argument that will hold the output information of the filter.
+       \return \ref ConstraintFilterReturn::_returncode, which a combination of ConstraintFilterOptions
+     */
+    typedef boost::function<int (const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr)> CheckPathVelocityAccelerationConstraintFn;
+    CheckPathVelocityAccelerationConstraintFn _checkpathvelocityaccelerationconstraintsfn;
+
+    /// \brief wrapper function calling _checkpathvelocityaccelerationconstraintsfn with some default args. Returns true if function doesn't exist.
+    inline int CheckPathAllConstraints(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, const std::vector<dReal>& ddq0, const std::vector<dReal>& ddq1, dReal elapsedtime, IntervalType interval, int options=0xffff, ConstraintFilterReturnPtr filterreturn=ConstraintFilterReturnPtr()) const
+    {
+        if( !_checkpathvelocityaccelerationconstraintsfn ) {
+            return true;
+        }
+        return _checkpathvelocityaccelerationconstraintsfn(q0, q1, dq0, dq1, ddq0, ddq1, elapsedtime, interval, options, filterreturn);
     }
 
     /** \brief Samples a random configuration (mandatory)
@@ -390,6 +430,9 @@ private:
     /// \brief the absolute acceleration limits of each DOF of the configuration space.
     std::vector<dReal> _vConfigAccelerationLimit;
 
+    /// \brief the absolute jerk limits of each DOF of the configuration space.
+    std::vector<dReal> _vConfigJerkLimit;
+
     /// \brief the discretization resolution of each dimension of the configuration space
     std::vector<dReal> _vConfigResolution;
 
@@ -477,7 +520,7 @@ protected:
     {
         return false;
     }
-    
+
     /// \brief output the planner parameters in a string (in XML format)
     ///
     /// \param options if 1 will skip writing the extra parameters

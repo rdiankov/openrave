@@ -48,7 +48,7 @@ public:
     class daeOpenRAVEURIResolver : public daeURIResolver
     {
 public:
-        daeOpenRAVEURIResolver(DAE& dae, const std::string& scheme, ColladaReader* preader) : daeURIResolver(dae), _scheme(scheme), _preader(preader) {
+        daeOpenRAVEURIResolver(DAE& dae_, const std::string& scheme, ColladaReader* preader_) : daeURIResolver(dae_), _scheme(scheme), _preader(preader_) {
         }
 
         ~daeOpenRAVEURIResolver() {
@@ -135,7 +135,7 @@ public:
     class InterfaceType
     {
 public:
-        InterfaceType(const std::string& type, const std::string& name) : type(type), name(name) {
+        InterfaceType(const std::string& type_, const std::string& name_) : type(type_), name(name_) {
         }
         std::string type, name;
     };
@@ -161,7 +161,7 @@ public:
     class JointAxisBinding
     {
 public:
-        JointAxisBinding(const boost::function<domNodeRef(daeElementRef)>& instantiatenodefn, daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info),_iaxis(0) {
+        JointAxisBinding(const boost::function<domNodeRef(daeElementRef)>& instantiatenodefn, daeElementRef pvisualtrans_, domAxis_constraintRef pkinematicaxis_, dReal jointvalue_, domKinematics_axis_infoRef kinematics_axis_info_, domMotion_axis_infoRef motion_axis_info_, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : pvisualtrans(pvisualtrans_), pkinematicaxis(pkinematicaxis_), jointvalue(jointvalue_), kinematics_axis_info(kinematics_axis_info_), motion_axis_info(motion_axis_info_),_iaxis(0) {
             _listInstanceScopeAxis = listInstanceScope;
             BOOST_ASSERT( !!pkinematicaxis );
             if( !!pvisualtrans ) {
@@ -670,8 +670,8 @@ public:
                                                 if( !!pchildtec ) {
                                                     daeTArray<daeElementRef> children;
                                                     pchildtec->getChildren(children);
-                                                    for(size_t ic = 0; ic < children.getCount(); ++ic) {
-                                                        daeElementRef pchildchild = children[ic];
+                                                    for(size_t icc = 0; icc < children.getCount(); ++icc) {
+                                                        daeElementRef pchildchild = children[icc];
                                                         if( std::string(pchildchild->getElementName()) == "ignore_link" ) {
                                                             KinBody::LinkPtr pignore_link;
                                                             string ignore_link_sid = pchildchild->getAttribute("link");
@@ -1738,93 +1738,93 @@ public:
                                 }
                                 bool bControlMode = pelt->getElementName() == std::string("controlMode");
                                 if( bControlMode ) {
-                                    pjoint->_info._controlMode = (KinBody::JointControlMode)boost::lexical_cast<int>(pelt->getCharData());
+                                    pjoint->_info._controlMode = (JointControlMode)boost::lexical_cast<int>(pelt->getCharData());
                                     continue;
                                 }
                                 bool bJCIRobotController = pelt->getElementName() == std::string("jointcontrolinfo_robotcontroller");
                                 if( bJCIRobotController ) {
-                                    pjoint->_info._jci_robotcontroller.reset(new KinBody::JointInfo::JointControlInfo_RobotController());
-                                    KinBody::JointInfo::JointControlInfo_RobotController& jci = *pjoint->_info._jci_robotcontroller;
+                                    pjoint->_info._jci_robotcontroller.reset(new JointControlInfo_RobotController());
+                                    JointControlInfo_RobotController& jci = *pjoint->_info._jci_robotcontroller;
                                     for( size_t ieltcontent = 0; ieltcontent < pelt->getChildren().getCount(); ++ieltcontent ) {
                                         daeElementRef pchild = pelt->getChildren()[ieltcontent];
-                                        if( pchild->getElementName() == std::string("robotId") ) {
-                                            jci.robotId = boost::lexical_cast<int>(pchild->getCharData());
+                                        if( pchild->getElementName() == std::string("controllerType") ) {
+                                            jci.controllerType = pchild->getCharData();
                                         }
-                                        else if( pchild->getElementName() == std::string("robotControllerDOFIndex") ) {
+                                        else if( pchild->getElementName() == std::string("robotControllerAxisIndex") ) {
                                             int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
                                             if( ijointaxis > pjoint->GetDOF() - 1 ) {
                                                 continue;
                                             }
-                                            jci.robotControllerDOFIndex.at(ijointaxis) = boost::lexical_cast<int>(pchild->getCharData());
+                                            jci.robotControllerAxisIndex.at(ijointaxis) = boost::lexical_cast<int>(pchild->getCharData());
                                         }
                                     }
                                     continue;
                                 }
                                 bool bJCIIO = pelt->getElementName() == std::string("jointcontrolinfo_io");
                                 if( bJCIIO ) {
-                                    pjoint->_info._jci_io.reset(new KinBody::JointInfo::JointControlInfo_IO());
-                                    KinBody::JointInfo::JointControlInfo_IO& jci = *pjoint->_info._jci_io;
+                                    pjoint->_info._jci_io.reset(new JointControlInfo_IO());
+                                    JointControlInfo_IO& jci = *pjoint->_info._jci_io;
                                     for( size_t ieltcontent = 0; ieltcontent < pelt->getChildren().getCount(); ++ieltcontent ) {
                                         daeElementRef pchild = pelt->getChildren()[ieltcontent];
-                                        if( pchild->getElementName() == std::string("deviceId") ) {
-                                            jci.deviceId = boost::lexical_cast<int>(pchild->getCharData());
+                                        if( pchild->getElementName() == std::string("deviceType") ) {
+                                            jci.deviceType = boost::lexical_cast<int>(pchild->getCharData());
                                         }
-                                        else if( pchild->getElementName() == std::string("vMoveIONames") ) {
+                                        else if( pchild->getElementName() == std::string("moveIONames") ) {
                                             int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
                                             if( ijointaxis > pjoint->GetDOF() - 1 ) {
                                                 continue;
                                             }
                                             ss.clear();
                                             ss.str(pchild->getCharData());
-                                            jci.vMoveIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                                            jci.moveIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                                         }
-                                        else if( pchild->getElementName() == std::string("vUpperLimitIONames") ) {
+                                        else if( pchild->getElementName() == std::string("upperLimitIONames") ) {
                                             int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
                                             if( ijointaxis > pjoint->GetDOF() - 1 ) {
                                                 continue;
                                             }
                                             ss.clear();
                                             ss.str(pchild->getCharData());
-                                            jci.vUpperLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                                            jci.upperLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                                         }
-                                        else if( pchild->getElementName() == std::string("vUpperLimitSensorIsOn") ) {
+                                        else if( pchild->getElementName() == std::string("upperLimitSensorIsOn") ) {
                                             int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
                                             if( ijointaxis > pjoint->GetDOF() - 1 ) {
                                                 continue;
                                             }
                                             ss.clear();
                                             ss.str(pchild->getCharData());
-                                            jci.vUpperLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                            jci.upperLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
                                         }
-                                        else if( pchild->getElementName() == std::string("vLowerLimitIONames") ) {
+                                        else if( pchild->getElementName() == std::string("lowerLimitIONames") ) {
                                             int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
                                             if( ijointaxis > pjoint->GetDOF() - 1 ) {
                                                 continue;
                                             }
                                             ss.clear();
                                             ss.str(pchild->getCharData());
-                                            jci.vLowerLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                                            jci.lowerLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                                         }
-                                        else if( pchild->getElementName() == std::string("vLowerLimitSensorIsOn") ) {
+                                        else if( pchild->getElementName() == std::string("lowerLimitSensorIsOn") ) {
                                             int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
                                             if( ijointaxis > pjoint->GetDOF() - 1 ) {
                                                 continue;
                                             }
                                             ss.clear();
                                             ss.str(pchild->getCharData());
-                                            jci.vLowerLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                            jci.lowerLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
                                         }
                                     }
                                     continue;
                                 }
                                 bool bJCIExternalDevice = pelt->getElementName() == std::string("jointcontrolinfo_externaldevice");
                                 if( bJCIExternalDevice ) {
-                                    pjoint->_info._jci_externaldevice.reset(new KinBody::JointInfo::JointControlInfo_ExternalDevice());
-                                    KinBody::JointInfo::JointControlInfo_ExternalDevice& jci = *pjoint->_info._jci_externaldevice;
+                                    pjoint->_info._jci_externaldevice.reset(new JointControlInfo_ExternalDevice());
+                                    JointControlInfo_ExternalDevice& jci = *pjoint->_info._jci_externaldevice;
                                     for( size_t ieltcontent = 0; ieltcontent < pelt->getChildren().getCount(); ++ieltcontent ) {
                                         daeElementRef pchild = pelt->getChildren()[ieltcontent];
-                                        if( pchild->getElementName() == std::string("externalDeviceId") ) {
-                                            jci.externalDeviceId = pchild->getCharData();
+                                        if( pchild->getElementName() == std::string("externalDeviceType") ) {
+                                            jci.externalDeviceType = pchild->getCharData();
                                         }
                                     }
                                     continue;
@@ -1834,13 +1834,13 @@ public:
                             // vUpper/LowerLimitSensorIsOn would be meaningless without vUpper/LowerLimitIONames. If the
                             // sizes of the two are not equal, resize vUpperLimitSensorIsOn to have the same size as
                             // vUpperLimitIONames and fill in the default value (1) if necessary.
-                            if( pjoint->_info._controlMode == KinBody::JointControlMode::JCM_IO ) {
+                            if( pjoint->_info._controlMode == JCM_IO ) {
                                 for( int ijointaxis = 0; ijointaxis < pjoint->GetDOF(); ++ijointaxis ) {
-                                    if( pjoint->_info._jci_io->vUpperLimitIONames.at(ijointaxis).size() != pjoint->_info._jci_io->vUpperLimitSensorIsOn.at(ijointaxis).size() ) {
-                                        pjoint->_info._jci_io->vUpperLimitSensorIsOn[ijointaxis].resize(pjoint->_info._jci_io->vUpperLimitIONames.at(ijointaxis).size(), 1);
+                                    if( pjoint->_info._jci_io->upperLimitIONames.at(ijointaxis).size() != pjoint->_info._jci_io->upperLimitSensorIsOn.at(ijointaxis).size() ) {
+                                        pjoint->_info._jci_io->upperLimitSensorIsOn[ijointaxis].resize(pjoint->_info._jci_io->upperLimitIONames.at(ijointaxis).size(), 1);
                                     }
-                                    if( pjoint->_info._jci_io->vLowerLimitIONames.at(ijointaxis).size() != pjoint->_info._jci_io->vLowerLimitSensorIsOn.at(ijointaxis).size() ) {
-                                        pjoint->_info._jci_io->vLowerLimitSensorIsOn[ijointaxis].resize(pjoint->_info._jci_io->vLowerLimitIONames.at(ijointaxis).size(), 1);
+                                    if( pjoint->_info._jci_io->lowerLimitIONames.at(ijointaxis).size() != pjoint->_info._jci_io->lowerLimitSensorIsOn.at(ijointaxis).size() ) {
+                                        pjoint->_info._jci_io->lowerLimitSensorIsOn[ijointaxis].resize(pjoint->_info._jci_io->lowerLimitIONames.at(ijointaxis).size(), 1);
                                     }
                                 }
                             }
@@ -3430,6 +3430,14 @@ public:
                         manipinfo._toolChangerConnectedBodyToolName.clear();
                     }
 
+                    daeElementRef pToolChangerLinkName = tec->getChild("toolChangerLinkName");
+                    if( !!pToolChangerLinkName ) {
+                        manipinfo._toolChangerLinkName = pToolChangerLinkName->getCharData();
+                    }
+                    else{
+                        manipinfo._toolChangerLinkName.clear();
+                    }
+
                     daeElementRef pframe_endlink = tec->getChild("frame_endlink");
                     if( !!pframe_endlink ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_endlink->getAttribute("link"), as).resolve().elt);
@@ -3524,7 +3532,7 @@ public:
                         else if( pmanipchild->getElementName() == string("restrict_graspset_name") ) {
                             manipinfo._vRestrictGraspSetNames.push_back(pmanipchild->getCharData());
                         }
-                        else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_endlink") && pmanipchild->getElementName() != string("frame_tip") && pmanipchild->getElementName() != string("grippername") && pmanipchild->getElementName() != string("toolChangerConnectedBodyToolName") ) {
+                        else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_endlink") && pmanipchild->getElementName() != string("frame_tip") && pmanipchild->getElementName() != string("grippername") && pmanipchild->getElementName() != string("toolChangerConnectedBodyToolName") && pmanipchild->getElementName() != string("toolChangerLinkName") ) {
                             RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%manipinfo._name));
                         }
                     }
@@ -4241,9 +4249,9 @@ public:
         }
         if( !!ias ) {
             // resolve the articulated_system, is this necessary?
-            domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
-            if( !!articulated_system ) {
-                return searchBinding(ref, articulated_system, bLogWarning, listInstanceScope);
+            domArticulated_systemRef articulated_system_ref = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
+            if( !!articulated_system_ref ) {
+                return searchBinding(ref, articulated_system_ref, bLogWarning, listInstanceScope);
             }
         }
         if( bLogWarning ) {
@@ -4749,8 +4757,8 @@ private:
             domFloat jointvalue=0;
             if( !!bindjoint->getValue() ) {
                 if (!!bindjoint->getValue()->getParam()) {
-                    std::list<daeElementRef> listInstanceScope;
-                    pelt = searchBinding(bindjoint->getValue()->getParam()->getValue(),kscene, true, listInstanceScope);
+                    std::list<daeElementRef> listInstanceScopeTmp;
+                    pelt = searchBinding(bindjoint->getValue()->getParam()->getValue(),kscene, true, listInstanceScopeTmp);
                 }
                 else {
                     pelt = bindjoint->getValue();
@@ -4758,7 +4766,7 @@ private:
             }
 
             resolveCommon_float_or_param(pelt,kscene, jointvalue);
-            bindings.listAxisBindings.push_back(JointAxisBinding(boost::bind(&ColladaReader::_InstantiateNode, this, _1), pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
+            bindings.listAxisBindings.push_back(JointAxisBinding(boost::bind(&ColladaReader::_InstantiateNode, this, boost::placeholders::_1), pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
         }
     }
 
@@ -5518,8 +5526,8 @@ private:
                         // search for the formula in library_formulas
                         string formulaurl = children[0]->getAttribute("definitionURL");
                         if( formulaurl.size() > 0 ) {
-                            daeElementRef pelt = daeURI(*children[0],formulaurl).getElement();
-                            pformula = daeSafeCast<domFormula>(pelt);
+                            daeElementRef pelt0 = daeURI(*children[0],formulaurl).getElement();
+                            pformula = daeSafeCast<domFormula>(pelt0);
                             if( !pformula ) {
                                 RAVELOG_WARN(str(boost::format("could not find csymbol %s formula\n")%children[0]->getAttribute("definitionURL")));
                             }

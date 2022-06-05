@@ -183,18 +183,20 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     _mapGUIFunctionListLimits[ViewerCommandPriority::MEDIUM] = 1000;
     _mapGUIFunctionListLimits[ViewerCommandPriority::LOW] = 1000;
 
-    _bLockEnvironment = true;
-    _InitGUI(bCreateStatusBar, bCreateMenu);
-    _bUpdateEnvironment = true;
-    _bExternalLoop = false;
-
     // Read copy QT resource to temp location and later stream that into OSG to use when making labels
     QFile fontFile(":/fonts/NotoSans-Regular.ttf");
     fontFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered);
     QByteArray ba = fontFile.readAll();
-    std::istringstream fontStream(ba.toStdString());
-    OSGLODLabel::SetFont(osgText::readFontStream(fontStream));
+    std::istringstream lodFontStream(ba.toStdString());
+    OSGLODLabel::SetFont(osgText::readFontStream(lodFontStream));
+    std::istringstream widgetFontStream(ba.toStdString());
+    QOSGViewerWidget::SetFont(osgText::readFontStream(widgetFontStream));
     fontFile.close();
+
+    _bLockEnvironment = true;
+    _InitGUI(bCreateStatusBar, bCreateMenu);
+    _bUpdateEnvironment = true;
+    _bExternalLoop = false;
 }
 
 QtOSGViewer::~QtOSGViewer()
@@ -270,6 +272,10 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
 
     if (!bCreateMenu && !bCreateMenu) {
         _CreateControlButtons();
+
+        // move HUD text out of way of control buttons if needed
+        osg::Vec2 hudTextOffset = _posgWidget->GetHUDTextOffset();
+        _posgWidget->SetHUDTextOffset(std::max(60.0f, hudTextOffset.x()), hudTextOffset.y());
     }
 
     resize(1024, 768);
@@ -887,14 +893,19 @@ void QtOSGViewer::_CreateControlButtons()
 
 void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
 {
-    RobotBasePtr robot;
     KinBodyPtr kinbody;
     KinBody::LinkPtr link;
 
     std::string mass;
 
-    //  Select robot in Viewers
-    _posgWidget->SelectItemFromName(item->text(0).toLatin1().data());
+    //  Select kinbody in Viewers
+    {
+        QTreeWidgetItem* itemKinBody = item;
+        while(!!itemKinBody->parent()) {
+            itemKinBody = itemKinBody->parent();
+        }
+        _posgWidget->SelectItemFromName(itemKinBody->text(0).toLatin1().data());
+    }
 
     //  Clears details
     if (!!_qdetailsTree) {
@@ -912,8 +923,8 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
                 _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
             }
 
-            robot = GetEnv()->GetRobot(item->parent()->parent()->text(0).toLatin1().data());
-            link  = robot->GetLink(item->text(0).toLatin1().data());
+            kinbody = GetEnv()->GetKinBody(item->parent()->parent()->text(0).toLatin1().data());
+            link  = kinbody->GetLink(item->text(0).toLatin1().data());
 
             //  Clears output string
             strs.clear();
@@ -1066,6 +1077,11 @@ void QtOSGViewer::_UpdateViewport()
     _camintrinsics.cy = (float)camheight/2;
     _camintrinsics.focal_length = zNear;
     _camintrinsics.distortion_model = "";
+}
+
+void QtOSGViewer::_SetHUDTextOffset(double xOffset, double yOffset)
+{
+    _posgWidget->SetHUDTextOffset(xOffset, yOffset);
 }
 
 bool QtOSGViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)

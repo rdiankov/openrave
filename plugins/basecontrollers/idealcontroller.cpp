@@ -15,8 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
+
+using namespace boost::placeholders;
 
 class IdealController : public ControllerBase
 {
@@ -536,7 +538,7 @@ private:
     {
         GrabBody() : offset(0), robotlinkindex(0) {
         }
-        GrabBody(int offset, int robotlinkindex, KinBodyPtr pbody) : offset(offset), robotlinkindex(robotlinkindex), pbody(pbody) {
+        GrabBody(int offset_, int robotlinkindex_, KinBodyPtr pbody_) : offset(offset_), robotlinkindex(robotlinkindex_), pbody(pbody_) {
         }
         int offset;
         int robotlinkindex;

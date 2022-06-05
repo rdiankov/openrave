@@ -133,17 +133,17 @@ public:
         probot->SetTransform(tbase.inverse()*trobot); // transform so that the manip's base is at the identity and matches tgoal
 
         const IkParameterization ikpprev = manip.GetIkParameterization(ikgoal);
-        T totalerror2 = _ComputeConstraintError(ikpprev, _error, _nMaxIterations);
-        if( totalerror2 <= _errorthresh2 ) {
+        T totalerror21 = _ComputeConstraintError(ikpprev, _error, _nMaxIterations);
+        if( totalerror21 <= _errorthresh2 ) {
             return -1;
         }
 
         const T lambda2 = 1e-12;         // normalization constant, changes the rate of convergence, but also improves convergence stability
         using namespace boost::numeric::ublas;
 
-        T firsterror2 = totalerror2;
-        T besterror2 = totalerror2;
-        _lasterror2 = totalerror2;
+        T firsterror2 = totalerror21;
+        T besterror2 = totalerror21;
+        _lasterror2 = totalerror21;
         int armdof = manip.GetArmDOF();
         std::vector<dReal>& vbest = _cachevbest; vbest = vsolution;
         std::vector<dReal>& vnew = _cachevnew; vnew = vsolution;
@@ -322,17 +322,17 @@ public:
         probot->SetTransform(tbase.inverse()*trobot); // transform so that the manip's base is at the identity and matches tgoal
 
         Transform tprev = manip.GetTransform();
-        T totalerror2 = _ComputeConstraintError(tprev, _error3d, _nMaxIterations, false);
-        if( totalerror2 <= _errorthresh2 ) {
+        T totalerror21 = _ComputeConstraintError(tprev, _error3d, _nMaxIterations, false);
+        if( totalerror21 <= _errorthresh2 ) {
             return -1;
         }
 
         const T lambda2 = 1e-12;         // normalization constant, changes the rate of convergence, but also improves convergence stability
         using namespace boost::numeric::ublas;
 
-        T firsterror2 = totalerror2;
-        T besterror2 = totalerror2;
-        _lasterror2 = totalerror2;
+        T firsterror2 = totalerror21;
+        T besterror2 = totalerror21;
+        _lasterror2 = totalerror21;
         int armdof = manip.GetArmDOF();
         std::vector<dReal>& vbest = _cachevbest; vbest = vsolution;
         std::vector<dReal>& vnew = _cachevnew; vnew = vsolution;
