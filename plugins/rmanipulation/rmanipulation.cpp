@@ -13,45 +13,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "plugindefs.h"
-#include <openrave/plugin.h>
+#include "rmanipulation.h"
 
-ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv);
-ModuleBasePtr CreateTaskCaging(EnvironmentBasePtr penv);
-ModuleBasePtr CreateTaskManipulation(EnvironmentBasePtr penv);
-ModuleBasePtr CreateVisualFeedback(EnvironmentBasePtr penv);
-
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
-{
-    switch(type) {
-    case PT_Module:
-        if( interfacename == "basemanipulation") {
-            return CreateBaseManipulation(penv);
-        }
-        else if( interfacename == "taskmanipulation" ) {
-            return CreateTaskManipulation(penv);
-        }
-        else if( interfacename == "taskcaging") {
-            return CreateTaskCaging(penv);
-        }
-        else if( interfacename == "visualfeedback") {
-            return CreateVisualFeedback(penv);
-        }
-        break;
-    default:
-        break;
-    }
-    return InterfaceBasePtr();
-}
-
-void GetPluginAttributesValidated(PLUGININFO& info)
-{
-    info.interfacenames[PT_Module].push_back("BaseManipulation");
-    info.interfacenames[PT_Module].push_back("TaskManipulation");
-    info.interfacenames[PT_Module].push_back("TaskCaging");
-    info.interfacenames[PT_Module].push_back("VisualFeedback");
-}
-
-OPENRAVE_PLUGIN_API void DestroyPlugin()
-{
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new RManipulationPlugin();
 }

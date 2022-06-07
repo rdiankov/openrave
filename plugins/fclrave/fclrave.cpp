@@ -13,27 +13,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "plugindefs.h"
+#include "fclrave.h"
 
-#include "fclcollision.h"
-
-#include <openrave/plugin.h>
-
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
-{
-
-    if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl_" ) {
-        return InterfaceBasePtr(new fclrave::FCLCollisionChecker(penv, sinput));
-    }
-
-    return InterfaceBasePtr();
-}
-
-void GetPluginAttributesValidated(PLUGININFO& info)
-{
-    info.interfacenames[OpenRAVE::PT_CollisionChecker].push_back("fcl_");
-}
-
-OPENRAVE_PLUGIN_API void DestroyPlugin()
-{
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new FCLRavePlugin();
 }

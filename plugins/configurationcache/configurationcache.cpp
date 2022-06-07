@@ -11,47 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include <openrave/plugin.h>
-#include "configurationcachetree.h"
+#include "configurationcache.h"
 
-using namespace OpenRAVE;
-
-namespace configurationcache
-{
-CollisionCheckerBasePtr CreateCacheCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput);
-SpaceSamplerBasePtr CreateConfigurationJitterer(EnvironmentBasePtr penv, std::istream& sinput);
-SpaceSamplerBasePtr CreateWorkspaceConfigurationJitterer(EnvironmentBasePtr penv, std::istream& sinput);
-}
-
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
-{
-    switch(type) {
-    case PT_CollisionChecker:
-        if( interfacename == "cachechecker") {
-            return InterfaceBasePtr(configurationcache::CreateCacheCollisionChecker(penv,sinput));
-        }
-        break;
-    case PT_SpaceSampler:
-        if( interfacename == "configurationjitterer" ) {
-            return configurationcache::CreateConfigurationJitterer(penv,sinput);
-        }
-        if( interfacename == "workspaceconfigurationjitterer" ) {
-            return configurationcache::CreateWorkspaceConfigurationJitterer(penv,sinput);
-        }
-        break;
-    default:
-        break;
-    }
-    return InterfaceBasePtr();
-}
-
-void GetPluginAttributesValidated(PLUGININFO& info)
-{
-    info.interfacenames[PT_CollisionChecker].push_back("CacheChecker");
-    info.interfacenames[PT_SpaceSampler].push_back("ConfigurationJitterer");
-    info.interfacenames[PT_SpaceSampler].push_back("WorkspaceConfigurationJitterer");
-}
-
-OPENRAVE_PLUGIN_API void DestroyPlugin()
-{
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new ConfigurationCachePlugin();
 }

@@ -13,37 +13,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "plugindefs.h"
-#include <openrave/plugin.h>
+#include "grasper.h"
 
-PlannerBasePtr CreateGrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput);
-ModuleBasePtr CreateGrasperModule(EnvironmentBasePtr penv, std::istream& sinput);
-
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
-{
-    switch(type) {
-    case PT_Planner:
-        if( interfacename == "grasper" ) {
-            return CreateGrasperPlanner(penv,sinput);
-        }
-        break;
-    case PT_Module:
-        if( interfacename == "grasper") {
-            return CreateGrasperModule(penv,sinput);
-        }
-        break;
-    default:
-        break;
-    }
-    return InterfaceBasePtr();
-}
-
-void GetPluginAttributesValidated(PLUGININFO& info)
-{
-    info.interfacenames[OpenRAVE::PT_Planner].push_back("Grasper");
-    info.interfacenames[OpenRAVE::PT_Module].push_back("Grasper");
-}
-
-OPENRAVE_PLUGIN_API void DestroyPlugin()
-{
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new GrasperPlugin();
 }

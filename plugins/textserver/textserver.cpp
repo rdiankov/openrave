@@ -13,28 +13,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "plugindefs.h"
-#include "textserver.h"
-#include <openrave/plugin.h>
+#include "textserverrave.h"
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
-{
-    switch(type) {
-    case OpenRAVE::PT_Module:
-        if( interfacename == "textserver")
-            return InterfaceBasePtr(new SimpleTextServer(penv));
-        break;
-    default:
-        break;
-    }
-    return InterfaceBasePtr();
-}
-
-void GetPluginAttributesValidated(PLUGININFO& info)
-{
-    info.interfacenames[OpenRAVE::PT_Module].push_back("textserver");
-}
-
-OPENRAVE_PLUGIN_API void DestroyPlugin()
-{
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new TextServerPlugin();
 }
