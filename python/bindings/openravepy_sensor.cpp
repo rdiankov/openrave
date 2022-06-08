@@ -86,10 +86,10 @@ SensorBase::CameraIntrinsics PyCameraIntrinsics::GetCameraIntrinsics()
         intrinsics.cy = 0;
     }
     else {
-        intrinsics.fx = py::extract<dReal>(K[0][0]);
-        intrinsics.fy = py::extract<dReal>(K[1][1]);
-        intrinsics.cx = py::extract<dReal>(K[0][2]);
-        intrinsics.cy = py::extract<dReal>(K[1][2]);
+        intrinsics.fx = py::extract<dReal>(K[py::to_object(0)][py::to_object(0)]);
+        intrinsics.fy = py::extract<dReal>(K[py::to_object(1)][py::to_object(1)]);
+        intrinsics.cx = py::extract<dReal>(K[py::to_object(0)][py::to_object(2)]);
+        intrinsics.cy = py::extract<dReal>(K[py::to_object(1)][py::to_object(2)]);
     }
     intrinsics.distortion_model = distortion_model;
     intrinsics.distortion_coeffs = ExtractArray<dReal>(distortion_coeffs);
@@ -239,7 +239,7 @@ SensorBase::SensorGeometryPtr PyForce6DGeomData::GetGeometry() {
     geom->polarity = polarity;
     const size_t num = len(correction_matrix);
     for (size_t i = 0; i < num; ++i) {
-        geom->correction_matrix[i] = py::extract<dReal>(correction_matrix[i]);
+        geom->correction_matrix[i] = py::extract<dReal>(correction_matrix[py::to_object(i)]);
     }
     return geom;
 }

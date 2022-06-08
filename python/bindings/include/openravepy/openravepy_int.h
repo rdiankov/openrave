@@ -232,25 +232,25 @@ typedef OPENRAVE_SHARED_PTR<PythonThreadSaver> PythonThreadSaverPtr;
 
 inline RaveVector<float> ExtractFloat3(const py::object& o)
 {
-    return RaveVector<float>(py::extract<float>(o[0]), py::extract<float>(o[1]), py::extract<float>(o[2]));
+    return RaveVector<float>(py::extract<float>(o[py::to_object(0)]), py::extract<float>(o[py::to_object(1)]), py::extract<float>(o[py::to_object(2)]));
 }
 
 template <typename T>
 inline RaveVector<T> ExtractVector2Type(const py::object& o)
 {
-    return RaveVector<T>(py::extract<T>(o[0]), py::extract<T>(o[1]),0);
+    return RaveVector<T>(py::extract<T>(o[py::to_object(0)]), py::extract<T>(o[py::to_object(1)]),0);
 }
 
 template <typename T>
 inline RaveVector<T> ExtractVector3Type(const py::object& o)
 {
-    return RaveVector<T>(py::extract<T>(o[0]), py::extract<T>(o[1]), py::extract<T>(o[2]));
+    return RaveVector<T>(py::extract<T>(o[py::to_object(0)]), py::extract<T>(o[py::to_object(1)]), py::extract<T>(o[py::to_object(2)]));
 }
 
 template <typename T>
 inline RaveVector<T> ExtractVector4Type(const py::object& o)
 {
-    return RaveVector<T>(py::extract<T>(o[0]), py::extract<T>(o[1]), py::extract<T>(o[2]), py::extract<T>(o[3]));
+    return RaveVector<T>(py::extract<T>(o[py::to_object(0)]), py::extract<T>(o[py::to_object(1)]), py::extract<T>(o[py::to_object(2)]), py::extract<T>(o[py::to_object(3)]));
 }
 
 inline Vector ExtractVector2(const py::object& oraw)
@@ -292,7 +292,7 @@ inline RaveVector<T> ExtractVector(const py::object& oraw)
     }
     Vector v;
     for(int i = 0; i < n; ++i) {
-        v[i] = (T)py::extract<T>(oraw[i]);
+        v[i] = (T)py::extract<T>(oraw[py::to_object(i)]);
     }
     return v;
 }
@@ -301,15 +301,15 @@ template <typename T>
 inline RaveTransform<T> ExtractTransformType(const py::object& o)
 {
     if( len(o) == 7 ) {
-        return RaveTransform<T>(RaveVector<T>(py::extract<T>(o[0]), py::extract<T>(o[1]), py::extract<T>(o[2]), py::extract<T>(o[3])), RaveVector<T>(py::extract<T>(o[4]), py::extract<T>(o[5]), py::extract<T>(o[6])));
+        return RaveTransform<T>(RaveVector<T>(py::extract<T>(o[py::to_object(0)]), py::extract<T>(o[py::to_object(1)]), py::extract<T>(o[py::to_object(2)]), py::extract<T>(o[py::to_object(3)])), RaveVector<T>(py::extract<T>(o[py::to_object(4)]), py::extract<T>(o[py::to_object(5)]), py::extract<T>(o[py::to_object(6)])));
     }
     RaveTransformMatrix<T> t;
     for(int i = 0; i < 3; ++i) {
-        py::object orow = o[i];
-        t.m[4*i+0] = py::extract<T>(orow[0]);
-        t.m[4*i+1] = py::extract<T>(orow[1]);
-        t.m[4*i+2] = py::extract<T>(orow[2]);
-        t.trans[i] = py::extract<T>(orow[3]);
+        py::object orow = o[py::to_object(i)];
+        t.m[4*i+0] = py::extract<T>(orow[py::to_object(0)]);
+        t.m[4*i+1] = py::extract<T>(orow[py::to_object(1)]);
+        t.m[4*i+2] = py::extract<T>(orow[py::to_object(2)]);
+        t.trans[i] = py::extract<T>(orow[py::to_object(3)]);
     }
     return t;
 }
@@ -318,15 +318,15 @@ template <typename T>
 inline RaveTransformMatrix<T> ExtractTransformMatrixType(const py::object& o)
 {
     if( len(o) == 7 ) {
-        return RaveTransform<T>(RaveVector<T>(py::extract<T>(o[0]), py::extract<T>(o[1]), py::extract<T>(o[2]), py::extract<T>(o[3])), RaveVector<T>(py::extract<T>(o[4]), py::extract<T>(o[5]), py::extract<T>(o[6])));
+        return RaveTransform<T>(RaveVector<T>(py::extract<T>(o[py::to_object(0)]), py::extract<T>(o[py::to_object(1)]), py::extract<T>(o[py::to_object(2)]), py::extract<T>(o[py::to_object(3)])), RaveVector<T>(py::extract<T>(o[py::to_object(4)]), py::extract<T>(o[py::to_object(5)]), py::extract<T>(o[py::to_object(6)])));
     }
     RaveTransformMatrix<T> t;
     for(int i = 0; i < 3; ++i) {
-        py::object orow = o[i];
-        t.m[4*i+0] = py::extract<T>(orow[0]);
-        t.m[4*i+1] = py::extract<T>(orow[1]);
-        t.m[4*i+2] = py::extract<T>(orow[2]);
-        t.trans[i] = py::extract<T>(orow[3]);
+        py::object orow = o[py::to_object(i)];
+        t.m[4*i+0] = py::extract<T>(orow[py::to_object(0)]);
+        t.m[4*i+1] = py::extract<T>(orow[py::to_object(1)]);
+        t.m[4*i+2] = py::extract<T>(orow[py::to_object(2)]);
+        t.trans[i] = py::extract<T>(orow[py::to_object(3)]);
     }
     return t;
 }
