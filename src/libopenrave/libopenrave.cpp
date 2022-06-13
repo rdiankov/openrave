@@ -2088,6 +2088,136 @@ std::string CollisionReport::__str__() const
     return s.str();
 }
 
+
+void CollisionReportInfo::Reset()
+{
+    body1Name.clear();
+    body2Name.clear();
+    body1LinkName.clear();
+    body2LinkName.clear();
+    body1GeomName.clear();
+    body2GeomName.clear();
+    contacts.clear();
+}
+
+void CollisionReportInfo::InitInfoFromReport(const OpenRAVE::CollisionReport& report)
+{
+    Reset();
+    if ( !!report.plink1 ) {
+        body1LinkName = report.plink1->GetName();
+        const KinBodyPtr pBody1 = report.plink1->GetParent();
+        if ( !!pBody1 ) {
+            body1Name = pBody1->GetName();
+        }
+    }
+    if ( !!report.pgeom1 ) {
+        body1GeomName = report.pgeom1->GetName();
+    }
+
+    if ( !!report.plink2 ) {
+        body2LinkName = report.plink2->GetName();
+        const KinBodyPtr pBody2 = report.plink2->GetParent();
+        if ( !!pBody2 ) {
+            body2Name = pBody2->GetName();
+        }
+    }
+    if ( !!report.pgeom2 ) {
+        body2GeomName = report.pgeom2->GetName();
+    }
+
+    contacts.resize(report.contacts.size());
+    for(int icontact = 0; icontact < (int)contacts.size(); ++icontact) {
+        contacts[icontact] = report.contacts[icontact].pos;
+    }
+}
+
+void CollisionReportInfo::LoadFromJson(const rapidjson::Value& rReport)
+{
+    orjson::LoadJsonValueByKey(rReport, "body1Name", body1Name);
+    orjson::LoadJsonValueByKey(rReport, "body2Name", body2Name);
+    orjson::LoadJsonValueByKey(rReport, "body1LinkName", body1LinkName);
+    orjson::LoadJsonValueByKey(rReport, "body2LinkName", body2LinkName);
+    orjson::LoadJsonValueByKey(rReport, "body1GeomName", body1GeomName);
+    orjson::LoadJsonValueByKey(rReport, "body2GeomName", body2GeomName);
+    if( rReport.HasMember("contacts") && rReport["contacts"].IsArray() ) {
+        for( const rapidjson::Value& rContact : rReport["contacts"].GetArray() ) {
+            if( !rContact.IsArray() || rContact.Size() != 3 ) {
+                continue;
+            }
+            bool isAllNumber = true;
+            for( const rapidjson::Value& rXYZ : rContact.GetArray() ) {
+                if (!rXYZ.IsNumber()) {
+                    isAllNumber = false;
+                    break;
+                }
+            }
+            if (!isAllNumber) {
+                continue;
+            }
+            contacts.push_back(OpenRAVE::Vector(rContact[0].GetDouble(), rContact[1].GetDouble(), rContact[2].GetDouble()));
+        }
+    }
+}
+
+void CollisionReportInfo::SaveToJson(rapidjson::Value& rReport, rapidjson::Document::AllocatorType& alloc) const
+{
+    if( !body1Name.empty() ) {
+        orjson::SetJsonValueByKey(rReport, "body1Name", body1Name, alloc);
+    }
+    if( !body2Name.empty() ) {
+        orjson::SetJsonValueByKey(rReport, "body2Name", body2Name, alloc);
+    }
+
+    if( !body1LinkName.empty() ) {
+        orjson::SetJsonValueByKey(rReport, "body1LinkName", body1LinkName, alloc);
+    }
+    if( !body2LinkName.empty() ) {
+        orjson::SetJsonValueByKey(rReport, "body2LinkName", body2LinkName, alloc);
+    }
+
+    if( !body1GeomName.empty() ) {
+        orjson::SetJsonValueByKey(rReport, "body1GeomName", body1GeomName, alloc);
+    }
+    if( !body2GeomName.empty() ) {
+        orjson::SetJsonValueByKey(rReport, "body2GeomName", body2GeomName, alloc);
+    }
+
+    {
+        rapidjson::Value rContacts; rContacts.SetArray();
+        rContacts.Reserve(contacts.size(), alloc);
+        for(const Vector& contact : contacts) {
+            rapidjson::Value rContact; rContact.SetArray();
+            rContact.Reserve(3, alloc);
+            rContact.PushBack(rapidjson::Value(contact[0]), alloc);
+            rContact.PushBack(rapidjson::Value(contact[1]), alloc);
+            rContact.PushBack(rapidjson::Value(contact[2]), alloc);
+            rContacts.PushBack(rContact, alloc);
+        }
+
+        rReport.AddMember(rapidjson::Document::StringRefType("contacts"), rContacts, alloc);
+    }
+}
+
+bool CollisionReportInfo::operator==(const CollisionReportInfo& other) const
+{
+    if (body1Name != other.body1Name ||
+        body2Name != other.body2Name ||
+        body1LinkName != other.body1LinkName ||
+        body2LinkName != other.body2LinkName ||
+        body1GeomName != other.body1GeomName ||
+        body2GeomName != other.body2GeomName ||
+        contacts.size() != other.contacts.size()) {
+        return false;
+    }
+
+    for (size_t index = 0; index < contacts.size(); ++index) {
+        if (contacts[index] != other.contacts[index]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool PhysicsEngineBase::GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque)
 {
     force = Vector(0,0,0);

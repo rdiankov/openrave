@@ -20,6 +20,7 @@
 
 #include <openrave/config.h>
 #include <openrave/openraveexception.h>
+#include <openrave/sensor.h>
 
 #include <array>
 #include <boost/shared_ptr.hpp>
