@@ -332,6 +332,7 @@ public:
 
     bool __eq__(PyEnvironmentBasePtr p);
     bool __ne__(PyEnvironmentBasePtr p);
+    long __hash__();
     std::string __repr__();
     std::string __str__();
     object __unicode__();
