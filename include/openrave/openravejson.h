@@ -766,9 +766,18 @@ bool inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t)
     if (!v.IsObject()) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
     }
-    if (v.HasMember(key)) {
-        LoadJsonValue(v[key], t);
-        return true;
+    rapidjson::Value::ConstMemberIterator itMember = v.FindMember(key);
+    if( itMember != v.MemberEnd() ) {
+        const rapidjson::Value& rMember = itMember->value;
+        if( !rMember.IsNull() ) {
+            try {
+                LoadJsonValue(rMember, t);
+                return true;
+            }
+            catch (const OpenRAVEException& ex) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("Got \"" + ex.message() + "\" while parsing the value of \"" + key + "\"", OpenRAVE::ORE_InvalidArguments);
+            }
+        }
     }
     return false;
 }
