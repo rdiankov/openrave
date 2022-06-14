@@ -766,7 +766,7 @@ bool inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t)
     if (!v.IsObject()) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
     }
-    if (v.HasMember(key) && !v.FindMember(key)->value.IsNull()) {
+    if (v.HasMember(key)) {
         LoadJsonValue(v[key], t);
         return true;
     }
