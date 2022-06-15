@@ -51,7 +51,7 @@ public:
 
     bool RegisterBody(ostream& sout, istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         RegisteredBody body;
         sinput >> body.filename >> body.appearanceprobability;
         if( !sinput ) {
@@ -140,7 +140,7 @@ public:
         sin.str("registerbody data/ketchup.kinbody.xml 0.3");
         p->SendCommand(sout,sin);
         while(IsOk()) {
-            boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
 };

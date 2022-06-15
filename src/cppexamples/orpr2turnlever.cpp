@@ -32,7 +32,7 @@ public:
     virtual void WaitRobot(RobotBasePtr probot) {
         // unlock the environment and wait for the robot to finish
         while(!probot->GetController()->IsDone() && IsOk()) {
-            boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
 
@@ -79,7 +79,7 @@ public:
         penv->Add(taskmodule,true,probot->GetName());
 
         {
-            EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+            EnvironmentLock lock(penv->GetMutex()); // lock environment
             stringstream ssin, ssout; ssin << "ReleaseFingers";
             taskmodule->SendCommand(ssout,ssin);
         }
@@ -88,7 +88,7 @@ public:
         TrajectoryBasePtr workspacetraj;
         Transform Tgrasp0;
         {
-            EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+            EnvironmentLock lock(penv->GetMutex()); // lock environment
             Transform Toffset;
             Toffset.trans = Vector(0,0.2,0);
             Transform Ttarget0 = target->GetTransform();
@@ -132,7 +132,7 @@ public:
 
         list<TrajectoryBasePtr> listtrajectories;
         {
-            EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+            EnvironmentLock lock(penv->GetMutex()); // lock environment
             probot->SetActiveDOFs(pmanip->GetArmIndices());
             probot->Grab(target);
             PlannerBasePtr planner = RaveCreatePlanner(penv,"workspacetrajectorytracker");

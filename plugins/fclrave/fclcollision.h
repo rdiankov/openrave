@@ -155,7 +155,7 @@ public:
         DestroyEnvironment();
 
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
-        EnvironmentMutex::scoped_lock lock(log_collision_use_mutex);
+        EnvironmentLock lock(log_collision_use_mutex);
 
         FOREACH(itpair, _currentlyused) {
             if(itpair->second > 0) {
@@ -348,7 +348,7 @@ public:
 
     virtual bool InitKinBody(OpenRAVE::KinBodyPtr pbody)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        OpenRAVE::EnvironmentLock lock(GetEnv()->GetMutex());
         FCLSpace::FCLKinBodyInfoPtr pinfo = _fclspace->GetInfo(*pbody);
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _fclspace->InitKinBody(pbody);

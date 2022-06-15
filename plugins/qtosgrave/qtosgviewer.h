@@ -137,7 +137,7 @@ public:
     virtual UserDataPtr RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback);
 
     /// \brief Locks environment
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
+    boost::shared_ptr<EnvironmentLock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
 
 public slots:
 
@@ -415,9 +415,9 @@ public:
     std::map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> _mapGUIFunctionLists; ///< map between priority and sublist for given priority level. protected by _mutexGUIFunctions
     std::map<ViewerCommandPriority, size_t> _mapGUIFunctionListLimits; ///< map between priority and sublist size limit for given priority level
     mutable list<Item*> _listRemoveItems; ///< raw points of items to be deleted in the viewer update thread, triggered from _DeleteItemCallback. proteced by _mutexItems
-    boost::mutex _mutexItems; ///< protects _listRemoveItems
-    mutable boost::mutex _mutexGUIFunctions;
-    mutable boost::condition _notifyGUIFunctionComplete; ///< signaled when a blocking _listGUIFunctions has been completed
+    std::mutex _mutexItems; ///< protects _listRemoveItems
+    mutable std::mutex _mutexGUIFunctions;
+    mutable std::condition_variable _notifyGUIFunctionComplete; ///< signaled when a blocking _listGUIFunctions has been completed
     //@}
 
     //@{ osg rendering primitives
@@ -432,14 +432,14 @@ public:
     geometry::RaveCameraIntrinsics<float> _camintrinsics; ///< intrinsics of the camera representing the current view, updated periodically, read only.
     //@}
 
-    boost::mutex _mutexUpdating; ///< when inside an update function, even if just checking if the viewer should be updated, this will be locked.
-    boost::mutex _mutexUpdateModels; ///< locked when osg environment is being updated from the underlying openrave environment
-    boost::condition _condUpdateModels; ///< signaled everytime environment models are updated
+    std::mutex _mutexUpdating; ///< when inside an update function, even if just checking if the viewer should be updated, this will be locked.
+    std::mutex _mutexUpdateModels; ///< locked when osg environment is being updated from the underlying openrave environment
+    std::condition_variable _condUpdateModels; ///< signaled everytime environment models are updated
 
     ViewGeometry _viewGeometryMode; ///< the visualization mode of the geometries
 
     //@{ callbacks
-    boost::mutex _mutexCallbacks; ///< maintains lock on list of callsbacks viewer has to make like _listRegisteredViewerThreadCallbacks, _listRegisteredItemSelectionCallbacks
+    std::mutex _mutexCallbacks; ///< maintains lock on list of callsbacks viewer has to make like _listRegisteredViewerThreadCallbacks, _listRegisteredItemSelectionCallbacks
     std::list<UserDataWeakPtr> _listRegisteredItemSelectionCallbacks;
     std::list<UserDataWeakPtr> _listRegisteredViewerThreadCallbacks;
     //@}

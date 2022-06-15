@@ -227,7 +227,7 @@ public:
             return _bRenderData;
         }
         case CC_RenderDataOff: {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             _dataviewer.reset();
             _bRenderData = false;
             return _bRenderData;
@@ -239,7 +239,7 @@ public:
             _RenderGeometry();
             return _bRenderData;
         case CC_RenderGeometryOff: {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             _graphgeometry.reset();
             _bRenderGeometry = false;
             return _bRenderData;
@@ -281,7 +281,7 @@ public:
                     _vimagedata.resize(3*_pgeom->width*_pgeom->height);
                     if( GetEnv()->GetViewer()->GetCameraImage(_vimagedata, _pgeom->width, _pgeom->height, _trans, _pgeom->KK) ) {
                         // copy the data
-                        boost::mutex::scoped_lock lock(_mutexdata);
+                        std::lock_guard<std::mutex> lock(_mutexdata);
                         pdata->vimagedata = _vimagedata;
                         pdata->__stamp = GetEnv()->GetSimulationTime();
                         pdata->__trans = _trans;
@@ -313,7 +313,7 @@ public:
     virtual bool GetSensorData(SensorDataPtr psensordata)
     {
         if( _bPower &&( psensordata->GetType() == ST_Camera) ) {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             if( _pdata->vimagedata.size() > 0 ) {
                 *boost::dynamic_pointer_cast<CameraSensorData>(psensordata) = *_pdata;
                 return true;
@@ -456,7 +456,7 @@ protected:
     ViewerBasePtr _dataviewer;
     string _channelformat;
 
-    mutable boost::mutex _mutexdata;
+    mutable std::mutex _mutexdata;
 
     bool _bRenderGeometry, _bRenderData;
     bool _bPower;     ///< if true, gather data, otherwise don't
