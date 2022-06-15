@@ -2844,6 +2844,9 @@ bool PyEnvironmentBase::__eq__(PyEnvironmentBasePtr p) {
 bool PyEnvironmentBase::__ne__(PyEnvironmentBasePtr p) {
     return !p || _penv!=p->_penv;
 }
+long PyEnvironmentBase::__hash__() {
+    return static_cast<long>(uintptr_t(_penv.get()));
+}
 std::string PyEnvironmentBase::__repr__() {
     return boost::str(boost::format("RaveGetEnvironment(%d)")%RaveGetEnvironmentId(_penv));
 }
@@ -3676,6 +3679,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetUInt64Parameter", &PyEnvironmentBase::GetUInt64Parameter, PY_ARGS("parameterName", "defaultValue") DOXY_FN(EnvironmentBase,GetUInt64Parameter))
                      .def("__enter__",&PyEnvironmentBase::__enter__)
                      .def("__exit__",&PyEnvironmentBase::__exit__)
+                     .def("__hash__",&PyEnvironmentBase::__hash__)
                      .def("__eq__",&PyEnvironmentBase::__eq__)
                      .def("__ne__",&PyEnvironmentBase::__ne__)
                      .def("__repr__",&PyEnvironmentBase::__repr__)
