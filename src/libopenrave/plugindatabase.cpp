@@ -668,6 +668,17 @@ InterfaceBasePtr RaveDatabase::Create(EnvironmentBasePtr penv, InterfaceType typ
     }
     if( !pointer ) {
         RAVELOG_WARN_FORMAT("env=%d failed to create name %s, interface %s\n", penv->GetId()%name%RaveGetInterfaceNamesMap().find(type)->second);
+        return pointer;
+    }
+
+    if (pointer->GetInterfaceType() == type) {
+        // No-op, this is correct
+    } else if ((pointer->GetInterfaceType() == PT_Robot) && (type == PT_KinBody)) {
+        // Special case: Robots are also KinBodies.
+        // No-op, this is correct
+    } else {
+        // Return an empty pointer; behaviour inherited from `RaveInterfaceCast`
+        pointer.reset();
     }
     return pointer;
 }
