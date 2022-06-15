@@ -1272,22 +1272,22 @@ InterfaceBasePtr RaveCreateInterface(EnvironmentBasePtr penv, InterfaceType type
 
 RobotBasePtr RaveCreateRobot(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<RobotBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Robot, name));
+    return boost::static_pointer_cast<RobotBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Robot, name));
 }
 
 PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<PlannerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Planner, name));
+    return boost::static_pointer_cast<PlannerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Planner, name));
 }
 
 SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<SensorSystemBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_SensorSystem, name));
+    return boost::static_pointer_cast<SensorSystemBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_SensorSystem, name));
 }
 
 ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<ControllerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Controller, name));
+    return boost::static_pointer_cast<ControllerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Controller, name));
 }
 
 MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const std::string& rawname)
@@ -1301,7 +1301,7 @@ MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const s
         std::transform(name.begin(), name.end(), name.begin(), ::tolower);
     }
     // TODO remove hack once MultiController is a registered interface
-    ControllerBasePtr pcontroller = RaveInterfaceCast<ControllerBase>(RaveGlobal::instance()->GetDatabase()->Create(env, PT_Controller, name));
+    ControllerBasePtr pcontroller = boost::static_pointer_cast<ControllerBase>(RaveGlobal::instance()->GetDatabase()->Create(env, PT_Controller, name));
     if( name == "genericmulticontroller" ) {
         return boost::static_pointer_cast<MultiControllerBase>(pcontroller);
     }
@@ -1311,62 +1311,62 @@ MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const s
 
 ModuleBasePtr RaveCreateModule(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
+    return boost::static_pointer_cast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
 }
 
 ModuleBasePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
+    return boost::static_pointer_cast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
 }
 
 ModuleBasePtr RaveCreateProblemInstance(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
+    return boost::static_pointer_cast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
 }
 
 IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<IkSolverBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_IkSolver, name));
+    return boost::static_pointer_cast<IkSolverBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_IkSolver, name));
 }
 
 PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<PhysicsEngineBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_PhysicsEngine, name));
+    return boost::static_pointer_cast<PhysicsEngineBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_PhysicsEngine, name));
 }
 
 SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<SensorBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Sensor, name));
+    return boost::static_pointer_cast<SensorBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Sensor, name));
 }
 
 CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<CollisionCheckerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_CollisionChecker, name));
+    return boost::static_pointer_cast<CollisionCheckerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_CollisionChecker, name));
 }
 
 ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<ViewerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Viewer, name));
+    return boost::static_pointer_cast<ViewerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Viewer, name));
 }
 
 KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<KinBody>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_KinBody, name));
+    return boost::static_pointer_cast<KinBody>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_KinBody, name));
 }
 
 TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<TrajectoryBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Trajectory, name));
+    return boost::static_pointer_cast<TrajectoryBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Trajectory, name));
 }
 
 TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int dof)
 {
-    return RaveInterfaceCast<TrajectoryBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Trajectory, ""));
+    return boost::static_pointer_cast<TrajectoryBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Trajectory, ""));
 }
 
 SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveInterfaceCast<SpaceSamplerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_SpaceSampler, name));
+    return boost::static_pointer_cast<SpaceSamplerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_SpaceSampler, name));
 }
 
 UserDataPtr RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn)
