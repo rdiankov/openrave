@@ -16,8 +16,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <openravepy/openravepy_int.h>
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 #include <openrave/utils.h>
-#include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem/operations.hpp>
 
@@ -569,7 +571,7 @@ class ViewerManager
         EnvironmentBasePtr _penv;
         std::string _viewername;
         ViewerBasePtr _pviewer; /// the created viewer
-        boost::condition _cond;  ///< notify when viewer thread is done processing and has initialized _pviewer
+        std::condition_variable _cond;  ///< notify when viewer thread is done processing and has initialized _pviewer
         bool _bShowViewer; ///< true if should show the viewer when initially created
     };
     typedef OPENRAVE_SHARED_PTR<ViewerInfo> ViewerInfoPtr;
@@ -577,7 +579,7 @@ public:
     ViewerManager() {
         _bShutdown = false;
         _bInMain = false;
-        _threadviewer.reset(new boost::thread(boost::bind(&ViewerManager::_RunViewerThread, this)));
+        _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
     }
 
     virtual ~ViewerManager() {
@@ -585,7 +587,7 @@ public:
     }
 
     static ViewerManager& GetInstance() {
-        boost::call_once(_InitializeSingleton, _onceInitialize);
+        std::call_once(_onceInitialize, _InitializeSingleton);
         // Return reference to object.
         return *_singleton;
     }
@@ -600,7 +602,7 @@ public:
 
             if( bDoNotAddIfExists ) {
                 // check all existing viewers
-                boost::mutex::scoped_lock lock(_mutexViewer);
+                std::lock_guard<std::mutex> lock(_mutexViewer);
                 std::list<ViewerInfoPtr>::iterator itviewer = _listviewerinfos.begin();
                 while(itviewer != _listviewerinfos.end() ) {
                     if( (*itviewer)->_penv == penv ) {
@@ -637,19 +639,19 @@ public:
                         pviewer->Show(1);
                     }
                     pinfo->_pviewer = pviewer;
-                    boost::mutex::scoped_lock lock(_mutexViewer);
+                    std::lock_guard<std::mutex> lock(_mutexViewer);
                     _listviewerinfos.push_back(pinfo);
                     _conditionViewer.notify_all();
                 }
             }
             else {
                 // no viewer has been created yet, so let the viewer thread create it (if using Qt, this initializes the QApplication in the right thread
-                boost::mutex::scoped_lock lock(_mutexViewer);
+                std::unique_lock<std::mutex> lock(_mutexViewer);
                 _listviewerinfos.push_back(pinfo);
                 _conditionViewer.notify_all();
 
                 /// wait until viewer thread process it
-                pinfo->_cond.wait(_mutexViewer);
+                pinfo->_cond.wait(lock);
                 pviewer = pinfo->_pviewer;
             }
         }
@@ -663,7 +665,7 @@ public:
             return false;
         }
         {
-            boost::mutex::scoped_lock lock(_mutexViewer);
+            std::lock_guard<std::mutex> lock(_mutexViewer);
             FOREACH(itviewer, _listviewerinfos) {
                 ViewerBasePtr ptestviewer = (*itviewer)->_pviewer;
                 if(ptestviewer == pviewer ) {
@@ -684,7 +686,7 @@ public:
         }
         bool bremoved = false;
         {
-            boost::mutex::scoped_lock lock(_mutexViewer);
+            std::lock_guard<std::mutex> lock(_mutexViewer);
             std::list<ViewerInfoPtr>::iterator itinfo = _listviewerinfos.begin();
             while(itinfo != _listviewerinfos.end() ) {
                 if( (*itinfo)->_penv == penv ) {
@@ -702,7 +704,7 @@ public:
     void Destroy() {
         _bShutdown = true;
         {
-            boost::mutex::scoped_lock lock(_mutexViewer);
+            std::lock_guard<std::mutex> lock(_mutexViewer);
             // have to notify everyone
             FOREACH(itinfo, _listviewerinfos) {
                 (*itinfo)->_cond.notify_all();
@@ -723,7 +725,7 @@ protected:
             std::list<ViewerBasePtr> listviewers, listtempviewers;
             bool bShowViewer = true;
             {
-                boost::mutex::scoped_lock lock(_mutexViewer);
+                std::unique_lock<std::mutex> lock(_mutexViewer);
                 if( _listviewerinfos.size() == 0 ) {
                     _conditionViewer.wait(lock);
                     if( _listviewerinfos.size() == 0 ) {
@@ -806,7 +808,7 @@ protected:
                 _bInMain = false;
                 // remove from _listviewerinfos in order to avoid running the main loop again
                 {
-                    boost::mutex::scoped_lock lock(_mutexViewer);
+                    std::lock_guard<std::mutex> lock(_mutexViewer);
                     FOREACH(itinfo, _listviewerinfos) {
                         if( (*itinfo)->_pviewer == puseviewer ) {
                             _listviewerinfos.erase(itinfo);
@@ -827,21 +829,21 @@ protected:
 
     }
 
-    OPENRAVE_SHARED_PTR<boost::thread> _threadviewer;
-    boost::mutex _mutexViewer;
-    boost::condition _conditionViewer;
+    OPENRAVE_SHARED_PTR<std::thread> _threadviewer;
+    std::mutex _mutexViewer;
+    std::condition_variable _conditionViewer;
     std::list<ViewerInfoPtr> _listviewerinfos;
 
     bool _bShutdown; ///< if true, shutdown everything
     bool _bInMain; ///< if true, viewer thread is running a main function
 
     static boost::scoped_ptr<ViewerManager> _singleton; ///< singleton
-    static boost::once_flag _onceInitialize; ///< makes sure initialization is atomic
+    static std::once_flag _onceInitialize; ///< makes sure initialization is atomic
 
 };
 
 boost::scoped_ptr<ViewerManager> ViewerManager::_singleton(0);
-boost::once_flag ViewerManager::_onceInitialize = BOOST_ONCE_INIT;
+std::once_flag ViewerManager::_onceInitialize;
 
 PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
 {
@@ -1159,7 +1161,7 @@ PyEnvironmentBasePtr PyEnvironmentBase::CloneSelf(int options)
 {
 //        string strviewer;
 //        if( options & Clone_Viewer ) {
-//            boost::mutex::scoped_lock lockcreate(_mutexViewer);
+//            std::lock_guard<std::mutex> lockcreate(_mutexViewer);
 //            if( !!_penv->GetViewer() ) {
 //                strviewer = _penv->GetViewer()->GetXMLId();
 //            }
@@ -1175,7 +1177,7 @@ PyEnvironmentBasePtr PyEnvironmentBase::CloneSelf(const std::string& clonedEnvNa
 {
 //        string strviewer;
 //        if( options & Clone_Viewer ) {
-//            boost::mutex::scoped_lock lockcreate(_mutexViewer);
+//            std::lock_guard<std::mutex> lockcreate(_mutexViewer);
 //            if( !!_penv->GetViewer() ) {
 //                strviewer = _penv->GetViewer()->GetXMLId();
 //            }
@@ -1193,7 +1195,7 @@ void PyEnvironmentBase::Clone(PyEnvironmentBasePtr pyreference, int options)
         if( !!_penv->GetViewer() && !!pyreference->GetEnv()->GetViewer() ) {
             if( _penv->GetViewer()->GetXMLId() != pyreference->GetEnv()->GetViewer()->GetXMLId() ) {
                 RAVELOG_VERBOSE("reset the viewer since it has to be cloned\n");
-                //boost::mutex::scoped_lock lockcreate(pyreference->_mutexViewer);
+                //std::lock_guard<std::mutex> lockcreate(pyreference->_mutexViewer);
                 SetViewer("");
             }
         }
@@ -1207,7 +1209,7 @@ void PyEnvironmentBase::Clone(PyEnvironmentBasePtr pyreference, const std::strin
         if( !!_penv->GetViewer() && !!pyreference->GetEnv()->GetViewer() ) {
             if( _penv->GetViewer()->GetXMLId() != pyreference->GetEnv()->GetViewer()->GetXMLId() ) {
                 RAVELOG_VERBOSE("reset the viewer since it has to be cloned\n");
-                //boost::mutex::scoped_lock lockcreate(pyreference->_mutexViewer);
+                //std::lock_guard<std::mutex> lockcreate(pyreference->_mutexViewer);
                 SetViewer("");
             }
         }
@@ -2134,7 +2136,7 @@ void PyEnvironmentBase::Lock()
         if( TryLock() ) {
             return;
         }
-        boost::this_thread::sleep(boost::posix_time::microseconds(10));
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
     }
 
     // failed, so must be a python thread blocking it...
@@ -2145,13 +2147,13 @@ void PyEnvironmentBase::Lock()
 void PyEnvironmentBase::LockRaw()
 {
 #if BOOST_VERSION < 103500
-    boost::mutex::scoped_lock envlock(_envmutex);
+    std::lock_guard<std::mutex> envlock(_envmutex);
     if( _listfreelocks.size() > 0 ) {
         _listfreelocks.back()->lock();
         _listenvlocks.splice(_listenvlocks.end(),_listfreelocks,--_listfreelocks.end());
     }
     else {
-        _listenvlocks.push_back(OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+        _listenvlocks.emplace_back(boost::make_shared<EnvironmentLock>(_penv->GetMutex()));
     }
 #else
     _penv->GetMutex().lock();
@@ -2167,7 +2169,7 @@ void PyEnvironmentBase::LockReleaseGil()
 void PyEnvironmentBase::Unlock()
 {
 #if BOOST_VERSION < 103500
-    boost::mutex::scoped_lock envlock(_envmutex);
+    std::lock_guard<std::mutex> envlock(_envmutex);
     BOOST_ASSERT(_listenvlocks.size()>0);
     _listenvlocks.back()->unlock();
     _listfreelocks.splice(_listfreelocks.end(),_listenvlocks,--_listenvlocks.end());
@@ -2182,10 +2184,10 @@ bool PyEnvironmentBase::TryLockReleaseGil()
     bool bSuccess = false;
     PythonThreadSaver saver;
 #if BOOST_VERSION < 103500
-    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+    OPENRAVE_SHARED_PTR<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(GetEnv()->GetMutex(),false);
     if( !!lockenv->try_lock() ) {
         bSuccess = true;
-        _listenvlocks.push_back(OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+        _listenvlocks.emplace_back(boost::make_shared<EnvironmentLock>(_penv->GetMutex()));
     }
 #else
     if( _penv->GetMutex().try_lock() ) {
@@ -2199,10 +2201,10 @@ bool PyEnvironmentBase::TryLock()
 {
     bool bSuccess = false;
 #if BOOST_VERSION < 103500
-    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+    OPENRAVE_SHARED_PTR<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(GetEnv()->GetMutex(),false);
     if( !!lockenv->try_lock() ) {
         bSuccess = true;
-        _listenvlocks.push_back(OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+        _listenvlocks.emplace_back(boost::make_shared<EnvironmentLock>(_penv->GetMutex()));
     }
 #else
     if( _penv->GetMutex().try_lock() ) {
@@ -2227,7 +2229,7 @@ bool PyEnvironmentBase::Lock(float timeout)
         if( TryLock() ) {
             return true;
         }
-        boost::this_thread::sleep(boost::posix_time::microseconds(10));
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
     }
     return false;
 }

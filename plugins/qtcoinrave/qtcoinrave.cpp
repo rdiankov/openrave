@@ -25,7 +25,7 @@
 
 ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv);
 
-boost::mutex g_mutexsoqt;
+std::mutex g_mutexsoqt;
 static int s_InitRefCount = 0;
 static int s_SoQtArgc = 0; // has to be static!!
 void EnsureSoQtInit()
@@ -49,7 +49,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 #endif
         if( interfacename == "qtcoin" ) {
             // have to lock after initialized since call relies on SoDBP::globalmutex
-            boost::mutex::scoped_lock lock(g_mutexsoqt);
+            std::lock_guard<std::mutex> lock(g_mutexsoqt);
             EnsureSoQtInit();
             //SoDBWriteLock dblock;
             return InterfaceBasePtr(new QtCoinViewer(penv, sinput));
