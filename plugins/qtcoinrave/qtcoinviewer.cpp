@@ -986,7 +986,7 @@ GraphHandlePtr QtCoinViewer::drawbox(const RaveVector<float>& vpos, const RaveVe
     pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
-GraphHandlePtr QtCoinViewer::drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents) {
+GraphHandlePtr QtCoinViewer::drawboxarray(const std::vector<RaveVector<float> >& vpos, const RaveVector<float>& vextents) {
     // not implemented
     return GraphHandlePtr();
 }
@@ -1253,7 +1253,7 @@ void QtCoinViewer::Reset()
 
 boost::shared_ptr<void> QtCoinViewer::LockGUI()
 {
-    boost::shared_ptr<std::unique_lock<std::mutex>> lock = boost::make_shared<std::unique_lock<std::mutex>>(_mutexGUI);
+    boost::shared_ptr<std::unique_lock<std::mutex> > lock = boost::make_shared<std::unique_lock<std::mutex> >(_mutexGUI);
     while(!_bInIdleThread) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
@@ -1926,9 +1926,9 @@ void* QtCoinViewer::_drawplane(SoSwitch* handle, const RaveTransform<float>& tpl
     pparent->addChild(tex);
 
     boost::array<RaveVector<float>, 4> vplanepoints = { { m.trans-vextents[0]*vright-vextents[1]*vup,
-                                                          m.trans-vextents[0]*vright+vextents[1]*vup,
-                                                          m.trans+vextents[0]*vright-vextents[1]*vup,
-                                                          m.trans+vextents[0]*vright+vextents[1]*vup}};
+        m.trans-vextents[0]*vright+vextents[1]*vup,
+        m.trans+vextents[0]*vright-vextents[1]*vup,
+        m.trans+vextents[0]*vright+vextents[1]*vup}};
     boost::array<float,8> texpoints = { { 0,0,0,1,1,0,1,1}};
     boost::array<int,6> indices = { { 0,1,2,1,2,3}};
     boost::array<float,18> vtripoints;
@@ -2092,9 +2092,9 @@ void* QtCoinViewer::_drawtrimesh(SoSwitch* handle, const float* ppoints, int str
         if( shortcut != NULL ) pact->setShortcut(tr(shortcut)); \
         if( tip != NULL ) pact->setStatusTip(tr(tip)); \
         if( checkable ) \
-            connect(pact, SIGNAL(triggered(bool)), this, SLOT(fn(bool))); \
+        connect(pact, SIGNAL(triggered(bool)), this, SLOT(fn(bool))); \
         else \
-            connect(pact, SIGNAL(triggered()), this, SLOT(fn())); \
+        connect(pact, SIGNAL(triggered()), this, SLOT(fn())); \
         pcurmenu->addAction(pact); \
         if( pgroup != NULL ) pgroup->addAction(pact); \
 }
@@ -2680,7 +2680,7 @@ void QtCoinViewer::_deselect()
 boost::shared_ptr<EnvironmentLock> QtCoinViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
 {
     // try to acquire the lock
-    boost::shared_ptr<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(GetEnv()->GetMutex(), defer_lock_t());
+    boost::shared_ptr<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(GetEnv()->GetMutex(), OpenRAVE::defer_lock_t());
     uint64_t basetime = utils::GetMicroTime();
     while(utils::GetMicroTime()-basetime<timeout ) {
         if( lockenv->try_lock() ) {
@@ -3688,7 +3688,7 @@ QtCoinViewer::EnvMessage::EnvMessage(QtCoinViewerPtr pviewer, void** ppreturn, b
 {
     // get a mutex
     if( bWaitForMutex ) {
-        _plock = boost::make_shared<std::unique_lock<std::mutex>>(_mutex);
+        _plock = boost::make_shared<std::unique_lock<std::mutex> >(_mutex);
     }
 }
 
