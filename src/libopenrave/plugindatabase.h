@@ -103,25 +103,28 @@ protected:
 typedef boost::shared_ptr<Plugin> PluginPtr;
 typedef boost::shared_ptr<Plugin const> PluginConstPtr;
 
+struct RegisteredInterface : public UserData
+{
+    friend class RaveDatabase;
+
+    RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, boost::shared_ptr<RaveDatabase> database);
+    virtual ~RegisteredInterface();
+
+    InterfaceType _type;
+    std::string _name;
+    boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> _createfn;
+    std::list< boost::weak_ptr<RegisteredInterface> >::iterator _iterator;
+protected:
+    boost::weak_ptr<RaveDatabase> _database;
+};
+typedef boost::shared_ptr<RegisteredInterface> RegisteredInterfacePtr;
+
 /// \brief database of interfaces from plugins
 class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
 {
-    struct RegisteredInterface : public UserData
-    {
-        RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, boost::shared_ptr<RaveDatabase> database);
-        virtual ~RegisteredInterface();
-
-        InterfaceType _type;
-        std::string _name;
-        boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> _createfn;
-        std::list< boost::weak_ptr<RegisteredInterface> >::iterator _iterator;
-    protected:
-        boost::weak_ptr<RaveDatabase> _database;
-    };
-    typedef boost::shared_ptr<RegisteredInterface> RegisteredInterfacePtr;
-
 public:
     friend class Plugin;
+    friend class RegisteredInterface;
 
     RaveDatabase();
     virtual ~RaveDatabase();

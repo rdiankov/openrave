@@ -422,7 +422,7 @@ void Plugin::_confirmLibrary()
     }
 }
 
-RaveDatabase::RegisteredInterface::RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, boost::shared_ptr<RaveDatabase> database)
+RegisteredInterface::RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, boost::shared_ptr<RaveDatabase> database)
     : _type(type)
     , _name(name)
     , _createfn(createfn)
@@ -430,7 +430,7 @@ RaveDatabase::RegisteredInterface::RegisteredInterface(InterfaceType type, const
 {
 }
 
-RaveDatabase::RegisteredInterface::~RegisteredInterface()
+RegisteredInterface::~RegisteredInterface()
 {
     boost::shared_ptr<RaveDatabase> database = _database.lock();
     if( !!database ) {
