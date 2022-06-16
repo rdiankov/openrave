@@ -4,7 +4,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 98)
+set (OPENRAVE_VERSION_MINOR 99)
 set (OPENRAVE_VERSION_PATCH 1)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
@@ -56,10 +56,18 @@ option(OPT_LOG4CXX "Use log4cxx for logging" ON)
 option(OPT_MSGPACK "Support msgpack format" ON)
 option(OPT_INSTALL_3DMODELDATA "If ON, then install the 3D model data." ON)
 option(OPT_EXTRA_ROBOTS "If ON, then install extra robots as part of 3D model data" ON)
+option(OPT_ENVIRONMENT_RECURSIVE_LOCK "Use recursive mutex for the Environment. Defaults to ON." ON)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
+
+if (OPT_ENVIRONMENT_RECURSIVE_LOCK)
+  message(STATUS "using threads and synchronization primitives from std.")
+  set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK 1)
+else()
+  set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK 0)
+endif()
 
 if(OPT_DOUBLE_PRECISION)
   set(OPENRAVE_PRECISION 1)

@@ -25,10 +25,8 @@ using py::object;
 
 class PyEnvironmentBase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyEnvironmentBase>
 {
-#if BOOST_VERSION < 103500
-    boost::mutex _envmutex;
-    std::list<OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock> > _listenvlocks, _listfreelocks;
-#endif
+    std::mutex _envmutex;
+    std::list<OPENRAVE_SHARED_PTR<EnvironmentLock> > _listenvlocks, _listfreelocks;
 
 public:
     class PyEnvironmentBaseInfo
@@ -332,6 +330,7 @@ public:
 
     bool __eq__(PyEnvironmentBasePtr p);
     bool __ne__(PyEnvironmentBasePtr p);
+    long __hash__();
     std::string __repr__();
     std::string __str__();
     object __unicode__();

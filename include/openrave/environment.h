@@ -24,8 +24,25 @@
 
 namespace OpenRAVE {
 
-typedef boost::recursive_try_mutex EnvironmentMutex;
-typedef EnvironmentMutex::scoped_lock EnvironmentLock;
+#if OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK
+#if __cplusplus >= 201703L
+#include <mutex>
+using EnvironmentMutex = ::std::recursive_mutex;
+using EnvironmentLock  = ::std::unique_lock<std::recursive_mutex>;
+using defer_lock_t     = ::std::defer_lock_t;
+using try_to_lock_t    = ::std::try_to_lock_t;
+#else
+using EnvironmentMutex = ::boost::recursive_try_mutex;
+using EnvironmentLock  = EnvironmentMutex::scoped_lock;
+using defer_lock_t     = ::boost::defer_lock_t;
+using try_to_lock_t    = ::boost::try_to_lock_t;
+#endif // __cplusplus >= 201703L
+#else
+using EnvironmentMutex = ::std::mutex;
+using EnvironmentLock  = ::std::unique_lock<std::mutex>;
+using defer_lock_t     = ::std::defer_lock_t;
+using try_to_lock_t    = ::std::try_to_lock_t;
+#endif // OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK
 
 /// \brief used when adding interfaces to the environment
 enum InterfaceAddMode

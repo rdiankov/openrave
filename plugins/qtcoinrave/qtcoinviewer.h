@@ -188,12 +188,12 @@ public:
     virtual UserDataPtr RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback);
     virtual void _DeleteItemCallback(Item* pItem)
     {
-        boost::mutex::scoped_lock lock(_mutexItems);
+        std::lock_guard<std::mutex> lock(_mutexItems);
         pItem->PrepForDeletion();
         _listRemoveItems.push_back(pItem);
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
+    boost::shared_ptr<EnvironmentLock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
 
 public slots:
 
@@ -244,8 +244,8 @@ public:
 protected:
         boost::weak_ptr<QtCoinViewer> _pviewer;
         void** _ppreturn;
-        boost::mutex _mutex;
-        boost::shared_ptr<boost::mutex::scoped_lock> _plock;
+        std::mutex _mutex;
+        boost::shared_ptr<std::unique_lock<std::mutex>> _plock;
     };
     typedef boost::shared_ptr<EnvMessage> EnvMessagePtr;
     typedef boost::shared_ptr<EnvMessage const> EnvMessageConstPtr;
@@ -385,8 +385,8 @@ public:
     // Message Queue
     list<EnvMessagePtr> _listMessages;
     list<Item*> _listRemoveItems;
-    boost::mutex _mutexItems, _mutexUpdating, _mutexMouseMove;     ///< mutex protected messages
-    mutable boost::mutex _mutexMessages;
+    std::mutex _mutexItems, _mutexUpdating, _mutexMouseMove;     ///< mutex protected messages
+    mutable std::mutex _mutexMessages;
 
     QVBoxLayout * vlayout;
     QGroupBox * view1;
@@ -446,9 +446,9 @@ public:
     int _available;
 
     bool _bLockEnvironment;
-    boost::mutex _mutexUpdateModels, _mutexCallbacks;
-    boost::condition _condUpdateModels;     ///< signaled everytime environment models are updated
-    boost::mutex _mutexGUI;
+    std::mutex _mutexUpdateModels, _mutexCallbacks;
+    std::condition_variable _condUpdateModels;     ///< signaled everytime environment models are updated
+    std::mutex _mutexGUI;
     bool _bInIdleThread;
 
     // toggle switches

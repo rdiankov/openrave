@@ -22,6 +22,8 @@
 #ifndef OPENRAVE_COLLISIONCHECKER_H
 #define OPENRAVE_COLLISIONCHECKER_H
 
+#include <openrave/openravejson.h>
+
 namespace OpenRAVE {
 
 /// options for collision checker
@@ -95,6 +97,39 @@ public:
     uint8_t nKeepPrevious; ///< if 1, will keep all previous data when resetting the collision checker. otherwise will reset
 
 };
+
+/// \brief Holds information about collision report without storing openrave environment data structure such as KinBody or Geometry
+class OPENRAVE_API CollisionReportInfo : public orjson::JsonSerializable
+{
+public:
+    /// \brief resets internal data to initial state
+    virtual void Reset();
+
+    /// \brief initializes internal data from input
+    /// \param report from which to initialize this data structure
+    void InitInfoFromReport(const CollisionReport& report);
+
+    /// \brief check equality of two objects
+    bool operator==(const CollisionReportInfo& other) const;
+
+    /// \brief check inequality of two objects
+    bool operator!=(const CollisionReportInfo& other) const
+    {
+        return !(*this == other);
+    }
+
+    /// \brief loads internal data from rapidjson value
+    virtual void LoadFromJson(const rapidjson::Value& rReport) override;
+
+    /// \brief serializes internal data to rapidjson value
+    virtual void SaveToJson(rapidjson::Value& rReport, rapidjson::Document::AllocatorType& alloc) const override;
+
+    std::string body1Name, body2Name; ///< names of colliding bodies
+    std::string body1LinkName, body2LinkName; ///< names of colliding body links
+    std::string body1GeomName, body2GeomName; ///< names of colliding body geometries
+    std::vector<OpenRAVE::Vector> contacts; ///< contact points
+};
+
 
 typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
 

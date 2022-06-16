@@ -193,7 +193,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
         return ModuleBase::SendCommand(sout,sinput);
     }

@@ -2892,12 +2892,6 @@ typedef void (*PluginExportFn_OnRaveInitialized)();
 /// \ingroup plugin_exports
 typedef void (*PluginExportFn_OnRavePreDestroy)();
 
-/// \deprecated (12/01/01)
-typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr env) RAVE_DEPRECATED;
-
-/// \deprecated (12/01/01)
-typedef bool (*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size) RAVE_DEPRECATED;
-
 // define inline functions
 const std::string& IkParameterization::GetName() const
 {

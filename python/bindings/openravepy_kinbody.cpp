@@ -1334,8 +1334,8 @@ bool PyLink::PyGeometry::__eq__(OPENRAVE_SHARED_PTR<PyGeometry> p) {
 bool PyLink::PyGeometry::__ne__(OPENRAVE_SHARED_PTR<PyGeometry> p) {
     return !p || _pgeometry != p->_pgeometry;
 }
-int PyLink::PyGeometry::__hash__() {
-    return static_cast<int>(uintptr_t(_pgeometry.get()));
+long PyLink::PyGeometry::__hash__() {
+    return static_cast<long>(uintptr_t(_pgeometry.get()));
 }
 
 PyLink::PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : _plink(plink), _pyenv(pyenv) {
@@ -1695,8 +1695,8 @@ bool PyLink::__eq__(OPENRAVE_SHARED_PTR<PyLink> p) {
 bool PyLink::__ne__(OPENRAVE_SHARED_PTR<PyLink> p) {
     return !p || _plink != p->_plink;
 }
-int PyLink::__hash__() {
-    return static_cast<int>(uintptr_t(_plink.get()));
+long PyLink::__hash__() {
+    return static_cast<long>(uintptr_t(_plink.get()));
 }
 
 PyLinkPtr toPyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
@@ -2053,8 +2053,8 @@ bool PyJoint::__eq__(OPENRAVE_SHARED_PTR<PyJoint> p) {
 bool PyJoint::__ne__(OPENRAVE_SHARED_PTR<PyJoint> p) {
     return !p || _pjoint!=p->_pjoint;
 }
-int PyJoint::__hash__() {
-    return static_cast<int>(uintptr_t(_pjoint.get()));
+long PyJoint::__hash__() {
+    return static_cast<long>(uintptr_t(_pjoint.get()));
 }
 
 PyJointPtr toPyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
@@ -2173,6 +2173,9 @@ bool PyManageData::__eq__(OPENRAVE_SHARED_PTR<PyManageData> p) {
 }
 bool PyManageData::__ne__(OPENRAVE_SHARED_PTR<PyManageData> p) {
     return !p || _pdata!=p->_pdata;
+}
+long PyManageData::__hash__() {
+    return static_cast<long>(uintptr_t(_pdata.get()));
 }
 
 PyKinBody::PyGrabbedInfo::PyGrabbedInfo() {
@@ -6081,6 +6084,7 @@ void init_openravepy_kinbody()
                                 .def("__unicode__", &PyManageData::__unicode__)
                                 .def("__eq__",&PyManageData::__eq__)
                                 .def("__ne__",&PyManageData::__ne__)
+                                .def("__hash__",&PyManageData::__hash__)
             ;
         }
     }

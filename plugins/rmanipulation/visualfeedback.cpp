@@ -656,7 +656,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         return ModuleBase::SendCommand(sout,sinput);
     }
 

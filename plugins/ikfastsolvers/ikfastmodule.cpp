@@ -408,7 +408,7 @@ public:
 //#endif
 
         // before adding a new library, check for existing
-        boost::mutex::scoped_lock lock(GetLibraryMutex());
+        std::lock_guard<std::mutex> lock(GetLibraryMutex());
         boost::shared_ptr<IkLibrary> lib;
         FOREACH(it, *GetLibraries()) {
             if( libraryname == (*it)->GetLibraryName() ) {
@@ -521,7 +521,7 @@ public:
 
     bool LoadIKFastSolver(ostream& sout, istream& sinput)
     {
-        EnvironmentMutex::scoped_lock envlock(GetEnv()->GetMutex());
+        EnvironmentLock envlock(GetEnv()->GetMutex());
         string robotname;
         string striktype;
         bool bForceIK = false;
@@ -709,7 +709,7 @@ public:
 
     bool PerfTiming(ostream& sout, istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         string cmd, libraryname;
         int num=1000;
         dReal maxtime = 1200;
@@ -807,7 +807,7 @@ public:
 
     bool IKtest(ostream& sout, istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         RAVELOG_DEBUG("Starting IKtest...\n");
         vector<dReal> varmjointvals, values;
         bool bInitialized=false;
@@ -930,7 +930,7 @@ public:
     bool DebugIK(ostream& sout, istream& sinput)
     {
         using namespace boost::numeric;
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
 
         int num_itrs = 1000;
         stringstream s;
@@ -1534,9 +1534,9 @@ public:
         return s_vStaticLibraries;
     }
 
-    static boost::mutex& GetLibraryMutex()
+    static std::mutex& GetLibraryMutex()
     {
-        static boost::mutex s_LibraryMutex;
+        static std::mutex s_LibraryMutex;
         return s_LibraryMutex;
     }
 
@@ -1546,7 +1546,7 @@ public:
         string name; name.resize(_name.size());
         std::transform(_name.begin(), _name.end(), name.begin(), ::tolower);
         /// start from the newer libraries
-        boost::mutex::scoped_lock lock(GetLibraryMutex());
+        std::lock_guard<std::mutex> lock(GetLibraryMutex());
         for(list< boost::shared_ptr<IkLibrary> >::reverse_iterator itlib = GetLibraries()->rbegin(); itlib != GetLibraries()->rend(); ++itlib) {
             FOREACHC(itikname,(*itlib)->GetIkNames()) {
                 if( name == *itikname ) {

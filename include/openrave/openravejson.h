@@ -20,6 +20,7 @@
 
 #include <openrave/config.h>
 #include <openrave/openraveexception.h>
+#include <openrave/sensor.h>
 
 #include <array>
 #include <boost/shared_ptr.hpp>
@@ -42,6 +43,15 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/prettywriter.h>
 
+#ifndef ORJSON_LOAD_REQUIRED_JSON_VALUE_BY_KEY
+#define ORJSON_LOAD_REQUIRED_JSON_VALUE_BY_KEY(rValue, key, param) \
+    { \
+        if (!(OpenRAVE::orjson::LoadJsonValueByKey(rValue, key, param))) \
+        { \
+            throw OPENRAVE_EXCEPTION_FORMAT("[%s, %u] assert(OpenRAVE::orjson::LoadJsonValueByKey(%s, %s, %s))", __FILE__%__LINE__%#rValue%key%#param,  OpenRAVE::ORE_InvalidArguments); \
+        } \
+    }
+#endif // ORJSON_LOAD_REQUIRED_JSON_VALUE_BY_KEY
 namespace OpenRAVE {
 
 namespace orjson {
@@ -737,7 +747,7 @@ inline void SaveJsonValue(rapidjson::Document& v, const T& t) {
     v.GetAllocator().Clear();
     SaveJsonValue(v, t, v.GetAllocator());
 }
-template<class T> void inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t);
+template<class T> bool inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t);
 inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::SensorBase::CameraIntrinsics& t) {
     if (!v.IsObject()) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object to SensorBase::CameraIntrinsics.", OpenRAVE::ORE_InvalidArguments);
@@ -753,13 +763,24 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::SensorBase::Camer
 
 //get one json value by key, and store it in local data structures
 template<class T>
-void inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t) {
+bool inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t) {
     if (!v.IsObject()) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
     }
-    if (v.HasMember(key)) {
-        LoadJsonValue(v[key], t);
+    rapidjson::Value::ConstMemberIterator itMember = v.FindMember(key);
+    if( itMember != v.MemberEnd() ) {
+        const rapidjson::Value& rMember = itMember->value;
+        if( !rMember.IsNull() ) {
+            try {
+                LoadJsonValue(rMember, t);
+                return true;
+            }
+            catch (const OpenRAVEException& ex) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("Got \"" + ex.message() + "\" while parsing the value of \"" + key + "\"", OpenRAVE::ORE_InvalidArguments);
+            }
+        }
     }
+    return false;
 }
 
 template<class T, class U>
