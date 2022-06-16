@@ -349,7 +349,7 @@ private:
 #endif
 #endif
     friend class ColladaReader;
-    friend class RaveDatabase;
+    friend class DynamicRaveDatabase;
 };
 
 } // end namespace OpenRAVE
