@@ -56,16 +56,6 @@ public:
 
     bool GetInfo(PLUGININFO& info);
 
-    virtual bool Load_CreateInterfaceGlobal();
-
-    virtual bool Load_GetPluginAttributes();
-
-    virtual bool Load_DestroyPlugin();
-
-    virtual bool Load_OnRaveInitialized();
-
-    virtual bool Load_OnRavePreDestroy();
-
     bool HasInterface(InterfaceType type, const std::string& name);
 
     InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* interfacehash, EnvironmentBasePtr penv);
@@ -76,6 +66,16 @@ public:
     void OnRavePreDestroy();
 
 protected:
+    virtual bool _Load_CreateInterfaceGlobal();
+
+    virtual bool _Load_GetPluginAttributes();
+
+    virtual bool _Load_DestroyPlugin();
+
+    virtual bool _Load_OnRaveInitialized();
+
+    virtual bool _Load_OnRavePreDestroy();
+
     /// if the library is not loaded yet, wait for it.
     void _confirmLibrary();
 

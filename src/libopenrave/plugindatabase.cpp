@@ -172,7 +172,7 @@ void Plugin::Destroy()
     }
     else {
         if( plibrary ) {
-            Load_DestroyPlugin();
+            _Load_DestroyPlugin();
         }
         std::lock_guard<std::mutex> lock(_mutex);
         // do some more checking here, there still might be instances of robots, planners, and sensors out there
@@ -214,7 +214,7 @@ bool Plugin::GetInfo(PLUGININFO& info)
     return true;
 }
 
-bool Plugin::Load_CreateInterfaceGlobal()
+bool Plugin::_Load_CreateInterfaceGlobal()
 {
     _confirmLibrary();
     if ((pfnCreateNew == NULL) &&( pfnCreate == NULL)) {
@@ -239,7 +239,7 @@ bool Plugin::Load_CreateInterfaceGlobal()
     return pfnCreateNew != NULL || pfnCreate != NULL;
 }
 
-bool Plugin::Load_GetPluginAttributes()
+bool Plugin::_Load_GetPluginAttributes()
 {
     _confirmLibrary();
     if ((pfnGetPluginAttributesNew == NULL) || (pfnGetPluginAttributes == NULL)) {
@@ -263,7 +263,7 @@ bool Plugin::Load_GetPluginAttributes()
     return pfnGetPluginAttributesNew != NULL || pfnGetPluginAttributes != NULL;
 }
 
-bool Plugin::Load_DestroyPlugin()
+bool Plugin::_Load_DestroyPlugin()
 {
     _confirmLibrary();
     if( pfnDestroyPlugin == NULL ) {
@@ -283,7 +283,7 @@ bool Plugin::Load_DestroyPlugin()
     return pfnDestroyPlugin != NULL;
 }
 
-bool Plugin::Load_OnRaveInitialized()
+bool Plugin::_Load_OnRaveInitialized()
 {
     _confirmLibrary();
     if( pfnOnRaveInitialized == NULL ) {
@@ -303,7 +303,7 @@ bool Plugin::Load_OnRaveInitialized()
     return pfnOnRaveInitialized!=NULL;
 }
 
-bool Plugin::Load_OnRavePreDestroy()
+bool Plugin::_Load_OnRavePreDestroy()
 {
     _confirmLibrary();
     if( pfnOnRavePreDestroy == NULL ) {
@@ -352,7 +352,7 @@ InterfaceBasePtr Plugin::CreateInterface(InterfaceType type, const std::string& 
     }
 
     try {
-        if( !Load_CreateInterfaceGlobal() ) {
+        if( !_Load_CreateInterfaceGlobal() ) {
             throw openrave_exception(str(boost::format(_("%s: can't load CreateInterface function\n"))%ppluginname),ORE_InvalidPlugin);
         }
         InterfaceBasePtr pinterface;
@@ -385,7 +385,7 @@ InterfaceBasePtr Plugin::CreateInterface(InterfaceType type, const std::string& 
 
 void Plugin::OnRaveInitialized()
 {
-    if( Load_OnRaveInitialized() ) {
+    if( _Load_OnRaveInitialized() ) {
         if( !!pfnOnRaveInitialized && !_bHasCalledOnRaveInitialized ) {
             pfnOnRaveInitialized();
             _bHasCalledOnRaveInitialized = true;
@@ -395,7 +395,7 @@ void Plugin::OnRaveInitialized()
 
 void Plugin::OnRavePreDestroy()
 {
-    if( Load_OnRavePreDestroy() ) {
+    if( _Load_OnRavePreDestroy() ) {
         // always call destroy regardless of initialization state (safest)
         if( !!pfnOnRavePreDestroy ) {
             pfnOnRavePreDestroy();
@@ -979,7 +979,7 @@ PluginPtr RaveDatabase::_LoadPlugin(const std::string& _libraryname)
     p->plibrary = plibrary;
 
     try {
-        if( !p->Load_GetPluginAttributes() ) {
+        if( !p->_Load_GetPluginAttributes() ) {
             // might not be a plugin
             RAVELOG_VERBOSE(str(boost::format("%s: can't load GetPluginAttributes function, might not be an OpenRAVE plugin\n")%libraryname));
             return PluginPtr();
