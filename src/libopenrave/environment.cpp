@@ -73,16 +73,16 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
     }
 
     if( _uInt64Parameters.size() > 0 ) {
-        rapidjson::Value rIntParameters;
-        rIntParameters.SetArray();
+        rapidjson::Value rUInt64Parameters;
+        rUInt64Parameters.SetArray();
         FOREACHC(it, _uInt64Parameters) {
-            rapidjson::Value rIntParameter;
-            rIntParameter.SetObject();
-            orjson::SetJsonValueByKey(rIntParameter, "id", it->first, allocator);
-            orjson::SetJsonValueByKey(rIntParameter, "value", it->second, allocator);
-            rIntParameters.PushBack(rIntParameter, allocator);
+            rapidjson::Value rInt64Parameter;
+            rInt64Parameter.SetObject();
+            orjson::SetJsonValueByKey(rInt64Parameter, "id", it->first, allocator);
+            orjson::SetJsonValueByKey(rInt64Parameter, "value", it->second, allocator);
+            rUInt64Parameters.PushBack(rInt64Parameter, allocator);
         }
-        rEnvInfo.AddMember("intParameters", rIntParameters, allocator);
+        rEnvInfo.AddMember("uint64Parameters", rUInt64Parameters, allocator);
     }
 
     if (_vBodyInfos.size() > 0) {
@@ -142,14 +142,14 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
         orjson::LoadJsonValueByKey(rEnvInfo, "gravity", _gravity);
     }
 
-    if (rEnvInfo.HasMember("intParameters") && rEnvInfo["intParameters"].IsArray()) {
-        for (rapidjson::Value::ConstValueIterator it = rEnvInfo["intParameters"].Begin(); it != rEnvInfo["intParameters"].End(); ++it) {
+    if (rEnvInfo.HasMember("uint64Parameters") && rEnvInfo["uint64Parameters"].IsArray()) {
+        for (rapidjson::Value::ConstValueIterator it = rEnvInfo["uint64Parameters"].Begin(); it != rEnvInfo["uint64Parameters"].End(); ++it) {
             std::string id;
             if( it->HasMember("id") ) {
                 orjson::LoadJsonValueByKey(*it, "id", id);
             }
             if (id.empty()) {
-                RAVELOG_WARN_FORMAT("ignored an entry in intParameters in environment \"%s\" due to missing or empty id", _uri);
+                RAVELOG_WARN_FORMAT("ignored an entry in uint64Parameters in environment \"%s\" due to missing or empty id", _uri);
                 continue;
             }
             // delete
