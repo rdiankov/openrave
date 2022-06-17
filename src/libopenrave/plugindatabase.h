@@ -19,6 +19,7 @@
 
 #include "openrave/openrave.h"
 #include "openrave/plugininfo.h"
+#include "plugindatabase_virtual.h"
 
 #include <condition_variable>
 #include <mutex>
@@ -27,7 +28,7 @@
 
 namespace OpenRAVE {
 
-class RaveDatabase;
+class DynamicRaveDatabase;
 
 void* _SysLoadLibrary(const std::string& lib, bool bLazy=false);
 void* _SysLoadSym(void* lib, const std::string& sym);
@@ -41,29 +42,31 @@ typedef InterfaceBasePtr(*PluginExportFn_CreateInterface)(InterfaceType type, co
 /// \deprecated (12/01/01)
 typedef bool(*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size) RAVE_DEPRECATED;
 
-// Holds information about a plugin.
-class Plugin : public UserData, public boost::enable_shared_from_this<Plugin>
+// Holds information about a plugin, for plugins loaded dynamically at runtime.
+class Plugin : public PluginBase, public boost::enable_shared_from_this<Plugin>
 {
 public:
-    Plugin(boost::shared_ptr<RaveDatabase> pdatabase);
-    virtual ~Plugin();
+    friend class DynamicRaveDatabase;
 
-    virtual void Destroy();
+    Plugin(boost::shared_ptr<DynamicRaveDatabase> pdatabase);
+    virtual ~Plugin() override;
 
-    virtual bool IsValid();
+    virtual void Destroy() override;
 
-    const std::string& GetName() const;
+    virtual bool IsValid() override;
 
-    bool GetInfo(PLUGININFO& info);
+    const std::string& GetName() const override;
 
-    bool HasInterface(InterfaceType type, const std::string& name);
+    bool GetInfo(PLUGININFO& info) override;
 
-    InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* interfacehash, EnvironmentBasePtr penv);
+    bool HasInterface(InterfaceType type, const std::string& name) override;
+
+    InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* interfacehash, EnvironmentBasePtr penv) override;
 
     /// \brief call to initialize the plugin, if initialized already, then ignore the call.
-    void OnRaveInitialized();
+    void OnRaveInitialized() override;
 
-    void OnRavePreDestroy();
+    void OnRavePreDestroy() override;
 
 protected:
     virtual bool _Load_CreateInterfaceGlobal();
@@ -79,7 +82,7 @@ protected:
     /// if the library is not loaded yet, wait for it.
     void _confirmLibrary();
 
-    boost::weak_ptr<RaveDatabase> _pdatabase;
+    boost::weak_ptr<DynamicRaveDatabase> _pdatabase;
     std::set<std::pair< InterfaceType, std::string> > _setBadInterfaces;         ///< interfaces whose hash is wrong and shouldn't be tried for this plugin
     std::string ppluginname;
 
@@ -97,37 +100,18 @@ protected:
     bool _bShutdown;         ///< managed by plugin database
     bool _bInitializing; ///< still in the initialization phase
     bool _bHasCalledOnRaveInitialized; ///< if true, then OnRaveInitialized has been called and does not need to call it again.
-
-    friend class RaveDatabase;
 };
 typedef boost::shared_ptr<Plugin> PluginPtr;
 typedef boost::shared_ptr<Plugin const> PluginConstPtr;
 
-struct RegisteredInterface : public UserData
-{
-    friend class RaveDatabase;
-
-    RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, boost::shared_ptr<RaveDatabase> database);
-    virtual ~RegisteredInterface();
-
-    InterfaceType _type;
-    std::string _name;
-    boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> _createfn;
-    std::list< boost::weak_ptr<RegisteredInterface> >::iterator _iterator;
-protected:
-    boost::weak_ptr<RaveDatabase> _database;
-};
-typedef boost::shared_ptr<RegisteredInterface> RegisteredInterfacePtr;
-
-/// \brief database of interfaces from plugins
-class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
+class DynamicRaveDatabase : public RaveDatabase, public boost::enable_shared_from_this<DynamicRaveDatabase>
 {
 public:
     friend class Plugin;
     friend class RegisteredInterface;
 
-    RaveDatabase();
-    virtual ~RaveDatabase();
+    DynamicRaveDatabase();
+    virtual ~DynamicRaveDatabase();
 
     virtual bool Init(bool bLoadAllPlugins);
 
@@ -183,9 +167,7 @@ protected:
     void _PluginLoaderThread();
 
     std::list<PluginPtr> _listplugins;
-    mutable std::mutex _mutex;     ///< changing plugin database
     std::list<void*> _listDestroyLibraryQueue;
-    std::list< boost::weak_ptr<RegisteredInterface> > _listRegisteredInterfaces;
     std::list<std::string> _listplugindirs;
 
     /// \name plugin loading
@@ -202,7 +184,7 @@ protected:
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-BOOST_TYPEOF_REGISTER_TYPE(RaveDatabase::Plugin)
+BOOST_TYPEOF_REGISTER_TYPE(DynamicRaveDatabase::Plugin)
 #endif
 
 #endif

@@ -60,7 +60,7 @@
 #define INTERFACE_PREDELETER boost::function<void(void const*)>()
 #endif
 #ifndef INTERFACE_POSTDELETER
-#define INTERFACE_POSTDELETER(name, plugin) boost::bind(&RaveDatabase::_InterfaceDestroyCallbackSharedPost,shared_from_this(),name,plugin)
+#define INTERFACE_POSTDELETER(name, plugin) boost::bind(&DynamicRaveDatabase::_InterfaceDestroyCallbackSharedPost,shared_from_this(),name,plugin)
 #endif
 
 #ifdef _WIN32
@@ -136,7 +136,7 @@ void _SysCloseLibrary(void* lib)
 #endif
 }
 
-Plugin::Plugin(boost::shared_ptr<RaveDatabase> pdatabase)
+Plugin::Plugin(boost::shared_ptr<DynamicRaveDatabase> pdatabase)
     : _pdatabase(pdatabase)
     , plibrary(NULL)
     , pfnCreate(NULL)
@@ -177,11 +177,11 @@ void Plugin::Destroy()
         std::lock_guard<std::mutex> lock(_mutex);
         // do some more checking here, there still might be instances of robots, planners, and sensors out there
         if (plibrary) {
-            RAVELOG_DEBUG("RaveDatabase: closing plugin %s\n", ppluginname.c_str());        // Sleep(10);
+            RAVELOG_DEBUG("DynamicRaveDatabase: closing plugin %s\n", ppluginname.c_str());        // Sleep(10);
             if( pfnDestroyPlugin != NULL ) {
                 pfnDestroyPlugin();
             }
-            boost::shared_ptr<RaveDatabase> pdatabase = _pdatabase.lock();
+            boost::shared_ptr<DynamicRaveDatabase> pdatabase = _pdatabase.lock();
             if( !!pdatabase ) {
                 pdatabase->_QueueLibraryDestruction(plibrary);
             }
@@ -422,35 +422,18 @@ void Plugin::_confirmLibrary()
     }
 }
 
-RegisteredInterface::RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, boost::shared_ptr<RaveDatabase> database)
-    : _type(type)
-    , _name(name)
-    , _createfn(createfn)
-    , _database(database)
+DynamicRaveDatabase::DynamicRaveDatabase() : RaveDatabase(), _bShutdown(false)
 {
 }
 
-RegisteredInterface::~RegisteredInterface()
-{
-    boost::shared_ptr<RaveDatabase> database = _database.lock();
-    if( !!database ) {
-        std::lock_guard<std::mutex> lock(database->_mutex);
-        database->_listRegisteredInterfaces.erase(_iterator);
-    }
-}
-
-RaveDatabase::RaveDatabase() : _bShutdown(false)
-{
-}
-
-RaveDatabase::~RaveDatabase()
+DynamicRaveDatabase::~DynamicRaveDatabase()
 {
     Destroy();
 }
 
-bool RaveDatabase::Init(bool bLoadAllPlugins)
+bool DynamicRaveDatabase::Init(bool bLoadAllPlugins)
 {
-    _threadPluginLoader.reset(new std::thread(boost::bind(&RaveDatabase::_PluginLoaderThread, this)));
+    _threadPluginLoader.reset(new std::thread(boost::bind(&DynamicRaveDatabase::_PluginLoaderThread, this)));
     std::vector<std::string> vplugindirs;
     char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_PLUGINS"); // getenv not thread-safe?
     if( pOPENRAVE_PLUGINS != NULL ) {
@@ -524,7 +507,7 @@ bool RaveDatabase::Init(bool bLoadAllPlugins)
     return true;
 }
 
-void RaveDatabase::Destroy()
+void DynamicRaveDatabase::Destroy()
 {
     RAVELOG_DEBUG("plugin database shutting down...\n");
     {
@@ -537,27 +520,27 @@ void RaveDatabase::Destroy()
         _threadPluginLoader.reset();
     }
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::unique_lock<std::mutex> lock = Lock();
         _listplugins.clear();
     }
     // cannot lock mutex due to __erase_iterator
     // cannot clear _listRegisteredInterfaces since there are destructors that will remove items from the list
     //_listRegisteredInterfaces.clear();
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::unique_lock<std::mutex> lock = Lock();
         _CleanupUnusedLibraries();
     }
     _listplugindirs.clear();
     RAVELOG_DEBUG("openrave plugin database destroyed\n");
 }
 
-void RaveDatabase::GetPlugins(std::list<PluginPtr>& listplugins) const
+void DynamicRaveDatabase::GetPlugins(std::list<PluginPtr>& listplugins) const
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock = Lock();
     listplugins = _listplugins;
 }
 
-InterfaceBasePtr RaveDatabase::Create(EnvironmentBasePtr penv, InterfaceType type, const std::string& _name)
+InterfaceBasePtr DynamicRaveDatabase::Create(EnvironmentBasePtr penv, InterfaceType type, const std::string& _name)
 {
     std::string name=_name;
     InterfaceBasePtr pointer;
@@ -590,7 +573,7 @@ InterfaceBasePtr RaveDatabase::Create(EnvironmentBasePtr penv, InterfaceType typ
         std::list< boost::weak_ptr<RegisteredInterface> > listRegisteredInterfaces;
         std::list<PluginPtr> listplugins;
         {
-            std::lock_guard<std::mutex> lock(_mutex);
+            std::unique_lock<std::mutex> lock = Lock();
             listRegisteredInterfaces = _listRegisteredInterfaces;
             listplugins = _listplugins;
         }
@@ -645,7 +628,7 @@ InterfaceBasePtr RaveDatabase::Create(EnvironmentBasePtr penv, InterfaceType typ
                     }
                 }
                 if( !(*itplugin)->IsValid() ) {
-                    std::lock_guard<std::mutex> lock(_mutex);
+                    std::unique_lock<std::mutex> lock = Lock();
                     _listplugins.remove(*itplugin);
                 }
                 ++itplugin;
@@ -683,7 +666,7 @@ InterfaceBasePtr RaveDatabase::Create(EnvironmentBasePtr penv, InterfaceType typ
     return pointer;
 }
 
-bool RaveDatabase::AddDirectory(const std::string& pdir)
+bool DynamicRaveDatabase::AddDirectory(const std::string& pdir)
 {
 #ifdef _WIN32
     WIN32_FIND_DATAA FindFileData;
@@ -733,9 +716,9 @@ bool RaveDatabase::AddDirectory(const std::string& pdir)
     return true;
 }
 
-void RaveDatabase::ReloadPlugins()
+void DynamicRaveDatabase::ReloadPlugins()
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock = Lock();
     FOREACH(itplugin,_listplugins) {
         PluginPtr newplugin = _LoadPlugin((*itplugin)->ppluginname);
         if( !!newplugin ) {
@@ -745,25 +728,25 @@ void RaveDatabase::ReloadPlugins()
     _CleanupUnusedLibraries();
 }
 
-void RaveDatabase::OnRaveInitialized()
+void DynamicRaveDatabase::OnRaveInitialized()
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock = Lock();
     FOREACH(itplugin, _listplugins) {
         (*itplugin)->OnRaveInitialized();
     }
 }
 
-void RaveDatabase::OnRavePreDestroy()
+void DynamicRaveDatabase::OnRavePreDestroy()
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock = Lock();
     FOREACH(itplugin, _listplugins) {
         (*itplugin)->OnRavePreDestroy();
     }
 }
 
-bool RaveDatabase::LoadPlugin(const std::string& pluginname)
+bool DynamicRaveDatabase::LoadPlugin(const std::string& pluginname)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock = Lock();
     std::list<PluginPtr>::iterator it = _GetPlugin(pluginname);
     std::string newpluginname;
     if( it != _listplugins.end() ) {
@@ -782,9 +765,9 @@ bool RaveDatabase::LoadPlugin(const std::string& pluginname)
     return !!p;
 }
 
-bool RaveDatabase::RemovePlugin(const std::string& pluginname)
+bool DynamicRaveDatabase::RemovePlugin(const std::string& pluginname)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock = Lock();
     std::list<PluginPtr>::iterator it = _GetPlugin(pluginname);
     if( it == _listplugins.end() ) {
         return false;
@@ -794,9 +777,9 @@ bool RaveDatabase::RemovePlugin(const std::string& pluginname)
     return true;
 }
 
-bool RaveDatabase::HasInterface(InterfaceType type, const std::string& interfacename)
+bool DynamicRaveDatabase::HasInterface(InterfaceType type, const std::string& interfacename)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock = Lock();
     FOREACHC(it,_listRegisteredInterfaces) {
         RegisteredInterfacePtr registration = it->lock();
         if( !!registration ) {
@@ -813,10 +796,10 @@ bool RaveDatabase::HasInterface(InterfaceType type, const std::string& interface
     return false;
 }
 
-void RaveDatabase::GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) const
+void DynamicRaveDatabase::GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) const
 {
     plugins.clear();
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock = Lock();
     FOREACHC(itplugin, _listplugins) {
         PLUGININFO info;
         if( (*itplugin)->GetInfo(info) ) {
@@ -835,10 +818,10 @@ void RaveDatabase::GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >
     }
 }
 
-void RaveDatabase::GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const
+void DynamicRaveDatabase::GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const
 {
     interfacenames.clear();
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock = Lock();
     FOREACHC(it,_listRegisteredInterfaces) {
         RegisteredInterfacePtr registration = it->lock();
         if( !!registration ) {
@@ -860,7 +843,7 @@ void RaveDatabase::GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::
     }
 }
 
-UserDataPtr RaveDatabase::RegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn)
+UserDataPtr DynamicRaveDatabase::RegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn)
 {
     BOOST_ASSERT(interfacehash != NULL && envhash != NULL);
     BOOST_ASSERT(!!createfn);
@@ -871,13 +854,13 @@ UserDataPtr RaveDatabase::RegisterInterface(InterfaceType type, const std::strin
     if( strcmp(interfacehash, RaveGetInterfaceHash(type)) ) {
         throw openrave_exception(str(boost::format(_("interface %s invalid hash %s!=%s\n"))%RaveGetInterfaceName(type)%interfacehash%RaveGetInterfaceHash(type)),ORE_InvalidInterfaceHash);
     }
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock = Lock();
     RegisteredInterfacePtr pdata(new RegisteredInterface(type,name,createfn,shared_from_this()));
     pdata->_iterator = _listRegisteredInterfaces.insert(_listRegisteredInterfaces.end(),pdata);
     return pdata;
 }
 
-void RaveDatabase::_CleanupUnusedLibraries()
+void DynamicRaveDatabase::_CleanupUnusedLibraries()
 {
     FOREACH(it,_listDestroyLibraryQueue) {
         _SysCloseLibrary(*it);
@@ -889,7 +872,7 @@ void RaveDatabase::_CleanupUnusedLibraries()
 ///
 /// It is safe to delete a plugin even if interfaces currently reference it because this function just decrements
 /// the reference count instead of unloading from memory.
-std::list<PluginPtr>::iterator RaveDatabase::_GetPlugin(const std::string& pluginname)
+std::list<PluginPtr>::iterator DynamicRaveDatabase::_GetPlugin(const std::string& pluginname)
 {
     FOREACH(it,_listplugins) {
         if( pluginname == (*it)->ppluginname ) {
@@ -919,7 +902,7 @@ std::list<PluginPtr>::iterator RaveDatabase::_GetPlugin(const std::string& plugi
     return _listplugins.end();
 }
 
-PluginPtr RaveDatabase::_LoadPlugin(const std::string& _libraryname)
+PluginPtr DynamicRaveDatabase::_LoadPlugin(const std::string& _libraryname)
 {
     std::string libraryname = _libraryname;
     void* plibrary = _SysLoadLibrary(libraryname,OPENRAVE_LAZY_LOADING);
@@ -1021,32 +1004,32 @@ PluginPtr RaveDatabase::_LoadPlugin(const std::string& _libraryname)
     return p;
 }
 
-void RaveDatabase::_QueueLibraryDestruction(void* lib)
+void DynamicRaveDatabase::_QueueLibraryDestruction(void* lib)
 {
     _listDestroyLibraryQueue.push_back(lib);
 }
 
-void RaveDatabase::_InterfaceDestroyCallbackShared(void const* pinterface)
+void DynamicRaveDatabase::_InterfaceDestroyCallbackShared(void const* pinterface)
 {
     if( pinterface != NULL ) {
     }
 }
 
 /// \brief makes sure plugin is in scope until after pointer is completely deleted
-void RaveDatabase::_InterfaceDestroyCallbackSharedPost(std::string name, UserDataPtr plugin)
+void DynamicRaveDatabase::_InterfaceDestroyCallbackSharedPost(std::string name, UserDataPtr plugin)
 {
     // post-processing for deleting interfaces
     plugin.reset();
 }
 
-void RaveDatabase::_AddToLoader(PluginPtr p)
+void DynamicRaveDatabase::_AddToLoader(PluginPtr p)
 {
     std::lock_guard<std::mutex> lock(_mutexPluginLoader);
     _listPluginsToLoad.push_back(p);
     _condLoaderHasWork.notify_all();
 }
 
-void RaveDatabase::_PluginLoaderThread()
+void DynamicRaveDatabase::_PluginLoaderThread()
 {
     while(!_bShutdown) {
         std::list<PluginPtr> listPluginsToLoad;

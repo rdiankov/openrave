@@ -1416,7 +1416,7 @@ private:
 #endif
     friend class ColladaWriter;
     friend class ColladaReader;
-    friend class RaveDatabase;
+    friend class DynamicRaveDatabase;
     friend class Grabbed;
 };
 

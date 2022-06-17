@@ -444,7 +444,7 @@ public:
         }
 
         // since initialization depends on _pdatabase, have pdatabase be local until it is complete
-        boost::shared_ptr<RaveDatabase> pdatabase(new RaveDatabase());
+        boost::shared_ptr<RaveDatabase> pdatabase = boost::make_shared<DynamicRaveDatabase>();
         if( !pdatabase->Init(bLoadAllPlugins) ) {
             RAVELOG_FATAL("failed to create the openrave plugin database\n");
         }
