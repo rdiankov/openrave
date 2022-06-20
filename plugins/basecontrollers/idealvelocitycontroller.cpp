@@ -40,7 +40,7 @@ public:
     virtual void Reset(int options)
     {
 //        if( !!_probot ) {
-//            EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+//            EnvironmentLock lock(GetEnv()->GetMutex());
 //            //_probot->GetDOFVelocities(_vPreviousVelocities,_dofindices);
 //        }
         _bVelocityMode = false;
@@ -55,7 +55,7 @@ public:
 
     virtual bool SetDesired(const std::vector<OpenRAVE::dReal>& values, TransformConstPtr trans) {
         OPENRAVE_ASSERT_OP(values.size(),==,_dofindices.size());
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
 
         _vDesiredVelocities = values;
         std::vector<dReal> vallvelocities;

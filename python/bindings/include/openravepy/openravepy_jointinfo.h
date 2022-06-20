@@ -274,7 +274,7 @@ public:
         object ComputeInnerEmptyVolume() const;
         bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);
         bool __ne__(OPENRAVE_SHARED_PTR<PyGeometry> p);
-        int __hash__();
+        long __hash__();
     };
 
     PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv);
@@ -373,7 +373,7 @@ public:
     object __unicode__();
     bool __eq__(OPENRAVE_SHARED_PTR<PyLink> p);
     bool __ne__(OPENRAVE_SHARED_PTR<PyLink> p);
-    int __hash__();
+    long __hash__();
 };
 
 class PyJoint
@@ -487,7 +487,7 @@ public:
     object __unicode__();
     bool __eq__(OPENRAVE_SHARED_PTR<PyJoint> p);
     bool __ne__(OPENRAVE_SHARED_PTR<PyJoint> p);
-    int __hash__();
+    long __hash__();
 };
 
 class PyKinBodyStateSaver
@@ -536,6 +536,7 @@ public:
     object __unicode__();
     bool __eq__(OPENRAVE_SHARED_PTR<PyManageData> p);
     bool __ne__(OPENRAVE_SHARED_PTR<PyManageData> p);
+    long __hash__();
 };
 typedef OPENRAVE_SHARED_PTR<PyManageData> PyManageDataPtr;
 typedef OPENRAVE_SHARED_PTR<PyManageData const> PyManageDataConstPtr;

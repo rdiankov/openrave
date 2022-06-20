@@ -917,7 +917,7 @@ bool PyRobotBase::PyManipulator::_FindIKSolutions(const IkParameterization& ikpa
 object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptions, bool ikreturn, bool releasegil, PyIkFailureAccumulatorPtr pyaccumulator) const
 {
     IkParameterization ikparam;
-    EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
+    EnvironmentLock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ExtractIkParameterization(oparam,ikparam) ) {
         if( ikreturn ) {
             IkReturn ikreject(IKRA_Reject);
@@ -961,7 +961,7 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
 {
     std::vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
     IkParameterization ikparam;
-    EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
+    EnvironmentLock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ExtractIkParameterization(oparam,ikparam) ) {
         if( ikreturn ) {
             IkReturn ikreject(IKRA_Reject);
@@ -1004,7 +1004,7 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
 object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, int filteroptions, bool ikreturn, bool releasegil, PyIkFailureAccumulatorPtr pyaccumulator) const
 {
     IkParameterization ikparam;
-    EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
+    EnvironmentLock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ikreturn ) {
         std::vector<IkReturnPtr> vikreturns;
         IkFailureAccumulatorPtr paccumulator;
@@ -1069,7 +1069,7 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, object freepar
 {
     std::vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
     IkParameterization ikparam;
-    EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
+    EnvironmentLock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ikreturn ) {
         std::vector<IkReturnPtr> vikreturns;
         IkFailureAccumulatorPtr paccumulator;

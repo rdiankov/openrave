@@ -18,8 +18,8 @@
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/utility.hpp>
-#include <boost/thread/once.hpp>
 
+#include <mutex>
 #include <streambuf>
 
 #ifndef _WIN32
@@ -342,7 +342,7 @@ dReal RaveCeil(dReal f) {
 #endif
 
 static std::set<std::string> _gettextDomainsInitialized;
-static boost::once_flag _onceRaveInitialize = BOOST_ONCE_INIT;
+static std::once_flag _onceRaveInitialize;
 
 /// there is only once global openrave state. It is created when openrave
 /// is first used, and destroyed when the program quits or RaveDestroy is called.
@@ -413,7 +413,7 @@ public:
 
     static boost::shared_ptr<RaveGlobal>& instance()
     {
-        boost::call_once(_create,_onceRaveInitialize);
+        std::call_once(_onceRaveInitialize, _create);
         return _state;
     }
 
@@ -500,7 +500,7 @@ public:
         // environments have to be destroyed carefully since their destructors can be called, which will attempt to unregister the environment
         std::map<int, EnvironmentBase*> mapenvironments;
         {
-            boost::mutex::scoped_lock lock(_mutexinternal);
+            std::lock_guard<std::mutex> lock(_mutexinternal);
             mapenvironments = _mapenvironments;
         }
         FOREACH(itenv,mapenvironments) {
@@ -517,7 +517,7 @@ public:
         // process the callbacks
         std::list<boost::function<void()> > listDestroyCallbacks;
         {
-            boost::mutex::scoped_lock lock(_mutexinternal);
+            std::lock_guard<std::mutex> lock(_mutexinternal);
             listDestroyCallbacks.swap(_listDestroyCallbacks);
         }
         FOREACH(itcallback, listDestroyCallbacks) {
@@ -548,7 +548,7 @@ public:
 
     void AddCallbackForDestroy(const boost::function<void()>& fn)
     {
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         _listDestroyCallbacks.push_back(fn);
     }
 
@@ -637,7 +637,7 @@ public:
 public:
         XMLReaderFunctionData(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn, boost::shared_ptr<RaveGlobal> global) : _global(global), _type(type), _xmltag(xmltag)
         {
-            boost::mutex::scoped_lock lock(global->_mutexinternal);
+            std::lock_guard<std::mutex> lock(global->_mutexinternal);
             _oldfn = global->_mapxmlreaders[_type][_xmltag];
             global->_mapxmlreaders[_type][_xmltag] = fn;
         }
@@ -645,7 +645,7 @@ public:
         {
             boost::shared_ptr<RaveGlobal> global = _global.lock();
             if( !!global ) {
-                boost::mutex::scoped_lock lock(global->_mutexinternal);
+                std::lock_guard<std::mutex> lock(global->_mutexinternal);
                 global->_mapxmlreaders[_type][_xmltag] = _oldfn;
             }
         }
@@ -676,7 +676,7 @@ protected:
 public:
         JSONReaderFunctionData(InterfaceType type, const std::string& id, const CreateJSONReaderFn& fn, boost::shared_ptr<RaveGlobal> global) : _global(global), _type(type), _id(id)
         {
-            boost::mutex::scoped_lock lock(global->_mutexinternal);
+            std::lock_guard<std::mutex> lock(global->_mutexinternal);
             _oldfn = global->_mapjsonreaders[_type][_id];
             global->_mapjsonreaders[_type][_id] = fn;
         }
@@ -684,7 +684,7 @@ public:
         {
             boost::shared_ptr<RaveGlobal> global = _global.lock();
             if( !!global ) {
-                boost::mutex::scoped_lock lock(global->_mutexinternal);
+                std::lock_guard<std::mutex> lock(global->_mutexinternal);
                 global->_mapjsonreaders[_type][_id] = _oldfn;
             }
         }
@@ -736,14 +736,14 @@ protected:
     int RegisterEnvironment(EnvironmentBase* penv)
     {
         BOOST_ASSERT(!!_pdatabase);
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         _mapenvironments[++_nGlobalEnvironmentId] = penv;
         return _nGlobalEnvironmentId;
     }
 
     void UnregisterEnvironment(EnvironmentBase* penv)
     {
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         FOREACH(it, _mapenvironments) {
             if( it->second == penv ) {
                 _mapenvironments.erase(it);
@@ -755,7 +755,7 @@ protected:
     int GetEnvironmentId(EnvironmentBaseConstPtr penv)
     {
         return !!penv ? penv->GetId() : 0;
-//        boost::mutex::scoped_lock lock(_mutexinternal);
+//        std::lock_guard<std::mutex> lock(_mutexinternal);
 //        FOREACH(it,_mapenvironments) {
 //            if( it->second == penv.get() ) {
 //                return it->first;
@@ -766,7 +766,7 @@ protected:
 
     EnvironmentBasePtr GetEnvironment(int id)
     {
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         std::map<int, EnvironmentBase*>::iterator it = _mapenvironments.find(id);
         if( it == _mapenvironments.end() ) {
             return EnvironmentBasePtr();
@@ -777,7 +777,7 @@ protected:
     void GetEnvironments(std::list<EnvironmentBasePtr>& listenvironments)
     {
         listenvironments.clear();
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         FOREACH(it,_mapenvironments) {
             EnvironmentBasePtr penv = it->second->shared_from_this();
             if( !!penv ) {
@@ -789,9 +789,10 @@ protected:
     SpaceSamplerBasePtr GetDefaultSampler()
     {
         if( !_pdefaultsampler ) {
-            boost::mutex::scoped_lock lock(_mutexinternal);
+            std::lock_guard<std::mutex> lock(_mutexinternal);
             BOOST_ASSERT( _mapenvironments.size() > 0 );
-            _pdefaultsampler = GetDatabase()->CreateSpaceSampler(_mapenvironments.begin()->second->shared_from_this(),"MT19937");
+            InterfaceBasePtr ifBasePtr = GetDatabase()->Create(_mapenvironments.begin()->second->shared_from_this(), PT_SpaceSampler, "MT19937");
+            _pdefaultsampler = RaveInterfaceCast<SpaceSamplerBase>(ifBasePtr);
         }
         return _pdefaultsampler;
     }
@@ -805,7 +806,7 @@ protected:
             return std::string();
         }
 
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         boost::filesystem::path fullfilename;
         boost::filesystem::path filename(_filename);
 
@@ -870,11 +871,11 @@ protected:
     }
 
     void SetDataAccess(int options) {
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         _nDataAccessOptions = options;
     }
     int GetDataAccess() {
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         return _nDataAccessOptions;
     }
     std::string GetDefaultViewerType() {
@@ -906,7 +907,7 @@ protected:
         return std::string();
     }
 
-    boost::mutex& GetInitializationMutex() {
+    std::mutex& GetInitializationMutex() {
         return _mutexInitialization;
     }
 
@@ -1089,8 +1090,8 @@ private:
     // state that is initialized/destroyed
     boost::shared_ptr<RaveDatabase> _pdatabase;
     int _nDebugLevel;
-    boost::mutex _mutexInitialization; ///< external mutex for initialization only
-    boost::mutex _mutexinternal;
+    std::mutex _mutexInitialization; ///< external mutex for initialization only
+    std::mutex _mutexinternal;
     std::map<InterfaceType, XMLREADERSMAP > _mapxmlreaders;
     std::map<InterfaceType, JSONREADERSMAP > _mapjsonreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
@@ -1180,9 +1181,9 @@ std::string RaveFindDatabaseFile(const std::string& filename, bool bRead)
 int RaveInitialize(bool bLoadAllPlugins, int level)
 {
     boost::shared_ptr<RaveGlobal>& state = RaveGlobal::instance();
-    boost::mutex::scoped_lock lock(state->GetInitializationMutex());
+    std::lock_guard<std::mutex> lock(state->GetInitializationMutex());
     if( state->_IsInitialized() ) {
-        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE already initialized, so not initializing again", boost::this_thread::get_id());
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE already initialized, so not initializing again", std::this_thread::get_id());
         return 0;
     }
     else {
@@ -1205,7 +1206,7 @@ UserDataPtr RaveGlobalState()
         }
         else {
             // make sure another thread is not initializing the state!
-            boost::mutex::scoped_lock lock(state->GetInitializationMutex());
+            std::lock_guard<std::mutex> lock(state->GetInitializationMutex());
             if( state->_IsInitialized() ) {
                 return state;
             }
@@ -1271,22 +1272,22 @@ InterfaceBasePtr RaveCreateInterface(EnvironmentBasePtr penv, InterfaceType type
 
 RobotBasePtr RaveCreateRobot(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateRobot(penv,name);
+    return boost::static_pointer_cast<RobotBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Robot, name));
 }
 
 PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreatePlanner(penv, name);
+    return boost::static_pointer_cast<PlannerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Planner, name));
 }
 
 SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateSensorSystem(penv, name);
+    return boost::static_pointer_cast<SensorSystemBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_SensorSystem, name));
 }
 
 ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateController(penv, name);
+    return boost::static_pointer_cast<ControllerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Controller, name));
 }
 
 MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const std::string& rawname)
@@ -1300,7 +1301,7 @@ MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const s
         std::transform(name.begin(), name.end(), name.begin(), ::tolower);
     }
     // TODO remove hack once MultiController is a registered interface
-    ControllerBasePtr pcontroller = RaveGlobal::instance()->GetDatabase()->CreateController(env, name);
+    ControllerBasePtr pcontroller = boost::static_pointer_cast<ControllerBase>(RaveGlobal::instance()->GetDatabase()->Create(env, PT_Controller, name));
     if( name == "genericmulticontroller" ) {
         return boost::static_pointer_cast<MultiControllerBase>(pcontroller);
     }
@@ -1310,62 +1311,62 @@ MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const s
 
 ModuleBasePtr RaveCreateModule(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateModule(penv, name);
+    return boost::static_pointer_cast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
 }
 
 ModuleBasePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateModule(penv, name);
+    return boost::static_pointer_cast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
 }
 
 ModuleBasePtr RaveCreateProblemInstance(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateModule(penv, name);
+    return boost::static_pointer_cast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
 }
 
 IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateIkSolver(penv, name);
+    return boost::static_pointer_cast<IkSolverBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_IkSolver, name));
 }
 
 PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreatePhysicsEngine(penv, name);
+    return boost::static_pointer_cast<PhysicsEngineBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_PhysicsEngine, name));
 }
 
 SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateSensor(penv, name);
+    return boost::static_pointer_cast<SensorBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Sensor, name));
 }
 
 CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateCollisionChecker(penv, name);
+    return boost::static_pointer_cast<CollisionCheckerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_CollisionChecker, name));
 }
 
 ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateViewer(penv, name);
+    return boost::static_pointer_cast<ViewerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Viewer, name));
 }
 
 KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateKinBody(penv, name);
+    return boost::static_pointer_cast<KinBody>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_KinBody, name));
 }
 
 TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateTrajectory(penv, name);
+    return boost::static_pointer_cast<TrajectoryBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Trajectory, name));
 }
 
 TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int dof)
 {
-    return RaveCreateTrajectory(penv,"");
+    return boost::static_pointer_cast<TrajectoryBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Trajectory, ""));
 }
 
 SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateSpaceSampler(penv, name);
+    return boost::static_pointer_cast<SpaceSamplerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_SpaceSampler, name));
 }
 
 UserDataPtr RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn)
@@ -2281,6 +2282,134 @@ void CollisionReport::SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::
     if( minDistance < 1e10 ) {
         orjson::SetJsonValueByKey(rCollisionReport, "minDistance", minDistance, alloc);
     }
+
+void CollisionReportInfo::Reset()
+{
+    body1Name.clear();
+    body2Name.clear();
+    body1LinkName.clear();
+    body2LinkName.clear();
+    body1GeomName.clear();
+    body2GeomName.clear();
+    contacts.clear();
+}
+
+void CollisionReportInfo::InitInfoFromReport(const OpenRAVE::CollisionReport& report)
+{
+    Reset();
+    if ( !!report.plink1 ) {
+        body1LinkName = report.plink1->GetName();
+        const KinBodyPtr pBody1 = report.plink1->GetParent();
+        if ( !!pBody1 ) {
+            body1Name = pBody1->GetName();
+        }
+    }
+    if ( !!report.pgeom1 ) {
+        body1GeomName = report.pgeom1->GetName();
+    }
+
+    if ( !!report.plink2 ) {
+        body2LinkName = report.plink2->GetName();
+        const KinBodyPtr pBody2 = report.plink2->GetParent();
+        if ( !!pBody2 ) {
+            body2Name = pBody2->GetName();
+        }
+    }
+    if ( !!report.pgeom2 ) {
+        body2GeomName = report.pgeom2->GetName();
+    }
+
+    contacts.resize(report.contacts.size());
+    for(int icontact = 0; icontact < (int)contacts.size(); ++icontact) {
+        contacts[icontact] = report.contacts[icontact].pos;
+    }
+}
+
+void CollisionReportInfo::LoadFromJson(const rapidjson::Value& rReport)
+{
+    orjson::LoadJsonValueByKey(rReport, "body1Name", body1Name);
+    orjson::LoadJsonValueByKey(rReport, "body2Name", body2Name);
+    orjson::LoadJsonValueByKey(rReport, "body1LinkName", body1LinkName);
+    orjson::LoadJsonValueByKey(rReport, "body2LinkName", body2LinkName);
+    orjson::LoadJsonValueByKey(rReport, "body1GeomName", body1GeomName);
+    orjson::LoadJsonValueByKey(rReport, "body2GeomName", body2GeomName);
+    if( rReport.HasMember("contacts") && rReport["contacts"].IsArray() ) {
+        for( const rapidjson::Value& rContact : rReport["contacts"].GetArray() ) {
+            if( !rContact.IsArray() || rContact.Size() != 3 ) {
+                continue;
+            }
+            bool isAllNumber = true;
+            for( const rapidjson::Value& rXYZ : rContact.GetArray() ) {
+                if (!rXYZ.IsNumber()) {
+                    isAllNumber = false;
+                    break;
+                }
+            }
+            if (!isAllNumber) {
+                continue;
+            }
+            contacts.push_back(OpenRAVE::Vector(rContact[0].GetDouble(), rContact[1].GetDouble(), rContact[2].GetDouble()));
+        }
+    }
+}
+
+void CollisionReportInfo::SaveToJson(rapidjson::Value& rReport, rapidjson::Document::AllocatorType& alloc) const
+{
+    if( !body1Name.empty() ) {
+        orjson::SetJsonValueByKey(rReport, "body1Name", body1Name, alloc);
+    }
+    if( !body2Name.empty() ) {
+        orjson::SetJsonValueByKey(rReport, "body2Name", body2Name, alloc);
+    }
+
+    if( !body1LinkName.empty() ) {
+        orjson::SetJsonValueByKey(rReport, "body1LinkName", body1LinkName, alloc);
+    }
+    if( !body2LinkName.empty() ) {
+        orjson::SetJsonValueByKey(rReport, "body2LinkName", body2LinkName, alloc);
+    }
+
+    if( !body1GeomName.empty() ) {
+        orjson::SetJsonValueByKey(rReport, "body1GeomName", body1GeomName, alloc);
+    }
+    if( !body2GeomName.empty() ) {
+        orjson::SetJsonValueByKey(rReport, "body2GeomName", body2GeomName, alloc);
+    }
+
+    {
+        rapidjson::Value rContacts; rContacts.SetArray();
+        rContacts.Reserve(contacts.size(), alloc);
+        for(const Vector& contact : contacts) {
+            rapidjson::Value rContact; rContact.SetArray();
+            rContact.Reserve(3, alloc);
+            rContact.PushBack(rapidjson::Value(contact[0]), alloc);
+            rContact.PushBack(rapidjson::Value(contact[1]), alloc);
+            rContact.PushBack(rapidjson::Value(contact[2]), alloc);
+            rContacts.PushBack(rContact, alloc);
+        }
+
+        rReport.AddMember(rapidjson::Document::StringRefType("contacts"), rContacts, alloc);
+    }
+}
+
+bool CollisionReportInfo::operator==(const CollisionReportInfo& other) const
+{
+    if (body1Name != other.body1Name ||
+        body2Name != other.body2Name ||
+        body1LinkName != other.body1LinkName ||
+        body2LinkName != other.body2LinkName ||
+        body1GeomName != other.body1GeomName ||
+        body2GeomName != other.body2GeomName ||
+        contacts.size() != other.contacts.size()) {
+        return false;
+    }
+
+    for (size_t index = 0; index < contacts.size(); ++index) {
+        if (contacts[index] != other.contacts[index]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool PhysicsEngineBase::GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque)
@@ -2543,10 +2672,10 @@ void DummyXMLReader::characters(const std::string& ch)
 void EnvironmentBase::_InitializeInternal()
 {
     if( !RaveGlobalState() ) {
-        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state is not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.", boost::this_thread::get_id());
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state is not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.", std::this_thread::get_id());
         uint64_t starttime = utils::GetMicroTime();
         RaveInitialize(true);
-        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state finished initializing in %u[us].", boost::this_thread::get_id()%(utils::GetMicroTime()-starttime));
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state finished initializing in %u[us].", std::this_thread::get_id()%(utils::GetMicroTime()-starttime));
     }
     __nUniqueId = RaveGlobal::instance()->RegisterEnvironment(this);
 }

@@ -106,7 +106,7 @@ int main(int argc, char ** argv)
     int contactpoints = 0;
     {
         // lock the environment to prevent data from changing
-        EnvironmentMutex::scoped_lock lock(penv->GetMutex());
+        EnvironmentLock lock(penv->GetMutex());
 
         vector<KinBodyPtr> vbodies;
         penv->GetBodies(vbodies);

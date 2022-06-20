@@ -54,7 +54,7 @@ public:
     }
 
     void Display() {
-        EnvironmentMutex::scoped_lock lock(log_out_mutex);
+        EnvironmentLock lock(log_out_mutex);
         std::fstream f("fclstatistics.log", std::fstream::out | std::fstream::app);
         FOREACH(ittiming, timings) {
             f << ittiming->first;

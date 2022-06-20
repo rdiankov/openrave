@@ -72,7 +72,7 @@ public:
     virtual ~ChangeCallbackData() {
         KinBodyConstPtr pbody = _pweakbody.lock();
         if( !!pbody ) {
-            boost::unique_lock< boost::shared_mutex > lock(pbody->GetInterfaceMutex());
+            std::unique_lock<boost::shared_mutex> lock(pbody->GetInterfaceMutex());
             FOREACH(itinfo, _iterators) {
                 pbody->_vlistRegisteredCallbacks.at(itinfo->first).erase(itinfo->second);
             }
@@ -5801,7 +5801,7 @@ ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const s
 UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::function<void()>&callback) const
 {
     ChangeCallbackDataPtr pdata(new ChangeCallbackData(properties,callback,shared_kinbody_const()));
-    boost::unique_lock< boost::shared_mutex > lock(GetInterfaceMutex());
+    std::unique_lock<boost::shared_mutex> lock(GetInterfaceMutex());
 
     uint32_t index = 0;
     while(properties) {

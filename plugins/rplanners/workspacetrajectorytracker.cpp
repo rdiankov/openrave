@@ -48,7 +48,7 @@ Planner Parameters\n\
 
     virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
 
         boost::shared_ptr<WorkspaceTrajectoryParameters> parameters(new WorkspaceTrajectoryParameters(GetEnv()));
         parameters->copy(params);
@@ -138,7 +138,7 @@ Planner Parameters\n\
             return PlannerStatus(description, PS_Failed);
         }
 
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         uint32_t basetime = utils::GetMilliTime();
         RobotBase::RobotStateSaver savestate(_robot);
         _robot->SetActiveDOFs(_manip->GetArmIndices());     // should be set by user anyway, but this is an extra precaution
