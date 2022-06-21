@@ -2282,6 +2282,7 @@ void CollisionReport::SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::
     if( minDistance < 1e10 ) {
         orjson::SetJsonValueByKey(rCollisionReport, "minDistance", minDistance, alloc);
     }
+}
 
 void CollisionReportInfo::Reset()
 {
