@@ -1053,6 +1053,7 @@ public:
                             listGeometryInfos.front()._vCollisionScale = info->_vCollisionScale*geomspacescale;
                             listGeometryInfos.front()._filenamecollision = info->_filenamecollision;
                             listGeometryInfos.front()._bVisible = info->_bVisible;
+                            listGeometryInfos.front()._name = info->_name;
                             FOREACH(itinfo, listGeometryInfos) {
                                 _plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(_plink,*itinfo)));
                             }
