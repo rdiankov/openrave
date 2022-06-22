@@ -1225,6 +1225,9 @@ public:
         }
 
         SharedLock lock412(_mutexInterfaces);
+        if (_vecbodies.empty()) {
+            return RobotBasePtr();
+        }
         const int envBodyIndex = _FindBodyIndexByName(pname);
         const KinBodyPtr& pbody = _vecbodies.at(envBodyIndex);
         if (!!pbody && pbody->IsRobot()) {
