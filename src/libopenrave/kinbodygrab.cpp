@@ -163,9 +163,10 @@ void Grabbed::ComputeListNonCollidingLinks()
 
 
             if( pOtherGrabbedBody != pGrabbedBody ) {
-                const bool bTwoGrabbedBodiesStaticRelativePose = std::find(_vAttachedToGrabbingLink.begin(), _vAttachedToGrabbingLink.end(), pOtherGrabbed->_pGrabbingLink) != _vAttachedToGrabbingLink.end();
+                // sufficient to check one direction, whether grabbing link of body 2 is in links attached rigidly to grabbing link of body 1. Result is same for both directions.
+                const bool bTwoGrabbedBodiesHaveStaticRelativePose = std::find(_vAttachedToGrabbingLink.begin(), _vAttachedToGrabbingLink.end(), pOtherGrabbed->_pGrabbingLink) != _vAttachedToGrabbingLink.end();
                 // if two grabbed bodies have static (constant) relative pose with respect to each other, do not need to check collision between them for the rest of time.
-                if (!bTwoGrabbedBodiesStaticRelativePose) {
+                if (!bTwoGrabbedBodiesHaveStaticRelativePose) {
                     KinBody::KinBodyStateSaver otherGrabbedEnableSaver(pOtherGrabbedBody, KinBody::Save_LinkEnable);
                     pOtherGrabbedBody->Enable(true);
                     for (const KinBody::LinkPtr& pOtherGrabbedLink : pOtherGrabbedBody->GetLinks()) {
