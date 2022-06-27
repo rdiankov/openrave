@@ -276,6 +276,11 @@ public:
                     if( !pfclgeom ) {
                         continue;
                     }
+                    // because user data is null pointer here, in CheckNarrowPhaseGeomCollision report.pgeom ends up being null pointer and we lose the geometry information.
+                    // maybe pass plink->GetGeometries()[index] where index=distance(vgeometryinfos.begin(), itgeominfo)?
+                    // or, should the collision report store names of body, link, and geom?
+                    // also, currently there is no information about which geometry group was used for collision checking.
+                    // It's usually obvious immediately after CheckCollision is called, but later on, it it is not that obvious collision report is computed with which geometry group.
                     pfclgeom->setUserData(nullptr);
 
                     // We do not set the transformation here and leave it to _Synchronize
