@@ -325,6 +325,7 @@ void init_openravepy_iksolver()
     .value("RejectEnvCollision",IKRA_RejectEnvCollision)
     .value("RejectJointLimits",IKRA_RejectJointLimits)
     .value("RejectKinematicsPrecision",IKRA_RejectKinematicsPrecision)
+    .value("RejectDistanceCheck",IKRA_RejectDistanceCheck)
     .value("RejectCustomFilter",IKRA_RejectCustomFilter)
     ;
 
