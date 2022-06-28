@@ -23,7 +23,7 @@
 #include <openrave/plugin.h>
 
 OpenRAVE::PlannerBasePtr CreateShortcutLinearPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateGraspGradientPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+//OpenRAVE::PlannerBasePtr CreateGraspGradientPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 OpenRAVE::PlannerBasePtr CreateRandomizedAStarPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 OpenRAVE::PlannerBasePtr CreateWorkspaceTrajectoryTracker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 OpenRAVE::PlannerBasePtr CreateLinearSmoother(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
@@ -88,9 +88,9 @@ struct RPlannersPlugin : public RavePlugin {
             else if( interfacename == "explorationrrt" ) {
                 return InterfaceBasePtr(new ExplorationPlanner(penv));
             }
-            else if( interfacename == "graspgradient" ) {
-                return CreateGraspGradientPlanner(penv,sinput);
-            }
+            //else if( interfacename == "graspgradient" ) {
+            //    return CreateGraspGradientPlanner(penv,sinput);
+            //}
             else if( interfacename == "shortcut_linear" ) {
                 return CreateShortcutLinearPlanner(penv,sinput);
             }

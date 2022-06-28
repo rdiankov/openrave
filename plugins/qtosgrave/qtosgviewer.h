@@ -190,7 +190,7 @@ public slots:
     //void _ProcessFacesModeChange();
 
     /// Sets or reset bounding box
-    void _ProcessBoundingBox();
+    //void _ProcessBoundingBox();
 
     /// \brief Sets or reset axes
     void axes();

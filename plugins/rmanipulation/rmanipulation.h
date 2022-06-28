@@ -20,7 +20,7 @@
 #include <openrave/plugin.h>
 
 OpenRAVE::ModuleBasePtr CreateBaseManipulation(OpenRAVE::EnvironmentBasePtr penv);
-OpenRAVE::ModuleBasePtr CreateTaskCaging(OpenRAVE::EnvironmentBasePtr penv);
+//OpenRAVE::ModuleBasePtr CreateTaskCaging(OpenRAVE::EnvironmentBasePtr penv);
 OpenRAVE::ModuleBasePtr CreateTaskManipulation(OpenRAVE::EnvironmentBasePtr penv);
 OpenRAVE::ModuleBasePtr CreateVisualFeedback(OpenRAVE::EnvironmentBasePtr penv);
 
@@ -45,9 +45,9 @@ struct RManipulationPlugin : public RavePlugin {
             else if( interfacename == "taskmanipulation" ) {
                 return CreateTaskManipulation(penv);
             }
-            else if( interfacename == "taskcaging") {
-                return CreateTaskCaging(penv);
-            }
+            //else if( interfacename == "taskcaging") {
+            //    return CreateTaskCaging(penv);
+            //}
             else if( interfacename == "visualfeedback") {
                 return CreateVisualFeedback(penv);
             }
