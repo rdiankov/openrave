@@ -389,7 +389,7 @@ inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
 inline py::object toPyVector2(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvec({2});
+    py::array_t<dReal> pyvec(2);
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
@@ -404,7 +404,7 @@ inline py::object toPyVector2(Vector v)
 inline py::object toPyVector3(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvec({3});
+    py::array_t<dReal> pyvec(3);
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
@@ -420,7 +420,7 @@ inline py::object toPyVector3(Vector v)
 inline py::object toPyVector4(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvec({4});
+    py::array_t<dReal> pyvec(4);
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
@@ -440,17 +440,10 @@ AttributesList toAttributesList(py::dict odict);
 AttributesList toAttributesList(py::list olist);
 AttributesList toAttributesList(py::object oattributes);
 
-bool GetReturnTransformQuaternions();
-
 template <typename T>
-inline py::object ReturnTransform(T t)
+inline py::object ReturnTransform(const T& t)
 {
-    if( GetReturnTransformQuaternions() ) {
-        return toPyArray(Transform(t));
-    }
-    else {
-        return toPyArray(TransformMatrix(t));
-    }
+    return toPyArray(TransformMatrix(t));
 }
 
 class OPENRAVEPY_API PyPluginInfo
@@ -600,6 +593,7 @@ void init_openravepy_ikparameterization(py::module& m);
 void init_openravepy_ikparameterization();
 #endif
 OPENRAVEPY_API py::object toPyAABB(const AABB& ab);
+OPENRAVEPY_API py::object toPyOrientedBox(const OrientedBox& obb);
 OPENRAVEPY_API py::object toPyRay(const RAY& r);
 OPENRAVEPY_API RAY ExtractRay(py::object o);
 
@@ -689,8 +683,8 @@ public:
     virtual py::object __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
-    virtual int __hash__() {
-        return static_cast<int>(uintptr_t(_pbase.get()));
+    virtual long __hash__() {
+        return static_cast<long>(uintptr_t(_pbase.get()));
     }
     virtual bool __eq__(PyInterfaceBasePtr p) {
         return !!p && _pbase == p->GetInterfaceBase();

@@ -49,7 +49,7 @@ public:
         while(IsOk()) {
             list<GraphHandlePtr> listgraphs;
             {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+                EnvironmentLock lock(penv->GetMutex()); // lock environment
 
                 params->_getstatefn(params->vinitialconfig);
                 params->vgoalconfig.resize(params->GetDOF());
@@ -91,7 +91,7 @@ public:
                     for(dReal ftime = 0; ftime <= ptraj->GetDuration(); ftime += 0.01) {
                         ptraj->Sample(vtrajdata,ftime,manip->GetArmConfigurationSpecification());
                         (*itrobot)->SetDOFValues(vtrajdata,true,manip->GetArmIndices());
-                        vpoints.push_back(manip->GetEndEffectorTransform().trans);
+                        vpoints.push_back(manip->GetTransform().trans);
                     }
                     listgraphs.push_back(penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f));
                 }
@@ -106,7 +106,7 @@ public:
                 if( probot1->GetController()->IsDone() || probot2->GetController()->IsDone() ) {
                     break;
                 }
-                boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     }

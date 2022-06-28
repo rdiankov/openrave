@@ -48,7 +48,7 @@ Planner Parameters\n\
 
     virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
 
         boost::shared_ptr<WorkspaceTrajectoryParameters> parameters(new WorkspaceTrajectoryParameters(GetEnv()));
         parameters->copy(params);
@@ -138,7 +138,7 @@ Planner Parameters\n\
             return PlannerStatus(description, PS_Failed);
         }
 
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         uint32_t basetime = utils::GetMilliTime();
         RobotBase::RobotStateSaver savestate(_robot);
         _robot->SetActiveDOFs(_manip->GetArmIndices());     // should be set by user anyway, but this is an extra precaution
@@ -246,15 +246,15 @@ Planner Parameters\n\
         ftime = 0;
         for(; ittrans != listtransforms.end(); ftime += _parameters->_fStepLength, ++ittrans) {
             _filteroptions = (ftime >= fstarttime) ? IKFO_CheckEnvCollisions : 0;
-            IkParameterization ikparam(*ittrans,IKP_Transform6D);
-            if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
+            IkParameterization ikparam1(*ittrans,IKP_Transform6D);
+            if( !_manip->FindIKSolution(ikparam1,vsolution,_filteroptions) ) {
                 if( _filteroptions == 0 ) {
                     // haven't even checked with environment collisions, so a solution really doesn't exist
                     return PlannerStatus(PS_Failed);
                 }
                 if(( ftime < _parameters->ignorefirstcollision) && bPrevInCollision ) {
                     _filteroptions = 0;
-                    if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
+                    if( !_manip->FindIKSolution(ikparam1,vsolution,_filteroptions) ) {
                         return PlannerStatus(PS_Failed);
                     }
                 }

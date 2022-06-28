@@ -22,7 +22,7 @@
 #include <openrave/utils.h>
 
 #ifndef ODE_USE_MULTITHREAD
-static boost::mutex _mutexode;
+static std::mutex _mutexode;
 static bool _bnotifiedmessage=false;
 #endif
 
@@ -230,7 +230,7 @@ public:
         }
 
 #ifndef ODE_USE_MULTITHREAD
-        boost::mutex::scoped_lock lock(_mutexode);
+        std::lock_guard<std::mutex> lock(_mutexode);
 #endif
         _odespace->Synchronize();
         dSpaceCollide(_odespace->GetSpace(), &cb, KinBodyCollisionCallback);
@@ -255,7 +255,7 @@ public:
         }
 
 #ifndef ODE_USE_MULTITHREAD
-        boost::mutex::scoped_lock lock(_mutexode);
+        std::lock_guard<std::mutex> lock(_mutexode);
 #endif
         _odespace->Synchronize();
 
@@ -289,7 +289,7 @@ public:
         }
 
 #ifndef ODE_USE_MULTITHREAD
-        boost::mutex::scoped_lock lock(_mutexode);
+        std::lock_guard<std::mutex> lock(_mutexode);
 #endif
         _odespace->Synchronize();
         dSpaceCollide(_odespace->GetSpace(), &cb, LinkCollisionCallback);
@@ -343,7 +343,7 @@ public:
         }
 
 #ifndef ODE_USE_MULTITHREAD
-        boost::mutex::scoped_lock lock(_mutexode);
+        std::lock_guard<std::mutex> lock(_mutexode);
 #endif
 
         _odespace->Synchronize();
@@ -410,9 +410,9 @@ public:
                             if( listcallbacks.size() == 0 ) {
                                 GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
                             }
-                            CollisionReportPtr preport(&_report,OpenRAVE::utils::null_deleter());
+                            CollisionReportPtr pcollisionreport(&_report,OpenRAVE::utils::null_deleter());
                             FOREACHC(itfn, listcallbacks) {
-                                OpenRAVE::CollisionAction action = (*itfn)(preport,false);
+                                OpenRAVE::CollisionAction action = (*itfn)(pcollisionreport,false);
                                 if( action != OpenRAVE::CA_DefaultAction ) {
                                     return false;
                                 }
@@ -462,7 +462,7 @@ public:
         }
 
 #ifndef ODE_USE_MULTITHREAD
-        boost::mutex::scoped_lock lock(_mutexode);
+        std::lock_guard<std::mutex> lock(_mutexode);
 #endif
 
         _odespace->Synchronize();
@@ -519,7 +519,7 @@ public:
             cb.pvlinkexcluded = &vlinkexcluded;
         }
 #ifndef ODE_USE_MULTITHREAD
-        boost::mutex::scoped_lock lock(_mutexode);
+        std::lock_guard<std::mutex> lock(_mutexode);
 #endif
 
         _odespace->Synchronize();
@@ -538,7 +538,7 @@ public:
         }
 
 #ifndef ODE_USE_MULTITHREAD
-        boost::mutex::scoped_lock lock(_mutexode);
+        std::lock_guard<std::mutex> lock(_mutexode);
 #endif
 
         _odespace->Synchronize();
@@ -656,7 +656,7 @@ public:
         }
 
 #ifndef ODE_USE_MULTITHREAD
-        boost::mutex::scoped_lock lock(_mutexode);
+        std::lock_guard<std::mutex> lock(_mutexode);
 #endif
 
         _odespace->Synchronize();
@@ -692,7 +692,7 @@ public:
         }
 
 #ifndef ODE_USE_MULTITHREAD
-        boost::mutex::scoped_lock lock(_mutexode);
+        std::lock_guard<std::mutex> lock(_mutexode);
 #endif
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
 
@@ -734,7 +734,7 @@ public:
         const std::vector<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
 
 #ifndef ODE_USE_MULTITHREAD
-        boost::mutex::scoped_lock lock(_mutexode);
+        std::lock_guard<std::mutex> lock(_mutexode);
 #endif
         _odespace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
         bool bCollision = false;
@@ -791,7 +791,7 @@ public:
         const std::vector<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
 
 #ifndef ODE_USE_MULTITHREAD
-        boost::mutex::scoped_lock lock(_mutexode);
+        std::lock_guard<std::mutex> lock(_mutexode);
 #endif
         _odespace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
         bool bCollision = false;
@@ -1278,11 +1278,11 @@ private:
             return;
         }
 
-        dGeomID geomray = o2;
+        dGeomID geomray1 = o2;
         dBodyID b = dGeomGetBody(o1);
         if( b == NULL ) {
             BOOST_ASSERT( dGeomGetClass(o1) == dRayClass );
-            geomray = o1;
+            geomray1 = o1;
             b = dGeomGetBody(o2);
         }
         BOOST_ASSERT( b != NULL );
@@ -1331,7 +1331,7 @@ private:
                 //if( _options & OpenRAVE::CO_Contacts) {
                 Vector vnorm(contact[index].geom.normal);
                 dReal distance = contact[index].geom.depth;
-                if( contact[index].geom.g1 != geomray ) {
+                if( contact[index].geom.g1 != geomray1 ) {
                     vnorm = -vnorm;
                     distance = -distance;
                 }

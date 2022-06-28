@@ -415,14 +415,14 @@ public:
       TriangleVector test;
       for (EdgeMap::Iterator i = mEdgeMap.getIterator(); !i.done(); ++i)
       {
-        RtEdge *e = (*i).second;
-        if ( e->mNextEdge == 0 ) // open edge!
+        RtEdge *edge = (*i).second;
+        if ( edge->mNextEdge == 0 ) // open edge!
         {
-          Triangle *t = e->mTriangle;
-          if ( !t->mPending )
+          Triangle *triangle = edge->mTriangle;
+          if ( !triangle->mPending )
           {
-            test.pushBack(t);
-            t->mPending = true;
+            test.pushBack(triangle);
+            triangle->mPending = true;
           }
         }
       }
@@ -432,8 +432,8 @@ public:
         TriangleVector::Iterator i;
         for (i=test.begin(); i!=test.end(); ++i)
         {
-          Triangle *t = (*i);
-          locateIntersection(t);
+          Triangle *triangle = (*i);
+          locateIntersection(triangle);
         }
       }
 
@@ -446,8 +446,8 @@ public:
       TriangleVector::Iterator i;
       for (i=scan.begin(); i!=scan.end(); ++i)
       {
-        Triangle *t = (*i);
-        locateIntersection(t);
+        Triangle *triangle = (*i);
+        locateIntersection(triangle);
       }
     }
 

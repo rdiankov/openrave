@@ -167,7 +167,7 @@ class FastGraspingThreaded:
                     with self.robot:
                         Tlocalgrasp = eye(4)
                         self.robot.SetTransform(Tfinal)
-                        Tgrasp = self.manip.GetEndEffectorTransform()
+                        Tgrasp = self.manip.GetTransform()
                         Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
                         grasp[self.gmodel.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
                     grasps.append(grasp)

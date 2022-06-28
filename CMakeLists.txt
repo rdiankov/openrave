@@ -4,8 +4,8 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 83)
-set (OPENRAVE_VERSION_PATCH 0)
+set (OPENRAVE_VERSION_MINOR 99)
+set (OPENRAVE_VERSION_PATCH 2)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -16,6 +16,9 @@ cmake_policy(SET CMP0002 NEW)
 # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
 cmake_policy(SET CMP0003 NEW)
 
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14) # C++14 for std::shared_timed_mutex
+endif()
 # Use, i.e. don't skip the full RPATH for the build tree
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 
@@ -53,10 +56,18 @@ option(OPT_LOG4CXX "Use log4cxx for logging" ON)
 option(OPT_MSGPACK "Support msgpack format" ON)
 option(OPT_INSTALL_3DMODELDATA "If ON, then install the 3D model data." ON)
 option(OPT_EXTRA_ROBOTS "If ON, then install extra robots as part of 3D model data" ON)
+option(OPT_ENVIRONMENT_RECURSIVE_LOCK "Use recursive mutex for the Environment. Defaults to ON." ON)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
+
+if (OPT_ENVIRONMENT_RECURSIVE_LOCK)
+  message(STATUS "using threads and synchronization primitives from std.")
+  set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK 1)
+else()
+  set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK 0)
+endif()
 
 if(OPT_DOUBLE_PRECISION)
   set(OPENRAVE_PRECISION 1)
@@ -206,7 +217,7 @@ if( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
 endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
-  add_definitions("-fno-strict-aliasing -Wall")
+  add_definitions("-fno-strict-aliasing -Wall -Werror=shadow")
 endif()
 
 set(OPENRAVE_EXPORT_CXXFLAGS)
@@ -394,7 +405,6 @@ foreach(ldir ${Boost_LIBRARY_DIRS})
   endif()
 endforeach()
 
-add_definitions(-std=gnu++14) # with -std=c++14, typeof is not defined, so use gnu++14 for now
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
   add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
   set(EXTRA_COMPILE_FLAGS "-fPIC")

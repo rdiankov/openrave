@@ -25,10 +25,8 @@ using py::object;
 
 class PyEnvironmentBase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyEnvironmentBase>
 {
-#if BOOST_VERSION < 103500
-    boost::mutex _envmutex;
-    std::list<OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock> > _listenvlocks, _listfreelocks;
-#endif
+    std::mutex _envmutex;
+    std::list<OPENRAVE_SHARED_PTR<EnvironmentLock> > _listenvlocks, _listfreelocks;
 
 public:
     class PyEnvironmentBaseInfo
@@ -44,7 +42,7 @@ public:
         object _gravity = toPyVector3(Vector(0,0,-9.797930195020351));
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         std::vector<std::string> _keywords;
-        std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos;
+        py::object _vBodyInfos = py::none_();
         std::string _name;
         std::string _description;
 #else
@@ -235,6 +233,9 @@ public:
     /// returns the number of colors
     static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors);
 
+    /// returns the number of vectors
+    static size_t _getListVector(object odata, std::vector<RaveVector<float>>& vvectors);
+
     static std::pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors);
 
     object plot3(object opoints,float pointsize,object ocolors=py::none_(),int drawstyle=0);
@@ -248,9 +249,15 @@ public:
     object drawlabel(const std::string &label, object worldPosition);
 
     object drawbox(object opos, object oextents, object ocolor=py::none_());
+    object drawboxarray(object opos, object oextents, object ocolor=py::none_());
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object drawplane(object otransform, object oextents, const std::vector<std::vector<dReal> >&_vtexture);
+    object drawplane(object otransform, object oextents, const std::vector<std::vector<std::vector<dReal> > >&vtexture);
+#else
     object drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture);
     object drawplane(object otransform, object oextents, const boost::multi_array<float,3>&vtexture);
+#endif
 
     object drawtrimesh(object opoints, object oindices=py::none_(), object ocolors=py::none_());
 
@@ -301,7 +308,7 @@ public:
 
     py::object GetDescription() const;
 
-    void SetKeywords(const std::vector<std::string>& sceneKeywords);
+    void SetKeywords(object oSceneKeywords);
 
     py::list GetKeywords() const;
 
@@ -323,6 +330,7 @@ public:
 
     bool __eq__(PyEnvironmentBasePtr p);
     bool __ne__(PyEnvironmentBasePtr p);
+    long __hash__();
     std::string __repr__();
     std::string __str__();
     object __unicode__();

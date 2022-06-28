@@ -713,7 +713,7 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries,
     // have to reset the self group!
     std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
     vgeometryinfos.resize(_vGeometries.size());
-    for(size_t i = 0; i < vgeometryinfos.size(); ++i) {
+    for(i = 0; i < vgeometryinfos.size(); ++i) {
         vgeometryinfos[i].reset(new KinBody::GeometryInfo());
         *vgeometryinfos[i] = _vGeometries[i]->_info;
     }
@@ -987,7 +987,9 @@ void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
 
 UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info)
 {
-    BOOST_ASSERT(info._id == _info._id);
+    if(!info._id.empty() && _info._id != info._id) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Do not allow updating body '%s' link '%s' (id='%s') with a different info id='%s'", GetParent()->GetName()%GetName()%_info._id%info._id, ORE_Assert);
+    }
 
     UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
 

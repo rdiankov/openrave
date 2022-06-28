@@ -46,7 +46,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         params->Validate();
         _goalindex = -1;
         _startindex = -1;
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         if( !_uniformsampler ) {
             _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         }
@@ -296,7 +296,7 @@ Some python code to display data::\n\
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new RRTParameters());
         _parameters->copy(pparams);
         if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
@@ -331,7 +331,7 @@ Some python code to display data::\n\
             else {
                 RAVELOG_WARN_FORMAT("env=%s, goal %d fails constraints with 0x%x", GetEnv()->GetNameId()%igoal%ret);
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                    int ret = _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart);
+                    ret = _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart);
                 }
                 _vecGoalNodes.push_back(NULL); // have to push back dummy or else indices will be messed up
             }
@@ -363,7 +363,7 @@ Some python code to display data::\n\
             return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%s, BirrtPlanner::PlanPath - Error, planner not initialized")%GetEnv()->GetNameId()), PS_Failed);
         }
 
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         uint64_t basetimeus = utils::GetMonotonicTime();
         
         int constraintFilterOptions = 0xffff|CFO_FillCheckedConfiguration;
@@ -693,7 +693,7 @@ public:
 
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new BasicRRTParameters());
         _parameters->copy(pparams);
         if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
@@ -750,7 +750,7 @@ public:
             return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
 
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         uint32_t basetime = utils::GetMilliTime();
 
         NodeBasePtr lastnode; // the last node visited by the RRT
@@ -955,7 +955,7 @@ public:
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ExplorationParameters());
         _parameters->copy(pparams);
         if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
@@ -973,7 +973,7 @@ public:
         if( !_parameters ) {
             return OPENRAVE_PLANNER_STATUS(PS_Failed);
         }
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         vector<dReal> vSampleConfig;
 
         PlannerParameters::StateSaver savestate(_parameters);

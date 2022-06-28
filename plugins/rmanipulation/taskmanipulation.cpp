@@ -193,7 +193,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
         return ModuleBase::SendCommand(sout,sinput);
     }
@@ -814,7 +814,7 @@ protected:
                 }
                 else if( pmanip->GetIkSolver()->Supports(IKP_Transform6D) ) {
                     tGoalEndEffector.SetTransform6D(tgoal);
-                    KinBody::KinBodyStateSaver saver(ptarget,KinBody::Save_LinkEnable);
+                    KinBody::KinBodyStateSaver statesaver(ptarget,KinBody::Save_LinkEnable);
                     ptarget->Enable(false);
                     if( pmanip->CheckEndEffectorCollision(tgoal,report) ) {
                         RAVELOG_DEBUG(str(boost::format("grasp %d: in collision (%s)\n")%igrasp%report->__str__()));
@@ -1072,11 +1072,11 @@ protected:
             _robot->SetDOFValues(vinsertconfiguration);
             _robot->GetActiveDOFValues(vtrajdata);
 
-            vector<int> vindices(_robot->GetDOF());
-            for(size_t i = 0; i < vindices.size(); ++i) {
-                vindices[i] = i;
+            vector<int> indices(_robot->GetDOF());
+            for(size_t i = 0; i < indices.size(); ++i) {
+                indices[i] = i;
             }
-            ptrajfinal->Insert(0,vCurRobotValues,_robot->GetConfigurationSpecificationIndices(vindices));
+            ptrajfinal->Insert(0,vCurRobotValues,_robot->GetConfigurationSpecificationIndices(indices));
             planningutils::InsertActiveDOFWaypointWithRetiming(0, vtrajdata, std::vector<dReal>(), ptrajfinal, _robot, _fMaxVelMult);
         }
 

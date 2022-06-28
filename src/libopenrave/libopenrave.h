@@ -53,8 +53,12 @@
 #include <algorithm>
 #include <complex>
 
-#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(), __itend__=(v).end(); it != __itend__; (it)++)
-#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(), __itend__=(v).end(); it != __itend__; )
+#define _MAKEDATA(n) __itend__##n
+#define MAKEDATA(n) _MAKEDATA(n)
+#define MAKEVAR MAKEDATA(__LINE__)
+
+#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(), MAKEVAR=(v).end(); it != MAKEVAR; (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(), MAKEVAR=(v).end(); it != MAKEVAR; )
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
@@ -108,7 +112,6 @@
 
 #endif
 
-#include <boost/bind.hpp>
 #include <boost/version.hpp>
 
 #ifdef HAVE_BOOST_FILESYSTEM
@@ -305,54 +308,6 @@ int CallSetStateValuesFns(const std::vector< std::pair<PlannerBase::PlannerParam
 void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v);
 
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
-
-/// \brief The information of a currently grabbed body.
-class Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
-{
-public:
-    Grabbed(KinBodyPtr pgrabbedbody, KinBody::LinkPtr plinkrobot) : _pgrabbedbody(pgrabbedbody), _plinkrobot(plinkrobot) {
-        _enablecallback = pgrabbedbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&Grabbed::UpdateCollidingLinks, this));
-        _plinkrobot->GetRigidlyAttachedLinks(_vattachedlinks);
-    }
-    virtual ~Grabbed() {
-    }
-    KinBodyWeakPtr _pgrabbedbody;         ///< the grabbed body
-    KinBody::LinkPtr _plinkrobot;         ///< robot link that is grabbing the body
-    std::list<KinBody::LinkConstPtr> _listNonCollidingLinks;         ///< links that are not colliding with the grabbed body at the time of Grab. Even if a link is disabled, it is considered as non-colliding as long as it is not colliiding with grabbed body
-    Transform _troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
-    std::set<int> _setRobotLinksToIgnore; ///< original links of the robot to force ignoring
-
-    /// \brief check collision with all links to see which are valid.
-    ///
-    /// Use the robot's self-collision checker if possible
-    /// resets all cached data and re-evaluates the collisions
-    /// \param setRobotLinksToIgnore indices of the robot links to always ignore, in other words remove from non-colliding list
-    void ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore);
-
-    inline const std::vector<KinBody::LinkPtr>& GetRigidlyAttachedLinks() const {
-        return _vattachedlinks;
-    }
-
-    void AddMoreIgnoreLinks(const std::set<int>& setRobotLinksToIgnore);
-
-    /// return -1 for unknown, 0 for no, 1 for yes
-    int WasLinkNonColliding(KinBody::LinkConstPtr plink) const;
-
-    /// \brief updates the non-colliding info while reusing the cache data from _ProcessCollidingLinks
-    ///
-    /// note that Regrab here is *very* dangerous since the robot could be a in a bad self-colliding state with the body. therefore, update the non-colliding state based on _mapLinkIsNonColliding
-    void UpdateCollidingLinks();
-
-private:
-    std::vector<KinBody::LinkPtr> _vattachedlinks;
-    UserDataPtr _enablecallback; ///< callback for grabbed body when it is enabled/disabled
-
-    std::map<KinBody::LinkConstPtr, int> _mapLinkIsNonColliding; // the collision state for each link at the time the body was grabbed.
-};
-
-typedef boost::shared_ptr<Grabbed> GrabbedPtr;
-typedef boost::shared_ptr<Grabbed const> GrabbedConstPtr;
-
 /// -1 v1 is smaller than v2
 // 0 two vectors are equivalent
 /// +1 v1 is greater than v2
@@ -643,6 +598,13 @@ bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<
         if (!pMatchExistingPointer) {
             // new element, requires re-init
             RAVELOG_VERBOSE("could not find existing pointer which matches");
+            result = UFIR_RequireReinitialize;
+            return false;
+        }
+
+        if( !pInfo->_id.empty() && pInfo->_id != pMatchExistingPointer->GetId() ) {
+            // new element, requires re-init
+            RAVELOG_VERBOSE("could not find existing pointer which matches and can update");
             result = UFIR_RequireReinitialize;
             return false;
         }

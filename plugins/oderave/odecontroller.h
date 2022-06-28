@@ -37,7 +37,7 @@ public:
     virtual void Reset(int options)
     {
         if( !!_probot ) {
-            EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+            OpenRAVE::EnvironmentLock lock(GetEnv()->GetMutex());
             ODESpace::KinBodyInfoPtr pinfo = GetODESpace();
             if( !!pinfo ) {
                 boost::shared_ptr<ODESpace> odespace(pinfo->_odespace);
@@ -111,7 +111,7 @@ public:
 protected:
     bool _SetVelocities(const std::vector<OpenRAVE::dReal>& velocities)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        OpenRAVE::EnvironmentLock lock(GetEnv()->GetMutex());
         ODESpace::KinBodyInfoPtr pinfo = GetODESpace();
         if( !pinfo ) {
             RAVELOG_WARN("need to set ode physics engine\n");

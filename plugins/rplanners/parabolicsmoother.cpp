@@ -34,7 +34,7 @@ class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityC
     class MyRampFeasibilityChecker : public ParabolicRamp::RampFeasibilityChecker
     {
 public:
-        MyRampFeasibilityChecker(ParabolicRamp::FeasibilityCheckerBase* feas) : ParabolicRamp::RampFeasibilityChecker(feas) {
+        MyRampFeasibilityChecker(ParabolicRamp::FeasibilityCheckerBase* feas_) : ParabolicRamp::RampFeasibilityChecker(feas_) {
             _envid = 0;
         }
 
@@ -201,7 +201,7 @@ public:
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
         return _InitPlan();
@@ -209,7 +209,7 @@ public:
 
     virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         isParameters >> *_parameters;
         return _InitPlan();
@@ -445,9 +445,9 @@ public:
                     const ParabolicRamp::Vector& x0 = path[path.size()-2];
                     const ParabolicRamp::Vector& x1 = path[path.size()-1];
                     dReal dotproduct=0,x0length2=0,x1length2=0;
-                    for(size_t i = 0; i < q.size(); ++i) {
-                        dReal dx0=x0[i]-q[i];
-                        dReal dx1=x1[i]-q[i];
+                    for(size_t j = 0; j < q.size(); ++j) {
+                        dReal dx0=x0[j]-q[j];
+                        dReal dx1=x1[j]-q[j];
                         dotproduct += dx0*dx1;
                         x0length2 += dx0*dx0;
                         x1length2 += dx1*dx1;
@@ -460,8 +460,8 @@ public:
                 // check if the point is not the same as the previous point
                 if( path.size() > 0 ) {
                     dReal d = 0;
-                    for(size_t i = 0; i < q.size(); ++i) {
-                        d += RaveFabs(q[i]-path.back().at(i));
+                    for(size_t j = 0; j < q.size(); ++j) {
+                        d += RaveFabs(q[j]-path.back().at(j));
                     }
                     if( d <= q.size()*std::numeric_limits<dReal>::epsilon() ) {
                         continue;
@@ -920,14 +920,14 @@ public:
             _nCallsCheckPathAllConstraints_SegmentFeasible2 += 1;
             _tStartCheckPathAllConstraints = utils::GetMicroTime();
 #endif
-            int ret = _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options);
+            int ret = _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options, _constraintreturn);
 #ifdef SMOOTHER1_TIMING_DEBUG
             _tEndCheckPathAllConstraints = utils::GetMicroTime();
             _totalTimeCheckPathAllConstraints_SegmentFeasible2 += 0.000001f*(float)(_tEndCheckPathAllConstraints - _tStartCheckPathAllConstraints);
 #endif
             ParabolicRamp::CheckReturn checkret(ret);
             if( ret == CFO_CheckTimeBasedConstraints ) {
-                checkret.fTimeBasedSurpassMult = 0.98; // don't have any other info, so just pick a multiple
+                checkret.fTimeBasedSurpassMult = 0.98 * _constraintreturn->_fTimeBasedSurpassMult;
             }
             return checkret;
         }
@@ -967,7 +967,7 @@ public:
             if( ret != 0 ) {
                 ParabolicRamp::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
-                    checkret.fTimeBasedSurpassMult = 0.98; // don't have any other info, so just pick a multiple
+                    checkret.fTimeBasedSurpassMult = 0.98 * _constraintreturn->_fTimeBasedSurpassMult;
                 }
                 return checkret;
             }
@@ -1692,14 +1692,14 @@ protected:
 #ifdef OPENRAVE_TIMING_DEBUGGING
                             tinterpstart = utils::GetMicroTime();
 #endif
-                            bool res=ParabolicRamp::SolveMinTime(outramp.x0, outramp.dx0, intermediate.ramps[iramp].x1, intermediate.ramps[iramp].dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate2, _parameters->_multidofinterp);
+                            bool res1=ParabolicRamp::SolveMinTime(outramp.x0, outramp.dx0, intermediate.ramps[iramp].x1, intermediate.ramps[iramp].dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate2, _parameters->_multidofinterp);
 #ifdef OPENRAVE_TIMING_DEBUGGING
                             tinterpend = utils::GetMicroTime();
                             interpolationtime += 0.000001f*(float)(tinterpend - tinterpstart);
                             ninterpolations += 1;
 #endif
 
-                            if( !res ) {
+                            if( !res1 ) {
                                 RAVELOG_WARN_FORMAT("env=%s, failed to SolveMinTime for different vel ramp", GetEnv()->GetNameId());
                                 retcheck.retcode = CFO_FinalValuesNotReached;
                                 break;
@@ -2351,13 +2351,13 @@ protected:
                             _nCallsInterpolator += 1;
                             _tStartInterpolator = utils::GetMicroTime();
 #endif
-                            bool res = ParabolicRamp::SolveMinTime(outramp.x0, outramp.dx0, intermediate.ramps[irampnd].x1, intermediate.ramps[irampnd].dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate2, _parameters->_multidofinterp);
+                            bool res1 = ParabolicRamp::SolveMinTime(outramp.x0, outramp.dx0, intermediate.ramps[irampnd].x1, intermediate.ramps[irampnd].dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate2, _parameters->_multidofinterp);
 #ifdef SMOOTHER1_TIMING_DEBUG
                             _tEndInterpolator = utils::GetMicroTime();
                             _totalTimeInterpolator += 0.000001f*(float)(_tEndInterpolator - _tStartInterpolator);
 #endif
 
-                            if (!res) {
+                            if (!res1) {
                                 RAVELOG_WARN_FORMAT("env=%s, failed to correct velocity discrepancy at the end of the segment", GetEnv()->GetNameId());
                                 retcheck.retcode = CFO_FinalValuesNotReached;
                                 break;

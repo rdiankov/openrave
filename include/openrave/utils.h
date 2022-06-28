@@ -175,7 +175,7 @@ template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
 template<typename T>
 struct index_cmp
 {
-    index_cmp(const T arr) : arr(arr) {
+    index_cmp(const T arr_) : arr(arr_) {
     }
     bool operator()(const size_t a, const size_t b) const
     {

@@ -485,8 +485,8 @@ void KinBodyItem::Load()
                     osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
                     vertices->reserveArray(mesh.vertices.size());
                     for(size_t i = 0; i < mesh.vertices.size(); ++i) {
-                        RaveVector<float> v = mesh.vertices[i];
-                        vertices->push_back(osg::Vec3(v.x, v.y, v.z));
+                        RaveVector<float> rv = mesh.vertices[i];
+                        vertices->push_back(osg::Vec3(rv.x, rv.y, rv.z));
                     }
                     geom->setVertexArray(vertices.get());
 
@@ -510,8 +510,8 @@ void KinBodyItem::Load()
                     geode->addDrawable(sd.get());
                     osg::ref_ptr<osg::Geode> geode2 = new osg::Geode;
                     geode2->addDrawable(geom);
-                    osg::ref_ptr<osg::StateSet> state = geode2->getOrCreateStateSet();
-                    state->setAttributeAndModes(dotMat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+                    osg::ref_ptr<osg::StateSet> geode2state = geode2->getOrCreateStateSet();
+                    geode2state->setAttributeAndModes(dotMat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
 
                     pgeometrydata->addChild(geode.get());
                     pgeometrydata->addChild(geode2.get());
@@ -712,7 +712,7 @@ bool KinBodyItem::UpdateFromOSG()
         }
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
+    boost::shared_ptr<EnvironmentLock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
     if( !!lockenv ) {
         _pbody->SetLinkTransformations(vtrans,_vjointvalues);
         _pbody->GetLinkTransformations(_vtrans,_vjointvalues);
@@ -725,13 +725,13 @@ bool KinBodyItem::UpdateFromOSG()
 
 void KinBodyItem::GetDOFValues(vector<dReal>& vjoints) const
 {
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     vjoints = _vjointvalues;
 }
 
 void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofvalues) const
 {
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     vtrans = _vtrans;
     vdofvalues = _vjointvalues;
 }
@@ -745,7 +745,7 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
+        boost::shared_ptr<EnvironmentLock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
         if( !lockenv ) {
             return false;
         }
@@ -778,7 +778,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     }
 
     if( _bReload || _bDrawStateChanged ) {
-        EnvironmentMutex::scoped_try_lock lockenv(_pbody->GetEnv()->GetMutex());
+        EnvironmentLock lockenv(_pbody->GetEnv()->GetMutex());
         if( !!lockenv ) {
             if( _bReload || _bDrawStateChanged ) {
                 Load();
@@ -786,7 +786,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         }
     }
 
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
 
@@ -995,10 +995,10 @@ void RobotItem::Load()
                 peesep->addChild(ptextsep);
 
                 osg::Matrix matrix;
-                OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
-                ptrans->setReferenceFrame(osg::Transform::RELATIVE_RF);
+                OSGMatrixTransformPtr ptransform = new osg::MatrixTransform();
+                ptransform->setReferenceFrame(osg::Transform::RELATIVE_RF);
                 matrix.setTrans(osg::Vec3f(0, 0, 0));//.02f,0.02f,0.02f));
-                ptextsep->addChild(ptrans);
+                ptextsep->addChild(ptransform);
 
                 osg::ref_ptr<osgText::Text> text = new osgText::Text();
 

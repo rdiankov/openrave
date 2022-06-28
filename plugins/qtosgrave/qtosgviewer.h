@@ -80,6 +80,7 @@ public:
 
     virtual GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
     virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents);
+    virtual GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents);
 
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);
@@ -136,7 +137,7 @@ public:
     virtual UserDataPtr RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback);
 
     /// \brief Locks environment
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
+    boost::shared_ptr<EnvironmentLock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
 
 public slots:
 
@@ -316,6 +317,9 @@ public:
     /// \brief reset the camera depending on its mode
     virtual void _UpdateViewport();
 
+    /// \brief set screen offset of hud text (default is (10, 0))
+    virtual void _SetHUDTextOffset(double xOffset, double yOffset);
+
     virtual OSGSwitchPtr _CreateGraphHandle();
     virtual void _CloseGraphHandle(OSGSwitchPtr handle);
     virtual void _SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t);
@@ -326,6 +330,7 @@ public:
     virtual void _SetTriangleMesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, osg::ref_ptr<osg::Vec3Array> osgvertices, osg::ref_ptr<osg::DrawElementsUInt> osgindices);
     virtual void _DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition);
     virtual void _DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency);
+    virtual void _DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency);
     virtual void _DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
 
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
@@ -410,9 +415,9 @@ public:
     std::map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> _mapGUIFunctionLists; ///< map between priority and sublist for given priority level. protected by _mutexGUIFunctions
     std::map<ViewerCommandPriority, size_t> _mapGUIFunctionListLimits; ///< map between priority and sublist size limit for given priority level
     mutable list<Item*> _listRemoveItems; ///< raw points of items to be deleted in the viewer update thread, triggered from _DeleteItemCallback. proteced by _mutexItems
-    boost::mutex _mutexItems; ///< protects _listRemoveItems
-    mutable boost::mutex _mutexGUIFunctions;
-    mutable boost::condition _notifyGUIFunctionComplete; ///< signaled when a blocking _listGUIFunctions has been completed
+    std::mutex _mutexItems; ///< protects _listRemoveItems
+    mutable std::mutex _mutexGUIFunctions;
+    mutable std::condition_variable _notifyGUIFunctionComplete; ///< signaled when a blocking _listGUIFunctions has been completed
     //@}
 
     //@{ osg rendering primitives
@@ -427,14 +432,14 @@ public:
     geometry::RaveCameraIntrinsics<float> _camintrinsics; ///< intrinsics of the camera representing the current view, updated periodically, read only.
     //@}
 
-    boost::mutex _mutexUpdating; ///< when inside an update function, even if just checking if the viewer should be updated, this will be locked.
-    boost::mutex _mutexUpdateModels; ///< locked when osg environment is being updated from the underlying openrave environment
-    boost::condition _condUpdateModels; ///< signaled everytime environment models are updated
+    std::mutex _mutexUpdating; ///< when inside an update function, even if just checking if the viewer should be updated, this will be locked.
+    std::mutex _mutexUpdateModels; ///< locked when osg environment is being updated from the underlying openrave environment
+    std::condition_variable _condUpdateModels; ///< signaled everytime environment models are updated
 
     ViewGeometry _viewGeometryMode; ///< the visualization mode of the geometries
 
     //@{ callbacks
-    boost::mutex _mutexCallbacks; ///< maintains lock on list of callsbacks viewer has to make like _listRegisteredViewerThreadCallbacks, _listRegisteredItemSelectionCallbacks
+    std::mutex _mutexCallbacks; ///< maintains lock on list of callsbacks viewer has to make like _listRegisteredViewerThreadCallbacks, _listRegisteredItemSelectionCallbacks
     std::list<UserDataWeakPtr> _listRegisteredItemSelectionCallbacks;
     std::list<UserDataWeakPtr> _listRegisteredViewerThreadCallbacks;
     //@}

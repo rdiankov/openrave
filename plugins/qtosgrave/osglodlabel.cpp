@@ -56,8 +56,10 @@ OSGLODLabel::OSGLODLabel(const std::string& label, osg::ref_ptr<osgText::Font> f
     text->setFontResolution(128,128);
 
     // Override the cartoon shader with the default shader for text
-    osg::ref_ptr<osg::Program> program = new osg::Program;
-    text->getOrCreateStateSet()->setAttributeAndModes(program.get(), osg::StateAttribute::PROTECTED | osg::StateAttribute::ON);
+    osg::StateSet::AttributeList attributes = text->getOrCreateStateSet()->getAttributeList();
+    for (osg::StateSet::AttributeList::iterator it=attributes.begin(); it!=attributes.end(); ++it) {
+        text->getOrCreateStateSet()->setAttributeAndModes(it->second.first, it->second.second | osg::StateAttribute::PROTECTED);
+    }
 
     // Ensure that the text is drawn over any shape in the scene
     text->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );

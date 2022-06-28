@@ -18,8 +18,6 @@
 using namespace ColladaDOM150;
 
 #include <locale>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/date_time/time_facet.hpp>
 #include <boost/algorithm/string.hpp>
 #include <ctime>
 
@@ -246,7 +244,7 @@ public:
     {
         axis_sids() : dofvalue(0) {
         }
-        axis_sids(const string& axissid, const string& valuesid, const string& jointnodesid) : axissid(axissid), valuesid(valuesid), jointnodesid(jointnodesid), dofvalue(0) {
+        axis_sids(const string& axissid_, const string& valuesid_, const string& jointnodesid_) : axissid(axissid_), valuesid(valuesid_), jointnodesid(jointnodesid_), dofvalue(0) {
         }
         string axissid, valuesid, jointnodesid;
         dReal dofvalue; // if valuesid is empty, use this float value. This is in degrees or meters
@@ -512,7 +510,7 @@ private:
     /// \brief Write down environment
     virtual bool Write(const std::string& scenename=std::string())
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         std::list<KinBodyPtr> listbodies(vbodies.begin(),vbodies.end());
@@ -595,7 +593,7 @@ private:
     /// \brief Write one robot as a file
     virtual bool Write(RobotBasePtr probot)
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         _CreateScene(probot->GetName());
         _mapBodyIds[probot->GetEnvironmentBodyIndex()] = 0;
         _AssignLinkSids(probot);
@@ -621,7 +619,7 @@ private:
         if( pbody->IsRobot() ) {
             return Write(RaveInterfaceCast<RobotBase>(pbody));
         }
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         _CreateScene(pbody->GetName());
         _mapBodyIds[pbody->GetEnvironmentBodyIndex()] = 0;
         _AssignLinkSids(pbody);
@@ -1234,7 +1232,7 @@ private:
     /// \brief Write common kinematic body in a given scene, called by _WriteKinBody
     virtual boost::shared_ptr<instance_kinematics_model_output> _WriteInstance_kinematics_model(KinBodyPtr pbody, daeElementRef parent, const string& sidscope)
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         RAVELOG_VERBOSE(str(boost::format("writing instance_kinematics_model (%d) %s\n")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%pbody->GetName()));
         boost::shared_ptr<kinematics_model_output> kmout = WriteKinematics_model(pbody);
 
@@ -1348,7 +1346,7 @@ private:
 
     virtual boost::shared_ptr<kinematics_model_output> WriteKinematics_model(KinBodyPtr pbody)
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         boost::shared_ptr<kinematics_model_output> kmout;
         if( _bReuseSimilar ) {
             kmout = _GetKinematics_model(pbody);
@@ -1666,7 +1664,7 @@ private:
             // write the float/int parameters for all joints
             FOREACH(itjoint, vjoints) {
                 KinBody::JointConstPtr pjoint = itjoint->second;
-                if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 && pjoint->GetStringParameters().size() == 0 && pjoint->GetControlMode() == KinBody::JCM_None ) {
+                if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 && pjoint->GetStringParameters().size() == 0 && pjoint->GetControlMode() == JCM_None ) {
                     continue;
                 }
                 string jointsid = _GetJointSid(pjoint);
@@ -1702,86 +1700,86 @@ private:
                     string_value->setAttribute("name",itparam->first.c_str());
                     string_value->setCharData(itparam->second);
                 }
-                if( pjoint->GetControlMode() != KinBody::JCM_None ) {
+                if( pjoint->GetControlMode() != JCM_None ) {
                     daeElementRef param_controlMode = ptec->add("controlMode");
                     param_controlMode->setCharData(boost::lexical_cast<std::string>(pjoint->_info._controlMode).c_str());
                     switch( pjoint->_info._controlMode ) {
-                    case KinBody::JCM_RobotController: {
+                    case JCM_RobotController: {
                         daeElementRef param_jointcontrolinfo_robotcontroller = ptec->add("jointcontrolinfo_robotcontroller");
                         // robotId
-                        daeElementRef param_robotId = param_jointcontrolinfo_robotcontroller->add("robotId");
-                        param_robotId->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotId).c_str());
-                        // robotControllerDOFIndex
+                        daeElementRef param_controllerType = param_jointcontrolinfo_robotcontroller->add("controllerType");
+                        param_controllerType->setCharData(pjoint->_info._jci_robotcontroller->controllerType.c_str());
+                        // robotControllerAxisIndex
                         for( int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis ) {
-                            daeElementRef param_robotControllerDOFIndex = param_jointcontrolinfo_robotcontroller->add("robotControllerDOFIndex");
-                            param_robotControllerDOFIndex->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_robotControllerDOFIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerDOFIndex[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisIndex = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisIndex");
+                            param_robotControllerAxisIndex->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisIndex[iaxis]).c_str());
                         }
                         break;
-                    } // end case KinBody::JCM_RobotController
-                    case KinBody::JCM_IO: {
+                    } // end case JCM_RobotController
+                    case JCM_IO: {
                         daeElementRef param_jointcontrolinfo_io = ptec->add("jointcontrolinfo_io");
                         // deviceId
-                        daeElementRef param_deviceId = param_jointcontrolinfo_io->add("deviceId");
-                        param_deviceId->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_io->deviceId).c_str());
+                        daeElementRef param_deviceType = param_jointcontrolinfo_io->add("deviceType");
+                        param_deviceType->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_io->deviceType).c_str());
                         for( int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis ) {
-                            // vMoveIONames
-                            daeElementRef param_vMoveIONames = param_jointcontrolinfo_io->add("vMoveIONames");
-                            param_vMoveIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_vMoveIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vMoveIONames[iaxis].size()).c_str());
+                            // moveIONames
+                            daeElementRef param_moveIONames = param_jointcontrolinfo_io->add("moveIONames");
+                            param_moveIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_moveIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->moveIONames[iaxis].size()).c_str());
                             ss.str(""); ss.clear();
-                            FOREACHC(itioname, pjoint->_info._jci_io->vMoveIONames[iaxis]) {
+                            FOREACHC(itioname, pjoint->_info._jci_io->moveIONames[iaxis]) {
                                 ss << *itioname << " ";
                             }
-                            param_vMoveIONames->setCharData(ss.str());
+                            param_moveIONames->setCharData(ss.str());
 
-                            // vUpperLimitIONames
-                            daeElementRef param_vUpperLimitIONames = param_jointcontrolinfo_io->add("vUpperLimitIONames");
-                            param_vUpperLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_vUpperLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vUpperLimitIONames[iaxis].size()).c_str());
+                            // upperLimitIONames
+                            daeElementRef param_upperLimitIONames = param_jointcontrolinfo_io->add("upperLimitIONames");
+                            param_upperLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_upperLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->upperLimitIONames[iaxis].size()).c_str());
                             ss.str(""); ss.clear();
-                            FOREACHC(itioname, pjoint->_info._jci_io->vUpperLimitIONames[iaxis]) {
+                            FOREACHC(itioname, pjoint->_info._jci_io->upperLimitIONames[iaxis]) {
                                 ss << *itioname << " ";
                             }
-                            param_vUpperLimitIONames->setCharData(ss.str());
+                            param_upperLimitIONames->setCharData(ss.str());
 
                             // vUpperLimitSensorIsOn
-                            daeElementRef param_vUpperLimitSensorIsOn = param_jointcontrolinfo_io->add("vUpperLimitSensorIsOn");
-                            param_vUpperLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_vUpperLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vUpperLimitSensorIsOn[iaxis].size()).c_str());
+                            daeElementRef param_upperLimitSensorIsOn = param_jointcontrolinfo_io->add("upperLimitSensorIsOn");
+                            param_upperLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_upperLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->upperLimitSensorIsOn[iaxis].size()).c_str());
                             ss.str(""); ss.clear();
-                            FOREACHC(itiovalue, pjoint->_info._jci_io->vUpperLimitSensorIsOn[iaxis]) {
+                            FOREACHC(itiovalue, pjoint->_info._jci_io->upperLimitSensorIsOn[iaxis]) {
                                 ss << (int)*itiovalue << " ";
                             }
-                            param_vUpperLimitSensorIsOn->setCharData(ss.str());
+                            param_upperLimitSensorIsOn->setCharData(ss.str());
 
                             // vLowerLimitIONames
-                            daeElementRef param_vLowerLimitIONames = param_jointcontrolinfo_io->add("vLowerLimitIONames");
-                            param_vLowerLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_vLowerLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vLowerLimitIONames[iaxis].size()).c_str());
+                            daeElementRef param_lowerLimitIONames = param_jointcontrolinfo_io->add("lowerLimitIONames");
+                            param_lowerLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_lowerLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->lowerLimitIONames[iaxis].size()).c_str());
                             ss.str(""); ss.clear();
-                            FOREACHC(itioname, pjoint->_info._jci_io->vLowerLimitIONames[iaxis]) {
+                            FOREACHC(itioname, pjoint->_info._jci_io->lowerLimitIONames[iaxis]) {
                                 ss << *itioname << " ";
                             }
-                            param_vLowerLimitIONames->setCharData(ss.str());
+                            param_lowerLimitIONames->setCharData(ss.str());
 
                             // vLowerLimitSensorIsOn
-                            daeElementRef param_vLowerLimitSensorIsOn = param_jointcontrolinfo_io->add("vLowerLimitSensorIsOn");
-                            param_vLowerLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_vLowerLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vLowerLimitSensorIsOn[iaxis].size()).c_str());
+                            daeElementRef param_lowerLimitSensorIsOn = param_jointcontrolinfo_io->add("lowerLimitSensorIsOn");
+                            param_lowerLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_lowerLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->lowerLimitSensorIsOn[iaxis].size()).c_str());
                             ss.str(""); ss.clear();
-                            FOREACHC(itiovalue, pjoint->_info._jci_io->vLowerLimitSensorIsOn[iaxis]) {
+                            FOREACHC(itiovalue, pjoint->_info._jci_io->lowerLimitSensorIsOn[iaxis]) {
                                 ss << (int)*itiovalue << " ";
                             }
-                            param_vLowerLimitSensorIsOn->setCharData(ss.str());
+                            param_lowerLimitSensorIsOn->setCharData(ss.str());
                         }
                         break;
                     } // end case KinBody::JCM_IO
-                    case KinBody::JCM_ExternalDevice: {
+                    case JCM_ExternalDevice: {
                         daeElementRef param_jointcontrolinfo_externaldevice = ptec->add("jointcontrolinfo_externaldevice");
                         // robotId
-                        daeElementRef param_externalDeviceId = param_jointcontrolinfo_externaldevice->add("externalDeviceId");
-                        param_externalDeviceId->setCharData(pjoint->_info._jci_externaldevice->externalDeviceId.c_str());
+                        daeElementRef param_externalDeviceType = param_jointcontrolinfo_externaldevice->add("externalDeviceType");
+                        param_externalDeviceType->setCharData(pjoint->_info._jci_externaldevice->externalDeviceType.c_str());
                         break;
                     } // end case KinBody::JCM_ExternalDevice
                     default: {
@@ -2584,6 +2582,8 @@ private:
 
             daeElementRef pToolChangerConnectedBodyToolName = ptec->add("toolChangerConnectedBodyToolName");
             pToolChangerConnectedBodyToolName->setCharData((*itmanip)->GetToolChangerConnectedBodyToolName().c_str());
+            daeElementRef pToolChangerLinkName = ptec->add("toolChangerLinkName");
+            pToolChangerLinkName->setCharData((*itmanip)->GetToolChangerLinkName().c_str());
 
             FOREACHC(itname, (*itmanip)->GetRestrictGraspSetNames()) {
                 daeElementRef restrict_graspset_name = ptec->add("restrict_graspset_name");
@@ -3203,7 +3203,7 @@ BOOST_TYPEOF_REGISTER_TYPE(ColladaWriter::articulated_system_output)
 
 void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
     std::string scenename, keywords, subject, author;
     FOREACHC(itatt,atts) {
@@ -3263,7 +3263,7 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
 
 void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
     std::string keywords, subject, author;
     FOREACHC(itatt,atts) {
@@ -3287,7 +3287,7 @@ void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const Attrib
 
 void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename,const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     if( listbodies.size() > 0 ) {
         EnvironmentBasePtr penv = listbodies.front()->GetEnv();
         ColladaWriter writer(penv,atts);
@@ -3351,7 +3351,7 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
 
 void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
     std::string scenename, keywords, subject, author;
     FOREACHC(itatt,atts) {
@@ -3398,7 +3398,7 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
 
 void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
     std::string keywords, subject, author;
     FOREACHC(itatt,atts) {
@@ -3422,7 +3422,7 @@ void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const A
 
 void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output,  const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     output.clear();
     if( listbodies.size() > 0 ) {
         EnvironmentBasePtr penv = listbodies.front()->GetEnv();
