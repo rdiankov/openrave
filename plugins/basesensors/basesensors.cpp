@@ -86,6 +86,10 @@ const std::string& BaseSensorsPlugin::GetPluginName() const
     return _pluginname;
 }
 
+#if !OPENRAVE_STATIC_PLUGINS
+
 OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
     return new BaseSensorsPlugin();
 }
+
+#endif // OPENRAVE_STATIC_PLUGINS

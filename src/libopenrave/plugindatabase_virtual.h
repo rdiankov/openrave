@@ -90,6 +90,19 @@ private:
     std::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> _createFn;
 };
 
+#if OPENRAVE_STATIC_PLUGINS
+
+class StaticRaveDatabase final : public RaveDatabase {
+public:
+    ~StaticRaveDatabase() override {}
+
+    void Init() override;
+    void ReloadPlugins() override {}
+    bool LoadPlugin(const std::string& libraryname) override;
+};
+
+#endif // OPENRAVE_STATIC_PLUGINS
+
 } // namespace OpenRAVE
 
 #endif // RAVE_PLUGIN_DATABASE_VIRTUAL_H
