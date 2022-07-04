@@ -14,6 +14,41 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "pqprave.h"
 
+#include "plugindefs.h"
+#include "collisionPQP.h"
+
+const std::string PQPRavePlugin::_pluginname = "PQPRavePlugin";
+
+PQPRavePlugin::PQPRavePlugin()
+{
+    _interfaces[OpenRAVE::PT_CollisionChecker].push_back("pqp");
+}
+
+PQPRavePlugin::~PQPRavePlugin() {}
+ 
+OpenRAVE::InterfaceBasePtr PQPRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+{
+    switch(type) {
+    case OpenRAVE::PT_CollisionChecker:
+        if( interfacename == "pqp")
+            return boost::make_shared<CollisionCheckerPQP>(penv);
+        break;
+    default:
+        break;
+    }
+    return OpenRAVE::InterfaceBasePtr();
+}
+
+const RavePlugin::InterfaceMap& PQPRavePlugin::GetInterfaces() const
+{
+    return _interfaces;
+}
+
+const std::string& PQPRavePlugin::GetPluginName() const
+{
+    return _pluginname;
+}
+
 OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
     return new PQPRavePlugin();
 }

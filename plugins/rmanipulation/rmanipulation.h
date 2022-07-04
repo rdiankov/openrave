@@ -16,60 +16,18 @@
 #ifndef OPENRAVE_PLUGIN_RMANIPULATION_H
 #define OPENRAVE_PLUGIN_RMANIPULATION_H
 
-#include "plugindefs.h"
 #include <openrave/plugin.h>
 
-OpenRAVE::ModuleBasePtr CreateBaseManipulation(OpenRAVE::EnvironmentBasePtr penv);
-//OpenRAVE::ModuleBasePtr CreateTaskCaging(OpenRAVE::EnvironmentBasePtr penv);
-OpenRAVE::ModuleBasePtr CreateTaskManipulation(OpenRAVE::EnvironmentBasePtr penv);
-OpenRAVE::ModuleBasePtr CreateVisualFeedback(OpenRAVE::EnvironmentBasePtr penv);
-
 struct RManipulationPlugin : public RavePlugin {
-    RManipulationPlugin()
-    {
-        _interfaces[PT_Module].push_back("BaseManipulation");
-        _interfaces[PT_Module].push_back("TaskManipulation");
-        _interfaces[PT_Module].push_back("TaskCaging");
-        _interfaces[PT_Module].push_back("VisualFeedback");
-    }
+    RManipulationPlugin();
+    ~RManipulationPlugin() override;
 
-    ~RManipulationPlugin() override {}
-
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
-    {
-        switch(type) {
-        case PT_Module:
-            if( interfacename == "basemanipulation") {
-                return CreateBaseManipulation(penv);
-            }
-            else if( interfacename == "taskmanipulation" ) {
-                return CreateTaskManipulation(penv);
-            }
-            //else if( interfacename == "taskcaging") {
-            //    return CreateTaskCaging(penv);
-            //}
-            else if( interfacename == "visualfeedback") {
-                return CreateVisualFeedback(penv);
-            }
-            break;
-        default:
-            break;
-        }
-        return OpenRAVE::InterfaceBasePtr();
-    }
-
-    const InterfaceMap& GetInterfaces() const override
-    {
-        return _interfaces;
-    }
-
-    const std::string& GetPluginName() const override
-    {
-        static std::string pluginname = "RManipulationPlugin";
-        return pluginname;
-    }
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    const InterfaceMap& GetInterfaces() const override;
+    const std::string& GetPluginName() const override;
 
 private:
+    static const std::string _pluginname;
     InterfaceMap _interfaces;
 };
 

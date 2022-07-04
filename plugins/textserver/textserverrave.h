@@ -16,41 +16,15 @@
 #ifndef OPENRAVE_PLUGIN_TEXTSERVERRAVE_H
 #define OPENRAVE_PLUGIN_TEXTSERVERRAVE_H
 
-#include "plugindefs.h"
-#include "textserver.h"
 #include <openrave/plugin.h>
 
 struct TextServerPlugin : public RavePlugin {
-    TextServerPlugin()
-    {
-        _interfaces[OpenRAVE::PT_Module].push_back("textserver");
-    }
+    TextServerPlugin();
+    ~TextServerPlugin() override;
 
-    ~TextServerPlugin() override {}
-
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
-    {
-        switch(type) {
-        case OpenRAVE::PT_Module:
-            if( interfacename == "textserver")
-                return boost::make_shared<SimpleTextServer>(penv);
-            break;
-        default:
-            break;
-        }
-        return OpenRAVE::InterfaceBasePtr();
-    }
-
-    const InterfaceMap& GetInterfaces() const override
-    {
-        return _interfaces;
-    }
-
-    const std::string& GetPluginName() const override
-    {
-        static std::string pluginname = "TextServerPlugin";
-        return pluginname;
-    }
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    const InterfaceMap& GetInterfaces() const override;
+    const std::string& GetPluginName() const override;
 
 private:
     InterfaceMap _interfaces;

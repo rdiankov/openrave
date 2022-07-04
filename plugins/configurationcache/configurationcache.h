@@ -15,59 +15,17 @@
 #define OPENRAVE_PLUGIN_CONFIGURATIONCACHE_H
 
 #include <openrave/plugin.h>
-#include "configurationcachetree.h"
-
-namespace configurationcache
-{
-OpenRAVE::CollisionCheckerBasePtr CreateCacheCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::SpaceSamplerBasePtr CreateConfigurationJitterer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::SpaceSamplerBasePtr CreateWorkspaceConfigurationJitterer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-}
 
 struct ConfigurationCachePlugin : public RavePlugin {
-    ConfigurationCachePlugin()
-    {
-        _interfaces[PT_CollisionChecker].push_back("CacheChecker");
-        _interfaces[PT_SpaceSampler].push_back("ConfigurationJitterer");
-        _interfaces[PT_SpaceSampler].push_back("WorkspaceConfigurationJitterer");
-    }
+    ConfigurationCachePlugin();
+    ~ConfigurationCachePlugin() override;
 
-    ~ConfigurationCachePlugin() override {}
-
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
-    {
-        switch(type) {
-        case PT_CollisionChecker:
-            if( interfacename == "cachechecker") {
-                return configurationcache::CreateCacheCollisionChecker(penv,sinput);
-            }
-            break;
-        case PT_SpaceSampler:
-            if( interfacename == "configurationjitterer" ) {
-                return configurationcache::CreateConfigurationJitterer(penv,sinput);
-            }
-            if( interfacename == "workspaceconfigurationjitterer" ) {
-                return configurationcache::CreateWorkspaceConfigurationJitterer(penv,sinput);
-            }
-            break;
-        default:
-            break;
-        }
-        return OpenRAVE::InterfaceBasePtr();
-    }
-
-    const InterfaceMap& GetInterfaces() const override
-    {
-        return _interfaces;
-    }
-
-    const std::string& GetPluginName() const override
-    {
-        static std::string pluginname = "ConfigurationCachePlugin";
-        return pluginname;
-    }
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    const InterfaceMap& GetInterfaces() const override;
+    const std::string& GetPluginName() const override;
 
 private:
+    static const std::string _pluginname;
     InterfaceMap _interfaces;
 };
 

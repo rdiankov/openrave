@@ -15,82 +15,21 @@
 #ifndef OPENRAVE_PLUGIN_BASESENSORS_H
 #define OPENRAVE_PLUGIN_BASESENSORS_H
 
-#include "plugindefs.h"
-#include "baselaser.h"
-#include "baseflashlidar3d.h"
-#include "basecamera.h"
-#include "baseforce6d.h"
+#include <openrave/openrave.h>
 #include <openrave/plugin.h>
 
 struct BaseSensorsPlugin : public RavePlugin {
-    BaseSensorsPlugin()
-    {
-        s_listRegisteredReaders.push_back(RaveRegisterXMLReader(PT_Sensor,"baselaser2d",BaseLaser2DSensor::CreateXMLReader));
-        s_listRegisteredReaders.push_back(RaveRegisterXMLReader(PT_Sensor,"base_laser2d",BaseLaser2DSensor::CreateXMLReader));
-        s_listRegisteredReaders.push_back(RaveRegisterXMLReader(PT_Sensor,"basespinninglaser2d",BaseSpinningLaser2DSensor::CreateXMLReader));
-        s_listRegisteredReaders.push_back(RaveRegisterXMLReader(PT_Sensor,"baseflashlidar3d",BaseFlashLidar3DSensor::CreateXMLReader));
-        s_listRegisteredReaders.push_back(RaveRegisterXMLReader(PT_Sensor,"base_laser3d",BaseFlashLidar3DSensor::CreateXMLReader));
-        s_listRegisteredReaders.push_back(RaveRegisterXMLReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateXMLReader));
-        s_listRegisteredReaders.push_back(RaveRegisterXMLReader(PT_Sensor,"base_pinhole_camera",BaseCameraSensor::CreateXMLReader));
-        s_listRegisteredReaders.push_back(RaveRegisterXMLReader(PT_Sensor,"baseforce6d",BaseForce6DSensor::CreateXMLReader));
-        s_listRegisteredReaders.push_back(RaveRegisterXMLReader(PT_Sensor,"base_force6d",BaseForce6DSensor::CreateXMLReader));
-        s_listRegisteredReaders.push_back(RaveRegisterJSONReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateJSONReader));
-        s_listRegisteredReaders.push_back(RaveRegisterJSONReader(PT_Sensor,"base_pinhole_camera",BaseCameraSensor::CreateJSONReader));
-        s_listRegisteredReaders.push_back(RaveRegisterJSONReader(PT_Sensor,"baseforce6d",BaseForce6DSensor::CreateJSONReader));
-        s_listRegisteredReaders.push_back(RaveRegisterJSONReader(PT_Sensor,"base_force6d",BaseForce6DSensor::CreateJSONReader));
-        _interfaces[OpenRAVE::PT_Sensor].push_back("BaseLaser2D");
-        _interfaces[OpenRAVE::PT_Sensor].push_back("base_laser2d");
-        _interfaces[OpenRAVE::PT_Sensor].push_back("BaseSpinningLaser2D");
-        _interfaces[OpenRAVE::PT_Sensor].push_back("BaseFlashLidar3D");
-        _interfaces[OpenRAVE::PT_Sensor].push_back("base_laser3d");
-        _interfaces[OpenRAVE::PT_Sensor].push_back("BaseCamera");
-        _interfaces[OpenRAVE::PT_Sensor].push_back("base_pinhole_camera");
-        _interfaces[OpenRAVE::PT_Sensor].push_back("BaseForce6D");
-        _interfaces[OpenRAVE::PT_Sensor].push_back("base_force6d");
-    }
+    BaseSensorsPlugin();
+    ~BaseSensorsPlugin() override;
 
-    ~BaseSensorsPlugin() override {}
-
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
-    {
-        switch(type) {
-        case PT_Sensor:
-            if((interfacename == "baselaser2d")||(interfacename == "base_laser2d")) {
-                return boost::make_shared<BaseLaser2DSensor>(penv);
-            }
-            else if( interfacename == "basespinninglaser2d" ) {
-                return boost::make_shared<BaseSpinningLaser2DSensor>(penv);
-            }
-            else if((interfacename == "baseflashlidar3d")||(interfacename == "base_laser3d")) {
-                return boost::make_shared<BaseFlashLidar3DSensor>(penv);
-            }
-            else if((interfacename == "basecamera")||(interfacename == "base_pinhole_camera")) {
-                return boost::make_shared<BaseCameraSensor>(penv);
-            }
-            else if((interfacename == "baseforce6d")||(interfacename == "base_force6d")) {
-                return boost::make_shared<BaseForce6DSensor>(penv);
-            }
-            break;
-        default:
-            break;
-        }
-        return OpenRAVE::InterfaceBasePtr();
-    }
-
-    const InterfaceMap& GetInterfaces() const override
-    {
-        return _interfaces;
-    }
-
-    const std::string& GetPluginName() const override
-    {
-        static std::string pluginname = "BaseSensorsPlugin";
-        return pluginname;
-    }
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    const InterfaceMap& GetInterfaces() const override;
+    const std::string& GetPluginName() const override;
 
 private:
+    static const std::string _pluginname;
     InterfaceMap _interfaces;
-    std::list<UserDataPtr> s_listRegisteredReaders;
+    std::list<OpenRAVE::UserDataPtr> s_listRegisteredReaders;
 };
 
 #endif // OPENRAVE_PLUGIN_BASESENSORS_H

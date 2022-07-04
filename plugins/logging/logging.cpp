@@ -16,6 +16,59 @@
 
 // Plugin exposes 3 functions to OpenRAVE.
 #include "logging.h"
+#include "plugindefs.h"
+
+#ifdef ENABLE_VIDEORECORDING
+OpenRAVE::ModuleBasePtr CreateViewerRecorder(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+void DestroyViewerRecordingStaticResources();
+#endif
+
+const std::string LoggingPlugin::_pluginname = "LoggingPlugin";
+
+LoggingPlugin::LoggingPlugin()
+{
+#ifdef ENABLE_VIDEORECORDING
+    _interfaces[OpenRAVE::PT_Module].push_back("ViewerRecorder");
+#endif
+}
+
+LoggingPlugin::~LoggingPlugin()
+{
+    Destroy();
+}
+
+void LoggingPlugin::Destroy()
+{
+#ifdef ENABLE_VIDEORECORDING
+DestroyViewerRecordingStaticResources();
+#endif
+}
+
+OpenRAVE::InterfaceBasePtr LoggingPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+{
+    switch(type) {
+    case OpenRAVE::PT_Module:
+#ifdef ENABLE_VIDEORECORDING
+        if( interfacename == "viewerrecorder" ) {
+            return CreateViewerRecorder(penv,sinput);
+        }
+#endif
+        break;
+    default:
+        break;
+    }
+    return OpenRAVE::InterfaceBasePtr();
+}
+
+const RavePlugin::InterfaceMap& LoggingPlugin::GetInterfaces() const
+{
+    return _interfaces;
+}
+
+const std::string& LoggingPlugin::GetPluginName() const
+{
+    return _pluginname;
+}
 
 OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
     return new LoggingPlugin();

@@ -16,38 +16,17 @@
 #ifndef OPENRAVE_PLUGIN_FCLRAVE_H
 #define OPENRAVE_PLUGIN_FCLRAVE_H
 
-#include "plugindefs.h"
-#include "fclcollision.h"
 #include <openrave/plugin.h>
 
 struct FCLRavePlugin : public RavePlugin {
-    FCLRavePlugin()
-    {
-        _interfaces[OpenRAVE::PT_CollisionChecker].push_back("fcl_");
-    }
-
-    ~FCLRavePlugin() override {}
-
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
-    {
-        if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl_" ) {
-            return boost::make_shared<fclrave::FCLCollisionChecker>(penv, sinput);
-        }
-        return OpenRAVE::InterfaceBasePtr();
-    }
-
-    const InterfaceMap& GetInterfaces() const override
-    {
-        return _interfaces;
-    }
-
-    const std::string& GetPluginName() const override
-    {
-        static std::string pluginname = "FCLRavePlugin";
-        return pluginname;
-    }
+    FCLRavePlugin();
+    ~FCLRavePlugin() override;
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    const InterfaceMap& GetInterfaces() const override;
+    const std::string& GetPluginName() const override;
 
 private:
+    static const std::string _pluginname;
     InterfaceMap _interfaces;
 };
 

@@ -15,43 +15,18 @@
 #ifndef OPENRAVE_PLUGIN_PQPRAVE_H
 #define OPENRAVE_PLUGIN_PQPRAVE_H
 
-#include "plugindefs.h"
-#include "collisionPQP.h"
 #include <openrave/plugin.h>
 
 struct PQPRavePlugin : public RavePlugin {
-    PQPRavePlugin()
-    {
-        _interfaces[OpenRAVE::PT_CollisionChecker].push_back("pqp");
-    }
+    PQPRavePlugin();
+    ~PQPRavePlugin() override;
 
-    ~PQPRavePlugin() override {}
-
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
-    {
-        switch(type) {
-        case OpenRAVE::PT_CollisionChecker:
-            if( interfacename == "pqp")
-                return boost::make_shared<CollisionCheckerPQP>(penv);
-            break;
-        default:
-            break;
-        }
-        return OpenRAVE::InterfaceBasePtr();
-    }
-
-    const InterfaceMap& GetInterfaces() const override
-    {
-        return _interfaces;
-    }
-
-    const std::string& GetPluginName() const override
-    {
-        static std::string pluginname = "PQPRavePlugin";
-        return pluginname;
-    }
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    const InterfaceMap& GetInterfaces() const override;
+    const std::string& GetPluginName() const override;
 
 private:
+    static const std::string _pluginname;
     InterfaceMap _interfaces;
 };
 

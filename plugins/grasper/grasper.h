@@ -16,52 +16,21 @@
 #ifndef OPENRAVE_PLUGIN_GRASPER_H
 #define OPENRAVE_PLUGIN_GRASPER_H
 
-#include "plugindefs.h"
 #include <openrave/plugin.h>
 
 OpenRAVE::PlannerBasePtr CreateGrasperPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 OpenRAVE::ModuleBasePtr CreateGrasperModule(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 
 struct GrasperPlugin : public RavePlugin {
-    GrasperPlugin()
-    {
-        _interfaces[OpenRAVE::PT_Planner].push_back("Grasper");
-        _interfaces[OpenRAVE::PT_Module].push_back("Grasper");
-    }
+    GrasperPlugin();
+    ~GrasperPlugin() override;
 
-    ~GrasperPlugin() override {}
-
-    OpenRAVE::InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
-    {
-        switch(type) {
-        case PT_Planner:
-            if( interfacename == "grasper" ) {
-                return CreateGrasperPlanner(penv,sinput);
-            }
-            break;
-        case PT_Module:
-            if( interfacename == "grasper") {
-                return CreateGrasperModule(penv,sinput);
-            }
-            break;
-        default:
-            break;
-        }
-        return OpenRAVE::InterfaceBasePtr();
-    }
-
-    const InterfaceMap& GetInterfaces() const override
-    {
-        return _interfaces;
-    }
-
-    const std::string& GetPluginName() const override
-    {
-        static std::string pluginname = "GrasperPlugin";
-        return pluginname;
-    }
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    const InterfaceMap& GetInterfaces() const override;
+    const std::string& GetPluginName() const override;
 
 private:
+    static const std::string _pluginname;
     InterfaceMap _interfaces;
 };
 

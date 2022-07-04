@@ -14,6 +14,51 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "bulletrave.h"
+//#include "plugindefs.h"
+#include "bulletphysics.h"
+#include "bulletcollision.h"
+
+OpenRAVE::CollisionCheckerBasePtr CreateBulletCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+
+const std::string BulletRavePlugin::_pluginname = "BulletRavePlugin";
+
+BulletRavePlugin::BulletRavePlugin()
+{
+    s_listRegisteredReaders.push_back(RaveRegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"bulletproperties",BulletPhysicsEngine::CreateXMLReader));
+    _interfaces[OpenRAVE::PT_CollisionChecker].push_back("bullet");
+    _interfaces[OpenRAVE::PT_PhysicsEngine].push_back("bullet");
+}
+
+BulletRavePlugin::~BulletRavePlugin() {}
+
+OpenRAVE::InterfaceBasePtr BulletRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+{
+    switch(type) {
+    case OpenRAVE::PT_CollisionChecker:
+        if( interfacename == "bullet") {
+            return CreateBulletCollisionChecker(penv,sinput);
+        }
+        break;
+    case OpenRAVE::PT_PhysicsEngine:
+        if( interfacename == "bullet") {
+            return CreateBulletPhysicsEngine(penv,sinput);
+        }
+        break;
+    default:
+        break;
+    }
+    return OpenRAVE::InterfaceBasePtr();
+}
+
+const RavePlugin::InterfaceMap& BulletRavePlugin::GetInterfaces() const
+{
+    return _interfaces;
+}
+
+const std::string& BulletRavePlugin::GetPluginName() const
+{
+    return _pluginname;
+}
 
 OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
     return new BulletRavePlugin();

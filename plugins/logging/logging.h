@@ -17,62 +17,19 @@
 #define OPENRAVE_PLUGIN_LOGGING_H
 
 // Plugin exposes 3 functions to OpenRAVE.
-#include "plugindefs.h"
 #include <openrave/plugin.h>
 
-#ifdef ENABLE_VIDEORECORDING
-OpenRAVE::ModuleBasePtr CreateViewerRecorder(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-void DestroyViewerRecordingStaticResources();
-#endif
-
 struct LoggingPlugin : public RavePlugin {
-    LoggingPlugin()
-    {
-#ifdef ENABLE_VIDEORECORDING
-        _interfaces[OpenRAVE::PT_Module].push_back("ViewerRecorder");
-#endif
-    }
+    LoggingPlugin();
+    ~LoggingPlugin() override;
 
-    ~LoggingPlugin() override
-    {
-        Destroy();
-    }
-
-    void Destroy() override
-    {
-#ifdef ENABLE_VIDEORECORDING
-    DestroyViewerRecordingStaticResources();
-#endif
-    }
-
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
-    {
-        switch(type) {
-        case OpenRAVE::PT_Module:
-    #ifdef ENABLE_VIDEORECORDING
-            if( interfacename == "viewerrecorder" ) {
-                return CreateViewerRecorder(penv,sinput);
-            }
-    #endif
-            break;
-        default:
-            break;
-        }
-        return OpenRAVE::InterfaceBasePtr();
-    }
-
-    const InterfaceMap& GetInterfaces() const override
-    {
-        return _interfaces;
-    }
-
-    const std::string& GetPluginName() const override
-    {
-        static std::string pluginname = "LoggingPlugin";
-        return pluginname;
-    }
+    void Destroy() override;
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    const InterfaceMap& GetInterfaces() const override;
+    const std::string& GetPluginName() const override;
 
 private:
+    static const std::string _pluginname;
     InterfaceMap _interfaces;
 };
 

@@ -15,55 +15,18 @@
 #ifndef OPENRAVE_PLUGIN_BASECONTROLLERS_H
 #define OPENRAVE_PLUGIN_BASECONTROLLERS_H
 
-#include "plugindefs.h"
 #include <openrave/plugin.h>
 
-OpenRAVE::ControllerBasePtr CreateIdealController(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::ControllerBasePtr CreateIdealVelocityController(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::ControllerBasePtr CreateRedirectController(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-
 struct BaseControllersPlugin : public RavePlugin {
-    BaseControllersPlugin()
-    {
-        _interfaces[PT_Controller].push_back("IdealController");
-        _interfaces[PT_Controller].push_back("IdealVelocityController");
-        _interfaces[PT_Controller].push_back("RedirectController");
-    }
+    BaseControllersPlugin();
+    ~BaseControllersPlugin() override;
 
-    ~BaseControllersPlugin() override {}
-
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
-    {
-        switch(type) {
-        case PT_Controller:
-            if( interfacename == "idealcontroller") {
-                return CreateIdealController(penv,sinput);
-            }
-            else if( interfacename == "idealvelocitycontroller") {
-                return CreateIdealVelocityController(penv,sinput);
-            }
-            else if( interfacename == "redirectcontroller" ) {
-                return CreateRedirectController(penv,sinput);
-            }
-            break;
-        default:
-            break;
-        }
-        return OpenRAVE::InterfaceBasePtr();
-    }
-
-    const InterfaceMap& GetInterfaces() const override
-    {
-        return _interfaces;
-    }
-
-    const std::string& GetPluginName() const override
-    {
-        static std::string pluginname = "BaseControllersPlugin";
-        return pluginname;
-    }
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    const InterfaceMap& GetInterfaces() const override;
+    const std::string& GetPluginName() const override;
 
 private:
+    static const std::string _pluginname;
     InterfaceMap _interfaces;
 };
 

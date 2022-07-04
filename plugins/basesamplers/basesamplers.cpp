@@ -16,6 +16,55 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "basesamplers.h"
 
+#include "mt19937ar.h"
+#include "halton.h"
+#include "robotconfiguration.h"
+#include "bodyconfiguration.h"
+
+BaseSamplersPlugin::BaseSamplersPlugin()
+{
+    _interfaces[OpenRAVE::PT_SpaceSampler].push_back("MT19937");
+    _interfaces[OpenRAVE::PT_SpaceSampler].push_back("Halton");
+    _interfaces[OpenRAVE::PT_SpaceSampler].push_back("RobotConfiguration");
+    _interfaces[OpenRAVE::PT_SpaceSampler].push_back("BodyConfiguration");
+}
+
+BaseSamplersPlugin::~BaseSamplersPlugin() {}
+
+OpenRAVE::InterfaceBasePtr BaseSamplersPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+{
+    switch(type) {
+    case OpenRAVE::PT_SpaceSampler:
+        if( interfacename == "mt19937") {
+            return InterfaceBasePtr(new MT19937Sampler(penv,sinput));
+        }
+        else if( interfacename == "halton" ) {
+            return InterfaceBasePtr(new HaltonSampler(penv,sinput));
+        }
+        else if( interfacename == "robotconfiguration" ) {
+            return InterfaceBasePtr(new RobotConfigurationSampler(penv,sinput));
+        }
+        else if( interfacename == "bodyconfiguration" ) {
+            return InterfaceBasePtr(new BodyConfigurationSampler(penv,sinput));
+        }
+        break;
+    default:
+        break;
+    }
+    return OpenRAVE::InterfaceBasePtr();
+}
+
+const RavePlugin::InterfaceMap& BaseSamplersPlugin::GetInterfaces() const
+{
+    return _interfaces;
+}
+
+const std::string& BaseSamplersPlugin::GetPluginName() const
+{
+    static std::string pluginname = "BaseSamplersPlugin";
+    return pluginname;
+}
+
 OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
     return new BaseSamplersPlugin();
 }

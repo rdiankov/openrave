@@ -16,54 +16,19 @@
 #ifndef OPENRAVE_PLUGIN_BULLETRAVE_H
 #define OPENRAVE_PLUGIN_BULLETRAVE_H
 
-#include "plugindefs.h"
-#include "bulletphysics.h"
-#include "bulletcollision.h"
+#include <openrave/openrave.h>
 #include <openrave/plugin.h>
 
-OpenRAVE::CollisionCheckerBasePtr CreateBulletCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-
 struct BulletRavePlugin : public RavePlugin {
-    BulletRavePlugin()
-    {
-        s_listRegisteredReaders.push_back(RaveRegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"bulletproperties",BulletPhysicsEngine::CreateXMLReader));
-        _interfaces[OpenRAVE::PT_CollisionChecker].push_back("bullet");
-        _interfaces[OpenRAVE::PT_PhysicsEngine].push_back("bullet");
-    }
+    BulletRavePlugin();
+    ~BulletRavePlugin() override;
 
-    ~BulletRavePlugin() override {}
-
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
-    {
-        switch(type) {
-        case OpenRAVE::PT_CollisionChecker:
-            if( interfacename == "bullet") {
-                return CreateBulletCollisionChecker(penv,sinput);
-            }
-            break;
-        case OpenRAVE::PT_PhysicsEngine:
-            if( interfacename == "bullet") {
-                return CreateBulletPhysicsEngine(penv,sinput);
-            }
-            break;
-        default:
-            break;
-        }
-        return OpenRAVE::InterfaceBasePtr();
-    }
-
-    const InterfaceMap& GetInterfaces() const override
-    {
-        return _interfaces;
-    }
-
-    const std::string& GetPluginName() const override
-    {
-        static std::string pluginname = "BulletRavePlugin";
-        return pluginname;
-    }
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    const InterfaceMap& GetInterfaces() const override;
+    const std::string& GetPluginName() const override;
 
 private:
+    static const std::string _pluginname;
     InterfaceMap _interfaces;
     std::list<OpenRAVE::UserDataPtr> s_listRegisteredReaders;
 };

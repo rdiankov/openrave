@@ -15,6 +15,63 @@
 
 #include "mobyrave.h"
 
+#include "mobyphysics.h"
+#include "mobycontroller.h"
+#include "mobyreplaycontroller.h"
+
+// create moby physics shared pointer
+OpenRAVE::PhysicsEngineBasePtr CreateMobyPhysics(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
+{
+    return boost::make_shared<MobyPhysics>(penv, sinput);
+}
+
+static std::string MobyRavePlugin::_pluginname = "MobyRavePlugin";
+
+MobyRavePlugin::MobyRavePlugin()
+{
+    s_listRegisteredReaders.push_back(RaveRegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"mobyphysics",MobyPhysics::CreateXMLReader));
+    s_listRegisteredReaders.push_back(RaveRegisterXMLReader(OpenRAVE::PT_Controller,"mobycontroller",MobyController::CreateXMLReader));
+    s_listRegisteredReaders.push_back(RaveRegisterXMLReader(OpenRAVE::PT_Controller,"mobyreplaycontroller",MobyReplayController::CreateXMLReader));
+    _interfaces[OpenRAVE::PT_PhysicsEngine].push_back("moby");
+    _interfaces[OpenRAVE::PT_Controller].push_back("moby");
+    _interfaces[OpenRAVE::PT_Controller].push_back("mobyreplay");
+}
+
+MobyRavePlugin::~MobyRavePlugin() {}
+
+OpenRAVE::InterfaceBasePtr MobyRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+{
+    switch( type ) {
+    case OpenRAVE::PT_PhysicsEngine:
+        if( interfacename == "moby" )
+        {
+            return CreateMobyPhysics(penv,sinput);
+        }
+        break;
+    case OpenRAVE::PT_Controller:
+        if( interfacename == "moby") {
+            return boost::make_shared<MobyController>(penv,sinput);
+        }
+        else if( interfacename == "mobyreplay") {
+            return boost::make_shared<MobyReplayController>(penv,sinput);
+        }
+        break;
+    default:
+        break;
+    }
+    return OpenRAVE::InterfaceBasePtr();
+}
+
+const RavePlugin::InterfaceMap& MobyRavePlugin::GetInterfaces() const
+{
+    return _interfaces;
+}
+
+const std::string& MobyRavePlugin::GetPluginName() const
+{
+    return _pluginname;
+}
+
 OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
     return new MobyRavePlugin();
 }

@@ -15,72 +15,15 @@
 #define OPENRAVE_PLUGIN_QTCOINRAVE_H
 
 #include <openrave/plugin.h>
-#include <openrave/utils.h>
-
-#include "qtosg.h"
-
-#if defined(HAVE_X11_XLIB_H) && defined(Q_WS_X11)
-#include <X11/Xlib.h>
-#endif
-
-namespace qtosgrave {
-
-OpenRAVE::ViewerBasePtr CreateQtOSGViewer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-
-}
 
 struct QtOSGRavePlugin : public RavePlugin {
-    QtOSGRavePlugin()
-    {
-        _interfaces[PT_Viewer].push_back("qtosg");
-    }
+    QtOSGRavePlugin();
+    ~QtOSGRavePlugin() override;
 
-    ~QtOSGRavePlugin() override
-    {
-        Destroy();
-    }
-
-    void Destroy() override
-    {
-        // necessary since QApplication does not destroy all threads when last SoQt viewer is done
-        //removePostedEvents - sometimes freezes on this function
-        //QApplication::quit();
-    }
-
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
-    {
-        //	Debug.
-        RAVELOG_VERBOSE("Initiating QTOSGRave plugin...!!!!.\n");
-
-        switch(type) {
-        case PT_Viewer:
-    #if defined(HAVE_X11_XLIB_H) && defined(Q_WS_X11)
-            // always check viewers since DISPLAY could change
-            if ( XOpenDisplay( NULL ) == NULL ) {
-                RAVELOG_WARN("no display detected, so cannot load viewer");
-                return InterfaceBasePtr();
-            }
-    #endif
-            if( interfacename == "qtosg" ) {
-                return qtosgrave::CreateQtOSGViewer(penv, sinput);
-            }
-            break;
-        default:
-            break;
-        }
-        return OpenRAVE::InterfaceBasePtr();
-    }
-
-    const InterfaceMap& GetInterfaces() const override
-    {
-        return _interfaces;
-    }
-
-    const std::string& GetPluginName() const override
-    {
-        static std::string pluginname = "QtOSGRavePlugin";
-        return pluginname;
-    }
+    void Destroy() override;
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    const InterfaceMap& GetInterfaces() const override;
+    const std::string& GetPluginName() const override;
 
 private:
     InterfaceMap _interfaces;

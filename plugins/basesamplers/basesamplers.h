@@ -18,55 +18,14 @@
 #define OPENRAVE_PLUGIN_BASESAMPLERS_H
 
 #include <openrave/plugin.h>
-#include "mt19937ar.h"
-#include "halton.h"
-#include "robotconfiguration.h"
-#include "bodyconfiguration.h"
 
 struct BaseSamplersPlugin : public RavePlugin {
-    BaseSamplersPlugin()
-    {
-        _interfaces[PT_SpaceSampler].push_back("MT19937");
-        _interfaces[PT_SpaceSampler].push_back("Halton");
-        _interfaces[PT_SpaceSampler].push_back("RobotConfiguration");
-        _interfaces[PT_SpaceSampler].push_back("BodyConfiguration");
-    }
+    BaseSamplersPlugin();
+    ~BaseSamplersPlugin() override;
 
-    ~BaseSamplersPlugin() override {}
-
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
-    {
-        switch(type) {
-        case PT_SpaceSampler:
-            if( interfacename == "mt19937") {
-                return InterfaceBasePtr(new MT19937Sampler(penv,sinput));
-            }
-            else if( interfacename == "halton" ) {
-                return InterfaceBasePtr(new HaltonSampler(penv,sinput));
-            }
-            else if( interfacename == "robotconfiguration" ) {
-                return InterfaceBasePtr(new RobotConfigurationSampler(penv,sinput));
-            }
-            else if( interfacename == "bodyconfiguration" ) {
-                return InterfaceBasePtr(new BodyConfigurationSampler(penv,sinput));
-            }
-            break;
-        default:
-            break;
-        }
-        return OpenRAVE::InterfaceBasePtr();
-    }
-
-    const InterfaceMap& GetInterfaces() const override
-    {
-        return _interfaces;
-    }
-
-    const std::string& GetPluginName() const override
-    {
-        static std::string pluginname = "BaseSamplersPlugin";
-        return pluginname;
-    }
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    const InterfaceMap& GetInterfaces() const override;
+    const std::string& GetPluginName() const override;
 
 private:
     InterfaceMap _interfaces;
