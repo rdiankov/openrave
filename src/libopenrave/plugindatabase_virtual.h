@@ -29,24 +29,28 @@ public:
     virtual ~RaveDatabase() {}
 
     virtual void Init() = 0;
-    virtual void Destroy() = 0;
-    virtual InterfaceBasePtr Create(EnvironmentBasePtr penv, InterfaceType type, std::string name) = 0;
-    virtual void OnRaveInitialized() = 0;
-    virtual void OnRavePreDestroy() = 0;
-    virtual bool HasInterface(InterfaceType type, const std::string& interfacename) const = 0;
-    virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) const = 0;
-    virtual void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const = 0;
+    virtual void Destroy();
+    virtual InterfaceBasePtr Create(EnvironmentBasePtr penv, InterfaceType type, std::string name);
+    virtual void OnRaveInitialized();
+    virtual void OnRavePreDestroy();
+    virtual bool HasInterface(InterfaceType type, const std::string& interfacename) const;
+    virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) const;
+    virtual void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const;
 
-    virtual void ReloadPlugins() {}
+    virtual void ReloadPlugins() = 0;
     virtual bool LoadPlugin(const std::string& libraryname) = 0;
 
-    virtual UserDataPtr AddVirtualPlugin(InterfaceType type, std::string name, std::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> createfn) = 0;
+    virtual UserDataPtr AddVirtualPlugin(InterfaceType type, std::string name, std::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> createfn);
 
     // Old interface
     UserDataPtr RegisterInterface(InterfaceType type, const std::string& name, const char* /*interfacehash*/, const char* /*envhash*/, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn)
     {
         return AddVirtualPlugin(type, name, createfn);
     }
+
+protected:
+    mutable std::mutex _mutex; ///< Protects the list of plugins
+    std::vector<PluginPtr> _vPlugins; ///< List of plugins
 };
 
 // VirtualPlugin replaces RegisteredInterface in utility but gives it a common interface as a regular Plugin.

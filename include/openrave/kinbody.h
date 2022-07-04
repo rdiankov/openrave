@@ -3496,7 +3496,7 @@ private:
     friend class CollisionCheckerBase;
     friend class ViewerBase;
     friend class SensorSystemBase;
-    friend class DynamicRaveDatabase;
+    friend class RaveDatabase;
     friend class ChangeCallbackData;
     friend class Grabbed;
 };

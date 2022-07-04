@@ -36,19 +36,9 @@ public:
     ~DynamicRaveDatabase() override;
 
     void Init() override; ///< Initializes by identifying environment variables and loading paths from $OPENRAVE_PLUGINS, then loads plugins
-    void Destroy() override;
-    InterfaceBasePtr Create(EnvironmentBasePtr penv, InterfaceType type, std::string name) override;
-    void OnRaveInitialized() override;
-    void OnRavePreDestroy() override;
-    bool HasInterface(InterfaceType type, const std::string& interfacename) const override;
-    void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) const override;
-    void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string>>& interfacenames) const override;
 
     void ReloadPlugins() override;
     bool LoadPlugin(const std::string& libraryname) override;
-
-    ///< "RegisterInterface"
-    UserDataPtr AddVirtualPlugin(InterfaceType type, std::string name, std::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> createfn);
 
 private:
     struct DynamicLibrary final
@@ -69,8 +59,6 @@ private:
     void _LoadPluginsFromPath(const std::string&, bool recurse = false);
     bool _LoadPlugin(const std::string&); ///< Attempts to load a RavePlugin from a shared object, fails liberally if the right symbols cannot be found. Locks _mutex.
 
-    mutable std::mutex _mutex; ///< Protects the list of plugins
-    std::vector<PluginPtr> _vPlugins; ///< List of plugins
     std::vector<std::string> _vPluginDirs; ///< List of plugin directories
     std::unordered_map<std::string, DynamicLibrary> _mapLibraryHandles; ///< A map of paths to *open* shared object handles.
 };
