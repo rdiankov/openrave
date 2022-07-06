@@ -3889,7 +3889,9 @@ protected:
         }
         else {
             envBodyIndex = _vecbodies.empty() ? 1 : _vecbodies.size(); // skip 0
-            RAVELOG_DEBUG_FORMAT("env=%s, assigned new body envBodyIndex=%d for \"%s\", this should not happen unless total number of bodies in env keeps increasing", GetNameId()%envBodyIndex%pbody->GetName());
+            if( envBodyIndex > 200 ) { // give some number sufficiently big so that leaking of objects can be detected rather than spamming the log
+                RAVELOG_DEBUG_FORMAT("env=%s, assigned new body envBodyIndex=%d for \"%s\", this should not happen unless total number of bodies in env keeps increasing", GetNameId()%envBodyIndex%pbody->GetName());
+            }
         }
         pbody->_environmentBodyIndex = envBodyIndex;
         return envBodyIndex;
