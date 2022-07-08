@@ -179,6 +179,11 @@ object PyCollisionCheckerBase::GetGeometryGroup()
     return ConvertStringToUnicode(_pCollisionChecker->GetGeometryGroup());
 }
 
+object PyCollisionCheckerBase::GetBodyGeometryGroup(PyKinBodyPtr pybody)
+{
+    return ConvertStringToUnicode(_pCollisionChecker->GetBodyGeometryGroup(openravepy::GetKinBody(pybody)));
+}
+
 void PyCollisionCheckerBase::RemoveKinBody(PyKinBodyPtr pbody)
 {
     _pCollisionChecker->RemoveKinBody(openravepy::GetKinBody(pbody));
@@ -822,6 +827,7 @@ void init_openravepy_collisionchecker()
     .def("SetGeometryGroup", &PyCollisionCheckerBase::SetGeometryGroup, DOXY_FN(CollisionCheckerBase, SetGeometryGroup))
     .def("SetBodyGeometryGroup", &PyCollisionCheckerBase::SetBodyGeometryGroup, PY_ARGS("body", "groupname") DOXY_FN(CollisionCheckerBase, SetBodyGeometryGroup))
     .def("GetGeometryGroup", &PyCollisionCheckerBase::GetGeometryGroup, DOXY_FN(CollisionCheckerBase, GetGeometryGroup))
+    .def("GetBodyGeometryGroup", &PyCollisionCheckerBase::GetBodyGeometryGroup, PY_ARGS("body") DOXY_FN(CollisionCheckerBase, GetBodyGeometryGroup))
     .def("SetCollisionOptions",&PyCollisionCheckerBase::SetCollisionOptions, DOXY_FN(CollisionCheckerBase,SetCollisionOptions "int"))
     .def("GetCollisionOptions",&PyCollisionCheckerBase::GetCollisionOptions, DOXY_FN(CollisionCheckerBase,GetCollisionOptions))
     .def("CheckCollision",pcolb, PY_ARGS("body") DOXY_FN(CollisionCheckerBase,CheckCollision "KinBodyConstPtr; CollisionReportPtr"))
