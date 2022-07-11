@@ -64,8 +64,14 @@ inline bool ExtractContiguousArrayToVector(py::object oContiguousArray,
     if (IS_PYTHONOBJECT_NONE(oContiguousArray)) {
         return true;
     }
+
+    if (!py::isinstance<py::array_t<T>>(oContiguousArray)) {
+        RAVELOG_WARN("Input data is not contigous or element type is different from expected, so have to use slow generic conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
+        return false;
+    }
+
     PyArrayObject* arrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)oContiguousArray.ptr());
-    if( !arrPtr || !arrPtr->data || !arrPtr->ob_type->tp_name || *arrPtr->ob_type->tp_name != 'n') {
+    if( !arrPtr || !arrPtr->data) {
         RAVELOG_WARN("Input data is not contigous so have to use slow conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
         return false;
     }
