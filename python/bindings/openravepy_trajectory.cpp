@@ -52,6 +52,31 @@ using py::def;
 
 namespace numeric = py::numeric;
 
+/// \brief converts python contigous array to stl vector
+/// \param[IN] oContiguousArray input array to convert from
+/// \param[OUT] vecOut output to where converted result is saved
+/// \return whether oContiguousArray is succesfully converted to vecOut
+template <typename T>
+inline bool ExtractContiguousArrayToVector(py::object oContiguousArray,
+                                           std::vector<T>& vecOut)
+{
+    vecOut.clear();
+    PyArrayObject* arrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)oContiguousArray.ptr());
+    if( !arrPtr || !arrPtr->data) {
+        RAVELOG_WARN("Input data or time is not contigous so have to use slow conversion. Please use numpy array for faster conversion");
+        return false;
+    }
+
+    AutoPyArrayObjectDereferencer psaver(openravepy::AutoPyArrayObjectDereferencer(arrPtr));
+    int pointsnum = PyArray_SIZE(arrPtr);
+    if (pointsnum > 0) {
+        T* pdata = (T*) PyArray_DATA(arrPtr);
+        vecOut.resize(pointsnum);
+        memcpy(&vecOut[0], pdata, pointsnum * sizeof(T));
+    }
+    return true;
+}
+
 PyTrajectoryBase::PyTrajectoryBase(TrajectoryBasePtr pTrajectory, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pTrajectory, pyenv),_ptrajectory(pTrajectory) {
 }
 PyTrajectoryBase::~PyTrajectoryBase() {
@@ -68,25 +93,37 @@ void PyTrajectoryBase::Init(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Grou
 
 void PyTrajectoryBase::Insert(size_t index, object odata)
 {
-    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    std::vector<dReal>& vdata = _vdataCache;
+    if (!ExtractContiguousArrayToVector(odata, vdata)) {
+        vdata = ExtractArray<dReal>(odata);
+    }
     _ptrajectory->Insert(index,vdata);
 }
 
 void PyTrajectoryBase::Insert(size_t index, object odata, bool bOverwrite)
 {
-    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    std::vector<dReal>& vdata = _vdataCache;
+    if (!ExtractContiguousArrayToVector(odata, vdata)) {
+        vdata = ExtractArray<dReal>(odata);
+    }
     _ptrajectory->Insert(index,vdata,bOverwrite);
 }
 
 void PyTrajectoryBase::Insert(size_t index, object odata, PyConfigurationSpecificationPtr pyspec)
 {
-    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    std::vector<dReal>& vdata = _vdataCache;
+    if (!ExtractContiguousArrayToVector(odata, vdata)) {
+        vdata = ExtractArray<dReal>(odata);
+    }
     _ptrajectory->Insert(index,vdata,openravepy::GetConfigurationSpecification(pyspec));
 }
 
 void PyTrajectoryBase::Insert(size_t index, object odata, PyConfigurationSpecificationPtr pyspec, bool bOverwrite)
 {
-    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    std::vector<dReal>& vdata = _vdataCache;
+    if (!ExtractContiguousArrayToVector(odata, vdata)) {
+        vdata = ExtractArray<dReal>(odata);
+    }
     _ptrajectory->Insert(index,vdata,openravepy::GetConfigurationSpecification(pyspec),bOverwrite);
 }
 
@@ -109,14 +146,14 @@ void PyTrajectoryBase::Remove(size_t startindex, size_t endindex)
 
 object PyTrajectoryBase::Sample(dReal time) const
 {
-    std::vector<dReal> values;
+    std::vector<dReal>& values = _vdataCache;
     _ptrajectory->Sample(values,time);
     return toPyArray(values);
 }
 
 object PyTrajectoryBase::Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const
 {
-    std::vector<dReal> values;
+    std::vector<dReal>& values = _vdataCache;
     _ptrajectory->Sample(values,time,openravepy::GetConfigurationSpecification(pyspec), true);
     return toPyArray(values);
 }
@@ -131,7 +168,10 @@ object PyTrajectoryBase::Sample(dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpe
 
 object PyTrajectoryBase::SampleFromPrevious(object odata, dReal time, PyConfigurationSpecificationPtr pyspec) const
 {
-    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    std::vector<dReal>& vdata = _vdataCache;
+    if (!ExtractContiguousArrayToVector(odata, vdata)) {
+        vdata = ExtractArray<dReal>(odata);
+    }
     _ptrajectory->Sample(vdata,time,openravepy::GetConfigurationSpecification(pyspec), false);
     return toPyArray(vdata);
 }
@@ -144,8 +184,11 @@ object PyTrajectoryBase::SampleFromPrevious(object odata, dReal time, OPENRAVE_S
 
 object PyTrajectoryBase::SamplePoints2D(object otimes) const
 {
-    std::vector<dReal> values;
-    std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
+    std::vector<dReal>& vtimes = _vtimesCache;
+    if (!ExtractContiguousArrayToVector(otimes, vtimes)) {
+        vtimes = ExtractArray<dReal>(otimes);
+    }
+    std::vector<dReal>& values = _vdataCache;
     _ptrajectory->SamplePoints(values,vtimes);
 
     const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
@@ -165,9 +208,12 @@ object PyTrajectoryBase::SamplePoints2D(object otimes) const
 
 object PyTrajectoryBase::SamplePoints2D(object otimes, PyConfigurationSpecificationPtr pyspec) const
 {
-    std::vector<dReal> values;
     ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
-    std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
+    std::vector<dReal>& vtimes = _vtimesCache;
+    if (!ExtractContiguousArrayToVector(otimes, vtimes)) {
+        vtimes = ExtractArray<dReal>(otimes);
+    }
+    std::vector<dReal>& values = _vdataCache;
     _ptrajectory->SamplePoints(values, vtimes, spec);
 
     const int numdof = spec.GetDOF();
@@ -189,7 +235,7 @@ object PyTrajectoryBase::SamplePoints2D(object otimes, PyConfigurationSpecificat
 object PyTrajectoryBase::SamplePointsSameDeltaTime2D(dReal deltatime,
                                                      bool ensureLastPoint) const
 {
-    std::vector<dReal> values;
+    std::vector<dReal>& values = _vdataCache;
     _ptrajectory->SamplePointsSameDeltaTime(values, deltatime, ensureLastPoint);
 
     const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
@@ -212,7 +258,7 @@ object PyTrajectoryBase::SamplePointsSameDeltaTime2D(dReal deltatime,
                                                      bool ensureLastPoint,
                                                      PyConfigurationSpecificationPtr pyspec) const
 {
-    std::vector<dReal> values;
+    std::vector<dReal>& values = _vdataCache;
     ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
     _ptrajectory->SamplePointsSameDeltaTime(values, deltatime, ensureLastPoint, spec);
 
@@ -255,14 +301,14 @@ size_t PyTrajectoryBase::GetNumWaypoints() const {
 
 object PyTrajectoryBase::GetWaypoints(size_t startindex, size_t endindex) const
 {
-    std::vector<dReal> values;
+    std::vector<dReal>& values = _vdataCache;
     _ptrajectory->GetWaypoints(startindex,endindex,values);
     return toPyArray(values);
 }
 
 object PyTrajectoryBase::GetWaypoints(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const
 {
-    std::vector<dReal> values;
+    std::vector<dReal>& values = _vdataCache;
     _ptrajectory->GetWaypoints(startindex,endindex,values,openravepy::GetConfigurationSpecification(pyspec));
     return toPyArray(values);
 }
@@ -276,7 +322,7 @@ object PyTrajectoryBase::GetWaypoints(size_t startindex, size_t endindex, OPENRA
 // similar to GetWaypoints except returns a 2D array, one row for every waypoint
 object PyTrajectoryBase::GetWaypoints2D(size_t startindex, size_t endindex) const
 {
-    std::vector<dReal> values;
+    std::vector<dReal>& values = _vdataCache;
     _ptrajectory->GetWaypoints(startindex,endindex,values);
     const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
 
@@ -329,7 +375,7 @@ object PyTrajectoryBase::__getitem__(py::slice indices) const
         vindices.push_back(i);
     }
 
-    std::vector<dReal> values; // workspace
+    std::vector<dReal>& values = _vdataCache; // workspace
     _ptrajectory->GetWaypoint(0,values);
     const int nindices = vindices.size();
     const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
@@ -367,7 +413,7 @@ object PyTrajectoryBase::GetAllWaypoints2D() const
 
 object PyTrajectoryBase::GetWaypoints2D(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const
 {
-    std::vector<dReal> values;
+    std::vector<dReal>& values = _vdataCache;
     ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
     _ptrajectory->GetWaypoints(startindex,endindex,values,spec);
     const int numdof = spec.GetDOF();
@@ -405,14 +451,14 @@ object PyTrajectoryBase::GetAllWaypoints2D(OPENRAVE_SHARED_PTR<ConfigurationSpec
 
 object PyTrajectoryBase::GetWaypoint(int index) const
 {
-    std::vector<dReal> values;
+    std::vector<dReal>& values = _vdataCache;
     _ptrajectory->GetWaypoint(index,values);
     return toPyArray(values);
 }
 
 object PyTrajectoryBase::GetWaypoint(int index, PyConfigurationSpecificationPtr pyspec) const
 {
-    std::vector<dReal> values;
+    std::vector<dReal>& values = _vdataCache;
     _ptrajectory->GetWaypoint(index,values,openravepy::GetConfigurationSpecification(pyspec));
     return toPyArray(values);
 }
