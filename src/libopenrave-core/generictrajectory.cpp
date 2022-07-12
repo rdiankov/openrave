@@ -455,7 +455,7 @@ public:
 
         std::vector<dReal>::iterator itdata = data.begin();
 
-        for(int i = 0; i < numPoints; ++i, itdata += dof) {
+        for(int i = 0; i < (ensureLastPoint ? numPoints-1 : numPoints); ++i, itdata += dof) {
             dReal sampletime = i * deltatime;
             if( sampletime >= duration ) {
                 std::copy(_vtrajdata.end() - _spec.GetDOF(), _vtrajdata.end(), itdata);
@@ -492,13 +492,8 @@ public:
         }
 
         if (ensureLastPoint) {
-            // It is possible to miss some information from the last point for groups with "previous" interpolation if the last point is within g_fEpsilon of a multiple of deltatime. Copy it to the last point
-            FOREACHC(itgroup, _spec._vgroups) {
-                const string& interpolation = itgroup->interpolation;
-                if( interpolation == "previous" ) {
-                    std::copy(_vtrajdata.end()-_spec.GetDOF()+itgroup->offset, _vtrajdata.end()-_spec.GetDOF()+itgroup->offset+itgroup->dof, data.end()-_spec.GetDOF()+itgroup->offset);
-                }
-            }
+            // copy the last point, itdata should point to that
+            std::copy(_vtrajdata.end() - _spec.GetDOF(), _vtrajdata.end(), itdata);
         }
     }
 
