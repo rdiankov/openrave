@@ -147,7 +147,6 @@ void Grabbed::ComputeListNonCollidingLinks()
         }
 
         // Check grabbed body vs other existing grabbed bodies
-        std::vector<KinBody::LinkPtr> vAttachedToOtherGrabbed;
         // int iOtherGrabbed = -1;
         for( const GrabbedPtr& pOtherGrabbed : pGrabber->_vGrabbedBodies ) {
             // ++iOtherGrabbed;
@@ -162,21 +161,19 @@ void Grabbed::ComputeListNonCollidingLinks()
             }
             // RAVELOG_INFO_FORMAT("env=%s, current grabbed='%s'; other grabbed(%d/%d)='%s'", penv->GetNameId()%pGrabbedBody->GetName()%iOtherGrabbed%numOtherGrabbed%pOtherGrabbedBody->GetName());
 
-            bool bSameLink = std::find(_vAttachedToGrabbingLink.begin(), _vAttachedToGrabbingLink.end(), pOtherGrabbed->_pGrabbingLink) != _vAttachedToGrabbingLink.end();
 
             if( pOtherGrabbedBody != pGrabbedBody ) {
-                KinBody::KinBodyStateSaver otherGrabbedEnableSaver(pOtherGrabbedBody, KinBody::Save_LinkEnable);
-                pOtherGrabbedBody->Enable(true);
-                FOREACHC(itOtherGrabbedLink, pOtherGrabbedBody->GetLinks()) {
-                    bool isNonColliding = false;
-                    if( bSameLink && std::find(vAttachedToOtherGrabbed.begin(), vAttachedToOtherGrabbed.end(), *itOtherGrabbedLink) != vAttachedToOtherGrabbed.end() ) {
-                    }
-                    else if( !pchecker->CheckCollision(KinBody::LinkConstPtr(*itOtherGrabbedLink), pGrabbedBody) ) {
-                        isNonColliding = true;
-                    }
-
-                    if( isNonColliding ) {
-                        _listNonCollidingLinksWhenGrabbed.push_back(*itOtherGrabbedLink);
+                // sufficient to check one direction, whether grabbing link of body 2 is in links attached rigidly to grabbing link of body 1. Result is same for both directions.
+                const bool bTwoGrabbedBodiesHaveStaticRelativePose = std::find(_vAttachedToGrabbingLink.begin(), _vAttachedToGrabbingLink.end(), pOtherGrabbed->_pGrabbingLink) != _vAttachedToGrabbingLink.end();
+                // if two grabbed bodies have static (constant) relative pose with respect to each other, do not need to check collision between them for the rest of time.
+                if (!bTwoGrabbedBodiesHaveStaticRelativePose) {
+                    KinBody::KinBodyStateSaver otherGrabbedEnableSaver(pOtherGrabbedBody, KinBody::Save_LinkEnable);
+                    pOtherGrabbedBody->Enable(true);
+                    for (const KinBody::LinkPtr& pOtherGrabbedLink : pOtherGrabbedBody->GetLinks()) {
+                        const bool isNonColliding = !pchecker->CheckCollision(KinBody::LinkConstPtr(pOtherGrabbedLink), pGrabbedBody);
+                        if( isNonColliding ) {
+                            _listNonCollidingLinksWhenGrabbed.push_back(pOtherGrabbedLink);
+                        }
                     }
                 }
             }
