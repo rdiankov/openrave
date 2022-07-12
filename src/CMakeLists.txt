@@ -27,6 +27,10 @@ endif()
 if( CLOCK_GETTIME_FOUND )
   set(openrave_libraries ${openrave_libraries} rt)
 endif()
+find_package(Threads)
+if( CMAKE_THREAD_LIBS_INIT )
+  set(openrave_libraries ${openrave_libraries} ${CMAKE_THREAD_LIBS_INIT})
+endif()
 
 set(LIBOPENRAVE_COMPILE_FLAGS "${Boost_CFLAGS}")
 
@@ -36,6 +40,10 @@ endif()
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -fPIC")
+endif()
+
+if( THREADS_HAVE_PTHREAD_ARG )
+  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -pthread")
 endif()
 
 set(LIBOPENRAVE_LINK_FLAGS "")
