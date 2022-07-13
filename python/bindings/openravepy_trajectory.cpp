@@ -92,8 +92,8 @@ inline bool ExtractContiguousArrayToVector(py::object oContiguousArray,
 /// \param[OUT] ppdata pointer to start address of input contiguous array. *ppdata could be nullptr if failed to convert input.
 /// \return number of elements in the input contiguous array. if negative, failed to convert input array into raw pointer. if input is null (None), 0 is returned.
 template <typename T>
-inline int ExtractContiguousArrayToArrayObject(py::object oContiguousArray,
-                                               T** ppdata)
+inline int ExtractContiguousArrayToPointer(py::object oContiguousArray,
+                                           T** ppdata)
 {
     *ppdata = nullptr;
     if (IS_PYTHONOBJECT_NONE(oContiguousArray)) {
@@ -134,7 +134,7 @@ void PyTrajectoryBase::Init(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Grou
 void PyTrajectoryBase::Insert(size_t index, object odata)
 {
     dReal* pdata = nullptr;
-    const int numElements = ExtractContiguousArrayToArrayObject(odata, &pdata);
+    const int numElements = ExtractContiguousArrayToPointer(odata, &pdata);
     if (numElements >= 0) {
         _ptrajectory->Insert(index, pdata, numElements);
     }
@@ -148,7 +148,7 @@ void PyTrajectoryBase::Insert(size_t index, object odata)
 void PyTrajectoryBase::Insert(size_t index, object odata, bool bOverwrite)
 {
     dReal* pdata = nullptr;
-    const int numElements = ExtractContiguousArrayToArrayObject(odata, &pdata);
+    const int numElements = ExtractContiguousArrayToPointer(odata, &pdata);
     if (numElements >= 0) {
         _ptrajectory->Insert(index, pdata, numElements, bOverwrite);
     }
@@ -163,7 +163,7 @@ void PyTrajectoryBase::Insert(size_t index, object odata, PyConfigurationSpecifi
 {
     const ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
     dReal* pdata = nullptr;
-    const int numElements = ExtractContiguousArrayToArrayObject(odata, &pdata);
+    const int numElements = ExtractContiguousArrayToPointer(odata, &pdata);
     if (numElements >= 0) {
         _ptrajectory->Insert(index, pdata, numElements, spec);
     }
@@ -178,7 +178,7 @@ void PyTrajectoryBase::Insert(size_t index, object odata, PyConfigurationSpecifi
 {
     const ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
     dReal* pdata = nullptr;
-    const int numElements = ExtractContiguousArrayToArrayObject(odata, &pdata);
+    const int numElements = ExtractContiguousArrayToPointer(odata, &pdata);
     if (numElements >= 0) {
         _ptrajectory->Insert(index, pdata, numElements, spec, bOverwrite);
     }
