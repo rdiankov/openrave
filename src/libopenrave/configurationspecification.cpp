@@ -77,9 +77,11 @@ ConfigurationSpecification::ConfigurationSpecification(const ConfigurationSpecif
 
 int ConfigurationSpecification::GetDOF() const
 {
+    // this function takes non-negligible time considering how many times this is called.
+    // TODO optimize this, whether by sorting _vgroups by offset or caching dof as member of ConfigurationSpecification class.
     int maxdof = 0;
-    FOREACHC(it,_vgroups) {
-        maxdof = max(maxdof,it->offset+it->dof);
+    for (const Group& group : _vgroups) {
+        maxdof += group.dof;
     }
     return maxdof;
 }
@@ -618,7 +620,7 @@ int ConfigurationSpecification::AddDeltaTimeGroup()
 {
     int dof = 0;
     for(size_t i = 0; i < _vgroups.size(); ++i) {
-        dof = max(dof,_vgroups[i].offset+_vgroups[i].dof);
+        dof += _vgroups[i].dof;
         if( _vgroups[i].name == "deltatime" ) {
             return _vgroups[i].offset;
         }
@@ -638,7 +640,7 @@ int ConfigurationSpecification::AddGroup(const std::string& name, int dof, const
     std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
     int specdof = 0;
     for(size_t i = 0; i < _vgroups.size(); ++i) {
-        specdof = max(specdof,_vgroups[i].offset+_vgroups[i].dof);
+        specdof += _vgroups[i].dof;
         if( _vgroups[i].name == name ) {
             BOOST_ASSERT(_vgroups[i].dof==dof);
             return _vgroups[i].offset;
@@ -1409,35 +1411,35 @@ boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> Configura
 }
 
 
-static void ConvertDOFRotation_AxisFrom3D(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
+static void ConvertDOFRotation_AxisFrom3D(std::vector<dReal>::iterator ittarget, const dReal* pSource, const Vector& vaxis)
 {
-    Vector axisangle(*(itsource+0),*(itsource+1),*(itsource+2));
+    Vector axisangle(*(pSource+0),*(pSource+1),*(pSource+2));
     *ittarget = normalizeAxisRotation(vaxis,quatFromAxisAngle(axisangle)).first;
 }
 
-static void ConvertDOFRotation_AxisFromQuat(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
+static void ConvertDOFRotation_AxisFromQuat(std::vector<dReal>::iterator ittarget, const dReal* pSource, const Vector& vaxis)
 {
-    Vector quat(*(itsource+0),*(itsource+1),*(itsource+2),*(itsource+3));
+    Vector quat(*(pSource+0),*(pSource+1),*(pSource+2),*(pSource+3));
     *ittarget = normalizeAxisRotation(vaxis,quat).first;
 }
 
-static void ConvertDOFRotation_3DFromAxis(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
+static void ConvertDOFRotation_3DFromAxis(std::vector<dReal>::iterator ittarget, const dReal* pSource, const Vector& vaxis)
 {
-    *(ittarget+0) = vaxis[0]* *itsource;
-    *(ittarget+1) = vaxis[1]* *itsource;
-    *(ittarget+2) = vaxis[2]* *itsource;
+    *(ittarget+0) = vaxis[0]* *pSource;
+    *(ittarget+1) = vaxis[1]* *pSource;
+    *(ittarget+2) = vaxis[2]* *pSource;
 }
-static void ConvertDOFRotation_3DFromQuat(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource)
+static void ConvertDOFRotation_3DFromQuat(std::vector<dReal>::iterator ittarget, const dReal* pSource)
 {
-    Vector quat(*(itsource+0),*(itsource+1),*(itsource+2),*(itsource+3));
+    Vector quat(*(pSource+0),*(pSource+1),*(pSource+2),*(pSource+3));
     Vector axisangle = quatFromAxisAngle(quat);
     *(ittarget+0) = axisangle[0];
     *(ittarget+1) = axisangle[1];
     *(ittarget+2) = axisangle[2];
 }
-static void ConvertDOFRotation_QuatFromAxis(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
+static void ConvertDOFRotation_QuatFromAxis(std::vector<dReal>::iterator ittarget, const dReal* pSource, const Vector& vaxis)
 {
-    Vector axisangle = vaxis * *itsource;
+    Vector axisangle = vaxis * *pSource;
     Vector quat = quatFromAxisAngle(axisangle);
     *(ittarget+0) = quat[0];
     *(ittarget+1) = quat[1];
@@ -1445,9 +1447,9 @@ static void ConvertDOFRotation_QuatFromAxis(std::vector<dReal>::iterator ittarge
     *(ittarget+3) = quat[3];
 }
 
-static void ConvertDOFRotation_QuatFrom3D(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource)
+static void ConvertDOFRotation_QuatFrom3D(std::vector<dReal>::iterator ittarget, const dReal* pSource)
 {
-    Vector axisangle(*(itsource+0),*(itsource+1),*(itsource+2));
+    Vector axisangle(*(pSource+0),*(pSource+1),*(pSource+2));
     Vector quat = quatFromAxisAngle(axisangle);
     *(ittarget+0) = quat[0];
     *(ittarget+1) = quat[1];
@@ -1457,6 +1459,11 @@ static void ConvertDOFRotation_QuatFrom3D(std::vector<dReal>::iterator ittarget,
 
 void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const ConfigurationSpecification::Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const ConfigurationSpecification::Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized)
 {
+    ConvertGroupData(ittargetdata, targetstride, gtarget, &(*itsourcedata), sourcestride, gsource, numpoints, penv, filluninitialized);
+}
+
+void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, const dReal* psourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized)
+{
     if( numpoints > 1 ) {
         BOOST_ASSERT(targetstride != 0 && sourcestride != 0 );
     }
@@ -1464,10 +1471,10 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
         BOOST_ASSERT(gsource.dof==gtarget.dof);
         for(size_t i = 0; i < numpoints; ++i) {
             if( i != 0 ) {
-                itsourcedata += sourcestride;
+                psourcedata += sourcestride;
                 ittargetdata += targetstride;
             }
-            std::copy(itsourcedata,itsourcedata+gsource.dof,ittargetdata);
+            std::copy(psourcedata,psourcedata+gsource.dof,ittargetdata);
         }
     }
     else {
@@ -1622,7 +1629,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                 int commondata = affinesource&affinetarget;
                 int uninitdata = affinetarget&(~commondata);
                 int sourcerotationstart = -1, targetrotationstart = -1, targetrotationend = -1;
-                boost::function< void(std::vector<dReal>::iterator, std::vector<dReal>::const_iterator) > rotconverterfn;
+                boost::function< void(std::vector<dReal>::iterator, const dReal*) > rotconverterfn;
                 if( (uninitdata & DOF_RotationMask) && (affinetarget & DOF_RotationMask) && (affinesource & DOF_RotationMask) ) {
                     // both hold rotations, but need to convert
                     uninitdata &= ~DOF_RotationMask;
@@ -1686,16 +1693,16 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                     }
                 }
 
-                for(size_t i = 0; i < numpoints; ++i, itsourcedata += sourcestride, ittargetdata += targetstride) {
+                for(size_t i = 0; i < numpoints; ++i, psourcedata += sourcestride, ittargetdata += targetstride) {
                     for(int j = 0; j < (int)vtransferindices.size(); ++j) {
                         if( vtransferindices[j] >= 0 ) {
-                            *(ittargetdata+j) = *(itsourcedata+vtransferindices[j]);
+                            *(ittargetdata+j) = *(psourcedata+vtransferindices[j]);
                         }
                         else {
                             if( j >= targetrotationstart && j < targetrotationend ) {
                                 if( j == targetrotationstart ) {
                                     // only convert when at first index
-                                    rotconverterfn(ittargetdata+targetrotationstart,itsourcedata+sourcerotationstart);
+                                    rotconverterfn(ittargetdata+targetrotationstart,psourcedata+sourcerotationstart);
                                 }
                             }
                             else if( filluninitialized ) {
@@ -1775,10 +1782,10 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
             throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported token conversion: %s"),gtarget.name,ORE_InvalidArguments);
         }
 
-        for(size_t i = 0; i < numpoints; ++i, itsourcedata += sourcestride, ittargetdata += targetstride) {
+        for(size_t i = 0; i < numpoints; ++i, psourcedata += sourcestride, ittargetdata += targetstride) {
             for(size_t j = 0; j < vtransferindices.size(); ++j) {
                 if( vtransferindices[j] >= 0 ) {
-                    *(ittargetdata+j) = *(itsourcedata+vtransferindices[j]);
+                    *(ittargetdata+j) = *(psourcedata+vtransferindices[j]);
                 }
                 else if( filluninitialized ) {
                     *(ittargetdata+j) = vdefaultvalues.at(j);

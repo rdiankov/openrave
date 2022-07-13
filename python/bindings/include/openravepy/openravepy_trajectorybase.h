@@ -107,6 +107,9 @@ public:
     object GetWaypoints2D(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object GetAllWaypoints2D(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object GetWaypoint(int index, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+
+private:
+    mutable std::vector<dReal> _vdataCache, _vtimesCache; ///< caches to avoid memory allocation
 };
 
 } // namespace openravepy
