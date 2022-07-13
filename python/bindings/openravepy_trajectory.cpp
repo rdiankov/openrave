@@ -71,12 +71,12 @@ inline bool ExtractContiguousArrayToVector(py::object oContiguousArray,
     }
 
     PyArrayObject* arrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)oContiguousArray.ptr());
+    AutoPyArrayObjectDereferencer psaver(openravepy::AutoPyArrayObjectDereferencer(arrPtr));
     if( !arrPtr || !arrPtr->data) {
         RAVELOG_WARN("Input data is not contigous so have to use slow conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
         return false;
     }
 
-    AutoPyArrayObjectDereferencer psaver(openravepy::AutoPyArrayObjectDereferencer(arrPtr));
     int pointsnum = PyArray_SIZE(arrPtr);
     if (pointsnum > 0) {
         T* pdata = (T*) PyArray_DATA(arrPtr);
@@ -84,6 +84,37 @@ inline bool ExtractContiguousArrayToVector(py::object oContiguousArray,
         memcpy(&vecOut[0], pdata, pointsnum * sizeof(T));
     }
     return true;
+}
+
+
+/// \brief converts python contigous array to raw pointer
+/// \param[IN] oContiguousArray input array to convert from
+/// \param[OUT] ppdata pointer to start address of input contiguous array. *ppdata could be nullptr if failed to convert input.
+/// \return number of elements in the input contiguous array. if negative, failed to convert input array into raw pointer. if input is null (None), 0 is returned.
+template <typename T>
+inline int ExtractContiguousArrayToArrayObject(py::object oContiguousArray,
+                                               T** ppdata)
+{
+    *ppdata = nullptr;
+    if (IS_PYTHONOBJECT_NONE(oContiguousArray)) {
+        return 0;
+    }
+
+    if (!py::isinstance<py::array_t<T>>(oContiguousArray)) {
+        RAVELOG_WARN("Input data is not contigous or element type is different from expected, so have to use slow generic conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
+        return -1;
+    }
+
+    PyArrayObject* arrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)oContiguousArray.ptr());
+    AutoPyArrayObjectDereferencer psaver(openravepy::AutoPyArrayObjectDereferencer(arrPtr));
+    if( !arrPtr || !arrPtr->data) {
+        RAVELOG_WARN("Input data is not contigous so have to use slow conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
+        return -1;
+    }
+
+    int pointsnum = PyArray_SIZE(arrPtr);
+    *ppdata = (T*) PyArray_DATA(arrPtr);
+    return pointsnum;
 }
 
 PyTrajectoryBase::PyTrajectoryBase(TrajectoryBasePtr pTrajectory, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pTrajectory, pyenv),_ptrajectory(pTrajectory) {
@@ -102,38 +133,60 @@ void PyTrajectoryBase::Init(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Grou
 
 void PyTrajectoryBase::Insert(size_t index, object odata)
 {
-    std::vector<dReal>& vdata = _vdataCache;
-    if (!ExtractContiguousArrayToVector(odata, vdata)) {
-        vdata = ExtractArray<dReal>(odata);
+    dReal* pdata = nullptr;
+    const int numElements = ExtractContiguousArrayToArrayObject(odata, &pdata);
+    if (numElements >= 0) {
+        _ptrajectory->Insert(index, pdata, numElements);
     }
-    _ptrajectory->Insert(index,vdata);
+    else {
+        std::vector<dReal>& vdata = _vdataCache;
+        vdata = ExtractArray<dReal>(odata);
+        _ptrajectory->Insert(index,vdata);
+    }
 }
 
 void PyTrajectoryBase::Insert(size_t index, object odata, bool bOverwrite)
 {
-    std::vector<dReal>& vdata = _vdataCache;
-    if (!ExtractContiguousArrayToVector(odata, vdata)) {
-        vdata = ExtractArray<dReal>(odata);
+    dReal* pdata = nullptr;
+    const int numElements = ExtractContiguousArrayToArrayObject(odata, &pdata);
+    if (numElements >= 0) {
+        _ptrajectory->Insert(index, pdata, numElements, bOverwrite);
     }
-    _ptrajectory->Insert(index,vdata,bOverwrite);
+    else {
+        std::vector<dReal>& vdata = _vdataCache;
+        vdata = ExtractArray<dReal>(odata);
+        _ptrajectory->Insert(index,vdata, bOverwrite);
+    }
 }
 
 void PyTrajectoryBase::Insert(size_t index, object odata, PyConfigurationSpecificationPtr pyspec)
 {
-    std::vector<dReal>& vdata = _vdataCache;
-    if (!ExtractContiguousArrayToVector(odata, vdata)) {
-        vdata = ExtractArray<dReal>(odata);
+    const ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
+    dReal* pdata = nullptr;
+    const int numElements = ExtractContiguousArrayToArrayObject(odata, &pdata);
+    if (numElements >= 0) {
+        _ptrajectory->Insert(index, pdata, numElements, spec);
     }
-    _ptrajectory->Insert(index,vdata,openravepy::GetConfigurationSpecification(pyspec));
+    else {
+        std::vector<dReal>& vdata = _vdataCache;
+        vdata = ExtractArray<dReal>(odata);
+        _ptrajectory->Insert(index, vdata, spec);
+    }
 }
 
 void PyTrajectoryBase::Insert(size_t index, object odata, PyConfigurationSpecificationPtr pyspec, bool bOverwrite)
 {
-    std::vector<dReal>& vdata = _vdataCache;
-    if (!ExtractContiguousArrayToVector(odata, vdata)) {
-        vdata = ExtractArray<dReal>(odata);
+    const ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
+    dReal* pdata = nullptr;
+    const int numElements = ExtractContiguousArrayToArrayObject(odata, &pdata);
+    if (numElements >= 0) {
+        _ptrajectory->Insert(index, pdata, numElements, spec, bOverwrite);
     }
-    _ptrajectory->Insert(index,vdata,openravepy::GetConfigurationSpecification(pyspec),bOverwrite);
+    else {
+        std::vector<dReal>& vdata = _vdataCache;
+        vdata = ExtractArray<dReal>(odata);
+        _ptrajectory->Insert(index, vdata, spec, bOverwrite);
+    }
 }
 
 void PyTrajectoryBase::Insert(size_t index, object odata, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup)
