@@ -77,9 +77,11 @@ ConfigurationSpecification::ConfigurationSpecification(const ConfigurationSpecif
 
 int ConfigurationSpecification::GetDOF() const
 {
+    // this function takes non-negligible time considering how many times this is called.
+    // TODO optimize this, whether by sorting _vgroups by offset or caching dof as member of ConfigurationSpecification class.
     int maxdof = 0;
-    FOREACHC(it,_vgroups) {
-        maxdof = max(maxdof,it->offset+it->dof);
+    for (const Group& group : _vgroups) {
+        maxdof += group.dof;
     }
     return maxdof;
 }
@@ -618,7 +620,7 @@ int ConfigurationSpecification::AddDeltaTimeGroup()
 {
     int dof = 0;
     for(size_t i = 0; i < _vgroups.size(); ++i) {
-        dof = max(dof,_vgroups[i].offset+_vgroups[i].dof);
+        dof += _vgroups[i].dof;
         if( _vgroups[i].name == "deltatime" ) {
             return _vgroups[i].offset;
         }
@@ -638,7 +640,7 @@ int ConfigurationSpecification::AddGroup(const std::string& name, int dof, const
     std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
     int specdof = 0;
     for(size_t i = 0; i < _vgroups.size(); ++i) {
-        specdof = max(specdof,_vgroups[i].offset+_vgroups[i].dof);
+        specdof += _vgroups[i].dof;
         if( _vgroups[i].name == name ) {
             BOOST_ASSERT(_vgroups[i].dof==dof);
             return _vgroups[i].offset;
