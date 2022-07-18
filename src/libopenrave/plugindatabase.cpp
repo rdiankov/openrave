@@ -14,6 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#if !OPENRAVE_STATIC_PLUGINS
+
 #include <cstdarg>
 #include <cstring>
 #include <functional>
@@ -322,3 +324,5 @@ bool DynamicRaveDatabase::_LoadPlugin(const std::string& strpath)
 }
 
 } // namespace OpenRAVE
+
+#endif // !OPENRAVE_STATIC_PLUGINS

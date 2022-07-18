@@ -31,6 +31,7 @@
 #include <locale>
 #include <set>
 
+#include "plugindatabase_virtual.h"
 #include "plugindatabase.h"
 
 #include <boost/algorithm/string/trim.hpp>
