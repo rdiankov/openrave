@@ -435,6 +435,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 orjson::SetJsonValueByKey(output, "constraintToolPosition", rConstraintToolPosition, alloc);
             }
         }
+        return true;
     }
 
     /// \brief Jitters the current configuration and sets a new configuration on the environment. The jittered
