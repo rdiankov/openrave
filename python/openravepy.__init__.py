@@ -103,6 +103,8 @@ else:
             self._pimpl = app_error
         def __str__( self ):
             return self._pimpl.message
+        def __repr__( self ):
+            return self._pimpl.__repr__()
         def __getattribute__(self, attr):
             my_pimpl = super(boost_filesystem_error, self).__getattribute__("_pimpl")
             try:
