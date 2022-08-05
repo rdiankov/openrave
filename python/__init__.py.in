@@ -26,8 +26,6 @@ def _loadversion(targetname):
 
 from platform import system
 from sys import platform
-from sys import version_info
-from types import ModuleType
 if platform.startswith('win') or system().lower() == 'windows':
     openravepy_currentversion = loadlatest()
 else:
@@ -39,6 +37,11 @@ else:
 if openravepy_currentversion is not None:
     from sys import modules
     modules['openravepy'] = openravepy_currentversion
+    # caused modules reloaded; has to reimport sys.modules
+    del modules
+    from sys import modules
+    from sys import version_info
+    from types import ModuleType
     if version_info[0] >= 3:
         # have to resolve so modules so that they are not initialized twice
         for name, value in modules['openravepy'].__dict__.items():
