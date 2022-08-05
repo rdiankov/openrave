@@ -19,6 +19,7 @@ import os.path
 from sys import platform as sysplatformname
 from sys import stdout
 import numpy
+import six
 try:
     from itertools import izip
 except ImportError:
@@ -290,7 +291,7 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
     :param colormode: optionally override default color mode of rgb to cmy
     :param coloradd: an optional 3-element vector for 
     """
-    if isinstance(target,basestring):
+    if isinstance(target,six.string_types):
         T = env.GetKinBody(target).GetTransform()
     elif hasattr(target,'GetTransform'):
         T = target.GetTransform()
