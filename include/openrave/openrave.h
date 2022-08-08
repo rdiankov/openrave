@@ -1036,6 +1036,21 @@ protected:
      */
     static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
 
+    /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
+
+        \param ittargetdata iterator pointing to start of target group data that should be overwritten
+        \param targetstride the number of elements that to go from the next target point. Necessary if numpoints > 1.
+        \param gtarget the target configuration group
+        \param psourcedata pointer to start of source group data that should be read
+        \param sourcestride the number of elements that to go from the next source point. Necessary if numpoints > 1.
+        \param gsource the source configuration group
+        \param numpoints the number of points to convert. The target and source strides are gtarget.dof and gsource.dof
+        \param penv [optional] The environment which might be needed to fill in unknown data. Assumes environment is locked.
+        \param filluninitialized If there exists target groups that cannot be initialized, then will set default values using the current environment. For example, the current joint values of the body will be used.
+        \throw openrave_exception throw f groups are incompatible
+     */
+    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, const dReal* psourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
+
     /** \brief Converts from one specification to another.
 
         \param ittargetdata iterator pointing to start of target group data that should be overwritten
