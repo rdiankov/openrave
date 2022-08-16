@@ -463,7 +463,7 @@ public:
 
         std::vector<dReal>::iterator itdata = data.begin();
 
-        for(int i = 0; i < numPoints; ++i, itdata += dof) {
+        for(int i = 0; i < (ensureLastPoint ? numPoints-1 : numPoints); ++i, itdata += dof) {
             dReal sampletime = i * deltatime;
             if( sampletime >= duration ) {
                 std::copy(_vtrajdata.end() - _spec.GetDOF(), _vtrajdata.end(), itdata);
@@ -497,6 +497,11 @@ public:
                     *(itdata + _timeoffset) = timeFromLowerWaypoint;
                 }
             }
+        }
+
+        if (ensureLastPoint) {
+            // copy the last point, itdata should point to that
+            std::copy(_vtrajdata.end() - _spec.GetDOF(), _vtrajdata.end(), itdata);
         }
     }
 
