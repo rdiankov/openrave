@@ -965,6 +965,9 @@ private:
     /// \brief initializes a robot with info structure
     virtual bool InitFromRobotInfo(const RobotBaseInfo& info);
 
+    /// \brief Returns the current position configuration
+    virtual void GetPositionConfiguration(PositionConfiguration& positionConfiguration) const;
+
     /// \brief Returns the manipulators of the robot
     virtual const std::vector<ManipulatorPtr>& GetManipulators() const;
 

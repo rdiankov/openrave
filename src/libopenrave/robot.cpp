@@ -832,7 +832,49 @@ bool RobotBase::InitFromRobotInfo(const RobotBaseInfo& info)
     FOREACH(it, info._mReadableInterfaces) {
         SetReadableInterface(it->first, it->second);
     }
+
+    _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.clear();
+    for( const PositionConfigurationPtr& positionConfiguration : info._vNonSelfCollidingPositionConfigurations ) {
+        _vNonSelfCollidingPositionConfigurationsAndLinkTransformations.emplace_back(positionConfiguration, std::vector<Transform>());  // Shallow copy
+    }
+
     return true;
+}
+
+void RobotBase::GetPositionConfiguration(PositionConfiguration& positionConfiguration) const
+{
+    positionConfiguration.jointConfigurationStates.clear();
+    positionConfiguration.jointConfigurationStates.reserve(GetDOF());
+    for( JointPtr joint : _vDOFOrderedJoints ) {
+        PositionConfiguration::JointConfigurationState jointConfigurationState;
+        jointConfigurationState.jointName = joint->GetName();
+
+        // Looks up whether the joint belongs to a connected body
+        bool isInConnectedBody = false;
+        for( const ConnectedBodyPtr& connectedBody : _vecConnectedBodies ) {
+            if( !connectedBody->IsActive() ) {
+                continue;
+            }
+            OPENRAVE_ASSERT_OP(connectedBody->_vResolvedJointNames.size(), ==, connectedBody->_info._vJointInfos.size());
+            for( int jointIndex = 0; jointIndex < (int)connectedBody->_vResolvedJointNames.size(); ++jointIndex ) {
+                if( joint->GetName() == connectedBody->_vResolvedJointNames.at(jointIndex).first ) {
+                    jointConfigurationState.jointName = connectedBody->_info._vJointInfos.at(jointIndex)->GetName();  // Joint name without prefix (connected body name)
+                    jointConfigurationState.connectedBodyName = connectedBody->GetName();
+                    isInConnectedBody = true;
+                    break;
+                }
+            }
+            if( isInConnectedBody ) {
+                break;  // Optimisation: Early exit
+            }
+        }
+
+        for( int jointAxis = 0; jointAxis < joint->GetDOF(); ++jointAxis ) {
+            jointConfigurationState.jointAxis = jointAxis;
+            jointConfigurationState.jointValue = joint->GetValue(jointAxis);
+            positionConfiguration.jointConfigurationStates.push_back(jointConfigurationState);
+        }
+    }
 }
 
 bool RobotBase::SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation)

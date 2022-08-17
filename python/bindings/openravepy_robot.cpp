@@ -1591,6 +1591,13 @@ bool PyRobotBase::Init(object olinkinfos, object ojointinfos, object omanipinfos
     return _probot->Init(vlinkinfos, vjointinfos, vmanipinfos, vattachedsensorinfos, uri);
 }
 
+object PyRobotBase::GetPositionConfiguration() const
+{
+    KinBody::PositionConfiguration positionConfiguration;
+    _probot->GetPositionConfiguration(positionConfiguration);
+    return object(PyPositionConfigurationPtr(new PyPositionConfiguration(positionConfiguration)));
+}
+
 object PyRobotBase::GetManipulators()
 {
     py::list manips;
@@ -2550,6 +2557,7 @@ void init_openravepy_robot()
 #else
                        .def("Init", initrobot, Init_overloads(PY_ARGS("linkinfos", "jointinfos", "manipinfos", "attachedsensorinfos", "uri") DOXY_FN(RobotBase, Init)))
 #endif
+                       .def("GetPositionConfiguration",&PyRobotBase::GetPositionConfiguration, DOXY_FN(RobotBase,GetPositionConfiguration))
                        .def("GetManipulators",GetManipulators1, DOXY_FN(RobotBase,GetManipulators))
                        .def("GetManipulators",GetManipulators2, PY_ARGS("manipname") DOXY_FN(RobotBase,GetManipulators))
                        .def("GetManipulator",&PyRobotBase::GetManipulator,PY_ARGS("manipname") "Return the manipulator whose name matches")

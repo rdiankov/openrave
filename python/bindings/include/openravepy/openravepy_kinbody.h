@@ -157,6 +157,7 @@ public:
         bool _isRobot = false;
         bool _isPartial = true;
         py::object _dofValues = py::none_();
+        py::object _vNonSelfCollidingPositionConfigurations = py::none_();
         py::object _readableInterfaces = py::none_();
         virtual std::string __str__();
         virtual py::object __unicode__();
@@ -201,6 +202,7 @@ public:
     py::object GetDOFValues(py::object oindices) const;
     py::object GetDOFVelocities() const;
     py::object GetDOFVelocities(py::object oindices) const;
+    py::object GetPositionConfiguration() const;
     py::object GetDOFLimits() const;
     py::object GetDOFVelocityLimits() const;
     py::object GetDOFAccelerationLimits() const;
@@ -326,6 +328,7 @@ public:
     py::object GetURI() const;
     py::object GetNonAdjacentLinks() const;
     py::object GetNonAdjacentLinks(int adjacentoptions) const;
+    bool AreAdjacentLinks(int linkindex0, int linkindex1) const;
     void SetAdjacentLinks(int linkindex0, int linkindex1);
     void SetAdjacentLinksCombinations(py::object olinkIndices);
     py::object GetAdjacentLinks() const;

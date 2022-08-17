@@ -2854,5 +2854,120 @@ void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     orjson::LoadJsonValueByKey(value, "equations", _equations);
 }
 
+void KinBody::PositionConfiguration::Reset()
+{
+    _id.clear();
+    name.clear();
+    jointConfigurationStates.clear();
+}
+
+void KinBody::PositionConfiguration::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    if( !value.IsObject() ) {
+        value.SetObject();
+    }
+
+    rapidjson::Value rJointConfigurationStates;
+    rJointConfigurationStates.SetArray();
+    rJointConfigurationStates.Reserve(jointConfigurationStates.size(), allocator);
+    for( const JointConfigurationState& jointConfigurationState : jointConfigurationStates ) {
+        rapidjson::Value rJointConfigurationState;
+        rJointConfigurationState.SetObject();
+        jointConfigurationState.SerializeJSON(rJointConfigurationState, allocator, fUnitScale, options);
+        rJointConfigurationStates.PushBack(rJointConfigurationState, allocator);
+    }
+
+    if( !_id.empty() ) {
+        OpenRAVE::orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    }
+    OpenRAVE::orjson::SetJsonValueByKey(value, "name", name, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "jointConfigurationStates", rJointConfigurationStates, allocator);
+}
+
+void KinBody::PositionConfiguration::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+{
+    Reset();
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "id", _id);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "name", name);
+
+    if( value.HasMember("jointConfigurationStates") && value["jointConfigurationStates"].IsArray() ) {
+        jointConfigurationStates.reserve(value["jointConfigurationStates"].GetArray().Size());
+        for( const rapidjson::Value& rJointConfigurationState : value["jointConfigurationStates"].GetArray() ) {
+            if( rJointConfigurationState.HasMember("jointName") && rJointConfigurationState.HasMember("jointValue") ) {
+                JointConfigurationState jointConfigurationState = JointConfigurationState();
+                jointConfigurationState.DeserializeJSON(rJointConfigurationState, fUnitScale, options);
+                jointConfigurationStates.push_back(jointConfigurationState);
+            }
+        }
+    }
+}
+
+bool KinBody::PositionConfiguration::operator==(const PositionConfiguration& other) const
+{
+    return _id == other._id
+           && name == other.name
+           && jointConfigurationStates == other.jointConfigurationStates;
+}
+
+bool KinBody::PositionConfiguration::operator!=(const PositionConfiguration& other) const
+{
+    return !operator==(other);
+}
+
+void KinBody::PositionConfiguration::JointConfigurationState::Reset()
+{
+    _id.clear();
+    jointName.clear();
+    jointAxis = 0;
+    jointValue = 0.0;
+    connectedBodyName.clear();
+}
+
+void KinBody::PositionConfiguration::JointConfigurationState::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    if( !_id.empty() ) {
+        OpenRAVE::orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    }
+    OpenRAVE::orjson::SetJsonValueByKey(value, "jointName", jointName, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "jointAxis", jointAxis, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "jointValue", jointValue, allocator);
+    if( !connectedBodyName.empty() ) {
+        OpenRAVE::orjson::SetJsonValueByKey(value, "connectedBodyName", connectedBodyName, allocator);
+    }
+}
+
+void KinBody::PositionConfiguration::JointConfigurationState::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
+{
+    Reset();
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "id", _id);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "jointName", jointName);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "jointAxis", jointAxis);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "jointValue", jointValue);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "connectedBodyName", connectedBodyName);
+}
+
+bool KinBody::PositionConfiguration::JointConfigurationState::operator==(const KinBody::PositionConfiguration::JointConfigurationState& other) const
+{
+    static constexpr dReal jointValueEpsilon = 1.0e-6;
+    return jointName == other.jointName
+           && jointAxis == other.jointAxis
+           && connectedBodyName == other.connectedBodyName
+           && OpenRAVE::RaveFabs(jointValue - other.jointValue) < jointValueEpsilon;
+}
+
+bool KinBody::PositionConfiguration::JointConfigurationState::operator!=(const KinBody::PositionConfiguration::JointConfigurationState& other) const
+{
+    return !operator==(other);
+}
+
+std::string KinBody::PositionConfiguration::JointConfigurationState::GetResolvedJointName() const
+{
+    if( connectedBodyName.empty() ) {
+        return jointName;
+    }
+    else {
+        return connectedBodyName + "_" + jointName;
+    }
+}
 
 }

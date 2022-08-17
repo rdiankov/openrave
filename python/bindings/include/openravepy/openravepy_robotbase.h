@@ -297,6 +297,8 @@ public:
 
     bool Init(object olinkinfos, object ojointinfos, object omanipinfos, object oattachedsensorinfos, const std::string& uri=std::string());
 
+    py::object GetPositionConfiguration() const;
+
     object GetManipulators();
 
     object GetManipulators(const std::string& manipname);

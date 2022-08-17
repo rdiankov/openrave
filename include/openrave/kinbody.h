@@ -2019,6 +2019,65 @@ private:
     typedef boost::shared_ptr<KinBody::Joint const> JointConstPtr;
     typedef boost::weak_ptr<KinBody::Joint> JointWeakPtr;
 
+    /// \brief Holds a joint value set representing a KinBody/Robot pose
+    class OPENRAVE_API PositionConfiguration : public InfoBase
+    {
+public:
+        PositionConfiguration() = default;
+        virtual ~PositionConfiguration() = default;
+
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+        void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        inline const std::string& GetName() const {
+            return name;
+        }
+
+        bool operator==(const PositionConfiguration& other) const;
+        bool operator!=(const PositionConfiguration& other) const;
+
+        inline void Swap(PositionConfiguration& rhs) {
+            _id.swap(rhs._id);
+            name.swap(rhs.name);
+            jointConfigurationStates.swap(rhs.jointConfigurationStates);
+        }
+
+        /// name and value of one joint
+        class JointConfigurationState : public InfoBase
+        {
+public:
+            JointConfigurationState() = default;
+            virtual ~JointConfigurationState() = default;
+
+            void Reset() override;
+            void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+            void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
+
+            bool operator==(const JointConfigurationState& other) const;
+            bool operator!=(const JointConfigurationState& other) const;
+
+            std::string GetResolvedJointName() const;
+
+            std::string _id; ///< id of the joint configuration state, for incremental update. Unique among JointConfigurationStates.
+            std::string jointName; ///< name of the joint. If the joint belong to a connectedBody, then its resolved name is connectedBodyName+"_"+jointName
+            int jointAxis = 0;
+            dReal jointValue = 0.0;
+            std::string connectedBodyName; ///< Name of the connected body the joint comes from. Set to empty if the joint belongs to a robot, not a connected body.
+        };
+        typedef boost::shared_ptr<JointConfigurationState> JointConfigurationStatePtr;
+        typedef boost::shared_ptr<JointConfigurationState const> JointConfigurationStateConstPtr;
+
+        std::string _id; ///< unique id of the configuration used to identify it when changing it.
+        std::string name; ///< name of the configuration
+        std::vector<JointConfigurationState> jointConfigurationStates; ///< joint name to joint values mapping
+    };
+    typedef boost::shared_ptr<PositionConfiguration> PositionConfigurationPtr;
+    typedef boost::shared_ptr<PositionConfiguration const> PositionConfigurationConstPtr;
+
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
     ///
     /// This is serializable and independent of environment.
@@ -2183,6 +2242,8 @@ public:
 
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
+
+        std::vector<PositionConfigurationPtr> _vNonSelfCollidingPositionConfigurations; ///< list of non-self-colliding position configurations
 
         std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 
@@ -2414,6 +2475,9 @@ private:
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     void GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+
+    /// \brief Returns the current position configuration
+    virtual void GetPositionConfiguration(PositionConfiguration& positionConfiguration) const;
 
     /// \brief Returns all the joint limits as organized by the DOF indices.
     ///
@@ -3413,6 +3477,16 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
+    /// \brief Returns adjacent link pair flags calculated from non-self-colliding position configurations
+    /// \note Computation cost can be reduced by giving adjacentLinkFlags in which already known adjacent link pairs are marked as input
+    /// \param[in,out] adjacentLinkFlags List of flags indicating whether link pairs can be treated as adjacent. Indexed in the same order as _vAdjacentLinks. Size needs to match that of _vAdjacentLinks.
+    void _CalculateAdjacentLinkFlagsFromNonSelfCollidingPositionConfigurations(std::vector<int8_t>& adjacentLinkFlags) const;
+
+    /// \brief Returns a full list of DOFs which values are determinable given an initial list of such DOFs
+    /// \param[in,out] isDOFValueDeterminableList List of flags which indicate whether DOF values are determinable. Takes an initial list as input, and returns a full list as output. Size must match GetDOF().
+    /// \return True if the list of DOFs has been converged, otherwise false.
+    bool _ResolveDOFValueDeterminableFlags(std::vector<bool>& isDOFValueDeterminableList, int maxNumIterations) const;
+
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
@@ -3441,8 +3515,10 @@ protected:
 
     mutable boost::array<std::vector<int>, 4> _vNonAdjacentLinks; ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
     mutable boost::array<std::set<int>, 4> _cacheSetNonAdjacentLinks; ///< used for caching return value of GetNonAdjacentLinks.
-    mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].
-    std::vector<Transform> _vInitialLinkTransformations; ///< the initial transformations of each link specifying at least one pose where the robot is collision free
+    static constexpr int NonAdjacentLinkCache_Uninitialized = 0x80000000; ///< A constant for _nNonAdjacentLinkCache, which indicates everything needs to be recomputed including _setNonAdjacentLinks[0].
+    mutable int _nNonAdjacentLinkCache = NonAdjacentLinkCache_Uninitialized; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If NonAdjacentLinkCache_Uninitialized, then everything needs to be recomputed including _setNonAdjacentLinks[0].
+    typedef std::pair<PositionConfigurationPtr, std::vector<Transform> > PositionConfigurationAndLinkTransformations;
+    std::vector<PositionConfigurationAndLinkTransformations> _vNonSelfCollidingPositionConfigurationsAndLinkTransformations; ///< list of non-self-colliding position configurations and corresponding link transformations
 
     mutable std::vector<int8_t> _vAttachedVisitedCache; ///< cache
     mutable std::vector<std::pair<Vector,Vector> > _vVelocitiesCache;

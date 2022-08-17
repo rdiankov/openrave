@@ -490,6 +490,54 @@ public:
     long __hash__();
 };
 
+class PyPositionConfiguration_JointConfigurationState
+{
+public:
+    PyPositionConfiguration_JointConfigurationState() = default;
+    PyPositionConfiguration_JointConfigurationState(const KinBody::PositionConfiguration::JointConfigurationState& jointConfigurationState);
+
+    KinBody::PositionConfiguration::JointConfigurationStatePtr GetJointConfigurationState() const;
+    object SerializeJSON(dReal fUnitScale = 1.0, object options = py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale = 1.0, object options = py::none_());
+
+    std::string __str__();
+    bool __eq__(OPENRAVE_SHARED_PTR<PyPositionConfiguration_JointConfigurationState> p);
+    bool __ne__(OPENRAVE_SHARED_PTR<PyPositionConfiguration_JointConfigurationState> p);
+
+    object _id = py::none_();
+    object jointName = py::none_();
+    int jointAxis = 0;
+    dReal jointValue = 0.0;
+    object connectedBodyName = py::none_();
+
+private:
+    void _Update(const KinBody::PositionConfiguration::JointConfigurationState& jointConfigurationState);
+};
+typedef OPENRAVE_SHARED_PTR<PyPositionConfiguration_JointConfigurationState> PyPositionConfiguration_JointConfigurationStatePtr;
+
+class PyPositionConfiguration
+{
+public:
+    PyPositionConfiguration() = default;
+    PyPositionConfiguration(const KinBody::PositionConfiguration& positionConfiguration);
+
+    KinBody::PositionConfigurationPtr GetPositionConfiguration() const;
+    object SerializeJSON(dReal fUnitScale = 1.0, object options = py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale = 1.0, object options = py::none_());
+
+    std::string __str__();
+    bool __eq__(OPENRAVE_SHARED_PTR<PyPositionConfiguration> p);
+    bool __ne__(OPENRAVE_SHARED_PTR<PyPositionConfiguration> p);
+
+    object _id = py::none_();
+    object name = py::none_();
+    py::list jointConfigurationStates;
+
+private:
+    void _Update(const KinBody::PositionConfiguration& positionConfiguration);
+};
+typedef OPENRAVE_SHARED_PTR<PyPositionConfiguration> PyPositionConfigurationPtr;
+
 class PyKinBodyStateSaver
 {
     PyEnvironmentBasePtr _pyenv;
