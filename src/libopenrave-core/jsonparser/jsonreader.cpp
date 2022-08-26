@@ -128,7 +128,9 @@ static std::string CanonicalizeURI(const std::string& suburi, const std::string&
             ParseURI(parentUri, scheme2, path2, fragment2);
             return scheme2 + ":" + path2 + "#" + fragment;
         }
-        return std::string("file:") + parentFilename + "#" + fragment;
+        if (!parentFilename.empty()) {
+            return std::string("file:") + parentFilename + "#" + fragment;
+        }
     }
     return suburi;
 }
