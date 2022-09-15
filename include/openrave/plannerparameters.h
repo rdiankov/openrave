@@ -199,7 +199,7 @@ protected:
             O << *it << " ";
         }
         O << "</grasps>" << std::endl;
-        O << "<target>" << (!!_ptarget ? _ptarget->GetEnvironmentId() : 0) << "</target>" << std::endl;
+        O << "<target>" << (!!_ptarget ? _ptarget->GetEnvironmentBodyIndex() : 0) << "</target>" << std::endl;
         O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << std::endl;
         O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << std::endl;
         O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << std::endl;
@@ -236,9 +236,9 @@ protected:
                 }
             }
             else if( name == "target" ) {
-                int id = 0;
-                _ss >> id;
-                _ptarget = _penv->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0;
+                _ss >> bodyIndex;
+                _ptarget = _penv->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( name == "numgradsamples" ) {
                 _ss >> _nGradientSamples;
@@ -282,6 +282,7 @@ public:
         _vXMLParameters.push_back("ftranslationstepmult");
         _vXMLParameters.push_back("fgraspingnoise");
         _vXMLParameters.push_back("vintersectplane");
+        _vXMLParameters.push_back("vordereddofindices");
         _bProcessingGrasp = false;
     }
 
@@ -304,6 +305,8 @@ public:
     dReal fgraspingnoise;     ///< random undeterministic noise to add to the target object, represents the max possible displacement of any point on the object (noise added after global direction and start have been determined)
     Vector vintersectplane; ///< if norm > 0, then the manipulator transform has to be on the plane for grabbing to work. This is mutually exclusive from the standoff.
 
+    std::vector<int> vordereddofindices; ///< if specified, will move fingers in this order instead of the order specified by robot->GetActiveDOFIndices().
+
 protected:
     EnvironmentBasePtr _penv;     ///< environment target belongs to
     bool _bProcessingGrasp;
@@ -314,7 +317,7 @@ protected:
             return false;
         }
         O << "<fstandoff>" << fstandoff << "</fstandoff>" << std::endl;
-        O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetEnvironmentId()) << "</targetbody>" << std::endl;
+        O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetEnvironmentBodyIndex()) << "</targetbody>" << std::endl;
         O << "<ftargetroll>" << ftargetroll << "</ftargetroll>" << std::endl;
         O << "<vtargetdirection>" << vtargetdirection << "</vtargetdirection>" << std::endl;
         O << "<vtargetposition>" << vtargetposition << "</vtargetposition>" << std::endl;
@@ -334,6 +337,11 @@ protected:
         O << "<ftranslationstepmult>" << ftranslationstepmult << "</ftranslationstepmult>" << std::endl;
         O << "<fgraspingnoise>" << fgraspingnoise << "</fgraspingnoise>" << std::endl;
         O << "<vintersectplane>" << vintersectplane << "</vintersectplane>" << std::endl;
+        O << "<vordereddofindices>" << std::endl;
+        for(std::vector<int>::const_iterator it = vordereddofindices.begin(); it != vordereddofindices.end(); ++it) {
+            O << *it << " ";
+        }
+        O << "</vordereddofindices>" << std::endl;
         if( !(options & 1) ) {
             O << _sExtraParameters << std::endl;
         }
@@ -355,7 +363,7 @@ protected:
             return PE_Support;
         }
 
-        static boost::array<std::string,17> tags = {{"fstandoff","targetbody","ftargetroll","vtargetdirection","vtargetposition","vmanipulatordirection", "btransformrobot","breturntrajectory","bonlycontacttarget","btightgrasp","bavoidcontact","vavoidlinkgeometry","fcoarsestep","ffinestep","ftranslationstepmult","fgraspingnoise","vintersectplane"}};
+        static boost::array<std::string,18> tags = {{"fstandoff","targetbody","ftargetroll","vtargetdirection","vtargetposition","vmanipulatordirection", "btransformrobot","breturntrajectory","bonlycontacttarget","btightgrasp","bavoidcontact","vavoidlinkgeometry","fcoarsestep","ffinestep","ftranslationstepmult","fgraspingnoise","vintersectplane","vordereddofindices"}};
         _bProcessingGrasp = find(tags.begin(),tags.end(),name) != tags.end();
         return _bProcessingGrasp ? PE_Support : PE_Pass;
     }
@@ -368,13 +376,16 @@ protected:
             if( name == "vavoidlinkgeometry" ) {
                 vavoidlinkgeometry = std::vector<std::string>((std::istream_iterator<std::string>(_ss)), std::istream_iterator<std::string>());
             }
+            else if( name == "vordereddofindices" ) {
+                vordereddofindices = std::vector<int>((std::istream_iterator<int>(_ss)), std::istream_iterator<int>());
+            }
             else if( name == "fstandoff") {
                 _ss >> fstandoff;
             }
             else if( name == "targetbody") {
-                int id = 0;
-                _ss >> id;
-                targetbody = _penv->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0;
+                _ss >> bodyIndex;
+                targetbody = _penv->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( name == "ftargetroll") {
                 _ss >> ftargetroll;
@@ -441,11 +452,12 @@ typedef boost::shared_ptr<GraspParameters const> GraspParametersConstPtr;
 class OPENRAVE_API TrajectoryTimingParameters : public PlannerBase::PlannerParameters
 {
 public:
-    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _hasvelocities(false), _outputaccelchanges(true), _multidofinterp(0), verifyinitialpath(1), _bProcessing(false) {
+    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _hasvelocities(false), _hasaccelerations(false), _outputaccelchanges(true), _multidofinterp(0), verifyinitialpath(1), _bProcessing(false) {
         _fStepLength = 0; // reset to 0 since it is being used
         _vXMLParameters.push_back("interpolation");
         _vXMLParameters.push_back("hastimestamps");
         _vXMLParameters.push_back("hasvelocities");
+        _vXMLParameters.push_back("hasaccelerations");
         _vXMLParameters.push_back("pointtolerance");
         _vXMLParameters.push_back("outputaccelchanges");
         _vXMLParameters.push_back("multidofinterp");
@@ -454,7 +466,7 @@ public:
 
     std::string _interpolation;
     dReal _pointtolerance; ///< multiple of dof resolutions to set on discretization tolerance
-    bool _hastimestamps, _hasvelocities;
+    bool _hastimestamps, _hasvelocities, _hasaccelerations;
     bool _outputaccelchanges; ///< if true, will output a waypoint every time a DOF changes its acceleration, this allows a trajectory be executed without knowing the max velocities/accelerations. If false, will just output the waypoints.
     int _multidofinterp; ///< if 1, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible. if 0, will compute minimum acceleration. If 2, will match acceleration ramps of all dofs.
     int verifyinitialpath; ///< if 0 then does not verify whether the path given as input is in collision
@@ -469,6 +481,7 @@ protected:
         O << "<interpolation>" << _interpolation << "</interpolation>" << std::endl;
         O << "<hastimestamps>" << _hastimestamps << "</hastimestamps>" << std::endl;
         O << "<hasvelocities>" << _hasvelocities << "</hasvelocities>" << std::endl;
+        O << "<hasaccelerations>" << _hasvelocities << "</hasaccelerations>" << std::endl;
         O << "<pointtolerance>" << _pointtolerance << "</pointtolerance>" << std::endl;
         O << "<outputaccelchanges>" << _outputaccelchanges << "</outputaccelchanges>" << std::endl;
         O << "<multidofinterp>" << _multidofinterp << "</multidofinterp>" << std::endl;
@@ -491,7 +504,7 @@ protected:
         case PE_Ignore: return PE_Ignore;
         }
 
-        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="hasvelocities" || name=="pointtolerance" || name=="outputaccelchanges" || name=="multidofinterp"||name=="verifyinitialpath";
+        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="hasvelocities" || name=="hasaccelerations" || name=="pointtolerance" || name=="outputaccelchanges" || name=="multidofinterp"||name=="verifyinitialpath";
         return _bProcessing ? PE_Support : PE_Pass;
     }
 
@@ -506,6 +519,9 @@ protected:
             }
             else if( name == "hasvelocities" ) {
                 _ss >> _hasvelocities;
+            }
+            else if( name == "hasaccelerations" ) {
+                _ss >> _hasaccelerations;
             }
             else if( name == "pointtolerance" ) {
                 _ss >> _pointtolerance;
@@ -789,7 +805,7 @@ protected:
     bool _bProcessingBasic;
     virtual bool serialize(std::ostream& O, int options=0) const
     {
-        if( !PlannerParameters::serialize(O, options&~1) ) {
+        if( !RRTParameters::serialize(O, options&~1) ) {
             return false;
         }
         O << "<goalbias>" << _fGoalBiasProb << "</goalbias>" << std::endl;
@@ -807,7 +823,7 @@ protected:
         if( _bProcessingBasic ) {
             return PE_Ignore;
         }
-        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+        switch( RRTParameters::startElement(name,atts) ) {
         case PE_Pass: break;
         case PE_Support: return PE_Support;
         case PE_Ignore: return PE_Ignore;
@@ -837,7 +853,7 @@ protected:
         }
 
         // give a chance for the default parameters to get processed
-        return PlannerParameters::endElement(name);
+        return RRTParameters::endElement(name);
     }
 };
 

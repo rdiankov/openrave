@@ -66,16 +66,15 @@ else:
     from numpy import array
 
 import numpy
-from ..openravepy_ext import transformPoints, openrave_exception
+from ..openravepy_ext import transformPoints
 from ..openravepy_int import RaveFindDatabaseFile, RaveDestroy, Environment, KinBody, rotationMatrixFromQuat, quatRotateDirection, rotationMatrixFromAxisAngle, RaveGetDefaultViewerType
 from . import DatabaseGenerator
 from .. import pyANN
-import convexdecomposition
+from . import convexdecomposition
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh, SpaceSamplerExtra
 import time
 import os.path
 from optparse import OptionParser
-from itertools import izip
 from os import makedirs
 
 import logging
@@ -99,7 +98,7 @@ class LinkStatisticsModel(DatabaseGenerator):
             return value
 
     def getversion(self):
-        return 6
+        return 7
     
     def save(self):
         self.SavePickle()
@@ -113,7 +112,7 @@ class LinkStatisticsModel(DatabaseGenerator):
     def LoadPickle(self):
         try:
             params = DatabaseGenerator.load(self)
-        except Exception, e:
+        except Exception as e:
             log.warn(u'failed to load linkstatistics: %s', e)
             return False
         
@@ -197,17 +196,20 @@ class LinkStatisticsModel(DatabaseGenerator):
         """
         with self.robot:
             self.robot.SetTransform(eye(4))
-            self.robot.SetDOFValues(zeros(self.robot.GetDOF()))
+            self.robot.SetDOFValues(zeros(self.robot.GetDOF()), range(self.robot.GetDOF()), 0)
             self.grabbedjointspheres = [(self.robot.GetGrabbedInfo(), self._ComputeJointSpheres())]
     
     def _GetJointSpheresFromGrabbed(self, grabbedinfo):
         for testgrabbedinfo, testjointspheres in self.grabbedjointspheres:
             if len(testgrabbedinfo) == len(grabbedinfo):
-                if all([(grabbedinfo[i]._grabbedname == testgrabbedinfo[i]._grabbedname and grabbedinfo[i]._robotlinkname == testgrabbedinfo[i]._robotlinkname and sum(abs(grabbedinfo[i]._trelative-testgrabbedinfo[i]._trelative)) <= 1e-7 and grabbedinfo[i]._setRobotLinksToIgnore == testgrabbedinfo[i]._setRobotLinksToIgnore) for i in range(len(grabbedinfo))]):
+                if all([(grabbedinfo[i]._grabbedname == testgrabbedinfo[i]._grabbedname and grabbedinfo[i]._robotlinkname == testgrabbedinfo[i]._robotlinkname and sum(abs(grabbedinfo[i]._trelative-testgrabbedinfo[i]._trelative)) <= 1e-7 and grabbedinfo[i]._setIgnoreRobotLinkNames == testgrabbedinfo[i]._setIgnoreRobotLinkNames) for i in range(len(grabbedinfo))]):
                     return testjointspheres
         
         log.debug('adding new linkstatistic for grabbed bodies: %r', [g._grabbedname for g in grabbedinfo])
-        jointspheres = self._ComputeJointSpheres()
+        with self.robot:
+            self.robot.SetTransform(eye(4))
+            self.robot.SetDOFValues(zeros(self.robot.GetDOF()), range(self.robot.GetDOF()), 0)
+            jointspheres = self._ComputeJointSpheres()
         self.grabbedjointspheres.append((grabbedinfo, jointspheres)) # tuple copies so that it doesn't change...
         return jointspheres
     
@@ -222,11 +224,12 @@ class LinkStatisticsModel(DatabaseGenerator):
             for childlink in childlinks:
                 Tlink = childlink.GetTransform()
                 localaabb = childlink.ComputeLocalAABB()
-                spherepos = dot(Tlink[:3,:3], localaabb.pos()) + Tlink[:3,3]
-                extensiondist = linalg.norm(j.GetAnchor() - spherepos)
+                linkpos = dot(Tlink[:3,:3], localaabb.pos()) + Tlink[:3,3]
+                extensiondist = linalg.norm(j.GetAnchor() - linkpos)
                 linkradius = linalg.norm(localaabb.extents())
                 sphereradius = max(sphereradius, linkradius+extensiondist)
-            
+
+            spherepos = j.GetAnchor()
             # process any child joints
             minpos = spherepos - sphereradius*ones([1,1,1])
             maxpos = spherepos + sphereradius*ones([1,1,1])
@@ -235,8 +238,8 @@ class LinkStatisticsModel(DatabaseGenerator):
             for childjoint in childjoints:
                 if childjoint.GetJointIndex() in jointspheres:
                     childpos, childradius = jointspheres[childjoint.GetJointIndex()]
-                    minpos = numpy.minimum(minpos, childpos - sphereradius*ones([1,1,1]))
-                    maxpos = numpy.maximum(maxpos, childpos + sphereradius*ones([1,1,1]))
+                    minpos = numpy.minimum(minpos, childpos - childradius*ones([1,1,1]))
+                    maxpos = numpy.maximum(maxpos, childpos + childradius*ones([1,1,1]))
             
             newspherepos = 0.5*(minpos + maxpos)
             newsphereradius = linalg.norm(newspherepos - spherepos) + sphereradius

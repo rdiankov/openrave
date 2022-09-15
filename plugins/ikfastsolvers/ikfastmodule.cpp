@@ -70,9 +70,7 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/lu.hpp>
 
-#if OPENRAVE_RAPIDJSON
 #include <rapidjson/error/en.h>
-#endif
 
 #include "next_combination.h"
 
@@ -274,17 +272,17 @@ private:
         void* SysLoadLibrary(const char* lib)
         {
 #ifdef _WIN32
-            void* plib = LoadLibraryA(lib);
-            if( plib == NULL ) {
+            void* plibrary = LoadLibraryA(lib);
+            if( plibrary == NULL ) {
                 RAVELOG_WARN("Failed to load %s\n", lib);
             }
 #else
-            void* plib = dlopen(lib, RTLD_NOW);
-            if( plib == NULL ) {
+            void* plibrary = dlopen(lib, RTLD_NOW);
+            if( plibrary == NULL ) {
                 RAVELOG_WARN("%s\n", dlerror());
             }
 #endif
-            return plib;
+            return plibrary;
         }
 
         void* SysLoadSym(void* lib, const char* sym)
@@ -327,9 +325,7 @@ public:
                         "return the type of inverse kinematics solver (IkParamterization::Type)");
 #ifdef Boost_IOSTREAMS_FOUND
 
-#if OPENRAVE_RAPIDJSON
         RegisterJSONCommand("LoadIKFastFromXMLId",boost::bind(&IkFastModule::_LoadIKFastFromXMLIdCommand, this, _1, _2, _3), "Loads ikfast module from xmlid");
-#endif
 
         RegisterCommand("LoadIKFastSolver",boost::bind(&IkFastModule::LoadIKFastSolver,this,_1,_2),
                         "Dynamically calls the inversekinematics.py script to generate an ik solver for a robot, or to load an existing one\n"
@@ -357,7 +353,6 @@ public:
     int main(const string& cmd)
     {
         if( cmd.size() > 0 ) {
-#if OPENRAVE_RAPIDJSON
             rapidjson::Document document;  ///< contains entire rapid json document to parse parameters.
             if (document.Parse(cmd.c_str(), cmd.size()).HasParseError()) {
                 throw OPENRAVE_EXCEPTION_FORMAT("Failed to parse cmd (offset %u): %s, data=%s", ((unsigned)document.GetErrorOffset())%(GetParseError_En(document.GetParseError()))%cmd, ORE_InvalidState);
@@ -371,7 +366,6 @@ public:
                     _platform = root["platform"].GetString();
                 }
             }
-#endif
         }
         return 0;
     }
@@ -393,7 +387,7 @@ public:
         }
         boost::trim(libraryname);
         if( !sinput ||( libraryname.size() == 0) ||( ikname.size() == 0) ) {
-            RAVELOG_DEBUG("bad input\n");
+            RAVELOG_DEBUG_FORMAT("bad input, ikname=%s, libraryname=%s", ikname%libraryname);
             return false;
         }
 
@@ -414,7 +408,7 @@ public:
 //#endif
 
         // before adding a new library, check for existing
-        boost::mutex::scoped_lock lock(GetLibraryMutex());
+        std::lock_guard<std::mutex> lock(GetLibraryMutex());
         boost::shared_ptr<IkLibrary> lib;
         FOREACH(it, *GetLibraries()) {
             if( libraryname == (*it)->GetLibraryName() ) {
@@ -443,7 +437,6 @@ public:
 
 #ifdef Boost_IOSTREAMS_FOUND
 
-#if OPENRAVE_RAPIDJSON
     bool _LoadIKFastFromXMLIdCommand(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator)
     {
         if( !input.HasMember("xmlid") ) {
@@ -461,8 +454,12 @@ public:
 
         std::vector<std::string> vikfasttokens;
         utils::TokenizeString(vtokens[1], ".", vikfasttokens);
-        if( vikfasttokens.size() != 4 || vikfasttokens[0] != "ikfast" ) {
+        if( vikfasttokens.size() != 4 ) {
             RAVELOG_WARN_FORMAT("not enough tokens for: %s", xmlid);
+            return false;
+        }
+        if( vikfasttokens[0] != "ikfast" ) {
+            RAVELOG_WARN_FORMAT("not enough an ikfast solver: %s", xmlid);
             return false;
         }
 
@@ -522,11 +519,9 @@ public:
         return bsuccess;
     }
 
-#endif
-
     bool LoadIKFastSolver(ostream& sout, istream& sinput)
     {
-        EnvironmentMutex::scoped_lock envlock(GetEnv()->GetMutex());
+        EnvironmentLock envlock(GetEnv()->GetMutex());
         string robotname;
         string striktype;
         bool bForceIK = false;
@@ -627,7 +622,7 @@ public:
                 // file not found, so create
                 RAVELOG_INFO(str(boost::format("Generating inverse kinematics %s for manip %s:%s, hash=%s, saving intermediate data to %s, will take several minutes...\n")%striktype%probot->GetName()%pmanip->GetName()%pmanip->GetInverseKinematicsStructureHash(iktype)%tempfilename));
                 GetEnv()->Save(tempfilename,EnvironmentBase::SO_Body,atts);
-                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s")%tempfilename%pmanip->GetName()%striktype);
+                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s --filepermissions=%i")%tempfilename%pmanip->GetName()%striktype%0777);
                 // use raw system call, popen causes weird crash in the inversekinematics compiler
                 int generateexit = system(cmdgen.c_str());
                 //FILE* pipe = MYPOPEN(cmdgen.c_str(), "r");
@@ -714,12 +709,12 @@ public:
 
     bool PerfTiming(ostream& sout, istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         string cmd, libraryname;
         int num=1000;
         dReal maxtime = 1200;
         while(!sinput.eof()) {
-            istream::streampos pos = sinput.tellg();
+            istream::pos_type pos = sinput.tellg();
             sinput >> cmd;
             if( !sinput ) {
                 break;
@@ -812,7 +807,7 @@ public:
 
     bool IKtest(ostream& sout, istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         RAVELOG_DEBUG("Starting IKtest...\n");
         vector<dReal> varmjointvals, values;
         bool bInitialized=false;
@@ -935,7 +930,7 @@ public:
     bool DebugIK(ostream& sout, istream& sinput)
     {
         using namespace boost::numeric;
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
 
         int num_itrs = 1000;
         stringstream s;
@@ -1539,9 +1534,9 @@ public:
         return s_vStaticLibraries;
     }
 
-    static boost::mutex& GetLibraryMutex()
+    static std::mutex& GetLibraryMutex()
     {
-        static boost::mutex s_LibraryMutex;
+        static std::mutex s_LibraryMutex;
         return s_LibraryMutex;
     }
 
@@ -1551,7 +1546,7 @@ public:
         string name; name.resize(_name.size());
         std::transform(_name.begin(), _name.end(), name.begin(), ::tolower);
         /// start from the newer libraries
-        boost::mutex::scoped_lock lock(GetLibraryMutex());
+        std::lock_guard<std::mutex> lock(GetLibraryMutex());
         for(list< boost::shared_ptr<IkLibrary> >::reverse_iterator itlib = GetLibraries()->rbegin(); itlib != GetLibraries()->rend(); ++itlib) {
             FOREACHC(itikname,(*itlib)->GetIkNames()) {
                 if( name == *itikname ) {

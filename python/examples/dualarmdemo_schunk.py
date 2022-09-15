@@ -96,13 +96,13 @@ class Schunkplanner:
         self.MoveObjectToPosition(r_[solutions[0],solutions[1]])
 
     def graspObject(self):
-        ThandR=self.robot.GetManipulators()[0].GetEndEffectorTransform()
-        ThandL=self.robot.GetManipulators()[1].GetEndEffectorTransform()
+        ThandR=self.robot.GetManipulators()[0].GetTransform()
+        ThandL=self.robot.GetManipulators()[1].GetTransform()
         self.probsmanip.SendCommand('movebothhandsstraight direction1 %lf ' %(ThandR[0,3]-ThandL[0,3]) +'%lf '%(ThandR[1,3]-ThandL[1,3]) +'%lf'%(ThandR[2,3]-ThandL[2,3]) +' direction0 %lf ' %(ThandL[0,3]-ThandR[0,3]) +'%lf '%(ThandL[1,3]-ThandR[1,3]) +'%lf'%(ThandL[2,3]-ThandR[2,3]))
 
     def releaseObject(self):
-        ThandR=self.robot.GetManipulators()[0].GetEndEffectorTransform()
-        ThandL=self.robot.GetManipulators()[1].GetEndEffectorTransform()
+        ThandR=self.robot.GetManipulators()[0].GetTransform()
+        ThandL=self.robot.GetManipulators()[1].GetTransform()
         self.probsmanip.SendCommand('movebothhandsstraight direction1 %lf ' %(ThandL[0,3]-ThandR[0,3]) +'%lf '%(ThandL[1,3]-ThandR[1,3]) +'%lf'%(ThandL[2,3]-ThandR[2,3]) +' direction0 %lf ' %(ThandR[0,3]-ThandL[0,3]) +'%lf '%(ThandR[1,3]-ThandL[1,3]) +'%lf'%(ThandR[2,3]-ThandL[2,3]) +' maxsteps 100')
 
     def graspAndMoveObject(self,jointvalues,obj):
@@ -162,7 +162,7 @@ def main(env,options):
         try:
             schunk.graspAndMoveObject(jointvalues,obj)
             schunk.WaitForController()
-            print "Path Planning complete...."
+            print("Path Planning complete....")
         except planning_error:
             pass
 

@@ -22,6 +22,8 @@
 #ifndef OPENRAVE_COLLISIONCHECKER_H
 #define OPENRAVE_COLLISIONCHECKER_H
 
+#include <openrave/openravejson.h>
+
 namespace OpenRAVE {
 
 /// options for collision checker
@@ -83,6 +85,8 @@ public:
 
     std::vector<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> > vLinkColliding; ///< all link collision pairs. Set when CO_AllCollisions is enabled.
 
+    KinBody::GeometryConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
+
     std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of plink1's surface. Filled if CO_UseContacts option is set.
 
     int options; ///< the options that the CollisionReport was called with. It is overwritten by the options set on the collision checker writing the report
@@ -92,8 +96,40 @@ public:
 
     uint8_t nKeepPrevious; ///< if 1, will keep all previous data when resetting the collision checker. otherwise will reset
 
-    //KinBody::Link::GeomConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
 };
+
+/// \brief Holds information about collision report without storing openrave environment data structure such as KinBody or Geometry
+class OPENRAVE_API CollisionReportInfo : public orjson::JsonSerializable
+{
+public:
+    /// \brief resets internal data to initial state
+    virtual void Reset();
+
+    /// \brief initializes internal data from input
+    /// \param report from which to initialize this data structure
+    void InitInfoFromReport(const CollisionReport& report);
+
+    /// \brief check equality of two objects
+    bool operator==(const CollisionReportInfo& other) const;
+
+    /// \brief check inequality of two objects
+    bool operator!=(const CollisionReportInfo& other) const
+    {
+        return !(*this == other);
+    }
+
+    /// \brief loads internal data from rapidjson value
+    virtual void LoadFromJson(const rapidjson::Value& rReport) override;
+
+    /// \brief serializes internal data to rapidjson value
+    virtual void SaveToJson(rapidjson::Value& rReport, rapidjson::Document::AllocatorType& alloc) const override;
+
+    std::string body1Name, body2Name; ///< names of colliding bodies
+    std::string body1LinkName, body2LinkName; ///< names of colliding body links
+    std::string body1GeomName, body2GeomName; ///< names of colliding body geometries
+    std::vector<OpenRAVE::Vector> contacts; ///< contact points
+};
+
 
 typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
 

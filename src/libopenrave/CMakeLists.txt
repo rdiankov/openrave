@@ -1,5 +1,35 @@
 cmake_policy(SET CMP0005 NEW)
-set(openrave_lib_SOURCES configurationspecification.cpp controller.cpp fparsermulti.h iksolver.cpp interface.cpp kinbody.cpp kinbodycollision.cpp kinbodygeometry.cpp kinbodygrab.cpp kinbodyjoint.cpp kinbodylink.cpp  kinbodystatesaver.cpp libopenrave.cpp libopenrave.h math.cpp planner.cpp plannerparameters.cpp planningutils.cpp plugindatabase.h robot.cpp robotconnectedbody.cpp robotmanipulator.cpp sensorsystem.cpp trajectory.cpp utils.cpp xmlreaders.cpp ${rave_header_files})
+set(openrave_lib_SOURCES
+  configurationspecification.cpp
+  controller.cpp
+  environment.cpp
+  fparsermulti.h
+  iksolver.cpp
+  interface.cpp
+  kinbody.cpp
+  kinbodycollision.cpp
+  kinbodygeometry.cpp
+  kinbodygrab.cpp
+  kinbodyjoint.cpp
+  kinbodylink.cpp
+  kinbodystatesaver.cpp
+  libopenrave.cpp
+  libopenrave.h
+  openravemathextra.cpp
+  openravemsgpack.cpp
+  planner.cpp
+  plannerparameters.cpp
+  planningutils.cpp
+  plugindatabase.h
+  plugindatabase.cpp
+  robot.cpp
+  robotconnectedbody.cpp
+  robotmanipulator.cpp
+  sensorsystem.cpp
+  trajectory.cpp
+  utils.cpp
+  xmlreaders.cpp
+  ${rave_header_files})
 
 check_function_exists(asinh HAS_ASINH)
 check_function_exists(acosh HAS_ACOSH)
@@ -30,8 +60,7 @@ set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBR
                                   CLEAN_DIRECT_OUTPUT 1
                                   COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS} -DOPENRAVE_DLL_EXPORTS -DOPENRAVE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
-target_link_libraries(libopenrave ${openrave_libraries} ${FPARSER_LIBRARIES} ${Intl_LIBRARIES})
-target_link_libraries(libopenrave PRIVATE boost_assertion_failed)
+target_link_libraries(libopenrave PRIVATE boost_assertion_failed PUBLIC ${openrave_libraries} ${FPARSER_LIBRARIES} ${Intl_LIBRARIES} ${CMAKE_DL_LIBS})
 if( MSVC )
   install(TARGETS libopenrave EXPORT openrave-targets RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
 else()
@@ -48,8 +77,7 @@ if( OPT_CBINDINGS )
     CLEAN_DIRECT_OUTPUT 1
     COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS} -DOPENRAVE_DLL -DOPENRAVE_C_DLL -DOPENRAVE_C_DLL_EXPORTS"
     LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
-  target_link_libraries(libopenrave_c libopenrave ${openrave_libraries} ${FPARSER_LIBRARIES})
-  target_link_libraries(libopenrave_c PRIVATE boost_assertion_failed)
+  target_link_libraries(libopenrave_c PRIVATE boost_assertion_failed PUBLIC libopenrave ${openrave_libraries} ${FPARSER_LIBRARIES})
   if( MSVC )
     install(TARGETS libopenrave_c EXPORT openrave-targets RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}cbindings-base)
   else()
@@ -74,9 +102,8 @@ if( OPT_STATIC )
                                            CLEAN_DIRECT_OUTPUT 1
                                            COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS}"
                                            LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
-  
-  target_link_libraries(libopenrave_static ${openrave_libraries} ${FPARSER_LIBRARIES})
-  target_link_libraries(libopenrave_static PRIVATE boost_assertion_failed)
+
+  target_link_libraries(libopenrave_static PRIVATE boost_assertion_failed PUBLIC ${openrave_libraries} ${FPARSER_LIBRARIES})
   add_dependencies(libopenrave_static interfacehashes_target openrave-md5)
   if( CRLIBM_FOUND )
     add_dependencies(libopenrave_static check_libm_accuracy-native) # forces check to be run before libopenrave is compilde

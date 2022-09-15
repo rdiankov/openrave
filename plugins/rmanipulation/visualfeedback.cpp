@@ -246,7 +246,7 @@ public:
             _ptargetbox = RaveCreateKinBody(_vf->_targetlink->GetParent()->GetEnv());
             _ptargetbox->InitFromBoxes(vboxes,true);
             _ptargetbox->SetName("__visualfeedbacktest__");
-            _ptargetbox->GetEnv()->Add(_ptargetbox,true); // need to set to visible, otherwise will be ignored
+            _ptargetbox->GetEnv()->Add(_ptargetbox,IAM_AllowRenaming); // need to set to visible, otherwise will be ignored
             _ptargetbox->Enable(false);
             _ptargetbox->SetTransform(_vf->_targetlink->GetTransform());
 
@@ -415,7 +415,7 @@ private:
         {
             RAY r;
             dReal filen = 1/RaveSqrt(v.lengthsqr3());
-            r.dir = tcamera.rotate((2.0f*filen)*v);
+            r.dir = tcamera.rotate((200.0f*filen)*v);                     // hardcoded test ray length of 200 meters
             r.pos = tcamera.trans + 0.5f*_vf->_fRayMinDist*r.dir;         // move the rays a little forward
             if( !_vf->_robot->GetEnv()->CheckCollision(r,_report) ) {
                 return true;         // not supposed to happen, but it is OK
@@ -427,8 +427,8 @@ private:
             //            _vf->_robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
             if( !(!!_report->plink1 &&( _report->plink1->GetParent() == _ptargetbox) ) ) {
                 if( _report->contacts.size() > 0 ) {
-                    Vector v = _report->contacts.at(0).pos;
-                    RAVELOG_VERBOSE_FORMAT("bad collision: %s: %f %f %f", _report->__str__()%v.x%v.y%v.z);
+                    Vector vv = _report->contacts.at(0).pos;
+                    RAVELOG_VERBOSE_FORMAT("bad collision: %s: %f %f %f", _report->__str__()%vv.x%vv.y%vv.z);
                 }
                 else {
                     RAVELOG_VERBOSE_FORMAT("bad collision: %s", _report->__str__());
@@ -481,7 +481,7 @@ private:
         bool _TestRayRigid(const Vector& v, const TransformMatrix& tcamera, const vector<KinBody::LinkPtr>& vattachedlinks)
         {
             dReal filen = 1/RaveSqrt(v.lengthsqr3());
-            RAY r((_vf->_fRayMinDist*filen)*v,(2.0f*filen)*v);
+            RAY r((_vf->_fRayMinDist*filen)*v,(200.0f*filen)*v);           // hardcoded test ray length of 200 meters
             if( _vf->_robot->GetEnv()->CheckCollision(r,KinBodyConstPtr(_vf->_robot),_report) ) {
                 //RAVELOG_INFO(str(boost::format("ray col: %s\n")%_report->__str__()));
                 return false;
@@ -656,7 +656,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         return ModuleBase::SendCommand(sout,sinput);
     }
 

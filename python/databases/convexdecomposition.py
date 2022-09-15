@@ -83,20 +83,27 @@ import time
 import os.path
 from os import makedirs
 from optparse import OptionParser
-from itertools import izip
+
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
 
 try:
     from cStringIO import StringIO
-except:
-    from StringIO import StringIO
+except ImportError:
+    try:
+        from StringIO import StringIO
+    except ImportError:
+        from io import StringIO
     
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 try:
     from .. import convexdecompositionpy
-except Exception, e:
-    print 'failed to import convexdecompositionpy', e
+except Exception as e:
+    print('failed to import convexdecompositionpy %r'%e)
 
 class ConvexDecompositionError(Exception):
     def __init__(self,msg=u''):
@@ -127,7 +134,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         return self.linkgeometry is not None and len(self.linkgeometry)==len(self.robot.GetLinks())
     
     def getversion(self):
-        return 2
+        return 3
     
     def save(self):
         try:
@@ -143,7 +150,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             except ImportError:
                 log.warn('python h5py library not found, will not be able to speedup database access')
                 return self.LoadPickle()
-        except Exception, e:
+        except Exception as e:
             log.warn(e)
             return False
 
@@ -163,7 +170,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         try:
             f['version'] = self.getversion()
             gparams = f.create_group('params')
-            for name,value in self.convexparams.iteritems():
+            for name,value in self.convexparams.items():
                 gparams[name] = value
             f['padding'] = self._padding
             glinkgeometry = f.create_group('linkgeometry')
@@ -211,20 +218,20 @@ class ConvexDecompositionModel(DatabaseGenerator):
             
             self.convexparams = {}
             gparams = f['params']
-            for name,value in gparams.iteritems():
+            for name,value in gparams.items():
                 self.convexparams[name] = value.value
             self._padding = f['padding'].value
             glinkgeometry = f['linkgeometry']
             self.linkgeometry = []
-            for ilink, glink in glinkgeometry.iteritems():
+            for ilink, glink in glinkgeometry.items():
                 linkgeometry = []
-                for ig, glinkhulls in glink.iteritems():
+                for ig, glinkhulls in glink.items():
                     ghulls = glinkhulls['hulls']
                     geometryhulls = []
-                    for j, ghull in ghulls.iteritems():
+                    for j, ghull in ghulls.items():
                         if 'vertices' in ghull and len(ghull['vertices'].shape) == 2 and 'indices' in ghull and len(ghull['indices'].shape\
 ) == 2 and 'planes' in ghull and len(ghull['planes'].shape) == 2:
-			    hull = [ghull['vertices'].value, ghull['indices'].value, ghull['planes'].value]
+                            hull = [ghull['vertices'].value, ghull['indices'].value, ghull['planes'].value]
                             geometryhulls.append(hull)
                         else:
                             log.warn('could not open link %s geometry %s hull %s: %r', ilink, ig, j, ghull)
@@ -236,7 +243,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             f = None
             return self.has()
         
-        except Exception,e:
+        except Exception as e:
             log.debug(u'LoadHDF5 for %s: ',filename,e)
             return False
         finally:
@@ -409,7 +416,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         if offset > 0:
             newvertices = r_[newvertices,zeros((offset,3))]
         # for every vertex, add a point representing the mean of surrounding extruded vertices
-        for originalvertex, newvertex in verticesofinterest.iteritems():
+        for originalvertex, newvertex in verticesofinterest.items():
             vertexindices = flatnonzero(indices==originalvertex)
             assert(len(vertexindices) > 0)
             newvertices[newvertex,:] = mean(newvertices[vertexindices],0)

@@ -23,69 +23,9 @@
 #include <boost/numeric/bindings/lapack/gesdd.hpp>
 #endif
 
-#include "configurationcachetree.h"
+#include "configurationjitterer.h"
 
 namespace configurationcache {
-
-/// \brief holds parameters for threshing the direction. if dot(manipdir, tooldir) > cosanglethresh, then ok
-class ManipDirectionThresh
-{
-public:
-    ManipDirectionThresh() : vManipDir(0,0,1), vGlobalDir(0,0,1), fCosAngleThresh(0.9999999) {
-    }
-    ManipDirectionThresh(const ManipDirectionThresh &r) : vManipDir(r.vManipDir), vGlobalDir(r.vGlobalDir), fCosAngleThresh(r.fCosAngleThresh) {
-    }
-
-    inline bool IsInConstraints(const Transform& tmanip) const
-    {
-        return tmanip.rotate(vManipDir).dot3(vGlobalDir) >= fCosAngleThresh;
-    }
-
-    /// \return the cos of the angle between current tmanip and the global dir
-    inline dReal ComputeCosAngle(const Transform& tmanip) const {
-        return tmanip.rotate(vManipDir).dot3(vGlobalDir);
-    }
-
-    Vector vManipDir; ///< direction on the manipulator
-    Vector vGlobalDir; ///< direction in world coordinates
-    dReal fCosAngleThresh; ///< the cos angle threshold
-};
-
-typedef boost::shared_ptr<ManipDirectionThresh> ManipDirectionThreshPtr;
-
-/// \brief holds parameters for threshing the position with respect to a bounding box.
-class ManipPositionConstraints
-{
-public:
-    ManipPositionConstraints() {
-    }
-    ManipPositionConstraints(const ManipPositionConstraints &r) : obb(r.obb) {
-    }
-
-    inline bool IsInConstraints(const Transform& tmanip) const
-    {
-        // transform tmanip.trans in obb coordinate system
-        Vector vdelta = tmanip.trans - obb.pos;
-        dReal fright = obb.right.dot(vdelta);
-        if( RaveFabs(fright) > obb.extents.x ) {
-            return false;
-        }
-        dReal fup = obb.up.dot(vdelta);
-        if( RaveFabs(fup) > obb.extents.y ) {
-            return false;
-        }
-        dReal fdir = obb.dir.dot(vdelta);
-        if( RaveFabs(fdir) > obb.extents.z ) {
-            return false;
-        }
-
-        return true;
-    }
-
-    OBB obb;
-};
-
-typedef boost::shared_ptr<ManipPositionConstraints> ManipPositionConstraintsPtr;
 
 class ConfigurationJitterer : public SpaceSamplerBase
 {
@@ -267,7 +207,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
     bool SetPerturbationCommand(std::ostream& sout, std::istream& sinput)
     {
-        int perturbation=0;
+        dReal perturbation=0;
         sinput >> perturbation;
         if( perturbation < 0 ) {
             return false;
@@ -522,17 +462,12 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( GetEnv()->CheckCollision(_probot, _report) ) {
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                        ss << "original env collision failed, ";
-                        for(size_t i = 0; i < vnewdof.size(); ++i ) {
-                            if( i > 0 ) {
-                                ss << "," << vnewdof[i];
-                            }
-                            else {
-                                ss << "colvalues=[" << vnewdof[i];
-                            }
+                        ss << "colvalues=[";
+                        FOREACHC(itval, vnewdof) {
+                            ss << *itval << ",";
                         }
-                        ss << "], report=" << _report->__str__();
-                        RAVELOG_VERBOSE(ss.str());
+                        ss << "]";
+                        RAVELOG_VERBOSE_FORMAT("env=%d, original env collision failed. report=%s; %s", GetEnv()->GetId()%_report->__str__()%ss.str());
                     }
                     nEnvCollisionFailure++;
                     bCollision = true;
@@ -542,17 +477,12 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( _probot->CheckSelfCollision(_report) ) {
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                        ss << "original self collision failed, ";
-                        for(size_t i = 0; i < vnewdof.size(); ++i ) {
-                            if( i > 0 ) {
-                                ss << "," << vnewdof[i];
-                            }
-                            else {
-                                ss << "colvalues=[" << vnewdof[i];
-                            }
+                        ss << "colvalues=[";
+                        FOREACHC(itval, vnewdof) {
+                            ss << *itval << ",";
                         }
-                        ss << "], report=" << _report->__str__();
-                        RAVELOG_VERBOSE(ss.str());
+                        ss << "]";
+                        RAVELOG_VERBOSE_FORMAT("env=%d, original self collision failed. report=%s; %s", GetEnv()->GetId()%_report->__str__()%ss.str());
                     }
                     nSelfCollisionFailure++;
                     bCollision = true;
@@ -562,7 +492,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
             if( (!bCollision && !bConstraintFailed) || _maxjitter <= 0 ) {
                 if( nNeighStateFailure > 0 ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d jitterer returning initial point is good, but neigh state failed %d times", GetEnv()->GetId()%nNeighStateFailure);
+                    RAVELOG_DEBUG_FORMAT("env=%d, jitterer returning initial point is good, but neigh state failed %d times", GetEnv()->GetId()%nNeighStateFailure);
                 }
                 return -1;
             }
@@ -570,7 +500,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             _nNumIterations++;
         }
         else {
-            RAVELOG_VERBOSE_FORMAT("env=%d skipping orig pos check", GetEnv()->GetId());
+            RAVELOG_VERBOSE_FORMAT("env=%d, skipping orig pos check", GetEnv()->GetId());
         }
 
         if( !!_cache ) {

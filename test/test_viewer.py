@@ -25,9 +25,9 @@ def _VmB(VmKey):
         t = open(_proc_status)
         v = t.read()
         t.close()
-    except Exception,e:
+    except Exception as e:
         # non-Linux?
-        print e
+        print(e)
         return 0.0
         
     # get VmKey line e.g. 'VmRSS:  9999  kB\n ...'
@@ -83,9 +83,9 @@ class TestViewer(EnvironmentSetup):
         env.Load(filename)
         env.SetViewer('qtcoin')
         #env.Reset()
-        print 'env2 '
+        print('env2 ')
         env.Load(filename)
-        print 'done'
+        print('done')
         time.sleep(4)
-        print 'quitting'
+        print('quitting')
         

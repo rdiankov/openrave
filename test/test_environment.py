@@ -38,9 +38,9 @@ class TestEnvironment(EnvironmentSetup):
         env=self.env
         assert(env.plot3([0,0,0],10)==None) # no viewer attached
         self.LoadEnv('data/lab1.env.xml')
-        bodies = dict([(b,b.GetEnvironmentId()) for b in env.GetBodies()])
+        bodies = dict([(b,b.GetEnvironmentBodyIndex()) for b in env.GetBodies()])
         assert(env.GetBodies()[0] in bodies)
-        assert(bodies[env.GetBodies()[0]] == env.GetBodies()[0].GetEnvironmentId())
+        assert(bodies[env.GetBodies()[0]] == env.GetBodies()[0].GetEnvironmentBodyIndex())
         s = 'this is a test string'
         env.SetUserData(s)
         assert(env.GetUserData()==s)
@@ -156,7 +156,7 @@ class TestEnvironment(EnvironmentSetup):
             clonedenv.Clone(env, CloningOptions.Bodies)
             endtime=time.time()-starttime
             self.log.info('clone time: %fs',endtime)
-            print endtime
+            print(endtime)
             misc.CompareEnvironments(env,clonedenv,epsilon=g_epsilon)
             clonedrobot = clonedenv.GetRobot(robot.GetName())
             assert(clonedrobot.GetActiveManipulator().GetName() == robot.GetActiveManipulator().GetName())

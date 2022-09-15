@@ -28,7 +28,8 @@ try:
 except:
     import pickle
 
-from .. import openravepy_int, openrave_exception
+from .. import openravepy_int
+from .. import OpenRAVEException
 from .. import metaclass
 from ..misc import OpenRAVEGlobalArguments
 import os.path
@@ -64,7 +65,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
             try:
                 if self._databasefile:
                     self._databasefile.close()
-            except Exception,e:
+            except Exception as e:
                 log.warn(e)
             self._databasefile = None
             
@@ -88,13 +89,13 @@ class DatabaseGenerator(metaclass.AutoReloader):
         if len(filename) == 0:
             return None
         try:
-            with open(filename, 'r') as f:
+            with open(filename, 'rb') as f:
                 modelversion,params = pickle.load(f)
             if modelversion == self.getversion():
                 return params
             else:
                 log.error('version is wrong %s!=%s ',modelversion,self.getversion())
-        except MemoryError,e:
+        except MemoryError as e:
             log.error('%s failed: ',filename,e)
         except:
             pass
@@ -108,8 +109,8 @@ class DatabaseGenerator(metaclass.AutoReloader):
             makedirs(os.path.split(filename)[0])            
         except OSError:
             pass
-        with open(filename, 'w') as f:
-            pickle.dump((self.getversion(),params), f)
+        with open(filename, 'wb') as f:
+            pickle.dump((self.getversion(),params), f, 2)
     def generate(self):
         raise NotImplementedError()
     def show(self,options=None):
@@ -202,17 +203,18 @@ class DatabaseGenerator(metaclass.AutoReloader):
                         if robot.GetDOF() > 0:
                             break
                     if robot is None or robot.GetDOF() == 0:
-                        raise openrave_exception('there is no robot with DOF > 0')
-                    
+                        raise OpenRAVEException('there is no robot with DOF > 0', 'Assert')
+                
                 elif allowkinbody:
                     robot = env.GetBodies()[0]
                 assert(robot is not None)
                 if hasattr(options,'manipname') and robot.IsRobot():
                     if options.manipname is None:
                         # prioritize manipulators with ik solvers
-                        indices = [i for i,m in enumerate(robot.GetManipulators()) if m.GetIkSolver() is not None]
-                        if len(indices) > 0:
-                            robot.SetActiveManipulator(indices[0])
+                        for i,m in enumerate(robot.GetManipulators()):
+                            if m.GetIkSolver() is not None:
+                                robot.SetActiveManipulator(m)
+                                break
                     else:
                         for i,m in enumerate(robot.GetManipulators()):
                             if m.GetName()==options.manipname:
@@ -244,14 +246,14 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 filename=model.getfilename(True)
                 if len(filename) == 0:
                     filename=model.getfilename(False)
-                print filename
+                print(filename)
                 openravepy_int.RaveDestroy()
                 sys.exit(0)
             if options.gethas:
                 hasmodel=model.load()
                 if hasmodel:
                     hasmodel = os.path.isfile(model.getfilename(True))
-                print int(hasmodel)
+                print(int(hasmodel))
                 openravepy_int.RaveDestroy()
                 sys.exit(not hasmodel)
             if options.viewername is not None:
@@ -267,16 +269,16 @@ class DatabaseGenerator(metaclass.AutoReloader):
             if destroyenv and env is not None:
                 env.Destroy()
 
-import inversekinematics
-import grasping
-import convexdecomposition
-import linkstatistics
-import kinematicreachability
-import inversereachability
+from . import inversekinematics
+from . import grasping
+from . import convexdecomposition
+from . import linkstatistics
+from . import kinematicreachability
+from . import inversereachability
     
 # python 2.5 raises 'import *' not allowed with 'from .'
 from sys import version_info
 if version_info[0:3]>=(2,6,0):
-    import visibilitymodel
+    from . import visibilitymodel
 else:
     log.warn('some openravepy.datbases cannot be used python versions < 2.6')

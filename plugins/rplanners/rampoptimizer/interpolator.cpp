@@ -76,7 +76,7 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
     dReal aMin = g_fRampInf;
     dReal dinv;
     for (size_t idof = 0; idof < _ndof; ++idof) {
-        if( !FuzzyZero(dVect[idof], g_fRampEpsilon) ) {
+        if( !FuzzyZero(dVect[idof], epsilon) ) {
             dinv = 1/dVect[idof];
             vMin = Min(vMin, vmVect[idof]*Abs(dinv));
             aMin = Min(aMin, amVect[idof]*Abs(dinv));
@@ -197,12 +197,12 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
 
     // Check inputs
     for (size_t idof = 0; idof < _ndof; ++idof) {
-        if( x0Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x0Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
+        if( x0Vect[idof] > xmaxVect[idof] + epsilon || x0Vect[idof] < xminVect[idof] - epsilon ) {
             RAVELOG_WARN_FORMAT("env=%d, x0Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", _envid%idof%x0Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
         }
 
-        if( x1Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x1Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
+        if( x1Vect[idof] > xmaxVect[idof] + epsilon || x1Vect[idof] < xminVect[idof] - epsilon ) {
             RAVELOG_WARN_FORMAT("env=%d, x1Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", _envid%idof%x1Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
         }
@@ -216,12 +216,12 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
             return false;
         }
 
-        if( v0Vect[idof] > vmVect[idof] + g_fRampEpsilon || v0Vect[idof] < -vmVect[idof] - g_fRampEpsilon ) {
+        if( v0Vect[idof] > vmVect[idof] + epsilon || v0Vect[idof] < -vmVect[idof] - epsilon ) {
             RAVELOG_WARN_FORMAT("env=%d, v0Vect[%d] = %.15e exceeds the bounds; vm = %.15e", _envid%idof%v0Vect[idof]%vmVect[idof]);
             return false;
         }
 
-        if( v1Vect[idof] > vmVect[idof] + g_fRampEpsilon || v1Vect[idof] < -vmVect[idof] - g_fRampEpsilon ) {
+        if( v1Vect[idof] > vmVect[idof] + epsilon || v1Vect[idof] < -vmVect[idof] - epsilon ) {
             RAVELOG_WARN_FORMAT("env=%d, v1Vect[%d] = %.15e exceeds the bounds; vm = %.15e", _envid%idof%v1Vect[idof]%vmVect[idof]);
             return false;
         }
@@ -350,12 +350,12 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
 
     // Check inputs
     for (size_t idof = 0; idof < _ndof; ++idof) {
-        if( x0Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x0Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
+        if( x0Vect[idof] > xmaxVect[idof] + epsilon || x0Vect[idof] < xminVect[idof] - epsilon ) {
             RAVELOG_WARN_FORMAT("env=%d, x0Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", _envid%idof%x0Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
         }
 
-        if( x1Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x1Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
+        if( x1Vect[idof] > xmaxVect[idof] + epsilon || x1Vect[idof] < xminVect[idof] - epsilon ) {
             RAVELOG_WARN_FORMAT("env=%d, x1Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", _envid%idof%x1Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
         }
@@ -369,12 +369,12 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
             return false;
         }
 
-        if( v0Vect[idof] > vmVect[idof] + g_fRampEpsilon || v0Vect[idof] < -vmVect[idof] - g_fRampEpsilon ) {
+        if( v0Vect[idof] > vmVect[idof] + epsilon || v0Vect[idof] < -vmVect[idof] - epsilon ) {
             RAVELOG_WARN_FORMAT("env=%d, v0Vect[%d] = %.15e exceeds the bounds; vm = %.15e", _envid%idof%v0Vect[idof]%vmVect[idof]);
             return false;
         }
 
-        if( v1Vect[idof] > vmVect[idof] + g_fRampEpsilon || v1Vect[idof] < -vmVect[idof] - g_fRampEpsilon ) {
+        if( v1Vect[idof] > vmVect[idof] + epsilon || v1Vect[idof] < -vmVect[idof] - epsilon ) {
             RAVELOG_WARN_FORMAT("env=%d, v1Vect[%d] = %.15e exceeds the bounds; vm = %.15e", _envid%idof%v1Vect[idof]%vmVect[idof]);
             return false;
         }
@@ -449,8 +449,8 @@ bool ParabolicInterpolator::Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dR
 {
     OPENRAVE_ASSERT_OP(vm, >, 0);
     OPENRAVE_ASSERT_OP(am, >, 0);
-    OPENRAVE_ASSERT_OP(Abs(v0), <=, vm + g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(Abs(v1), <=, vm + g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(Abs(v0), <=, vm + epsilon);
+    OPENRAVE_ASSERT_OP(Abs(v1), <=, vm + epsilon);
 
     dReal d = x1 - x0;
     dReal dv = v1 - v0;
@@ -476,7 +476,7 @@ bool ParabolicInterpolator::Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dR
         dStraight = -0.5*dVSqr/am;
     }
 
-    if( FuzzyEquals(d, dStraight, g_fRampEpsilon) ) {
+    if( FuzzyEquals(d, dStraight, epsilon) ) {
         /*
            v1 can be reached from v0 by the acceleration am or -am.
 
@@ -516,14 +516,14 @@ bool ParabolicInterpolator::Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dR
     if( d > dStraight ) {
         a0 = am;
         vp = Sqrt((0.5*sumVSqr) + (a0*d));
-        if( vp > vm + g_fRampEpsilon ) {
+        if( vp > vm + epsilon ) {
             noViolation = false;
         }
     }
     else {
         a0 = -am;
         vp = -Sqrt((0.5*sumVSqr) + (a0*d));
-        if( -vp > vm + g_fRampEpsilon ) {
+        if( -vp > vm + epsilon ) {
             noViolation = false;
         }
     }
@@ -567,7 +567,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
 {
     dReal bmin, bmax;
     curve.GetPeaks(bmin, bmax);
-    if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
+    if( (bmin >= xmin - epsilon) && (bmax <= xmax + epsilon) ) {
         //RAVELOG_VERBOSE("The input curve does not violate joint limits.");
         return true;
     }
@@ -604,12 +604,12 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
 
     bool bSuccess = false;
 
-    if( (bt0 < duration) && (Abs(ba0) <= am + g_fRampEpsilon) ) {
+    if( (bt0 < duration) && (Abs(ba0) <= am + epsilon) ) {
         RAVELOG_VERBOSE("Case IIA: checking...");
         if( Abs(x1 - bx0) < (duration - bt0)*vm ) {
             if( Compute1DTrajectoryFixedDuration(bx0, x1, 0, v1, vm, am, duration - bt0, _cacheCurve) ) {
                 _cacheCurve.GetPeaks(bmin, bmax);
-                if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
+                if( (bmin >= xmin - epsilon) && (bmax <= xmax + epsilon) ) {
                     RAVELOG_VERBOSE("Case IIA: passed");
                     bSuccess = true;
                     _cacheRampsVect.resize(1 + _cacheCurve.GetRamps().size());
@@ -622,12 +622,12 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
         }
     }// end case IIA
 
-    if( (bt1 < duration) && (Abs(ba1) <= am + g_fRampEpsilon) ) {
+    if( (bt1 < duration) && (Abs(ba1) <= am + epsilon) ) {
         RAVELOG_VERBOSE("Case IIB: checking...");
         if( Abs(x0 - bx1) < (duration - bt1)*vm ) {
             if( Compute1DTrajectoryFixedDuration(x0, bx1, v0, 0, vm, am, duration - bt1, _cacheCurve) ) {
                 _cacheCurve.GetPeaks(bmin, bmax);
-                if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
+                if( (bmin >= xmin - epsilon) && (bmax <= xmax + epsilon) ) {
                     RAVELOG_VERBOSE("Case IIB: passed");
                     bSuccess = true;
                     _cacheRampsVect.resize(1 + _cacheCurve.GetRamps().size());
@@ -641,7 +641,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
     }// end case IIB
 
     if( bx0 == bx1 ) {
-        if( (bt0 + bt1 < duration) && (Max(Abs(ba0), Abs(ba1)) <= am + g_fRampEpsilon) ) {
+        if( (bt0 + bt1 < duration) && (Max(Abs(ba0), Abs(ba1)) <= am + epsilon) ) {
             RAVELOG_VERBOSE("Case III");
             bSuccess = true;
             _cacheRampsVect.resize(3);
@@ -651,12 +651,12 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
         }
     }
     else {
-        if( (bt0 + bt1 < duration) && (Max(Abs(ba0), Abs(ba1)) <= am + g_fRampEpsilon) ) {
+        if( (bt0 + bt1 < duration) && (Max(Abs(ba0), Abs(ba1)) <= am + epsilon) ) {
             RAVELOG_VERBOSE("Case IV: checking...");
             if( Abs(bx0 - bx1) < (duration - (bt0 + bt1))*vm ) {
                 if( Compute1DTrajectoryFixedDuration(bx0, bx1, 0, 0, vm, am, duration - (bt0 + bt1), _cacheCurve) ) {
                     _cacheCurve.GetPeaks(bmin, bmax);
-                    if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
+                    if( (bmin >= xmin - epsilon) && (bmax <= xmax + epsilon) ) {
                         RAVELOG_VERBOSE("Case IV: passed");
                         bSuccess = true;
                         _cacheRampsVect.resize(2 + _cacheCurve.GetRamps().size());
@@ -748,7 +748,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
        intersection of two intervals gives either an interval or an empty set.)
 
      */
-    if( duration < -g_fRampEpsilon ) {
+    if( duration < -epsilon ) {
         RAVELOG_VERBOSE_FORMAT("env=%d, duration = %.15e is negative", _envid%duration);
         return false;
     }
@@ -756,9 +756,9 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     // Cache vector
     std::vector<Ramp>& ramps = _cacheRampsVect2;
 
-    if( duration <= g_fRampEpsilon ) {
+    if( duration <= epsilon ) {
         // Check if this is a stationary trajectory
-        if( FuzzyEquals(x0, x1, g_fRampEpsilon) && FuzzyEquals(v0, v1, g_fRampEpsilon) ) {
+        if( FuzzyEquals(x0, x1, epsilon) && FuzzyEquals(v0, v1, epsilon) ) {
             // This is actually a stationary trajectory
             ramps.resize(1);
             ramps[0].Initialize(v0, 0, 0, x0);
@@ -780,7 +780,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
     // Correct small and acceptable discrepancies in velocities (if any)
     if( v0 > vm ) {
-        if( v0 <= vm + g_fRampEpsilon ) {
+        if( v0 <= vm + epsilon ) {
             // Acceptable
             v0 = vm;
         }
@@ -790,7 +790,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         }
     }
     else if( v0 < -vm ) {
-        if( v0 >= -vm - g_fRampEpsilon ) {
+        if( v0 >= -vm - epsilon ) {
             // Acceptable
             v0 = -vm;
         }
@@ -801,7 +801,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     }
 
     if( v1 > vm ) {
-        if( v1 <= vm + g_fRampEpsilon ) {
+        if( v1 <= vm + epsilon ) {
             // Acceptable
             v1 = vm;
         }
@@ -811,7 +811,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         }
     }
     else if( v1 < -vm ) {
-        if( v1 >= -vm - g_fRampEpsilon ) {
+        if( v1 >= -vm - epsilon ) {
             // Acceptable
             v1 = -vm;
         }
@@ -841,7 +841,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
        Therefore, if B = 0 we can just interpolate the trajectory right away and return early.
      */
-    if (FuzzyZero(B, g_fRampEpsilon)) {
+    if (FuzzyZero(B, epsilon)) {
         // In this case the boundary conditions match the given duration, i.e., (x1, v1) can be
         // reached from (x0, v0) using one ramp.
         // RAVELOG_VERBOSE("case B == 0: one-ramp trajectory");
@@ -867,7 +867,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     D = B/sum2;
 
     if( IS_DEBUGLEVEL(Level_Verbose) ) {
-        if( Abs(A) <= g_fRampEpsilon && Abs(B) <= g_fRampEpsilon ) {
+        if( Abs(A) <= epsilon && Abs(B) <= epsilon ) {
             RAVELOG_VERBOSE_FORMAT("env=%d, A and B are zero. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
         }
     }
@@ -883,8 +883,8 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
     // Intervals 1 and 2 are derived from constraints on a0 (the acceleration of the first ramp)
     // I) sum1 <= B/t0
-    if( FuzzyZero(sum1, g_fRampEpsilon) ) {
-        if( FuzzyZero(B, g_fRampEpsilon) ) {
+    if( FuzzyZero(sum1, epsilon) ) {
+        if( FuzzyZero(B, epsilon) ) {
             // t0 can be anything
         }
         else {
@@ -901,8 +901,8 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     }
 
     // II) B/t0 <= sum2
-    if( FuzzyZero(sum2, g_fRampEpsilon) ) {
-        if( FuzzyZero(B, g_fRampEpsilon) ) {
+    if( FuzzyZero(sum2, epsilon) ) {
+        if( FuzzyZero(B, epsilon) ) {
             // t0 can be anything
         }
         else {
@@ -930,8 +930,8 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
     // Intervals 3 and 4 are derived from constraints on a1 (the acceleration of the second (last) ramp
     // III) sum1 <= B/(t0 - t)
-    if( FuzzyZero(sum1, g_fRampEpsilon) ) {
-        if( FuzzyZero(B, g_fRampEpsilon) ) {
+    if( FuzzyZero(sum1, epsilon) ) {
+        if( FuzzyZero(B, epsilon) ) {
             // t0 can be anything
         }
         else {
@@ -948,8 +948,8 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     }
 
     // IV)
-    if( FuzzyZero(sum2, g_fRampEpsilon) ) {
-        if( FuzzyZero(B, g_fRampEpsilon) ) {
+    if( FuzzyZero(sum2, epsilon) ) {
+        if( FuzzyZero(B, epsilon) ) {
             // t0 can be anything
         }
         else {
@@ -978,7 +978,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     // Find the intersection between interval 2 and interval 4, store it in interval 4. This is a
     // bit tricky because if the given duration is actually the minimum time that this trajectory
     // can get, the two intervals will theoretically intersect at only one point.
-    if( FuzzyEquals(i2l, i4u, g_fRampEpsilon) || FuzzyEquals(i2u, i4l, g_fRampEpsilon) ) {
+    if( FuzzyEquals(i2l, i4u, epsilon) || FuzzyEquals(i2u, i4l, epsilon) ) {
         RAVELOG_VERBOSE("interval 2 and interval 4 intersect at a point, most likely because the given endTime is actually its minimum time.");
         // Make sure that the above statement is true.
         if( !Compute1DTrajectory(x0, x1, v0, v1, vm, am, curveOut) ) {
@@ -986,7 +986,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
             return false; // what ?
         }
         else {
-            if( FuzzyEquals(curveOut.GetDuration(), duration, g_fRampEpsilon) ) {
+            if( FuzzyEquals(curveOut.GetDuration(), duration, epsilon) ) {
                 RAVELOG_VERBOSE("The hypothesis is correct.");
                 // The curve has already been validated in Compute1DTrajectory
                 return true;
@@ -1079,7 +1079,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     vp = v0 + (a0*t0);
 
     // Consistency checking
-    if( !FuzzyEquals(vp, v1 - (a1*t1), g_fRampEpsilon) ) {
+    if( !FuzzyEquals(vp, v1 - (a1*t1), epsilon) ) {
         RAVELOG_VERBOSE_FORMAT("env=%d, Verification failed (vp != v1 - a1*d1): %.15e != %.15e", _envid%vp%(v1 - (a1*t1)));
         RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
         RAVELOG_VERBOSE_FORMAT("Calculated values: A = %.15e; B = %.15e; t0 = %.15e; t1 = %.15e; vp = %.15e; a0 = %.15e; a1 = %.15e", A%B%t0%t1%vp%a0%a1);
@@ -1087,7 +1087,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     }
 
     // Velocity bound checking
-    if( Abs(vp) <= vm + g_fRampEpsilon ) {
+    if( Abs(vp) <= vm + epsilon ) {
         // The two-ramp profile works. Go for it.
         ramps.resize(2);
         ramps[0].Initialize(v0, a0, t0, x0);
@@ -1108,7 +1108,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
         // a0 and a1 should not be zero if the velocity limit is violated. The first check is done
         // at the line: FuzzyEquals(vp, v1 - (a1*t1)) above.
-        if( (FuzzyZero(a0, g_fRampEpsilon)) || (FuzzyZero(a1, g_fRampEpsilon)) ) {
+        if( (FuzzyZero(a0, epsilon)) || (FuzzyZero(a1, epsilon)) ) {
             RAVELOG_VERBOSE_FORMAT("env=%d, Velocity limit is violated but at least one acceleration is zero: a0 = %.15e; a1 = %.15e; Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%a0%a1%x0%x1%v0%v1%vm%am%duration);
             return false;
         }
@@ -1170,7 +1170,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
         dReal root = cbrt(A2*B2*B2); // from math.h
 
-        if( FuzzyZero(C2, g_fRampEpsilon) ) {
+        if( FuzzyZero(C2, epsilon) ) {
             // This means the excessive area is too large such that after we paste it on both sides
             // of the original velocity profile, the whole profile becomes one-ramp with a = 0 and v
             // = vmNew.
@@ -1181,7 +1181,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         dReal C2inv = 1/C2;
         a0 = (A2 + root)*C2inv;
         if( Abs(a0) > am ) {
-            if( FuzzyZero(root, g_fRampEpsilon*g_fRampEpsilon) ) {// This condition gives a1 = 0.
+            if( FuzzyZero(root, epsilon*epsilon) ) {// This condition gives a1 = 0.
                 // The computed a0 is exceeding the bound and its corresponding a1 is
                 // zero. Therefore, we cannot fix this case. This is probably because the given
                 // duration is actually less than the minimum duration that it can get.
@@ -1198,7 +1198,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         // Now compute a1
         // Special case: a0 == 0. Then this implies vm == dx0. Reevaluate those above equations
         // leads to a1 = B2/C2
-        if( Abs(a0) <= g_fRampEpsilon ) {
+        if( Abs(a0) <= epsilon ) {
             a0 = 0;
             a1 = B2/C2;
             if( Abs(a1) > am ) {
@@ -1213,7 +1213,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         }
         else {
             // From the hyperbola equation, we have y = B2*x/(C2*x - A2) = B2*x/root
-            if( Abs(root) < g_fRampEpsilon*g_fRampEpsilon ) {
+            if( Abs(root) < epsilon*epsilon ) {
                 // Special case: a1 == 0. This implies vm == dx1. If we calculate back the value of a0,
                 // we will get a0 = A2/C2 which is actually root = 0.
                 a1 = 0;
@@ -1238,17 +1238,17 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         }
 
         // Final check on the accelerations
-        if( (Abs(a0) > am + g_fRampEpsilon) || (Abs(a1) > am + g_fRampEpsilon) ) {
+        if( (Abs(a0) > am + epsilon) || (Abs(a1) > am + epsilon) ) {
             RAVELOG_VERBOSE_FORMAT("env=%d, Cannot fix accelration bounds violation. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
             return false;
         }
 
-        if( (Abs(a0) <= g_fRampEpsilon) && (Abs(a1) <= g_fRampEpsilon) ) {
+        if( (Abs(a0) <= epsilon) && (Abs(a1) <= epsilon) ) {
             RAVELOG_VERBOSE_FORMAT("env=%d, Both accelerations are zero. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e; A2 = %.15e; B2 = %.15e; C2 = %.15e; D2 = %.15e", _envid%x0%x1%v0%v1%vm%am%duration%A2%B2%C2%D2);
             return false;
         }
 
-        if( Abs(a0) <= g_fRampEpsilon ) {
+        if( Abs(a0) <= epsilon ) {
             RAVELOG_VERBOSE("|a0| < epsilon");
             t0 = duration + dv3/a1;
             t1 = duration - t0;
@@ -1259,7 +1259,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
             ramps[1].Initialize(vp, a1, t1);
             curveOut.Initialize(ramps);
         }
-        else if( Abs(a1) <= g_fRampEpsilon ) {
+        else if( Abs(a1) <= epsilon ) {
             RAVELOG_VERBOSE("|a1| < epsilon");
             t0 = dv2/a0;
             t1 = duration - t0;
@@ -1306,7 +1306,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
             }
             else {
                 dReal tMiddle = duration - (t0 + tLastRamp);
-                if( FuzzyZero(tMiddle, g_fRampEpsilon) ) {
+                if( FuzzyZero(tMiddle, epsilon) ) {
                     RAVELOG_VERBOSE("Three-ramp profile works but having too short middle ramp.");
                     // If we leave it like this, it may cause errors later on.
                     t0 = (2*d - (v1 + vmNew)*duration)/(v0 - v1);
@@ -1314,7 +1314,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
                     vp = vmNew;
                     a0 = dv2/t0;
                     a1 = -dv3/t1;
-                    if( (Abs(a0) > am + g_fRampEpsilon) || (Abs(a1) > am + g_fRampEpsilon) ) {
+                    if( (Abs(a0) > am + epsilon) || (Abs(a1) > am + epsilon) ) {
                         RAVELOG_VERBOSE_FORMAT("env=%d, Cannot merge into two-ramp because of acceleration limits. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e; Calculated values: t0 = %.15e; t1 = %.15e; vp = %.15e; a0 = %.15e; a1 = %.15e", _envid%x0%x1%v0%v1%vm%am%duration%t0%t1%vp%a0%a1);
                         return false;
                     }
@@ -1425,7 +1425,7 @@ bool ParabolicInterpolator::_CalculateLeastUpperBoundInoperativeTimeInterval(dRe
     T3 = Max(T2, T3);
 
     t = Max(T1, T3);
-    if( t > g_fRampEpsilon ) {
+    if( t > epsilon ) {
         // Sanity check
 
         // dStraight is the displacement produced if we were to travel with only one acceleration
@@ -1446,7 +1446,7 @@ bool ParabolicInterpolator::_CalculateLeastUpperBoundInoperativeTimeInterval(dRe
         return true;
     }
     else {
-        if( FuzzyEquals(x1, x0, g_fRampEpsilon) && FuzzyZero(v0, g_fRampEpsilon) && FuzzyZero(v1, g_fRampEpsilon) ) {
+        if( FuzzyEquals(x1, x0, epsilon) && FuzzyZero(v0, epsilon) && FuzzyZero(v1, epsilon) ) {
             t = 0;
             return true;
         }
@@ -1486,7 +1486,7 @@ bool ParabolicInterpolator::_SolveForT0(dReal A, dReal B, dReal t, dReal l, dRea
         l = 0;
     }
 
-    if( (Abs(A) < g_fRampEpsilon) && (Abs(B) < g_fRampEpsilon) ) {
+    if( (Abs(A) < epsilon) && (Abs(B) < epsilon) ) {
         if( l > 0 ) {
             return false;
         }
@@ -1501,7 +1501,7 @@ bool ParabolicInterpolator::_SolveForT0(dReal A, dReal B, dReal t, dReal l, dRea
     double tSqr = t*t;
     double tCube = tSqr*t;
 
-    if( Abs(A) < g_fRampEpsilon ) {
+    if( Abs(A) < epsilon ) {
         dReal coeffs[4] = {2*B, -3*B*t, 3*B*tSqr, -B*tCube};
         OpenRAVE::mathextra::polyroots<dReal, 3>(&coeffs[0], &rawRoots[0], numRoots);
     }
@@ -1521,14 +1521,14 @@ bool ParabolicInterpolator::_SolveForT0(dReal A, dReal B, dReal t, dReal l, dRea
         if( (rawRoots[i] <= u) && (rawRoots[i] >= l) ) {
             dReal root = rawRoots[i];
             dReal firstTerm, secondTerm;
-            if( Abs(root) < g_fRampEpsilon ) {
+            if( Abs(root) < epsilon ) {
                 firstTerm = 0;
             }
             else {
                 firstTerm = A + (B/root);
             }
 
-            if( Abs(t - root) < g_fRampEpsilon ) {
+            if( Abs(t - root) < epsilon ) {
                 secondTerm = 0;
             }
             else {
@@ -1559,7 +1559,17 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     }
 
     switchpointsList.push_back(0);
-    switchpointsList.push_back(curvesVectIn[0].GetDuration());
+    // Although functions to recompute trajectories with a fixed duration have been called prior
+    // to this, the duration of each dof can still be a bit different (but within the acceptable
+    // range). Should use the actual max duration as the duration of rampndVectOut.
+    dReal maxDuration = 0;
+    for( size_t idof = 0; idof < _ndof; ++idof ) {
+        if( curvesVectIn[idof].GetDuration() > maxDuration ) {
+            maxDuration = curvesVectIn[idof].GetDuration();
+        }
+    }
+    switchpointsList.push_back(maxDuration);
+
     for (size_t idof = 0; idof < _ndof; ++idof) {
         dReal sw = 0;
         for (std::vector<Ramp>::const_iterator itramp = curvesVectIn[idof].GetRamps().begin(); itramp != curvesVectIn[idof].GetRamps().end(); ++itramp) {
@@ -1570,9 +1580,9 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
             // (exclusive).
 
             // Note also that skipping some switchpoints which are closer to their neighbors than
-            // g_fRampEpsilon may introduce discrepancies greater than g_fRampEpsilon.
+            // epsilon may introduce discrepancies greater than epsilon.
             // if( !(sw == *it) && !(sw == *(it - 1)) ) {
-            if( !FuzzyEquals(sw, *it, 0.01*g_fRampEpsilon) && !FuzzyEquals(sw, *(it - 1), 0.01*g_fRampEpsilon) ) {
+            if( !FuzzyEquals(sw, *it, 0.01*epsilon) && !FuzzyEquals(sw, *(it - 1), 0.01*epsilon) ) {
                 switchpointsList.insert(it, sw);
             }
         }
@@ -1600,9 +1610,9 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
                 temp2 = v0Vect[jdof] - v1Vect[jdof];
                 a = -(dur*temp1 + 2*temp2)*divMult;
                 // if( Sqr(temp1 + 0.5*durSqr*a) + Sqr(temp2 + a*dur) < Sqr(temp1 + 0.5*durSqr*aVect[jdof]) + Sqr(temp2 + aVect[jdof]*dur) ) {
-                if( Abs(temp1 + 0.5*durSqr*a) <= g_fRampEpsilon && Abs(temp2 + a*dur) <= g_fRampEpsilon ) {
+                if( Abs(temp1 + 0.5*durSqr*a) <= epsilon && Abs(temp2 + a*dur) <= epsilon ) {
                     // The recomputed acceleration gives smaller discrepancy
-                    if( Abs(a) <= amVect[jdof] + g_fRampEpsilon ) {
+                    if( Abs(a) <= amVect[jdof] + epsilon ) {
                         aVect[jdof] = a;
                     }
                 }

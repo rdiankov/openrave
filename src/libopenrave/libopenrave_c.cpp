@@ -17,7 +17,7 @@
 #include "openrave_c/openrave_c.h"
 #include "libopenrave.h"
 
-#include <boost/thread/condition.hpp>
+#include <condition_variable>
 
 namespace OpenRAVE {
 
@@ -120,10 +120,10 @@ void ORCTriMeshDestroy(void* trimesh)
 }
 
 // can only support one viewer per environment
-typedef std::map<EnvironmentBasePtr, boost::shared_ptr<boost::thread> > VIEWERMAP;
+typedef std::map<EnvironmentBasePtr, boost::shared_ptr<std::thread> > VIEWERMAP;
 static VIEWERMAP s_mapEnvironmentThreadViewers;
-static boost::mutex s_mutexViewer;
-static boost::condition s_conditionViewer;
+static std::mutex s_mutexViewer;
+static std::condition_variable s_conditionViewer;
 
 void ORCEnvironmentDestroy(void* env)
 {
@@ -192,7 +192,7 @@ int ORCEnvironmentGetRobots(void* env, void** robots)
 
 void ORCEnvironmentAdd(void* env, void* pinterface)
 {
-    GetEnvironment(env)->Add(GetInterface(pinterface));
+    GetEnvironment(env)->Add(GetInterface(pinterface), IAM_StrictNameChecking);
 }
 
 int ORCEnvironmentAddModule(void* env, void* module, const char* args)
@@ -232,10 +232,10 @@ void CViewerThread(EnvironmentBasePtr penv, const string &strviewer, int bShowVi
 {
     ViewerBasePtr pviewer;
     {
-        boost::mutex::scoped_lock lock(s_mutexViewer);
+        std::lock_guard<std::mutex> lock(s_mutexViewer);
         pviewer = RaveCreateViewer(penv, strviewer);
         if( !!pviewer ) {
-            penv->AddViewer(pviewer);
+            penv->Add(pviewer, IAM_AllowRenaming);
         }
         s_conditionViewer.notify_one();
     }
@@ -263,8 +263,8 @@ int ORCEnvironmentSetViewer(void* env, const char* viewername)
     }
 
     if( !!viewername && strlen(viewername) > 0 ) {
-        boost::mutex::scoped_lock lock(s_mutexViewer);
-        boost::shared_ptr<boost::thread> threadviewer(new boost::thread(boost::bind(CViewerThread, penv, std::string(viewername), true)));
+        std::unique_lock<std::mutex> lock(s_mutexViewer);
+        boost::shared_ptr<std::thread> threadviewer = boost::make_shared<std::thread>(std::bind(CViewerThread, penv, std::string(viewername), true));
         s_mapEnvironmentThreadViewers[penv] = threadviewer;
         s_conditionViewer.wait(lock);
     }
@@ -279,9 +279,9 @@ char* ORCInterfaceSendCommand(void* pinterface, const char* command)
     if( !bSuccess ) {
         return NULL;
     }
-    stringstream::streampos posstart = sout.tellg();
+    stringstream::pos_type posstart = sout.tellg();
     sout.seekg(0, ios_base::end);
-    stringstream::streampos posend = sout.tellg();
+    stringstream::pos_type posend = sout.tellg();
     sout.seekg(posstart);
     BOOST_ASSERT(posstart<=posend);
     char* poutput = (char*)malloc(posend-posstart+1);

@@ -93,7 +93,7 @@ class TestIkFast(EnvironmentSetup):
             numiktests = int(self.numiktests[numfree])
             chunksize = 100 # have to split into chunks because of timeouts
             cmd = 'DebugIK robot %s threshold %f '%(robot.GetName(), self.errorthreshold)
-            for ichunk in range((numiktests+chunksize-1)/chunksize):
+            for ichunk in range((numiktests+chunksize-1)//chunksize):
                 res = self.ikfastproblem.SendCommand(cmd+'numtests %d '%chunksize).split()
                 numtested += int(res[0])
                 numsuccessful += int(res[1])
@@ -115,7 +115,7 @@ class TestIkFast(EnvironmentSetup):
             jointnames = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
 
             self.log.info('ikfast version: %s, file: %s', ikmodel.ikfast.__version__, ikmodel.getsourcefilename(read=True))
-            #print 'SECTION Robot Information'
+            #print('SECTION Robot Information')
             self.log.info('robot: %s, manipulator: '%(robotfilename))
             self.log.info('free joint increment: %s'%ikmodel.freeinc)
             self.log.info('manipulator %s: %s %s [%s]'%(manipname, ikmodel.manip.GetBase().GetName(),ikmodel.manip.GetEndEffector().GetName(),jointnames))
@@ -123,7 +123,7 @@ class TestIkFast(EnvironmentSetup):
             self.log.info('lower limits: '+' '.join(str(f) for f in lower))
             self.log.info('upper limits: '+' '.join(str(f) for f in upper))
             if len(solutionresults[0])>0 or len(solutionresults[1])>0:
-                #print '\nSECTION Problematic IK'
+                #print('\nSECTION Problematic IK')
                 self.log.info('\n\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the normalized free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),numfree,str(freeindicesstr)))
             for isol in range(2):
                 if len(solutionresults[isol]) == 0:
@@ -143,7 +143,7 @@ class TestIkFast(EnvironmentSetup):
                     rows.append(ikparamvalues+freevalues)
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
-                    print prefix + ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
+                    print(prefix + ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))]))
             # jenkins plot measurement data
             self.PrintMeasurement('compile-time (s)', '%.3f'%compiletime)
             self.PrintMeasurement('success', '%.4f'%successrate)

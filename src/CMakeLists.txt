@@ -27,6 +27,10 @@ endif()
 if( CLOCK_GETTIME_FOUND )
   set(openrave_libraries ${openrave_libraries} rt)
 endif()
+find_package(Threads)
+if( CMAKE_THREAD_LIBS_INIT )
+  set(openrave_libraries ${openrave_libraries} ${CMAKE_THREAD_LIBS_INIT})
+endif()
 
 set(LIBOPENRAVE_COMPILE_FLAGS "${Boost_CFLAGS}")
 
@@ -36,6 +40,10 @@ endif()
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -fPIC")
+endif()
+
+if( THREADS_HAVE_PTHREAD_ARG )
+  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -pthread")
 endif()
 
 set(LIBOPENRAVE_LINK_FLAGS "")
@@ -71,6 +79,7 @@ endif()
 
 if(NOT OPENRAVE_DISABLE_ASSERT_HANDLER)
   add_definitions("-DBOOST_ENABLE_ASSERT_HANDLER") # turns segfault into exception
+  add_definitions("-DRAPIDJSON_ASSERT=BOOST_ASSERT") # turns segfault into exception
 endif()
 add_library(boost_assertion_failed STATIC boost_assertion_failed.cpp)
 add_dependencies(boost_assertion_failed interfacehashes_target)
@@ -98,8 +107,7 @@ else()
   set(SOCKET_LIBS)
 endif()
 
-target_link_libraries(openrave ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} ${openrave_libraries} libopenrave libopenrave-core)
-target_link_libraries(openrave PRIVATE boost_assertion_failed)
+target_link_libraries(openrave PRIVATE boost_assertion_failed PUBLIC ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} ${openrave_libraries} libopenrave libopenrave-core)
 
 install(TARGETS openrave DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
 if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
@@ -118,11 +126,15 @@ if( MSVC )
 endif()
 
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cppexamples/FindOpenRAVE.cmake" DESTINATION ${OPENRAVE_SHARE_DIR}/cppexamples COMPONENT ${COMPONENT_PREFIX}dev)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/models DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/robots DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
-if( OPT_EXTRA_ROBOTS )
-  file(GLOB collada_robot_files ${CMAKE_CURRENT_SOURCE_DIR}/collada_robots/*.zae)
-  install(FILES ${collada_robot_files} DESTINATION ${OPENRAVE_SHARE_DIR}/robots COMPONENT ${COMPONENT_PREFIX}data)
+
+if( OPT_INSTALL_3DMODELDATA )
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/models DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/robots DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
+  if( OPT_EXTRA_ROBOTS )
+    file(GLOB collada_robot_files ${CMAKE_CURRENT_SOURCE_DIR}/collada_robots/*.zae)
+    install(FILES ${collada_robot_files} DESTINATION ${OPENRAVE_SHARE_DIR}/robots COMPONENT ${COMPONENT_PREFIX}data)
+  endif()
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
 endif()
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
+
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cppexamples  DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}dev FILES_MATCHING PATTERN "*.cpp" PATTERN "*.xml" PATTERN "*.h" PATTERN "*.txt" PATTERN ".svn" EXCLUDE)

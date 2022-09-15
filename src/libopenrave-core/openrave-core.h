@@ -46,6 +46,12 @@ enum EnvironmentCreateOptions
 /// \param options a set of EnvironmentCreateOptions specifying how the environment is created.
 OPENRAVE_CORE_API EnvironmentBasePtr RaveCreateEnvironment(int options=ECO_StartSimulationThread);
 
+/// \brief Creates an OpenRAVE environment with name.
+///
+/// \param name name of the environment
+/// \param options a set of EnvironmentCreateOptions specifying how the environment is created.
+ OPENRAVE_CORE_API EnvironmentBasePtr RaveCreateEnvironment(const std::string& name, int options=ECO_StartSimulationThread);
+
 /// \deprecated (10/09/23) see \ref RaveCreateEnvironment
 OPENRAVE_CORE_API EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins=true) RAVE_DEPRECATED;
 

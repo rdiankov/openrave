@@ -116,8 +116,8 @@ inline double* inv4(const double* pf, double* pfres);
 
 /// extract eigen values and vectors from a 2x2 matrix and returns true if all values are real
 /// returned eigen vectors are normalized
-template <typename T>
-inline bool eig2(const T* pfmat, T* peigs, T& fv1x, T& fv1y, T& fv2x, T& fv2y);
+OPENRAVE_API bool eig2(const float* pfmat, float* peigs, float& fv1x, float& fv1y, float& fv2x, float& fv2y);
+OPENRAVE_API bool eig2(const double* pfmat, double* peigs, double& fv1x, double& fv1y, double& fv2x, double& fv2y);
 
 // Simple routines for linear algebra algorithms //
 
@@ -208,48 +208,6 @@ template <typename T> inline bool inv2(T* pf, T* pfres);
 ///////////////////////
 // Function Definitions
 ///////////////////////
-template <typename T>
-bool eig2(const T* pfmat, T* peigs, T& fv1x, T& fv1y, T& fv2x, T& fv2y)
-{
-    // x^2 + bx + c
-    T a, b, c, d;
-    b = -(pfmat[0] + pfmat[3]);
-    c = pfmat[0] * pfmat[3] - pfmat[1] * pfmat[2];
-    d = b * b - 4.0f * c + 1e-16f;
-    if( d < 0 ) {
-        return false;
-    }
-    if( d < 1e-16f ) {
-        a = -0.5f * b;
-        peigs[0] = a;
-        peigs[1] = a;
-        fv1x = pfmat[1];
-        fv1y = a - pfmat[0];
-        c = 1 / sqrt(fv1x*fv1x + fv1y*fv1y);
-        fv1x *= c;
-        fv1y *= c;
-        fv2x = -fv1y;
-        fv2y = fv1x;
-        return true;
-    }
-    // two roots
-    d = sqrt(d);
-    a = -0.5f * (b + d);
-    peigs[0] = a;
-    fv1x = pfmat[1];
-    fv1y = a-pfmat[0];
-    c = 1 / sqrt(fv1x*fv1x + fv1y*fv1y);
-    fv1x *= c;
-    fv1y *= c;
-    a += d;
-    peigs[1] = a;
-    fv2x = pfmat[1];
-    fv2y = a-pfmat[0];
-    c = 1 / sqrt(fv2x*fv2x + fv2y*fv2y);
-    fv2x *= c;
-    fv2y *= c;
-    return true;
-}
 
 // returns the number of real roots, fills r1 and r2 with the answers
 template <typename T>
@@ -1170,7 +1128,7 @@ inline void svd3(const T* A, T* U, T* D, T* V)
     multtrans3(VVt, A, A);
     // get eigen values of V: VVt  V = V  D^2
     T afSubDiag[3];
-    std::copy(&VVt,&VVt[9],&V[0]);
+    std::copy(&VVt[0],&VVt[9],&V[0]);
     Tridiagonal3(V,eigenvalues,afSubDiag);
     QLAlgorithm3(V,eigenvalues,afSubDiag);
 
@@ -1186,7 +1144,15 @@ inline void svd3(const T* A, T* U, T* D, T* V)
 
     mult3_s3(U, A, V); // U = A V = U D
     for(int i = 0; i < 3; ++i) {
-        D[i] = sqrt(eigenvalues[i]);
+        if( eigenvalues[i] > 0 ) {
+            D[i] = sqrt(eigenvalues[i]);
+        }
+        else {
+            if( eigenvalues[i] < -std::numeric_limits<T>::epsilon() ) {
+                throw std::runtime_error("eigenvalue should be non-negative");
+            }
+            D[i] = 0; // close to 0
+        }
         T f = 1/D[i];
         U[i] *= f;
         U[i+3] *= f;
@@ -1201,22 +1167,22 @@ inline void svd3(const T* A, T* U, T* D, T* V)
     }
     if( maxval > 0 ) {
         // flip columns
-        swap(U[0], U[maxval]);
-        swap(U[3], U[3+maxval]);
-        swap(U[6], U[6+maxval]);
-        swap(V[0], V[maxval]);
-        swap(V[3], V[3+maxval]);
-        swap(V[6], V[6+maxval]);
-        swap(D[0], D[maxval]);
+        std::swap(U[0], U[maxval]);
+        std::swap(U[3], U[3+maxval]);
+        std::swap(U[6], U[6+maxval]);
+        std::swap(V[0], V[maxval]);
+        std::swap(V[3], V[3+maxval]);
+        std::swap(V[6], V[6+maxval]);
+        std::swap(D[0], D[maxval]);
     }
     if( D[1] < D[2] ) {
-        swap(U[1], U[2]);
-        swap(U[4], U[5]);
-        swap(U[7], U[8]);
-        swap(V[1], V[2]);
-        swap(V[4], V[5]);
-        swap(V[7], V[8]);
-        swap(D[1], D[2]);
+        std::swap(U[1], U[2]);
+        std::swap(U[4], U[5]);
+        std::swap(U[7], U[8]);
+        std::swap(V[1], V[2]);
+        std::swap(V[4], V[5]);
+        std::swap(V[7], V[8]);
+        std::swap(D[1], D[2]);
     }
 }
 
@@ -1247,7 +1213,7 @@ int Max(T* pts, int stride, int numPts)
 
     return best;
 }
-    
+
 /// \brief Durand-Kerner polynomial root finding method
 template <typename IKReal, int D>
 inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
@@ -1321,6 +1287,245 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
             }
         }
     }
+}
+
+// Polynomial utilities
+
+// Coefficient computation given boundary conditions
+
+// Given boundary conditions (x0, dx0, ddx0), (x1, dx1, ddx1), and duration t, compute the
+// corresponding quintic coefficients a, b, c, d, e, f:
+// p(x) = ax^5 + bx^4 + cx^3 + dx^2 + ex + f.
+template <typename T>
+inline void computequinticcoeffs(T x0, T x1, T dx0, T dx1, T ddx0, T ddx1, T t, T* coeffs)
+{
+    T t2 = t*t;
+    T t3 = t2*t;
+    T t4 = t3*t;
+    T t5 = t4*t;
+
+    coeffs[0] = (t2*(ddx1 - ddx0) - 6.0*t*(dx1 + dx0) + 12.0*(x1 - x0))/(2*t5);
+    coeffs[1] = (t2*(3.0*ddx0 - 2.0*ddx1) + t*(16.0*dx0 + 14.0*dx1) + 30.0*(x0 - x1))/(2*t4);
+    coeffs[2] = (t2*(ddx1 - 3.0*ddx0) - t*(12.0*dx0 + 8.0*dx1) + 20.0*(x1 - x0))/(2*t3);
+    coeffs[3] = 0.5*ddx0;
+    coeffs[4] = dx0;
+    coeffs[5] = x0;
+    return;
+}
+
+// Given boundary conditions (x0, dx0, ddx0), (x1, dx1, ddx1), and duration t, compute the
+// corresponding cubic coefficients a, b, c, d:
+// p(x) = ax^3 + bx^2 + cx + d.
+// This function assumes that the given boundary conditions are consistent.
+template <typename T>
+inline void computecubiccoeffs(T x0, T x1, T dx0, T dx1, T ddx0, T ddx1, T t, T* coeffs)
+{
+    coeffs[3] = x0;
+    coeffs[2] = dx0;
+    coeffs[1] = 0.5*ddx0;
+
+    // T candidate1 = (x1 - x0 - dx0*t - 0.5*ddx0*t2)/t3;
+    // T candidate2 = 2*(x0 - x1)/t3 + (dx0 + dx1)/t2;
+    // T candidate3 = (ddx1 - ddx0)/(6*t);
+
+    // Use the following formula to evaluate the first coefficient since it is
+    // using acceleration terms. The accleration terms themselves were evaluated
+    // from the expression 6*a*t + 2*b, which only uses a and b and therefore
+    // least affected by numerical errors from the zero-th and first derivatives.
+    coeffs[0] = (ddx1 - ddx0)/(6*t);
+    return;
+}
+
+// Evaluation functions
+
+// Evaluate the given quintic at the given point. Strongest coefficient first.
+template <typename T>
+inline void evaluatequintic(const T* coeffs, const T t, T& val)
+{
+    val = coeffs[5] + t*(coeffs[4] + t*(coeffs[3] + t*(coeffs[2] + t*(coeffs[1] + t*coeffs[0]))));
+}
+
+// Evaluate the first derivative of the given quintic at the given point. Strongest coefficient first.
+template <typename T>
+inline void evaluatequinticderiv1(const T* coeffs, const T t, T& val)
+{
+    val = coeffs[4] + t*(2*coeffs[3] + t*(3*coeffs[2] + t*(4*coeffs[1] + t*5*coeffs[0])));
+}
+
+// Evaluate the second derivative of the given quintic at the given point. Strongest coefficient first.
+template <typename T>
+inline void evaluatequinticderiv2(const T* coeffs, const T t, T& val)
+{
+    val = 2*coeffs[3] + t*(6*coeffs[2] + t*(12*coeffs[1] + t*20*coeffs[0]));
+}
+
+// Evaluate the given cubic at the given point. Strongest coefficient first.
+template <typename T>
+inline void evaluatecubic(const T* coeffs, const T t, T& val)
+{
+    val = coeffs[3] + t*(coeffs[2] + t*(coeffs[1] + t*(coeffs[0])));
+}
+
+// Evaluate the first derivative of the given cubic at the given point. Strongest coefficient first.
+template <typename T>
+inline void evaluatecubicderiv1(const T* coeffs, const T t, T& val)
+{
+    val = coeffs[2] + t*(2*coeffs[1] + t*(3*coeffs[0]));
+}
+
+// Evaluate the second derivative of the given cubic at the given point. Strongest coefficient first.
+template <typename T>
+inline void evaluatecubicderiv2(const T* coeffs, const T t, T& val)
+{
+    val = 2*coeffs[1] + t*(6*coeffs[0]);
+}
+
+// Functions for computing critical points.
+
+// Given a set of quintic coefficients, find all critical points (points at which the first
+// derivative vanishes).
+template <typename T>
+inline void computequinticcriticalpoints(const T* coeffs, T* criticalpoints, int& numpoints)
+{
+    const T quarticcoeffs[] = {5*coeffs[0], 4*coeffs[1], 3*coeffs[2], 2*coeffs[3], coeffs[4]};
+    polyroots<T, 4>(quarticcoeffs, criticalpoints, numpoints);
+}
+
+// Given a set of quartic coefficients, find all critical points (points at which the first
+// derivative vanishes).
+template <typename T>
+inline void computequarticcriticalpoints(const T* coeffs, T* criticalpoints, int& numpoints)
+{
+    const T cubiccoeffs[] = {4*coeffs[0], 3*coeffs[1], 2*coeffs[2], coeffs[3]};
+    polyroots<T, 3>(cubiccoeffs, criticalpoints, numpoints);
+}
+
+// Given a set of cubic coefficients, find all critical points (points at which the first
+// derivative vanishes).
+template <typename T>
+inline void computecubiccriticalpoints(const T* coeffs, T* criticalpoints, int& numpoints)
+{
+    const T quadraticcoeffs[] = {3*coeffs[0], 2*coeffs[1], coeffs[2]};
+    polyroots<T, 2>(quadraticcoeffs, criticalpoints, numpoints);
+}
+
+// Given a set of quadratic coefficients, find all critical points (points at which the first
+// derivative vanishes).
+template <typename T>
+inline void computequadraticcriticalpoints(const T* coeffs, T* criticalpoints, int& numpoints)
+{
+    // const T linearcoeffs[] = {2*coeffs[0], coeffs[1]};
+    BOOST_ASSERT(coeffs[0] != 0);
+    numpoints = 1;
+    criticalpoints[0] = -0.5*coeffs[1]/coeffs[0];
+}
+
+// Given a set of coefficients of a quintic p(t) (strongest coefficient first), find smallest tdelta
+// > 0 such that p(t + tdelta) = p(tcur) + step. (step can be negative.)  *** Assume that if there
+// exists a critical point tc to the right of tcur, |p(tc) - p(tcur)| >= |step|. This is to
+// guarantee that tnext always exists.
+template <typename T>
+inline bool computequinticnextdiscretizedstep(const T* coeffs, const T step, const T tcur, T& tdelta)
+{
+    // Evaluate the 0th, 1st, 2nd, ..., 5th derivatives of p
+    // T p = coeffs[5] + tcur*(coeffs[4] + tcur*(coeffs[3] + tcur*(coeffs[2] + tcur*(coeffs[1] + tcur*coeffs[0]))));
+    T tempcoeffs[] = {5*coeffs[0], 4*coeffs[1], 3*coeffs[2], 2*coeffs[3], coeffs[4], 0};
+    T d1p = tempcoeffs[4] + tcur*(tempcoeffs[3] + tcur*(tempcoeffs[2] + tcur*(tempcoeffs[1] + tcur*tempcoeffs[0])));
+
+    tempcoeffs[0] *= 4; tempcoeffs[1] *= 3; tempcoeffs[2] *= 2;
+    T d2p = tempcoeffs[3] + tcur*(tempcoeffs[2] + tcur*(tempcoeffs[1] + tcur*tempcoeffs[0]));
+
+    tempcoeffs[0] *= 3; tempcoeffs[1] *= 2;
+    T d3p = tempcoeffs[2] + tcur*(tempcoeffs[1] + tcur*tempcoeffs[0]);
+
+    tempcoeffs[0] *= 2;
+    T d4p = tempcoeffs[1] + tcur*tempcoeffs[0];
+
+    T d5p = tempcoeffs[0];
+
+    // tempcoeffs holds coefficients of a polynomial resulting from Taylor series expansion of p at t = tcur.
+    tempcoeffs[0] = d5p/120;
+    tempcoeffs[1] = d4p/24;
+    tempcoeffs[2] = d3p/6;
+    tempcoeffs[3] = d2p/2;
+    tempcoeffs[4] = d1p;
+    tempcoeffs[5] = -step;
+
+    int numroots = 0;
+    T rawroots[5];
+    if( tempcoeffs[0] != 0 ) {
+        polyroots<T, 5>(tempcoeffs, rawroots, numroots);
+    }
+    else if( tempcoeffs[1] != 0 ) {
+        polyroots<T, 4>(&tempcoeffs[1], rawroots, numroots);
+    }
+    else if( tempcoeffs[2] != 0 ) {
+        polyroots<T, 3>(&tempcoeffs[2], rawroots, numroots);
+    }
+    else if( tempcoeffs[3] != 0 ) {
+        polyroots<T, 2>(&tempcoeffs[3], rawroots, numroots);
+    }
+    else if( tempcoeffs[4] != 0 ) {
+        polyroots<T, 1>(&tempcoeffs[4], rawroots, numroots);
+    }
+    bool bFound = false;
+    for( int i = 0; i < numroots; ++i ) {
+        if( rawroots[i] > 0 ) {
+            if( !bFound || (rawroots[i] < tdelta) ) {
+                bFound = true;
+                tdelta = rawroots[i];
+            }
+        }
+    }
+    return bFound;
+}
+
+// Given a set of coefficients of a cubic p(t) (strongest coefficient first), find smallest tdelta
+// > 0 such that p(tcur + tdelta) = p(tcur) + step. (step can be negative.)  *** Assume that if there
+// exists a critical point tc to the right of tcur, |p(tc) - p(tcur)| >= |step|. This is to
+// guarantee that tnext always exists.
+template <typename T>
+inline bool computecubicnextdiscretizedstep(const T* coeffs, const T step, const T tcur, T& tdelta)
+{
+    // Evaluate the 0th, 1st, 2nd, and 3rd derivatives of p
+    // T p = coeffs[3] + tcur*(coeffs[2] + tcur*(coeffs[1] + tcur*(coeffs[0])));
+    T tempcoeffs[] = {3*coeffs[0], 2*coeffs[1], coeffs[2], 0};
+    T d1p = tempcoeffs[2] + tcur*(tempcoeffs[1] + tcur*(tempcoeffs[0]));
+
+    tempcoeffs[0] *= 2;
+    T d2p = tempcoeffs[1] + tcur*(tempcoeffs[0]);
+
+    T d3p = tempcoeffs[0];
+
+    // tempcoeffs holds coefficients of a polynomial resulting from Taylor series expansion of p at t = tcur.
+    tempcoeffs[0] = d3p/6;
+    tempcoeffs[1] = d2p/2;
+    tempcoeffs[2] = d1p;
+    tempcoeffs[3] = -step;
+
+    int numroots = 0;
+    T rawroots[3];
+    if( tempcoeffs[0] != 0 ) {
+        polyroots<T, 3>(tempcoeffs, rawroots, numroots);
+    }
+    else if( tempcoeffs[1] != 0 ) {
+        polyroots<T, 2>(&tempcoeffs[1], rawroots, numroots);
+    }
+    else if( tempcoeffs[2] != 0 ) {
+        // polyroots<T, 1>(&tempcoeffs[2], rawroots, numroots);
+        numroots = 1;
+        rawroots[0] = -tempcoeffs[3]/tempcoeffs[2];
+    }
+    bool bFound = false;
+    for( int i = 0; i < numroots; ++i ) {
+        if( rawroots[i] > 0 ) {
+            if( !bFound || (rawroots[i] < tdelta) ) {
+                bFound = true;
+                tdelta = rawroots[i];
+            }
+        }
+    }
+    return bFound;
 }
 
 } // end namespace mathextra

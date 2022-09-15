@@ -17,7 +17,7 @@
    -------------------------------------------------------------------- */
 #include "qtosg.h"
 #include "osgrenderitem.h"
-
+#include "osglodlabel.h"
 #include <osgUtil/SmoothingVisitor>
 #include <osg/BlendFunc>
 #include <osg/PolygonOffset>
@@ -230,7 +230,7 @@ KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, Ki
     _userdata = 0;
     _bReload = false;
     _bDrawStateChanged = false;
-    _environmentid = pbody->GetEnvironmentId();
+    _environmentid = pbody->GetEnvironmentBodyIndex();
     _geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::_HandleGeometryChangedCallback,this));
     _drawcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::_HandleDrawChangedCallback,this));
 }
@@ -249,6 +249,7 @@ void KinBodyItem::Load()
     _osgdata->removeChildren(0, _osgdata->getNumChildren()); // have to remove all the children before creating a new mesh
 
     _veclinks.resize(0);
+    _vecgeoms.resize(_pbody->GetLinks().size());
 
     Transform tbody = _pbody->GetTransform();
     Transform tbodyinv = tbody.inverse();
@@ -278,8 +279,11 @@ void KinBodyItem::Load()
 //        }
 
         _veclinks.push_back(LinkNodes(posglinkroot, posglinktrans));
+        size_t linkindex = itlink - _pbody->GetLinks().begin();
+        _vecgeoms.at(linkindex).resize(0);
 
         for(size_t igeom = 0; igeom < porlink->GetGeometries().size(); ++igeom) {
+            _vecgeoms[linkindex].push_back( GeomNodes(new osg::Group(), new osg::MatrixTransform()) );
             KinBody::Link::GeometryPtr orgeom = porlink->GetGeometries()[igeom];
             if( !orgeom->IsVisible() && _viewmode == VG_RenderOnly ) {
                 continue;
@@ -465,6 +469,54 @@ void KinBodyItem::Load()
                     pgeometrydata->addChild(geode);
                     break;
                 }
+                // Board is a Box, dots are a separate Mesh from the board's collision Mesh
+                case GT_CalibrationBoard: {
+                    // Make board
+                    Vector v;
+                    osg::ref_ptr<osg::Box> board = new osg::Box();
+                    board->setCenter(osg::Vec3f(0, 0, -orgeom->GetBoxExtents().z));
+                    board->setHalfLengths(osg::Vec3f(orgeom->GetBoxExtents().x,orgeom->GetBoxExtents().y,orgeom->GetBoxExtents().z));
+
+                    // Make dot mesh
+                    osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
+
+                    TriMesh mesh = TriMesh();
+                    orgeom->GetCalibrationBoardDotMesh(mesh);
+                    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
+                    vertices->reserveArray(mesh.vertices.size());
+                    for(size_t i = 0; i < mesh.vertices.size(); ++i) {
+                        RaveVector<float> rv = mesh.vertices[i];
+                        vertices->push_back(osg::Vec3(rv.x, rv.y, rv.z));
+                    }
+                    geom->setVertexArray(vertices.get());
+
+                    osg::DrawElementsUInt* geom_prim = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, mesh.indices.size());
+                    for(size_t i = 0; i < mesh.indices.size(); ++i) {
+                        (*geom_prim)[i] = mesh.indices[i];
+                    }
+                    geom->addPrimitiveSet(geom_prim);
+                    osgUtil::SmoothingVisitor::smooth(*geom);
+
+                    // Set color of dot grid mesh
+                    RaveVector<float> dotColor = orgeom->GetCalibrationBoardDotColor();
+                    osg::ref_ptr<osg::Material> dotMat = new osg::Material;
+                    dotMat->setDiffuse( osg::Material::FRONT, osg::Vec4(dotColor.x,dotColor.y,dotColor.z,1) );
+                    dotMat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,1) );
+                    dotMat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
+                    
+                    // Place the two parts into the same pgeometrydata
+                    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
+                    osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(board.get());
+                    geode->addDrawable(sd.get());
+                    osg::ref_ptr<osg::Geode> geode2 = new osg::Geode;
+                    geode2->addDrawable(geom);
+                    osg::ref_ptr<osg::StateSet> geode2state = geode2->getOrCreateStateSet();
+                    geode2state->setAttributeAndModes(dotMat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+
+                    pgeometrydata->addChild(geode.get());
+                    pgeometrydata->addChild(geode2.get());
+                    break;
+                }
                 default:
                     break;
                 }
@@ -477,6 +529,8 @@ void KinBodyItem::Load()
                 pgeometryroot->setName(str(boost::format("geom%d")%igeom));
                 //  Apply external transform to local transform
                 posglinktrans->addChild(pgeometryroot);
+
+                _vecgeoms[linkindex][igeom] = GeomNodes(pgeometrydata, pgeometryroot); // overwrite
             }
         }
     }
@@ -658,7 +712,7 @@ bool KinBodyItem::UpdateFromOSG()
         }
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
+    boost::shared_ptr<EnvironmentLock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
     if( !!lockenv ) {
         _pbody->SetLinkTransformations(vtrans,_vjointvalues);
         _pbody->GetLinkTransformations(_vtrans,_vjointvalues);
@@ -671,13 +725,13 @@ bool KinBodyItem::UpdateFromOSG()
 
 void KinBodyItem::GetDOFValues(vector<dReal>& vjoints) const
 {
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     vjoints = _vjointvalues;
 }
 
 void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofvalues) const
 {
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     vtrans = _vtrans;
     vdofvalues = _vjointvalues;
 }
@@ -691,7 +745,7 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
+        boost::shared_ptr<EnvironmentLock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
         if( !lockenv ) {
             return false;
         }
@@ -703,7 +757,7 @@ bool KinBodyItem::UpdateFromModel()
         }
 
         // make sure the body is still present!
-        if( _pbody->GetEnv()->GetBodyFromEnvironmentId(_environmentid) == _pbody ) {
+        if( _pbody->GetEnv()->GetBodyFromEnvironmentBodyIndex(_environmentid) == _pbody ) {
             _pbody->GetLinkTransformations(_vtrans, _vjointvalues);
             _pbody->GetDOFValues(vjointvalues);
         }
@@ -724,7 +778,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     }
 
     if( _bReload || _bDrawStateChanged ) {
-        EnvironmentMutex::scoped_try_lock lockenv(_pbody->GetEnv()->GetMutex());
+        EnvironmentLock lockenv(_pbody->GetEnv()->GetMutex());
         if( !!lockenv ) {
             if( _bReload || _bDrawStateChanged ) {
                 Load();
@@ -732,7 +786,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         }
     }
 
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
 
@@ -812,6 +866,21 @@ KinBody::LinkPtr KinBodyItem::GetLinkFromOSG(OSGNodePtr plinknode) const
     }
 
     return KinBody::LinkPtr();
+}
+
+KinBody::Link::GeometryPtr KinBodyItem::GetGeomFromOSG(OSGNodePtr pgeomnode) const
+{
+    FindNode search(pgeomnode);
+    for(size_t ilink = 0; ilink < _vecgeoms.size(); ++ilink) {
+        for(size_t igeom = 0; igeom < _vecgeoms.at(ilink).size(); ++igeom) {
+            search.apply(*_vecgeoms[ilink][igeom].second);
+            if( search.IsFound() ) {
+                return _pbody->GetLinks().at(ilink)->GetGeometries().at(igeom);
+            }
+        }
+    }
+
+    return KinBody::Link::GeometryPtr();
 }
 
 RobotItem::RobotItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(osgSceneRoot, osgFigureRoot, robot, viewgeom)
@@ -896,38 +965,8 @@ void RobotItem::Load()
             peesep->addChild(CreateOSGXYZAxes(0.1, 0.0005));
 
             // add text
-            {
-                OSGGroupPtr ptextsep = new osg::Group();
-                osg::ref_ptr<osg::Geode> textGeode = new osg::Geode;
-                peesep->addChild(ptextsep);
-
-                osg::Matrix matrix;
-                OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
-                ptrans->setReferenceFrame(osg::Transform::RELATIVE_RF);
-                matrix.setTrans(osg::Vec3f(0, 0, 0));//.02f,0.02f,0.02f));
-                ptextsep->addChild(ptrans);
-
-                osg::ref_ptr<osgText::Text> text = new osgText::Text();
-
-                //Set the screen alignment - always face the screen
-                text->setAxisAlignment(osgText::Text::SCREEN);
-                text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
-                text->setCharacterSize(50.0);
-
-                text->setColor(osg::Vec4(0,0,0,1));
-                text->setEnableDepthWrites(false);
-
-                text->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
-                text->setBackdropColor(osg::Vec4(1,1,1,1));
-
-
-                text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
-                //text->setFontResolution(18,18);
-
-                text->setText((*itmanip)->GetName());//str(boost::format("EE%d")%index));
-                textGeode->addDrawable(text);
-                ptextsep->addChild(textGeode);
-            }
+            osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel((*itmanip)->GetName());
+            peesep->addChild(labelTrans);
         }
     }
 
@@ -956,10 +995,10 @@ void RobotItem::Load()
                 peesep->addChild(ptextsep);
 
                 osg::Matrix matrix;
-                OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
-                ptrans->setReferenceFrame(osg::Transform::RELATIVE_RF);
+                OSGMatrixTransformPtr ptransform = new osg::MatrixTransform();
+                ptransform->setReferenceFrame(osg::Transform::RELATIVE_RF);
                 matrix.setTrans(osg::Vec3f(0, 0, 0));//.02f,0.02f,0.02f));
-                ptextsep->addChild(ptrans);
+                ptextsep->addChild(ptransform);
 
                 osg::ref_ptr<osgText::Text> text = new osgText::Text();
 

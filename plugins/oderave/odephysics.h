@@ -484,7 +484,7 @@ The possible properties that can be set are: ";
         }
     }
 
-    virtual Vector GetGravity()
+    virtual const Vector& GetGravity()
     {
         return _gravity;
     }
@@ -597,7 +597,7 @@ private:
             int minindex = min(pkb1->GetIndex(), pkb2->GetIndex());
             int maxindex = max(pkb1->GetIndex(), pkb2->GetIndex());
 
-            if( pkb1->GetParent()->GetAdjacentLinks().find(minindex|(maxindex<<16)) != pkb1->GetParent()->GetAdjacentLinks().end() )
+            if( pkb1->GetParent()->AreAdjacentLinks(minindex, maxindex))
                 return;
         }
 

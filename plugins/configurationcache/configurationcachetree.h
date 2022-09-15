@@ -149,7 +149,7 @@ private:
     friend class CacheTree;
 };
 
-typedef CacheTreeNode* CacheTreeNodePtr; ///< boost::shared_ptr might be too slow, and we never expose the pointers outside of CacheTree, so can use raw pointers.
+typedef CacheTreeNode* CacheTreeNodePtr; ///< OPENRAVE_SHARED_PTR might be too slow, and we never expose the pointers outside of CacheTree, so can use raw pointers.
 typedef const CacheTreeNode* CacheTreeNodeConstPtr;
 
 /** Cache stores configuration information in a data structure based on the Cover Tree (Beygelzimer et al. 2006 http://hunch.net/~jl/projects/cover_tree/icml_final/final-icml.pdf)
@@ -325,7 +325,7 @@ private:
     std::map<CacheTreeNodePtr, int> _mapNodeIndices;
     std::vector< std::set<CacheTreeNodePtr> > _vsetLevelNodes; ///< _vsetLevelNodes[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetLevelNodes.at(_EncodeLevel(_maxlevel)) is the root.
 
-    boost::shared_ptr<boost::pool<> > _poolNodes; ///< the dynamically growing memory pool of nodes. Since each node's size is determined during run-time, the pool constructor has to be called with the correct node size
+    OPENRAVE_SHARED_PTR<boost::pool<> > _poolNodes; ///< the dynamically growing memory pool of nodes. Since each node's size is determined during run-time, the pool constructor has to be called with the correct node size
 
     dReal _maxdistance; ///< maximum possible distance between two states. used to balance the tree.
     dReal _base, _fBaseInv, _fBaseInv2, _fBaseChildMult; ///< a constant used to control the max level of traversion. _fBaseInv = 1/_base, _fBaseInv2=Sqr(_fBaseInv), _fBaseChildMult=1/(_base-1)
@@ -344,7 +344,7 @@ private:
     std::vector<dReal> _dummycs; ///< for loading
 };
 
-typedef boost::shared_ptr<CacheTree> CacheTreePtr;
+typedef OPENRAVE_SHARED_PTR<CacheTree> CacheTreePtr;
 
 /** Maintains an up-to-date cache tree synchronized to the openrave environment. Tracks bodies being added removed, states changing, etc.
    The state of cache consists of the active DOFs of the robot that is passed in at constructor time.
@@ -536,8 +536,8 @@ public:
         UserDataPtr _changehandle;
     };
 
-    typedef boost::shared_ptr<KinBodyCachedData> KinBodyCachedDataPtr;
-    typedef boost::weak_ptr<KinBodyCachedData> KinBodyCachedDataWeakPtr;
+    typedef OPENRAVE_SHARED_PTR<KinBodyCachedData> KinBodyCachedDataPtr;
+    typedef OPENRAVE_WEAK_PTR<KinBodyCachedData> KinBodyCachedDataWeakPtr;
 
     EnvironmentBasePtr _penv; ///< environment
 
@@ -553,7 +553,7 @@ public:
 
 };
 
-typedef boost::shared_ptr<ConfigurationCache> ConfigurationCachePtr;
+typedef OPENRAVE_SHARED_PTR<ConfigurationCache> ConfigurationCachePtr;
 
 }
 

@@ -22,6 +22,8 @@
 #ifndef OPENRAVE_SENSORSYSTEM_H
 #define OPENRAVE_SENSORSYSTEM_H
 
+#include <thread>
+
 namespace OpenRAVE {
 
 /** \brief <b>[interface]</b> Used to manage the creation and destruction of bodies. See \ref arch_sensorsystem.
@@ -48,7 +50,7 @@ public:
 
     /// add body for registering with sensor system
     /// pdata is a pointer to a data structor holding tracking/registration information for the system
-    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, XMLReadableConstPtr pdata) = 0;
+    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, ReadableConstPtr pdata) = 0;
     /// remove body from sensory system. If bDestroy is true, will also deallocate the memory
     virtual bool RemoveKinBody(KinBodyPtr pbody) = 0;
     /// returns true if body is present
@@ -76,13 +78,42 @@ private:
 class OPENRAVE_API SimpleSensorSystem : public SensorSystemBase
 {
 public:
-    class OPENRAVE_API XMLData : public XMLReadable {
+    class OPENRAVE_API XMLData : public Readable {
 public:
-        XMLData(const std::string& xmlid) : XMLReadable(xmlid), id(0) {
+        XMLData(const std::string& xmlid) : Readable(xmlid), id(0) {
         }
+
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override {
+            return false;
+        }
+
         virtual void copy(boost::shared_ptr<XMLData const> pdata) {
             *this = *pdata;
         }
+
+        /// \return true if this readable is equivalent to other readable
+        virtual bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const XMLData* pOther = dynamic_cast<const XMLData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return sid == pOther->sid &&
+                id == pOther->id &&
+                strOffsetLink == pOther->strOffsetLink &&
+                transOffset == pOther->transOffset &&
+                transPreOffset == pOther->transPreOffset;
+        }
+
+        /// \return return a cloned copy of this readable
+        virtual ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<XMLData> pNew(new XMLData(GetXMLId()));
+            *pNew = *this;
+            return pNew;
+        }
+
 
         std::string sid;         ///< global id for the system id
         int id;
@@ -99,7 +130,7 @@ public:
             SetBody(pbody);
         }
 
-        virtual XMLReadableConstPtr GetData() const {
+        virtual ReadableConstPtr GetData() const {
             return _initdata;
         }
         virtual KinBody::LinkPtr GetOffsetLink() const {
@@ -156,7 +187,7 @@ protected:
     {
 public:
         SimpleXMLReader(boost::shared_ptr<XMLData>);
-        virtual XMLReadablePtr GetReadable() {
+        virtual ReadablePtr GetReadable() {
             return _pdata;
         }
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
@@ -177,7 +208,7 @@ protected:
     virtual void Reset();
 
     virtual void AddRegisteredBodies(const std::vector<KinBodyPtr>& vbodies);
-    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, XMLReadableConstPtr pdata);
+    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, ReadableConstPtr pdata);
 
     virtual bool RemoveKinBody(KinBodyPtr pbody);
     virtual bool IsBodyPresent(KinBodyPtr pbody);
@@ -200,10 +231,10 @@ protected:
 
     std::string _xmlid;
     BODIES _mapbodies;
-    boost::mutex _mutex;
+    std::mutex _mutex;
     uint64_t _expirationtime;     ///< expiration time in us
     bool _bShutdown;
-    boost::thread _threadUpdate;
+    std::thread _threadUpdate;
 };
 
 } // end namespace OpenRAVE

@@ -15,8 +15,7 @@ if( OPT_BULLET )
 
       #message(STATUS "Bullet found ${bullet_INCLUDE_DIRS}, libs: ${bullet_LIBRARIES}, cflags=${bullet_CFLAGS_OTHER}, lflags=${bullet_LDFLAGS_OTHER}, building bulletrave plugin")
 
-      target_link_libraries(bulletrave libopenrave ${bullet_LIBRARIES})
-      target_link_libraries(bulletrave PRIVATE boost_assertion_failed)
+      target_link_libraries(bulletrave PRIVATE boost_assertion_failed PUBLIC libopenrave ${bullet_LIBRARIES})
 
       # for some reason the flags come out as a list, so convert to a string
       set(openrave_bullet_CFLAGS_OTHER)

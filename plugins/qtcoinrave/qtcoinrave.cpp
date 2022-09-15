@@ -13,17 +13,19 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "qtcoin.h"
+
+#include <QApplication>
+#include <QLabel>
+
 #include "qtcameraviewer.h"
 #include <openrave/plugin.h>
 #if defined(HAVE_X11_XLIB_H) && defined(Q_WS_X11)
 #include <X11/Xlib.h>
 #endif
 
-#include <QApplication>
-
 ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv);
 
-boost::mutex g_mutexsoqt;
+std::mutex g_mutexsoqt;
 static int s_InitRefCount = 0;
 static int s_SoQtArgc = 0; // has to be static!!
 void EnsureSoQtInit()
@@ -47,7 +49,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 #endif
         if( interfacename == "qtcoin" ) {
             // have to lock after initialized since call relies on SoDBP::globalmutex
-            boost::mutex::scoped_lock lock(g_mutexsoqt);
+            std::lock_guard<std::mutex> lock(g_mutexsoqt);
             EnsureSoQtInit();
             //SoDBWriteLock dblock;
             return InterfaceBasePtr(new QtCoinViewer(penv, sinput));

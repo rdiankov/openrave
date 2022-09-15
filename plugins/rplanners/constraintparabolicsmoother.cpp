@@ -107,7 +107,7 @@ public:
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
         _probot = pbase;
@@ -116,7 +116,7 @@ public:
 
     virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         isParameters >> *_parameters;
         _probot = pbase;
@@ -185,9 +185,9 @@ public:
                         // Insert all links of all bodies that the endeffector is grabbing
                         std::vector<KinBodyPtr> grabbedbodies;
                         probot->GetGrabbed(grabbedbodies);
-                        FOREACH(itbody,grabbedbodies){
-                            if((*itmanip)->IsGrabbing(**itbody)) {
-                                FOREACH(itlink,(*itbody)->GetLinks()){
+                        FOREACH(itgrabbed,grabbedbodies){
+                            if((*itmanip)->IsGrabbing(**itgrabbed)) {
+                                FOREACH(itlink,(*itgrabbed)->GetLinks()){
                                     globallinklist.push_back(*itlink);
                                 }
                             }
@@ -299,7 +299,7 @@ public:
                 // Change timing of ramps so that they satisfy minswitchtime, _fStepLength, and dynamics and collision constraints
 
                 // Disable usePerturbation for this particular stage
-                int options = 0xffff;
+                int options = 0xffff|CFO_FromTrajectorySmoother;
                 // Reset all ramps
                 FOREACH(itramp, ramps) {
                     itramp->modified = true;
@@ -337,9 +337,9 @@ public:
                         const ParabolicRamp::Vector& x0 = path[path.size()-2];
                         const ParabolicRamp::Vector& x1 = path[path.size()-1];
                         dReal dotproduct=0,x0length2=0,x1length2=0;
-                        for(size_t i = 0; i < q.size(); ++i) {
-                            dReal dx0=x0[i]-q[i];
-                            dReal dx1=x1[i]-q[i];
+                        for(size_t j = 0; j < q.size(); ++j) {
+                            dReal dx0=x0[j]-q[j];
+                            dReal dx1=x1[j]-q[j];
                             dotproduct += dx0*dx1;
                             x0length2 += dx0*dx0;
                             x1length2 += dx1*dx1;
@@ -353,8 +353,8 @@ public:
                     // check if the point is not the same as the previous point
                     if( path.size() > 0 ) {
                         bool bIsClose = true;
-                        for(size_t i = 0; i < q.size(); ++i) {
-                            if( RaveFabs(q[i]-path.back().at(i)) > ParabolicRamp::EpsilonX ) {
+                        for(size_t j = 0; j < q.size(); ++j) {
+                            if( RaveFabs(q[j]-path.back().at(j)) > ParabolicRamp::EpsilonX ) {
                                 bIsClose = false;
                             }
                         }
@@ -382,7 +382,7 @@ public:
             // Sanity check before any shortcutting
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 RAVELOG_VERBOSE("Sanity check before starting shortcutting...\n");
-                int options = 0xffff;
+                int options = 0xffff|CFO_FromTrajectorySmoother;
                 int iramp = 0;
                 FOREACHC(itramp,ramps){
                     if(checker.Check(*itramp,options) != 0) {
@@ -443,7 +443,7 @@ public:
 
                 //  Further merge if possible
 
-                int options = 0xffff;
+                int options = 0xffff|CFO_FromTrajectorySmoother;
                 dReal upperbound = 1.05;
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
                 bool resmerge = mergewaypoints::FurtherMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,checker,options);
@@ -568,7 +568,7 @@ public:
             //                if(_parameters->verifyinitialpath) {
             if(!!pchecker) {
                 // part of original trajectory which might not have been processed with perturbations, so ignore them
-                int options = 0xffff; // no perturbation
+                int options = 0xffff|CFO_FromTrajectorySmoother; // no perturbation
                 if( pchecker->Check(*itrampnd,options) != 0) {
                     // unfortunately happens sometimes when the robot is close to corners.. not sure if returning is failing is the right solution here..
 
@@ -614,7 +614,7 @@ public:
             ramps.front().SetConstant(x[0]);
         }
         else if( x.size() > 1 ) {
-            int options = 0xffff; // no perturbation
+            int options = 0xffff|CFO_FromTrajectorySmoother; // no perturbation
             if(!_parameters->verifyinitialpath) {
                 RAVELOG_VERBOSE("Initial path verification is disabled (in SetMilestones)\n");
                 options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions); // no collision checking
@@ -787,7 +787,7 @@ public:
             itramp1->Derivative(u1,dx0);
             itramp2->Derivative(u2,dx1);
 
-            int options = 0xffff;
+            int options = 0xffff|CFO_FromTrajectorySmoother;
             // If we run mergewaypoints afterwards, no need to check for collision at this stage
             if(_parameters->minswitchtime > 0) {
                 options = options &(~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
@@ -854,7 +854,7 @@ public:
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
                 dReal upperbound = (durationbeforeshortcut-fimprovetimethresh)/mergewaypoints::ComputeRampsDuration(ramps);
                 // Do not check collision during merge, check later
-                int options = 0xffff & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+                options = (0xffff|CFO_FromTrajectorySmoother) & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
 
 
                 bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,check,options);
@@ -875,7 +875,7 @@ public:
                         // Perturbations are applied when a configuration is outside the "radius" of start and goal config
                         int itx = 0;
                         dReal radius_around_endpoints = 0.1;
-                        options = 0xffff;
+                        options = 0xffff|CFO_FromTrajectorySmoother;
                         FOREACH(itramp, resramps) {
                             if(!itramp->modified) {
                                 continue;

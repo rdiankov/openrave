@@ -116,6 +116,26 @@ protected:
     class BaseFlashLidar3DGeom : public LaserGeomData
     {
 public:
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const BaseFlashLidar3DGeom* pOther = dynamic_cast<const BaseFlashLidar3DGeom*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return LaserGeomData::operator==(other) &&
+                width == pOther->width &&
+                height == pOther->height &&
+                KK == pOther->KK;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<BaseFlashLidar3DGeom> pNew(new BaseFlashLidar3DGeom());
+            *pNew = *this;
+            return pNew;
+        }
+
         CameraIntrinsics KK;         // intrinsic matrix expanding to [ KK[0] 0 KK[2]; 0 KK[1] KK[3] ]
         int width, height;         // dimensions in number of lasers
     };
@@ -175,7 +195,7 @@ public:
             _bRenderData = true;
             return _bRenderData;
         case CC_RenderDataOff: {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             _listGraphicsHandles.clear();
             _bRenderData = false;
             return _bRenderData;
@@ -187,7 +207,7 @@ public:
             _RenderGeometry();
             return _bRenderData;
         case CC_RenderGeometryOff: {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             _graphgeometry.reset();
             _bRenderGeometry = false;
             return _bRenderData;
@@ -212,7 +232,7 @@ public:
 
             {
                 // Lock the data mutex and fill with the range data (get all in one timestep)
-                boost::mutex::scoped_lock lock(_mutexdata);
+                std::lock_guard<std::mutex> lock(_mutexdata);
                 t = GetTransform();
                 _pdata->__trans = t;
                 _pdata->__stamp = GetEnv()->GetSimulationTime();
@@ -237,7 +257,7 @@ public:
                             // store the colliding bodies
                             KinBody::LinkConstPtr plink = !!_report->plink1 ? _report->plink1 : _report->plink2;
                             if( !!plink ) {
-                                _databodyids[index] = plink->GetParent()->GetEnvironmentId();
+                                _databodyids[index] = plink->GetParent()->GetEnvironmentBodyIndex();
                             }
                         }
                         else {
@@ -262,7 +282,7 @@ public:
 
                 {
                     // Lock the data mutex and fill the arrays used for rendering
-                    boost::mutex::scoped_lock lock(_mutexdata);
+                    std::lock_guard<std::mutex> lock(_mutexdata);
                     N = (int)_pdata->ranges.size();
                     vpoints.resize(N+1);
                     for(int i = 0; i < N; ++i)
@@ -321,7 +341,7 @@ public:
     virtual bool GetSensorData(SensorDataPtr psensordata)
     {
         if( psensordata->GetType() == ST_Laser ) {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             *boost::dynamic_pointer_cast<LaserSensorData>(psensordata) = *_pdata;
             return true;
         }
@@ -339,7 +359,7 @@ public:
     }
     bool _CollidingBodies(ostream& sout, istream& sinput)
     {
-        boost::mutex::scoped_lock lock(_mutexdata);
+        std::lock_guard<std::mutex> lock(_mutexdata);
         FOREACH(it, _databodyids) {
             sout << *it << " ";
         }
@@ -351,7 +371,7 @@ public:
         _trans = trans;
     }
 
-    virtual Transform GetTransform() {
+    virtual const Transform& GetTransform() {
         return _trans;
     }
 
@@ -435,7 +455,7 @@ protected:
     GraphHandlePtr _graphgeometry;
     dReal _fTimeToScan;
 
-    boost::mutex _mutexdata;
+    std::mutex _mutexdata;
     bool _bRenderData, _bRenderGeometry, _bPower;
 
     friend class BaseFlashLidar3DXMLReader;

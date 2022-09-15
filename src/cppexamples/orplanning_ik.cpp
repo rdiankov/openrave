@@ -57,10 +57,10 @@ public:
 
         while(IsOk()) {
             {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+                EnvironmentLock lock(penv->GetMutex()); // lock environment
 
                 // find a new manipulator position and feed that into the planner. If valid, robot will move to it safely.
-                Transform t = pmanip->GetEndEffectorTransform();
+                Transform t = pmanip->GetTransform();
                 t.trans += Vector(RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f);
                 t.rot = quatMultiply(t.rot,quatFromAxisAngle(Vector(RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f)*0.2f));
                 ssin.str("");
@@ -75,7 +75,7 @@ public:
 
             // unlock the environment and wait for the robot to finish
             while(!probot->GetController()->IsDone() && IsOk()) {
-                boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     }

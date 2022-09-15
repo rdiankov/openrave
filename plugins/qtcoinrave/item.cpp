@@ -94,7 +94,7 @@ KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry
     _userdata = 0;
     _bReload = false;
     _bDrawStateChanged = false;
-    networkid = pchain->GetEnvironmentId();
+    networkid = pchain->GetEnvironmentBodyIndex();
     _geometrycallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::GeometryChangedCallback,this));
     _drawcallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::DrawChangedCallback,this));
 }
@@ -183,10 +183,10 @@ void KinBodyItem::Load()
                     if (mesh) {
                         // apply render scale to the mesh
                         Vector render_scale = geom->GetRenderScale();
-                        FOREACH(it, mesh->vertices) {
-                            it->x *= render_scale.x;
-                            it->y *= render_scale.y;
-                            it->z *= render_scale.z;
+                        FOREACH(vertex, mesh->vertices) {
+                            vertex->x *= render_scale.x;
+                            vertex->y *= render_scale.y;
+                            vertex->z *= render_scale.z;
                         }
 
                         psep = RenderTrimesh(psep, *mesh, geom);
@@ -291,8 +291,8 @@ void KinBodyItem::Load()
                     SoFaceSet* faceset = new SoFaceSet();
                     // this makes it crash!
                     //faceset->numVertices.set1Value(mesh.indices.size()/3-1,3);
-                    for(size_t i = 0; i < mesh.indices.size()/3; ++i) {
-                        faceset->numVertices.set1Value(i,3);
+                    for(size_t k = 0; k < mesh.indices.size()/3; ++k) {
+                        faceset->numVertices.set1Value(k,3);
                     }
                     psep->addChild(faceset);
                     break;
@@ -370,8 +370,8 @@ SoSeparator *KinBodyItem::RenderTrimesh(SoSeparator *psep, TriMesh const &mesh, 
     SoFaceSet* faceset = new SoFaceSet();
     // this makes it crash!
     //faceset->numVertices.set1Value(mesh.indices.size()/3-1,3);
-    for(size_t i = 0; i < mesh.indices.size()/3; ++i) {
-        faceset->numVertices.set1Value(i,3);
+    for(size_t k = 0; k < mesh.indices.size()/3; ++k) {
+        faceset->numVertices.set1Value(k,3);
     }
     psep->addChild(faceset);
     return psep;
@@ -393,7 +393,7 @@ bool KinBodyItem::UpdateFromIv()
         ++ittrans;
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
+    boost::shared_ptr<EnvironmentLock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
     if( !!lockenv ) {
         _pchain->SetLinkTransformations(vtrans,_vdofbranches);
     }
@@ -422,7 +422,7 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
+        boost::shared_ptr<EnvironmentLock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
         if( !lockenv ) {
             return false;
         }
@@ -430,7 +430,7 @@ bool KinBodyItem::UpdateFromModel()
             Load();
         }
         // make sure the body is still present!
-        if( _pchain->GetEnv()->GetBodyFromEnvironmentId(networkid) == _pchain ) {
+        if( _pchain->GetEnv()->GetBodyFromEnvironmentBodyIndex(networkid) == _pchain ) {
             _pchain->GetLinkTransformations(_vtrans,_vdofbranches);
             _pchain->GetDOFValues(vjointvalues);
         }
@@ -443,13 +443,13 @@ bool KinBodyItem::UpdateFromModel()
 
 void KinBodyItem::GetDOFValues(vector<dReal>& vjoints) const
 {
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     vjoints = _vjointvalues;
 }
 
 void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofbranches) const
 {
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     vtrans = _vtrans;
     vdofbranches = _vdofbranches;
 }
@@ -462,7 +462,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     }
 
     if( _bReload || _bDrawStateChanged ) {
-        EnvironmentMutex::scoped_try_lock lockenv(_pchain->GetEnv()->GetMutex());
+        EnvironmentLock lockenv(_pchain->GetEnv()->GetMutex());
         if( !!lockenv ) {
             if( _bReload || _bDrawStateChanged ) {
                 Load();
@@ -470,7 +470,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         }
     }
 
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
 
@@ -534,12 +534,12 @@ RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry vi
 
 void RobotItem::Load()
 {
-    FOREACH(it,_vEndEffectors) {
-        _ivGeom->removeChild(it->_pswitch);
+    FOREACH(itve,_vEndEffectors) {
+        _ivGeom->removeChild(itve->_pswitch);
     }
     _vEndEffectors.resize(0);
-    FOREACH(it,_vAttachedSensors) {
-        _ivGeom->removeChild(it->_pswitch);
+    FOREACH(itas,_vAttachedSensors) {
+        _ivGeom->removeChild(itas->_pswitch);
     }
     _vAttachedSensors.resize(0);
     KinBodyItem::Load();
@@ -677,9 +677,9 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name, const Vector* 
 
         //Transform t = GetRaveTransform(_selectedItem->GetIvTransform());
 
-        SoTranslation* ptrans = new SoTranslation();
-        ptrans->translation.setValue(SbVec3f(0.02f,0.02f,0.02f));
-        ptextsep->addChild(ptrans);
+        SoTranslation* pTrans = new SoTranslation();
+        pTrans->translation.setValue(SbVec3f(0.02f,0.02f,0.02f));
+        ptextsep->addChild(pTrans);
 
         SoTransparencyType* ptype = new SoTransparencyType();
         ptype->value = SoGLRenderAction::NONE;
@@ -717,9 +717,9 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
             itee->_pswitch->whichChild = bGrab ? SO_SWITCH_ALL : SO_SWITCH_NONE;
         }
     }
-    FOREACH(itee, _vAttachedSensors) {
-        if( !!itee->_pswitch ) {
-            itee->_pswitch->whichChild = bGrab ? SO_SWITCH_ALL : SO_SWITCH_NONE;
+    FOREACH(itas, _vAttachedSensors) {
+        if( !!itas->_pswitch ) {
+            itas->_pswitch->whichChild = bGrab ? SO_SWITCH_ALL : SO_SWITCH_NONE;
         }
     }
 
@@ -753,12 +753,12 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
             }
         }
 
-        FOREACH(itee, _vAttachedSensors) {
-            if((itee->_index >= 0)&&(itee->_index < (int)_probot->GetAttachedSensors().size())) {
-                RobotBase::AttachedSensorConstPtr sensor = _probot->GetAttachedSensors().at(itee->_index);
+        FOREACH(itas, _vAttachedSensors) {
+            if((itas->_index >= 0)&&(itas->_index < (int)_probot->GetAttachedSensors().size())) {
+                RobotBase::AttachedSensorConstPtr sensor = _probot->GetAttachedSensors().at(itas->_index);
                 if( !!sensor->GetAttachingLink() ) {
                     RaveTransform<float> tgrasp = vtrans.at(sensor->GetAttachingLink()->GetIndex())*sensor->GetRelativeTransform();
-                    SetSoTransform(itee->_ptrans, transInvRoot * tgrasp);
+                    SetSoTransform(itas->_ptrans, transInvRoot * tgrasp);
                 }
             }
         }

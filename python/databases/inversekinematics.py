@@ -148,7 +148,6 @@ if not __openravepy_build_doc__:
 else:
     from numpy import array
 
-from .. import openrave_exception
 from ..openravepy_ext import RobotStateSaver
 from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody, normalizeAxisRotation, quatFromRotationMatrix, RaveGetDefaultViewerType
 from . import DatabaseGenerator
@@ -242,7 +241,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     raise InverseKinematicsError(u'link %s part of IK chain cannot be declared static'%link)
         try:
             self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
-        except ImportError,e:
+        except ImportError as e:
             log.warn('failed to import ikfast, so reverting to older version: %s',e)
             self.ikfast = __import__('openravepy.ikfast_sympy0_6',fromlist=['openravepy'])
         for handler in log.handlers:
@@ -295,28 +294,51 @@ class InverseKinematicsModel(DatabaseGenerator):
     def has(self):
         return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) and self.iksolver.GetXMLId() == self.manip.GetIkSolver().GetXMLId()
     
-    def save(self):
+    def save(self, filepermissions = None):
         statsfilename=self.getstatsfilename(False)
         try:
-            os.makedirs(os.path.split(statsfilename)[0])
-        except OSError:
-            pass
-        with open(statsfilename, 'w') as f:
-            pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f)
-        log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
+            defaultMask = os.umask(0)
+            basepath = os.path.split(statsfilename)[0]
+            try:
+                os.makedirs(basepath)
+            except OSError as e:
+                pass
+
+            with open(statsfilename, 'wb') as f:
+                pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f, 2)
+            log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
+
+            if filepermissions is not None and filepermissions >= 0:
+                log.info('changing filepermissions of path %s to \'%s\' recursively.', basepath, filepermissions)
+                try:
+                    os.chmod(basepath, filepermissions)
+                    for root, dirs, files in os.walk(basepath):
+                        for d in dirs:
+                            os.chmod(os.path.join(root, d), filepermissions)
+                        for f in files:
+                            os.chmod(os.path.join(root, f), filepermissions)
+                except OSError as e:
+                    log.warn('failed to changed permissions of path %s to \'%s\': %s', basepath, filepermissions, e)
+        finally:
+            os.umask(defaultMask)
         
     def load(self,freeinc=None,checkforloaded=True,*args,**kwargs):
         try:
             filename = self.getstatsfilename(True)
             if len(filename) == 0:
-                return checkforloaded and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
-            with open(filename, 'r') as f:
+                hasloaded = checkforloaded and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
+                if hasloaded:
+                    if self.iksolver is	None:
+                        log.debug('setting self.iksolver to %s', self.manip.GetIkSolver())
+                        self.iksolver = self.manip.GetIkSolver()
+            
+            with open(filename, 'rb') as f:
                 modelversion,self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc = pickle.load(f)
             if modelversion != self.getversion():
                 log.warn('version is wrong %s!=%s',modelversion,self.getversion())
                 return checkforloaded and self.manip.GetIkSolver() is not None  and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
                 
-        except Exception,e:
+        except Exception as e:
             log.warn(e)
             return checkforloaded and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
             
@@ -355,6 +377,9 @@ class InverseKinematicsModel(DatabaseGenerator):
                         return False
                     
                     self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIkSolver().GetXMLId().split(' ',1)[0]+iksuffix) if self.manip.GetIkSolver() is not None else None
+                    if self.iksolver is None:
+                        return False
+                
                 else:
                     if int(self.iktype) != int(iktype):
                         raise InverseKinematicsError('ik does not match types %s!=%s'%(self.iktype,iktype))
@@ -382,7 +407,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         """
         with self.env:
             values = []
-            eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
+            eetrans = self.manip.GetTransform()[0:3,3]
             armlength = 0
             orderedarmindices = [j for j in self.robot.GetDependencyOrderedJoints() if j.GetJointIndex() in self.manip.GetArmIndices()]
             for j in orderedarmindices[::-1]:
@@ -618,6 +643,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         ipython = None
         freeinc = None
         ikfastmaxcasedepth = 3
+        filepermissions = None
         if options is not None:
             forceikbuild=options.force
             precision=options.precision
@@ -628,6 +654,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if options.freeinc is not None:
                 freeinc = [float64(s) for s in options.freeinc]
             ikfastmaxcasedepth = options.maxcasedepth
+            filepermissions = options.filepermissions
         if self.manip.GetKinematicsStructureHash() == 'f17f58ee53cc9d185c2634e721af7cd3': # wam 4dof
             if iktype is None:
                 iktype=IkParameterizationType.Translation3D
@@ -657,7 +684,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if iktype==None:
                 iktype == IkParameterizationType.TranslationDirection5D
         self.generate(iktype=iktype,freejoints=freejoints,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython,ikfastmaxcasedepth=ikfastmaxcasedepth)
-        self.save()
+        self.save(filepermissions)
 
     def getIndicesFromJointNames(self,freejoints):
         freeindices = []
@@ -672,7 +699,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 if not dofindices[0] in self.manip.GetArmIndices():
                     raise LookupError("cannot find joint '%s(%d)' in solve joints: %s"%(jointname,dofindices[0],self.manip.GetArmIndices()))
                 freeindices.append(dofindices[0])
-        print 'getIndicesFromJointNames',freeindices,freejoints
+        print('getIndicesFromJointNames %r %r'%(freeindices,freejoints))
         return freeindices
 
     def generate(self,iktype=None, freejoints=None, freeinc=None, freeindices=None, precision=None, forceikbuild=True, outputlang=None, avoidPrismaticAsFree=False, ipython=False, ikfastoptions=0, ikfastmaxcasedepth=3):
@@ -877,7 +904,11 @@ class InverseKinematicsModel(DatabaseGenerator):
             if self.iktype == IkParameterizationType.TranslationXAxisAngle4D or self.iktype == IkParameterizationType.TranslationYAxisAngle4D or self.iktype == IkParameterizationType.TranslationZAxisAngle4D or self.iktype == IkParameterizationType.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D or self.iktype == IkParameterizationType.TranslationXYOrientation3D:
                 solver.useleftmultiply = False
             baselink=self.manip.GetBase().GetIndex()
-            eelink=self.manip.GetEndEffector().GetIndex()
+            ikChainEndLink = self.manip.GetIkChainEndLink()
+            if ikChainEndLink is not None:
+                eelink = ikChainEndLink.GetIndex()
+            else:
+                eelink = self.manip.GetEndEffector().GetIndex()
             if ipython:
                 # requires ipython v0.11+
                 IPython = __import__('IPython')
@@ -911,11 +942,11 @@ class InverseKinematicsModel(DatabaseGenerator):
                 try:
                     from pkg_resources import resource_filename
                     shutil.copyfile(resource_filename('openravepy','ikfast.h'), os.path.join(sourcedir,'ikfast.h'))
-                except ImportError,e:
+                except ImportError as e:
                     log.warn(e)
                     
                 log.info(u'successfully generated c++ ik in %fs, file=%s', self.statistics['generationtime'], sourcefilename)
-            except self.ikfast.IKFastSolver.IKFeasibilityError, e:
+            except self.ikfast.IKFastSolver.IKFeasibilityError as e:
                 self.ikfeasibility = str(e)
                 log.warn(e)
 
@@ -941,7 +972,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                         if self.statistics.get('usinglapack',False) or not iswindows:
                             libraries = ['lapack']
                         compiler.link_shared_object(objectfiles,output_filename=output_filename, libraries=libraries)
-                    except distutils.errors.LinkError,e:
+                    except distutils.errors.LinkError as e:
                         log.warn(e)
                         if libraries is not None and 'lapack' in libraries:
                             libraries.remove('lapack')
@@ -1048,13 +1079,14 @@ class InverseKinematicsModel(DatabaseGenerator):
                         newcompiler = ccompiler.new_compiler()
                         if newcompiler is not None:
                             compiler = newcompiler
-            except Exception, e:
+            except Exception as e:
                 log.warn(e)
         else:
             compiler.add_library('stdc++')
             if compiler.compiler_type == 'unix':
                 compile_flags.append('-O3')
                 compile_flags.append('-fPIC')
+                compile_flags.append('-std=c++11')
         return compiler,compile_flags
     
     @staticmethod
@@ -1084,6 +1116,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                           help='if true will drop into the ipython interpreter right before ikfast is called')
         parser.add_option('--iktype', action='store',type='string',dest='iktype',default=None,
                           help='The ik type to build the solver current types are: %s'%(', '.join(iktype.name for iktype in IkParameterizationType.values.values() if not int(iktype) & IkParameterizationType.VelocityDataBit )))
+        parser.add_option('--filepermissions', action='store',type='int',dest='filepermissions',default=-1,
+                          help='The desired permissions for saving the iksolver files and directories')
         return parser
     
     @staticmethod
@@ -1093,7 +1127,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         (options, leftargs) = parser.parse_args(args=args)
         if options.iktype is not None:
             # cannot use .names due to python 2.5 (or is it boost version?)
-            for value,type in IkParameterizationType.values.iteritems():
+            for value,type in IkParameterizationType.values.items():
                 if type.name.lower() == options.iktype.lower():
                     iktype = type
                     break

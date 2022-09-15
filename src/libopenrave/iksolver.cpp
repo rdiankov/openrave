@@ -187,7 +187,7 @@ UserDataPtr IkSolverBase::RegisterFinishCallback(const IkFinishCallbackFn& finis
 
 IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkReturnPtr filterreturn, int32_t minpriority, int32_t maxpriority)
 {
-    vector<dReal> vtestsolution,vtestsolution2;
+    vector<dReal> vtestsolution;
     if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
         RobotBasePtr robot = manipulator->GetRobot();
         robot->GetConfigurationValues(vtestsolution);
@@ -197,7 +197,17 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
             KinBody::JointPtr pjoint = robot->GetJointFromDOFIndex(dofindex);
             fdiff = pjoint->SubtractValue(vtestsolution.at(dofindex), solution.at(i), dofindex-pjoint->GetDOFIndex());
             if( fdiff > g_fEpsilonJointLimit ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("_CallFilters on robot %s manip %s need to start with robot configuration set to the solution. manip dof %d (%.15e != %.15e)"),robot->GetName()%manipulator->GetName()%dofindex%vtestsolution.at(dofindex)%solution.at(i), ORE_InconsistentConstraints);
+                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                ss << "dof " << i << " of solution=[";
+                for( const auto value : solution) {
+                    ss << value << ", ";
+                }
+                ss << "] != dof " << dofindex << " of currentvalues=[";
+                for( const auto value : vtestsolution) {
+                    ss << value << ", ";
+                }
+                ss << "]";
+                throw OPENRAVE_EXCEPTION_FORMAT(_("_CallFilters on robot %s manip %s need to start with robot configuration set to the solution, most likely a problem with internal ik solver call. %s"),robot->GetName()%manipulator->GetName()%ss.str(), ORE_InconsistentConstraints);
             }
         }
     }
@@ -221,9 +231,21 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
                     if( RaveFabs(vtestsolution.at(i)-vtestsolution2.at(i)) > g_fEpsilonJointLimit ) {
                         int dofindex = manipulator->GetArmIndices()[i];
                         KinBody::JointPtr pjoint = robot->GetJointFromDOFIndex(dofindex); // for debugging
+                        
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                        ss << "dof " << dofindex << " of solution=[";
+                        for( const auto value : vtestsolution) {
+                            ss << value << ", ";
+                        }
+                        ss << "] != dof " << dofindex << " of currentvalues=[";
+                        for( const auto value : vtestsolution2) {
+                            ss << value << ", ";
+                        }
+                        ss << "]";
+
                         robot->GetConfigurationValues(vtestsolution2);
                         pitdata->_filterfn(solution,manipulator,param); // for debugging internals
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("one of the filters set on robot %s manip %s did not restore the robot configuraiton. config dof %d (%f -> %f)"),robot->GetName()%manipulator->GetName()%i%vtestsolution.at(i)%vtestsolution2.at(i), ORE_InconsistentConstraints);
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("one of the filters set on robot %s manip %s did not restore the robot configuraiton. %s"),robot->GetName()%manipulator->GetName()%ss.str(), ORE_InconsistentConstraints);
                     }
                 }
             }

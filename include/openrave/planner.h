@@ -37,6 +37,9 @@ enum ConstraintFilterOptions
     CFO_CheckWithPerturbation=0x00010000, ///< when checking collisions, perturbs all the joint values a little and checks again. This forces the line to be away from grazing collisions.
     CFO_FillCheckedConfiguration=0x00020000, ///< if set, will fill \ref ConstraintFilterReturn::_configurations and \ref ConstraintFilterReturn::_configurationtimes
     CFO_FillCollisionReport=0x00040000, ///< if set, will fill \ref ConstraintFilterReturn::_report if in environment or self-collision
+    CFO_FromPathSampling=0x00080000, ///< if set, will use \ref NSO_FromPathSampling for the _neighstatefn
+    CFO_FromPathShortcutting=0x00100000, ///< if set, will use \ref NSO_FromPathShortcutting for the _neighstatefn
+    CFO_FromTrajectorySmoother=0x00200000, ///< if set, will use \ref NSO_FromTrajectorySmoother for the _neighstatefn
     CFO_FinalValuesNotReached=0x40000000, ///< if set, then the final values of the interpolation have not been reached, although a close interpolation has been computed. This happens when manipulator constraints are used.
     CFO_StateSettingError=0x80000000, ///< error when the state setting function (or neighbor function) breaks
     CFO_RecommendedOptions = 0x0000ffff, ///< recommended options that all plugins should use by default
@@ -55,11 +58,14 @@ enum PlannerStatusCode
     PS_FailedDueToKinematics = 0x00100000, ///< failed due to kinematics constraints
     PS_FailedDueToIK = 0x00200000, ///< failed due to inverse kinematics (could be due to collisions or velocity constraints, but don't know)
     PS_FailedDueToVelocityConstraints = 0x00400000, ///< failed due to velocity constraints
+    PS_FailedDueToCustomFilter = 0x00800000, ///< failed due to custom filter
+    PS_FailedDueToTimeBasedConstraints = 0x01000000, ///< failed due to time based constraints such as torque
 };
 
 enum PlanningOptions
 {
     PO_NoStatusDetail = 1, ///< if set, then do not output any PlannerStatus details, just the finish code. This allows system to be faster.
+    PO_AddCollisionStatistics = 2 /// If set, Fill in collision to aid in planning failure debugging. This will slow down the system.
 };
 
 /// \brief action to send to the planner while it is planning. This is usually done by the user-specified planner callback function
@@ -76,7 +82,10 @@ enum PlannerAction
 enum NeighborStateOptions
 {
     NSO_GoalToInitial=1, ///< if set, then q is coming from a goal state, else it is coming from an initial state.
-    NSO_OnlyHardConstraints=2, ///< if set, then the new neighbor should be as close as possible to q+qdelta, otherwise can prioritize other constraints and only use q+qdelta as a hint. This is used in smoothers when the path is already determined and user just wants to verify that hard constraints are met only; do not modify q+qdelta unless hard constraints fail.
+    NSO_OnlyHardConstraints=2, ///< if set, then the new neighbor should be as close as possible to q+qdelta. This is used in smoothers when the path is already determined and user just wants to verify that hard constraints are met only; do not modify q+qdelta unless hard constraints fail.
+    NSO_FromPathSampling=4, ///< if set, then the new neighbor needs to keep tighter constraint to give a room for the later processing. and if set, then it can prioritize the constraints and only use q+qdelta as a hint.
+    NSO_FromPathShortcutting=8, ///< if set, then the new neighbor should be as close as possible to q+qdelta while the new neighbor needs to keep tighter constraint to give a room for the later processing. This is used from path shortcutter when the path is already determined and user just wants to verify that tighter constraints are met only; do not modify q+qdelta unless tighter constraints fail.
+    NSO_FromTrajectorySmoother=16, ///< if set, then the new neighbor should be as close as possible to q+qdelta while the new neighbor needs to keep the constraint for smoother. When the path is already determined and user just wants to verify that tighter constraints are met only; do not modify q+qdelta unless tighter constraints fail.
 };
 
 /// \brief the status of _neighstatefn method. The first bit indicates if _neighstatefn call is successful. The second bit indicates, in case the call is successful, if the returned state is obtained from linear interpolation.
@@ -91,7 +100,7 @@ enum NeighborStateStatus
 class OPENRAVE_API ConstraintFilterReturn
 {
 public:
-    ConstraintFilterReturn() : _fTimeWhenInvalid(0), _returncode(0), _bHasRampDeviatedFromInterpolation(false) {
+    ConstraintFilterReturn() : _fTimeWhenInvalid(0), _returncode(0), _bHasRampDeviatedFromInterpolation(false), _fTimeBasedSurpassMult(1.0) {
     }
     /// \brief clears the data
     inline void Clear() {
@@ -99,20 +108,23 @@ public:
         _configurationtimes.resize(0);
         _invalidvalues.resize(0);
         _invalidvelocities.resize(0);
+        _invalidaccelerations.resize(0);
         _returncode = 0;
         _fTimeWhenInvalid = 0;
         _bHasRampDeviatedFromInterpolation = false;
         _report.Reset();
+        _fTimeBasedSurpassMult = 1.0;
     }
 
     std::vector<dReal> _configurations; ///< N*dof vector of the configurations used to check constraints. If the constraints were invalid, they stop at the first invalid constraint
     std::vector<dReal> _configurationtimes; ///< N vector of the times where each configuration was sampled at. If timeelapsed is set in the check path constraints function, then this is scaled by this time. Otherwise it is a value in [0,1] that describes the interpolation coefficient: 0 is the initial configuration, 1 is the final configuration.
 
-    std::vector<dReal> _invalidvalues, _invalidvelocities; ///< if the constraint returned with an error, contains invalid configuration where it failed
+    std::vector<dReal> _invalidvalues, _invalidvelocities, _invalidaccelerations; ///< if the constraint returned with an error, contains invalid configuration where it failed
     dReal _fTimeWhenInvalid; ///< if the constraint has an elapsed time, will contain the time when invalidated
     int _returncode; ///< if == 0, the constraint is good. If != 0 means constraint was violated and bitmasks in ConstraintFilterOptions can be used to find what constraint was violated.
     CollisionReport _report; ///< if in collision (_returncode&(CFO_CheckEnvCollisions|CFO_CheckSelfCollisions)), then stores the collision report
     bool _bHasRampDeviatedFromInterpolation; ///< if true, then it means that the checked ramp that passed is different from the interpolation expected on the start and end points, and the new points are filled in _configurations
+    dReal _fTimeBasedSurpassMult; ///< if option contains CFO_CheckTimeBasedConstraints, then the multiplier is set to (some factor)*|max|/|actual max|. this is used for the reduction factor in velocity unit. if several constraints should be taken into account, take min.
 };
 
 typedef boost::shared_ptr<ConstraintFilterReturn> ConstraintFilterReturnPtr;
@@ -127,7 +139,7 @@ typedef boost::shared_ptr<ConstraintFilterReturn> ConstraintFilterReturnPtr;
 
     Also allows the parameters and descriptions to be serialized to reStructuredText for documentation purposes.
  */
-class OPENRAVE_API PlannerParameters : public BaseXMLReader, public XMLReadable
+class OPENRAVE_API PlannerParameters : public BaseXMLReader, public Readable
 {
 public:
     typedef std::list< std::vector<dReal> > ConfigurationList;
@@ -163,8 +175,28 @@ private:
     virtual PlannerParameters& operator=(const PlannerParameters& r);
     virtual void copy(boost::shared_ptr<PlannerParameters const> r);
 
+    virtual bool operator==(const Readable& other) const override {
+        if (GetXMLId() != other.GetXMLId()) {
+            return false;
+        }
+        const PlannerParameters* pOther = dynamic_cast<const PlannerParameters*>(&other);
+        if (!pOther) {
+            return false;
+        }
+        return this == pOther; // pointer compare, becase we cannot compare boost::function in this
+    }
+
+    virtual ReadablePtr CloneSelf() const override {
+        boost::shared_ptr<PlannerParameters> pNew(new PlannerParameters());
+        *pNew = *this;
+        return pNew;
+    }
+
     /// \brief sets up the planner parameters to use the active joints of the robot
-    virtual void SetRobotActiveJoints(RobotBasePtr robot);
+    virtual void SetRobotActiveJoints(RobotBasePtr& probot);
+
+    /// \brief sets up the planner to use specific DOF indices of the robot.
+    virtual void SetRobotDOFIndices(RobotBasePtr& probot, const std::vector<int>& dofindices);
 
     /** \brief sets up the planner parameters to use the configuration specification space
 
@@ -187,6 +219,7 @@ private:
         - _vConfigUpperLimit
         - _vConfigVelocityLimit
         - _vConfigAccelerationLimit
+        - _vConfigJerkLimit
         - _vConfigResolution
         - vinitialconfig
         - _vInitialConfigVelocities - the initial velocities (at vinitialconfig) of the robot when starting to plan
@@ -262,6 +295,39 @@ private:
             return true;
         }
         return _checkpathvelocityconstraintsfn(q0, q1, dq0, dq1, elapsedtime, interval, options, filterreturn);
+    }
+
+    /** \brief Checks that all the constraints are satisfied at each discretized point between the two states (configuration, the first, and the second time derivatives).
+
+       The two states are interpolated using a quintic polynomial
+
+       errorcode = _checkpathvelocityaccelerationconstraintsfn(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, interval, options, configurations)
+
+       When called, q0 and dq0 is guaranteed to be set on the robot.
+       The function returns true if the path to q1 satisfies all the constraints of the planner.
+
+       \param q0 is the configuration the robot is coming from (shouldn't assume that it is currently set).
+       \param q1 is the configuration the robot should move to.
+       \param dq0 is the first time derivative (or velocity) of each DOF at q0.
+       \param dq1 is the first time derivative (or velocity) of each DOF at q1.
+       \param ddq0 is the second time derivative (or acceleration) of each DOF at q0.
+       \param ddq1 is the second time derivative (or acceleration) of each DOF at q1.
+       \param timeelapsed is the estimated time to go from q0 to q1 with the current constraints. Set to 0 if non-applicable.
+       \param interval Specifies whether to check the end points of the interval for constraints
+       \param options a mask of ConstraintFilterOptions
+       \param filterreturn Optional argument that will hold the output information of the filter.
+       \return \ref ConstraintFilterReturn::_returncode, which a combination of ConstraintFilterOptions
+     */
+    typedef boost::function<int (const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr)> CheckPathVelocityAccelerationConstraintFn;
+    CheckPathVelocityAccelerationConstraintFn _checkpathvelocityaccelerationconstraintsfn;
+
+    /// \brief wrapper function calling _checkpathvelocityaccelerationconstraintsfn with some default args. Returns true if function doesn't exist.
+    inline int CheckPathAllConstraints(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, const std::vector<dReal>& ddq0, const std::vector<dReal>& ddq1, dReal elapsedtime, IntervalType interval, int options=0xffff, ConstraintFilterReturnPtr filterreturn=ConstraintFilterReturnPtr()) const
+    {
+        if( !_checkpathvelocityaccelerationconstraintsfn ) {
+            return true;
+        }
+        return _checkpathvelocityaccelerationconstraintsfn(q0, q1, dq0, dq1, ddq0, ddq1, elapsedtime, interval, options, filterreturn);
     }
 
     /** \brief Samples a random configuration (mandatory)
@@ -364,6 +430,9 @@ private:
     /// \brief the absolute acceleration limits of each DOF of the configuration space.
     std::vector<dReal> _vConfigAccelerationLimit;
 
+    /// \brief the absolute jerk limits of each DOF of the configuration space.
+    std::vector<dReal> _vConfigJerkLimit;
+
     /// \brief the discretization resolution of each dimension of the configuration space
     std::vector<dReal> _vConfigResolution;
 
@@ -447,6 +516,11 @@ protected:
         return boost::static_pointer_cast<PlannerParameters const>(shared_from_this());
     }
 
+    virtual bool SerializeXML(BaseXMLWriterPtr writer, int options) const override
+    {
+        return false;
+    }
+
     /// \brief output the planner parameters in a string (in XML format)
     ///
     /// \param options if 1 will skip writing the extra parameters
@@ -481,19 +555,27 @@ typedef boost::weak_ptr<PlannerParameters> PlannerParametersWeakPtr;
 typedef boost::weak_ptr<PlannerParameters const> PlannerParametersWeakConstPtr;
 
 /// \brief Planner error information
+///
+/// For constructors that have report, will internally creates a new pointer and store the contents of report
 class OPENRAVE_API PlannerStatus
 {
 public:
     PlannerStatus();
-    PlannerStatus(const int statusCode);
-    PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report=CollisionReportPtr());
-    PlannerStatus(const std::string& description, const int statusCode, const IkParameterization& ikparam, CollisionReportPtr report=CollisionReportPtr());
-    PlannerStatus(const std::string& description, const int statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr report=CollisionReportPtr());
+    PlannerStatus(const uint32_t statusCode);
+    PlannerStatus(const std::string& description, const uint32_t statusCode);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, CollisionReportPtr& report);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam, CollisionReportPtr& report);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr& report);
+
     virtual ~PlannerStatus();
 
     PlannerStatus& SetErrorOrigin(const std::string& errorOrigin);
     PlannerStatus& SetPlannerParameters(PlannerParametersConstPtr parameters);
 
+    void InitCollisionReport(CollisionReportPtr& collisionReport);
+    void AddCollisionReport(const CollisionReport& collisionReport);
     void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
 
     inline uint32_t GetStatusCode() const {
@@ -505,17 +587,21 @@ public:
         return statusCode&PS_HasSolution;
     }
 
-    PlannerParametersConstPtr parameters; ///< parameters used in the planner
-    std::string description;        ///< Optional, the description of how/why the error happended. Displayed to the user by the UI. It will automatically be filled with a generic message corresponding to statusCode if not provided.
-    uint32_t statusCode; // combination of PS_X fields (PlannerStatusCode)
-    IkParameterization ikparam;      // Optional,  the ik parameter that failed to find a solution.
-    std::vector<dReal> jointValues; // Optional,  the robot's joint values in rad or m
-    CollisionReportPtr report;       ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
+    PlannerParametersConstPtr parameters;   ///< parameters used in the planner
+    std::string description;                ///< Optional, the description of how/why the error happended. Displayed to the user by the UI. It will automatically be filled with a generic message corresponding to statusCode if not provided.
+    uint32_t statusCode;                    // combination of PS_X fields (PlannerStatusCode)
+    IkParameterization ikparam;             // Optional, the ik parameter that failed to find a solution.
+    std::vector<dReal> jointValues;         // Optional, the robot's joint values in rad or m
+    CollisionReportPtr report;              ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
+    std::string errorOrigin;                // Auto, a string representing the code path of the error.
 
-    std::string errorOrigin;        // Auto, a string representing the code path of the error. Automatically filled on construction.
+    std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int > mCollidingLinksCount; // Counter for colliding links
+    uint32_t numPlannerIterations; ///< number of planner iterations before failure
+    uint64_t elapsedPlanningTimeUS; ///< us, elapsed time of the planner
 };
 
 #define OPENRAVE_PLANNER_STATUS(...) PlannerStatus(__VA_ARGS__).SetErrorOrigin(str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__)).SetPlannerParameters(_parameters);
+#define OPENRAVE_PLANNER_STATUS_NOPARAMS(...) PlannerStatus(__VA_ARGS__).SetErrorOrigin(str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__));
 
 /** \brief <b>[interface]</b> Planner interface that generates trajectories for target objects to follow through the environment. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_planner.
     \ingroup interfaces
