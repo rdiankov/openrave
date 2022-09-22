@@ -2194,6 +2194,7 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
     pinfo->_robotlinkname = _robotlinkname;
     pinfo->_trelative = ExtractTransform(_trelative);
     pinfo->_setIgnoreRobotLinkNames = std::set<std::string>(begin(_setIgnoreRobotLinkNames), end(_setIgnoreRobotLinkNames));
+    // convert userdata
 #else
     if( !IS_PYTHONOBJECT_NONE(_id) ) {
         pinfo->_id = py::extract<std::string>(_id);
@@ -3758,6 +3759,14 @@ object PyKinBody::GetConfigurationValues() const
     return toPyArray(values);
 }
 
+bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, object userData)
+{
+    CHECK_POINTER(pbody);
+    CHECK_POINTER(pylink);
+    std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
+    // convert from python dict to rapidjson and pass to _pbody->Grab
+    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore);
+}
 
 bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore)
 {
