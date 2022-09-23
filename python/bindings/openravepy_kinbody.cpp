@@ -2194,7 +2194,6 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
     pinfo->_robotlinkname = _robotlinkname;
     pinfo->_trelative = ExtractTransform(_trelative);
     pinfo->_setIgnoreRobotLinkNames = std::set<std::string>(begin(_setIgnoreRobotLinkNames), end(_setIgnoreRobotLinkNames));
-    // convert userdata
 #else
     if( !IS_PYTHONOBJECT_NONE(_id) ) {
         pinfo->_id = py::extract<std::string>(_id);
@@ -2217,6 +2216,11 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
         }
     }
 #endif
+    // convert userdata
+    rapidjson::Document doc;
+    toRapidJSONValue(_userData, doc, doc.GetAllocator());
+    pinfo->_prUserData.reset(new rapidjson::Document());
+    pinfo->_prUserData->CopyFrom(doc, pinfo->_prUserData->GetAllocator());
     return pinfo;
 }
 
@@ -2273,6 +2277,11 @@ void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
     }
     _setIgnoreRobotLinkNames = setRobotLinksToIgnore;
 #endif
+    if (!!info._prUserData) {
+        _userData = toPyObject(*(info._prUserData));
+    } else {
+        _userData = py::none_();
+    }
 }
 
 py::object PyKinBody::PyGrabbedInfo::__unicode__() {
@@ -3765,7 +3774,9 @@ bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, ob
     CHECK_POINTER(pylink);
     std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
     // convert from python dict to rapidjson and pass to _pbody->Grab
-    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore);
+    rapidjson::Document rUserData;
+    toRapidJSONValue(userData, rUserData, rUserData.GetAllocator());
+    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore, rUserData);
 }
 
 bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore)
@@ -5193,6 +5204,7 @@ void init_openravepy_kinbody()
         void (PyKinBody::*setdofvelocities4)(object,object,object,uint32_t) = &PyKinBody::SetDOFVelocities;
         bool (PyKinBody::*pgrab2)(PyKinBodyPtr,object) = &PyKinBody::Grab;
         bool (PyKinBody::*pgrab4)(PyKinBodyPtr,object,object) = &PyKinBody::Grab;
+        bool (PyKinBody::*pgrab6)(PyKinBodyPtr,object,object,object) = &PyKinBody::Grab;
         int (PyKinBody::*checkgrabbedinfo2)(PyKinBodyPtr,object) const = &PyKinBody::CheckGrabbedInfo;
         int (PyKinBody::*checkgrabbedinfo3)(PyKinBodyPtr,object,object) const = &PyKinBody::CheckGrabbedInfo;
         object (PyKinBody::*GetNonAdjacentLinks1)() const = &PyKinBody::GetNonAdjacentLinks;
@@ -5509,6 +5521,7 @@ void init_openravepy_kinbody()
                          .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian,PY_ARGS("linkindex") DOXY_FN(KinBody,CalculateAngularVelocityJacobian "int; std::vector"))
                          .def("Grab",pgrab2,PY_ARGS("body","grablink") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"))
                          .def("Grab",pgrab4,PY_ARGS("body","grablink","linkstoignore") DOXY_FN(KinBody,Grab "KinBodyPtr; LinkPtr; const std::set"))
+                         .def("Grab",pgrab6,PY_ARGS("body","grablink","linkstoignore","userData") DOXY_FN(KinBody,Grab "KinBodyPtr; LinkPtr; const std::set; rapidjson::Document"))
                          .def("Release",&PyKinBody::Release,PY_ARGS("body") DOXY_FN(KinBody,Release))
                          .def("ReleaseAllGrabbed",&PyKinBody::ReleaseAllGrabbed, DOXY_FN(KinBody,ReleaseAllGrabbed))
                          .def("ReleaseAllGrabbedWithLink",&PyKinBody::ReleaseAllGrabbedWithLink, PY_ARGS("grablink") DOXY_FN(KinBody,ReleaseAllGrabbedWithLink))

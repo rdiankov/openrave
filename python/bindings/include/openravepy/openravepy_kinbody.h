@@ -125,6 +125,7 @@ public:
 #else
         py::object _setIgnoreRobotLinkNames = py::none_();
 #endif
+        py::object _userData = py::none_();
     }; // class PyGrabbedInfo
     typedef OPENRAVE_SHARED_PTR<PyGrabbedInfo> PyGrabbedInfoPtr;
 
@@ -307,6 +308,7 @@ public:
     py::object GetConfigurationValues() const;
     bool Grab(PyKinBodyPtr pbody, py::object pylink_or_linkstoignore);
     bool Grab(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore);
+    bool Grab(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore, py::object userData);
     void Release(PyKinBodyPtr pbody);
     void ReleaseAllGrabbed();
     void ReleaseAllGrabbedWithLink(py::object pylink);

@@ -2121,6 +2121,22 @@ bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore)
     return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreInt);
 }
 
+bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, object userData)
+{
+    CHECK_POINTER(pbody);
+    CHECK_POINTER(pylink);
+    rapidjson::Document rUserData;
+    toRapidJSONValue(userData, rUserData, rUserData.GetAllocator());
+    if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
+        // linkstoignore is a list of link names
+        std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
+        return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreString, rUserData);
+    }
+    // linkstoignore is a list of link indices
+    std::set<int> setlinkstoignoreInt = ExtractSet<int>(linkstoignore);
+    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreInt, rUserData);
+}
+
 bool PyRobotBase::CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport)
 {
     return _probot->CheckLinkSelfCollision(ilinkindex, ExtractTransform(olinktrans), !pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport));
@@ -2523,6 +2539,7 @@ void init_openravepy_robot()
         bool (PyRobotBase::*pgrab1)(PyKinBodyPtr) = &PyRobotBase::Grab;
         bool (PyRobotBase::*pgrab2)(PyKinBodyPtr, object) = &PyRobotBase::Grab;
         bool (PyRobotBase::*pgrab3)(PyKinBodyPtr, object, object) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab5)(PyKinBodyPtr, object, object, object) = &PyRobotBase::Grab;
 
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator3)(PyRobotBase::PyManipulatorPtr) = &PyRobotBase::SetActiveManipulator;
@@ -2704,6 +2721,7 @@ void init_openravepy_robot()
                        .def("Grab",pgrab1, PY_ARGS("body") DOXY_FN(RobotBase,Grab "KinBodyPtr"))
                        .def("Grab",pgrab2, PY_ARGS("body","grablink") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"))
                        .def("Grab",pgrab3, PY_ARGS("body","grablink", "linkstoignore") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr; LinkPtr"))
+                       .def("Grab",pgrab5, PY_ARGS("body","grablink","linkstoignore","userData") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr; Linkptr; rapidjson::Document"))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def("CheckLinkSelfCollision", &PyRobotBase::CheckLinkSelfCollision,
                             "linkindex"_a,
