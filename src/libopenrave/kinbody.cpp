@@ -328,12 +328,13 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(*it, "id");
                 const bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(*it, "__deleted__", false);
 
-                std::string name = OpenRAVE::orjson::GetStringJsonValueByKey(value, "name");
+                std::string name = OpenRAVE::orjson::GetStringJsonValueByKey(*it, "name");
                 if (name.empty()) {
                     name = id;
                 }
 
                 const rapidjson::Value::ConstMemberIterator itValue = it->FindMember("value");
+                const rapidjson::Value::ConstMemberIterator itType = it->FindMember("type");
 
                 typename std::map<std::string, ReadablePtr>::iterator itExistingReadableInterface = _mReadableInterfaces.end();
                 if (!id.empty()) {
@@ -367,16 +368,19 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                     ReadablePtr pReadable = itExistingReadableInterface->second;
                     if (itValue != it->MemberEnd()) {
                         // only update if value is given
-                        _DeserializeReadableInterface(pReadable->GetXMLId(), itValue->value, fUnitScale, pReadable);
+                        if (itType != it->MemberEnd() && itType->value.IsString() && pReadable->GetXMLId() != itType->value.GetString()) {
+                            // type changed, so reload from scratch
+                            pReadable.reset();
+                            _DeserializeReadableInterface(itType->value.GetString(), itValue->value, fUnitScale, pReadable);
+                        } else {
+                            _DeserializeReadableInterface(pReadable->GetXMLId(), itValue->value, fUnitScale, pReadable);
+                        }
                         if (!pReadable) {
                             continue; // failed to deserialize
                         }
                     }
                     pReadable->_id = id;
-                    if (name != itExistingReadableInterface->first) {
-                        // handle rename
-                        _mReadableInterfaces.erase(itExistingReadableInterface);
-                    }
+                    _mReadableInterfaces.erase(itExistingReadableInterface);
                     _mReadableInterfaces[name] = pReadable;
                     continue;
                 }
@@ -386,8 +390,10 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 if (itValue == it->MemberEnd()) {
                     continue; // cannot create without value being present
                 }
-                std::string type = OpenRAVE::orjson::GetStringJsonValueByKey(*it, "type");
-                if (type.empty()) {
+                std::string type;
+                if (itType != it->MemberEnd() && itType->value.IsString()) {
+                    type = itType->value.GetString();
+                } else {
                     type = name; // fallback to name as hint for type
                 }
                 ReadablePtr pReadable;
