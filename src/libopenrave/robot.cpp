@@ -2043,9 +2043,19 @@ bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::s
     return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore);
 }
 
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Document& rUserData)
+{
+    return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore, rUserData);
+}
+
 bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames)
 {
     return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames);
+}
+
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Document& rUserData)
+{
+    return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames, rUserData);
 }
 
 void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
