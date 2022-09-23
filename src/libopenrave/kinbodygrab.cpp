@@ -287,7 +287,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
     velocity.first += velocity.second.cross(tGrabbedBody.trans - tGrabbingLink.trans);
     pGrabbedBody->SetVelocity(velocity.first, velocity.second);
-    pGrabbed->_rUserInfo = rUserData.Copy();//?
+    pGrabbed->_SetUserInfo(rUserData);
     _vGrabbedBodies.push_back(pGrabbed);
 
     try {

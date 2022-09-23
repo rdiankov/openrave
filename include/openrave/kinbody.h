@@ -2050,7 +2050,7 @@ public:
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
         std::set<std::string> _setIgnoreRobotLinkNames; ///< names of links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
-        rapidjson::Document _rUserData;
+        rapidjson::Document _rUserData; ///< user-defined custom data
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
@@ -3555,6 +3555,10 @@ public:
         return _listNonCollidingIsValid;
     }
 
+    inline void _SetUserInfo(const rapidjson::Document& rUserInfo) {
+        _rUserInfo.CopyFrom(rUserInfo, _rUserInfo.GetAllocator());
+    }
+
     /// \brief Add more links to force to be ignored during grabber's self-collision checking into
     ///        _setGrabberLinkIndicesToIgnore. This function is called when we make the grabber grab the same grabbed body
     ///        more than once with different input links to ignore.
@@ -3572,7 +3576,7 @@ private:
     std::vector<KinBody::LinkPtr> _vAttachedToGrabbingLink; ///< vector of all links that are rigidly attached to _pGrabbingLink
     KinBody::KinBodyStateSaverPtr _pGrabberSaver; ///< statesaver that saves the snapshot of the grabber at the time Grab is called. The saved state will be used (i.e. restored) temporarily when computation of _listNonCollidingLinksWhenGrabbed is necessary.
     KinBody::KinBodyStateSaverPtr _pGrabbedSaver; ///< statesaver that saves the snapshot of the grabbed at the time Grab is called. The saved state will be used (i.e. restored) temporarily when computation of _listNonCollidingLinksWhenGrabbed is necessary.
-    rapidjson::Document _rUserInfo;
+    rapidjson::Document _rUserInfo; ///< user-defined custom data
 
 }; // end class Grabbed
 
