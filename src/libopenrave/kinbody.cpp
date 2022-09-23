@@ -220,7 +220,8 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
 
     if (_mReadableInterfaces.size() > 0) {
         rapidjson::Value rReadableInterfaces;
-        rReadableInterfaces.SetObject();
+        rReadableInterfaces.SetArray();
+        rReadableInterfaces.Reserve(_mReadableInterfaces.size(), allocator);
         for(std::map<std::string, ReadablePtr>::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
             // skip serializing __collada__ since we won't need it in json
             if (it->first == "__collada__") {
@@ -228,7 +229,14 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
             }
             rapidjson::Value rReadable;
             it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
-            orjson::SetJsonValueByKey(rReadableInterfaces, it->first.c_str(), rReadable, allocator);
+
+            rapidjson::Value rReadableInterface;
+            rReadableInterface.SetObject();
+            orjson::SetJsonValueByKey(rReadableInterface, "id", it->second->_id, allocator);
+            orjson::SetJsonValueByKey(rReadableInterface, "name", it->first, allocator);
+            orjson::SetJsonValueByKey(rReadableInterface, "type", it->second->GetXMLId(), allocator);
+            orjson::SetJsonValueByKey(rReadableInterface, "value", rReadable, allocator);
+            rReadableInterfaces.PushBack(rReadableInterface, allocator);
         }
         rKinBodyInfo.AddMember("readableInterfaces", rReadableInterfaces, allocator);
     }
@@ -266,68 +274,8 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("grabbed")) {
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
-        size_t iGrabbed = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
-            //UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
-            const rapidjson::Value& rGrabbed = *it;
-            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "id");
-            bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(rGrabbed, "__deleted__", false);
-            std::vector<GrabbedInfoPtr>::iterator itMatchingId = _vGrabbedInfos.end();
-            std::vector<GrabbedInfoPtr>::iterator itMatchingName = _vGrabbedInfos.end();
-            if (!id.empty()) {
-                // only try to find old info if id is not empty
-                FOREACH(itInfo, _vGrabbedInfos) {
-                    if ((*itInfo)->_id == id) {
-                        itMatchingId = itInfo;
-                        break;
-                    }
-                }
-            }
-
-            std::string grabbedName = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "grabbedName");
-            // only try to find old info if id is not empty
-            FOREACH(itInfo, _vGrabbedInfos) {
-                if ((*itInfo)->_grabbedname == grabbedName) {
-                    itMatchingName = itInfo;
-                    if( id.empty() ) {
-                        id = (*itInfo)->_id;
-                    }
-                    break;
-                }
-            }
-
-            // here we allow items with empty id to be created because
-            // when we load things from json, some id could be missing on file
-            // and for the partial update case, the id should be non-empty
-            if (itMatchingId != _vGrabbedInfos.end()) {
-                if (isDeleted) {
-                    _vGrabbedInfos.erase(itMatchingId);
-                    continue;
-                }
-                (*itMatchingId)->DeserializeJSON(rGrabbed, fUnitScale, options);
-
-                if( itMatchingId != itMatchingName && itMatchingName != _vGrabbedInfos.end() ) {
-                    // there is another entry with matching name, so remove it
-                    _vGrabbedInfos.erase(itMatchingName);
-                }
-                continue;
-            }
-
-            if (isDeleted) {
-                // ignore
-                continue;
-            }
-
-            if( itMatchingName != _vGrabbedInfos.end() ) {
-                (*itMatchingName)->DeserializeJSON(rGrabbed, fUnitScale, options);
-                (*itMatchingName)->_id = id;
-                continue;
-            }
-
-            GrabbedInfoPtr pNewInfo(new GrabbedInfo());
-            pNewInfo->DeserializeJSON(rGrabbed, fUnitScale, options);
-            pNewInfo->_id = id;
-            _vGrabbedInfos.push_back(pNewInfo);
+        for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it) {
+            UpdateOrCreateInfoWithNameCheck(*it, _vGrabbedInfos, "grabbedName", fUnitScale, options);
         }
     }
 
@@ -370,13 +318,100 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         AddModifiedField(KinBodyInfo::KBIF_DOFValues);
     }
 
-    if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
-        for (rapidjson::Value::ConstMemberIterator it = value["readableInterfaces"].MemberBegin(); it != value["readableInterfaces"].MemberEnd(); ++it) {
-            // skip over __collada__ since it will most likely fail to deserialize
-            if (strcmp(it->name.GetString(), "__collada__") == 0 ) {
-                continue;
+    const rapidjson::Value::ConstMemberIterator itReadableInterfaces = value.FindMember("readableInterfaces");
+    if (itReadableInterfaces != value.MemberEnd()) {
+        if (itReadableInterfaces->value.IsArray()) {
+            for(rapidjson::Value::ConstValueIterator it = itReadableInterfaces->value.Begin(); it != itReadableInterfaces->value.End(); ++it) {
+                if (!it->IsObject()) {
+                    continue;
+                }
+                std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(*it, "id");
+                const bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(*it, "__deleted__", false);
+
+                std::string name = OpenRAVE::orjson::GetStringJsonValueByKey(value, "name");
+                if (name.empty()) {
+                    name = id;
+                }
+
+                const rapidjson::Value::ConstMemberIterator itValue = it->FindMember("value");
+
+                typename std::map<std::string, ReadablePtr>::iterator itExistingReadableInterface = _mReadableInterfaces.end();
+                if (!id.empty()) {
+                    // only try to find old info if id is not empty
+                    FOREACH(itReadableInterface, _mReadableInterfaces) {
+                        if (itReadableInterface->second->_id == id) {
+                            itExistingReadableInterface = itReadableInterface;
+                            break;
+                        }
+                    }
+                }
+                else {
+                    // sometimes names can be empty, in which case, always create a new object
+                    if( !name.empty() ) {
+                        // only try to find old info if id is not empty
+                        itExistingReadableInterface = _mReadableInterfaces.find(name);
+                        if (itExistingReadableInterface != _mReadableInterfaces.end()) {
+                            id = itExistingReadableInterface->second->_id;
+                        }
+                    }
+                }
+                
+                // here we allow items with empty id to be created because
+                // when we load things from json, some id could be missing on file
+                // and for the partial update case, the id should be non-empty
+                if (itExistingReadableInterface != _mReadableInterfaces.end()) {
+                    if (isDeleted) {
+                        _mReadableInterfaces.erase(itExistingReadableInterface);
+                        continue;
+                    }
+                    ReadablePtr pReadable = itExistingReadableInterface->second;
+                    if (itValue != it->MemberEnd()) {
+                        // only update if value is given
+                        _DeserializeReadableInterface(pReadable->GetXMLId(), itValue->value, fUnitScale, pReadable);
+                        if (!pReadable) {
+                            continue; // failed to deserialize
+                        }
+                    }
+                    pReadable->_id = id;
+                    if (name != itExistingReadableInterface->first) {
+                        // handle rename
+                        _mReadableInterfaces.erase(itExistingReadableInterface);
+                    }
+                    _mReadableInterfaces[name] = pReadable;
+                    continue;
+                }
+                if (isDeleted) {
+                    continue;
+                }
+                if (itValue == it->MemberEnd()) {
+                    continue; // cannot create without value being present
+                }
+                std::string type = OpenRAVE::orjson::GetStringJsonValueByKey(*it, "type");
+                if (type.empty()) {
+                    type = name; // fallback to name as hint for type
+                }
+                ReadablePtr pReadable;
+                _DeserializeReadableInterface(type, itValue->value, fUnitScale, pReadable);
+                if (!pReadable) {
+                    continue; // failed to deserialize
+                }
+                pReadable->_id = id;
+                _mReadableInterfaces[name] = pReadable;
             }
-            _DeserializeReadableInterface(it->name.GetString(), it->value, fUnitScale);
+        } else if (itReadableInterfaces->value.IsObject()) {
+            for (rapidjson::Value::ConstMemberIterator it = itReadableInterfaces->value.MemberBegin(); it != itReadableInterfaces->value.MemberEnd(); ++it) {
+                // skip over __collada__ since it will most likely fail to deserialize
+                if (strcmp(it->name.GetString(), "__collada__") == 0 ) {
+                    continue;
+                }
+                const std::string name = it->name.GetString();
+                ReadablePtr pReadable;
+                _DeserializeReadableInterface(name, it->value, fUnitScale, pReadable);
+                if (!pReadable) {
+                    continue;
+                }
+                _mReadableInterfaces[name] = pReadable;
+            }
         }
     }
 
@@ -387,24 +422,18 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
 }
 
-void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
-    std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
-    ReadablePtr pReadable;
-    if(itReadable != _mReadableInterfaces.end()) {
-        pReadable = itReadable->second;
-    }
-    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, pReadable, AttributesList());
+void KinBody::KinBodyInfo::_DeserializeReadableInterfaceForInterfaceType(InterfaceType interfaceType, const std::string& type, const rapidjson::Value& value, dReal fUnitScale, ReadablePtr& pReadable) {
+    BaseJSONReaderPtr pReader = RaveCallJSONReader(interfaceType, type, pReadable, AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value, fUnitScale);
-        _mReadableInterfaces[id] = pReader->GetReadable();
+        pReadable = pReader->GetReadable();
         return;
     }
     if (value.IsString()) {
-        StringReadablePtr pStringReadable(new StringReadable(id, value.GetString()));
-        _mReadableInterfaces[id] = pStringReadable;
+        pReadable = boost::make_shared<StringReadable>(type, value.GetString());
         return;
     }
-    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
+    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", type);
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)

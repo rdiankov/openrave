@@ -2045,6 +2045,10 @@ public:
         void serialize(std::ostream& o) const; ///< used only for hash computation
         std::string GetGrabbedInfoHash() const;
 
+        inline const std::string& GetName() const {
+            return _grabbedname;
+        }
+
         std::string _id; ///< unique id of the grabbed info
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
@@ -2207,7 +2211,11 @@ private:
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of KinBodyInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
 protected:
-        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale);
+        virtual void _DeserializeReadableInterface(const std::string& type, const rapidjson::Value& value, dReal fUnitScale, ReadablePtr& pReadable) {
+            _DeserializeReadableInterfaceForInterfaceType(PT_KinBody, type, value, fUnitScale, pReadable);
+        }
+
+        virtual void _DeserializeReadableInterfaceForInterfaceType(InterfaceType interfaceType, const std::string& type, const rapidjson::Value& value, dReal fUnitScale, ReadablePtr& pReadable);
 
         friend class KinBody; ///< for changing _modifiedFields
 

@@ -362,8 +362,10 @@ public:
     /// \return return a cloned copy of this readable
     virtual ReadablePtr CloneSelf() const = 0;
 
+    std::string _id; ///< unique id of this readable
+
 private:
-    std::string __xmlid;
+    std::string __xmlid; ///< functions as the type of the readable
 };
 
 /// \brief a list of key-value pairs. It is possible for keys to repeat.

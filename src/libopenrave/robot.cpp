@@ -702,26 +702,6 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
     }
 }
 
-void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
-    std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
-    ReadablePtr pReadable;
-    if(itReadable != _mReadableInterfaces.end()) {
-        pReadable = itReadable->second;
-    }
-    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, pReadable, AttributesList());
-    if (!!pReader) {
-        pReader->DeserializeJSON(value, fUnitScale);
-        _mReadableInterfaces[id] = pReader->GetReadable();
-        return;
-    }
-    if (value.IsString()) {
-        StringReadablePtr pReadableString(new StringReadable(id, value.GetString()));
-        _mReadableInterfaces[id] = pReadableString;
-        return;
-    }
-    RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
-}
-
 RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
 {
     _nAffineDOFs = 0;
