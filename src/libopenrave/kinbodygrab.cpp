@@ -206,7 +206,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink)
 
 bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<std::string>& setIgnoreGrabberLinkNames)
 {
-    return Grab(pGrabbedBody, pGrabbingLink, setIgnoreGrabberLinkNames, rapidjson::Document());
+    return Grab(pGrabbedBody, pGrabbingLink, setIgnoreGrabberLinkNames, nullptr);
 }
 
 bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<std::string>& setIgnoreGrabberLinkNames, const boost::shared_ptr<rapidjson::Document>& prUserData)
