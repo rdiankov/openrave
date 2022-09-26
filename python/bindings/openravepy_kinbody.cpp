@@ -2277,7 +2277,7 @@ void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
     }
     _setIgnoreRobotLinkNames = setRobotLinksToIgnore;
 #endif
-    if (!!info._prUserData) {
+    if (!!info._prUserData && info._prUserData->IsObject()) {
         _userData = toPyObject(*(info._prUserData));
     } else {
         _userData = py::none_();
