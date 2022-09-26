@@ -2029,7 +2029,7 @@ public:
         }
         bool operator==(const GrabbedInfo& other) const {
             bool isUserDataSame = false;
-            if((!!_prUserData && !!other._prUserData) && (*_prUserData == *(other._prUserData))) {
+            if(!!_prUserData && !!other._prUserData && *_prUserData == *(other._prUserData)) {
                 // same content
                 isUserDataSame = true;
             }
