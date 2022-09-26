@@ -726,7 +726,9 @@ void KinBody::GrabbedInfo::serialize(std::ostream& o) const
     for( std::set<std::string>::const_iterator it = _setIgnoreRobotLinkNames.begin(); it != _setIgnoreRobotLinkNames.end(); ++it ) {
         o << (*it) << " ";
     }
-    // FIXME also serialize rUserData
+    if (!!_prUserData && _prUserData->IsObject()) {
+        o << OpenRAVE::orjson::GetJsonString(_prUserData) << " ";
+    }
 }
 
 std::string KinBody::GrabbedInfo::GetGrabbedInfoHash() const
