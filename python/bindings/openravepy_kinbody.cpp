@@ -3774,9 +3774,9 @@ bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, ob
     CHECK_POINTER(pylink);
     std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
     // convert from python dict to rapidjson and pass to _pbody->Grab
-    rapidjson::Document rUserData;
-    toRapidJSONValue(userData, rUserData, rUserData.GetAllocator());
-    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore, rUserData);
+    boost::shared_ptr<rapidjson::Document> prUserData(new rapidjson::Document());
+    toRapidJSONValue(userData, prUserData, prUserData->GetAllocator());
+    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore, prUserData);
 }
 
 bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore)

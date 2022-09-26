@@ -2125,16 +2125,16 @@ bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, 
 {
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
-    rapidjson::Document rUserData;
-    toRapidJSONValue(userData, rUserData, rUserData.GetAllocator());
+    boost::shared_ptr<rapidjson::Document> prUserData(new rapidjson::Document());
+    toRapidJSONValue(userData, *prUserData, prUserData->GetAllocator());
     if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
         // linkstoignore is a list of link names
         std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
-        return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreString, rUserData);
+        return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreString, prUserData);
     }
     // linkstoignore is a list of link indices
     std::set<int> setlinkstoignoreInt = ExtractSet<int>(linkstoignore);
-    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreInt, rUserData);
+    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreInt, prUserData);
 }
 
 bool PyRobotBase::CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport)

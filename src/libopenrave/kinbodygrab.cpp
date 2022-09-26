@@ -209,21 +209,21 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     return Grab(pGrabbedBody, pGrabbingLink, setIgnoreGrabberLinkNames, rapidjson::Document());
 }
 
-bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<std::string>& setIgnoreGrabberLinkNames, const rapidjson::Document& rUserData)
+bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<std::string>& setIgnoreGrabberLinkNames, const boost::shared_ptr<rapidjson::Document>& prUserData)
 {
     std::set<int> setGrabberLinksToIgnore;
     FOREACHC(itLinkName, setIgnoreGrabberLinkNames) {
         setGrabberLinksToIgnore.insert(GetLink(*itLinkName)->GetIndex());
     }
-    return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, rUserData);
+    return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, prUserData);
 }
 
 bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<int>& setGrabberLinksToIgnore)
 {
-    return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, rapidjson::Document());
+    return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, nullptr);
 }
 
-bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<int>& setGrabberLinksToIgnore, const rapidjson::Document& rUserData)
+bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<int>& setGrabberLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData)
 {
     OPENRAVE_ASSERT_FORMAT(!!pGrabbedBody, "env=%s, body to be grabbed by body '%s' is invalid", GetEnv()->GetNameId()%GetName(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(!!pGrabbingLink, "env=%s, pGrabbingLink of body '%s' for grabbing body '%s' is invalid", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName(), ORE_InvalidArguments);
@@ -269,10 +269,10 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
             if( distError2 <= g_fEpsilonLinear ) {
                 bool bIsUserDataSame = false;
                 // Comparing user data. Here userdata can contain graspparams json object.
-                if (!pPreviouslyGrabbed->_prUserData && rUserData == rapidjson::Document()) {
+                if (!pPreviouslyGrabbed->_prUserData && !prUserData) {
                     bIsUserDataSame = true;
                 }
-                else if (!!pPreviouslyGrabbed->_prUserData && *(pPreviouslyGrabbed->_prUserData) == rUserData) {
+                else if (!!pPreviouslyGrabbed->_prUserData && !prUserData && *(pPreviouslyGrabbed->_prUserData) == *prUserData) {
                     bIsUserDataSame = true;
                 }
                 else {
@@ -312,9 +312,9 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
     velocity.first += velocity.second.cross(tGrabbedBody.trans - tGrabbingLink.trans);
     pGrabbedBody->SetVelocity(velocity.first, velocity.second);
-    if (rUserData.IsObject()) {
+    if (!prUserData && prUserData->IsObject()) {
         pGrabbed->_prUserData.reset(new rapidjson::Document());
-        pGrabbed->_prUserData->CopyFrom(rUserData, pGrabbed->_prUserData->GetAllocator());
+        pGrabbed->_prUserData->CopyFrom(*prUserData, pGrabbed->_prUserData->GetAllocator());
     }
     _vGrabbedBodies.push_back(pGrabbed);
 
