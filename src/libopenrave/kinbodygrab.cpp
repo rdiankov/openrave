@@ -267,14 +267,29 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
         if( pPreviouslyGrabbed->_pGrabbingLink == pGrabbingLink ) {
             dReal distError2 = TransformDistance2(tGrabbingLink*pPreviouslyGrabbed->_tRelative, tGrabbedBody);
             if( distError2 <= g_fEpsilonLinear ) {
-                // Grabbing the same object at the same relative transform with the same grabbing link. So just modify
-                // setGrabberLinksToIgnore and then return.
-                pPreviouslyGrabbed->AddMoreIgnoreLinks(setGrabberLinksToIgnore);
-                return true;
+                bool bIsUserDataSame = false;
+                // Comparing user data. Here userdata can contain graspparams json object.
+                if (!pPreviouslyGrabbed->_prUserData && rUserData == rapidjson::Document()) {
+                    bIsUserDataSame = true;
+                }
+                else if (!!pPreviouslyGrabbed->_prUserData && *(pPreviouslyGrabbed->_prUserData) == rUserData) {
+                    bIsUserDataSame = true;
+                }
+                else {
+                    RAVELOG_DEBUG_FORMAT("env=%s, body '%s' is already grabbing body '%s' but userdata differs.", GetEnv()->GetNameId()%GetName());
+                }
+
+                if (bIsUserDataSame) {
+                    // Grabbing the same object at the same relative transform with the same grabbing link with the same userdata.
+                    // So just modify setGrabberLinksToIgnore and then return.
+                    pPreviouslyGrabbed->AddMoreIgnoreLinks(setGrabberLinksToIgnore);
+                    return true;
+                }
             }
             else {
                 RAVELOG_DEBUG_FORMAT("env=%s, body '%s' is already grabbing body '%s' but grabbed body transform differs. distError2=%.15e", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName()%distError2);
             }
+
         }
         else {
             RAVELOG_DEBUG_FORMAT("env=%s, body '%s' is already grabbing body '%s' with link '%s' but the current desired grabbing link is '%s'", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName()%pPreviouslyGrabbed->_pGrabbingLink->GetName()%pGrabbingLink->GetName());
