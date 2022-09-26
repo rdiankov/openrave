@@ -2033,7 +2033,7 @@ public:
                    && _robotlinkname == other._robotlinkname
                    && _trelative == other._trelative
                    && _setIgnoreRobotLinkNames == other._setIgnoreRobotLinkNames
-                   && _prUserData == other._prUserData;
+                   && ((!_prUserData && !(other._prUserData)) || (*_prUserData == *(other._prUserData)));
         }
         bool operator!=(const GrabbedInfo& other) const {
             return !operator==(other);
