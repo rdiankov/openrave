@@ -2033,7 +2033,7 @@ public:
                 // same content
                 isUserDataSame = true;
             }
-            else if(!prUserData && !other._prUserData) {
+            else if(!_prUserData && !other._prUserData) {
                 // both data are not set
                 isUserDataSame = true;
             }
