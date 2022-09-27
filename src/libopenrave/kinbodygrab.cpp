@@ -269,10 +269,10 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
             if( distError2 <= g_fEpsilonLinear ) {
                 bool bIsUserDataSame = false;
                 // Comparing user data. Here userdata can contain graspparams json object.
-                if (!pPreviouslyGrabbed->_prUserData && !prUserData) {
+                if(!pPreviouslyGrabbed->_prUserData && !prUserData) {
                     bIsUserDataSame = true;
                 }
-                else if (!!pPreviouslyGrabbed->_prUserData && !prUserData && *(pPreviouslyGrabbed->_prUserData) == *prUserData) {
+                else if(!!pPreviouslyGrabbed->_prUserData && !!prUserData && *(pPreviouslyGrabbed->_prUserData) == *prUserData) {
                     bIsUserDataSame = true;
                 }
                 else {
@@ -312,7 +312,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
     velocity.first += velocity.second.cross(tGrabbedBody.trans - tGrabbingLink.trans);
     pGrabbedBody->SetVelocity(velocity.first, velocity.second);
-    if (!prUserData && prUserData->IsObject()) {
+    if(!!prUserData && prUserData->IsObject()) {
         pGrabbed->_prUserData.reset(new rapidjson::Document());
         pGrabbed->_prUserData->CopyFrom(*prUserData, pGrabbed->_prUserData->GetAllocator());
     }
@@ -640,10 +640,11 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vGrabbedInfos) const
             outputinfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
             outputinfo._trelative = pgrabbed->_tRelative;
             outputinfo._setIgnoreRobotLinkNames.clear();
-            if (!!pgrabbed->_prUserData && pgrabbed->_prUserData->IsObject()) {
+            if(!!pgrabbed->_prUserData && pgrabbed->_prUserData->IsObject()) {
                 outputinfo._prUserData.reset(new rapidjson::Document());
                 outputinfo._prUserData->CopyFrom(*(pgrabbed->_prUserData), outputinfo._prUserData->GetAllocator());
-            } else {
+            }
+            else {
                 outputinfo._prUserData.reset();
             }
 
@@ -742,7 +743,7 @@ void KinBody::GrabbedInfo::serialize(std::ostream& o) const
         o << (*it) << " ";
     }
     if (!!_prUserData && _prUserData->IsObject()) {
-        o << OpenRAVE::orjson::GetJsonString(_prUserData) << " ";
+        o << OpenRAVE::orjson::GetJsonString(*_prUserData) << " ";
     }
 }
 
