@@ -164,6 +164,8 @@ public:
         // set global scale when initalize jsonreader.
         _fGlobalScale = 1.0 / _penv->GetUnit().second;
         _deserializeOptions = 0;
+
+        //Sets up curl multi handle to be used
         _curlMultiHandle = curl_multi_init();
     }
 
@@ -913,7 +915,7 @@ protected:
 
     //Remote URI Spesific
 
-    void _DownloadRecursivly(const rapidjson::Value& rEnvInfo){
+    void _DownloadRecursively(const rapidjson::Value& rEnvInfo){
 
         if (rEnvInfo.HasMember("bodies")) {
             const rapidjson::Value& rBodies = rEnvInfo["bodies"];
@@ -924,8 +926,10 @@ protected:
                 std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
                 std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
                 if (_IsExpandableReferenceUri(referenceUri)) {
-                    //TODO add, add curl
-                    
+                    if(_AddReferenceURIToDownload(referenceUri)) {
+                        throw  OPENRAVE_EXCEPTION_FORMAT("failed to create curl handler from %s", referenceUri);
+                    }
+
                 }
                 else if( !referenceUri.empty() ) {
                     if (_bMustResolveURI) {
@@ -935,6 +939,35 @@ protected:
                     RAVELOG_WARN_FORMAT("env=%d, body '%s' has invalid referenceUri='%s'", _penv->GetId()%bodyId%referenceUri);
                 }
             }
+
+
+            int stillRunning;
+            do {
+                CURLMcode mc = curl_multi_perform(_curlMultiHandle, &stillRunning);
+                CURLMsg  *curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
+
+                if(!mc && stillRunning) {
+                    /* wait for activity, timeout or "nothing" */
+                    mc = curl_multi_poll(_curlMultiHandle, NULL, 0, 1000, NULL);
+                }
+                if(mc) {
+                    break;
+                }
+
+                while(curlmsg != NULL) {
+                    if (curlmsg->msg == CURLMSG_DONE) {
+                        for ( int i = 0; i < _curlDataVector.size(); i++) {
+                            if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
+                                std::shared_ptr<rapidjson::Document> document = std::shared_ptr<rapidjson::Document>(new rapidjson::Document);
+                                document.get()->Parse(_curlDataVector.at(i).get()->buffer->GetString());
+                            }
+                        }
+                    }
+                    curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
+                }
+
+            } while(stillRunning);
+
         }
 
     }
@@ -948,38 +981,40 @@ protected:
     };
 
     CURLM *_curlMultiHandle; /// < curl multi handler, used to downlod files simultaneously
-    std::vector<boost::shared_ptr<curlData>> _curlDataVector; ///< Holds all curl handlers
+    std::vector<boost::shared_ptr<curlData> > _curlDataVector; ///< Holds all curl handlers
 
     /// @brief Write back function for libcurl, all data that is retrieves is then pushed into a rapidjson::StringBuffer
     /// @param data Data recieved from libcurl
     /// @param size size
     /// @param nmemb size
-    /// @param userdata Own structure to store incoming data 
+    /// @param userdata Own structure to store incoming data
     /// @return Returns the total size back to libcurl
     size_t _WriteBackDataFromCurl(char *data, size_t size, size_t nmemb, curlData &userdata)
-    {       
+    {
         std::memcpy(userdata.buffer->Push(size * nmemb), data, size * nmemb);
         return size * nmemb;
     }
 
-    /// @brief Adds referenceURI to download 
+    /// @brief Adds referenceURI to download
     /// @param referenceUri URI to download
-    /// @return 
+    /// @return
     int _AddReferenceURIToDownload(const std::string& referenceUri)
     {
         std::shared_ptr<curlData> data = std::shared_ptr<curlData>(new curlData);
         data.get()->URI = reference;
-        if(data.get()->curl){
+        if(data.get()->curl) {
             //Set up easy curl to download the correlating files
             curl_easy_setopt(json.get()->curl, CURLOPT_URL, data.get()->URI.c_str());
             curl_easy_setopt(json.get()->curl, CURLOPT_HTTPGET, 1);
             curl_easy_setopt(json.get()->curl, CURLOPT_WRITEFUNCTION, WriteBackDataFromCurl);
             curl_easy_setopt(json.get()->curl, CURLOPT_WRITEDATA, json.get());
-            curl_multi_add_handle(_curlMultiHandle, data.get()->curl())
+            curl_multi_add_handle(_curlMultiHandle, data.get()->curl());
+            _curlDataVector.push_back(data);
         }
         else{
             return -1;
         }
+        return 0;
     }
 
 
