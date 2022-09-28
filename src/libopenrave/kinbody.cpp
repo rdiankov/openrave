@@ -5621,6 +5621,8 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 if(!!pgrabbedref->_prUserData && pgrabbedref->_prUserData->IsObject()) {
                     pgrabbed->_prUserData.reset(new rapidjson::Document());
                     pgrabbed->_prUserData->CopyFrom(*(pgrabbedref->_prUserData), pgrabbed->_prUserData->GetAllocator());
+                } else {
+                    pgrabbed->_prUserData.reset();
                 }
                 if( pgrabbedref->IsListNonCollidingLinksValid() ) {
                     FOREACHC(itLinkRef, pgrabbedref->_listNonCollidingLinksWhenGrabbed) {
