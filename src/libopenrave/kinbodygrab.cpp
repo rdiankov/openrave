@@ -446,8 +446,8 @@ void KinBody::RegrabAll()
         pNewGrabbed->_tRelative = pGrabbed->_tRelative;
         pNewGrabbed->_setGrabberLinkIndicesToIgnore.swap(pGrabbed->_setGrabberLinkIndicesToIgnore);
         if (!!pGrabbed->_prUserData && pGrabbed->_prUserData->IsObject()) {
-            pNewGrabbed->_prUserData.reset(rapidjson::Document());
-            pNewGrabbed->_prUserData.CopyFrom(*(pGrabbed->_prUserData), pNewGrabbed->_prUserData->GetAllocator());
+            pNewGrabbed->_prUserData.reset(new rapidjson::Document());
+            pNewGrabbed->_prUserData->CopyFrom(*(pGrabbed->_prUserData), pNewGrabbed->_prUserData->GetAllocator());
         }
 
         std::pair<Vector, Vector> velocity = pNewGrabbed->_pGrabbingLink->GetVelocity();
