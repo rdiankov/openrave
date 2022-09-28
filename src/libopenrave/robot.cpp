@@ -2030,7 +2030,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnor
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore);
+    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore, nullptr);
 }
 
 bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith)
@@ -2038,19 +2038,9 @@ bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith)
     return KinBody::Grab(body, pRobotLinkToGrabWith);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore)
-{
-    return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore);
-}
-
 bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData)
 {
     return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore, prUserData);
-}
-
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames)
-{
-    return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames);
 }
 
 bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const boost::shared_ptr<rapidjson::Document>& prUserData)

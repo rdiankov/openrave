@@ -705,7 +705,7 @@ public:
                                                         }
                                                     }
                                                 }
-                                                pbody->Grab(link->GetParent(),ref_link, setRobotLinksToIgnore);
+                                                pbody->Grab(link->GetParent(), ref_link, setRobotLinksToIgnore, nullptr);
                                             }
                                             else {
                                                 RAVELOG_WARN(str(boost::format("%s needs to be a robot in order to grab")%ref_link->GetParent()->GetName()));

@@ -3185,30 +3185,10 @@ private:
         \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
         \param[in] setBodyLinksToIgnore Additional body link indices that collision checker ignore
         when checking collisions between the grabbed body and the body.
-        \return true if successful and body is grabbed.
-     */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore);
-
-    /** \brief Grab the body with the specified link.
-
-        \param[in] body the body to be grabbed
-        \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
-        \param[in] setBodyLinksToIgnore Additional body link indices that collision checker ignore
-        when checking collisions between the grabbed body and the body.
         \param[in] prUserData custom data to keep in the body
         \return true if successful and body is grabbed.
      */
     virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData);
-
-    /** \brief Grab the body with the specified link.
-
-        \param[in] body the body to be grabbed
-        \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
-        \param[in] setBodyLinksToIgnore Additional body link names that collision checker ignore
-        when checking collisions between the grabbed body and the body.
-        \return true if successful and body is grabbed.
-     */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames);
 
     /** \brief Grab the body with the specified link.
 
@@ -3268,6 +3248,7 @@ private:
         GICR_BodyNotGrabbed = 1,  //< Specified body is not grabbed
         GICR_GrabbingLinkNotMatch = 2, ///< Specified body is grabbed, but grabbing link does not match
         GICR_IgnoredLinksNotMatch = 3, ///< Specified body is grabbed and grabbing link matches, but ignored links do not match
+        GICR_UserDataNotMatch = 4, ///< Specified body is grabbed, grabbing link matches, and ignored links match, but user data does not match
     };
 
     /** \brief Checks whether a body is grabbed with the given robot link.
@@ -3278,12 +3259,12 @@ private:
     /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
      *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
      */
-    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore) const;
+    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData) const;
 
     /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
      *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
      */
-    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setBodyLinksToIgnore) const;
+    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setBodyLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData) const;
 
     /** \brief gets all grabbed bodies of the body
 

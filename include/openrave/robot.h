@@ -1264,30 +1264,10 @@ private:
         \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
         \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
         when checking collisions between the grabbed body and the robot.
-        \return true if successful and body is grabbed.
-     */
-    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore) override;
-
-    /** \brief Grab the body with the specified link.
-
-        \param[in] body the body to be grabbed
-        \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
-        \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
-        when checking collisions between the grabbed body and the robot.
         \param[in] prUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed.
      */
     bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData) override;
-
-    /** \brief Grab the body with the specified link.
-
-        \param[in] body the body to be grabbed
-        \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
-        \param[in] setIgnoreBodyLinkNames Additional body link names that collision checker ignore
-        when checking collisions between the grabbed body and the body.
-        \return true if successful and body is grabbed.
-     */
-    bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames) override;
 
     /** \brief Grab the body with the specified link.
 

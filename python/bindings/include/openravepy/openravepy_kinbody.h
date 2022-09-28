@@ -307,7 +307,6 @@ public:
     void SetConfigurationValues(py::object ovalues, uint32_t checklimits=KinBody::CLA_CheckLimits);
     py::object GetConfigurationValues() const;
     bool Grab(PyKinBodyPtr pbody, py::object pylink_or_linkstoignore);
-    bool Grab(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore);
     bool Grab(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore, py::object userData);
     void Release(PyKinBodyPtr pbody);
     void ReleaseAllGrabbed();
@@ -315,7 +314,7 @@ public:
     void RegrabAll();
     py::object IsGrabbing(PyKinBodyPtr pbody) const;
     int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink) const;
-    int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore) const;
+    int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore, py::object userData) const;
     int GetNumGrabbed() const;
     py::object GetGrabbed() const;
     py::object GetGrabbedInfo(py::object ograbbedname=py::none_()) const;

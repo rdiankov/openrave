@@ -201,12 +201,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink)
     FOREACHC(itAttachedLink, vAttachedToGrabbingLink) {
         setGrabberLinksToIgnore.insert((*itAttachedLink)->GetIndex());
     }
-    return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore);
-}
-
-bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<std::string>& setIgnoreGrabberLinkNames)
-{
-    return Grab(pGrabbedBody, pGrabbingLink, setIgnoreGrabberLinkNames, nullptr);
+    return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, nullptr);
 }
 
 bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<std::string>& setIgnoreGrabberLinkNames, const boost::shared_ptr<rapidjson::Document>& prUserData)
@@ -216,11 +211,6 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
         setGrabberLinksToIgnore.insert(GetLink(*itLinkName)->GetIndex());
     }
     return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, prUserData);
-}
-
-bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<int>& setGrabberLinksToIgnore)
-{
-    return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, nullptr);
 }
 
 bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<int>& setGrabberLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData)
@@ -315,6 +305,8 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     if(!!prUserData && prUserData->IsObject()) {
         pGrabbed->_prUserData.reset(new rapidjson::Document());
         pGrabbed->_prUserData->CopyFrom(*prUserData, pGrabbed->_prUserData->GetAllocator());
+    } else {
+        pGrabbed->_prUserData.reset();
     }
     _vGrabbedBodies.push_back(pGrabbed);
 
@@ -448,6 +440,8 @@ void KinBody::RegrabAll()
         if (!!pGrabbed->_prUserData && pGrabbed->_prUserData->IsObject()) {
             pNewGrabbed->_prUserData.reset(new rapidjson::Document());
             pNewGrabbed->_prUserData->CopyFrom(*(pGrabbed->_prUserData), pNewGrabbed->_prUserData->GetAllocator());
+        } else {
+            pNewGrabbed->_prUserData.reset();
         }
 
         std::pair<Vector, Vector> velocity = pNewGrabbed->_pGrabbingLink->GetVelocity();
@@ -499,7 +493,7 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
     return defaultErrorCode;
 }
 
-int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setGrabberLinksToIgnore) const
+int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setGrabberLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData) const
 {
     GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
     for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
@@ -530,14 +524,26 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
                 break;
             }
         }
-        if( ignoringLinksMatch && numIgnoredLinks == setGrabberLinksToIgnore.size() ) {
+
+        if( ignoringLinksMatch && numIgnoredLinks == setGrabberLinksToIgnore.size()) {
+            continue;
+        }
+        defaultErrorCode = std::max(defaultErrorCode, GICR_UserDataNotMatch);
+
+        bool userDataMatch = false;
+        if (!pgrabbed->_prUserData && !prUserData) {
+            userDataMatch = true;
+        } else if (!!pgrabbed->_prUserData && !!prUserData && *(pgrabbed->_prUserData) == *prUserData) {
+            userDataMatch = true;
+        }
+        if (userDataMatch) {
             return GICR_Identical;
         }
     }
     return defaultErrorCode;
 }
 
-int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setGrabberLinksToIgnore) const
+int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setGrabberLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData) const
 {
     GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
     for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
@@ -568,7 +574,18 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
                 break;
             }
         }
-        if( ignoringLinksMatch && numIgnoredLinks == setGrabberLinksToIgnore.size() ) {
+        if( ignoringLinksMatch && numIgnoredLinks == setGrabberLinksToIgnore.size()) {
+            continue;
+        }
+        defaultErrorCode = std::max(defaultErrorCode, GICR_UserDataNotMatch);
+
+        bool userDataMatch = false;
+        if (!pgrabbed->_prUserData && !prUserData) {
+            userDataMatch = true;
+        } else if (!!pgrabbed->_prUserData && !!prUserData && *(pgrabbed->_prUserData) == *prUserData) {
+            userDataMatch = true;
+        }
+        if (userDataMatch) {
             return GICR_Identical;
         }
     }

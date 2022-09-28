@@ -123,6 +123,10 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                                     GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, pbody->GetLinks().at(pGrabbingLink->GetIndex())));
                                     pNewGrabbed->_tRelative = pGrabbed->_tRelative;
                                     pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
+                                    if (!!pGrabbed->_prUserData && pGrabbed->_prUserData->IsObject()) {
+                                        pNewGrabbed->_prUserData.reset(new rapidjson::Document());
+                                        pNewGrabbed->_prUserData->CopyFrom(*(pGrabbed->_prUserData), pNewGrabbed->_prUserData->GetAllocator());
+                                    }
                                     if( pGrabbed->IsListNonCollidingLinksValid() ) {
                                         FOREACHC(itLinkRef, pGrabbed->_listNonCollidingLinksWhenGrabbed) {
                                             int linkindex = (*itLinkRef)->GetIndex();
@@ -304,6 +308,10 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                                     pNewGrabbed->_listNonCollidingLinksWhenGrabbed.push_back(body.GetLinks().at((*itLinkRef)->GetIndex()));
                                 }
                                 pNewGrabbed->_SetLinkNonCollidingIsValid(true);
+                            }
+                            if (!!pGrabbed->_prUserData && pGrabbed->_prUserData->IsObject()) {
+                                pNewGrabbed->_prUserData.reset(new rapidjson::Document());
+                                pNewGrabbed->_prUserData->CopyFrom(*(pGrabbed->_prUserData), pNewGrabbed->_prUserData->GetAllocator());
                             }
 
                             body._AttachBody(pNewGrabbedBody);
