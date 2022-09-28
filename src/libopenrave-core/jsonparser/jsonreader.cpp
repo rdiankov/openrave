@@ -22,6 +22,7 @@
 #include <rapidjson/istreamwrapper.h>
 #include <string>
 #include <fstream>
+#include <curl/curl.h> /// Required for remote URI
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
@@ -163,6 +164,7 @@ public:
         // set global scale when initalize jsonreader.
         _fGlobalScale = 1.0 / _penv->GetUnit().second;
         _deserializeOptions = 0;
+        _curlMultiHandle = curl_multi_init();
     }
 
     virtual ~JSONReader()
@@ -173,7 +175,7 @@ public:
         return _vOpenRAVESchemeAliases;
     }
 
-    /// \brief Extrat all bodies and add them into environment
+    /// \brief Extract all bodies and add them into environment
     bool ExtractAll(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, rapidjson::Document::AllocatorType& alloc)
     {
         uint64_t starttimeus = utils::GetMonotonicTime();
@@ -183,7 +185,7 @@ public:
         if( !rEnvInfo.IsObject() ) {
             throw OPENRAVE_EXCEPTION_FORMAT("The environment data needs to be a valid dictionary. Currently it is '%s'", orjson::DumpJson(rEnvInfo), ORE_InvalidArguments);
         }
-
+        //Currently reading from environment
         EnvironmentBase::EnvironmentBaseInfo envInfo;
         if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
             _ExtractSpecifiedBodies(envInfo, rEnvInfo);
@@ -196,6 +198,7 @@ public:
         std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
 
         std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rEnvInfo, "referenceUri", "");
+        //Keep going up the line and checking for all referenceURI bodies
         if (_IsExpandableReferenceUri(referenceUri)) {
             std::string scheme, path, fragment;
             ParseURI(referenceUri, scheme, path, fragment);
@@ -907,6 +910,79 @@ protected:
     bool _bIgnoreInvalidBodies = false; ///< if true, ignores any invalid bodies
 
     std::map<std::string, boost::shared_ptr<const rapidjson::Document> > _rapidJSONDocuments; ///< cache for opened rapidjson Documents
+
+    //Remote URI Spesific
+
+    void _DownloadRecursivly(const rapidjson::Value& rEnvInfo){
+
+        if (rEnvInfo.HasMember("bodies")) {
+            const rapidjson::Value& rBodies = rEnvInfo["bodies"];
+            vInputToBodyInfoMapping.resize(rBodies.Size(),-1); // -1, no mapping by default
+            for(int iInputBodyIndex = 0; iInputBodyIndex < (int)rBodies.Size(); ++iInputBodyIndex) {
+                const rapidjson::Value& rBodyInfo = rBodies[iInputBodyIndex];
+                std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
+                std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
+                std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
+                if (_IsExpandableReferenceUri(referenceUri)) {
+                    //TODO add, add curl
+                    
+                }
+                else if( !referenceUri.empty() ) {
+                    if (_bMustResolveURI) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", bodyId%referenceUri, ORE_InvalidURI);
+                    }
+
+                    RAVELOG_WARN_FORMAT("env=%d, body '%s' has invalid referenceUri='%s'", _penv->GetId()%bodyId%referenceUri);
+                }
+            }
+        }
+
+    }
+
+    /// \brief data type that is passed to curl handler containing information on parsing incoming files
+    struct curlData
+    {
+        rapidjson::StringBuffer *buffer; // Internal buffer assigned once curl is set up to download
+        CURL * curl = curl_easy_init(); // Curl handler requires to be initlized
+        std::string URI;
+    };
+
+    CURLM *_curlMultiHandle; /// < curl multi handler, used to downlod files simultaneously
+    std::vector<boost::shared_ptr<curlData>> _curlDataVector; ///< Holds all curl handlers
+
+    /// @brief Write back function for libcurl, all data that is retrieves is then pushed into a rapidjson::StringBuffer
+    /// @param data Data recieved from libcurl
+    /// @param size size
+    /// @param nmemb size
+    /// @param userdata Own structure to store incoming data 
+    /// @return Returns the total size back to libcurl
+    size_t _WriteBackDataFromCurl(char *data, size_t size, size_t nmemb, curlData &userdata)
+    {       
+        std::memcpy(userdata.buffer->Push(size * nmemb), data, size * nmemb);
+        return size * nmemb;
+    }
+
+    /// @brief Adds referenceURI to download 
+    /// @param referenceUri URI to download
+    /// @return 
+    int _AddReferenceURIToDownload(const std::string& referenceUri)
+    {
+        std::shared_ptr<curlData> data = std::shared_ptr<curlData>(new curlData);
+        data.get()->URI = reference;
+        if(data.get()->curl){
+            //Set up easy curl to download the correlating files
+            curl_easy_setopt(json.get()->curl, CURLOPT_URL, data.get()->URI.c_str());
+            curl_easy_setopt(json.get()->curl, CURLOPT_HTTPGET, 1);
+            curl_easy_setopt(json.get()->curl, CURLOPT_WRITEFUNCTION, WriteBackDataFromCurl);
+            curl_easy_setopt(json.get()->curl, CURLOPT_WRITEDATA, json.get());
+            curl_multi_add_handle(_curlMultiHandle, data.get()->curl())
+        }
+        else{
+            return -1;
+        }
+    }
+
+
 };
 
 bool RaveParseJSON(EnvironmentBasePtr penv, const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
