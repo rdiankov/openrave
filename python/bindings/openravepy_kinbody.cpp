@@ -3784,7 +3784,7 @@ bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink)
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
     KinBody::LinkPtr plink = GetKinBodyLink(pylink);
-    return _pbody->Grab(pbody->GetBody(), plink);
+    return _pbody->Grab(pbody->GetBody(), plink, nullptr);
 }
 
 void PyKinBody::Release(PyKinBodyPtr pbody)

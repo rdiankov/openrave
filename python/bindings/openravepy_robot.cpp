@@ -2090,7 +2090,7 @@ object PyRobotBase::CalculateActiveAngularVelocityJacobian(int index) const
 }
 
 bool PyRobotBase::Grab(PyKinBodyPtr pbody) {
-    CHECK_POINTER(pbody); return _probot->Grab(pbody->GetBody());
+    CHECK_POINTER(pbody); return _probot->Grab(pbody->GetBody(), nullptr);
 }
 
 // since PyKinBody::Grab is overloaded with (pbody, plink) parameters, have to support both...?
@@ -2100,11 +2100,11 @@ bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore)
     CHECK_POINTER(pylink_or_linkstoignore);
     KinBody::LinkPtr plink = GetKinBodyLink(pylink_or_linkstoignore);
     if( !!plink ) {
-        return _probot->Grab(pbody->GetBody(), plink);
+        return _probot->Grab(pbody->GetBody(), plink, nullptr);
     }
     // maybe it is a set?
     std::set<int> setlinkstoignore = ExtractSet<int>(pylink_or_linkstoignore);
-    return _probot->Grab(pbody->GetBody(), setlinkstoignore);
+    return _probot->Grab(pbody->GetBody(), setlinkstoignore, nullptr);
 }
 
 bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, object userData)

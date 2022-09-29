@@ -2015,27 +2015,27 @@ void RobotBase::SetNonCollidingConfiguration()
     RegrabAll();
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody)
+bool RobotBase::Grab(KinBodyPtr pbody, const boost::shared_ptr<rapidjson::Document>& prUserData)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector());
+    return Grab(pbody, pmanip->GetEndEffector(), prUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore)
+bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore, nullptr);
+    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore, prUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith)
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const boost::shared_ptr<rapidjson::Document>& prUserData)
 {
-    return KinBody::Grab(body, pRobotLinkToGrabWith);
+    return KinBody::Grab(body, pRobotLinkToGrabWith, prUserData);
 }
 
 bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData)

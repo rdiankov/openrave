@@ -3205,9 +3205,10 @@ private:
 
         \param[in] body the body to be grabbed
         \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
+        \param[in] prUserData custom data to keep in the body
         \return true if successful and body is grabbed/
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const boost::shared_ptr<rapidjson::Document>& prUserData);
 
     /** \brief Release the body if grabbed.
 
@@ -3523,8 +3524,6 @@ public:
     virtual ~Grabbed() {
     }
 
-    void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
-    void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options);
 
     /// \brief This function initializes _listNonCollidingLinksWhenGrabbed. First it restores the state of both the
     ///        grabber and the grabbed body to the snapshot when "Grab" function was called. Then it performs the check

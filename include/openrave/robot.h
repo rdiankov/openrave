@@ -1284,25 +1284,28 @@ private:
 
         \param[in] body the body to be grabbed
         \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
+        \param[in] prUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed/
      */
-    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith) override;
+    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const boost::shared_ptr<rapidjson::Document>& prUserData) override;
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
         \param[in] body the body to be grabbed
         \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
         when checking collisions between the grabbed body and the robot.
+        \param[in] prUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed
      */
-    virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore);
+    virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData);
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
         \param[in] body the body to be grabbed
+        \param[in] prUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed
      */
-    virtual bool Grab(KinBodyPtr body);
+    virtual bool Grab(KinBodyPtr body, const boost::shared_ptr<rapidjson::Document>& prUserData);
 
     //@}
 
