@@ -123,7 +123,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                                     GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, pbody->GetLinks().at(pGrabbingLink->GetIndex())));
                                     pNewGrabbed->_tRelative = pGrabbed->_tRelative;
                                     pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
-                                    if (!!pGrabbed->_prUserData && pGrabbed->_prUserData->IsObject()) {
+                                    if (!!pGrabbed->_prUserData) {
                                         pNewGrabbed->_prUserData.reset(new rapidjson::Document());
                                         pNewGrabbed->_prUserData->CopyFrom(*(pGrabbed->_prUserData), pNewGrabbed->_prUserData->GetAllocator());
                                     }
@@ -309,7 +309,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                                 }
                                 pNewGrabbed->_SetLinkNonCollidingIsValid(true);
                             }
-                            if (!!pGrabbed->_prUserData && pGrabbed->_prUserData->IsObject()) {
+                            if (!!pGrabbed->_prUserData) {
                                 pNewGrabbed->_prUserData.reset(new rapidjson::Document());
                                 pNewGrabbed->_prUserData->CopyFrom(*(pGrabbed->_prUserData), pNewGrabbed->_prUserData->GetAllocator());
                             }
