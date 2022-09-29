@@ -98,7 +98,7 @@ public:
     virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr) {
         return false;
     }
-    
+
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr) {
         return false;
     }

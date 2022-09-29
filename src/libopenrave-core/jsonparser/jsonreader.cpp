@@ -917,6 +917,8 @@ protected:
 
     void _DownloadRecursively(const rapidjson::Value& rEnvInfo){
 
+        std::vector<int> vInputToBodyInfoMapping;
+
         if (rEnvInfo.HasMember("bodies")) {
             const rapidjson::Value& rBodies = rEnvInfo["bodies"];
             vInputToBodyInfoMapping.resize(rBodies.Size(),-1); // -1, no mapping by default
@@ -927,7 +929,7 @@ protected:
                 std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
                 if (_IsExpandableReferenceUri(referenceUri)) {
                     if(_AddReferenceURIToDownload(referenceUri)) {
-                        throw  OPENRAVE_EXCEPTION_FORMAT("failed to create curl handler from %s", referenceUri);
+                        RAVELOG_WARN_FORMAT("failed to create curl handler from %s", referenceUri);   
                     }
 
                 }
@@ -941,7 +943,7 @@ protected:
             }
 
 
-            int stillRunning;
+            int stillRunning, msgInQueue;
             do {
                 CURLMcode mc = curl_multi_perform(_curlMultiHandle, &stillRunning);
                 CURLMsg  *curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
@@ -956,7 +958,7 @@ protected:
 
                 while(curlmsg != NULL) {
                     if (curlmsg->msg == CURLMSG_DONE) {
-                        for ( int i = 0; i < _curlDataVector.size(); i++) {
+                        for ( unsigned long i = 0; i < _curlDataVector.size(); i++) {
                             if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
                                 std::shared_ptr<rapidjson::Document> document = std::shared_ptr<rapidjson::Document>(new rapidjson::Document);
                                 document.get()->Parse(_curlDataVector.at(i).get()->buffer->GetString());
@@ -989,7 +991,7 @@ protected:
     /// @param nmemb size
     /// @param userdata Own structure to store incoming data
     /// @return Returns the total size back to libcurl
-    size_t _WriteBackDataFromCurl(char *data, size_t size, size_t nmemb, curlData &userdata)
+    static size_t _WriteBackDataFromCurl(char *data, size_t size, size_t nmemb, curlData &userdata)
     {
         std::memcpy(userdata.buffer->Push(size * nmemb), data, size * nmemb);
         return size * nmemb;
@@ -1000,15 +1002,15 @@ protected:
     /// @return
     int _AddReferenceURIToDownload(const std::string& referenceUri)
     {
-        std::shared_ptr<curlData> data = std::shared_ptr<curlData>(new curlData);
-        data.get()->URI = reference;
+        boost::shared_ptr<curlData> data = boost::shared_ptr<curlData>(new curlData);
+        data.get()->URI = referenceUri;
         if(data.get()->curl) {
             //Set up easy curl to download the correlating files
-            curl_easy_setopt(json.get()->curl, CURLOPT_URL, data.get()->URI.c_str());
-            curl_easy_setopt(json.get()->curl, CURLOPT_HTTPGET, 1);
-            curl_easy_setopt(json.get()->curl, CURLOPT_WRITEFUNCTION, WriteBackDataFromCurl);
-            curl_easy_setopt(json.get()->curl, CURLOPT_WRITEDATA, json.get());
-            curl_multi_add_handle(_curlMultiHandle, data.get()->curl());
+            curl_easy_setopt(data.get()->curl, CURLOPT_URL, data.get()->URI.c_str());
+            curl_easy_setopt(data.get()->curl, CURLOPT_HTTPGET, 1);
+            curl_easy_setopt(data.get()->curl, CURLOPT_WRITEFUNCTION, _WriteBackDataFromCurl);
+            curl_easy_setopt(data.get()->curl, CURLOPT_WRITEDATA, data.get());
+            curl_multi_add_handle(_curlMultiHandle, data.get()->curl);
             _curlDataVector.push_back(data);
         }
         else{

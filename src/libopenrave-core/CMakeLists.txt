@@ -6,6 +6,13 @@ endif()
 set(OPENRAVE_CORE_LIBRARIES ${openrave_libraries})
 set(openrave_core_SOURCES openrave-core.cpp environment-core.h openrave-core.h ravep.h xmlreaders-core.cpp genericcollisionchecker.cpp genericphysicsengine.cpp genericrobot.cpp multicontroller.cpp generictrajectory.cpp jsonparser/jsoncommon.cpp jsonparser/jsonreader.cpp jsonparser/jsonwriter.cpp)
 
+if(CURL_FOUND)
+  message("found")
+else()
+  message("not found")
+endif()
+
+
 if( libpcrecpp_FOUND )
   # pcre for url parsing
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${libpcrecpp_CFLAGS_OTHER}")
@@ -14,6 +21,13 @@ if( libpcrecpp_FOUND )
   include_directories(${libpcrecpp_INCLUDE_DIRS})
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${libpcrecpp_LIBRARY_DIRS})
   add_definitions(-DHAVE_PCRECPP)
+endif()
+
+find_package(CURL)
+if (CURL_FOUND)
+  set (OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${CURL_LIBRARIES})
+else()
+  message(FATAL_ERROR "curl library not found")
 endif()
 
 if( COLLADA_DOM_FOUND )
