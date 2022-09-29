@@ -156,6 +156,12 @@ public:
                 // take the first argument given from scalegeometry to set as the overall geometry scale
                 ss >> _fGeomScale;
             }
+            else if (itatt->first == "remotescheme"){
+                _remoteScheme = itatt->second;
+            }
+            else if (itatt->first == "remoteurl"){
+                _remoteUrl = itatt->second;
+            }
         }
         if (_vOpenRAVESchemeAliases.size() == 0) {
             _vOpenRAVESchemeAliases.push_back("openrave");
@@ -241,7 +247,7 @@ public:
 
             RAVELOG_ERROR_FORMAT("Failed to load env referenceUri='%s' from file '%s'", referenceUri%_filename);
         }
-
+        
         _ProcessEnvInfoBodies(envInfo, rEnvInfo, alloc, _uri, _filename, mapProcessedConnectedBodyUris);
 
         std::vector<KinBody::KinBodyInfoPtr>::iterator itBodyInfo = envInfo._vBodyInfos.begin();
@@ -418,9 +424,16 @@ protected:
     {
         dReal fUnitScale = _GetUnitScale(rEnvInfo, 1.0);
         std::vector<int> vInputToBodyInfoMapping;
+
+        //check if downloading remotely over curl
+        if(!_remoteScheme.empty() && !_remoteUrl.empty()){
+            _DownloadRecursively(currentUri);
+        }
+        
         if (rEnvInfo.HasMember("bodies")) {
             const rapidjson::Value& rBodies = rEnvInfo["bodies"];
             vInputToBodyInfoMapping.resize(rBodies.Size(),-1); // -1, no mapping by default
+            
             for(int iInputBodyIndex = 0; iInputBodyIndex < (int)rBodies.Size(); ++iInputBodyIndex) {
                 const rapidjson::Value& rBodyInfo = rBodies[iInputBodyIndex];
                 std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
@@ -906,6 +919,8 @@ protected:
     std::string _filename; ///< original filename used to open reader
     std::string _uri; ///< original uri used to open reader
     std::string _defaultSuffix; ///< defaultSuffix of the main document, either ".json" or ".msgpack"
+    std::string _remoteScheme; ///< remote scheme for remote loading
+    std::string _remoteUrl; ///< remote url for scheme
     std::vector<std::string> _vOpenRAVESchemeAliases;
     bool _bMustResolveURI = false; ///< if true, throw exception if object uri does not resolve
     bool _bMustResolveEnvironmentURI = false; ///< if true, throw exception if environment uri does not resolve
@@ -915,9 +930,49 @@ protected:
 
     //Remote URI Spesific
 
-    void _DownloadRecursively(const rapidjson::Value& rEnvInfo){
+    void _DownloadRecursively(const std::string& currentURI){
+        std::vector<int> vInputToBodyInfoMapping;
+        //TODO make function to replace it with remote URL
+
+        std::string newUri = _remoteUrl + currentURI.substr(currentURI.find("/")+1);
+
+        _AddReferenceURIToDownload(newUri);
+
+        int stillRunning, msgInQueue;
+            do {
+
+                CURLMcode mc = curl_multi_perform(_curlMultiHandle, &stillRunning);
+                CURLMsg  *curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
+                if(!mc && stillRunning) {
+                    /* wait for activity, timeout or "nothing" */
+                    mc = curl_multi_poll(_curlMultiHandle, NULL, 0, 1000, NULL);
+                }
+                if(mc) {
+                    break;
+                }
+
+                while(curlmsg != NULL) {
+                    if (curlmsg->msg == CURLMSG_DONE) {
+                        for ( unsigned long i = 0; i < _curlDataVector.size(); i++) {
+                            if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
+                                std::shared_ptr<rapidjson::Document> document = std::shared_ptr<rapidjson::Document>(new rapidjson::Document);
+                                document.get()->Parse(_curlDataVector.at(i).get()->buffer->GetString());
+                            }
+                        }
+                    }
+                    curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
+                }
+
+            } while(stillRunning);
+
+
+
+    }
+
+    void _DownloadRecursively(const rapidjson::Value& rEnvInfo, const std::string& currentUri){
 
         std::vector<int> vInputToBodyInfoMapping;
+        //TODO make function to replace it with remote URL
 
         if (rEnvInfo.HasMember("bodies")) {
             const rapidjson::Value& rBodies = rEnvInfo["bodies"];
@@ -941,13 +996,13 @@ protected:
                     RAVELOG_WARN_FORMAT("env=%d, body '%s' has invalid referenceUri='%s'", _penv->GetId()%bodyId%referenceUri);
                 }
             }
-
+        
 
             int stillRunning, msgInQueue;
             do {
+
                 CURLMcode mc = curl_multi_perform(_curlMultiHandle, &stillRunning);
                 CURLMsg  *curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
-
                 if(!mc && stillRunning) {
                     /* wait for activity, timeout or "nothing" */
                     mc = curl_multi_poll(_curlMultiHandle, NULL, 0, 1000, NULL);
@@ -977,7 +1032,7 @@ protected:
     /// \brief data type that is passed to curl handler containing information on parsing incoming files
     struct curlData
     {
-        rapidjson::StringBuffer *buffer; // Internal buffer assigned once curl is set up to download
+        rapidjson::StringBuffer *buffer = new rapidjson::StringBuffer(); // Internal buffer assigned once curl is set up to download
         CURL * curl = curl_easy_init(); // Curl handler requires to be initlized
         std::string URI;
     };
