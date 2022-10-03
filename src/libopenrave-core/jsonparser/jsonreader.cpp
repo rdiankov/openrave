@@ -420,14 +420,17 @@ protected:
 
     boost::shared_ptr<const rapidjson::Document> _GetDocumentFromFilename(const std::string& fullFilename, rapidjson::Document::AllocatorType& alloc)
     {
+        
         boost::shared_ptr<const rapidjson::Document> doc;
         // TODO: optimize this. for the first time doc is cached, all the expandable object will never get cached, because we are not update document cache after expand any body
         if (_rapidJSONDocuments.find(fullFilename) != _rapidJSONDocuments.end()) {
+            printf("already in rapid json document\n");
             doc = _rapidJSONDocuments[fullFilename];
         }
         else {
             boost::shared_ptr<rapidjson::Document> newDoc;
             if (_EndsWith(fullFilename, ".json")) {
+                printf("\n#################\ngetting value from .json\n");
                 newDoc.reset(new rapidjson::Document(&alloc));
                 OpenRapidJsonDocument(fullFilename, *newDoc);
             }
@@ -436,6 +439,7 @@ protected:
                 OpenMsgPackDocument(fullFilename, *newDoc);
             }
             if (!!newDoc) {
+                printf("NOT in rapid json adding value in getdocumentfromfilename\n");
                 doc = newDoc;
                 _rapidJSONDocuments[fullFilename] = doc;
             }
@@ -448,6 +452,7 @@ protected:
 
         std::vector<int> vInputToBodyInfoMapping;
         dReal fUnitScale = _GetUnitScale(rEnvInfo, 1.0);
+        printf("in process env info\n");
 
         if (rEnvInfo.HasMember("bodies")) {
             const rapidjson::Value& rBodies = rEnvInfo["bodies"];
@@ -515,6 +520,9 @@ protected:
         std::string scheme, path, fragment;
         ParseURI(referenceUri, scheme, path, fragment);
 
+        printf("path %s\n", path.c_str());
+        printf("scheme %s\n", scheme.c_str());
+        printf("referenceUri %s\n", referenceUri.c_str());
         int insertIndex = -1;
 
         // deal with uri that has just #originBodyId
@@ -551,8 +559,18 @@ protected:
             if( _ReplaceFilenameSuffix(path, ".dae", _defaultSuffix) ) {
                 RAVELOG_WARN_FORMAT("env=%d, filename had '.dae' suffix, so changed to %s", _penv->GetId()%path);
             }
-            std::string fullFilename = ResolveURI(scheme, path, std::string(), GetOpenRAVESchemeAliases());
+            std::string fullFilename;
+            if(IsRemote()){
+                fullFilename = ResolveRemoteUri(referenceUri);
+            }
+            else{
+                fullFilename = ResolveURI(scheme, path, std::string(), GetOpenRAVESchemeAliases());
+            }
+            printf("fullFileName %s\n", fullFilename.c_str());
+            
             if (fullFilename.empty()) {
+
+
 #ifdef HAVE_BOOST_FILESYSTEM
                 fullFilename = ResolveURI(scheme, path, boost::filesystem::path(currentFilename).parent_path().string(), GetOpenRAVESchemeAliases());
 #endif
@@ -568,7 +586,9 @@ protected:
 
             uint64_t beforeOpenStampUS = utils::GetMonotonicTime();
 
+            
             boost::shared_ptr<const rapidjson::Document> referenceDoc = _GetDocumentFromFilename(fullFilename, alloc);
+            printf("referenceDoc %s\n", fullFilename.c_str());
             if (!referenceDoc || !(*referenceDoc).HasMember("bodies")) {
                 RAVELOG_ERROR_FORMAT("referenced document cannot be loaded, or has no bodies: %s", fullFilename);
                 return -1;
@@ -790,6 +810,7 @@ protected:
     {
         FOREACH(itConnected, robotInfo._vConnectedBodyInfos) {
             RobotBase::ConnectedBodyInfoPtr& pConnected = *itConnected;
+            printf("pconnected URI %s\n", pConnected->_uri.c_str());
             std::map<RobotBase::ConnectedBodyInfoPtr, std::string>::iterator itProcessedEntry = mapProcessedConnectedBodyUris.find(pConnected);
             if( itProcessedEntry != mapProcessedConnectedBodyUris.end() && itProcessedEntry->second == pConnected->_uri ) {
                 continue;
@@ -950,7 +971,9 @@ protected:
 
     void _PutDocumentIntoRapidJSONMap(const std::string& fullURLname, boost::shared_ptr<const rapidjson::Document> document)
     {
+        printf("In put documents into map\n");
         if (_rapidJSONDocuments.find(fullURLname) == _rapidJSONDocuments.end()) {
+            printf("Adding %s to json documents\n", fullURLname.c_str());
             _rapidJSONDocuments[fullURLname] = document;
         }
     }
@@ -959,11 +982,11 @@ protected:
         return _remoteUrl + referenceUri.substr(referenceUri.find_first_of('/')+1);
     }
 
-    void _ParseDocumentForNewURLs(const boost::shared_ptr<const rapidjson::Document> &doc)
+    void _ParseDocumentForNewURLs(const rapidjson::Value& doc)
     {
         std::vector<int> vInputToBodyInfoMapping;
-        if (doc.get()->HasMember("bodies")) {
-            const rapidjson::Value& rBodies = (*doc)["bodies"];
+        if (doc.HasMember("bodies")) {
+            const rapidjson::Value& rBodies = doc["bodies"];
             vInputToBodyInfoMapping.resize(rBodies.Size(),-1); // -1, no mapping by default
             for(int iInputBodyIndex = 0; iInputBodyIndex < (int)rBodies.Size(); ++iInputBodyIndex) {
                 const rapidjson::Value& rBodyInfo = rBodies[iInputBodyIndex];
@@ -991,13 +1014,14 @@ protected:
 
     void _DownloadRecursively(const rapidjson::Value &rEnvInfo)
     {
+        printf("in download recursivly\n");
         std::vector<int> vInputToBodyInfoMapping;
         //TODO make function to replace it with remote URL
         
 
-        boost::shared_ptr<const rapidjson::Document> headLevel;
-        headLevel = _rapidJSONDocuments[_uri];
-        _ParseDocumentForNewURLs(headLevel);
+        
+        _ParseDocumentForNewURLs(rEnvInfo);
+        printf("after parse documents");
 
         int stillRunning, msgInQueue;
         do {
@@ -1021,7 +1045,7 @@ protected:
                             document.get()->Parse(_curlDataVector.at(i).get()->buffer->GetString());
                             _PutDocumentIntoRapidJSONMap(_curlDataVector.at(i).get()->URI, document);
                             
-                            _ParseDocumentForNewURLs(document);
+                            _ParseDocumentForNewURLs( *document);
 
                             stillRunning++; // This is to make sure the while loop continues
                         }
@@ -1064,12 +1088,7 @@ protected:
                             if (!ok) {
                                 throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", currentURI, ORE_InvalidArguments);
                             }
-                            boost::shared_ptr<rapidjson::Document> sharedDocument =  boost::shared_ptr<rapidjson::Document>(new rapidjson::Document);
                             
-                            //boost::shared_ptr<rapidjson::Document> sharedDocument = boost::make_shared<rapidjson::Document>(&doc.GetAllocator());
-                            sharedDocument.get()->CopyFrom(doc, doc.GetAllocator());
-                            //sharedDocument.reset( new rapidjson::Document(&doc.GetAllocator()));
-                            _PutDocumentIntoRapidJSONMap(currentURI, sharedDocument);
                             return;
                         }
                     }
@@ -1231,12 +1250,14 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFro
         if (fullFilename.size() == 0 ) {
             return false;
         }
+
         OpenRapidJsonDocument(fullFilename, rEnvInfo);
     }
     
 
     
     std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
+    printf("starting extract all");
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
