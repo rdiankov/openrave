@@ -530,12 +530,13 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         defaultErrorCode = std::max(defaultErrorCode, GICR_UserDataNotMatch);
 
         bool userDataMatch = false;
-        if (!pgrabbed->_prUserData && !prUserData) {
-            userDataMatch = true;
-        } else if (!!pgrabbed->_prUserData && !!prUserData && *(pgrabbed->_prUserData) == *prUserData) {
+        if( !pgrabbed->_prUserData && !prUserData ) {
             userDataMatch = true;
         }
-        if (userDataMatch) {
+        else if( !!pgrabbed->_prUserData && !!prUserData && *(pgrabbed->_prUserData) == *prUserData ) {
+            userDataMatch = true;
+        }
+        if( userDataMatch ) {
             return GICR_Identical;
         }
     }
@@ -573,18 +574,19 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
                 break;
             }
         }
-        if( ignoringLinksMatch && numIgnoredLinks == setGrabberLinksToIgnore.size()) {
+        if( ignoringLinksMatch && numIgnoredLinks == setGrabberLinksToIgnore.size() ) {
             continue;
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_UserDataNotMatch);
 
         bool userDataMatch = false;
-        if (!pgrabbed->_prUserData && !prUserData) {
-            userDataMatch = true;
-        } else if (!!pgrabbed->_prUserData && !!prUserData && *(pgrabbed->_prUserData) == *prUserData) {
+        if( !pgrabbed->_prUserData && !prUserData ) {
             userDataMatch = true;
         }
-        if (userDataMatch) {
+        else if( !!pgrabbed->_prUserData && !!prUserData && *(pgrabbed->_prUserData) == *prUserData ) {
+            userDataMatch = true;
+        }
+        if( userDataMatch ) {
             return GICR_Identical;
         }
     }
@@ -628,10 +630,11 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos
             poutputinfo->_robotlinkname = pgrabbed->_pGrabbingLink->GetName();
             poutputinfo->_trelative = pgrabbed->_tRelative;
             poutputinfo->_setIgnoreRobotLinkNames.clear();
-            if (!!pgrabbed->_prUserData) {
+            if( !!pgrabbed->_prUserData ) {
                 poutputinfo->_prUserData.reset(new rapidjson::Document());
                 poutputinfo->_prUserData->CopyFrom(*(pgrabbed->_prUserData), poutputinfo->_prUserData->GetAllocator());
-            } else {
+            }
+            else {
                 poutputinfo->_prUserData.reset();
             }
 
@@ -660,7 +663,7 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vGrabbedInfos) const
             outputinfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
             outputinfo._trelative = pgrabbed->_tRelative;
             outputinfo._setIgnoreRobotLinkNames.clear();
-            if(!!pgrabbed->_prUserData) {
+            if( !!pgrabbed->_prUserData ) {
                 outputinfo._prUserData.reset(new rapidjson::Document());
                 outputinfo._prUserData->CopyFrom(*(pgrabbed->_prUserData), outputinfo._prUserData->GetAllocator());
             }
@@ -689,10 +692,11 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
                 grabbedInfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
                 grabbedInfo._trelative = pgrabbed->_tRelative;
                 grabbedInfo._setIgnoreRobotLinkNames.clear();
-                if (!!pgrabbed->_prUserData) {
+                if( !!pgrabbed->_prUserData ) {
                     grabbedInfo._prUserData.reset(new rapidjson::Document());
                     grabbedInfo._prUserData->CopyFrom(*(pgrabbed->_prUserData), grabbedInfo._prUserData->GetAllocator());
-                } else {
+                }
+                else {
                     grabbedInfo._prUserData.reset();
                 }
 
@@ -731,7 +735,7 @@ void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
     if( !_setIgnoreRobotLinkNames.empty() ) {
         orjson::SetJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames, allocator);
     }
-    if (!!_prUserData) {
+    if( !!_prUserData ) {
         orjson::SetJsonValueByKey(value, "userData", *_prUserData, allocator);
     }
 }
@@ -746,10 +750,11 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _trelative.trans *= fUnitScale;
     }
     orjson::LoadJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames);
-    if (value.HasMember("userData")) {
+    if( value.HasMember("userData" ) ) {
         _prUserData.reset(new rapidjson::Document());
         _prUserData->CopyFrom(value["userData"], _prUserData->GetAllocator());
-    } else {
+    }
+    else {
         _prUserData.reset();
     }
 }
@@ -762,7 +767,7 @@ void KinBody::GrabbedInfo::serialize(std::ostream& o) const
     for( std::set<std::string>::const_iterator it = _setIgnoreRobotLinkNames.begin(); it != _setIgnoreRobotLinkNames.end(); ++it ) {
         o << (*it) << " ";
     }
-    if (!!_prUserData) {
+    if( !!_prUserData ) {
         o << OpenRAVE::orjson::GetJsonString(*_prUserData) << " ";
     }
 }
@@ -816,10 +821,11 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
             FOREACHC(itLinkName, pGrabbedInfo->_setIgnoreRobotLinkNames) {
                 pGrabbed->_setGrabberLinkIndicesToIgnore.insert(GetLink(*itLinkName)->GetIndex());
             }
-            if (!!pGrabbedInfo->_prUserData) {
+            if( !!pGrabbedInfo->_prUserData ) {
                 pGrabbed->_prUserData.reset(new rapidjson::Document());
                 pGrabbed->_prUserData->CopyFrom(*(pGrabbedInfo->_prUserData), pGrabbed->_prUserData->GetAllocator());
-            } else {
+            }
+            else {
                 pGrabbed->_prUserData.reset();
             }
 
