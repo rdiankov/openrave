@@ -3828,7 +3828,6 @@ int PyKinBody::CheckGrabbedInfo(PyKinBodyPtr pbody, object pylink, object linkst
         std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
         return _pbody->CheckGrabbedInfo(*(pbody->GetBody()), *GetKinBodyLink(pylink), setlinkstoignoreString, prUserData);
     }
-
     // linkstoignore is a list of link indices
     std::set<int> setlinkstoignoreInt = ExtractSet<int>(linkstoignore);
     return _pbody->CheckGrabbedInfo(*(pbody->GetBody()), *GetKinBodyLink(pylink), setlinkstoignoreInt, prUserData);

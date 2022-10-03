@@ -3524,7 +3524,6 @@ public:
     virtual ~Grabbed() {
     }
 
-
     /// \brief This function initializes _listNonCollidingLinksWhenGrabbed. First it restores the state of both the
     ///        grabber and the grabbed body to the snapshot when "Grab" function was called. Then it performs the check
     ///        and populates the list.

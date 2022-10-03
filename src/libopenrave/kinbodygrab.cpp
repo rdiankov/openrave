@@ -284,7 +284,6 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
         else {
             RAVELOG_DEBUG_FORMAT("env=%s, body '%s' is already grabbing body '%s' with link '%s' but the current desired grabbing link is '%s'", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName()%pPreviouslyGrabbed->_pGrabbingLink->GetName()%pGrabbingLink->GetName());
         }
-
         // Detach pGrabbedBody first before re-adding it.
         _RemoveAttachedBody(*pGrabbedBody);
         _vGrabbedBodies.erase(itPreviouslyGrabbed);
