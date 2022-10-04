@@ -2111,8 +2111,14 @@ bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, 
 {
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
-    boost::shared_ptr<rapidjson::Document> prUserData(new rapidjson::Document());
-    toRapidJSONValue(userData, *prUserData, prUserData->GetAllocator());
+    boost::shared_ptr<rapidjson::Document> prUserData;
+    if( !IS_PYTHONOBJECT_NONE(userData) ) {
+        prUserData.reset(new rapidjson::Document());
+        toRapidJSONValue(userData, *prUserData, prUserData->GetAllocator());
+    }
+    else {
+        prUserData.reset();
+    }
     if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
         // linkstoignore is a list of link names
         std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
