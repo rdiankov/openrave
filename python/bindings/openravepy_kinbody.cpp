@@ -2217,10 +2217,15 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
     }
 #endif
     // convert userdata
-    rapidjson::Document doc;
-    toRapidJSONValue(_userData, doc, doc.GetAllocator());
-    pinfo->_prUserData.reset(new rapidjson::Document());
-    pinfo->_prUserData->CopyFrom(doc, pinfo->_prUserData->GetAllocator());
+    if( !IS_PYTHONOBJECT_NONE(_userData) ) {
+        rapidjson::Document doc;
+        toRapidJSONValue(_userData, doc, doc.GetAllocator());
+        pinfo->_prUserData.reset(new rapidjson::Document());
+        pinfo->_prUserData->CopyFrom(doc, pinfo->_prUserData->GetAllocator());
+    }
+    else {
+        pinfo->_prUserData.reset();
+    }
     return pinfo;
 }
 
@@ -2277,9 +2282,10 @@ void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
     }
     _setIgnoreRobotLinkNames = setRobotLinksToIgnore;
 #endif
-    if (!!info._prUserData) {
+    if( !!info._prUserData ) {
         _userData = toPyObject(*(info._prUserData));
-    } else {
+    }
+    else {
         _userData = py::none_();
     }
 }
@@ -3775,10 +3781,11 @@ bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, ob
     std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
     // convert from python dict to rapidjson and pass to _pbody->Grab
     boost::shared_ptr<rapidjson::Document> prUserData;
-    if (!userData.is_none()) {
+    if( !IS_PYTHONOBJECT_NONE(userData) ) {
         prUserData.reset(new rapidjson::Document());
         toRapidJSONValue(userData, *prUserData, prUserData->GetAllocator());
-    } else {
+    }
+    else {
         prUserData.reset();
     }
     return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore, prUserData);
@@ -3827,7 +3834,12 @@ int PyKinBody::CheckGrabbedInfo(PyKinBodyPtr pbody, object pylink, object linkst
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
     boost::shared_ptr<rapidjson::Document> prUserData(new rapidjson::Document());
-    toRapidJSONValue(userData, *prUserData, prUserData->GetAllocator());
+    if( !IS_PYTHONOBJECT_NONE(userData) ) {
+        toRapidJSONValue(userData, *prUserData, prUserData->GetAllocator());
+    }
+    else {
+        prUserData.reset();
+    }
     if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
         // linkstoignore is a list of link names
         std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
