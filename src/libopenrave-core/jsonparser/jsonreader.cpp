@@ -430,13 +430,11 @@ protected:
         boost::shared_ptr<const rapidjson::Document> doc;
         // TODO: optimize this. for the first time doc is cached, all the expandable object will never get cached, because we are not update document cache after expand any body
         if (_rapidJSONDocuments.find(fullFilename) != _rapidJSONDocuments.end()) {
-            printf("already in rapid json document\n");
             doc = _rapidJSONDocuments[fullFilename];
         }
         else {
             boost::shared_ptr<rapidjson::Document> newDoc;
             if (_EndsWith(fullFilename, ".json") && !IsRemote()) {
-                printf("\n#################\ngetting value from .json\n");
                 newDoc.reset(new rapidjson::Document(&alloc));
                 OpenRapidJsonDocument(fullFilename, *newDoc);
             }
@@ -445,7 +443,6 @@ protected:
                 OpenMsgPackDocument(fullFilename, *newDoc);
             }
             if (!!newDoc) {
-                printf("NOT in rapid json adding value in getdocumentfromfilename\n");
 
                 doc = newDoc;
                 _rapidJSONDocuments[fullFilename] = doc;
@@ -816,7 +813,6 @@ protected:
         if(IsRemote()) {
             FOREACH(itConnected, robotInfo._vConnectedBodyInfos) {
                 RobotBase::ConnectedBodyInfoPtr& pConnected = *itConnected;
-                printf("pconnected URI %s\n", pConnected->_uri.c_str());
                 std::map<RobotBase::ConnectedBodyInfoPtr, std::string>::iterator itProcessedEntry = mapProcessedConnectedBodyUris.find(pConnected);
                 if( itProcessedEntry != mapProcessedConnectedBodyUris.end() && itProcessedEntry->second == pConnected->_uri ) {
                     continue;
@@ -827,15 +823,14 @@ protected:
                 }
                 std::set<std::string> circularReference;
                 EnvironmentBase::EnvironmentBaseInfo envInfo;
-
-                _DownloadConnectedBody(pConnected->_uri);
+                _AddReferenceURIToDownload(pConnected->_uri);
             }
+            _DownloadConnectedBodies();
         }
 
 
         FOREACH(itConnected, robotInfo._vConnectedBodyInfos) {
             RobotBase::ConnectedBodyInfoPtr& pConnected = *itConnected;
-            printf("pconnected URI %s\n", pConnected->_uri.c_str());
             std::map<RobotBase::ConnectedBodyInfoPtr, std::string>::iterator itProcessedEntry = mapProcessedConnectedBodyUris.find(pConnected);
             if( itProcessedEntry != mapProcessedConnectedBodyUris.end() && itProcessedEntry->second == pConnected->_uri ) {
                 continue;
@@ -996,7 +991,6 @@ protected:
     void _PutDocumentIntoRapidJSONMap(const std::string& fullURLname, boost::shared_ptr<const rapidjson::Document> document)
     {
         if (_rapidJSONDocuments.find(fullURLname) == _rapidJSONDocuments.end()) {
-            printf("Adding %s to json documents\n", fullURLname.c_str());
             _rapidJSONDocuments[fullURLname] = document;
         }
     }
@@ -1061,11 +1055,15 @@ protected:
                             boost::shared_ptr<rapidjson::Document> document = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document);
                             document.get()->Parse(_curlDataVector.at(i).get()->buffer->GetString());
                             _PutDocumentIntoRapidJSONMap(_curlDataVector.at(i).get()->URI, document);
-
-
                             _ParseDocumentForNewURLs( *document);
 
                             stillRunning++; // This is to make sure the while loop continues
+
+                            curl_multi_remove_handle(_curlMultiHandle,_curlDataVector.at(i).get()->curl);
+                            curl_easy_cleanup(_curlDataVector.at(i).get()->curl);
+                            _curlDataVector.erase(_curlDataVector.begin() + i);
+                            i--;
+                            size--;
                         }
                     }
                 }
@@ -1106,7 +1104,9 @@ protected:
                             if (!ok) {
                                 throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", currentURI, ORE_InvalidArguments);
                             }
-
+                            curl_multi_remove_handle(_curlMultiHandle,_curlDataVector.at(i).get()->curl);
+                            curl_easy_cleanup(_curlDataVector.at(i).get()->curl);
+                            _curlDataVector.erase(_curlDataVector.begin() + i);
                             return;
                         }
                     }
@@ -1117,17 +1117,19 @@ protected:
 
     }
 
-    void _DownloadConnectedBody(const std::string& currentURI)
+    void _DownloadConnectedBodies()
     {
+        if (!_curlDataVector.size()) {
+            return;
+        }
+
         std::vector<int> vInputToBodyInfoMapping;
         //TODO make function to replace it with remote URL
 
-        _AddReferenceURIToDownload(currentURI);
 
         int stillRunning = 0;
         int msgInQueue = 0;
         do {
-
             CURLMcode mc = curl_multi_perform(_curlMultiHandle, &stillRunning);
             CURLMsg  *curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
             if(!mc && stillRunning) {
@@ -1147,13 +1149,17 @@ protected:
                             rapidjson::ParseResult ok = sharedDocument.get()->Parse<rapidjson::kParseFullPrecisionFlag>(_curlDataVector.at(i).get()->buffer->GetString());
 
                             if (!ok) {
-                                throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", currentURI, ORE_InvalidArguments);
+                                throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", _curlDataVector.at(i).get()->URI, ORE_InvalidArguments);
                             }
 
-                            printf("adding connected body to map: %s\n", _curlDataVector.at(i).get()->URI.c_str());
                             _PutDocumentIntoRapidJSONMap(_curlDataVector.at(i).get()->URI, sharedDocument);
                             _ParseDocumentForNewURLs( *sharedDocument);
 
+                            curl_multi_remove_handle(_curlMultiHandle,_curlDataVector.at(i).get()->curl);
+                            curl_easy_cleanup(_curlDataVector.at(i).get()->curl);
+                            _curlDataVector.erase(_curlDataVector.begin() + i);
+                            i--;
+                            size--;
                             stillRunning++;
                         }
                     }
@@ -1297,11 +1303,12 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFro
 
 
     std::string fullFilename;
-    reader.SetURI(uri);
     rapidjson::Document rEnvInfo(&alloc);
 
     if(reader.IsRemote()) {
         fullFilename = reader.ResolveRemoteUri(uri);
+        reader.SetURI(uri);
+
 
         if (fullFilename.size() == 0 ) {
             return false;
@@ -1315,6 +1322,7 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFro
         if (fullFilename.size() == 0 ) {
             return false;
         }
+        reader.SetURI(uri);
 
         OpenRapidJsonDocument(fullFilename, rEnvInfo);
     }
