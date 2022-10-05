@@ -520,11 +520,12 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
             }
             if( isLinkIgnored != (setGrabberLinksToIgnore.count(link->GetIndex()) > 0) ) {
                 ignoringLinksMatch = false;
+                RAVELOG_WARN("[mirai] ignore link not match");
                 break;
             }
         }
 
-        if( ignoringLinksMatch && numIgnoredLinks == setGrabberLinksToIgnore.size()) {
+        if( !ignoringLinksMatch || numIgnoredLinks != setGrabberLinksToIgnore.size() ) {
             continue;
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_UserDataNotMatch);
@@ -574,7 +575,7 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
                 break;
             }
         }
-        if( ignoringLinksMatch && numIgnoredLinks == setGrabberLinksToIgnore.size() ) {
+        if( !ignoringLinksMatch || numIgnoredLinks != setGrabberLinksToIgnore.size() ) {
             continue;
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_UserDataNotMatch);
