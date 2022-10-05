@@ -266,7 +266,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
                     bIsUserDataSame = true;
                 }
                 else {
-                    RAVELOG_DEBUG_FORMAT("env=%s, body '%s' is already grabbing body '%s' but userdata differs.", GetEnv()->GetNameId()%GetName());
+                    RAVELOG_DEBUG_FORMAT("env=%s, body '%s' is already grabbing body '%s' but userdata differs.", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName());
                 }
 
                 if (bIsUserDataSame) {
