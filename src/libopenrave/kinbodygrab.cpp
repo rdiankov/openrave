@@ -768,7 +768,7 @@ void KinBody::GrabbedInfo::serialize(std::ostream& o) const
         o << (*it) << " ";
     }
     if( !!_prUserData ) {
-        o << OpenRAVE::orjson::GetJsonString(*_prUserData) << " ";
+        o << OpenRAVE::orjson::DumpJson(*_prUserData) << " ";
     }
 }
 
