@@ -125,13 +125,6 @@ static std::string ResolveURI(const std::string& uri, const std::string& curdir,
 {
     std::string scheme, path, fragment;
     ParseURI(uri, scheme, path, fragment);
-        printf("resolveLOCALUri\n");
-        // printf("uri: %s\n", uri.c_str());
-        // printf("scheme: %s\n", scheme.c_str());
-        // printf("path: %s\n", path.c_str());
-        // printf("fragment: %s\n", fragment.c_str());
-        printf("full thing: %s\n", ResolveURI(scheme, path, curdir, vOpenRAVESchemeAliases).c_str());
-
 
     return ResolveURI(scheme, path, curdir, vOpenRAVESchemeAliases);
 }
@@ -198,7 +191,7 @@ public:
     }
 
     virtual ~JSONReader()
-    { 
+    {
         curl_multi_cleanup(_curlMultiHandle);
     }
 
@@ -247,7 +240,7 @@ public:
                 }
             }
 
-            boost::shared_ptr<const rapidjson::Document> prReferenceEnvInfo = _GetDocumentFromFilename(fullFilename, alloc);
+            boost::shared_ptr<const rapidjson::Document> prReferenceEnvInfo = _GetDocumentFromFilename(fullFilename);
             if (!prReferenceEnvInfo) {
                 RAVELOG_WARN_FORMAT("env=%d, failed to load referenced body from filename '%s'", _penv->GetId()%fullFilename);
                 if (_bMustResolveURI) {
@@ -276,7 +269,6 @@ public:
         if(IsRemote()) {
             _DownloadRecursively(rEnvInfo);
         }
-
         _ProcessEnvInfoBodies(envInfo, rEnvInfo, alloc, _uri, _filename, mapProcessedConnectedBodyUris);
 
         std::vector<KinBody::KinBodyInfoPtr>::iterator itBodyInfo = envInfo._vBodyInfos.begin();
@@ -410,19 +402,17 @@ public:
     std::string ResolveRemoteUri(const std::string &uri){
         std::string scheme, path, fragment;
         ParseURI(uri, scheme, path, fragment );
-        printf("\n#######\n");
-        if (scheme == "file"){
-            return ResolveURI(scheme, path, std::string(), _vOpenRAVESchemeAliases);\
+
+        if (scheme == "file") {
+
+            return ResolveURI(scheme, path, std::string(), _vOpenRAVESchemeAliases);
         }
-        if (_StartsWith(uri, "http")){
+        if (_StartsWith(uri, "http")) {
             return uri;
         }
-        // printf("uri: %s\n", uri.c_str());
-        // printf("scheme: %s\n", scheme.c_str());
-        // printf("path: %s\n", path.c_str());
-        // printf("fragment: %s\n", fragment.c_str());
 
-        
+
+
         return _remoteUrl + uri.substr(uri.find_first_of(":/")+2,  uri.find_last_of("#") - uri.find_last_of(":/") -1);
     }
 
@@ -455,27 +445,25 @@ protected:
         return false;
     }
 
-    boost::shared_ptr<const rapidjson::Document> _GetDocumentFromFilename(const std::string& referenceURI, rapidjson::Document::AllocatorType& alloc)
+    boost::shared_ptr<const rapidjson::Document> _GetDocumentFromFilename(const std::string& referenceURI)
     {
         boost::shared_ptr<const rapidjson::Document> doc;
+
         // TODO: optimize this. for the first time doc is cached, all the expandable object will never get cached, because we are not update document cache after expand any body
-        printf("referenceUri in get document from filename %s\n", referenceURI.c_str());
 
         if (_rapidJSONDocuments.find(referenceURI) != _rapidJSONDocuments.end()) {
             doc = _rapidJSONDocuments[referenceURI];
         }
         else {
-            boost::shared_ptr<rapidjson::Document> newDoc;
+            boost::shared_ptr<rapidjson::Document> newDoc = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document());;
             if (_EndsWith(referenceURI, ".json") && !_StartsWith(referenceURI, "http")) {
-                newDoc.reset(new rapidjson::Document(&alloc));
+                _URLsAlreadyStaged.push_back(referenceURI);
                 OpenRapidJsonDocument(referenceURI, *newDoc);
             }
             else if (_EndsWith(referenceURI, ".msgpack")) {
-                newDoc.reset(new rapidjson::Document(&alloc));
                 OpenMsgPackDocument(referenceURI, *newDoc);
             }
             if (!!newDoc) {
-
                 doc = newDoc;
                 _rapidJSONDocuments[referenceURI] = doc;
             }
@@ -502,6 +490,7 @@ protected:
                 std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
                 if (_IsExpandableReferenceUri(referenceUri)) {
                     std::set<std::string> circularReference;
+
                     int insertIndex = _ExpandRapidJSON(envInfo, bodyId, bodyName, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc, _filename);
                     if( insertIndex < 0 ) {
                         RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s' inside file '%s'", referenceUri%_filename);
@@ -595,13 +584,13 @@ protected:
                 RAVELOG_WARN_FORMAT("env=%d, filename had '.dae' suffix, so changed to %s", _penv->GetId()%path);
             }
             std::string fullFilename;
+
             if(IsRemote()) {
                 fullFilename = ResolveRemoteUri(referenceUri);
             }
             else{
                 fullFilename = ResolveURI(scheme, path, std::string(), GetOpenRAVESchemeAliases());
             }
-
             if (fullFilename.empty()) {
 
 
@@ -621,7 +610,7 @@ protected:
             uint64_t beforeOpenStampUS = utils::GetMonotonicTime();
 
 
-            boost::shared_ptr<const rapidjson::Document> referenceDoc = _GetDocumentFromFilename(fullFilename, alloc);
+            boost::shared_ptr<const rapidjson::Document> referenceDoc = _GetDocumentFromFilename(fullFilename);
             if (!referenceDoc || !(*referenceDoc).HasMember("bodies")) {
                 RAVELOG_ERROR_FORMAT("referenced document cannot be loaded, or has no bodies: %s", fullFilename);
                 return -1;
@@ -854,11 +843,24 @@ protected:
                 }
                 std::set<std::string> circularReference;
                 EnvironmentBase::EnvironmentBaseInfo envInfo;
-                _AddReferenceURIToDownload(pConnected->_uri);
+
+                ResolveRemoteUri(pConnected->_uri);
+
+
+                if (_IsExpandableReferenceUri(pConnected->_uri) && std::find(_URLsAlreadyStaged.begin(), _URLsAlreadyStaged.end(), pConnected->_uri) == _URLsAlreadyStaged.end()) {
+                    if(_StartsWith(pConnected->_uri,_remoteScheme)) {
+                        if(_AddReferenceURIToDownload(pConnected->_uri)) {
+                            RAVELOG_WARN_FORMAT("failed to create curl handler from %s", pConnected->_uri);
+                        }
+                    }
+                    else{
+                        _DownloadRecursively( (*(_GetDocumentFromFilename( ResolveRemoteUri(pConnected->_uri)))));
+                    }
+                }
+
             }
             _DownloadConnectedBodies();
         }
-
 
         FOREACH(itConnected, robotInfo._vConnectedBodyInfos) {
             RobotBase::ConnectedBodyInfoPtr& pConnected = *itConnected;
@@ -869,9 +871,7 @@ protected:
 
             std::set<std::string> circularReference;
             EnvironmentBase::EnvironmentBaseInfo envInfo;
-
             int insertIndex = _ExpandRapidJSON(envInfo, "__connectedBody__", "", rEnvInfo, pConnected->_uri, circularReference, fUnitScale, alloc, _filename);
-
             if( insertIndex < 0 ) {
                 RAVELOG_ERROR_FORMAT("env=%d, failed to load connected body from uri '%s'", _penv->GetId()%pConnected->_uri);
                 if (_bMustResolveURI) {
@@ -1042,14 +1042,15 @@ protected:
                 std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
                 std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
                 if (_IsExpandableReferenceUri(referenceUri) && std::find(_URLsAlreadyStaged.begin(), _URLsAlreadyStaged.end(), referenceUri) == _URLsAlreadyStaged.end()) {
-                    if(_AddReferenceURIToDownload(referenceUri) && _StartsWith(referenceUri, "http")) {
-                        RAVELOG_WARN_FORMAT("failed to create curl handler from %s", referenceUri);
+                    if(_StartsWith(referenceUri,_remoteScheme)) { //TODO fix issue here
+                        if(_AddReferenceURIToDownload(referenceUri)) {
+                            RAVELOG_WARN_FORMAT("failed to create curl handler from %s", referenceUri);
+
+                        }
                     }
                     else{
-                        
-                        _GetDocumentFromFilename( ResolveRemoteUri(referenceUri), rapidjson::Document().GetAllocator());
+                        _GetDocumentFromFilename( ResolveRemoteUri(referenceUri));
                     }
-
                 }
                 else if( !referenceUri.empty() && std::find(_URLsAlreadyStaged.begin(), _URLsAlreadyStaged.end(), referenceUri) == _URLsAlreadyStaged.end()) {
                     if (_bMustResolveURI) {
@@ -1061,7 +1062,6 @@ protected:
 
             }
         }
-        
 
     }
 
@@ -1093,6 +1093,7 @@ protected:
                         if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
                             boost::shared_ptr<rapidjson::Document> document = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document);
                             document.get()->Parse(_curlDataVector.at(i).get()->buffer->GetString());
+
                             _PutDocumentIntoRapidJSONMap(_curlDataVector.at(i).get()->URI, document);
                             _ParseDocumentForNewURLs( *document);
 
@@ -1112,12 +1113,12 @@ protected:
 
     void _DownloadOne(const std::string& currentURI, rapidjson::Document& doc)
     {
+
         std::vector<int> vInputToBodyInfoMapping;
         //TODO make function to replace it with remote URL
 
 
         _AddReferenceURIToDownload(currentURI);
-
         int stillRunning = 0;
         int msgInQueue = 0;
         do {
@@ -1239,7 +1240,6 @@ protected:
         std::string newUri = ResolveRemoteUri(referenceUri);
         boost::shared_ptr<curlData> data = boost::shared_ptr<curlData>(new curlData);
         data.get()->URI = newUri;
-        printf("data.get()->URI %s\n", data.get()->URI.c_str());
         if(data.get()->curl) {
             //Set up easy curl to download the correlating files
             curl_easy_setopt(data.get()->curl, CURLOPT_URL, data.get()->URI.c_str());
@@ -1269,12 +1269,10 @@ protected:
     /// \brief open and cache a json document remotly
     void _OpenRapidJsonDocumentRemote(const std::string& filename, rapidjson::Document& doc)
     {
-        if (_StartsWith(filename, "http")){
-            printf("_OpenRapidJsonDocumentRemote: Remote\n");
+        if (_StartsWith(filename, "http")) {
             _DownloadOne(filename,  doc);
         }
         else{
-            printf("_OpenRapidJsonDocumentRemote: Local\n");
             OpenRapidJsonDocument(filename, doc);
         }
     }
@@ -1365,7 +1363,6 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFro
         if (fullFilename.size() == 0 ) {
             return false;
         }
-        printf("full filename: %s\n", fullFilename.c_str());
         reader.OpenRapidJsonDocumentRemote(fullFilename, rEnvInfo);
     }
 
