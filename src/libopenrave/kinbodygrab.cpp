@@ -755,16 +755,18 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
 }
 
-void KinBody::GrabbedInfo::serialize(std::ostream& o) const
+void KinBody::GrabbedInfo::serialize(std::ostream& os) const
 {
-    o << _grabbedname << " ";
-    o << _robotlinkname << " ";
-    SerializeRound(o, _trelative);
+    os << _grabbedname << " ";
+    os << _robotlinkname << " ";
+    SerializeRound(os, _trelative);
     for( std::set<std::string>::const_iterator it = _setIgnoreRobotLinkNames.begin(); it != _setIgnoreRobotLinkNames.end(); ++it ) {
-        o << (*it) << " ";
+        os << (*it) << " ";
     }
     if( !!_prUserData ) {
-        o << OpenRAVE::orjson::DumpJson(*_prUserData) << " ";
+        // using 'void DumpJson(Value, ostream, unsigned int)' so that std::setprecision is respected
+        OpenRAVE::orjson::DumpJson(*_prUserData, os);
+        os << " ";
     }
 }
 
