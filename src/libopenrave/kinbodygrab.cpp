@@ -300,10 +300,11 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
     velocity.first += velocity.second.cross(tGrabbedBody.trans - tGrabbingLink.trans);
     pGrabbedBody->SetVelocity(velocity.first, velocity.second);
-    if(!!prUserData) {
+    if( !!prUserData ) {
         pGrabbed->_prUserData.reset(new rapidjson::Document());
         pGrabbed->_prUserData->CopyFrom(*prUserData, pGrabbed->_prUserData->GetAllocator());
-    } else {
+    }
+    else {
         pGrabbed->_prUserData.reset();
     }
     _vGrabbedBodies.push_back(pGrabbed);
@@ -435,10 +436,11 @@ void KinBody::RegrabAll()
         GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink));
         pNewGrabbed->_tRelative = pGrabbed->_tRelative;
         pNewGrabbed->_setGrabberLinkIndicesToIgnore.swap(pGrabbed->_setGrabberLinkIndicesToIgnore);
-        if (!!pGrabbed->_prUserData) {
+        if( !!pGrabbed->_prUserData ) {
             pNewGrabbed->_prUserData.reset(new rapidjson::Document());
             pNewGrabbed->_prUserData->CopyFrom(*(pGrabbed->_prUserData), pNewGrabbed->_prUserData->GetAllocator());
-        } else {
+        }
+        else {
             pNewGrabbed->_prUserData.reset();
         }
 
