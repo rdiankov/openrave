@@ -637,7 +637,7 @@ bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<
 }
 
 template<typename T>
-inline bool AreSharedPtrsDeepEqual(const boost::shared_ptr<T>& pFirst, const boost::shared_ptr<T>& pSecond) {
+bool AreSharedPtrsDeepEqual(const boost::shared_ptr<T>& pFirst, const boost::shared_ptr<T>& pSecond) {
     return (pFirst == pSecond) || (!!pFirst && !!pSecond && *pFirst == *pSecond);
 }
 
