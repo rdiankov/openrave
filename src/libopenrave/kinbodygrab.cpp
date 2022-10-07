@@ -565,14 +565,7 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_UserDataNotMatch);
 
-        bool userDataMatch = false;
-        if( !pgrabbed->_prUserData && !prUserData ) {
-            userDataMatch = true;
-        }
-        else if( !!pgrabbed->_prUserData && !!prUserData && *(pgrabbed->_prUserData) == *prUserData ) {
-            userDataMatch = true;
-        }
-        if( userDataMatch ) {
+        if( AreSharedPtrsDeepEqual(pgrabbed->_prUserData, prUserData) ) {
             return GICR_Identical;
         }
     }
