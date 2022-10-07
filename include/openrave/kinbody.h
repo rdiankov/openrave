@@ -2027,24 +2027,7 @@ private:
 public:
         GrabbedInfo() {
         }
-        bool operator==(const GrabbedInfo& other) const {
-            bool isUserDataSame = false;
-            if(!!_prUserData && !!other._prUserData && *_prUserData == *(other._prUserData)) {
-                // same content
-                isUserDataSame = true;
-            }
-            else if(!_prUserData && !other._prUserData) {
-                // both data are not set
-                isUserDataSame = true;
-            }
-
-            return _id == other._id
-                   && _grabbedname == other._grabbedname
-                   && _robotlinkname == other._robotlinkname
-                   && _trelative == other._trelative
-                   && _setIgnoreRobotLinkNames == other._setIgnoreRobotLinkNames
-                   && isUserDataSame;
-        }
+        bool operator==(const GrabbedInfo& other) const;
         bool operator!=(const GrabbedInfo& other) const {
             return !operator==(other);
         }

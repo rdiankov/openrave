@@ -257,22 +257,14 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
         if( pPreviouslyGrabbed->_pGrabbingLink == pGrabbingLink ) {
             dReal distError2 = TransformDistance2(tGrabbingLink*pPreviouslyGrabbed->_tRelative, tGrabbedBody);
             if( distError2 <= g_fEpsilonLinear ) {
-                bool bIsUserDataSame = false;
-                if(!pPreviouslyGrabbed->_prUserData && !prUserData) {
-                    bIsUserDataSame = true;
-                }
-                else if(!!pPreviouslyGrabbed->_prUserData && !!prUserData && *(pPreviouslyGrabbed->_prUserData) == *prUserData) {
-                    bIsUserDataSame = true;
-                }
-                else {
-                    RAVELOG_DEBUG_FORMAT("env=%s, body '%s' is already grabbing body '%s' but userdata differs.", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName());
-                }
-
-                if (bIsUserDataSame) {
+                if (AreSharedPtrsDeepEqual(pPreviouslyGrabbed->_prUserData, prUserData)) {
                     // Grabbing the same object at the same relative transform with the same grabbing link with the same userdata.
                     // So just modify setGrabberLinksToIgnore and then return.
                     pPreviouslyGrabbed->AddMoreIgnoreLinks(setGrabberLinksToIgnore);
                     return true;
+                }
+                else {
+                    RAVELOG_DEBUG_FORMAT("env=%s, body '%s' is already grabbing body '%s' but userdata differs.", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName());
                 }
             }
             else {
@@ -530,14 +522,7 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_UserDataNotMatch);
 
-        bool userDataMatch = false;
-        if( !pgrabbed->_prUserData && !prUserData ) {
-            userDataMatch = true;
-        }
-        else if( !!pgrabbed->_prUserData && !!prUserData && *(pgrabbed->_prUserData) == *prUserData ) {
-            userDataMatch = true;
-        }
-        if( userDataMatch ) {
+        if( AreSharedPtrsDeepEqual(pgrabbed->_prUserData, prUserData) ) {
             return GICR_Identical;
         }
     }
@@ -711,6 +696,16 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
         }
     }
     return false;
+}
+
+bool KinBody::GrabbedInfo::operator==(const GrabbedInfo& other) const
+{
+    return _id == other._id
+       && _grabbedname == other._grabbedname
+       && _robotlinkname == other._robotlinkname
+       && _trelative == other._trelative
+       && _setIgnoreRobotLinkNames == other._setIgnoreRobotLinkNames
+       && AreSharedPtrsDeepEqual(_prUserData, other._prUserData);
 }
 
 void KinBody::GrabbedInfo::Reset()
