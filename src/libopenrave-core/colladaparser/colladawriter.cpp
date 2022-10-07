@@ -2438,7 +2438,6 @@ private:
         FOREACHC(itias, listModelDatabase) {
             KinBodyPtr pbody = RaveInterfaceCast<KinBody>((*itias)->pbody);
             pbody->GetGrabbed(vGrabbedBodies);
-            // TODO(mirai) decide whether to write GrabbedInfo here
             if( vGrabbedBodies.size() > 0 && !(*itias)->ipmout ) {
                 RAVELOG_DEBUG_FORMAT("physics info is not written to body %s, so cannot write any grabbed bodies", pbody->GetName());
                 continue;

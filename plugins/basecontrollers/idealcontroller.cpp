@@ -354,11 +354,9 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 if( !!grabinfo.trelativepose ) {
                     grabinfo.pbody->SetTransform(plink->GetTransform() * *grabinfo.trelativepose);
                 }
-                // TODO(mirai) revert it back without nullptr
                 probot->Grab(grabinfo.pbody, plink, nullptr);
             }
             FOREACH(it,listgrab) {
-                // TODO(mirai) revert it back without nullptr
                 probot->Grab(it->first,it->second, nullptr);
             }
             // set _bIsDone after all computation is done!

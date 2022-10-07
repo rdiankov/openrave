@@ -664,12 +664,10 @@ public:
                 {
                     grabinfo.pbody->SetTransform(plink->GetTransform() * *grabinfo.trelativepose);
                 }
-                // TODO(mirai) revert it back without nullptr
                 _probot->Grab(grabinfo.pbody, plink, nullptr);
             }
             FOREACH(it,listgrab)
             {
-                // TODO(mirai) revert it back without nullptr
                 _probot->Grab(it->first,it->second, nullptr);
             }
 

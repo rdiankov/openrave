@@ -1093,7 +1093,6 @@ protected:
         }
 
         RAVELOG_DEBUG(str(boost::format("robot %s:%s grabbing body %s...\n")%robot->GetName()%robot->GetActiveManipulator()->GetEndEffector()->GetName()%ptarget->GetName()));
-        // TODO(mirai) revert it back without nullptr
         robot->Grab(ptarget, nullptr);
         return true;
     }
