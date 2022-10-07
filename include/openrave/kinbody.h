@@ -2028,15 +2028,7 @@ public:
         GrabbedInfo() {
         }
         bool operator==(const GrabbedInfo& other) const {
-            bool isUserDataSame = false;
-            if(!!_prUserData && !!other._prUserData && *_prUserData == *(other._prUserData)) {
-                // same content
-                isUserDataSame = true;
-            }
-            else if(!_prUserData && !other._prUserData) {
-                // both data are not set
-                isUserDataSame = true;
-            }
+            const bool isUserDataSame = (!_prUserData && !other._prUserData) || (!!_prUserData && !!other._prUserData && *_prUserData == *(other->_prUserData));
 
             return _id == other._id
                    && _grabbedname == other._grabbedname
@@ -3188,7 +3180,7 @@ private:
         \param[in] prUserData custom data to keep in the body
         \return true if successful and body is grabbed.
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData = nullptr);
 
     /** \brief Grab the body with the specified link.
 
@@ -3199,7 +3191,7 @@ private:
         \param[in] prUserData custom data to keep in the body
         \return true if successful and body is grabbed.
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const boost::shared_ptr<rapidjson::Document>& prUserData);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const boost::shared_ptr<rapidjson::Document>& prUserData = nullptr);
 
     /** \brief Grab a body with the specified link.
 
@@ -3208,7 +3200,7 @@ private:
         \param[in] prUserData custom data to keep in the body
         \return true if successful and body is grabbed/
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const boost::shared_ptr<rapidjson::Document>& prUserData);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const boost::shared_ptr<rapidjson::Document>& prUserData = nullptr);
 
     /** \brief Release the body if grabbed.
 

@@ -258,7 +258,6 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
             dReal distError2 = TransformDistance2(tGrabbingLink*pPreviouslyGrabbed->_tRelative, tGrabbedBody);
             if( distError2 <= g_fEpsilonLinear ) {
                 bool bIsUserDataSame = false;
-                // Comparing user data. Here userdata can contain graspparams json object.
                 if(!pPreviouslyGrabbed->_prUserData && !prUserData) {
                     bIsUserDataSame = true;
                 }
@@ -479,12 +478,14 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
 
         // compare grabbing body
         if( !pgrabbedbody || pgrabbedbody.get() != &body ) {
+            RAVELOG_WARN("[mirai] pgrabbedbody does not match, so continuing. it's okay if there are more than two grabbed objects");
             continue;
         }
         defaultErrorCode = GICR_GrabbingLinkNotMatch;
 
         // compare grabbing robot link
         if( pgrabbed->_pGrabbingLink.get() != &bodyLinkToGrabWith ) {
+            RAVELOG_WARN("[mirai] pGrabbingLink does not match, so continuing.");
             continue;
         }
         return GICR_Identical;
@@ -500,12 +501,14 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
 
         // compare grabbing body
         if( !pgrabbedbody || pgrabbedbody.get() != &body ) {
+            RAVELOG_WARN("[mirai] name not match");
             continue;
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_GrabbingLinkNotMatch);
 
         // compare grabbing robot link
         if( pgrabbed->_pGrabbingLink.get() != &bodyLinkToGrabWith ) {
+            RAVELOG_WARN("[mirai] grabbing link not match");
             continue;
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_IgnoredLinksNotMatch);
@@ -520,25 +523,41 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
             }
             if( isLinkIgnored != (setGrabberLinksToIgnore.count(link->GetIndex()) > 0) ) {
                 ignoringLinksMatch = false;
-                RAVELOG_WARN("[mirai] ignore link not match");
                 break;
             }
         }
 
         if( !ignoringLinksMatch || numIgnoredLinks != setGrabberLinksToIgnore.size() ) {
+            RAVELOG_WARN("[mirai] ignore link num not match");
             continue;
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_UserDataNotMatch);
 
         bool userDataMatch = false;
         if( !pgrabbed->_prUserData && !prUserData ) {
+            RAVELOG_WARN("[mirai] prUserData both null");
             userDataMatch = true;
         }
         else if( !!pgrabbed->_prUserData && !!prUserData && *(pgrabbed->_prUserData) == *prUserData ) {
+            RAVELOG_WARN("[mirai] prUserData has same content");
             userDataMatch = true;
         }
+        if( !pgrabbed->_prUserData) { 
+            RAVELOG_WARN("[mirai] pgrabbed->_prUserData null");
+        } else {
+            RAVELOG_WARN_FORMAT("[mirai] pgrabbed->_prUserData %s", OpenRAVE::orjson::DumpJson(*(pgrabbed->_prUserData)));
+        }
+        if( !prUserData) { 
+            RAVELOG_WARN("[mirai] prUserData null");
+        } else {
+            RAVELOG_WARN_FORMAT("[mirai] prUserData %s", OpenRAVE::orjson::DumpJson(*prUserData));
+        }
         if( userDataMatch ) {
+            RAVELOG_WARN("[mirai] userdata match");
             return GICR_Identical;
+        }
+        else {
+            RAVELOG_WARN("[mirai] userdata not match");
         }
     }
     return defaultErrorCode;
@@ -552,12 +571,14 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
 
         // compare grabbing body
         if( !pgrabbedbody || pgrabbedbody.get() != &body ) {
+            RAVELOG_WARN("[mirai] name not match");
             continue;
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_GrabbingLinkNotMatch);
 
         // compare grabbing robot link
         if( pgrabbed->_pGrabbingLink.get() != &bodyLinkToGrabWith ) {
+            RAVELOG_WARN("[mirai] grabbing link not match");
             continue;
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_IgnoredLinksNotMatch);
@@ -568,27 +589,45 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         for( const LinkPtr& link : _veclinks ) {
             const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end();
             if( isLinkIgnored ) {
+                RAVELOG_WARN_FORMAT("[mirai] link %d %s ignored", link->GetIndex()%link->GetName());
                 ++numIgnoredLinks;
             }
             if( isLinkIgnored != (setGrabberLinksToIgnore.count(link->GetName()) > 0) ) {
                 ignoringLinksMatch = false;
+                RAVELOG_WARN_FORMAT("[mirai] link %d %s not match", link->GetIndex()%link->GetName());
                 break;
             }
         }
         if( !ignoringLinksMatch || numIgnoredLinks != setGrabberLinksToIgnore.size() ) {
+            RAVELOG_WARN_FORMAT("[mirai] ignore link num not match %d %d", numIgnoredLinks%setGrabberLinksToIgnore.size());
             continue;
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_UserDataNotMatch);
 
         bool userDataMatch = false;
         if( !pgrabbed->_prUserData && !prUserData ) {
+            RAVELOG_WARN("[mirai] prUserData both null");
             userDataMatch = true;
         }
         else if( !!pgrabbed->_prUserData && !!prUserData && *(pgrabbed->_prUserData) == *prUserData ) {
+            RAVELOG_WARN("[mirai] prUserData has same content");
             userDataMatch = true;
+        }
+        if( !pgrabbed->_prUserData) { 
+            RAVELOG_WARN("[mirai] pgrabbed->_prUserData null");
+        } else {
+            RAVELOG_WARN_FORMAT("[mirai] pgrabbed->_prUserData %s", OpenRAVE::orjson::DumpJson(*(pgrabbed->_prUserData)));
+        }
+        if( !prUserData) { 
+            RAVELOG_WARN("[mirai] prUserData null");
+        } else {
+            RAVELOG_WARN_FORMAT("[mirai] prUserData %s", OpenRAVE::orjson::DumpJson(*prUserData));
         }
         if( userDataMatch ) {
             return GICR_Identical;
+        }
+        else {
+            RAVELOG_WARN("[mirai] userdata not match");
         }
     }
     return defaultErrorCode;
@@ -736,9 +775,12 @@ void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
     if( !_setIgnoreRobotLinkNames.empty() ) {
         orjson::SetJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames, allocator);
     }
+    RAVELOG_WARN("[mirai] before");
     if( !!_prUserData ) {
         orjson::SetJsonValueByKey(value, "userData", *_prUserData, allocator);
+        RAVELOG_WARN("[mirai] set userdata");
     }
+    RAVELOG_WARN("[mirai] after");
 }
 
 void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -751,13 +793,17 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _trelative.trans *= fUnitScale;
     }
     orjson::LoadJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames);
+    RAVELOG_WARN("[mirai] before");
     if( value.HasMember("userData" ) ) {
         _prUserData.reset(new rapidjson::Document());
         _prUserData->CopyFrom(value["userData"], _prUserData->GetAllocator());
+        RAVELOG_WARN("[mirai] set userdata");
     }
     else {
         _prUserData.reset();
+        RAVELOG_WARN("[mirai] does not set userdata");
     }
+    RAVELOG_WARN("[mirai] after");
 }
 
 void KinBody::GrabbedInfo::serialize(std::ostream& o) const

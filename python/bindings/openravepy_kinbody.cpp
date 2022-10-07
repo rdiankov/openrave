@@ -2216,15 +2216,9 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
         }
     }
 #endif
-    // convert userdata
     if( !IS_PYTHONOBJECT_NONE(_userData) ) {
-        rapidjson::Document doc;
-        toRapidJSONValue(_userData, doc, doc.GetAllocator());
         pinfo->_prUserData.reset(new rapidjson::Document());
-        pinfo->_prUserData->CopyFrom(doc, pinfo->_prUserData->GetAllocator());
-    }
-    else {
-        pinfo->_prUserData.reset();
+        toRapidJSONValue(_userData, *(pinfo->_prUserData), pinfo->_prUserData->GetAllocator());
     }
     return pinfo;
 }
@@ -2282,12 +2276,16 @@ void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
     }
     _setIgnoreRobotLinkNames = setRobotLinksToIgnore;
 #endif
+    RAVELOG_INFO("[mirai] _Update");
     if( !!info._prUserData ) {
         _userData = toPyObject(*(info._prUserData));
+        RAVELOG_INFO("[mirai] _Update has");
     }
     else {
+        RAVELOG_INFO("[mirai] _Update does not have");
         _userData = py::none_();
     }
+    RAVELOG_INFO("[mirai] _Update");
 }
 
 py::object PyKinBody::PyGrabbedInfo::__unicode__() {
@@ -3833,12 +3831,10 @@ int PyKinBody::CheckGrabbedInfo(PyKinBodyPtr pbody, object pylink, object linkst
 {
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
-    boost::shared_ptr<rapidjson::Document> prUserData(new rapidjson::Document());
+    boost::shared_ptr<rapidjson::Document> prUserData = nullptr;
     if( !IS_PYTHONOBJECT_NONE(userData) ) {
+        prUserData.reset(new rapidjson::Document());
         toRapidJSONValue(userData, *prUserData, prUserData->GetAllocator());
-    }
-    else {
-        prUserData.reset();
     }
     if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
         // linkstoignore is a list of link names

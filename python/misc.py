@@ -850,6 +850,7 @@ def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,compare
                     grabbedlink1 = robot1.IsGrabbing(g1)
                     assert(grabbedlink0.GetName()==grabbedlink1.GetName())
                 # compare the positions
+            # TODO(mirai) grabbedInfo?
 
             if comparesensors:
                 pass
@@ -884,3 +885,4 @@ def CompareEnvironments(env,env2,options=openravepy_int.CloningOptions.Bodies,ep
                 assert( set([body.GetName() for body in grabbed]) == set([body.GetName() for body in grabbed2]) )
                 assert( transdist(robot.GetActiveDOFIndices(),robot2.GetActiveDOFIndices()) == 0)
                 assert( robot.GetActiveManipulator().GetName() == robot2.GetActiveManipulator().GetName())
+        # TODO(mirai) grabbedInfo?
