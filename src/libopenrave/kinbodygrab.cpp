@@ -258,7 +258,6 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
             dReal distError2 = TransformDistance2(tGrabbingLink*pPreviouslyGrabbed->_tRelative, tGrabbedBody);
             if( distError2 <= g_fEpsilonLinear ) {
                 bool bIsUserDataSame = false;
-                // Comparing user data. Here userdata can contain graspparams json object.
                 if(!pPreviouslyGrabbed->_prUserData && !prUserData) {
                     bIsUserDataSame = true;
                 }
@@ -520,7 +519,6 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
             }
             if( isLinkIgnored != (setGrabberLinksToIgnore.count(link->GetIndex()) > 0) ) {
                 ignoringLinksMatch = false;
-                RAVELOG_WARN("[mirai] ignore link not match");
                 break;
             }
         }
