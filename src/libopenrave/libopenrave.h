@@ -665,26 +665,16 @@ bool AreArraysDeepEqual(const boost::array<boost::shared_ptr<T>, N>& vFirst, con
 }
 
 /// \brief copies rapidjson document pointer and data from one to another. if source pointer is nullptr, then resets destination pointer to nullptr
-inline void DeepCopyUninitializedJsonDocumentPointer(const boost::shared_ptr<rapidjson::Document>& prSource, boost::shared_ptr<rapidjson::Document>& prDestUninitialized)
+inline void DeepCopy(const boost::shared_ptr<rapidjson::Document>& source, boost::shared_ptr<rapidjson::Document>& dest)
 {
-    if( !!prSource ) {
-        prDestUninitialized.reset(new rapidjson::Document());
-        OpenRAVE::orjson::SaveJsonValue(*(prDestUninitialized), prSource);
+    if( !!source ) {
+        dest.reset(new rapidjson::Document());
+        OpenRAVE::orjson::SaveJsonValue(*(dest), source);
     }
     else {
-        prDestUninitialized.reset();
+        dest.reset();
     }
 }
-
-/// \brief copies rapidjson document pointer and data from one to another. dest pointer is expected to be nullptr at start, so this function does nothing if source pointer is nullptr
-inline void DeepCopyInitializedJsonDocumentPointer(const boost::shared_ptr<rapidjson::Document>& prSource, boost::shared_ptr<rapidjson::Document>& prDestInitialized)
-{
-    if( !!prSource ) {
-        prDestInitialized.reset(new rapidjson::Document());
-        OpenRAVE::orjson::SaveJsonValue(*(prDestInitialized), prSource);
-    }
-}
-
 
 } // end OpenRAVE namespace
 

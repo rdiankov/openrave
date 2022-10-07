@@ -292,7 +292,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
     velocity.first += velocity.second.cross(tGrabbedBody.trans - tGrabbingLink.trans);
     pGrabbedBody->SetVelocity(velocity.first, velocity.second);
-    DeepCopyInitializedJsonDocumentPointer(prUserData, pGrabbed->_prUserData);
+    DeepCopy(prUserData, pGrabbed->_prUserData);
     _vGrabbedBodies.push_back(pGrabbed);
 
     try {
@@ -422,7 +422,7 @@ void KinBody::RegrabAll()
         GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink));
         pNewGrabbed->_tRelative = pGrabbed->_tRelative;
         pNewGrabbed->_setGrabberLinkIndicesToIgnore.swap(pGrabbed->_setGrabberLinkIndicesToIgnore);
-        DeepCopyInitializedJsonDocumentPointer(pGrabbed->_prUserData, pNewGrabbed->_prUserData);
+        DeepCopy(pGrabbed->_prUserData, pNewGrabbed->_prUserData);
 
         std::pair<Vector, Vector> velocity = pNewGrabbed->_pGrabbingLink->GetVelocity();
         velocity.first += velocity.second.cross(pBody->GetTransform().trans - pNewGrabbed->_pGrabbingLink->GetTransform().trans);
@@ -597,7 +597,7 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos
             poutputinfo->_robotlinkname = pgrabbed->_pGrabbingLink->GetName();
             poutputinfo->_trelative = pgrabbed->_tRelative;
             poutputinfo->_setIgnoreRobotLinkNames.clear();
-            DeepCopyInitializedJsonDocumentPointer(pgrabbed->_prUserData, poutputinfo->_prUserData);
+            DeepCopy(pgrabbed->_prUserData, poutputinfo->_prUserData);
 
             FOREACHC(itlink, _veclinks) {
                 if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
@@ -624,7 +624,7 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vGrabbedInfos) const
             outputinfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
             outputinfo._trelative = pgrabbed->_tRelative;
             outputinfo._setIgnoreRobotLinkNames.clear();
-            DeepCopyUninitializedJsonDocumentPointer(pgrabbed->_prUserData, outputinfo._prUserData);
+            DeepCopy(pgrabbed->_prUserData, outputinfo._prUserData);
 
             FOREACHC(itlink, _veclinks) {
                 if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
@@ -647,7 +647,7 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
                 grabbedInfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
                 grabbedInfo._trelative = pgrabbed->_tRelative;
                 grabbedInfo._setIgnoreRobotLinkNames.clear();
-                DeepCopyInitializedJsonDocumentPointer(pgrabbed->_prUserData, grabbedInfo._prUserData);
+                DeepCopy(pgrabbed->_prUserData, grabbedInfo._prUserData);
 
                 FOREACHC(itlink, _veclinks) {
                     if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
@@ -782,7 +782,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
             FOREACHC(itLinkName, pGrabbedInfo->_setIgnoreRobotLinkNames) {
                 pGrabbed->_setGrabberLinkIndicesToIgnore.insert(GetLink(*itLinkName)->GetIndex());
             }
-            DeepCopyInitializedJsonDocumentPointer(pGrabbedInfo->_prUserData, pGrabbed->_prUserData);
+            DeepCopy(pGrabbedInfo->_prUserData, pGrabbed->_prUserData);
 
             std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
             velocity.first += velocity.second.cross(tBody.trans - tGrabbingLink.trans);

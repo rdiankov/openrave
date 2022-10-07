@@ -135,7 +135,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                                         }
                                         pNewGrabbed->_SetLinkNonCollidingIsValid(true);
                                     }
-                                    DeepCopyInitializedJsonDocumentPointer(pGrabbed->_prUserData, pNewGrabbed->_prUserData);
+                                    DeepCopy(pGrabbed->_prUserData, pNewGrabbed->_prUserData);
 
                                     pbody->_AttachBody(pNewGrabbedBody);
                                     pbody->_vGrabbedBodies.push_back(pNewGrabbed);
@@ -306,7 +306,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                                 }
                                 pNewGrabbed->_SetLinkNonCollidingIsValid(true);
                             }
-                            DeepCopyInitializedJsonDocumentPointer(pGrabbed->_prUserData, pNewGrabbed->_prUserData);
+                            DeepCopy(pGrabbed->_prUserData, pNewGrabbed->_prUserData);
 
                             body._AttachBody(pNewGrabbedBody);
                             body._vGrabbedBodies.push_back(pNewGrabbed);
