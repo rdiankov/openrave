@@ -962,7 +962,7 @@ inline void UpdateJson(rapidjson::Document& a, const rapidjson::Value& b) {
     }
 }
 
-} // namespace JSON
+} // namespace orjson
 
 } // namespace OpenRAVE
 

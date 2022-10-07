@@ -713,7 +713,7 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     orjson::LoadJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames);
     if( value.HasMember("userData" ) ) {
         _prUserData.reset(new rapidjson::Document());
-        _prUserData->CopyFrom(value["userData"], _prUserData->GetAllocator());
+        orjson::SaveJsonValue(*_prUserData, value["userData"], _prUserData->GetAllocator());
     }
     else {
         _prUserData.reset();
