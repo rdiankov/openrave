@@ -3232,7 +3232,7 @@ private:
         GICR_BodyNotGrabbed = 1,  //< Specified body is not grabbed
         GICR_GrabbingLinkNotMatch = 2, ///< Specified body is grabbed, but grabbing link does not match
         GICR_IgnoredLinksNotMatch = 3, ///< Specified body is grabbed and grabbing link matches, but ignored links do not match
-        GICR_UserDataNotMatch = 4, ///< Specified body is grabbed, grabbing link matches, and ignored links match, but user data does not match
+        GICR_UserDataNotMatch = 4, ///< Specified body is grabbed, grabbing link matches, and ignored links match, but user data do not match
     };
 
     /** \brief Checks whether a body is grabbed with the given robot link.

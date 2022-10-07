@@ -18,8 +18,6 @@
 
 namespace OpenRAVE {
 
-
-
 Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
 {
     _pGrabbedBody = pGrabbedBody;
