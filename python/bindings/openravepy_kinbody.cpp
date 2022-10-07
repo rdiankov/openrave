@@ -2216,7 +2216,6 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
         }
     }
 #endif
-    // convert userdata
     if( !IS_PYTHONOBJECT_NONE(_userData) ) {
         pinfo->_prUserData.reset(new rapidjson::Document());
         toRapidJSONValue(_userData, *(pinfo->_prUserData), pinfo->_prUserData->GetAllocator());
@@ -3775,13 +3774,10 @@ bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, ob
     CHECK_POINTER(pylink);
     std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
     // convert from python dict to rapidjson and pass to _pbody->Grab
-    boost::shared_ptr<rapidjson::Document> prUserData;
+    boost::shared_ptr<rapidjson::Document> prUserData = nullptr;
     if( !IS_PYTHONOBJECT_NONE(userData) ) {
         prUserData.reset(new rapidjson::Document());
         toRapidJSONValue(userData, *prUserData, prUserData->GetAllocator());
-    }
-    else {
-        prUserData.reset();
     }
     return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore, prUserData);
 }
