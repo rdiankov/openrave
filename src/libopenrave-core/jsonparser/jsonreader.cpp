@@ -40,7 +40,8 @@ static bool _EndsWith(const std::string& fullString, const std::string& endStrin
     return false;
 }
 
-static bool _StartsWith(const std::string& fullString, const std::string& startString) {
+static bool _StartsWith(const std::string& fullString, const std::string& startString)
+{
     if (fullString.length() >= startString.length()) {
         return fullString.compare(0, startString.length(), startString) == 0;
     }
@@ -50,7 +51,8 @@ static bool _StartsWith(const std::string& fullString, const std::string& startS
 /// \brief if filename endswith oldSuffix, replace it with newSuffix
 ///
 /// \return true if replaced oldSuffix with newSuffix
-static bool _ReplaceFilenameSuffix(std::string& filename, const std::string& oldSuffix, const std::string& newSuffix) {
+static bool _ReplaceFilenameSuffix(std::string& filename, const std::string& oldSuffix, const std::string& newSuffix)
+{
     // fix extension, replace dae with json
     // this is done for ease of migration
     if (_EndsWith(filename, oldSuffix)) {
@@ -127,7 +129,6 @@ static std::string ResolveURI(const std::string& uri, const std::string& curdir,
     ParseURI(uri, scheme, path, fragment);
 
     return ResolveURI(scheme, path, curdir, vOpenRAVESchemeAliases);
-
 }
 
 static std::string CanonicalizeURI(const std::string& suburi, const std::string& parentUri, const std::string& parentFilename)
@@ -173,6 +174,8 @@ public:
             }
             else if (itatt->first == "remoteurl") {
                 _remoteUrl = itatt->second;
+                //Sets up curl multi handle to be used
+                _curlMultiHandle = curl_multi_init();
             }
 
         }
@@ -185,8 +188,6 @@ public:
         _fGlobalScale = 1.0 / _penv->GetUnit().second;
         _deserializeOptions = 0;
 
-        //Sets up curl multi handle to be used
-        _curlMultiHandle = curl_multi_init();
     }
 
     virtual ~JSONReader()
@@ -416,8 +417,7 @@ public:
             return _remoteUrl + uri.substr(uri.find_first_of(":/")+2,  uri.find_last_of("#") - uri.find_last_of(":/") -1);
         }
         else{
-            std::string returnString =  ResolveURI(scheme, path, std::string(), _vOpenRAVESchemeAliases);
-            return returnString;
+            return ResolveURI(scheme, path, std::string(), _vOpenRAVESchemeAliases);
         }
         return std::string();
     }
@@ -463,7 +463,7 @@ protected:
         else {
             boost::shared_ptr<rapidjson::Document> newDoc = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document());;
             if (_EndsWith(referenceURI, ".json") && !_StartsWith(referenceURI, "http")) {
-                _URLsAlreadyStaged.push_back(referenceURI);
+                _urlsAlreadyStaged.push_back(referenceURI);
                 OpenRapidJsonDocument(referenceURI, *newDoc);
             }
             else if (_EndsWith(referenceURI, ".msgpack")) {
@@ -851,7 +851,7 @@ protected:
                 ResolveRemoteUri(pConnected->_uri);
 
 
-                if (_IsExpandableReferenceUri(pConnected->_uri) && std::find(_URLsAlreadyStaged.begin(), _URLsAlreadyStaged.end(), pConnected->_uri) == _URLsAlreadyStaged.end()) {
+                if (_IsExpandableReferenceUri(pConnected->_uri) && std::find(_urlsAlreadyStaged.begin(), _urlsAlreadyStaged.end(), pConnected->_uri) == _urlsAlreadyStaged.end()) {
                     if(_StartsWith(pConnected->_uri,_remoteScheme)) {
                         if(_AddReferenceURIToDownload(pConnected->_uri)) {
                             RAVELOG_WARN_FORMAT("failed to create curl handler from %s", pConnected->_uri);
@@ -1048,7 +1048,7 @@ protected:
                 std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
                 std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
                 std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
-                if (_IsExpandableReferenceUri(referenceUri) && std::find(_URLsAlreadyStaged.begin(), _URLsAlreadyStaged.end(), referenceUri) == _URLsAlreadyStaged.end()) {
+                if (_IsExpandableReferenceUri(referenceUri) && std::find(_urlsAlreadyStaged.begin(), _urlsAlreadyStaged.end(), referenceUri) == _urlsAlreadyStaged.end()) {
                     //Right now this checks to see if it is remote or loading from disk with file:/
                     if(_StartsWith(referenceUri, _remoteScheme)) {
                         //"this will add the uri reference to download and warns if it fails
@@ -1063,7 +1063,7 @@ protected:
                         _GetDocumentFromFilename( ResolveRemoteUri(referenceUri));
                     }
                 }
-                else if( !referenceUri.empty() && std::find(_URLsAlreadyStaged.begin(), _URLsAlreadyStaged.end(), referenceUri) == _URLsAlreadyStaged.end()) {
+                else if( !referenceUri.empty() && std::find(_urlsAlreadyStaged.begin(), _urlsAlreadyStaged.end(), referenceUri) == _urlsAlreadyStaged.end()) {
                     if (_bMustResolveURI) {
                         throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", bodyId%referenceUri, ORE_InvalidURI);
                     }
@@ -1103,20 +1103,17 @@ protected:
 
             while(curlmsg != NULL) {
                 if (curlmsg->msg == CURLMSG_DONE) {
-                    unsigned long size = _curlDataVector.size();
-                    for ( unsigned long i = 0; i < size; i++) {
+                    for ( unsigned long i = 0; i <  _curlDataVector.size(); i++) {
                         if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
                             boost::shared_ptr<rapidjson::Document> document = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document);
                             document.get()->Parse(_curlDataVector.at(i).get()->buffer->GetString());
 
-                            _PutDocumentIntoRapidJSONMap(_curlDataVector.at(i).get()->URI, document);
-                            _ParseDocumentForNewURLs( *document);
-
-                            stillRunning++; // This is to make sure the while loop continues
+                            _PutDocumentIntoRapidJSONMap(_curlDataVector.at(i).get()->uri, document);
+                            _ParseDocumentForNewURLs(*document);
 
                             _CurlCleanup(i);
+                            stillRunning++; // This is to make sure the while loop continues
                             i--;
-                            size--;
                         }
                     }
                 }
@@ -1131,7 +1128,6 @@ protected:
 
         std::vector<int> vInputToBodyInfoMapping;
         //TODO make function to replace it with remote URL
-
 
         _AddReferenceURIToDownload(currentURI);
         int stillRunning = 0;
@@ -1193,23 +1189,21 @@ protected:
 
             while(curlmsg != NULL) {
                 if (curlmsg->msg == CURLMSG_DONE) {
-                    unsigned long size = _curlDataVector.size();
-                    for ( unsigned long i = 0; i < size; i++) {
+                    for ( unsigned long i = 0; i < _curlDataVector.size(); i++) {
                         if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
                             boost::shared_ptr<rapidjson::Document> sharedDocument = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document);
                             rapidjson::ParseResult ok = sharedDocument.get()->Parse<rapidjson::kParseFullPrecisionFlag>(_curlDataVector.at(i).get()->buffer->GetString());
 
                             if (!ok) {
-                                throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", _curlDataVector.at(i).get()->URI, ORE_InvalidArguments);
+                                throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", _curlDataVector.at(i).get()->uri, ORE_InvalidArguments);
                             }
 
-                            _PutDocumentIntoRapidJSONMap(_curlDataVector.at(i).get()->URI, sharedDocument);
+                            _PutDocumentIntoRapidJSONMap(_curlDataVector.at(i).get()->uri, sharedDocument);
                             _ParseDocumentForNewURLs( *sharedDocument);
 
                             _CurlCleanup(i);
 
                             i--;
-                            size--;
                             stillRunning++; // Increase still running by 1 to start new curl downloads even if the other ones have finished
                         }
                     }
@@ -1228,12 +1222,12 @@ protected:
     {
         rapidjson::StringBuffer *buffer = new rapidjson::StringBuffer(); // Internal buffer assigned once curl is set up to download
         CURL * curl = curl_easy_init(); // Curl handler requires to be initlized
-        std::string URI;
+        std::string uri;
     };
 
     CURLM *_curlMultiHandle; /// < curl multi handler, used to downlod files simultaneously
     std::vector<boost::shared_ptr<curlData> > _curlDataVector; ///< Holds all curl handlers
-    std::vector<std::string> _URLsAlreadyStaged; ///< Holds the URLs that have already been downloaded or will be
+    std::vector<std::string> _urlsAlreadyStaged; ///< Holds the URLs that have already been downloaded or will be
 
     /// @brief Write back function for libcurl, all data that is retrieves is then pushed into a rapidjson::StringBuffer
     /// @param data Data recieved from libcurl
@@ -1254,16 +1248,16 @@ protected:
     {
         std::string newUri = ResolveRemoteUri(referenceUri);
         boost::shared_ptr<curlData> data = boost::shared_ptr<curlData>(new curlData);
-        data.get()->URI = newUri;
+        data.get()->uri = newUri;
         if(data.get()->curl) {
             //Set up easy curl to download the correlating files
-            curl_easy_setopt(data.get()->curl, CURLOPT_URL, data.get()->URI.c_str());
+            curl_easy_setopt(data.get()->curl, CURLOPT_URL, data.get()->uri.c_str());
             curl_easy_setopt(data.get()->curl, CURLOPT_HTTPGET, 1);
             curl_easy_setopt(data.get()->curl, CURLOPT_WRITEFUNCTION, _WriteBackDataFromCurl);
             curl_easy_setopt(data.get()->curl, CURLOPT_WRITEDATA, data.get());
             curl_multi_add_handle(_curlMultiHandle, data.get()->curl);
             _curlDataVector.push_back(data); // These are active curls or soon to be active
-            _URLsAlreadyStaged.push_back(referenceUri); // to keep track of which have been downloaded
+            _urlsAlreadyStaged.push_back(referenceUri); // to keep track of which have been downloaded
         }
         else{
             return -1;
@@ -1278,7 +1272,6 @@ protected:
         curl_easy_cleanup(_curlDataVector.at(vectorLocation).get()->curl);
         _curlDataVector.at(vectorLocation).get()->buffer->Clear();
         _curlDataVector.erase(_curlDataVector.begin() + vectorLocation);
-
     }
 
     /// \brief open and cache a json document remotly
