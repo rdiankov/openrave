@@ -200,7 +200,7 @@ public:
         if( !rEnvInfo.IsObject()) {
             throw OPENRAVE_EXCEPTION_FORMAT("The environment data needs to be a valid dictionary. Currently it is '%s'", orjson::DumpJson(rEnvInfo), ORE_InvalidArguments);
         }
-        
+
 
         // Currently reading from environment
         EnvironmentBase::EnvironmentBaseInfo envInfo;
@@ -213,9 +213,9 @@ public:
         }
         std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
         std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rEnvInfo, "referenceUri", "");
-        
 
-        
+
+
         // If remote URL is provided, start the process to download everything and load it into the json map
         if(IsDownloadingFromRemote()) {
             _DownloadRecursively(rEnvInfo);
@@ -400,14 +400,9 @@ public:
         std::string scheme, path, fragment;
         ParseURI(uri, scheme, path, fragment );
 
-        // printf("\n\n########\nuri %s\n", uri.c_str());
-        // printf("scheme %s\n", scheme.c_str());
-        // printf("path %s\n", path.c_str());
-        // printf("fragment %s\n########\n\n", fragment.c_str());
 
-        
         if (IsDownloadingFromRemote()) {
-            
+
             if (scheme == "file") {
                 return ("file://" + ResolveURI(scheme, path, std::string(), _vOpenRAVESchemeAliases));
             }
@@ -462,7 +457,7 @@ protected:
         }
         else {
             boost::shared_ptr<rapidjson::Document> newDoc = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document());;
-            if (_EndsWith(referenceUri, ".json")) {
+            if ((referenceUri, ".json")) {
                 _urlsAlreadyStaged.push_back(referenceUri);
                 OpenRapidJsonDocument(referenceUri, *newDoc);
             }
@@ -1043,10 +1038,10 @@ protected:
                 std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
                 if (_IsExpandableReferenceUri(referenceUri) && std::find(_urlsAlreadyStaged.begin(), _urlsAlreadyStaged.end(), referenceUri) == _urlsAlreadyStaged.end()) {
                     // Right now this checks to see if it is remote or loading from disk with file:/
-                        // "this will add the uri reference to download and warns if it fails
-                        if(_AddReferenceURIToDownload(referenceUri)) {
-                            RAVELOG_WARN_FORMAT("failed to create curl handler from %s", referenceUri);
-                        }
+                    // "this will add the uri reference to download and warns if it fails
+                    if(_AddReferenceURIToDownload(referenceUri)) {
+                        RAVELOG_WARN_FORMAT("failed to create curl handler from %s", referenceUri);
+                    }
                 }
                 else if( !referenceUri.empty() && std::find(_urlsAlreadyStaged.begin(), _urlsAlreadyStaged.end(), referenceUri) == _urlsAlreadyStaged.end()) {
                     if (_bMustResolveURI) {
@@ -1133,7 +1128,7 @@ protected:
                     for ( unsigned long i = 0; i < size; i++) {
                         if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
                             rapidjson::ParseResult ok = doc.Parse<rapidjson::kParseFullPrecisionFlag>(_curlDataVector.at(i).get()->buffer->GetString());
-                            
+
                             if (!ok) {
                                 throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", currentUri, ORE_InvalidArguments);
                             }
@@ -1231,7 +1226,6 @@ protected:
     int _AddReferenceURIToDownload(const std::string& referenceUri)
     {
         std::string newUri = ResolveRemoteUri(referenceUri);
-        printf("newURI %s\n", newUri.c_str());
         boost::shared_ptr<curlData> data = boost::shared_ptr<curlData>(new curlData);
         data.get()->uri = newUri;
         if(data.get()->curl) {
@@ -1350,7 +1344,7 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFro
         return false;
     }
     reader.SetURI(uri);
-    
+
     if(reader.IsDownloadingFromRemote()) {
         reader.OpenRapidJsonDocumentRemote(uri, rEnvInfo);
     }
