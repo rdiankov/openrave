@@ -82,7 +82,33 @@ std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(object pyLinkInfoList)
     }
     return vLinkInfos;
 }
+std::vector<KinBody::GeometryInfoPtr> ExtractGeometryInfoArray(object pyGeometryInfoList)
+{
+    if(IS_PYTHONOBJECT_NONE(pyGeometryInfoList)) {
+        return {};
+    }
 
+    std::vector<KinBody::GeometryInfoPtr> vGeometryInfos;
+    try {
+        const size_t arraySize = len(pyGeometryInfoList);
+        vGeometryInfos.resize(arraySize);
+
+        for(size_t iGeometryInfo = 0; iGeometryInfo < arraySize; iGeometryInfo++) {
+            extract_<OPENRAVE_SHARED_PTR<PyGeometryInfo> > pygeometryinfo(pyGeometryInfoList[iGeometryInfo]);
+            if (pygeometryinfo.check()) {
+                vGeometryInfos[iGeometryInfo] = ((OPENRAVE_SHARED_PTR<PyGeometryInfo>)pygeometryinfo)->GetGeometryInfo();
+            }
+            else {
+                throw openrave_exception(_("Bad GeometryInfo"));
+            }
+        }
+    }
+    catch(...) {
+        RAVELOG_WARN("Cannot do ExtractArray for GeometryInfos");
+    }
+    return vGeometryInfos;
+    
+}
 std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(object pyJointInfoList)
 {
     if( IS_PYTHONOBJECT_NONE(pyJointInfoList) ) {
