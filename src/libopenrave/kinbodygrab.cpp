@@ -727,7 +727,7 @@ void KinBody::GrabbedInfo::serialize(std::ostream& os) const
         os << (*it) << " ";
     }
     if( !!_prUserData ) {
-        // using 'void DumpJson(Value, ostream, unsigned int)' so that std::setprecision is respected
+        // using 'void DumpJson(Value, ostream, unsigned int)' to let rapidjson::OStreamWrapper to handle std::ostream
         OpenRAVE::orjson::DumpJson(*_prUserData, os);
         os << " ";
     }
