@@ -432,23 +432,23 @@ protected:
     boost::shared_ptr<const rapidjson::Document> _GetDocumentFromFilename(const std::string& fullFilename, rapidjson::Document::AllocatorType& alloc)
     {
         boost::shared_ptr<const rapidjson::Document> doc;
-
+        printf("document name in get document %s\n", fullFilename.c_str());
         // TODO: optimize this. for the first time doc is cached, all the expandable object will never get cached, because we are not update document cache after expand any body
 
-        if (_rapidJSONDocuments.find(_GetPath(fullFilename)) != _rapidJSONDocuments.end()) {
-            doc = _rapidJSONDocuments[_GetPath(fullFilename)];
+        if (_rapidJSONDocuments.find(fullFilename) != _rapidJSONDocuments.end()) {
+            doc = _rapidJSONDocuments[fullFilename];
         }
         else {
             boost::shared_ptr<rapidjson::Document> newDoc = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document());;
-            if (_EndsWith(_GetPath(fullFilename), ".json")) {
-                OpenRapidJsonDocument(_GetPath(fullFilename), *newDoc);
+            if (_EndsWith(fullFilename, ".json")) {
+                OpenRapidJsonDocument(fullFilename, *newDoc);
             }
-            else if (_EndsWith(_GetPath(fullFilename), ".msgpack")) {
-                OpenMsgPackDocument(_GetPath(fullFilename), *newDoc);
+            else if (_EndsWith(fullFilename, ".msgpack")) {
+                OpenMsgPackDocument(fullFilename, *newDoc);
             }
             if (!!newDoc) {
                 doc = newDoc;
-                _rapidJSONDocuments[_GetPath(fullFilename)] = doc;
+                _rapidJSONDocuments[fullFilename] = doc;
             }
 
         }
@@ -566,7 +566,7 @@ protected:
             std::string fullFilename;
 
             if(IsDownloadingFromRemote()) {
-                fullFilename = referenceUri;
+                fullFilename = _GetPath(referenceUri);
             }
             else{
                 fullFilename = ResolveURI(scheme, path, std::string(), GetOpenRAVESchemeAliases());
@@ -1360,6 +1360,7 @@ protected:
         }
         return 0;
     }
+    //TODO change it so to just pass the curl handle instead of this gross thing
     /// @brief To clean curl handlers and remove it from the datavector location. To be run already in a loop
     /// @param vectorLocation location in curlDataVector
     void _CurlCleanup(int vectorLocation)
@@ -1379,6 +1380,7 @@ protected:
     }
 
 };
+
 
 bool RaveParseJSON(EnvironmentBasePtr penv, const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
@@ -1642,14 +1644,11 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std:
         if (fullFilename.size() == 0 ) {
             RAVELOG_DEBUG_FORMAT("could not resolve uri='%s' into a path", uri);
             return false;
-
         }
 
         OpenMsgPackDocument(fullFilename, doc);
 
     }
-
-
 
     return reader.ExtractOne(doc, ppbody, uri, alloc);
 }
