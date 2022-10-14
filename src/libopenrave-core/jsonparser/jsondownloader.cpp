@@ -27,62 +27,9 @@
 
 
 
-static bool EndsWith(const std::string& fullString, const std::string& endString) {
-    if (fullString.length() >= endString.length()) {
-        return fullString.compare(fullString.length() - endString.length(), endString.length(), endString) == 0;
-    }
-    return false;
-}
-
-
-/// \brief get the scheme of the uri, e.g. file: or openrave:
-static void ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
-{
-    path = uri;
-    size_t hashindex = path.find_last_of('#');
-    if (hashindex != std::string::npos) {
-        fragment = path.substr(hashindex + 1);
-        path = path.substr(0, hashindex);
-    }
-
-    size_t colonindex = path.find_first_of(':');
-    if (colonindex != std::string::npos) {
-        // notice: in python code, like realtimerobottask3.py, it pass scheme as {openravescene: mujin}. No colon,
-        scheme = path.substr(0, colonindex);
-        path = path.substr(colonindex + 1);
-    }
-
-}
-
-static std::string ResolveURI(const std::string& scheme, const std::string& path, const std::string& curdir, const std::vector<std::string>& vOpenRAVESchemeAliases)
-{
-    if (scheme.empty() && path.empty() ) {
-        return std::string();
-    }
-    else if (scheme == "file")
-    {
-        return RaveFindLocalFile(path, curdir);
-    }
-    else if (find(vOpenRAVESchemeAliases.begin(), vOpenRAVESchemeAliases.end(), scheme) != vOpenRAVESchemeAliases.end())
-    {
-        return RaveFindLocalFile(path, curdir);
-    }
-    return std::string();
-}
 
 
 
-// Need to remove fragement to check for .json or .msgpack
-static std::string GetPath(const std::string& uri)
-{
-    std::string path = uri;
-    size_t hashindex = path.find_last_of('#');
-
-    if (hashindex != std::string::npos) {
-        path = path.substr(0, hashindex);
-    }
-    return path;
-}
 
 
 
@@ -130,13 +77,13 @@ void JSONRemoteHelper::DownloadRecursively(const rapidjson::Value &rEnvInfo)
                 for ( unsigned long i = 0; i <  _curlDataVector.size(); i++) {
                     if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
                         boost::shared_ptr<rapidjson::Document> document = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document);
-                        if (EndsWith(GetPath( _curlDataVector.at(i).get()->uri), ".json")) {
+                        if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".json")) {
                             rapidjson::ParseResult ok = document.get()->Parse(_curlDataVector.at(i).get()->buffer.GetString());
                             if (!ok) {
                                 throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", _curlDataVector.at(i).get()->uri, ORE_InvalidArguments);
                             }
                         }
-                        else if (EndsWith(GetPath( _curlDataVector.at(i).get()->uri), ".msgpack")) {
+                        else if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".msgpack")) {
 
                             try {
                                 MsgPack::ParseMsgPack(*document, (const void*)_curlDataVector.at(i).get()->buffer.GetString(), _curlDataVector.at(i).get()->buffer.GetSize());
@@ -190,13 +137,13 @@ void JSONRemoteHelper::DownloadRecursively(const std::string &referenceUri)
                 for ( unsigned long i = 0; i <  _curlDataVector.size(); i++) {
                     if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
                         boost::shared_ptr<rapidjson::Document> document = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document);
-                        if (EndsWith(GetPath( _curlDataVector.at(i).get()->uri), ".json")) {
+                        if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".json")) {
                             rapidjson::ParseResult ok = document.get()->Parse(_curlDataVector.at(i).get()->buffer.GetString());
                             if (!ok) {
                                 throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", _curlDataVector.at(i).get()->uri, ORE_InvalidArguments);
                             }
                         }
-                        else if (EndsWith(GetPath( _curlDataVector.at(i).get()->uri), ".msgpack")) {
+                        else if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".msgpack")) {
 
                             try {
                                 MsgPack::ParseMsgPack(*document, (const void*)_curlDataVector.at(i).get()->buffer.GetString(), _curlDataVector.at(i).get()->buffer.GetSize());
@@ -249,14 +196,14 @@ void JSONRemoteHelper::DownloadOne(const std::string& currentUri, rapidjson::Doc
                 for ( unsigned long i = 0; i < size; i++) {
                     if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
 
-                        if (EndsWith(GetPath( _curlDataVector.at(i).get()->uri), ".json")) {
+                        if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".json")) {
                             rapidjson::ParseResult ok = doc.Parse<rapidjson::kParseFullPrecisionFlag>(_curlDataVector.at(i).get()->buffer.GetString());
                             if (!ok) {
                                 throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", currentUri, ORE_InvalidArguments);
                             }
                         }
 
-                        else if (EndsWith(GetPath( _curlDataVector.at(i).get()->uri), ".msgpack")) {
+                        else if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".msgpack")) {
                             try {
                                 MsgPack::ParseMsgPack(doc, (const void*)_curlDataVector.at(i).get()->buffer.GetString(), _curlDataVector.at(i).get()->buffer.GetSize());
                             }
@@ -306,13 +253,13 @@ void JSONRemoteHelper::DownloadConnectedBodies()
                     if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
                         boost::shared_ptr<rapidjson::Document> sharedDocument = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document);
 
-                        if (EndsWith(GetPath( _curlDataVector.at(i).get()->uri), ".json")) {
+                        if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".json")) {
                             rapidjson::ParseResult ok = sharedDocument.get()->Parse(_curlDataVector.at(i).get()->buffer.GetString());
                             if (!ok) {
                                 throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", _curlDataVector.at(i).get()->uri, ORE_InvalidArguments);
                             }
                         }
-                        else if (EndsWith(GetPath( _curlDataVector.at(i).get()->uri), ".msgpack")) {
+                        else if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".msgpack")) {
 
                             try {
                                 MsgPack::ParseMsgPack(*sharedDocument, (const void*)_curlDataVector.at(i).get()->buffer.GetString(), _curlDataVector.at(i).get()->buffer.GetSize());
@@ -379,8 +326,8 @@ bool JSONRemoteHelper::IsUrlAlreadyStaged(std::string uri)
 /// @param document  map value document
 void JSONRemoteHelper::_PutDocumentIntoRapidJSONMap(const std::string& fullURLname, boost::shared_ptr<const rapidjson::Document> document)
 {
-    if (_rapidJSONDocuments->find(GetPath(fullURLname)) == _rapidJSONDocuments->end()) {
-        (*_rapidJSONDocuments)[GetPath(fullURLname)] = document;
+    if (_rapidJSONDocuments->find(_GetPath(fullURLname)) == _rapidJSONDocuments->end()) {
+        (*_rapidJSONDocuments)[_GetPath(fullURLname)] = document;
     }
 }
 
