@@ -3974,6 +3974,13 @@ void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
         if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
             // collision checking will not be automatically updated with environment calls, so need to do this manually
             _selfcollisionchecker->InitKinBody(shared_kinbody());
+
+            // self collision checker initializes internal data structure at the time of grab, so need to do it here for newly set self collision checker.
+            std::vector<KinBodyPtr> vGrabbed;
+            GetGrabbed(vGrabbed);
+            for (const KinBodyPtr& pgrabbed : vGrabbed) {
+                _selfcollisionchecker->InitKinBody(pgrabbed);
+            }
         }
     }
 }
