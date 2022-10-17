@@ -169,8 +169,10 @@ public:
 #endif
             }
             else if (itatt->first == "timeout") {
+                dReal timeout = 0;
                 stringstream ss(itatt->second);
-                ss >> _timeout;
+                ss >> timeout;
+                _timeoutUS = timeout * 1000000; // convert timeout from seconds to microseconds
             }
 
         }
@@ -220,7 +222,7 @@ public:
         if (IsDownloadingFromRemote()) {
             JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
             jsonDownloader.QueueDownloadReferenceURIs(rEnvInfo);
-            jsonDownloader.WaitForDownloads(_timeout);
+            jsonDownloader.WaitForDownloads(_timeoutUS);
         }
 #endif
 
@@ -420,7 +422,7 @@ public:
     {
         // download only one document, do not recurse
         JSONDownloader jsonDownloader(doc.GetAllocator(), _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, false);
-        jsonDownloader.Download(uri, doc, _timeout);
+        jsonDownloader.Download(uri, doc, _timeoutUS);
     }
 #endif
 
@@ -764,7 +766,7 @@ protected:
             if (IsDownloadingFromRemote()) {
                 JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
                 jsonDownloader.QueueDownloadURI(referenceUri);
-                jsonDownloader.WaitForDownloads(_timeout);
+                jsonDownloader.WaitForDownloads(_timeoutUS);
             }
 #endif
             std::set<std::string> circularReference; // dummy
@@ -854,7 +856,7 @@ protected:
                     jsonDownloader.QueueDownloadURI(pConnected->_uri);
                 }
             }
-            jsonDownloader.WaitForDownloads(_timeout);
+            jsonDownloader.WaitForDownloads(_timeoutUS);
         }
 #endif
 
@@ -1003,7 +1005,7 @@ protected:
 
     dReal _fGlobalScale = 1.0;
     dReal _fGeomScale = 1.0;
-    dReal _timeout = 10.0; ///< download timeout
+    uint64_t _timeoutUS = 10000000; ///< download timeout in microseconds
     EnvironmentBasePtr _penv;
     int _deserializeOptions = 0; ///< options used for deserializing
     std::string _filename; ///< original filename used to open reader
