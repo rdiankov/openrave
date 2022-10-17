@@ -1913,10 +1913,10 @@ inline obb<T> OBBFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransform<T
 /// \ingroup geometric_primitives
 /// \param[in] t transformation used to set the coordinate system of ab.
 template <typename T>
-inline RaveOrientedBox<T> OrientedBoxFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransformMatrix<T>& t)
+inline RaveOrientedBox<T> OrientedBoxFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransform<T>& t)
 {
     RaveOrientedBox<T> o;
-    o.transform.rot = quatFromMatrix(t);
+    o.transform.rot = t.rot;
     o.transform.trans = t*ab.pos;
     o.extents = ab.extents;
     return o;
@@ -1927,9 +1927,9 @@ inline RaveOrientedBox<T> OrientedBoxFromAABB(const RaveAxisAlignedBox<T>& ab, c
 /// \ingroup geometric_primitives
 /// \param[in] t transformation used to set the coordinate system of ab.
 template <typename T>
-inline RaveOrientedBox<T> OrientedBoxFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransform<T>& t)
+inline RaveOrientedBox<T> OrientedBoxFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransformMatrix<T>& t)
 {
-    return OrientedBoxFromAABB(ab,RaveTransformMatrix<T>(t));
+    return OrientedBoxFromAABB(ab,RaveTransform<T>(t));
 }
 
 /// \brief Transforms an oriented bounding box.
