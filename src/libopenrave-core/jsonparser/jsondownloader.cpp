@@ -25,363 +25,305 @@
 #include <fstream>
 #include <curl/curl.h> /// Required for remote URI
 
+namespace OpenRAVE {
 
-
-
-
-
-
-
-
-
-JSONRemoteHelper::JSONRemoteHelper(std::map<std::string, boost::shared_ptr<const rapidjson::Document> > &rapidJSONMap, std::string &remoteUrl, std::vector<std::string>& schemeVector){
-    _rapidJSONDocuments = &rapidJSONMap;
-    _remoteUrl = remoteUrl;
-    _vOpenRAVESchemeAliases = schemeVector;
-
-    // Sets up curl multi handle to be used
-    _curlMultiHandle = curl_multi_init();
-
-}
-JSONRemoteHelper::~JSONRemoteHelper(){
-    curl_multi_cleanup(_curlMultiHandle);
-}
-
-
-/// @brief Downloads all the remote files, parse them, download other references, then store them in document map
-/// @param rEnvInfo top layer
-void JSONRemoteHelper::DownloadRecursively(const rapidjson::Value &rEnvInfo)
+static bool _EndsWith(const std::string& fullString, const std::string& endString)
 {
-    std::vector<int> vInputToBodyInfoMapping;
-    // TODO make function to replace it with remote URL
-
-    // Parsing the top level
-    _ParseDocumentForNewURLs(rEnvInfo);
-    int stillRunning, msgInQueue;
-
-    // Loop to download then parse in parallel
-    do {
-
-        CURLMcode mc = curl_multi_perform(_curlMultiHandle, &stillRunning);
-        CURLMsg  *curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
-        if(!mc && stillRunning) {
-            /* wait for activity, timeout or "nothing" */
-            mc = curl_multi_poll(_curlMultiHandle, NULL, 0, 1000, NULL);
-        }
-        if(mc) {
-            break;
-        }
-
-        while(curlmsg != NULL) {
-            if (curlmsg->msg == CURLMSG_DONE) {
-                for ( unsigned long i = 0; i <  _curlDataVector.size(); i++) {
-                    if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
-                        boost::shared_ptr<rapidjson::Document> document = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document);
-                        if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".json")) {
-                            rapidjson::ParseResult ok = document.get()->Parse(_curlDataVector.at(i).get()->buffer.GetString());
-                            if (!ok) {
-                                throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", _curlDataVector.at(i).get()->uri, ORE_InvalidArguments);
-                            }
-                        }
-                        else if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".msgpack")) {
-
-                            try {
-                                MsgPack::ParseMsgPack(*document, (const void*)_curlDataVector.at(i).get()->buffer.GetString(), _curlDataVector.at(i).get()->buffer.GetSize());
-                            }
-                            catch(const std::exception& ex) {
-                                throw OPENRAVE_EXCEPTION_FORMAT("Failed to parse msgpack format for file '%s': %s", _curlDataVector.at(i).get()->uri%ex.what(), ORE_Failed);
-                            }
-
-                        }
-
-                        _PutDocumentIntoRapidJSONMap(_curlDataVector.at(i).get()->uri, document);
-                        _ParseDocumentForNewURLs(*document);
-
-
-
-                        curl_multi_remove_handle(_curlMultiHandle,_curlDataVector.at(i).get()->curl);
-                        _curlDataVector.erase(_curlDataVector.begin() + i);
-
-                        stillRunning++; // This is to make sure the while loop continues
-                        i--;
-                    }
-                }
-            }
-            curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
-        }
-
-    } while(stillRunning);
+    if (fullString.length() >= endString.length()) {
+        return fullString.compare(fullString.length() - endString.length(), endString.length(), endString) == 0;
+    }
+    return false;
 }
 
-/// @brief Downloads all the remote files, parse them, download other references, then store them in document map
-/// @param referenceUri if needed to download starting from a string
-void JSONRemoteHelper::DownloadRecursively(const std::string &referenceUri)
+/// \brief get the scheme of the uri, e.g. file: or openrave:
+static void _ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
 {
-    AddReferenceURIToDownload(referenceUri);
-    int stillRunning, msgInQueue;
-    // Loop to download then parse in parallel
-    do {
+    path = uri;
+    size_t hashindex = path.find_last_of('#');
+    if (hashindex != std::string::npos) {
+        fragment = path.substr(hashindex + 1);
+        path = path.substr(0, hashindex);
+    }
 
-        CURLMcode mc = curl_multi_perform(_curlMultiHandle, &stillRunning);
-        CURLMsg  *curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
-        if(!mc && stillRunning) {
-            /* wait for activity, timeout or "nothing" */
-            mc = curl_multi_poll(_curlMultiHandle, NULL, 0, 1000, NULL);
-        }
-        if(mc) {
-            break;
-        }
-
-        while(curlmsg != NULL) {
-            if (curlmsg->msg == CURLMSG_DONE) {
-                for ( unsigned long i = 0; i <  _curlDataVector.size(); i++) {
-                    if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
-                        boost::shared_ptr<rapidjson::Document> document = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document);
-                        if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".json")) {
-                            rapidjson::ParseResult ok = document.get()->Parse(_curlDataVector.at(i).get()->buffer.GetString());
-                            if (!ok) {
-                                throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", _curlDataVector.at(i).get()->uri, ORE_InvalidArguments);
-                            }
-                        }
-                        else if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".msgpack")) {
-
-                            try {
-                                MsgPack::ParseMsgPack(*document, (const void*)_curlDataVector.at(i).get()->buffer.GetString(), _curlDataVector.at(i).get()->buffer.GetSize());
-                            }
-                            catch(const std::exception& ex) {
-                                throw OPENRAVE_EXCEPTION_FORMAT("Failed to parse msgpack format for file '%s': %s", _curlDataVector.at(i).get()->uri%ex.what(), ORE_Failed);
-                            }
-
-                        }
-
-                        _PutDocumentIntoRapidJSONMap(_curlDataVector.at(i).get()->uri, document);
-                        _ParseDocumentForNewURLs(*document);
-
-                        curl_multi_remove_handle(_curlMultiHandle,_curlDataVector.at(i).get()->curl);
-                        _curlDataVector.erase(_curlDataVector.begin() + i);
-                        stillRunning++; // This is to make sure the while loop continues
-                        i--;
-                    }
-                }
-            }
-            curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
-        }
-
-    } while(stillRunning);
+    size_t colonindex = path.find_first_of(':');
+    if (colonindex != std::string::npos) {
+        // notice: in python code, like realtimerobottask3.py, it pass scheme as {openravescene: mujin}. No colon,
+        scheme = path.substr(0, colonindex);
+        path = path.substr(colonindex + 1);
+    }
 }
 
-void JSONRemoteHelper::DownloadOne(const std::string& currentUri, rapidjson::Document& doc)
+static void _ParseMsgPackDocument(const rapidjson::StringBuffer& buffer, const std::string& uri, rapidjson::Document& doc)
 {
-
-    std::vector<int> vInputToBodyInfoMapping;
-    // TODO make function to replace it with remote URL
-    AddReferenceURIToDownload(currentUri);
-    int stillRunning = 0;
-    int msgInQueue = 0;
-    do {
-
-        CURLMcode mc = curl_multi_perform(_curlMultiHandle, &stillRunning);
-        CURLMsg  *curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
-        if(!mc && stillRunning) {
-            /* wait for activity, timeout or "nothing" */
-            mc = curl_multi_poll(_curlMultiHandle, NULL, 0, 1000, NULL);
-        }
-        if(mc) {
-            break;
-        }
-
-        while(curlmsg != NULL) {
-            if (curlmsg->msg == CURLMSG_DONE) {
-                unsigned long size = _curlDataVector.size();
-                for ( unsigned long i = 0; i < size; i++) {
-                    if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
-
-                        if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".json")) {
-                            rapidjson::ParseResult ok = doc.Parse<rapidjson::kParseFullPrecisionFlag>(_curlDataVector.at(i).get()->buffer.GetString());
-                            if (!ok) {
-                                throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", currentUri, ORE_InvalidArguments);
-                            }
-                        }
-
-                        else if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".msgpack")) {
-                            try {
-                                MsgPack::ParseMsgPack(doc, (const void*)_curlDataVector.at(i).get()->buffer.GetString(), _curlDataVector.at(i).get()->buffer.GetSize());
-                            }
-                            catch(const std::exception& ex) {
-                                throw OPENRAVE_EXCEPTION_FORMAT("Failed to parse msgpack format for file '%s': %s", _curlDataVector.at(i).get()->uri%ex.what(), ORE_Failed);
-                            }
-                        }
-
-
-                        curl_multi_remove_handle(_curlMultiHandle,_curlDataVector.at(i).get()->curl);
-                        _curlDataVector.erase(_curlDataVector.begin() + i);
-                        return;
-                    }
-                }
-            }
-            curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
-        }
-    } while(stillRunning != 0);
-
+    try {
+        MsgPack::ParseMsgPack(doc, buffer.GetString(), buffer.GetSize());
+    }
+    catch(const std::exception& ex) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to parse msgpack document \"%\"': %s", uri%ex.what(), ORE_Failed);
+    }
 }
 
-void JSONRemoteHelper::DownloadConnectedBodies()
+static void _ParseJsonDocument(const rapidjson::StringBuffer& buffer, const std::string& uri, rapidjson::Document& doc)
 {
-    if (!_curlDataVector.size()) {
+    rapidjson::ParseResult ok = doc.Parse<rapidjson::kParseFullPrecisionFlag>(buffer.GetString());
+    if (!ok) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", uri, ORE_InvalidArguments);
+    }
+}
+
+JSONDownloadContext::JSONDownloadContext()
+{
+    curl = curl_easy_init();
+    if (!curl) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to init curl handle", ORE_InvalidArguments);
+    }
+}
+
+JSONDownloadContext::~JSONDownloadContext()
+{
+    if (!!curl) {
+        curl_easy_cleanup(curl);
+        curl = nullptr;
+    }
+}
+
+JSONDownloader::JSONDownloader(rapidjson::Document::AllocatorType& alloc, std::map<std::string, boost::shared_ptr<const rapidjson::Document> >& rapidJSONDocuments, const std::string& remoteUrl, const std::vector<std::string>& vOpenRAVESchemeAliases, int deserializeOptions) :
+    _alloc(alloc),
+    _rapidJSONDocuments(rapidJSONDocuments),
+    _remoteUrl(remoteUrl),
+    _vOpenRAVESchemeAliases(vOpenRAVESchemeAliases),
+    _deserializeOptions(deserializeOptions)
+{
+    _curlm = curl_multi_init();
+    if (!_curlm) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to create curl handle", ORE_InvalidArguments);
+    }
+
+}
+JSONDownloader::~JSONDownloader()
+{
+    WaitForDownloads();
+
+    if (!!_curlm) {
+        curl_multi_cleanup(_curlm);
+        _curlm = nullptr;
+    }
+}
+
+void JSONDownloader::Download(const std::string& uri, rapidjson::Document& doc)
+{
+    _QueueDownloadURI(uri, &doc);
+    WaitForDownloads();
+}
+
+void JSONDownloader::WaitForDownloads()
+{
+    if (_mapDownloadContexts.empty()) {
         return;
     }
 
-    std::vector<int> vInputToBodyInfoMapping;
-    // TODO make function to replace it with remote URL
-
-    int stillRunning = 0;
-    int msgInQueue = 0;
-    do {
-        CURLMcode mc = curl_multi_perform(_curlMultiHandle, &stillRunning);
-        CURLMsg  *curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
-        if(!mc && stillRunning) {
-            /* wait for activity, timeout or "nothing" */
-            mc = curl_multi_poll(_curlMultiHandle, NULL, 0, 1000, NULL);
+    const uint64_t startTimestampUS = utils::GetMonotonicTime();
+    int numDownloads = 0;
+    while (!_mapDownloadContexts.empty()) {
+        // check if any handle still running
+        int numRunningHandles = 0;
+        const CURLMcode performCode = curl_multi_perform(_curlm, &numRunningHandles);
+        if (performCode) {
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to download, curl_multi_perform() failed with code %d", (int)performCode, ORE_InvalidArguments);
         }
-        if(mc) {
-            break;
-        }
-
-        while(curlmsg != NULL) {
-            if (curlmsg->msg == CURLMSG_DONE) {
-                for ( unsigned long i = 0; i < _curlDataVector.size(); i++) {
-                    if (_curlDataVector.at(i).get()->curl == curlmsg->easy_handle) {
-                        boost::shared_ptr<rapidjson::Document> sharedDocument = boost::shared_ptr<rapidjson::Document>(new rapidjson::Document);
-
-                        if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".json")) {
-                            rapidjson::ParseResult ok = sharedDocument.get()->Parse(_curlDataVector.at(i).get()->buffer.GetString());
-                            if (!ok) {
-                                throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", _curlDataVector.at(i).get()->uri, ORE_InvalidArguments);
-                            }
-                        }
-                        else if (_EndsWith(_GetPath( _curlDataVector.at(i).get()->uri), ".msgpack")) {
-
-                            try {
-                                MsgPack::ParseMsgPack(*sharedDocument, (const void*)_curlDataVector.at(i).get()->buffer.GetString(), _curlDataVector.at(i).get()->buffer.GetSize());
-                            }
-                            catch(const std::exception& ex) {
-                                throw OPENRAVE_EXCEPTION_FORMAT("Failed to parse msgpack format for file '%s': %s", _curlDataVector.at(i).get()->uri%ex.what(), ORE_Failed);
-                            }
-
-
-                        }
-
-                        _PutDocumentIntoRapidJSONMap(_curlDataVector.at(i).get()->uri, sharedDocument);
-                        _ParseDocumentForNewURLs( *sharedDocument);
-
-                        curl_multi_remove_handle(_curlMultiHandle,_curlDataVector.at(i).get()->curl);
-                        _curlDataVector.erase(_curlDataVector.begin() + i);
-
-                        i--;
-                        stillRunning++; // Increase still running by 1 to start new curl downloads even if the other ones have finished
-                    }
-                }
+        RAVELOG_VERBOSE_FORMAT("curl_multi_perform(): numRunningHandles = %d", numRunningHandles);
+        if (numRunningHandles > 0) {
+            // poll for 100ms
+            const CURLMcode pollCode = curl_multi_poll(_curlm, NULL, 0, 100, NULL);
+            if (pollCode) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to download, curl_multi_poll() failed with code %d", (int)pollCode, ORE_InvalidArguments);
             }
-            curlmsg = curl_multi_info_read(_curlMultiHandle, &msgInQueue);
         }
-    } while(stillRunning != 0);
 
-    return;
-}
-
-/// @brief Adds referenceUri to download
-/// @param referenceUri URI to download
-/// @return
-int JSONRemoteHelper::AddReferenceURIToDownload(const std::string& referenceUri)
-{
-    boost::shared_ptr<JSONRemoteHelper::CurlData> data = boost::shared_ptr<JSONRemoteHelper::CurlData>(new JSONRemoteHelper::CurlData);
-    data.get()->uri = referenceUri;
-    if(data.get()->curl) {
-        // Set up easy curl to download the correlating files
-        curl_easy_setopt(data.get()->curl, CURLOPT_URL, _ResolveRemoteUri(data.get()->uri).c_str()); // c_str() is required
-        curl_easy_setopt(data.get()->curl, CURLOPT_HTTPGET, 1);
-        curl_easy_setopt(data.get()->curl, CURLOPT_WRITEFUNCTION, _WriteBackDataFromCurl);
-        curl_easy_setopt(data.get()->curl, CURLOPT_WRITEDATA, data.get());
-        curl_multi_add_handle(_curlMultiHandle, data.get()->curl);
-        _curlDataVector.push_back(data); // These are active curls or soon to be active
-        _urlsAlreadyStaged.push_back(referenceUri); // to keep track of which have been downloaded
-    }
-    else{
-        return -1;
-    }
-    return 0;
-}
-
-bool JSONRemoteHelper::IsUrlAlreadyStaged(std::string uri)
-{
-    return std::find(_urlsAlreadyStaged.begin(), _urlsAlreadyStaged.end(), uri) == _urlsAlreadyStaged.end();
-}
-
-
-
-
-
-/// @brief Places document into the map of loaded documents, does a check to make sure that it is not already in there
-/// @param fullURLname map key
-/// @param document  map value document
-void JSONRemoteHelper::_PutDocumentIntoRapidJSONMap(const std::string& fullURLname, boost::shared_ptr<const rapidjson::Document> document)
-{
-    if (_rapidJSONDocuments->find(_GetPath(fullURLname)) == _rapidJSONDocuments->end()) {
-        (*_rapidJSONDocuments)[_GetPath(fullURLname)] = document;
-    }
-}
-
-/// @brief This will parse the given document for reference URIs then put them in a queue to down in parallel
-/// @param doc document to parse
-void JSONRemoteHelper::_ParseDocumentForNewURLs(const rapidjson::Value& doc)
-{
-    std::vector<int> vInputToBodyInfoMapping;
-    if (doc.HasMember("bodies")) {
-        const rapidjson::Value& rBodies = doc["bodies"];
-        vInputToBodyInfoMapping.resize(rBodies.Size(),-1); // -1, no mapping by default
-        for(int iInputBodyIndex = 0; iInputBodyIndex < (int)rBodies.Size(); ++iInputBodyIndex) {
-            const rapidjson::Value& rBodyInfo = rBodies[iInputBodyIndex];
-            std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
-            std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
-            std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
-            if (_IsExpandableReferenceUri(referenceUri) && std::find(_urlsAlreadyStaged.begin(), _urlsAlreadyStaged.end(), referenceUri) == _urlsAlreadyStaged.end()) {
-                // Right now this checks to see if it is remote or loading from disk with file:/
-                // "this will add the uri reference to download and warns if it fails
-                if(AddReferenceURIToDownload(referenceUri)) {
-                    RAVELOG_WARN_FORMAT("failed to create curl handler from %s", referenceUri);
-                }
+        // process all messages
+        for (;;) {
+            int numMessagesInQueue = 0;
+            const CURLMsg *curlMessage = curl_multi_info_read(_curlm, &numMessagesInQueue);
+            RAVELOG_VERBOSE_FORMAT("curl_multi_info_read(): numMessagesInQueue = %d", numMessagesInQueue);
+            if (!curlMessage) {
+                break;
             }
-            else if( !referenceUri.empty() && std::find(_urlsAlreadyStaged.begin(), _urlsAlreadyStaged.end(), referenceUri) == _urlsAlreadyStaged.end()) {
-                throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", bodyId%referenceUri, ORE_InvalidURI);
+            RAVELOG_VERBOSE_FORMAT("curl_multi_info_read(): curlMessage->msg = %d", (int)curlMessage->msg);
+            if (curlMessage->msg != CURLMSG_DONE) {
+                continue;
             }
 
+            // remove handle
+            const CURLMcode removeHandleCode = curl_multi_remove_handle(_curlm, curlMessage->easy_handle);
+            if (removeHandleCode) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to download, curl_multi_remove_handle() failed with code %d", (int)removeHandleCode, ORE_InvalidArguments);
+            }
+            const std::map<CURL*, JSONDownloadContextPtr>::iterator it = _mapDownloadContexts.find(curlMessage->easy_handle);
+            if (it == _mapDownloadContexts.end()) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("curl download finished, but failed to find corresponding context, cannot continue", ORE_InvalidArguments);
+            }
+            JSONDownloadContextPtr pContext = it->second;
+            _mapDownloadContexts.erase(it);
+
+            // check result
+            const CURLcode curlCode = curlMessage->data.result;
+            if (curlCode != CURLE_OK) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to download uri \"%s\": %s", pContext->uri%curl_easy_strerror(curlCode), ORE_InvalidURI);
+            }
+
+            // check http response code
+            int responseCode = 0;
+            const CURLcode getInfoCode = curl_easy_getinfo(pContext->curl, CURLINFO_RESPONSE_CODE, &responseCode);
+            if (getInfoCode != CURLE_OK) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to get response status code for uri \"%s\": %s", pContext->uri%curl_easy_strerror(getInfoCode), ORE_InvalidArguments);
+            }
+            if (responseCode != 0 && responseCode != 200) {
+                // file scheme downloads have a zero response code
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to download uri \"%s\", received http %d response", pContext->uri%responseCode, ORE_InvalidURI);
+            }
+
+            // parse data
+            if (_EndsWith(pContext->uri, ".json")) {
+                _ParseJsonDocument(pContext->buffer, pContext->uri, *pContext->pDoc);
+                QueueDownloadReferenceURIs(*pContext->pDoc);
+            }
+            else if (_EndsWith(pContext->uri, ".msgpack")) {
+                _ParseMsgPackDocument(pContext->buffer, pContext->uri, *pContext->pDoc);
+                QueueDownloadReferenceURIs(*pContext->pDoc);
+            }
+
+            const uint64_t currentTimestampUS = utils::GetMonotonicTime();
+            RAVELOG_DEBUG_FORMAT("successfully downloaded \"%s\", took %d[us]", pContext->uri%(currentTimestampUS-pContext->startTimestampUS));
+            ++numDownloads;
         }
     }
 
+    const uint64_t stopTimestampUS = utils::GetMonotonicTime();
+    RAVELOG_DEBUG_FORMAT("downloaded %d files, took %d[us]", numDownloads%(stopTimestampUS-startTimestampUS));
 }
 
-std::string JSONRemoteHelper::_ResolveRemoteUri(const std::string &uri)
+static size_t _WriteBackDataFromCurl(const char *data, size_t size, size_t dataSize, JSONDownloadContext* pContext)
 {
+    const size_t numBytes = size * dataSize;
+    std::memcpy(pContext->buffer.Push(numBytes), data, numBytes);
+    return numBytes;
+}
 
+void JSONDownloader::_QueueDownloadURI(const std::string& uri, rapidjson::Document* pDoc)
+{
     std::string scheme, path, fragment;
-    ParseURI(uri, scheme, path, fragment );
+    _ParseURI(uri, scheme, path, fragment);
 
+    if (scheme.empty() && path.empty()) {
+        RAVELOG_WARN_FORMAT("unknown uri \"%s\"", uri);
+        return; // unknown uri
+    }
+    std::string canonicalUri;
+    std::string url;
     if (scheme == "file") {
-        return ("file://" + ResolveURI(scheme, path, std::string(), _vOpenRAVESchemeAliases));
+        std::string fullFilename = RaveFindLocalFile(path);
+        if (fullFilename.empty()) {
+            RAVELOG_WARN_FORMAT("failed to resolve uri \"%s\" to local file", uri);
+            return; // no such file to download
+        }
+        url = "file://" + fullFilename;
+        canonicalUri = path;
+    }
+    else if (std::find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end()) {
+        url = _remoteUrl + path;
+        canonicalUri = scheme + ":" + path;
+    }
+    else {
+        RAVELOG_WARN_FORMAT("unable to handle uri \"%s\"", uri);
+        return; // do not understand this uri
     }
 
-    return _remoteUrl + uri.substr(uri.find_last_of(":/")+1,  uri.find_last_of("#") - uri.find_last_of(":/") -1);
+    if (!pDoc) {
+        if (_rapidJSONDocuments.find(canonicalUri) != _rapidJSONDocuments.end()) {
+            RAVELOG_VERBOSE_FORMAT("uri \"%s\" already in cache", canonicalUri);
+            return; // already in _rapidJSONDocuments
+        }
+        // create a doc and insert to map first
+        boost::shared_ptr<rapidjson::Document> pNewDoc = boost::make_shared<rapidjson::Document>(&_alloc);
+        _rapidJSONDocuments[canonicalUri] = pNewDoc;
+        pDoc = pNewDoc.get();
+    }
+
+    JSONDownloadContextPtr pContext = boost::make_shared<JSONDownloadContext>();
+    pContext->uri = canonicalUri;
+    pContext->pDoc = pDoc;
+    pContext->startTimestampUS = utils::GetMonotonicTime();
+
+    // set curl options
+    CURLcode curlCode;
+    curlCode = curl_easy_setopt(pContext->curl, CURLOPT_URL, url.c_str());
+    if (curlCode != CURLE_OK) { 
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_URL) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_InvalidArguments);
+    }
+    curlCode = curl_easy_setopt(pContext->curl, CURLOPT_HTTPGET, 1);
+    if (curlCode != CURLE_OK) { 
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_HTTPGET) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_InvalidArguments);
+    }
+    curlCode = curl_easy_setopt(pContext->curl, CURLOPT_WRITEFUNCTION, _WriteBackDataFromCurl);
+    if (curlCode != CURLE_OK) { 
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_WRITEFUNCTION) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_InvalidArguments);
+    }
+    curlCode = curl_easy_setopt(pContext->curl, CURLOPT_WRITEDATA, pContext.get());
+    if (curlCode != CURLE_OK) { 
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_WRITEDATA) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_InvalidArguments);
+    }
+
+    // add handle to curl multi
+    const CURLMcode addHandleCode = curl_multi_add_handle(_curlm, pContext->curl);
+    if (!!addHandleCode) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to download uri \"%s\", curl_multi_add_handle() failed with code %d", canonicalUri%(int)addHandleCode, ORE_InvalidArguments);
+    }
+
+    _mapDownloadContexts[pContext->curl] = pContext;
+    RAVELOG_DEBUG_FORMAT("start to download uri \"%s\" from \"%s\"", canonicalUri%url);
+}
+
+void JSONDownloader::QueueDownloadReferenceURIs(const rapidjson::Value& rEnvInfo)
+{
+    if (_deserializeOptions & IDO_IgnoreReferenceUri) {
+        return;
+    }
+    if (!rEnvInfo.IsObject()) {
+        return;
+    }
+
+    const rapidjson::Value::ConstMemberIterator itBodies = rEnvInfo.FindMember("bodies");
+    if (itBodies == rEnvInfo.MemberEnd()) {
+        return;
+    }
+    const rapidjson::Value& rBodies = itBodies->value;
+    for (rapidjson::Value::ConstValueIterator itBody = rBodies.Begin(); itBody != rBodies.End(); ++itBody) {
+        const rapidjson::Value& rBody = *itBody;
+        if (!rBody.IsObject()) {
+            continue;
+        }
+        const std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBody, "referenceUri", "");
+        if (referenceUri.empty()) {
+            continue;
+        }
+        if (!_IsExpandableReferenceUri(referenceUri)) {
+            throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", orjson::GetJsonValueByKey<std::string>(rBody, "id", "")%referenceUri, ORE_InvalidURI);
+        }
+        QueueDownloadURI(referenceUri);
+    }
 }
 
 /// \brief returns true if the referenceUri is a valid URI that can be loaded
-bool JSONRemoteHelper::_IsExpandableReferenceUri(const std::string& referenceUri) const
+bool JSONDownloader::_IsExpandableReferenceUri(const std::string& referenceUri) const
 {
-
+    if (_deserializeOptions & IDO_IgnoreReferenceUri) {
+        return false;
+    }
     if (referenceUri.empty()) {
         return false;
     }
     std::string scheme, path, fragment;
-    ParseURI(referenceUri, scheme, path, fragment);
+    _ParseURI(referenceUri, scheme, path, fragment);
     if (!fragment.empty()) {
         return true;
     }
@@ -391,3 +333,4 @@ bool JSONRemoteHelper::_IsExpandableReferenceUri(const std::string& referenceUri
     return false;
 }
 
+}
