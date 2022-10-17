@@ -15,15 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "jsoncommon.h"
 #include "jsondownloader.h"
-#include <openrave/openravejson.h>
 #include <openrave/openravemsgpack.h>
-#include <openrave/openrave.h>
-#include <rapidjson/istreamwrapper.h>
-#include <string>
-#include <fstream>
-#include <curl/curl.h> /// Required for remote URI
 
 namespace OpenRAVE {
 
@@ -102,21 +95,19 @@ JSONDownloader::JSONDownloader(rapidjson::Document::AllocatorType& alloc, std::m
 }
 JSONDownloader::~JSONDownloader()
 {
-    WaitForDownloads();
-
     if (!!_curlm) {
         curl_multi_cleanup(_curlm);
         _curlm = nullptr;
     }
 }
 
-void JSONDownloader::Download(const std::string& uri, rapidjson::Document& doc)
+void JSONDownloader::Download(const std::string& uri, rapidjson::Document& doc, uint64_t timeoutUS)
 {
     _QueueDownloadURI(uri, &doc);
-    WaitForDownloads();
+    WaitForDownloads(timeoutUS);
 }
 
-void JSONDownloader::WaitForDownloads()
+void JSONDownloader::WaitForDownloads(uint64_t timeoutUS)
 {
     if (_mapDownloadContexts.empty()) {
         return;
@@ -138,6 +129,12 @@ void JSONDownloader::WaitForDownloads()
             if (pollCode) {
                 throw OPENRAVE_EXCEPTION_FORMAT("failed to download, curl_multi_poll() failed with code %d", (int)pollCode, ORE_InvalidArguments);
             }
+        }
+
+        // check for timeout
+        const uint64_t currentTimestampUS = utils::GetMonotonicTime();
+        if (currentTimestampUS > startTimestampUS + timeoutUS) {
+            throw OPENRAVE_EXCEPTION_FORMAT("timed out waiting for download to finish, timeout is %d[us]", timeoutUS, ORE_Timeout);
         }
 
         // process all messages
@@ -196,7 +193,6 @@ void JSONDownloader::WaitForDownloads()
                 }
             }
 
-            const uint64_t currentTimestampUS = utils::GetMonotonicTime();
             RAVELOG_DEBUG_FORMAT("successfully downloaded \"%s\", took %d[us]", pContext->uri%(currentTimestampUS-pContext->startTimestampUS));
             ++numDownloads;
         }

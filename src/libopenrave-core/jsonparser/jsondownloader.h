@@ -51,7 +51,8 @@ public:
     /// \brief Download one uri into supplied doc
     /// \param uri URI to download
     /// \param doc rapidjson document to store the downloaded and parsed document
-    void Download(const std::string& uri, rapidjson::Document& doc);    
+    /// \param timeoutUS timeout in microseconds to wait for download to finish
+    void Download(const std::string& uri, rapidjson::Document& doc, uint64_t timeoutUS = 10000000);
 
     /// \brief Queues uri to download
     /// \param uri URI to download
@@ -64,7 +65,8 @@ public:
     void QueueDownloadReferenceURIs(const rapidjson::Value& rEnvInfo);
 
     /// \brief Wait for queued downloads to finish, downloaded documents are inserted into rapidJSONDocuments passed in constructor
-    void WaitForDownloads();
+    /// \param timeoutUS timeout in microseconds to wait for download to finish
+    void WaitForDownloads(uint64_t timeoutUS = 10000000);
 
 protected: 
 
