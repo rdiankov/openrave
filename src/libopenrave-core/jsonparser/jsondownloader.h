@@ -21,9 +21,9 @@
 #ifndef OPENRAVE_JSON_DOWNLOADER_H
 #define OPENRAVE_JSON_DOWNLOADER_H
 
-#if OPENRAVE_CURL
-
 #include "jsoncommon.h"
+
+#if OPENRAVE_CURL
 
 #include <curl/curl.h>
 
