@@ -19,41 +19,38 @@
  */
 #include "jsoncommon.h"
 
-#include <openrave/openravejson.h>
-#include <openrave/openravemsgpack.h>
-#include <openrave/openrave.h>
-#include <rapidjson/istreamwrapper.h>
-#include <string>
-#include <fstream>
-#include <curl/curl.h> /// Required for remote URI
-
+#include <curl/curl.h>
 
 #ifndef OPENRAVE_JSON_DOWNLOADER_H
 #define OPENRAVE_JSON_DOWNLOADER_H
 
 namespace OpenRAVE {
 
-/// \brief data type that is passed to curl handler containing information on parsing incoming files
+/// \brief Context of a download, passed to curl handler to buffer incoming data
 struct JSONDownloadContext
 {
 public:
     JSONDownloadContext();
     ~JSONDownloadContext();
 
-    std::string uri; // url of the download
-    CURL * curl = nullptr; // the curl handle for this download
-    rapidjson::StringBuffer buffer; // buffer used to receive downloaded data
-    rapidjson::Document *pDoc = nullptr; // if non-null, the caller-supplied document to put results into
-    uint64_t startTimestampUS = 0;
+    std::string uri; ///< canonicalized uri of the download
+    CURL * curl = nullptr; ///< the curl handle for this download
+    rapidjson::StringBuffer buffer; ///< buffer used to receive downloaded data
+    rapidjson::Document *pDoc = nullptr; ///< if non-null, the caller-supplied document to put results into
+    uint64_t startTimestampUS = 0; ///< start timestamp in microseconds
 };
 typedef boost::shared_ptr<JSONDownloadContext> JSONDownloadContextPtr;
 
+/// \brief Downloader to be used in scope to download one or multiple uris and their references.
 class JSONDownloader {
 
 public:
-    JSONDownloader(rapidjson::Document::AllocatorType& alloc, std::map<std::string, boost::shared_ptr<const rapidjson::Document> >& rapidJSONDocuments, const std::string& remoteUrl, const std::vector<std::string>& vOpenRAVESchemeAliases, int deserializeOptions);
+    JSONDownloader(rapidjson::Document::AllocatorType& alloc, std::map<std::string, boost::shared_ptr<const rapidjson::Document> >& rapidJSONDocuments, const std::string& remoteUrl, const std::vector<std::string>& vOpenRAVESchemeAliases, bool downloadRecursively = true);
     ~JSONDownloader();
 
+    /// \brief Download one uri into supplied doc
+    /// \param uri URI to download
+    /// \param doc rapidjson document to store the downloaded and parsed document
     void Download(const std::string& uri, rapidjson::Document& doc);    
 
     /// \brief Queues uri to download
@@ -62,25 +59,26 @@ public:
         _QueueDownloadURI(uri, nullptr);
     }
 
-    /// \brief Downloads all the remote files, parse them, download other references, then store them in document map
-    /// \param rEnvInfo top layer
+    /// \brief Downloads all reference uris in the supplied env info, as well as all their further references
+    /// \param rEnvInfo env info where reference uris should be discovered
     void QueueDownloadReferenceURIs(const rapidjson::Value& rEnvInfo);
 
-    /// \brief Wait for queued downloads to finish
+    /// \brief Wait for queued downloads to finish, downloaded documents are inserted into rapidJSONDocuments passed in constructor
     void WaitForDownloads();
 
 protected: 
 
+    /// \brief Queue uri to be downloaded, optionally supply a rapidjson document to be used to store result
     void _QueueDownloadURI(const std::string& uri, rapidjson::Document* pDoc);
 
-    /// \brief returns true if the referenceUri is a valid URI that can be loaded
+    /// \brief Returns true if the referenceUri is a valid URI that can be loaded
     bool _IsExpandableReferenceUri(const std::string& referenceUri) const;
 
-    rapidjson::Document::AllocatorType& _alloc;
-    std::map<std::string, boost::shared_ptr<const rapidjson::Document> >& _rapidJSONDocuments; ///< cache for opened rapidjson Documents
-    const std::string& _remoteUrl; ///< remote url for scheme
-    const std::vector<std::string>& _vOpenRAVESchemeAliases;
-    int _deserializeOptions = 0;
+    rapidjson::Document::AllocatorType& _alloc; ///< re-use allocator, passed in via constructor
+    std::map<std::string, boost::shared_ptr<const rapidjson::Document> >& _rapidJSONDocuments; ///< cache for opened rapidjson Documents, newly downloaded documents will be inserted here, passed in via constructor
+    const std::string& _remoteUrl; ///< remote url for scheme, passed in via constructor
+    const std::vector<std::string>& _vOpenRAVESchemeAliases; ///< list of scheme aliases, passed in via constructor
+    bool _downloadRecursively = true; ///< whether to recurse all referenced uris
 
     CURLM *_curlm = nullptr; ///< curl multi handler, used to downlod files simultaneously
     std::map<CURL*, JSONDownloadContextPtr> _mapDownloadContexts; ///< map from curl handle to download context

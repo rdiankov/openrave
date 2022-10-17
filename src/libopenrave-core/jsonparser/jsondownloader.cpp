@@ -87,12 +87,12 @@ JSONDownloadContext::~JSONDownloadContext()
     }
 }
 
-JSONDownloader::JSONDownloader(rapidjson::Document::AllocatorType& alloc, std::map<std::string, boost::shared_ptr<const rapidjson::Document> >& rapidJSONDocuments, const std::string& remoteUrl, const std::vector<std::string>& vOpenRAVESchemeAliases, int deserializeOptions) :
+JSONDownloader::JSONDownloader(rapidjson::Document::AllocatorType& alloc, std::map<std::string, boost::shared_ptr<const rapidjson::Document> >& rapidJSONDocuments, const std::string& remoteUrl, const std::vector<std::string>& vOpenRAVESchemeAliases, bool downloadRecursively) :
     _alloc(alloc),
     _rapidJSONDocuments(rapidJSONDocuments),
     _remoteUrl(remoteUrl),
     _vOpenRAVESchemeAliases(vOpenRAVESchemeAliases),
-    _deserializeOptions(deserializeOptions)
+    _downloadRecursively(downloadRecursively)
 {
     _curlm = curl_multi_init();
     if (!_curlm) {
@@ -185,11 +185,15 @@ void JSONDownloader::WaitForDownloads()
             // parse data
             if (_EndsWith(pContext->uri, ".json")) {
                 _ParseJsonDocument(pContext->buffer, pContext->uri, *pContext->pDoc);
-                QueueDownloadReferenceURIs(*pContext->pDoc);
+                if (_downloadRecursively) {
+                    QueueDownloadReferenceURIs(*pContext->pDoc);
+                }
             }
             else if (_EndsWith(pContext->uri, ".msgpack")) {
                 _ParseMsgPackDocument(pContext->buffer, pContext->uri, *pContext->pDoc);
-                QueueDownloadReferenceURIs(*pContext->pDoc);
+                if (_downloadRecursively) {
+                    QueueDownloadReferenceURIs(*pContext->pDoc);
+                }
             }
 
             const uint64_t currentTimestampUS = utils::GetMonotonicTime();
@@ -285,9 +289,6 @@ void JSONDownloader::_QueueDownloadURI(const std::string& uri, rapidjson::Docume
 
 void JSONDownloader::QueueDownloadReferenceURIs(const rapidjson::Value& rEnvInfo)
 {
-    if (_deserializeOptions & IDO_IgnoreReferenceUri) {
-        return;
-    }
     if (!rEnvInfo.IsObject()) {
         return;
     }
@@ -316,9 +317,6 @@ void JSONDownloader::QueueDownloadReferenceURIs(const rapidjson::Value& rEnvInfo
 /// \brief returns true if the referenceUri is a valid URI that can be loaded
 bool JSONDownloader::_IsExpandableReferenceUri(const std::string& referenceUri) const
 {
-    if (_deserializeOptions & IDO_IgnoreReferenceUri) {
-        return false;
-    }
     if (referenceUri.empty()) {
         return false;
     }

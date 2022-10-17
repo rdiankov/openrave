@@ -207,7 +207,7 @@ public:
 
         // If remote URL is provided, start the process to download everything and load it into the json map
         if (IsDownloadingFromRemote()) {
-            JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, _deserializeOptions);
+            JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
             jsonDownloader.QueueDownloadReferenceURIs(rEnvInfo);
             jsonDownloader.WaitForDownloads();
         }
@@ -402,7 +402,8 @@ public:
     /// \brief open and cache a json document remotly
     void OpenRemoteDocument(const std::string& uri, rapidjson::Document& doc)
     {
-        JSONDownloader jsonDownloader(doc.GetAllocator(), _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, _deserializeOptions | IDO_IgnoreReferenceUri);
+        // download only one document, do not recurse
+        JSONDownloader jsonDownloader(doc.GetAllocator(), _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, false);
         jsonDownloader.Download(uri, doc);
     }
 
@@ -735,7 +736,7 @@ protected:
         int insertIndex = -1;
         if (_IsExpandableReferenceUri(referenceUri)) {
             if (IsDownloadingFromRemote()) {
-                JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, _deserializeOptions);
+                JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
                 jsonDownloader.QueueDownloadURI(referenceUri);
                 jsonDownloader.WaitForDownloads();
             }
@@ -818,7 +819,7 @@ protected:
     {
 
         if (IsDownloadingFromRemote()) {
-            JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, _deserializeOptions);
+            JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
             FOREACH(itConnected, robotInfo._vConnectedBodyInfos) {
                 RobotBase::ConnectedBodyInfoPtr& pConnected = *itConnected;
                 if (_IsExpandableReferenceUri(pConnected->_uri)) {
