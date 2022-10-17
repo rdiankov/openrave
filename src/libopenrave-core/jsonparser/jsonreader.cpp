@@ -734,12 +734,12 @@ protected:
         EnvironmentBase::EnvironmentBaseInfo envInfo; // dummy for reference uris
         int insertIndex = -1;
         if (_IsExpandableReferenceUri(referenceUri)) {
-            std::set<std::string> circularReference; // dummy
             if (IsDownloadingFromRemote()) {
                 JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, _deserializeOptions);
                 jsonDownloader.QueueDownloadURI(referenceUri);
                 jsonDownloader.WaitForDownloads();
             }
+            std::set<std::string> circularReference; // dummy
             insertIndex = _ExpandRapidJSON(envInfo, bodyId, bodyName, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc, _filename);
             if( insertIndex < 0 ) {
                 RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s' inside file '%s'", referenceUri%_filename);
@@ -1059,6 +1059,7 @@ bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std
 bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     rapidjson::Document rEnvInfo(&alloc);
     if (reader.IsDownloadingFromRemote()) {
         reader.OpenRemoteDocument(uri, rEnvInfo);
@@ -1069,15 +1070,14 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFro
         }
         OpenRapidJsonDocument(fullFilename, rEnvInfo);
     }
-
     std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
-    reader.SetURI(uri);
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
 bool RaveParseJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     rapidjson::Document doc(&alloc);
     if (reader.IsDownloadingFromRemote()) {
         reader.OpenRemoteDocument(uri, doc);
@@ -1088,13 +1088,13 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::st
         }
         OpenRapidJsonDocument(fullFilename, doc);
     }
-    reader.SetURI(uri);
     return reader.ExtractOne(doc, ppbody, uri, alloc);
 }
 
 bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     rapidjson::Document doc(&alloc);
     if (reader.IsDownloadingFromRemote()) {
         reader.OpenRemoteDocument(uri, doc);
@@ -1106,7 +1106,6 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std:
         OpenRapidJsonDocument(fullFilename, doc);
     }
     KinBodyPtr pbody;
-    reader.SetURI(uri);
     if( reader.ExtractOne(doc, pbody, uri, alloc) ) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
         return true;
@@ -1192,6 +1191,7 @@ bool RaveParseMsgPackFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const 
 bool RaveParseMsgPackURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".msgpack");
+    reader.SetURI(uri);
     rapidjson::Document rEnvInfo(&alloc);
     if (reader.IsDownloadingFromRemote()) {
         reader.OpenRemoteDocument(uri, rEnvInfo);
@@ -1200,15 +1200,16 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, const std::string& uri, Update
         if (fullFilename.size() == 0 ) {
             return false;
         }
+        OpenMsgPackDocument(fullFilename, rEnvInfo);
     }
     std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
-    reader.SetURI(uri);
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
 bool RaveParseMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".msgpack");
+    reader.SetURI(uri);
     rapidjson::Document doc(&alloc);
     if (reader.IsDownloadingFromRemote()) {
         reader.OpenRemoteDocument(uri, doc);
@@ -1220,13 +1221,13 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std:
         }
         OpenMsgPackDocument(fullFilename, doc);
     }
-    reader.SetURI(uri);
     return reader.ExtractOne(doc, ppbody, uri, alloc);
 }
 
 bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".msgpack");
+    reader.SetURI(uri);
     rapidjson::Document doc(&alloc);
     if (reader.IsDownloadingFromRemote()) {
         reader.OpenRemoteDocument(uri, doc);
@@ -1239,7 +1240,6 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const s
         OpenMsgPackDocument(fullFilename, doc);
     }
     KinBodyPtr pbody;
-    reader.SetURI(uri);
     if( reader.ExtractOne(doc, pbody, uri, alloc) ) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
         return true;
