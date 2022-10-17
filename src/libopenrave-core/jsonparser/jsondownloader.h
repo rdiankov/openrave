@@ -17,12 +17,15 @@
 /** \file jsondownloader.h
     \brief Helper class for jsonreader to download files remotely
  */
-#include "jsoncommon.h"
-
-#include <curl/curl.h>
 
 #ifndef OPENRAVE_JSON_DOWNLOADER_H
 #define OPENRAVE_JSON_DOWNLOADER_H
+
+#if OPENRAVE_CURL
+
+#include "jsoncommon.h"
+
+#include <curl/curl.h>
 
 namespace OpenRAVE {
 
@@ -87,5 +90,7 @@ protected:
 };
 
 }
+
+#endif // OPENRAVE_CURL
 
 #endif

@@ -1998,6 +1998,9 @@ const char* RaveGetErrorCodeString(OpenRAVEErrorCode error)
     case ORE_BodyNameConflict: return "BodyNameConflict";
     case ORE_SensorNameConflict: return "SensorNameConflict";
     case ORE_BodyIdConflict: return "BodyIdConflict";
+    case ORE_CurlTimeout: return "CurlTimeout";
+    case ORE_CurlInvalidHandle: return "CurlInvalidHandle";
+    case ORE_CurlInvalidResponse: return "CurlInvalidResponse";
     }
     // should throw an exception?
     return "";

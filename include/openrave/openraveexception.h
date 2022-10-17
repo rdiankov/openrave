@@ -43,6 +43,9 @@ enum OpenRAVEErrorCode {
     ORE_BodyNameConflict=13, ///< body with same name is trying to be added to the environment
     ORE_SensorNameConflict=14, ///< sensor with same name is trying to be added to the environment
     ORE_BodyIdConflict=15, ///< body with same id is trying to be added to the environment
+    ORE_CurlTimeout=16, ///< curl download timed out
+    ORE_CurlInvalidHandle=17, ///< the curl handle cannot be created
+    ORE_CurlInvalidResponse=18, ///< curl downloaded response is invalid
 };
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
