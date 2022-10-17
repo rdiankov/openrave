@@ -162,12 +162,19 @@ public:
                 ss >> _fGeomScale;
             }
             else if (itatt->first == "remoteurl") {
+#if OPENRAVE_CURL
                 _remoteUrl = itatt->second;
+#else
+                throw OPENRAVE_EXCEPTION_FORMAT("\"remoteurl\" option is not supported, have to compile openrave with curl support first", filename, ORE_InvalidArguments);
+#endif
+            }
+            else if (itatt->first == "timeout") {
+                stringstream ss(itatt->second);
+                ss >> _timeout;
             }
 
         }
         if (_vOpenRAVESchemeAliases.size() == 0) {
-
             _vOpenRAVESchemeAliases.push_back("openrave");
         }
 
@@ -213,7 +220,7 @@ public:
         if (IsDownloadingFromRemote()) {
             JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
             jsonDownloader.QueueDownloadReferenceURIs(rEnvInfo);
-            jsonDownloader.WaitForDownloads();
+            jsonDownloader.WaitForDownloads(_timeout);
         }
 #endif
 
@@ -407,15 +414,15 @@ public:
     {
         return !_remoteUrl.empty();
     }
-#endif
 
     /// \brief open and cache a json document remotly
     void OpenRemoteDocument(const std::string& uri, rapidjson::Document& doc)
     {
         // download only one document, do not recurse
         JSONDownloader jsonDownloader(doc.GetAllocator(), _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, false);
-        jsonDownloader.Download(uri, doc);
+        jsonDownloader.Download(uri, doc, _timeout);
     }
+#endif
 
 protected:
 
@@ -757,7 +764,7 @@ protected:
             if (IsDownloadingFromRemote()) {
                 JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
                 jsonDownloader.QueueDownloadURI(referenceUri);
-                jsonDownloader.WaitForDownloads();
+                jsonDownloader.WaitForDownloads(_timeout);
             }
 #endif
             std::set<std::string> circularReference; // dummy
@@ -847,7 +854,7 @@ protected:
                     jsonDownloader.QueueDownloadURI(pConnected->_uri);
                 }
             }
-            jsonDownloader.WaitForDownloads();
+            jsonDownloader.WaitForDownloads(_timeout);
         }
 #endif
 
@@ -996,18 +1003,22 @@ protected:
 
     dReal _fGlobalScale = 1.0;
     dReal _fGeomScale = 1.0;
+    dReal _timeout = 10.0; ///< download timeout
     EnvironmentBasePtr _penv;
     int _deserializeOptions = 0; ///< options used for deserializing
     std::string _filename; ///< original filename used to open reader
     std::string _uri; ///< original uri used to open reader
     std::string _defaultSuffix; ///< defaultSuffix of the main document, either ".json" or ".msgpack"
-    std::string _remoteUrl; ///< remote url for scheme
     std::vector<std::string> _vOpenRAVESchemeAliases;
     bool _bMustResolveURI = false; ///< if true, throw exception if object uri does not resolve
     bool _bMustResolveEnvironmentURI = false; ///< if true, throw exception if environment uri does not resolve
     bool _bIgnoreInvalidBodies = false; ///< if true, ignores any invalid bodies
 
     std::map<std::string, boost::shared_ptr<const rapidjson::Document> > _rapidJSONDocuments; ///< cache for opened rapidjson Documents
+
+#if OPENRAVE_CURL
+    std::string _remoteUrl; ///< remote url for scheme
+#endif
 };
 
 
