@@ -218,6 +218,7 @@ endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   add_definitions("-fno-strict-aliasing -Wall -Werror=shadow")
+  add_definitions("-Werror=return-type")
 endif()
 
 set(OPENRAVE_EXPORT_CXXFLAGS)
