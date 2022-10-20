@@ -95,6 +95,7 @@ JSONDownloader::JSONDownloader(rapidjson::Document::AllocatorType& alloc, std::m
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to create curl handle", ORE_CurlInvalidHandle);
     }
 
+    _userAgent = boost::str(boost::format("OpenRAVE/%s")%OPENRAVE_VERSION_STRING);
 }
 JSONDownloader::~JSONDownloader()
 {
@@ -260,6 +261,22 @@ void JSONDownloader::_QueueDownloadURI(const std::string& uri, rapidjson::Docume
 
     // set curl options
     CURLcode curlCode;
+    curlCode = curl_easy_setopt(pContext->curl, CURLOPT_USERAGENT, _userAgent.c_str());
+    if (curlCode != CURLE_OK) { 
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_USERAGENT) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
+    }
+    curlCode = curl_easy_setopt(pContext->curl, CURLOPT_FOLLOWLOCATION, 1);
+    if (curlCode != CURLE_OK) { 
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_FOLLOWLOCATION) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
+    }
+    curlCode = curl_easy_setopt(pContext->curl, CURLOPT_MAXREDIRS, 10);
+    if (curlCode != CURLE_OK) { 
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_MAXREDIRS) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
+    }
+    curlCode = curl_easy_setopt(pContext->curl, CURLOPT_NOSIGNAL, 1);
+    if (curlCode != CURLE_OK) { 
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_NOSIGNAL) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
+    }
     curlCode = curl_easy_setopt(pContext->curl, CURLOPT_URL, url.c_str());
     if (curlCode != CURLE_OK) { 
         throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_URL) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);

@@ -86,6 +86,7 @@ protected:
     bool _downloadRecursively = true; ///< whether to recurse all referenced uris
 
     CURLM *_curlm = nullptr; ///< curl multi handler, used to downlod files simultaneously
+    std::string _userAgent; ///< user agent to use when downloading from server
     std::map<CURL*, JSONDownloadContextPtr> _mapDownloadContexts; ///< map from curl handle to download context
 };
 
