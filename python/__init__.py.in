@@ -37,9 +37,6 @@ else:
 if openravepy_currentversion is not None:
     from sys import modules
     modules['openravepy'] = openravepy_currentversion
-    # caused modules reloaded; has to reimport sys.modules
-    del modules
-    from sys import modules
     from sys import version_info
     from types import ModuleType
     if version_info[0] >= 3:
