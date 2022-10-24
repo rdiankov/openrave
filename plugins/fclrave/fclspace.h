@@ -619,7 +619,7 @@ public:
         if( !!pinfo ) {
             return GetLinkBV(*pinfo, index);
         } else {
-            RAVELOG_WARN_FORMAT("env=%s, body '%s' is not initialized in fclspace %s", _penv->GetNameId()%body.GetName()%_userdatakey);
+            RAVELOG_WARN_FORMAT("env=%s, KinBody '%s' is not initialized in fclspace %s (self=%d)", _penv->GetNameId()%body.GetName()%_userdatakey%_bIsSelfCollisionChecker);
             return CollisionObjectPtr();
         }
     }
