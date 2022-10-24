@@ -300,12 +300,21 @@ void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, const std::string& 
     unpacked.get().convert(d);
 }
 
+void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, const void* data, size_t size)
+{
+    msgpack::unpacked unpacked;
+    msgpack::unpack(&unpacked, (const char*) data, size);
+    unpacked.get().convert(d);
+}
+
 void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, std::istream& is)
 {
     std::string str;
     str.assign(std::istreambuf_iterator<char>(is), std::istreambuf_iterator<char>());
     OpenRAVE::MsgPack::ParseMsgPack(d, str);
 }
+
+
 
 #else
 
