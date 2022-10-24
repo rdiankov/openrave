@@ -151,6 +151,7 @@ void JSONDownloader::WaitForDownloads(uint64_t timeoutUS)
             }
             RAVELOG_VERBOSE_FORMAT("curl_multi_info_read(): curlMessage->msg = %d", (int)curlMessage->msg);
             if (curlMessage->msg != CURLMSG_DONE) {
+                // go to the next message in the queue
                 continue;
             }
 
@@ -196,6 +197,9 @@ void JSONDownloader::WaitForDownloads(uint64_t timeoutUS)
                 if (_downloadRecursively) {
                     QueueDownloadReferenceURIs(*pContext->pDoc);
                 }
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("Do not know how to parse data from uri '%s', supported is json/msgpack", pContext->uri, ORE_EnvironmentFormatUnrecognized);
             }
 
             RAVELOG_DEBUG_FORMAT("successfully downloaded \"%s\", took %d[us]", pContext->uri%(currentTimestampUS-pContext->startTimestampUS));
@@ -262,35 +266,35 @@ void JSONDownloader::_QueueDownloadURI(const std::string& uri, rapidjson::Docume
     // set curl options
     CURLcode curlCode;
     curlCode = curl_easy_setopt(pContext->curl, CURLOPT_USERAGENT, _userAgent.c_str());
-    if (curlCode != CURLE_OK) { 
+    if (curlCode != CURLE_OK) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_USERAGENT) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
     }
     curlCode = curl_easy_setopt(pContext->curl, CURLOPT_FOLLOWLOCATION, 1);
-    if (curlCode != CURLE_OK) { 
+    if (curlCode != CURLE_OK) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_FOLLOWLOCATION) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
     }
     curlCode = curl_easy_setopt(pContext->curl, CURLOPT_MAXREDIRS, 10);
-    if (curlCode != CURLE_OK) { 
+    if (curlCode != CURLE_OK) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_MAXREDIRS) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
     }
     curlCode = curl_easy_setopt(pContext->curl, CURLOPT_NOSIGNAL, 1);
-    if (curlCode != CURLE_OK) { 
+    if (curlCode != CURLE_OK) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_NOSIGNAL) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
     }
     curlCode = curl_easy_setopt(pContext->curl, CURLOPT_URL, url.c_str());
-    if (curlCode != CURLE_OK) { 
+    if (curlCode != CURLE_OK) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_URL) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
     }
     curlCode = curl_easy_setopt(pContext->curl, CURLOPT_HTTPGET, 1);
-    if (curlCode != CURLE_OK) { 
+    if (curlCode != CURLE_OK) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_HTTPGET) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
     }
     curlCode = curl_easy_setopt(pContext->curl, CURLOPT_WRITEFUNCTION, _WriteBackDataFromCurl);
-    if (curlCode != CURLE_OK) { 
+    if (curlCode != CURLE_OK) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_WRITEFUNCTION) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
     }
     curlCode = curl_easy_setopt(pContext->curl, CURLOPT_WRITEDATA, pContext.get());
-    if (curlCode != CURLE_OK) { 
+    if (curlCode != CURLE_OK) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_WRITEDATA) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
     }
 

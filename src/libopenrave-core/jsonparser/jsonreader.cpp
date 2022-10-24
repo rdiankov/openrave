@@ -165,14 +165,14 @@ public:
 #if OPENRAVE_CURL
                 _remoteUrl = itatt->second;
 #else
-                throw OPENRAVE_EXCEPTION_FORMAT("\"remoteurl\" option is not supported, have to compile openrave with curl support first", filename, ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT("\"remoteurl\" option is not supported, have to compile openrave with CURL support first", filename, ORE_InvalidArguments);
 #endif
             }
             else if (itatt->first == "timeout") {
                 dReal timeout = 0;
                 stringstream ss(itatt->second);
                 ss >> timeout;
-                _timeoutUS = timeout * 1000000; // convert timeout from seconds to microseconds
+                _downloadTimeoutUS = timeout * 1000000; // convert timeout from seconds to microseconds
             }
 
         }
@@ -217,14 +217,14 @@ public:
 
         std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rEnvInfo, "referenceUri", "");
 
-#if OPENRAVE_CURL
         // If remote URL is provided, start the process to download everything and load it into the json map
         if (IsDownloadingFromRemote()) {
+#if OPENRAVE_CURL
             JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
             jsonDownloader.QueueDownloadReferenceURIs(rEnvInfo);
-            jsonDownloader.WaitForDownloads(_timeoutUS);
-        }
+            jsonDownloader.WaitForDownloads(_downloadTimeoutUS);
 #endif
+        }
 
         // Keep going up the line and checking for all referenceUri bodies
         if (_IsExpandableReferenceUri(referenceUri)) {
@@ -232,7 +232,6 @@ public:
             ParseURI(referenceUri, scheme, path, fragment);
 
             std::string fullFilename;
-#if OPENRAVE_CURL
             if (IsDownloadingFromRemote()) {
                 // here we use fullFilename as key to look up in _rapidJSONDocuments
                 if (scheme == "file") {
@@ -240,9 +239,8 @@ public:
                 } else {
                     fullFilename = scheme + ":" + path;
                 }
-            } else
-#endif
-            {
+            }
+            else {
                 fullFilename = ResolveURI(scheme, path, std::string(), GetOpenRAVESchemeAliases());
             }
             if (fullFilename.empty()) {
@@ -281,8 +279,6 @@ public:
 
             RAVELOG_ERROR_FORMAT("Failed to load env referenceUri='%s' from file '%s'", referenceUri%_filename);
         }
-
-
 
         _ProcessEnvInfoBodies(envInfo, rEnvInfo, alloc, _uri, _filename, mapProcessedConnectedBodyUris);
 
@@ -351,7 +347,6 @@ public:
 
         _penv->UpdateFromInfo(envInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies, updateMode);
         RAVELOG_DEBUG_FORMAT("env=%d, loaded %d bodies in %u[us]", _penv->GetId()%envInfo._vBodyInfos.size()%(utils::GetMonotonicTime()-starttimeus));
-
         return true;
     }
 
@@ -372,7 +367,6 @@ public:
     {
         std::string scheme, path, fragment;
         ParseURI(uri, scheme, path, fragment);
-
         if (fragment == "") {
             return ExtractFirst(rEnvInfo, ppbody, alloc);
         }
@@ -411,7 +405,6 @@ public:
         }
     }
 
-#if OPENRAVE_CURL
     bool IsDownloadingFromRemote() const
     {
         return !_remoteUrl.empty();
@@ -420,11 +413,14 @@ public:
     /// \brief open and cache a json document remotly
     void OpenRemoteDocument(const std::string& uri, rapidjson::Document& doc)
     {
+#if OPENRAVE_CURL
         // download only one document, do not recurse
         JSONDownloader jsonDownloader(doc.GetAllocator(), _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, false);
-        jsonDownloader.Download(uri, doc, _timeoutUS);
-    }
+        jsonDownloader.Download(uri, doc, _downloadTimeoutUS);
+#else
+        throw OPENRAVE_EXCEPTION_FORMAT("Do not support downloading remote document '%s'.", uri, ORE_NotImplemented);
 #endif
+    }
 
 protected:
 
@@ -455,12 +451,7 @@ protected:
         if (_rapidJSONDocuments.find(fullFilename) != _rapidJSONDocuments.end()) {
             doc = _rapidJSONDocuments[fullFilename];
         }
-#if OPENRAVE_CURL
-        else if (!IsDownloadingFromRemote())
-#else
-        else
-#endif
-        {
+        else if (!IsDownloadingFromRemote()) {
             boost::shared_ptr<rapidjson::Document> newDoc;
             if (_EndsWith(fullFilename, ".json")) {
                 newDoc.reset(new rapidjson::Document(&alloc));
@@ -587,7 +578,6 @@ protected:
             }
             std::string fullFilename;
 
-#if OPENRAVE_CURL
             if (IsDownloadingFromRemote()) {
                 // here we use fullFilename as key to look up in _rapidJSONDocuments
                 if (scheme == "file") {
@@ -595,13 +585,11 @@ protected:
                 } else {
                     fullFilename = scheme + ":" + path;
                 }
-            } else
-#endif
-            {
+            }
+            else {
                 fullFilename = ResolveURI(scheme, path, std::string(), GetOpenRAVESchemeAliases());
             }
             if (fullFilename.empty()) {
-
 
 #ifdef HAVE_BOOST_FILESYSTEM
                 fullFilename = ResolveURI(scheme, path, boost::filesystem::path(currentFilename).parent_path().string(), GetOpenRAVESchemeAliases());
@@ -618,9 +606,7 @@ protected:
 
             uint64_t beforeOpenStampUS = utils::GetMonotonicTime();
 
-
             boost::shared_ptr<const rapidjson::Document> referenceDoc = _GetDocumentFromFilename(fullFilename, alloc);
-
             if (!referenceDoc || !(*referenceDoc).HasMember("bodies")) {
                 RAVELOG_ERROR_FORMAT("referenced document cannot be loaded, or has no bodies: %s", fullFilename);
                 return -1;
@@ -762,13 +748,13 @@ protected:
         EnvironmentBase::EnvironmentBaseInfo envInfo; // dummy for reference uris
         int insertIndex = -1;
         if (_IsExpandableReferenceUri(referenceUri)) {
-#if OPENRAVE_CURL
             if (IsDownloadingFromRemote()) {
+#if OPENRAVE_CURL
                 JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
                 jsonDownloader.QueueDownloadURI(referenceUri);
-                jsonDownloader.WaitForDownloads(_timeoutUS);
-            }
+                jsonDownloader.WaitForDownloads(_downloadTimeoutUS);
 #endif
+            }
             std::set<std::string> circularReference; // dummy
             insertIndex = _ExpandRapidJSON(envInfo, bodyId, bodyName, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc, _filename);
             if( insertIndex < 0 ) {
@@ -847,8 +833,8 @@ protected:
     void _ProcessURIsInRobotBaseInfo(RobotBase::RobotBaseInfo& robotInfo, const rapidjson::Value& rEnvInfo, dReal fUnitScale, rapidjson::Document::AllocatorType& alloc, std::map<RobotBase::ConnectedBodyInfoPtr, std::string>& mapProcessedConnectedBodyUris)
     {
 
-#if OPENRAVE_CURL
         if (IsDownloadingFromRemote()) {
+#if OPENRAVE_CURL
             JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
             FOREACH(itConnected, robotInfo._vConnectedBodyInfos) {
                 RobotBase::ConnectedBodyInfoPtr& pConnected = *itConnected;
@@ -856,9 +842,9 @@ protected:
                     jsonDownloader.QueueDownloadURI(pConnected->_uri);
                 }
             }
-            jsonDownloader.WaitForDownloads(_timeoutUS);
-        }
+            jsonDownloader.WaitForDownloads(_downloadTimeoutUS);
 #endif
+        }
 
         FOREACH(itConnected, robotInfo._vConnectedBodyInfos) {
             RobotBase::ConnectedBodyInfoPtr& pConnected = *itConnected;
@@ -1005,7 +991,7 @@ protected:
 
     dReal _fGlobalScale = 1.0;
     dReal _fGeomScale = 1.0;
-    uint64_t _timeoutUS = 10000000; ///< download timeout in microseconds
+    uint64_t _downloadTimeoutUS = 10000000; ///< download timeout in microseconds
     EnvironmentBasePtr _penv;
     int _deserializeOptions = 0; ///< options used for deserializing
     std::string _filename; ///< original filename used to open reader
@@ -1018,9 +1004,7 @@ protected:
 
     std::map<std::string, boost::shared_ptr<const rapidjson::Document> > _rapidJSONDocuments; ///< cache for opened rapidjson Documents
 
-#if OPENRAVE_CURL
     std::string _remoteUrl; ///< remote url for scheme
-#endif
 };
 
 
