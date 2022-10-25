@@ -3171,7 +3171,7 @@ private:
         \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
         \param[in] setBodyLinksToIgnore Additional body link indices that collision checker ignore
         when checking collisions between the grabbed body and the body.
-        \param[in] rUserData custom data to keep in the body
+        \param[in] rGrabbedUserData custom data to keep in the body
         \return true if successful and body is grabbed.
      */
     virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const rapidjson::Value& rGrabbedUserData);

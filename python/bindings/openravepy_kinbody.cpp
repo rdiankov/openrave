@@ -5526,7 +5526,7 @@ void init_openravepy_kinbody()
                          .def("RegrabAll",&PyKinBody::RegrabAll, DOXY_FN(KinBody,RegrabAll))
                          .def("IsGrabbing",&PyKinBody::IsGrabbing,PY_ARGS("body") DOXY_FN(KinBody,IsGrabbing))
                          .def("CheckGrabbedInfo",checkgrabbedinfo2,PY_ARGS("body","grablink") DOXY_FN(KinBody,CheckGrabbedInfo "const KinBody; const Link"))
-                         .def("CheckGrabbedInfo",checkgrabbedinfo3,PY_ARGS("body","grablink","linkstoignore","userData") DOXY_FN(KinBody,CheckGrabbedInfo "const KinBody; const Link; const std::set; const boost::shared_ptr<rapidjson::Document>"))
+                         .def("CheckGrabbedInfo",checkgrabbedinfo3,PY_ARGS("body","grablink","linkstoignore","userData") DOXY_FN(KinBody,CheckGrabbedInfo "const KinBody; const Link; const std::set; const rapidjson::Document"))
                          .def("GetNumGrabbed", &PyKinBody::GetNumGrabbed, DOXY_FN(KinBody,GetNumGrabbed))
                          .def("GetGrabbed",&PyKinBody::GetGrabbed, DOXY_FN(KinBody,GetGrabbed))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
