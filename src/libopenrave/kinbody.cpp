@@ -499,6 +499,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
     return true;
 }
 
@@ -542,6 +543,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
     return true;
 }
 
@@ -572,6 +574,7 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible,
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
     return true;
 }
 
@@ -595,6 +598,7 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::s
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
     return true;
 }
 
@@ -625,6 +629,7 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
     return true;
 }
 
@@ -689,6 +694,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     }
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
     return true;
 }
 
@@ -720,6 +726,7 @@ void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const st
     }
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
 }
 
 bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
