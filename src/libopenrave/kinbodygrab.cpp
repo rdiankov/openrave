@@ -192,7 +192,7 @@ void Grabbed::ComputeListNonCollidingLinks()
     // }
 }
 
-bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const boost::shared_ptr<rapidjson::Document>& prUserData)
+bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const rapidjson::Value& rGrabbedUserData)
 {
     // always ignore links that are statically attached to plink (ie assume they are always colliding with the body)
     std::set<int> setGrabberLinksToIgnore;
@@ -201,19 +201,19 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const boost::
     FOREACHC(itAttachedLink, vAttachedToGrabbingLink) {
         setGrabberLinksToIgnore.insert((*itAttachedLink)->GetIndex());
     }
-    return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, prUserData);
+    return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, rGrabbedUserData);
 }
 
-bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<std::string>& setIgnoreGrabberLinkNames, const boost::shared_ptr<rapidjson::Document>& prUserData)
+bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<std::string>& setIgnoreGrabberLinkNames, const rapidjson::Value& rGrabbedUserData)
 {
     std::set<int> setGrabberLinksToIgnore;
     FOREACHC(itLinkName, setIgnoreGrabberLinkNames) {
         setGrabberLinksToIgnore.insert(GetLink(*itLinkName)->GetIndex());
     }
-    return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, prUserData);
+    return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, rGrabbedUserData);
 }
 
-bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<int>& setGrabberLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData)
+bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<int>& setGrabberLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
 {
     OPENRAVE_ASSERT_FORMAT(!!pGrabbedBody, "env=%s, body to be grabbed by body '%s' is invalid", GetEnv()->GetNameId()%GetName(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(!!pGrabbingLink, "env=%s, pGrabbingLink of body '%s' for grabbing body '%s' is invalid", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName(), ORE_InvalidArguments);
@@ -257,7 +257,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
         if( pPreviouslyGrabbed->_pGrabbingLink == pGrabbingLink ) {
             dReal distError2 = TransformDistance2(tGrabbingLink*pPreviouslyGrabbed->_tRelative, tGrabbedBody);
             if( distError2 <= g_fEpsilonLinear ) {
-                if (AreSharedPtrsDeepEqual(pPreviouslyGrabbed->_prUserData, prUserData)) {
+                if (pPreviouslyGrabbed->_rGrabbedUserData == rGrabbedUserData ) {
                     // Grabbing the same object at the same relative transform with the same grabbing link with the same userdata.
                     // So just modify setGrabberLinksToIgnore and then return.
                     pPreviouslyGrabbed->AddMoreIgnoreLinks(setGrabberLinksToIgnore);
@@ -292,7 +292,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
     velocity.first += velocity.second.cross(tGrabbedBody.trans - tGrabbingLink.trans);
     pGrabbedBody->SetVelocity(velocity.first, velocity.second);
-    DeepCopy(prUserData, pGrabbed->_prUserData);
+    CopyRapidJsonDoc(rGrabbedUserData, pGrabbed->_rGrabbedUserData);
     _vGrabbedBodies.push_back(pGrabbed);
 
     try {
@@ -422,7 +422,7 @@ void KinBody::RegrabAll()
         GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink));
         pNewGrabbed->_tRelative = pGrabbed->_tRelative;
         pNewGrabbed->_setGrabberLinkIndicesToIgnore.swap(pGrabbed->_setGrabberLinkIndicesToIgnore);
-        DeepCopy(pGrabbed->_prUserData, pNewGrabbed->_prUserData);
+        CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
 
         std::pair<Vector, Vector> velocity = pNewGrabbed->_pGrabbingLink->GetVelocity();
         velocity.first += velocity.second.cross(pBody->GetTransform().trans - pNewGrabbed->_pGrabbingLink->GetTransform().trans);
@@ -473,7 +473,7 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
     return defaultErrorCode;
 }
 
-int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setGrabberLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData) const
+int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setGrabberLinksToIgnore, const rapidjson::Value& rGrabbedUserData) const
 {
     GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
     for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
@@ -510,14 +510,14 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_UserDataNotMatch);
 
-        if( AreSharedPtrsDeepEqual(pgrabbed->_prUserData, prUserData) ) {
+        if( pgrabbed->_rGrabbedUserData == rGrabbedUserData ) {
             return GICR_Identical;
         }
     }
     return defaultErrorCode;
 }
 
-int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setGrabberLinksToIgnore, const boost::shared_ptr<rapidjson::Document>& prUserData) const
+int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setGrabberLinksToIgnore, const rapidjson::Value& rGrabbedUserData) const
 {
     GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
     for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
@@ -553,7 +553,7 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         }
         defaultErrorCode = std::max(defaultErrorCode, GICR_UserDataNotMatch);
 
-        if( AreSharedPtrsDeepEqual(pgrabbed->_prUserData, prUserData) ) {
+        if( pgrabbed->_rGrabbedUserData == rGrabbedUserData ) {
             return GICR_Identical;
         }
     }
@@ -597,7 +597,7 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos
             poutputinfo->_robotlinkname = pgrabbed->_pGrabbingLink->GetName();
             poutputinfo->_trelative = pgrabbed->_tRelative;
             poutputinfo->_setIgnoreRobotLinkNames.clear();
-            DeepCopy(pgrabbed->_prUserData, poutputinfo->_prUserData);
+            CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, poutputinfo->_rGrabbedUserData);
 
             FOREACHC(itlink, _veclinks) {
                 if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
@@ -624,7 +624,7 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vGrabbedInfos) const
             outputinfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
             outputinfo._trelative = pgrabbed->_tRelative;
             outputinfo._setIgnoreRobotLinkNames.clear();
-            DeepCopy(pgrabbed->_prUserData, outputinfo._prUserData);
+            CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, outputinfo._rGrabbedUserData);
 
             FOREACHC(itlink, _veclinks) {
                 if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
@@ -647,7 +647,7 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
                 grabbedInfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
                 grabbedInfo._trelative = pgrabbed->_tRelative;
                 grabbedInfo._setIgnoreRobotLinkNames.clear();
-                DeepCopy(pgrabbed->_prUserData, grabbedInfo._prUserData);
+                CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, grabbedInfo._rGrabbedUserData);
 
                 FOREACHC(itlink, _veclinks) {
                     if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
@@ -661,6 +661,16 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
     return false;
 }
 
+KinBody::GrabbedInfo::GrabbedInfo(const GrabbedInfo& other)
+{
+    _id = other._id;
+    _grabbedname = other._grabbedname;
+    _robotlinkname = other._robotlinkname;
+    _trelative = other._trelative;
+    _setIgnoreRobotLinkNames = other._setIgnoreRobotLinkNames;
+    _rGrabbedUserData.CopyFrom(other._rGrabbedUserData, _rGrabbedUserData.GetAllocator());
+}
+
 bool KinBody::GrabbedInfo::operator==(const GrabbedInfo& other) const
 {
     return _id == other._id
@@ -668,7 +678,19 @@ bool KinBody::GrabbedInfo::operator==(const GrabbedInfo& other) const
        && _robotlinkname == other._robotlinkname
        && _trelative == other._trelative
        && _setIgnoreRobotLinkNames == other._setIgnoreRobotLinkNames
-       && AreSharedPtrsDeepEqual(_prUserData, other._prUserData);
+       && _rGrabbedUserData == other._rGrabbedUserData;
+}
+
+KinBody::GrabbedInfo& KinBody::GrabbedInfo::operator=(const GrabbedInfo& other)
+{
+    _id = other._id;
+    _grabbedname = other._grabbedname;
+    _robotlinkname = other._robotlinkname;
+    _trelative = other._trelative;
+    _setIgnoreRobotLinkNames = other._setIgnoreRobotLinkNames;
+    _rGrabbedUserData = rapidjson::Document(); // reset allocator
+    _rGrabbedUserData.CopyFrom(other._rGrabbedUserData, _rGrabbedUserData.GetAllocator());
+    return *this;
 }
 
 void KinBody::GrabbedInfo::Reset()
@@ -678,7 +700,7 @@ void KinBody::GrabbedInfo::Reset()
     _robotlinkname.clear();
     _trelative = Transform();
     _setIgnoreRobotLinkNames.clear();
-    _prUserData.reset();
+    _rGrabbedUserData.SetNull();
 }
 
 void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -694,8 +716,8 @@ void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
     if( !_setIgnoreRobotLinkNames.empty() ) {
         orjson::SetJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames, allocator);
     }
-    if( !!_prUserData ) {
-        orjson::SetJsonValueByKey(value, "userData", *_prUserData, allocator);
+    if( !_rGrabbedUserData.IsNull() ) {
+        orjson::SetJsonValueByKey(value, "userData", _rGrabbedUserData, allocator);
     }
 }
 
@@ -710,11 +732,11 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
     orjson::LoadJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames);
     if( value.HasMember("userData" ) ) {
-        _prUserData.reset(new rapidjson::Document());
-        orjson::SaveJsonValue(*_prUserData, value["userData"], _prUserData->GetAllocator());
+        _rGrabbedUserData = rapidjson::Document(); // to remove the allocator
+        orjson::SaveJsonValue(_rGrabbedUserData, value["userData"], _rGrabbedUserData.GetAllocator());
     }
     else {
-        _prUserData.reset();
+        _rGrabbedUserData.SetNull();
     }
 }
 
@@ -726,9 +748,9 @@ void KinBody::GrabbedInfo::serialize(std::ostream& os) const
     for( std::set<std::string>::const_iterator it = _setIgnoreRobotLinkNames.begin(); it != _setIgnoreRobotLinkNames.end(); ++it ) {
         os << (*it) << " ";
     }
-    if( !!_prUserData ) {
+    if( _rGrabbedUserData.IsNull() ) {
         // using 'void DumpJson(Value, ostream, unsigned int)' to let rapidjson::OStreamWrapper to handle std::ostream
-        OpenRAVE::orjson::DumpJson(*_prUserData, os);
+        OpenRAVE::orjson::DumpJson(_rGrabbedUserData, os);
         os << " ";
     }
 }
@@ -782,7 +804,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
             FOREACHC(itLinkName, pGrabbedInfo->_setIgnoreRobotLinkNames) {
                 pGrabbed->_setGrabberLinkIndicesToIgnore.insert(GetLink(*itLinkName)->GetIndex());
             }
-            DeepCopy(pGrabbedInfo->_prUserData, pGrabbed->_prUserData);
+            CopyRapidJsonDoc(pGrabbedInfo->_rGrabbedUserData, pGrabbed->_rGrabbedUserData);
 
             std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
             velocity.first += velocity.second.cross(tBody.trans - tGrabbingLink.trans);

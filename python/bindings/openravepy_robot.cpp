@@ -2090,7 +2090,7 @@ object PyRobotBase::CalculateActiveAngularVelocityJacobian(int index) const
 }
 
 bool PyRobotBase::Grab(PyKinBodyPtr pbody) {
-    CHECK_POINTER(pbody); return _probot->Grab(pbody->GetBody(), nullptr);
+    CHECK_POINTER(pbody); return _probot->Grab(pbody->GetBody(), rapidjson::Value());
 }
 
 // since PyKinBody::Grab is overloaded with (pbody, plink) parameters, have to support both...?
@@ -2100,33 +2100,30 @@ bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore)
     CHECK_POINTER(pylink_or_linkstoignore);
     KinBody::LinkPtr plink = GetKinBodyLink(pylink_or_linkstoignore);
     if( !!plink ) {
-        return _probot->Grab(pbody->GetBody(), plink, nullptr);
+        return _probot->Grab(pbody->GetBody(), plink, rapidjson::Value());
     }
     // maybe it is a set?
     std::set<int> setlinkstoignore = ExtractSet<int>(pylink_or_linkstoignore);
-    return _probot->Grab(pbody->GetBody(), setlinkstoignore, nullptr);
+    return _probot->Grab(pbody->GetBody(), setlinkstoignore, rapidjson::Value());
 }
 
 bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, object userData)
 {
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
-    boost::shared_ptr<rapidjson::Document> prUserData;
+    rapidjson::Document rGrabbedUserData;
     if( !IS_PYTHONOBJECT_NONE(userData) ) {
-        prUserData.reset(new rapidjson::Document());
-        toRapidJSONValue(userData, *prUserData, prUserData->GetAllocator());
+        toRapidJSONValue(userData, rGrabbedUserData, rGrabbedUserData.GetAllocator());
     }
-    else {
-        prUserData.reset();
-    }
+
     if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
         // linkstoignore is a list of link names
         std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
-        return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreString, prUserData);
+        return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreString, rGrabbedUserData);
     }
     // linkstoignore is a list of link indices
     std::set<int> setlinkstoignoreInt = ExtractSet<int>(linkstoignore);
-    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreInt, prUserData);
+    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreInt, rGrabbedUserData);
 }
 
 bool PyRobotBase::CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport)

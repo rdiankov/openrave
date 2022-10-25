@@ -2217,8 +2217,8 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
     }
 #endif
     if( !IS_PYTHONOBJECT_NONE(_userData) ) {
-        pinfo->_prUserData.reset(new rapidjson::Document());
-        toRapidJSONValue(_userData, *(pinfo->_prUserData), pinfo->_prUserData->GetAllocator());
+        pinfo->_rGrabbedUserData = rapidjson::Document();
+        toRapidJSONValue(_userData, pinfo->_rGrabbedUserData, pinfo->_rGrabbedUserData.GetAllocator());
     }
     return pinfo;
 }
@@ -2276,12 +2276,7 @@ void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
     }
     _setIgnoreRobotLinkNames = setRobotLinksToIgnore;
 #endif
-    if( !!info._prUserData ) {
-        _userData = toPyObject(*(info._prUserData));
-    }
-    else {
-        _userData = py::none_();
-    }
+    _userData = toPyObject(info._rGrabbedUserData);
 }
 
 py::object PyKinBody::PyGrabbedInfo::__unicode__() {
@@ -3768,18 +3763,20 @@ object PyKinBody::GetConfigurationValues() const
     return toPyArray(values);
 }
 
-bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, object userData)
+bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink, object olinkstoignore, object oUserData)
 {
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
-    std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
-    // convert from python dict to rapidjson and pass to _pbody->Grab
-    boost::shared_ptr<rapidjson::Document> prUserData = nullptr;
-    if( !IS_PYTHONOBJECT_NONE(userData) ) {
-        prUserData.reset(new rapidjson::Document());
-        toRapidJSONValue(userData, *prUserData, prUserData->GetAllocator());
+    std::set<int> setlinkstoignore;
+    if( !IS_PYTHONOBJECT_NONE(olinkstoignore) ) {
+        setlinkstoignore = ExtractSet<int>(olinkstoignore);
     }
-    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore, prUserData);
+    // convert from python dict to rapidjson and pass to _pbody->Grab
+    rapidjson::Document rGrabbedUserData;
+    if( !IS_PYTHONOBJECT_NONE(oUserData) ) {
+        toRapidJSONValue(oUserData, rGrabbedUserData, rGrabbedUserData.GetAllocator());
+    }
+    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore, rGrabbedUserData);
 }
 
 bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink)
@@ -3787,7 +3784,7 @@ bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink)
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
     KinBody::LinkPtr plink = GetKinBodyLink(pylink);
-    return _pbody->Grab(pbody->GetBody(), plink, nullptr);
+    return _pbody->Grab(pbody->GetBody(), plink, rapidjson::Value());
 }
 
 void PyKinBody::Release(PyKinBodyPtr pbody)
@@ -3824,19 +3821,21 @@ int PyKinBody::CheckGrabbedInfo(PyKinBodyPtr pbody, object pylink, object linkst
 {
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
-    boost::shared_ptr<rapidjson::Document> prUserData = nullptr;
+    rapidjson::Document rGrabbedUserData;
     if( !IS_PYTHONOBJECT_NONE(userData) ) {
-        prUserData.reset(new rapidjson::Document());
-        toRapidJSONValue(userData, *prUserData, prUserData->GetAllocator());
+        toRapidJSONValue(userData, rGrabbedUserData, rGrabbedUserData.GetAllocator());
     }
     if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
         // linkstoignore is a list of link names
         std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
-        return _pbody->CheckGrabbedInfo(*(pbody->GetBody()), *GetKinBodyLink(pylink), setlinkstoignoreString, prUserData);
+        return _pbody->CheckGrabbedInfo(*(pbody->GetBody()), *GetKinBodyLink(pylink), setlinkstoignoreString, rGrabbedUserData);
     }
     // linkstoignore is a list of link indices
-    std::set<int> setlinkstoignoreInt = ExtractSet<int>(linkstoignore);
-    return _pbody->CheckGrabbedInfo(*(pbody->GetBody()), *GetKinBodyLink(pylink), setlinkstoignoreInt, prUserData);
+    std::set<int> setlinkstoignoreInt;
+    if( !IS_PYTHONOBJECT_NONE(linkstoignore) ) {
+        setlinkstoignoreInt = ExtractSet<int>(linkstoignore);
+    }
+    return _pbody->CheckGrabbedInfo(*(pbody->GetBody()), *GetKinBodyLink(pylink), setlinkstoignoreInt, rGrabbedUserData);
 }
 
 int PyKinBody::GetNumGrabbed() const

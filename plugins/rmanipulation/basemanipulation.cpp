@@ -1093,7 +1093,7 @@ protected:
         }
 
         RAVELOG_DEBUG(str(boost::format("robot %s:%s grabbing body %s...\n")%robot->GetName()%robot->GetActiveManipulator()->GetEndEffector()->GetName()%ptarget->GetName()));
-        robot->Grab(ptarget, nullptr);
+        robot->Grab(ptarget, rapidjson::Value());
         return true;
     }
 

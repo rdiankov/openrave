@@ -354,10 +354,10 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 if( !!grabinfo.trelativepose ) {
                     grabinfo.pbody->SetTransform(plink->GetTransform() * *grabinfo.trelativepose);
                 }
-                probot->Grab(grabinfo.pbody, plink, nullptr);
+                probot->Grab(grabinfo.pbody, plink, rapidjson::Value());
             }
             FOREACH(it,listgrab) {
-                probot->Grab(it->first,it->second, nullptr);
+                probot->Grab(it->first,it->second, rapidjson::Value());
             }
             // set _bIsDone after all computation is done!
             _bIsDone = bIsDone;
