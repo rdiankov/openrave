@@ -663,12 +663,7 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
 
 KinBody::GrabbedInfo::GrabbedInfo(const GrabbedInfo& other)
 {
-    _id = other._id;
-    _grabbedname = other._grabbedname;
-    _robotlinkname = other._robotlinkname;
-    _trelative = other._trelative;
-    _setIgnoreRobotLinkNames = other._setIgnoreRobotLinkNames;
-    _rGrabbedUserData.CopyFrom(other._rGrabbedUserData, _rGrabbedUserData.GetAllocator());
+    *this = other;
 }
 
 bool KinBody::GrabbedInfo::operator==(const GrabbedInfo& other) const
