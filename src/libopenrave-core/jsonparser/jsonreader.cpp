@@ -163,7 +163,7 @@ public:
             }
             else if (itatt->first == "remoteurl") {
 #if OPENRAVE_CURL
-                _remoteUrl = itatt->second;
+                _pDownloader = boost::make_shared<JSONDownloader>(_rapidJSONDocuments, itatt->second, _vOpenRAVESchemeAliases);
 #else
                 throw OPENRAVE_EXCEPTION_FORMAT("\"remoteurl\" option is not supported, have to compile openrave with CURL support first", filename, ORE_InvalidArguments);
 #endif
@@ -220,9 +220,9 @@ public:
         // If remote URL is provided, start the process to download everything and load it into the json map
         if (IsDownloadingFromRemote()) {
 #if OPENRAVE_CURL
-            JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
-            jsonDownloader.QueueDownloadReferenceURIs(rEnvInfo);
-            jsonDownloader.WaitForDownloads(_downloadTimeoutUS);
+            JSONDownloaderScope jsonDownload(*_pDownloader, alloc, !(_deserializeOptions & IDO_IgnoreReferenceUri));
+            jsonDownload.QueueDownloadReferenceURIs(rEnvInfo);
+            jsonDownload.WaitForDownloads(_downloadTimeoutUS);
 #endif
         }
 
@@ -407,7 +407,7 @@ public:
 
     bool IsDownloadingFromRemote() const
     {
-        return !_remoteUrl.empty();
+        return !!_pDownloader;
     }
 
     /// \brief open and cache a json document remotly
@@ -415,8 +415,8 @@ public:
     {
 #if OPENRAVE_CURL
         // download only one document, do not recurse
-        JSONDownloader jsonDownloader(doc.GetAllocator(), _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, false);
-        jsonDownloader.Download(uri, doc, _downloadTimeoutUS);
+        JSONDownloaderScope jsonDownload(*_pDownloader, doc.GetAllocator(), false);
+        jsonDownload.Download(uri, doc, _downloadTimeoutUS);
 #else
         throw OPENRAVE_EXCEPTION_FORMAT("Do not support downloading remote document '%s'.", uri, ORE_NotImplemented);
 #endif
@@ -750,9 +750,9 @@ protected:
         if (_IsExpandableReferenceUri(referenceUri)) {
             if (IsDownloadingFromRemote()) {
 #if OPENRAVE_CURL
-                JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
-                jsonDownloader.QueueDownloadURI(referenceUri);
-                jsonDownloader.WaitForDownloads(_downloadTimeoutUS);
+                JSONDownloaderScope jsonDownload(*_pDownloader, alloc, !(_deserializeOptions & IDO_IgnoreReferenceUri));
+                jsonDownload.QueueDownloadURI(referenceUri);
+                jsonDownload.WaitForDownloads(_downloadTimeoutUS);
 #endif
             }
             std::set<std::string> circularReference; // dummy
@@ -835,14 +835,14 @@ protected:
 
         if (IsDownloadingFromRemote()) {
 #if OPENRAVE_CURL
-            JSONDownloader jsonDownloader(alloc, _rapidJSONDocuments, _remoteUrl, _vOpenRAVESchemeAliases, !(_deserializeOptions & IDO_IgnoreReferenceUri));
+            JSONDownloaderScope jsonDownload(*_pDownloader, alloc, !(_deserializeOptions & IDO_IgnoreReferenceUri));
             FOREACH(itConnected, robotInfo._vConnectedBodyInfos) {
                 RobotBase::ConnectedBodyInfoPtr& pConnected = *itConnected;
                 if (_IsExpandableReferenceUri(pConnected->_uri)) {
-                    jsonDownloader.QueueDownloadURI(pConnected->_uri);
+                    jsonDownload.QueueDownloadURI(pConnected->_uri);
                 }
             }
-            jsonDownloader.WaitForDownloads(_downloadTimeoutUS);
+            jsonDownload.WaitForDownloads(_downloadTimeoutUS);
 #endif
         }
 
@@ -1004,7 +1004,9 @@ protected:
 
     std::map<std::string, boost::shared_ptr<const rapidjson::Document> > _rapidJSONDocuments; ///< cache for opened rapidjson Documents
 
-    std::string _remoteUrl; ///< remote url for scheme
+#if OPENRAVE_CURL
+    JSONDownloaderPtr _pDownloader; ///< downloader for downloading remote files, only non-null if remoteurl is set
+#endif
 };
 
 
