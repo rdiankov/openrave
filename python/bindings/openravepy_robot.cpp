@@ -2107,13 +2107,13 @@ bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore)
     return _probot->Grab(pbody->GetBody(), setlinkstoignore, rapidjson::Value());
 }
 
-bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, object userData)
+bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, object grabbedUserData)
 {
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
     rapidjson::Document rGrabbedUserData;
-    if( !IS_PYTHONOBJECT_NONE(userData) ) {
-        toRapidJSONValue(userData, rGrabbedUserData, rGrabbedUserData.GetAllocator());
+    if( !IS_PYTHONOBJECT_NONE(grabbedUserData) ) {
+        toRapidJSONValue(grabbedUserData, rGrabbedUserData, rGrabbedUserData.GetAllocator());
     }
 
     if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
@@ -2708,7 +2708,7 @@ void init_openravepy_robot()
                        .def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian, PY_ARGS("linkindex") DOXY_FN(RobotBase,CalculateActiveAngularVelocityJacobian "int; std::vector"))
                        .def("Grab",pgrab1, PY_ARGS("body") DOXY_FN(RobotBase,Grab "KinBodyPtr"))
                        .def("Grab",pgrab3, PY_ARGS("body","grablink") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"))
-                       .def("Grab",pgrab5, PY_ARGS("body","grablink","linkstoignore","userData") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr; Linkptr; rapidjson::Document"))
+                       .def("Grab",pgrab5, PY_ARGS("body","grablink","linkstoignore","grabbedUserData") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr; Linkptr; rapidjson::Document"))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def("CheckLinkSelfCollision", &PyRobotBase::CheckLinkSelfCollision,
                             "linkindex"_a,

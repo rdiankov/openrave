@@ -712,7 +712,7 @@ void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
         orjson::SetJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames, allocator);
     }
     if( !_rGrabbedUserData.IsNull() ) {
-        orjson::SetJsonValueByKey(value, "userData", _rGrabbedUserData, allocator);
+        orjson::SetJsonValueByKey(value, "grabbedUserData", _rGrabbedUserData, allocator);
     }
 }
 
@@ -726,9 +726,9 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _trelative.trans *= fUnitScale;
     }
     orjson::LoadJsonValueByKey(value, "ignoreRobotLinkNames", _setIgnoreRobotLinkNames);
-    if( value.HasMember("userData" ) ) {
+    if( value.HasMember("grabbedUserData") ) {
         _rGrabbedUserData = rapidjson::Document(); // to remove the allocator
-        orjson::SaveJsonValue(_rGrabbedUserData, value["userData"], _rGrabbedUserData.GetAllocator());
+        orjson::SaveJsonValue(_rGrabbedUserData, value["grabbedUserData"], _rGrabbedUserData.GetAllocator());
     }
     else {
         _rGrabbedUserData.SetNull();
