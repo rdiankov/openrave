@@ -47,7 +47,7 @@ struct convert< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> 
                 for (; ptr < END; ++ptr)
                 {
                     rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> element(&v.GetAllocator());
-                    ptr->convert(&element);
+                    ptr->convert(element);
                     v.PushBack(static_cast<rapidjson::GenericValue<Encoding, Allocator>&>(element), v.GetAllocator());
                 }
             }
@@ -60,7 +60,7 @@ struct convert< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> 
                 {
                     rapidjson::GenericValue<Encoding, Allocator> key(ptr->key.via.str.ptr, ptr->key.via.str.size, v.GetAllocator());
                     rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> val(&v.GetAllocator());
-                    ptr->val.convert(&val);
+                    ptr->val.convert(val);
 
                     v.AddMember(key, val, v.GetAllocator());
                 }
@@ -284,26 +284,26 @@ private:
 void OpenRAVE::MsgPack::DumpMsgPack(const rapidjson::Value& value, std::ostream& os)
 {
     msgpack::osbuffer buf(os);
-    msgpack::pack(&buf, value);
+    msgpack::pack(buf, value);
 }
 
 void OpenRAVE::MsgPack::DumpMsgPack(const rapidjson::Value& value, std::vector<char>& output)
 {   
     msgpack::vbuffer buf(output);
-    msgpack::pack(&buf, value);
+    msgpack::pack(buf, value);
 }
 
 void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, const std::string& str)
 {
     msgpack::unpacked unpacked;
-    msgpack::unpack(&unpacked, str.data(), str.size());
+    msgpack::unpack(unpacked, str.data(), str.size());
     unpacked.get().convert(d);
 }
 
 void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, const void* data, size_t size)
 {
     msgpack::unpacked unpacked;
-    msgpack::unpack(&unpacked, (const char*) data, size);
+    msgpack::unpack(unpacked, (const char*) data, size);
     unpacked.get().convert(d);
 }
 
