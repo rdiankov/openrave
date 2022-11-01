@@ -332,6 +332,7 @@ public:
     py::object GetManageData() const;
     int GetUpdateStamp() const;
     std::string serialize(int options) const;
+    UpdateFromInfoResult UpdateFromKinBodyInfo(py::object oInfo);
     std::string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
 
