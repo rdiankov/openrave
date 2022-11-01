@@ -95,8 +95,8 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 return params
             else:
                 log.error('version is wrong %s!=%s ',modelversion,self.getversion())
-        except MemoryError as e:
-            log.error('%s failed: ',filename,e)
+        except MemoryError:
+            log.exception('%s failed:',filename)
         except:
             pass
         return None
