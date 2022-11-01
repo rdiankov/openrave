@@ -333,6 +333,11 @@ void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, const std::string& 
     throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
 }
 
+void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, const void* data, size_t size)
+{
+    throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
+}
+
 void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, std::istream& is)
 {
     throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
