@@ -639,6 +639,12 @@ protected:
             }
 
             if( insertIndex >= 0 ) {
+                bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
+                RAVELOG_VERBOSE_FORMAT("Deserializing rRefKinBodyInfo=%s into insertIndex=%d, isPartial=%d", orjson::DumpJson(rRefKinBodyInfo)%insertIndex%isPartial);
+                if( !isPartial ) {
+                    envInfo._vBodyInfos.at(insertIndex)->Reset();
+                }
+
                 envInfo._vBodyInfos.at(insertIndex)->DeserializeJSON(rRefKinBodyInfo, fUnitScale, _deserializeOptions);
             }
         }
@@ -667,6 +673,12 @@ protected:
                         pExistingBodyInfo = pNewRobotInfo;
                     }
 
+                    bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
+                    RAVELOG_VERBOSE_FORMAT("Deserializing again rRefKinBodyInfo=%s into insertIndex=%d with isPartial=%d", orjson::DumpJson(rRefKinBodyInfo)%insertIndex%isPartial);
+
+                    if( !isPartial ) {
+                        pExistingBodyInfo->Reset();
+                    }
                     pExistingBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
                     insertIndex = ibody;
                     break;
