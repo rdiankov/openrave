@@ -1328,7 +1328,12 @@ public:
             listcallbacks.push_back(pdata->_callback);
         }
     }
-
+    
+    virtual void SwapCollisionCallbacks(std::list<UserDataWeakPtr>& listBackupRegisteredCollisionCallbacks) {
+        ExclusiveLock lock(_mutexInterfaces);
+        _listRegisteredCollisionCallbacks.swap(listBackupRegisteredCollisionCallbacks);
+    }
+    
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)
     {
         EnvironmentLock lockenv(GetMutex());

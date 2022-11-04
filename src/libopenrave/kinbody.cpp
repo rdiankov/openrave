@@ -86,6 +86,25 @@ protected:
     boost::weak_ptr<KinBody const> _pweakbody;
 };
 
+class CollisionCallbackRemover
+{
+public:
+    CollisionCallbackRemover(EnvironmentBasePtr penv) : _pweakenv(penv) {
+        _listRegisteredCollisionCallbacks.clear();
+        penv->SwapCollisionCallbacks(_listRegisteredCollisionCallbacks);
+    }
+    virtual ~CollisionCallbackRemover() {
+        EnvironmentBasePtr penv = _pweakenv.lock();
+        if( !!penv ) {
+            penv->SwapCollisionCallbacks(_listRegisteredCollisionCallbacks);
+        }
+    }
+
+protected:
+    boost::weak_ptr<EnvironmentBase> _pweakenv;
+    std::list<UserDataWeakPtr> _listRegisteredCollisionCallbacks;
+};
+    
 class CallFunctionAtDestructor
 {
 public:
@@ -5376,6 +5395,7 @@ private:
         TransformsSaver saver(shared_kinbody_const());
         CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
         CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
+        CollisionCallbackRemover callbackremover(GetEnv()); // reset collision callbacks too
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
         }

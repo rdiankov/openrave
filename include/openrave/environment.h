@@ -194,6 +194,12 @@ public:
     /// \param listcallbacks filled with the user callbacks. Once the environment is unlocked, the list becomes invalid.
     virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>&) const = 0;
 
+    /// \brief swap the registered collision callbacks with listBackupRegisteredCollisionCallbacks.
+    /// Used to temporarily remove and add back all collision callbacks.
+    ///
+    /// \param listBackupRegisteredCollisionCallbacks is swapped with the current list of registered collision callbacks
+    virtual void SwapCollisionCallbacks(std::list<UserDataWeakPtr>& listBackupRegisteredCollisionCallbacks) = 0;
+    
     //@}
 
     /// \name Physics and Simulation
