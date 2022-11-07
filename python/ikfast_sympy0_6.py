@@ -4830,7 +4830,7 @@ class IKFastSolver(AutoReloader):
                 
                 # ignore any equations with degree 3 or more
                 if Poly(enew,varsym.svar).degree > maxdegree or Poly(enew,varsym.cvar).degree > maxdegree:
-                    log.debug('ignoring equation: ',enew)
+                    log.debug('ignoring equation: %r',enew)
                     continue
                 
                 if Poly(enew,varsym.svar).coeff() == S.Zero or Poly(enew,varsym.cvar) == S.Zero or Poly(enew,varsym.var) == S.Zero:
