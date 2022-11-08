@@ -175,22 +175,17 @@ std::map<std::string, ReadablePtr> ExtractReadableInterfaces(object pyReadableIn
 
     py::dict pyReadableInterfacesDict = (py::dict)pyReadableInterfaces;
     std::map<std::string, ReadablePtr> mReadableInterfaces;
-    try {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        py::list keys = py::list(pyReadableInterfacesDict);
+    py::list keys = py::list(pyReadableInterfacesDict);
 #else
-        py::list keys = py::list(pyReadableInterfacesDict.keys());
+    py::list keys = py::list(pyReadableInterfacesDict.keys());
 #endif
-        size_t numkeys = len(keys);
-        for(size_t iKey = 0; iKey < numkeys; iKey++) {
-            std::string name = py::extract<std::string>(keys[iKey]);
-            mReadableInterfaces[name] = ExtractReadable(pyReadableInterfacesDict[name]);
-            // Readable pValue = py::extract<Readable>(pyReadableInterfacesDict[name]);
-            // mReadableInterfaces[name] = pValue;
-        }
-    }
-    catch (...) {
-        RAVELOG_WARN("Cannot do Extract mapping for readableinterfaces");
+    size_t numkeys = len(keys);
+    for(size_t iKey = 0; iKey < numkeys; iKey++) {
+        std::string name = py::extract<std::string>(keys[iKey]);
+        mReadableInterfaces[name] = ExtractReadable(pyReadableInterfacesDict[name]);
+        // Readable pValue = py::extract<Readable>(pyReadableInterfacesDict[name]);
+        // mReadableInterfaces[name] = pValue;
     }
     return mReadableInterfaces;
 }
@@ -4566,10 +4561,10 @@ void init_openravepy_kinbody()
 #else
     object updatefrominforesult = enum_<UpdateFromInfoResult>("UpdateFromInfoResult" DOXY_ENUM(UpdateFromInfoResult))
 #endif
-        .value("NoChange",UFIR_NoChange)
-        .value("Success",UFIR_Success)
-        .value("RequireRemoveFromEnvironment",UFIR_RequireRemoveFromEnvironment)
-        .value("RequireReinitialize",UFIR_RequireReinitialize)
+                                  .value("NoChange",UFIR_NoChange)
+                                  .value("Success",UFIR_Success)
+                                  .value("RequireRemoveFromEnvironment",UFIR_RequireRemoveFromEnvironment)
+                                  .value("RequireReinitialize",UFIR_RequireReinitialize)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object geometrytype = enum_<GeometryType>(m, "GeometryType" DOXY_ENUM(GeometryType))
