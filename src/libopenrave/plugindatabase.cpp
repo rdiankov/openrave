@@ -207,29 +207,28 @@ void DynamicRaveDatabase::ReloadPlugins()
 bool DynamicRaveDatabase::LoadPlugin(const std::string& libraryname)
 {
     // If the libraryname matches any of the existing loaded libraries, then reload it
-    std::vector<PluginPtr>::iterator it = std::find_if(_vPlugins.begin(), _vPlugins.end(), [&](const PluginPtr& plugin) {
-        return (plugin->GetPluginName() == libraryname || plugin->GetPluginPath() == libraryname);
-    });
-    if (it != _vPlugins.end()) {
+    {
         std::lock_guard<std::mutex> lock(_mutex);
-        std::rotate(it, it + 1, _vPlugins.end());
-        _vPlugins.pop_back();
+        _vPlugins.erase(std::remove_if(_vPlugins.begin(), _vPlugins.end(), [&libraryname](const PluginPtr& plugin) {
+            return (plugin->GetPluginName() == libraryname || plugin->GetPluginPath() == libraryname);
+        }), _vPlugins.end());
     }
     return _LoadPlugin(libraryname);
 }
 
 void DynamicRaveDatabase::_LoadPluginsFromPath(const std::string& strpath, bool recurse) try
 {
+    static const std::string PLUGIN_EXT =
 #if defined (__APPLE_CC__)
-#define PLUGIN_EXT ".dylib"
+        ".dylib";
 #elif defined (_WIN32)
-#define PLUGIN_EXT ".dll"
+        ".dll";
 #else
-#define PLUGIN_EXT ".so"
+        ".so";
 #endif
 
 #ifdef HAVE_BOOST_FILESYSTEM
-    fs::path path(strpath);
+    const fs::path path(strpath);
     if (fs::is_empty(path)) {
         return;
     } else if (fs::is_directory(path)) {
@@ -242,7 +241,7 @@ void DynamicRaveDatabase::_LoadPluginsFromPath(const std::string& strpath, bool 
         }
     } else if (fs::is_regular_file(path)) {
         // Check that the file has a platform-appropriate extension
-        if (path.has_extension() && path.extension() == PLUGIN_EXT) {
+        if (0 == strpath.compare(strpath.size() - PLUGIN_EXT.size(), PLUGIN_EXT.size(), PLUGIN_EXT)) {
             _LoadPlugin(path.string());
         }
     } else {
@@ -281,7 +280,7 @@ void DynamicRaveDatabase::_LoadPluginsFromPath(const std::string& strpath, bool 
         }
         ::closedir(dirptr);
     } else if (S_ISREG(sb.st_mode)) {
-        _LoadPlugin(dirname);
+        _LoadPlugin(strpath);
     } else {
         // Not a directory or file, ignore it
     }
@@ -307,7 +306,7 @@ bool DynamicRaveDatabase::_LoadPlugin(const std::string& strpath)
     }
     RavePlugin* plugin = nullptr;
     try {
-        plugin = reinterpret_cast<PluginExportFn_Create>(psym)();
+        plugin = static_cast<PluginExportFn_Create>(psym)();
     } catch (const std::exception& e) {
         RAVELOG_WARN_FORMAT("Failed to construct a RavePlugin from %s: %s", strpath % e.what());
     }
