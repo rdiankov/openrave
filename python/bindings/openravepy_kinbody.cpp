@@ -175,22 +175,17 @@ std::map<std::string, ReadablePtr> ExtractReadableInterfaces(object pyReadableIn
 
     py::dict pyReadableInterfacesDict = (py::dict)pyReadableInterfaces;
     std::map<std::string, ReadablePtr> mReadableInterfaces;
-    try {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        py::list keys = py::list(pyReadableInterfacesDict);
+    py::list keys = py::list(pyReadableInterfacesDict);
 #else
-        py::list keys = py::list(pyReadableInterfacesDict.keys());
+    py::list keys = py::list(pyReadableInterfacesDict.keys());
 #endif
-        size_t numkeys = len(keys);
-        for(size_t iKey = 0; iKey < numkeys; iKey++) {
-            std::string name = py::extract<std::string>(keys[iKey]);
-            mReadableInterfaces[name] = ExtractReadable(pyReadableInterfacesDict[name]);
-            // Readable pValue = py::extract<Readable>(pyReadableInterfacesDict[name]);
-            // mReadableInterfaces[name] = pValue;
-        }
-    }
-    catch (...) {
-        RAVELOG_WARN("Cannot do Extract mapping for readableinterfaces");
+    size_t numkeys = len(keys);
+    for(size_t iKey = 0; iKey < numkeys; iKey++) {
+        std::string name = py::extract<std::string>(keys[iKey]);
+        mReadableInterfaces[name] = ExtractReadable(pyReadableInterfacesDict[name]);
+        // Readable pValue = py::extract<Readable>(pyReadableInterfacesDict[name]);
+        // mReadableInterfaces[name] = pValue;
     }
     return mReadableInterfaces;
 }
@@ -3981,6 +3976,14 @@ string PyKinBody::serialize(int options) const
     return ss.str();
 }
 
+UpdateFromInfoResult PyKinBody::UpdateFromKinBodyInfo(py::object pyKinBodyInfo)
+{
+    KinBody::KinBodyInfoPtr pKinBodyInfo;
+    pKinBodyInfo = ExtractKinBodyInfo(pyKinBodyInfo);
+    CHECK_POINTER(pKinBodyInfo);
+    return _pbody->UpdateFromKinBodyInfo(*pKinBodyInfo);
+}
+
 string PyKinBody::GetKinematicsGeometryHash() const
 {
     return _pbody->GetKinematicsGeometryHash();
@@ -4571,6 +4574,16 @@ void init_openravepy_kinbody()
     .def("Close",&PyStateRestoreContextBase::Close,DOXY_FN(KinBody::KinBodyStateSaver, Close))
     .def("__str__",&PyStateRestoreContextBase::__str__)
     .def("__unicode__",&PyStateRestoreContextBase::__unicode__)
+    ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object updatefrominforesult = enum_<UpdateFromInfoResult>(m, "UpdateFromInfoResult" DOXY_ENUM(UpdateFromInfoResult))
+#else
+    object updatefrominforesult = enum_<UpdateFromInfoResult>("UpdateFromInfoResult" DOXY_ENUM(UpdateFromInfoResult))
+#endif
+                                  .value("NoChange",UFIR_NoChange)
+                                  .value("Success",UFIR_Success)
+                                  .value("RequireRemoveFromEnvironment",UFIR_RequireRemoveFromEnvironment)
+                                  .value("RequireReinitialize",UFIR_RequireReinitialize)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object geometrytype = enum_<GeometryType>(m, "GeometryType" DOXY_ENUM(GeometryType))
@@ -5626,6 +5639,7 @@ void init_openravepy_kinbody()
                          .def("GetManageData",&PyKinBody::GetManageData, DOXY_FN(KinBody,GetManageData))
                          .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp, DOXY_FN(KinBody,GetUpdateStamp))
                          .def("serialize",&PyKinBody::serialize,PY_ARGS("options") DOXY_FN(KinBody,serialize))
+                         .def("UpdateFromKinBodyInfo",&PyKinBody::UpdateFromKinBodyInfo,PY_ARGS("info") DOXY_FN(KinBody,UpdateFromKinBodyInfo))
                          .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash, DOXY_FN(KinBody,GetKinematicsGeometryHash))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("CreateKinBodyStateSaver", &PyKinBody::CreateKinBodyStateSaver,

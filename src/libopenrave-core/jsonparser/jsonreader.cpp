@@ -23,6 +23,7 @@
 #include <openrave/openravejson.h>
 #include <openrave/openravemsgpack.h>
 #include <openrave/openrave.h>
+#include <openrave/openraveexception.h>
 #include <rapidjson/istreamwrapper.h>
 #include <string>
 #include <fstream>
@@ -165,7 +166,7 @@ public:
 #if OPENRAVE_CURL
                 _pDownloader = boost::make_shared<JSONDownloader>(_rapidJSONDocuments, itatt->second, _vOpenRAVESchemeAliases);
 #else
-                throw OPENRAVE_EXCEPTION_FORMAT("\"remoteurl\" option is not supported, have to compile openrave with CURL support first", filename, ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT("\"remoteurl\" option is not supported, have to compile openrave with CURL support first", _filename, ORE_InvalidArguments);
 #endif
             }
             else if (itatt->first == "timeout") {
@@ -407,7 +408,11 @@ public:
 
     bool IsDownloadingFromRemote() const
     {
+#if OPENRAVE_CURL
         return !!_pDownloader;
+#else
+        return false;
+#endif
     }
 
     /// \brief open and cache a json document remotly
@@ -639,6 +644,12 @@ protected:
             }
 
             if( insertIndex >= 0 ) {
+                const bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
+                RAVELOG_VERBOSE_FORMAT("Deserializing rRefKinBodyInfo=%s into insertIndex=%d, isPartial=%d", orjson::DumpJson(rRefKinBodyInfo)%insertIndex%isPartial);
+                if( !isPartial ) {
+                    envInfo._vBodyInfos.at(insertIndex)->Reset();
+                }
+
                 envInfo._vBodyInfos.at(insertIndex)->DeserializeJSON(rRefKinBodyInfo, fUnitScale, _deserializeOptions);
             }
         }
@@ -665,6 +676,12 @@ protected:
                         RobotBase::RobotBaseInfoPtr pNewRobotInfo(new RobotBase::RobotBaseInfo());
                         *((KinBody::KinBodyInfo*)pNewRobotInfo.get())  = *pExistingBodyInfo;
                         pExistingBodyInfo = pNewRobotInfo;
+                    }
+
+                    const bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
+                    RAVELOG_VERBOSE_FORMAT("Deserializing again rRefKinBodyInfo=%s into insertIndex=%d with isPartial=%d", orjson::DumpJson(rRefKinBodyInfo)%insertIndex%isPartial);
+                    if( !isPartial ) {
+                        pExistingBodyInfo->Reset();
                     }
 
                     pExistingBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
