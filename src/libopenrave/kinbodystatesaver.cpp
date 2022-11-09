@@ -92,6 +92,10 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         OPENRAVE_ASSERT_OP(pbody->_vGrabbedBodies.size(),==,0);
         for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
             KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
+            if( !pbody->GetLink(pGrabbed->_pGrabbingLink->GetName()) ) {
+                RAVELOG_WARN_FORMAT("env=%s, could not restore grabbing link '%s' for grabbed body '%s' since %s does not have the link (body num links is %d)", pbody->GetEnv()->GetNameId()%pGrabbed->_pGrabbingLink->GetName()%pGrabbedBody->GetName()%pbody->GetName()%pbody->GetLinks().size());
+                continue;
+            }
             if( !!pGrabbedBody ) {
                 if( pbody->GetEnv() == _pbody->GetEnv() ) {
                     pbody->_AttachBody(pGrabbedBody);
