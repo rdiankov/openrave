@@ -664,11 +664,11 @@ public:
                 {
                     grabinfo.pbody->SetTransform(plink->GetTransform() * *grabinfo.trelativepose);
                 }
-                _probot->Grab(grabinfo.pbody, plink);
+                _probot->Grab(grabinfo.pbody, plink, nullptr);
             }
             FOREACH(it,listgrab)
             {
-                _probot->Grab(it->first,it->second);
+                _probot->Grab(it->first,it->second, nullptr);
             }
 
             // set _bIsDone after all computation is done!

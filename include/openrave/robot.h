@@ -1264,9 +1264,10 @@ private:
         \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
         \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
         when checking collisions between the grabbed body and the robot.
+        \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed.
      */
-    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore) override;
+    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData) override;
 
     /** \brief Grab the body with the specified link.
 
@@ -1274,33 +1275,37 @@ private:
         \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
         \param[in] setIgnoreBodyLinkNames Additional body link names that collision checker ignore
         when checking collisions between the grabbed body and the body.
+        \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed.
      */
-    bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames) override;
+    bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData) override;
 
     /** \brief Grab a body with the specified link.
 
         \param[in] body the body to be grabbed
         \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
+        \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed/
      */
-    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith) override;
+    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData) override;
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
         \param[in] body the body to be grabbed
         \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
         when checking collisions between the grabbed body and the robot.
+        \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed
      */
-    virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore);
+    virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData);
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
         \param[in] body the body to be grabbed
+        \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed
      */
-    virtual bool Grab(KinBodyPtr body);
+    virtual bool Grab(KinBodyPtr body, const rapidjson::Value& rGrabbedUserData);
 
     //@}
 
