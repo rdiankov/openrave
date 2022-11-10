@@ -58,7 +58,26 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "id", _id);
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "transform", _tLocalTool);
-    orjson::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
+    try {
+        orjson::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
+    }
+    catch(const std::exception& e) {
+        // backward compatiblity with float chucking directions
+        RAVELOG_WARN_FORMAT("encountered error while loading 'chuckingDirections' as integers, try to load it as doubles: %s", e.what());
+        vector<double> vLocalChuckingDirection;
+        orjson::LoadJsonValueByKey(value, "chuckingDirections", vLocalChuckingDirection);
+        _vChuckingDirection.resize(vLocalChuckingDirection.size());
+        for (size_t index = 0; index < vLocalChuckingDirection.size(); ++index) {
+            int direction = 0;
+            if (vLocalChuckingDirection[index] > 1e-7) {
+                direction = 1;
+            }
+            else if (vLocalChuckingDirection[index] < -1e-7) {
+                direction = -1;
+            }
+            _vChuckingDirection[index] = direction;
+        }
+    }
     orjson::LoadJsonValueByKey(value, "direction", _vdirection);
     orjson::LoadJsonValueByKey(value, "baseLinkName", _sBaseLinkName);
     orjson::LoadJsonValueByKey(value, "ikChainEndLinkName", _sIkChainEndLinkName); //optional;
